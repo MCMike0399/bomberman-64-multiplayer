@@ -1,0 +1,103 @@
+namespace Bomber.Game.Simulation;
+
+/// <summary>Finite knockdowns, victim-owned struggle input, paired holds and thrown-player physics.</summary>
+public sealed partial class BlastSession
+{
+    private const float HoldSeconds=3.2f,EffortSeconds=.24f,EffortCooldown=.10f,PlayerCarryHeight=1.4f;
+    private static void ClearRecovery(BlastPlayer p)
+    {
+        p.StunTimer=0;p.CarriedById=null;p.HoldRemaining=0;p.RecoveryTotal=0;
+        p.StruggleCooldown=0;p.RecoveryX=p.RecoveryZ=0;p.KnockdownReason=null;
+        p.Airborne=false;p.AirVX=p.AirVY=p.AirVZ=0;
+    }
+    private bool ProcessRecovery(BlastPlayer p,InputState input,float dt)
+    {
+        if(p.StunTimer<=0&&p.CarriedById is null&&!p.Airborne)return false;
+        float magnitude=input.X*input.X+input.Z*input.Z;
+        float previous=p.RecoveryX*p.RecoveryX+p.RecoveryZ*p.RecoveryZ;
+        bool direction=magnitude>.20f&&(previous<.04f||input.X*p.RecoveryX+input.Z*p.RecoveryZ<.2f);
+        bool press=(input.A&&!p.PrevA)||(input.B&&!p.PrevB)||(input.R&&!p.PrevR);
+        p.RecoveryX=input.X;p.RecoveryZ=input.Z;
+        p.PrevA=input.A;p.PrevB=input.B;p.PrevR=input.R;
+        p.StruggleCooldown=Math.Max(0,p.StruggleCooldown-dt);
+        float effort=0;
+        if(!p.Airborne&&(direction||press)&&p.StruggleCooldown<=0)
+        {effort=EffortSeconds;p.StruggleCooldown=EffortCooldown;}
+        if(p.CarriedById is not null)
+        {
+            p.HoldRemaining=Math.Max(0,p.HoldRemaining-dt-effort);
+            if(p.HoldRemaining<=0)ReleaseHeld(p,"escaped");
+        }
+        else if(!p.Airborne)
+        {
+            p.StunTimer=Math.Max(0,p.StunTimer-dt-effort);
+            if(p.StunTimer<=0)
+            {
+                p.KnockdownReason=null;
+                Present("recover",p.Id,p.Id,p.X,p.Y,p.Z);
+            }
+        }
+        // Consume recovery edges even on the get-up tick; no buffered bomb/throw surprises.
+        return true;
+    }
+    private void KnockDown(BlastPlayer p,float duration,string reason,string? entity,string? causedBy)
+    {
+        if(p.InvincibleTimer>0||p.CarriedById is not null)return;
+        DropCarriedBombs(p);
+        p.StunTimer=duration;p.RecoveryTotal=duration;p.KnockdownReason=reason;
+        p.StruggleCooldown=0;p.RecoveryX=p.Input.X;p.RecoveryZ=p.Input.Z;
+        p.InvincibleTimer=duration+.45f;
+        Present("knockdown",entity,p.Id,p.X,p.Y,p.Z,duration,reason:reason,causedBy:causedBy);
+    }
+    private void BeginHold(BlastPlayer carrier,BlastPlayer victim)
+    {
+        DropCarriedBombs(victim);
+        carrier.CarryingPlayerId=victim.Id;victim.CarriedById=carrier.Id;
+        victim.HoldRemaining=HoldSeconds;victim.RecoveryTotal=HoldSeconds;victim.StunTimer=.5f;
+        victim.KnockdownReason="held";victim.StruggleCooldown=0;
+        Present("player-grab",victim.Id,carrier.Id,victim.X,victim.Y,victim.Z,reason:"player");
+    }
+    private void ReleaseHeld(BlastPlayer victim,string reason)
+    {
+        string? carrierId=victim.CarriedById;
+        if(carrierId!=null&&_players.TryGetValue(carrierId,out var carrier)&&carrier.CarryingPlayerId==victim.Id)
+        {
+            carrier.CarryingPlayerId=null;
+            victim.X=carrier.X;victim.Z=carrier.Z;
+        }
+        victim.CarriedById=null;victim.HoldRemaining=0;victim.StunTimer=0;victim.KnockdownReason=null;
+        victim.SurfaceY=_stage.SurfaceAt(victim.X,victim.Z);victim.Tier=(int)MathF.Round(victim.Y);
+        victim.InvincibleTimer=Math.Max(victim.InvincibleTimer,.6f);
+        Present("player-release",victim.Id,victim.Id,victim.X,victim.Y,victim.Z,reason:reason,causedBy:carrierId);
+    }
+    private void TickPlayerCarrying(float dt)
+    {
+        foreach(var p in _players.Values)
+        {
+            if(!p.Alive)continue;
+            if(p.CarriedById is {} carrierId)
+            {
+                if(!_players.TryGetValue(carrierId,out var carrier)||!carrier.Alive||carrier.Ghost||carrier.CarryingPlayerId!=p.Id)
+                {ReleaseHeld(p,"carrier-lost");continue;}
+                p.X=carrier.X;p.Z=carrier.Z;p.SurfaceY=carrier.Y+PlayerCarryHeight;p.Tier=carrier.Tier;
+            }
+            else if(p.Airborne)
+            {
+                float nx=p.X+p.AirVX*dt,nz=p.Z+p.AirVZ*dt;
+                p.AirVY-=9.8f*dt;p.SurfaceY+=p.AirVY*dt;
+                var cell=_stage.At((int)MathF.Floor(nx),(int)MathF.Floor(nz));
+                float ground=_stage.SurfaceAt(nx,nz);
+                if((cell.Kind==CellKind.Pillar||_softBlocks.IsAlive((int)MathF.Floor(nx),(int)MathF.Floor(nz)))&&p.Y<ground+1.2f)
+                {p.AirVX=p.AirVZ=0;ground=_stage.SurfaceAt(p.X,p.Z);cell=_stage.At((int)p.X,(int)p.Z);}
+                else {p.X=nx;p.Z=nz;}
+                if(p.Y<=ground)
+                {
+                    p.Airborne=false;p.SurfaceY=ground;p.Tier=(int)MathF.Round(ground);
+                    if(cell.IsElimination){Eliminate(null,p,cell.Kind==CellKind.Water?"water":"fall");continue;}
+                    p.StunTimer=.65f;p.RecoveryTotal=.65f;p.KnockdownReason="landing";
+                    Present("player-land",p.Id,p.Id,p.X,p.Y,p.Z);
+                }
+            }
+        }
+    }
+}

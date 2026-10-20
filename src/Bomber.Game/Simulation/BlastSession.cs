@@ -126,7 +126,10 @@ public sealed partial class BlastSession : GameSession
     public override void OnPlayerConnectionChanged(ISessionContext context, RealtimePlayer player, bool connected)
     {
         if (!connected && _players.TryGetValue(player.PlayerId, out var p))
-            p.Input = default; // stand still while disconnected
+        {
+            DropCarriedBombs(p); // a lost connection safely releases a hold instead of launching its victim
+            p.Input=default;p.PrevB=false;
+        }
         if (connected)
         {
             SendStage(context, player.PlayerId);
@@ -258,7 +261,7 @@ public sealed partial class BlastSession : GameSession
             p.PendingRoundStart = false;
             p.Ghost = false;
             p.Alive = true;
-            p.StunTimer = 0;
+            ClearRecovery(p);
             p.InvincibleTimer = 0;
             p.CarryingBombId = null;
             p.CarryingPlayerId = null;
@@ -369,6 +372,7 @@ public sealed partial class BlastSession : GameSession
 
         // Process inputs and apply physics.
         ProcessInputs(context, dt);
+        TickPlayerCarrying(dt);
         DrownSubmergedEntities();
         TickBombs(context, dt);
         TickHazards(context, dt);
@@ -455,8 +459,8 @@ public sealed partial class BlastSession : GameSession
             var input = possessor is null ? p.Input : p.Input with { X = possessor.Input.X, Z = possessor.Input.Z };
 
             // Count down timers.
-            if (p.StunTimer > 0) { p.StunTimer -= dt; continue; } // stunned: no action
-            if (p.InvincibleTimer > 0) p.InvincibleTimer -= dt;
+            if (p.InvincibleTimer > 0) p.InvincibleTimer = Math.Max(0,p.InvincibleTimer-dt);
+            if (ProcessRecovery(p,p.Input,dt)) continue;
 
             // Edge detection for buttons.
             var aPress = input.A && !p.PrevA;
@@ -496,7 +500,7 @@ public sealed partial class BlastSession : GameSession
             {
                 if (p.CarryingBombId is not null)
                     PumpBomb(p);
-                else
+                else if(p.CarryingPlayerId is null)
                     TryPlaceBomb(context, p, input.B);
             }
 
@@ -657,6 +661,7 @@ public sealed partial class BlastSession : GameSession
             if (nx == 0 && nz == 0) continue;
 
             b.State = BombState.Rolling;
+            b.LastTouchedById=p.Id;
             b.VX = nx * BlastBomb.RollSpeed;
             b.VZ = nz * BlastBomb.RollSpeed;
             if (_presentedKickContacts.Add((p.Id, b.Id)))
@@ -714,14 +719,12 @@ public sealed partial class BlastSession : GameSession
         if (!p.Ghost)
         {
             var victim = _players.Values
-                .Where(v => v.Id != p.Id && v.Alive && !v.Ghost && v.StunTimer > 0 && Math.Abs(v.Y - p.Y) < .6f)
+                .Where(v => v.Id != p.Id && v.Alive && !v.Ghost && v.StunTimer > 0 && v.CarriedById is null && !v.Airborne && Math.Abs(v.Y - p.Y) < .6f)
                 .OrderBy(v => Dist2(v.X, v.Z, p.X, p.Z))
                 .FirstOrDefault(v => Dist2(v.X, v.Z, p.X, p.Z) <= (PlayerRadius * 2 + 0.3f) * (PlayerRadius * 2 + 0.3f));
             if (victim is not null)
             {
-                p.CarryingPlayerId = victim.Id;
-                victim.StunTimer = float.MaxValue; // held until thrown
-                Present("lift", victim.Id, p.Id, victim.X, victim.Y, victim.Z, reason: "player");
+                BeginHold(p,victim);
             }
         }
     }
@@ -768,6 +771,7 @@ public sealed partial class BlastSession : GameSession
         var angle = MathF.PI * 55f / 180f; // throw angle up from horizontal
 
         bomb.State = BombState.Flying;
+        bomb.LastTouchedById=p.Id;
         bomb.X = p.X;
         bomb.Z = p.Z;
         bomb.FlyVX = p.FacingX * speed;
@@ -784,27 +788,13 @@ public sealed partial class BlastSession : GameSession
     {
         if (!_players.TryGetValue(p.CarryingPlayerId!, out var victim)) { p.CarryingPlayerId = null; return; }
 
-        var stickMag = Math.Clamp(input.Length, 0.2f, 1f);
-        var dist = 4f * stickMag;
-        victim.StunTimer = 0;
-        victim.X = p.X + p.FacingX * dist;
-        victim.Z = p.Z + p.FacingZ * dist;
-        victim.X = Math.Clamp(victim.X, 0, _stage.Width - 1);
-        victim.Z = Math.Clamp(victim.Z, 0, _stage.Height - 1);
-
-        Present("throw", victim.Id, p.Id, p.X, p.Y + .9f, p.Z, dist, reason: "player");
-
-        // Check if thrown off the stage.
-        var cell = _stage.At((int)victim.X, (int)victim.Z);
-        if (cell.IsElimination || victim.X < 0 || victim.X >= _stage.Width)
-            Eliminate(p.Id, victim, cell.Kind == CellKind.Water ? "water" : "fall");
-        else
-        {
-            victim.StunTimer = 1.0f;
-            victim.InvincibleTimer = 1.5f;
-        }
-
-        p.CarryingPlayerId = null;
+        var strength=Math.Clamp(input.Length,0.2f,1f);
+        victim.CarriedById=null;victim.HoldRemaining=0;victim.Airborne=true;
+        victim.X=p.X;victim.Z=p.Z;victim.SurfaceY=p.Y+PlayerCarryHeight;
+        victim.AirVX=p.FacingX*(2+strength*3);victim.AirVZ=p.FacingZ*(2+strength*3);victim.AirVY=3.8f;
+        victim.StunTimer=.65f;victim.RecoveryTotal=.65f;victim.KnockdownReason="thrown";
+        victim.InvincibleTimer=.35f;p.CarryingPlayerId=null;
+        Present("player-throw",victim.Id,p.Id,p.X,p.Y+PlayerCarryHeight,p.Z,strength,reason:"player");
     }
 
     // ─── pumping ──────────────────────────────────────────────────────────────
@@ -883,10 +873,13 @@ public sealed partial class BlastSession : GameSession
         // Check collision with a player (stun) or another resting bomb (billiard).
         foreach (var p in _players.Values)
         {
-            if (!p.Alive || p.Ghost || p.StunTimer > 0 || p.InvincibleTimer > 0 || Math.Abs(p.Y - _stage.SurfaceAt(nx, nz)) > .6f) continue;
+            if (!p.Alive || p.Ghost || p.StunTimer > 0 || p.InvincibleTimer > 0 || p.CarriedById is not null || p.Airborne || Math.Abs(p.Y - _stage.SurfaceAt(nx, nz)) > .6f) continue;
+            // A player following an outgoing kick must not collide with its trailing edge.
+            if((p.X-b.X)*b.VX+(p.Z-b.Z)*b.VZ<=0)continue;
             if (Dist2(nx, nz, p.X, p.Z) < (PlayerRadius + BlastBomb.Radius) * (PlayerRadius + BlastBomb.Radius))
             {
-                StunPlayer(p, 1.5f);
+                KnockDown(p,1.5f,"rolling-bomb",b.Id,b.LastTouchedById??b.OwnerId);
+                b.X=nx;b.Z=nz;b.CellX=cx;b.CellZ=cz;
                 b.State = BombState.Resting;
                 b.VX = 0; b.VZ = 0;
                 return;
@@ -900,6 +893,7 @@ public sealed partial class BlastSession : GameSession
             {
                 // Billiard: the hit bomb slides in the same direction; this bomb stops.
                 other.State = BombState.Rolling;
+                other.LastTouchedById=b.LastTouchedById;
                 other.VX = b.VX; other.VZ = b.VZ;
                 b.State = BombState.Resting;
                 b.VX = 0; b.VZ = 0;
@@ -938,7 +932,7 @@ public sealed partial class BlastSession : GameSession
             if (Dist2(b.X, b.Z, p.X, p.Z) < (PlayerRadius + BlastBomb.Radius) * (PlayerRadius + BlastBomb.Radius))
             {
                 // Head hit: stun the player, bomb bounces (continues).
-                StunPlayer(p, 2.0f);
+                KnockDown(p,2.0f,"falling-bomb",b.Id,b.LastTouchedById??b.OwnerId);
                 b.FlyVY = MathF.Abs(b.FlyVY) * 0.6f; // bounce upward
             }
         }
@@ -1114,7 +1108,7 @@ public sealed partial class BlastSession : GameSession
         // Become a ghost.
         p.Ghost = true;
         p.Alive = true;
-        p.StunTimer = 0;
+        ClearRecovery(p);
         p.InvincibleTimer = 2.0f;
         // Lose carried power-ups as ghost.
         p.HasRed = false; p.HasRemote = false;
@@ -1145,7 +1139,7 @@ public sealed partial class BlastSession : GameSession
         player.X = spawn.X + .5f; player.Z = spawn.Z + .5f;
         player.SurfaceY = _stage.SurfaceAt(player.X,player.Z); player.Tier = (int)MathF.Round(player.SurfaceY);
         player.Alive = true; player.Ghost = false; player.PendingRoundStart = false;
-        player.StunTimer = 0; player.InvincibleTimer = 1.5f;
+        ClearRecovery(player); player.InvincibleTimer = 1.5f;
         player.Input = default; player.PrevA = player.PrevB = player.PrevR = false;
         PowerUpRules.Reset(player);
         player.ActiveBombs = _bombs.Count(b => b.OwnerId == player.Id && !b.Exploded);
@@ -1163,13 +1157,6 @@ public sealed partial class BlastSession : GameSession
 
         if (type is null) return;
         _items.Add(new BlastItem { Id = NextItemId(), CellX = (int)p.X, CellZ = (int)p.Z, Tier = p.Tier, Type = type });
-    }
-
-    private static void StunPlayer(BlastPlayer p, float duration)
-    {
-        if (p.InvincibleTimer > 0) return;
-        p.StunTimer = duration;
-        p.InvincibleTimer = duration + 1.5f;
     }
 
     // ─── ghost latch ─────────────────────────────────────────────────────────
@@ -1341,6 +1328,9 @@ public sealed partial class BlastSession : GameSession
             alive = p.Alive,
             ghost = p.Ghost,
             stunned = p.StunTimer > 0,
+            knockdownReason=p.KnockdownReason,
+            recoveryRemaining=MathF.Round(p.CarriedById is not null?p.HoldRemaining:p.StunTimer,2),
+            recoveryTotal=p.RecoveryTotal,carriedBy=p.CarriedById,carryingPlayerId=p.CarryingPlayerId,airborne=p.Airborne,
             carrying = p.CarryingBombId is not null ? "bomb" : p.CarryingPlayerId is not null ? "player" : null,
             heart = p.HasHeart,
             fire = p.FireLevel,
@@ -1449,6 +1439,7 @@ public sealed partial class BlastSession : GameSession
 
     private void DropCarriedBombs(BlastPlayer p)
     {
+        if(p.CarriedById is not null)ReleaseHeld(p,"interrupted");
         if (p.CarryingBombId is not null)
         {
             var b = _bombs.FirstOrDefault(b => b.Id == p.CarryingBombId);
@@ -1458,7 +1449,7 @@ public sealed partial class BlastSession : GameSession
         if (p.CarryingPlayerId is not null)
         {
             if (_players.TryGetValue(p.CarryingPlayerId, out var held))
-                held.StunTimer = 0;
+                ReleaseHeld(held,"carrier-interrupted");
             p.CarryingPlayerId = null;
         }
     }

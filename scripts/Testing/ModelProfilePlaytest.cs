@@ -18,12 +18,24 @@ public partial class PlaytestDriver
         var bodySize=torso.Mesh.GetAabb().Size*torso.Scale.Abs();
         Check(headSize.Z/headSize.X>=.78f,"actual helmet mesh retains depth in side profile");
         Check(bodySize.Z/bodySize.X>=.88f,"actual torso mesh retains depth in side profile");
+        var face=(MeshInstance3D)player.FindChild("FaceSurface",true,false);
+        Check(face.Mesh.GetAabb().Size.Z>.055f,"cream face has a curved volume and returning rim");
+        var arrays=face.Mesh.SurfaceGetArrays(0);
+        var vertices=arrays[(int)Mesh.ArrayType.Vertex].AsVector3Array();
+        var normals=arrays[(int)Mesh.ArrayType.Normal].AsVector3Array();
+        bool sound=vertices.Length>0&&vertices.Length%3==0;
+        for(int i=0;i<vertices.Length;i+=3)
+        {
+            var cross=(vertices[i+1]-vertices[i]).Cross(vertices[i+2]-vertices[i]);
+            sound&=cross.LengthSquared()>1e-12f&&cross.Dot(normals[i]+normals[i+1]+normals[i+2])<0;
+        }
+        Check(sound,"actual curved face mesh has nondegenerate outward clockwise triangles");
         Event("model-profile-dimensions",new {helmet=headSize.ToString(),torso=bodySize.ToString()});
         var arenaCamera=_root.GetViewport().GetCamera3D()!;
         var closeup=new Camera3D {Fov=32,Near=.05f,Far=100};_root.AddChild(closeup);closeup.MakeCurrent();
         try
         {
-            foreach(var (name,x,z) in new[]{("front",0f,1f),("right",1f,0f),("back",0f,-1f),("left",-1f,0f)})
+            foreach(var (name,x,z) in new[]{("front",0f,1f),("right",1f,0f),("back",0f,-1f),("left",-1f,0f),("three-quarter",.7071f,.7071f)})
             {
                 Input(0,new PlayerInput(x,z));await Frames(4);Input(0,default);await Frames(7);
                 Check(Math.Abs(Player.GetProperty("fx").GetSingle()-x)<.01&&Math.Abs(Player.GetProperty("fz").GetSingle()-z)<.01,"real movement turns character toward "+name);

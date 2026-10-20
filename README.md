@@ -32,7 +32,7 @@ On macOS, the installed editor can also launch it directly:
 
 The game opens fullscreen. **F11** or **Alt+Enter** switches between fullscreen and a window; run `./scripts/client.sh --windowed -- --display-windowed` for a windowed launch.
 
-Choose **LOCAL BATTLE**, then set each of the eight roster slots to **Human**, **CPU**, or **Off** and choose a suit color. The selected character walks on a shared lit 3D stage using the same articulated model seen in battle. Continue to stage and match rules, choose Easy/Normal/Hard CPU difficulty, then start with **2–8 total participants**. **PRACTICE** lets one player explore the map and rehearse bomb handling without CPU opponents. Six visible training pickups teach bomb capacity, fire, red power, remote detonation and hearts; **RESET PRACTICE** restores the cache. One human can play with up to seven bots. Local play works without a server. Two keyboard seats are available; additional local seats require connected gamepads. With three or more local humans, the first two seats use keyboards and up to six gamepads fill seats 3–8 in connection order. With one or two humans, the corresponding gamepads also work as optional controls.
+Choose **LOCAL BATTLE**, then set each of the eight roster slots to **Human**, **CPU**, or **Off** and choose a suit color. The selected character walks on a shared lit 3D stage using the same articulated model seen in battle. Continue to the miniature arena stage and arrow-controlled rules, choose Easy/Normal/Hard CPU difficulty, then start with **2–8 total participants**. **PRACTICE** lets one player explore the map and rehearse bomb handling without CPU opponents. Six visible training pickups teach bomb capacity, fire, red power, remote detonation and hearts; **RESET PRACTICE** restores the cache. One human can play with up to seven bots. Local play works without a server. Two keyboard seats are available; additional local seats require connected gamepads. With three or more local humans, the first two seats use keyboards and up to six gamepads fill seats 3–8 in connection order. With one or two humans, the corresponding gamepads also work as optional controls.
 
 ## macOS app
 
@@ -98,7 +98,17 @@ It downloads checksum-pinned SDL 3.4.18 and libusb 1.0.29, builds inside ignored
 
 **Switch 2 Bluetooth is not implemented by this adapter.** Wireless software bridges exist, but none was installed or validated in this iteration. [Controller research](docs/controller-research.md) explains the USB issue, positional button labels, wireless distinction and dependency provenance. Detection and synthetic tests are reported separately from physical button observation in [verification](docs/verification.md).
 
+Left-stick menu navigation uses deliberate threshold crossings and repeat while held, including setup, lobbies and results. It accepts gradual pushes, stabilizes diagonal choices, and changes direction immediately on reversal. The Switch 2 USB path is tested through the same native event bridge used during play; [physical versus synthetic evidence](docs/verification.md) remains explicit.
+
 Walking into a resting bomb kicks it. Hold lift to carry a nearby bomb, or hold lift and press bomb to create one directly in your hands. Repeatedly press bomb while holding lift to inflate it, then release lift to throw. Use **hold carry, tap bomb, then tap bomb again to pump**: Xbox X+A, Switch Y+B, PS5 Square+Cross, or keyboard K+J (Shift+Space also works). The character lifts, compresses, and releases the bomb in response to accepted actions. Explosions use spherical distance and cover occlusion rather than a classic grid cross. Pickups upgrade blast size, bomb capacity, remote detonation, red piercing bombs or a protective heart. Ghosts and sudden death are enabled by default. With one minute left, the Pyramid-inspired Sunken Temple warns of rising water; its lower court floods before the upper terraces. Other arenas retain closing columns. Permanent stone and terrain block blasts; red bombs penetrate breakable cover. Last survivor earns a round win; first to the win target wins the match.
+
+## Knockdowns and player grabs
+
+A sliding bomb knocks down a player it approaches; following your own outgoing kick no longer hits you from behind. Falling bombs can also knock players down. A visible hit message, stars and **DOWN / HELD** status explain what happened.
+
+Alternate movement directions or tap the action buttons to recover faster. Holding one direction/button does not repeatedly count as effort. Hold **carry** near a downed opponent to pick them up, walk with them, and release carry to throw them through an arc. The victim can wiggle/tap to escape; an inactive hold also times out. Both controller and keyboard inputs use the same authoritative recovery rules, and bots recover through those inputs too. Disconnects release held players safely.
+
+These mechanics run in the shared local/server simulation. Rebuild the independent game server along with the client for the new state and presentation events. [Rules, failure reproductions and input fixes](docs/iteration8-gameplay-input.md).
 
 ## Battle progression
 
@@ -165,9 +175,9 @@ The game already uses native Metal. The `macOS Metal` export preset declares App
 
 ## Character, UI and effects
 
-The seventh iteration puts the menu into a live 3D theatre: characters share lighting and floor shadows, mode plaques have solid bevels and selection motion, and the camera has restrained parallax. The eight-seat roster uses a green stage with short MAN/COM/OFF controls; the winner celebrates against shaded drifting clouds and gold victory medals. The helmet now has an egg silhouette and an inset face, with a compact pear torso, short relaxed arms and full pink boots. Walking, breathing and head motion are independently phased.
+The current menu is a live 3D theatre: characters share lighting and floor shadows, mode plaques have solid bevels and selection motion, and the camera has restrained parallax. The eight-seat roster uses a green stage with short MAN/COM/OFF controls; the winner celebrates against shaded drifting clouds and gold victory medals. The helmet has a rounded egg silhouette, a separate moderately convex faceplate with a rounded return into the shell, a slightly lower forehead, and a softer neck connection. The compact pear torso, short relaxed arms and full pink boots retain the approved proportions. Walking, breathing and head motion are independently phased.
 
-The battle timer, scores and controls float directly over the scene with outlined text and no opaque top/bottom bands. The Pyramid-inspired arena now has a centered lower camera, continuous masonry courses, engraved fascia, dark irregular courtyard cobbles, softer directional shadows, and quieter animated turquoise water. TUNIC and Pokémon BDSP informed the separation of lit tops, shaded sides and readable toy-like forms. [Design study, inspected official images, and skills research](docs/iteration7-design.md); [original-game footage and timestamps](docs/iteration6-research.md).
+Match setup now displays an actual lit miniature of the selected arena and a native arrow-controlled rules rail. The battle timer, scores and controls float directly over the scene with outlined text and no opaque top/bottom bands. The Pyramid-inspired arena now has a centered lower camera, weathered sandstone with responsive relief, engraved fascia, preserved irregular courtyard cobbles, a submerged bedrock foundation, and lower-intensity lighting. Water combines four modulated directional waves, analytical normals, reconstructed depth tint and shoreline foam; [rendering techniques and limits](docs/iteration8-rendering.md). TUNIC and Pokémon BDSP informed the separation of lit tops, shaded sides and readable toy-like forms. [Design study, inspected official images, and skills research](docs/iteration7-design.md); [original-game footage and timestamps](docs/iteration6-research.md).
 
 Small, medium and large blasts have distinct billow counts, growth/fade timing and sound bodies. A full-radius boundary marks the active blast; the longer vapor tail is cosmetic. Water eliminations produce ripples and a splash plume, while accepted actions drive the character's kick, lift, pump and throw reactions.
 
@@ -190,6 +200,10 @@ The gallery shows actual captures from the exported macOS app's final windowed r
 
 ![Animated eight-seat roster](docs/images/battle-roster.png)
 
+![Native arena and rules setup](docs/images/match-setup.png)
+
+![Private room settings](docs/images/room-settings.png)
+
 ![Controller tester](docs/images/controller-test.png)
 
 ![Small blast](docs/images/blast-small.png)
@@ -203,6 +217,12 @@ Model inspection uses the actual in-game character with a temporary close-up cam
 ![Character front](docs/images/model-front.png)
 
 ![Character side profile](docs/images/model-side.png)
+
+![Curved separate faceplate](docs/images/model-three-quarter.png)
+
+![Carrying a downed opponent](docs/images/player-grab.png)
+
+![Player throw arc](docs/images/player-throw.png)
 
 The game uses original procedural visuals. No original game ROM, Nintendo/Hudson artwork, footage, kernel source, credentials, or playtest traces are distributed here. The adapted simulation retains its upstream MIT notice in `src/Bomber.Game/Simulation/LICENSE`.
 

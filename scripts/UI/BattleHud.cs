@@ -18,7 +18,7 @@ public partial class BattleHud : Control
     private JsonElement? _lastState;
     private float _hurryAge;
     private int _phaseNumber;
-    private Label _controls=null!;
+    private Label _controls=null!,_recovery=null!;
     public override void _Ready()
     {
         Theme=ArcadeTheme.Create();MouseFilter=MouseFilterEnum.Ignore;SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
@@ -28,6 +28,8 @@ public partial class BattleHud : Control
         Theme.SetConstant("outline_size","Button",3);
         _strip=new HBoxContainer {AnchorRight=1,OffsetLeft=22,OffsetRight=-22,OffsetTop=7,OffsetBottom=110,Alignment=BoxContainer.AlignmentMode.Begin};_strip.AddThemeConstantOverride("separation",12);AddChild(_strip);
         _phase=new Label {AnchorLeft=.2f,AnchorRight=.8f,OffsetTop=124,OffsetBottom=176,HorizontalAlignment=HorizontalAlignment.Center};_phase.AddThemeFontSizeOverride("font_size",30);_phase.AddThemeColorOverride("font_color",Colors.White);_phase.AddThemeColorOverride("font_outline_color",ArcadeTheme.Ink);_phase.AddThemeConstantOverride("outline_size",8);AddChild(_phase);
+        _recovery=new Label {AnchorLeft=.1f,AnchorRight=.9f,AnchorTop=1,AnchorBottom=1,OffsetTop=-109,OffsetBottom=-73,HorizontalAlignment=HorizontalAlignment.Center};
+        _recovery.AddThemeFontSizeOverride("font_size",20);_recovery.AddThemeColorOverride("font_color",ArcadeTheme.Gold);_recovery.AddThemeConstantOverride("outline_size",6);AddChild(_recovery);
         var footer=new PanelContainer {AnchorTop=1,AnchorBottom=1,AnchorRight=1,OffsetLeft=24,OffsetRight=-24,OffsetTop=-69,OffsetBottom=-15};
         footer.AddThemeStyleboxOverride("panel",new StyleBoxEmpty {ContentMarginLeft=8,ContentMarginRight=8,ContentMarginTop=8,ContentMarginBottom=8});AddChild(footer);
         var row=ArcadeTheme.Row(footer,20);_connection=ArcadeTheme.Text(row,"LOCAL BATTLE",14);_connection.SizeFlagsHorizontal=SizeFlags.ExpandFill;
@@ -60,7 +62,9 @@ public partial class BattleHud : Control
             card.Portrait.Suit=BlastCircuit.Rendering.ArtMaterials.PlayerColors[Math.Clamp(appearance,0,7)];
             card.Portrait.Eliminated=eliminated;card.Portrait.Ghost=ghost;card.Portrait.QueueRedraw();
             card.Name.Text="P"+(slot+1)+(p.GetProperty("bot").GetBoolean()?" CPU":" "+p.GetProperty("name").GetString());
-            card.Score.Text=ghost?"↻ GHOST":eliminated?"× OUT":"● ALIVE";card.Score.AddThemeColorOverride("font_color",ghost?new Color("7cd8f1"):eliminated?ArcadeTheme.Red:new Color("74e69f"));
+            bool held=p.TryGetProperty("carriedBy",out var carrier)&&carrier.ValueKind==JsonValueKind.String;
+            bool down=p.GetProperty("stunned").GetBoolean();
+            card.Score.Text=ghost?"↻ GHOST":eliminated?"× OUT":held?"HELD":down?"DOWN":"● ALIVE";card.Score.AddThemeColorOverride("font_color",ghost?new Color("7cd8f1"):eliminated?ArcadeTheme.Red:down?ArcadeTheme.Gold:new Color("74e69f"));
             _medals[slot].Wins=p.GetProperty("wins").GetInt32();
             card.Stats.Text=$"B {p.GetProperty("bombs").GetInt32()}  F {p.GetProperty("fire").GetInt32()}"+(p.GetProperty("red").GetBoolean()?"  P":"")+(p.GetProperty("remote").GetBoolean()?"  R":"")+(p.GetProperty("heart").GetBoolean()?"  ♥":"");
             card.Stats.Modulate=eliminated?new Color(.6f,.6f,.6f):Colors.White;
@@ -73,6 +77,8 @@ public partial class BattleHud : Control
         _round.Text=Practice?"PRACTICE":phase==2&&flood?(waterDelay>0?$"FLOOD IN {waterDelay}":"WATER RISING"):"ROUND "+state.GetProperty("round").GetInt32();
         _timer.AddThemeColorOverride("font_color",phase==2?ArcadeTheme.Red:ArcadeTheme.Gold);
         _phase.Text=phase switch{0=>"GET READY!",1=>"",2 when _hurryAge<3=>flood?"HURRY UP!  GET TO HIGH GROUND":"HURRY UP!",2=>"",3=>"ROUND OVER",_=>""};
+        var recovering=players.Where(p=>p.GetProperty("alive").GetBoolean()&&!p.GetProperty("ghost").GetBoolean()&&p.GetProperty("stunned").GetBoolean()).ToArray();
+        _recovery.Text=recovering.Length==0?"":string.Join(", ",recovering.Select(p=>"P"+(p.GetProperty("slot").GetInt32()+1)))+"  •  WIGGLE STICK / ALTERNATE MOVEMENT + TAP ACTIONS TO RECOVER";
     }
     private void BuildCards(JsonElement[] players)
     {

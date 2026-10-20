@@ -35,6 +35,7 @@ public partial class ArcadeModeButton : Button
     public override void _Process(double delta)
     {
         if(!IsVisibleInTree()||_plaque==null)return;
+        _title.Text=Text;
         bool focused=HasFocus()||IsHovered();float target=ButtonPressed?-.08f:focused?.09f:0;
         _lift=Mathf.Lerp(_lift,target,1-Mathf.Exp(-(float)delta*14));
         _plaque.Position=new(0,_lift,_lift*1.8f);_plaque.RotationDegrees=new(focused?-2:0,-2,0);

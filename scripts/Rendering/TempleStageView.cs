@@ -11,7 +11,7 @@ public partial class TempleStageView : Node3D
     private JsonElement _cells;
     public int Width {get;private set;}
     public int Depth {get;private set;}
-    private Material _stone=null!,_cobble=null!;
+    private ShaderMaterial _stone=null!,_cobble=null!,_masonry=null!,_bedrock=null!;
     private MeshInstance3D _water=null!;
     private float _targetWater=-.53f;
     private bool _waterInitialized;
@@ -26,6 +26,9 @@ public partial class TempleStageView : Node3D
         if(_water==null)return;
         var p=_water.Position;p.Y=Mathf.Lerp(p.Y,_targetWater,1-Mathf.Exp(-7*(float)delta));_water.Position=p;
         if(_water.MaterialOverride is ShaderMaterial water)water.SetShaderParameter("flood_amount",Mathf.Clamp((_targetWater+.53f)/(4*HeightScale),0,1));
+        _stone.SetShaderParameter("water_height",p.Y);
+        _masonry.SetShaderParameter("water_height",p.Y);
+        _bedrock.SetShaderParameter("water_height",p.Y);
     }
     public TempleStageView(ArtMaterials art){_art=art;}
     public float Surface(float x,float z)
@@ -44,8 +47,8 @@ public partial class TempleStageView : Node3D
     {
         Width=data.GetProperty("width").GetInt32();Depth=data.GetProperty("height").GetInt32();_cells=data.GetProperty("cells").Clone();
         _stone=_art.Stone();_cobble=_art.Stone(true);
-        var wall=_art.Masonry();var cap=_art.Color(new("e8cc82"));
-        _water=new MeshInstance3D {Mesh=new PlaneMesh {Size=new Vector2(160,160),SubdivideWidth=80,SubdivideDepth=80},MaterialOverride=_art.Water(),Position=new Vector3(Width/2f,-.53f,Depth/2f),CastShadow=GeometryInstance3D.ShadowCastingSetting.Off};AddChild(_water);
+        _masonry=_art.Masonry();_bedrock=_art.Bedrock();var wall=_masonry;var cap=_art.Color(new("e8cc82"));
+        _water=new MeshInstance3D {Mesh=new PlaneMesh {Size=new Vector2(160,160),SubdivideWidth=180,SubdivideDepth=180},MaterialOverride=_art.Water(),Position=new Vector3(Width/2f,-.53f,Depth/2f),CastShadow=GeometryInstance3D.ShadowCastingSetting.Off};AddChild(_water);
         bool temple=data.GetProperty("id").GetString()=="sunken-temple";
         for(int z=0;z<Depth;z++)for(int x=0;x<Width;x++)
         {
@@ -90,7 +93,39 @@ public partial class TempleStageView : Node3D
                 }
             }
         }
-        if(temple)Shrine();
+        if(temple){Bedrock();Shrine();}
+    }
+    private void Bedrock()
+    {
+        // This foundation is visual only: no bodies, colliders or walkable terrain.
+        // Its crown remains below the lowest playable court and slopes into the sea.
+        var surface=new SurfaceTool();surface.Begin(Mesh.PrimitiveType.Triangles);
+        const int segments=20;
+        Vector3 Point(int side,int step,float expansion,float y)
+        {
+            float t=(float)step/segments;
+            float wobble=Mathf.Sin(step*2.13f+side*1.7f)*Mathf.Sin(t*Mathf.Pi)*.12f;
+            float left=1-expansion-wobble,right=Width-1+expansion+wobble;
+            float back=1-expansion-wobble,front=Depth-1+expansion+wobble;
+            return side switch {0=>new(Mathf.Lerp(left,right,t),y,back),1=>new(right,y,Mathf.Lerp(back,front,t)),2=>new(Mathf.Lerp(right,left,t),y,front),_=>new(left,y,Mathf.Lerp(front,back,t))};
+        }
+        void Triangle(Vector3 a,Vector3 b,Vector3 c)
+        {
+            // SurfaceTool follows Godot's clockwise front-face convention.
+            Vector3 normal=(c-a).Cross(b-a).Normalized();
+            foreach(var p in new[]{a,b,c}){surface.SetNormal(normal);surface.SetUV(new(p.X,p.Z));surface.AddVertex(p);}
+        }
+        float[] levels=[-.24f,-.9f,-2.15f,-4.5f];
+        float[] expansions=[-.02f,.32f,1.05f,2.1f];
+        for(int layer=0;layer<levels.Length-1;layer++)for(int side=0;side<4;side++)for(int i=0;i<segments;i++)
+        {
+            var a=Point(side,i,expansions[layer],levels[layer]);
+            var b=Point(side,i+1,expansions[layer],levels[layer]);
+            var c=Point(side,i+1,expansions[layer+1],levels[layer+1]);
+            var d=Point(side,i,expansions[layer+1],levels[layer+1]);
+            Triangle(a,c,b);Triangle(a,d,c);
+        }
+        AddChild(new MeshInstance3D {Mesh=surface.Commit(),MaterialOverride=_bedrock});
     }
     private void Relief(Vector3 point,int dx,int dz)
     {

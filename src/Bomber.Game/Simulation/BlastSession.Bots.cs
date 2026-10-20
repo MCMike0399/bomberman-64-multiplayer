@@ -54,7 +54,8 @@ public sealed partial class BlastSession
         AiTestThinkCount++;bot.BotThinkTimer=_aiReaction;
         BotRefreshField();
         int start=_aiGraph.Cell(bot.X,bot.Z);if(start<0){bot.Input=default;return;}
-        if(bot.StunTimer>0){bot.Input=default;return;}
+        if(bot.StunTimer>0||bot.CarriedById is not null)
+        {bool effort=(_tickCount/4+bot.Slot)%2==0;bot.Input=new InputState(effort?1:-1,0,effort,false,false);return;}
         // Fair information: current visible entities and timers only; never sample the match RNG or future drops.
         bool urgent=!BotSafe(_aiDanger,start,0,3.05f);
         if(urgent)

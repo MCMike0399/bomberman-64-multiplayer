@@ -137,3 +137,12 @@ Blast visuals use authoritative radius and hazard age, with a visible danger bou
 `tools/package-macos.py` derives an ARM64 template from the installed official Universal 2 template, exports the solution and self-contained managed runtime, adds native controller libraries/notices, and applies/verifies a local ad-hoc signature. Exporter log errors are failures even when the process exits zero. `ControllerHub` selects source-tree libraries in the editor and bundle-relative libraries in exported builds. The app harness omits the source path and runs from its evidence directory.
 
 `model-profile` is an inspection scenario: normal inputs rotate the actual authoritative player, and a temporary camera captures four sides of that player's real rendered model. It checks torso/helmet mesh depth, then restores the normal camera. It does not spawn a substitute character or change game state directly.
+
+
+## Recovery, carries and menu input roles
+
+`BlastSession.Grapple` owns finite knockdowns, rate-limited victim input effort, paired carry relationships and thrown-player physics. Snapshots expose recovery/holder/airborne state; accepted presentation events explain hits and releases. Both sides of a hold are detached on leave/reset/death, and disconnect releases safely. Bot recovery uses ordinary inputs. Numerical tuning is centralized in the grapple partial module; no client can set a stun timer or holder.
+
+`MenuStickNavigation` converts sampled held axes into deliberate steps with engage/release hysteresis, diagonal stability and repeat timing. It is independent of report frequency. `GameRoot.ScreenName` owns `ControllerHub.MenuNavigationEnabled`, separately from the lifetime of gameplay bindings; retained online lobby or results sessions therefore do not disable visible menu navigation. Switch synthetic regressions use the exact native-publication helper used by SDL reports, while physical observations stay separately labeled.
+
+`ArcadeRuleDial` retains native Godot focus/action semantics for stage/rule arrows. The setup stage preview builds the same authority cells through `TempleStageView`; it does not load a screenshot or invented collision map. The visual water/foundation are presentation-only and never expand walkable authority terrain.

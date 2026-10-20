@@ -28,7 +28,17 @@ public partial class GameRoot : Node3D
     private string _lastName="Player",_lastCode="";
     private JsonElement? _lobby;
     private JsonElement? _result;
-    public string ScreenName { get; private set; }="Modes";
+    private string _screenName="Modes";
+    public string ScreenName
+    {
+        get=>_screenName;
+        private set
+        {
+            _screenName=value;
+            // Input role follows the visible screen; lobby/results retain match bindings.
+            if(ControllerHub.Current is {} hub)hub.MenuNavigationEnabled=value is not ("Match" or "Controls");
+        }
+    }
     public int SnapshotCount { get; private set; }
     public JsonElement? LatestState { get; private set; }
     public JsonElement? LatestStage { get; private set; }

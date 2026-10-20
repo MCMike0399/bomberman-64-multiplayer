@@ -64,3 +64,12 @@ python3 tools/playtest/run.py --app "artifacts/exports/Blast Circuit.app" --scen
 `--scenario model-profile` turns the actual practice player through front/right/back/left using normal movement inputs, checks helmet/torso mesh depth, and captures a temporary inspection camera before restoring the arena view. Native resize tests wait for both window size and input transform to settle; controller trials verify actual window/application focus rather than forcing focus flags.
 
 Mouse automation moves the OS pointer to the target before injecting press/release events. `Input.ParseInputEvent` alone does not move it, so native motion arriving between those events can otherwise cancel a click. Focus recovery uses the real platform activation API, and still fails if the window/application cannot acquire focus.
+
+## Iteration-eight scenarios
+
+- `setup`: actual stage/rule dials, native keyboard navigation, private-room settings persistence and practice launch.
+- `controller-popups`: gradual Switch bridge input selects roles in the configured embedded Godot popup and adjusts setup rules.
+- `grapple`: ordinary three-player training sessions collect a remote pickup, kick into a victim, recover, grab/follow/escape and throw/land. No fixture state mutation.
+- `model-profile`: now includes a three-quarter view and actual cream face mesh volume/winding checks.
+
+`controller-observe` also saves `physical-axis-trace.jsonl` with wall-clock timestamps and all axis samples, including center/release. It records no serial number. Synthetic controller tests use the same native publication helper for Switch events, and separately exercise retained match bindings in Results/Lobby.

@@ -9,12 +9,18 @@ public partial class BomberModel : Node3D
     private Node3D _stars=new();
     private Label3D _nameLabel=null!;
     private bool _carrying,_stunned,_ghost;
+    private bool _heldVictim,_airborne;
+    private float _downBlend;
+    public float KnockdownPose=>_downBlend;
+    public void RecoveryPose(bool held,bool airborne){_heldVictim=held;_airborne=airborne;}
     private float _time,_walkPhase,_speed,_carryBlend,_pumpPulse,_throwPulse,_kickPulse,_liftPulse,_deathPulse,_victoryPulse;
     private int _charge;
     private readonly ArtMaterials _art;
     private readonly List<MeshInstance3D> _suitParts=[],_torsoParts=[];
     private readonly Node3D _head=new();
-    private static ArrayMesh? _helmetMesh,_torsoMesh;
+    private const float HeadCenter=1.085f,HelmetHalfHeight=.38f,HelmetTaper=.035f,FaceCenterY=-.010f,EyeCenterY=.010f;
+    private static ArrayMesh? _helmetMesh,_torsoMesh,_faceMesh,_faceRimMesh;
+    private static readonly Dictionary<float,ArrayMesh> EyeMeshes=[];
     private readonly List<MeshInstance3D> _eyes=[];
     private Color _suitColor;
     public int PumpAnimationCount {get;private set;}
@@ -61,15 +67,20 @@ public partial class BomberModel : Node3D
         RoundedBox(_body,new(0,.41f,.21f),new(.13f,.12f,.055f),gold,.35f);
         RoundedBox(_body,new(0,.41f,.242f),new(.066f,.06f,.012f),dark,.2f);
         // A softly rounded helmet sits over a slimmer suit; the shallow face remains easy to read.
-        _head.Position=new(0,1.10f,0);_body.AddChild(_head);
+        _head.Position=new(0,HeadCenter,0);_body.AddChild(_head);
         var helmet=new MeshInstance3D {Name="HelmetShell",Mesh=_helmetMesh??=CreateHelmet(),MaterialOverride=suit};
         _head.AddChild(helmet);_suitParts.Add(helmet);
-        RoundedBox(_head,new(0,-.025f,.247f),new(.646f,.466f,.016f),art.Color(new("8b755c"),.8f),.48f);
-        RoundedBox(_head,new(0,-.025f,.263f),new(.634f,.454f,.024f),face,.47f);
+        _head.AddChild(new MeshInstance3D {Name="FaceRim",Mesh=_faceRimMesh??=CreateCurvedFacePatch(.646f,.466f,0,FaceCenterY,.009f),MaterialOverride=art.Color(new("8b755c"),.8f),Position=new(0,FaceCenterY,0)});
+        _head.AddChild(new MeshInstance3D {Name="FaceSurface",Mesh=_faceMesh??=CreateCurvedFacePatch(.634f,.454f,0,FaceCenterY,.016f),MaterialOverride=face,Position=new(0,FaceCenterY,0)});
         foreach(float x in new[]{-.134f,.134f})
-            _eyes.Add(RoundedBox(_head,new(x,-.005f,.287f),new(.036f,.193f,.012f),dark,.8f));
-        Cylinder(_head,new(0,.397f,0),.058f,.1f,dark);
-        Sphere(_head,new(0,.481f,0),new(.225f,.225f,.225f),pink);
+        {
+            // Keep two simple eyes laid against the faceplate's moderate curvature.
+            if(!EyeMeshes.TryGetValue(x,out var eyeMesh))EyeMeshes[x]=eyeMesh=CreateCurvedFacePatch(.036f,.193f,x,EyeCenterY,.022f,.8f,false);
+            var eye=new MeshInstance3D {Mesh=eyeMesh,MaterialOverride=dark,Position=new(x,EyeCenterY,0)};
+            _head.AddChild(eye);_eyes.Add(eye);
+        }
+        Cylinder(_head,new(0,.382f,0),.058f,.1f,dark);
+        Sphere(_head,new(0,.466f,0),new(.225f,.225f,.225f),pink);
         _leftArm.Position=new(-.265f,.68f,0);_rightArm.Position=new(.265f,.68f,0);
         _body.AddChild(_leftArm);_body.AddChild(_rightArm);
         foreach(var arm in new[]{_leftArm,_rightArm})
@@ -96,38 +107,95 @@ public partial class BomberModel : Node3D
         _nameLabel=new Label3D {Text=name,Position=new(0,1.87f,0),FontSize=30,PixelSize=.009f,Billboard=BaseMaterial3D.BillboardModeEnum.Enabled,Modulate=new Color("fff7d5"),OutlineModulate=new Color("232942"),OutlineSize=10,NoDepthTest=true};AddChild(_nameLabel);
         var shadow=Cylinder(this,new(0,.018f,0),.34f,.008f,art.Color(new Color(.13f,.1f,.08f,.22f)));shadow.CastShadow=GeometryInstance3D.ShadowCastingSetting.Off;
     }
-    private static ArrayMesh CreateHelmet(bool flattenFront=true)
+    private static float FaceHemisphereZ(float x,float headY)
+    {
+        float y=headY/HelmetHalfHeight,radiusSquared=(1-y*y)*Mathf.Pow(1+HelmetTaper*y,2);
+        return .365f*Mathf.Sqrt(Mathf.Max(.0001f,radiusSquared-Mathf.Pow(x/.427f,2)));
+    }
+    private static float HelmetFrontZ(float z)=>z>.28f?.28f+.075f*(1-Mathf.Exp(-(z-.28f)/.075f)):z;
+    private static ArrayMesh CreateCurvedFacePatch(float width,float height,float centerX,float centerY,float offset,float roundness=.47f,bool seatToShell=true)
+    {
+        // A distinct faceplate with moderate cheek curvature. Its rounded return
+        // bridges back into the helmet, preserving the original front outline.
+        const int rings=12,segments=64;
+        var surface=new SurfaceTool();surface.Begin(Mesh.PrimitiveType.Triangles);
+        Vector2 Outline(float phi)
+        {
+            float corner=roundness*.5f,flat=.5f-corner;
+            var radial=new Vector2(Mathf.Cos(phi),Mathf.Sin(phi));
+            var square=radial/Mathf.Max(Mathf.Abs(radial.X),Mathf.Abs(radial.Y))*.5f;
+            var inner=square.Clamp(Vector2.One*-flat,Vector2.One*flat);
+            return (inner+(square-inner).Normalized()*corner)*2;
+        }
+        Vector3 Point(float radius,int segment,float depth,float shellBlend=0)
+        {
+            var outline=Outline(Mathf.Tau*segment/segments);
+            float x=width*.5f*radius*outline.X,y=height*.5f*radius*outline.Y;
+            float hemisphere=FaceHemisphereZ(centerX+x,centerY+y);
+            float front=Mathf.Lerp(.28f,hemisphere,.55f)+depth;
+            float rear=seatToShell?HelmetFrontZ(hemisphere)-.005f:front;
+            return new(x,y,Mathf.Lerp(front,rear,shellBlend));
+        }
+        void Triangle(Vector3 a,Vector3 b,Vector3 c,bool front)
+        {
+            var normal=(b-a).Cross(c-a);
+            // Godot uses clockwise front faces. Caps are oriented by the hemisphere;
+            // the lip is ordered explicitly around its outward perimeter.
+            if(front&&normal.Z>0||!front&&normal.Z<0){surface.AddVertex(a);surface.AddVertex(c);surface.AddVertex(b);}
+            else {surface.AddVertex(a);surface.AddVertex(b);surface.AddVertex(c);}
+        }
+        void Cap(float maxRadius,float depth,bool front,float shellBlend=0)
+        {
+            for(int ring=0;ring<rings;ring++)for(int segment=0;segment<segments;segment++)
+            {
+                float inner=maxRadius*ring/rings,outer=maxRadius*(ring+1)/rings;
+                var a=Point(inner,segment,depth,shellBlend);var b=Point(outer,segment,depth,shellBlend);var c=Point(outer,segment+1,depth,shellBlend);var d=Point(inner,segment+1,depth,shellBlend);
+                Triangle(a,b,c,front);if(ring>0)Triangle(a,c,d,front);
+            }
+        }
+        Cap(.985f,offset,true);
+        // Three contour rings make a short rounded return, nested in the curved rim.
+        var profiles=new[]{(Radius:.985f,Depth:offset,ShellBlend:0f),(Radius:1f,Depth:offset-.003f,ShellBlend:0f),(Radius:.985f,Depth:offset-.012f,ShellBlend:1f)};
+        for(int ring=0;ring<profiles.Length-1;ring++)for(int segment=0;segment<segments;segment++)
+        {
+            var a=Point(profiles[ring].Radius,segment,profiles[ring].Depth,profiles[ring].ShellBlend);var b=Point(profiles[ring+1].Radius,segment,profiles[ring+1].Depth,profiles[ring+1].ShellBlend);
+            var c=Point(profiles[ring+1].Radius,segment+1,profiles[ring+1].Depth,profiles[ring+1].ShellBlend);var d=Point(profiles[ring].Radius,segment+1,profiles[ring].Depth,profiles[ring].ShellBlend);
+            // Clockwise outward orientation around the closed return.
+            surface.AddVertex(a);surface.AddVertex(c);surface.AddVertex(b);
+            surface.AddVertex(a);surface.AddVertex(d);surface.AddVertex(c);
+        }
+        Cap(.985f,offset-.012f,false,1);
+        surface.GenerateNormals();return surface.Commit();
+    }
+    private static ArrayMesh CreateHelmet(bool extendedBack=true)
     {
         // A real egg silhouette, fuller at the crown and tucked under the cheeks.
         // This avoids the long planar sides of a rounded cuboid at oblique battle angles.
         const int rings=24,segments=40;
+        // The torso keeps its established pear proportions; only the helmet is retuned.
+        float halfHeight=extendedBack?HelmetHalfHeight:.395f,taper=extendedBack?HelmetTaper:.075f;
         var surface=new SurfaceTool();surface.Begin(Mesh.PrimitiveType.Triangles);
         Vector3 Point(int ring,int segment)
         {
             float theta=Mathf.Pi*ring/rings,phi=Mathf.Tau*segment/segments;
-            float y=Mathf.Cos(theta),radius=Mathf.Sin(theta)*(1+.075f*y);
+            float y=Mathf.Cos(theta),radius=Mathf.Sin(theta)*(1+taper*y);
             float z=.365f*radius*Mathf.Sin(phi);
-            // Seat only the central face cap. Flattening the entire front hemisphere
-            // also squared the crown and chin when seen from the side.
-            if(flattenFront&&z>.24f)z=.24f+.02f*(1-Mathf.Exp(-(z-.24f)/.02f));
-            else if(flattenFront&&z<0)z*=.435f/.365f;
-            return new(.427f*radius*Mathf.Cos(phi),.395f*y,z);
+            if(extendedBack&&z>.28f)z=HelmetFrontZ(z);
+            else if(extendedBack&&z<0)z*=.435f/.365f;
+            return new(.427f*radius*Mathf.Cos(phi),halfHeight*y,z);
         }
         void Vertex(Vector3 p)
         {
             float normalZ=p.Z/(.365f*.365f);
-            if(flattenFront&&p.Z>.24f)
+            if(extendedBack&&p.Z>.28f)
             {
-                // Transform the original egg normal through the eased front profile.
-                // This keeps the cheek lighting continuous instead of a sharp flat-cap seam.
-                float remaining=Mathf.Max(1-(p.Z-.24f)/.02f,.0001f);
-                float originalZ=.24f-.02f*Mathf.Log(remaining);
-                float slope=remaining;
-                normalZ=originalZ/(.365f*.365f*Mathf.Max(slope,.015f));
+                float slope=Mathf.Max(1-(p.Z-.28f)/.075f,.001f);
+                float original=.28f-.075f*Mathf.Log(slope);
+                normalZ=original/(.365f*.365f*slope);
             }
-            else if(flattenFront&&p.Z<0)normalZ=p.Z/(.435f*.435f);
-            surface.SetNormal(new Vector3(p.X/(.427f*.427f),p.Y/(.395f*.395f)-.15f,normalZ).Normalized());
-            surface.SetUV(new(.5f+Mathf.Atan2(p.Z,p.X)/Mathf.Tau,.5f-p.Y/.79f));
+            else if(extendedBack&&p.Z<0)normalZ=p.Z/(.435f*.435f);
+            surface.SetNormal(new Vector3(p.X/(.427f*.427f),p.Y/(halfHeight*halfHeight)-2*taper,normalZ).Normalized());
+            surface.SetUV(new(.5f+Mathf.Atan2(p.Z,p.X)/Mathf.Tau,.5f-p.Y/(halfHeight*2)));
             surface.AddVertex(p);
         }
         void Triangle(Vector3 a,Vector3 b,Vector3 c)
@@ -174,6 +242,7 @@ public partial class BomberModel : Node3D
         float breath=Mathf.Sin(_time*2.35f)*idle;
         float sway=Mathf.Sin(_time*1.2f)*idle;
         float stepBob=(1-Mathf.Cos(_walkPhase*2))*.023f*_speed;
+        _downBlend=Mathf.MoveToward(_downBlend,(_stunned||_heldVictim||_airborne)&&!_ghost?1:0,dt*8);
         _leftLeg.Rotation=new(walk*.65f,0,0);_rightLeg.Rotation=new(-walk*.65f-kick*1.15f,0,kick*.12f);
         float spread=.265f+_charge*.065f*_carryBlend;
         _leftArm.Position=new(-spread,.68f+_carryBlend*.12f,0);_rightArm.Position=new(spread,.68f+_carryBlend*.12f,0);
@@ -185,9 +254,11 @@ public partial class BomberModel : Node3D
         _body.Position=new(sway*.009f,stepBob+breath*.009f-pump*.08f+lift*.04f+victory*.08f-death*.18f+(_ghost?.18f+Mathf.Sin(_time*3)*.08f:0),0);
         _body.Scale=new(1+pump*.06f,1-pump*.09f-death*.18f,1+pump*.06f);
         _body.Rotation=new(_speed*.055f+acceleration*.012f-_carryBlend*_charge*.025f+toss*.12f,-walk*.025f,(_stunned?Mathf.Sin(_time*9)*.22f:0)+death*.48f+walk*.042f+sway*.012f);
+        _body.Position=_body.Position.Lerp(new Vector3(0,.22f,0),_downBlend);
+        _body.Rotation=_body.Rotation.Lerp(new Vector3(_airborne?Mathf.Sin(_time*8)*.3f:0,0,1.35f+(_heldVictim?Mathf.Sin(_time*12)*.045f:0)),_downBlend);
         // Counter the suit's step roll so the big head floats with a soft, attentive lag.
         float glance=Mathf.Sin(_time*.73f)*Mathf.Pow(Mathf.Max(0,Mathf.Sin(_time*.31f)),6)*idle;
-        _head.Position=new(0,1.10f-stepBob*.25f,0);
+        _head.Position=new(0,HeadCenter-stepBob*.25f,0);
         _head.Rotation=new(breath*.025f-_speed*.035f-pump*.08f,glance*.11f+walk*.02f,-walk*.055f-sway*.025f);
         // Short asynchronous-looking blinks keep the roster alive without hiding the face in combat.
         float blinkPhase=_time%4.7f;

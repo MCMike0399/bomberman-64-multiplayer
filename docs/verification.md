@@ -1,4 +1,30 @@
-# Verified iteration seven — 2026-10-20
+# Verified iteration eight — 2026-10-20
+
+| Check | Result |
+|---|---|
+| Game and server builds/export | Zero warnings/errors |
+| Gameplay integration tests | 43 passed, including outgoing-kick, recovery, hold, throw and cleanup regressions |
+| Client/input/session tests | 93 passed |
+| AI behavior/determinism/allocation checks | 15 passed |
+| Real independent server smoke | 2–8 humans and one human + seven bots passed (42.8 seconds) |
+| Final exported-app full suite | **623 assertions, 81 captures**, zero runtime errors and zero capture fallbacks |
+| Physical Switch 2 Pro USB | Both left-stick axes reached −1/+1, gradual intermediate values observed, then centered below deadzone |
+| Installed app | Strict signature check; Launch Services gameplay smoke passed with 223 snapshots and zero stderr |
+
+Final app run: `20261020T165457.490551Z-all`, completed in 43.72 seconds on this Mac. It launches the self-contained ARM64 app without the source-project path. This includes actual menu navigation, gradual/held/reversed controller input, retained-session Lobby/Results navigation, configured role popups, the new setup dials, five character profile views, terrain traversal, powerups, recovery/grabs/throws, rendering/audio, flooding, results and real network sessions.
+
+The new gameplay regression reproduced a player catching the back of their outgoing bomb and stunning themselves. Other regressions verify visible hit causes, victim-owned recovery, no repeated effort from held input, finite passive holds, no latent bomb, paired carry following/escape, continuous throw flight and safe carrier disconnect/departure. The graphical grapple sequence uses ordinary inputs and the real temple training items, not state mutation.
+
+Physical evidence is `20261020T161913.603699Z-controller-observe`: 8,998 timestamped USB axis events, left X/Y full-range movement, and final centered values approximately −.0048/−.0289. No physical button press was observed in that capture. Synthetic Switch tests use the production native-publication helper; Xbox/DualSense canonical coverage remains synthetic in this iteration. Earlier physical-button evidence is retained below.
+
+The face mesh is checked for real depth, outward clockwise triangles and nondegeneracy, then captured front/back/both sides/three-quarter. The final model keeps the separate plate at moderate convexity, with a rounded return, slightly reduced forehead and rounder lower helmet. The setup preview renders actual authority terrain. The courtyard shader is preserved; upper stone, lower lighting, foundation and water were inspected at normal and flood levels. [Rendering sources and boundaries](iteration8-rendering.md).
+
+A separate 15-second installed-app smoke, capped at 60 FPS, reported 59–61 FPS intervals on Apple M5 Pro with native Metal and normal gameplay. This is a short local observation, not a benchmark, improvement claim, worst-case guarantee or Game Mode measurement. The app remains locally ad-hoc signed, not notarized. Production hardware deployment, internet latency/loss, Bluetooth Switch support and physical eight-controller play remain outside this verification.
+
+The README screenshots come from the final exported-app run. [Gameplay/input design](iteration8-gameplay-input.md), [harness](../tools/playtest/README.md), [Mac app packaging](macos-app.md).
+
+## Iteration seven baseline — 2026-10-20
+
 
 | Check | Result |
 |---|---|

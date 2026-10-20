@@ -45,18 +45,18 @@ public partial class ArenaView : Node3D
         AddChild(_dynamic);AddChild(_effects);_audio=new BattleAudio();AddChild(_audio);
         var environment=new Godot.Environment
         {
-            BackgroundMode=Godot.Environment.BGMode.Color,BackgroundColor=new Color("7ed4e4"),
-            AmbientLightSource=Godot.Environment.AmbientSource.Color,AmbientLightColor=new Color("adc5e4"),AmbientLightEnergy=.46f,
+            BackgroundMode=Godot.Environment.BGMode.Color,BackgroundColor=new Color("70afbd"),
+            AmbientLightSource=Godot.Environment.AmbientSource.Color,AmbientLightColor=new Color("a4b6d4"),AmbientLightEnergy=.29f,
             TonemapMode=Godot.Environment.ToneMapper.Filmic,ReflectedLightSource=Godot.Environment.ReflectionSource.Disabled,
-            SsaoEnabled=true,SsaoRadius=.85f,SsaoIntensity=1.5f,SsaoPower=1.2f,
-            GlowEnabled=true,GlowIntensity=.25f,GlowBloom=0,
-            AdjustmentEnabled=true,AdjustmentContrast=1.06f,AdjustmentSaturation=1.04f,
-            FogEnabled=true,FogLightColor=new Color("89cbd8"),FogDensity=.001f
+            SsaoEnabled=true,SsaoRadius=.7f,SsaoIntensity=1.65f,SsaoPower=1.25f,
+            GlowEnabled=true,GlowIntensity=.17f,GlowBloom=0,
+            AdjustmentEnabled=true,AdjustmentContrast=1.08f,AdjustmentSaturation=1.02f,
+            FogEnabled=true,FogLightColor=new Color("78b3bf"),FogDensity=.0007f
         };
         AddChild(new WorldEnvironment {Environment=environment});
-        var sun=new DirectionalLight3D {RotationDegrees=new(-48,-30,0),LightColor=new Color("ffe6ba"),LightEnergy=1.1f,ShadowEnabled=true,
-            DirectionalShadowMaxDistance=65,ShadowBias=.025f,ShadowNormalBias=.8f,LightAngularDistance=1.5f};AddChild(sun);
-        AddChild(new DirectionalLight3D {RotationDegrees=new(-25,135,0),LightColor=new Color("a1cff5"),LightEnergy=.26f});
+        var sun=new DirectionalLight3D {RotationDegrees=new(-46,-34,0),LightColor=new Color("ffe8c7"),LightEnergy=.92f,ShadowEnabled=true,
+            DirectionalShadowMaxDistance=65,ShadowBias=.025f,ShadowNormalBias=.45f,LightAngularDistance=1.8f};AddChild(sun);
+        AddChild(new DirectionalLight3D {RotationDegrees=new(-25,135,0),LightColor=new Color("9fbae5"),LightEnergy=.12f});
         _camera=new Camera3D {Projection=Camera3D.ProjectionType.Perspective,Fov=36,Near=.1f,Far=180,Current=true};AddChild(_camera);
         _cameraRig=new BattleCameraRig(_camera);
         GetViewport().SizeChanged+=_cameraRig.Fit;
@@ -114,6 +114,7 @@ public partial class ArenaView : Node3D
             _targets[id]=PositionOf(p);
             float angle=Mathf.Atan2(F(p,"fx"),F(p,"fz"));node.Rotation=new Vector3(0,angle,0);
             ((BomberModel)node).Pose(p.GetProperty("carrying").ValueKind!=JsonValueKind.Null,p.GetProperty("stunned").GetBoolean(),ghost);
+            ((BomberModel)node).RecoveryPose(p.TryGetProperty("carriedBy",out var heldBy)&&heldBy.ValueKind==JsonValueKind.String,p.TryGetProperty("airborne",out var air)&&air.GetBoolean());
             if(p.TryGetProperty("pickupSerial",out var serial))
             {
                 int value=serial.GetInt32();
@@ -210,6 +211,13 @@ public partial class ArenaView : Node3D
                 case "bomb-drop":case "bomb-carry":_audio.Bomb();break;
                 case "kick":_audio.Kick();break;
                 case "lift":_audio.Lift();break;
+                case "player-grab":_audio.Lift();CountEffect(kind);break;
+                case "player-throw":_audio.Throw();CountEffect(kind);break;
+                case "player-release":case "recover":_audio.Pickup();CountEffect(kind);break;
+                case "player-land":_audio.Kick();break;
+                case "knockdown":
+                    _audio.Kick();CountEffect(kind);
+                    PowerupMessage(PositionOf(e),reason=="rolling-bomb"?"SLIDING BOMB HIT!":"FALLING BOMB HIT!",false);break;
                 case "pump":_audio.Pump((int)F(e,"magnitude"));break;
                 case "throw":_audio.Throw(F(e,"magnitude")/6);break;
                 case "blast":_audio.Blast(F(e,"radius"));break;
@@ -231,7 +239,7 @@ public partial class ArenaView : Node3D
     }
     private void PowerupMessage(Vector3 position,string kind,bool maximum=false)
     {
-        string text=kind switch {"fire"=>maximum?"MAX BLAST!":"BLAST UP!","bomb"=>maximum?"MAX BOMBS!":"BOMB UP!","remote"=>"REMOTE!","red"=>"POWER BOMB!","heart"=>"HEART!",_=>"POWER UP!"};
+        string text=kind switch {"fire"=>maximum?"MAX BLAST!":"BLAST UP!","bomb"=>maximum?"MAX BOMBS!":"BOMB UP!","remote"=>"REMOTE!","red"=>"POWER BOMB!","heart"=>"HEART!",_=>kind};
         var label=new Label3D {Text=text,Position=position+new Vector3(0,2.2f,0),FontSize=34,PixelSize=.012f,Billboard=BaseMaterial3D.BillboardModeEnum.Enabled,NoDepthTest=true,OutlineSize=10,Modulate=new Color("ffe571"),OutlineModulate=new Color("233657")};
         _effects.AddChild(label);var tween=label.CreateTween().SetParallel();tween.TweenProperty(label,"position",label.Position+Vector3.Up*.9f,1.2);tween.TweenProperty(label,"modulate:a",0f,1.2);tween.Chain().TweenCallback(Callable.From(label.QueueFree));
     }

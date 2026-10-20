@@ -52,6 +52,9 @@ public partial class PlaytestDriver : Node
             else switch(_scenario)
             {
                 case "menu": await Menus(); break;
+                case "setup": await SetupMenus(); break;
+                case "grapple": await GrappleActions(); break;
+                case "controller-popups": await AnalogPopupMenus(); break;
                 case "controllers": await ControllerInputs(); break;
                 case "controller-inventory": await ControllerInventory(); break;
                 case "controller-observe": await ControllerObserve(); break;
@@ -68,7 +71,7 @@ public partial class PlaytestDriver : Node
                 case "roster": await RosterSelection(); break;
                 case "framing": await Framing(); break;
                 case "fullscreen": await Fullscreen(); break;
-                case "all": await Menus(); await ControllerInputs(); await RosterSelection(); await Framing(); await ModelProfiles(); await LocalActions(); await Ramps(); await Powerups(); await PumpGrowth(); await PresentationEffects(); await HurryWater(); await Combat(); await Results(); await Network(); break;
+                case "all": await Menus(); await SetupMenus(); await ControllerInputs(); await AnalogPopupMenus(); await RosterSelection(); await Framing(); await ModelProfiles(); await GrappleActions(); await LocalActions(); await Ramps(); await Powerups(); await PumpGrowth(); await PresentationEffects(); await HurryWater(); await Combat(); await Results(); await Network(); break;
                 default: throw new ArgumentException("Unknown scenario: "+_scenario);
             }
         }

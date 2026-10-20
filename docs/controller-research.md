@@ -38,3 +38,8 @@ The bootstrap verifies the archives against the official GitHub release-asset SH
 - libusb-1.0.29.tar.bz2: `5977fc950f8d1395ccea9bd48c06b3f808fd3c2c961b44b0c2e6e29fc3a70a85`.
 
 Sources: [SDL assets](https://github.com/libsdl-org/SDL/releases/expanded_assets/release-3.4.18), [libusb assets](https://github.com/libusb/libusb/releases/expanded_assets/v1.0.29). Libraries, build tools and downloaded source stay ignored. The bootstrap copies each library's upstream license beside the generated binaries; those dependencies are not relicensed under the game's MIT license.
+
+
+## Iteration-eight input corrections
+
+The native Switch USB report path remained live and full-range. The reproducible failures were above it: gradual analog deflection did not reliably navigate the GUI, changed-only reports provided no held repeat, and retained match bindings disabled analog navigation in Lobby/Results. The explicit menu state machine and visible-screen input role fix these without changing positional button mappings, unit-speed gameplay or the hybrid native reader. See [input/recovery details](iteration8-gameplay-input.md) and [current evidence](verification.md).

@@ -17,8 +17,10 @@ public partial class ControllerHub : Node
     public ControllerFamily ActiveFamily {get;private set;}=ControllerFamily.Keyboard;
     public int ActiveKeyboardSeat {get;private set;}
     public bool TesterActive {get;set;}
+    public bool MenuNavigationEnabled {get;set;}=true;
     public bool HasApplicationFocus=>_focused;
     public event Action<int,string,float>? ObservedInput;
+    public event Action<int,JoyAxis,float>? ObservedAxis;
     public string BackendStatus {get;private set;}="Godot controller backend";
     private List<ControllerDevice> _devices=[];
     private IReadOnlyList<GamepadDevice>? _testDevices;
@@ -26,6 +28,7 @@ public partial class ControllerHub : Node
     private readonly Dictionary<int,(bool Bomb,bool Remote)> _taps=[];
     private bool _focused=true,_inMatch;
     private double _refreshClock;
+    private readonly Dictionary<int,MenuStickNavigation> _menuSticks=[];
     private SdlGamepadBackend? _native;
     private readonly Dictionary<(int Device,int Button),bool> _nativeButtons=[];
     private readonly Dictionary<(int Device,int Axis),float> _nativeAxes=[];
@@ -67,10 +70,10 @@ public partial class ControllerHub : Node
     }
     public void BeginMatch(int humanCount)
     {
-        RefreshDevices();Bindings=new(humanCount,_devices.Where(d=>d.Mapped).Select(d=>d.Device).ToArray());_inMatch=true;ClearEdges();
+        RefreshDevices();Bindings=new(humanCount,_devices.Where(d=>d.Mapped).Select(d=>d.Device).ToArray());_inMatch=true;MenuNavigationEnabled=false;ClearEdges();
         Array.Fill(_armed,false);
     }
-    public void EndMatch(){_inMatch=false;Bindings=null;ClearEdges();}
+    public void EndMatch(){_inMatch=false;MenuNavigationEnabled=true;Bindings=null;ClearEdges();}
     public PlayerInput Read(int seat)
     {
         if(!_focused||!_inMatch||Bindings==null)return default;
@@ -132,8 +135,24 @@ public partial class ControllerHub : Node
     public override void _Process(double delta)
     {
         PollNative();
+        PollMenuSticks(delta);
         _refreshClock+=delta;
         if(_refreshClock>=.5){_refreshClock=0;RefreshDevices();}
+    }
+    private void PollMenuSticks(double delta)
+    {
+        if(!_focused||!MenuNavigationEnabled||TesterActive){_menuSticks.Clear();return;}
+        foreach(var device in _devices.Where(d=>d.Mapped))
+        {
+            int id=device.Device.RuntimeId;
+            if(!_menuSticks.TryGetValue(id,out var navigation))_menuSticks[id]=navigation=new();
+            int direction=navigation.Step(Input.GetJoyAxis(id,JoyAxis.LeftX),Input.GetJoyAxis(id,JoyAxis.LeftY),delta);
+            if(direction==0)continue;
+            string action=direction switch {1=>"ui_left",2=>"ui_right",3=>"ui_up",_=>"ui_down"};
+            Input.ParseInputEvent(new InputEventAction {Action=action,Pressed=true,Strength=1});
+            Input.ParseInputEvent(new InputEventAction {Action=action,Pressed=false});
+        }
+        foreach(int removed in _menuSticks.Keys.Except(_devices.Select(d=>d.Device.RuntimeId)).ToArray())_menuSticks.Remove(removed);
     }
     private static int NativeId(int id)=>1000+id;
     private void PollNative()
@@ -146,8 +165,7 @@ public partial class ControllerHub : Node
         {
             if(edge.Button is <0 or >14)continue;
             int id=NativeId(edge.Id);
-            _nativeButtons[(id,edge.Button)]=edge.Pressed;
-            Input.ParseInputEvent(new InputEventJoypadButton {Device=id,ButtonIndex=(JoyButton)edge.Button,Pressed=edge.Pressed});
+            PublishNativeButton(id,edge.Button,edge.Pressed);
         }
         var connected=_native.Devices.Select(d=>NativeId(d.Id)).ToHashSet();
         foreach(var pad in _native.Devices)
@@ -155,17 +173,13 @@ public partial class ControllerHub : Node
             int id=NativeId(pad.Id);
             for(int axis=0;axis<2;axis++)
             {
-                float value=_native.Axis(pad.Id,axis);_nativeAxes.TryGetValue((id,axis),out float previous);
-                if(Mathf.Abs(value-previous)<.0001f)continue;
-                _nativeAxes[(id,axis)]=value;
-                Input.ParseInputEvent(new InputEventJoypadMotion {Device=id,Axis=(JoyAxis)axis,AxisValue=value});
+                PublishNativeAxis(id,axis,_native.Axis(pad.Id,axis));
             }
             for(int button=0;button<=14;button++)
             {
                 bool value=_native.Button(pad.Id,button);_nativeButtons.TryGetValue((id,button),out bool previous);
                 if(value==previous)continue;
-                _nativeButtons[(id,button)]=value;
-                Input.ParseInputEvent(new InputEventJoypadButton {Device=id,ButtonIndex=(JoyButton)button,Pressed=value});
+                PublishNativeButton(id,button,value);
             }
         }
         foreach(var key in _nativeAxes.Keys.Where(k=>!connected.Contains(k.Device)).ToArray())
@@ -176,6 +190,26 @@ public partial class ControllerHub : Node
         {
             Input.ParseInputEvent(new InputEventJoypadButton {Device=key.Device,ButtonIndex=(JoyButton)key.Button,Pressed=false});_nativeButtons.Remove(key);
         }
+        Input.FlushBufferedEvents();
+    }
+    private void PublishNativeAxis(int id,int axis,float value)
+    {
+        _nativeAxes.TryGetValue((id,axis),out float previous);
+        if(Mathf.Abs(value-previous)<.0001f)return;
+        _nativeAxes[(id,axis)]=value;
+        Input.ParseInputEvent(new InputEventJoypadMotion {Device=id,Axis=(JoyAxis)axis,AxisValue=value});
+    }
+    private void PublishNativeButton(int id,int button,bool pressed)
+    {
+        _nativeButtons[(id,button)]=pressed;
+        Input.ParseInputEvent(new InputEventJoypadButton {Device=id,ButtonIndex=(JoyButton)button,Pressed=pressed});
+    }
+    internal void NativeEventForPlaytest(int id,JoyAxis? axis,float value,JoyButton? button,bool pressed)
+    {
+        if(!OS.GetCmdlineUserArgs().Any(a=>a.StartsWith("--playtest="))||id<1000)
+            throw new InvalidOperationException("Native event replay is restricted to the playtest harness.");
+        if(axis is {} a)PublishNativeAxis(id,(int)a,value);
+        if(button is {} b)PublishNativeButton(id,(int)b,pressed);
         Input.FlushBufferedEvents();
     }
     public override void _Input(InputEvent @event)
@@ -204,8 +238,16 @@ public partial class ControllerHub : Node
                     old.Remote||button.ButtonIndex is JoyButton.B or JoyButton.RightShoulder);
             }
         }
-        else if(@event is InputEventJoypadMotion motion&&Mathf.Abs(motion.AxisValue)>.35f)
-        {SetActiveDevice(motion.Device);ObservedInput?.Invoke(motion.Device,"axis:"+motion.Axis,motion.AxisValue);}
+        else if(@event is InputEventJoypadMotion motion)
+        {
+            ObservedAxis?.Invoke(motion.Device,motion.Axis,motion.AxisValue);
+            if(Mathf.Abs(motion.AxisValue)>.35f)
+            {SetActiveDevice(motion.Device);ObservedInput?.Invoke(motion.Device,"axis:"+motion.Axis,motion.AxisValue);}
+        }
+        // Godot GUI's joy-motion navigation uses its own threshold/repeat semantics.
+        // One explicit policy handles gradual crossings and stationary native USB reports.
+        if(MenuNavigationEnabled&&@event is InputEventJoypadMotion {Axis:JoyAxis.LeftX or JoyAxis.LeftY})
+            GetViewport().SetInputAsHandled();
         if(TesterActive&&(@event is InputEventJoypadMotion||@event is InputEventJoypadButton {ButtonIndex:not JoyButton.Start}))
             GetViewport().SetInputAsHandled();
     }
@@ -221,7 +263,7 @@ public partial class ControllerHub : Node
         if(what==NotificationApplicationFocusOut){_focused=false;ClearEdges();}
         if(what==NotificationApplicationFocusIn){_focused=true;Array.Fill(_armed,false);}
     }
-    private void ClearEdges(){Array.Clear(_keyboardBomb);Array.Clear(_keyboardRemote);_taps.Clear();}
+    private void ClearEdges(){Array.Clear(_keyboardBomb);Array.Clear(_keyboardRemote);_taps.Clear();_menuSticks.Clear();}
     internal void OverrideDevicesForPlaytest(IReadOnlyList<GamepadDevice> devices)
     {
         if(!OS.GetCmdlineUserArgs().Any(a=>a.StartsWith("--playtest=")))throw new InvalidOperationException("Device substitution is restricted to the playtest harness.");

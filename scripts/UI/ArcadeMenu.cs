@@ -20,6 +20,8 @@ public partial class ArcadeMenu : Control
     private OptionButton _stage=null!,_difficulty=null!;
     private Button _launch=null!;
     private Label _setupTitle=null!,_stageDescription=null!;
+    private readonly List<ArcadeRuleDial> _ruleDials=[];
+    private ArcadeRuleDial _stageDial=null!;
     private SpinBox _bots=null!,_wins=null!,_rounds=null!;
     private RosterSelection _localPlayers=null!;
     private Label _rosterSummary=null!;
@@ -105,29 +107,44 @@ public partial class ArcadeMenu : Control
     }
     private void BuildSetup()
     {
-        var screen=Screen("Setup");var box=Card(screen,new(64,62),new(1312,724));
-        var header=ArcadeTheme.Row(box);_setupTitle=ArcadeTheme.Text(header,"MATCH SETUP",38);_setupTitle.SizeFlagsHorizontal=SizeFlags.ExpandFill;ArcadeTheme.Button(header,"← BACK",()=>BackRequested?.Invoke());
-        var columns=ArcadeTheme.Row(box,26);columns.SizeFlagsVertical=SizeFlags.ExpandFill;
-        var left=ArcadeTheme.Column(columns,14);left.CustomMinimumSize=new(566,0);
-        ArcadeTheme.Text(left,"01  /  CHOOSE YOUR ARENA",17);
-        _stage=new OptionButton {CustomMinimumSize=new(0,58)};_stage.AddItem("SUNKEN TEMPLE  •  ramps & balconies");_stage.AddItem("ROCK GARDEN  •  classic arena");_stage.AddItem("UP & DOWN  •  terraced arena");left.AddChild(_stage);
-        var preview=new StagePreview {CustomMinimumSize=new(550,285)};left.AddChild(preview);_stage.ItemSelected+=i=>{preview.StageIndex=(int)i;preview.QueueRedraw();UpdateStageDescription();};
-        _stageDescription=ArcadeTheme.Text(left,"Climb the outer walkways. Send a pumped bomb\nover the ledge. Watch the water below.",18);
-        var right=ArcadeTheme.Column(columns,14);right.SizeFlagsHorizontal=SizeFlags.ExpandFill;
-        ArcadeTheme.Text(right,"02  /  SET THE RULES",17);
-        _rosterSummary=ArcadeTheme.Text(right,"",20);
-        var row=ArcadeTheme.Row(right,16);_wins=Number(row,"WINS TO VICTORY",1,5,3);
-        _hostBotBox=ArcadeTheme.Column(row,6);_hostBotBox.SizeFlagsHorizontal=SizeFlags.ExpandFill;_bots=Number(_hostBotBox,"CPU RIVALS",0,7,3);
-        _editPlayers=ArcadeTheme.Button(row,"EDIT PLAYERS",()=>Navigation?.Invoke("Roster"));_editPlayers.SizeFlagsHorizontal=SizeFlags.ExpandFill;
-        var rules=ArcadeTheme.Row(right,16);
-        _rounds=Number(rules,"ROUND TIME / SECONDS",60,300,120);_rounds.Step=30;
-        var cpu=ArcadeTheme.Column(rules,6);cpu.SizeFlagsHorizontal=SizeFlags.ExpandFill;ArcadeTheme.Text(cpu,"CPU DIFFICULTY",15);
-        _difficulty=new OptionButton {CustomMinimumSize=new(240,50)};_difficulty.AddItem("EASY");_difficulty.AddItem("NORMAL");_difficulty.AddItem("HARD");_difficulty.Select(1);cpu.AddChild(_difficulty);
-        _sudden=new CheckButton {Text="SUDDEN DEATH",ButtonPressed=true};right.AddChild(_sudden);
-        _ghosts=new CheckButton {Text="GHOST COMEBACKS",ButtonPressed=true};right.AddChild(_ghosts);
-        _notice=ArcadeTheme.Text(right,"2–8 total participants. CPU players fill empty seats.",16);_notice.AutowrapMode=TextServer.AutowrapMode.WordSmart;_notice.CustomMinimumSize=new(520,54);
-        _launch=ArcadeTheme.Button(right,"LET’S GO!   →",()=>LocalRequested?.Invoke(),true);_launch.CustomMinimumSize=new(0,65);
-        ArcadeTheme.Text(box,"P1  WASD + J / K / L      P2  ARROWS + N / M / ,      PADS  STICK / D-PAD + SOUTH / WEST / EAST",14);
+        var screen=Screen("Setup");
+        _setupTitle=ArcadeTheme.Text(screen,"MATCH SETUP",44,ArcadeTheme.Gold);_setupTitle.Position=new(80,64);
+        var back=ArcadeTheme.Button(screen,"BACK",()=>BackRequested?.Invoke());back.Name="SetupBack";back.Position=new(1195,73);back.Size=new(140,48);QuietSetupButton(back);
+        // These native settings nodes remain the single source of truth for configure/API/harness callers.
+        var state=new VBoxContainer {Name="SetupSettings",Visible=false};screen.AddChild(state);
+        _stage=new OptionButton {Name="Stage"};foreach(var title in new[]{"Sunken Temple","Rock Garden","Up & Down"})_stage.AddItem(title);state.AddChild(_stage);
+        _wins=new SpinBox {Name="Wins",MinValue=1,MaxValue=5,Value=3};state.AddChild(_wins);
+        _bots=new SpinBox {Name="Bots",MinValue=0,MaxValue=7,Value=3};state.AddChild(_bots);
+        _rounds=new SpinBox {Name="RoundSeconds",MinValue=60,MaxValue=300,Step=30,Value=120};state.AddChild(_rounds);
+        _difficulty=new OptionButton {Name="Difficulty"};foreach(var title in new[]{"Easy","Normal","Hard"})_difficulty.AddItem(title);_difficulty.Select(1);state.AddChild(_difficulty);
+        _sudden=new CheckButton {Name="SuddenDeath",ButtonPressed=true};state.AddChild(_sudden);
+        _ghosts=new CheckButton {Name="Ghosts",ButtonPressed=true};state.AddChild(_ghosts);
+        _stageDial=new ArcadeRuleDial {Name="StageSelector",Position=new(80,602),Size=new(640,76),Caption="ARENA",ReadValue=()=>_stage.GetItemText(_stage.Selected).ToUpperInvariant(),ChangeValue=direction=>{_stage.Select((_stage.Selected+direction+3)%3);UpdateStageDescription();}};
+        screen.AddChild(_stageDial);
+        _stageDescription=ArcadeTheme.Text(screen,"",18);_stageDescription.Position=new(104,691);_stageDescription.Size=new(620,70);
+        _stage.ItemSelected+=_=>UpdateStageDescription();
+        _rosterSummary=ArcadeTheme.Text(screen,"",18);_rosterSummary.Position=new(822,143);
+        var rail=new VBoxContainer {Position=new(800,188),Size=new(535,415)};rail.AddThemeConstantOverride("separation",3);screen.AddChild(rail);
+        Dial(rail,"Wins to victory",()=>((int)_wins.Value).ToString(),direction=>_wins.Value=Cycle((int)_wins.Value,direction,1,5));
+        Dial(rail,"Round time",()=>TimeSpan.FromSeconds(_rounds.Value).ToString(@"m\:ss"),direction=>_rounds.Value=Cycle((int)_rounds.Value,direction*30,60,300));
+        Dial(rail,"CPU level",()=>_difficulty.GetItemText(_difficulty.Selected).ToUpperInvariant(),direction=>_difficulty.Select((_difficulty.Selected+direction+3)%3));
+        var bots=Dial(rail,"CPU rivals",()=>((int)_bots.Value).ToString(),direction=>_bots.Value=Cycle((int)_bots.Value,direction,0,7));_hostBotBox=bots;
+        Dial(rail,"Sudden death",()=>_sudden.ButtonPressed?"ON":"OFF",_=>_sudden.ButtonPressed=!_sudden.ButtonPressed);
+        Dial(rail,"Ghost comeback",()=>_ghosts.ButtonPressed?"ON":"OFF",_=>_ghosts.ButtonPressed=!_ghosts.ButtonPressed);
+        _editPlayers=ArcadeTheme.Button(rail,"CHANGE PLAYERS",()=>Navigation?.Invoke("Roster"));_editPlayers.Name="EditPlayers";_editPlayers.CustomMinimumSize=new(0,43);_editPlayers.AddThemeFontSizeOverride("font_size",17);QuietSetupButton(_editPlayers);
+        _notice=ArcadeTheme.Text(screen,"",16);_notice.Position=new(824,625);_notice.Size=new(490,58);_notice.AutowrapMode=TextServer.AutowrapMode.WordSmart;
+        _launch=new ArcadeModeButton {Name="LaunchMatch",Text="LET’S GO!",Position=new(797,699),Size=new(550,86),FaceColor=new Color("a34d76"),Accent=new Color("f3bc66")};screen.AddChild(_launch);_launch.Pressed+=()=>LocalRequested?.Invoke();
+        UpdateStageDescription();
+    }
+    private ArcadeRuleDial Dial(Node parent,string caption,Func<string> value,Action<int> change)
+    {
+        var dial=new ArcadeRuleDial {Name=caption.Replace(" ",""),Caption=caption,ReadValue=value,ChangeValue=change};parent.AddChild(dial);_ruleDials.Add(dial);return dial;
+    }
+    private static int Cycle(int value,int direction,int min,int max)=>value+direction>max?min:value+direction<min?max:value+direction;
+    private static void QuietSetupButton(Button button)
+    {
+        foreach(var state in new[]{"normal","hover","pressed"})button.AddThemeStyleboxOverride(state,new StyleBoxEmpty());
+        button.AddThemeStyleboxOverride("focus",ArcadeTheme.Panel(new Color(0,0,0,0),ArcadeTheme.Gold,2,0,4));
     }
     private void BuildOnline()
     {
@@ -226,7 +243,8 @@ public partial class ArcadeMenu : Control
         _screen=screen=="Practice"||screen=="HostSetup"?"Setup":screen;
         _practice=screen=="Practice";
         _setupTitle.Text=_practice?"PRACTICE SETUP":screen=="HostSetup"?"PRIVATE ROOM SETTINGS":"MATCH SETUP";
-        _launch.Text=screen=="HostSetup"?"SAVE ROOM SETTINGS   →":_practice?"ENTER PRACTICE   →":"LET’S GO!   →";
+        _launch.Text=screen=="HostSetup"?"SAVE ROOM SETTINGS":_practice?"ENTER PRACTICE":"LET’S GO!";
+        foreach(var dial in _ruleDials)dial.Disabled=_practice;
         _difficulty.Disabled=_practice;_bots.Editable=!_practice;_wins.Editable=!_practice;_rounds.Editable=!_practice;_sudden.Disabled=_practice;_ghosts.Disabled=_practice;
         _hostBotBox.Visible=screen=="HostSetup";_editPlayers.Visible=screen=="Setup";
         _rosterSummary.Text=_practice?"ONE CONTENDER  /  FREE TRAINING":screen=="HostSetup"?"ONLINE ROOM  /  1 HUMAN + CPU RIVALS":$"{_localPlayers.Roster.Humans} HUMAN + {_localPlayers.Roster.CpuPlayers} CPU  /  {_localPlayers.Roster.Participants} CONTENDERS";
@@ -236,6 +254,7 @@ public partial class ArcadeMenu : Control
         if(screen=="Roster"){_localPlayers.BotDifficulty=_difficulty.Selected+1;_localPlayers.Refresh();}
         foreach(var pair in _screens)pair.Value.Visible=pair.Key==_screen;
         if(screen=="Roster")_localPlayers.CallDeferred(nameof(RosterSelection.FocusFirst));
+        else if(_screen=="Setup")_stageDial.CallDeferred(Control.MethodName.GrabFocus);
         else {var first=FirstFocusable(_screens[_screen]);first?.CallDeferred(Control.MethodName.GrabFocus);}
     }
     private static Control? FirstFocusable(Node node)
@@ -291,10 +310,7 @@ public partial class ArcadeMenu : Control
     }
     private void UpdateStageDescription()
     {
+        _background.SelectArena(StageIds[_stage.Selected]);
         _stageDescription.Text=_stage.Selected switch {0=>"Climb the outer walkways. Send a pumped bomb\nover the ledge. Watch the water below.",1=>"An open arena with pillars and breakable blocks.\nFind an escape before lighting the fuse.",_=>"Fight across three connected terraces.\nUse ramps to move between elevations."};
-    }
-    private static SpinBox Number(Node parent,string title,int min,int max,int value)
-    {
-        var column=ArcadeTheme.Column(parent,6);column.SizeFlagsHorizontal=SizeFlags.ExpandFill;ArcadeTheme.Text(column,title,15);var spin=new SpinBox {MinValue=min,MaxValue=max,Value=value,CustomMinimumSize=new(150,50)};column.AddChild(spin);return spin;
     }
 }

@@ -1,6 +1,8 @@
 using Godot;
 using Bomber.Client;
 using BlastCircuit.Rendering;
+using Bomber.Game.Simulation;
+using System.Text.Json;
 namespace BlastCircuit.UI;
 
 /// <summary>A lit miniature theatre behind the actual menu controls.</summary>
@@ -16,7 +18,9 @@ public partial class ArcadeBackdrop : SubViewportContainer
     private readonly int[] _renderedAppearances=new int[8];
     private LocalRoster? _roster;
     private SubViewport _viewport=null!;
-    private Node3D _world=null!,_green=null!,_clouds=null!,_cabinet=null!;
+    private Node3D _world=null!,_green=null!,_clouds=null!,_cabinet=null!,_arenaMount=null!;
+    private TempleStageView? _miniature;
+    private string _arenaId="";
     private Camera3D _camera=null!;
     private Godot.Environment _environment=null!;
     private Vector2 _parallax;
@@ -75,6 +79,9 @@ public partial class ArcadeBackdrop : SubViewportContainer
             var player=new BomberModel(_characterMaterials,ArtMaterials.PlayerColors[i],"");
             pedestal.AddChild(player);player.ShowName(false);_rosterModels.Add(player);
         }
+        _arenaMount=new Node3D {Name="ArenaDiorama",Position=new(-4.3f,2.6f,.4f),Scale=Vector3.One*.86f,RotationDegrees=new(21,-16,0)};_world.AddChild(_arenaMount);
+        Cylinder(_arenaMount,new(0,-.60f,0),4.7f,.3f,gold);
+        Cylinder(_arenaMount,new(0,-.39f,0),4.55f,.15f,Surface("252c51",.35f,.18f));
         _clouds=new Node3D();_world.AddChild(_clouds);
         var cloud=new ShaderMaterial {Shader=new Shader {Code="""
 shader_type spatial;
@@ -90,6 +97,28 @@ void fragment() {
         {
             var cluster=new Node3D {Position=new((i*7.17f)%25-12.5f,(i*3.41f)%9-1,-5-(i%3)*2)};_clouds.AddChild(cluster);
             for(int j=0;j<5;j++){var puff=Sphere(cluster,new((j-2)*.76f,Mathf.Sin(j*1.7f)*.25f,0),new(1.85f,1.25f+(j%2)*.45f,1.4f),cloud);puff.CastShadow=GeometryInstance3D.ShadowCastingSetting.Off;}
+        }
+    }
+    public void SelectArena(string id)
+    {
+        if(_arenaId==id)return;_arenaId=id;
+        if(_miniature!=null){_arenaMount.RemoveChild(_miniature);_miniature.QueueFree();}
+        var layout=BlastStages.Get(id);
+        var cells=new List<object>();
+        for(int z=0;z<layout.Height;z++)for(int x=0;x<layout.Width;x++)
+        {
+            var c=layout.Cells[x,z];cells.Add(new {k=(int)c.Kind,t=c.Tier,rf=c.RampFromTier,rt=c.RampToTier,rx=c.RampDX,rz=c.RampDZ});
+        }
+        var data=JsonSerializer.SerializeToElement(new {id=layout.Id,width=layout.Width,height=layout.Height,cells});
+        float scale=8.1f/Math.Max(layout.Width,layout.Height);
+        _miniature=new TempleStageView(new ArtMaterials()) {Scale=Vector3.One*scale,Position=new(-layout.Width*scale/2,0,-layout.Height*scale/2)};
+        _arenaMount.AddChild(_miniature);_miniature.Build(data);
+        // Keep the authority terrain/materials, while trimming its ocean to the display plinth.
+        foreach(var child in _miniature.GetChildren())
+        {
+            if(child is MeshInstance3D {Mesh:PlaneMesh plane} water){plane.Size=new(layout.Width+.8f,layout.Height+.8f);water.Position=new(layout.Width/2f,-.53f,layout.Height/2f);}
+            // Gameplay's deep sea foundation would project through the display plinth.
+            else if(child is MeshInstance3D {Mesh:not null} terrain&&terrain.Mesh.GetAabb().Position.Y< -3.5f)terrain.Visible=false;
         }
     }
     public LineupPose Pose(int slot)=>slot<_rosterModels.Count?new(_clock,_rosterModels[slot].WalkPose,_rosterModels[slot].Position.Y,_renderedAppearances[slot],_rosterModels[slot].IsVisibleInTree()):default;
@@ -153,6 +182,8 @@ void fragment() {
             var player=_rosterModels[i];player.Visible=Quiet&&!Results;
             if(player.Visible)player.Animate(dt,i==_selectedSlot&&_roster?.Slots[i].Role!=RosterRole.Off?dt*2.1f:0);
         }
+        _arenaMount.Visible=Page is "Setup" or "Practice" or "HostSetup";
+        foreach(var ornament in _cabinet.GetChildren().Skip(4).OfType<Node3D>())ornament.Visible=!_arenaMount.Visible;
         _green.Visible=Quiet&&!Results;_clouds.Visible=Results;_cabinet.Visible=!Results;
         if(_wasResults!=Results){_wasResults=Results;_environment.BackgroundColor=new Color(Results?"73b6e4":"121129");_environment.AmbientLightEnergy=Results?.65f:.48f;}
         var mouse=GetGlobalMousePosition()/GetViewportRect().Size-new Vector2(.5f,.5f);

@@ -2,7 +2,7 @@ using System.Text.Json;
 using Bomber.Game;
 using Bomber.Game.Simulation;
 
-var passed = 0;
+var passed = GrappleChecks.Run();
 Run("participant bounds and stage validation", () =>
 {
     foreach (var options in new[] {

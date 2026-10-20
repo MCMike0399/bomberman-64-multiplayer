@@ -133,6 +133,17 @@ public sealed class BlastPlayer
     // Timed state.
     public float StunTimer { get; set; }       // seconds remaining stunned
     public float InvincibleTimer { get; set; } // seconds remaining invincible after stun
+    public string? KnockdownReason { get; set; }
+    public string? CarriedById { get; set; }
+    public float RecoveryTotal { get; set; }
+    public float HoldRemaining { get; set; }
+    public float StruggleCooldown { get; set; }
+    public float RecoveryX { get; set; }
+    public float RecoveryZ { get; set; }
+    public bool Airborne { get; set; }
+    public float AirVX { get; set; }
+    public float AirVZ { get; set; }
+    public float AirVY { get; set; }
 
     // Carrying.
     public string? CarryingBombId { get; set; }   // bomb id if carrying a bomb
@@ -186,6 +197,7 @@ public sealed class BlastBomb
     public string Id { get; init; } = "";
 
     public string? OwnerId { get; set; }
+    public string? LastTouchedById { get; set; }
     public float X { get; set; }
     public float Z { get; set; }
     public int Tier { get; set; }

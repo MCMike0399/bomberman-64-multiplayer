@@ -30,7 +30,7 @@ public partial class PlaytestDriver
     {
         await ControllerFocusReady();
         await ControllerInventory();var hub=ControllerHub.Current;
-        Event("controller-test-mode",new {inputSource="synthetic Godot keyboard and canonical gamepad events",deviceRegistry="playtest substitution",physicalButtonsTested=false});
+        Event("controller-test-mode",new {inputSource="synthetic Godot keyboard and canonical gamepad events",deviceRegistry="playtest substitution",switchEventPath="production native publication bridge",physicalButtonsTested=false});
         try
         {
             CtlReleaseAll();hub.OverrideDevicesForPlaytest(QaPads);await Frames(3);await ControllerMenuEvents();
@@ -39,7 +39,7 @@ public partial class PlaytestDriver
             {
                 float analog=await ControllerMovementTrial(pad);Check(Math.Abs(analog-keyboard)<.025f,$"{pad.Name}: unit-speed analog movement equals keyboard movement");await ControllerBombEvents(pad);
             }
-            await ControllerKeyboardSeats();await ControllerHotplugEvents();await ControllerFocusEvents();
+            await ControllerKeyboardSeats();await ControllerHotplugEvents();await ControllerFocusEvents();await ControllerBoundMenuEvents();
             _root.Navigate("Controls");await Frames(3);await Capture("controllers-synthetic-tester");
         }
         finally
@@ -96,7 +96,17 @@ public partial class PlaytestDriver
             if(!observed.TryGetValue(id,out var actions))observed[id]=actions=[];
             if(actions.Add(action)){Event("physical-input",new {name=device.Device.Name,action,value});Save();}
         }
-        ControllerHub.Current.ObservedInput+=Record;
+        using var axisTrace=new StreamWriter(Path.Combine(_output,"physical-axis-trace.jsonl")){AutoFlush=true};
+        var axisWatch=System.Diagnostics.Stopwatch.StartNew();int axisSamples=0;
+        void RecordAxis(int id,JoyAxis axis,float value)
+        {
+            var device=ControllerHub.Current.Devices.FirstOrDefault(d=>d.Device.RuntimeId==id&&d.Backend!="Synthetic QA");
+            if(device==null||axisSamples>=20000)return;
+            axisSamples++;
+            axisTrace.WriteLine(JsonSerializer.Serialize(new {seconds=axisWatch.Elapsed.TotalSeconds,name=device.Device.Name,backend=device.Backend,axis=axis.ToString(),value,
+                menuActive=Math.Abs(value)>=MenuStickNavigation.PressThreshold,gameplayActive=Math.Abs(value)>InputPolicy.StickDeadzone}));
+        }
+        ControllerHub.Current.ObservedInput+=Record;ControllerHub.Current.ObservedAxis+=RecordAxis;
         try
         {
             await Capture("controllers-physical-ready");
@@ -108,12 +118,36 @@ public partial class PlaytestDriver
             Check(true,"physical observations recorded separately from simulated tests");
             await Capture("controllers-physical-observed");
         }
-        finally{ControllerHub.Current.ObservedInput-=Record;_root.Navigate("Modes");}
+        finally{ControllerHub.Current.ObservedInput-=Record;ControllerHub.Current.ObservedAxis-=RecordAxis;Event("physical-axis-trace",new {axisSamples,path="physical-axis-trace.jsonl"});_root.Navigate("Modes");}
     }
     private async Task ControllerMenuEvents()
     {
+        await ControllerFocusReady();
         _root.Navigate("Modes");await Frames(3);FindButton("LOCAL BATTLE").GrabFocus();await Frames(1);
-        CtlAxis(12,JoyAxis.LeftY,.3f);await Frames(3);Check(FindButton("LOCAL BATTLE").HasFocus(),"menu analog deadzone rejects .3 drift");CtlAxis(12,JoyAxis.LeftY,0);
+        foreach(var pad in QaPads)
+        {
+            await ControllerFocusReady();
+            int id=pad.RuntimeId;
+            CtlAxis(id,JoyAxis.LeftY,.3f);await Frames(3);Check(FindButton("LOCAL BATTLE").HasFocus(),pad.Name+": menu analog deadzone rejects .3 drift");CtlAxis(id,JoyAxis.LeftY,0);
+            // Real sticks cross the threshold gradually, then may send no reports while held.
+            foreach(float value in new[]{.35f,.42f,.48f,.65f}){CtlAxis(id,JoyAxis.LeftY,value);await Frames(1);}
+            Event("menu-navigation-focus",new {pad=pad.Name,windowFocus=GetWindow().HasFocus(),applicationFocus=ControllerHub.Current.HasApplicationFocus,enabled=ControllerHub.Current.MenuNavigationEnabled,tester=ControllerHub.Current.TesterActive,focus=(GetViewport().GuiGetFocusOwner() as Button)?.Text});
+            Check(FindButton("ONLINE BATTLE").HasFocus(),pad.Name+": gradual analog threshold crossing moves menu exactly once");
+            await Frames(14);
+            Check(FindButton("PRACTICE").HasFocus(),pad.Name+": held analog direction repeats without more motion events");
+            CtlAxis(id,JoyAxis.LeftY,-.65f);await Frames(2);
+            Check(FindButton("ONLINE BATTLE").HasFocus(),pad.Name+": analog reversal navigates immediately");
+            foreach(float value in new[]{-.44f,-.35f,-.43f}){CtlAxis(id,JoyAxis.LeftY,value);await Frames(1);}
+            Check(FindButton("ONLINE BATTLE").HasFocus(),pad.Name+": threshold jitter never creates extra navigation presses");
+            CtlAxis(id,JoyAxis.LeftY,0);await Frames(2);CtlAxis(id,JoyAxis.LeftY,-.65f);await Frames(2);
+            Check(FindButton("LOCAL BATTLE").HasFocus(),pad.Name+": neutral release rearms the same direction");
+            CtlAxis(id,JoyAxis.LeftY,0);await Frames(2);
+            CtlAxis(id,JoyAxis.LeftX,.6f);CtlAxis(id,JoyAxis.LeftY,.65f);await Frames(2);
+            Check(FindButton("ONLINE BATTLE").HasFocus(),pad.Name+": diagonal stick selects a single menu direction");
+            CtlAxis(id,JoyAxis.LeftX,.68f);await Frames(2);
+            Check(FindButton("ONLINE BATTLE").HasFocus(),pad.Name+": near-diagonal noise keeps its navigation axis");
+            CtlAxis(id,JoyAxis.LeftX,0);CtlAxis(id,JoyAxis.LeftY,0);await Frames(2);FindButton("LOCAL BATTLE").GrabFocus();await Frames(1);
+        }
         CtlButton(12,JoyButton.DpadDown,true);await Frames(2);CtlButton(12,JoyButton.DpadDown,false);await Frames(2);
         Check(FindButton("ONLINE BATTLE").HasFocus(),"canonical D-pad navigates real menu");
         Event("controller-menu-map",new {accept=EngineInput.IsActionPressed("ui_accept"),events=InputMap.ActionGetEvents("ui_accept").Select(e=>e.AsText()).ToArray()});
@@ -146,7 +180,12 @@ public partial class PlaytestDriver
         CtlAxis(pad.RuntimeId,JoyAxis.LeftX,.3f);
         var deadzoneIntent=PlayerControls.Read(0,1);
         Event("controller-deadzone-probe",new {pad=pad.Name,windowFocus=GetWindow().HasFocus(),applicationFocus=ControllerHub.Current.HasApplicationFocus,intent=deadzoneIntent});
-        Check(deadzoneIntent.X>.99f,"gameplay deadzone accepts .3 at unit speed");CtlAxis(pad.RuntimeId,JoyAxis.LeftX,0);
+        Check(deadzoneIntent.X>.99f,"gameplay deadzone accepts .3 at unit speed");
+        CtlAxis(pad.RuntimeId,JoyAxis.LeftX,.3f);CtlAxis(pad.RuntimeId,JoyAxis.LeftY,.4f);
+        var diagonal=PlayerControls.Read(0,1);Check(Math.Abs(diagonal.X-.6f)<.001f&&Math.Abs(diagonal.Z-.8f)<.001f,pad.Name+": diagonal preserves analog direction at unit speed");
+        CtlAxis(pad.RuntimeId,JoyAxis.LeftX,-.3f);CtlAxis(pad.RuntimeId,JoyAxis.LeftY,-.4f);
+        var reverse=PlayerControls.Read(0,1);Check(Math.Abs(reverse.X+.6f)<.001f&&Math.Abs(reverse.Z+.8f)<.001f,pad.Name+": gameplay reversal reaches production read without stale direction");
+        CtlAxis(pad.RuntimeId,JoyAxis.LeftY,0);CtlAxis(pad.RuntimeId,JoyAxis.LeftX,0);
         CtlButton(pad.RuntimeId,JoyButton.DpadRight,true);Check(PlayerControls.Read(0,1).X>.99f,"D-pad provides gameplay movement");CtlButton(pad.RuntimeId,JoyButton.DpadRight,false);
         foreach(var button in new[]{JoyButton.B,JoyButton.RightShoulder})
         {CtlButton(pad.RuntimeId,button,true);Check(PlayerControls.Read(0,1).R,"remote alias reaches command: "+button);CtlButton(pad.RuntimeId,button,false);_ = PlayerControls.Read(0,1);}
@@ -189,6 +228,28 @@ public partial class PlaytestDriver
         hub.OverrideDevicesForPlaytest([QaPads[1],new(14,QaPads[0].Guid,QaPads[0].Name)]);Check(hub.Bindings.DeviceIdForSeat(2)==14&&hub.Bindings.DeviceIdForSeat(3)==1001,"reconnect restores unique identity with new runtime ID");
         CtlReleaseAll();await Capture("controllers-stable-hotplug");_root.Back();await Frames(3);
     }
+    private async Task ControllerBoundMenuEvents()
+    {
+        await ControllerFocusReady();
+        CtlReleaseAll();var hub=ControllerHub.Current;hub.OverrideDevicesForPlaytest([QaPads[1]]);
+        _root.StartLocal(new SessionSettings(Stage:"rock-garden",Bots:0),1,practice:true);
+        await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"retained-binding menu trial reaches fight",150);
+        var session=_root.ActiveSession;var bindings=hub.Bindings;
+        _root.Navigate("Results");await Frames(3);FindButton("PLAY AGAIN").GrabFocus();await Frames(1);
+        foreach(float value in new[]{.3f,.35f,.42f,.48f,.65f}){CtlAxis(1001,JoyAxis.LeftX,value);await Frames(1);}
+        Check(FindButton("MODE SELECT").HasFocus(),"results analog navigation works while match controller bindings remain attached");
+        CtlAxis(1001,JoyAxis.LeftX,0);await Frames(2);
+        Check(ReferenceEquals(session,_root.ActiveSession)&&ReferenceEquals(bindings,hub.Bindings),"results navigation preserves session and controller assignments");
+        _root.Back();await Frames(2);hub.BeginMatch(1);bindings=hub.Bindings;
+        _root.Navigate("Lobby");await Frames(3);
+        var probe=new ControllerMenuProbe();AddChild(probe);
+        CtlAxis(1001,JoyAxis.LeftY,.65f);await Frames(2);
+        Check(probe.DownSteps==1&&FindButton("LEAVE ROOM").HasFocus(),"lobby analog navigation reaches the real menu while match bindings remain attached");
+        await Frames(14);Check(probe.DownSteps>=2,"lobby held analog navigation repeats while match bindings remain attached");probe.QueueFree();
+        CtlAxis(1001,JoyAxis.LeftY,0);await Frames(2);
+        Check(ReferenceEquals(bindings,hub.Bindings),"lobby navigation preserves controller assignments");
+        _root.Back();await Frames(3);
+    }
     private async Task ControllerFocusEvents()
     {
         var hub=ControllerHub.Current;CtlReleaseAll();hub.OverrideDevicesForPlaytest([QaPads[0]]);_root.StartLocal(new SessionSettings(Stage:"rock-garden",Bots:0),1,practice:true);
@@ -199,11 +260,21 @@ public partial class PlaytestDriver
     }
     private JsonElement CtlPlayer(int slot)=>State.GetProperty("players").EnumerateArray().Single(p=>p.GetProperty("slot").GetInt32()==slot);
     private static void CtlKey(Key key,bool pressed){EngineInput.ParseInputEvent(new InputEventKey {Keycode=key,PhysicalKeycode=key,Pressed=pressed,Echo=false});EngineInput.FlushBufferedEvents();}
-    private static void CtlButton(int device,JoyButton button,bool pressed){EngineInput.ParseInputEvent(new InputEventJoypadButton {Device=device,ButtonIndex=button,Pressed=pressed});EngineInput.FlushBufferedEvents();}
-    private static void CtlAxis(int device,JoyAxis axis,float value){EngineInput.ParseInputEvent(new InputEventJoypadMotion {Device=device,Axis=axis,AxisValue=value});EngineInput.FlushBufferedEvents();}
+    private static void CtlButton(int device,JoyButton button,bool pressed){if(device>=1000){ControllerHub.Current.NativeEventForPlaytest(device,null,0,button,pressed);return;}EngineInput.ParseInputEvent(new InputEventJoypadButton {Device=device,ButtonIndex=button,Pressed=pressed});EngineInput.FlushBufferedEvents();}
+    private static void CtlAxis(int device,JoyAxis axis,float value){if(device>=1000){ControllerHub.Current.NativeEventForPlaytest(device,axis,value,null,false);return;}EngineInput.ParseInputEvent(new InputEventJoypadMotion {Device=device,Axis=axis,AxisValue=value});EngineInput.FlushBufferedEvents();}
     private static void CtlReleaseAll()
     {
         foreach(var key in QaKeys)CtlKey(key,false);
         foreach(var pad in QaPads){CtlAxis(pad.RuntimeId,JoyAxis.LeftX,0);CtlAxis(pad.RuntimeId,JoyAxis.LeftY,0);foreach(var button in QaButtons)CtlButton(pad.RuntimeId,button,false);}
+    }
+}
+
+// Observe real dispatched GUI actions rather than calling the navigation policy directly.
+public partial class ControllerMenuProbe : Node
+{
+    public int DownSteps {get;private set;}
+    public override void _Input(InputEvent input)
+    {
+        if(input is InputEventAction {Pressed:true} action&&action.Action=="ui_down")DownSteps++;
     }
 }

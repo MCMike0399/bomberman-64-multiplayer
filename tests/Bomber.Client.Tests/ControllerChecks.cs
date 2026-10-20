@@ -9,6 +9,14 @@ static class ControllerChecks
     {
         static bool Near(float a,float b,float tolerance=.00001f)=>Math.Abs(a-b)<=tolerance;
         static float Speed(PlayerInput p)=>new Vector2(p.X,p.Z).Length();
+        var menu=new MenuStickNavigation();
+        check(menu.Step(0,.3f,.016)==0&&menu.Step(0,.44f,.016)==0&&menu.Step(0,.46f,.016)==4,"Menu stick activates on gradual press threshold crossing");
+        check(menu.Step(0,.4f,.1)==0&&menu.Step(0,.35f,.1)==0,"Menu hysteresis does not retrigger around press threshold");
+        check(menu.Step(0,.6f,.21)==4&&menu.Step(0,.6f,.13)==4,"Menu held direction repeats independently of motion report frequency");
+        check(menu.Step(0,-.6f,.01)==3,"Menu reversal is immediate without neutral report");
+        check(menu.Step(0,0,.01)==0&&menu.Step(0,-.6f,.01)==3,"Menu neutral release rearms direction");
+        menu.Reset();check(menu.Step(.6f,.65f,0)==4&&menu.Step(.68f,.65f,.01)==0,"Near-diagonal menu noise does not switch navigation axes");
+        check(menu.Step(float.NaN,0,0)==0&&menu.Step(0,.6f,0)==4,"Malformed menu motion resets safely");
         var cardinal=InputPolicy.Resolve(new PlayerInput(1,0));
         var diagonal=InputPolicy.Resolve(new PlayerInput(1,1));
         var analog=InputPolicy.Resolve(default,new PlayerInput(.3f,.4f));
