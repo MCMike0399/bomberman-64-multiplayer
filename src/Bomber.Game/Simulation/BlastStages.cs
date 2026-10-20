@@ -145,6 +145,7 @@ public static class BlastStages
         {
             Id = SunkenTemple, Name = "Sunken Temple", Width = width, Height = height, Cells = cells,
             SoftBlockDensity = .10, MaxSoftBlocks = 30,
+            TrainingItems = [(8,12,"fire"),(7,12,"fire"),(12,12,"bomb"),(8,13,"remote"),(12,13,"red"),(10,13,"heart")],
             ClearCells = Enumerable.Range(0, width).SelectMany(x => Enumerable.Range(0, height).Select(z => (X:x,Z:z)))
                 .Where(c => (c.X >= 9 && c.X <= 11 && c.Z <= 13) || c.Z is 12 or 13 or 16 or 18 ||
                     ((c.X >= 5 && c.X <= 7 || c.X >= 13 && c.X <= 15) && c.Z >= 13)).ToHashSet(),

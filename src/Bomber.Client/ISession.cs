@@ -16,17 +16,18 @@ public interface ISession : IAsyncDisposable
 }
 
 public sealed record SessionSettings(string Stage = "sunken-temple", int Bots = 3, int Wins = 3,
-    int RoundSeconds = 120, bool SuddenDeath = true, bool Ghosts = true)
+    int RoundSeconds = 120, bool SuddenDeath = true, bool Ghosts = true, string BotDifficulty = "normal")
 {
     public Dictionary<string, string> ToWireSettings()
     {
+        if (BotDifficulty is not ("easy" or "normal" or "hard")) throw new ArgumentException("Unknown CPU difficulty.");
         if (Stage is not ("sunken-temple" or "rock-garden" or "up-and-down")) throw new ArgumentException("Unknown stage.");
         if (Bots is < 0 or > 7 || Wins is < 1 or > 5 || RoundSeconds is < 60 or > 300)
             throw new ArgumentOutOfRangeException(nameof(Bots), "Bots 0–7, wins 1–5, round seconds 60–300.");
         return new() { ["stage"] = Stage, ["bots"] = Bots.ToString(System.Globalization.CultureInfo.InvariantCulture),
             ["wins"] = Wins.ToString(System.Globalization.CultureInfo.InvariantCulture),
             ["round-seconds"] = RoundSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            ["sudden-death"] = SuddenDeath ? "on" : "off", ["ghosts"] = Ghosts ? "on" : "off" };
+            ["bot-difficulty"] = BotDifficulty, ["sudden-death"] = SuddenDeath ? "on" : "off", ["ghosts"] = Ghosts ? "on" : "off" };
     }
 }
 

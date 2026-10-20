@@ -25,7 +25,7 @@ def healthy(origin):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--scenario', choices=['all', 'menu', 'local-actions', 'ramp', 'network', 'combat', 'results', 'script'], default='all')
+    parser.add_argument('--scenario', choices=['all', 'menu', 'local-actions', 'ramp', 'network', 'combat', 'results', 'powerup-collect', 'pump-growth', 'hurry-water', 'script'], default='all')
     parser.add_argument('--script', type=Path, help='JSON scenario, see temple-walk.json')
     parser.add_argument('--headless', action='store_true', help='Explicitly disable screenshot capture')
     parser.add_argument('--godot', default=os.environ.get('GODOT', '/Applications/Godot_mono.app/Contents/MacOS/Godot'))

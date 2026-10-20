@@ -90,3 +90,14 @@ The UI has separate modes, setup, online connection, lobby, match and results sc
 `tools/playtest/run.py` launches the real Godot executable and optionally manages a local kernel process. `scripts/Testing/PlaytestDriver.cs` uses the composition root's normal sessions and injects movement/button intent. UI checks exercise actual engine input. Route assertions observe position and altitude; they do not teleport players. Every scenario records assertions, detached state snapshots, screenshots when graphical, and runtime logs. The runner rejects nonzero engine exits, missing reports, assertion failures, timeouts and engine/script errors.
 
 `--scenario script --script <file.json>` lets another agent specify navigation, held inputs, bounded movement goals, captures and state checks. Failure bundles live in unique folders under `artifacts/playtest/`; this keeps the exact failure witness separate from a later passing rerun. Headless runs explicitly disable image evidence. See the [harness guide](../tools/playtest/README.md) for commands and the script schema.
+
+
+## Iteration-three gameplay modules
+
+The simulation now separates bot behavior into `BlastSession.Bots.cs` and `Simulation/Ai`. Immutable navigation edges are cached; each lobby owns reusable search arrays, shared opponent/cover observations and timed danger fields. Predicted chain reactions and flood safety use the same blast/terrain rules as authoritative movement. Reaction profiles change decision timing without changing a player's physical capabilities. There is no external model call in the tick loop. [AI tests and measurements](../tests/Bomber.Ai.Tests/README.md) document both gains and CPU tradeoffs.
+
+`FloodRules` owns the Pyramid-inspired water curve and `PowerUpRules` owns drop weights, caps and inventory reset. Temple snapshots publish `hurryMode`, `waterLevel`, `waterStartsIn`, `waterRiseRate` and `hurryStartsIn`; other maps retain columns. Bots forecast the same water curve. Exact constants are documented project tuning informed by the [original manual and inspected gameplay footage](gameplay-research.md).
+
+Bomb snapshots now identify owner and carrier, pump count and effective level. Player snapshots include accepted pump and pickup serials. `BombModel` animates growth and fuse feedback; `BomberModel` supplies the lift/pump/throw pose and carry socket; `PowerupModel` gives each upgrade a distinct silhouette. Visual attachment never changes authoritative positions or hit results. A new match clears dynamic presentation state while static terrain can be reused.
+
+The engine harness checks actual model scale, active pumping pose, accepted inputs, inventory, flood height and survival. Training pickups exist only in local practice and use ordinary collection rules. Practice reset rebuilds a fresh match; there is no network debug-spawn or teleport command.

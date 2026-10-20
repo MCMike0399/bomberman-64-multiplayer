@@ -21,6 +21,15 @@ public partial class ArenaView : Node3D
     private string _stage="";
     private double _clock;
     private float _shake;
+    private int _lastRound=-1;
+    private bool _wasHurry;
+    private readonly Dictionary<string,int> _pickups=[];
+    public float WaterHeight=>_terrain?.WaterHeight??0;
+    public float LargestBombScale=>_entities.Values.OfType<BombModel>().Select(b=>b.VisualScale).DefaultIfEmpty(0).Max();
+    public int PumpAnimationCount=>_entities.Values.OfType<BomberModel>().Sum(p=>p.PumpAnimationCount);
+    public float PumpIntensity=>_entities.Values.OfType<BomberModel>().Select(p=>p.PumpIntensity).DefaultIfEmpty(0).Max();
+    public int CarriedBombs=>_entities.Values.OfType<BombModel>().Count(b=>b.CarrierId!=null);
+    public int VisiblePowerups=>_entities.Values.Count(n=>n is PowerupModel);
     public string StageId=>_stage;
     public int VisiblePlayerCount=>_entities.Values.Count(n=>n is BomberModel);
 
@@ -50,6 +59,12 @@ public partial class ArenaView : Node3D
         _camera.Position=center+new Vector3(0,span*.88f,span*1.32f);
         _camera.LookAt(center);
     }
+    public void ResetMatch()
+    {
+        foreach(Node child in _dynamic.GetChildren())child.QueueFree();
+        foreach(Node child in _effects.GetChildren())child.QueueFree();
+        _entities.Clear();_targets.Clear();_blocks.Clear();_ages.Clear();_walls.Clear();_pickups.Clear();_lastRound=-1;_wasHurry=false;
+    }
     public void Stage(JsonElement data)
     {
         string id=data.GetProperty("id").GetString()!;
@@ -58,12 +73,17 @@ public partial class ArenaView : Node3D
         _terrain?.QueueFree();_terrain=new TempleStageView(_art);AddChild(_terrain);_terrain.Build(data);
         foreach(Node child in _dynamic.GetChildren())child.QueueFree();
         foreach(Node child in _effects.GetChildren())child.QueueFree();
-        _entities.Clear();_targets.Clear();_blocks.Clear();_ages.Clear();_walls.Clear();
+        _entities.Clear();_targets.Clear();_blocks.Clear();_ages.Clear();_walls.Clear();_pickups.Clear();_lastRound=-1;_wasHurry=false;
         FrameCamera(_terrain.Width,_terrain.Depth);
     }
     public void State(JsonElement data)
     {
         if(_terrain==null)return;
+        int round=(int)F(data,"round");
+        if(round!=_lastRound){_lastRound=round;_wasHurry=false;_pickups.Clear();}
+        bool hurry=(int)F(data,"phase")==2;
+        if(hurry&&!_wasHurry)_audio.Hurry();_wasHurry=hurry;
+        if(data.TryGetProperty("waterLevel",out var water))_terrain.SetWaterLevel(water.GetSingle());
         byte[] bits=Convert.FromBase64String(data.GetProperty("softBlocks").GetString()!);
         for(int i=0;i<_terrain.Width*_terrain.Depth;i++)
         {
@@ -84,16 +104,33 @@ public partial class ArenaView : Node3D
             _targets[id]=PositionOf(p);
             float angle=Mathf.Atan2(F(p,"fx"),F(p,"fz"));node.Rotation=new Vector3(0,angle,0);
             ((BomberModel)node).Pose(p.GetProperty("carrying").ValueKind!=JsonValueKind.Null,p.GetProperty("stunned").GetBoolean(),ghost);
+            if(p.TryGetProperty("pickupSerial",out var serial))
+            {
+                int value=serial.GetInt32();
+                if(_pickups.TryGetValue(id,out int previous)&&value>previous&&p.TryGetProperty("lastPickup",out var pickup))
+                {
+                    string kind=pickup.GetString()??"";
+                    bool maximum=kind=="fire"&&F(p,"fire")>=3||kind=="bomb"&&F(p,"bombs")>=8;
+                    PowerupMessage(node.Position,kind,maximum);_audio.Pickup();
+                }
+                _pickups[id]=value;
+            }
         }
         foreach(var b in data.GetProperty("bombs").EnumerateArray())
         {
             string id="b:"+b.GetProperty("id").GetString();seen.Add(id);
             if(!_entities.TryGetValue(id,out var node))
             {
-                node=Bomb(b.GetProperty("red").GetBoolean());_dynamic.AddChild(node);_entities[id]=node;node.Position=PositionOf(b);_audio.Bomb();
+                node=new BombModel(_art);_dynamic.AddChild(node);_entities[id]=node;node.Position=PositionOf(b);_audio.Bomb();
             }
             _targets[id]=PositionOf(b);
-            float size=1+F(b,"pumps")*.27f;node.Scale=Vector3.One*size*(1+.045f*Mathf.Sin((float)_clock*14));
+            string? carrier=b.TryGetProperty("carrierId",out var carriedBy)&&carriedBy.ValueKind==JsonValueKind.String?carriedBy.GetString():null;
+            var model=(BombModel)node;
+            if(model.UpdateState((int)F(b,"pumps"),(int)F(b,"level"),b.GetProperty("red").GetBoolean(),b.GetProperty("remote").GetBoolean(),F(b,"fuse"),carrier))
+            {
+                _audio.Pump(model.Charge);
+                if(carrier!=null&&_entities.TryGetValue("p:"+carrier,out var player)&&player is BomberModel bomber)bomber.Pump(model.Charge);
+            }
         }
         foreach(var h in data.GetProperty("hazards").EnumerateArray())
         {
@@ -109,21 +146,20 @@ public partial class ArenaView : Node3D
                 float a=i*Mathf.Tau/8;
                 Sphere(node,new(Mathf.Cos(a)*radius*.66f,.1f,Mathf.Sin(a)*radius*.66f),Vector3.One*radius*.35f,_art.Color(new Color(1,.66f,.12f,.45f),.3f,true));
             }
-            _dynamic.AddChild(node);_entities[id]=node;_ages[id]=0;_shake=.09f;_audio.Blast();
+            _dynamic.AddChild(node);_entities[id]=node;_ages[id]=0;_shake=Mathf.Max(_shake,Mathf.Clamp(radius*.024f,.05f,.16f));_audio.Blast(radius);
         }
         foreach(var item in data.GetProperty("items").EnumerateArray())
         {
             string id="i:"+item.GetProperty("id").GetString();seen.Add(id);
             if(!_entities.TryGetValue(id,out var node))
             {
-                float x=F(item,"cx")+.5f,z=F(item,"cz")+.5f;node=Pickup(item.GetProperty("type").GetString()??"");
+                float x=F(item,"cx")+.5f,z=F(item,"cz")+.5f;node=new PowerupModel(_art,item.GetProperty("type").GetString()??"");
                 node.Position=new(x,_terrain.Surface(x,z)+.48f,z);_dynamic.AddChild(node);_entities[id]=node;
             }
-            node.Rotation=new(0,(float)_clock*1.4f,0);
         }
         foreach(string id in _entities.Keys.Where(k=>!seen.Contains(k)).ToArray())
         {
-            if(id.StartsWith("i:"))_audio.Pickup();_entities[id].QueueFree();_entities.Remove(id);_targets.Remove(id);_ages.Remove(id);
+            _entities[id].QueueFree();_entities.Remove(id);_targets.Remove(id);_ages.Remove(id);
         }
         int left=(int)F(data,"closedLeft"),right=(int)F(data,"closedRight");
         for(int x=0;x<_terrain.Width;x++)
@@ -142,10 +178,14 @@ public partial class ArenaView : Node3D
         foreach(var (id,target) in _targets)
         {
             if(!_entities.TryGetValue(id,out var node))continue;
+            if(node is BombModel {CarrierId:not null})continue;
             Vector3 previous=node.Position;
             node.Position=previous.DistanceSquaredTo(target)>16?target:previous.Lerp(target,1-Mathf.Exp(-20*dt));
             if(node is BomberModel model)model.Animate(dt,previous.DistanceTo(node.Position));
         }
+        foreach(var bomb in _entities.Values.OfType<BombModel>())
+            if(bomb.CarrierId is { } carrier&&_entities.TryGetValue("p:"+carrier,out var player)&&player is BomberModel actor)
+                bomb.Position=bomb.Position.Lerp(_dynamic.ToLocal(actor.BombSocket),1-Mathf.Exp(-24*dt));
         foreach(string id in _ages.Keys.ToArray())
         {
             _ages[id]+=dt;
@@ -153,22 +193,11 @@ public partial class ArenaView : Node3D
         }
         _shake=Mathf.MoveToward(_shake,0,dt*.6f);_camera.HOffset=Mathf.Sin((float)_clock*75)*_shake;_camera.VOffset=Mathf.Cos((float)_clock*83)*_shake*.5f;
     }
-    private Node3D Bomb(bool red)
+    private void PowerupMessage(Vector3 position,string kind,bool maximum=false)
     {
-        var n=new Node3D();
-        Sphere(n,new(0,.36f,0),Vector3.One*.69f,_art.Color(red?new("cf263e"):new("222536"),.22f));
-        Cylinder(n,new(0,.69f,0),.09f,.12f,_art.Color(new("ac8b3a"),.35f));
-        var fuse=Cylinder(n,new(.035f,.81f,0),.027f,.2f,_art.Color(new("e7c989")));fuse.RotationDegrees=new(0,0,-24);
-        Sphere(n,new(.076f,.91f,0),Vector3.One*.1f,_art.Color(new("ffcf51"),.3f,true));
-        return n;
-    }
-    private Node3D Pickup(string type)
-    {
-        int kind=type switch {"fire"=>0,"bomb"=>1,"remote"=>2,"red"=>3,"heart"=>4,_=>1};
-        Color[] colors=[new("ff7840"),new("5884f1"),new("b585eb"),new("ed4162"),new("f9689f")];
-        string[] marks=["F","B","R","P","+"];
-        var n=new Node3D();Box(n,Vector3.Zero,Vector3.One*.46f,_art.Color(colors[Math.Clamp(kind,0,4)],.35f),.08f);
-        n.AddChild(new Label3D {Text=marks[Math.Clamp(kind,0,4)],Position=new(0,0,.25f),FontSize=48,PixelSize=.008f,OutlineSize=8,Modulate=Godot.Colors.White});return n;
+        string text=kind switch {"fire"=>maximum?"MAX BLAST!":"BLAST UP!","bomb"=>maximum?"MAX BOMBS!":"BOMB UP!","remote"=>"REMOTE!","red"=>"POWER BOMB!","heart"=>"HEART!",_=>"POWER UP!"};
+        var label=new Label3D {Text=text,Position=position+new Vector3(0,2.2f,0),FontSize=34,PixelSize=.012f,Billboard=BaseMaterial3D.BillboardModeEnum.Enabled,NoDepthTest=true,OutlineSize=10,Modulate=new Color("ffe571"),OutlineModulate=new Color("233657")};
+        _effects.AddChild(label);var tween=label.CreateTween().SetParallel();tween.TweenProperty(label,"position",label.Position+Vector3.Up*.9f,1.2);tween.TweenProperty(label,"modulate:a",0f,1.2);tween.Chain().TweenCallback(Callable.From(label.QueueFree));
     }
     private void Debris(Vector3 position)
     {

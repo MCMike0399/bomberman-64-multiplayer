@@ -13,7 +13,7 @@ public partial class PlaytestDriver : Node
     private GameRoot _root = null!;
     private string _scenario = "all", _output = "", _server = "http://127.0.0.1:18496";
     private StreamWriter _trace = null!;
-    private int _frame, _lastSnapshot = -1;
+    private int _frame, _lastSnapshot = -1, _captureFallbacks;
     private readonly List<object> _checks = [];
     private readonly List<string> _screenshots = [];
     private readonly Dictionary<int, PlayerInput> _inputs = [];
@@ -55,7 +55,10 @@ public partial class PlaytestDriver : Node
                 case "network": await Network(); break;
                 case "combat": await Combat(); break;
                 case "results": await Results(); break;
-                case "all": await Menus(); await LocalActions(); await Ramps(); await Combat(); await Results(); await Network(); break;
+                case "powerup-collect": await Powerups(); break;
+                case "pump-growth": await PumpGrowth(); break;
+                case "hurry-water": await HurryWater(); break;
+                case "all": await Menus(); await LocalActions(); await Ramps(); await Powerups(); await PumpGrowth(); await HurryWater(); await Combat(); await Results(); await Network(); break;
                 default: throw new ArgumentException("Unknown scenario: "+_scenario);
             }
         }
@@ -67,7 +70,7 @@ public partial class PlaytestDriver : Node
         finally
         {
             var summary=new { scenario=_scenario,passed=failure==null,frames=_frame,seconds=_clock.Elapsed.TotalSeconds,
-                assertions=_checks.Count,checks=_checks,screenshots=_screenshots,screenshotMode=_headless?"disabled-headless":"graphical",
+                assertions=_checks.Count,checks=_checks,screenshots=_screenshots,captureFallbacks=_captureFallbacks,screenshotMode=_headless?"disabled-headless":"graphical",
                 failure=failure?.ToString(),screen=_root.ScreenName,snapshots=_root.SnapshotCount,finalState=_root.LatestState };
             File.WriteAllText(Path.Combine(_output,"summary.json"),JsonSerializer.Serialize(summary,new JsonSerializerOptions { WriteIndented=true }));
             _trace.Dispose();
@@ -171,6 +174,90 @@ public partial class PlaytestDriver : Node
         await Capture("temple-descended");
         _root.Back(); await Frames(4);
     }
+    private JsonElement Visual => JsonSerializer.SerializeToElement(_root.VisualState);
+    private async Task Powerups()
+    {
+        _root.StartLocal(new SessionSettings(Stage:"sunken-temple",Bots:0),1,practice:true);
+        await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"training pickups reach fight",150);
+        var initialCapacity=Player.GetProperty("bombs").GetInt32();
+        Check(Visual.GetProperty("powerups").GetInt32()>=6,"six training pickup models visible");
+        await Capture("powerups-visible-cache");
+        await MoveTo(8.5f,12.5f,80);
+        Check(Player.GetProperty("fire").GetInt32()==2,"walking onto first flame increases fire level");
+        await MoveTo(7.5f,12.5f,60);
+        Check(Player.GetProperty("fire").GetInt32()==3,"second flame reaches regular fire cap3");
+        await MoveTo(12.5f,12.5f,120);
+        Check(Player.GetProperty("bombs").GetInt32()==initialCapacity+1,"walking onto bomb increases capacity by exactly one");
+        await MoveTo(12.5f,13.5f,60);
+        Check(Player.GetProperty("red").GetBoolean(),"walking onto red power enables strong bombs");
+        await MoveTo(10.5f,13.5f,80);
+        Check(Player.GetProperty("heart").GetBoolean(),"walking onto heart grants extra hit");
+        await MoveTo(8.5f,13.5f,80);
+        Check(Player.GetProperty("remote").GetBoolean(),"walking onto remote enables command detonation");
+        Check(Player.GetProperty("pickupSerial").GetInt64()>=6,"six real pickups accepted by authority");
+        Check(Visual.GetProperty("powerups").GetInt32()==0,"collected pickup models disappear");
+        await Capture("powerups-collected-hud");
+        Input(0,new PlayerInput(0,0,A:true));await Frames(4);Input(0,default);await Frames(4);
+        Check(State.GetProperty("bombs").EnumerateArray().Any(b=>b.GetProperty("red").GetBoolean()&&b.GetProperty("remote").GetBoolean()),"collected powerups change newly placed bomb");
+        Input(0,new PlayerInput(0,0,R:true));await Frames(4);Input(0,default);await Frames(4);
+        Check(State.GetProperty("hazards").GetArrayLength()>0,"remote action detonates upgraded bomb");
+        await Click("RESET");await Frames(4);
+        Check(Player.GetProperty("fire").GetInt32()==1&&Player.GetProperty("bombs").GetInt32()==initialCapacity,"practice reset restores baseline upgrades");
+        Check(Player.GetProperty("pickupSerial").GetInt64()==0&&Visual.GetProperty("powerups").GetInt32()>=6,"practice reset restores visible training cache");
+        await Capture("powerups-practice-reset");
+        _root.Back();await Frames(3);
+    }
+    private async Task PumpGrowth()
+    {
+        _root.StartLocal(new SessionSettings(Stage:"sunken-temple",Bots:0),1,practice:true);
+        await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"pump training reaches fight",150);
+        Input(0,new PlayerInput(0,0,B:true));await Frames(2);
+        Input(0,new PlayerInput(0,0,A:true,B:true));await Frames(4);
+        Check(Player.GetProperty("carrying").GetString()=="bomb","hold lift and press bomb creates carried bomb");
+        Input(0,new PlayerInput(0,0,B:true));await Frames(12);
+        float previous=Visual.GetProperty("largestBombScale").GetSingle();
+        await Capture("pump-stage-0");
+        for(var charge=1;charge<=3;charge++)
+        {
+            Input(0,new PlayerInput(0,0,A:true,B:true));await Frames(4);
+            Check(Visual.GetProperty("pumpIntensity").GetSingle()>.1f,$"body squash pose is active during pump{charge}");
+            await Capture($"pump-action-{charge}");
+            Input(0,new PlayerInput(0,0,B:true));await Frames(12);
+            Check(State.GetProperty("bombs")[0].GetProperty("pumps").GetInt32()==charge,$"accepted pump stage{charge}");
+            var scale=Visual.GetProperty("largestBombScale").GetSingle();
+            Check(scale>previous+.2f,$"rendered bomb grows at pump stage{charge}");previous=scale;
+            Event("pump-visual",new {charge,scale,visual=Visual});
+            await Capture($"pump-stage-{charge}");
+        }
+        Check(Visual.GetProperty("carriedBombs").GetInt32()==1,"charged model remains attached to carrier socket");
+        Check(previous>2,"fully charged bomb visibly exceeds twice base scale");
+        Check(Visual.GetProperty("pumpAnimations").GetInt32()>=3,"three accepted pumps trigger body animation");
+        Check(Player.GetProperty("pumpSerial").GetInt64()>=3,"authority publishes three accepted pump events");
+        Input(0,new PlayerInput(1,0));await Frames(4);
+        Check(State.GetProperty("bombs").EnumerateArray().Any(b=>b.GetProperty("state").GetInt32()==3&&b.GetProperty("pumps").GetInt32()==3),"release throws fully charged bomb");
+        await Capture("pump-charged-flight");
+        _root.Back();await Frames(3);
+    }
+    private async Task HurryWater()
+    {
+        _root.StartLocal(new SessionSettings(Stage:"sunken-temple",Bots:0,Wins:3,RoundSeconds:60,SuddenDeath:true,Ghosts:false),2);
+        Input(1,default);
+        await WaitState(s=>s.GetProperty("phase").GetInt32()==2,"one-minute temple round enters hurry",180);
+        Check(State.GetProperty("hurryMode").GetString()=="water","temple sudden death selects water mode");
+        float initial=Visual.GetProperty("waterHeight").GetSingle();
+        await MoveTo(10.5f,3.5f,200);
+        Check(Player.GetProperty("y").GetSingle()>=4,"human climbs to flood-safe crown using inputs");
+        await Capture("hurry-water-highground");
+        await WaitState(s=>s.GetProperty("waterLevel").GetSingle()>=.25f,"rising water submerges lowest court",3000);
+        Check(Visual.GetProperty("waterHeight").GetSingle()>initial+.5f,"rendered water plane rises with authority");
+        Check(State.GetProperty("closedLeft").GetInt32()==0&&State.GetProperty("closedRight").GetInt32()==0,"temple does not shrink by closing columns");
+        await Capture("hurry-water-court-flooded");
+        await WaitState(s=>s.GetProperty("players").EnumerateArray().Any(p=>p.GetProperty("slot").GetInt32()==1&&!p.GetProperty("alive").GetBoolean()),"rising water eliminates lower-terrace human",3000);
+        Check(Player.GetProperty("alive").GetBoolean()&&Player.GetProperty("y").GetSingle()>=4,"highground human survives lower terrace flooding");
+        Check(State.GetProperty("waterLevel").GetSingle()>=1,"drowning occurs after water reaches low terrace height");
+        await Capture("hurry-water-low-out-high-safe");
+        _root.Back();await Frames(3);
+    }
     private async Task Combat()
     {
         _root.StartLocal(new SessionSettings(Stage:"sunken-temple",Bots:3,Wins:1,RoundSeconds:60,SuddenDeath:false),1);
@@ -240,6 +327,8 @@ public partial class PlaytestDriver : Node
         Check(lobbyText.Contains("BATTLE BEGINS IN",StringComparison.Ordinal),"lobby renders real countdown text");
         await Capture("network-lobby");
         await WaitState(s=>s.GetProperty("phase").GetInt32()==1 && s.GetProperty("players").GetArrayLength()==2,"engine receives two-human authoritative fight",900);
+        Check(State.GetProperty("hurryMode").GetString()=="water","network server supplies temple-specific water sudden death");
+        Check(State.TryGetProperty("waterLevel",out var networkWater)&&networkWater.ValueKind==JsonValueKind.Number,"network server publishes authoritative water height");
         var before=Player.GetProperty("z").GetSingle();
         Input(0,new PlayerInput(0,-1,A:true));
         bool observed=false;
@@ -311,7 +400,17 @@ public partial class PlaytestDriver : Node
     {
         if(_headless) { Event("screenshot-disabled",new {label,reason="headless display"});return; }
         await Frames(2);
-        await ToSignal(RenderingServer.Singleton,RenderingServer.SignalName.FramePostDraw);
+        async Task DrawFence() => await ToSignal(RenderingServer.Singleton,RenderingServer.SignalName.FramePostDraw);
+        var fence=DrawFence();
+        if(await Task.WhenAny(fence,Task.Delay(500))!=fence)
+        {
+            if(OS.GetThreadCallerId()!=OS.GetMainThreadId())throw new InvalidOperationException("Render fallback must run on the engine main thread.");
+            _captureFallbacks++;
+            Event("render-fallback",new {label,frame=_frame,drawnFrames=Engine.GetFramesDrawn(),reason="post-draw timeout",mainThread=true});
+            RenderingServer.ForceDraw(false,0);
+            RenderingServer.ForceSync();
+        }
+        else await fence;
         var path=Path.Combine(_output,label+".png");
         var error=GetViewport().GetTexture().GetImage().SavePng(path);
         if(error!=Error.Ok)throw new IOException($"Screenshot failed: {error}");

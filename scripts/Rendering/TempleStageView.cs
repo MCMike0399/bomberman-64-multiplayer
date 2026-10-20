@@ -12,6 +12,21 @@ public partial class TempleStageView : Node3D
     public int Width {get;private set;}
     public int Depth {get;private set;}
     private Material _stone=null!,_cobble=null!;
+    private MeshInstance3D _water=null!;
+    private float _targetWater=-.53f;
+    private bool _waterInitialized;
+    public float WaterHeight=>_water?.Position.Y??-.53f;
+    public void SetWaterLevel(float tierLevel)
+    {
+        _targetWater=tierLevel*HeightScale;
+        if(!_waterInitialized&&_water!=null){_water.Position=new(_water.Position.X,_targetWater,_water.Position.Z);_waterInitialized=true;}
+    }
+    public override void _Process(double delta)
+    {
+        if(_water==null)return;
+        var p=_water.Position;p.Y=Mathf.Lerp(p.Y,_targetWater,1-Mathf.Exp(-7*(float)delta));_water.Position=p;
+        if(_water.MaterialOverride is ShaderMaterial water)water.SetShaderParameter("flood_amount",Mathf.Clamp((_targetWater+.53f)/(4*HeightScale),0,1));
+    }
     public TempleStageView(ArtMaterials art){_art=art;}
     public float Surface(float x,float z)
     {
@@ -30,14 +45,14 @@ public partial class TempleStageView : Node3D
         Width=data.GetProperty("width").GetInt32();Depth=data.GetProperty("height").GetInt32();_cells=data.GetProperty("cells").Clone();
         _stone=_art.Stone();_cobble=_art.Stone(true);
         var wall=_art.Color(new("aa8850"));var cap=_art.Color(new("e7c987"));
-        var water=new MeshInstance3D {Mesh=new PlaneMesh {Size=new Vector2(160,160),SubdivideWidth=80,SubdivideDepth=80},MaterialOverride=_art.Water(),Position=new Vector3(Width/2f,-.53f,Depth/2f),CastShadow=GeometryInstance3D.ShadowCastingSetting.Off};AddChild(water);
+        _water=new MeshInstance3D {Mesh=new PlaneMesh {Size=new Vector2(160,160),SubdivideWidth=80,SubdivideDepth=80},MaterialOverride=_art.Water(),Position=new Vector3(Width/2f,-.53f,Depth/2f),CastShadow=GeometryInstance3D.ShadowCastingSetting.Off};AddChild(_water);
         bool temple=data.GetProperty("id").GetString()=="sunken-temple";
         for(int z=0;z<Depth;z++)for(int x=0;x<Width;x++)
         {
             var c=_cells[z*Width+x];int kind=c.GetProperty("k").GetInt32();if(kind is 2 or 3)continue;
             float tier=c.GetProperty("t").GetSingle(),y=tier*HeightScale;
             bool courtyard=temple && tier==0;
-            float floorBottom=-.72f;
+            float floorBottom=-1.8f;
             Box(this,new(x+.5f,(y-.15f+floorBottom)/2,z+.5f),new(.998f,y-.15f-floorBottom, .998f),wall);
             Box(this,new(x+.5f,y-.085f,z+.5f),new(.985f,.17f,.985f),courtyard?_cobble:_stone,.025f);
             if(kind==4)

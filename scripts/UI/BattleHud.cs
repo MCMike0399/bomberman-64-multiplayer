@@ -6,12 +6,16 @@ namespace BlastCircuit.UI;
 public partial class BattleHud : Control
 {
     public event Action? LeaveRequested;
+    public event Action? RestartRequested;
+    private Button _restart=null!;
     public bool Practice {get;set;}
     private HBoxContainer _strip=null!;
     private Label _timer=null!,_round=null!,_phase=null!,_connection=null!;
-    private readonly Dictionary<int,(BomberPortrait Portrait,Label Name,Label Score,PanelContainer Panel)> _cards=[];
+    private readonly Dictionary<int,(BomberPortrait Portrait,Label Name,Label Score,Label Stats,PanelContainer Panel)> _cards=[];
     private string _signature="";
     private JsonElement? _lastState;
+    private float _hurryAge;
+    private int _phaseNumber;
     public override void _Ready()
     {
         Theme=ArcadeTheme.Create();MouseFilter=MouseFilterEnum.Ignore;SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
@@ -20,6 +24,7 @@ public partial class BattleHud : Control
         var footer=new PanelContainer {AnchorTop=1,AnchorBottom=1,AnchorRight=1,OffsetLeft=24,OffsetRight=-24,OffsetTop=-69,OffsetBottom=-15};footer.AddThemeStyleboxOverride("panel",ArcadeTheme.Panel(ArcadeTheme.Cream,ArcadeTheme.Ink,2,14,8));AddChild(footer);
         var row=ArcadeTheme.Row(footer,20);_connection=ArcadeTheme.Text(row,"LOCAL BATTLE",14);_connection.SizeFlagsHorizontal=SizeFlags.ExpandFill;
         ArcadeTheme.Text(row,"SPACE  BOMB / PUMP    SHIFT  LIFT / THROW    R  REMOTE",14);
+        _restart=ArcadeTheme.Button(row,"RESET PRACTICE",()=>RestartRequested?.Invoke());_restart.Visible=false;_restart.CustomMinimumSize=new(140,36);_restart.AddThemeFontSizeOverride("font_size",14);
         var leave=ArcadeTheme.Button(row,"LEAVE  [ESC]",()=>LeaveRequested?.Invoke());leave.CustomMinimumSize=new(140,36);leave.AddThemeFontSizeOverride("font_size",14);
     }
     public void State(JsonElement state)
@@ -36,12 +41,17 @@ public partial class BattleHud : Control
             card.Portrait.Eliminated=eliminated;card.Portrait.QueueRedraw();
             card.Name.Text=(p.GetProperty("bot").GetBoolean()?"CPU ":"P"+(slot+1)+" ")+p.GetProperty("name").GetString();
             card.Score.Text=$"★ {p.GetProperty("wins").GetInt32()}  ·  {(ghost?"GHOST":eliminated?"OUT":"IN PLAY")}";
+            card.Stats.Text=$"B {p.GetProperty("bombs").GetInt32()}  F {p.GetProperty("fire").GetInt32()}"+(p.GetProperty("red").GetBoolean()?"  P":"")+(p.GetProperty("remote").GetBoolean()?"  R":"")+(p.GetProperty("heart").GetBoolean()?"  ♥":"");
             card.Panel.Modulate=eliminated?new Color(.68f,.68f,.68f):Colors.White;
         }
         int phase=state.GetProperty("phase").GetInt32(),seconds=Math.Max(0,(int)Math.Ceiling(state.GetProperty("timeLeft").GetSingle()));
-        _timer.Text=Practice?"∞":$"{seconds/60}:{seconds%60:00}";_round.Text=Practice?"PRACTICE":"ROUND "+state.GetProperty("round").GetInt32();
+        if(phase!=_phaseNumber){_hurryAge=0;_phaseNumber=phase;}
+        bool flood=state.TryGetProperty("hurryMode",out var mode)&&mode.GetString()=="water";
+        _timer.Text=Practice?"∞":$"{seconds/60}:{seconds%60:00}";
+        int waterDelay=state.TryGetProperty("waterStartsIn",out var delay)?(int)Math.Ceiling(delay.GetSingle()):0;
+        _round.Text=Practice?"PRACTICE":phase==2&&flood?(waterDelay>0?$"FLOOD IN {waterDelay}":"WATER RISING"):"ROUND "+state.GetProperty("round").GetInt32();
         _timer.AddThemeColorOverride("font_color",seconds<=60&&phase==2?ArcadeTheme.Red:ArcadeTheme.Ink);
-        _phase.Text=phase switch{0=>"GET READY!",1=>"",2=>"HURRY UP!",3=>"ROUND OVER",_=>""};
+        _phase.Text=phase switch{0=>"GET READY!",1=>"",2 when _hurryAge<3=>flood?"HURRY UP!  GET TO HIGH GROUND":"HURRY UP!",2=>"",3=>"ROUND OVER",_=>""};
     }
     private void BuildCards(JsonElement[] players)
     {
@@ -59,10 +69,11 @@ public partial class BattleHud : Control
             var card=new PanelContainer {CustomMinimumSize=new(146,90)};card.AddThemeStyleboxOverride("panel",ArcadeTheme.Panel(ArcadeTheme.Cream,ArcadeTheme.Ink,2,13,6));_strip.AddChild(card);
             var row=ArcadeTheme.Row(card,2);var portrait=new BomberPortrait {CustomMinimumSize=new(46,68),Suit=ArcadeTheme.Players[slot%8]};row.AddChild(portrait);
             var column2=ArcadeTheme.Column(row,3);column2.SizeFlagsHorizontal=SizeFlags.ExpandFill;var name=ArcadeTheme.Text(column2,"",12);name.CustomMinimumSize=new(80,0);name.ClipText=true;name.TextOverrunBehavior=TextServer.OverrunBehavior.TrimEllipsis;
-            var score=ArcadeTheme.Text(column2,"",11);_cards[slot]=(portrait,name,score,card);
+            var score=ArcadeTheme.Text(column2,"",11);var stats=ArcadeTheme.Text(column2,"",10);_cards[slot]=(portrait,name,score,stats,card);
         }
     }
     public void Connection(string status,string? code,bool practice)
-    {_connection.Text=(practice?"PRACTICE  ·  ":"")+status+(code is null?"":"  ·  ROOM "+code);}
-    public void Reset(){_signature="";_lastState=null;}
+    {_restart.Visible=practice;_connection.Text=(practice?"PRACTICE  ·  ":"")+status+(code is null?"":"  ·  ROOM "+code);}
+    public override void _Process(double delta){if(_phaseNumber==2)_hurryAge+=(float)delta;}
+    public void Reset(){_signature="";_lastState=null;_hurryAge=0;_phaseNumber=0;}
 }

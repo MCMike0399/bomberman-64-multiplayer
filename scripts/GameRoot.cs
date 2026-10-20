@@ -29,6 +29,7 @@ public partial class GameRoot : Node3D
     public JsonElement? LatestState { get; private set; }
     public JsonElement? LatestStage { get; private set; }
     public ISession? ActiveSession=>_session;
+    public object VisualState=>new {waterHeight=_arena.WaterHeight,largestBombScale=_arena.LargestBombScale,pumpAnimations=_arena.PumpAnimationCount,pumpIntensity=_arena.PumpIntensity,carriedBombs=_arena.CarriedBombs,powerups=_arena.VisiblePowerups};
     public JsonElement? LatestLobby=>_lobby;
 
     public override void _Ready()
@@ -39,7 +40,7 @@ public partial class GameRoot : Node3D
         _hud=new BattleHud {Visible=false};layer.AddChild(_hud);
         _menu.Navigation+=Navigate;_menu.BackRequested+=Back;_menu.ReplayRequested+=Replay;
         _menu.LocalRequested+=StartConfigured;_menu.OnlineRequested+=StartConfiguredOnline;
-        _hud.LeaveRequested+=Back;
+        _hud.LeaveRequested+=Back;_hud.RestartRequested+=Replay;
         var args=OS.GetCmdlineUserArgs();
         _smoke=args.Any(a=>a.StartsWith("--smoke"));
         var duration=args.FirstOrDefault(a=>a.StartsWith("--smoke-seconds="));
@@ -117,7 +118,7 @@ public partial class GameRoot : Node3D
     }
     private void Begin(ISession session,bool online)
     {
-        ReleaseSession();_session=session;LatestStage=null;LatestState=null;_result=null;_lobby=null;SnapshotCount=0;_injected.Clear();_hud.Reset();_hud.Practice=_practice;
+        ReleaseSession();_arena.ResetMatch();_session=session;LatestStage=null;LatestState=null;_result=null;_lobby=null;SnapshotCount=0;_injected.Clear();_hud.Reset();_hud.Practice=_practice;
         if(online)
         {ScreenName="Lobby";_menu.ShowScreen("Lobby");_menu.ShowLobby(null,session.JoinCode,session.Status);_menu.Visible=true;_hud.Visible=false;_arena.Visible=false;}
         else EnterMatch();

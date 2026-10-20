@@ -26,3 +26,5 @@ Use a fixed elevated camera and warm procedural stone materials with subtle tile
 Menu flow should expose mode selection, local/practice setup, online create/join/quick play, lobby and match/results separately. This flow is an original adaptation of the manual's separate setup stages. Mouse/keyboard/gamepad focus must remain readable.
 
 Validate with real engine screenshots paired with state traces: a menu image alone cannot prove input, bomb lifting/throwing, ramp traversal or online authority. The playtest harness records observed state and asserts those behaviors; headless runs explicitly report that screenshots are unavailable.
+
+The later [English-manual and video study](gameplay-research.md) identifies the original reference stage as Pyramid and directly verifies its water hazard and visible bomb pumping.

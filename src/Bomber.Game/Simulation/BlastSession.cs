@@ -17,7 +17,7 @@ namespace Bomber.Game.Simulation;
 ///
 /// Threading contract: plain fields, no locks, no blocking. An exception here ends the lobby.
 /// </summary>
-public sealed class BlastSession : GameSession
+public sealed partial class BlastSession : GameSession
 {
     // ─── settings (validated and clamped from lobby options) ─────────────────
 
@@ -37,6 +37,8 @@ public sealed class BlastSession : GameSession
     private RoundPhase _phase;
     private int _roundNum;
     private float _phaseTimer;     // seconds until phase transition
+    private long _fightTicks;
+    private float _waterLevel = -1;
     private float _roundTimer;     // time elapsed in current fight/hurry phase
     private int _closedLeft;       // hurry: columns closed from the left (x < _closedLeft = dead zone)
     private int _closedRight;      // hurry: columns closed from the right (x >= Width-_closedRight = dead zone)
@@ -74,6 +76,7 @@ public sealed class BlastSession : GameSession
         _suddenDeath = TryBool(options, "sudden-death", true);
         _ghostsEnabled = TryBool(options, "ghosts", true);
         _botCount = Math.Clamp(TryInt(options, "bots", 0, 0, 7), 0, 7);
+        BotInitialize(options);
     }
 
     // ─── IGameSession callbacks ───────────────────────────────────────────────
@@ -205,6 +208,8 @@ public sealed class BlastSession : GameSession
         _phase = RoundPhase.Ready;
         _phaseTimer = 2f;
         _roundTimer = 0;
+        _fightTicks = 0;
+        _waterLevel = -1;
         _closedLeft = 0;
         _closedRight = 0;
         _hurryColTimer = 0;
@@ -212,6 +217,8 @@ public sealed class BlastSession : GameSession
         _bombs.Clear();
         _hazards.Clear();
         _items.Clear();
+        foreach(var item in _stage.InitialItems.Concat(_practice ? _stage.TrainingItems : []))
+            _items.Add(new BlastItem { Id=NextItemId(),CellX=item.X,CellZ=item.Z,Tier=_stage.At(item.X,item.Z).Tier,Type=item.Type });
 
         // Restore pending joiners and reset living players.
         foreach (var p in _players.Values)
@@ -227,6 +234,7 @@ public sealed class BlastSession : GameSession
             p.LatchTimer = 0;
             p.LatchReverseCount = 0;
             p.ActiveBombs = 0;
+            PowerUpRules.Reset(p);
             p.Input = default;
             p.PrevA = false;
             p.PrevB = false;
@@ -250,6 +258,7 @@ public sealed class BlastSession : GameSession
 
         // Generate soft blocks (deterministic from match seed + round number).
         PlaceSoftBlocks(context.Random);
+        BotReset();
 
         // Tell all connected players about the round reset via stage update.
         foreach (var player in context.Players)
@@ -264,7 +273,7 @@ public sealed class BlastSession : GameSession
 
     private void SimulateRound(ISessionContext context, float dt)
     {
-        if (!_practice) _roundTimer += dt;
+        if (!_practice) _roundTimer = ++_fightTicks * dt;
         var timeLeft = _roundSeconds - _roundTimer;
 
         // Trigger hurry.
@@ -283,8 +292,12 @@ public sealed class BlastSession : GameSession
                 }
         }
 
-        // Hurry: advance closing walls.
-        if (_phase == RoundPhase.Hurry)
+        // Temple flooding replaces the legacy maps' closing-column hazard.
+        if (_phase == RoundPhase.Hurry && _stage.Id == BlastStages.SunkenTemple)
+        {
+            _waterLevel = WaterLevelAfter(0);
+        }
+        if (_phase == RoundPhase.Hurry && _stage.Id != BlastStages.SunkenTemple)
         {
             _hurryColTimer += dt;
             if (_hurryColTimer >= 1f)
@@ -316,6 +329,7 @@ public sealed class BlastSession : GameSession
 
         // Process inputs and apply physics.
         ProcessInputs(context, dt);
+        DrownSubmergedEntities();
         TickBombs(context, dt);
         TickHazards(context, dt);
         TickItems(context);
@@ -327,6 +341,25 @@ public sealed class BlastSession : GameSession
             var winner = _players.Values.FirstOrDefault(p => p.Alive && !p.Ghost);
             EndRound(context, winner?.Id, living == 0 ? "no_survivors" : "last_standing");
         }
+    }
+
+    private float WaterLevelAfter(float seconds) => !_practice && _suddenDeath && _stage.Id == BlastStages.SunkenTemple
+        ? FloodRules.Level(_roundTimer + Math.Max(0, seconds),_roundSeconds) : -1;
+    private bool WaterUnsafe(float x,float z,float seconds=0) =>
+        _stage.At((int)MathF.Floor(x),(int)MathF.Floor(z)).IsElimination ||
+        FloodRules.Submerged(_stage.SurfaceAt(x,z),WaterLevelAfter(seconds));
+
+    private void DrownSubmergedEntities()
+    {
+        if (_phase != RoundPhase.Hurry || _stage.Id != BlastStages.SunkenTemple) return;
+        foreach (var player in _players.Values)
+            if (player.Alive && !player.PendingRoundStart && FloodRules.Submerged(player.Y,_waterLevel))
+            { DropCarriedBombs(player); Eliminate(null,player); }
+        // Submerged bombs fizzle instead of detonating; water is lethal independently of hearts.
+        foreach (var bomb in _bombs)
+            if (!bomb.Exploded && bomb.State != BombState.Carried && FloodRules.Submerged(BombY(bomb),_waterLevel))
+            { bomb.Exploded=true; DecrementOwnerBombs(bomb.OwnerId); }
+        _items.RemoveAll(item=>FloodRules.Submerged(_stage.SurfaceAt(item.X,item.Z),_waterLevel));
     }
 
     private void EndRound(ISessionContext context, string? winnerId, string reason)
@@ -422,7 +455,7 @@ public sealed class BlastSession : GameSession
                 if (p.CarryingBombId is not null)
                     PumpBomb(p);
                 else
-                    TryPlaceBomb(context, p);
+                    TryPlaceBomb(context, p, input.B);
             }
 
             // B: pick up / throw.
@@ -520,7 +553,10 @@ public sealed class BlastSession : GameSession
             if (b.State != BombState.Resting) continue;
             if (Math.Abs(BombY(b) - _stage.SurfaceAt(x, z)) > .6f) continue;
             if (b.OwnerId == mover.Id && b.FuseTimer >= BlastBomb.FuseSeconds - 0.2f) continue; // pass through own just-placed bomb briefly
-            if ((b.X - x) * (b.X - x) + (b.Z - z) * (b.Z - z) < (PlayerRadius + BlastBomb.Radius) * (PlayerRadius + BlastBomb.Radius))
+            var distance = Dist2(b.X,b.Z,x,z);
+            var previousDistance = Dist2(b.X,b.Z,mover.X,mover.Z);
+            var clearance = (PlayerRadius + BlastBomb.Radius) * (PlayerRadius + BlastBomb.Radius);
+            if (distance < clearance && !(previousDistance < clearance && distance > previousDistance + .00001f))
                 return true;
         }
         return false;
@@ -555,6 +591,7 @@ public sealed class BlastSession : GameSession
             var dx = b.X - p.X;
             var dz = b.Z - p.Z;
             var dist = MathF.Sqrt(dx * dx + dz * dz);
+            if (dx * input.X + dz * input.Z <= .001f) continue; // walking away never kicks a bomb behind the player
             if (dist > PlayerRadius + BlastBomb.Radius + 0.05f) continue;
 
             // Kick in the player's facing direction.
@@ -572,7 +609,7 @@ public sealed class BlastSession : GameSession
 
     // ─── bomb placement ───────────────────────────────────────────────────────
 
-    private void TryPlaceBomb(ISessionContext context, BlastPlayer p)
+    private void TryPlaceBomb(ISessionContext context, BlastPlayer p, bool hold = false)
     {
         if (p.ActiveBombs >= p.BombCapacity) return;
 
@@ -593,6 +630,7 @@ public sealed class BlastSession : GameSession
         };
         _bombs.Add(bomb);
         p.ActiveBombs++;
+        if (hold) { bomb.State = BombState.Carried; p.CarryingBombId = bomb.Id; UpdateCarriedBombPosition(bomb); }
     }
 
     // ─── pick up / throw ──────────────────────────────────────────────────────
@@ -710,7 +748,7 @@ public sealed class BlastSession : GameSession
     {
         var bomb = _bombs.FirstOrDefault(b => b.Id == p.CarryingBombId);
         if (bomb is null) return;
-        if (bomb.Pumps < 3) bomb.Pumps++;
+        if (bomb.Pumps < 3) { bomb.Pumps++; p.PumpSerial++; }
     }
 
     // ─── remote detonation ────────────────────────────────────────────────────
@@ -912,7 +950,7 @@ public sealed class BlastSession : GameSession
         foreach (var (x, z) in hits)
         {
             _softBlocks.Set(x, z, false);
-            if (context.Random.NextDouble() < .3) DropItem(context, x, z, _stage.At(x, z).Tier);
+            if (context.Random.NextDouble() < PowerUpRules.DropChance) DropItem(context, x, z, _stage.At(x, z).Tier);
         }
     }
 
@@ -933,11 +971,9 @@ public sealed class BlastSession : GameSession
 
     // ─── items ────────────────────────────────────────────────────────────────
 
-    private static readonly string[] ItemTypes = ["fire", "bomb", "remote", "red", "heart"];
-
     private void DropItem(ISessionContext context, int cx, int cz, int tier)
     {
-        var type = ItemTypes[context.Random.Next(ItemTypes.Length)];
+        var type = PowerUpRules.ChooseDrop(context.Random);
         _items.Add(new BlastItem { Id = NextItemId(), CellX = cx, CellZ = cz, Tier = tier, Type = type });
     }
 
@@ -972,17 +1008,7 @@ public sealed class BlastSession : GameSession
         }
     }
 
-    private static void ApplyItem(BlastPlayer p, string type)
-    {
-        switch (type)
-        {
-            case "fire":  p.FireLevel = Math.Clamp(p.FireLevel + 1, 1, 3); break;
-            case "bomb":  p.BombCapacity = Math.Min(p.BombCapacity + 1, 8); break;
-            case "remote": p.HasRemote = true; break;
-            case "red":   p.HasRed = true; break;
-            case "heart": p.HasHeart = true; break;
-        }
-    }
+    private static void ApplyItem(BlastPlayer p,string type) => PowerUpRules.Apply(p,type);
 
     // ─── player hits ──────────────────────────────────────────────────────────
 
@@ -1005,6 +1031,7 @@ public sealed class BlastSession : GameSession
         if (!p.Alive) return;
         if (_practice) { RespawnPracticePlayer(p); return; }
         p.Alive = false;
+        DropCarriedBombs(p);
 
         // Drop one collected item power-up (designer choice).
         DropPowerUpOnDeath(p);
@@ -1053,7 +1080,7 @@ public sealed class BlastSession : GameSession
         player.Alive = true; player.Ghost = false; player.PendingRoundStart = false;
         player.StunTimer = 0; player.InvincibleTimer = 1.5f;
         player.Input = default; player.PrevA = player.PrevB = player.PrevR = false;
-        player.HasHeart = player.HasRed = player.HasRemote = false; player.FireLevel = 1; player.BombCapacity = 3;
+        PowerUpRules.Reset(player);
         player.ActiveBombs = _bombs.Count(b => b.OwnerId == player.Id && !b.Exploded);
         player.FacingX = 0; player.FacingZ = 1; player.BotThinkTimer = 0;
     }
@@ -1065,7 +1092,7 @@ public sealed class BlastSession : GameSession
         else if (p.HasRed) type = "red";
         else if (p.HasRemote) type = "remote";
         else if (p.FireLevel > 1) type = "fire";
-        else if (p.BombCapacity > 3) type = "bomb";
+        else if (p.BombCapacity > PowerUpRules.StartingBombs) type = "bomb";
 
         if (type is null) return;
         _items.Add(new BlastItem { Id = NextItemId(), CellX = (int)p.X, CellZ = (int)p.Z, Tier = p.Tier, Type = type });
@@ -1148,6 +1175,11 @@ public sealed class BlastSession : GameSession
     private void PlaceSoftBlocks(Random rng)
     {
         _softBlocks = new SoftBlockGrid(_stage.Width, _stage.Height);
+        if (_stage.FixedSoftBlocks is { } fixedBlocks)
+        {
+            foreach(var cell in fixedBlocks) _softBlocks.Set(cell.Item1,cell.Item2,true);
+            return;
+        }
         if (_practice) return;
         var spawnCells = new HashSet<(int, int)>(_stage.Spawns.SelectMany(s =>
             new[] { (s.X, s.Z), (s.X + 1, s.Z), (s.X - 1, s.Z), (s.X, s.Z + 1), (s.X, s.Z - 1) }));
@@ -1186,100 +1218,6 @@ public sealed class BlastSession : GameSession
     }
 
     // ─── bot AI ──────────────────────────────────────────────────────────────
-
-    private static readonly (int X, int Z)[] Neighbors = [(0, -1), (-1, 0), (1, 0), (0, 1)];
-
-    private bool BotDanger(float x, float z, BlastBomb? extra = null)
-    {
-        var y = _stage.SurfaceAt(x, z);
-        return _bombs.Append(extra).Any(b => b is not null && !b.Exploded && b.State != BombState.Carried &&
-            InBlast(b.X, b.Z, BombY(b), b.BlastRadius + PlayerRadius, x, z, y, b.IsRed));
-    }
-
-    private bool BotCellOpen(int x, int z, string botId) => _stage.At(x, z).IsPassable && !_softBlocks.IsAlive(x, z) &&
-        !_bombs.Any(b => !b.Exploded && b.State == BombState.Resting && b.OwnerId != botId && b.CellX == x && b.CellZ == z);
-
-    /// <summary>Breadth-first traversal uses exactly the terrain edges available to moving players.
-    /// Returns the first waypoint on the shortest reachable route rather than steering through walls.</summary>
-    private (int X, int Z)? BotRoute(BlastPlayer bot, Func<int, int, bool> goal, BlastBomb? extraDanger = null)
-    {
-        var start = ((int)MathF.Floor(bot.X), (int)MathF.Floor(bot.Z));
-        var seen = new HashSet<(int, int)> { start };
-        var queue = new Queue<(int X, int Z, int FirstX, int FirstZ)>();
-        queue.Enqueue((start.Item1, start.Item2, start.Item1, start.Item2));
-        while (queue.TryDequeue(out var node))
-        {
-            if (goal(node.X, node.Z)) return (node.FirstX, node.FirstZ);
-            foreach (var (dx, dz) in Neighbors)
-            {
-                var nx = node.X + dx; var nz = node.Z + dz;
-                if (!seen.Add((nx, nz)) || !BotCellOpen(nx, nz, bot.Id) || !_stage.CanCross(node.X, node.Z, nx, nz)) continue;
-                // During a hypothetical placement, an escape must be reachable before its fuse.
-                var first = node.X == start.Item1 && node.Z == start.Item2 ? (nx, nz) : (node.FirstX, node.FirstZ);
-                queue.Enqueue((nx, nz, first.Item1, first.Item2));
-            }
-        }
-        return null;
-    }
-
-    private bool BotHasEscape(BlastPlayer bot, BlastBomb hypothetical)
-    {
-        // The finite grid bounds search; actual movement is cardinal and a 2.5-second fuse gives
-        // 11 cells of travel. Require a reachable refuge within eight cells, leaving turning margin.
-        var start = ((int)MathF.Floor(bot.X), (int)MathF.Floor(bot.Z));
-        var seen = new HashSet<(int, int)> { start };
-        var queue = new Queue<(int X, int Z, int Steps)>(); queue.Enqueue((start.Item1, start.Item2, 0));
-        while (queue.TryDequeue(out var node))
-        {
-            if (node.Steps > 0 && !BotDanger(node.X + .5f, node.Z + .5f, hypothetical)) return true;
-            if (node.Steps >= 8) continue;
-            foreach (var (dx, dz) in Neighbors)
-            {
-                var nx = node.X + dx; var nz = node.Z + dz;
-                if (seen.Add((nx, nz)) && BotCellOpen(nx, nz, bot.Id) && _stage.CanCross(node.X, node.Z, nx, nz))
-                    queue.Enqueue((nx, nz, node.Steps + 1));
-            }
-        }
-        return false;
-    }
-
-    private void BotThink(BlastPlayer bot, float dt)
-    {
-        bot.BotThinkTimer -= dt;
-        if (bot.BotThinkTimer > 0) return;
-        bot.BotThinkTimer = .1f;
-        var cx = (int)MathF.Floor(bot.X); var cz = (int)MathF.Floor(bot.Z);
-        var danger = BotDanger(bot.X, bot.Z);
-        (int X, int Z)? waypoint;
-        if (danger)
-            waypoint = BotRoute(bot, (x, z) => !BotDanger(x + .5f, z + .5f));
-        else
-        {
-            var adjacentCover = Neighbors.Any(n => _softBlocks.IsAlive(cx + n.X, cz + n.Z));
-            var nearbyEnemy = _players.Values.Any(p => p.Id != bot.Id && p.Alive && !p.Ghost &&
-                InBlast(bot.X, bot.Z, bot.Y, 2.2f, p.X, p.Z, p.Y, false));
-            var candidate = new BlastBomb { Id = "planning", OwnerId = bot.Id, X = cx + .5f, Z = cz + .5f,
-                CellX = cx, CellZ = cz, Tier = bot.Tier, FireLevel = bot.FireLevel, IsRed = bot.HasRed };
-            if (!_practice && !bot.PrevA && bot.ActiveBombs < bot.BombCapacity && (adjacentCover || nearbyEnemy) && BotHasEscape(bot, candidate))
-            {
-                bot.Input = new InputState(0, 0, true, false, false); return;
-            }
-            var opponents = _players.Values.Where(p => p.Id != bot.Id && p.Alive && !p.Ghost)
-                .Select(p => ((int)MathF.Floor(p.X), (int)MathF.Floor(p.Z))).ToHashSet();
-            waypoint = BotRoute(bot, (x, z) => opponents.Contains((x, z)) || Neighbors.Any(n => _softBlocks.IsAlive(x + n.X, z + n.Z)));
-        }
-        if (waypoint is null) { bot.Input = default; return; }
-        var target = waypoint.Value;
-        // Center the current cell before turning a corner; diagonal corner cutting disagrees with
-        // the player's circular collider next to cliff faces or cover.
-        var tx = target.X + .5f; var tz = target.Z + .5f;
-        if (target.X != cx && Math.Abs(bot.Z - (cz + .5f)) > .08f) tx = cx + .5f;
-        if (target.Z != cz && Math.Abs(bot.X - (cx + .5f)) > .08f) tz = cz + .5f;
-        var dx2 = tx - bot.X; var dz2 = tz - bot.Z;
-        var length = MathF.Sqrt(dx2 * dx2 + dz2 * dz2);
-        var speed = Math.Min(1, length / (PlayerSpeed * .1f));
-        bot.Input = length < .025f ? default : new InputState(dx2 / length * speed, dz2 / length * speed, false, false, false);
-    }
 
     // ─── stage message ────────────────────────────────────────────────────────
 
@@ -1339,6 +1277,10 @@ public sealed class BlastSession : GameSession
             heart = p.HasHeart,
             fire = p.FireLevel,
             bombs = p.BombCapacity,
+            activeBombs = p.ActiveBombs,
+            pickupSerial = p.PickupSerial,
+            lastPickup = p.LastPickup,
+            pumpSerial = p.PumpSerial,
             red = p.HasRed,
             remote = p.HasRemote,
             wins = p.Wins,
@@ -1348,6 +1290,9 @@ public sealed class BlastSession : GameSession
         var bombList = _bombs.Where(b => !b.Exploded).Select(b => new
         {
             id = b.Id,
+            ownerId = b.OwnerId,
+            carrierId = b.State == BombState.Carried ? _players.Values.FirstOrDefault(p=>p.CarryingBombId==b.Id)?.Id : null,
+            effectiveLevel = b.EffectiveLevel,
             x = MathF.Round(b.X, 2),
             y = MathF.Round(BombY(b), 3),
             z = MathF.Round(b.Z, 2),
@@ -1386,6 +1331,11 @@ public sealed class BlastSession : GameSession
             timeLeft = MathF.Round(timeLeft, 1),
             closedLeft = _closedLeft,
             closedRight = _closedRight,
+            hurryMode = !_suddenDeath || _practice ? "none" : _stage.Id == BlastStages.SunkenTemple ? "water" : "columns",
+            waterLevel = _waterLevel,
+            waterStartsIn = !_practice && _suddenDeath && _stage.Id == BlastStages.SunkenTemple ? Math.Max(0,_roundSeconds-60+FloodRules.RiseDelay-_roundTimer) : -1,
+            waterRiseRate = !_practice && _suddenDeath && _stage.Id == BlastStages.SunkenTemple && _roundTimer >= _roundSeconds-60+FloodRules.RiseDelay ? FloodRules.RisePerSecond : 0,
+            hurryStartsIn = _practice || !_suddenDeath ? -1 : Math.Max(0,_roundSeconds - 60 - _roundTimer),
             players = playerList,
             bombs = bombList,
             hazards = hazardList,

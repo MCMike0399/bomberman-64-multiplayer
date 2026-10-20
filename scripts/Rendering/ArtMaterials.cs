@@ -49,6 +49,7 @@ void fragment(){
 shader_type spatial;
 render_mode diffuse_burley;
 varying vec3 world;
+uniform float flood_amount=0.0;
 void vertex(){
   world=(MODEL_MATRIX*vec4(VERTEX,1.0)).xyz;
   VERTEX.y+=sin(world.x*1.25+TIME*.6)*.035+sin(world.z*1.8-TIME*.8)*.025;
@@ -60,6 +61,7 @@ void fragment(){
   float caustic=pow(max(0.0,1.0-abs(a+b)*.9),10.0);
   float wave=sin(p.x*.4+p.y*.7+TIME*.3)*.5+.5;
   ALBEDO=mix(vec3(.025,.29,.4),vec3(.06,.51,.6),wave*.65)+vec3(.07,.15,.12)*caustic;
+  ALBEDO=mix(ALBEDO,ALBEDO*vec3(.64,.78,.95),flood_amount*.55);
   ROUGHNESS=.48; METALLIC=.08; SPECULAR=.4;
   NORMAL_MAP=vec3(.5+sin(p.x*2.0+TIME)*.06,.5+cos(p.y*2.0+TIME)*.06,1.0);
   NORMAL_MAP_DEPTH=.4;

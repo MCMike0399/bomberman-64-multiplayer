@@ -11,12 +11,14 @@ public sealed record MatchOptions
     public int RoundSeconds { get; init; } = 120;
     public bool SuddenDeath { get; init; } = true;
     public bool Ghosts { get; init; } = true;
+    public string BotDifficulty { get; init; } = "normal";
     public bool Practice { get; init; }
     public int Seed { get; init; } = 64;
 
     public IReadOnlyDictionary<string, string> ToSettings() => new Dictionary<string, string>
     {
         ["stage"] = Stage,
+        ["bot-difficulty"] = BotDifficulty,
         ["wins"] = Wins.ToString(CultureInfo.InvariantCulture),
         ["round-seconds"] = RoundSeconds.ToString(CultureInfo.InvariantCulture),
         ["sudden-death"] = SuddenDeath ? "on" : "off",
@@ -29,6 +31,7 @@ public sealed record MatchOptions
         if (HumanPlayers is < 1 or > 8 || BotPlayers is < 0 or > 7 || HumanPlayers + BotPlayers > 8 || HumanPlayers + BotPlayers < (Practice ? 1 : 2))
             throw new ArgumentOutOfRangeException(nameof(HumanPlayers), "A match needs 2–8 total participants and at least one human.");
         if (Stage is not ("sunken-temple" or "rock-garden" or "up-and-down")) throw new ArgumentException("Unknown stage.", nameof(Stage));
+        if (BotDifficulty is not ("easy" or "normal" or "hard")) throw new ArgumentException("Unknown bot difficulty.",nameof(BotDifficulty));
         if (Wins is < 1 or > 5) throw new ArgumentOutOfRangeException(nameof(Wins));
         if (RoundSeconds is < 60 or > 300) throw new ArgumentOutOfRangeException(nameof(RoundSeconds));
     }

@@ -30,7 +30,7 @@ On macOS, the installed editor can also launch it directly:
 /Applications/Godot_mono.app/Contents/MacOS/Godot --path .
 ```
 
-Choose **LOCAL BATTLE**, configure **2–8 total participants** counting local humans and CPU players, then start the match. **PRACTICE** lets one player explore the map and rehearse bomb handling without CPU opponents. One human can play with up to seven bots. Local play works without a server. Two keyboard seats are available; additional local seats require connected gamepads. With three or more local humans, the first two seats use keyboards and up to six gamepads fill seats 3–8 in connection order. With one or two humans, the corresponding gamepads also work as optional controls.
+Choose **LOCAL BATTLE**, configure **2–8 total participants** counting local humans and CPU players, choose Easy/Normal/Hard CPU difficulty, then start the match. **PRACTICE** lets one player explore the map and rehearse bomb handling without CPU opponents. Six visible training pickups teach bomb capacity, fire, red power, remote detonation and hearts; **RESET PRACTICE** restores the cache. One human can play with up to seven bots. Local play works without a server. Two keyboard seats are available; additional local seats require connected gamepads. With three or more local humans, the first two seats use keyboards and up to six gamepads fill seats 3–8 in connection order. With one or two humans, the corresponding gamepads also work as optional controls.
 
 ## Play online
 
@@ -44,7 +44,7 @@ For local development, start that independent server in another terminal:
 
 It listens at `http://127.0.0.1:18496`. Enter that URL in the game and choose **ONLINE BATTLE → CREATE PRIVATE ROOM**, then share the lobby’s displayed join code. Another game instance can enter the same URL and use **JOIN ROOM**. For a human-only match, set CPU players to zero; with bots enabled a lobby can start with one connected human. Each online game instance controls one human seat.
 
-**QUICK PLAY** uses the kernel matchmaking queue. It needs another compatible queued player; use a private lobby for solo bot practice online. The setup screen configures stage, CPU count, win target, round duration, sudden death and ghosts. The lobby displays the real server roster and countdown.
+**QUICK PLAY** uses the kernel matchmaking queue. It needs another compatible queued player; use a private lobby for solo bot practice online. The setup screen configures stage, CPU count and difficulty, win target, round duration, sudden death and ghosts. The lobby displays the real server roster and countdown.
 
 For a LAN server, bind to a reachable interface and enter the server machine's address on each client:
 
@@ -64,7 +64,15 @@ The default is loopback. No external hosting, domain, TLS, firewall changes or p
 | Remote detonate after pickup | R | Backspace | B |
 | Leave match / cancel connection | Escape | Escape | Start in battle; B backs out of menus |
 
-Walking into a resting bomb kicks it. Hold lift to carry a nearby bomb, press bomb to pump it, then release lift to throw. Explosions use spherical distance and cover occlusion rather than a classic grid cross. Pickups upgrade blast size, bomb capacity, remote detonation, red piercing bombs or a protective heart. Ghosts and closing sudden-death columns are enabled by default. Last survivor earns a round win; first to the win target wins the match.
+Walking into a resting bomb kicks it. Hold lift to carry a nearby bomb, or hold lift and press bomb to create one directly in your hands. Repeatedly press bomb while holding lift to inflate it, then release lift to throw. On a gamepad this is **hold X, tap A, then keep tapping A to pump**; on keyboard use **Shift + Space**. The character lifts, compresses, and releases the bomb in response to accepted actions. Explosions use spherical distance and cover occlusion rather than a classic grid cross. Pickups upgrade blast size, bomb capacity, remote detonation, red piercing bombs or a protective heart. Ghosts and sudden death are enabled by default. With one minute left, the Pyramid-inspired Sunken Temple warns of rising water; its lower court floods before the upper terraces. Other arenas retain closing columns. Permanent stone and terrain block blasts; red bombs penetrate breakable cover. Last survivor earns a round win; first to the win target wins the match.
+
+## Battle progression
+
+Breakable stone objects can drop weighted upgrades. Fire raises normal blast strength to level 3; bomb upgrades raise simultaneous capacity to 8. Red power penetrates breakable cover, remote bombs detonate on command, and one heart absorbs one blast without stacking. Water remains lethal. Equipment resets between rounds.
+
+Three accepted pump presses add three effective blast levels, reaching level 6 with maximum fire upgrades. Bombs visibly inflate beyond the character's head. Timed bombs pause their fuse while carried and resume it after release. These numerical choices and the flood curve are project tuning; [manual and gameplay-video research](docs/gameplay-research.md) distinguishes confirmed observations from assumptions.
+
+Bots pursue useful upgrades, pressure reachable opponents, predict visible fuse/chain danger, plan an escape before placing bombs, and seek high ground before flooding. Difficulty changes reaction time rather than movement speed, damage or hidden knowledge. See the [AI behavior tests and measured tradeoffs](tests/Bomber.Ai.Tests/README.md).
 
 ## Repeatable playtests and triage
 
@@ -87,6 +95,7 @@ The checks below are executable integration tests, run with `dotnet run`:
 ```bash
 dotnet run --project tests/Bomber.Game.Tests/Bomber.Game.Tests.csproj
 dotnet run --project tests/Bomber.Client.Tests/Bomber.Client.Tests.csproj
+dotnet run -c Release --project tests/Bomber.Ai.Tests
 ```
 
 With the server running, exercise real HTTP and WebSocket clients:
@@ -117,3 +126,10 @@ It starts a local match and exits after eight seconds with `GODOT_SMOKE_OK`. `--
 ![Mode selection](docs/images/mode-select.png)
 
 The game uses original procedural visuals. No original game ROM, Nintendo/Hudson artwork, footage, kernel source, credentials, or playtest traces are distributed here. The adapted simulation retains its upstream MIT notice in `src/Bomber.Game/Simulation/LICENSE`.
+
+
+Iteration-three visual checks:
+
+![A fully pumped bomb held overhead](docs/images/bomb-charge.png)
+
+![Pyramid-inspired lower courtyard flooding](docs/images/rising-water.png)

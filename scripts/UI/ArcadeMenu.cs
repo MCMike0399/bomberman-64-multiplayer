@@ -12,7 +12,7 @@ public partial class ArcadeMenu : Control
     private Control _content=null!;
     private Label _notice=null!,_lobbyStatus=null!,_joinCode=null!;
     private GridContainer _roster=null!;
-    private OptionButton _stage=null!;
+    private OptionButton _stage=null!,_difficulty=null!;
     private Button _launch=null!;
     private Label _setupTitle=null!,_stageDescription=null!;
     private SpinBox _humans=null!,_bots=null!,_wins=null!,_rounds=null!;
@@ -28,7 +28,7 @@ public partial class ArcadeMenu : Control
     public string PlayerName=>_name.Text.Trim();
     public string Code=>_code.Text.Trim();
     public bool Practice=>_practice;
-    public SessionSettings Settings => new(StageIds[_stage.Selected],(int)_bots.Value,(int)_wins.Value,(int)_rounds.Value,_sudden.ButtonPressed,_ghosts.ButtonPressed);
+    public SessionSettings Settings => new(StageIds[_stage.Selected],(int)_bots.Value,(int)_wins.Value,(int)_rounds.Value,_sudden.ButtonPressed,_ghosts.ButtonPressed,new[]{"easy","normal","hard"}[_difficulty.Selected]);
     private static readonly string[] StageIds=["sunken-temple","rock-garden","up-and-down"];
     public override void _Ready()
     {
@@ -83,7 +83,10 @@ public partial class ArcadeMenu : Control
         var right=ArcadeTheme.Column(columns,14);right.SizeFlagsHorizontal=SizeFlags.ExpandFill;
         ArcadeTheme.Text(right,"02  /  SET THE RULES",17);
         var row=ArcadeTheme.Row(right,16);_humans=Number(row,"HUMANS",1,8,1);_bots=Number(row,"CPU RIVALS",0,7,3);_wins=Number(row,"WINS",1,5,3);
-        _rounds=Number(right,"ROUND TIME / SECONDS",60,300,120);_rounds.Step=30;
+        var rules=ArcadeTheme.Row(right,16);
+        _rounds=Number(rules,"ROUND TIME / SECONDS",60,300,120);_rounds.Step=30;
+        var cpu=ArcadeTheme.Column(rules,6);cpu.SizeFlagsHorizontal=SizeFlags.ExpandFill;ArcadeTheme.Text(cpu,"CPU DIFFICULTY",15);
+        _difficulty=new OptionButton {CustomMinimumSize=new(240,50)};_difficulty.AddItem("EASY");_difficulty.AddItem("NORMAL");_difficulty.AddItem("HARD");_difficulty.Select(1);cpu.AddChild(_difficulty);
         _sudden=new CheckButton {Text="SUDDEN DEATH",ButtonPressed=true};right.AddChild(_sudden);
         _ghosts=new CheckButton {Text="GHOST COMEBACKS",ButtonPressed=true};right.AddChild(_ghosts);
         _notice=ArcadeTheme.Text(right,"2–8 total participants. CPU players fill empty seats.",16);_notice.AutowrapMode=TextServer.AutowrapMode.WordSmart;_notice.CustomMinimumSize=new(520,54);
@@ -148,9 +151,9 @@ public partial class ArcadeMenu : Control
         _practice=screen=="Practice";
         _setupTitle.Text=_practice?"PRACTICE SETUP":screen=="HostSetup"?"PRIVATE ROOM SETTINGS":"MATCH SETUP";
         _launch.Text=screen=="HostSetup"?"SAVE ROOM SETTINGS   →":_practice?"ENTER PRACTICE   →":"LET’S GO!   →";
-        _humans.Editable=!_practice;_bots.Editable=!_practice;_wins.Editable=!_practice;_rounds.Editable=!_practice;_sudden.Disabled=_practice;_ghosts.Disabled=_practice;
+        _difficulty.Disabled=_practice;_humans.Editable=!_practice;_bots.Editable=!_practice;_wins.Editable=!_practice;_rounds.Editable=!_practice;_sudden.Disabled=_practice;_ghosts.Disabled=_practice;
         if(!_practice && (screen=="Setup"||screen=="HostSetup") && _humans.Value+_bots.Value<2)_bots.Value=3;
-        if(_practice){_humans.Value=1;_bots.Value=0;_notice.Text="Practice: one player, clear arena, no time limit or wins target.";}
+        if(_practice){_humans.Value=1;_bots.Value=0;_notice.Text="Practice: collect the nearby training power-ups. No timer or wins target. Reset practice to try again.";}
         else if(screen=="Setup"||screen=="HostSetup")_notice.Text="2–8 total participants. CPU players fill empty seats.";
         foreach(var pair in _screens)pair.Value.Visible=pair.Key==_screen;
         var first=FirstFocusable(_screens[_screen]);first?.CallDeferred(Control.MethodName.GrabFocus);
@@ -193,7 +196,7 @@ public partial class ArcadeMenu : Control
     }
     public void Configure(SessionSettings settings,int humans=1)
     {
-        _stage.Select(Math.Max(0,Array.IndexOf(StageIds,settings.Stage)));_bots.Value=settings.Bots;_wins.Value=settings.Wins;_rounds.Value=settings.RoundSeconds;_sudden.ButtonPressed=settings.SuddenDeath;_ghosts.ButtonPressed=settings.Ghosts;_humans.Value=humans;UpdateStageDescription();
+        _difficulty.Select(Array.IndexOf(new[]{"easy","normal","hard"},settings.BotDifficulty));_stage.Select(Math.Max(0,Array.IndexOf(StageIds,settings.Stage)));_bots.Value=settings.Bots;_wins.Value=settings.Wins;_rounds.Value=settings.RoundSeconds;_sudden.ButtonPressed=settings.SuddenDeath;_ghosts.ButtonPressed=settings.Ghosts;_humans.Value=humans;UpdateStageDescription();
     }
     private void UpdateStageDescription()
     {

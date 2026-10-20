@@ -24,7 +24,7 @@ public sealed class LocalSession : ISession
         _inputs = new PlayerInput[humanCount];
         _buttons = Enumerable.Range(0, humanCount).Select(_ => new Queue<(bool A, bool B, bool R)>()).ToArray();
         _match = new LocalMatch(new MatchOptions { HumanPlayers = humanCount, BotPlayers = settings.Bots,
-            Stage = settings.Stage, Wins = settings.Wins, RoundSeconds = settings.RoundSeconds,
+            Stage = settings.Stage, BotDifficulty = settings.BotDifficulty, Wins = settings.Wins, RoundSeconds = settings.RoundSeconds,
             SuddenDeath = settings.SuddenDeath, Ghosts = settings.Ghosts, Seed = seed, Practice = practice });
         _match.Message += OnMessage;
         if (_match.StageJson is { } stage) OnMessage(stage);

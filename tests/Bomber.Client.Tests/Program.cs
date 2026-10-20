@@ -10,6 +10,8 @@ var wire = settings.ToWireSettings();
 Check(wire["round-seconds"] == "90" && wire["bots"] == "2" && wire["sudden-death"] == "off" && wire["ghosts"] == "on", "Kernel uses string-valued, hyphenated lobby settings");
 Throws(() => new SessionSettings(Bots: 8).ToWireSettings(), "Reject excessive bots");
 Throws(() => new SessionSettings(Stage: "invalid").ToWireSettings(), "Reject unknown stage");
+Throws(() => new SessionSettings(BotDifficulty: "impossible").ToWireSettings(), "Reject unknown CPU difficulty");
+Check(new SessionSettings(BotDifficulty: "hard").ToWireSettings()["bot-difficulty"]=="hard", "Selected difficulty reaches the kernel lobby settings");
 Throws(() => new LocalSession(new SessionSettings(Bots: 0), 1), "Solo session needs a bot");
 Throws(() => new LocalSession(new SessionSettings(Bots: 7), 2), "Enforce eight-player cap");
 using (var input = JsonDocument.Parse(NetworkSession.EncodeInput(new PlayerInput(float.NaN, 9, true, true, false), 42)))

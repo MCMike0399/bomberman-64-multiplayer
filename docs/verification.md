@@ -1,15 +1,15 @@
-# Verified iteration — 2026-10-19
+# Verified iteration three — 2026-10-19
 
 Environment: macOS ARM64, Godot 4.7.2 .NET / Forward+ Metal, .NET 10.0.401. The authoritative kernel-backed server was a separate local .NET process. This verifies the client/server separation; no deployment to the user's server hardware was performed.
 
 | Check | Result |
 |---|---|
 | Game and server builds | Zero warnings/errors |
-| `dotnet run --project tests/Bomber.Game.Tests` | 20 checks passed |
-| `dotnet run --project tests/Bomber.Client.Tests` | 26 checks passed |
+| `dotnet run --project tests/Bomber.Game.Tests` | 27 checks passed |
+| `dotnet run --project tests/Bomber.Client.Tests` | 28 checks passed |
 | `dotnet run --project tests/Bomber.Smoke -- http://127.0.0.1:18496` | Passed 2–8 human lobbies, mixed seven-bot match, actual movement/bombs, quick play/cancellation, acknowledgements and reconnect |
-| Graphical `tools/playtest/run.py --scenario all` | 54 assertions, 15 actual viewport captures, zero runtime errors |
-| Focused graphical network check after final style/server update | 10 assertions, 2 captures, zero runtime errors |
+| Graphical `tools/playtest/run.py --scenario all` | 103 assertions, 29 actual viewport captures, zero runtime errors |
+| `dotnet run -c Release --project tests/Bomber.Ai.Tests` | 15 behavior, determinism and allocation checks passed |
 
 The gameplay checks include actual stair ascent/descent, continuous height, forbidden cliff crossings, altitude-aware blast/cover, reachable bot paths, own-bomb escape, trapped-bot refusal, practice respawn after self-explosion/water falls, and retained final bot-win scores. Client checks include real input-edge preservation, roster schemas, controller seat assignment and connection cleanup.
 
@@ -20,3 +20,10 @@ Selected local-game captures are included in [the screenshot gallery](../README.
 The harness caught a named-pickup rendering exception that a startup-only smoke missed. It also caught window-coordinate errors in synthetic mouse input. Captures wait for rendering completion; earlier stale-image artifacts remain separate from passing evidence. Runtime errors fail the wrapper even if Godot itself exits 0.
 
 Physical eight-controller coverage, internet latency/loss, multi-node capacity and production hosting were not established by these local checks. See [playtest instructions](../tools/playtest/README.md) for repeatable runs and JSON scenario authoring.
+
+
+Iteration-three checks additionally cover weighted destruction drops and all five upgrade types, capacity/fire limits, round resets, red/remote chain behavior, one-hit hearts, held creation and fuse pausing, per-press pumping, real model growth and body poses, local training reset, Pyramid water timing and altitude-based drowning. New AI checks cover useful pickup pursuit, timed chain danger, flood refuge, repeated opponent pressure, fair response profiles and reusable search storage.
+
+The full graphical run executed nine scenarios and inspected actual model scale, active pump pose, inventory, flood height and connected lobby UI. It completed in 41.388 seconds on this machine with zero runtime errors. Captures use a bounded post-draw fence with a main-thread redraw fallback, rather than waiting forever if background drawing pauses. The final passing run required no fallback. These timings are a record of this run, not performance guarantees.
+
+The [AI benchmark report](../tests/Bomber.Ai.Tests/README.md) records approximately 58–62% lower allocations per active tick across the sampled maps, improved movement/pickup counters, and increased CPU cost on some maps. It explicitly distinguishes the combined iteration comparison from isolated AI causality and does not claim that numerical counters prove fun.

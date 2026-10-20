@@ -5,17 +5,19 @@ namespace BlastCircuit.Rendering;
 public partial class BattleAudio : Node
 {
     private readonly AudioStreamPlayer[] _voices=new AudioStreamPlayer[6];
-    private AudioStreamWav _bomb=null!,_blast=null!,_pickup=null!;
+    private AudioStreamWav _bomb=null!,_blast=null!,_pickup=null!,_pump=null!,_hurry=null!;
     private int _voice;
     public override void _Ready()
     {
         for(int i=0;i<_voices.Length;i++){_voices[i]=new AudioStreamPlayer {VolumeDb=-15};AddChild(_voices[i]);}
-        _bomb=Tone(.1,220,false);_blast=Tone(.38,70,true);_pickup=Tone(.17,740,false);
+        _bomb=Tone(.1,220,false);_blast=Tone(.38,70,true);_pickup=Tone(.17,740,false);_pump=Tone(.12,290,false);_hurry=Tone(.55,170,false);
     }
     public void Bomb()=>Play(_bomb);
-    public void Blast()=>Play(_blast);
+    public void Blast(float radius=1.3f)=>Play(_blast,Mathf.Clamp(1.15f-radius*.08f,.65f,1.1f));
     public void Pickup()=>Play(_pickup);
-    private void Play(AudioStream stream){var voice=_voices[_voice++%_voices.Length];voice.Stream=stream;voice.Play();}
+    public void Pump(int charge)=>Play(_pump,1+charge*.17f);
+    public void Hurry()=>Play(_hurry,.85f);
+    private void Play(AudioStream stream,float pitch=1){var voice=_voices[_voice++%_voices.Length];voice.Stream=stream;voice.PitchScale=pitch;voice.Play();}
     private static AudioStreamWav Tone(double seconds,double frequency,bool noise)
     {
         const int rate=22050;int count=(int)(rate*seconds);var data=new byte[count*2];var rng=new Random(64);

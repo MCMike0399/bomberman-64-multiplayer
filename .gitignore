@@ -2,7 +2,8 @@
 /android/
 **/bin/
 **/obj/
-artifacts/
+/artifacts/*
+!/artifacts/.gdignore
 .DS_Store
 
 # External kernel checkout; retained locally as a source-build dependency.

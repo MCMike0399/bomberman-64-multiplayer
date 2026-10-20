@@ -10,7 +10,7 @@ python3 tools/playtest/run.py --scenario script --script tools/playtest/temple-w
 
 The default Godot path is the installed macOS .NET editor; override with `--godot` or `GODOT`. Existing healthy kernel servers are reused. `--start-server` starts and later stops a server only when the runner created it. Network scenarios require a real available server and fail if absent.
 
-Each run gets a unique artifact directory under `artifacts/playtest/` with `runtime.log`, `runner-summary.json`, `summary.json`, `trace.jsonl` and graphical screenshots. Build/startup logs are included when those actions are requested. The runner records timeout, missing summary, nonzero exit and engine/script/unhandled errors in runtime.log as failures, even when in-engine assertions passed. Graphical runs must produce screenshots. Graphical runs capture actual viewport pixels after `RenderingServer.FramePostDraw`, so asynchronous lobby updates finish rendering before readback. The network scenario asserts visible host/peer labels and countdown as well as server state. `--headless` intentionally disables screenshots and reports `screenshotMode: disabled-headless`, with every omitted capture recorded in the trace.
+Each run gets a unique artifact directory under `artifacts/playtest/` with `runtime.log`, `runner-summary.json`, `summary.json`, `trace.jsonl` and graphical screenshots. Build/startup logs are included when those actions are requested. The runner records timeout, missing summary, nonzero exit and engine/script/unhandled errors in runtime.log as failures, even when in-engine assertions passed. Graphical runs must produce screenshots. Graphical runs capture actual viewport pixels after a bounded `RenderingServer.FramePostDraw` fence. If a background macOS window stops producing draw callbacks for 500 ms, capture explicitly redraws and synchronizes the real renderer on the main thread before readback; every fallback is recorded in the trace and summary. The network scenario asserts visible host/peer labels and countdown as well as server state. `--headless` intentionally disables screenshots and reports `screenshotMode: disabled-headless`, with every omitted capture recorded in the trace.
 
 Built-in scenarios:
 
@@ -20,7 +20,10 @@ Built-in scenarios:
 - `network`: Godot product NetworkSession hosts a real kernel lobby, second product client joins by code, and observes the injected engine player's movement remotely.
 - `combat`: seed64 temple with three CPU rivals, observes actual bomb/explosion/item IDs and a completed round or match, then captures the result. This continues long enough to exercise post-explosion item rendering.
 - `results`: a real bomb eliminates the stationary human in a one-CPU duel, asserts the CPU winning point and actual Results screen, activates Play Again through keyboard input and leaves the replay.
-- `all`: all six, in order.
+- `powerup-collect`: walks through the visible practice cache, verifies all five upgrade types, HUD/state counters, model removal and remote detonation of an upgraded bomb.
+- `pump-growth`: creates a carried bomb with lift+bomb, accepts three distinct presses, checks three rendered growth stages and body animations, then throws it.
+- `hurry-water`: two real local humans, one walks to the crown while the other stays on a lower terrace; observes actual timed flooding, rising rendered water, lower player drowning and higher player survival.
+- `all`: all nine, in order.
 
 Local play uses fixed 30 Hz engine time and deterministic default seed 64. Network authority runs on real server time; kernel lobby countdown and message arrival remain asynchronous. The runner caps wall time and the in-engine driver bounds state waits and walking frames.
 

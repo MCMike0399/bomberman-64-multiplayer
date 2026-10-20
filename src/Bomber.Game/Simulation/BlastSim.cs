@@ -58,6 +58,10 @@ public sealed class StageLayout
     public int Height { get; init; }  // rows (Z)
     public CellDef[,] Cells { get; init; } = new CellDef[0, 0];
     public (int X, int Z)[] Spawns { get; init; } = [];
+    // Fixed layouts are a local, assembly-internal fixture seam; no network message can set them.
+    public IReadOnlyList<(int X,int Z,string Type)> TrainingItems { get; init; } = [];
+    internal IReadOnlyList<(int X,int Z,string Type)> InitialItems { get; init; } = [];
+    internal IReadOnlySet<(int X,int Z)>? FixedSoftBlocks { get; init; }
     public double SoftBlockDensity { get; init; } = .45;
     public int MaxSoftBlocks { get; init; } = int.MaxValue;
     public IReadOnlySet<(int X, int Z)> ClearCells { get; init; } = new HashSet<(int, int)>();
@@ -134,10 +138,13 @@ public sealed class BlastPlayer
     public string? CarryingPlayerId { get; set; } // player id if carrying a stunned player
 
     // Power-ups.
-    public int BombCapacity { get; set; } = 3;  // max active bombs
+    public int BombCapacity { get; set; } = PowerUpRules.StartingBombs;  // max active bombs
     public int FireLevel { get; set; } = 1;      // 1–3 normal, pumping raises effective level
     public bool HasRemote { get; set; }
     public bool HasRed { get; set; }
+    public long PickupSerial { get; set; }
+    public string? LastPickup { get; set; }
+    public long PumpSerial { get; set; }
     public bool HasHeart { get; set; }
 
     // Score.
@@ -207,8 +214,9 @@ public sealed class BlastBomb
     public const float ThrowAngle = 50f; // degrees
     public const float Radius = 0.35f;
 
-    /// <summary>Effective blast radius: base level contributes 0.9 cells/level, pumps add 0.75 each.</summary>
-    public float BlastRadius => (FireLevel * 0.9f) + (Pumps * 0.75f) + 0.4f;
+    /// <summary>Effective blast radius: 0.9 cells per effective level plus 0.4; mega levels cap at six.</summary>
+    public int EffectiveLevel => Math.Clamp(FireLevel + Pumps, 1, Pumps > 0 ? PowerUpRules.MaximumMegaFire : PowerUpRules.MaximumNormalFire);
+    public float BlastRadius => EffectiveLevel * .9f + .4f;
 }
 
 /// <summary>A short-lived spherical blast zone after an explosion.</summary>
