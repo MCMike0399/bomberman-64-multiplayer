@@ -24,12 +24,12 @@ public static class ArcadeTheme
         t.SetColor("font_color","CheckButton",Ink);t.SetColor("font_focus_color","CheckButton",Ink);t.SetColor("font_color","SpinBox",Ink);
         return t;
     }
-    public static StyleBoxFlat Panel(Color fill,Color? edge=null,int border=3,int radius=16,int margin=16)=>new()
+    public static StyleBoxFlat Panel(Color fill,Color? edge=null,int border=3,int radius=3,int margin=16)=>new()
     {
         BgColor=fill,BorderColor=edge??Ink,BorderWidthTop=border,BorderWidthBottom=border,BorderWidthLeft=border,BorderWidthRight=border,
         CornerRadiusTopLeft=radius,CornerRadiusTopRight=radius,CornerRadiusBottomLeft=radius,CornerRadiusBottomRight=radius,
         ContentMarginLeft=margin,ContentMarginRight=margin,ContentMarginTop=margin,ContentMarginBottom=margin,
-        ShadowColor=new Color(Ink,.13f),ShadowSize=4,ShadowOffset=new Vector2(0,5)
+        ShadowColor=new Color(Ink,.13f),ShadowSize=0,ShadowOffset=new Vector2(0,5)
     };
     public static Label Text(Node parent,string text,int size=20,Color? color=null)
     {

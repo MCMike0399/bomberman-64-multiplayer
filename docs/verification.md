@@ -1,4 +1,26 @@
-# Verified iteration five — 2026-10-20
+# Verified iteration six — 2026-10-20
+
+| Check | Result |
+|---|---|
+| Godot and independent server builds | Zero warnings/errors |
+| Gameplay integration tests | 37 passed, including the newly reproduced kick-contact regression |
+| Client/session/presentation tests | 86 passed |
+| AI behavior, timing and allocation tests | 15 passed |
+| Synthesized audio | 19 distinct clips validated for energy, bounded peaks, clean endpoints, decay and caching |
+| Real network smoke | All 2–8 human matches and one human + seven server bots passed (42.8 seconds) |
+| Final windowed graphical suite | 302 assertions, 62 captures, zero runtime errors or capture fallbacks |
+
+Final run: `20261020T142843.186715Z-all` (32.432 seconds locally; not a performance guarantee). It plays through the actual menus, roster, controller paths, map navigation, pickups, bomb actions, explosions, water, combat, results and network sessions. The results screen additionally verifies that the celebrating 3D model uses the winning player's appearance. The refreshed README gallery comes from this run and contains only this project's original game visuals.
+
+The focused presentation sequence compares small, medium and large real bombs in the same temple camera. It checks rendered radius against authority, distinct billow counts, once-only accepted pump/throw/blast cues, nonhazardous vapor, cleanup, ground-bomb lifting, a contact kick, practice elimination/respawn, falling into water, and the eight-player HUD. Networking verifies event metadata and one bomb cue across repeated snapshots.
+
+Actual output-bus capture recorded 160,768 stereo frames, peak amplitude 0.2292 and RMS 0.0249, with no discarded frames. The mix was non-silent and below clipping. The public WAV demo is that generated game mix; no microphone or reference-game audio is included. These objective checks do not claim that the sounds were auditioned against the original game. The [reference study](iteration6-research.md) explicitly records the original-audio perception limitation.
+
+The presentation test exposed a gameplay defect: a player could be blocked just beyond the old kick threshold. A real-input regression reproduced it; the fix tests contact along the intended movement segment while preserving direction checks and continuous-contact deduplication. Other event tests cover bounded history, repeated/older snapshots, coalesced updates, reconnect baselines and water/fall/explosion causes.
+
+Native controller support, windowed debug defaults, external kernel ownership and macOS Game Mode/export limitations are unchanged. Production hosting, adverse-network latency, physical eight-controller play and subjective audio balance remain outside these local checks.
+
+## Iteration five baseline — 2026-10-20
 
 Environment: Macintosh, macOS ARM64, Godot 4.7.2 .NET / native Metal, .NET 10.0.401. The authoritative server remained a separate local .NET process.
 

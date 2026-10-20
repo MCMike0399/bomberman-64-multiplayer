@@ -55,6 +55,7 @@ public partial class PlaytestDriver : Node
                 case "controllers": await ControllerInputs(); break;
                 case "controller-inventory": await ControllerInventory(); break;
                 case "controller-observe": await ControllerObserve(); break;
+                case "presentation": await PresentationEffects(); break;
                 case "local-actions": await LocalActions(); break;
                 case "ramp": await Ramps(); break;
                 case "network": await Network(); break;
@@ -66,7 +67,7 @@ public partial class PlaytestDriver : Node
                 case "roster": await RosterSelection(); break;
                 case "framing": await Framing(); break;
                 case "fullscreen": await Fullscreen(); break;
-                case "all": await Menus(); await ControllerInputs(); await RosterSelection(); await Framing(); await LocalActions(); await Ramps(); await Powerups(); await PumpGrowth(); await HurryWater(); await Combat(); await Results(); await Network(); break;
+                case "all": await Menus(); await ControllerInputs(); await RosterSelection(); await Framing(); await LocalActions(); await Ramps(); await Powerups(); await PumpGrowth(); await PresentationEffects(); await HurryWater(); await Combat(); await Results(); await Network(); break;
                 default: throw new ArgumentException("Unknown scenario: "+_scenario);
             }
         }
@@ -440,7 +441,11 @@ public partial class PlaytestDriver : Node
         for(var i=0;i<600 && _root.ScreenName!="Results";i++)await Frames(1);
         Check(_root.ScreenName=="Results","real explosion eliminates human and completes CPU-won match");
         Check(State.GetProperty("players").EnumerateArray().Any(p=>p.GetProperty("bot").GetBoolean()&&p.GetProperty("wins").GetInt32()>=1),"CPU receives match-winning point");
-        Check(VisibleText(_root).Contains("1 WINS",StringComparison.Ordinal),"results UI displays preserved winning point");
+        Check((_root.FindChild("Standings",true,false) as Label)!.Text.Contains("1 WIN",StringComparison.Ordinal),"results UI displays preserved winning point");
+        var winner=State.GetProperty("players").EnumerateArray().Single(p=>p.GetProperty("bot").GetBoolean());
+        var preview=(_root.FindChild("WinnerPreview",true,false) as BlastCircuit.UI.CharacterPreview)!;
+        Check(preview.Appearance==winner.GetProperty("appearance").GetInt32()&&preview.Celebrating,"results celebrate the actual winner's selected suit");
+        await Frames(12);
         await Capture("results-cpu-victory");
         await Click("PLAY AGAIN");await Frames(4);
         Check(_root.ScreenName=="Match" && _root.ActiveSession!=null,"results replay button starts fresh match");
@@ -481,6 +486,8 @@ public partial class PlaytestDriver : Node
         await WaitState(s=>s.GetProperty("players").EnumerateArray().Any(p=>p.GetProperty("id").GetString()==host.PlayerId&&p.GetProperty("appearance").GetInt32()==4)&&s.GetProperty("players").EnumerateArray().Any(p=>p.GetProperty("id").GetString()==peer.PlayerId&&p.GetProperty("appearance").GetInt32()==6),"network authority reflects both chosen appearances",180);
         Check(State.GetProperty("hurryMode").GetString()=="water","network server supplies temple-specific water sudden death");
         Check(State.TryGetProperty("waterLevel",out var networkWater)&&networkWater.ValueKind==JsonValueKind.Number,"network server publishes authoritative water height");
+        Check(State.TryGetProperty("presentationSeq",out _)&&State.TryGetProperty("events",out _),"network server publishes accepted presentation events");
+        int bombCueBefore=_root.BattleAudio.Counts.GetValueOrDefault("bomb");
         var before=Player.GetProperty("z").GetSingle();
         Input(0,new PlayerInput(0,-1,A:true));
         bool observed=false;
@@ -495,7 +502,9 @@ public partial class PlaytestDriver : Node
                 }
         }
         Check(observed,"injected engine movement observed by second network client");
-        Input(0,default); await Capture("network-two-humans");
+        Input(0,default); await Frames(4);
+        Check(_root.BattleAudio.Counts.GetValueOrDefault("bomb")==bombCueBefore+1,"network bomb event plays once across repeated snapshots");
+        await Capture("network-two-humans");
         _root.Back(); await Frames(4);
     }
     private static string VisibleText(Node node)
@@ -548,10 +557,10 @@ public partial class PlaytestDriver : Node
         if(!passed)throw new InvalidOperationException("Assertion failed: "+description);
     }
     private void Event(string type,object data) => _trace.WriteLine(JsonSerializer.Serialize(new {frame=_frame,type,data}));
-    private async Task Capture(string label)
+    private async Task Capture(string label,int settleFrames=2)
     {
         if(_headless) { Event("screenshot-disabled",new {label,reason="headless display"});return; }
-        await Frames(2);
+        await Frames(settleFrames);
         async Task DrawFence() => await ToSignal(RenderingServer.Singleton,RenderingServer.SignalName.FramePostDraw);
         var fence=DrawFence();
         if(await Task.WhenAny(fence,Task.Delay(500))!=fence)

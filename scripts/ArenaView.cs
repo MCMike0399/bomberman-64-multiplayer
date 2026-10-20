@@ -1,6 +1,7 @@
 using Godot;
 using System.Text.Json;
 using BlastCircuit.Rendering;
+using Bomber.Client;
 using static BlastCircuit.Rendering.ArtGeometry;
 namespace BlastCircuit;
 
@@ -13,7 +14,9 @@ public partial class ArenaView : Node3D
     private readonly Dictionary<string,Node3D> _entities=[];
     private readonly Dictionary<string,Vector3> _targets=[];
     private readonly Dictionary<int,Node3D> _blocks=[];
-    private readonly Dictionary<string,float> _ages=[];
+    private readonly Dictionary<string,ExplosionView> _explosions=[];
+    private readonly Dictionary<string,int> _effectCounts=[];
+    private readonly PresentationCursor _presentation=new();
     private readonly Dictionary<int,Node3D> _walls=[];
     private TempleStageView? _terrain;
     private Camera3D _camera=null!;
@@ -33,6 +36,9 @@ public partial class ArenaView : Node3D
     public int VisiblePowerups=>_entities.Values.Count(n=>n is PowerupModel);
     public string StageId=>_stage;
     public int VisiblePlayerCount=>_entities.Values.Count(n=>n is BomberModel);
+    public BattleAudio Audio=>_audio;
+    public object PresentationState=>new {sequence=_presentation.Sequence,audio=_audio.Counts,voicePlays=_audio.VoicePlayCount,droppedCues=_audio.DroppedCueCount,effects=_effectCounts,explosions=_explosions.Values.Where(GodotObject.IsInstanceValid).Select(v=>new {tier=v.Tier,radius=v.Radius,age=v.Age,phase=v.Phase,lobes=v.LobeCount,hazard=v.HazardActive,extent=v.VisualExtent}).ToArray()};
+    public void ResetPresentationBaseline()=>_presentation.Reset();
 
     public override void _Ready()
     {
@@ -56,12 +62,13 @@ public partial class ArenaView : Node3D
         VisibilityChanged+=UpdateProcessing;
         UpdateProcessing();
     }
-    private void UpdateProcessing()=>ProcessMode=IsVisibleInTree()?ProcessModeEnum.Inherit:ProcessModeEnum.Disabled;
+    private void UpdateProcessing(){ProcessMode=IsVisibleInTree()?ProcessModeEnum.Inherit:ProcessModeEnum.Disabled;if(!IsVisibleInTree())_audio?.StopAll();}
     public void ResetMatch()
     {
+        _audio.StopAll();
         foreach(Node child in _dynamic.GetChildren())child.QueueFree();
         foreach(Node child in _effects.GetChildren())child.QueueFree();
-        _entities.Clear();_targets.Clear();_blocks.Clear();_ages.Clear();_walls.Clear();_pickups.Clear();_lastRound=-1;_wasHurry=false;
+        _entities.Clear();_targets.Clear();_blocks.Clear();_explosions.Clear();_presentation.Reset();_walls.Clear();_pickups.Clear();_lastRound=-1;_wasHurry=false;
     }
     public void Stage(JsonElement data)
     {
@@ -71,7 +78,7 @@ public partial class ArenaView : Node3D
         _terrain?.QueueFree();_terrain=new TempleStageView(_art);AddChild(_terrain);_terrain.Build(data);
         foreach(Node child in _dynamic.GetChildren())child.QueueFree();
         foreach(Node child in _effects.GetChildren())child.QueueFree();
-        _entities.Clear();_targets.Clear();_blocks.Clear();_ages.Clear();_walls.Clear();_pickups.Clear();_lastRound=-1;_wasHurry=false;
+        _entities.Clear();_targets.Clear();_blocks.Clear();_explosions.Clear();_presentation.Reset();_walls.Clear();_pickups.Clear();_lastRound=-1;_wasHurry=false;
         _cameraRig.SetStage(data);
     }
     public void State(JsonElement data)
@@ -79,8 +86,9 @@ public partial class ArenaView : Node3D
         if(_terrain==null)return;
         int round=(int)F(data,"round");
         if(round!=_lastRound){_lastRound=round;_wasHurry=false;_pickups.Clear();}
+        bool eventsAvailable=data.TryGetProperty("events",out _);
         bool hurry=(int)F(data,"phase")==2;
-        if(hurry&&!_wasHurry)_audio.Hurry();_wasHurry=hurry;
+        if(!eventsAvailable&&hurry&&!_wasHurry)_audio.Hurry();_wasHurry=hurry;
         if(data.TryGetProperty("waterLevel",out var water))_terrain.SetWaterLevel(water.GetSingle());
         byte[] bits=Convert.FromBase64String(data.GetProperty("softBlocks").GetString()!);
         for(int i=0;i<_terrain.Width*_terrain.Depth;i++)
@@ -122,32 +130,28 @@ public partial class ArenaView : Node3D
             string id="b:"+b.GetProperty("id").GetString();seen.Add(id);
             if(!_entities.TryGetValue(id,out var node))
             {
-                node=new BombModel(_art);_dynamic.AddChild(node);_entities[id]=node;node.Position=PositionOf(b);_audio.Bomb();
+                node=new BombModel(_art);_dynamic.AddChild(node);_entities[id]=node;node.Position=PositionOf(b);if(!eventsAvailable)_audio.Bomb();
             }
             _targets[id]=PositionOf(b);
             string? carrier=b.TryGetProperty("carrierId",out var carriedBy)&&carriedBy.ValueKind==JsonValueKind.String?carriedBy.GetString():null;
             var model=(BombModel)node;
             if(model.UpdateState((int)F(b,"pumps"),(int)F(b,"level"),b.GetProperty("red").GetBoolean(),b.GetProperty("remote").GetBoolean(),F(b,"fuse"),carrier))
             {
-                _audio.Pump(model.Charge);
+                if(!eventsAvailable)_audio.Pump(model.Charge);
                 if(carrier!=null&&_entities.TryGetValue("p:"+carrier,out var player)&&player is BomberModel bomber)bomber.Pump(model.Charge);
             }
         }
         foreach(var h in data.GetProperty("hazards").EnumerateArray())
         {
-            string id="h:"+h.GetProperty("id").GetString();seen.Add(id);
-            if(_entities.ContainsKey(id))continue;
+            string id=h.GetProperty("id").GetString()!;
+            if(_explosions.TryGetValue(id,out var active)&&GodotObject.IsInstanceValid(active))continue;
             float y=h.TryGetProperty("y",out var yValue)?yValue.GetSingle()*TempleStageView.HeightScale:_terrain.Surface(F(h,"x"),F(h,"z"));
-            var node=new Node3D {Position=new(F(h,"x"),y+.3f,F(h,"z"))};
-            float radius=F(h,"r");
-            Sphere(node,Vector3.Zero,new(radius*2,radius*2*TempleStageView.HeightScale,radius*2),_art.Color(new Color(1,.43f,.09f,.2f),.3f,true));
-            Sphere(node,Vector3.Zero,Vector3.One*radius*1.1f,_art.Color(new Color(1,.88f,.42f,.72f),.3f,true));
-            for(int i=0;i<8;i++)
-            {
-                float a=i*Mathf.Tau/8;
-                Sphere(node,new(Mathf.Cos(a)*radius*.66f,.1f,Mathf.Sin(a)*radius*.66f),Vector3.One*radius*.35f,_art.Color(new Color(1,.66f,.12f,.45f),.3f,true));
-            }
-            _dynamic.AddChild(node);_entities[id]=node;_ages[id]=0;_shake=Mathf.Max(_shake,Mathf.Clamp(radius*.024f,.05f,.16f));_audio.Blast(radius);
+            float radius=F(h,"r"),age=h.TryGetProperty("age",out var lifeAge)?lifeAge.GetSingle():0;
+            bool red=h.TryGetProperty("red",out var redValue)&&redValue.GetBoolean();
+            var blast=new ExplosionView(_art,radius,red,age,_explosions.Count>=16){Position=new(F(h,"x"),y+.3f,F(h,"z"))};
+            _effects.AddChild(blast);_explosions[id]=blast;
+            CountEffect("blast-"+blast.Tier);_shake=Mathf.Max(_shake,Mathf.Clamp(radius*.024f,.04f,.15f));
+            if(!eventsAvailable)_audio.Blast(radius);
         }
         foreach(var item in data.GetProperty("items").EnumerateArray())
         {
@@ -160,8 +164,9 @@ public partial class ArenaView : Node3D
         }
         foreach(string id in _entities.Keys.Where(k=>!seen.Contains(k)).ToArray())
         {
-            _entities[id].QueueFree();_entities.Remove(id);_targets.Remove(id);_ages.Remove(id);
+            _entities[id].QueueFree();_entities.Remove(id);_targets.Remove(id);
         }
+        Present(_presentation.Read(data));
         int left=(int)F(data,"closedLeft"),right=(int)F(data,"closedRight");
         for(int x=0;x<_terrain.Width;x++)
         {
@@ -187,14 +192,42 @@ public partial class ArenaView : Node3D
         foreach(var bomb in _entities.Values.OfType<BombModel>())
             if(bomb.CarrierId is { } carrier&&_entities.TryGetValue("p:"+carrier,out var player)&&player is BomberModel actor)
                 bomb.Position=bomb.Position.Lerp(_dynamic.ToLocal(actor.BombSocket),1-Mathf.Exp(-24*dt));
-        foreach(string id in _ages.Keys.ToArray())
-        {
-            _ages[id]+=dt;
-            if(_entities.TryGetValue(id,out var blast))blast.Scale=Vector3.One*(.85f+.15f*Mathf.Sin(Mathf.Min(1,_ages[id]*7)*Mathf.Pi/2));
-        }
+        foreach(var id in _explosions.Keys.Where(id=>!GodotObject.IsInstanceValid(_explosions[id])).ToArray())_explosions.Remove(id);
         _shake=Mathf.MoveToward(_shake,0,dt*.6f);_cameraRig.Shake((float)_clock,_shake);
     }
     public override void _ExitTree(){if(_cameraRig!=null)GetViewport().SizeChanged-=_cameraRig.Fit;VisibilityChanged-=UpdateProcessing;}
+    private void CountEffect(string key)=>_effectCounts[key]=_effectCounts.GetValueOrDefault(key)+1;
+    private void Present(IReadOnlyList<JsonElement> events)
+    {
+        foreach(var e in events)
+        {
+            string kind=e.GetProperty("kind").GetString()!,reason=e.GetProperty("reason").GetString()??"";
+            string? player=e.GetProperty("playerId").GetString();
+            if(player!=null&&_entities.TryGetValue("p:"+player,out var actor)&&actor is BomberModel model)model.React(kind);
+            switch(kind)
+            {
+                case "bomb-drop":case "bomb-carry":_audio.Bomb();break;
+                case "kick":_audio.Kick();break;
+                case "lift":_audio.Lift();break;
+                case "pump":_audio.Pump((int)F(e,"magnitude"));break;
+                case "throw":_audio.Throw(F(e,"magnitude")/6);break;
+                case "blast":_audio.Blast(F(e,"radius"));break;
+                case "death":
+                    bool water=reason is "water" or "fall";
+                    if(water)_audio.Splash();else _audio.Death();
+                    var pos=PositionOf(e);
+                    if(water)pos.Y=WaterHeight;
+                    _effects.AddChild(new ExitEffect(_art,water){Position=pos+Vector3.Up*(water?.12f:.8f)});CountEffect(water?"splash":"death");break;
+                case "round-ready":_audio.RoundReady();break;
+                case "fight":_audio.Fight();break;
+                case "hurry":_audio.Hurry();break;
+                case "waterfall":_audio.Splash();CountEffect("water-rise");break;
+                case "round-over":
+                    _audio.RoundWin();
+                    if(player!=null&&_entities.TryGetValue("p:"+player,out var winner)&&winner is BomberModel bomber)bomber.React("victory");break;
+            }
+        }
+    }
     private void PowerupMessage(Vector3 position,string kind,bool maximum=false)
     {
         string text=kind switch {"fire"=>maximum?"MAX BLAST!":"BLAST UP!","bomb"=>maximum?"MAX BOMBS!":"BOMB UP!","remote"=>"REMOTE!","red"=>"POWER BOMB!","heart"=>"HEART!",_=>"POWER UP!"};

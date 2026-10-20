@@ -1,6 +1,6 @@
 # Blast Circuit
 
-A playable Godot C# arena battle game inspired by Bomberman 64, with original procedural art, 2–8 participants, local play, online private lobbies, matchmaking and server-controlled bots. The featured Sunken Temple arena has a stepped sandstone pyramid, a recessed courtyard, broad stairs and surrounding water. Animated characters, original synthesized audio, debris, and bomb effects run in the Godot client.
+A playable Godot C# arena battle game inspired by Bomberman 64, with original procedural art, 2–8 participants, local play, online private lobbies, matchmaking and server-controlled bots. The featured Sunken Temple arena has a stepped sandstone pyramid, a recessed courtyard, broad stairs and surrounding water. Animated characters, original synthesized action cues, expanding blast clouds, splashes and debris run in the Godot client.
 
 The original game supports four simultaneous players. Eight-player support and the numerical simulation tuning are decisions for this project. See [research and sources](docs/research.md).
 
@@ -122,6 +122,7 @@ The checks below are executable integration tests, run with `dotnet run`:
 dotnet run --project tests/Bomber.Game.Tests/Bomber.Game.Tests.csproj
 dotnet run --project tests/Bomber.Client.Tests/Bomber.Client.Tests.csproj
 dotnet run -c Release --project tests/Bomber.Ai.Tests
+dotnet run --project tests/Bomber.Audio.Tests
 ```
 
 With the server running, exercise real HTTP and WebSocket clients:
@@ -149,9 +150,20 @@ It starts a local match and exits after eight seconds with `GODOT_SMOKE_OK`. `--
 
 The game already uses native Metal. The `macOS Metal` export preset declares Apple’s `LSSupportsGameMode` opt-in and Games bundle category. Game Mode is controlled by macOS during eligible fullscreen play; it is not enabled by windowed debug tests, and no performance boost is claimed without measurement. [Setup, primary sources and verification limits](docs/macos-game-mode.md).
 
-## Visual polish
+## Character, UI and effects
 
-The fourth iteration uses a smoothly rounded helmet and inset face, articulated head motion, blinks, mitten thumbs and shaped boots. Warm key light, cool fill, softer shadows, quieter stone and water materials, and a higher perspective camera improve the temple’s depth and visibility. The camera fits each map and viewport around the HUD. [Reference research](docs/iteration4-research.md) documents the inspected Bomberman 64 selection footage and TUNIC developer interviews.
+The sixth iteration uses original Bomberman 64 footage and Nintendo's booklet as visual references: a broader rounded helmet and flat face opening, cobalt shirt for white Bomber, slim limbs and outward pink boots. Menus use a shared character stage and flat choices; the eight-seat roster, left clock, face/win strip, eliminated portraits, hurry pulses and actual-winner celebration replace the former card-heavy presentation. [Reference study with inspected timestamps](docs/iteration6-research.md).
+
+Small, medium and large blasts have distinct billow counts, growth/fade timing and sound bodies. A full-radius boundary marks the active blast; the longer vapor tail is cosmetic. Water eliminations produce ripples and a splash plume, while accepted actions drive the character's kick, lift, pump and throw reactions.
+
+**19 original synthesized clips** cover bomb placement, kicks, lifts, three pump charges, throws, three blast sizes, pickups, deaths, water, hurry, round transitions and menu confirmation/back. A bounded authoritative event history and client cursor prevent repeated snapshots from replaying cues; joining or reconnecting establishes a silent baseline. Sound effects are new compositions, not ripped samples or a claimed exact audio reproduction.
+
+[Download a captured game-engine action mix](docs/audio/actions-mixed.wav). This is the automated input sequence, recorded from the game's output bus without microphone input. Individual generated WAVs can be exported locally:
+
+```bash
+dotnet run --project tests/Bomber.Audio.Tests -- --export artifacts/audio/iteration6
+python3 tools/playtest/run.py --scenario presentation
+```
 
 ## Screenshots
 
@@ -164,6 +176,12 @@ The gallery shows actual captures from the final windowed regression run, includ
 ![Animated eight-seat roster](docs/images/battle-roster.png)
 
 ![Controller tester](docs/images/controller-test.png)
+
+![Small blast](docs/images/blast-small.png)
+
+![Charged blast](docs/images/blast-large.png)
+
+![Actual winning character](docs/images/battle-results.png)
 
 The game uses original procedural visuals. No original game ROM, Nintendo/Hudson artwork, footage, kernel source, credentials, or playtest traces are distributed here. The adapted simulation retains its upstream MIT notice in `src/Bomber.Game/Simulation/LICENSE`.
 

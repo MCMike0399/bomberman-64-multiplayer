@@ -279,6 +279,8 @@ Run("flood thresholds use actual elevation and temple hurry does not close colum
     while(State(match).GetProperty("waterLevel").GetSingle()<1)Step(match,2);
     Assert(!Player(match,1).GetProperty("alive").GetBoolean()&&Player(match,2).GetProperty("alive").GetBoolean(),"Water did not independently eliminate next tier.");
     Assert(State(match).GetProperty("phase").GetInt32()==3&&Player(match,2).GetProperty("wins").GetInt32()==1,"Last high survivor did not win flooded round.");
+    Assert(Events(match).Count(e=>Kind(e)=="waterfall")==1,"Flood rise did not emit exactly one waterfall event.");
+    Assert(Events(match).Where(e=>Kind(e)=="death").All(e=>e.GetProperty("reason").GetString()=="water"),"Flood deaths lost their water cause.");
 });
 Run("power-up limits weighted choices and round inventory reset", () =>
 {
@@ -431,6 +433,82 @@ Run("late lobby joins and reconnects receive existing authoritative appearances"
     f.Sent.Clear();f.Session.OnPlayerConnectionChanged(f,f.Players[1],true);
     Assert(f.Sent.Any(m=>m.Recipient=="fixture-1"&&m.Type=="appearance"&&m.Data.GetProperty("playerId").GetString()=="fixture-0"&&m.Data.GetProperty("index").GetInt32()==6),"Reconnecting lobby player did not recover appearance roster.");
 });
+Run("presentation events record only accepted held actions and one authoritative blast", () =>
+{
+    var match = new LocalMatch(new MatchOptions {HumanPlayers=1,BotPlayers=0,Practice=true},FlatArena([(3,3)])); Fight(match);
+    match.SetInput(0,new PlayerInput(0,0,false,true));Step(match,2);
+    match.SetInput(0,new PlayerInput(0,0,true,true));Step(match,2);
+    for(var i=0;i<8;i++){match.SetInput(0,new PlayerInput(0,0,false,true));Step(match,2);match.SetInput(0,new PlayerInput(0,0,true,true));Step(match,2);}
+    var events=Events(match);
+    Assert(events.Count(e=>Kind(e)=="bomb-carry")==1&&!events.Any(e=>Kind(e)=="bomb-drop"),"Held creation reported a ground placement.");
+    Assert(events.Count(e=>Kind(e)=="pump")==3,"Rejected capped pumps emitted events.");
+    match.SetInput(0,default);Step(match,2);
+    var thrown=Events(match).Single(e=>Kind(e)=="throw");
+    Assert(thrown.GetProperty("playerId").GetString()=="local-0"&&thrown.GetProperty("radius").GetSingle()>3,"Throw lost actor or effective radius.");
+    Step(match,100);events=Events(match);
+    Assert(events.Count(e=>Kind(e)=="throw")==1&&events.Count(e=>Kind(e)=="blast")==1,"One action emitted duplicate throw/blast events.");
+    Assert(events.Single(e=>Kind(e)=="blast").GetProperty("entityId").GetString()==thrown.GetProperty("entityId").GetString(),"Blast lost bomb identity.");
+});
+Run("walking back into a bomb kicks across the blocked final movement step", () =>
+{
+    var match=new LocalMatch(new MatchOptions {Stage="rock-garden",HumanPlayers=1,BotPlayers=0,Practice=true});Fight(match);
+    match.SetInput(0,new PlayerInput(0,0,true));Step(match,2);match.SetInput(0,default);Step(match,2);
+    match.SetInput(0,new PlayerInput(.95f,0));Step(match,8);
+    Assert(Math.Abs(Player(match).GetProperty("x").GetSingle()-2.64f)<.01f,"Repro did not reach the blocked-step approach position.");
+    Assert(!Events(match).Any(e=>Kind(e)=="kick"),"Walking away kicked the bomb behind the player.");
+    match.SetInput(0,new PlayerInput(-1,0));Step(match,2);
+    Assert(!Events(match).Any(e=>Kind(e)=="kick"),"Bomb was kicked before this tick could reach contact.");
+    Step(match,8);
+    Assert(Events(match).Any(e=>Kind(e)=="kick"),"Movement collision stopped the player outside the fixed kick distance.");
+    Assert(State(match).GetProperty("bombs")[0].GetProperty("x").GetSingle()<1.5f,"Accepted kick did not roll the actual bomb.");
+});
+Run("presentation ground placement lift and repeated blocked contact are distinct", () =>
+{
+    var arena=FlatArena([(3,3)]);
+    var match=new LocalMatch(new MatchOptions {HumanPlayers=1,BotPlayers=0,Practice=true},arena);Fight(match);
+    match.SetInput(0,new PlayerInput(0,0,true));Step(match,2);match.SetInput(0,default);Step(match,2);
+    match.SetInput(0,new PlayerInput(0,0,false,true));Step(match,2);
+    Assert(Events(match).Count(e=>Kind(e)=="bomb-drop")==1&&Events(match).Count(e=>Kind(e)=="lift")==1,"Accepted ground placement/lift missing.");
+    arena=FlatArena([(3,3)]);arena.Cells[4,3]=CellDef.Pillar;
+    match=new LocalMatch(new MatchOptions {HumanPlayers=1,BotPlayers=0,Practice=true},arena);Fight(match);
+    match.SetInput(0,new PlayerInput(0,0,true));Step(match,2);match.SetInput(0,new PlayerInput(-1,0));Step(match,6);
+    match.SetInput(0,new PlayerInput(.4f,0));Step(match,36);
+    var kicks=Events(match).Count(e=>Kind(e)=="kick");
+    Assert(kicks==2,"Expected initial roll and a fresh contact after the bomb rolled away.");
+    Step(match,12);
+    Assert(Events(match).Count(e=>Kind(e)=="kick")==kicks,"Continuous blocked contact emitted duplicate kicks.");
+});
+Run("presentation deaths retain explosion water and fall reasons through practice recovery", () =>
+{
+    var match=new LocalMatch(new MatchOptions {HumanPlayers=1,BotPlayers=0,Practice=true},FlatArena([(3,3)]));Fight(match);
+    match.SetInput(0,new PlayerInput(0,0,true));Step(match,90);
+    var death=Events(match).Single(e=>Kind(e)=="death");
+    Assert(death.GetProperty("reason").GetString()=="explosion"&&death.GetProperty("causedBy").GetString()=="local-0","Explosion death reason/owner lost.");
+    Assert(Events(match).Single(e=>Kind(e)=="respawn").GetProperty("reason").GetString()=="explosion","Practice recovery lost original cause.");
+    foreach(var kind in new[]{CellKind.Water,CellKind.Void})
+    {
+        var stage=FlatArena([(1,3)]);for(var z=0;z<9;z++)stage.Cells[0,z]=kind==CellKind.Water?CellDef.Water:CellDef.Void;
+        match=new LocalMatch(new MatchOptions {HumanPlayers=1,BotPlayers=0,Practice=true},stage);Fight(match);
+        match.SetInput(0,new PlayerInput(-1,0));Step(match,6);
+        death=Events(match).First(e=>Kind(e)=="death");
+        Assert(death.GetProperty("reason").GetString()==(kind==CellKind.Water?"water":"fall"),"Terrain death has incorrect cause.");
+    }
+});
+Run("presentation history survives round reset reconnect and remains bounded with consecutive ids", () =>
+{
+    var f=new AppearanceFixture();f.Step(62);var before=f.Snapshot.GetProperty("presentationSeq").GetInt64();
+    f.Session.OnPlayerConnectionChanged(f,f.Players[0],false);f.Session.OnPlayerConnectionChanged(f,f.Players[0],true);f.Step(2);
+    Assert(f.Snapshot.GetProperty("presentationSeq").GetInt64()==before,"Reconnect reset or invented events.");
+    f.Step(3800);
+    var events=f.Snapshot.GetProperty("events").EnumerateArray().ToArray();
+    Assert(events.Any(e=>Kind(e)=="round-ready"&&e.GetProperty("round").GetInt32()==2)&&events.Any(e=>e.GetProperty("round").GetInt32()==1),"Round reset cleared presentation history.");
+    var match=new LocalMatch(new MatchOptions {HumanPlayers=1,BotPlayers=0,Practice=true},FlatArena([(3,3)]));Fight(match);
+    for(var i=0;i<50;i++){match.SetInput(0,new PlayerInput(0,0,true));Step(match,90);match.SetInput(0,default);Step(match,2);}
+    events=Events(match);
+    Assert(events.Length==128&&events[0].GetProperty("seq").GetInt64()>1,"Presentation history grew without a cap.");
+    for(var i=1;i<events.Length;i++)Assert(events[i].GetProperty("seq").GetInt64()==events[i-1].GetProperty("seq").GetInt64()+1,"Event sequence has gaps/duplicates.");
+    Assert(events[^1].GetProperty("seq").GetInt64()==State(match).GetProperty("presentationSeq").GetInt64(),"Snapshot cursor disagrees with retained tail.");
+});
 Console.WriteLine($"Passed {passed} game integration checks.");
 
 void Run(string name, Action check) { check(); passed++; Console.WriteLine($"PASS {name}"); }
@@ -465,3 +543,6 @@ static StageLayout FlatArena((int X,int Z)[] spawns)
     var cells=new CellDef[9,9];for(var x=0;x<9;x++)for(var z=0;z<9;z++)cells[x,z]=CellDef.Floor0;
     return new StageLayout {Id="fixture",Width=9,Height=9,Cells=cells,Spawns=spawns,SoftBlockDensity=0};
 }
+
+static JsonElement[] Events(LocalMatch match)=>State(match).GetProperty("events").EnumerateArray().ToArray();
+static string? Kind(JsonElement e)=>e.GetProperty("kind").GetString();

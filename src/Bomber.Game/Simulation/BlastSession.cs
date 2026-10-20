@@ -57,6 +57,7 @@ public sealed partial class BlastSession : GameSession
     // ─── match-end guard ─────────────────────────────────────────────────────
 
     private bool _matchEndScheduled;
+    private bool _waterfallStarted;
 
     // Per-session ID counters — deterministic given the same sequence of events.
     private int _nextBombId;
@@ -239,11 +240,13 @@ public sealed partial class BlastSession : GameSession
         _roundTimer = 0;
         _fightTicks = 0;
         _waterLevel = -1;
+        _waterfallStarted = false;
         _closedLeft = 0;
         _closedRight = 0;
         _hurryColTimer = 0;
 
         _bombs.Clear();
+        _presentedKickContacts.Clear();
         _hazards.Clear();
         _items.Clear();
         foreach(var item in _stage.InitialItems.Concat(_practice ? _stage.TrainingItems : []))
@@ -288,6 +291,7 @@ public sealed partial class BlastSession : GameSession
         // Generate soft blocks (deterministic from match seed + round number).
         PlaceSoftBlocks(context.Random);
         BotReset();
+        Present("round-ready");
 
         // Tell all connected players about the round reset via stage update.
         foreach (var player in context.Players)
@@ -298,6 +302,7 @@ public sealed partial class BlastSession : GameSession
     {
         _phase = RoundPhase.Fight;
         _roundTimer = 0;
+        Present("fight");
     }
 
     private void SimulateRound(ISessionContext context, float dt)
@@ -309,6 +314,7 @@ public sealed partial class BlastSession : GameSession
         if (!_practice && _suddenDeath && _phase == RoundPhase.Fight && timeLeft <= 60f)
         {
             _phase = RoundPhase.Hurry;
+            Present("hurry");
             _hurryColTimer = 0;
             // Remove all ghosts when hurry starts.
             foreach (var p in _players.Values)
@@ -325,6 +331,11 @@ public sealed partial class BlastSession : GameSession
         if (_phase == RoundPhase.Hurry && _stage.Id == BlastStages.SunkenTemple)
         {
             _waterLevel = WaterLevelAfter(0);
+            if (!_waterfallStarted && _roundTimer >= _roundSeconds - 60 + FloodRules.RiseDelay)
+            {
+                _waterfallStarted = true;
+                Present("waterfall", magnitude: FloodRules.RisePerSecond, y: _waterLevel);
+            }
         }
         if (_phase == RoundPhase.Hurry && _stage.Id != BlastStages.SunkenTemple)
         {
@@ -383,7 +394,7 @@ public sealed partial class BlastSession : GameSession
         if (_phase != RoundPhase.Hurry || _stage.Id != BlastStages.SunkenTemple) return;
         foreach (var player in _players.Values)
             if (player.Alive && !player.PendingRoundStart && FloodRules.Submerged(player.Y,_waterLevel))
-            { DropCarriedBombs(player); Eliminate(null,player); }
+            { DropCarriedBombs(player); Eliminate(null,player,"water"); }
         // Submerged bombs fizzle instead of detonating; water is lethal independently of hearts.
         foreach (var bomb in _bombs)
             if (!bomb.Exploded && bomb.State != BombState.Carried && FloodRules.Submerged(BombY(bomb),_waterLevel))
@@ -395,6 +406,7 @@ public sealed partial class BlastSession : GameSession
     {
         _phase = RoundPhase.Over;
         _phaseTimer = 3f;
+        Present("round-over", playerId: winnerId, reason: reason);
 
         if (winnerId is not null && _players.TryGetValue(winnerId, out var winner))
             winner.Wins++;
@@ -404,6 +416,7 @@ public sealed partial class BlastSession : GameSession
         {
             _matchEndScheduled = true;
             var details = BuildScoreboard(reason);
+            BroadcastState(context); // Flush the final accepted actions before the match-end envelope.
             if (w.IsBot)
                 context.EndMatch(new MatchResult("bot_won", [], details));
             else
@@ -504,6 +517,8 @@ public sealed partial class BlastSession : GameSession
 
     private void MovePlayer(BlastPlayer p, InputState input, float dt)
     {
+        var startX = p.X;
+        var startZ = p.Z;
         ApplyMoveDelta(p, input.X * PlayerSpeed * dt, input.Z * PlayerSpeed * dt);
 
         // Update facing for non-zero input.
@@ -518,7 +533,7 @@ public sealed partial class BlastSession : GameSession
         }
 
         // Check kick: walk into a resting bomb.
-        CheckKick(p, input);
+        CheckKick(p, input, startX, startZ, dt);
     }
 
     private void MovePlayerCarrying(BlastPlayer p, InputState input, float dt)
@@ -552,7 +567,7 @@ public sealed partial class BlastSession : GameSession
 
         // Elimination: out-of-bounds or void/water cell.
         if (cell.IsElimination || p.X < 0 || p.X >= _stage.Width || p.Z < 0 || p.Z >= _stage.Height)
-            Eliminate(null, p);
+            Eliminate(null, p, cell.Kind == CellKind.Water ? "water" : "fall");
     }
 
     private bool CollidesWithSolid(float x, float z, int tier, BlastPlayer mover)
@@ -610,8 +625,9 @@ public sealed partial class BlastSession : GameSession
 
     // ─── kicking ──────────────────────────────────────────────────────────────
 
-    private void CheckKick(BlastPlayer p, InputState input)
+    private void CheckKick(BlastPlayer p, InputState input, float startX, float startZ, float dt)
     {
+        ForgetSeparatedKickContacts(p);
         if (input.X * input.X + input.Z * input.Z < 0.1f) return;
 
         foreach (var b in _bombs)
@@ -621,7 +637,18 @@ public sealed partial class BlastSession : GameSession
             var dz = b.Z - p.Z;
             var dist = MathF.Sqrt(dx * dx + dz * dz);
             if (dx * input.X + dz * input.Z <= .001f) continue; // walking away never kicks a bomb behind the player
-            if (dist > PlayerRadius + BlastBomb.Radius + 0.05f) continue;
+            if (dist > PlayerRadius + BlastBomb.Radius + 0.05f)
+            {
+                // Movement collision can stop up to one tick short of touching the bomb. Test
+                // this tick's intended segment, rather than enlarging the proximity radius.
+                var stepX = input.X * PlayerSpeed * dt;
+                var stepZ = input.Z * PlayerSpeed * dt;
+                var along = Math.Clamp(((b.X - startX) * stepX + (b.Z - startZ) * stepZ) /
+                    (stepX * stepX + stepZ * stepZ), 0, 1);
+                var clearance = PlayerRadius + BlastBomb.Radius;
+                if (Dist2(b.X, b.Z, startX + along * stepX, startZ + along * stepZ) > clearance * clearance)
+                    continue;
+            }
 
             // Kick in the player's facing direction.
             var nx = MathF.Round(p.FacingX);
@@ -632,6 +659,8 @@ public sealed partial class BlastSession : GameSession
             b.State = BombState.Rolling;
             b.VX = nx * BlastBomb.RollSpeed;
             b.VZ = nz * BlastBomb.RollSpeed;
+            if (_presentedKickContacts.Add((p.Id, b.Id)))
+                PresentBomb("kick", b, p.Id, BlastBomb.RollSpeed);
             break; // one kick per tick
         }
     }
@@ -660,6 +689,7 @@ public sealed partial class BlastSession : GameSession
         _bombs.Add(bomb);
         p.ActiveBombs++;
         if (hold) { bomb.State = BombState.Carried; p.CarryingBombId = bomb.Id; UpdateCarriedBombPosition(bomb); }
+        PresentBomb(hold ? "bomb-carry" : "bomb-drop", bomb, p.Id);
     }
 
     // ─── pick up / throw ──────────────────────────────────────────────────────
@@ -676,6 +706,7 @@ public sealed partial class BlastSession : GameSession
         {
             bomb.State = BombState.Carried;
             p.CarryingBombId = bomb.Id;
+            PresentBomb("lift", bomb, p.Id);
             return;
         }
 
@@ -690,6 +721,7 @@ public sealed partial class BlastSession : GameSession
             {
                 p.CarryingPlayerId = victim.Id;
                 victim.StunTimer = float.MaxValue; // held until thrown
+                Present("lift", victim.Id, p.Id, victim.X, victim.Y, victim.Z, reason: "player");
             }
         }
     }
@@ -710,6 +742,7 @@ public sealed partial class BlastSession : GameSession
         {
             bomb.State = BombState.Carried;
             p.CarryingBombId = bomb.Id;
+            PresentBomb("lift", bomb, p.Id);
         }
     }
 
@@ -744,6 +777,7 @@ public sealed partial class BlastSession : GameSession
         bomb.Tier = p.Tier;
 
         p.CarryingBombId = null;
+        PresentBomb("throw", bomb, p.Id, speed);
     }
 
     private void ThrowPlayer(ISessionContext context, BlastPlayer p, InputState input)
@@ -758,10 +792,12 @@ public sealed partial class BlastSession : GameSession
         victim.X = Math.Clamp(victim.X, 0, _stage.Width - 1);
         victim.Z = Math.Clamp(victim.Z, 0, _stage.Height - 1);
 
+        Present("throw", victim.Id, p.Id, p.X, p.Y + .9f, p.Z, dist, reason: "player");
+
         // Check if thrown off the stage.
         var cell = _stage.At((int)victim.X, (int)victim.Z);
         if (cell.IsElimination || victim.X < 0 || victim.X >= _stage.Width)
-            Eliminate(p.Id, victim);
+            Eliminate(p.Id, victim, cell.Kind == CellKind.Water ? "water" : "fall");
         else
         {
             victim.StunTimer = 1.0f;
@@ -777,7 +813,7 @@ public sealed partial class BlastSession : GameSession
     {
         var bomb = _bombs.FirstOrDefault(b => b.Id == p.CarryingBombId);
         if (bomb is null) return;
-        if (bomb.Pumps < 3) { bomb.Pumps++; p.PumpSerial++; }
+        if (bomb.Pumps < 3) { bomb.Pumps++; p.PumpSerial++; PresentBomb("pump", bomb, p.Id, bomb.Pumps); }
     }
 
     // ─── remote detonation ────────────────────────────────────────────────────
@@ -949,6 +985,7 @@ public sealed partial class BlastSession : GameSession
         DecrementOwnerBombs(bomb.OwnerId);
 
         var r = bomb.BlastRadius;
+        PresentBomb("blast", bomb, bomb.OwnerId, bomb.EffectiveLevel);
 
         // Create hazard sphere.
         _hazards.Add(new BlastHazard
@@ -965,7 +1002,7 @@ public sealed partial class BlastSession : GameSession
         var chains = _bombs.Where(other => !other.Exploded && other.State != BombState.Carried &&
             InBlast(bomb.X, bomb.Z, BombY(bomb), r + .5f, other.X, other.Z, BombY(other), bomb.IsRed)).ToArray();
         DestroyBlocksInBlast(context, bomb.X, bomb.Z, r, bomb.IsRed, BombY(bomb));
-        foreach (var player in victims) HitPlayer(context, player);
+        foreach (var player in victims) HitPlayer(context, player, "explosion", bomb.OwnerId);
         foreach (var other in chains) ExplodeBomb(context, other);
     }
 
@@ -1041,7 +1078,7 @@ public sealed partial class BlastSession : GameSession
 
     // ─── player hits ──────────────────────────────────────────────────────────
 
-    private void HitPlayer(ISessionContext context, BlastPlayer p)
+    private void HitPlayer(ISessionContext context, BlastPlayer p, string reason = "explosion", string? causedBy = null)
     {
         if (!p.Alive || p.Ghost || p.InvincibleTimer > 0) return;
 
@@ -1052,13 +1089,14 @@ public sealed partial class BlastSession : GameSession
             return;
         }
 
-        Eliminate(null, p);
+        Eliminate(causedBy, p, reason);
     }
 
-    private void Eliminate(string? causedBy, BlastPlayer p)
+    private void Eliminate(string? causedBy, BlastPlayer p, string reason)
     {
         if (!p.Alive) return;
-        if (_practice) { RespawnPracticePlayer(p); return; }
+        Present("death", p.Id, p.Id, p.X, p.Y, p.Z, reason: reason, causedBy: causedBy);
+        if (_practice) { RespawnPracticePlayer(p); Present("respawn", p.Id, p.Id, p.X, p.Y, p.Z, reason: reason); return; }
         p.Alive = false;
         DropCarriedBombs(p);
 
@@ -1235,7 +1273,7 @@ public sealed partial class BlastSession : GameSession
         {
             if (!p.Alive || p.Ghost) continue;
             if ((int)p.X < _closedLeft || (int)p.X >= _stage.Width - _closedRight)
-                HitPlayer(context, p);
+                HitPlayer(context, p, "columns");
         }
         // Also explode resting bombs in closed columns.
         foreach (var b in _bombs.ToList())
@@ -1341,6 +1379,9 @@ public sealed partial class BlastSession : GameSession
             z = MathF.Round(h.Z, 2),
             y = MathF.Round(h.Y, 3),
             r = MathF.Round(h.Radius, 2),
+            age = Math.Clamp(.4f - h.LifeTimer, 0, .4f),
+            life = Math.Max(0, h.LifeTimer),
+            red = h.IsRed,
         });
 
         var itemList = _items.Select(it => new
@@ -1357,6 +1398,8 @@ public sealed partial class BlastSession : GameSession
         context.Broadcast("state", new
         {
             round = _roundNum,
+            presentationSeq = _presentationSeq,
+            events = _presentationEvents.ToArray(),
             phase = (int)_phase,
             timeLeft = MathF.Round(timeLeft, 1),
             closedLeft = _closedLeft,

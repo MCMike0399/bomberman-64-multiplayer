@@ -12,6 +12,7 @@ public partial class GameRoot : Node3D
     private ArenaView _arena=null!;
     private ArcadeMenu _menu=null!;
     private BattleHud _hud=null!;
+    private BlastCircuit.Rendering.BattleAudio _uiAudio=null!;
     private ISession? _session;
     private CancellationTokenSource? _connectCancel;
     private readonly Dictionary<int,PlayerInput> _injected=[];
@@ -35,12 +36,15 @@ public partial class GameRoot : Node3D
     public object VisualState=>new {waterHeight=_arena.WaterHeight,largestBombScale=_arena.LargestBombScale,pumpAnimations=_arena.PumpAnimationCount,pumpIntensity=_arena.PumpIntensity,carriedBombs=_arena.CarriedBombs,powerups=_arena.VisiblePowerups};
     public JsonElement? LatestLobby=>_lobby;
     public object RosterState=>_menu.RosterState;
+    public object PresentationState=>_arena.PresentationState;
+    public BlastCircuit.Rendering.BattleAudio BattleAudio=>_arena.Audio;
     public int SelectedAppearance=>_menu.OnlineAppearance;
     public void ConfigureRosterSlot(int slot,string role,int appearance)=>_menu.ConfigureRosterSlot(slot,role.ToLowerInvariant() switch {"human"=>RosterRole.Human,"cpu"=>RosterRole.Cpu,"off"=>RosterRole.Off,_=>throw new ArgumentException("Role must be human, cpu or off.")},appearance);
     public void SetOnlineAppearance(int appearance)=>_menu.SetOnlineAppearance(appearance);
 
     public override void _Ready()
     {
+        _uiAudio=new BlastCircuit.Rendering.BattleAudio();AddChild(_uiAudio);
         _arena=new ArenaView();AddChild(_arena);_arena.Visible=false;
         var layer=new CanvasLayer();AddChild(layer);
         _menu=new ArcadeMenu();layer.AddChild(_menu);
@@ -73,6 +77,7 @@ public partial class GameRoot : Node3D
             CancelConnection();
             if(_session!=null)ReleaseSession();
         }
+        if(screen!=ScreenName){if(screen=="Modes"||(screen=="Roster"&&ScreenName=="Setup"))_uiAudio.MenuBack();else _uiAudio.MenuConfirm();}
         _setupForHost=screen=="HostSetup";
         ControllerHub.Current.TesterActive=screen=="Controls";
         ScreenName=screen=="Practice"||screen=="HostSetup"?"Setup":screen;
@@ -128,6 +133,7 @@ public partial class GameRoot : Node3D
     }
     private void Begin(ISession session,bool online)
     {
+        _uiAudio.MenuConfirm();
         ReleaseSession();_arena.ResetMatch();_session=session;LatestStage=null;LatestState=null;_result=null;_lobby=null;SnapshotCount=0;_injected.Clear();_hud.Reset();_hud.Practice=_practice;_menu.ResetLobby();
         ControllerHub.Current.BeginMatch(session.LocalPlayerCount);
         if(online)
@@ -211,6 +217,7 @@ public partial class GameRoot : Node3D
                     if(data.TryGetProperty("playerId",out var owner)&&data.TryGetProperty("index",out var suit))_menu.SetLobbyAppearance(owner.GetString()!,suit.GetInt32());
                     break;
                 case "sys.welcome":
+                    if(LatestState!=null)_arena.ResetPresentationBaseline();
                     if(data.TryGetProperty("lobby",out var welcomeLobby)){_lobby=welcomeLobby.Clone();_menu.ShowLobby(_lobby,session.JoinCode,session.Status);}
                     break;
                 case "sys.lobby":_lobby=data.Clone();_menu.ShowLobby(_lobby,session.JoinCode,session.Status);break;

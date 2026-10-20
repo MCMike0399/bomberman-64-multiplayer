@@ -26,16 +26,17 @@ public partial class RosterSelection : VBoxContainer
         ArcadeTheme.Text(header,"01  PLAYERS   /   02  RULES   /   03  BATTLE",15);
         ArcadeTheme.Button(header,"← BACK",()=>BackRequested?.Invoke()).Name="RosterBack";
         _summary=ArcadeTheme.Text(this,"",17);
-        var grid=new GridContainer {Columns=4,SizeFlagsVertical=SizeFlags.ExpandFill};grid.AddThemeConstantOverride("h_separation",14);grid.AddThemeConstantOverride("v_separation",12);AddChild(grid);
+        var grid=new GridContainer {Columns=8,SizeFlagsVertical=SizeFlags.ExpandFill};grid.AddThemeConstantOverride("h_separation",3);grid.AddThemeConstantOverride("v_separation",12);AddChild(grid);
         for(int i=0;i<8;i++)
         {
-            int slot=i;var panel=new PanelContainer {CustomMinimumSize=new(292,251),SizeFlagsHorizontal=SizeFlags.ExpandFill,SizeFlagsVertical=SizeFlags.ExpandFill};grid.AddChild(panel);
-            var column=ArcadeTheme.Column(panel,4);
+            int slot=i;var panel=new PanelContainer {CustomMinimumSize=new(150,460),SizeFlagsHorizontal=SizeFlags.ExpandFill,SizeFlagsVertical=SizeFlags.ExpandFill};grid.AddChild(panel);
+            var column=ArcadeTheme.Column(panel,8);
             var title=ArcadeTheme.Text(column,"",15);title.HorizontalAlignment=HorizontalAlignment.Center;
-            var preview=new CharacterPreview {CustomMinimumSize=new(240,141),SizeFlagsVertical=SizeFlags.ExpandFill,SizeFlagsHorizontal=SizeFlags.ExpandFill};column.AddChild(preview);
-            var row=ArcadeTheme.Row(column,6);
-            var role=new OptionButton {Name=$"Slot{slot}Role",CustomMinimumSize=new(110,35),SizeFlagsHorizontal=SizeFlags.ExpandFill};role.AddItem("OFF");role.AddItem("HUMAN");role.AddItem("CPU");row.AddChild(role);
-            var appearance=new Button {Name=$"Slot{slot}Appearance",CustomMinimumSize=new(130,35),SizeFlagsHorizontal=SizeFlags.ExpandFill};appearance.AddThemeFontSizeOverride("font_size",14);row.AddChild(appearance);
+            var preview=new CharacterPreview {CustomMinimumSize=new(140,270),SizeFlagsVertical=SizeFlags.ExpandFill,SizeFlagsHorizontal=SizeFlags.ExpandFill};column.AddChild(preview);
+            var row=ArcadeTheme.Column(column,4);
+            var role=new OptionButton {Name=$"Slot{slot}Role",CustomMinimumSize=new(0,40),SizeFlagsHorizontal=SizeFlags.ExpandFill};role.AddItem("OFF");role.AddItem("HUMAN");role.AddItem("CPU");row.AddChild(role);
+            var appearance=new Button {Name=$"Slot{slot}Appearance",CustomMinimumSize=new(0,38),SizeFlagsHorizontal=SizeFlags.ExpandFill};appearance.AddThemeFontSizeOverride("font_size",12);row.AddChild(appearance);
+            StripControl(role);StripControl(appearance);appearance.TooltipText="Cycle suit color";
             var binding=ArcadeTheme.Text(column,"",11);binding.HorizontalAlignment=HorizontalAlignment.Center;
             _cards.Add((panel,role,appearance,title,binding,preview));
             role.ItemSelected+=value=>{if(!_updating){var current=Roster.Slots[slot];Roster.Set(slot,(RosterRole)value,current.Appearance);Select(slot);Refresh();}};
@@ -64,7 +65,11 @@ public partial class RosterSelection : VBoxContainer
         for(int i=0;i<_cards.Count;i++)
         {
             var card=_cards[i];card.Preview.Selected=i==slot;
-            card.Panel.AddThemeStyleboxOverride("panel",ArcadeTheme.Panel(i==slot?new Color("fff0b7"):Colors.White,i==slot?ArcadeTheme.Gold:ArcadeTheme.Ink,i==slot?4:2,16,8));
+            var color=ArcadeTheme.Players[Roster.Slots[i].Appearance];
+            var style=ArcadeTheme.Panel(new Color(color,i==slot?.22f:.08f),i==slot?ArcadeTheme.Red:new Color(color,.5f),0,0,8);style.BorderWidthBottom=i==slot?8:3;style.ShadowSize=0;
+            card.Panel.AddThemeStyleboxOverride("panel",style);
+            card.Title.AddThemeColorOverride("font_color",i==slot?ArcadeTheme.Red:ArcadeTheme.Ink);
+            card.Title.Text=(i==slot?"▼ ":"")+card.Title.Text.TrimStart('▼',' ');
         }
     }
     public void Refresh()
@@ -85,7 +90,17 @@ public partial class RosterSelection : VBoxContainer
         }
         _summary.Text=$"{Roster.Humans} HUMAN  +  {Roster.CpuPlayers} CPU    /    {Roster.Participants} CONTENDERS     •     {pads} GAMEPADS CONNECTED";
         _notice.Text="Choose HUMAN, CPU or OFF. Change a suit color; every contender has the same abilities.";
-        _updating=false;
+        _updating=false;Select(_selected);
+    }
+    private static void StripControl(Button control)
+    {
+        foreach(var state in new[]{"normal","hover","pressed","focus"})
+        {
+            var fill=state=="hover"?new Color(1,1,1,.35f):state=="pressed"?new Color(ArcadeTheme.Gold,.4f):new Color(1,1,1,0);
+            var style=ArcadeTheme.Panel(fill,state=="focus"?ArcadeTheme.Red:new Color(ArcadeTheme.Ink,.22f),0,0,5);
+            style.BorderWidthBottom=state=="focus"?3:state=="normal"?1:2;
+            control.AddThemeStyleboxOverride(state,style);
+        }
     }
     public void FocusFirst()=>_cards[0].Role.GrabFocus();
 }
