@@ -52,6 +52,9 @@ public partial class PlaytestDriver : Node
             else switch(_scenario)
             {
                 case "menu": await Menus(); break;
+                case "controllers": await ControllerInputs(); break;
+                case "controller-inventory": await ControllerInventory(); break;
+                case "controller-observe": await ControllerObserve(); break;
                 case "local-actions": await LocalActions(); break;
                 case "ramp": await Ramps(); break;
                 case "network": await Network(); break;
@@ -63,7 +66,7 @@ public partial class PlaytestDriver : Node
                 case "roster": await RosterSelection(); break;
                 case "framing": await Framing(); break;
                 case "fullscreen": await Fullscreen(); break;
-                case "all": await Menus(); await RosterSelection(); await Framing(); await LocalActions(); await Ramps(); await Powerups(); await PumpGrowth(); await HurryWater(); await Combat(); await Results(); await Network(); break;
+                case "all": await Menus(); await ControllerInputs(); await RosterSelection(); await Framing(); await LocalActions(); await Ramps(); await Powerups(); await PumpGrowth(); await HurryWater(); await Combat(); await Results(); await Network(); break;
                 default: throw new ArgumentException("Unknown scenario: "+_scenario);
             }
         }
@@ -345,7 +348,8 @@ public partial class PlaytestDriver : Node
         Check(State.GetProperty("bombs").EnumerateArray().Any(b=>b.GetProperty("red").GetBoolean()&&b.GetProperty("remote").GetBoolean()),"collected powerups change newly placed bomb");
         Input(0,new PlayerInput(0,0,R:true));await Frames(4);Input(0,default);await Frames(4);
         Check(State.GetProperty("hazards").GetArrayLength()>0,"remote action detonates upgraded bomb");
-        await Click("RESET");await Frames(4);
+        // In-battle HUD buttons deliberately stay out of D-pad focus navigation.
+        await MouseClick("RESET");await Frames(4);
         Check(Player.GetProperty("fire").GetInt32()==1&&Player.GetProperty("bombs").GetInt32()==initialCapacity,"practice reset restores baseline upgrades");
         Check(Player.GetProperty("pickupSerial").GetInt64()==0&&Visual.GetProperty("powerups").GetInt32()>=6,"practice reset restores visible training cache");
         await Capture("powerups-practice-reset");

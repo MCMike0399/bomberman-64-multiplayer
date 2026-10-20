@@ -110,3 +110,14 @@ The engine harness checks actual model scale, active pumping pose, accepted inpu
 Online appearance commands contain only an index, `{t:"appearance",d:{index:0}}`. The authority binds changes to the authenticated sender, validates indices 0–7 and sends current choices to joining and reconnecting players. Match snapshots and final scores include appearance independently of slot; this is cosmetic state and does not affect simulation randomness or outcomes.
 
 `CharacterPreview` renders the shared `BomberModel` in isolated miniature worlds. Shared cached meshes/materials keep eight previews inexpensive; changing color reuses the model and its animation state. `BattleCameraRig` fits terrain and standing-character bounds after stage or viewport changes, preserves a perspective view, and adds shake relative to the fitted offset. `DisplayModeController` owns fullscreen shortcuts separately from match input.
+
+
+## Controller input boundary
+
+`InputPolicy` is engine-independent: it rejects non-finite axes, applies a radial stick deadzone, normalizes accepted direction to unit speed and resolves D-pad, stick and keyboard precedence without adding vectors. The authoritative server still owns movement, collision, bomb edges and speed limits.
+
+`MatchControllerBindings` reserves a controller identity for each eligible human seat for the duration of a match. Device-list reordering never transfers control between players. A unique reconnect can recover its seat under a new runtime ID; ambiguous replacements remain unassigned. The API supports explicit assignment, while the current UI requires restarting a match to resolve that ambiguous case.
+
+`ControllerHub` adapts Godot devices and the optional native USB backend to the same canonical events. It owns short-tap latches, action release gates at match entry/focus restoration, per-seat hotplug changes and family-aware prompts. `PlayerControls` reads physical keyboard keys and delegates policy to the hub. The live tester consumes face-button navigation so testing an action does not accidentally leave the screen. Native device IDs use a separate range; the controller harness exercises that range as well.
+
+`SdlGamepadBackend` loads a separate, input-only SDL library on the engine thread, opens only the Switch 2 Pro USB VID/PID, preserves queued button edges, and releases its handles on shutdown. The macOS build keeps bulk initialization and nonexclusive HID reports separate. Xbox/DualSense stay on Godot's backend. Generated libraries are ignored, preserve upstream notices, and are not part of the independent server. [Controller research](controller-research.md) records the source pins, macOS patches and wireless limitations.

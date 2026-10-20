@@ -1,5 +1,6 @@
 using Godot;
 using System.Text.Json;
+using BlastCircuit.InputDevices;
 namespace BlastCircuit.UI;
 
 /// <summary>Compact participant strip and timer; game state remains owned by the session.</summary>
@@ -16,6 +17,7 @@ public partial class BattleHud : Control
     private JsonElement? _lastState;
     private float _hurryAge;
     private int _phaseNumber;
+    private Label _controls=null!;
     public override void _Ready()
     {
         Theme=ArcadeTheme.Create();MouseFilter=MouseFilterEnum.Ignore;SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
@@ -23,10 +25,14 @@ public partial class BattleHud : Control
         _phase=new Label {AnchorLeft=.2f,AnchorRight=.8f,OffsetTop=124,OffsetBottom=176,HorizontalAlignment=HorizontalAlignment.Center};_phase.AddThemeFontSizeOverride("font_size",30);_phase.AddThemeColorOverride("font_color",Colors.White);_phase.AddThemeColorOverride("font_outline_color",ArcadeTheme.Ink);_phase.AddThemeConstantOverride("outline_size",8);AddChild(_phase);
         var footer=new PanelContainer {AnchorTop=1,AnchorBottom=1,AnchorRight=1,OffsetLeft=24,OffsetRight=-24,OffsetTop=-69,OffsetBottom=-15};footer.AddThemeStyleboxOverride("panel",ArcadeTheme.Panel(ArcadeTheme.Cream,ArcadeTheme.Ink,2,14,8));AddChild(footer);
         var row=ArcadeTheme.Row(footer,20);_connection=ArcadeTheme.Text(row,"LOCAL BATTLE",14);_connection.SizeFlagsHorizontal=SizeFlags.ExpandFill;
-        ArcadeTheme.Text(row,"SPACE  BOMB / PUMP    SHIFT  LIFT / THROW    R  REMOTE",14);
+        _controls=ArcadeTheme.Text(row,"",13);UpdateControls();ControllerHub.Current.PromptChanged+=UpdateControls;
         _restart=ArcadeTheme.Button(row,"RESET PRACTICE",()=>RestartRequested?.Invoke());_restart.Visible=false;_restart.CustomMinimumSize=new(140,36);_restart.AddThemeFontSizeOverride("font_size",14);
+        _restart.FocusMode=FocusModeEnum.None;
         var leave=ArcadeTheme.Button(row,"LEAVE  [ESC]",()=>LeaveRequested?.Invoke());leave.CustomMinimumSize=new(140,36);leave.AddThemeFontSizeOverride("font_size",14);
+        leave.FocusMode=FocusModeEnum.None;
     }
+    private void UpdateControls()=>_controls.Text=ControllerProfile.Actions(ControllerHub.Current.ActiveFamily,ControllerHub.Current.ActiveKeyboardSeat);
+    public override void _ExitTree(){ControllerHub.Current.PromptChanged-=UpdateControls;}
     public void State(JsonElement state)
     {
         _lastState=state.Clone();

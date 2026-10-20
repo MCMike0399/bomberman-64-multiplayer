@@ -1,6 +1,7 @@
 using Godot;
 using Bomber.Client;
 using BlastCircuit.Rendering;
+using BlastCircuit.InputDevices;
 namespace BlastCircuit.UI;
 
 /// <summary>Eight editable places, explicit runtime control bindings, and live shared-model character previews.</summary>
@@ -14,7 +15,10 @@ public partial class RosterSelection : VBoxContainer
     private int _selected;
     private bool _updating;
     public static readonly string[] AppearanceNames=["WHITE","BLACK","RED","BLUE","GREEN","GOLD","PURPLE","CYAN"];
-    public object DiagnosticState=>new {humans=Roster.Humans,cpu=Roster.CpuPlayers,selected=_selected,slots=Roster.Slots.Select((s,i)=>new {slot=i,role=s.Role.ToString().ToLowerInvariant(),appearance=s.Appearance,binding=Roster.Binding(i,Input.GetConnectedJoypads().Count),selected=i==_selected,animationTime=_cards[i].Preview.AnimationTime,walkPose=_cards[i].Preview.WalkPose,previewBob=_cards[i].Preview.BobHeight,previewAppearance=_cards[i].Preview.Appearance}).ToArray()};
+    public object DiagnosticState=>new {humans=Roster.Humans,cpu=Roster.CpuPlayers,selected=_selected,slots=Roster.Slots.Select((s,i)=>new {slot=i,role=s.Role.ToString().ToLowerInvariant(),appearance=s.Appearance,binding=Binding(i),selected=i==_selected,animationTime=_cards[i].Preview.AnimationTime,walkPose=_cards[i].Preview.WalkPose,previewBob=_cards[i].Preview.BobHeight,previewAppearance=_cards[i].Preview.Appearance}).ToArray()};
+    private string Binding(int slot)=>Roster.Slots[slot].Role==RosterRole.Human
+        ?ControllerHub.Current.BindingLabel(Roster.Slots.Take(slot).Count(s=>s.Role==RosterRole.Human),Roster.Humans)
+        :Roster.Binding(slot,ControllerHub.Current.PlayableCount);
     public override void _Ready()
     {
         AddThemeConstantOverride("separation",10);
@@ -41,14 +45,13 @@ public partial class RosterSelection : VBoxContainer
         var footer=ArcadeTheme.Row(this,20);_notice=ArcadeTheme.Text(footer,"",15);_notice.SizeFlagsHorizontal=SizeFlags.ExpandFill;_notice.AutowrapMode=TextServer.AutowrapMode.WordSmart;_notice.CustomMinimumSize=new(760,40);
         ArcadeTheme.Button(footer,"CONTINUE TO RULES   →",()=>
         {
-            var error=Roster.ValidationError(Input.GetConnectedJoypads().Count);
+            var error=Roster.ValidationError(ControllerHub.Current.PlayableCount);
             if(error!=null){_notice.Text=error;return;}
             ContinueRequested?.Invoke();
         },true).Name="RosterContinue";
-        Input.JoyConnectionChanged+=OnJoyConnectionChanged;Refresh();Select(0);
+        ControllerHub.Current.DevicesChanged+=Refresh;Refresh();Select(0);
     }
-    private void OnJoyConnectionChanged(long device,bool connected)=>Refresh();
-    public override void _ExitTree(){Input.JoyConnectionChanged-=OnJoyConnectionChanged;}
+    public override void _ExitTree(){ControllerHub.Current.DevicesChanged-=Refresh;}
     public void Configure(int slot,RosterRole role,int appearance){Roster.Set(slot,role,appearance);Select(slot);Refresh();}
     public void ConfigureCounts(int humans,int bots)
     {
@@ -67,12 +70,15 @@ public partial class RosterSelection : VBoxContainer
     public void Refresh()
     {
         if(_cards.Count!=8)return;
-        _updating=true;int human=0,cpu=0,pads=Input.GetConnectedJoypads().Count;
+        _updating=true;int human=0,cpu=0,pads=ControllerHub.Current.PlayableCount;
         for(int i=0;i<8;i++)
         {
             var slot=Roster.Slots[i];var card=_cards[i];card.Role.Select((int)slot.Role);
             card.Title.Text=slot.Role switch {RosterRole.Human=>$"HUMAN {++human}",RosterRole.Cpu=>$"CPU {++cpu}",_=>$"SEAT {i+1}  /  OFF"};
-            card.Appearance.Text=AppearanceNames[slot.Appearance]+"  →";card.Binding.Text=Roster.Binding(i,pads);
+            card.Appearance.Text=AppearanceNames[slot.Appearance]+"  →";
+            card.Binding.Text=slot.Role==RosterRole.Human?ControllerHub.Current.BindingLabel(human-1,Roster.Humans):Roster.Binding(i,pads);
+            card.Binding.ClipText=true;card.Binding.TextOverrunBehavior=TextServer.OverrunBehavior.TrimEllipsis;
+            card.Binding.TooltipText=card.Binding.Text;
             card.Preview.EnabledSeat=slot.Role!=RosterRole.Off;
             if(card.Preview.Appearance!=slot.Appearance)card.Preview.SetAppearance(slot.Appearance);
             card.Appearance.Modulate=slot.Role==RosterRole.Off?new Color(.65f,.65f,.65f):Colors.White;

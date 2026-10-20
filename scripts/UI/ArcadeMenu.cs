@@ -1,6 +1,7 @@
 using Godot;
 using Bomber.Client;
 using System.Text.Json;
+using BlastCircuit.InputDevices;
 namespace BlastCircuit.UI;
 
 /// <summary>Mode, setup, connection, lobby and result screens; emits intent to the composition root.</summary>
@@ -32,6 +33,7 @@ public partial class ArcadeMenu : Control
     private string _screen="Modes";
     private DateTimeOffset? _countdown;
     private readonly List<Button> _onlineButtons=[];
+    private Label _inputFooter=null!;
     public int HumanCount => _practice?1:_localPlayers.Roster.Humans;
     public int[] PlayerAppearances => _practice?new[]{_localPlayers.Roster.AuthorityAppearances().FirstOrDefault()}:_localPlayers.Roster.AuthorityAppearances();
     public object RosterState=>_localPlayers.DiagnosticState;
@@ -49,13 +51,15 @@ public partial class ArcadeMenu : Control
         Theme=ArcadeTheme.Create();SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         var background=new ArcadeBackdrop();AddChild(background);background.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         _content=new Control();AddChild(_content);_content.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-        BuildModes();BuildRoster();BuildSetup();BuildOnline();BuildLobby();BuildResults();
+        BuildModes();BuildControls();BuildRoster();BuildSetup();BuildOnline();BuildLobby();BuildResults();
         var footer=new HBoxContainer {AnchorTop=1,AnchorBottom=1,AnchorRight=1,OffsetTop=-62,OffsetBottom=-8,OffsetLeft=58,OffsetRight=-58,Alignment=BoxContainer.AlignmentMode.Center};AddChild(footer);
-        ArcadeTheme.Text(footer,"↑ ↓  SELECT   ENTER / A  CONFIRM   ESC / B  BACK   F11  SCREEN",17);
+        _inputFooter=ArcadeTheme.Text(footer,"",16);UpdateInputFooter();ControllerHub.Current.PromptChanged+=UpdateInputFooter;
         var spacer=new Control {SizeFlagsHorizontal=SizeFlags.ExpandFill};footer.AddChild(spacer);
         ArcadeTheme.Text(footer,"BURBUJA  •  LOCAL + ONLINE  •  2–8 PLAYERS",15);
         ShowScreen("Modes");
     }
+    private void UpdateInputFooter()=>_inputFooter.Text=ControllerProfile.Menu(ControllerHub.Current.ActiveFamily);
+    public override void _ExitTree(){ControllerHub.Current.PromptChanged-=UpdateInputFooter;}
     private Control Screen(string name)
     {var control=new Control();_content.AddChild(control);control.AnchorLeft=control.AnchorRight=.5f;control.AnchorTop=control.AnchorBottom=.5f;control.OffsetLeft=-720;control.OffsetRight=720;control.OffsetTop=-450;control.OffsetBottom=450;_screens[name]=control;return control;}
     private VBoxContainer Card(Node parent,Vector2 position,Vector2 size,Color? fill=null)
@@ -72,13 +76,19 @@ public partial class ArcadeMenu : Control
         var right=new BomberPortrait {Position=new(430,420),Size=new(180,240),Suit=ArcadeTheme.Players[2],Rotation=.12f};screen.AddChild(right);
         var hero=new BomberPortrait {Position=new(235,365),Size=new(230,330),Suit=ArcadeTheme.Players[0],Hero=true};screen.AddChild(hero);
         var legend=ArcadeTheme.Text(screen,"LIFT  •  PUMP  •  THROW  •  SURVIVE",18);legend.Position=new(105,728);
-        var card=Card(screen,new(744,112),new(610,644));
+        var card=Card(screen,new(744,96),new(610,716));
         ArcadeTheme.Text(card,"LET’S BATTLE!",38);
         ArcadeTheme.Text(card,"Pick a mode and jump into the arena.",18);
         Mode(card,"01     LOCAL BATTLE","Friends, controllers & CPU rivals",()=>Navigation?.Invoke("Roster"),true);
         Mode(card,"02     ONLINE BATTLE","Host a room or find your next rival",()=>Navigation?.Invoke("Online"));
         Mode(card,"03     PRACTICE","Explore the temple. Master every throw.",()=>Navigation?.Invoke("Practice"));
         ArcadeTheme.Text(card,"One keyboard supports two players.\nAdd up to six pads for eight local players.",16);
+        ArcadeTheme.Button(card,"CONTROLS & CONTROLLER TEST",()=>Navigation?.Invoke("Controls")).Name="OpenControls";
+    }
+    private void BuildControls()
+    {
+        var screen=Screen("Controls");var box=Card(screen,new(64,54),new(1312,746));
+        var panel=new ControllerPanel();box.AddChild(panel);panel.BackRequested+=()=>BackRequested?.Invoke();
     }
     private static void Mode(Node parent,string title,string description,Action action,bool primary=false)
     {
@@ -119,7 +129,7 @@ public partial class ArcadeMenu : Control
         _ghosts=new CheckButton {Text="GHOST COMEBACKS",ButtonPressed=true};right.AddChild(_ghosts);
         _notice=ArcadeTheme.Text(right,"2–8 total participants. CPU players fill empty seats.",16);_notice.AutowrapMode=TextServer.AutowrapMode.WordSmart;_notice.CustomMinimumSize=new(520,54);
         _launch=ArcadeTheme.Button(right,"LET’S GO!   →",()=>LocalRequested?.Invoke(),true);_launch.CustomMinimumSize=new(0,65);
-        ArcadeTheme.Text(box,"P1  WASD + SPACE / SHIFT / R      P2  ARROWS + ENTER / CTRL / BACKSPACE      GAMEPAD  LEFT STICK + A / X / B",14);
+        ArcadeTheme.Text(box,"P1  WASD + J / K / L      P2  ARROWS + N / M / ,      PADS  STICK / D-PAD + SOUTH / WEST / EAST",14);
     }
     private void BuildOnline()
     {

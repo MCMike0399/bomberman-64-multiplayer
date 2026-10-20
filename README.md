@@ -58,15 +58,34 @@ The default is loopback. No external hosting, domain, TLS, firewall changes or p
 
 ## Controls
 
-| Action | Keyboard seat 1 | Keyboard seat 2 | Gamepad |
-|---|---|---|---|
-| Move | WASD | Arrow keys | Left stick |
-| Place bomb / pump held bomb | Space | Enter | A |
-| Lift / release to throw | Shift | Ctrl | X |
-| Remote detonate after pickup | R | Backspace | B |
-| Leave match / cancel connection | Escape | Escape | Start in battle; B backs out of menus |
+| Action | Keyboard 1 | Keyboard 2 | Xbox | Switch 2 | PS5 |
+|---|---|---|---|---|---|
+| Move | WASD | Arrows | Stick / D-pad | Stick / D-pad | Stick / D-pad |
+| Bomb / pump | J or Space | N or Enter | A | B | Cross |
+| Hold carry; release to throw | K or Shift | M or Ctrl | X or LB | Y or L | Square or L1 |
+| Remote detonation | L or R | Comma or Backspace | B or RB | A or R | Circle or R1 |
+| Leave battle | Esc | Esc | Menu | + | Options |
 
-Walking into a resting bomb kicks it. Hold lift to carry a nearby bomb, or hold lift and press bomb to create one directly in your hands. Repeatedly press bomb while holding lift to inflate it, then release lift to throw. On a gamepad this is **hold X, tap A, then keep tapping A to pump**; on keyboard use **Shift + Space**. The character lifts, compresses, and releases the bomb in response to accepted actions. Explosions use spherical distance and cover occlusion rather than a classic grid cross. Pickups upgrade blast size, bomb capacity, remote detonation, red piercing bombs or a protective heart. Ghosts and sudden death are enabled by default. With one minute left, the Pyramid-inspired Sunken Temple warns of rising water; its lower court floods before the upper terraces. Other arenas retain closing columns. Permanent stone and terrain block blasts; red bombs penetrate breakable cover. Last survivor earns a round win; first to the win target wins the match.
+Keyboard 2 also supports numpad 0 / 1 / 2 for bomb / carry / remote. Menus use the **bottom face button to confirm** and **right face button to go back**, with controller-specific prompts. F11 or Alt+Enter toggles fullscreen.
+
+Choose **CONTROLS & CONTROLLER TEST** on the main menu to inspect connected pads and live inputs. Face buttons stay in the tester; Menu / + / Options or Esc leaves it. The roster shows which pad accompanies each human seat. Two-human matches allow one pad per player alongside the two keyboard layouts; larger matches reserve the first two humans for keyboards and assign pads to the remaining humans.
+
+All devices run at the same speed, including diagonal keyboard movement. Sticks retain their analog direction but use full running speed beyond the **20% radial deadzone**. D-pad input takes priority over stick input, which takes priority over keyboard movement; directions are never added together. Short bomb taps are buffered, holding bomb does not auto-repeat, and actions must be released after entering a match or returning focus. Disconnecting a pad reserves its seat without moving another player's controls. Identical controllers that both reconnect under ambiguous identities require restarting the match to assign them safely.
+
+### Switch 2 USB on macOS
+
+The optional adapter is built locally for the Switch 2 Pro controller that Godot's bundled backend cannot expose:
+
+```bash
+./tools/controllers/bootstrap-sdl.sh
+./scripts/client.sh
+```
+
+It downloads checksum-pinned SDL 3.4.18 and libusb 1.0.29, builds inside ignored project directories, and places the runtime libraries in `native/macos/`. Xcode command-line build tools and Python 3 are required. It does not install a system driver. This adapter currently supports **one Switch 2 Pro over USB** at a time; additional players can use Xbox, DualSense, other mapped pads or keyboards. Xbox and DualSense continue through Godot's normal backend. Rebuild/restart the game after installing the adapter. Native libraries and their copied licenses must be included separately when preparing a desktop export; that export packaging has not been verified here.
+
+**Switch 2 Bluetooth is not implemented by this adapter.** Wireless software bridges exist, but none was installed or validated in this iteration. [Controller research](docs/controller-research.md) explains the USB issue, positional button labels, wireless distinction and dependency provenance. Detection and synthetic tests are reported separately from physical button observation in [verification](docs/verification.md).
+
+Walking into a resting bomb kicks it. Hold lift to carry a nearby bomb, or hold lift and press bomb to create one directly in your hands. Repeatedly press bomb while holding lift to inflate it, then release lift to throw. Use **hold carry, tap bomb, then tap bomb again to pump**: Xbox X+A, Switch Y+B, PS5 Square+Cross, or keyboard K+J (Shift+Space also works). The character lifts, compresses, and releases the bomb in response to accepted actions. Explosions use spherical distance and cover occlusion rather than a classic grid cross. Pickups upgrade blast size, bomb capacity, remote detonation, red piercing bombs or a protective heart. Ghosts and sudden death are enabled by default. With one minute left, the Pyramid-inspired Sunken Temple warns of rising water; its lower court floods before the upper terraces. Other arenas retain closing columns. Permanent stone and terrain block blasts; red bombs penetrate breakable cover. Last survivor earns a round win; first to the win target wins the match.
 
 ## Battle progression
 
@@ -83,11 +102,13 @@ The agent harness plays through the actual Godot scene using inputs and product 
 ```bash
 python3 tools/playtest/run.py --build --start-server --scenario all
 python3 tools/playtest/run.py --scenario fullscreen
+python3 tools/playtest/run.py --scenario controllers
+python3 tools/playtest/run.py --scenario controller-observe
 python3 tools/playtest/run.py --scenario ramp --headless
 python3 tools/playtest/run.py --scenario script --script tools/playtest/temple-walk.json
 ```
 
-Graphical runs default to **fullscreen**, matching normal play. The suite exercises real menu controls, enters matches, moves through stairs, handles bombs, collects upgrades, survives flooding, reaches results and connects to the real server. Only the aspect-ratio checks temporarily use a window; gameplay returns to fullscreen. `--windowed` explicitly opts into a windowed run.
+Graphical harness runs and `./scripts/debug.sh` default to **windowed mode**. Normal `./scripts/client.sh` play still opens fullscreen. The suite exercises real menu controls, enters matches, moves through stairs, handles bombs, collects upgrades, survives flooding, reaches results and connects to the real server. Use `--fullscreen` to explicitly test fullscreen; `--scenario fullscreen` requests it directly. The normal windowed suite stays windowed through gameplay and aspect-ratio checks.
 
 Runs save screenshots, authoritative state traces, assertion results, engine logs and failure summaries in unique `artifacts/playtest/` folders. Failed assertions, timeouts and missing reports return a failing exit code. Graphical captures show real viewport pixels; headless captures are explicitly disabled. See [harness instructions](tools/playtest/README.md) for scenario scripting and diagnosis.
 
@@ -124,19 +145,25 @@ It starts a local match and exits after eight seconds with `GODOT_SMOKE_OK`. `--
 [Architecture](docs/architecture.md) describes the boundaries, protocol and scaling path. The repository consumes a separately supplied burbuja-kernel checkout at `burbuja-kernel/`, revision `b0758339984bbeead1b3d1236f31e980aaa5f20e`. Build and runtime use source project references for the kernel. The product now owns its adapted simulation in `src/Bomber.Game/Simulation`, retaining MIT provenance, so map and collision changes do not mutate the generic kernel. Preserve the kernel checkout and its license.
 
 
+## macOS Game Mode
+
+The game already uses native Metal. The `macOS Metal` export preset declares Apple’s `LSSupportsGameMode` opt-in and Games bundle category. Game Mode is controlled by macOS during eligible fullscreen play; it is not enabled by windowed debug tests, and no performance boost is claimed without measurement. [Setup, primary sources and verification limits](docs/macos-game-mode.md).
+
 ## Visual polish
 
 The fourth iteration uses a smoothly rounded helmet and inset face, articulated head motion, blinks, mitten thumbs and shaped boots. Warm key light, cool fill, softer shadows, quieter stone and water materials, and a higher perspective camera improve the temple’s depth and visibility. The camera fits each map and viewport around the HUD. [Reference research](docs/iteration4-research.md) documents the inspected Bomberman 64 selection footage and TUNIC developer interviews.
 
 ## Screenshots
 
-All five images below are actual fullscreen captures from the final iteration-four regression run.
+The gallery shows actual captures from the final windowed regression run, including the physical Switch 2 USB device in the controller tester.
 
 ![Sunken Temple battle](docs/images/temple-battle.png)
 
 ![Mode selection](docs/images/mode-select.png)
 
 ![Animated eight-seat roster](docs/images/battle-roster.png)
+
+![Controller tester](docs/images/controller-test.png)
 
 The game uses original procedural visuals. No original game ROM, Nintendo/Hudson artwork, footage, kernel source, credentials, or playtest traces are distributed here. The adapted simulation retains its upstream MIT notice in `src/Bomber.Game/Simulation/LICENSE`.
 

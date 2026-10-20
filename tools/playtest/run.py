@@ -25,10 +25,12 @@ def healthy(origin):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--scenario', choices=['all', 'menu', 'local-actions', 'ramp', 'network', 'combat', 'results', 'powerup-collect', 'pump-growth', 'hurry-water', 'roster', 'framing', 'fullscreen', 'script'], default='all')
+    parser.add_argument('--scenario', choices=['all', 'menu', 'local-actions', 'ramp', 'network', 'combat', 'results', 'powerup-collect', 'pump-growth', 'hurry-water', 'roster', 'framing', 'fullscreen', 'controllers', 'controller-inventory', 'controller-observe', 'script'], default='all')
     parser.add_argument('--script', type=Path, help='JSON scenario, see temple-walk.json')
     parser.add_argument('--headless', action='store_true', help='Explicitly disable screenshot capture')
-    parser.add_argument('--windowed', action='store_true', help='Opt into a windowed run; graphical playtests default to fullscreen')
+    display = parser.add_mutually_exclusive_group()
+    display.add_argument('--windowed', action='store_true', help='Use windowed testing (the default)')
+    display.add_argument('--fullscreen', action='store_true', help='Explicitly test fullscreen; normal QA stays windowed')
     parser.add_argument('--godot', default=os.environ.get('GODOT', '/Applications/Godot_mono.app/Contents/MacOS/Godot'))
     parser.add_argument('--server', default='http://127.0.0.1:18496')
     parser.add_argument('--start-server', action='store_true', help='Start local server if unreachable; stop only the process this runner owns')
@@ -40,6 +42,7 @@ def main():
         parser.error('--scenario script requires --script')
     if args.scenario == 'fullscreen' and (args.windowed or args.headless):
         parser.error('--scenario fullscreen requires a graphical fullscreen launch')
+    windowed = args.headless or not (args.fullscreen or args.scenario == 'fullscreen')
     run_id = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%S.%fZ') + '-' + args.scenario
     folder = args.output.resolve() / run_id
     folder.mkdir(parents=True)
@@ -66,12 +69,12 @@ def main():
                     raise RuntimeError('Server startup failed; inspect server.log')
                 time.sleep(.1)
         command = [args.godot, '--path', str(ROOT), '--max-fps', '30', '--fixed-fps', '30', '--disable-vsync']
-        if args.windowed or args.headless:
+        if windowed:
             command.append('--windowed')
         if args.headless:
             command.append('--headless')
         command += ['--', '--playtest=' + args.scenario, '--playtest-output=' + str(folder), '--playtest-server=' + args.server]
-        if args.windowed or args.headless:
+        if windowed:
             command.append('--display-windowed')
         if args.script:
             command.append('--playtest-file=' + str(args.script.resolve()))

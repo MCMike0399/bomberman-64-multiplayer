@@ -2,6 +2,7 @@ using Godot;
 using Bomber.Client;
 using Bomber.Game;
 using BlastCircuit.UI;
+using BlastCircuit.InputDevices;
 using System.Text.Json;
 namespace BlastCircuit;
 
@@ -66,13 +67,14 @@ public partial class GameRoot : Node3D
 
     public void Navigate(string screen)
     {
-        if(screen is not ("Modes" or "Roster" or "Setup" or "Practice" or "HostSetup" or "Online" or "Lobby" or "Match" or "Results"))throw new ArgumentException("Unknown screen.",nameof(screen));
-        if(screen is "Modes" or "Roster" or "Online" or "Setup" or "Practice" or "HostSetup")
+        if(screen is not ("Modes" or "Controls" or "Roster" or "Setup" or "Practice" or "HostSetup" or "Online" or "Lobby" or "Match" or "Results"))throw new ArgumentException("Unknown screen.",nameof(screen));
+        if(screen is "Modes" or "Controls" or "Roster" or "Online" or "Setup" or "Practice" or "HostSetup")
         {
             CancelConnection();
             if(_session!=null)ReleaseSession();
         }
         _setupForHost=screen=="HostSetup";
+        ControllerHub.Current.TesterActive=screen=="Controls";
         ScreenName=screen=="Practice"||screen=="HostSetup"?"Setup":screen;
         _arena.Visible=ScreenName is "Match" or "Results";
         _hud.Visible=ScreenName=="Match";
@@ -83,7 +85,7 @@ public partial class GameRoot : Node3D
     {
         if(_setupForHost){Navigate("Online");return;}
         int humans=_menu.HumanCount;
-        if(humans>LocalControllerLayout.Capacity(Input.GetConnectedJoypads().Count))
+        if(humans>LocalControllerLayout.Capacity(ControllerHub.Current.PlayableCount))
         {_menu.Notice($"Connect more gamepads for {humans} human players. Two keyboard seats are available.");return;}
         StartLocal(_menu.Settings,humans,_menu.Practice,_menu.PlayerAppearances);
     }
@@ -127,6 +129,7 @@ public partial class GameRoot : Node3D
     private void Begin(ISession session,bool online)
     {
         ReleaseSession();_arena.ResetMatch();_session=session;LatestStage=null;LatestState=null;_result=null;_lobby=null;SnapshotCount=0;_injected.Clear();_hud.Reset();_hud.Practice=_practice;_menu.ResetLobby();
+        ControllerHub.Current.BeginMatch(session.LocalPlayerCount);
         if(online)
         {ScreenName="Lobby";_menu.ShowScreen("Lobby");_menu.ShowLobby(null,session.JoinCode,session.Status);_menu.Visible=true;_hud.Visible=false;_arena.Visible=false;}
         else EnterMatch();
@@ -166,6 +169,7 @@ public partial class GameRoot : Node3D
     private void ReleaseSession()
     {
         var old=_session;_session=null;_injected.Clear();
+        ControllerHub.Current.EndMatch();
         if(old!=null)_=DisposeSessionAsync(old);
     }
     private static async Task DisposeSessionAsync(ISession session)
@@ -175,8 +179,8 @@ public partial class GameRoot : Node3D
         // B remains the remote-detonation button during play. Start opens the way back.
         bool battle=ScreenName=="Match";
         bool cancel=@event is InputEventKey {Pressed:true,Echo:false,Keycode:Key.Escape}
-            || (!battle && @event.IsActionPressed("ui_cancel"))
-            || (battle && @event is InputEventJoypadButton {Pressed:true,ButtonIndex:JoyButton.Start});
+            || (!battle && ScreenName!="Controls" && @event.IsActionPressed("ui_cancel"))
+            || ((battle||ScreenName=="Controls") && @event is InputEventJoypadButton {Pressed:true,ButtonIndex:JoyButton.Start});
         if(cancel){Back();GetViewport().SetInputAsHandled();}
     }
     public override void _Process(double delta)

@@ -84,4 +84,5 @@ await using(var selected=new LocalSession(new SessionSettings(Bots:2),1,playerAp
     var players=selected.DrainMessages().Last(m=>m.GetProperty("t").GetString()=="state").GetProperty("d").GetProperty("players").EnumerateArray().OrderBy(p=>p.GetProperty("slot").GetInt32()).ToArray();
     Check(players.Select(p=>p.GetProperty("appearance").GetInt32()).SequenceEqual(new[]{7,3,1}), "Local adapter applies the actual human and CPU appearance selections to authoritative state");
 }
+ControllerChecks.Run(Check,Throws);
 Console.WriteLine($"PASS: {checks} client contract and session checks");

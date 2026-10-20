@@ -1,4 +1,37 @@
-# Verified iteration four — 2026-10-19
+# Verified iteration five — 2026-10-20
+
+Environment: Macintosh, macOS ARM64, Godot 4.7.2 .NET / native Metal, .NET 10.0.401. The authoritative server remained a separate local .NET process.
+
+| Check | Result |
+|---|---|
+| Client/server builds | Zero warnings/errors |
+| Gameplay tests | 32 passed |
+| Client/input policy tests | 67 passed |
+| AI behavior/determinism/allocation tests | 15 passed |
+| Real networking | All 2–8 human matches and one human + seven server bots passed (42.9 s) |
+| Final windowed `--scenario all` | 261 assertions, 51 captures, zero runtime errors |
+| Earlier fullscreen combined suite | 272 assertions, 54 captures, zero runtime errors |
+| Native Switch 2 backend | Checksum-pinned source build, local signing/load, real USB enumeration and physical input observed |
+
+The final windowed run is `20261020T132406.932535Z-all`, completed in 54.586 seconds. It includes production keyboard/canonical-controller input events, menus, roster, camera aspects, actual stair movement, powerups, carried bomb growth, flooding, combat, results/replay and real network movement. Six README gallery images were refreshed from that run. The default is now windowed, matching the user's latest preference; fullscreen requires an explicit option. Controller event trials wait for stable real window/application focus rather than assuming a few fast engine frames are enough.
+
+## Physical versus simulated controller evidence
+
+- **Xbox Series controller:** actual left/right stick and face-button input was observed through Godot in `20261020T044301.802650Z-controller-observe`. Godot calls this device “Xbox One”; the product does not infer an exact model solely from that name.
+- **Switch 2 Pro over USB:** actual left X/Y movement, all four canonical face buttons and both shoulders were observed in `20261020T130215.347536Z-controller-observe`. That successful capture followed the USB initialization plus nonexclusive HID-reader fixes. Earlier detection-only runs and the user's report of no movement were genuine failures, not evidence of working input.
+- **PS5 DualSense:** canonical mapping, prompts and gameplay are covered with synthetic Godot events. No physical DualSense was connected for this session, so physical-device compatibility is not claimed as observed.
+
+Synthetic controller tests replace only device discovery; movement and buttons travel through Godot's input event system, `PlayerControls`, the normal session and real authority. They cover keyboard/cardinal/diagonal/partial-stick travel equality, 20% radial drift rejection, independent keyboard seats, compact and legacy aliases, D-pad navigation, shoulder actions, sub-frame button taps, no held-bomb auto-repeat, neutral arming, focus loss/restoration, stable hotplug reservations and native-range device IDs. They do not use the game-root input-injection shortcut.
+
+The live tester records no serial numbers and checkpoints newly observed input categories. An observation session completing without input is explicitly **unverified**, not a passing physical-button test. Raw observations, native build logs and failed witnesses stay in ignored artifacts.
+
+## macOS and packaging boundaries
+
+Native Metal is active in the tested renderer. The macOS export preset declares Games category and Apple's `LSSupportsGameMode` opt-in, with ARM64 ASTC import enabled. Godot parsed the preset; standalone export preflight is blocked by the missing matching .NET macOS export template. No exported bundle, actual OS Game Mode activation, performance improvement or notarized release was established. See [Game Mode research](macos-game-mode.md).
+
+The optional native adapter currently handles one uniquely identified Switch 2 Pro USB controller. Switch 2 Bluetooth was researched but not implemented or installed. Xbox/DualSense remain on the engine backend. Upstream native libraries, copied licenses, kernel source, private logs and downloaded media are excluded from Git. Physical eight-controller coverage, adverse internet latency and production hosting remain unverified.
+
+## Iteration four baseline — 2026-10-19
 
 Environment: macOS ARM64, Godot 4.7.2 .NET / Forward+ Metal, .NET 10.0.401. The kernel-backed server runs as an independent local .NET process. Deployment to the user's server hardware remains separate work.
 

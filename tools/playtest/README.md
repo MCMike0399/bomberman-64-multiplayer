@@ -24,9 +24,12 @@ Built-in scenarios:
 - `pump-growth`: creates a carried bomb with lift+bomb, accepts three distinct presses, checks three rendered growth stages and body animations, then throws it.
 - `hurry-water`: two real local humans, one walks to the crown while the other stays on a lower terrace; observes actual timed flooding, rising rendered water, lower player drowning and higher player survival.
 - `roster`: real local-mode navigation, mixed human/CPU slots with gaps, actual role/appearance controls, moving shared-model previews and matching packed appearances in the authority.
-- `framing`: projects all walkable cells plus character headroom into the camera in native fullscreen, then at 1280×720 and 1280×800, checks HUD-safe margins across all three stages and captures each result.
+- `framing`: projects all walkable cells plus character headroom into the camera at 1280×720 and 1280×800 (plus native fullscreen when explicitly requested), checks HUD-safe margins across all three stages and captures each result.
 - `fullscreen`: a separate graphical-only run with the product fullscreen default; verifies F11 and Alt+Enter both switch and restore actual window mode. A headless fullscreen run fails explicitly because it cannot verify an OS window.
-- `all`: the full regression sequence in fullscreen, temporarily entering windowed mode for explicit aspect-ratio checks and restoring fullscreen.
+- `controllers`: production Godot keyboard and canonical pad events drive real sessions. Covers equal travel, compact/legacy keyboard aliases, D-pad, shoulder actions, sub-frame taps, held-button behavior, neutral arming, focus and stable hotplug seats. Xbox/Switch/DualSense profiles here are explicitly synthetic; no game-root input injection is used.
+- `controller-inventory`: records detected engine/native controllers without serial numbers and captures the live tester. Detection alone does not verify physical buttons.
+- `controller-observe`: a 60-second graphical session for human input. Records actual observed axes/buttons per device, checkpoints each newly observed action, and keeps physical evidence separate from synthetic tests. No injected events. An empty actions list means unverified, even if the observation session itself completes.
+- `all`: the full regression sequence, windowed by default. An explicit `--fullscreen` run also checks native fullscreen framing and restores fullscreen after aspect checks.
 
 Local play uses fixed 30 Hz engine time and deterministic default seed 64. Network authority runs on real server time; kernel lobby countdown and message arrival remain asynchronous. The runner caps wall time and the in-engine driver bounds state waits and walking frames.
 
@@ -37,11 +40,13 @@ For failure triage, inspect runner-summary first, then summary's failed check, t
 Direct engine invocation is also available:
 
 ```sh
-/Applications/Godot_mono.app/Contents/MacOS/Godot --path . --max-fps 30 --fixed-fps 30 -- --playtest=ramp --playtest-output=/tmp/temple-evidence
+/Applications/Godot_mono.app/Contents/MacOS/Godot --path . --windowed --max-fps 30 --fixed-fps 30 -- --display-windowed --playtest=ramp --playtest-output=/tmp/temple-evidence
 ```
 
 Synthetic mouse coordinates follow [Godot’s official canvas/screen transform guide](https://docs.godotengine.org/en/4.7/tutorials/2d/2d_transforms.html): viewport screen transform × control global transform with canvas × local center. This matters when the 1440×900 logical UI is stretched into a smaller window.
 
-QA launches use the normal fullscreen product default. Pass runner `--windowed` for an intentional automation override; this passes engine `--windowed` and product user argument `--display-windowed`, including embedded runtimes where consumed engine flags are not visible to C#. Menu and framing checks temporarily toggle to windowed mode for aspect-ratio checks, then restore fullscreen. Actual mode must remain stable for 500 ms before a check passes. Headless framing still checks projection and records that an OS window-mode check is inapplicable; it never claims to have verified fullscreen. Menu interaction covers 16:9 and 16:10 sizes.
+QA and debug launches are **windowed by default**. Runner `--fullscreen` explicitly opts into fullscreen; `--scenario fullscreen` also requests it. Windowed runs pass engine `--windowed` and product `--display-windowed`, including embedded runtimes where consumed engine flags are not visible to C#. Explicit fullscreen menu/framing checks temporarily toggle into a window for aspect-ratio checks, then restore fullscreen. Actual window mode must remain stable for 500 ms. Headless checks never claim to verify an OS window.
 
 Godot native popup menus have their own window ID. Synthetic role-selection keys must use `Input.ParseInputEvent` with `InputEventKey.WindowId = popup.GetWindowId()`. Sending keys to the main window or calling the popup viewport directly can leave the selected item unchanged. The roster scenario opens the actual role control, navigates with arrow keys in that popup window, then confirms with Enter.
+
+Controller event trials explicitly focus the test window and wait for a stable application-focus state. Do not launch a second Godot editor/export process during those trials. Focus-loss suppression is a product feature; bypassing it would hide input-lifecycle regressions. Keep a persistent server running when overlapping network checks, since an independently owned harness server is stopped when that harness exits.

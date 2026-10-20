@@ -24,3 +24,5 @@
 **/secrets.json
 .vs/
 .idea/
+/native/macos/*.dylib
+/native/macos/*.txt
