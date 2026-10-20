@@ -1,4 +1,31 @@
-# Verified iteration eight — 2026-10-20
+# Verified iteration nine — 2026-10-20
+
+| Check | Result |
+|---|---|
+| Game and exported app builds | Zero warnings/errors |
+| Gameplay integration tests | 57 passed |
+| Client/session tests | 93 passed |
+| AI tests | 21 passed, including six real production matches requiring explosions, destroyed cover and drops |
+| Full exported-app regression | **1,303 assertions, 95 captures**, zero runtime errors; one bounded redraw fallback |
+| Final spherical-head export | 13 profile checks / 5 captures and 10 Results checks / 1 capture, zero runtime errors |
+| Independent networking | 2–8 humans and one human + seven server bots passed (42.7 seconds) |
+
+The full app run is `20261020T191040.273345Z-all`, 66.656 seconds locally. It covers all earlier flows plus primary-only charging, normal/remote detonation, continuous kick directions, rendered movement cadence, directed ledge falls, ghost riding/control/expiry, new Nintendo mapping, and the 3D Results theatre. Timing is a local test duration, not a performance guarantee.
+
+After that full run, the user requested a more spherical head. Only model geometry was further refined: the final self-contained export passed `20261020T192454.987991Z-model-profile` and `20261020T192458.903369Z-results`. All five head views were visually inspected. Actual shell vertices satisfy the continuous ellipsoid shape, normals are finite/unit/outward, and the faceplate has real volume with nondegenerate outward triangles. The screenshot gallery uses the full gameplay run, with final head/Results closeups and the two main-menu views updated afterward. The final menu gallery run `20261020T193259.542675Z-script` passed three checks with two captures.
+
+The movement regression demonstrated alternating .102/.198-cell rendered steps before interpolation (1.95 ratio), versus approximately .150/.150 afterward (1.000003 ratio) at the same authoritative speed and fixed 30-FPS sampling. Native bridge tests already preserved 360-degree axes; no unsupported native SDK diagnosis is claimed.
+
+Physical Switch 2 USB capture `20261020T184756.285569Z-controller-observe` contains 20,737 reports, full-axis range and all 36 ten-degree direction bins, all four face buttons and both shoulders. The first capture contained only idle drift and is not claimed as physical movement coverage. A three-second held diagonal was not established by the physical trace; unchanged held-state coverage is synthetic. Printed Nintendo A/B/X actions and menu confirm/back are tested through the production per-device path.
+
+Front placement uncovered a real bot regression: 265 placements but no explosions/destruction/drops in the fixed-seed temple witness. Front-aware placement and retreat now produce 31 placements, 30 explosions, 15 destroyed cover objects and seven drops. All three stock stages with three and seven bots pass outcome checks. The full combat harness also requires actual pickups and round completion; its assertion was retained.
+
+The new role-popup default focus was verified in the full suite. Failed exploratory/early runs remain in ignored artifacts, including a later native mouse-resize interruption during a cosmetic screenshot pass. Final head-only validation does not claim a second full gameplay run. Normal windowed QA, transparent battle HUD, private kernel exclusion and local ad-hoc signing remain. Production deployment, adverse-network latency, physical DualSense and Game Mode performance gains remain unverified.
+
+[Movement, bomb, ghost and AI implementation](iteration9-gameplay.md) · [Harness](../tools/playtest/README.md) · [Mac app](macos-app.md)
+
+## Iteration eight baseline — 2026-10-20
+
 
 | Check | Result |
 |---|---|

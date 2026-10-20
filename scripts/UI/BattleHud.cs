@@ -79,6 +79,26 @@ public partial class BattleHud : Control
         _phase.Text=phase switch{0=>"GET READY!",1=>"",2 when _hurryAge<3=>flood?"HURRY UP!  GET TO HIGH GROUND":"HURRY UP!",2=>"",3=>"ROUND OVER",_=>""};
         var recovering=players.Where(p=>p.GetProperty("alive").GetBoolean()&&!p.GetProperty("ghost").GetBoolean()&&p.GetProperty("stunned").GetBoolean()).ToArray();
         _recovery.Text=recovering.Length==0?"":string.Join(", ",recovering.Select(p=>"P"+(p.GetProperty("slot").GetInt32()+1)))+"  •  WIGGLE STICK / ALTERNATE MOVEMENT + TAP ACTIONS TO RECOVER";
+        if(recovering.Length==0)
+        {
+            var family=ControllerHub.Current.ActiveFamily;
+            string primary=family==ControllerFamily.Keyboard?"J / SPACE":ControllerProfile.ButtonName(family,ControllerProfile.BombButton(family));
+            string carry=family==ControllerFamily.Keyboard?"K / SHIFT":ControllerProfile.ButtonName(family,ControllerProfile.CarryButton(family));
+            string remote=family==ControllerFamily.Keyboard?"L / R":ControllerProfile.ButtonName(family,ControllerProfile.RemoteButton(family));
+            foreach(var p in players.Where(p=>!p.GetProperty("bot").GetBoolean()&&p.GetProperty("alive").GetBoolean()&&!p.GetProperty("ghost").GetBoolean()))
+            {
+                int seat=p.GetProperty("slot").GetInt32();
+                if(family==ControllerFamily.Keyboard){primary=seat==1?"N / ENTER":"J / SPACE";carry=seat==1?"M / CTRL":"K / SHIFT";remote=seat==1?", / BACKSPACE":"L / R";}
+                string who="P"+(seat+1);
+                if(p.GetProperty("carrying").GetString()=="bomb")
+                {
+                    bool latched=p.TryGetProperty("carryFromPrimary",out var primaryCarry)&&primaryCarry.GetBoolean();
+                    _recovery.Text=$"{who}  CARRIED BOMB  •  {primary} PUMP  •  "+(latched?$"{carry} THROW":$"RELEASE {carry} TO THROW");break;
+                }
+                if(state.GetProperty("bombs").EnumerateArray().Any(b=>b.GetProperty("remote").GetBoolean()&&b.GetProperty("ownerId").GetString()==p.GetProperty("id").GetString()))
+                    _recovery.Text=$"{who}  REMOTE BOMBS WAIT FOR YOUR COMMAND  •  {remote} DETONATE";
+            }
+        }
     }
     private void BuildCards(JsonElement[] players)
     {

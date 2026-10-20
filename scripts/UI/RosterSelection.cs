@@ -40,6 +40,9 @@ public partial class RosterSelection : VBoxContainer
             var preview=new Control {MouseFilter=MouseFilterEnum.Ignore,CustomMinimumSize=new(130,270),SizeFlagsVertical=SizeFlags.ExpandFill,SizeFlagsHorizontal=SizeFlags.ExpandFill};column.AddChild(preview);
             var row=ArcadeTheme.Column(column,4);
             var role=new OptionButton {Name=$"Slot{slot}Role",CustomMinimumSize=new(0,58),SizeFlagsHorizontal=SizeFlags.ExpandFill};role.AddItem("OFF");role.AddItem("MAN");role.AddItem("COM");role.AddThemeFontSizeOverride("font_size",34);role.AddThemeColorOverride("font_outline_color",new Color("080b1e"));role.AddThemeConstantOverride("outline_size",7);row.AddChild(role);
+            // Opening after pointer/gamepad navigation must still establish a usable item focus.
+            var popup=role.GetPopup();
+            popup.AboutToPopup+=()=>popup.CallDeferred(PopupMenu.MethodName.SetFocusedItem,role.Selected);
             var appearance=new Button {Name=$"Slot{slot}Appearance",CustomMinimumSize=new(0,38),SizeFlagsHorizontal=SizeFlags.ExpandFill};appearance.AddThemeFontSizeOverride("font_size",12);row.AddChild(appearance);
             StripControl(role);StripControl(appearance);appearance.TooltipText="Cycle suit color";
             var pips=new Label {Text="● ● ●",HorizontalAlignment=HorizontalAlignment.Center};pips.AddThemeFontSizeOverride("font_size",19);pips.AddThemeColorOverride("font_color",new Color("bcbeef"));column.AddChild(pips);_difficultyPips.Add(pips);

@@ -190,17 +190,22 @@ public partial class ArcadeMenu : Control
     {
         var screen=Screen("Results");
 
-        _results=Card(screen,new(132,128),new(1176,620),new Color(0,0,0,0));
-        _resultTitle=ArcadeTheme.Text(_results,"BATTLE COMPLETE!",38,ArcadeTheme.Gold);
+        _results=new VBoxContainer {Position=new(100,170),Size=new(1215,585)};screen.AddChild(_results);
+        _resultTitle=ArcadeTheme.Text(screen,"BATTLE COMPLETE!",48,ArcadeTheme.Gold);
+        _resultTitle.Position=new(100,55);_resultTitle.Size=new(1240,65);
         _resultTitle.HorizontalAlignment=HorizontalAlignment.Center;
         _resultTitle.ClipText=true;_resultTitle.TextOverrunBehavior=TextServer.OverrunBehavior.TrimEllipsis;
-        var body=ArcadeTheme.Row(_results,30);body.SizeFlagsVertical=SizeFlags.ExpandFill;
-        var champion=ArcadeTheme.Column(body,4);champion.CustomMinimumSize=new(305,0);
-        _winnerPreview=new CharacterPreview {Name="WinnerPreview",Platform=false,CustomMinimumSize=new(305,335),SizeFlagsHorizontal=SizeFlags.ExpandFill,SizeFlagsVertical=SizeFlags.ExpandFill};champion.AddChild(_winnerPreview);
-        ArcadeTheme.Text(champion,"THE LAST ONE STANDING",17,ArcadeTheme.Gold).HorizontalAlignment=HorizontalAlignment.Center;
-        _resultRows=ArcadeTheme.Column(body,2);_resultRows.SizeFlagsHorizontal=SizeFlags.ExpandFill;
+        var body=ArcadeTheme.Row(_results,55);body.SizeFlagsVertical=SizeFlags.ExpandFill;
+        var champion=ArcadeTheme.Column(body,0);champion.CustomMinimumSize=new(475,0);
+        _winnerPreview=new CharacterPreview {Name="WinnerPreview",Platform=false,ResultsPresentation=true,CustomMinimumSize=new(475,440),SizeFlagsHorizontal=SizeFlags.ExpandFill,SizeFlagsVertical=SizeFlags.ExpandFill};champion.AddChild(_winnerPreview);
+        ArcadeTheme.Text(champion,"THE LAST ONE STANDING",18,ArcadeTheme.Gold).HorizontalAlignment=HorizontalAlignment.Center;
+        var standings=ArcadeTheme.Column(body,10);standings.SizeFlagsHorizontal=SizeFlags.ExpandFill;
+        var heading=ArcadeTheme.Row(standings);ArcadeTheme.Text(heading,"Final standings",24,ArcadeTheme.Gold).SizeFlagsHorizontal=SizeFlags.ExpandFill;ArcadeTheme.Text(heading,"Round wins",18,ArcadeTheme.Gold);
+        _resultRows=ArcadeTheme.Column(standings,3);_resultRows.SizeFlagsHorizontal=SizeFlags.ExpandFill;
         var scores=ArcadeTheme.Text(_results,"",1);scores.Name="Standings";scores.Visible=false;
-        var row=ArcadeTheme.Row(_results);ArcadeTheme.Button(row,"PLAY AGAIN   →",()=>ReplayRequested?.Invoke(),true).SizeFlagsHorizontal=SizeFlags.ExpandFill;ArcadeTheme.Button(row,"MODE SELECT",()=>Navigation?.Invoke("Modes")).SizeFlagsHorizontal=SizeFlags.ExpandFill;
+        var row=ArcadeTheme.Row(_results,25);
+        var replay=new ArcadeModeButton {Text="PLAY AGAIN   →",CustomMinimumSize=new(590,88),FaceColor=new("a34d76"),Accent=new("da94ba"),SizeFlagsHorizontal=SizeFlags.ExpandFill};replay.Pressed+=()=>ReplayRequested?.Invoke();row.AddChild(replay);
+        var modes=new ArcadeModeButton {Text="MODE SELECT",CustomMinimumSize=new(590,88),FaceColor=new("4f62a2"),Accent=new("d3b66c"),SizeFlagsHorizontal=SizeFlags.ExpandFill};modes.Pressed+=()=>Navigation?.Invoke("Modes");row.AddChild(modes);
     }
     public void ShowResults(JsonElement? state,JsonElement? result)
     {
@@ -213,6 +218,7 @@ public partial class ArcadeMenu : Control
         {
             var ordered=scores.EnumerateArray().OrderByDescending(p=>p.GetProperty("wins").GetInt32()).ToArray();
             foreach(var child in _resultRows.GetChildren()){_resultRows.RemoveChild(child);child.QueueFree();}
+            _background.SetResultCount(ordered.Length);
             foreach(var (player,rank) in ordered.Select((p,i)=>(p,i)))AddResultRow(player,rank);
             text=string.Join("\n",ordered.Select((p,i)=>$"{i+1:00}    {p.GetProperty("name").GetString()}     {p.GetProperty("wins").GetInt32()} "+(p.GetProperty("wins").GetInt32()==1?"WIN":"WINS")));
             if(ordered.Length>0&&result is {} completed&&completed.TryGetProperty("reason",out var won)&&won.GetString() is "won" or "bot_won")
@@ -229,13 +235,13 @@ public partial class ArcadeMenu : Control
     {
         int slot=player.GetProperty("slot").GetInt32();
         int appearance=player.TryGetProperty("appearance",out var suit)?suit.GetInt32():slot;
-        var panel=new PanelContainer {CustomMinimumSize=new(670,52)};
-        panel.AddThemeStyleboxOverride("panel",ArcadeTheme.Panel(new Color(.06f,.2f,.43f,rank==0?.54f:.24f),new Color(1,1,1,.24f),1,2,3));_resultRows.AddChild(panel);
-        var row=ArcadeTheme.Row(panel,14);
-        var position=ArcadeTheme.Text(row,(rank+1).ToString("00"),22,ArcadeTheme.Gold);position.CustomMinimumSize=new(42,0);
-        var character=new BomberPortrait {CustomMinimumSize=new(51,50),Suit=ArcadeTheme.Players[Math.Clamp(appearance,0,7)]};row.AddChild(character);
-        var name=ArcadeTheme.Text(row,player.GetProperty("name").GetString()??"PLAYER",21);name.SizeFlagsHorizontal=SizeFlags.ExpandFill;name.ClipText=true;
-        row.AddChild(new ResultMedals {Wins=player.GetProperty("wins").GetInt32(),CustomMinimumSize=new(190,45)});
+        var row=ArcadeTheme.Row(_resultRows,10);row.CustomMinimumSize=new(650,47);
+        var position=ArcadeTheme.Text(row,(rank+1).ToString(),23,rank==0?ArcadeTheme.Gold:ArcadeTheme.Cream);position.CustomMinimumSize=new(30,0);
+        var character=new BomberPortrait {CustomMinimumSize=new(45,47),Suit=ArcadeTheme.Players[Math.Clamp(appearance,0,7)]};row.AddChild(character);
+        var name=ArcadeTheme.Text(row,player.GetProperty("name").GetString()??"PLAYER",22);name.SizeFlagsHorizontal=SizeFlags.ExpandFill;name.ClipText=true;name.TextOverrunBehavior=TextServer.OverrunBehavior.TrimEllipsis;
+        int wins=player.GetProperty("wins").GetInt32();
+        row.AddChild(new ResultMedals {Wins=wins,CustomMinimumSize=new(170,47)});
+        var count=ArcadeTheme.Text(row,wins.ToString(),25,ArcadeTheme.Gold);count.CustomMinimumSize=new(34,0);count.HorizontalAlignment=HorizontalAlignment.Right;
     }
     public void ShowScreen(string screen)
     {

@@ -57,8 +57,11 @@ public partial class ControllerHub : Node
     private static void ConfigureMenuActions()
     {
         static void Add(string action,InputEvent input){if(!InputMap.ActionHasEvent(action,input))InputMap.ActionAddEvent(action,input);}
-        Add("ui_accept",new InputEventJoypadButton {Device=-1,ButtonIndex=JoyButton.A});
-        Add("ui_cancel",new InputEventJoypadButton {Device=-1,ButtonIndex=JoyButton.B});
+        // Face buttons need per-device semantics (Nintendo printed A/B differs from Xbox).
+        // Install exact device bindings on discovery, including embedded PopupMenus.
+        foreach(string action in new[]{"ui_accept","ui_cancel"})
+            foreach(var input in InputMap.ActionGetEvents(action).OfType<InputEventJoypadButton>())
+                InputMap.ActionEraseEvent(action,input);
         foreach(var (action,button,axis,value) in new[]{
             ("ui_left",JoyButton.DpadLeft,JoyAxis.LeftX,-1f),("ui_right",JoyButton.DpadRight,JoyAxis.LeftX,1f),
             ("ui_up",JoyButton.DpadUp,JoyAxis.LeftY,-1f),("ui_down",JoyButton.DpadDown,JoyAxis.LeftY,1f)})
@@ -82,9 +85,10 @@ public partial class ControllerHub : Node
         PlayerInput stick=default,dpad=default;
         if(id is {} pad)
         {
+            var family=DeviceFamily(pad);
             stick=new(Input.GetJoyAxis(pad,JoyAxis.LeftX),Input.GetJoyAxis(pad,JoyAxis.LeftY),
-                Button(pad,JoyButton.A),Button(pad,JoyButton.X)||Button(pad,JoyButton.LeftShoulder),
-                Button(pad,JoyButton.B)||Button(pad,JoyButton.RightShoulder));
+                Button(pad,ControllerProfile.BombButton(family)),Button(pad,ControllerProfile.CarryButton(family))||Button(pad,JoyButton.LeftShoulder),
+                Button(pad,ControllerProfile.RemoteButton(family))||Button(pad,JoyButton.RightShoulder));
             dpad=new((Button(pad,JoyButton.DpadRight)?1:0)-(Button(pad,JoyButton.DpadLeft)?1:0),
                 (Button(pad,JoyButton.DpadDown)?1:0)-(Button(pad,JoyButton.DpadUp)?1:0));
         }
@@ -119,12 +123,23 @@ public partial class ControllerHub : Node
         if(_devices.SequenceEqual(next))return;
         var oldIds=_devices.Select(d=>d.Device.RuntimeId).ToHashSet();
         var oldBindings=Bindings?.Seats.Select(s=>s.RuntimeId).ToArray();
-        _devices=next;Bindings?.Refresh(next.Where(d=>d.Mapped).Select(d=>d.Device).ToArray());
+        _devices=next;ConfigureDeviceMenuActions();Bindings?.Refresh(next.Where(d=>d.Mapped).Select(d=>d.Device).ToArray());
         foreach(var id in oldIds.Except(next.Select(d=>d.Device.RuntimeId)))_taps.Remove(id);
         if(oldBindings!=null&&Bindings!=null)
             for(int seat=0;seat<oldBindings.Length;seat++)
                 if(oldBindings[seat]!=Bindings.DeviceIdForSeat(seat))_armed[seat]=false;
         DevicesChanged?.Invoke();
+    }
+    private void ConfigureDeviceMenuActions()
+    {
+        foreach(string action in new[]{"ui_accept","ui_cancel"})
+            foreach(var input in InputMap.ActionGetEvents(action).OfType<InputEventJoypadButton>())
+                InputMap.ActionEraseEvent(action,input);
+        foreach(var device in _devices.Where(d=>d.Mapped))
+        {
+            InputMap.ActionAddEvent("ui_accept",new InputEventJoypadButton {Device=device.Device.RuntimeId,ButtonIndex=ControllerProfile.ConfirmButton(device.Family)});
+            InputMap.ActionAddEvent("ui_cancel",new InputEventJoypadButton {Device=device.Device.RuntimeId,ButtonIndex=ControllerProfile.CancelButton(device.Family)});
+        }
     }
     private static ControllerDevice DescribeGodotDevice(int id)
     {
@@ -234,8 +249,9 @@ public partial class ControllerHub : Node
             if(_inMatch&&_focused)
             {
                 _taps.TryGetValue(button.Device,out var old);
-                _taps[button.Device]=(old.Bomb||button.ButtonIndex==JoyButton.A,
-                    old.Remote||button.ButtonIndex is JoyButton.B or JoyButton.RightShoulder);
+                var family=DeviceFamily(button.Device);
+                _taps[button.Device]=(old.Bomb||button.ButtonIndex==ControllerProfile.BombButton(family),
+                    old.Remote||button.ButtonIndex==ControllerProfile.RemoteButton(family)||button.ButtonIndex==JoyButton.RightShoulder);
             }
         }
         else if(@event is InputEventJoypadMotion motion)
@@ -251,6 +267,7 @@ public partial class ControllerHub : Node
         if(TesterActive&&(@event is InputEventJoypadMotion||@event is InputEventJoypadButton {ButtonIndex:not JoyButton.Start}))
             GetViewport().SetInputAsHandled();
     }
+    private ControllerFamily DeviceFamily(int id)=>_devices.FirstOrDefault(d=>d.Device.RuntimeId==id)?.Family??ControllerFamily.Generic;
     private void SetActiveDevice(int id)
     {
         var device=_devices.FirstOrDefault(d=>d.Device.RuntimeId==id);

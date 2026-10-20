@@ -226,7 +226,7 @@ public partial class GameRoot : Node3D
             {
                 case "stage":LatestStage=data.Clone();_arena.Stage(data);break;
                 case "state":
-                    LatestState=data.Clone();SnapshotCount++;_arena.State(data);_hud.State(data);
+                    LatestState=data.Clone();SnapshotCount++;_arena.State(data,envelope.TryGetProperty("k",out var stateTick)&&stateTick.ValueKind==JsonValueKind.Number?stateTick.GetInt64():-1);_hud.State(data);
                     if(ScreenName=="Lobby")EnterMatch();
                     break;
                 case "appearance":

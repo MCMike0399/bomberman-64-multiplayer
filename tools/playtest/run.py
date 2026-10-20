@@ -25,7 +25,7 @@ def healthy(origin):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--scenario', choices=['all', 'menu', 'setup', 'grapple', 'controller-popups', 'local-actions', 'ramp', 'network', 'combat', 'results', 'powerup-collect', 'pump-growth', 'hurry-water', 'roster', 'framing', 'fullscreen', 'controllers', 'controller-inventory', 'controller-observe', 'presentation', 'model-profile', 'script'], default='all')
+    parser.add_argument('--scenario', choices=['all', 'menu', 'setup', 'grapple', 'controller-popups', 'local-actions', 'ramp', 'network', 'combat', 'results', 'powerup-collect', 'pump-growth', 'hurry-water', 'roster', 'framing', 'fullscreen', 'controllers', 'controller-inventory', 'controller-observe', 'presentation', 'model-profile', 'movement', 'traversal', 'bomb-handling', 'script'], default='all')
     parser.add_argument('--script', type=Path, help='JSON scenario, see temple-walk.json')
     parser.add_argument('--headless', action='store_true', help='Explicitly disable screenshot capture')
     display = parser.add_mutually_exclusive_group()

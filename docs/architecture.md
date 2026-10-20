@@ -146,3 +146,12 @@ Blast visuals use authoritative radius and hazard age, with a visible danger bou
 `MenuStickNavigation` converts sampled held axes into deliberate steps with engage/release hysteresis, diagonal stability and repeat timing. It is independent of report frequency. `GameRoot.ScreenName` owns `ControllerHub.MenuNavigationEnabled`, separately from the lifetime of gameplay bindings; retained online lobby or results sessions therefore do not disable visible menu navigation. Switch synthetic regressions use the exact native-publication helper used by SDL reports, while physical observations stay separately labeled.
 
 `ArcadeRuleDial` retains native Godot focus/action semantics for stage/rule arrows. The setup stage preview builds the same authority cells through `TempleStageView`; it does not load a screenshot or invented collision map. The visual water/foundation are presentation-only and never expand walkable authority terrain.
+
+
+## Iteration-nine control and physics boundaries
+
+`SnapshotMotion` interpolates previous/latest authority positions by envelope ticks, replacing exponential target chasing. It adds one snapshot of visual buffering, does not predict, and snaps discontinuous corrections. Smooth facing and distance-driven stride remain cosmetic. Ghost rider presentation follows its host; ghost nuisance strength, expiry and shake-off stay authoritative.
+
+`BlastSession.BombActions` centralizes primary-hold candidate/latch behavior and full-circle front-placement validation. A primary-lifted bomb throws on the carry press; legacy carry release remains supported. Rolling collision is substepped at the faster continuous-vector kick speed. `CanWalk` supplies directed downward graph edges while `CanCross` preserves strict ramp connectivity; falling is distinct from thrown-player recovery.
+
+AI planning uses the actual valid forward bomb location and ordinary orientation/tap/retreat inputs, rather than planning an underfoot bomb and accidentally kicking the real one away. Outcome tests require blasts, destroyed cover and drops. Nintendo per-device action buttons now follow printed A/B/X; Xbox/PlayStation remain unchanged.

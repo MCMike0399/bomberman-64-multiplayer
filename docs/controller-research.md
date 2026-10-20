@@ -43,3 +43,8 @@ Sources: [SDL assets](https://github.com/libsdl-org/SDL/releases/expanded_assets
 ## Iteration-eight input corrections
 
 The native Switch USB report path remained live and full-range. The reproducible failures were above it: gradual analog deflection did not reliably navigate the GUI, changed-only reports provided no held repeat, and retained match bindings disabled analog navigation in Lobby/Results. The explicit menu state machine and visible-screen input role fix these without changing positional button mappings, unit-speed gameplay or the hybrid native reader. See [input/recovery details](iteration8-gameplay-input.md) and [current evidence](verification.md).
+
+
+## Printed Nintendo labels (iteration nine)
+
+The user's latest preference supersedes the earlier positional mapping: Switch printed A is primary/confirm, printed B is carry/back, and X or R detonates remote bombs. Device-specific InputMap bindings preserve normal Godot menu and embedded popup behavior. The native hybrid reader is unchanged. Synthetic gradual-circle and unchanged-held-axis tests passed before the remap; the reported stepped feel was reproduced in visual snapshot chasing and corrected with interpolation. Current physical and synthetic evidence is recorded in [verification](verification.md).

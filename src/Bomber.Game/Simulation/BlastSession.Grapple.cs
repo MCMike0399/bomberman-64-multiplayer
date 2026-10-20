@@ -8,7 +8,7 @@ public sealed partial class BlastSession
     {
         p.StunTimer=0;p.CarriedById=null;p.HoldRemaining=0;p.RecoveryTotal=0;
         p.StruggleCooldown=0;p.RecoveryX=p.RecoveryZ=0;p.KnockdownReason=null;
-        p.Airborne=false;p.AirVX=p.AirVY=p.AirVZ=0;
+        p.Airborne=false;p.Falling=false;p.AirVX=p.AirVY=p.AirVZ=0;
     }
     private bool ProcessRecovery(BlastPlayer p,InputState input,float dt)
     {
@@ -70,6 +70,19 @@ public sealed partial class BlastSession
         victim.InvincibleTimer=Math.Max(victim.InvincibleTimer,.6f);
         Present("player-release",victim.Id,victim.Id,victim.X,victim.Y,victim.Z,reason:reason,causedBy:carrierId);
     }
+    private bool AirborneTerrainBlocks(float x,float z,BlastPlayer p)
+    {
+        for(var cx=(int)MathF.Floor(x-PlayerRadius);cx<=(int)MathF.Floor(x+PlayerRadius);cx++)
+            for(var cz=(int)MathF.Floor(z-PlayerRadius);cz<=(int)MathF.Floor(z+PlayerRadius);cz++)
+            {
+                if(!CircleOverlapsCell(x,z,cx,cz))continue;
+                if(EscapingCell(x,z,p,cx,cz))continue;
+                var cell=_stage.At(cx,cz);
+                if(cell.Kind==CellKind.Pillar||_softBlocks.IsAlive(cx,cz))return true;
+                if(cell.IsPassable&&_stage.SurfaceAt(Math.Clamp(x,cx+.001f,cx+.999f),Math.Clamp(z,cz+.001f,cz+.999f))>p.Y+.02f)return true;
+            }
+        return false;
+    }
     private void TickPlayerCarrying(float dt)
     {
         foreach(var p in _players.Values)
@@ -83,19 +96,24 @@ public sealed partial class BlastSession
             }
             else if(p.Airborne)
             {
-                float nx=p.X+p.AirVX*dt,nz=p.Z+p.AirVZ*dt;
-                p.AirVY-=9.8f*dt;p.SurfaceY+=p.AirVY*dt;
-                var cell=_stage.At((int)MathF.Floor(nx),(int)MathF.Floor(nz));
-                float ground=_stage.SurfaceAt(nx,nz);
-                if((cell.Kind==CellKind.Pillar||_softBlocks.IsAlive((int)MathF.Floor(nx),(int)MathF.Floor(nz)))&&p.Y<ground+1.2f)
-                {p.AirVX=p.AirVZ=0;ground=_stage.SurfaceAt(p.X,p.Z);cell=_stage.At((int)p.X,(int)p.Z);}
-                else {p.X=nx;p.Z=nz;}
-                if(p.Y<=ground)
+                var steps=Math.Max(1,(int)MathF.Ceiling(MathF.Sqrt(p.AirVX*p.AirVX+p.AirVZ*p.AirVZ)*dt/.1f));
+                var stepDt=dt/steps;
+                for(var step=0;step<steps&&p.Airborne;step++)
                 {
-                    p.Airborne=false;p.SurfaceY=ground;p.Tier=(int)MathF.Round(ground);
-                    if(cell.IsElimination){Eliminate(null,p,cell.Kind==CellKind.Water?"water":"fall");continue;}
-                    p.StunTimer=.65f;p.RecoveryTotal=.65f;p.KnockdownReason="landing";
-                    Present("player-land",p.Id,p.Id,p.X,p.Y,p.Z);
+                    float nx=p.X+p.AirVX*stepDt,nz=p.Z+p.AirVZ*stepDt;
+                    if(!AirborneTerrainBlocks(nx,p.Z,p))p.X=nx;
+                    if(!AirborneTerrainBlocks(p.X,nz,p))p.Z=nz;
+                    p.AirVY-=9.8f*stepDt;p.SurfaceY+=p.AirVY*stepDt;
+                    var cell=_stage.At((int)MathF.Floor(p.X),(int)MathF.Floor(p.Z));
+                    float ground=_stage.SurfaceAt(p.X,p.Z);
+                    if(p.Y<=ground)
+                    {
+                        bool falling=p.Falling;p.Airborne=false;p.Falling=false;p.SurfaceY=ground;p.Tier=(int)MathF.Round(ground);
+                        if(cell.IsElimination||p.X<0||p.Z<0||p.X>=_stage.Width||p.Z>=_stage.Height)
+                        {Eliminate(null,p,cell.Kind==CellKind.Water?"water":"fall");break;}
+                        if(!falling){p.StunTimer=.65f;p.RecoveryTotal=.65f;p.KnockdownReason="landing";}
+                        Present("player-land",p.Id,p.Id,p.X,p.Y,p.Z,reason:falling?"fall":"throw");
+                    }
                 }
             }
         }

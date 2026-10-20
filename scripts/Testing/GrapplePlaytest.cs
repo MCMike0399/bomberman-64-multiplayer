@@ -69,7 +69,8 @@ public partial class PlaytestDriver
         await GrappleWalk(0,8,13);Check(GrapplePlayer(0).GetProperty("remote").GetBoolean(),"kicker collects the real training remote pickup");
         await GrappleWalk(0,7,13);await GrappleWalk(1,11,13);await GrappleWalk(2,11,12);
         int knockBefore=GrappleEffect("knockdown"),kickCueBefore=Cue("kick");
-        Input(0,new PlayerInput(0,0,A:true));await Frames(2);Input(0,new PlayerInput(-1,0));await Frames(8);Input(0,new PlayerInput(1,0));
+        // Face along the victim's real corridor before front placement.
+        Input(0,new PlayerInput(1,0));await Frames(1);Input(0,new PlayerInput(0,0,A:true));await Frames(2);Input(0,default);await Frames(7);Input(0,new PlayerInput(1,0));
         await WaitState(s=>s.GetProperty("bombs").EnumerateArray().Any(b=>b.GetProperty("state").GetInt32()==1),"contact input starts real bomb rolling",25);
         Input(0,default);
         await WaitState(_=>GrapplePlayer(1).GetProperty("stunned").GetBoolean(),"real kicked bomb knocks down opponent",65);

@@ -74,16 +74,16 @@ The default is loopback. No external hosting, domain, TLS, firewall changes or p
 | Action | Keyboard 1 | Keyboard 2 | Xbox | Switch 2 | PS5 |
 |---|---|---|---|---|---|
 | Move | WASD | Arrows | Stick / D-pad | Stick / D-pad | Stick / D-pad |
-| Bomb / pump | J or Space | N or Enter | A | B | Cross |
-| Hold carry; release to throw | K or Shift | M or Ctrl | X or LB | Y or L | Square or L1 |
-| Remote detonation | L or R | Comma or Backspace | B or RB | A or R | Circle or R1 |
+| Bomb / pump | J or Space | N or Enter | A | A | Cross |
+| Carry / throw | K or Shift | M or Ctrl | X or LB | B or L | Square or L1 |
+| Remote detonation | L or R | Comma or Backspace | B or RB | X or R | Circle or R1 |
 | Leave battle | Esc | Esc | Menu | + | Options |
 
-Keyboard 2 also supports numpad 0 / 1 / 2 for bomb / carry / remote. Menus use the **bottom face button to confirm** and **right face button to go back**, with controller-specific prompts. F11 or Alt+Enter toggles fullscreen.
+Keyboard 2 also supports numpad 0 / 1 / 2 for bomb / carry / remote. Switch uses its **printed A to confirm and B to go back**. Xbox/PlayStation retain bottom-button confirm and right-button back, with matching prompts. F11 or Alt+Enter toggles fullscreen.
 
 Choose **CONTROLS & CONTROLLER TEST** on the main menu to inspect connected pads and live inputs. Face buttons stay in the tester; Menu / + / Options or Esc leaves it. The roster shows which pad accompanies each human seat. Two-human matches allow one pad per player alongside the two keyboard layouts; larger matches reserve the first two humans for keyboards and assign pads to the remaining humans.
 
-All devices run at the same speed, including diagonal keyboard movement. Sticks retain their analog direction but use full running speed beyond the **20% radial deadzone**. D-pad input takes priority over stick input, which takes priority over keyboard movement; directions are never added together. Short bomb taps are buffered, holding bomb does not auto-repeat, and actions must be released after entering a match or returning focus. Disconnecting a pad reserves its seat without moving another player's controls. Identical controllers that both reconnect under ambiguous identities require restarting the match to assign them safely.
+All devices run at the same maximum running speed, including diagonal keyboard movement. Stick direction is continuous through 360 degrees. Character rendering now interpolates between authoritative snapshots rather than repeatedly catching up to each one, and the stride/turn animation follows that smooth motion. Sticks retain their analog direction but use full running speed beyond the **20% radial deadzone**. D-pad input takes priority over stick input, which takes priority over keyboard movement; directions are never added together. Short bomb taps are buffered, holding bomb does not auto-repeat, and actions must be released after entering a match or returning focus. Disconnecting a pad reserves its seat without moving another player's controls. Identical controllers that both reconnect under ambiguous identities require restarting the match to assign them safely.
 
 ### Switch 2 USB on macOS
 
@@ -100,7 +100,7 @@ It downloads checksum-pinned SDL 3.4.18 and libusb 1.0.29, builds inside ignored
 
 Left-stick menu navigation uses deliberate threshold crossings and repeat while held, including setup, lobbies and results. It accepts gradual pushes, stabilizes diagonal choices, and changes direction immediately on reversal. The Switch 2 USB path is tested through the same native event bridge used during play; [physical versus synthetic evidence](docs/verification.md) remains explicit.
 
-Walking into a resting bomb kicks it. Hold lift to carry a nearby bomb, or hold lift and press bomb to create one directly in your hands. Repeatedly press bomb while holding lift to inflate it, then release lift to throw. Use **hold carry, tap bomb, then tap bomb again to pump**: Xbox X+A, Switch Y+B, PS5 Square+Cross, or keyboard K+J (Shift+Space also works). The character lifts, compresses, and releases the bomb in response to accepted actions. Explosions use spherical distance and cover occlusion rather than a classic grid cross. Pickups upgrade blast size, bomb capacity, remote detonation, red piercing bombs or a protective heart. Ghosts and sudden death are enabled by default. With one minute left, the Pyramid-inspired Sunken Temple warns of rising water; its lower court floods before the upper terraces. Other arenas retain closing columns. Permanent stone and terrain block blasts; red bombs penetrate breakable cover. Last survivor earns a round win; first to the win target wins the match.
+Tap the bomb button to place a bomb **in front** of the player. Hold it for a quarter-second to lift that same bomb; release, then tap it again to pump. Press carry to throw the A-lifted bomb. On Switch this is **A: tap/place, hold/lift, tap/pump; B: throw**. The older hold-carry pickup and release-to-throw path also works, as does carry + bomb to create a bomb overhead. Walking into a resting bomb triggers one kick and sends it down the chosen continuous direction faster than running speed; it is not a gradual push. Normal fuses resume after throwing. Remote bombs wait for the remote command, with an explicit HUD hint. Explosions use spherical distance and cover occlusion rather than a classic grid cross. Pickups upgrade blast size, bomb capacity, remote detonation, red piercing bombs or a protective heart. Ghosts and sudden death are enabled by default. A latched ghost rides visibly on top and adds limited steering interference; the living player retains control and can shake it off. Walking off a high terrace starts a gravity fall to lower terrain; upward cliffs and solid walls still block movement. With one minute left, the Pyramid-inspired Sunken Temple warns of rising water; its lower court floods before the upper terraces. Other arenas retain closing columns. Permanent stone and terrain block blasts; red bombs penetrate breakable cover. Last survivor earns a round win; first to the win target wins the match.
 
 ## Knockdowns and player grabs
 
@@ -109,6 +109,8 @@ A sliding bomb knocks down a player it approaches; following your own outgoing k
 Alternate movement directions or tap the action buttons to recover faster. Holding one direction/button does not repeatedly count as effort. Hold **carry** near a downed opponent to pick them up, walk with them, and release carry to throw them through an arc. The victim can wiggle/tap to escape; an inactive hold also times out. Both controller and keyboard inputs use the same authoritative recovery rules, and bots recover through those inputs too. Disconnects release held players safely.
 
 These mechanics run in the shared local/server simulation. Rebuild the independent game server along with the client for the new state and presentation events. [Rules, failure reproductions and input fixes](docs/iteration8-gameplay-input.md).
+
+[Iteration-nine movement, bombs, traversal and AI fixes](docs/iteration9-gameplay.md).
 
 ## Battle progression
 
@@ -175,7 +177,7 @@ The game already uses native Metal. The `macOS Metal` export preset declares App
 
 ## Character, UI and effects
 
-The current menu is a live 3D theatre: characters share lighting and floor shadows, mode plaques have solid bevels and selection motion, and the camera has restrained parallax. The eight-seat roster uses a green stage with short MAN/COM/OFF controls; the winner celebrates against shaded drifting clouds and gold victory medals. The helmet has a rounded egg silhouette, a separate moderately convex faceplate with a rounded return into the shell, a slightly lower forehead, and a softer neck connection. The compact pear torso, short relaxed arms and full pink boots retain the approved proportions. Walking, breathing and head motion are independently phased.
+The current menu is a live 3D theatre: characters share lighting and floor shadows, mode plaques have solid bevels and selection motion, and the camera has restrained parallax. The eight-seat roster uses a green stage with short MAN/COM/OFF controls; the winner celebrates on a lit podium in a dimensional arcade theatre, with a physical standings board, metallic medals and raised replay buttons. The helmet is now near-spherical, centered slightly forward to balance its rear volume, with a separate rounded faceplate and a softer neck connection. The compact pear torso, short relaxed arms and full pink boots retain the approved proportions. Walking, breathing and head motion are independently phased.
 
 Match setup now displays an actual lit miniature of the selected arena and a native arrow-controlled rules rail. The battle timer, scores and controls float directly over the scene with outlined text and no opaque top/bottom bands. The Pyramid-inspired arena now has a centered lower camera, weathered sandstone with responsive relief, engraved fascia, preserved irregular courtyard cobbles, a submerged bedrock foundation, and lower-intensity lighting. Water combines four modulated directional waves, analytical normals, reconstructed depth tint and shoreline foam; [rendering techniques and limits](docs/iteration8-rendering.md). TUNIC and Pokémon BDSP informed the separation of lit tops, shaded sides and readable toy-like forms. [Design study, inspected official images, and skills research](docs/iteration7-design.md); [original-game footage and timestamps](docs/iteration6-research.md).
 
@@ -192,7 +194,7 @@ python3 tools/playtest/run.py --scenario presentation
 
 ## Screenshots
 
-The gallery shows actual captures from the exported macOS app's final windowed regression run, including the detected Switch 2 USB device in the controller tester. Detection does not claim new physical button testing.
+The gallery shows actual captures from the exported macOS app's windowed regression run, with final spherical-head closeups and Results captures updated afterward, including the detected Switch 2 USB device in the controller tester. Detection does not claim new physical button testing.
 
 ![Sunken Temple battle](docs/images/temple-battle.png)
 
@@ -223,6 +225,10 @@ Model inspection uses the actual in-game character with a temporary close-up cam
 ![Carrying a downed opponent](docs/images/player-grab.png)
 
 ![Player throw arc](docs/images/player-throw.png)
+
+![Falling from an upper terrace](docs/images/ledge-fall.png)
+
+![Ghost riding a living player](docs/images/ghost-rider.png)
 
 The game uses original procedural visuals. No original game ROM, Nintendo/Hudson artwork, footage, kernel source, credentials, or playtest traces are distributed here. The adapted simulation retains its upstream MIT notice in `src/Bomber.Game/Simulation/LICENSE`.
 

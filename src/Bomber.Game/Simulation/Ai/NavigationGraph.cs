@@ -2,7 +2,7 @@ using System.Runtime.CompilerServices;
 
 namespace Bomber.Game.Simulation.Ai;
 
-/// <summary>Immutable cardinal walk edges use exactly the authority's ramp/cliff continuity rules.</summary>
+/// <summary>Immutable directed walk edges follow ramps and allow drops from higher terrain.</summary>
 internal sealed class NavigationGraph
 {
     private static readonly ConditionalWeakTable<StageLayout, NavigationGraph> Cache = new();
@@ -20,7 +20,7 @@ internal sealed class NavigationGraph
         {
             int cell=z*Width+x;Walkable[cell]=stage.At(x,z).IsPassable;Height[cell]=stage.SurfaceAt(x+.5f,z+.5f);
             if(!Walkable[cell])continue;
-            for(int d=0;d<4;d++)if(stage.CanCross(x,z,x+dx[d],z+dz[d]))Edges[cell*4+d]=(z+dz[d])*Width+x+dx[d];
+            for(int d=0;d<4;d++)if(stage.CanWalk(x,z,x+dx[d],z+dz[d]))Edges[cell*4+d]=(z+dz[d])*Width+x+dx[d];
         }
     }
     public int Cell(float x,float z)

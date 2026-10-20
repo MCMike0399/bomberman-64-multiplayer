@@ -73,3 +73,11 @@ Mouse automation moves the OS pointer to the target before injecting press/relea
 - `model-profile`: now includes a three-quarter view and actual cream face mesh volume/winding checks.
 
 `controller-observe` also saves `physical-axis-trace.jsonl` with wall-clock timestamps and all axis samples, including center/release. It records no serial number. Synthetic controller tests use the same native publication helper for Switch events, and separately exercise retained match bindings in Results/Lobby.
+
+## Iteration-nine scenarios
+
+- `movement`: actual rendered per-frame displacement must remain steady across authority snapshots, then settle on release.
+- `bomb-handling`: tap/hold primary, persistent held state, pumping, carry-button throw, normal fuse and remote-command behavior through stock-map inputs.
+- `traversal`: gravity drops, air steering, blocked upward cliffs, real ghost creation/latch, retained victim control and visible riding/expiry.
+
+`controller-observe` now allows 120 seconds and can end early with Menu / + / Options. Physical reports remain separate from injected tests. The Nintendo controller cases use printed A/B/X instead of assuming the same physical action positions as Xbox.

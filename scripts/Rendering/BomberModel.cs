@@ -18,7 +18,7 @@ public partial class BomberModel : Node3D
     private readonly ArtMaterials _art;
     private readonly List<MeshInstance3D> _suitParts=[],_torsoParts=[];
     private readonly Node3D _head=new();
-    private const float HeadCenter=1.085f,HelmetHalfHeight=.38f,HelmetTaper=.035f,FaceCenterY=-.010f,EyeCenterY=.010f;
+    private const float HeadCenter=1.085f,HelmetHalfHeight=.38f,HelmetDepth=.395f,HelmetForward=.045f,FaceCenterY=-.010f,EyeCenterY=.010f;
     private static ArrayMesh? _helmetMesh,_torsoMesh,_faceMesh,_faceRimMesh;
     private static readonly Dictionary<float,ArrayMesh> EyeMeshes=[];
     private readonly List<MeshInstance3D> _eyes=[];
@@ -79,8 +79,8 @@ public partial class BomberModel : Node3D
             var eye=new MeshInstance3D {Mesh=eyeMesh,MaterialOverride=dark,Position=new(x,EyeCenterY,0)};
             _head.AddChild(eye);_eyes.Add(eye);
         }
-        Cylinder(_head,new(0,.382f,0),.058f,.1f,dark);
-        Sphere(_head,new(0,.466f,0),new(.225f,.225f,.225f),pink);
+        Cylinder(_head,new(0,.382f,HelmetForward),.058f,.1f,dark);
+        Sphere(_head,new(0,.466f,HelmetForward),new(.225f,.225f,.225f),pink);
         _leftArm.Position=new(-.265f,.68f,0);_rightArm.Position=new(.265f,.68f,0);
         _body.AddChild(_leftArm);_body.AddChild(_rightArm);
         foreach(var arm in new[]{_leftArm,_rightArm})
@@ -109,10 +109,9 @@ public partial class BomberModel : Node3D
     }
     private static float FaceHemisphereZ(float x,float headY)
     {
-        float y=headY/HelmetHalfHeight,radiusSquared=(1-y*y)*Mathf.Pow(1+HelmetTaper*y,2);
-        return .365f*Mathf.Sqrt(Mathf.Max(.0001f,radiusSquared-Mathf.Pow(x/.427f,2)));
+        float y=headY/HelmetHalfHeight;
+        return HelmetForward+HelmetDepth*Mathf.Sqrt(Mathf.Max(.0001f,1-y*y-Mathf.Pow(x/.427f,2)));
     }
-    private static float HelmetFrontZ(float z)=>z>.28f?.28f+.075f*(1-Mathf.Exp(-(z-.28f)/.075f)):z;
     private static ArrayMesh CreateCurvedFacePatch(float width,float height,float centerX,float centerY,float offset,float roundness=.47f,bool seatToShell=true)
     {
         // A distinct faceplate with moderate cheek curvature. Its rounded return
@@ -132,8 +131,10 @@ public partial class BomberModel : Node3D
             var outline=Outline(Mathf.Tau*segment/segments);
             float x=width*.5f*radius*outline.X,y=height*.5f*radius*outline.Y;
             float hemisphere=FaceHemisphereZ(centerX+x,centerY+y);
-            float front=Mathf.Lerp(.28f,hemisphere,.55f)+depth;
-            float rear=seatToShell?HelmetFrontZ(hemisphere)-.005f:front;
+            // Lift the perimeter slightly while following the continuous spherical front.
+            float faceRadiusSquared=Mathf.Pow((centerX+x)/.317f,2)+Mathf.Pow((centerY+y-FaceCenterY)/.227f,2);
+            float front=hemisphere+depth+.03f*faceRadiusSquared;
+            float rear=seatToShell?hemisphere-.005f:front;
             return new(x,y,Mathf.Lerp(front,rear,shellBlend));
         }
         void Triangle(Vector3 a,Vector3 b,Vector3 c,bool front)
@@ -169,31 +170,22 @@ public partial class BomberModel : Node3D
     }
     private static ArrayMesh CreateHelmet(bool extendedBack=true)
     {
-        // A real egg silhouette, fuller at the crown and tucked under the cheeks.
-        // This avoids the long planar sides of a rounded cuboid at oblique battle angles.
+        // An uninterrupted near-sphere makes every head angle softly round.
+        // Its slight forward center balances the face without a heavy rear cranium.
         const int rings=24,segments=40;
         // The torso keeps its established pear proportions; only the helmet is retuned.
-        float halfHeight=extendedBack?HelmetHalfHeight:.395f,taper=extendedBack?HelmetTaper:.075f;
+        float halfHeight=extendedBack?HelmetHalfHeight:.395f,taper=extendedBack?0:.075f;
         var surface=new SurfaceTool();surface.Begin(Mesh.PrimitiveType.Triangles);
         Vector3 Point(int ring,int segment)
         {
             float theta=Mathf.Pi*ring/rings,phi=Mathf.Tau*segment/segments;
             float y=Mathf.Cos(theta),radius=Mathf.Sin(theta)*(1+taper*y);
-            float z=.365f*radius*Mathf.Sin(phi);
-            if(extendedBack&&z>.28f)z=HelmetFrontZ(z);
-            else if(extendedBack&&z<0)z*=.435f/.365f;
+            float z=(extendedBack?HelmetForward:0)+(extendedBack?HelmetDepth:.365f)*radius*Mathf.Sin(phi);
             return new(.427f*radius*Mathf.Cos(phi),halfHeight*y,z);
         }
         void Vertex(Vector3 p)
         {
-            float normalZ=p.Z/(.365f*.365f);
-            if(extendedBack&&p.Z>.28f)
-            {
-                float slope=Mathf.Max(1-(p.Z-.28f)/.075f,.001f);
-                float original=.28f-.075f*Mathf.Log(slope);
-                normalZ=original/(.365f*.365f*slope);
-            }
-            else if(extendedBack&&p.Z<0)normalZ=p.Z/(.435f*.435f);
+            float normalZ=extendedBack?(p.Z-HelmetForward)/(HelmetDepth*HelmetDepth):p.Z/(.365f*.365f);
             surface.SetNormal(new Vector3(p.X/(.427f*.427f),p.Y/(halfHeight*halfHeight)-2*taper,normalZ).Normalized());
             surface.SetUV(new(.5f+Mathf.Atan2(p.Z,p.X)/Mathf.Tau,.5f-p.Y/(halfHeight*2)));
             surface.AddVertex(p);
@@ -227,7 +219,7 @@ public partial class BomberModel : Node3D
     }
     public void Animate(float dt,float distance)
     {
-        _time+=dt;_walkPhase+=Mathf.Min(distance,.3f)*4.8f;
+        _time+=dt;_walkPhase+=Mathf.Min(distance,.3f)*5.8f;
         float previousSpeed=_speed;
         _speed=Mathf.Lerp(_speed,Mathf.Min(1,distance/Mathf.Max(dt,.001f)/3),1-Mathf.Exp(-10*dt));
         float acceleration=Mathf.Clamp((_speed-previousSpeed)/Mathf.Max(dt,.001f),-3,3);
@@ -236,14 +228,16 @@ public partial class BomberModel : Node3D
         _kickPulse=Mathf.MoveToward(_kickPulse,0,dt*3.8f);_liftPulse=Mathf.MoveToward(_liftPulse,0,dt*3.2f);
         _deathPulse=Mathf.MoveToward(_deathPulse,0,dt*1.8f);_victoryPulse=Mathf.MoveToward(_victoryPulse,0,dt*.7f);
         float pump=Mathf.Sin(_pumpPulse*Mathf.Pi),toss=Mathf.Sin(_throwPulse*Mathf.Pi);
-        float kick=Mathf.Sin(_kickPulse*Mathf.Pi),lift=Mathf.Sin(_liftPulse*Mathf.Pi),death=Mathf.Sin(_deathPulse*Mathf.Pi),victory=Mathf.Sin(_victoryPulse*Mathf.Pi);
+        float kick=Mathf.Sin(Mathf.Sqrt(_kickPulse)*Mathf.Pi*.5f),lift=Mathf.Sin(_liftPulse*Mathf.Pi),death=Mathf.Sin(_deathPulse*Mathf.Pi),victory=Mathf.Sin(_victoryPulse*Mathf.Pi);
         float walk=Mathf.Sin(_walkPhase)*_speed;
         float idle=(1-_speed)*(1-_carryBlend)*(1-death);
         float breath=Mathf.Sin(_time*2.35f)*idle;
         float sway=Mathf.Sin(_time*1.2f)*idle;
-        float stepBob=(1-Mathf.Cos(_walkPhase*2))*.023f*_speed;
+        float stepBob=(1-Mathf.Cos(_walkPhase*2))*.014f*_speed;
         _downBlend=Mathf.MoveToward(_downBlend,(_stunned||_heldVictim||_airborne)&&!_ghost?1:0,dt*8);
-        _leftLeg.Rotation=new(walk*.65f,0,0);_rightLeg.Rotation=new(-walk*.65f-kick*1.15f,0,kick*.12f);
+        _leftLeg.Rotation=new(walk*.95f,0,0);_rightLeg.Rotation=new(-walk*.95f-kick*1.15f,0,kick*.12f);
+        _leftLeg.Position=new(-.16f,.37f+Mathf.Max(0,-walk)*.055f,-walk*.08f);
+        _rightLeg.Position=new(.16f,.37f+Mathf.Max(0,walk)*.055f,walk*.08f);
         float spread=.265f+_charge*.065f*_carryBlend;
         _leftArm.Position=new(-spread,.68f+_carryBlend*.12f,0);_rightArm.Position=new(spread,.68f+_carryBlend*.12f,0);
         _leftArm.Scale=_rightArm.Scale=new(1,1+_carryBlend*.8f,1);

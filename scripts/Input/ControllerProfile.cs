@@ -3,7 +3,7 @@ namespace BlastCircuit.InputDevices;
 
 public enum ControllerFamily { Keyboard, Xbox, Nintendo, PlayStation, Generic }
 
-/// <summary>Labels describe canonical physical positions, never swap gameplay actions by brand.</summary>
+/// <summary>Canonical positions provide device labels; action choices follow each controller family.</summary>
 public static class ControllerProfile
 {
     public static ControllerFamily Family(string name,int vendor=0)
@@ -21,15 +21,20 @@ public static class ControllerProfile
         ControllerFamily.Xbox=>("A","X","B","LB","Menu"),
         _=>("South","West","East","L shoulder","Start")
     };
+    public static JoyButton BombButton(ControllerFamily family)=>family==ControllerFamily.Nintendo?JoyButton.B:JoyButton.A;
+    public static JoyButton CarryButton(ControllerFamily family)=>family==ControllerFamily.Nintendo?JoyButton.A:JoyButton.X;
+    public static JoyButton RemoteButton(ControllerFamily family)=>family==ControllerFamily.Nintendo?JoyButton.Y:JoyButton.B;
+    public static JoyButton ConfirmButton(ControllerFamily family)=>BombButton(family);
+    public static JoyButton CancelButton(ControllerFamily family)=>family==ControllerFamily.Nintendo?JoyButton.A:JoyButton.B;
     public static string Actions(ControllerFamily family,int keyboardSeat=0)
     {
         if(family==ControllerFamily.Keyboard)return keyboardSeat==0?"J / SPACE  BOMB   K / SHIFT  CARRY   L / R  REMOTE":"N / ENTER  BOMB   M / CTRL  CARRY   , / BACKSPACE  REMOTE";
-        var p=Labels(family);return $"{p.South}  BOMB   {p.West} / {p.Shoulder}  CARRY   {p.East} / R shoulder  REMOTE";
+        return $"{ButtonName(family,BombButton(family))}  BOMB   {ButtonName(family,CarryButton(family))} / {ButtonName(family,JoyButton.LeftShoulder)}  CARRY   {ButtonName(family,RemoteButton(family))} / {ButtonName(family,JoyButton.RightShoulder)}  REMOTE";
     }
     public static string Menu(ControllerFamily family)
     {
         if(family==ControllerFamily.Keyboard)return "ARROWS  SELECT   ENTER  CONFIRM   ESC  BACK   F11  SCREEN";
-        var p=Labels(family);return $"STICK / D-PAD  SELECT   {p.South}  CONFIRM   {p.East}  BACK   F11  SCREEN";
+        return $"STICK / D-PAD  SELECT   {ButtonName(family,ConfirmButton(family))}  CONFIRM   {ButtonName(family,CancelButton(family))}  BACK   F11  SCREEN";
     }
     public static string ButtonName(ControllerFamily family,JoyButton button)
     {

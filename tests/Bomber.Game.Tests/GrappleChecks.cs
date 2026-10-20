@@ -61,7 +61,8 @@ internal static class GrappleChecks
         var cells=new CellDef[9,9];for(int x=0;x<9;x++)for(int z=0;z<9;z++)cells[x,z]=CellDef.Floor0;
         var arena=new StageLayout {Id="fixture",Width=9,Height=9,Cells=cells,Spawns=[(2,3),(5,3),(5,4)],SoftBlockDensity=0,InitialItems=[(2,3,"remote")]};
         var m=new LocalMatch(new MatchOptions {HumanPlayers=3,BotPlayers=0,Practice=true},arena);Step(m,64);
-        m.SetInput(0,new PlayerInput(0,0,true));Step(m,2);m.SetInput(0,new PlayerInput(-1,0));Step(m,8);
+        m.SetInput(0,new PlayerInput(1,0));Step(m,2);
+        m.SetInput(0,new PlayerInput(0,0,true));Step(m,2);
         m.SetInput(0,new PlayerInput(1,0));
         for(int i=0;i<45&&!P(m,1).GetProperty("stunned").GetBoolean();i++)m.Tick();
         m.SetInput(0,default);Assert(P(m,1).GetProperty("stunned").GetBoolean(),"Fixture: moving bomb did not hit victim. "+m.StateJson);return m;
@@ -72,7 +73,7 @@ internal static class GrappleChecks
         var cells=new CellDef[9,9];for(int x=0;x<9;x++)for(int z=0;z<9;z++)cells[x,z]=CellDef.Floor0;
         var f=new AppearanceFixture(customStage:new StageLayout {Id="fixture",Width=9,Height=9,Cells=cells,Spawns=[(2,3),(5,3),(5,4)],SoftBlockDensity=0,InitialItems=[(2,3,"remote")]},humans:3);
         void Input(int seat,float x=0,bool a=false,bool b=false)=>f.Message(seat,JsonSerializer.Serialize(new {x,z=0,a,b,r=false}),"input");
-        f.Step(64);Input(0,a:true);f.Step(2);Input(0,-1);f.Step(8);Input(0,1);
+        f.Step(64);Input(0,1);f.Step(2);Input(0,a:true);f.Step(2);Input(0,1);
         for(int i=0;i<45&&!f.Snapshot.GetProperty("players")[1].GetProperty("stunned").GetBoolean();i++)f.Step(1);
         Input(0);Input(2,b:true);f.Step(2);
         Assert(f.Snapshot.GetProperty("players")[2].GetProperty("carrying").GetString()=="player","Callback fixture did not grab.");

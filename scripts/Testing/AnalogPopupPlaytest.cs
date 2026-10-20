@@ -13,8 +13,8 @@ public partial class PlaytestDriver
         {
             CtlReleaseAll();hub.OverrideDevicesForPlaytest([QaPads[1]]);_root.Navigate("Roster");await Frames(5);await ControllerFocusReady();
             var role=(OptionButton)NamedButton("Slot1Role");
-            async Task South()
-            {CtlButton(1001,JoyButton.A,true);await Frames(1);CtlButton(1001,JoyButton.A,false);await Frames(3);}
+            async Task Confirm()
+            {CtlButton(1001,JoyButton.B,true);await Frames(1);CtlButton(1001,JoyButton.B,false);await Frames(3);}
             async Task Tilt(JoyAxis axis,int sign)
             {
                 foreach(float amount in new[]{.35f,.42f,.48f,.65f}){CtlAxis(1001,axis,amount*sign);await Frames(1);}
@@ -22,16 +22,16 @@ public partial class PlaytestDriver
             }
             foreach(var (target,expected) in new[]{(1,"human"),(2,"cpu")})
             {
-                role.GrabFocus();await Frames(1);await South();
+                role.GrabFocus();await Frames(1);await Confirm();
                 var popup=role.GetPopup();openPopup=popup;
-                Check(popup.Visible,"native south opens actual role PopupMenu for "+expected);
+                Check(popup.Visible,"Switch printed A opens actual role PopupMenu for "+expected);
                 int current=popup.GetFocusedItem();Check(current>=0,"native popup focuses an actual role item");
                 Event("analog-native-popup",new {popupWindow=popup.GetWindowId(),focused=current,target,applicationFocus=hub.HasApplicationFocus});
                 for(int step=0;step<Math.Abs(target-current);step++)await Tilt(JoyAxis.LeftY,target<current?-1:1);
                 Check(popup.GetFocusedItem()==target,"gradual native stick selects role item: "+expected);
-                await Capture("analog-role-popup-"+expected);await South();
-                Check(!popup.Visible,"native south accepts and closes role popup: "+expected);
-                Check(Roster.GetProperty("slots")[1].GetProperty("role").GetString()==expected,"native stick and south update actual roster role: "+expected);
+                await Capture("analog-role-popup-"+expected);await Confirm();
+                Check(!popup.Visible,"Switch printed A accepts and closes role popup: "+expected);
+                Check(Roster.GetProperty("slots")[1].GetProperty("role").GetString()==expected,"native stick and printed A update actual roster role: "+expected);
                 openPopup=null;
             }
             _root.Navigate("Setup");await Frames(4);await ControllerFocusReady();

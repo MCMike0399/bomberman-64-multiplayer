@@ -16,7 +16,20 @@ public partial class PlaytestDriver
         var torso=(MeshInstance3D)player.FindChild("Torso",true,false);
         var headSize=helmet.Mesh.GetAabb().Size;
         var bodySize=torso.Mesh.GetAabb().Size*torso.Scale.Abs();
-        Check(headSize.Z/headSize.X>=.78f,"actual helmet mesh retains depth in side profile");
+        Check(headSize.Z/headSize.X>=.90f,"actual helmet mesh has a near-spherical side profile");
+        var shellArrays=helmet.Mesh.SurfaceGetArrays(0);
+        var shellVertices=shellArrays[(int)Mesh.ArrayType.Vertex].AsVector3Array();
+        var shellNormals=shellArrays[(int)Mesh.ArrayType.Normal].AsVector3Array();
+        var shellBounds=helmet.Mesh.GetAabb();var shellCenter=shellBounds.GetCenter();var shellRadii=shellBounds.Size*.5f;
+        bool spherical=shellVertices.Length>0,normalSound=true;
+        for(int i=0;i<shellVertices.Length;i++)
+        {
+            var local=shellVertices[i]-shellCenter;var unit=local/shellRadii;
+            spherical&=Math.Abs(unit.LengthSquared()-1)<.001f;
+            normalSound&=float.IsFinite(shellNormals[i].LengthSquared())&&Math.Abs(shellNormals[i].LengthSquared()-1)<.001f&&shellNormals[i].Dot(local)>0;
+        }
+        Check(spherical,"actual helmet vertices follow one continuous ellipsoid without a compressed front");
+        Check(normalSound,"actual spherical helmet normals remain finite unit and outward");
         Check(bodySize.Z/bodySize.X>=.88f,"actual torso mesh retains depth in side profile");
         var face=(MeshInstance3D)player.FindChild("FaceSurface",true,false);
         Check(face.Mesh.GetAabb().Size.Z>.055f,"cream face has a curved volume and returning rim");

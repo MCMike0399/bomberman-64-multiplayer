@@ -24,7 +24,7 @@ public sealed partial class BlastSession
         _aiGraph=NavigationGraph.For(_stage);_aiDanger=new(_aiGraph,_stage);_aiPlacementDanger=new(_aiGraph,_stage);
         int count=_aiGraph.Count;_aiQueue=new int[count];_aiSeen=new int[count];_aiFirst=new int[count];_aiDepth=new int[count];_aiItemKind=new byte[count];_aiCover=new bool[count];_aiNearest=new float[count];_aiSecondNearest=new float[count];_aiNearestOwner=new string?[count];
     }
-    private void BotReset(){_aiFieldTick=-1;_aiLastBomb.Clear();foreach(var p in _players.Values)p.BotThinkTimer=0;}
+    private void BotReset(){_aiFieldTick=-1;_aiLastBomb.Clear();foreach(var p in _players.Values){p.BotThinkTimer=0;p.BotPlacingBomb=false;p.BotBombTapPending=false;}}
     private void BotRefreshField()
     {
         if(_aiFieldTick==_tickCount)return;
@@ -50,6 +50,15 @@ public sealed partial class BlastSession
     }
     private void BotThink(BlastPlayer bot,float dt)
     {
+        // Execute the already planned tap/retreat on successive authority ticks.
+        // This releases A before hold-to-lift and avoids running into the new front bomb.
+        if(bot.BotBombTapPending)
+        {
+            bot.BotBombTapPending=false;
+            int cell=_aiGraph.Cell(bot.X,bot.Z);
+            if(cell>=0)BotSteer(bot,cell,bot.BotGoalZ*_stage.Width+bot.BotGoalX);
+            else bot.Input=default;
+        }
         bot.BotThinkTimer-=dt;if(bot.BotThinkTimer>0)return;
         AiTestThinkCount++;bot.BotThinkTimer=_aiReaction;
         BotRefreshField();
@@ -62,7 +71,17 @@ public sealed partial class BlastSession
         {
             int escape=BotSearch(bot,start,_aiDanger,true,12);
             if(escape<0)escape=BotLeastRiskStep(bot,start);
-            BotSteer(bot,start,escape);return;
+            bot.BotPlacingBomb=false;BotSteer(bot,start,escape);return;
+        }
+        if(bot.BotPlacingBomb)
+        {
+            bot.BotPlacingBomb=false;
+            if(BotFrontBombPlan(bot,start,bot.FacingX,bot.FacingZ,0,out int escape))
+            {
+                _aiLastBomb[bot.Id]=_roundTimer;
+                bot.BotGoalX=escape%_stage.Width;bot.BotGoalZ=escape/_stage.Width;
+                bot.BotBombTapPending=true;bot.Input=new InputState(0,0,true,false,false);return;
+            }
         }
         if(bot.HasRemote&&!bot.PrevR&&BotRemoteOpportunity(bot))
         {bot.Input=new InputState(0,0,false,false,true);return;}
@@ -72,22 +91,49 @@ public sealed partial class BlastSession
         if(!_practice&&useful&&centered&&!bot.PrevA&&bot.ActiveBombs<bot.BombCapacity&&_aiDanger.BombOwners[start] is null&&
             (!_aiLastBomb.TryGetValue(bot.Id,out var last)||_roundTimer-last>.65f))
         {
-            _aiCandidate.OwnerId=bot.Id;_aiCandidate.X=start%_stage.Width+.5f;_aiCandidate.Z=start/_stage.Width+.5f;
-            _aiCandidate.CellX=start%_stage.Width;_aiCandidate.CellZ=start/_stage.Width;_aiCandidate.Tier=bot.Tier;
-            _aiCandidate.FireLevel=bot.FireLevel;_aiCandidate.Pumps=0;_aiCandidate.IsRed=bot.HasRed;_aiCandidate.IsRemote=false;
-            // Reserve reaction/turning margin. Placement uses the real 2.5-second fuse in the authority.
-            _aiCandidate.FuseTimer=BlastBomb.FuseSeconds-.25f;_aiCandidate.State=BombState.Resting;
-            _aiCandidateBombs.Clear();_aiCandidateBombs.AddRange(_bombs);_aiCandidateBombs.Add(_aiCandidate);
-            _aiPlacementDanger.Build(_softBlocks,_aiCandidateBombs,_hazards);
-            int escape=BotSearch(bot,start,_aiPlacementDanger,true,8);
-            if(escape>=0&&escape!=start)
+            float best=0,aimX=0,aimZ=0;
+            // Small angular increments include tangential placements beside cover;
+            // pointing directly into an adjacent block would fail the real circle test.
+            for(int direction=0;direction<32;direction++)
             {
-                _aiLastBomb[bot.Id]=_roundTimer;
-                // Move immediately while placing; a bot obeys the same kick/collision rules as a human.
-                BotSteer(bot,start,escape);bot.Input=bot.Input with {A=true};return;
+                float angle=direction*MathF.Tau/32,nx=MathF.Cos(angle),nz=MathF.Sin(angle);
+                float distance=PlayerRadius+BlastBomb.Radius+.07f+.12f*PlayerSpeed*_aiSteeringInterval;
+                float x=bot.X+nx*distance,z=bot.Z+nz*distance;
+                if(!CanPlaceBombAt(bot,x,z))continue;
+                float score=BotFrontUtility(bot,x,z);
+                if(score>best){best=score;aimX=nx;aimZ=nz;}
+            }
+            if(best>0&&BotFrontBombPlan(bot,start,aimX,aimZ,.12f*PlayerSpeed*_aiSteeringInterval,out _))
+            {
+                // Orient using ordinary movement, then place on the next reaction.
+                bot.BotPlacingBomb=true;bot.Input=new InputState(aimX*.12f,aimZ*.12f,false,false,false);return;
             }
         }
         BotSteer(bot,start,waypoint);
+    }
+    private float BotFrontUtility(BlastPlayer bot,float x,float z)
+    {
+        float score=0,y=_stage.SurfaceAt(x,z),radius=bot.FireLevel*.9f+.4f;
+        int reach=(int)MathF.Ceiling(radius);
+        for(int cx=(int)x-reach;cx<=(int)x+reach;cx++)for(int cz=(int)z-reach;cz<=(int)z+reach;cz++)
+            if(_softBlocks.IsAlive(cx,cz)&&InBlast(x,z,y,radius,cx+.5f,cz+.5f,_stage.At(cx,cz).Tier,bot.HasRed))score++;
+        if(BotEnemyInRange(x,y,z,radius,bot.Id,bot.HasRed))score+=2;
+        return score;
+    }
+    private bool BotFrontBombPlan(BlastPlayer bot,int start,float aimX,float aimZ,float advance,out int escape)
+    {
+        escape=-1;
+        float distance=PlayerRadius+BlastBomb.Radius+.07f+advance;
+        float x=bot.X+aimX*distance,z=bot.Z+aimZ*distance;
+        if(!CanPlaceBombAt(bot,x,z)||BotFrontUtility(bot,x,z)<=0)return false;
+        _aiCandidate.OwnerId=bot.Id;_aiCandidate.X=x;_aiCandidate.Z=z;
+        _aiCandidate.CellX=(int)x;_aiCandidate.CellZ=(int)z;_aiCandidate.Tier=(int)MathF.Round(_stage.SurfaceAt(x,z));
+        _aiCandidate.FireLevel=bot.FireLevel;_aiCandidate.Pumps=0;_aiCandidate.IsRed=bot.HasRed;_aiCandidate.IsRemote=false;
+        _aiCandidate.FuseTimer=BlastBomb.FuseSeconds-.25f;_aiCandidate.State=BombState.Resting;
+        _aiCandidateBombs.Clear();_aiCandidateBombs.AddRange(_bombs);_aiCandidateBombs.Add(_aiCandidate);
+        _aiPlacementDanger.Build(_softBlocks,_aiCandidateBombs,_hazards);
+        escape=BotSearch(bot,start,_aiPlacementDanger,true,8);
+        return escape>=0&&escape!=start;
     }
     private bool BotSafe(TimedDangerField field,int cell,float enter,float leave)
     {
@@ -128,6 +174,9 @@ public sealed partial class BlastSession
             {
                 int next=_aiGraph.Edges[cell*4+((d+bot.Slot)%4)];
                 if(next<0||_aiSeen[next]==_aiGeneration||!BotOpen(next,start,bot,danger))continue;
+                if(cell==start&&escape&&ReferenceEquals(danger,_aiPlacementDanger)&&
+                    (next%_stage.Width+.5f-bot.X)*(_aiCandidate.X-bot.X)+
+                    (next/_stage.Width+.5f-bot.Z)*(_aiCandidate.Z-bot.Z)>.001f)continue;
                 float nextArrival=(depth+1)*(1/PlayerSpeed+.045f);
                 if(!BotSafe(danger,next,arrival,nextArrival+.08f))continue;
                 // The current tile may already be burning; allow leaving it rather than freezing in place.

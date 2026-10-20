@@ -264,6 +264,7 @@ public sealed partial class BlastSession : GameSession
             ClearRecovery(p);
             p.InvincibleTimer = 0;
             p.CarryingBombId = null;
+            p.CarryFromPrimary=false;p.PrimaryBombCandidateId=null;p.PrimaryHoldTimer=0;
             p.CarryingPlayerId = null;
             p.LatchedToId = null;
             p.LatchTimer = 0;
@@ -373,6 +374,7 @@ public sealed partial class BlastSession : GameSession
         // Process inputs and apply physics.
         ProcessInputs(context, dt);
         TickPlayerCarrying(dt);
+        SynchronizeLatchedGhosts();
         DrownSubmergedEntities();
         TickBombs(context, dt);
         TickHazards(context, dt);
@@ -456,10 +458,22 @@ public sealed partial class BlastSession : GameSession
 
             // Determine effective input (may be overridden by a latching ghost).
             var possessor = _players.Values.FirstOrDefault(g => g.Alive && g.Ghost && g.LatchedToId == p.Id);
-            var input = possessor is null ? p.Input : p.Input with { X = possessor.Input.X, Z = possessor.Input.Z };
+            var input = possessor is null ? p.Input : p.Input with
+            {
+                X = p.Input.X + possessor.Input.X*.3f,
+                Z = p.Input.Z + possessor.Input.Z*.3f,
+            };
+            if(input.Length>1)input=input with {X=input.X/input.Length,Z=input.Z/input.Length};
 
             // Count down timers.
             if (p.InvincibleTimer > 0) p.InvincibleTimer = Math.Max(0,p.InvincibleTimer-dt);
+            if(p.Falling)
+            {
+                p.AirVX=input.X*PlayerSpeed;p.AirVZ=input.Z*PlayerSpeed;
+                if(input.Length>.1f){p.FacingX=input.X/input.Length;p.FacingZ=input.Z/input.Length;}
+                p.PrevA=input.A;p.PrevB=input.B;p.PrevR=input.R;
+                continue;
+            }
             if (ProcessRecovery(p,p.Input,dt)) continue;
 
             // Edge detection for buttons.
@@ -474,7 +488,7 @@ public sealed partial class BlastSession : GameSession
             // Ghost-specific actions.
             if (p.Ghost)
             {
-                MovePlayer(p, input, dt);
+                if(p.LatchedToId is null)MovePlayer(p, input, dt);
                 // Ghost tries to latch onto a nearby living player.
                 if (_ghostsEnabled && p.LatchedToId is null)
                     TryLatch(p);
@@ -495,19 +509,7 @@ public sealed partial class BlastSession : GameSession
             if (rPress && p.HasRemote)
                 RemoteDetonate(context, p);
 
-            // A: place bomb or pump.
-            if (aPress)
-            {
-                if (p.CarryingBombId is not null)
-                    PumpBomb(p);
-                else if(p.CarryingPlayerId is null)
-                    TryPlaceBomb(context, p, input.B);
-            }
-
-            // B: pick up / throw.
-            if (bPress) TryPickUp(context, p);
-            else if (bRelease && (p.CarryingBombId is not null || p.CarryingPlayerId is not null))
-                ThrowCarried(context, p, input);
+            ProcessBombActions(context,p,input,aPress,bPress,bRelease,dt);
         }
     }
 
@@ -523,7 +525,7 @@ public sealed partial class BlastSession : GameSession
     {
         var startX = p.X;
         var startZ = p.Z;
-        ApplyMoveDelta(p, input.X * PlayerSpeed * dt, input.Z * PlayerSpeed * dt);
+        ApplyMoveDelta(p, input.X * PlayerSpeed * dt, input.Z * PlayerSpeed * dt,dt);
 
         // Update facing for non-zero input.
         if (input.X * input.X + input.Z * input.Z > 0.01f)
@@ -542,7 +544,7 @@ public sealed partial class BlastSession : GameSession
 
     private void MovePlayerCarrying(BlastPlayer p, InputState input, float dt)
     {
-        ApplyMoveDelta(p, input.X * PlayerSpeed * dt, input.Z * PlayerSpeed * dt);
+        ApplyMoveDelta(p, input.X * PlayerSpeed * dt, input.Z * PlayerSpeed * dt,dt);
         if (input.X * input.X + input.Z * input.Z > 0.01f)
         {
             p.FacingX = input.X; p.FacingZ = input.Z;
@@ -551,8 +553,10 @@ public sealed partial class BlastSession : GameSession
         }
     }
 
-    private void ApplyMoveDelta(BlastPlayer p, float dx, float dz)
+    private void ApplyMoveDelta(BlastPlayer p, float dx, float dz,float dt)
     {
+        var originX=(int)MathF.Floor(p.X);var originZ=(int)MathF.Floor(p.Z);
+        var previousY=p.Y;
         // Axis-separated to allow sliding along walls.
         var nx = p.X + dx;
         if (!CollidesWithSolid(nx, p.Z, p.Tier, p))
@@ -566,8 +570,15 @@ public sealed partial class BlastSession : GameSession
         p.Z = Math.Clamp(p.Z, -0.5f, _stage.Height + 0.5f);
 
         var cell = _stage.At((int)MathF.Floor(p.X), (int)MathF.Floor(p.Z));
-        p.SurfaceY = _stage.SurfaceAt(p.X, p.Z);
-        p.Tier = (int)MathF.Round(p.SurfaceY);
+        var ground=_stage.SurfaceAt(p.X,p.Z);
+        if(!p.Ghost&&ground<previousY-.05f&&!CellsConnected(originX,originZ,(int)MathF.Floor(p.X),(int)MathF.Floor(p.Z)))
+        {
+            p.Airborne=true;p.Falling=true;p.AirVY=0;
+            p.AirVX=dx/Math.Max(dt,.0001f);p.AirVZ=dz/Math.Max(dt,.0001f);
+            Present("player-fall",p.Id,p.Id,p.X,p.Y,p.Z);
+            return;
+        }
+        p.SurfaceY=ground;p.Tier=(int)MathF.Round(ground);
 
         // Elimination: out-of-bounds or void/water cell.
         if (cell.IsElimination || p.X < 0 || p.X >= _stage.Width || p.Z < 0 || p.Z >= _stage.Height)
@@ -582,7 +593,9 @@ public sealed partial class BlastSession : GameSession
             {
                 var cell = _stage.At(cx, cz);
                 if (cell.IsPassable && CircleOverlapsCell(x, z, cx, cz) &&
-                    !CellsConnected((int)MathF.Floor(mover.X), (int)MathF.Floor(mover.Z), cx, cz)) return true;
+                    !CellsConnected((int)MathF.Floor(mover.X), (int)MathF.Floor(mover.Z), cx, cz)&&
+                    _stage.SurfaceAt(Math.Clamp(x,cx+.001f,cx+.999f),Math.Clamp(z,cz+.001f,cz+.999f))>mover.Y+.05f&&
+                    !EscapingCell(x,z,mover,cx,cz)) return true;
                 if (cell.Kind == CellKind.Pillar) // hard wall
                 {
                     if (CircleOverlapsCell(x, z, cx, cz))
@@ -624,7 +637,15 @@ public sealed partial class BlastSession : GameSession
         var nz = Math.Clamp(z, cz, cz + 1f);
         var ddx = x - nx;
         var ddz = z - nz;
-        return ddx * ddx + ddz * ddz < PlayerRadius * PlayerRadius;
+        return ddx * ddx + ddz * ddz < PlayerRadius * PlayerRadius - .00001f;
+    }
+
+    private static bool EscapingCell(float x,float z,BlastPlayer p,int cx,int cz)
+    {
+        static float Distance(float x,float z,int cx,int cz)
+        {var dx=x-Math.Clamp(x,cx,cx+1f);var dz=z-Math.Clamp(z,cz,cz+1f);return dx*dx+dz*dz;}
+        var old=Distance(p.X,p.Z,cx,cz);
+        return old<=PlayerRadius*PlayerRadius+.000001f&&Distance(x,z,cx,cz)>=old-.000001f;
     }
 
     // ─── kicking ──────────────────────────────────────────────────────────────
@@ -654,11 +675,10 @@ public sealed partial class BlastSession : GameSession
                     continue;
             }
 
-            // Kick in the player's facing direction.
-            var nx = MathF.Round(p.FacingX);
-            var nz = MathF.Round(p.FacingZ);
-            if (nx == 0 && nz == 0) { nx = (int)MathF.Round(input.X); nz = (int)MathF.Round(input.Z); }
-            if (nx == 0 && nz == 0) continue;
+            // Preserve the full stick angle; the bomb must clear a running kicker.
+            var magnitude = MathF.Sqrt(input.X * input.X + input.Z * input.Z);
+            var nx = input.X / magnitude;
+            var nz = input.Z / magnitude;
 
             b.State = BombState.Rolling;
             b.LastTouchedById=p.Id;
@@ -676,17 +696,18 @@ public sealed partial class BlastSession : GameSession
     {
         if (p.ActiveBombs >= p.BombCapacity) return;
 
-        var cx = (int)p.X;
-        var cz = (int)p.Z;
-        if (_stage.At(cx, cz).Kind is not CellKind.Floor and not CellKind.Ramp) return;
-        if (_bombs.Any(b => b.CellX == cx && b.CellZ == cz && b.Tier == p.Tier && b.State == BombState.Resting)) return;
+        var x = p.X + p.FacingX * (PlayerRadius + BlastBomb.Radius + .07f);
+        var z = p.Z + p.FacingZ * (PlayerRadius + BlastBomb.Radius + .07f);
+        var cx = (int)MathF.Floor(x);
+        var cz = (int)MathF.Floor(z);
+        if (!hold && !CanPlaceBombAt(p, x, z)) return;
 
         var bomb = new BlastBomb
         {
             Id = NextBombId(),
             OwnerId = p.Id,
-            X = cx + 0.5f, Z = cz + 0.5f,
-            CellX = cx, CellZ = cz, Tier = p.Tier,
+            X = x, Z = z,
+            CellX = cx, CellZ = cz, Tier = (int)MathF.Round(_stage.SurfaceAt(x, z)),
             FireLevel = p.FireLevel,
             IsRed = p.HasRed,
             IsRemote = p.HasRemote,
@@ -781,6 +802,7 @@ public sealed partial class BlastSession : GameSession
         bomb.Tier = p.Tier;
 
         p.CarryingBombId = null;
+        p.CarryFromPrimary = false;
         PresentBomb("throw", bomb, p.Id, speed);
     }
 
@@ -851,23 +873,26 @@ public sealed partial class BlastSession : GameSession
 
     private void TickRollingBomb(ISessionContext context, BlastBomb b, float dt)
     {
+        // Sweep the whole circle in short steps so faster kicks cannot tunnel through
+        // terrain, players, or other bombs between authoritative ticks.
+        var steps = Math.Max(1, (int)MathF.Ceiling(MathF.Sqrt(b.VX*b.VX+b.VZ*b.VZ)*dt/.1f));
+        for (var step=0;step<steps && b.State==BombState.Rolling && !b.Exploded;step++)
+            StepRollingBomb(context,b,dt/steps);
+    }
+
+    private void StepRollingBomb(ISessionContext context, BlastBomb b, float dt)
+    {
         var nx = b.X + b.VX * dt;
         var nz = b.Z + b.VZ * dt;
         var cx = (int)nx;
         var cz = (int)nz;
 
-        // Stop at a hard cell, soft block, or the grid edge.
         var cell = _stage.At(cx, cz);
-        if (cell.Kind == CellKind.Pillar || _softBlocks.IsAlive(cx, cz) ||
-            nx < 0 || nx >= _stage.Width || nz < 0 || nz >= _stage.Height)
+        if (!BombTerrainClear(nx, nz, (int)MathF.Floor(b.X), (int)MathF.Floor(b.Z)))
         {
             b.State = BombState.Resting;
-            b.VX = 0; b.VZ = 0;
+            b.VX = b.VZ = 0;
             return;
-        }
-        if (cell.IsPassable && !CellsConnected((int)MathF.Floor(b.X), (int)MathF.Floor(b.Z), cx, cz))
-        {
-            b.State = BombState.Resting; b.VX = b.VZ = 0; return;
         }
 
         // Check collision with a player (stun) or another resting bomb (billiard).
@@ -1140,6 +1165,7 @@ public sealed partial class BlastSession : GameSession
         player.SurfaceY = _stage.SurfaceAt(player.X,player.Z); player.Tier = (int)MathF.Round(player.SurfaceY);
         player.Alive = true; player.Ghost = false; player.PendingRoundStart = false;
         ClearRecovery(player); player.InvincibleTimer = 1.5f;
+        player.CarryFromPrimary=false;player.PrimaryBombCandidateId=null;player.PrimaryHoldTimer=0;
         player.Input = default; player.PrevA = player.PrevB = player.PrevR = false;
         PowerUpRules.Reset(player);
         player.ActiveBombs = _bombs.Count(b => b.OwnerId == player.Id && !b.Exploded);
@@ -1177,8 +1203,16 @@ public sealed partial class BlastSession : GameSession
             ghost.LatchReverseCount = 0;
             ghost.LatchPrevDX = p.FacingX;
             ghost.LatchPrevDZ = p.FacingZ;
+            Present("ghost-latch",ghost.Id,p.Id,p.X,p.Y,p.Z);
             break;
         }
+    }
+
+    private void SynchronizeLatchedGhosts()
+    {
+        foreach(var ghost in _players.Values)
+            if(ghost.LatchedToId is {} id&&_players.TryGetValue(id,out var victim))
+            {ghost.X=victim.X;ghost.Z=victim.Z;ghost.SurfaceY=victim.Y;ghost.Tier=victim.Tier;}
     }
 
     private void TrackLatch(BlastPlayer ghost, BlastPlayer victim, float dt)
@@ -1201,9 +1235,9 @@ public sealed partial class BlastSession : GameSession
             {
                 ghost.LatchReverseCount++;
                 ghost.LatchReverseCooldown = 0.15f;
-                ghost.LatchPrevDX = vdx;
-                ghost.LatchPrevDZ = vdz;
             }
+            ghost.LatchPrevDX = vdx;
+            ghost.LatchPrevDZ = vdz;
         }
 
         // Shake-off: 6 reversals or 4 seconds elapsed.
@@ -1211,15 +1245,17 @@ public sealed partial class BlastSession : GameSession
             DetachGhost(ghost);
     }
 
-    private static void DetachGhost(BlastPlayer ghost)
+    private void DetachGhost(BlastPlayer ghost)
     {
+        var victim=ghost.LatchedToId;
         ghost.LatchedToId = null;
         ghost.LatchTimer = 0;
         ghost.LatchReverseCount = 0;
         ghost.StunTimer = 0.5f; // give the victim time to move away before another latch
+        Present("ghost-detach",ghost.Id,victim,ghost.X,ghost.Y,ghost.Z);
     }
 
-    private static void DetachIfLatched(BlastPlayer p)
+    private void DetachIfLatched(BlastPlayer p)
     {
         if (p.LatchedToId is not null) DetachGhost(p);
     }
@@ -1327,10 +1363,13 @@ public sealed partial class BlastSession : GameSession
             fz = MathF.Round(p.FacingZ, 2),
             alive = p.Alive,
             ghost = p.Ghost,
+            latchedTo=p.LatchedToId,
+            carryFromPrimary=p.CarryFromPrimary,
+            primaryHoldProgress=p.PrimaryBombCandidateId is null?0:Math.Clamp(p.PrimaryHoldTimer/.25f,0,1),
             stunned = p.StunTimer > 0,
             knockdownReason=p.KnockdownReason,
             recoveryRemaining=MathF.Round(p.CarriedById is not null?p.HoldRemaining:p.StunTimer,2),
-            recoveryTotal=p.RecoveryTotal,carriedBy=p.CarriedById,carryingPlayerId=p.CarryingPlayerId,airborne=p.Airborne,
+            recoveryTotal=p.RecoveryTotal,carriedBy=p.CarriedById,carryingPlayerId=p.CarryingPlayerId,airborne=p.Airborne,falling=p.Falling,
             carrying = p.CarryingBombId is not null ? "bomb" : p.CarryingPlayerId is not null ? "player" : null,
             heart = p.HasHeart,
             fire = p.FireLevel,
@@ -1439,6 +1478,7 @@ public sealed partial class BlastSession : GameSession
 
     private void DropCarriedBombs(BlastPlayer p)
     {
+        p.CarryFromPrimary=false;p.PrimaryBombCandidateId=null;p.PrimaryHoldTimer=0;
         if(p.CarriedById is not null)ReleaseHeld(p,"interrupted");
         if (p.CarryingBombId is not null)
         {

@@ -39,7 +39,7 @@ public partial class PlaytestDriver
             {
                 float analog=await ControllerMovementTrial(pad);Check(Math.Abs(analog-keyboard)<.025f,$"{pad.Name}: unit-speed analog movement equals keyboard movement");await ControllerBombEvents(pad);
             }
-            await ControllerKeyboardSeats();await ControllerHotplugEvents();await ControllerFocusEvents();await ControllerBoundMenuEvents();
+            await ControllerKeyboardSeats();await ControllerHotplugEvents();await ControllerFocusEvents();await ControllerBoundMenuEvents();await ControllerFaceMenuEvents();
             _root.Navigate("Controls");await Frames(3);await Capture("controllers-synthetic-tester");
         }
         finally
@@ -101,7 +101,7 @@ public partial class PlaytestDriver
         void RecordAxis(int id,JoyAxis axis,float value)
         {
             var device=ControllerHub.Current.Devices.FirstOrDefault(d=>d.Device.RuntimeId==id&&d.Backend!="Synthetic QA");
-            if(device==null||axisSamples>=20000)return;
+            if(device==null||axisSamples>=60000)return;
             axisSamples++;
             axisTrace.WriteLine(JsonSerializer.Serialize(new {seconds=axisWatch.Elapsed.TotalSeconds,name=device.Device.Name,backend=device.Backend,axis=axis.ToString(),value,
                 menuActive=Math.Abs(value)>=MenuStickNavigation.PressThreshold,gameplayActive=Math.Abs(value)>InputPolicy.StickDeadzone}));
@@ -112,7 +112,7 @@ public partial class PlaytestDriver
             await Capture("controllers-physical-ready");
             Save();
             var watch=System.Diagnostics.Stopwatch.StartNew();
-            while(watch.Elapsed.TotalSeconds<60&&_root.ScreenName=="Controls"){await Frames(1);await Task.Delay(30);}
+            while(watch.Elapsed.TotalSeconds<120&&_root.ScreenName=="Controls"){await Frames(1);await Task.Delay(30);}
             var report=Report();Save();
             Event("physical-input-observation",report);
             Check(true,"physical observations recorded separately from simulated tests");
@@ -154,6 +154,22 @@ public partial class PlaytestDriver
         CtlButton(12,JoyButton.A,true);await Frames(1);Event("controller-menu-pressed",new {screen=_root.ScreenName,accept=EngineInput.IsActionPressed("ui_accept")});CtlButton(12,JoyButton.A,false);await Frames(4);Event("controller-menu-released",new {screen=_root.ScreenName});Check(_root.ScreenName=="Online","canonical south confirms real online menu");
         CtlButton(12,JoyButton.B,true);await Frames(1);CtlButton(12,JoyButton.B,false);await Frames(4);Check(_root.ScreenName=="Modes","canonical east backs out of menu");await Capture("controllers-menu-events");
     }
+    private async Task ControllerFaceMenuEvents()
+    {
+        ControllerHub.Current.OverrideDevicesForPlaytest(QaPads);
+        foreach(var pad in QaPads)
+        {
+            await ControllerFocusReady();CtlReleaseAll();_root.Navigate("Modes");await Frames(3);
+            var family=ControllerProfile.Family(pad.Name);
+            var confirm=ControllerProfile.ConfirmButton(family);var cancel=ControllerProfile.CancelButton(family);
+            Check(ControllerProfile.Menu(family).Contains(ControllerProfile.ButtonName(family,confirm)+"  CONFIRM"),pad.Name+": confirm prompt follows the device mapping");
+            FindButton("LOCAL BATTLE").GrabFocus();await Frames(1);
+            CtlButton(pad.RuntimeId,confirm,true);await Frames(6);CtlButton(pad.RuntimeId,confirm,false);await Frames(3);
+            Check(_root.ScreenName=="Roster",pad.Name+": printed confirm enters roster once without cancelling");
+            CtlButton(pad.RuntimeId,cancel,true);await Frames(6);CtlButton(pad.RuntimeId,cancel,false);await Frames(3);
+            Check(_root.ScreenName=="Modes",pad.Name+": printed back exits once without confirming another menu");
+        }
+    }
     private async Task<float> ControllerMovementTrial(GamepadDevice? pad)
     {
         await ControllerFocusReady();
@@ -166,16 +182,39 @@ public partial class PlaytestDriver
         await Frames(8);
         if(pad==null)CtlKey(Key.D,false);else CtlAxis(pad.RuntimeId,JoyAxis.LeftX,0);await Frames(4);
         float distance=CtlPlayer(0).GetProperty("x").GetSingle()-start;Check(distance>.6f,(pad?.Name??"Keyboard")+": production events move authoritative player");
-        Event("controller-movement",new {source=pad?.Name??"Keyboard",synthetic=true,distance});await Capture("controllers-move-"+(pad?.RuntimeId.ToString()??"keyboard"));_root.Back();await Frames(3);return distance;
+        Event("controller-movement",new {source=pad?.Name??"Keyboard",synthetic=true,distance});
+        await Capture("controllers-move-"+(pad?.RuntimeId.ToString()??"keyboard"));
+        if(pad!=null)
+        {
+            for(int step=0;step<120;step++)
+            {
+                float angle=step*Mathf.Tau/120;float x=Mathf.Cos(angle),z=Mathf.Sin(angle);
+                float radius=.28f+.65f*(step%20)/19;
+                CtlAxis(pad.RuntimeId,JoyAxis.LeftX,x*radius);CtlAxis(pad.RuntimeId,JoyAxis.LeftY,z*radius);
+                await Frames(1);var intent=PlayerControls.Read(0,1);
+                Check(Math.Abs(intent.X-x)<.001f&&Math.Abs(intent.Z-z)<.001f,pad.Name+": gradual 360 stick direction remains continuous at step "+step);
+            }
+            CtlAxis(pad.RuntimeId,JoyAxis.LeftX,.3f);CtlAxis(pad.RuntimeId,JoyAxis.LeftY,.4f);
+            for(int frame=0;frame<60;frame++)
+            {
+                await Frames(1);var intent=PlayerControls.Read(0,1);
+                Check(Math.Abs(intent.X-.6f)<.001f&&Math.Abs(intent.Z-.8f)<.001f,pad.Name+": sustained diagonal retains full-speed state without new reports at frame "+frame);
+            }
+            CtlAxis(pad.RuntimeId,JoyAxis.LeftX,0);CtlAxis(pad.RuntimeId,JoyAxis.LeftY,0);
+        }
+        _root.Back();await Frames(3);return distance;
     }
     private async Task ControllerBombEvents(GamepadDevice pad)
     {
+        var family=ControllerProfile.Family(pad.Name);
+        var bomb=ControllerProfile.BombButton(family);var carry=ControllerProfile.CarryButton(family);var remote=ControllerProfile.RemoteButton(family);
+        Check(ControllerProfile.ButtonName(family,bomb)==(family==ControllerFamily.PlayStation?"Cross":"A"),pad.Name+": primary prompt matches the physical printed button");
         await ControllerFocusReady();
-        CtlReleaseAll();ControllerHub.Current.OverrideDevicesForPlaytest([pad]);CtlButton(pad.RuntimeId,JoyButton.A,true);
+        CtlReleaseAll();ControllerHub.Current.OverrideDevicesForPlaytest([pad]);CtlButton(pad.RuntimeId,bomb,true);
         _root.StartLocal(new SessionSettings(Stage:"rock-garden",Bots:0),1,practice:true);
         await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"held-confirm trial reaches fight",150);
         Check(State.GetProperty("bombs").GetArrayLength()==0,pad.Name+": held confirm cannot become gameplay bomb");
-        CtlButton(pad.RuntimeId,JoyButton.A,false);await Frames(4);
+        CtlButton(pad.RuntimeId,bomb,false);await Frames(4);
         await ControllerFocusReady();
         CtlAxis(pad.RuntimeId,JoyAxis.LeftX,.3f);
         var deadzoneIntent=PlayerControls.Read(0,1);
@@ -187,19 +226,45 @@ public partial class PlaytestDriver
         var reverse=PlayerControls.Read(0,1);Check(Math.Abs(reverse.X+.6f)<.001f&&Math.Abs(reverse.Z+.8f)<.001f,pad.Name+": gameplay reversal reaches production read without stale direction");
         CtlAxis(pad.RuntimeId,JoyAxis.LeftY,0);CtlAxis(pad.RuntimeId,JoyAxis.LeftX,0);
         CtlButton(pad.RuntimeId,JoyButton.DpadRight,true);Check(PlayerControls.Read(0,1).X>.99f,"D-pad provides gameplay movement");CtlButton(pad.RuntimeId,JoyButton.DpadRight,false);
-        foreach(var button in new[]{JoyButton.B,JoyButton.RightShoulder})
+        foreach(var button in new[]{remote,JoyButton.RightShoulder})
         {CtlButton(pad.RuntimeId,button,true);Check(PlayerControls.Read(0,1).R,"remote alias reaches command: "+button);CtlButton(pad.RuntimeId,button,false);_ = PlayerControls.Read(0,1);}
-        CtlButton(pad.RuntimeId,JoyButton.X,true);Check(PlayerControls.Read(0,1).B,"west face button carries");CtlButton(pad.RuntimeId,JoyButton.X,false);
-        CtlButton(pad.RuntimeId,JoyButton.A,true);CtlButton(pad.RuntimeId,JoyButton.A,false);await Frames(4);
-        Check(State.GetProperty("bombs").GetArrayLength()==1,pad.Name+": sub-frame south tap places one real bomb");
-        CtlButton(pad.RuntimeId,JoyButton.A,true);CtlAxis(pad.RuntimeId,JoyAxis.LeftX,1);await Frames(10);CtlAxis(pad.RuntimeId,JoyAxis.LeftX,0);await Frames(2);
+        CtlButton(pad.RuntimeId,carry,true);var carryIntent=PlayerControls.Read(0,1);Check(carryIntent.B&&!carryIntent.A&&!carryIntent.R,pad.Name+": carry face button reaches only carry");CtlButton(pad.RuntimeId,carry,false);
+        CtlButton(pad.RuntimeId,bomb,true);CtlButton(pad.RuntimeId,bomb,false);await Frames(4);
+        Check(State.GetProperty("bombs").GetArrayLength()==1,pad.Name+": sub-frame primary tap places one real bomb");
+        // Start fresh so this press's count is independent of placement rules at the first tap's position.
+        _root.Back();await Frames(2);_root.StartLocal(new SessionSettings(Stage:"rock-garden",Bots:0),1,practice:true);
+        await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"held-primary trial reaches fight",150);await Frames(4);
+        CtlButton(pad.RuntimeId,bomb,true);CtlAxis(pad.RuntimeId,JoyAxis.LeftX,1);await Frames(10);CtlAxis(pad.RuntimeId,JoyAxis.LeftX,0);await Frames(2);
         Check(State.GetProperty("bombs").GetArrayLength()==1,pad.Name+": holding bomb while moving never auto-repeats");
-        CtlButton(pad.RuntimeId,JoyButton.A,false);await Frames(2);CtlButton(pad.RuntimeId,JoyButton.A,true);await Frames(2);CtlButton(pad.RuntimeId,JoyButton.A,false);await Frames(2);
+        CtlButton(pad.RuntimeId,bomb,false);CtlAxis(pad.RuntimeId,JoyAxis.LeftX,-1);await Frames(2);CtlAxis(pad.RuntimeId,JoyAxis.LeftX,0);
+        CtlButton(pad.RuntimeId,bomb,true);await Frames(2);CtlButton(pad.RuntimeId,bomb,false);await Frames(2);
         Check(State.GetProperty("bombs").GetArrayLength()==2,pad.Name+": release and repress creates second bomb");
         CtlButton(pad.RuntimeId,JoyButton.LeftShoulder,true);await Frames(2);Check(CtlPlayer(0).GetProperty("carrying").GetString()=="bomb",pad.Name+": left shoulder lifts real bomb");
         CtlButton(pad.RuntimeId,JoyButton.LeftShoulder,false);await Frames(2);Check(CtlPlayer(0).GetProperty("carrying").ValueKind==JsonValueKind.Null,pad.Name+": release throws bomb");
         Check(State.GetProperty("bombs").EnumerateArray().Any(b=>b.GetProperty("state").GetInt32()==3),pad.Name+": thrown bomb enters flight");
         await Capture("controllers-bomb-"+pad.RuntimeId);CtlReleaseAll();_root.Back();await Frames(3);
+        await ControllerPrimaryHoldEvents(pad);
+    }
+    private async Task ControllerPrimaryHoldEvents(GamepadDevice pad)
+    {
+        var family=ControllerProfile.Family(pad.Name);
+        var primary=ControllerProfile.BombButton(family);var carry=ControllerProfile.CarryButton(family);
+        CtlReleaseAll();await ControllerFocusReady();
+        _root.StartLocal(new SessionSettings(Stage:"rock-garden",Bots:0),1,practice:true);
+        await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"primary hold/pump/throw trial reaches fight",150);await Frames(4);
+        CtlButton(pad.RuntimeId,primary,true);await Frames(2);
+        Check(State.GetProperty("bombs").GetArrayLength()==1&&CtlPlayer(0).GetProperty("carrying").ValueKind==JsonValueKind.Null,pad.Name+": primary press first places a ground bomb before hold threshold");
+        string bombId=State.GetProperty("bombs")[0].GetProperty("id").GetString()!;
+        await Frames(8);
+        Check(CtlPlayer(0).GetProperty("carrying").GetString()=="bomb"&&CtlPlayer(0).GetProperty("carryFromPrimary").GetBoolean(),pad.Name+": sustained primary lifts its own bomb after the hold threshold");
+        Check(State.GetProperty("bombs").GetArrayLength()==1&&State.GetProperty("bombs")[0].GetProperty("id").GetString()==bombId,pad.Name+": primary hold carries the same bomb without another placement");
+        CtlButton(pad.RuntimeId,primary,false);await Frames(2);
+        Check(CtlPlayer(0).GetProperty("carrying").GetString()=="bomb",pad.Name+": releasing primary preserves the carried bomb");
+        CtlButton(pad.RuntimeId,primary,true);await Frames(2);CtlButton(pad.RuntimeId,primary,false);await Frames(2);
+        Check(State.GetProperty("bombs")[0].GetProperty("pumps").GetInt32()==1,pad.Name+": fresh primary press pumps the carried bomb once");
+        CtlButton(pad.RuntimeId,carry,true);await Frames(2);
+        Check(CtlPlayer(0).GetProperty("carrying").ValueKind==JsonValueKind.Null&&State.GetProperty("bombs")[0].GetProperty("state").GetInt32()==3,pad.Name+": printed carry button throws the primary-held bomb on press");
+        CtlButton(pad.RuntimeId,carry,false);CtlReleaseAll();_root.Back();await Frames(3);
     }
     private async Task ControllerKeyboardSeats()
     {
@@ -256,7 +321,19 @@ public partial class PlaytestDriver
         await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"focus trial reaches fight",150);await Frames(4);CtlKey(Key.D,true);CtlKey(Key.J,true);
         hub.Notification((int)Node.NotificationApplicationFocusOut);Check(PlayerControls.Read(0,1)==default,"focus loss returns neutral movement and actions");
         hub.Notification((int)Node.NotificationApplicationFocusIn);Check(!PlayerControls.Read(0,1).A,"held bomb cannot trigger on focus restoration");
-        CtlReleaseAll();_ = PlayerControls.Read(0,1);CtlKey(Key.J,true);Check(PlayerControls.Read(0,1).A,"fresh press rearms after focus restoration");CtlReleaseAll();_root.Back();await Frames(3);
+        CtlReleaseAll();_ = PlayerControls.Read(0,1);CtlKey(Key.J,true);Check(PlayerControls.Read(0,1).A,"fresh press rearms after focus restoration");CtlReleaseAll();
+        foreach(var pad in QaPads)
+        {
+            hub.OverrideDevicesForPlaytest([pad]);hub.BeginMatch(1);_ = PlayerControls.Read(0,1);
+            var primary=ControllerProfile.BombButton(ControllerProfile.Family(pad.Name));
+            CtlAxis(pad.RuntimeId,JoyAxis.LeftX,.3f);CtlAxis(pad.RuntimeId,JoyAxis.LeftY,.4f);CtlButton(pad.RuntimeId,primary,true);
+            hub.Notification((int)Node.NotificationApplicationFocusOut);Check(PlayerControls.Read(0,1)==default,pad.Name+": focus loss suppresses held stick and primary");
+            hub.Notification((int)Node.NotificationApplicationFocusIn);var restored=PlayerControls.Read(0,1);
+            Check(!restored.A&&Math.Abs(restored.X-.6f)<.001f&&Math.Abs(restored.Z-.8f)<.001f,pad.Name+": focus restoration preserves continuous movement while requiring primary release");
+            CtlButton(pad.RuntimeId,primary,false);_ = PlayerControls.Read(0,1);CtlButton(pad.RuntimeId,primary,true);
+            Check(PlayerControls.Read(0,1).A,pad.Name+": fresh primary press rearms after focus restoration");CtlReleaseAll();
+        }
+        _root.Back();await Frames(3);
     }
     private JsonElement CtlPlayer(int slot)=>State.GetProperty("players").EnumerateArray().Single(p=>p.GetProperty("slot").GetInt32()==slot);
     private static void CtlKey(Key key,bool pressed){EngineInput.ParseInputEvent(new InputEventKey {Keycode=key,PhysicalKeycode=key,Pressed=pressed,Echo=false});EngineInput.FlushBufferedEvents();}

@@ -45,7 +45,7 @@ if(args.Contains("--benchmark"))
     var output=args.FirstOrDefault(a=>a.StartsWith("--output="));if(output!=null)File.WriteAllText(output[9..],json+"\n");
     return;
 }
-var checks=0;
+var checks=FrontPlacementChecks.Run();
 void Check(bool passed,string name){if(!passed)throw new Exception(name);checks++;Console.WriteLine("PASS "+name);}
 void Fight(Fixture f){f.Step(62);}
 
@@ -55,9 +55,9 @@ var temple=BlastStages.Get("sunken-temple");var templeGraph=NavigationGraph.For(
 for(int cell=0;cell<templeGraph.Count;cell++)for(int d=0;d<4;d++)
 {
     int next=templeGraph.Edges[cell*4+d];
-    if(next>=0&&!temple.CanCross(cell%temple.Width,cell/temple.Width,next%temple.Width,next/temple.Width))throw new Exception("AI graph invents a cliff traversal");
+    if(next>=0&&!temple.CanWalk(cell%temple.Width,cell/temple.Width,next%temple.Width,next/temple.Width))throw new Exception("AI graph invents an uphill cliff traversal");
 }
-Check(true,"all cached temple edges agree with authoritative ramp and cliff crossings");
+Check(true,"all cached temple edges agree with authoritative ramps and directed cliff drops");
 var soft=new SoftBlockGrid(flat.Width,flat.Height);var danger=new TimedDangerField(graph,flat);
 var chain=new[]{new BlastBomb {Id="early",X=3.5f,Z=3.5f,CellX=3,CellZ=3,FuseTimer=.45f},new BlastBomb {Id="late",X=4.5f,Z=3.5f,CellX=4,CellZ=3,FuseTimer=2.5f}};
 danger.Build(soft,chain,Array.Empty<BlastHazard>());

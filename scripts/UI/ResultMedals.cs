@@ -1,22 +1,41 @@
 using Godot;
 namespace BlastCircuit.UI;
 
-/// <summary>Stamped gold victory tokens, drawn from simple original geometry.</summary>
-public partial class ResultMedals : Control
+/// <summary>Little struck metal medals, lit as objects instead of flat score icons.</summary>
+public partial class ResultMedals : SubViewportContainer
 {
     public int Wins {get;set;}
-    public override void _Ready()=>MouseFilter=MouseFilterEnum.Ignore;
-    public override void _Draw()
+    private SubViewport _viewport=null!;
+    private bool _drawn;
+    public override void _Ready()
     {
+        MouseFilter=MouseFilterEnum.Ignore;Stretch=true;
+        _viewport=new SubViewport {OwnWorld3D=true,TransparentBg=true,Size=new(340,94),Msaa3D=Viewport.Msaa.Msaa2X,RenderTargetUpdateMode=SubViewport.UpdateMode.Disabled};AddChild(_viewport);
+        var world=new Node3D();_viewport.AddChild(world);
+        world.AddChild(new WorldEnvironment {Environment=new Godot.Environment {AmbientLightSource=Godot.Environment.AmbientSource.Color,AmbientLightColor=new Color("d6c9aa"),AmbientLightEnergy=.55f,TonemapMode=Godot.Environment.ToneMapper.Filmic}});
+        world.AddChild(new DirectionalLight3D {RotationDegrees=new(-35,-25,0),LightColor=new Color("fff2ca"),LightEnergy=1.9f});
+        world.AddChild(new DirectionalLight3D {RotationDegrees=new(20,140,0),LightColor=new Color("a7bdff"),LightEnergy=.6f});
+        var camera=new Camera3D {Position=new(0,.18f,5),Projection=Camera3D.ProjectionType.Orthogonal,Size=.95f,Current=true};world.AddChild(camera);camera.LookAt(Vector3.Zero);
+        var gold=ArcadeBackdrop.Surface("dfb94e",.29f,.75f);var bright=ArcadeBackdrop.Surface("ffdf83",.36f,.5f);var dark=ArcadeBackdrop.Surface("987133",.4f,.65f);var ribbon=ArcadeBackdrop.Surface("b6537a",.65f);
         for(int i=0;i<Math.Min(5,Wins);i++)
         {
-            var p=new Vector2(20+i*31,23);
-            DrawColoredPolygon([p+new Vector2(-9,7),p+new Vector2(-11,21),p+new Vector2(0,16),p+new Vector2(11,21),p+new Vector2(9,7)],new Color("b44e6b"));
-            DrawCircle(p,15,new Color("80541c"));DrawCircle(p+new Vector2(0,-1),13,new Color("f8d665"));
-            DrawArc(p+new Vector2(0,-1),10,0,Mathf.Tau,28,new Color("b68729"),1.5f,true);
-            Vector2[] star=new Vector2[10];for(int j=0;j<10;j++)star[j]=p+new Vector2(0,-1)+Vector2.FromAngle(-Mathf.Pi/2+j*Mathf.Tau/10)*(j%2==0?8:3.5f);
-            DrawColoredPolygon(star,new Color("fff1ab"));
+            var medal=new Node3D {Position=new(-1.32f+i*.63f,.035f,0),RotationDegrees=new(0,-11,0)};world.AddChild(medal);
+            foreach(float x in new[]{-.1f,.1f}){var tail=ArcadeBackdrop.Box(medal,new(x,-.23f,-.035f),new(.17f,.27f,.035f),ribbon);tail.RotationDegrees=new(0,0,x<0?-12:12);}
+            var coin=ArcadeBackdrop.Cylinder(medal,Vector3.Zero,.255f,.095f,gold);coin.RotationDegrees=new(90,0,0);
+            var inset=ArcadeBackdrop.Cylinder(medal,new(0,0,.056f),.205f,.015f,dark);inset.RotationDegrees=new(90,0,0);
+            var face=ArcadeBackdrop.Cylinder(medal,new(0,0,.066f),.185f,.015f,gold);face.RotationDegrees=new(90,0,0);
+            var surface=new SurfaceTool();surface.Begin(Mesh.PrimitiveType.Triangles);
+            for(int j=0;j<10;j++)
+            {
+                Vector3 Point(int n){float a=Mathf.Pi/2+n*Mathf.Tau/10,r=n%2==0?.145f:.065f;return new(Mathf.Cos(a)*r,Mathf.Sin(a)*r,.083f);}
+                surface.SetNormal(Vector3.Back);surface.AddVertex(Vector3.Back*.083f);surface.AddVertex(Point(j+1));surface.AddVertex(Point(j));
+            }
+            medal.AddChild(new MeshInstance3D {Mesh=surface.Commit(),MaterialOverride=bright});
         }
-        if(Wins==0)DrawString(ThemeDB.FallbackFont,new(10,31),"—",HorizontalAlignment.Left,-1,24,new Color(1,1,1,.6f));
+    }
+    public override void _Process(double delta)
+    {
+        if(_drawn||!IsVisibleInTree())return;
+        _viewport.RenderTargetUpdateMode=SubViewport.UpdateMode.Once;_drawn=true;
     }
 }

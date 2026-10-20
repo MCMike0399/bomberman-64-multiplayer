@@ -2,7 +2,7 @@ using System.Text.Json;
 using Bomber.Game;
 using Bomber.Game.Simulation;
 
-var passed = GrappleChecks.Run();
+var passed = TraversalAndGhostChecks.Run() + BombActionsChecks.Run() + GrappleChecks.Run();
 Run("participant bounds and stage validation", () =>
 {
     foreach (var options in new[] {
@@ -54,8 +54,8 @@ Run("bomb press is edge triggered and explodes after fuse", () =>
     Fight(match);
     match.SetInput(0, new PlayerInput(0, 0, true)); Step(match, 2);
     Assert(State(match).GetProperty("bombs").GetArrayLength() == 1, "Bomb was not placed.");
-    Step(match, 20);
-    Assert(State(match).GetProperty("bombs").GetArrayLength() == 1, "Holding A placed extra bombs.");
+    match.SetInput(0,default);Step(match,20);
+    Assert(State(match).GetProperty("bombs").GetArrayLength() == 1, "One A tap placed extra bombs.");
     var sawHazard = false;
     match.Message += json => { if (Data(json).TryGetProperty("hazards", out var hazards) && hazards.GetArrayLength() > 0) sawHazard = true; };
     Step(match, 70);
@@ -163,7 +163,7 @@ Run("detonation does not hit a nearby player two levels overhead", () =>
 {
     var stage = FlatArena([(2,3),(3,3)]); stage.Cells[3,3] = CellDef.Floor2;
     var match = new LocalMatch(new MatchOptions { HumanPlayers = 2, BotPlayers = 0, Practice = true }, stage); Fight(match);
-    match.SetInput(0,new PlayerInput(0,0,true)); Step(match,90);
+    match.SetInput(0,new PlayerInput(0,0,true)); Step(match,2);match.SetInput(0,default);Step(match,88);
     var high = Player(match,1);
     Assert(high.GetProperty("alive").GetBoolean() && !high.GetProperty("ghost").GetBoolean(), "Ground-level bomb killed elevated player outside its sphere.");
 });
@@ -185,7 +185,7 @@ Run("bot reaches safe terrain before an adjacent bomb fuse expires", () =>
     var reachedRefuge=false;
     for(var i=0;i<90;i++)
     {
-        match.Tick(); var state=State(match);var live=Player(match,1);
+        match.Tick(); if(i==1)match.SetInput(0,default);var state=State(match);var live=Player(match,1);
         foreach(var bomb in state.GetProperty("bombs").EnumerateArray())
             if(!BlastGeometry.Contains(stage,new SoftBlockGrid(9,9),bomb.GetProperty("x").GetSingle(),bomb.GetProperty("y").GetSingle(),bomb.GetProperty("z").GetSingle(),1.7f,
                 live.GetProperty("x").GetSingle(),live.GetProperty("y").GetSingle(),live.GetProperty("z").GetSingle())) reachedRefuge=true;
@@ -327,11 +327,11 @@ Run("remote bomb chain reaction observes cover and red piercing", () =>
         var cells=FlatArena([(1,3)]).Cells;
         var gear=new List<(int,int,string)> {(1,3,"remote"),(1,3,"fire"),(1,3,"fire")};if(red)gear.Add((1,3,"red"));
         var arena=new StageLayout {Id="fixture",Width=9,Height=9,Cells=cells,Spawns=[(1,3)],SoftBlockDensity=0,InitialItems=gear,
-            FixedSoftBlocks=shield?new HashSet<(int,int)> {(2,3)}:new HashSet<(int,int)>()};
+            FixedSoftBlocks=shield?new HashSet<(int,int)> {(2,4)}:new HashSet<(int,int)>()};
         var match=new LocalMatch(new MatchOptions {HumanPlayers=1,BotPlayers=0,Practice=true},arena);Fight(match);
         match.SetInput(0,new PlayerInput(0,0,true));Step(match,2);match.SetInput(0,default);Step(match,2);
         Walk(match,1.5f,1.5f);
-        Assert(Math.Abs(State(match).GetProperty("bombs")[0].GetProperty("z").GetSingle()-3.5f)<.01f,"Walking away accidentally kicked the bomb behind the player.");
+        Assert(Math.Abs(State(match).GetProperty("bombs")[0].GetProperty("z").GetSingle()-4.32f)<.01f,"Walking away accidentally kicked the bomb behind the player.");
         Walk(match,3.5f,1.5f);Walk(match,3.5f,3.5f);
         match.SetInput(0,new PlayerInput(0,0,true));Step(match,2);match.SetInput(0,default);Step(match,4);
         Assert(State(match).GetProperty("bombs").GetArrayLength()==2,"Remote bombs expired before remote command.");
@@ -341,7 +341,7 @@ Run("remote bomb chain reaction observes cover and red piercing", () =>
         if(shield)
         {
             var bits=Convert.FromBase64String(State(match).GetProperty("softBlocks").GetString()!);
-            Assert((bits[(3*9+2)/8]&(1<<((3*9+2)%8)))==0,"Explosion failed to remove destructible cover.");
+            Assert((bits[(4*9+2)/8]&(1<<((4*9+2)%8)))==0,"Explosion failed to remove destructible cover.");
         }
     }
 });
@@ -451,16 +451,18 @@ Run("presentation events record only accepted held actions and one authoritative
 });
 Run("walking back into a bomb kicks across the blocked final movement step", () =>
 {
-    var match=new LocalMatch(new MatchOptions {Stage="rock-garden",HumanPlayers=1,BotPlayers=0,Practice=true});Fight(match);
+    var match=new LocalMatch(new MatchOptions {HumanPlayers=1,BotPlayers=0,Practice=true},FlatArena([(3,3)]));Fight(match);
+    match.SetInput(0,new PlayerInput(-.2f,0));Step(match,2);
     match.SetInput(0,new PlayerInput(0,0,true));Step(match,2);match.SetInput(0,default);Step(match,2);
+    var bombX=State(match).GetProperty("bombs")[0].GetProperty("x").GetSingle();
     match.SetInput(0,new PlayerInput(.95f,0));Step(match,8);
-    Assert(Math.Abs(Player(match).GetProperty("x").GetSingle()-2.64f)<.01f,"Repro did not reach the blocked-step approach position.");
+    Assert(Player(match).GetProperty("x").GetSingle()>bombX+1.8f,"Repro did not move away from front bomb.");
     Assert(!Events(match).Any(e=>Kind(e)=="kick"),"Walking away kicked the bomb behind the player.");
     match.SetInput(0,new PlayerInput(-1,0));Step(match,2);
     Assert(!Events(match).Any(e=>Kind(e)=="kick"),"Bomb was kicked before this tick could reach contact.");
     Step(match,8);
     Assert(Events(match).Any(e=>Kind(e)=="kick"),"Movement collision stopped the player outside the fixed kick distance.");
-    Assert(State(match).GetProperty("bombs")[0].GetProperty("x").GetSingle()<1.5f,"Accepted kick did not roll the actual bomb.");
+    Assert(State(match).GetProperty("bombs")[0].GetProperty("x").GetSingle()<bombX-.05f,"Accepted kick did not roll the actual bomb.");
 });
 Run("presentation ground placement lift and repeated blocked contact are distinct", () =>
 {
@@ -469,19 +471,18 @@ Run("presentation ground placement lift and repeated blocked contact are distinc
     match.SetInput(0,new PlayerInput(0,0,true));Step(match,2);match.SetInput(0,default);Step(match,2);
     match.SetInput(0,new PlayerInput(0,0,false,true));Step(match,2);
     Assert(Events(match).Count(e=>Kind(e)=="bomb-drop")==1&&Events(match).Count(e=>Kind(e)=="lift")==1,"Accepted ground placement/lift missing.");
-    arena=FlatArena([(3,3)]);arena.Cells[4,3]=CellDef.Pillar;
+    arena=FlatArena([(3,3)]);arena.Cells[3,5]=CellDef.Pillar;
     match=new LocalMatch(new MatchOptions {HumanPlayers=1,BotPlayers=0,Practice=true},arena);Fight(match);
-    match.SetInput(0,new PlayerInput(0,0,true));Step(match,2);match.SetInput(0,new PlayerInput(-1,0));Step(match,6);
-    match.SetInput(0,new PlayerInput(.4f,0));Step(match,36);
+    match.SetInput(0,new PlayerInput(0,0,true));Step(match,2);match.SetInput(0,new PlayerInput(0,.4f));Step(match,18);
     var kicks=Events(match).Count(e=>Kind(e)=="kick");
-    Assert(kicks==2,"Expected initial roll and a fresh contact after the bomb rolled away.");
+    Assert(kicks==2,"Expected initial roll and a fresh contact after the fast bomb rolled away.");
     Step(match,12);
     Assert(Events(match).Count(e=>Kind(e)=="kick")==kicks,"Continuous blocked contact emitted duplicate kicks.");
 });
 Run("presentation deaths retain explosion water and fall reasons through practice recovery", () =>
 {
     var match=new LocalMatch(new MatchOptions {HumanPlayers=1,BotPlayers=0,Practice=true},FlatArena([(3,3)]));Fight(match);
-    match.SetInput(0,new PlayerInput(0,0,true));Step(match,90);
+    match.SetInput(0,new PlayerInput(0,0,true));Step(match,2);match.SetInput(0,default);Step(match,88);
     var death=Events(match).Single(e=>Kind(e)=="death");
     Assert(death.GetProperty("reason").GetString()=="explosion"&&death.GetProperty("causedBy").GetString()=="local-0","Explosion death reason/owner lost.");
     Assert(Events(match).Single(e=>Kind(e)=="respawn").GetProperty("reason").GetString()=="explosion","Practice recovery lost original cause.");
@@ -503,7 +504,7 @@ Run("presentation history survives round reset reconnect and remains bounded wit
     var events=f.Snapshot.GetProperty("events").EnumerateArray().ToArray();
     Assert(events.Any(e=>Kind(e)=="round-ready"&&e.GetProperty("round").GetInt32()==2)&&events.Any(e=>e.GetProperty("round").GetInt32()==1),"Round reset cleared presentation history.");
     var match=new LocalMatch(new MatchOptions {HumanPlayers=1,BotPlayers=0,Practice=true},FlatArena([(3,3)]));Fight(match);
-    for(var i=0;i<50;i++){match.SetInput(0,new PlayerInput(0,0,true));Step(match,90);match.SetInput(0,default);Step(match,2);}
+    for(var i=0;i<50;i++){match.SetInput(0,new PlayerInput(0,0,true));Step(match,2);match.SetInput(0,default);Step(match,88);match.SetInput(0,default);Step(match,2);}
     events=Events(match);
     Assert(events.Length==128&&events[0].GetProperty("seq").GetInt64()>1,"Presentation history grew without a cap.");
     for(var i=1;i<events.Length;i++)Assert(events[i].GetProperty("seq").GetInt64()==events[i-1].GetProperty("seq").GetInt64()+1,"Event sequence has gaps/duplicates.");

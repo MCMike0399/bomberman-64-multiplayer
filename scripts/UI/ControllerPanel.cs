@@ -19,8 +19,8 @@ public partial class ControllerPanel : VBoxContainer
         _live=ArcadeTheme.Text(scroll,"",18);_live.SizeFlagsHorizontal=SizeFlags.ExpandFill;_live.AutowrapMode=TextServer.AutowrapMode.WordSmart;
         ArcadeTheme.Text(this,"KEYBOARD 1    WASD to move • J bomb • hold K to carry • L remote\n                           Space / Shift / R still work.",18);
         ArcadeTheme.Text(this,"KEYBOARD 2    Arrows to move • N bomb • hold M to carry • comma remote\n                           Enter / Ctrl / Backspace or numpad 0 / 1 / 2 also work.",18);
-        ArcadeTheme.Text(this,"GAMEPADS    Left stick or D-pad to move. Same physical button positions:\nXbox A / X / B     •     Switch B / Y / A     •     PS5 Cross / Square / Circle\nLeft shoulder also carries; right shoulder also detonates. Release carry to throw.",18);
-        ArcadeTheme.Text(this,"Same running speed in every direction and on every input device.\nStick drift inside the 20% deadzone is ignored. Hold carry and tap bomb to inflate.",16);
+        ArcadeTheme.Text(this,"GAMEPADS    Left stick or D-pad to move. Bomb / carry / remote:\nXbox A / X / B     •     Switch A / B / X     •     PS5 Cross / Square / Circle\nL / LB / L1 also carries; R / RB / R1 detonates remote bombs.",18);
+        ArcadeTheme.Text(this,"Same running speed in every direction and on every input device.\nTap bomb to place. Hold bomb to lift, tap again to pump, then press carry to throw.",16);
         UpdateStatus();
     }
     public override void _Process(double delta)
@@ -34,11 +34,11 @@ public partial class ControllerPanel : VBoxContainer
         _live.Text=hub.Devices.Count==0?"No mapped gamepads detected. Keyboard play remains available.":
             string.Join("\n\n",hub.Devices.Select((d,i)=>
             {
-                int id=d.Device.RuntimeId;var p=ControllerProfile.Labels(d.Family);
+                int id=d.Device.RuntimeId;string Label(JoyButton button)=>ControllerProfile.ButtonName(d.Family,button);
                 var buttons=Enumerable.Range(0,16).Where(b=>Input.IsJoyButtonPressed(id,(JoyButton)b)).Select(b=>ControllerProfile.ButtonName(d.Family,(JoyButton)b));
                 return $"PAD {i+1}  {d.Device.Name}  •  {d.Backend}  •  {(d.Mapped?"READY":"UNMAPPED")}\n"+
                     $"Stick {Input.GetJoyAxis(id,JoyAxis.LeftX):+0.00;-0.00;0.00}, {Input.GetJoyAxis(id,JoyAxis.LeftY):+0.00;-0.00;0.00}   "+
-                    $"Held: {string.Join(", ",buttons).PadRight(1,'—')}   •   Bomb {p.South} / Carry {p.West} / Remote {p.East}";
+                    $"Held: {string.Join(", ",buttons).PadRight(1,'—')}   •   Bomb {Label(ControllerProfile.BombButton(d.Family))} / Carry {Label(ControllerProfile.CarryButton(d.Family))} / Remote {Label(ControllerProfile.RemoteButton(d.Family))}";
             }));
     }
 }

@@ -102,6 +102,20 @@ public sealed class StageLayout
         return true;
     }
 
+    /// <summary>Movement can leave a higher edge; returning upward still needs a ramp.</summary>
+    public bool CanWalk(int ax,int az,int bx,int bz)
+    {
+        if(CanCross(ax,az,bx,bz))return true;
+        if(Math.Abs(ax-bx)+Math.Abs(az-bz)!=1||!At(ax,az).IsPassable||!At(bx,bz).IsPassable)return false;
+        for(int i=1;i<=3;i++)
+        {
+            float u=i*.25f,x=ax!=bx?Math.Max(ax,bx):ax+u,z=az!=bz?Math.Max(az,bz):az+u;
+            float dx=(bx-ax)*.001f,dz=(bz-az)*.001f;
+            if(SurfaceAt(x+dx,z+dz)>SurfaceAt(x-dx,z-dz)+.01f)return false;
+        }
+        return true;
+    }
+
     public bool IsHardCell(int x, int z) => At(x, z).Kind == CellKind.Pillar;
 }
 
@@ -141,11 +155,15 @@ public sealed class BlastPlayer
     public float RecoveryX { get; set; }
     public float RecoveryZ { get; set; }
     public bool Airborne { get; set; }
+    public bool Falling { get; set; }
     public float AirVX { get; set; }
     public float AirVZ { get; set; }
     public float AirVY { get; set; }
 
     // Carrying.
+    public bool CarryFromPrimary { get; set; }
+    public string? PrimaryBombCandidateId { get; set; }
+    public float PrimaryHoldTimer { get; set; }
     public string? CarryingBombId { get; set; }   // bomb id if carrying a bomb
     public string? CarryingPlayerId { get; set; } // player id if carrying a stunned player
 
@@ -181,6 +199,7 @@ public sealed class BlastPlayer
     public int BotGoalX { get; set; }
     public int BotGoalZ { get; set; }
     public bool BotPlacingBomb { get; set; }
+    public bool BotBombTapPending { get; set; }
 
     // Spectator state: joined in progress, waits for next round.
     public bool PendingRoundStart { get; set; }
@@ -221,7 +240,7 @@ public sealed class BlastBomb
     public bool Exploded { get; set; }
 
     public const float FuseSeconds = 2.5f;
-    public const float RollSpeed = 4f;   // cells/sec while rolling
+    public const float RollSpeed = 8f;   // cells/sec while rolling
     public const float FlySpeed = 6f;    // cells/sec horizontal throw
     public const float Gravity = 9.8f;
     public const float ThrowAngle = 50f; // degrees

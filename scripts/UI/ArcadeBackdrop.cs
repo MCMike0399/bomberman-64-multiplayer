@@ -18,7 +18,7 @@ public partial class ArcadeBackdrop : SubViewportContainer
     private readonly int[] _renderedAppearances=new int[8];
     private LocalRoster? _roster;
     private SubViewport _viewport=null!;
-    private Node3D _world=null!,_green=null!,_clouds=null!,_cabinet=null!,_arenaMount=null!;
+    private Node3D _world=null!,_green=null!,_clouds=null!,_cabinet=null!,_arenaMount=null!,_resultsStage=null!,_resultsBoard=null!;
     private TempleStageView? _miniature;
     private string _arenaId="";
     private Camera3D _camera=null!;
@@ -83,21 +83,47 @@ public partial class ArcadeBackdrop : SubViewportContainer
         Cylinder(_arenaMount,new(0,-.60f,0),4.7f,.3f,gold);
         Cylinder(_arenaMount,new(0,-.39f,0),4.55f,.15f,Surface("252c51",.35f,.18f));
         _clouds=new Node3D();_world.AddChild(_clouds);
-        var cloud=new ShaderMaterial {Shader=new Shader {Code="""
-shader_type spatial;
-render_mode blend_mix, depth_draw_never, cull_back;
-void fragment() {
-    float facing=clamp(dot(normalize(NORMAL),normalize(VIEW)),0.0,1.0);
-    ALBEDO=vec3(0.88,0.94,1.0);
-    ROUGHNESS=1.0;
-    ALPHA=smoothstep(0.0,0.85,facing)*0.82;
-}
-"""}};
-        for(int i=0;i<8;i++)
+        BuildResultsStage();
+    }
+    private void BuildResultsStage()
+    {
+        _resultsStage=new Node3D {Name="VictoryTheatre",Visible=false};_world.AddChild(_resultsStage);
+        var gold=Surface("c9a257",.3f,.65f);var navy=Surface("25335f",.38f,.22f);
+        var velvet=Surface("343259",.68f);var trim=Surface("e3c982",.3f,.55f);
+        _resultsBoard=new Node3D();_resultsStage.AddChild(_resultsBoard);SetResultCount(8);
+        // Stacked foreground steps and tall wings give the theatre real near/far planes.
+        ChamferBox(_resultsStage,new(-5.1f,-.1f,1.0f),new(7.2f,.42f,5.7f),navy,.14f);
+        ChamferBox(_resultsStage,new(-5.1f,.14f,1.0f),new(6.7f,.10f,5.2f),gold,.08f);
+        foreach(float x in new[]{-10.7f,10.7f})
         {
-            var cluster=new Node3D {Position=new((i*7.17f)%25-12.5f,(i*3.41f)%9-1,-5-(i%3)*2)};_clouds.AddChild(cluster);
-            for(int j=0;j<5;j++){var puff=Sphere(cluster,new((j-2)*.76f,Mathf.Sin(j*1.7f)*.25f,0),new(1.85f,1.25f+(j%2)*.45f,1.4f),cloud);puff.CastShadow=GeometryInstance3D.ShadowCastingSetting.Off;}
+            Cylinder(_resultsStage,new(x,1.55f,3.8f),.43f,4.0f,navy);
+            Cylinder(_resultsStage,new(x,-.34f,3.8f),.65f,.25f,gold);
+            Cylinder(_resultsStage,new(x,3.4f,3.8f),.57f,.20f,gold);
+            Sphere(_resultsStage,new(x,3.75f,3.8f),Vector3.One*.58f,trim);
         }
+        // The arch sits behind the winner rather than filling the view with a flat image.
+        foreach(float radius in new[]{3.0f,3.22f})
+        {
+            var arch=new MeshInstance3D {Mesh=new TorusMesh {InnerRadius=radius-.055f,OuterRadius=radius+.055f,Rings=72,RingSegments=12},MaterialOverride=gold,Position=new(-5.15f,2.55f,-2.9f),RotationDegrees=new(90,0,0)};_resultsStage.AddChild(arch);
+        }
+        for(int i=0;i<9;i++)
+        {
+            float a=Mathf.Pi*.14f+i*Mathf.Pi*.09f;
+            var glint=Box(_resultsStage,new(-5.15f+Mathf.Cos(a)*3.55f,2.55f+Mathf.Sin(a)*3.55f,-2.9f),new(.13f,.33f,.13f),trim);glint.RotationDegrees=new(0,0,-a*180/Mathf.Pi);
+        }
+        _resultsStage.AddChild(new OmniLight3D {Position=new(-5,3.7f,2),LightColor=new Color("ffdc8e"),LightEnergy=1.4f,OmniRange=7});
+        _resultsStage.AddChild(new OmniLight3D {Position=new(4.4f,4,3),LightColor=new Color("e1c8ff"),LightEnergy=.65f,OmniRange=6});
+    }
+    public void SetResultCount(int count)
+    {
+        if(_resultsBoard==null)return;
+        foreach(var child in _resultsBoard.GetChildren()){_resultsBoard.RemoveChild(child);child.QueueFree();}
+        float height=1.8f+.75f*Math.Clamp(count,3,8),center=6.7f-height/2;
+        var navy=Surface("25335f",.38f,.22f);var gold=Surface("c9a257",.3f,.65f);
+        ChamferBox(_resultsBoard,new(4,center,.45f),new(11,height,.55f),navy,.16f);
+        ChamferBox(_resultsBoard,new(4,center,.76f),new(10.78f,height-.21f,.13f),gold,.12f);
+        ChamferBox(_resultsBoard,new(4,center,.85f),new(10.53f,height-.44f,.1f),Surface("343259",.68f),.10f);
+        foreach(float x in new[]{-1.13f,9.13f})foreach(float y in new[]{6.33f,6.7f-height+.37f})Sphere(_resultsBoard,new(x,y,.97f),Vector3.One*.11f,Surface("e3c982",.3f,.55f));
     }
     public void SelectArena(string id)
     {
@@ -184,8 +210,8 @@ void fragment() {
         }
         _arenaMount.Visible=Page is "Setup" or "Practice" or "HostSetup";
         foreach(var ornament in _cabinet.GetChildren().Skip(4).OfType<Node3D>())ornament.Visible=!_arenaMount.Visible;
-        _green.Visible=Quiet&&!Results;_clouds.Visible=Results;_cabinet.Visible=!Results;
-        if(_wasResults!=Results){_wasResults=Results;_environment.BackgroundColor=new Color(Results?"73b6e4":"121129");_environment.AmbientLightEnergy=Results?.65f:.48f;}
+        _green.Visible=Quiet&&!Results;_clouds.Visible=false;_cabinet.Visible=true;_resultsStage.Visible=Results;
+        if(_wasResults!=Results){_wasResults=Results;_environment.BackgroundColor=new Color(Results?"181631":"121129");_environment.AmbientLightEnergy=Results?.44f:.48f;}
         var mouse=GetGlobalMousePosition()/GetViewportRect().Size-new Vector2(.5f,.5f);
         _parallax=_parallax.Lerp(mouse,1-Mathf.Exp(-dt*2));
         _camera.Position=new(_parallax.X*.32f,4.5f-_parallax.Y*.18f,18.5f);

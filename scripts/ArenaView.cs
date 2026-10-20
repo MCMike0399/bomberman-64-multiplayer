@@ -13,6 +13,10 @@ public partial class ArenaView : Node3D
     private readonly Node3D _dynamic=new(),_effects=new();
     private readonly Dictionary<string,Node3D> _entities=[];
     private readonly Dictionary<string,Vector3> _targets=[];
+    private readonly Dictionary<string,SnapshotMotion> _playerMotion=[];
+    private readonly Dictionary<string,float> _facings=[];
+    private readonly Dictionary<string,string> _ghostHosts=[];
+    private long _snapshotTick;
     private readonly Dictionary<int,Node3D> _blocks=[];
     private readonly Dictionary<string,ExplosionView> _explosions=[];
     private readonly Dictionary<string,int> _effectCounts=[];
@@ -66,6 +70,7 @@ public partial class ArenaView : Node3D
     private void UpdateProcessing(){ProcessMode=IsVisibleInTree()?ProcessModeEnum.Inherit:ProcessModeEnum.Disabled;if(!IsVisibleInTree())_audio?.StopAll();}
     public void ResetMatch()
     {
+        _playerMotion.Clear();_facings.Clear();_ghostHosts.Clear();_snapshotTick=0;
         _audio.StopAll();
         foreach(Node child in _dynamic.GetChildren())child.QueueFree();
         foreach(Node child in _effects.GetChildren())child.QueueFree();
@@ -76,15 +81,17 @@ public partial class ArenaView : Node3D
         string id=data.GetProperty("id").GetString()!;
         if(_stage==id)return;
         _stage=id;
+        _playerMotion.Clear();_facings.Clear();_ghostHosts.Clear();
         _terrain?.QueueFree();_terrain=new TempleStageView(_art);AddChild(_terrain);_terrain.Build(data);
         foreach(Node child in _dynamic.GetChildren())child.QueueFree();
         foreach(Node child in _effects.GetChildren())child.QueueFree();
         _entities.Clear();_targets.Clear();_blocks.Clear();_explosions.Clear();_presentation.Reset();_walls.Clear();_pickups.Clear();_lastRound=-1;_wasHurry=false;
         _cameraRig.SetStage(data);
     }
-    public void State(JsonElement data)
+    public void State(JsonElement data,long tick=-1)
     {
         if(_terrain==null)return;
+        _snapshotTick=tick<0?_snapshotTick+2:tick;
         int round=(int)F(data,"round");
         if(round!=_lastRound){_lastRound=round;_wasHurry=false;_pickups.Clear();}
         bool eventsAvailable=data.TryGetProperty("events",out _);
@@ -112,9 +119,14 @@ public partial class ArenaView : Node3D
             }
             ((BomberModel)node).SetSuitColor(color);
             _targets[id]=PositionOf(p);
-            float angle=Mathf.Atan2(F(p,"fx"),F(p,"fz"));node.Rotation=new Vector3(0,angle,0);
+            if(!_playerMotion.TryGetValue(id,out var motion))_playerMotion[id]=new SnapshotMotion(node.Position,_snapshotTick);
+            else motion.Push(_targets[id],_snapshotTick);
+            float angle=Mathf.Atan2(F(p,"fx"),F(p,"fz"));_facings[id]=angle;
+            if(p.TryGetProperty("latchedTo",out var latch)&&latch.ValueKind==JsonValueKind.String)_ghostHosts[id]="p:"+latch.GetString();
+            else _ghostHosts.Remove(id);
             ((BomberModel)node).Pose(p.GetProperty("carrying").ValueKind!=JsonValueKind.Null,p.GetProperty("stunned").GetBoolean(),ghost);
-            ((BomberModel)node).RecoveryPose(p.TryGetProperty("carriedBy",out var heldBy)&&heldBy.ValueKind==JsonValueKind.String,p.TryGetProperty("airborne",out var air)&&air.GetBoolean());
+            bool falling=p.TryGetProperty("falling",out var fall)&&fall.GetBoolean();
+            ((BomberModel)node).RecoveryPose(p.TryGetProperty("carriedBy",out var heldBy)&&heldBy.ValueKind==JsonValueKind.String,!falling&&p.TryGetProperty("airborne",out var air)&&air.GetBoolean());
             if(p.TryGetProperty("pickupSerial",out var serial))
             {
                 int value=serial.GetInt32();
@@ -166,7 +178,7 @@ public partial class ArenaView : Node3D
         }
         foreach(string id in _entities.Keys.Where(k=>!seen.Contains(k)).ToArray())
         {
-            _entities[id].QueueFree();_entities.Remove(id);_targets.Remove(id);
+            _entities[id].QueueFree();_entities.Remove(id);_targets.Remove(id);_playerMotion.Remove(id);_facings.Remove(id);_ghostHosts.Remove(id);
         }
         Present(_presentation.Read(data));
         int left=(int)F(data,"closedLeft"),right=(int)F(data,"closedRight");
@@ -188,9 +200,13 @@ public partial class ArenaView : Node3D
             if(!_entities.TryGetValue(id,out var node))continue;
             if(node is BombModel {CarrierId:not null})continue;
             Vector3 previous=node.Position;
-            node.Position=previous.DistanceSquaredTo(target)>16?target:previous.Lerp(target,1-Mathf.Exp(-20*dt));
+            node.Position=_playerMotion.TryGetValue(id,out var motion)?motion.Advance(dt):previous.DistanceSquaredTo(target)>16?target:previous.Lerp(target,1-Mathf.Exp(-20*dt));
+            if(_facings.TryGetValue(id,out var angle))node.Rotation=new Vector3(0,Mathf.LerpAngle(node.Rotation.Y,angle,1-Mathf.Exp(-18*dt)),0);
             if(node is BomberModel model)model.Animate(dt,previous.DistanceTo(node.Position));
         }
+        foreach(var (ghost,host) in _ghostHosts)
+            if(_entities.TryGetValue(ghost,out var rider)&&_entities.TryGetValue(host,out var living))
+                rider.Position=living.Position+new Vector3(0,1.5f,0);
         foreach(var bomb in _entities.Values.OfType<BombModel>())
             if(bomb.CarrierId is { } carrier&&_entities.TryGetValue("p:"+carrier,out var player)&&player is BomberModel actor)
                 bomb.Position=bomb.Position.Lerp(_dynamic.ToLocal(actor.BombSocket),1-Mathf.Exp(-24*dt));
@@ -215,6 +231,8 @@ public partial class ArenaView : Node3D
                 case "player-throw":_audio.Throw();CountEffect(kind);break;
                 case "player-release":case "recover":_audio.Pickup();CountEffect(kind);break;
                 case "player-land":_audio.Kick();break;
+                case "ghost-latch":_audio.Lift();CountEffect(kind);break;
+                case "ghost-detach":_audio.Throw();CountEffect(kind);break;
                 case "knockdown":
                     _audio.Kick();CountEffect(kind);
                     PowerupMessage(PositionOf(e),reason=="rolling-bomb"?"SLIDING BOMB HIT!":"FALLING BOMB HIT!",false);break;
