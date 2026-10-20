@@ -1,0 +1,25 @@
+.godot/
+/android/
+**/bin/
+**/obj/
+artifacts/
+.DS_Store
+
+# External kernel checkout; retained locally as a source-build dependency.
+/burbuja-kernel/
+
+# Credentials and local-only configuration.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+*.log
+**/appsettings.Local.json
+**/appsettings.Production.json
+**/secrets.json
+.vs/
+.idea/

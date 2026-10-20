@@ -1,0 +1,214 @@
+using Godot;
+using Bomber.Client;
+using Bomber.Game;
+using BlastCircuit.UI;
+using System.Text.Json;
+namespace BlastCircuit;
+
+/// <summary>Composition root for screen navigation, session lifetime, controls and snapshot presentation.</summary>
+public partial class GameRoot : Node3D
+{
+    private ArenaView _arena=null!;
+    private ArcadeMenu _menu=null!;
+    private BattleHud _hud=null!;
+    private ISession? _session;
+    private CancellationTokenSource? _connectCancel;
+    private readonly Dictionary<int,PlayerInput> _injected=[];
+    private bool _connecting,_practice,_setupForHost,_smoke;
+    private string _capture="gameplay";
+    private double _elapsed,_smokeDuration=8;
+    private SessionSettings _lastSettings=new();
+    private int _lastHumans=1;
+    private NetworkMode _lastMode;
+    private Uri? _lastServer;
+    private string _lastName="Player",_lastCode="";
+    private JsonElement? _lobby;
+    private JsonElement? _result;
+    public string ScreenName { get; private set; }="Modes";
+    public int SnapshotCount { get; private set; }
+    public JsonElement? LatestState { get; private set; }
+    public JsonElement? LatestStage { get; private set; }
+    public ISession? ActiveSession=>_session;
+    public JsonElement? LatestLobby=>_lobby;
+
+    public override void _Ready()
+    {
+        _arena=new ArenaView();AddChild(_arena);_arena.Visible=false;
+        var layer=new CanvasLayer();AddChild(layer);
+        _menu=new ArcadeMenu();layer.AddChild(_menu);
+        _hud=new BattleHud {Visible=false};layer.AddChild(_hud);
+        _menu.Navigation+=Navigate;_menu.BackRequested+=Back;_menu.ReplayRequested+=Replay;
+        _menu.LocalRequested+=StartConfigured;_menu.OnlineRequested+=StartConfiguredOnline;
+        _hud.LeaveRequested+=Back;
+        var args=OS.GetCmdlineUserArgs();
+        _smoke=args.Any(a=>a.StartsWith("--smoke"));
+        var duration=args.FirstOrDefault(a=>a.StartsWith("--smoke-seconds="));
+        if(duration!=null&&double.TryParse(duration.Split('=')[1],out var seconds))_smokeDuration=Math.Clamp(seconds,1,120);
+        if(args.Contains("--smoke-menu"))_capture="menu";
+        else if(args.Contains("--smoke-online")){_capture="online";_ = StartOnlineAsync(new Uri("http://127.0.0.1:18496"),"Player",new SessionSettings(Bots:7),NetworkMode.CreatePrivate);}
+        else if(_smoke)
+        {
+            var settings=new SessionSettings();
+            if(args.Contains("--smoke-tier")){settings=settings with { Stage="up-and-down"};_capture="tiers";}
+            StartLocal(settings);
+        }
+        Bomber.Testing.PlaytestDriver.TryAttach(this);
+    }
+
+    public void Navigate(string screen)
+    {
+        if(screen is not ("Modes" or "Setup" or "Practice" or "HostSetup" or "Online" or "Lobby" or "Match" or "Results"))throw new ArgumentException("Unknown screen.",nameof(screen));
+        if(screen is "Modes" or "Online" or "Setup" or "Practice" or "HostSetup")
+        {
+            CancelConnection();
+            if(_session!=null)ReleaseSession();
+        }
+        _setupForHost=screen=="HostSetup";
+        ScreenName=screen=="Practice"||screen=="HostSetup"?"Setup":screen;
+        _arena.Visible=ScreenName is "Match" or "Results";
+        _hud.Visible=ScreenName=="Match";
+        _menu.Visible=ScreenName!="Match";
+        if(_menu.Visible)_menu.ShowScreen(screen);
+    }
+    private void StartConfigured()
+    {
+        if(_setupForHost){Navigate("Online");return;}
+        int humans=_menu.HumanCount;
+        if(humans>LocalControllerLayout.Capacity(Input.GetConnectedJoypads().Count))
+        {_menu.Notice($"Connect more gamepads for {humans} human players. Two keyboard seats are available.");return;}
+        StartLocal(_menu.Settings,humans,_menu.Practice);
+    }
+    public void StartLocal(SessionSettings settings,int humans=1,bool practice=false)
+    {
+        if(_connecting)return;
+        try
+        {
+            var session=new LocalSession(settings,humans,practice:practice);
+            _lastSettings=settings;_lastHumans=humans;_practice=practice;_lastServer=null;
+            Begin(session,false);
+        }
+        catch(Exception error){_menu.Notice(error.Message);GD.PushWarning(error.Message);}
+    }
+    private async void StartConfiguredOnline(NetworkMode mode)
+    {
+        try{await StartOnlineAsync(new Uri(_menu.ServerUrl),_menu.PlayerName,_menu.Settings,mode,_menu.Code);}
+        catch(Exception error){_menu.SetBusy(false,"Could not connect: "+error.Message);}
+    }
+    public async Task StartOnlineAsync(Uri server,string name,SessionSettings settings,NetworkMode mode,string? code=null)
+    {
+        if(_connecting)throw new InvalidOperationException("A connection is already in progress.");
+        ReleaseSession();_connecting=true;_practice=false;
+        var cancellation=new CancellationTokenSource(TimeSpan.FromSeconds(120));_connectCancel=cancellation;
+        ScreenName="Online";_menu.Visible=true;_arena.Visible=false;_hud.Visible=false;_menu.ShowScreen("Online");_menu.SetBusy(true,mode==NetworkMode.QuickPlay?"Searching for players… Cancel to leave the queue.":"Connecting to your battle room…");
+        try
+        {
+            var session=await NetworkSession.ConnectAsync(server,name,settings,mode,code,cancellation.Token);
+            if(cancellation.IsCancellationRequested||!IsInsideTree()){await session.DisposeAsync();return;}
+            _lastSettings=settings;_lastHumans=1;_lastServer=server;_lastName=name;_lastMode=mode;_lastCode=code??"";
+            Begin(session,true);
+        }
+        catch(OperationCanceledException) when(cancellation.IsCancellationRequested){if(IsInsideTree())_menu.Notice("Connection cancelled. Choose a mode to try again.");}
+        catch(Exception error){if(IsInsideTree())_menu.Notice("Could not connect: "+error.Message);throw;}
+        finally
+        {
+            if(ReferenceEquals(_connectCancel,cancellation)){_connectCancel=null;_connecting=false;if(IsInsideTree())_menu.SetBusy(false);}
+            cancellation.Dispose();
+        }
+    }
+    private void Begin(ISession session,bool online)
+    {
+        ReleaseSession();_session=session;LatestStage=null;LatestState=null;_result=null;_lobby=null;SnapshotCount=0;_injected.Clear();_hud.Reset();_hud.Practice=_practice;
+        if(online)
+        {ScreenName="Lobby";_menu.ShowScreen("Lobby");_menu.ShowLobby(null,session.JoinCode,session.Status);_menu.Visible=true;_hud.Visible=false;_arena.Visible=false;}
+        else EnterMatch();
+        if(!online)GetViewport().GuiReleaseFocus();
+    }
+    private void EnterMatch()
+    {
+        ScreenName="Match";_menu.Visible=false;_arena.Visible=true;_hud.Visible=true;GetViewport().GuiReleaseFocus();
+    }
+    public void InjectInput(int seat,PlayerInput? input)
+    {
+        if(input is { } value)_injected[seat]=value;else _injected.Remove(seat);
+    }
+    public void Back()
+    {
+        if(_connecting){CancelConnection();_menu.SetBusy(false,"Connection cancelled.");ScreenName="Online";_menu.ShowScreen("Online");return;}
+        if(_session!=null){ReleaseSession();Navigate("Modes");return;}
+        if(ScreenName=="Setup"&&_setupForHost)Navigate("Online");else Navigate("Modes");
+    }
+    private void Replay()
+    {
+        ReleaseSession();
+        if(_lastServer is { } server)
+        {
+            // Quick play finds a fresh match; a private host gets a fresh shareable room.
+            if(_lastMode==NetworkMode.JoinCode){Navigate("Online");_menu.Notice("Enter a new room code to join your next battle.");}
+            else _=ReplayOnline(server);
+        }
+        else StartLocal(_lastSettings,_lastHumans,_practice);
+    }
+    private async Task ReplayOnline(Uri server)
+    {try{await StartOnlineAsync(server,_lastName,_lastSettings,_lastMode,_lastCode);}catch(Exception error){_menu.Notice(error.Message);}}
+    private void CancelConnection()
+    {
+        var cancellation=_connectCancel;_connectCancel=null;_connecting=false;cancellation?.Cancel();
+    }
+    private void ReleaseSession()
+    {
+        var old=_session;_session=null;_injected.Clear();
+        if(old!=null)_=DisposeSessionAsync(old);
+    }
+    private static async Task DisposeSessionAsync(ISession session)
+    {try{await session.DisposeAsync();}catch(Exception error){GD.PushWarning("Session cleanup: "+error.Message);}}
+    public override void _UnhandledInput(InputEvent @event)
+    {
+        // B remains the remote-detonation button during play. Start opens the way back.
+        bool battle=ScreenName=="Match";
+        bool cancel=@event is InputEventKey {Pressed:true,Echo:false,Keycode:Key.Escape}
+            || (!battle && @event.IsActionPressed("ui_cancel"))
+            || (battle && @event is InputEventJoypadButton {Pressed:true,ButtonIndex:JoyButton.Start});
+        if(cancel){Back();GetViewport().SetInputAsHandled();}
+    }
+    public override void _Process(double delta)
+    {
+        if(_smoke)
+        {
+            _elapsed+=delta;
+            if(_elapsed>_smokeDuration)
+            {
+                if(DisplayServer.GetName()!="headless")GetViewport().GetTexture().GetImage().SavePng($"res://artifacts/{_capture}.png");
+                bool passed=_capture=="menu"||SnapshotCount>0;GD.Print($"{(passed?"GODOT_SMOKE_OK":"GODOT_SMOKE_FAILED")} {_capture} snapshots={SnapshotCount}");GetTree().Quit(passed?0:1);return;
+            }
+        }
+        var session=_session;if(session==null)return;
+        if(ScreenName=="Match")for(int i=0;i<session.LocalPlayerCount;i++)session.SendInput(i,_injected.TryGetValue(i,out var input)?input:PlayerControls.Read(i,session.LocalPlayerCount));
+        session.Advance(delta);
+        foreach(var envelope in session.DrainMessages())
+        {
+            if(!envelope.TryGetProperty("d",out var data))continue;
+            switch(envelope.GetProperty("t").GetString())
+            {
+                case "stage":LatestStage=data.Clone();_arena.Stage(data);break;
+                case "state":
+                    LatestState=data.Clone();SnapshotCount++;_arena.State(data);_hud.State(data);
+                    if(ScreenName=="Lobby")EnterMatch();
+                    break;
+                case "sys.welcome":
+                    if(data.TryGetProperty("lobby",out var welcomeLobby)){_lobby=welcomeLobby.Clone();_menu.ShowLobby(_lobby,session.JoinCode,session.Status);}
+                    break;
+                case "sys.lobby":_lobby=data.Clone();_menu.ShowLobby(_lobby,session.JoinCode,session.Status);break;
+                case "sys.ended":
+                    _result=data.Clone();ScreenName="Results";_hud.Visible=false;_menu.Visible=true;_menu.ShowResults(LatestState,_result);break;
+                case "sys.closed":
+                    if(ScreenName!="Results"){ScreenName="Results";_hud.Visible=false;_menu.Visible=true;_menu.ShowResults(LatestState,data);}break;
+                case "sys.error":
+                    if(data.TryGetProperty("message",out var message))_menu.Notice(message.GetString()??"Connection error.");break;
+            }
+        }
+        _hud.Connection(session.Status,session.JoinCode,_practice);_menu.UpdateConnection(session.Status);
+        if(session.IsEnded&&session.Status.StartsWith("Error",StringComparison.Ordinal)&&ScreenName!="Results")
+        {ScreenName="Results";_hud.Visible=false;_menu.Visible=true;_menu.ShowResults(LatestState,JsonSerializer.SerializeToElement(new {reason=session.Status}));}
+    }
+    public override void _ExitTree(){CancelConnection();ReleaseSession();}
+}

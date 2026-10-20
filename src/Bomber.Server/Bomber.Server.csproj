@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><TreatWarningsAsErrors>true</TreatWarningsAsErrors></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Bomber.Game/Bomber.Game.csproj" />
+    <ProjectReference Include="../../burbuja-kernel/src/Burbuja.Hosting/Burbuja.Hosting.csproj" />
+  </ItemGroup>
+  <Target Name="RemoveStaticPluginPublishManifests" AfterTargets="ComputeFilesToPublish">
+    <ItemGroup><ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(ResolvedFileToPublish.RelativePath)' == 'plugin.json'" /></ItemGroup>
+  </Target>
+</Project>

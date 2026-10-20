@@ -1,0 +1,15 @@
+{
+  "steps": [
+    {"op":"navigate","screen":"Setup"},
+    {"op":"assert-screen","screen":"Setup"},
+    {"op":"capture","label":"setup"},
+    {"op":"start-local","stage":"sunken-temple","practice":true,"bots":0,"humans":1},
+    {"op":"frames","count":80},
+    {"op":"assert-state","path":"players.0.alive","equals":true},
+    {"op":"move-to","x":10.5,"z":3.5,"maxFrames":200},
+    {"op":"assert-state","path":"players.0.y","gte":4},
+    {"op":"capture","label":"temple-crown"},
+    {"op":"move-to","x":10.5,"z":12.5,"maxFrames":200},
+    {"op":"capture","label":"temple-return"}
+  ]
+}

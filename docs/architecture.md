@@ -1,0 +1,92 @@
+# Architecture
+
+The design separates authoritative rules, session transport, and Godot presentation. Local practice and the online server instantiate the same simulation. A renderer consumes stage/state messages and sends movement/button intent; it never decides hits, wins or item ownership.
+
+```mermaid
+flowchart TD
+    Controls[PlayerControls] --> Root[GameRoot composition root]
+    Root --> Session[ISession]
+    Session --> Local[LocalSession]
+    Session --> Network[NetworkSession]
+    Local --> Facade[LocalMatch]
+    Facade --> Rules[BlastSession / BlastSim / BlastStages]
+    Network -->|HTTP + WebSocket JSON| Kernel[Burbuja.Hosting + Realtime]
+    Kernel --> Registration[BomberRealtimeGame]
+    Registration --> Rules
+    Session -->|stage/state snapshots| Root
+    Root --> View[ArenaView + HUD]
+```
+
+## Modules and ownership
+
+| Module | Responsibilities | Dependencies |
+|---|---|---|
+| `src/Bomber.Game` | Match options, validated local roster, fixed-step authority adapter and realtime game registration | Kernel realtime contracts; product-owned Blast simulation |
+| `src/Bomber.Client` | `ISession`, local accumulator, network authentication/lobbies, reconnect, input sequencing, bounded message handoff | `Bomber.Game`, .NET HTTP/WebSocket APIs; no Godot dependency |
+| `src/Bomber.Server` | Independent ASP.NET executable, configuration and registration of the `blast` game | `Bomber.Game`, `Burbuja.Hosting` |
+| `scripts/GameRoot.cs` | Godot composition root, match menu, session lifecycle, input dispatch and HUD | Session interface and presentation |
+| `scripts/PlayerControls.cs` | Two keyboard layouts and gamepad intent | Godot input and `PlayerInput` value type |
+| `scripts/ArenaView.cs` | Procedural stage/entity geometry, lighting, visual smoothing and effects | Godot; decoded snapshots |
+
+`ISession` is the engine-facing seam: `Advance`, `SendInput`, `DrainMessages`, connection status, join code and disposal. `LocalSession` and `NetworkSession` implement it. The session module can be exercised without starting Godot; the simulation can be exercised without starting a server.
+
+`LocalMatch` adapts the kernel's `ISessionContext` interface to local players and deterministic time/randomness. `BomberRealtimeGame` implements `IRealtimeGame`; the online host registers it through dependency injection. The kernel owns authentication, reservations, lobby lifecycle, matchmaking, server placement, transport and rate limits. Game-specific rules stay in the game layer.
+
+The first iteration linked the kernel example. This iteration makes the adapted simulation product-owned so terrain, AI, and combat fixes belong to this game:
+
+- `src/Bomber.Game/Simulation/BlastSession.cs`
+- `src/Bomber.Game/Simulation/BlastSim.cs`
+- `src/Bomber.Game/Simulation/BlastStages.cs`
+
+Source baseline: kernel revision `b0758339984bbeead1b3d1236f31e980aaa5f20e`, MIT license in `burbuja-kernel/LICENSE`. The source checkout must still be present for kernel contract and hosting references. The server is this product's executable; it does not modify the generic kernel or run its example host. Simulation source retains provenance and the upstream MIT notice.
+
+## Simulation and game flow
+
+A single owner calls each session sequentially. Authority ticks at **30 Hz** and emits complete snapshots every other tick (**15 Hz**). Local play uses an accumulator with bounded catch-up after a paused window. The online kernel supplies its own fixed-tick lobby loop and load accounting. Bot decisions run inside the authority with the session's seeded random source.
+
+The match has ready, fight, hurry and round-over phases. Authority owns continuous planar movement, terrain tiers/ramps, bomb placement/kicks/carrying/pumping/throws, spherical blasts and occlusion, chain reactions, destructible blocks, items, stun/ghost state, round scoring and match completion. Static stage data describes cells, tier/ramp transitions and spawns. State snapshots carry current entities and a compact soft-block grid.
+
+The original publisher manual does not specify the exact equations or constants. This implementation's fuse, radii, movement and bot policy are project choices. Eight participants extends the original four-player battle mode. [Research](research.md) records sources and known differences.
+
+## Transport and responsiveness
+
+The client uses .NET `HttpClient` for guest identity, queue and lobby operations, and `ClientWebSocket` for the kernel application protocol. It does not depend on Godot RPC or Godot's high-level multiplayer wire format. A reservation may identify a different owning server; clients honor that returned address. HTTPS connections reject a downgrade to an insecure socket.
+
+Client input looks like `{t:"input",s:sequence,d:{x,z,a,b,r}}`. Authority normalizes and validates movement; clients cannot submit positions or hits. Server envelopes carry `{t,k,d}`, where `k` is the authoritative tick. Snapshots include per-player input acknowledgements. The network adapter sends current movement at 30 Hz and preserves bounded button transitions; it avoids a growing queue of obsolete movement commands. The handoff buffer coalesces state snapshots while retaining stage/control messages within a fixed capacity.
+
+Network receives run outside the engine thread. They hand detached JSON messages to a bounded buffer; Godot drains it on its own thread. `ArenaView` smooths entities toward the latest authoritative positions. There is **no client prediction, rollback, or reconciliation replay**, and this smoothing is not a timestamp-buffered interpolation system. TCP/WebSocket's reliable ordered delivery can delay newer snapshots behind lost packets. Internet play needs latency/loss measurement before making responsiveness claims.
+
+Disconnects clear authoritative human movement, and the kernel holds a seat for its reconnect grace. The client attempts reservation/socket reconnect with the same guest identity; this is not a persistent-account or save/resume system. A late human takes their kernel seat and replaces any bot occupying that slot, keeping the arena within eight participants.
+
+## Scaling and deployment boundary
+
+The independent host currently enables one in-process lobby server with capacity for eight lobbies and least-loaded placement. This is configuration, not an eight-lobby throughput benchmark. Every lobby has its own simulation state and bounded transport buffers. Single-authority ownership keeps the game loop free of cross-thread shared mutable entities.
+
+The generic kernel can expose multiple lobby servers and use its Redis/Valkey backplane for a multi-node fleet. Placement and fleet routing are kernel concerns; they do not require adding network details to bombs or players. Scaling requires configuring node/server identities, public socket addresses, shared guest signing keys and the backplane plugin. See the kernel's [realtime guide](../burbuja-kernel/docs/realtime-lobbies.md) and [Redis plugin guide](../burbuja-kernel/plugins/Burbuja.Plugins.Realtime.Redis/README.md).
+
+The intended deployment is an independent kernel host on the user's own server hardware, with Godot clients connecting to its lobby and WebSocket endpoints. The product does not require Docker or Compose. `Bomber.Server` registers the game on `Burbuja.Hosting`; an existing generic kernel host needs the equivalent game registration.
+
+This product has been exercised on one local server. Multi-node operation, failover, distributed load, TLS/public hosting and production capacity have not been verified here. No external infrastructure was provisioned.
+
+## Evidence and remaining work
+
+The executable game checks cover deterministic bot replay, participant limits, terrain, fuse/explosion behavior, input handling and round reset. Client contract checks exercise local sessions and transport serialization. Network smoke uses separate real WebSocket clients for 2–8 humans, private codes, authoritative movement, reconnect and server bots. The Godot smoke mode loads and runs the actual scene; it complements the plain C# checks.
+
+The game uses original procedural meshes and effects. The client now has articulated procedural characters, walking/carrying/stun poses, synthesized original sound cues, destructible-cover debris, and warm sandstone/water materials. Broader physical-controller coverage, accessibility, gameplay balancing and adverse-network testing remain further work. Neither tests nor this architecture document claim exact reproduction of the original game's undocumented behavior.
+
+
+## Sunken Temple geometry and presentation
+
+`sunken-temple` is an original 21×23-cell reconstruction of the supplied reference composition. Tier 1 forms the island, tier 0 the recessed cobbled court, and tiers 2–4 the rear pyramid. Broad stair cells connect these surfaces. The rear shrine occupies real hard cells rather than placing invisible decoration in a walkable route. Destructible cover is limited and important approaches remain open.
+
+The authority computes continuous surface height on ramps. Radius-aware movement rejects discontinuous terrain edges; bot searches use the same crossing rules. Explosions use three-dimensional distance and sample intervening terrain/cover before removing destroyed blocks. Presentation scales authoritative height consistently by 1.35 and builds visible steps from the same cell descriptors.
+
+`ArenaView` owns snapshot reconciliation and delegates terrain to `TempleStageView`, shared mesh construction to `ArtGeometry`, materials to `ArtMaterials`, articulated characters to `BomberModel`, and procedural audio to `BattleAudio`. The fixed perspective camera exposes the courtyard walls and stair risers. Desktop uses Forward+ (Metal on macOS), soft shadows, ambient occlusion and MSAA. Rendering does not modify authoritative positions or hit outcomes.
+
+The UI has separate modes, setup, online connection, lobby, match and results screens. Lobby information comes from actual kernel events; there is no pretend ready/start handshake. Local practice permits one human, clear paths and no match time limit. Eight-seat matches keep the compact portrait strip above the playfield.
+
+## Playtest and failure evidence
+
+`tools/playtest/run.py` launches the real Godot executable and optionally manages a local kernel process. `scripts/Testing/PlaytestDriver.cs` uses the composition root's normal sessions and injects movement/button intent. UI checks exercise actual engine input. Route assertions observe position and altitude; they do not teleport players. Every scenario records assertions, detached state snapshots, screenshots when graphical, and runtime logs. The runner rejects nonzero engine exits, missing reports, assertion failures, timeouts and engine/script errors.
+
+`--scenario script --script <file.json>` lets another agent specify navigation, held inputs, bounded movement goals, captures and state checks. Failure bundles live in unique folders under `artifacts/playtest/`; this keeps the exact failure witness separate from a later passing rerun. Headless runs explicitly disable image evidence. See the [harness guide](../tools/playtest/README.md) for commands and the script schema.
