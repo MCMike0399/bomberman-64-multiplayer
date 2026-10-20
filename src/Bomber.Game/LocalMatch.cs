@@ -26,7 +26,7 @@ public sealed class LocalMatch
     {
         options.Validate();
         _context = new LocalContext(options, Receive);
-        _session = new BlastSession(new GameSessionOptions("local", "blast", _context.Settings, options.Seed), arena, options.Practice);
+        _session = new BlastSession(new GameSessionOptions("local", "blast", _context.Settings, options.Seed), arena, options.Practice, options.PlayerAppearances);
         foreach (var player in _context.Players) _session.OnPlayerJoined(_context, player);
         _context.State = LobbyState.Running;
         _session.OnMatchStarted(_context);
@@ -49,6 +49,15 @@ public sealed class LocalMatch
         var sequence = ++_sequence;
         _context.Sequences[player.PlayerId] = sequence;
         _session.OnMessage(_context, player, new InboundMessage("input", data, sequence, _context.Now));
+    }
+
+    public void SetAppearance(int localSlot,int appearance)
+    {
+        if(localSlot<0||localSlot>=HumanPlayers)throw new ArgumentOutOfRangeException(nameof(localSlot));
+        if(appearance is <0 or >7)throw new ArgumentOutOfRangeException(nameof(appearance));
+        if(IsEnded)return;
+        _session.OnMessage(_context,_context.Players[localSlot],new InboundMessage("appearance",
+            JsonSerializer.SerializeToElement(new {index=appearance}),null,_context.Now));
     }
 
     public void Tick()

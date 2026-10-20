@@ -30,7 +30,9 @@ On macOS, the installed editor can also launch it directly:
 /Applications/Godot_mono.app/Contents/MacOS/Godot --path .
 ```
 
-Choose **LOCAL BATTLE**, configure **2–8 total participants** counting local humans and CPU players, choose Easy/Normal/Hard CPU difficulty, then start the match. **PRACTICE** lets one player explore the map and rehearse bomb handling without CPU opponents. Six visible training pickups teach bomb capacity, fire, red power, remote detonation and hearts; **RESET PRACTICE** restores the cache. One human can play with up to seven bots. Local play works without a server. Two keyboard seats are available; additional local seats require connected gamepads. With three or more local humans, the first two seats use keyboards and up to six gamepads fill seats 3–8 in connection order. With one or two humans, the corresponding gamepads also work as optional controls.
+The game opens fullscreen. **F11** or **Alt+Enter** switches between fullscreen and a window; run `./scripts/client.sh --windowed -- --display-windowed` for a windowed launch.
+
+Choose **LOCAL BATTLE**, then set each of the eight roster slots to **Human**, **CPU**, or **Off** and choose a suit color. The selected character walks on its pedestal using the same articulated model seen in battle. Continue to stage and match rules, choose Easy/Normal/Hard CPU difficulty, then start with **2–8 total participants**. **PRACTICE** lets one player explore the map and rehearse bomb handling without CPU opponents. Six visible training pickups teach bomb capacity, fire, red power, remote detonation and hearts; **RESET PRACTICE** restores the cache. One human can play with up to seven bots. Local play works without a server. Two keyboard seats are available; additional local seats require connected gamepads. With three or more local humans, the first two seats use keyboards and up to six gamepads fill seats 3–8 in connection order. With one or two humans, the corresponding gamepads also work as optional controls.
 
 ## Play online
 
@@ -44,7 +46,7 @@ For local development, start that independent server in another terminal:
 
 It listens at `http://127.0.0.1:18496`. Enter that URL in the game and choose **ONLINE BATTLE → CREATE PRIVATE ROOM**, then share the lobby’s displayed join code. Another game instance can enter the same URL and use **JOIN ROOM**. For a human-only match, set CPU players to zero; with bots enabled a lobby can start with one connected human. Each online game instance controls one human seat.
 
-**QUICK PLAY** uses the kernel matchmaking queue. It needs another compatible queued player; use a private lobby for solo bot practice online. The setup screen configures stage, CPU count and difficulty, win target, round duration, sudden death and ghosts. The lobby displays the real server roster and countdown.
+**QUICK PLAY** uses the kernel matchmaking queue. It needs another compatible queued player; use a private lobby for solo bot practice online. The setup screen configures stage, CPU count and difficulty, win target, round duration, sudden death and ghosts. The lobby displays the real server roster and countdown. Choose your suit in the online setup; the authority preserves that appearance through rounds and reconnects.
 
 For a LAN server, bind to a reachable interface and enter the server machine's address on each client:
 
@@ -80,9 +82,12 @@ The agent harness plays through the actual Godot scene using inputs and product 
 
 ```bash
 python3 tools/playtest/run.py --build --start-server --scenario all
+python3 tools/playtest/run.py --scenario fullscreen
 python3 tools/playtest/run.py --scenario ramp --headless
 python3 tools/playtest/run.py --scenario script --script tools/playtest/temple-walk.json
 ```
+
+Graphical runs default to **fullscreen**, matching normal play. The suite exercises real menu controls, enters matches, moves through stairs, handles bombs, collects upgrades, survives flooding, reaches results and connects to the real server. Only the aspect-ratio checks temporarily use a window; gameplay returns to fullscreen. `--windowed` explicitly opts into a windowed run.
 
 Runs save screenshots, authoritative state traces, assertion results, engine logs and failure summaries in unique `artifacts/playtest/` folders. Failed assertions, timeouts and missing reports return a failing exit code. Graphical captures show real viewport pixels; headless captures are explicitly disabled. See [harness instructions](tools/playtest/README.md) for scenario scripting and diagnosis.
 
@@ -119,16 +124,24 @@ It starts a local match and exits after eight seconds with `GODOT_SMOKE_OK`. `--
 [Architecture](docs/architecture.md) describes the boundaries, protocol and scaling path. The repository consumes a separately supplied burbuja-kernel checkout at `burbuja-kernel/`, revision `b0758339984bbeead1b3d1236f31e980aaa5f20e`. Build and runtime use source project references for the kernel. The product now owns its adapted simulation in `src/Bomber.Game/Simulation`, retaining MIT provenance, so map and collision changes do not mutate the generic kernel. Preserve the kernel checkout and its license.
 
 
+## Visual polish
+
+The fourth iteration uses a smoothly rounded helmet and inset face, articulated head motion, blinks, mitten thumbs and shaped boots. Warm key light, cool fill, softer shadows, quieter stone and water materials, and a higher perspective camera improve the temple’s depth and visibility. The camera fits each map and viewport around the HUD. [Reference research](docs/iteration4-research.md) documents the inspected Bomberman 64 selection footage and TUNIC developer interviews.
+
 ## Screenshots
+
+All five images below are actual fullscreen captures from the final iteration-four regression run.
 
 ![Sunken Temple battle](docs/images/temple-battle.png)
 
 ![Mode selection](docs/images/mode-select.png)
 
+![Animated eight-seat roster](docs/images/battle-roster.png)
+
 The game uses original procedural visuals. No original game ROM, Nintendo/Hudson artwork, footage, kernel source, credentials, or playtest traces are distributed here. The adapted simulation retains its upstream MIT notice in `src/Bomber.Game/Simulation/LICENSE`.
 
 
-Iteration-three visual checks:
+Current bomb and flood checks:
 
 ![A fully pumped bomb held overhead](docs/images/bomb-charge.png)
 

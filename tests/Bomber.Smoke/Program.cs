@@ -13,9 +13,11 @@ var clock = Stopwatch.StartNew();
 var games = await Api(HttpMethod.Get, "/realtime/v1/games");
 Check(games.GetProperty("value").EnumerateArray().Any(g => g.GetProperty("id").GetString() == "blast"), "blast game registered");
 
+if(args.Contains("--appearance-only")){await LobbyAppearanceCatchup();return;}
 await QuickPlay();
 if (args.Contains("--quick-only")) return;
 await ProductSessions();
+await LobbyAppearanceCatchup();
 if (args.Contains("--client-only")) return;
 
 for (var humans = 2; humans <= 8; humans++)
@@ -84,6 +86,29 @@ async Task QuickPlay()
     Console.WriteLine("PASS product quick-play cancellation, two-client matchmaking and shared authoritative roster");
 }
 
+async Task LobbyAppearanceCatchup()
+{
+    await using var host=await Guest("Appearance room host");
+    var created=await Api(HttpMethod.Post,"/realtime/v1/lobbies",CreateBody(0),host.Token);
+    var lobby=created.GetProperty("lobby");var id=lobby.GetProperty("lobbyId").GetString()!;var code=lobby.GetProperty("joinCode").GetString()!;
+    await host.Connect(created.GetProperty("reservation"),http.BaseAddress!);
+    await host.Send(new {t="appearance",d=new {index=6}});
+    await host.Wait("appearance",d=>d.GetProperty("playerId").GetString()==host.PlayerId&&d.GetProperty("index").GetInt32()==6);
+    await using var joiner=await Guest("Appearance late joiner");
+    var reservation=await Api(HttpMethod.Post,"/realtime/v1/lobbies/join",new {code},joiner.Token);
+    await joiner.Connect(reservation,http.BaseAddress!);
+    await joiner.Wait("appearance",d=>d.GetProperty("playerId").GetString()==host.PlayerId&&d.GetProperty("index").GetInt32()==6);
+    var beforeStart=await Api(HttpMethod.Get,$"/realtime/v1/lobbies/{id}",token:host.Token);
+    Check(beforeStart.GetProperty("state").GetString() is "open" or "countdown","late join receives selection before match starts");
+    await joiner.Disconnect();await Task.Delay(100);
+    var restored=await Api(HttpMethod.Post,$"/realtime/v1/lobbies/{id}/join",new {},joiner.Token);
+    await joiner.Connect(restored,http.BaseAddress!);
+    await joiner.Wait("appearance",d=>d.GetProperty("playerId").GetString()==host.PlayerId&&d.GetProperty("index").GetInt32()==6);
+    var restoredLobby=await Api(HttpMethod.Get,$"/realtime/v1/lobbies/{id}",token:host.Token);
+    Check(restoredLobby.GetProperty("state").GetString() is "open" or "countdown","reconnecting lobby client receives selection before match starts");
+    Console.WriteLine("PASS private lobby late-join and reconnect receive existing host appearance before match snapshots");
+}
+
 async Task ProductSessions()
 {
     await using (var local = new LocalSession(new SessionSettings(Bots:7)))
@@ -98,17 +123,21 @@ async Task ProductSessions()
         var next=local.DrainMessages().Last(m => m.GetProperty("t").GetString()=="state").GetProperty("d");
         Check(next.GetProperty("bombs").GetArrayLength() > 0, "local session delivers action input to authority");
     }
-    await using var host = await NetworkSession.ConnectAsync(new Uri(origin),"Product host",new SessionSettings(Bots:0));
+    await using var host = await NetworkSession.ConnectAsync(new Uri(origin),"Product host",new SessionSettings(Bots:0),appearance:4);
     Check(!string.IsNullOrEmpty(host.JoinCode), "product client creates a shareable join code");
-    await using var joiner = await NetworkSession.ConnectAsync(new Uri(origin),"Product joiner",new SessionSettings(Bots:0), NetworkMode.JoinCode,host.JoinCode);
+    await using var joiner = await NetworkSession.ConnectAsync(new Uri(origin),"Product joiner",new SessionSettings(Bots:0), NetworkMode.JoinCode,host.JoinCode,appearance:7);
     Check(host.LobbyId == joiner.LobbyId,"product clients join same lobby");
-    var ready=await ProductState(host,d => d.GetProperty("phase").GetInt32()==1 && d.GetProperty("players").GetArrayLength()==2);
+    var ready=await ProductState(host,d => d.GetProperty("phase").GetInt32()==1 && d.GetProperty("players").GetArrayLength()==2 &&
+        d.GetProperty("players").EnumerateArray().Any(p=>p.GetProperty("id").GetString()==host.PlayerId&&p.GetProperty("appearance").GetInt32()==4) &&
+        d.GetProperty("players").EnumerateArray().Any(p=>p.GetProperty("id").GetString()==joiner.PlayerId&&p.GetProperty("appearance").GetInt32()==7));
     var before=ready.GetProperty("players").EnumerateArray().Single(p => p.GetProperty("id").GetString()==host.PlayerId);
     var beforeX=before.GetProperty("x").GetSingle();
     host.SendInput(0,new PlayerInput(1,0,true));
     await ProductState(joiner,d => d.GetProperty("bombs").GetArrayLength()>0 && d.GetProperty("players").EnumerateArray().Any(p => p.GetProperty("id").GetString()==host.PlayerId && Math.Abs(p.GetProperty("x").GetSingle()-beforeX)>.1));
     host.SendInput(0,default);
-    Console.WriteLine("PASS product LocalSession practice and NetworkSession create/code join, remote movement and bomb action");
+    host.SetAppearance(6);
+    await ProductState(joiner,d=>d.GetProperty("players").EnumerateArray().Any(p=>p.GetProperty("id").GetString()==host.PlayerId&&p.GetProperty("appearance").GetInt32()==6));
+    Console.WriteLine("PASS product LocalSession practice and NetworkSession create/code join, selected looks, remote movement, bomb action and cosmetic update");
 }
 async Task<JsonElement> ProductState(NetworkSession session,Func<JsonElement,bool> predicate)
 {
@@ -144,6 +173,15 @@ async Task MovementAndReconnect(Peer mover, Peer observer, string lobbyId)
     var initial = await mover.Wait("state", d => d.GetProperty("phase").GetInt32() == 1);
     var player = initial.GetProperty("d").GetProperty("players").EnumerateArray().Single(p => p.GetProperty("id").GetString() == mover.PlayerId);
     var x = player.GetProperty("x").GetSingle(); var z = player.GetProperty("z").GetSingle();
+    await mover.Send(new {t="appearance",d=new {index=6,slot=1,playerId=observer.PlayerId}});
+    await observer.Wait("state",d=>d.GetProperty("players").EnumerateArray().Any(p=>p.GetProperty("id").GetString()==mover.PlayerId&&p.GetProperty("appearance").GetInt32()==6));
+    foreach(var data in new object[]{new {index=-1},new {index=8},new {index="2"},new {index=1.5},new {slot=1}})
+        await mover.Send(new {t="appearance",d=data});
+    await mover.Send(new {t="input",s=0,d=new {x=0,z=0,a=false,b=false,r=false}});
+    var guarded=await observer.Wait("state",d=>d.GetProperty("players").EnumerateArray().Any(p=>p.GetProperty("id").GetString()==mover.PlayerId&&p.GetProperty("ack").ValueKind==JsonValueKind.Number&&p.GetProperty("ack").GetInt64()==0));
+    var guardedPlayers=guarded.GetProperty("d").GetProperty("players").EnumerateArray().ToArray();
+    Check(guardedPlayers.Single(p=>p.GetProperty("id").GetString()==mover.PlayerId).GetProperty("appearance").GetInt32()==6,"malformed cosmetic packets leave sender appearance intact");
+    Check(guardedPlayers.Single(p=>p.GetProperty("id").GetString()==observer.PlayerId).GetProperty("appearance").GetInt32()==1,"sender cannot target another player's cosmetic slot");
     await mover.Send(new { t="input", s=1, d=new { x=1, z=0, a=false, b=false, r=false } });
     await observer.Wait("state", d => d.GetProperty("players").EnumerateArray().Any(p => p.GetProperty("id").GetString() == mover.PlayerId && p.GetProperty("ack").ValueKind == JsonValueKind.Number && p.GetProperty("ack").GetInt64() == 1 && (Math.Abs(p.GetProperty("x").GetSingle()-x) > .1 || Math.Abs(p.GetProperty("z").GetSingle()-z) > .1)));
     await mover.Send(new { t="input", s=2, d=new { x=0,z=0,a=false,b=false,r=false } });
@@ -156,8 +194,13 @@ async Task MovementAndReconnect(Peer mover, Peer observer, string lobbyId)
     var welcome = await mover.Wait("sys.welcome");
     Check(welcome.GetProperty("d").GetProperty("playerId").GetString() == mover.PlayerId, "reconnect welcome identity");
     await mover.Wait("stage");
-    await mover.Wait("state", d => d.GetProperty("players").EnumerateArray().Count(p => p.GetProperty("id").GetString() == mover.PlayerId) == 1);
-    Console.WriteLine("PASS sequenced movement observed remotely; disconnect/reservation/reconnect restores identity, stage and state");
+    var restored=await mover.Wait("state", d => d.GetProperty("players").EnumerateArray().Count(p => p.GetProperty("id").GetString() == mover.PlayerId) == 1);
+    Check(restored.GetProperty("d").GetProperty("players").EnumerateArray().Single(p=>p.GetProperty("id").GetString()==mover.PlayerId).GetProperty("appearance").GetInt32()==6,"reconnect preserves authoritative appearance without resending it");
+    await mover.Send(new {t="input",s=3,d=new {x=-1,z=0,a=false,b=false,r=false}});
+    var nextRound=await observer.Wait("state",d=>d.GetProperty("round").GetInt32()>=2);
+    Check(nextRound.GetProperty("d").GetProperty("players").EnumerateArray().Single(p=>p.GetProperty("id").GetString()==mover.PlayerId).GetProperty("appearance").GetInt32()==6,"appearance persists through a real online round reset");
+    await mover.Send(new {t="input",s=4,d=new {x=0,z=0,a=false,b=false,r=false}});
+    Console.WriteLine("PASS sequenced movement, validated own-player cosmetics, reconnect persistence and online round reset");
 }
 void Check(bool condition,string description) { if (!condition) throw new Exception("FAIL " + description); }
 

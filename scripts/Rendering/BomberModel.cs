@@ -11,39 +11,58 @@ public partial class BomberModel : Node3D
     private bool _carrying,_stunned,_ghost;
     private float _time,_speed,_carryBlend,_pumpPulse,_throwPulse;
     private int _charge;
+    private readonly ArtMaterials _art;
+    private readonly List<MeshInstance3D> _suitParts=[];
+    private readonly Node3D _head=new();
+    private readonly List<MeshInstance3D> _eyes=[];
+    private Color _suitColor;
     public int PumpAnimationCount {get;private set;}
+    public float WalkPose=>_leftLeg.Rotation.X;
     public float CarryBlend=>_carryBlend;
     public float PumpIntensity=>Mathf.Sin(_pumpPulse*Mathf.Pi);
     public Vector3 BombSocket=>_body.ToGlobal(new Vector3(0,Mathf.Lerp(.25f,1.47f,_carryBlend)+Mathf.Sin(_pumpPulse*Mathf.Pi)*.09f,.08f));
     public void Pump(int charge){_charge=charge;_pumpPulse=1;PumpAnimationCount++;}
+    public void ShowName(bool visible)=>_nameLabel.Visible=visible;
+    public void SetSuitColor(Color color)
+    {
+        if(_suitColor==color)return;
+        _suitColor=color;
+        foreach(var part in _suitParts)part.MaterialOverride=_art.Color(color,.46f);
+    }
     public BomberModel(ArtMaterials art,Color color,string name)
     {
-        var suit=art.Color(color,.4f);var white=art.Color(new("fff7e9"),.36f);var pink=art.Color(new("ee4a90"),.38f);
-        var face=art.Color(new("ffcb91"),.65f);var dark=art.Color(new("272341"),.5f);var gold=art.Color(new("ffd15a"),.36f);
+        _art=art;_suitColor=color;
+        var suit=art.Color(color,.46f);var white=art.Color(new("fff7e9"),.48f);var pink=art.Color(new("ee4a90"),.42f);
+        var face=art.Color(new("ffd3a6"),.78f);var dark=art.Color(new("272341"),.55f);var gold=art.Color(new("ffd15a"),.36f);
         AddChild(_body);
-        Sphere(_body,new(0,.63f,0),new(.48f,.57f,.4f),suit);
-        Box(_body,new(0,.43f,.015f),new(.48f,.105f,.4f),dark,.035f);
-        Box(_body,new(0,.44f,.23f),new(.14f,.13f,.055f),gold,.02f);
-        // Rounded helmet and inset peach face make each player readable at game-camera distance.
-        Box(_body,new(0,1.04f,0),new(.74f,.65f,.61f),suit,.16f);
-        Box(_body,new(0,1.025f,.296f),new(.53f,.39f,.065f),dark,.075f);
-        Box(_body,new(0,1.03f,.334f),new(.47f,.325f,.045f),face,.055f);
-        Box(_body,new(-.115f,1.055f,.362f),new(.047f,.19f,.022f),dark,.016f);
-        Box(_body,new(.115f,1.055f,.362f),new(.047f,.19f,.022f),dark,.016f);
-        Cylinder(_body,new(0,1.38f,0),.065f,.12f,dark);
-        Sphere(_body,new(0,1.49f,0),new(.22f,.22f,.22f),pink);
+        _suitParts.Add(Sphere(_body,new(0,.62f,0),new(.49f,.56f,.43f),suit));
+        RoundedBox(_body,new(0,.43f,.015f),new(.48f,.105f,.43f),dark);
+        RoundedBox(_body,new(0,.44f,.245f),new(.145f,.135f,.06f),gold,.35f);
+        RoundedBox(_body,new(0,.44f,.28f),new(.073f,.067f,.012f),dark,.2f);
+        // A continuous curved shell and soft face opening replace the old flat chamfered cube.
+        _head.Position=new(0,1.06f,0);_body.AddChild(_head);
+        _suitParts.Add(RoundedBox(_head,Vector3.Zero,new(.79f,.69f,.66f),suit,.87f));
+        RoundedBox(_head,new(0,-.025f,.292f),new(.593f,.438f,.13f),dark,.95f);
+        RoundedBox(_head,new(0,-.025f,.326f),new(.548f,.397f,.092f),face,1);
+        foreach(float x in new[]{-.119f,.119f})
+            _eyes.Add(RoundedBox(_head,new(x,-.005f,.373f),new(.048f,.192f,.025f),dark,1));
+        Cylinder(_head,new(0,.358f,0),.058f,.1f,dark);
+        Sphere(_head,new(0,.442f,0),new(.225f,.225f,.225f),pink);
         _leftArm.Position=new(-.31f,.72f,0);_rightArm.Position=new(.31f,.72f,0);
         _body.AddChild(_leftArm);_body.AddChild(_rightArm);
         foreach(var arm in new[]{_leftArm,_rightArm})
         {
             Sphere(arm,new(0,-.12f,0),new(.16f,.29f,.16f),white);
-            Sphere(arm,new(0,-.3f,.025f),new(.25f,.23f,.25f),pink);
+            RoundedBox(arm,new(0,-.215f,.015f),new(.19f,.075f,.19f),pink,1);
+            Sphere(arm,new(0,-.3f,.035f),new(.25f,.24f,.27f),pink);
+            Sphere(arm,new(arm==_leftArm?.09f:-.09f,-.29f,.105f),new(.105f,.14f,.12f),pink);
         }
         _leftLeg.Position=new(-.15f,.37f,0);_rightLeg.Position=new(.15f,.37f,0);_body.AddChild(_leftLeg);_body.AddChild(_rightLeg);
         foreach(var leg in new[]{_leftLeg,_rightLeg})
         {
             Sphere(leg,new(0,-.13f,0),new(.17f,.28f,.17f),white);
-            Sphere(leg,new(0,-.27f,.08f),new(.28f,.19f,.39f),pink);
+            RoundedBox(leg,new(0,-.28f,.075f),new(.285f,.19f,.39f),pink,.95f);
+            RoundedBox(leg,new(0,-.355f,.075f),new(.281f,.035f,.38f),art.Color(new("b92e6e"),.7f),.9f);
         }
         AddChild(_stars);
         for(int i=0;i<3;i++)
@@ -86,6 +105,11 @@ public partial class BomberModel : Node3D
         _body.Position=new(0,Mathf.Abs(walk)*.045f-pump*.08f+(_ghost?.18f+Mathf.Sin(_time*3)*.08f:0),0);
         _body.Scale=new(1+pump*.06f,1-pump*.09f,1+pump*.06f);
         _body.Rotation=new(-_carryBlend*_charge*.025f+toss*.12f,0,_stunned?Mathf.Sin(_time*9)*.22f:0);
+        _head.Rotation=new(Mathf.Sin(_time*2.2f)*.018f*(1-_speed)-pump*.08f,0,-walk*.025f);
+        // Short asynchronous-looking blinks keep the roster alive without hiding the face in combat.
+        float blinkPhase=_time%4.7f;
+        float eyeHeight=blinkPhase>4.52f?Mathf.Max(.12f,Mathf.Abs(blinkPhase-4.61f)/.09f):1;
+        foreach(var eye in _eyes)eye.Scale=new(1,eyeHeight,1);
         _stars.Rotation=new(0,_time*3,0);
         _nameLabel.Position=new(0,1.87f+_carryBlend*(.65f+_charge*.35f),0);
         Scale=Vector3.One*(_ghost?.85f:1.12f);

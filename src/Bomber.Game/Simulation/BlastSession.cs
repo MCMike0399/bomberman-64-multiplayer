@@ -21,6 +21,7 @@ public sealed partial class BlastSession : GameSession
 {
     // ─── settings (validated and clamped from lobby options) ─────────────────
 
+    private readonly int[] _localAppearances;
     private readonly bool _practice;
     private readonly int _winsTarget;
     private readonly int _roundSeconds;
@@ -66,8 +67,9 @@ public sealed partial class BlastSession : GameSession
     private string NextHazardId() => $"h{++_nextHazardId}";
     private string NextItemId()   => $"i{++_nextItemId}";
 
-    public BlastSession(GameSessionOptions options, StageLayout? arena = null, bool practice = false)
+    public BlastSession(GameSessionOptions options, StageLayout? arena = null, bool practice = false, IReadOnlyList<int>? appearances = null)
     {
+        _localAppearances = appearances?.ToArray() ?? [];
         _practice = practice;
         _stage = arena ?? BlastStages.Get(options.Settings.TryGetValue("stage", out var s) ? s : "sunken-temple");
 
@@ -91,6 +93,7 @@ public sealed partial class BlastSession : GameSession
         {
             Id = player.PlayerId,
             Slot = player.Slot,
+            Appearance = DefaultAppearance(player.Slot),
             DisplayName = player.DisplayName,
         };
 
@@ -104,6 +107,7 @@ public sealed partial class BlastSession : GameSession
 
         _players[player.PlayerId] = p;
         SendStage(context, player.PlayerId);
+        SendAppearances(context,player.PlayerId);
     }
 
     public override void OnPlayerLeft(ISessionContext context, RealtimePlayer player, LeaveReason reason)
@@ -123,7 +127,16 @@ public sealed partial class BlastSession : GameSession
         if (!connected && _players.TryGetValue(player.PlayerId, out var p))
             p.Input = default; // stand still while disconnected
         if (connected)
+        {
             SendStage(context, player.PlayerId);
+            SendAppearances(context,player.PlayerId);
+        }
+    }
+
+    private void SendAppearances(ISessionContext context,string recipient)
+    {
+        foreach(var player in _players.Values.OrderBy(p=>p.Slot))
+            context.Send(recipient,"appearance",new {playerId=player.Id,index=player.Appearance});
     }
 
     public override void OnMatchStarted(ISessionContext context)
@@ -135,7 +148,7 @@ public sealed partial class BlastSession : GameSession
             var botId = $"bot-{i}";
             _players[botId] = new BlastPlayer
             {
-                Id = botId, Slot = slot, IsBot = true,
+                Id = botId, Slot = slot, IsBot = true, Appearance = DefaultAppearance(slot),
                 DisplayName = $"Bot {i + 1}",
             };
         }
@@ -143,10 +156,26 @@ public sealed partial class BlastSession : GameSession
         StartRound(context, 1);
     }
 
+    private int DefaultAppearance(int slot) => slot>=0&&slot<_localAppearances.Length ? _localAppearances[slot] : Math.Clamp(slot,0,7);
+
     public override void OnMessage(ISessionContext context, RealtimePlayer player, InboundMessage message)
     {
         if (!_players.TryGetValue(player.PlayerId, out var p))
             return;
+
+        if (message.Type == "appearance")
+        {
+            // Only the authenticated sender is writable. Client-supplied slot/playerId fields have
+            // no authority; invalid/missing/non-integer selections never alter the current choice.
+            if(message.Format==FrameFormat.Text && message.Data.ValueKind==System.Text.Json.JsonValueKind.Object &&
+                message.Data.TryGetProperty("index",out var value) && value.ValueKind==System.Text.Json.JsonValueKind.Number &&
+                value.TryGetInt32(out var index) && index is >=0 and <=7)
+            {
+                p.Appearance=index;
+                context.Broadcast("appearance",new {playerId=p.Id,index});
+            }
+            return;
+        }
 
         if (message.Type == "stage")
         {
@@ -1262,6 +1291,7 @@ public sealed partial class BlastSession : GameSession
         var playerList = _players.Values.Select(p => new
         {
             slot = p.Slot,
+            appearance = p.Appearance,
             id = p.Id,
             name = p.DisplayName,
             bot = p.IsBot,
@@ -1352,6 +1382,8 @@ public sealed partial class BlastSession : GameSession
             .Select(p => (JsonNode)new JsonObject
             {
                 ["id"] = p.Id,
+                ["slot"] = p.Slot,
+                ["appearance"] = p.Appearance,
                 ["name"] = p.DisplayName,
                 ["wins"] = p.Wins,
                 ["bot"] = p.IsBot,

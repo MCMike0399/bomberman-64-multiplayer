@@ -17,6 +17,7 @@ public partial class ArenaView : Node3D
     private readonly Dictionary<int,Node3D> _walls=[];
     private TempleStageView? _terrain;
     private Camera3D _camera=null!;
+    private BattleCameraRig _cameraRig=null!;
     private BattleAudio _audio=null!;
     private string _stage="";
     private double _clock;
@@ -39,26 +40,23 @@ public partial class ArenaView : Node3D
         var environment=new Godot.Environment
         {
             BackgroundMode=Godot.Environment.BGMode.Color,BackgroundColor=new Color("7ed4e4"),
-            AmbientLightSource=Godot.Environment.AmbientSource.Color,AmbientLightColor=new Color("d7e2e9"),AmbientLightEnergy=.45f,
+            AmbientLightSource=Godot.Environment.AmbientSource.Color,AmbientLightColor=new Color("b9cde8"),AmbientLightEnergy=.52f,
             TonemapMode=Godot.Environment.ToneMapper.Filmic,ReflectedLightSource=Godot.Environment.ReflectionSource.Disabled,
-            SsaoEnabled=true,SsaoRadius=1.4f,SsaoIntensity=1.5f,SsaoPower=1.3f,
-            GlowEnabled=true,GlowIntensity=.25f,GlowBloom=.05f,
+            SsaoEnabled=true,SsaoRadius=1.1f,SsaoIntensity=1.25f,SsaoPower=1.15f,
+            GlowEnabled=true,GlowIntensity=.18f,GlowBloom=0,
             FogEnabled=true,FogLightColor=new Color("89cbd8"),FogDensity=.0015f
         };
         AddChild(new WorldEnvironment {Environment=environment});
-        var sun=new DirectionalLight3D {RotationDegrees=new(-52,-27,0),LightColor=new Color("fff0cb"),LightEnergy=1.05f,ShadowEnabled=true,
-            DirectionalShadowMaxDistance=65,ShadowBias=.025f,ShadowNormalBias=1.2f};AddChild(sun);
+        var sun=new DirectionalLight3D {RotationDegrees=new(-52,-27,0),LightColor=new Color("fff0d2"),LightEnergy=1.15f,ShadowEnabled=true,
+            DirectionalShadowMaxDistance=65,ShadowBias=.025f,ShadowNormalBias=1.2f,LightAngularDistance=.8f};AddChild(sun);
         AddChild(new DirectionalLight3D {RotationDegrees=new(-25,135,0),LightColor=new Color("b8dcf0"),LightEnergy=.22f});
-        _camera=new Camera3D {Projection=Camera3D.ProjectionType.Perspective,Fov=40,Near=.1f,Far=180,Current=true};AddChild(_camera);
-        FrameCamera(21,23);
+        _camera=new Camera3D {Projection=Camera3D.ProjectionType.Perspective,Fov=36,Near=.1f,Far=180,Current=true};AddChild(_camera);
+        _cameraRig=new BattleCameraRig(_camera);
+        GetViewport().SizeChanged+=_cameraRig.Fit;
+        VisibilityChanged+=UpdateProcessing;
+        UpdateProcessing();
     }
-    private void FrameCamera(int width,int depth)
-    {
-        var center=new Vector3(width/2f,1.6f,depth*.52f);
-        float span=Mathf.Max(width,depth);
-        _camera.Position=center+new Vector3(0,span*.88f,span*1.32f);
-        _camera.LookAt(center);
-    }
+    private void UpdateProcessing()=>ProcessMode=IsVisibleInTree()?ProcessModeEnum.Inherit:ProcessModeEnum.Disabled;
     public void ResetMatch()
     {
         foreach(Node child in _dynamic.GetChildren())child.QueueFree();
@@ -74,7 +72,7 @@ public partial class ArenaView : Node3D
         foreach(Node child in _dynamic.GetChildren())child.QueueFree();
         foreach(Node child in _effects.GetChildren())child.QueueFree();
         _entities.Clear();_targets.Clear();_blocks.Clear();_ages.Clear();_walls.Clear();_pickups.Clear();_lastRound=-1;_wasHurry=false;
-        FrameCamera(_terrain.Width,_terrain.Depth);
+        _cameraRig.SetStage(data);
     }
     public void State(JsonElement data)
     {
@@ -97,10 +95,13 @@ public partial class ArenaView : Node3D
             string id="p:"+p.GetProperty("id").GetString();bool ghost=p.GetProperty("ghost").GetBoolean();
             if(!p.GetProperty("alive").GetBoolean()&&!ghost)continue;
             seen.Add(id);int slot=p.GetProperty("slot").GetInt32();
+            int appearance=p.TryGetProperty("appearance",out var selected)?selected.GetInt32():slot;
+            var color=Colors[Math.Clamp(appearance,0,Colors.Length-1)];
             if(!_entities.TryGetValue(id,out var node))
             {
-                node=new BomberModel(_art,Colors[slot%Colors.Length],$"P{slot+1}");_dynamic.AddChild(node);_entities[id]=node;node.Position=PositionOf(p);
+                node=new BomberModel(_art,color,$"P{slot+1}");_dynamic.AddChild(node);_entities[id]=node;node.Position=PositionOf(p);
             }
+            ((BomberModel)node).SetSuitColor(color);
             _targets[id]=PositionOf(p);
             float angle=Mathf.Atan2(F(p,"fx"),F(p,"fz"));node.Rotation=new Vector3(0,angle,0);
             ((BomberModel)node).Pose(p.GetProperty("carrying").ValueKind!=JsonValueKind.Null,p.GetProperty("stunned").GetBoolean(),ghost);
@@ -191,8 +192,9 @@ public partial class ArenaView : Node3D
             _ages[id]+=dt;
             if(_entities.TryGetValue(id,out var blast))blast.Scale=Vector3.One*(.85f+.15f*Mathf.Sin(Mathf.Min(1,_ages[id]*7)*Mathf.Pi/2));
         }
-        _shake=Mathf.MoveToward(_shake,0,dt*.6f);_camera.HOffset=Mathf.Sin((float)_clock*75)*_shake;_camera.VOffset=Mathf.Cos((float)_clock*83)*_shake*.5f;
+        _shake=Mathf.MoveToward(_shake,0,dt*.6f);_cameraRig.Shake((float)_clock,_shake);
     }
+    public override void _ExitTree(){if(_cameraRig!=null)GetViewport().SizeChanged-=_cameraRig.Fit;VisibilityChanged-=UpdateProcessing;}
     private void PowerupMessage(Vector3 position,string kind,bool maximum=false)
     {
         string text=kind switch {"fire"=>maximum?"MAX BLAST!":"BLAST UP!","bomb"=>maximum?"MAX BOMBS!":"BOMB UP!","remote"=>"REMOTE!","red"=>"POWER BOMB!","heart"=>"HEART!",_=>"POWER UP!"};

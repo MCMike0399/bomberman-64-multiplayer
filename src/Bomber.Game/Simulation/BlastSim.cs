@@ -115,6 +115,7 @@ public sealed class BlastPlayer
 {
     public string Id { get; init; } = "";
     public int Slot { get; init; }
+    public int Appearance { get; set; }
     public bool IsBot { get; init; }
     public string DisplayName { get; init; } = "";
 

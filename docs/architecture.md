@@ -81,7 +81,7 @@ The game uses original procedural meshes and effects. The client now has articul
 
 The authority computes continuous surface height on ramps. Radius-aware movement rejects discontinuous terrain edges; bot searches use the same crossing rules. Explosions use three-dimensional distance and sample intervening terrain/cover before removing destroyed blocks. Presentation scales authoritative height consistently by 1.35 and builds visible steps from the same cell descriptors.
 
-`ArenaView` owns snapshot reconciliation and delegates terrain to `TempleStageView`, shared mesh construction to `ArtGeometry`, materials to `ArtMaterials`, articulated characters to `BomberModel`, and procedural audio to `BattleAudio`. The fixed perspective camera exposes the courtyard walls and stair risers. Desktop uses Forward+ (Metal on macOS), soft shadows, ambient occlusion and MSAA. Rendering does not modify authoritative positions or hit outcomes.
+`ArenaView` owns snapshot reconciliation and delegates terrain to `TempleStageView`, shared mesh construction to `ArtGeometry`, materials to `ArtMaterials`, articulated characters to `BomberModel`, and procedural audio to `BattleAudio`. The fitted perspective camera exposes the courtyard walls and stair risers while keeping playable bounds clear of the HUD. Desktop uses Forward+ (Metal on macOS), soft shadows, ambient occlusion and MSAA. Rendering does not modify authoritative positions or hit outcomes.
 
 The UI has separate modes, setup, online connection, lobby, match and results screens. Lobby information comes from actual kernel events; there is no pretend ready/start handshake. Local practice permits one human, clear paths and no match time limit. Eight-seat matches keep the compact portrait strip above the playfield.
 
@@ -101,3 +101,12 @@ The simulation now separates bot behavior into `BlastSession.Bots.cs` and `Simul
 Bomb snapshots now identify owner and carrier, pump count and effective level. Player snapshots include accepted pump and pickup serials. `BombModel` animates growth and fuse feedback; `BomberModel` supplies the lift/pump/throw pose and carry socket; `PowerupModel` gives each upgrade a distinct silhouette. Visual attachment never changes authoritative positions or hit results. A new match clears dynamic presentation state while static terrain can be reused.
 
 The engine harness checks actual model scale, active pumping pose, accepted inputs, inventory, flood height and survival. Training pickups exist only in local practice and use ordinary collection rules. Practice reset rebuilds a fresh match; there is no network debug-spawn or teleport command.
+
+
+## Roster and presentation polish
+
+`LocalRoster` validates and serializes eight editable Human/CPU/Off cards. Runtime seats are deliberately ordered humans first, then CPUs; color choices are reordered with them, so disabled or interleaved cards cannot change control bindings. `MatchOptions.PlayerAppearances` is validated and cloned at the authority boundary.
+
+Online appearance commands contain only an index, `{t:"appearance",d:{index:0}}`. The authority binds changes to the authenticated sender, validates indices 0–7 and sends current choices to joining and reconnecting players. Match snapshots and final scores include appearance independently of slot; this is cosmetic state and does not affect simulation randomness or outcomes.
+
+`CharacterPreview` renders the shared `BomberModel` in isolated miniature worlds. Shared cached meshes/materials keep eight previews inexpensive; changing color reuses the model and its animation state. `BattleCameraRig` fits terrain and standing-character bounds after stage or viewport changes, preserves a perspective view, and adds shake relative to the fitted offset. `DisplayModeController` owns fullscreen shortcuts separately from match input.

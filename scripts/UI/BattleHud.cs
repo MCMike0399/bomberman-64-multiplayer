@@ -38,6 +38,8 @@ public partial class BattleHud : Control
             var slot=p.GetProperty("slot").GetInt32();if(!_cards.TryGetValue(slot,out var card))continue;
             var alive=p.GetProperty("alive").GetBoolean();var ghost=p.GetProperty("ghost").GetBoolean();
             var eliminated=!alive&&!ghost;
+            int appearance=p.TryGetProperty("appearance",out var suit)?suit.GetInt32():slot;
+            card.Portrait.Suit=BlastCircuit.Rendering.ArtMaterials.PlayerColors[Math.Clamp(appearance,0,7)];
             card.Portrait.Eliminated=eliminated;card.Portrait.QueueRedraw();
             card.Name.Text=(p.GetProperty("bot").GetBoolean()?"CPU ":"P"+(slot+1)+" ")+p.GetProperty("name").GetString();
             card.Score.Text=$"★ {p.GetProperty("wins").GetInt32()}  ·  {(ghost?"GHOST":eliminated?"OUT":"IN PLAY")}";

@@ -21,6 +21,8 @@ public sealed class NetworkSession : ISession
     private readonly Queue<(bool A, bool B, bool R)> _buttons = new();
     private long _sequence;
     private int _disposed;
+    private int _appearance;
+    private int _appearancePending;
     public int LocalPlayerCount => 1;
     public string Status => Volatile.Read(ref _status);
     public bool IsEnded => Status.StartsWith("Ended", StringComparison.Ordinal) || Status.StartsWith("Error:", StringComparison.Ordinal);
@@ -39,9 +41,10 @@ public sealed class NetworkSession : ISession
     }
 
     public static async Task<NetworkSession> ConnectAsync(Uri server, string displayName, SessionSettings settings,
-        NetworkMode mode = NetworkMode.CreatePrivate, string? joinCode = null, CancellationToken cancellationToken = default)
+        NetworkMode mode = NetworkMode.CreatePrivate, string? joinCode = null, CancellationToken cancellationToken = default, int appearance = 0)
     {
-        var session = new NetworkSession(server, null);
+        if (appearance is < 0 or > 7) throw new ArgumentOutOfRangeException(nameof(appearance));
+        var session = new NetworkSession(server, null) { _appearance = appearance };
         try { await session.InitializeAsync(displayName, settings, mode, joinCode, cancellationToken).ConfigureAwait(false); return session; }
         catch { await session.DisposeAsync().ConfigureAwait(false); throw; }
     }
@@ -186,15 +189,28 @@ public sealed class NetworkSession : ISession
             if (message.ValueKind != JsonValueKind.Object || !message.TryGetProperty("t", out var type) || type.ValueKind != JsonValueKind.String)
                 throw new IOException("Server sent an invalid message.");
             if (type.GetString() == "sys.ended") Volatile.Write(ref _status, "Ended: Match complete");
+            if (type.GetString() == "sys.welcome") Interlocked.Exchange(ref _appearancePending, 1);
             _messages.Add(message);
         }
     }
 
+    public void SetAppearance(int index)
+    {
+        if(index is <0 or >7)throw new ArgumentOutOfRangeException(nameof(index));
+        Volatile.Write(ref _appearance,index);Interlocked.Exchange(ref _appearancePending,1);
+    }
+    public static byte[] EncodeAppearance(int index)
+    {
+        if(index is <0 or >7)throw new ArgumentOutOfRangeException(nameof(index));
+        return JsonSerializer.SerializeToUtf8Bytes(new {t="appearance",d=new {index}});
+    }
     private async Task SendLoopAsync(ClientWebSocket socket, CancellationToken ct)
     {
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1d / 30));
         while (await timer.WaitForNextTickAsync(ct))
         {
+            if (Interlocked.Exchange(ref _appearancePending,0)!=0)
+                await socket.SendAsync(EncodeAppearance(Volatile.Read(ref _appearance)).AsMemory(),WebSocketMessageType.Text,true,ct);
             PlayerInput input;
             lock (_inputGate)
             {

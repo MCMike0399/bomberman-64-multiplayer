@@ -19,9 +19,9 @@ public sealed class ArtMaterials
     {
         var material=new ShaderMaterial { Shader=new Shader { Code=StoneShader } };
         material.SetShaderParameter("base_color",cobble?new Color("70634c"):new Color("ceb377"));
-        material.SetShaderParameter("mortar_color",cobble?new Color("3e3c34"):new Color("897349"));
-        material.SetShaderParameter("tile_count",cobble?new Vector2(3,4):new Vector2(1,1));
-        material.SetShaderParameter("grout",cobble?.065f:.018f);
+        material.SetShaderParameter("mortar_color",cobble?new Color("514c43"):new Color("a18a61"));
+        material.SetShaderParameter("tile_count",cobble?new Vector2(2,3):new Vector2(1,1));
+        material.SetShaderParameter("grout",cobble?.045f:.014f);
         return material;
     }
     public ShaderMaterial Water()=>new() { Shader=new Shader { Code=WaterShader } };
@@ -39,8 +39,8 @@ void fragment(){
   vec2 f=fract(v);vec2 cell=floor(v);
   float dist=min(min(f.x,1.0-f.x),min(f.y,1.0-f.y));
   float seam=smoothstep(grout*.5,grout*1.6,dist);
-  float grain=hash(floor(UV*180.0))*.055;
-  float tone=.91+hash(cell)*.17+grain;
+  float grain=hash(floor(UV*90.0))*.018;
+  float tone=.96+hash(cell)*.07+grain;
   ALBEDO=mix(mortar_color.rgb,base_color.rgb*tone,seam);
   ROUGHNESS=.89;
 }
@@ -56,15 +56,15 @@ void vertex(){
 }
 void fragment(){
   vec2 p=world.xz;
-  float a=sin(p.x*2.1+sin(p.y*1.4+TIME*.65));
-  float b=sin(p.y*2.5+sin(p.x*1.3-TIME*.4));
+  float a=sin(p.x*1.2+sin(p.y*.9+TIME*.4));
+  float b=sin(p.y*1.4+sin(p.x*.8-TIME*.3));
   float caustic=pow(max(0.0,1.0-abs(a+b)*.9),10.0);
   float wave=sin(p.x*.4+p.y*.7+TIME*.3)*.5+.5;
-  ALBEDO=mix(vec3(.025,.29,.4),vec3(.06,.51,.6),wave*.65)+vec3(.07,.15,.12)*caustic;
+  ALBEDO=mix(vec3(.035,.34,.43),vec3(.075,.49,.56),wave*.55)+vec3(.035,.065,.055)*caustic;
   ALBEDO=mix(ALBEDO,ALBEDO*vec3(.64,.78,.95),flood_amount*.55);
   ROUGHNESS=.48; METALLIC=.08; SPECULAR=.4;
-  NORMAL_MAP=vec3(.5+sin(p.x*2.0+TIME)*.06,.5+cos(p.y*2.0+TIME)*.06,1.0);
-  NORMAL_MAP_DEPTH=.4;
+  NORMAL_MAP=vec3(.5+sin(p.x*1.2+TIME*.6)*.035,.5+cos(p.y*1.2+TIME*.6)*.035,1.0);
+  NORMAL_MAP_DEPTH=.3;
 }
 """;
 }

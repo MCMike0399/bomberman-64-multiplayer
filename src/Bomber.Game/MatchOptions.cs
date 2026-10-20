@@ -12,6 +12,7 @@ public sealed record MatchOptions
     public bool SuddenDeath { get; init; } = true;
     public bool Ghosts { get; init; } = true;
     public string BotDifficulty { get; init; } = "normal";
+    public IReadOnlyList<int> PlayerAppearances { get; init; } = [];
     public bool Practice { get; init; }
     public int Seed { get; init; } = 64;
 
@@ -30,6 +31,8 @@ public sealed record MatchOptions
     {
         if (HumanPlayers is < 1 or > 8 || BotPlayers is < 0 or > 7 || HumanPlayers + BotPlayers > 8 || HumanPlayers + BotPlayers < (Practice ? 1 : 2))
             throw new ArgumentOutOfRangeException(nameof(HumanPlayers), "A match needs 2–8 total participants and at least one human.");
+        if (PlayerAppearances.Count != 0 && (PlayerAppearances.Count != HumanPlayers + BotPlayers || PlayerAppearances.Any(index=>index is < 0 or > 7)))
+            throw new ArgumentException("Appearances must contain one index (0–7) per active participant.",nameof(PlayerAppearances));
         if (Stage is not ("sunken-temple" or "rock-garden" or "up-and-down")) throw new ArgumentException("Unknown stage.", nameof(Stage));
         if (BotDifficulty is not ("easy" or "normal" or "hard")) throw new ArgumentException("Unknown bot difficulty.",nameof(BotDifficulty));
         if (Wins is < 1 or > 5) throw new ArgumentOutOfRangeException(nameof(Wins));

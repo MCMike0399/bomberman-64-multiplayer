@@ -16,6 +16,38 @@ public static class ArtGeometry
         if(!Meshes.TryGetValue(key,out var mesh))Meshes[key]=mesh=new SphereMesh {Radius=.5f,Height=1,RadialSegments=32,Rings=16};
         var node=Add(parent,position,mesh,material);node.Scale=scale;return node;
     }
+    /// <summary>Smooth rounded cuboid with independent proportions, shared between roster and arena.</summary>
+    public static MeshInstance3D RoundedBox(Node parent,Vector3 position,Vector3 size,Material material,float roundness=.7f)
+    {
+        string key=$"rounded:{size}:{roundness}";
+        if(!Meshes.TryGetValue(key,out var mesh))
+        {
+            const int steps=12;
+            float radius=Mathf.Clamp(roundness,.02f,1)*.5f,inner=.5f-radius;
+            var surface=new SurfaceTool();surface.Begin(Mesh.PrimitiveType.Triangles);
+            void Vertex(Vector3 p)
+            {
+                var closest=p.Clamp(Vector3.One*-inner,Vector3.One*inner);
+                var direction=(p-closest).Normalized();
+                surface.SetNormal((direction/size).Normalized());
+                surface.SetUV(new(p.X+.5f,p.Y+.5f));
+                surface.AddVertex((closest+direction*radius)*size);
+            }
+            for(int axis=0;axis<3;axis++)for(int sign=-1;sign<=1;sign+=2)
+            {
+                int u=(axis+1)%3,v=(axis+2)%3;
+                Vector3 Point(int x,int y){Vector3 p=default;p[axis]=sign*.5f;p[u]=(float)x/steps-.5f;p[v]=(float)y/steps-.5f;return p;}
+                for(int x=0;x<steps;x++)for(int y=0;y<steps;y++)
+                {
+                    var a=Point(x,y);var b=Point(x+1,y);var c=Point(x+1,y+1);var d=Point(x,y+1);
+                    if(sign>0){Vertex(a);Vertex(c);Vertex(b);Vertex(a);Vertex(d);Vertex(c);}
+                    else {Vertex(a);Vertex(b);Vertex(c);Vertex(a);Vertex(c);Vertex(d);}
+                }
+            }
+            Meshes[key]=mesh=surface.Commit();
+        }
+        return Add(parent,position,mesh,material);
+    }
     public static MeshInstance3D Cylinder(Node parent,Vector3 position,float radius,float height,Material material)
     {
         string key=$"cylinder:{radius}:{height}";

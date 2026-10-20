@@ -1,4 +1,29 @@
-# Verified iteration three — 2026-10-19
+# Verified iteration four — 2026-10-19
+
+Environment: macOS ARM64, Godot 4.7.2 .NET / Forward+ Metal, .NET 10.0.401. The kernel-backed server runs as an independent local .NET process. Deployment to the user's server hardware remains separate work.
+
+| Check | Result |
+|---|---|
+| Godot client and server builds | Zero warnings/errors |
+| Gameplay executable tests | 32 checks passed |
+| Client executable tests | 37 checks passed |
+| AI behavior/determinism/allocation tests | 15 checks passed |
+| Real HTTP/WebSocket network smoke | All 2–8 human matches, seven server bots, round reset and reconnect passed |
+| Pre-match appearance catch-up | Late join and reconnect received existing choices before the match began |
+| Fullscreen graphical `--scenario all` | 171 assertions, 42 viewport captures, zero runtime errors |
+| Dedicated `--scenario fullscreen` | 7 assertions, 2 captures, F11 and Alt+Enter both ways |
+
+The full suite launched fullscreen and entered actual matches. It exercised real role and suit controls, verified changing leg poses in the shared 3D previews, packed gapped human/CPU selections correctly, walked all temple stairs up and down, collected powerups, carried/pumped/threw bombs, observed flooding and bot combat, reached results, replayed, and verified remote movement and selected colors against the real server.
+
+Camera projection checks covered all three stages in native fullscreen plus 1280×720 and 1280×800. Only explicit resize checks temporarily used a window; the harness restored fullscreen before gameplay. Window-mode assertions require 500 ms of stability. Native roster popup key events target the popup's own window ID; routing every key to the main window had produced an automation failure that is now fixed.
+
+The passing complete run was `20261020T032443.975972Z-all` (49.765 s); dedicated display verification was `20261020T032539.382344Z-fullscreen` (4.609 s). The full run needed no capture fallback. These are local measurements, not performance guarantees. Logs and traces remain in ignored artifacts. The [README gallery](../README.md#screenshots) contains five unmodified captures from this final full run, showing the new models, roster, camera, materials, bomb growth and water.
+
+Read-only mesh review checked all 1,728 rounded-cuboid triangles for representative helmet, face and sole dimensions: no degenerate triangles or incorrect winding. Actual screenshots were inspected as well as state assertions. Publication checks found no credentials, private kernel origin, local user paths or ignored source/media in the publishable file set.
+
+Physical eight-controller coverage, internet latency/loss, production hosting and multi-node capacity remain unverified. The current work does not change that boundary. See [harness instructions](../tools/playtest/README.md) and [reference research](iteration4-research.md).
+
+## Iteration three baseline — 2026-10-19
 
 Environment: macOS ARM64, Godot 4.7.2 .NET / Forward+ Metal, .NET 10.0.401. The authoritative kernel-backed server was a separate local .NET process. This verifies the client/server separation; no deployment to the user's server hardware was performed.
 

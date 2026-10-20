@@ -19,6 +19,8 @@ public partial class GameRoot : Node3D
     private double _elapsed,_smokeDuration=8;
     private SessionSettings _lastSettings=new();
     private int _lastHumans=1;
+    private int[]? _lastAppearances;
+    private int _lastOnlineAppearance;
     private NetworkMode _lastMode;
     private Uri? _lastServer;
     private string _lastName="Player",_lastCode="";
@@ -31,6 +33,10 @@ public partial class GameRoot : Node3D
     public ISession? ActiveSession=>_session;
     public object VisualState=>new {waterHeight=_arena.WaterHeight,largestBombScale=_arena.LargestBombScale,pumpAnimations=_arena.PumpAnimationCount,pumpIntensity=_arena.PumpIntensity,carriedBombs=_arena.CarriedBombs,powerups=_arena.VisiblePowerups};
     public JsonElement? LatestLobby=>_lobby;
+    public object RosterState=>_menu.RosterState;
+    public int SelectedAppearance=>_menu.OnlineAppearance;
+    public void ConfigureRosterSlot(int slot,string role,int appearance)=>_menu.ConfigureRosterSlot(slot,role.ToLowerInvariant() switch {"human"=>RosterRole.Human,"cpu"=>RosterRole.Cpu,"off"=>RosterRole.Off,_=>throw new ArgumentException("Role must be human, cpu or off.")},appearance);
+    public void SetOnlineAppearance(int appearance)=>_menu.SetOnlineAppearance(appearance);
 
     public override void _Ready()
     {
@@ -38,6 +44,7 @@ public partial class GameRoot : Node3D
         var layer=new CanvasLayer();AddChild(layer);
         _menu=new ArcadeMenu();layer.AddChild(_menu);
         _hud=new BattleHud {Visible=false};layer.AddChild(_hud);
+        _menu.AppearanceChanged+=index=>{if(_session is NetworkSession network)network.SetAppearance(index);};
         _menu.Navigation+=Navigate;_menu.BackRequested+=Back;_menu.ReplayRequested+=Replay;
         _menu.LocalRequested+=StartConfigured;_menu.OnlineRequested+=StartConfiguredOnline;
         _hud.LeaveRequested+=Back;_hud.RestartRequested+=Replay;
@@ -45,7 +52,8 @@ public partial class GameRoot : Node3D
         _smoke=args.Any(a=>a.StartsWith("--smoke"));
         var duration=args.FirstOrDefault(a=>a.StartsWith("--smoke-seconds="));
         if(duration!=null&&double.TryParse(duration.Split('=')[1],out var seconds))_smokeDuration=Math.Clamp(seconds,1,120);
-        if(args.Contains("--smoke-menu"))_capture="menu";
+        if(args.Contains("--smoke-roster")){_capture="roster";Navigate("Roster");}
+        else if(args.Contains("--smoke-menu"))_capture="menu";
         else if(args.Contains("--smoke-online")){_capture="online";_ = StartOnlineAsync(new Uri("http://127.0.0.1:18496"),"Player",new SessionSettings(Bots:7),NetworkMode.CreatePrivate);}
         else if(_smoke)
         {
@@ -58,8 +66,8 @@ public partial class GameRoot : Node3D
 
     public void Navigate(string screen)
     {
-        if(screen is not ("Modes" or "Setup" or "Practice" or "HostSetup" or "Online" or "Lobby" or "Match" or "Results"))throw new ArgumentException("Unknown screen.",nameof(screen));
-        if(screen is "Modes" or "Online" or "Setup" or "Practice" or "HostSetup")
+        if(screen is not ("Modes" or "Roster" or "Setup" or "Practice" or "HostSetup" or "Online" or "Lobby" or "Match" or "Results"))throw new ArgumentException("Unknown screen.",nameof(screen));
+        if(screen is "Modes" or "Roster" or "Online" or "Setup" or "Practice" or "HostSetup")
         {
             CancelConnection();
             if(_session!=null)ReleaseSession();
@@ -77,35 +85,35 @@ public partial class GameRoot : Node3D
         int humans=_menu.HumanCount;
         if(humans>LocalControllerLayout.Capacity(Input.GetConnectedJoypads().Count))
         {_menu.Notice($"Connect more gamepads for {humans} human players. Two keyboard seats are available.");return;}
-        StartLocal(_menu.Settings,humans,_menu.Practice);
+        StartLocal(_menu.Settings,humans,_menu.Practice,_menu.PlayerAppearances);
     }
-    public void StartLocal(SessionSettings settings,int humans=1,bool practice=false)
+    public void StartLocal(SessionSettings settings,int humans=1,bool practice=false,IReadOnlyList<int>? playerAppearances=null)
     {
         if(_connecting)return;
         try
         {
-            var session=new LocalSession(settings,humans,practice:practice);
-            _lastSettings=settings;_lastHumans=humans;_practice=practice;_lastServer=null;
+            var session=new LocalSession(settings,humans,practice:practice,playerAppearances:playerAppearances);
+            _lastSettings=settings;_lastHumans=humans;_lastAppearances=playerAppearances?.ToArray();_practice=practice;_lastServer=null;
             Begin(session,false);
         }
         catch(Exception error){_menu.Notice(error.Message);GD.PushWarning(error.Message);}
     }
     private async void StartConfiguredOnline(NetworkMode mode)
     {
-        try{await StartOnlineAsync(new Uri(_menu.ServerUrl),_menu.PlayerName,_menu.Settings,mode,_menu.Code);}
+        try{await StartOnlineAsync(new Uri(_menu.ServerUrl),_menu.PlayerName,_menu.OnlineSettings,mode,_menu.Code,appearance:_menu.OnlineAppearance);}
         catch(Exception error){_menu.SetBusy(false,"Could not connect: "+error.Message);}
     }
-    public async Task StartOnlineAsync(Uri server,string name,SessionSettings settings,NetworkMode mode,string? code=null)
+    public async Task StartOnlineAsync(Uri server,string name,SessionSettings settings,NetworkMode mode,string? code=null,int appearance=0)
     {
         if(_connecting)throw new InvalidOperationException("A connection is already in progress.");
-        ReleaseSession();_connecting=true;_practice=false;
+        ReleaseSession();_menu.SetOnlineAppearance(appearance);_connecting=true;_practice=false;
         var cancellation=new CancellationTokenSource(TimeSpan.FromSeconds(120));_connectCancel=cancellation;
         ScreenName="Online";_menu.Visible=true;_arena.Visible=false;_hud.Visible=false;_menu.ShowScreen("Online");_menu.SetBusy(true,mode==NetworkMode.QuickPlay?"Searching for players… Cancel to leave the queue.":"Connecting to your battle room…");
         try
         {
-            var session=await NetworkSession.ConnectAsync(server,name,settings,mode,code,cancellation.Token);
+            var session=await NetworkSession.ConnectAsync(server,name,settings,mode,code,cancellation.Token,appearance);
             if(cancellation.IsCancellationRequested||!IsInsideTree()){await session.DisposeAsync();return;}
-            _lastSettings=settings;_lastHumans=1;_lastServer=server;_lastName=name;_lastMode=mode;_lastCode=code??"";
+            _lastSettings=settings;_lastHumans=1;_lastServer=server;_lastName=name;_lastOnlineAppearance=appearance;_lastMode=mode;_lastCode=code??"";
             Begin(session,true);
         }
         catch(OperationCanceledException) when(cancellation.IsCancellationRequested){if(IsInsideTree())_menu.Notice("Connection cancelled. Choose a mode to try again.");}
@@ -118,7 +126,7 @@ public partial class GameRoot : Node3D
     }
     private void Begin(ISession session,bool online)
     {
-        ReleaseSession();_arena.ResetMatch();_session=session;LatestStage=null;LatestState=null;_result=null;_lobby=null;SnapshotCount=0;_injected.Clear();_hud.Reset();_hud.Practice=_practice;
+        ReleaseSession();_arena.ResetMatch();_session=session;LatestStage=null;LatestState=null;_result=null;_lobby=null;SnapshotCount=0;_injected.Clear();_hud.Reset();_hud.Practice=_practice;_menu.ResetLobby();
         if(online)
         {ScreenName="Lobby";_menu.ShowScreen("Lobby");_menu.ShowLobby(null,session.JoinCode,session.Status);_menu.Visible=true;_hud.Visible=false;_arena.Visible=false;}
         else EnterMatch();
@@ -136,7 +144,7 @@ public partial class GameRoot : Node3D
     {
         if(_connecting){CancelConnection();_menu.SetBusy(false,"Connection cancelled.");ScreenName="Online";_menu.ShowScreen("Online");return;}
         if(_session!=null){ReleaseSession();Navigate("Modes");return;}
-        if(ScreenName=="Setup"&&_setupForHost)Navigate("Online");else Navigate("Modes");
+        if(ScreenName=="Setup"&&_setupForHost)Navigate("Online");else if(ScreenName=="Setup"&&!_menu.Practice)Navigate("Roster");else Navigate("Modes");
     }
     private void Replay()
     {
@@ -147,10 +155,10 @@ public partial class GameRoot : Node3D
             if(_lastMode==NetworkMode.JoinCode){Navigate("Online");_menu.Notice("Enter a new room code to join your next battle.");}
             else _=ReplayOnline(server);
         }
-        else StartLocal(_lastSettings,_lastHumans,_practice);
+        else StartLocal(_lastSettings,_lastHumans,_practice,_lastAppearances);
     }
     private async Task ReplayOnline(Uri server)
-    {try{await StartOnlineAsync(server,_lastName,_lastSettings,_lastMode,_lastCode);}catch(Exception error){_menu.Notice(error.Message);}}
+    {try{await StartOnlineAsync(server,_lastName,_lastSettings,_lastMode,_lastCode,_lastOnlineAppearance);}catch(Exception error){_menu.Notice(error.Message);}}
     private void CancelConnection()
     {
         var cancellation=_connectCancel;_connectCancel=null;_connecting=false;cancellation?.Cancel();
@@ -179,7 +187,7 @@ public partial class GameRoot : Node3D
             if(_elapsed>_smokeDuration)
             {
                 if(DisplayServer.GetName()!="headless")GetViewport().GetTexture().GetImage().SavePng($"res://artifacts/{_capture}.png");
-                bool passed=_capture=="menu"||SnapshotCount>0;GD.Print($"{(passed?"GODOT_SMOKE_OK":"GODOT_SMOKE_FAILED")} {_capture} snapshots={SnapshotCount}");GetTree().Quit(passed?0:1);return;
+                bool passed=_capture is "menu" or "roster"||SnapshotCount>0;GD.Print($"{(passed?"GODOT_SMOKE_OK":"GODOT_SMOKE_FAILED")} {_capture} snapshots={SnapshotCount}");GetTree().Quit(passed?0:1);return;
             }
         }
         var session=_session;if(session==null)return;
@@ -194,6 +202,9 @@ public partial class GameRoot : Node3D
                 case "state":
                     LatestState=data.Clone();SnapshotCount++;_arena.State(data);_hud.State(data);
                     if(ScreenName=="Lobby")EnterMatch();
+                    break;
+                case "appearance":
+                    if(data.TryGetProperty("playerId",out var owner)&&data.TryGetProperty("index",out var suit))_menu.SetLobbyAppearance(owner.GetString()!,suit.GetInt32());
                     break;
                 case "sys.welcome":
                     if(data.TryGetProperty("lobby",out var welcomeLobby)){_lobby=welcomeLobby.Clone();_menu.ShowLobby(_lobby,session.JoinCode,session.Status);}

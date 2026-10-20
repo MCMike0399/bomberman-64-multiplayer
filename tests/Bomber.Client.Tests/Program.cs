@@ -66,4 +66,22 @@ await using(var practice=new LocalSession(new SessionSettings(Bots:0),1,practice
     var state=practice.DrainMessages().Last(m=>m.GetProperty("t").GetString()=="state").GetProperty("d");
     Check(state.GetProperty("players").GetArrayLength()==1 && !practice.IsEnded, "Practice supports one human without ending the match");
 }
+var roster=new LocalRoster();
+for(int slot=0;slot<8;slot++)roster.Set(slot,RosterRole.Off,slot);
+roster.Set(0,RosterRole.Cpu,2);roster.Set(4,RosterRole.Human,7);roster.Set(7,RosterRole.Human,6);
+Check(roster.AuthorityAppearances().SequenceEqual(new[]{7,6,2}), "Mixed roster packs humans first and CPU last while keeping each selected suit");
+Check(roster.Binding(4,0).StartsWith("WASD")&&roster.Binding(7,0).StartsWith("ARROWS")&&roster.Binding(0,0)=="CPU CONTROLLED", "Gapped UI slots show actual human controller seats rather than their card number");
+Check(roster.ValidationError(0)==null, "Two human keyboard seats and a CPU form a valid gapped roster");
+roster.Set(6,RosterRole.Human,3);
+Check(roster.ValidationError(0)!=null&&roster.ValidationError(1)==null&&roster.Binding(7,1)=="GAMEPAD 1", "Additional gapped humans require distinct connected gamepads");
+Throws(()=>roster.Set(8,RosterRole.Human,0), "Roster rejects out-of-range UI slot");
+Throws(()=>roster.Set(0,RosterRole.Human,8), "Roster rejects undefined appearance");
+Throws(()=>NetworkSession.EncodeAppearance(-1), "Network appearance encoder rejects invalid index");
+using(var appearance=JsonDocument.Parse(NetworkSession.EncodeAppearance(6)))
+    Check(appearance.RootElement.GetProperty("t").GetString()=="appearance"&&appearance.RootElement.GetProperty("d").GetProperty("index").GetInt32()==6&&appearance.RootElement.GetProperty("d").EnumerateObject().Count()==1, "Cosmetic packet carries only the sender's chosen appearance and no target identity");
+await using(var selected=new LocalSession(new SessionSettings(Bots:2),1,playerAppearances:new[]{7,3,1}))
+{
+    var players=selected.DrainMessages().Last(m=>m.GetProperty("t").GetString()=="state").GetProperty("d").GetProperty("players").EnumerateArray().OrderBy(p=>p.GetProperty("slot").GetInt32()).ToArray();
+    Check(players.Select(p=>p.GetProperty("appearance").GetInt32()).SequenceEqual(new[]{7,3,1}), "Local adapter applies the actual human and CPU appearance selections to authoritative state");
+}
 Console.WriteLine($"PASS: {checks} client contract and session checks");

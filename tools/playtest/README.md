@@ -17,13 +17,16 @@ Built-in scenarios:
 - `menu`: actual focused keyboard activation through local/online/practice buttons and back, plus transformed mouse clicks at 1280×800 and 1024×640, with screenshots.
 - `local-actions`: one-human practice, place/lift/pump/throw, checking authoritative bomb/carrier states and leaving the session.
 - `ramp`: actual walking from sunken-temple spawn through three stair flights to tier 4 and back to tier 1, checking arrival and elevation.
-- `network`: Godot product NetworkSession hosts a real kernel lobby, second product client joins by code, and observes the injected engine player's movement remotely.
+- `network`: Godot product NetworkSession hosts a real kernel lobby, second product client joins by code, and observes the injected engine player's movement remotely. It activates the actual online suit button and verifies that both chosen appearances reach authoritative snapshots.
 - `combat`: seed64 temple with three CPU rivals, observes actual bomb/explosion/item IDs and a completed round or match, then captures the result. This continues long enough to exercise post-explosion item rendering.
 - `results`: a real bomb eliminates the stationary human in a one-CPU duel, asserts the CPU winning point and actual Results screen, activates Play Again through keyboard input and leaves the replay.
 - `powerup-collect`: walks through the visible practice cache, verifies all five upgrade types, HUD/state counters, model removal and remote detonation of an upgraded bomb.
 - `pump-growth`: creates a carried bomb with lift+bomb, accepts three distinct presses, checks three rendered growth stages and body animations, then throws it.
 - `hurry-water`: two real local humans, one walks to the crown while the other stays on a lower terrace; observes actual timed flooding, rising rendered water, lower player drowning and higher player survival.
-- `all`: all nine, in order.
+- `roster`: real local-mode navigation, mixed human/CPU slots with gaps, actual role/appearance controls, moving shared-model previews and matching packed appearances in the authority.
+- `framing`: projects all walkable cells plus character headroom into the camera in native fullscreen, then at 1280×720 and 1280×800, checks HUD-safe margins across all three stages and captures each result.
+- `fullscreen`: a separate graphical-only run with the product fullscreen default; verifies F11 and Alt+Enter both switch and restore actual window mode. A headless fullscreen run fails explicitly because it cannot verify an OS window.
+- `all`: the full regression sequence in fullscreen, temporarily entering windowed mode for explicit aspect-ratio checks and restoring fullscreen.
 
 Local play uses fixed 30 Hz engine time and deterministic default seed 64. Network authority runs on real server time; kernel lobby countdown and message arrival remain asynchronous. The runner caps wall time and the in-engine driver bounds state waits and walking frames.
 
@@ -38,3 +41,7 @@ Direct engine invocation is also available:
 ```
 
 Synthetic mouse coordinates follow [Godot’s official canvas/screen transform guide](https://docs.godotengine.org/en/4.7/tutorials/2d/2d_transforms.html): viewport screen transform × control global transform with canvas × local center. This matters when the 1440×900 logical UI is stretched into a smaller window.
+
+QA launches use the normal fullscreen product default. Pass runner `--windowed` for an intentional automation override; this passes engine `--windowed` and product user argument `--display-windowed`, including embedded runtimes where consumed engine flags are not visible to C#. Menu and framing checks temporarily toggle to windowed mode for aspect-ratio checks, then restore fullscreen. Actual mode must remain stable for 500 ms before a check passes. Headless framing still checks projection and records that an OS window-mode check is inapplicable; it never claims to have verified fullscreen. Menu interaction covers 16:9 and 16:10 sizes.
+
+Godot native popup menus have their own window ID. Synthetic role-selection keys must use `Input.ParseInputEvent` with `InputEventKey.WindowId = popup.GetWindowId()`. Sending keys to the main window or calling the popup viewport directly can leave the selected item unchanged. The roster scenario opens the actual role control, navigates with arrow keys in that popup window, then confirms with Enter.
