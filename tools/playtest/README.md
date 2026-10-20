@@ -81,3 +81,12 @@ Mouse automation moves the OS pointer to the target before injecting press/relea
 - `traversal`: gravity drops, air steering, blocked upward cliffs, real ghost creation/latch, retained victim control and visible riding/expiry.
 
 `controller-observe` now allows 120 seconds and can end early with Menu / + / Options. Physical reports remain separate from injected tests. The Nintendo controller cases use printed A/B/X instead of assuming the same physical action positions as Xbox.
+
+## Iteration-ten scenarios
+
+- `kick-physics`: real stock-temple contact kick, launch hop/travel, victim flight/landing, active remote waiting/command, and a normal diagonal corner stop followed by a timed explosion and safe retreat.
+- `body-contacts`: ordinary three-human paths test head-on authority/rendered separation, capped idle yielding and tangential escape.
+- `movement`: also feeds the production interpolation helper controlled uneven arrival times at 30/60/120 FPS, including starvation, stale packets and discontinuities; then verifies real arena run/stop cadence.
+- `grapple`: waits for actual kick flight to land and walks to the displaced victim before grabbing; impact captures are uniquely numbered.
+
+These are included in `all`. Run only one graphical Godot instance at a time. For changed authority code, rebuild/restart your project-owned local server before networking tests; an already reachable server may otherwise run an older assembly.

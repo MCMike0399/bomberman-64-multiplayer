@@ -1,4 +1,28 @@
-# Verified iteration nine — 2026-10-20
+# Verified iteration ten — 2026-10-20
+
+| Check | Result |
+|---|---|
+| Server and self-contained Mac export | Successful; server build zero warnings/errors |
+| Gameplay integration | 72 checks passed, including eight bomb-impact/fuse and seven body-contact cases |
+| Client/session/input | 93 checks passed |
+| AI | 21 checks passed, including combat outcomes across all stages |
+| Original synthesized audio | 19 cues validated for energy, bounded peaks, clean edges and caching |
+| Full exported-app regression | **1,470 assertions, 109 captures**, zero runtime errors, zero capture fallbacks |
+| Independent HTTP/WebSocket networking | 2–8 humans and one human + seven server bots passed (42.9 seconds) |
+| Installed app | Version 0.10.0; strict signature check, byte-for-byte export comparison and macOS Launch Services gameplay smoke passed |
+
+The final windowed standalone run is `artifacts/iteration10-final/20261020T225239.321415Z-all`, 65.325 seconds including startup. It runs the bundled executable without a source-project path against the rebuilt project-owned localhost server. Kick launch/impact/landing, normal corner fuse, remote command, body contact/yield/side escape, grabs, all earlier menu/controller/presentation flows and actual network gameplay passed. Selected real screenshots refresh the README gallery. Local test durations are not performance benchmarks.
+
+The normal and pumped finite-fuse checks already passed before the fix. The reproduced indefinite-bomb defect was an orphaned remote after owner departure in a three-player match. New coverage separates that lifecycle from active remote command behavior, moving remote detonation, billiard transfer and full-radius wall sweeps. [Primary manual and inspected footage, diagnosis and tuning](iteration10-kick-research.md).
+
+Controlled uneven snapshot arrival tests exercise the production interpolation helper at 30/60/120 FPS, plus stale arrival, starvation and discontinuity handling. Actual scene running/stop behavior also passes. The 100 ms visual buffer trades roughly 33 ms more delay than the earlier one-snapshot interpolation for smoother cadence. It is not client prediction and does not establish internet latency/loss tolerance.
+
+Height-aware body tests cover head-on fairness, glancing contact, idle yielding, wall pressure/escape, eight-body crowds, separate heights and overlap repair. The visible scene checks also require real model separation. Grapple tests now wait for landing and walk to the displaced victim using ordinary input; they do not teleport it back to the previous fixture location.
+
+The installed `~/Applications/Blast Circuit.app` matches the tested export. A separate macOS Launch Services smoke reached 118 gameplay snapshots with no stderr output, using Metal on Apple M5 Pro. The local ad-hoc signature is verified; no notarization, OS Game Mode boost, new physical-controller observation or production deployment is claimed. The approved head geometry and menus are unchanged in this iteration.
+
+## Iteration nine baseline — 2026-10-20
+
 
 | Check | Result |
 |---|---|

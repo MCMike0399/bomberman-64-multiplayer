@@ -150,8 +150,15 @@ Blast visuals use authoritative radius and hazard age, with a visible danger bou
 
 ## Iteration-nine control and physics boundaries
 
-`SnapshotMotion` interpolates previous/latest authority positions by envelope ticks, replacing exponential target chasing. It adds one snapshot of visual buffering, does not predict, and snaps discontinuous corrections. Smooth facing and distance-driven stride remain cosmetic. Ghost rider presentation follows its host; ghost nuisance strength, expiry and shake-off stay authoritative.
+`SnapshotMotion` interpolates a bounded envelope-tick sample queue with a continuously advancing playback clock. A 100 ms buffer absorbs uneven packet arrivals without resetting interpolation; a bounded 1.15× catch-up prevents backlog growth, starvation holds until buffered again, and discontinuities snap. It does not extrapolate or predict. Smooth facing and distance-driven stride remain cosmetic. Ghost rider presentation follows its host; ghost nuisance strength, expiry and shake-off stay authoritative.
 
 `BlastSession.BombActions` centralizes primary-hold candidate/latch behavior and full-circle front-placement validation. A primary-lifted bomb throws on the carry press; legacy carry release remains supported. Rolling collision is substepped at the faster continuous-vector kick speed. `CanWalk` supplies directed downward graph edges while `CanCross` preserves strict ramp connectivity; falling is distinct from thrown-player recovery.
 
 AI planning uses the actual valid forward bomb location and ordinary orientation/tap/retreat inputs, rather than planning an underfoot bomb and accidentally kicking the real one away. Outcome tests require blasts, destroyed cover and drops. Nintendo per-device action buttons now follow printed A/B/X; Xbox/PlayStation remain unchanged.
+
+
+## Body contacts and kick impacts
+
+`BlastSession.BodyContacts` resolves height-aware player circles after movement/flight and before rider synchronization. Alternating pair order and repeated terrain-aware corrections share pressure through crowds. Tangential travel survives; idle/stunned yielding is capped across all neighbors per tick. Ghosts and carried players do not become blocking bodies. Released, overlapping holds receive full separation repair.
+
+Bomb travel sweeps the full radius in short increments. The launch hop is presentation height and does not permit a shot through walls; accepted player impact enters the existing authoritative flight/recovery system through a capped impulse helper. Billiard transfer retains both fuses. Remote authority verifies its owner remains able to command it; orphaned remotes resume the ordinary fuse and publish `remote-fuse`. A wall impact alone does not change remote mode.

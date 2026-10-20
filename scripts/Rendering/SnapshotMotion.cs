@@ -1,22 +1,39 @@
 using Godot;
 namespace BlastCircuit.Rendering;
 
-/// <summary>One snapshot of interpolation delay avoids stop/catch-up pulses without inventing authority motion.</summary>
-public sealed class SnapshotMotion(Vector3 initial,long tick)
+/// <summary>Clocked interpolation absorbs uneven packet arrival without resetting motion every packet.</summary>
+public sealed class SnapshotMotion
 {
-    private Vector3 _from=initial,_to=initial;
-    private long _tick=tick;
-    private float _age,_duration=2f/30;
+    private const double BufferSeconds=.1;
+    private readonly List<(double Time,Vector3 Position)> _samples=[];
+    private long _tick;
+    private double _playback;
+    private bool _starved;
+    public SnapshotMotion(Vector3 initial,long tick)
+    {_tick=tick;_playback=tick/30d-BufferSeconds;_samples.Add((tick/30d,initial));}
     public void Push(Vector3 position,long tick)
     {
-        if(tick<=_tick)return;
-        _duration=Mathf.Clamp((tick-_tick)/30f,1f/30,.2f);
-        _from=_to;_to=position;_age=0;_tick=tick;
-        if(_from.DistanceSquaredTo(_to)>9)_from=_to;
+        if(tick<=_tick||!position.IsFinite())return;
+        bool discontinuity=_samples[^1].Position.DistanceSquaredTo(position)>9||tick-_tick>15;
+        _tick=tick;double time=tick/30d;
+        if(discontinuity){_samples.Clear();_playback=time-BufferSeconds;_starved=false;}
+        _samples.Add((time,position));
+        if(_starved&&time-_playback>=BufferSeconds)_starved=false;
+        while(_samples.Count>16)_samples.RemoveAt(0);
     }
     public Vector3 Advance(float dt)
     {
-        _age+=dt;
-        return _from.Lerp(_to,Mathf.Clamp(_age/_duration,0,1));
+        if(!float.IsFinite(dt)||dt<=0)return Sample();
+        if(!_starved)_playback+=Math.Min(dt,.25)*(_samples[^1].Time-_playback>BufferSeconds+.06?1.15:1);
+        if(_playback>_samples[^1].Time){_playback=_samples[^1].Time;_starved=true;}
+        return Sample();
+    }
+    private Vector3 Sample()
+    {
+        while(_samples.Count>2&&_samples[1].Time<=_playback)_samples.RemoveAt(0);
+        var from=_samples[0];
+        if(_samples.Count==1||_playback<=from.Time)return from.Position;
+        var to=_samples[1];
+        return from.Position.Lerp(to.Position,(float)Math.Clamp((_playback-from.Time)/(to.Time-from.Time),0,1));
     }
 }

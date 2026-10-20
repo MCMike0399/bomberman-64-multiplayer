@@ -50,6 +50,12 @@ public sealed partial class BlastSession
             ThrowCarried(context,p,input);
     }
 
+    private static void LaunchKickedBomb(BlastBomb bomb,float vx,float vz,string? touchedBy)
+    {
+        bomb.State=BombState.Rolling;bomb.LastTouchedById=touchedBy;
+        bomb.VX=vx;bomb.VZ=vz;bomb.KickHopRemaining=BlastBomb.KickHopSeconds;
+    }
+
     private bool CanPlaceBombAt(BlastPlayer player,float x,float z)
     {
         var cell=_stage.At((int)MathF.Floor(x),(int)MathF.Floor(z));

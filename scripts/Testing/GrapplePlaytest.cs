@@ -34,7 +34,6 @@ public partial class PlaytestDriver
         Check(GrappleValue(carrier,"x")>start+.2f,"carrier really walks while holding player");
         Check(Math.Abs(GrappleValue(victim,"x")-GrappleValue(carrier,"x"))<.1f&&Math.Abs(GrappleValue(victim,"z")-GrappleValue(carrier,"z"))<.1f,"held player follows carrier authority position");
         Check(GrappleValue(victim,"y")>GrappleValue(carrier,"y")+1,"held player stays visibly above carrier");
-        int grabBefore=GrappleEffect("player-grab"),liftCueBefore=Cue("lift");
         Input(2,new PlayerInput(0,0,B:true));await Frames(2);await Capture("grapple-held-follow");
         int releaseBefore=GrappleEffect("player-release");
         for(int i=0;i<44&&GrapplePlayer(1).GetProperty("carriedBy").ValueKind!=JsonValueKind.Null;i+=2)
@@ -60,6 +59,7 @@ public partial class PlaytestDriver
         Check(GrappleValue(GrapplePlayer(1),"y")<=1.01f,"player flight lands on actual temple walkway");await Capture("grapple-player-landed");
         _root.Back();await Frames(3);
     }
+    private int _grappleTrial;
     private async Task PrepareGrapple()
     {
         if(_root.ActiveSession!=null){_root.Back();await Frames(3);}
@@ -67,7 +67,7 @@ public partial class PlaytestDriver
         _root.StartLocal(new SessionSettings(Stage:"sunken-temple",Bots:0),3,practice:true);
         await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"three-human grapple training reaches fight",150);
         await GrappleWalk(0,8,13);Check(GrapplePlayer(0).GetProperty("remote").GetBoolean(),"kicker collects the real training remote pickup");
-        await GrappleWalk(0,7,13);await GrappleWalk(1,11,13);await GrappleWalk(2,11,12);
+        await GrappleWalk(0,7,13);await GrappleWalk(1,11,13);await GrappleWalk(2,15,12);
         int knockBefore=GrappleEffect("knockdown"),kickCueBefore=Cue("kick");
         // Face along the victim's real corridor before front placement.
         Input(0,new PlayerInput(1,0));await Frames(1);Input(0,new PlayerInput(0,0,A:true));await Frames(2);Input(0,default);await Frames(7);Input(0,new PlayerInput(1,0));
@@ -78,10 +78,24 @@ public partial class PlaytestDriver
         Check(GrapplePlayer(1).GetProperty("knockdownReason").GetString()=="rolling-bomb","snapshot identifies physical rolling-bomb cause");
         Check(!GrapplePlayer(0).GetProperty("stunned").GetBoolean(),"kicker avoids outgoing bomb self-hit");
         Check(GrappleEffect("knockdown")>knockBefore&&Cue("kick")>kickCueBefore,"knockdown event reaches actual renderer and cue path");
+        Check(GrapplePlayer(1).GetProperty("airborne").GetBoolean(),"bomb impact launches victim through real authority flight");
+        await Capture($"grapple-impact-flight-{++_grappleTrial}");
+        await WaitState(_=>!GrapplePlayer(1).GetProperty("airborne").GetBoolean(),"bomb-impact victim lands before grounded recovery or grab",65);
+        Check(GrapplePlayer(1).GetProperty("stunned").GetBoolean()&&!GrapplePlayer(1).GetProperty("ghost").GetBoolean(),"bomb-impact landing preserves a finite grounded recovery window");
     }
     private async Task GrabGrappleVictim()
     {
         int grabBefore=GrappleEffect("player-grab"),liftCueBefore=Cue("lift");
+        // Stop in grab range outside body clearance; input never walks through the victim.
+        bool inRange=false;
+        for(int frame=0;frame<16;frame++)
+        {
+            var victim=GrapplePlayer(1);var carrier=GrapplePlayer(2);
+            float dx=GrappleValue(victim,"x")-GrappleValue(carrier,"x"),dz=GrappleValue(victim,"z")-GrappleValue(carrier,"z");
+            if(dx*dx+dz*dz<=1.02f*1.02f){inRange=true;break;}
+            Input(2,new PlayerInput(Math.Clamp(dx*4,-1,1),Math.Clamp(dz*4,-1,1)));await Frames(1);
+        }
+        Check(inRange,"carrier reaches landed victim through ordinary movement within body clearance");
         Input(2,new PlayerInput(0,0,B:true));await Frames(2);
         Check(GrapplePlayer(2).GetProperty("carrying").GetString()=="player","real lift button picks up knocked-down victim");
         Check(GrapplePlayer(1).GetProperty("carriedBy").GetString()==GrapplePlayer(2).GetProperty("id").GetString(),"hold identifies authoritative carrier");

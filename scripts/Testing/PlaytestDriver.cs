@@ -63,6 +63,8 @@ public partial class PlaytestDriver : Node
                 case "movement": await MovementQuality(); break;
                 case "traversal": await TraversalAndGhosts(); break;
                 case "bomb-handling": await BombHandling(); break;
+                case "kick-physics": await KickPhysics(); break;
+                case "body-contacts": await BodyContacts(); break;
                 case "local-actions": await LocalActions(); break;
                 case "ramp": await Ramps(); break;
                 case "network": await Network(); break;
@@ -74,7 +76,7 @@ public partial class PlaytestDriver : Node
                 case "roster": await RosterSelection(); break;
                 case "framing": await Framing(); break;
                 case "fullscreen": await Fullscreen(); break;
-                case "all": await Menus(); await SetupMenus(); await ControllerInputs(); await AnalogPopupMenus(); await RosterSelection(); await Framing(); await ModelProfiles(); await MovementQuality(); await TraversalAndGhosts(); await BombHandling(); await GrappleActions(); await LocalActions(); await Ramps(); await Powerups(); await PumpGrowth(); await PresentationEffects(); await HurryWater(); await Combat(); await Results(); await Network(); break;
+                case "all": await Menus(); await SetupMenus(); await ControllerInputs(); await AnalogPopupMenus(); await RosterSelection(); await Framing(); await ModelProfiles(); await MovementQuality(); await TraversalAndGhosts(); await BombHandling(); await KickPhysics(); await BodyContacts(); await GrappleActions(); await LocalActions(); await Ramps(); await Powerups(); await PumpGrowth(); await PresentationEffects(); await HurryWater(); await Combat(); await Results(); await Network(); break;
                 default: throw new ArgumentException("Unknown scenario: "+_scenario);
             }
         }

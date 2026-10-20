@@ -23,7 +23,7 @@ internal static class GrappleChecks
             Assert(State(active).GetProperty("bombs").GetArrayLength()==1,"Recovery mash placed a latent bomb.");
         });
         Check("holding one input does not count as repeated recovery effort",()=>{
-            var m=Hit();m.SetInput(1,new PlayerInput(1,0,true));Step(m,18);
+            var m=Hit();m.SetInput(1,new PlayerInput(1,0,true));Step(m,9);
             Assert(P(m,1).GetProperty("stunned").GetBoolean(),"Held input repeatedly counted as mash.");
         });
         Check("grabbed player follows carrier and escapes with own input",()=>{
@@ -58,26 +58,44 @@ internal static class GrappleChecks
     }
     static LocalMatch Hit()
     {
-        var cells=new CellDef[9,9];for(int x=0;x<9;x++)for(int z=0;z<9;z++)cells[x,z]=CellDef.Floor0;
-        var arena=new StageLayout {Id="fixture",Width=9,Height=9,Cells=cells,Spawns=[(2,3),(5,3),(5,4)],SoftBlockDensity=0,InitialItems=[(2,3,"remote")]};
+        var cells=new CellDef[17,13];for(int x=0;x<17;x++)for(int z=0;z<13;z++)cells[x,z]=CellDef.Floor0;
+        var arena=new StageLayout {Id="fixture",Width=17,Height=13,Cells=cells,Spawns=[(2,3),(5,3),(9,4)],SoftBlockDensity=0,InitialItems=[(2,3,"remote")]};
         var m=new LocalMatch(new MatchOptions {HumanPlayers=3,BotPlayers=0,Practice=true},arena);Step(m,64);
         m.SetInput(0,new PlayerInput(1,0));Step(m,2);
         m.SetInput(0,new PlayerInput(0,0,true));Step(m,2);
         m.SetInput(0,new PlayerInput(1,0));
         for(int i=0;i<45&&!P(m,1).GetProperty("stunned").GetBoolean();i++)m.Tick();
-        m.SetInput(0,default);Assert(P(m,1).GetProperty("stunned").GetBoolean(),"Fixture: moving bomb did not hit victim. "+m.StateJson);return m;
+        m.SetInput(0,default);Assert(P(m,1).GetProperty("stunned").GetBoolean(),"Fixture: moving bomb did not hit victim. "+m.StateJson);
+        Assert(P(m,1).GetProperty("airborne").GetBoolean(),"Fixture: bomb impact did not launch victim.");
+        for(int i=0;i<60&&P(m,1).GetProperty("airborne").GetBoolean();i++)m.Tick();
+        Assert(!P(m,1).GetProperty("airborne").GetBoolean()&&P(m,1).GetProperty("stunned").GetBoolean(),"Fixture: impact did not land in finite recovery.");
+        return m;
     }
-    static LocalMatch Grab(){var m=Hit();m.SetInput(2,new PlayerInput(0,0,B:true));Step(m,2);Assert(P(m,2).GetProperty("carrying").GetString()=="player","Fixture: carrier failed to grab victim.");return m;}
+    static LocalMatch Grab(){var m=Hit();ApproachVictim(()=>P(m,1),()=>P(m,2),input=>m.SetInput(2,input),()=>m.Tick());m.SetInput(2,new PlayerInput(0,0,B:true));Step(m,2);Assert(P(m,2).GetProperty("carrying").GetString()=="player","Fixture: carrier failed to grab victim.");return m;}
     static AppearanceFixture SessionGrab()
     {
-        var cells=new CellDef[9,9];for(int x=0;x<9;x++)for(int z=0;z<9;z++)cells[x,z]=CellDef.Floor0;
-        var f=new AppearanceFixture(customStage:new StageLayout {Id="fixture",Width=9,Height=9,Cells=cells,Spawns=[(2,3),(5,3),(5,4)],SoftBlockDensity=0,InitialItems=[(2,3,"remote")]},humans:3);
-        void Input(int seat,float x=0,bool a=false,bool b=false)=>f.Message(seat,JsonSerializer.Serialize(new {x,z=0,a,b,r=false}),"input");
+        var cells=new CellDef[17,13];for(int x=0;x<17;x++)for(int z=0;z<13;z++)cells[x,z]=CellDef.Floor0;
+        var f=new AppearanceFixture(customStage:new StageLayout {Id="fixture",Width=17,Height=13,Cells=cells,Spawns=[(2,3),(5,3),(9,4)],SoftBlockDensity=0,InitialItems=[(2,3,"remote")]},humans:3);
+        void Input(int seat,float x=0,float z=0,bool a=false,bool b=false)=>f.Message(seat,JsonSerializer.Serialize(new {x,z,a,b,r=false}),"input");
         f.Step(64);Input(0,1);f.Step(2);Input(0,a:true);f.Step(2);Input(0,1);
         for(int i=0;i<45&&!f.Snapshot.GetProperty("players")[1].GetProperty("stunned").GetBoolean();i++)f.Step(1);
-        Input(0);Input(2,b:true);f.Step(2);
+        Input(0);
+        Assert(f.Snapshot.GetProperty("players")[1].GetProperty("airborne").GetBoolean(),"Callback fixture did not launch victim.");
+        for(int i=0;i<60&&f.Snapshot.GetProperty("players")[1].GetProperty("airborne").GetBoolean();i++)f.Step(1);
+        ApproachVictim(()=>f.Snapshot.GetProperty("players")[1],()=>f.Snapshot.GetProperty("players")[2],input=>Input(2,input.X,input.Z),()=>f.Step(1));
+        Input(2,b:true);f.Step(2);
         Assert(f.Snapshot.GetProperty("players")[2].GetProperty("carrying").GetString()=="player","Callback fixture did not grab.");
         return f;
+    }
+    static void ApproachVictim(Func<JsonElement> victim,Func<JsonElement> carrier,Action<PlayerInput> input,Action tick)
+    {
+        for(int i=0;i<18;i++)
+        {
+            float dx=F(victim(),"x")-F(carrier(),"x"),dz=F(victim(),"z")-F(carrier(),"z");
+            if(dx*dx+dz*dz<=1.02f*1.02f){input(default);return;}
+            input(new PlayerInput(Math.Clamp(dx*4,-1,1),Math.Clamp(dz*4,-1,1)));tick();
+        }
+        throw new InvalidOperationException("Fixture: ordinary carrier inputs could not approach the landed victim. victim="+victim()+" carrier="+carrier());
     }
     static void Step(LocalMatch m,int ticks){for(int i=0;i<ticks;i++)m.Tick();}
     static JsonElement State(LocalMatch m){using var d=JsonDocument.Parse(m.StateJson!);return d.RootElement.GetProperty("d").Clone();}

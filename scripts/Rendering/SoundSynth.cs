@@ -13,7 +13,8 @@ public static class SoundSynth
     {
         var clips = new Dictionary<string,SynthClip>();
         Add("bomb", .12, (t,n,l) => .75*Chirp(t,190,-850)*Decay(t,26)+.2*n*Decay(t,70));
-        Add("kick", .105, (t,n,l) => .8*Chirp(t,175,-1050)*Decay(t,35)+.35*n*Decay(t,110));
+        Add("kick", .19, (t,n,l) => .65*Chirp(t,150,-450)*Decay(t,24)+.3*n*Decay(t,95)
+            +.28*Note(t,75)*Decay(t,18)+.45*(n-l)*Math.Pow(Math.Sin(Math.PI*t/.19),2)*Decay(t,15));
         Add("lift", .17, (t,n,l) => .65*Chirp(t,330,1600)*Decay(t,14)+.2*l*Decay(t,30));
         for(var charge=1;charge<=3;charge++)
         {

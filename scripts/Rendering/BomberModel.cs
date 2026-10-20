@@ -25,6 +25,7 @@ public partial class BomberModel : Node3D
     private Color _suitColor;
     public int PumpAnimationCount {get;private set;}
     public float WalkPose=>_leftLeg.Rotation.X;
+    public float KickPose=>_kickPulse;
     public float CarryBlend=>_carryBlend;
     public float PumpIntensity=>Mathf.Sin(_pumpPulse*Mathf.Pi);
     public Vector3 BombSocket=>_body.ToGlobal(new Vector3(0,Mathf.Lerp(.25f,1.47f,_carryBlend)+Mathf.Sin(_pumpPulse*Mathf.Pi)*.09f,.08f));
@@ -225,29 +226,33 @@ public partial class BomberModel : Node3D
         float acceleration=Mathf.Clamp((_speed-previousSpeed)/Mathf.Max(dt,.001f),-3,3);
         _carryBlend=Mathf.MoveToward(_carryBlend,_carrying?1:0,dt*6);
         _pumpPulse=Mathf.MoveToward(_pumpPulse,0,dt*3.6f);_throwPulse=Mathf.MoveToward(_throwPulse,0,dt*4.5f);
-        _kickPulse=Mathf.MoveToward(_kickPulse,0,dt*3.8f);_liftPulse=Mathf.MoveToward(_liftPulse,0,dt*3.2f);
+        _kickPulse=Mathf.MoveToward(_kickPulse,0,dt/.34f);_liftPulse=Mathf.MoveToward(_liftPulse,0,dt*3.2f);
         _deathPulse=Mathf.MoveToward(_deathPulse,0,dt*1.8f);_victoryPulse=Mathf.MoveToward(_victoryPulse,0,dt*.7f);
         float pump=Mathf.Sin(_pumpPulse*Mathf.Pi),toss=Mathf.Sin(_throwPulse*Mathf.Pi);
-        float kick=Mathf.Sin(Mathf.Sqrt(_kickPulse)*Mathf.Pi*.5f),lift=Mathf.Sin(_liftPulse*Mathf.Pi),death=Mathf.Sin(_deathPulse*Mathf.Pi),victory=Mathf.Sin(_victoryPulse*Mathf.Pi);
+        float kickTime=1-_kickPulse;
+        float kick=_kickPulse<=0?0:kickTime<.15f?-.22f*(kickTime/.15f):kickTime<.4f?Mathf.Lerp(-.22f,1,Mathf.SmoothStep(0,1,(kickTime-.15f)/.25f)):1-Mathf.SmoothStep(0,1,(kickTime-.4f)/.6f);
+        float lift=Mathf.Sin(_liftPulse*Mathf.Pi),death=Mathf.Sin(_deathPulse*Mathf.Pi),victory=Mathf.Sin(_victoryPulse*Mathf.Pi);
         float walk=Mathf.Sin(_walkPhase)*_speed;
         float idle=(1-_speed)*(1-_carryBlend)*(1-death);
         float breath=Mathf.Sin(_time*2.35f)*idle;
         float sway=Mathf.Sin(_time*1.2f)*idle;
         float stepBob=(1-Mathf.Cos(_walkPhase*2))*.014f*_speed;
         _downBlend=Mathf.MoveToward(_downBlend,(_stunned||_heldVictim||_airborne)&&!_ghost?1:0,dt*8);
-        _leftLeg.Rotation=new(walk*.95f,0,0);_rightLeg.Rotation=new(-walk*.95f-kick*1.15f,0,kick*.12f);
+        _leftLeg.Rotation=new(walk*.95f,0,0);_rightLeg.Rotation=new(-walk*.95f*(1-Mathf.Max(kick,0))-kick*1.45f,0,kick*.12f);
         _leftLeg.Position=new(-.16f,.37f+Mathf.Max(0,-walk)*.055f,-walk*.08f);
-        _rightLeg.Position=new(.16f,.37f+Mathf.Max(0,walk)*.055f,walk*.08f);
+        _rightLeg.Position=new(.16f,.37f+Mathf.Max(0,walk)*.055f,walk*.08f+kick*.12f);
         float spread=.265f+_charge*.065f*_carryBlend;
         _leftArm.Position=new(-spread,.68f+_carryBlend*.12f,0);_rightArm.Position=new(spread,.68f+_carryBlend*.12f,0);
         _leftArm.Scale=_rightArm.Scale=new(1,1+_carryBlend*.8f,1);
         float left=Mathf.Lerp(-.1f-walk*.55f+breath*.025f,-2.9f-pump*.18f,_carryBlend)-toss*1.7f-lift*.2f-victory*2.7f;
         float right=Mathf.Lerp(-.14f+walk*.55f-breath*.018f,-2.9f-pump*.18f,_carryBlend)-toss*1.7f-lift*.2f-victory*2.7f;
-        _leftArm.Rotation=new(left,-.07f,Mathf.Lerp(-.48f+breath*.025f,-.12f-_charge*.035f,_carryBlend));
-        _rightArm.Rotation=new(right,.07f,Mathf.Lerp(.50f-breath*.025f,.12f+_charge*.035f,_carryBlend));
+        _leftArm.Rotation=new(left-kick*.35f,-.07f,Mathf.Lerp(-.48f+breath*.025f,-.12f-_charge*.035f,_carryBlend));
+        _rightArm.Rotation=new(right+kick*.4f,.07f,Mathf.Lerp(.50f-breath*.025f,.12f+_charge*.035f,_carryBlend));
         _body.Position=new(sway*.009f,stepBob+breath*.009f-pump*.08f+lift*.04f+victory*.08f-death*.18f+(_ghost?.18f+Mathf.Sin(_time*3)*.08f:0),0);
         _body.Scale=new(1+pump*.06f,1-pump*.09f-death*.18f,1+pump*.06f);
         _body.Rotation=new(_speed*.055f+acceleration*.012f-_carryBlend*_charge*.025f+toss*.12f,-walk*.025f,(_stunned?Mathf.Sin(_time*9)*.22f:0)+death*.48f+walk*.042f+sway*.012f);
+        _body.Position+=new Vector3(0,0,kick*.045f);
+        _body.Rotation+=new Vector3(-kick*.16f,kick*.1f,0);
         _body.Position=_body.Position.Lerp(new Vector3(0,.22f,0),_downBlend);
         _body.Rotation=_body.Rotation.Lerp(new Vector3(_airborne?Mathf.Sin(_time*8)*.3f:0,0,1.35f+(_heldVictim?Mathf.Sin(_time*12)*.045f:0)),_downBlend);
         // Counter the suit's step roll so the big head floats with a soft, attentive lag.

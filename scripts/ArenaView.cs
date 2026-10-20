@@ -149,7 +149,7 @@ public partial class ArenaView : Node3D
             _targets[id]=PositionOf(b);
             string? carrier=b.TryGetProperty("carrierId",out var carriedBy)&&carriedBy.ValueKind==JsonValueKind.String?carriedBy.GetString():null;
             var model=(BombModel)node;
-            if(model.UpdateState((int)F(b,"pumps"),(int)F(b,"level"),b.GetProperty("red").GetBoolean(),b.GetProperty("remote").GetBoolean(),F(b,"fuse"),carrier))
+            if(model.UpdateState((int)F(b,"pumps"),(int)F(b,"level"),b.GetProperty("red").GetBoolean(),b.GetProperty("remote").GetBoolean(),F(b,"fuse"),carrier,(int)F(b,"state")))
             {
                 if(!eventsAvailable)_audio.Pump(model.Charge);
                 if(carrier!=null&&_entities.TryGetValue("p:"+carrier,out var player)&&player is BomberModel bomber)bomber.Pump(model.Charge);
@@ -202,7 +202,7 @@ public partial class ArenaView : Node3D
             Vector3 previous=node.Position;
             node.Position=_playerMotion.TryGetValue(id,out var motion)?motion.Advance(dt):previous.DistanceSquaredTo(target)>16?target:previous.Lerp(target,1-Mathf.Exp(-20*dt));
             if(_facings.TryGetValue(id,out var angle))node.Rotation=new Vector3(0,Mathf.LerpAngle(node.Rotation.Y,angle,1-Mathf.Exp(-18*dt)),0);
-            if(node is BomberModel model)model.Animate(dt,previous.DistanceTo(node.Position));
+            if(node is BomberModel model)model.Animate(dt,new Vector2(node.Position.X-previous.X,node.Position.Z-previous.Z).Length());
         }
         foreach(var (ghost,host) in _ghostHosts)
             if(_entities.TryGetValue(ghost,out var rider)&&_entities.TryGetValue(host,out var living))
@@ -225,7 +225,11 @@ public partial class ArenaView : Node3D
             switch(kind)
             {
                 case "bomb-drop":case "bomb-carry":_audio.Bomb();break;
-                case "kick":_audio.Kick();break;
+                case "kick":
+                    _audio.Kick();CountEffect("kick");
+                    var heading=player!=null&&_entities.TryGetValue("p:"+player,out var kicker)?kicker.Basis.Z:Vector3.Forward;
+                    _effects.AddChild(new KickBurst(_art,heading){Position=PositionOf(e)+Vector3.Up*.25f});break;
+                case "remote-fuse":PowerupMessage(PositionOf(e),"FUSE LIT!",false);CountEffect(kind);break;
                 case "lift":_audio.Lift();break;
                 case "player-grab":_audio.Lift();CountEffect(kind);break;
                 case "player-throw":_audio.Throw();CountEffect(kind);break;
@@ -235,7 +239,7 @@ public partial class ArenaView : Node3D
                 case "ghost-detach":_audio.Throw();CountEffect(kind);break;
                 case "knockdown":
                     _audio.Kick();CountEffect(kind);
-                    PowerupMessage(PositionOf(e),reason=="rolling-bomb"?"SLIDING BOMB HIT!":"FALLING BOMB HIT!",false);break;
+                    PowerupMessage(PositionOf(e),reason=="rolling-bomb"?"KICK IMPACT!":"FALLING BOMB HIT!",false);break;
                 case "pump":_audio.Pump((int)F(e,"magnitude"));break;
                 case "throw":_audio.Throw(F(e,"magnitude")/6);break;
                 case "blast":_audio.Blast(F(e,"radius"));break;

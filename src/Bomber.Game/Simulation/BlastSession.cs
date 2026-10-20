@@ -372,8 +372,10 @@ public sealed partial class BlastSession : GameSession
                 BotThink(p, dt);
 
         // Process inputs and apply physics.
+        BeginBodyContacts();
         ProcessInputs(context, dt);
         TickPlayerCarrying(dt);
+        ResolveBodyContacts(dt);
         SynchronizeLatchedGhosts();
         DrownSubmergedEntities();
         TickBombs(context, dt);
@@ -680,10 +682,7 @@ public sealed partial class BlastSession : GameSession
             var nx = input.X / magnitude;
             var nz = input.Z / magnitude;
 
-            b.State = BombState.Rolling;
-            b.LastTouchedById=p.Id;
-            b.VX = nx * BlastBomb.RollSpeed;
-            b.VZ = nz * BlastBomb.RollSpeed;
+            LaunchKickedBomb(b,nx*BlastBomb.RollSpeed,nz*BlastBomb.RollSpeed,p.Id);
             if (_presentedKickContacts.Add((p.Id, b.Id)))
                 PresentBomb("kick", b, p.Id, BlastBomb.RollSpeed);
             break; // one kick per tick
@@ -832,7 +831,7 @@ public sealed partial class BlastSession : GameSession
 
     private void RemoteDetonate(ISessionContext context, BlastPlayer p)
     {
-        var mine = _bombs.Where(b => b.OwnerId == p.Id && b.IsRemote && b.State == BombState.Resting).ToList();
+        var mine = _bombs.Where(b => b.OwnerId == p.Id && b.IsRemote && !b.Exploded && b.State != BombState.Carried).ToList();
         if (mine.Count == 0) return;
         // Detonate the oldest remote bomb.
         ExplodeBomb(context, mine[0]);
@@ -847,7 +846,17 @@ public sealed partial class BlastSession : GameSession
             var b = _bombs[i];
             if (b.Exploded) { _bombs.RemoveAt(i); continue; }
 
-            // Fuse countdown (not while carried or remote).
+            // A remote cannot wait for a command its owner can no longer send. Keep
+            // active owners' deliberate remote semantics, but resume a real fuse for
+            // abandoned bombs rather than leaving an immortal obstacle in a corner.
+            if(b.IsRemote && (b.OwnerId is null || !_players.TryGetValue(b.OwnerId,out var remoteOwner) ||
+                !remoteOwner.Alive || remoteOwner.Ghost || !remoteOwner.HasRemote || !context.IsConnected(remoteOwner.Id)))
+            {
+                b.IsRemote=false;
+                PresentBomb("remote-fuse",b,b.OwnerId,b.FuseTimer);
+            }
+
+            // Fuse countdown (not while carried or commandable remote).
             if (b.State != BombState.Carried && !b.IsRemote)
             {
                 b.FuseTimer -= dt;
@@ -869,10 +878,12 @@ public sealed partial class BlastSession : GameSession
 
     private float BombY(BlastBomb bomb) => bomb.State == BombState.Flying ? bomb.FlyY :
         bomb.State == BombState.Carried ? (_players.Values.FirstOrDefault(p => p.CarryingBombId == bomb.Id)?.Y ?? bomb.Tier) + .9f :
-        _stage.SurfaceAt(bomb.X, bomb.Z);
+        _stage.SurfaceAt(bomb.X, bomb.Z) + (bomb.State==BombState.Rolling && bomb.KickHopRemaining>0
+            ? BlastBomb.KickHopHeight*MathF.Sin(MathF.PI*bomb.KickHopRemaining/BlastBomb.KickHopSeconds) : 0);
 
     private void TickRollingBomb(ISessionContext context, BlastBomb b, float dt)
     {
+        b.KickHopRemaining=Math.Max(0,b.KickHopRemaining-dt);
         // Sweep the whole circle in short steps so faster kicks cannot tunnel through
         // terrain, players, or other bombs between authoritative ticks.
         var steps = Math.Max(1, (int)MathF.Ceiling(MathF.Sqrt(b.VX*b.VX+b.VZ*b.VZ)*dt/.1f));
@@ -904,6 +915,9 @@ public sealed partial class BlastSession : GameSession
             if (Dist2(nx, nz, p.X, p.Z) < (PlayerRadius + BlastBomb.Radius) * (PlayerRadius + BlastBomb.Radius))
             {
                 KnockDown(p,1.5f,"rolling-bomb",b.Id,b.LastTouchedById??b.OwnerId);
+                var speed=MathF.Sqrt(b.VX*b.VX+b.VZ*b.VZ);
+                ApplyPlayerImpulse(p,b.VX/speed*BlastBomb.ImpactHorizontalSpeed,
+                    b.VZ/speed*BlastBomb.ImpactHorizontalSpeed,BlastBomb.ImpactUpSpeed);
                 b.X=nx;b.Z=nz;b.CellX=cx;b.CellZ=cz;
                 b.State = BombState.Resting;
                 b.VX = 0; b.VZ = 0;
@@ -916,10 +930,8 @@ public sealed partial class BlastSession : GameSession
             if (other == b || other.State != BombState.Resting || Math.Abs(BombY(other) - _stage.SurfaceAt(nx, nz)) > .6f) continue;
             if (Dist2(nx, nz, other.X, other.Z) < (BlastBomb.Radius * 2 + 0.05f) * (BlastBomb.Radius * 2 + 0.05f))
             {
-                // Billiard: the hit bomb slides in the same direction; this bomb stops.
-                other.State = BombState.Rolling;
-                other.LastTouchedById=b.LastTouchedById;
-                other.VX = b.VX; other.VZ = b.VZ;
+                // Transfer the shot, including its brief launch hop, without resetting either fuse.
+                LaunchKickedBomb(other,b.VX,b.VZ,b.LastTouchedById);
                 b.State = BombState.Resting;
                 b.VX = 0; b.VZ = 0;
                 return;

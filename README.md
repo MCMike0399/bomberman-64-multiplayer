@@ -104,13 +104,17 @@ Tap the bomb button to place a bomb **in front** of the player. Hold it for a qu
 
 ## Knockdowns and player grabs
 
-A sliding bomb knocks down a player it approaches; following your own outgoing kick no longer hits you from behind. Falling bombs can also knock players down. A visible hit message, stars and **DOWN / HELD** status explain what happened.
+A kicked bomb shoots ahead at 12 cells/second with a short hop, a leg follow-through, speed streaks and a sharp impact cue. Contact knocks an opponent upward and away before a finite landing recovery; following your own outgoing kick no longer hits you from behind. Falling bombs can also knock players down. A visible hit message, stars and **DOWN / HELD** status explain what happened.
 
 Alternate movement directions or tap the action buttons to recover faster. Holding one direction/button does not repeatedly count as effort. Hold **carry** near a downed opponent to pick them up, walk with them, and release carry to throw them through an arc. The victim can wiggle/tap to escape; an inactive hold also times out. Both controller and keyboard inputs use the same authoritative recovery rules, and bots recover through those inputs too. Disconnects release held players safely.
 
 These mechanics run in the shared local/server simulation. Rebuild the independent game server along with the client for the new state and presentation events. [Rules, failure reproductions and input fixes](docs/iteration8-gameplay-input.md).
 
-[Iteration-nine movement, bombs, traversal and AI fixes](docs/iteration9-gameplay.md).
+Players now meet through height-aware body contacts: opposing runners block, glancing contact preserves sideways movement, and idle opponents yield slowly instead of becoming an immovable barrier. Movement uses a 100 ms snapshot buffer to absorb uneven arrivals without changing input speed or direction. This adds roughly 33 ms of visual delay over the previous interpolation; it does not predict network movement.
+
+Normal and pumped bombs keep their timed fuse when stopped in a corner. Active remote bombs still wait for the owner’s command, including while moving. If the owner leaves, dies or loses the ability to detonate, the abandoned remote resumes its remaining ordinary fuse. [Kick research, timing policy and regression evidence](docs/iteration10-kick-research.md).
+
+[Earlier movement, bombs, traversal and AI fixes](docs/iteration9-gameplay.md).
 
 ## Battle progression
 
@@ -194,7 +198,7 @@ python3 tools/playtest/run.py --scenario presentation
 
 ## Screenshots
 
-The gallery shows actual captures from the exported macOS app's windowed regression run, with final spherical-head closeups and Results captures updated afterward, including the detected Switch 2 USB device in the controller tester. Detection does not claim new physical button testing.
+The gallery contains real exported-app captures. Temple, kick, body-contact and grapple images come from the v0.10.0 windowed regression; unchanged menus, head profiles and other scenes retain their verified earlier captures. The controller tester shows device detection, not new physical button testing.
 
 ![Sunken Temple battle](docs/images/temple-battle.png)
 
@@ -225,6 +229,12 @@ Model inspection uses the actual in-game character with a temporary close-up cam
 ![Carrying a downed opponent](docs/images/player-grab.png)
 
 ![Player throw arc](docs/images/player-throw.png)
+
+![Contact kick launching a bomb](docs/images/kick-launch.png)
+
+![Kicked bomb knocking an opponent upward](docs/images/kick-impact.png)
+
+![Player bodies meeting on the temple walkway](docs/images/body-contact.png)
 
 ![Falling from an upper terrace](docs/images/ledge-fall.png)
 
