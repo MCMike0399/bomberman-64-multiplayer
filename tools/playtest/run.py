@@ -25,13 +25,14 @@ def healthy(origin):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--scenario', choices=['all', 'menu', 'local-actions', 'ramp', 'network', 'combat', 'results', 'powerup-collect', 'pump-growth', 'hurry-water', 'roster', 'framing', 'fullscreen', 'controllers', 'controller-inventory', 'controller-observe', 'presentation', 'script'], default='all')
+    parser.add_argument('--scenario', choices=['all', 'menu', 'local-actions', 'ramp', 'network', 'combat', 'results', 'powerup-collect', 'pump-growth', 'hurry-water', 'roster', 'framing', 'fullscreen', 'controllers', 'controller-inventory', 'controller-observe', 'presentation', 'model-profile', 'script'], default='all')
     parser.add_argument('--script', type=Path, help='JSON scenario, see temple-walk.json')
     parser.add_argument('--headless', action='store_true', help='Explicitly disable screenshot capture')
     display = parser.add_mutually_exclusive_group()
     display.add_argument('--windowed', action='store_true', help='Use windowed testing (the default)')
     display.add_argument('--fullscreen', action='store_true', help='Explicitly test fullscreen; normal QA stays windowed')
     parser.add_argument('--godot', default=os.environ.get('GODOT', '/Applications/Godot_mono.app/Contents/MacOS/Godot'))
+    parser.add_argument('--app', type=Path, help='Test an exported macOS .app independently of the source project')
     parser.add_argument('--server', default='http://127.0.0.1:18496')
     parser.add_argument('--start-server', action='store_true', help='Start local server if unreachable; stop only the process this runner owns')
     parser.add_argument('--build', action='store_true', help='Build Godot and server projects first')
@@ -68,7 +69,15 @@ def main():
                 if owned_server.poll() is not None or time.monotonic() > deadline:
                     raise RuntimeError('Server startup failed; inspect server.log')
                 time.sleep(.1)
-        command = [args.godot, '--path', str(ROOT), '--max-fps', '30', '--fixed-fps', '30', '--disable-vsync']
+        if args.app:
+            import plistlib
+            app = args.app.resolve()
+            with (app / 'Contents/Info.plist').open('rb') as plist:
+                executable = plistlib.load(plist)['CFBundleExecutable']
+            command = [str(app / 'Contents/MacOS' / executable)]
+        else:
+            command = [args.godot, '--path', str(ROOT)]
+        command += ['--max-fps', '30', '--fixed-fps', '30', '--disable-vsync']
         if windowed:
             command.append('--windowed')
         if args.headless:
@@ -80,7 +89,7 @@ def main():
             command.append('--playtest-file=' + str(args.script.resolve()))
         result['command'] = command
         with (folder / 'runtime.log').open('w') as log:
-            runtime = subprocess.Popen(command, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT)
+            runtime = subprocess.Popen(command, cwd=folder if args.app else ROOT, stdout=log, stderr=subprocess.STDOUT)
             runtime.wait(timeout=args.timeout)
         result['exitCode'] = runtime.returncode
         summary_path = folder / 'summary.json'

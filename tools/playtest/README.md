@@ -51,3 +51,16 @@ QA and debug launches are **windowed by default**. Runner `--fullscreen` explici
 Godot native popup menus have their own window ID. Synthetic role-selection keys must use `Input.ParseInputEvent` with `InputEventKey.WindowId = popup.GetWindowId()`. Sending keys to the main window or calling the popup viewport directly can leave the selected item unchanged. The roster scenario opens the actual role control, navigates with arrow keys in that popup window, then confirms with Enter.
 
 Controller event trials explicitly focus the test window and wait for a stable application-focus state. Do not launch a second Godot editor/export process during those trials. Focus-loss suppression is a product feature; bypassing it would hide input-lifecycle regressions. Keep a persistent server running when overlapping network checks, since an independently owned harness server is stopped when that harness exits.
+
+## Test the standalone macOS app
+
+```bash
+python3 tools/playtest/run.py --app "artifacts/exports/Blast Circuit.app" --scenario all --start-server
+python3 tools/playtest/run.py --app "artifacts/exports/Blast Circuit.app" --scenario fullscreen
+```
+
+`--app` reads the executable name from the bundle plist, omits the source-project `--path`, and launches with its working directory in the evidence folder. This exercises the shipped pack, managed runtime and bundled controller libraries. Windowed remains the default. The roster assertions inspect the actual visible shared 3D models, including their appearance and changing walk pose.
+
+`--scenario model-profile` turns the actual practice player through front/right/back/left using normal movement inputs, checks helmet/torso mesh depth, and captures a temporary inspection camera before restoring the arena view. Native resize tests wait for both window size and input transform to settle; controller trials verify actual window/application focus rather than forcing focus flags.
+
+Mouse automation moves the OS pointer to the target before injecting press/release events. `Input.ParseInputEvent` alone does not move it, so native motion arriving between those events can otherwise cancel a click. Focus recovery uses the real platform activation API, and still fails if the window/application cannot acquire focus.

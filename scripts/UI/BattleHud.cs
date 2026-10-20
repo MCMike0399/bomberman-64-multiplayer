@@ -22,16 +22,26 @@ public partial class BattleHud : Control
     public override void _Ready()
     {
         Theme=ArcadeTheme.Create();MouseFilter=MouseFilterEnum.Ignore;SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-        var band=new Panel {AnchorRight=1,OffsetTop=0,OffsetBottom=117};var bandStyle=ArcadeTheme.Panel(new Color(1,.965f,.86f,.87f),ArcadeTheme.Ink,0,0,0);bandStyle.BorderWidthBottom=3;band.AddThemeStyleboxOverride("panel",bandStyle);band.MouseFilter=MouseFilterEnum.Ignore;AddChild(band);
+        Theme.SetColor("font_outline_color","Label",ArcadeTheme.Ink);
+        Theme.SetConstant("outline_size","Label",3);
+        Theme.SetColor("font_outline_color","Button",ArcadeTheme.Ink);
+        Theme.SetConstant("outline_size","Button",3);
         _strip=new HBoxContainer {AnchorRight=1,OffsetLeft=22,OffsetRight=-22,OffsetTop=7,OffsetBottom=110,Alignment=BoxContainer.AlignmentMode.Begin};_strip.AddThemeConstantOverride("separation",12);AddChild(_strip);
         _phase=new Label {AnchorLeft=.2f,AnchorRight=.8f,OffsetTop=124,OffsetBottom=176,HorizontalAlignment=HorizontalAlignment.Center};_phase.AddThemeFontSizeOverride("font_size",30);_phase.AddThemeColorOverride("font_color",Colors.White);_phase.AddThemeColorOverride("font_outline_color",ArcadeTheme.Ink);_phase.AddThemeConstantOverride("outline_size",8);AddChild(_phase);
-        var footer=new PanelContainer {AnchorTop=1,AnchorBottom=1,AnchorRight=1,OffsetLeft=24,OffsetRight=-24,OffsetTop=-69,OffsetBottom=-15};footer.AddThemeStyleboxOverride("panel",ArcadeTheme.Panel(new Color(1,.965f,.86f,.85f),ArcadeTheme.Ink,0,0,8));AddChild(footer);
+        var footer=new PanelContainer {AnchorTop=1,AnchorBottom=1,AnchorRight=1,OffsetLeft=24,OffsetRight=-24,OffsetTop=-69,OffsetBottom=-15};
+        footer.AddThemeStyleboxOverride("panel",new StyleBoxEmpty {ContentMarginLeft=8,ContentMarginRight=8,ContentMarginTop=8,ContentMarginBottom=8});AddChild(footer);
         var row=ArcadeTheme.Row(footer,20);_connection=ArcadeTheme.Text(row,"LOCAL BATTLE",14);_connection.SizeFlagsHorizontal=SizeFlags.ExpandFill;
         _controls=ArcadeTheme.Text(row,"",13);UpdateControls();ControllerHub.Current.PromptChanged+=UpdateControls;
         _restart=ArcadeTheme.Button(row,"RESET PRACTICE",()=>RestartRequested?.Invoke());_restart.Visible=false;_restart.CustomMinimumSize=new(140,36);_restart.AddThemeFontSizeOverride("font_size",14);
         _restart.FocusMode=FocusModeEnum.None;
         var leave=ArcadeTheme.Button(row,"LEAVE  [ESC]",()=>LeaveRequested?.Invoke());leave.CustomMinimumSize=new(140,36);leave.AddThemeFontSizeOverride("font_size",14);
         leave.FocusMode=FocusModeEnum.None;
+        foreach(var button in new[]{_restart,leave})
+        {
+            button.AddThemeStyleboxOverride("normal",new StyleBoxEmpty());
+            button.AddThemeStyleboxOverride("hover",ArcadeTheme.Panel(new Color(1,1,1,.15f),Colors.White,1,5,8));
+            button.AddThemeStyleboxOverride("pressed",ArcadeTheme.Panel(new Color(0,0,0,.12f),Colors.White,1,5,8));
+        }
     }
     private void UpdateControls()=>_controls.Text=ControllerProfile.Actions(ControllerHub.Current.ActiveFamily,ControllerHub.Current.ActiveKeyboardSeat);
     public override void _ExitTree(){ControllerHub.Current.PromptChanged-=UpdateControls;}
@@ -50,7 +60,7 @@ public partial class BattleHud : Control
             card.Portrait.Suit=BlastCircuit.Rendering.ArtMaterials.PlayerColors[Math.Clamp(appearance,0,7)];
             card.Portrait.Eliminated=eliminated;card.Portrait.Ghost=ghost;card.Portrait.QueueRedraw();
             card.Name.Text="P"+(slot+1)+(p.GetProperty("bot").GetBoolean()?" CPU":" "+p.GetProperty("name").GetString());
-            card.Score.Text=ghost?"↻ GHOST":eliminated?"× OUT":"● ALIVE";card.Score.AddThemeColorOverride("font_color",ghost?new Color("177c8c"):eliminated?ArcadeTheme.Red:new Color("22735b"));
+            card.Score.Text=ghost?"↻ GHOST":eliminated?"× OUT":"● ALIVE";card.Score.AddThemeColorOverride("font_color",ghost?new Color("7cd8f1"):eliminated?ArcadeTheme.Red:new Color("74e69f"));
             _medals[slot].Wins=p.GetProperty("wins").GetInt32();
             card.Stats.Text=$"B {p.GetProperty("bombs").GetInt32()}  F {p.GetProperty("fire").GetInt32()}"+(p.GetProperty("red").GetBoolean()?"  P":"")+(p.GetProperty("remote").GetBoolean()?"  R":"")+(p.GetProperty("heart").GetBoolean()?"  ♥":"");
             card.Stats.Modulate=eliminated?new Color(.6f,.6f,.6f):Colors.White;

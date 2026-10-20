@@ -196,8 +196,14 @@ public partial class GameRoot : Node3D
             _elapsed+=delta;
             if(_elapsed>_smokeDuration)
             {
-                if(DisplayServer.GetName()!="headless")GetViewport().GetTexture().GetImage().SavePng($"res://artifacts/{_capture}.png");
-                bool passed=_capture is "menu" or "roster"||SnapshotCount>0;GD.Print($"{(passed?"GODOT_SMOKE_OK":"GODOT_SMOKE_FAILED")} {_capture} snapshots={SnapshotCount}");GetTree().Quit(passed?0:1);return;
+                bool captured=true;
+                if(DisplayServer.GetName()!="headless")
+                {
+                    string folder=ProjectSettings.GlobalizePath(OS.HasFeature("editor")?"res://artifacts":"user://captures");
+                    captured=DirAccess.MakeDirRecursiveAbsolute(folder)==Error.Ok
+                        &&GetViewport().GetTexture().GetImage().SavePng(System.IO.Path.Combine(folder,_capture+".png"))==Error.Ok;
+                }
+                bool passed=captured&&(_capture is "menu" or "roster"||SnapshotCount>0);GD.Print($"{(passed?"GODOT_SMOKE_OK":"GODOT_SMOKE_FAILED")} {_capture} snapshots={SnapshotCount}");GetTree().Quit(passed?0:1);return;
             }
         }
         var session=_session;if(session==null)return;

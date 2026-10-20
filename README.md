@@ -6,7 +6,7 @@ The original game supports four simultaneous players. Eight-player support and t
 
 ## Run the game
 
-Install **Godot 4.7.2 .NET** and the **.NET 10 SDK** (10.0.401 was used for verification). The root project pins `Godot.NET.Sdk/4.7.2` and targets `net10.0`. Use matching Godot export templates for desktop exports; a standalone export has not been produced here.
+Install **Godot 4.7.2 .NET** and the **.NET 10 SDK** (10.0.401 was used for verification). The root project pins `Godot.NET.Sdk/4.7.2` and targets `net10.0`. Use matching Godot .NET export templates when building the standalone desktop app.
 
 Both local and online builds currently require the kernel realtime contracts. A clean checkout does not build until that dependency is supplied. The kernel checkout is an external dependency ignored by this game's Git repository. It remains locally at `burbuja-kernel/`. After a fresh checkout, restore the pinned source using your normal Git access (the kernel source is not included in this public repository):
 
@@ -32,7 +32,20 @@ On macOS, the installed editor can also launch it directly:
 
 The game opens fullscreen. **F11** or **Alt+Enter** switches between fullscreen and a window; run `./scripts/client.sh --windowed -- --display-windowed` for a windowed launch.
 
-Choose **LOCAL BATTLE**, then set each of the eight roster slots to **Human**, **CPU**, or **Off** and choose a suit color. The selected character walks on its pedestal using the same articulated model seen in battle. Continue to stage and match rules, choose Easy/Normal/Hard CPU difficulty, then start with **2–8 total participants**. **PRACTICE** lets one player explore the map and rehearse bomb handling without CPU opponents. Six visible training pickups teach bomb capacity, fire, red power, remote detonation and hearts; **RESET PRACTICE** restores the cache. One human can play with up to seven bots. Local play works without a server. Two keyboard seats are available; additional local seats require connected gamepads. With three or more local humans, the first two seats use keyboards and up to six gamepads fill seats 3–8 in connection order. With one or two humans, the corresponding gamepads also work as optional controls.
+Choose **LOCAL BATTLE**, then set each of the eight roster slots to **Human**, **CPU**, or **Off** and choose a suit color. The selected character walks on a shared lit 3D stage using the same articulated model seen in battle. Continue to stage and match rules, choose Easy/Normal/Hard CPU difficulty, then start with **2–8 total participants**. **PRACTICE** lets one player explore the map and rehearse bomb handling without CPU opponents. Six visible training pickups teach bomb capacity, fire, red power, remote detonation and hearts; **RESET PRACTICE** restores the cache. One human can play with up to seven bots. Local play works without a server. Two keyboard seats are available; additional local seats require connected gamepads. With three or more local humans, the first two seats use keyboards and up to six gamepads fill seats 3–8 in connection order. With one or two humans, the corresponding gamepads also work as optional controls.
+
+## macOS app
+
+The Apple Silicon app bundles the game, .NET runtime, original assets, and optional Switch 2 USB backend. It runs independently of the Godot editor and source checkout; local play needs no server. The built app is installed at `~/Applications/Blast Circuit.app` on the development Mac. Open it from Finder; normal play starts fullscreen, and **F11** switches to a window.
+
+To rebuild from source, first install the matching **Godot 4.7.2 .NET export templates**, restore the kernel dependency above, and optionally build the USB adapter. Then run:
+
+```bash
+python3 tools/package-macos.py
+open "artifacts/exports/Blast Circuit.app"
+```
+
+The script creates a project-local ARM64 template from the official Universal 2 template, exports the managed dependency graph, adds controller libraries and notices, and verifies the local signature. It rejects exporter errors even if Godot returns exit code zero. The app has a local ad-hoc signature; it is not notarized for public distribution. App bundles and export templates stay outside Git. [Packaging details and verification](docs/macos-app.md).
 
 ## Play online
 
@@ -81,7 +94,7 @@ The optional adapter is built locally for the Switch 2 Pro controller that Godot
 ./scripts/client.sh
 ```
 
-It downloads checksum-pinned SDL 3.4.18 and libusb 1.0.29, builds inside ignored project directories, and places the runtime libraries in `native/macos/`. Xcode command-line build tools and Python 3 are required. It does not install a system driver. This adapter currently supports **one Switch 2 Pro over USB** at a time; additional players can use Xbox, DualSense, other mapped pads or keyboards. Xbox and DualSense continue through Godot's normal backend. Rebuild/restart the game after installing the adapter. Native libraries and their copied licenses must be included separately when preparing a desktop export; that export packaging has not been verified here.
+It downloads checksum-pinned SDL 3.4.18 and libusb 1.0.29, builds inside ignored project directories, and places the runtime libraries in `native/macos/`. Xcode command-line build tools and Python 3 are required. It does not install a system driver. This adapter currently supports **one Switch 2 Pro over USB** at a time; additional players can use Xbox, DualSense, other mapped pads or keyboards. Xbox and DualSense continue through Godot's normal backend. Rebuild/restart the game after installing the adapter. The macOS packaging script includes these native libraries and their licenses when the adapter is installed locally. The exported app loads them directly from its bundle; physical-input evidence remains separate from device enumeration.
 
 **Switch 2 Bluetooth is not implemented by this adapter.** Wireless software bridges exist, but none was installed or validated in this iteration. [Controller research](docs/controller-research.md) explains the USB issue, positional button labels, wireless distinction and dependency provenance. Detection and synthetic tests are reported separately from physical button observation in [verification](docs/verification.md).
 
@@ -139,7 +152,7 @@ Godot also has a short scene smoke mode:
 /Applications/Godot_mono.app/Contents/MacOS/Godot --headless --path . -- --smoke
 ```
 
-It starts a local match and exits after eight seconds with `GODOT_SMOKE_OK`. `--smoke-tier`, `--smoke-menu`, and `--smoke-online` exercise the second stage, menu, and running server. Add `--smoke-seconds=90` for a longer run. A graphical run with `--smoke` also writes `artifacts/gameplay.png` when that directory exists. These automated checks do not establish controller coverage, internet latency tolerance or final gameplay balance.
+It starts a local match and exits after eight seconds with `GODOT_SMOKE_OK`. `--smoke-tier`, `--smoke-menu`, and `--smoke-online` exercise the second stage, menu, and running server. Add `--smoke-seconds=90` for a longer run. A graphical `--smoke` run writes `artifacts/gameplay.png` in the editor or `user://captures/gameplay.png` in the exported app. Capture failures fail the smoke run. These automated checks do not establish controller coverage, internet latency tolerance or final gameplay balance.
 
 ## Code and dependencies
 
@@ -152,7 +165,9 @@ The game already uses native Metal. The `macOS Metal` export preset declares App
 
 ## Character, UI and effects
 
-The sixth iteration uses original Bomberman 64 footage and Nintendo's booklet as visual references: a broader rounded helmet and flat face opening, cobalt shirt for white Bomber, slim limbs and outward pink boots. Menus use a shared character stage and flat choices; the eight-seat roster, left clock, face/win strip, eliminated portraits, hurry pulses and actual-winner celebration replace the former card-heavy presentation. [Reference study with inspected timestamps](docs/iteration6-research.md).
+The seventh iteration puts the menu into a live 3D theatre: characters share lighting and floor shadows, mode plaques have solid bevels and selection motion, and the camera has restrained parallax. The eight-seat roster uses a green stage with short MAN/COM/OFF controls; the winner celebrates against shaded drifting clouds and gold victory medals. The helmet now has an egg silhouette and an inset face, with a compact pear torso, short relaxed arms and full pink boots. Walking, breathing and head motion are independently phased.
+
+The battle timer, scores and controls float directly over the scene with outlined text and no opaque top/bottom bands. The Pyramid-inspired arena now has a centered lower camera, continuous masonry courses, engraved fascia, dark irregular courtyard cobbles, softer directional shadows, and quieter animated turquoise water. TUNIC and Pokémon BDSP informed the separation of lit tops, shaded sides and readable toy-like forms. [Design study, inspected official images, and skills research](docs/iteration7-design.md); [original-game footage and timestamps](docs/iteration6-research.md).
 
 Small, medium and large blasts have distinct billow counts, growth/fade timing and sound bodies. A full-radius boundary marks the active blast; the longer vapor tail is cosmetic. Water eliminations produce ripples and a splash plume, while accepted actions drive the character's kick, lift, pump and throw reactions.
 
@@ -167,7 +182,7 @@ python3 tools/playtest/run.py --scenario presentation
 
 ## Screenshots
 
-The gallery shows actual captures from the final windowed regression run, including the physical Switch 2 USB device in the controller tester.
+The gallery shows actual captures from the exported macOS app's final windowed regression run, including the detected Switch 2 USB device in the controller tester. Detection does not claim new physical button testing.
 
 ![Sunken Temple battle](docs/images/temple-battle.png)
 
@@ -182,6 +197,12 @@ The gallery shows actual captures from the final windowed regression run, includ
 ![Charged blast](docs/images/blast-large.png)
 
 ![Actual winning character](docs/images/battle-results.png)
+
+Model inspection uses the actual in-game character with a temporary close-up camera:
+
+![Character front](docs/images/model-front.png)
+
+![Character side profile](docs/images/model-side.png)
 
 The game uses original procedural visuals. No original game ROM, Nintendo/Hudson artwork, footage, kernel source, credentials, or playtest traces are distributed here. The adapted simulation retains its upstream MIT notice in `src/Bomber.Game/Simulation/LICENSE`.
 

@@ -10,18 +10,18 @@ public static class ArcadeTheme
     {
         var t = new Theme { DefaultFontSize = 20 };
         // Bundled Godot fallback stays portable across exported platforms.
-        t.SetColor("font_color", "Label", Ink);
+        t.SetColor("font_color", "Label", Cream);
         foreach(var type in new[]{"Button","OptionButton"})
         {
-            t.SetColor("font_color",type,Ink);t.SetColor("font_hover_color",type,Ink);t.SetColor("font_pressed_color",type,Ink);
-            t.SetColor("font_focus_color",type,Ink);t.SetColor("font_hover_pressed_color",type,Ink);t.SetColor("font_disabled_color",type,new Color("697486"));
-            t.SetStylebox("normal",type,Panel(Colors.White,Ink,3));t.SetStylebox("hover",type,Panel(Gold.Lightened(.35f),Ink,3));
-            t.SetStylebox("pressed",type,Panel(Gold,Ink,3));t.SetStylebox("focus",type,Panel(new Color(0,0,0,0),Pink,4));
+            t.SetColor("font_color",type,Cream);t.SetColor("font_hover_color",type,Colors.White);t.SetColor("font_pressed_color",type,Colors.White);
+            t.SetColor("font_focus_color",type,Colors.White);t.SetColor("font_hover_pressed_color",type,Colors.White);t.SetColor("font_disabled_color",type,new Color("697486"));
+            t.SetStylebox("normal",type,Panel(new Color("283e83"),new Color("7189c7"),3));t.SetStylebox("hover",type,Panel(new Color("415ba9"),Gold,3));
+            t.SetStylebox("pressed",type,Panel(new Color("192954"),Pink,3));t.SetStylebox("focus",type,Panel(new Color(0,0,0,0),Pink,4));
             t.SetStylebox("disabled",type,Panel(new Color("e1dfd7"),new Color("a3a8ab"),2));
         }
         t.SetStylebox("normal","LineEdit",Panel(Colors.White,Ink,2));t.SetStylebox("focus","LineEdit",Panel(Cream,Ink,3));t.SetColor("font_color","LineEdit",Ink);t.SetColor("font_placeholder_color","LineEdit",new("768299"));t.SetColor("caret_color","LineEdit",Ink);
         t.SetColor("font_color","PopupMenu",Ink);t.SetStylebox("panel","PopupMenu",Panel(Cream,Ink,3));t.SetStylebox("hover","PopupMenu",Panel(Gold,Ink,0));
-        t.SetColor("font_color","CheckButton",Ink);t.SetColor("font_focus_color","CheckButton",Ink);t.SetColor("font_color","SpinBox",Ink);
+        t.SetColor("font_color","CheckButton",Cream);t.SetColor("font_focus_color","CheckButton",Cream);t.SetColor("font_color","SpinBox",Cream);
         return t;
     }
     public static StyleBoxFlat Panel(Color fill,Color? edge=null,int border=3,int radius=3,int margin=16)=>new()
@@ -33,7 +33,7 @@ public static class ArcadeTheme
     };
     public static Label Text(Node parent,string text,int size=20,Color? color=null)
     {
-        var label=new Label {Text=text};label.AddThemeFontSizeOverride("font_size",size);label.AddThemeColorOverride("font_color",color??Ink);parent.AddChild(label);return label;
+        var label=new Label {Text=text};label.AddThemeConstantOverride("outline_size",3);label.AddThemeColorOverride("font_outline_color",Ink);label.AddThemeFontSizeOverride("font_size",size);label.AddThemeColorOverride("font_color",color??Cream);parent.AddChild(label);return label;
     }
     public static Button Button(Node parent,string text,Action action,bool primary=false)
     {

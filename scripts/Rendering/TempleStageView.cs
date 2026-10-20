@@ -44,7 +44,7 @@ public partial class TempleStageView : Node3D
     {
         Width=data.GetProperty("width").GetInt32();Depth=data.GetProperty("height").GetInt32();_cells=data.GetProperty("cells").Clone();
         _stone=_art.Stone();_cobble=_art.Stone(true);
-        var wall=_art.Color(new("aa8850"));var cap=_art.Color(new("e7c987"));
+        var wall=_art.Masonry();var cap=_art.Color(new("e8cc82"));
         _water=new MeshInstance3D {Mesh=new PlaneMesh {Size=new Vector2(160,160),SubdivideWidth=80,SubdivideDepth=80},MaterialOverride=_art.Water(),Position=new Vector3(Width/2f,-.53f,Depth/2f),CastShadow=GeometryInstance3D.ShadowCastingSetting.Off};AddChild(_water);
         bool temple=data.GetProperty("id").GetString()=="sunken-temple";
         for(int z=0;z<Depth;z++)for(int x=0;x<Width;x++)
@@ -63,7 +63,9 @@ public partial class TempleStageView : Node3D
                 {
                     float h=(to-from)*(step+1)/6f;
                     var point=new Vector3(x+.5f+dx*((step+.5f)/6-.5f),from+h/2,z+.5f+dz*((step+.5f)/6-.5f));
-                    Box(this,point,new(dx==0?.99f:1f/6,h,dz==0?.99f:1f/6),cap,.012f);
+                    Box(this,point,new(dx==0?.99f:1f/6,h,dz==0?.99f:1f/6),wall);
+                    // Thin pale treads over darker risers make each broad staircase legible.
+                    Box(this,new(point.X,from+h-.018f,point.Z),new(dx==0?.99f:1f/6,.036f,dz==0?.99f:1f/6),cap,.006f);
                 }
             }
             if(kind==1)
@@ -93,14 +95,20 @@ public partial class TempleStageView : Node3D
     private void Relief(Vector3 point,int dx,int dz)
     {
         var root=new Node3D {Position=point,Rotation=new Vector3(0,Mathf.Atan2(dx,dz),0)};AddChild(root);
-        var dark=_art.Color(new("795d36"));var light=_art.Color(new("dabb74"));
-        Box(root,new(0,.29f,.012f),new(.94f,.075f,.025f),light);
-        Box(root,new(0,-.29f,.012f),new(.94f,.075f,.025f),light);
-        Box(root,new(0,0,.005f),new(.62f,.36f,.018f),dark,.015f);
-        Box(root,new(0,0,.022f),new(.49f,.26f,.025f),light,.015f);
-        Box(root,new(0,0,.04f),new(.3f,.12f,.02f),dark,.01f);
-        Box(root,new(.16f,-.05f,.052f),new(.07f,.23f,.02f),light);
+        var dark=_art.Color(new("745321"));var light=_art.Color(new("d4ad55"));
+        Box(root,new(0,.3f,.012f),new(.99f,.065f,.03f),light);
+        Box(root,new(0,-.3f,.012f),new(.99f,.065f,.03f),light);
+        Box(root,new(0,0,.006f),new(.88f,.4f,.018f),dark);
+        // Squared spiral frieze, built from our own simple strokes rather than copied artwork.
+        Box(root,new(-.36f,0,.023f),new(.055f,.34f,.025f),light);
+        Box(root,new(0,.15f,.023f),new(.75f,.055f,.025f),light);
+        Box(root,new(.35f,.01f,.023f),new(.055f,.32f,.025f),light);
+        Box(root,new(.095f,-.12f,.023f),new(.56f,.055f,.025f),light);
+        Box(root,new(-.16f,-.025f,.023f),new(.055f,.23f,.025f),light);
+        Box(root,new(.02f,.06f,.023f),new(.39f,.055f,.025f),light);
+        Box(root,new(.19f,.005f,.023f),new(.055f,.15f,.025f),light);
     }
+
     private void Pillar(Vector3 p)
     {
         var stone=_art.Color(new("c6a563"));var highlight=_art.Color(new("f0d99c"));
@@ -112,8 +120,8 @@ public partial class TempleStageView : Node3D
     private void Shrine()
     {
         float y=4*HeightScale;
-        var sandstone=_art.Color(new("d5af60"));var gold=_art.Color(new("f2d77f"));var dark=_art.Color(new("6d4f34"));
-        Box(this,new(10.5f,y+.48f,2.5f),new(2.8f,.96f,.82f),sandstone,.12f);
+        var sandstone=_art.Masonry();var gold=_art.Color(new("eac46a"));var dark=_art.Color(new("6d4f27"));
+        Box(this,new(10.5f,y+.48f,2.5f),new(2.8f,.96f,.82f),sandstone,.035f);
         Box(this,new(10.5f,y+.98f,2.5f),new(3.02f,.13f,.96f),gold,.035f);
         Box(this,new(10.5f,y+.58f,2.932f),new(1.8f,.58f,.05f),dark,.05f);
         Box(this,new(10.5f,y+.58f,2.97f),new(1.55f,.42f,.045f),_art.Color(new("e88699"),.44f),.04f);
@@ -121,7 +129,7 @@ public partial class TempleStageView : Node3D
         foreach(float x in new[]{9.14f,11.86f})
         {
             Box(this,new(x,y+.61f,2.9f),new(.2f,1.05f,.23f),gold,.035f);
-            Sphere(this,new(x,y+1.22f,2.9f),new(.23f,.23f,.23f),gold);
+            Box(this,new(x,y+1.13f,2.9f),new(.26f,.12f,.29f),gold,.025f);
         }
     }
     public Node3D CreateCover(int cell)

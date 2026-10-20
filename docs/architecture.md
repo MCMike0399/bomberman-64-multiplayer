@@ -105,11 +105,11 @@ The engine harness checks actual model scale, active pumping pose, accepted inpu
 
 ## Roster and presentation polish
 
-`LocalRoster` validates and serializes eight editable Human/CPU/Off cards. Runtime seats are deliberately ordered humans first, then CPUs; color choices are reordered with them, so disabled or interleaved cards cannot change control bindings. `MatchOptions.PlayerAppearances` is validated and cloned at the authority boundary.
+`LocalRoster` validates and serializes eight editable Human/CPU/Off seats. Runtime seats are deliberately ordered humans first, then CPUs; color choices are reordered with them, so disabled or interleaved seats cannot change control bindings. `MatchOptions.PlayerAppearances` is validated and cloned at the authority boundary.
 
 Online appearance commands contain only an index, `{t:"appearance",d:{index:0}}`. The authority binds changes to the authenticated sender, validates indices 0–7 and sends current choices to joining and reconnecting players. Match snapshots and final scores include appearance independently of slot; this is cosmetic state and does not affect simulation randomness or outcomes.
 
-`CharacterPreview` renders the shared `BomberModel` in isolated miniature worlds. Shared cached meshes/materials keep eight previews inexpensive; changing color reuses the model and its animation state. `BattleCameraRig` fits terrain and standing-character bounds after stage or viewport changes, preserves a perspective view, and adds shake relative to the fitted offset. `DisplayModeController` owns fullscreen shortcuts separately from match input.
+`ArcadeBackdrop` owns a live 3D menu stage. Mode and roster characters use the same world, light and floor, so their shadows and perspective agree. `RosterSelection` retains native focusable controls and exposes diagnostics from those actual visible models. `ArcadeModeButton` keeps native Button semantics while rendering a solid beveled plaque and eased selection response. Menu viewports suspend drawing when hidden. `CharacterPreview` remains for isolated online/winner previews. All scenes reuse `BomberModel`; its cached egg/pear meshes, animations and appearance updates are independent of match simulation. `BattleCameraRig` fits terrain and standing-character bounds after stage or viewport changes, preserves a perspective view, and adds shake relative to the fitted offset. `DisplayModeController` owns fullscreen shortcuts separately from match input.
 
 
 ## Controller input boundary
@@ -130,3 +130,10 @@ Online appearance commands contain only an index, `{t:"appearance",d:{index:0}}`
 `PresentationCursor` baselines the first state, consumes newer sequence numbers once in order, ignores older snapshots, and resets on a new match or reconnect. `ArenaView` owns presentation dispatch, while `ExplosionView`, `ExitEffect` and `BattleAudio` own their visual/audio lifetimes. The new game server is required for complete event cues; older snapshots retain only the older inferred placement/pump/blast/hurry fallback.
 
 Blast visuals use authoritative radius and hazard age, with a visible danger boundary while active and a nonhazardous dissipating tail. Small/medium/large effects differ in billow geometry and timing; dense chains reduce decorative lobes while retaining the boundary. Audio uses cached original PCM, bounded voice starts and local gain. Starting/leaving a match stops old voices. The graphical presentation scenario records actual mixer samples, checks cue deduplication, exercises real actions and verifies effect cleanup; pure audio tests inspect generated clips separately.
+
+
+## macOS packaging
+
+`tools/package-macos.py` derives an ARM64 template from the installed official Universal 2 template, exports the solution and self-contained managed runtime, adds native controller libraries/notices, and applies/verifies a local ad-hoc signature. Exporter log errors are failures even when the process exits zero. `ControllerHub` selects source-tree libraries in the editor and bundle-relative libraries in exported builds. The app harness omits the source path and runs from its evidence directory.
+
+`model-profile` is an inspection scenario: normal inputs rotate the actual authoritative player, and a temporary camera captures four sides of that player's real rendered model. It checks torso/helmet mesh depth, then restores the normal camera. It does not spawn a substitute character or change game state directly.

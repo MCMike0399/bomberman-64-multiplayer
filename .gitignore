@@ -5,6 +5,7 @@
 /artifacts/*
 !/artifacts/.gdignore
 .DS_Store
+__pycache__/
 
 # External kernel checkout; retained locally as a source-build dependency.
 /burbuja-kernel/

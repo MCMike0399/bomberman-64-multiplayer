@@ -7,7 +7,7 @@ using System.Text.Json;
 
 namespace Bomber.Testing;
 
-/// <summary>Runs real game input through GameRoot; never edits simulation or renderer state.</summary>
+/// <summary>Runs real game input through GameRoot; profile inspection uses a temporary camera without editing simulation.</summary>
 public partial class PlaytestDriver : Node
 {
     private GameRoot _root = null!;
@@ -56,6 +56,7 @@ public partial class PlaytestDriver : Node
                 case "controller-inventory": await ControllerInventory(); break;
                 case "controller-observe": await ControllerObserve(); break;
                 case "presentation": await PresentationEffects(); break;
+                case "model-profile": await ModelProfiles(); break;
                 case "local-actions": await LocalActions(); break;
                 case "ramp": await Ramps(); break;
                 case "network": await Network(); break;
@@ -67,7 +68,7 @@ public partial class PlaytestDriver : Node
                 case "roster": await RosterSelection(); break;
                 case "framing": await Framing(); break;
                 case "fullscreen": await Fullscreen(); break;
-                case "all": await Menus(); await ControllerInputs(); await RosterSelection(); await Framing(); await LocalActions(); await Ramps(); await Powerups(); await PumpGrowth(); await PresentationEffects(); await HurryWater(); await Combat(); await Results(); await Network(); break;
+                case "all": await Menus(); await ControllerInputs(); await RosterSelection(); await Framing(); await ModelProfiles(); await LocalActions(); await Ramps(); await Powerups(); await PumpGrowth(); await PresentationEffects(); await HurryWater(); await Combat(); await Results(); await Network(); break;
                 default: throw new ArgumentException("Unknown scenario: "+_scenario);
             }
         }
@@ -106,14 +107,14 @@ public partial class PlaytestDriver : Node
         if(restoreFullscreen){await KeyPress(Key.F11);await WindowMode(Window.ModeEnum.Windowed,"menu temporarily enters windowed resize QA");}
         foreach(var size in new[] {new Vector2I(1280,720),new Vector2I(1280,800),new Vector2I(1024,640)})
         {
-            GetWindow().Size=size;await Frames(6);
+            await ResizeWindow(size);
             await MouseClick("LOCAL BATTLE");
             Check(_root.ScreenName=="Roster",$"mouse local button after resize {size}");
             await MouseClick("BACK");
             Check(_root.ScreenName=="Modes",$"mouse back button after resize {size}");
             await Capture($"menu-resized-{size.X}x{size.Y}");
         }
-        GetWindow().Size=new Vector2I(1280,800);await Frames(3);
+        await ResizeWindow(new Vector2I(1280,800));
         if(restoreFullscreen){await KeyPress(Key.F11);await WindowMode(Window.ModeEnum.Fullscreen,"menu restores fullscreen after resize QA");}
     }
     private async Task KeyPress(Key key,bool alt=false)
@@ -122,6 +123,26 @@ public partial class PlaytestDriver : Node
         await Frames(1);
         Godot.Input.ParseInputEvent(new InputEventKey {Keycode=key,PhysicalKeycode=key,AltPressed=alt,Pressed=false});
         await Frames(3);
+    }
+    private async Task ResizeWindow(Vector2I size)
+    {
+        GetWindow().Size=size;
+        if(_headless){await Frames(6);return;}
+        var wall=Stopwatch.StartNew();double? stableSince=null;
+        var previous=GetViewport().GetScreenTransform();bool stable=false;
+        while(wall.Elapsed.TotalSeconds<4)
+        {
+            await Frames(1);await Task.Delay(20);
+            var transform=GetViewport().GetScreenTransform();
+            if(GetWindow().Size==size&&transform.IsEqualApprox(previous))
+            {
+                stableSince??=wall.Elapsed.TotalSeconds;
+                if(wall.Elapsed.TotalSeconds-stableSince.Value>=.2){stable=true;break;}
+            }
+            else stableSince=null;
+            previous=transform;
+        }
+        Check(stable,"native window size and input transform settle: "+size);
     }
     private Button NamedButton(string name) => _root.FindChild(name,true,false) as Button ?? throw new InvalidOperationException("Button not found: "+name);
     private async Task ActivateNamed(string name)
@@ -197,9 +218,9 @@ public partial class PlaytestDriver : Node
         else Event("display-check-not-applicable",new {reason="headless has no native fullscreen window"});
         foreach(var size in new[] {new Vector2I(1280,720),new Vector2I(1280,800)})
         {
-            GetWindow().Size=size;await Frames(6);await VerifyStages($"{size.X}x{size.Y}");
+            await ResizeWindow(size);await VerifyStages($"{size.X}x{size.Y}");
         }
-        GetWindow().Size=new Vector2I(1280,800);await Frames(6);
+        await ResizeWindow(new Vector2I(1280,800));
         if(restoreFullscreen){await KeyPress(Key.F11);await WindowMode(Window.ModeEnum.Fullscreen,"camera restores fullscreen after aspect QA");}
     }
     private void CheckFraming(string stage,Vector2I window)
@@ -234,7 +255,8 @@ public partial class PlaytestDriver : Node
         Check(Roster.GetProperty("humans").GetInt32()==2&&Roster.GetProperty("cpu").GetInt32()==2,"mixed roster supports gaps without losing counts");
         await ActivateNamed("Slot0Appearance");
         Check(Roster.GetProperty("slots")[0].GetProperty("appearance").GetInt32()==6,"real appearance button changes selected suit");
-        Check(Roster.GetProperty("slots")[0].GetProperty("previewAppearance").GetInt32()==6,"3D preview uses chosen appearance");
+        Check(Roster.GetProperty("slots")[0].GetProperty("previewAppearance").GetInt32()==6,"visible shared-stage model uses chosen appearance");
+        Check(Roster.GetProperty("sharedStage").GetBoolean()&&Roster.GetProperty("slots")[0].GetProperty("previewVisible").GetBoolean(),"roster diagnostics refer to visible shared-stage characters");
         var before=Roster.GetProperty("slots")[0].GetProperty("walkPose").GetSingle();await Frames(5);
         var after=Roster.GetProperty("slots")[0].GetProperty("walkPose").GetSingle();
         Check(Math.Abs(after-before)>.03f,"selected 3D character actually changes walking pose");
@@ -278,7 +300,12 @@ public partial class PlaytestDriver : Node
     }
     private async Task MouseClick(string label)
     {
+        await ControllerFocusReady();
         var target=FindButton(label);
+        // ParseInputEvent does not move the OS pointer. Pending native mouse-motion
+        // events could otherwise cancel the synthetic press during the next frame.
+        target.GetViewport().WarpMouse(target.GetGlobalTransformWithCanvas()*(target.Size/2));
+        await Frames(2);await Task.Delay(40);
         // Godot's documented canvas-local -> screen transform includes stretch and window placement.
         var center=target.GetViewport().GetScreenTransform()*target.GetGlobalTransformWithCanvas()*(target.Size/2);
         Event("mouse-click",new {label,x=center.X,y=center.Y,windowWidth=GetWindow().Size.X,windowHeight=GetWindow().Size.Y});

@@ -8,8 +8,8 @@ Apple says Game Mode requires Apple Silicon, macOS 14 or newer and native fullsc
 
 Normal play still opens fullscreen. Run `./scripts/debug.sh` or the Python harness for windowed testing. `--fullscreen` opts a harness run into fullscreen; the dedicated `--scenario fullscreen` also explicitly requests it.
 
-The installed editor is classified as a developer tool. Running this project through that editor executable does not establish that macOS recognizes the game as its own eligible app. The declaration applies to the game's exported `.app` bundle. Matching Godot .NET export templates are required for that export; native Switch 2 libraries and upstream notices must also be packaged separately. See [Godot's macOS export guide](https://docs.godotengine.org/en/4.7/tutorials/export/exporting_for_macos.html).
+The installed editor is classified as a developer tool. Running this project through that editor executable does not establish that macOS recognizes the game as its own eligible app. The declaration applies to the game's exported `.app` bundle. Iteration seven now produces and tests that standalone app, including the native Switch 2 libraries and upstream notices. See [packaging](macos-app.md) and [Godot's macOS export guide](https://docs.godotengine.org/en/4.7/tutorials/export/exporting_for_macos.html).
 
-Configuration checks verified the Metal setting, native export platform, Games category and parseable plist containing the documented opt-in. They do not establish OS activation, increased FPS, lower latency, notarization or a production-ready exported bundle.
+Configuration and bundle checks verify the Metal setting, native export platform, Games category and parseable plist containing the documented opt-in. The exported app also passes actual gameplay tests. These do not establish OS activation, increased FPS, lower latency or notarization.
 
-Exporter preflight loaded this preset and, after enabling the required ARM64 ASTC texture import, reported only the missing `4.7.2.stable.mono/macos.zip` export template. No standalone app was produced.
+Historical iteration-five preflight was blocked by missing templates. Iteration seven installed the verified matching .NET template, prepared an ARM64 variant, added the required C# solution and exported the self-contained app.

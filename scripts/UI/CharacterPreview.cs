@@ -17,6 +17,7 @@ public partial class CharacterPreview : SubViewportContainer
     public bool Celebrating {get;private set;}
     public bool Selected {get;set;}
     public bool EnabledSeat {get;set;}=true;
+    public bool Platform {get;set;}=true;
     public double AnimationTime=>_clock;
     public int Appearance=>_appearance;
     public float WalkPose=>_model?.WalkPose??0;
@@ -36,7 +37,7 @@ public partial class CharacterPreview : SubViewportContainer
         _world.AddChild(new DirectionalLight3D {RotationDegrees=new(-35,-30,0),LightColor=new Color("fff2c9"),LightEnergy=1.3f});
         _world.AddChild(new DirectionalLight3D {RotationDegrees=new(-20,150,0),LightColor=new Color("c2d9ff"),LightEnergy=.45f});
         var camera=_camera=new Camera3D {Position=new(0,1.52f,3.9f),Projection=Camera3D.ProjectionType.Orthogonal,Size=2.05f,Current=true};_world.AddChild(camera);camera.LookAt(new Vector3(0,.86f,0));
-        ArtGeometry.Cylinder(_world,new Vector3(0,-.04f,0),.7f,.07f,Materials.Color(new Color("efc455")));
+        if(Platform)ArtGeometry.Cylinder(_world,new Vector3(0,-.04f,0),.7f,.07f,Materials.Color(new Color("efc455")));
         RebuildModel();
     }
     private void RebuildModel()
@@ -52,7 +53,7 @@ public partial class CharacterPreview : SubViewportContainer
     public override void _Process(double delta)
     {
         if(!IsVisibleInTree()||_model==null)return;
-        _camera.Size=Math.Max(2.05f,1.48f/Math.Max(.2f,Size.X/Math.Max(1,Size.Y)));
+        _camera.Size=Math.Max(2.05f,1.05f/Math.Max(.2f,Size.X/Math.Max(1,Size.Y)));
         _clock+=delta;_untilDraw+=delta;if(_untilDraw<1d/30)return;
         float dt=(float)Math.Min(_untilDraw,.1);_untilDraw=0;
         if(Celebrating){_untilCelebrate-=dt;if(_untilCelebrate<=0){_model.React("victory");_untilCelebrate=1.6f;}}

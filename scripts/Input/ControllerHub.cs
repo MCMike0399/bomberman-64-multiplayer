@@ -36,7 +36,11 @@ public partial class ControllerHub : Node
         Input.JoyConnectionChanged+=OnConnection;
         if(OperatingSystem.IsMacOS()&&DisplayServer.GetName()!="headless")
         {
-            string path=System.Environment.GetEnvironmentVariable("BOMBER_SDL3_LIBRARY")??ProjectSettings.GlobalizePath("res://native/macos/libSDL3.dylib");
+            // An exported app loads real adjacent dylibs, never a source-tree or PCK path.
+            string defaultLibrary=OS.HasFeature("editor")
+                ?ProjectSettings.GlobalizePath("res://native/macos/libSDL3.dylib")
+                :Path.GetFullPath(Path.Combine(OS.GetExecutablePath().GetBaseDir(),"../Frameworks/Controllers/libSDL3.dylib"));
+            string path=System.Environment.GetEnvironmentVariable("BOMBER_SDL3_LIBRARY")??defaultLibrary;
             if(File.Exists(path))
             {
                 _native=SdlGamepadBackend.TryCreate(out var error,path);

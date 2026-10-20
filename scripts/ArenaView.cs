@@ -46,16 +46,17 @@ public partial class ArenaView : Node3D
         var environment=new Godot.Environment
         {
             BackgroundMode=Godot.Environment.BGMode.Color,BackgroundColor=new Color("7ed4e4"),
-            AmbientLightSource=Godot.Environment.AmbientSource.Color,AmbientLightColor=new Color("b9cde8"),AmbientLightEnergy=.52f,
+            AmbientLightSource=Godot.Environment.AmbientSource.Color,AmbientLightColor=new Color("adc5e4"),AmbientLightEnergy=.46f,
             TonemapMode=Godot.Environment.ToneMapper.Filmic,ReflectedLightSource=Godot.Environment.ReflectionSource.Disabled,
-            SsaoEnabled=true,SsaoRadius=1.1f,SsaoIntensity=1.25f,SsaoPower=1.15f,
-            GlowEnabled=true,GlowIntensity=.18f,GlowBloom=0,
-            FogEnabled=true,FogLightColor=new Color("89cbd8"),FogDensity=.0015f
+            SsaoEnabled=true,SsaoRadius=.85f,SsaoIntensity=1.5f,SsaoPower=1.2f,
+            GlowEnabled=true,GlowIntensity=.25f,GlowBloom=0,
+            AdjustmentEnabled=true,AdjustmentContrast=1.06f,AdjustmentSaturation=1.04f,
+            FogEnabled=true,FogLightColor=new Color("89cbd8"),FogDensity=.001f
         };
         AddChild(new WorldEnvironment {Environment=environment});
-        var sun=new DirectionalLight3D {RotationDegrees=new(-52,-27,0),LightColor=new Color("fff0d2"),LightEnergy=1.15f,ShadowEnabled=true,
-            DirectionalShadowMaxDistance=65,ShadowBias=.025f,ShadowNormalBias=1.2f,LightAngularDistance=.8f};AddChild(sun);
-        AddChild(new DirectionalLight3D {RotationDegrees=new(-25,135,0),LightColor=new Color("b8dcf0"),LightEnergy=.22f});
+        var sun=new DirectionalLight3D {RotationDegrees=new(-48,-30,0),LightColor=new Color("ffe6ba"),LightEnergy=1.1f,ShadowEnabled=true,
+            DirectionalShadowMaxDistance=65,ShadowBias=.025f,ShadowNormalBias=.8f,LightAngularDistance=1.5f};AddChild(sun);
+        AddChild(new DirectionalLight3D {RotationDegrees=new(-25,135,0),LightColor=new Color("a1cff5"),LightEnergy=.26f});
         _camera=new Camera3D {Projection=Camera3D.ProjectionType.Perspective,Fov=36,Near=.1f,Far=180,Current=true};AddChild(_camera);
         _cameraRig=new BattleCameraRig(_camera);
         GetViewport().SizeChanged+=_cameraRig.Fit;

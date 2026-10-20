@@ -52,7 +52,7 @@ public partial class PlaytestDriver
     {
         if(_headless)return;
         GetWindow().GrabFocus();
-        var wall=System.Diagnostics.Stopwatch.StartNew();double? stableSince=null;bool stable=false;
+        var wall=System.Diagnostics.Stopwatch.StartNew();double? stableSince=null;bool stable=false;double nextActivation=0;
         while(wall.Elapsed.TotalSeconds<4)
         {
             if(GetWindow().HasFocus()&&ControllerHub.Current.HasApplicationFocus)
@@ -60,9 +60,20 @@ public partial class PlaytestDriver
                 stableSince??=wall.Elapsed.TotalSeconds;
                 if(wall.Elapsed.TotalSeconds-stableSince.Value>=.15){stable=true;break;}
             }
-            else stableSince=null;
+            else
+            {
+                stableSince=null;
+                // macOS may finish a native resize after the initial activation request.
+                // Re-request actual OS activation; never synthesize application-focus flags.
+                if(wall.Elapsed.TotalSeconds>=nextActivation)
+                {
+                    DisplayServer.WindowMoveToForeground(GetWindow().GetWindowId());
+                    nextActivation=wall.Elapsed.TotalSeconds+.35;
+                }
+            }
             await Frames(1);await Task.Delay(20);
         }
+        Event("native-input-focus",new {stable,window=GetWindow().HasFocus(),application=ControllerHub.Current.HasApplicationFocus});
         Check(stable,"controller event trial has stable real window/application focus");
     }
     private async Task ControllerObserve()
@@ -125,12 +136,17 @@ public partial class PlaytestDriver
     }
     private async Task ControllerBombEvents(GamepadDevice pad)
     {
+        await ControllerFocusReady();
         CtlReleaseAll();ControllerHub.Current.OverrideDevicesForPlaytest([pad]);CtlButton(pad.RuntimeId,JoyButton.A,true);
         _root.StartLocal(new SessionSettings(Stage:"rock-garden",Bots:0),1,practice:true);
         await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"held-confirm trial reaches fight",150);
         Check(State.GetProperty("bombs").GetArrayLength()==0,pad.Name+": held confirm cannot become gameplay bomb");
         CtlButton(pad.RuntimeId,JoyButton.A,false);await Frames(4);
-        CtlAxis(pad.RuntimeId,JoyAxis.LeftX,.3f);Check(PlayerControls.Read(0,1).X>.99f,"gameplay deadzone accepts .3 at unit speed");CtlAxis(pad.RuntimeId,JoyAxis.LeftX,0);
+        await ControllerFocusReady();
+        CtlAxis(pad.RuntimeId,JoyAxis.LeftX,.3f);
+        var deadzoneIntent=PlayerControls.Read(0,1);
+        Event("controller-deadzone-probe",new {pad=pad.Name,windowFocus=GetWindow().HasFocus(),applicationFocus=ControllerHub.Current.HasApplicationFocus,intent=deadzoneIntent});
+        Check(deadzoneIntent.X>.99f,"gameplay deadzone accepts .3 at unit speed");CtlAxis(pad.RuntimeId,JoyAxis.LeftX,0);
         CtlButton(pad.RuntimeId,JoyButton.DpadRight,true);Check(PlayerControls.Read(0,1).X>.99f,"D-pad provides gameplay movement");CtlButton(pad.RuntimeId,JoyButton.DpadRight,false);
         foreach(var button in new[]{JoyButton.B,JoyButton.RightShoulder})
         {CtlButton(pad.RuntimeId,button,true);Check(PlayerControls.Read(0,1).R,"remote alias reaches command: "+button);CtlButton(pad.RuntimeId,button,false);_ = PlayerControls.Read(0,1);}

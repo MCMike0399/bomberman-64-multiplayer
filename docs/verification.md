@@ -1,4 +1,26 @@
-# Verified iteration six — 2026-10-20
+# Verified iteration seven — 2026-10-20
+
+| Check | Result |
+|---|---|
+| Managed build/export | Zero warnings/errors; self-contained ARM64 app |
+| Exported app, windowed full suite | **330 assertions, 66 captures**, zero runtime errors; 3 capture fallbacks |
+| Exported app, fullscreen controls | 7 assertions, 2 captures; normal fullscreen launch and F11/Alt+Enter verified |
+| Client contracts/session checks | 86 passed |
+| Independent real network smoke | All 2–8 human matches and one human + seven server bots passed (42.8 seconds) |
+| Bundle validation | Strict recursive signature check and plist validation passed |
+
+The final full run is `20261020T153937.985698Z-all`, 37.031 seconds locally. Fullscreen is `20261020T152500.279221Z-fullscreen`, 4.989 seconds. These are local run durations, not frame-rate or performance guarantees. Both launch the exported executable without a source-project path, from an independent evidence directory. Graphical output identifies native Metal on Apple M5 Pro.
+
+The full suite exercises the live 3D menu, actual shared-stage roster models, mouse/controller navigation, multiple window aspects, appearance transfer, traversal, powerups, bomb actions, blast/audio effects, flooding, combat, results and real networking. The new profile scenario captures the actual in-game character from four directions using authoritative movement inputs, with a temporary close-up camera. Mesh checks guard against a flattened helmet/torso; visual inspection checked the curved crown/chin and preserved front face.
+
+Early packaged runs exposed export and automation issues that are fixed: Godot returned success while reporting missing C# solution errors, and fast harness frames could race native window resize/focus. Packaging now rejects logged export errors and requires the game assembly. The harness waits for stable native window size/input transforms, re-requests actual OS activation when needed, and rechecks real focus before input trials. Synthetic mouse events do not move the OS pointer; it now warps the real pointer onto the control before clicking, preventing pending native motion from cancelling the test press. It does not bypass production focus gates or weaken gameplay assertions. Earlier failing evidence remains in ignored artifacts.
+
+The bundle includes its .NET runtime and optional SDL/libusb controller libraries with notices. The controller tester detected the Switch 2 adapter from the bundle; this is not a new claim of observed physical buttons. The existing physical USB evidence remains in the iteration-five section. Native Bluetooth support is unchanged.
+
+The README gallery was refreshed from that full app run. Exported quick-smoke screenshots go to writable `user://captures`, and capture errors fail the smoke run. A separate macOS Launch Services smoke verified gameplay (115 snapshots) and a saved screenshot with zero stderr output. The installed bundle is checked against the final export. Source and documentation are public; app/template binaries, private kernel source, downloaded references and raw test traces remain ignored. The app uses a local ad-hoc signature and is not notarized. Game Mode's plist opt-in is present, but OS activation and performance benefits remain unmeasured. [Packaging and reproduction](macos-app.md), [design research](iteration7-design.md).
+
+## Iteration six baseline — 2026-10-20
+
 
 | Check | Result |
 |---|---|

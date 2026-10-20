@@ -32,8 +32,8 @@ public sealed class BattleCameraRig(Camera3D camera)
         if(_bounds.Count==0)return;
         var viewport=camera.GetViewport().GetVisibleRect().Size;
         if(viewport.X<=0||viewport.Y<=0)return;
-        var direction=new Vector3(.075f,.735f,.674f).Normalized();
-        // Slight yaw preserves the familiar temple orientation; the higher angle reveals routes behind cover.
+        var direction=new Vector3(0,.64f,.768f).Normalized();
+        // Centered frontal view keeps the broad stepped silhouette and visible vertical risers.
         bool Place(float distance)
         {
             camera.Position=_center+direction*distance;camera.LookAt(_center);
