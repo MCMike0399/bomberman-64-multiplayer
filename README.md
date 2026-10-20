@@ -133,3 +133,8 @@ Iteration-three visual checks:
 ![A fully pumped bomb held overhead](docs/images/bomb-charge.png)
 
 ![Pyramid-inspired lower courtyard flooding](docs/images/rising-water.png)
+
+
+## License
+
+The game is licensed under the [MIT License](LICENSE), copyright 2026 MCMike0399. The adapted simulation retains its upstream MIT notice in `src/Bomber.Game/Simulation/LICENSE`. The separately supplied kernel dependency and reference media are not bundled or relicensed by this repository.
