@@ -13,6 +13,24 @@ ROOT = Path(__file__).resolve().parents[2]
 REVISION = 'b0758339984bbeead1b3d1236f31e980aaa5f20e'
 
 
+def failure_category(stderr):
+    """Expose useful diagnostics without reflecting Git output or private origins."""
+    message = stderr.decode(errors='replace').lower() if isinstance(stderr, bytes) else stderr.lower()
+    categories = [
+        (('invalid format', 'error in libcrypto'), 'SSH private-key format was rejected'),
+        (('permission denied (publickey)',), 'SSH public-key authentication was rejected'),
+        (('host key verification failed', 'host identification has changed', 'host key is known'), 'SSH host-key verification failed'),
+        (('could not resolve hostname', 'could not resolve host'), 'GitHub DNS resolution failed'),
+        (('connection refused', 'connection timed out', 'network is unreachable'), 'SSH network connection failed'),
+        (('not our ref', "couldn't find remote ref"), 'Pinned revision is unavailable'),
+        (('repository not found', 'could not read from remote repository'), 'Repository access was rejected'),
+    ]
+    for markers, label in categories:
+        if any(marker in message for marker in markers):
+            return label
+    return 'Git operation failed without a recognized safe diagnostic'
+
+
 def main():
     repository = os.environ.get('KERNEL_REPOSITORY', '')
     token = os.environ.get('KERNEL_READ_TOKEN', '')
@@ -23,7 +41,7 @@ def main():
     if destination.exists():
         raise SystemExit('CI requires a clean workspace: burbuja-kernel already exists; refusing to overwrite it.')
     with tempfile.TemporaryDirectory(prefix='blast-git-auth-') as temporary:
-        environment = dict(os.environ, GIT_TERMINAL_PROMPT='0')
+        environment = dict(os.environ, GIT_TERMINAL_PROMPT='0', GIT_CONFIG_NOSYSTEM='1', GIT_CONFIG_GLOBAL=os.devnull)
         if deploy_key:
             key = Path(temporary) / 'deploy-key'
             key.write_text(deploy_key.rstrip() + '\n')
@@ -38,7 +56,7 @@ def main():
             hosts = Path(temporary) / 'known_hosts'
             hosts.write_text(''.join('github.com ' + item + '\n' for item in host_keys))
             environment['GIT_SSH_COMMAND'] = shlex.join([
-                'ssh', '-i', str(key), '-o', 'IdentitiesOnly=yes', '-o', 'BatchMode=yes',
+                'ssh', '-F', os.devnull, '-i', str(key), '-o', 'IdentitiesOnly=yes', '-o', 'BatchMode=yes',
                 '-o', 'StrictHostKeyChecking=yes', '-o', 'UserKnownHostsFile=' + str(hosts),
             ])
             origin = 'git@github.com:' + repository + '.git'
@@ -61,7 +79,8 @@ def main():
                 raise SystemExit('Pinned kernel fetch timed out; verify network access to GitHub.') from None
             if result.returncode:
                 # Git errors can contain the private origin. Never echo captured output.
-                raise SystemExit('Pinned kernel fetch failed; verify repository access and the pinned revision.')
+                raise SystemExit('Pinned kernel fetch failed: ' + failure_category(result.stderr)
+                                 + f' (exit {result.returncode}). Verify the scoped deploy key and pinned revision.')
     actual = subprocess.check_output(['git', '-C', str(destination), 'rev-parse', 'HEAD'], text=True).strip()
     if actual != REVISION:
         raise SystemExit('Kernel checkout revision mismatch.')

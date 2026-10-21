@@ -79,6 +79,17 @@ class PublicationBoundaryTests(unittest.TestCase):
 
 
 class CredentialBoundaryTests(unittest.TestCase):
+    def test_safe_failure_categories_never_reflect_private_diagnostics(self):
+        examples = [(b'git@private.example: Permission denied (publickey). secret-owner/repo', 'authentication'),
+                    (b'Load key /secret/key: error in libcrypto; secret-owner/repo', 'format'),
+                    (b'PRIVATE-SECRET unknown diagnostic secret-owner/repo', 'recognized safe diagnostic')]
+        for message, expected in examples:
+            with self.subTest(message=message):
+                result = bootstrap.failure_category(message)
+                self.assertIn(expected, result)
+                self.assertNotIn('secret', result.lower())
+                self.assertNotIn('private.example', result)
+
     def test_missing_credentials_fail_before_running_git(self):
         with patch.dict(os.environ, {}, clear=True), patch.object(bootstrap.subprocess, 'run') as run:
             with self.assertRaises(SystemExit):
@@ -95,6 +106,9 @@ class CredentialBoundaryTests(unittest.TestCase):
                 if command[1] == 'init':
                     (root / 'burbuja-kernel').mkdir()
                 ssh = shlex.split(kwargs['env']['GIT_SSH_COMMAND'])
+                self.assertEqual(os.devnull, ssh[ssh.index('-F') + 1])
+                self.assertEqual(os.devnull, kwargs['env']['GIT_CONFIG_GLOBAL'])
+                self.assertEqual('1', kwargs['env']['GIT_CONFIG_NOSYSTEM'])
                 key = Path(ssh[ssh.index('-i') + 1])
                 self.assertEqual('private-key-material\n', key.read_text())
                 self.assertEqual(0o600, key.stat().st_mode & 0o777)
