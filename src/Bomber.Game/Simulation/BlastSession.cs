@@ -194,7 +194,7 @@ public sealed partial class BlastSession : GameSession
             var z = Finite(raw.Z);
             var len = MathF.Sqrt(x * x + z * z);
             if (len > 1f) { x /= len; z /= len; }
-            p.Input = new InputState(x, z, raw.A, raw.B, raw.R);
+            p.Input = new InputState(x, z, raw.A, raw.B, raw.R, raw.Aim);
         }
     }
 
@@ -264,6 +264,7 @@ public sealed partial class BlastSession : GameSession
             ClearRecovery(p);ClearKick(p);
             p.InvincibleTimer = 0;
             p.CarryingBombId = null;
+            ClearThrowAim(p);
             p.CarryFromPrimary=false;p.PrimaryBombCandidateId=null;p.PrimaryHoldTimer=0;
             p.CarryingPlayerId = null;
             p.LatchedToId = null;
@@ -466,6 +467,10 @@ public sealed partial class BlastSession : GameSession
                 Z = p.Input.Z + possessor.Input.Z*.3f,
             };
             if(input.Length>1)input=input with {X=input.X/input.Length,Z=input.Z/input.Length};
+            // Clients preserve stick magnitude for precision aim. With no bomb,
+            // the ignored modifier must retain ordinary full-speed walking.
+            if(input.Aim&&p.CarryingBombId is null&&input.Length>0)
+                input=input with {X=input.X/input.Length,Z=input.Z/input.Length};
 
             // Count down timers.
             if (p.InvincibleTimer > 0) p.InvincibleTimer = Math.Max(0,p.InvincibleTimer-dt);
@@ -491,10 +496,12 @@ public sealed partial class BlastSession : GameSession
 
             if(AdvanceKick(p,dt))continue;
 
+            UpdateThrowAim(p,input,dt);
+
             // Ghost-specific actions.
             if (p.Ghost)
             {
-                if(p.LatchedToId is null)MovePlayer(p, input, dt);
+                if(p.LatchedToId is null&&!p.Aiming)MovePlayer(p, input, dt);
                 // Ghost tries to latch onto a nearby living player.
                 if (_ghostsEnabled && p.LatchedToId is null)
                     TryLatch(p);
@@ -505,11 +512,14 @@ public sealed partial class BlastSession : GameSession
                 continue;
             }
 
-            // Move.
-            if (p.CarryingBombId is null && p.CarryingPlayerId is null)
-                MovePlayer(p, input, dt);
-            else
-                MovePlayerCarrying(p, input, dt); // move with carried object
+            // A planted aim stance exchanges movement for deliberate direction and range.
+            if(!p.Aiming)
+            {
+                if (p.CarryingBombId is null && p.CarryingPlayerId is null)
+                    MovePlayer(p, input, dt);
+                else
+                    MovePlayerCarrying(p, input, dt);
+            }
 
             // R: remote detonate.
             if (rPress && p.HasRemote)
@@ -553,7 +563,7 @@ public sealed partial class BlastSession : GameSession
     private void MovePlayerCarrying(BlastPlayer p, InputState input, float dt)
     {
         ApplyMoveDelta(p, input.X * PlayerSpeed * dt, input.Z * PlayerSpeed * dt,dt);
-        if (input.X * input.X + input.Z * input.Z > 0.01f)
+        if (!p.AimSet && input.X * input.X + input.Z * input.Z > 0.01f)
         {
             p.FacingX = input.X; p.FacingZ = input.Z;
             var len = MathF.Sqrt(p.FacingX * p.FacingX + p.FacingZ * p.FacingZ);
@@ -805,14 +815,16 @@ public sealed partial class BlastSession : GameSession
     private void ThrowBomb(ISessionContext context, BlastPlayer p, InputState input)
     {
         var bomb = _bombs.FirstOrDefault(b => b.Id == p.CarryingBombId);
-        if (bomb is null) { p.CarryingBombId = null; return; }
+        if (bomb is null) { p.CarryingBombId = null; ClearThrowAim(p); return; }
 
         // A released stick still throws decisively clear of the carrier. Pumps
         // project the larger blast farther away, rewarding the setup with space.
-        var speed = BombThrowRules.Speed(input.Length,bomb.Pumps);
-        var velocity = BombThrowRules.Velocity(p.FacingX,p.FacingZ,input.Length,bomb.Pumps);
+        var velocity = p.AimSet ? BombThrowRules.AimedVelocity(p.AimX,p.AimZ,p.AimRange) :
+            BombThrowRules.Velocity(p.FacingX,p.FacingZ,input.Length,bomb.Pumps);
+        var speed = MathF.Sqrt(velocity.X*velocity.X+velocity.Z*velocity.Z);
 
         bomb.State = BombState.Flying;
+        bomb.LandingY=null;
         bomb.LastTouchedById=p.Id;
         bomb.X = p.X;
         bomb.Z = p.Z;
@@ -823,6 +835,7 @@ public sealed partial class BlastSession : GameSession
         bomb.Tier = p.Tier;
 
         p.CarryingBombId = null;
+        ClearThrowAim(p);
         p.CarryFromPrimary = false;
         PresentBomb("throw", bomb, p.Id, speed);
     }
@@ -896,6 +909,13 @@ public sealed partial class BlastSession : GameSession
 
             switch (b.State)
             {
+                case BombState.Resting:
+                    if(b.LandingY is { } support&&support>StaticBombLandingHeight(b.X,b.Z)+.001f)
+                    {
+                        b.State=BombState.Flying;b.FlyY=support;b.FlyVX=0;b.FlyVZ=0;b.FlyVY=0;b.LandingY=null;
+                        TickFlyingBomb(context,b,dt);
+                    }
+                    break;
                 case BombState.Rolling: TickRollingBomb(context, b, dt); break;
                 case BombState.Flying: TickFlyingBomb(context, b, dt); break;
                 case BombState.Carried: UpdateCarriedBombPosition(b); break;
@@ -905,7 +925,7 @@ public sealed partial class BlastSession : GameSession
 
     private float BombY(BlastBomb bomb) => bomb.State == BombState.Flying ? bomb.FlyY :
         bomb.State == BombState.Carried ? (_players.Values.FirstOrDefault(p => p.CarryingBombId == bomb.Id)?.Y ?? bomb.Tier) + BombThrowRules.LaunchHeight :
-        _stage.SurfaceAt(bomb.X, bomb.Z) + (bomb.State==BombState.Rolling && bomb.KickHopRemaining>0
+        (bomb.State==BombState.Resting?bomb.LandingY??_stage.SurfaceAt(bomb.X,bomb.Z):_stage.SurfaceAt(bomb.X,bomb.Z)) + (bomb.State==BombState.Rolling && bomb.KickHopRemaining>0
             ? BlastBomb.KickHopHeight*MathF.Sin(MathF.PI*bomb.KickHopRemaining/BlastBomb.KickHopSeconds) : 0);
 
     private void TickRollingBomb(ISessionContext context, BlastBomb b, float dt)
@@ -997,10 +1017,11 @@ public sealed partial class BlastSession : GameSession
     private void TickFlyingBomb(ISessionContext context, BlastBomb b, float dt)
     {
         if(b.ResumeRollingAfterFall){TickFallingKickedBomb(context,b,dt);return;}
-        var flight=BombThrowRules.Advance(new(b.X,b.FlyY,b.Z),new(b.FlyVX,b.FlyVY,b.FlyVZ),dt);
-        b.X=flight.Position.X;b.Z=flight.Position.Z;b.FlyY=flight.Position.Y;b.FlyVY=flight.Velocity.Y;
+        var flight=BombThrowRules.AdvanceStatic(new(b.X,b.FlyY,b.Z),new(b.FlyVX,b.FlyVY,b.FlyVZ),dt,
+            BombLandingHeight,(x,z)=>_stage.At(x,z).Kind,(x,z)=>_softBlocks.IsAlive(x,z));
+        b.X=flight.Position.X;b.Z=flight.Position.Z;b.FlyY=flight.Position.Y;b.FlyVY=flight.Velocity.Y;b.FlyVX=flight.Velocity.X;b.FlyVZ=flight.Velocity.Z;
 
-        var landingY = _stage.SurfaceAt(b.X, b.Z);
+        var landingY = StaticBombLandingHeight(b.X, b.Z);
 
         // A head hit is a bomb coming down onto a player's head; on the way up it clears the thrower.
         foreach (var p in _players.Values)
@@ -1028,6 +1049,7 @@ public sealed partial class BlastSession : GameSession
             else
             {
                 b.State = BombState.Resting;
+                b.LandingY=landingY;
                 b.CellX = (int)b.X;
                 b.CellZ = (int)b.Z;
                 b.Tier = (int)MathF.Round(landingY); // update tier to where it landed
@@ -1038,6 +1060,7 @@ public sealed partial class BlastSession : GameSession
 
     private void UpdateCarriedBombPosition(BlastBomb b)
     {
+        b.LandingY=null;
         // Whoever holds it, which need not be the player who placed it.
         var carrier = _players.Values.FirstOrDefault(p => p.CarryingBombId == b.Id);
         if (carrier is null) return;
@@ -1418,6 +1441,7 @@ public sealed partial class BlastSession : GameSession
             ghost = p.Ghost,
             latchedTo=p.LatchedToId,
             carryFromPrimary=p.CarryFromPrimary,
+            aiming=p.Aiming,aimSet=p.AimSet,aimX=p.AimX,aimZ=p.AimZ,aimRange=p.AimRange,
             primaryHoldProgress=p.PrimaryBombCandidateId is null?0:Math.Clamp(p.PrimaryHoldTimer/.25f,0,1),
             kickWindup=MathF.Round(p.KickWindupRemaining,3),
             kickRecovery=MathF.Round(p.KickRecoveryRemaining,3),
@@ -1535,6 +1559,7 @@ public sealed partial class BlastSession : GameSession
     private void DropCarriedBombs(BlastPlayer p)
     {
         ClearKick(p);
+        ClearThrowAim(p);
         p.CarryFromPrimary=false;p.PrimaryBombCandidateId=null;p.PrimaryHoldTimer=0;
         if(p.CarriedById is not null)ReleaseHeld(p,"interrupted");
         if (p.CarryingBombId is not null)
@@ -1574,6 +1599,7 @@ public sealed partial class BlastSession : GameSession
         public bool A { get; set; }
         public bool B { get; set; }
         public bool R { get; set; }
+        public bool Aim { get; set; }
     }
 
 }

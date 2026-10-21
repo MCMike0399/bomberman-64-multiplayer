@@ -10,12 +10,12 @@ public static class PlayerControls
     internal static PlayerInput Keyboard(int seat)
     {
         if(seat==0)return new(Axis(Key.A,Key.D),Axis(Key.W,Key.S),
-            Down(Key.J,Key.Space),Down(Key.K,Key.Shift),Down(Key.L,Key.R));
+            Down(Key.J,Key.J),Down(Key.Space,Key.K),Down(Key.L,Key.R),Input.IsPhysicalKeyPressed(Key.Shift));
         if(seat==1)return new(Axis(Key.Left,Key.Right),Axis(Key.Up,Key.Down),
-            Down(Key.N,Key.Enter,Key.Kp0),Down(Key.M,Key.Ctrl,Key.Kp1),Down(Key.Comma,Key.Backspace,Key.Kp2));
+            Down(Key.N,Key.Enter,Key.Kp0),Down(Key.M,Key.Kp1),Down(Key.Comma,Key.Backspace,Key.Kp2),Input.IsPhysicalKeyPressed(Key.Ctrl));
         return default;
     }
-    internal static bool BombKey(int seat,Key key)=>seat==0?key is Key.J or Key.Space:key is Key.N or Key.Enter or Key.Kp0;
+    internal static bool BombKey(int seat,Key key)=>seat==0?key is Key.J:key is Key.N or Key.Enter or Key.Kp0;
     internal static bool RemoteKey(int seat,Key key)=>seat==0?key is Key.L or Key.R:key is Key.Comma or Key.Backspace or Key.Kp2;
     private static bool Down(Key first,Key second,Key third=Key.None)=>
         Input.IsPhysicalKeyPressed(first)||Input.IsPhysicalKeyPressed(second)||(third!=Key.None&&Input.IsPhysicalKeyPressed(third));

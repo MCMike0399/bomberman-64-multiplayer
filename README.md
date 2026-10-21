@@ -74,10 +74,15 @@ The default is loopback. No external hosting, domain, TLS, firewall changes or p
 | Action | Keyboard 1 | Keyboard 2 | Xbox | Switch 2 | PS5 |
 |---|---|---|---|---|---|
 | Move | WASD | Arrows | Stick / D-pad | Stick / D-pad | Stick / D-pad |
-| Bomb / kick / pump | J or Space | N or Enter | A | A | Cross |
-| Carry / throw | K or Shift | M or Ctrl | X or LB | B or L | Square or L1 |
+| Bomb / kick / pump | J | N or Enter | A | A | Cross |
+| Hold carry / release throw | Space (K alias) | M or Numpad 1 | X or LB | B or L | Square or L1 |
+| Precision aim while carrying | Shift | Ctrl | RT | ZR | R2 |
 | Remote detonation | L or R | Comma or Backspace | B or RB | X or R | Circle or R1 |
 | Leave battle | Esc | Esc | Menu | + | Options |
+
+**Ready, aim, throw:** hold Space near a bomb to lift it, or hold Space and tap J to create one overhead. Keep Space held and tap J to pump. Hold Shift: A/D turn the aim, W/S change the distance. Small nudges start slowly; sustained input sweeps faster. Release Space to throw. Controllers use the same sequence with carry, bomb and right trigger; the left stick or D-pad adjusts aim. Releasing the aim modifier lets you reposition while keeping the selected direction and range.
+
+Deliberate aim covers 2–9 cells on level ground, with a high lob that can reach upper terraces. The marker accounts for terrain height, cover, walls and fuse expiry; moving opponents can still interrupt the flight. Pumping increases blast power without shifting an aimed landing. There is no target lock or aim assist: leading a moving opponent and choosing when to stand still are the skill. [Original manual controls and project choices](docs/iteration16-controls-research.md).
 
 Menus accept **WASD or arrow keys**, with Enter to confirm and Esc to go back; text fields still accept letters normally.
 
@@ -85,7 +90,7 @@ Keyboard 2 also supports numpad 0 / 1 / 2 for bomb / carry / remote. Switch uses
 
 Choose **CONTROLS & CONTROLLER TEST** on the main menu to inspect connected pads and live inputs. Face buttons stay in the tester; Menu / + / Options or Esc leaves it. The roster shows which pad accompanies each human seat. Two-human matches allow one pad per player alongside the two keyboard layouts; larger matches reserve the first two humans for keyboards and assign pads to the remaining humans.
 
-All devices run at the same maximum running speed, including diagonal keyboard movement. Stick direction is continuous through 360 degrees. Character rendering now interpolates between authoritative snapshots rather than repeatedly catching up to each one, and the stride/turn animation follows that smooth motion. Sticks retain their analog direction but use full running speed beyond the **20% radial deadzone**. D-pad input takes priority over stick input, which takes priority over keyboard movement; directions are never added together. Short bomb taps are buffered, holding bomb does not auto-repeat, and actions must be released after entering a match or returning focus. Disconnecting a pad reserves its seat without moving another player's controls. Identical controllers that both reconnect under ambiguous identities require restarting the match to assign them safely.
+All devices run at the same maximum running speed, including diagonal keyboard movement. Stick direction is continuous through 360 degrees. Character rendering now interpolates between authoritative snapshots rather than repeatedly catching up to each one, and the stride/turn animation follows that smooth motion. Sticks retain their analog direction but use full running speed beyond the **20% radial deadzone**. Precision aim preserves stick magnitude for fine adjustment; keyboard taps use the same slow-start ramp and both devices share maximum turning/range rates. D-pad input takes priority over stick input, which takes priority over keyboard movement; directions are never added together. Short bomb taps are buffered, holding bomb does not auto-repeat, and actions must be released after entering a match or returning focus. Disconnecting a pad reserves its seat without moving another player's controls. Identical controllers that both reconnect under ambiguous identities require restarting the match to assign them safely.
 
 ### Switch 2 USB on macOS
 
@@ -126,7 +131,7 @@ Water contact uses the actual visible water height. Merely grazing the shoreline
 
 Breakable stone objects can drop weighted upgrades. Fire raises normal blast strength to level 3; bomb upgrades raise simultaneous capacity to 8. Red power penetrates breakable cover. Blue remote bombs with green indicators detonate on command. Picking up either special upgrade replaces the other for newly placed bombs. Existing red bombs retain their original fuse; an existing remote resumes its normal fuse if its owner switches to red and can no longer command it. One heart absorbs one blast without stacking. Water remains lethal. Equipment resets between rounds.
 
-Three accepted pump presses add three effective blast levels, reaching level 6 with maximum fire upgrades. The default bomb is larger for readability, but pumped visual growth is restrained: three pumps are about 1.8× the default size, with a visual target cap of 2.3. This does not change blast strength. Pickups are also larger and the camera fits the stage more closely. Timed bombs pause their fuse while carried and resume it after release. Pumping also adds throw reach. While a local player carries a bomb, an advisory dotted arc shows the static trajectory and landing point; water and void endpoints instead show where it sinks or falls away. Moving players and bombs can interrupt that forecast. Neutral throws now clear the carrier, and the released model starts at hand height instead of dipping toward their helmet. [Carry/throw diagnosis and evidence](docs/iteration15-charge.md). These numerical choices and the flood curve are project tuning; [manual and gameplay-video research](docs/gameplay-research.md) distinguishes confirmed observations from assumptions.
+Three accepted pump presses add three effective blast levels, reaching level 6 with maximum fire upgrades. The default bomb is larger for readability, but pumped visual growth is restrained: three pumps are about 1.8× the default size, with a visual target cap of 2.3. This does not change blast strength. Pickups are also larger and the camera fits the stage more closely. Timed bombs pause their fuse while carried and resume it after release. Pumping also adds throw reach. While a local player carries a bomb, a dotted arc shows the shared static trajectory and landing point; water and void endpoints instead show where it sinks or falls away. Moving players and bombs can interrupt that forecast. Neutral throws now clear the carrier, and the released model starts at hand height instead of dipping toward their helmet. [Carry/throw diagnosis and evidence](docs/iteration15-charge.md). These numerical choices and the flood curve are project tuning; [manual and gameplay-video research](docs/gameplay-research.md) distinguishes confirmed observations from assumptions.
 
 The original manual establishes increased destructive power for red bombs, but the inspected sources do not establish a separate radius multiplier at identical fire and pump levels. This build keeps radius tied to those levels and gives red its cover penetration. [Placement, color and red-power research](docs/iteration12-bombs-research.md).
 
@@ -205,7 +210,7 @@ The game already uses native Metal. The `macOS Metal` export preset declares App
 
 ## Character, UI and effects
 
-The current menu is a live 3D theatre: characters share lighting and floor shadows, mode plaques have solid bevels and selection motion, and the camera has restrained parallax. The eight-seat roster uses a green stage with short MAN/COM/OFF controls; the winner celebrates on a lit podium in a dimensional arcade theatre, with a physical standings board, metallic medals and raised replay buttons. The helmet is softly oval in v0.15.0 (slightly shorter vertically, with fuller front-to-back roundness and the same width), centered slightly forward to balance its rear volume, with a separate rounded faceplate and a softer neck connection. The compact pear torso, short relaxed arms and full pink boots retain the approved proportions. Movement now uses a playful cartoon trot: short planted pushes, gathered boot arcs, a brief light flight, a coordinated body spring and glove follow-through. The suit compresses at contact while the head retains its softly oval proportions. Stopping settles the pose without extra steps or changing gameplay speed. [Walk tuning, original-footage observations and regression tests](docs/iteration15-walk.md).
+The current menu is a live 3D theatre: characters share lighting and floor shadows, mode plaques have solid bevels and selection motion, and the camera has restrained parallax. The eight-seat roster uses a green stage with short MAN/COM/OFF controls; the winner celebrates on a lit podium in a dimensional arcade theatre, with a physical standings board, metallic medals and raised replay buttons. The helmet is softly oval (slightly shorter vertically, with fuller front-to-back roundness and the same width), centered slightly forward to balance its rear volume, with a separate rounded faceplate and a softer neck connection. The compact pear torso, short relaxed arms and full pink boots retain the approved proportions. The suit is a little slimmer while retaining the large helmet, gloves and boots. Short, fixed-length legs stay attached at the hips; smooth boot curves replace abrupt angle changes and the earlier stretchy-leg gait. A restrained body spring and glove follow-through preserve the cartoon motion. The head retains its softly oval proportions. [Character references and measured corrections](docs/iteration16-character.md). Stopping settles the pose without extra steps or changing gameplay speed. [Walk tuning, original-footage observations and regression tests](docs/iteration15-walk.md).
 
 Match setup now displays an actual lit miniature of the selected arena and a native arrow-controlled rules rail.
 
@@ -224,9 +229,13 @@ python3 tools/playtest/run.py --scenario presentation
 
 ## Screenshots
 
-The gallery contains real exported-app captures. Model front/side/three-quarter images and the walking clip are refreshed for the final v0.15.0 softly oval helmet. AI, difficulty-selection and WASD menu images are updated for v0.13.0; other scenes retain their verified earlier captures. The bomb-trail closeup uses a temporary inspection camera on actual actors. The controller tester shows device detection, not new physical button testing.
+The gallery contains real exported-app captures. Model front/side/three-quarter images and the walking clip are refreshed for v0.16.0’s slimmer suit and compact, fixed-length legs. AI, difficulty-selection and WASD menu images are updated for v0.13.0; other scenes retain their verified earlier captures. The bomb-trail closeup uses a temporary inspection camera on actual actors. The controller tester shows device detection, not new physical button testing.
 
-[Watch the livelier walking animation](docs/videos/walk-personality.mp4) — a normal-speed, 4.7-second excerpt of real practice movement with a temporary side inspection camera. [Reference observations and measured contacts](docs/iteration15-walk.md).
+[Watch precision aiming and a charged throw](docs/videos/precision-aim.mp4) — actual practice gameplay, normal speed, with the ordinary battle camera. The range changes, pumping keeps the chosen endpoint, and release commits the lob.
+
+![Choosing a charged bomb's landing point](docs/images/precision-aim.png)
+
+[Watch the compact chibi walking animation](docs/videos/walk-personality.mp4) — a normal-speed, 4.7-second excerpt of real practice movement with a temporary side inspection camera. [References and fixed-leg continuity checks](docs/iteration16-character.md).
 
 [Watch Easy, Medium and Hard in actual gameplay](docs/videos/ai-difficulties.mp4) — three labeled six-second excerpts, normal simulation speed and game audio. [AI behavior and test results](docs/iteration13-ai.md).
 
@@ -262,7 +271,7 @@ The gallery contains real exported-app captures. Model front/side/three-quarter 
 
 ![Actual winning character](docs/images/battle-results.png)
 
-The v0.15.0 model inspections below show the softly oval helmet on the actual in-game character with a temporary close-up camera:
+The v0.16.0 model inspections below show the softly oval helmet on the actual in-game character with a temporary close-up camera:
 
 ![Character front](docs/images/model-front.png)
 

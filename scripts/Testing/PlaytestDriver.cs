@@ -539,7 +539,7 @@ public partial class PlaytestDriver : Node
     }
     private JsonElement State => _root.LatestState ?? throw new InvalidOperationException("No authoritative state yet.");
     private JsonElement Player => State.GetProperty("players").EnumerateArray().OrderBy(p=>p.GetProperty("slot").GetInt32()).First();
-    private void Input(int seat,PlayerInput input) { _inputs[seat]=input;_root.InjectInput(seat,input);Event("input",new { seat,input.X,input.Z,input.A,input.B,input.R }); }
+    private void Input(int seat,PlayerInput input) { _inputs[seat]=input;_root.InjectInput(seat,input);Event("input",new { seat,input.X,input.Z,input.A,input.B,input.R,input.Aim }); }
     private async Task Frames(int count)
     {
         for(var i=0;i<count;i++)
@@ -627,7 +627,7 @@ public partial class PlaytestDriver : Node
                 case "resize":GetWindow().Size=new Vector2I(Number("width",1280),Number("height",800));await Frames(6);break;
                 case "start-local":_root.StartLocal(new SessionSettings(Stage:step.GetProperty("stage").GetString()!,Bots:Number("bots",0)),Number("humans",1),Flag("practice"));break;
                 case "frames":await Frames(Number("count",1));break;
-                case "input":Input(Number("seat",0),new PlayerInput(Scalar("x"),Scalar("z"),Flag("a"),Flag("b"),Flag("r")));break;
+                case "input":Input(Number("seat",0),new PlayerInput(Scalar("x"),Scalar("z"),Flag("a"),Flag("b"),Flag("r"),Flag("aim")));break;
                 case "move-to":await MoveTo(Scalar("x"),Scalar("z"),Number("maxFrames",300));break;
                 case "capture":await Capture(step.GetProperty("label").GetString()!);break;
                 case "assert-screen":Check(_root.ScreenName==step.GetProperty("screen").GetString(),"script screen "+step.GetProperty("screen"));break;

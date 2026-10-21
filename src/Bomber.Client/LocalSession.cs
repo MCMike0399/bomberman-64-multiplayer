@@ -9,7 +9,7 @@ public sealed class LocalSession : ISession
     private readonly MessageBuffer _messages = new();
     private double _accumulator;
     private readonly PlayerInput[] _inputs;
-    private readonly Queue<(bool A, bool B, bool R)>[] _buttons;
+    private readonly Queue<(bool A, bool B, bool R, bool Aim)>[] _buttons;
     private bool _disposed;
     public int LocalPlayerCount { get; }
     public string Status => _disposed ? "Ended" : _match.IsEnded ? "Ended: Match complete" : "Local battle";
@@ -22,7 +22,7 @@ public sealed class LocalSession : ISession
             throw new ArgumentOutOfRangeException(nameof(humanCount), "Choose 1–8 humans and 2–8 total players.");
         LocalPlayerCount = humanCount;
         _inputs = new PlayerInput[humanCount];
-        _buttons = Enumerable.Range(0, humanCount).Select(_ => new Queue<(bool A, bool B, bool R)>()).ToArray();
+        _buttons = Enumerable.Range(0, humanCount).Select(_ => new Queue<(bool A, bool B, bool R, bool Aim)>()).ToArray();
         _match = new LocalMatch(new MatchOptions { HumanPlayers = humanCount, BotPlayers = settings.Bots,
             Stage = settings.Stage, BotDifficulty = settings.BotDifficulty, Wins = settings.Wins, RoundSeconds = settings.RoundSeconds,
             SuddenDeath = settings.SuddenDeath, Ghosts = settings.Ghosts, Seed = seed, Practice = practice, PlayerAppearances = playerAppearances ?? Array.Empty<int>() });
@@ -45,7 +45,7 @@ public sealed class LocalSession : ISession
             for (var i = 0; i < LocalPlayerCount; i++)
             {
                 var input = _inputs[i];
-                if (_buttons[i].TryDequeue(out var buttons)) input = input with { A = buttons.A, B = buttons.B, R = buttons.R };
+                if (_buttons[i].TryDequeue(out var buttons)) input = input with { A = buttons.A, B = buttons.B, R = buttons.R, Aim = buttons.Aim };
                 _match.SetInput(i, input);
             }
             _match.Tick();
@@ -57,10 +57,10 @@ public sealed class LocalSession : ISession
         if (localPlayer < 0 || localPlayer >= LocalPlayerCount) throw new ArgumentOutOfRangeException(nameof(localPlayer));
         if (_disposed) return;
         var previous = _inputs[localPlayer];
-        if ((previous.A, previous.B, previous.R) != (input.A, input.B, input.R))
+        if ((previous.A, previous.B, previous.R, previous.Aim) != (input.A, input.B, input.R, input.Aim))
         {
             if (_buttons[localPlayer].Count == 16) _buttons[localPlayer].Dequeue();
-            _buttons[localPlayer].Enqueue((input.A, input.B, input.R));
+            _buttons[localPlayer].Enqueue((input.A, input.B, input.R, input.Aim));
         }
         _inputs[localPlayer] = input;
     }

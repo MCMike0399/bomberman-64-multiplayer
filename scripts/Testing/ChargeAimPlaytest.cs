@@ -67,7 +67,11 @@ public partial class PlaytestDriver
             Event("charge-landing",new{pumps,predicted=preview,actual=HandlingBomb});
             await Capture($"charge-aim-{pumps}-landing",0);
         }
-        await HandlingPractice();await GrappleWalk(0,6,18);
+        // The shared arc reaches the visible water plane (-1). Approach the
+        // shore through ordinary movement so this throw lands in the water row,
+        // rather than on dry ground or past the outer map boundary.
+        await HandlingPractice();await GrappleWalk(0,6,17);
+        Input(0,new PlayerInput(0,1));await Frames(3);Input(0,default);await Frames(3);
         Check(Player.GetProperty("fz").GetSingle()>.9f,"shore witness faces south after its real courtyard walk");
         Input(0,new PlayerInput(0,0,A:true));await Frames(14);Input(0,default);await Frames(16);
         var waterPreview=_root.ThrowPreviews.Single();Event("charge-water-preview",waterPreview);

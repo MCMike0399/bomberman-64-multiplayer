@@ -100,18 +100,22 @@ public partial class BattleHud : Control
         var recovering=players.Where(p=>p.GetProperty("alive").GetBoolean()&&!p.GetProperty("ghost").GetBoolean()&&p.GetProperty("stunned").GetBoolean()).ToArray();
         if(recovering.Length>0)return string.Join(", ",recovering.Select(p=>"P"+(p.GetProperty("slot").GetInt32()+1)))+" dizzy: wiggle the stick and tap buttons to recover";
         var family=ControllerHub.Current.ActiveFamily;
-        string primary=family==ControllerFamily.Keyboard?"J / SPACE":ControllerProfile.ButtonName(family,ControllerProfile.BombButton(family));
-        string carry=family==ControllerFamily.Keyboard?"K / SHIFT":ControllerProfile.ButtonName(family,ControllerProfile.CarryButton(family));
+        string primary=family==ControllerFamily.Keyboard?"J":ControllerProfile.ButtonName(family,ControllerProfile.BombButton(family));
+        string carry=family==ControllerFamily.Keyboard?"SPACE":ControllerProfile.ButtonName(family,ControllerProfile.CarryButton(family));
         string remote=family==ControllerFamily.Keyboard?"L / R":ControllerProfile.ButtonName(family,ControllerProfile.RemoteButton(family));
         foreach(var p in players.Where(p=>!p.GetProperty("bot").GetBoolean()&&p.GetProperty("alive").GetBoolean()&&!p.GetProperty("ghost").GetBoolean()))
         {
             int seat=p.GetProperty("slot").GetInt32();
-            if(family==ControllerFamily.Keyboard){primary=seat==1?"N / ENTER":"J / SPACE";carry=seat==1?"M / CTRL":"K / SHIFT";remote=seat==1?", / BACKSPACE":"L / R";}
+            if(family==ControllerFamily.Keyboard){primary=seat==1?"N / ENTER":"J";carry=seat==1?"M":"SPACE";remote=seat==1?", / BACKSPACE":"L / R";}
             string who="P"+(seat+1);
             if(p.GetProperty("carrying").GetString()=="bomb")
             {
                 bool latched=p.TryGetProperty("carryFromPrimary",out var primaryCarry)&&primaryCarry.GetBoolean();
-                return $"{who}: {PromptBar.Spoken(primary)} pumps farther, "+(latched?$"{PromptBar.Spoken(carry)} throws it":$"release {PromptBar.Spoken(carry)} to throw");
+                string aim=family==ControllerFamily.Keyboard?(seat==1?"Ctrl":"Shift"):ControllerProfile.AimName(family);
+                string release=latched?$"{PromptBar.Spoken(carry)} throws":$"release {PromptBar.Spoken(carry)} to throw";
+                if(p.TryGetProperty("aiming",out var aiming)&&aiming.GetBoolean())
+                    return $"{who}: left/right turns · up/down sets range · nudge to fine-tune · {release}";
+                return $"{who}: {PromptBar.Spoken(primary)} pumps · hold {aim} to aim · {release}";
             }
             if(state.GetProperty("bombs").EnumerateArray().Any(b=>b.GetProperty("remote").GetBoolean()&&b.GetProperty("ownerId").GetString()==p.GetProperty("id").GetString()))
                 return $"{who}'s remote bombs are waiting. {PromptBar.Spoken(remote)} sets them off";

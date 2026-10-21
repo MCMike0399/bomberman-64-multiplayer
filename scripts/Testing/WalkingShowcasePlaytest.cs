@@ -31,6 +31,7 @@ public partial class PlaytestDriver
             {
                 float startX=Player.GetProperty("x").GetSingle(),startRender=model.GlobalPosition.X,startZ=model.GlobalPosition.Z,previous=startRender,maxLift=0,minPose=1,maxPose=-1;
                 var displacements=new List<float>();int frames=0,support=0,flight=0;
+                float maxSoleAngularSpeed=0,maxLegStretch=0,maxHipGap=0;var leftSole=model.LeftBootOrientation;var rightSole=model.RightBootOrientation;
                 Input(0,new PlayerInput(direction,0));
                 while((target-Player.GetProperty("x").GetSingle())*direction>.08f&&frames<75)
                 {
@@ -38,6 +39,9 @@ public partial class PlaytestDriver
                     float x=model.GlobalPosition.X;
                     if(frames>8)displacements.Add((x-previous)*direction);
                     previous=x;minPose=Mathf.Min(minPose,model.WalkPose);maxPose=Mathf.Max(maxPose,model.WalkPose);
+                    maxSoleAngularSpeed=Mathf.Max(maxSoleAngularSpeed,Mathf.Max(leftSole.AngleTo(model.LeftBootOrientation),rightSole.AngleTo(model.RightBootOrientation))*30);
+                    leftSole=model.LeftBootOrientation;rightSole=model.RightBootOrientation;
+                    maxLegStretch=Mathf.Max(maxLegStretch,model.WalkLegStretch);maxHipGap=Mathf.Max(maxHipGap,model.WalkHipSeparation);
                     maxLift=Mathf.Max(maxLift,Mathf.Max(model.LeftFootLift,model.RightFootLift));
                     if(Mathf.Abs(model.LeftFootLift)<.01f||Mathf.Abs(model.RightFootLift)<.01f)support++;
                     if(model.LeftFootLift>.01f&&model.RightFootLift>.01f)flight++;
@@ -46,9 +50,10 @@ public partial class PlaytestDriver
                 float travel=(Player.GetProperty("x").GetSingle()-startX)*direction;
                 Check(frames<75&&travel>7.5f,"ordinary input traverses the clear courtyard toward "+label);
                 Check(displacements.Count>20&&displacements.Min()>.03f,"actual walking keeps continuous displacement through supporting-foot contacts: "+label);
-                Check(minPose<-.3f&&maxPose>.3f&&maxLift>.09f&&maxLift<.2f&&support>frames*.5f&&flight>frames*.1f,"actual scene alternates planted push-off, gathered boots and brief flight: "+label);
+                Check(minPose<-.3f&&maxPose>.3f&&maxLift>.025f&&maxLift<.12f&&Mathf.Abs(maxLegStretch-1)<.001f&&maxHipGap<.001f,"actual scene alternates compact boots with fixed short legs attached at the hips: "+label);
+                Check(maxSoleAngularSpeed<16,"actual scene boots roll continuously through travel and reversal: "+label);
                 Check(Mathf.Abs(model.GlobalPosition.Z-startZ)<.1f&&Player.GetProperty("fx").GetSingle()*direction>.99f,"direction reversal keeps the real actor on the courtyard path: "+label);
-                Event("walking-showcase-leg",new {label,frames,seconds=frames/30f,authorityTravel=travel,renderTravel=(model.GlobalPosition.X-startRender)*direction,minStep=displacements.Min(),maxStep=displacements.Max(),minPose,maxPose,maxLift,support,flight});
+                Event("walking-showcase-leg",new {label,frames,seconds=frames/30f,authorityTravel=travel,renderTravel=(model.GlobalPosition.X-startRender)*direction,minStep=displacements.Min(),maxStep=displacements.Max(),minPose,maxPose,maxLift,support,flight,maxSoleAngularSpeed,maxLegStretch,maxHipGap});
             }
             await WalkLeg(1,14.5f,"right");
             await Capture("walk-feel-turn",0);

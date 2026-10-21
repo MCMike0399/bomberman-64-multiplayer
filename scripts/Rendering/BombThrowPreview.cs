@@ -17,10 +17,12 @@ public partial class BombThrowPreview : Node3D
     {
         for(int i=0;i<_dots.Length;i++)_dots[i]=Sphere(this,Vector3.Zero,Vector3.One*.105f,_material);
         _target=new(){Mesh=new TorusMesh{InnerRadius=.31f,OuterRadius=.39f,Rings=32,RingSegments=6},MaterialOverride=_material};AddChild(_target);
+        Box(_target,Vector3.Zero,new(.18f,.014f,.035f),_material);
+        Box(_target,Vector3.Zero,new(.035f,.014f,.18f),_material);
         _label=new Label3D{Font=ArcadeTheme.Body,FontSize=32,PixelSize=.012f,Billboard=BaseMaterial3D.BillboardModeEnum.Enabled,
             OutlineModulate=ArcadeTheme.Ink,OutlineSize=8,NoDepthTest=false};AddChild(_label);
     }
-    public void Update(ThrowProjection projection,int pumps,int slot)
+    public void Update(ThrowProjection projection,int pumps,int slot,bool aimSet=false,bool aiming=false,float range=0)
     {
         var color=pumps==3?ArcadeTheme.Gold:ArcadeTheme.Aqua.Lerp(ArcadeTheme.Gold,pumps/3f);
         _material.AlbedoColor=color;_material.Emission=color*.55f;
@@ -35,15 +37,16 @@ public partial class BombThrowPreview : Node3D
         var last=projection.Last;
         _target.Position=new(last.X,last.Y*TempleStageView.HeightScale+.055f,last.Z);
         _target.Visible=projection.End==ThrowProjectionEnd.Landing;
+        _target.Scale=Vector3.One*(aiming?1.08f:1);
         _label.Position=_target.Position+Vector3.Up*.42f;
         _label.Modulate=color;
         _label.Text=projection.End switch{
-            ThrowProjectionEnd.Obstructed=>$"P{slot+1} · arc guide stops here",
+            ThrowProjectionEnd.Obstructed=>$"P{slot+1} · blocked landing",
             ThrowProjectionEnd.Fuse=>$"P{slot+1} · fuse ends here",
             ThrowProjectionEnd.Water=>$"P{slot+1} · sinks here",
             ThrowProjectionEnd.Void=>$"P{slot+1} · falls away here",
-            _=>$"P{slot+1} · {pumps}/3 · aim"
+            _=>aimSet?$"P{slot+1} · {range:0.0} range · {pumps}/3":$"P{slot+1} · {pumps}/3 · aim"
         };
     }
 }
-public sealed record ThrowPreviewState(string PlayerId,int Pumps,float X,float Y,float Z,string End,int Points,bool LandingMarkerVisible,string EndpointLabel);
+public sealed record ThrowPreviewState(string PlayerId,int Pumps,float X,float Y,float Z,string End,int Points,bool LandingMarkerVisible,string EndpointLabel,bool AimSet=false,bool Aiming=false,float AimRange=0);

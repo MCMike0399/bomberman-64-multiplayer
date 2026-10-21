@@ -315,10 +315,10 @@ public partial class PlaytestDriver
         await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"two keyboard seats reach fight",150);await ControllerFrames(4);
         float first=CtlPlayer(0).GetProperty("x").GetSingle(),second=CtlPlayer(1).GetProperty("x").GetSingle();CtlKey(Key.D,true);CtlKey(Key.Left,true);await ControllerFrames(8);CtlKey(Key.D,false);CtlKey(Key.Left,false);await ControllerFrames(4);
         float p1=CtlPlayer(0).GetProperty("x").GetSingle()-first,p2=second-CtlPlayer(1).GetProperty("x").GetSingle();Check(p1>.6f&&Math.Abs(p1-p2)<.025f,"P1 WASD and P2 arrows share authoritative speed");
-        foreach(var entry in new[]{(0,Key.J,0),(0,Key.K,1),(0,Key.L,2),(1,Key.N,0),(1,Key.M,1),(1,Key.Comma,2),(0,Key.Space,0),(0,Key.Shift,1),(0,Key.R,2),(1,Key.Enter,0),(1,Key.Ctrl,1),(1,Key.Backspace,2),(1,Key.Kp0,0),(1,Key.Kp1,1),(1,Key.Kp2,2)})
+        foreach(var entry in new[]{(0,Key.J,0),(0,Key.K,1),(0,Key.L,2),(1,Key.N,0),(1,Key.M,1),(1,Key.Comma,2),(0,Key.Space,1),(0,Key.Shift,3),(0,Key.R,2),(1,Key.Enter,0),(1,Key.Ctrl,3),(1,Key.Backspace,2),(1,Key.Kp0,0),(1,Key.Kp1,1),(1,Key.Kp2,2)})
         {
-            CtlKey(entry.Item2,true);var actual=PlayerControls.Read(entry.Item1,2);bool active=entry.Item3==0?actual.A:entry.Item3==1?actual.B:actual.R;Check(active,$"keyboard seat{entry.Item1+1} {entry.Item2} reaches correct action");
-            var untouched=PlayerControls.Read(1-entry.Item1,2);Check(!untouched.A&&!untouched.B&&!untouched.R,$"keyboard {entry.Item2} never leaks to other seat");CtlKey(entry.Item2,false);_ = PlayerControls.Read(entry.Item1,2);
+            CtlKey(entry.Item2,true);var actual=PlayerControls.Read(entry.Item1,2);bool active=entry.Item3==0?actual.A:entry.Item3==1?actual.B:entry.Item3==2?actual.R:actual.Aim;Check(active,$"keyboard seat{entry.Item1+1} {entry.Item2} reaches correct action");
+            var untouched=PlayerControls.Read(1-entry.Item1,2);Check(!untouched.A&&!untouched.B&&!untouched.R&&!untouched.Aim,$"keyboard {entry.Item2} never leaks to other seat");CtlKey(entry.Item2,false);_ = PlayerControls.Read(entry.Item1,2);
         }
         CtlKey(Key.J,true);CtlKey(Key.J,false);CtlKey(Key.N,true);CtlKey(Key.N,false);await ControllerFrames(4);
         Check(State.GetProperty("bombs").GetArrayLength()==2,"both compact keyboard bomb taps reach authority independently");await Capture("controllers-two-keyboards");_root.Back();await ControllerFrames(3);
@@ -385,7 +385,7 @@ public partial class PlaytestDriver
     private static void CtlReleaseAll()
     {
         foreach(var key in QaKeys)CtlKey(key,false);
-        foreach(var pad in QaPads){CtlAxis(pad.RuntimeId,JoyAxis.LeftX,0);CtlAxis(pad.RuntimeId,JoyAxis.LeftY,0);foreach(var button in QaButtons)CtlButton(pad.RuntimeId,button,false);}
+        foreach(var pad in QaPads){CtlAxis(pad.RuntimeId,JoyAxis.LeftX,0);CtlAxis(pad.RuntimeId,JoyAxis.LeftY,0);CtlAxis(pad.RuntimeId,JoyAxis.TriggerRight,0);foreach(var button in QaButtons)CtlButton(pad.RuntimeId,button,false);}
     }
 }
 

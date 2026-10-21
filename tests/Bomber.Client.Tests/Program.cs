@@ -88,4 +88,5 @@ await using(var selected=new LocalSession(new SessionSettings(Bots:2),1,playerAp
 }
 ControllerChecks.Run(Check,Throws);
 await PresentationChecks.Run(Check);
+await AimInputChecks.Run(Check);
 Console.WriteLine($"PASS: {checks} client contract and session checks");

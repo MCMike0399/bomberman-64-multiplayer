@@ -11,3 +11,5 @@ The executable uses guest HTTP authentication and actual WebSockets. It checks t
 Quick play also checks cancellation of a waiting product client, then matches two actual product clients into the same authoritative lobby. Pass `--quick-only` to run just this check.
 
 Pass `--client-only` to verify just the product session adapters. Supply a different origin as the positional argument to test another running host.
+
+Precision aim also uses two actual product `NetworkSession` clients on Rock Garden. It creates and carries a bomb through the production encoder, verifies planted aim and retained direction/range from the observer's snapshots, compares the local adapter's accepted schema and range, then releases the bomb and observes its resumed fuse and descent without an owner head hit. All waits use live wall-clock snapshots. Pass `--aim-only` to run this focused regression; it is also included in the full and `--client-only` runs.

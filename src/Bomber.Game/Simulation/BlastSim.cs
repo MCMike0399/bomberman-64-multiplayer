@@ -177,6 +177,15 @@ public sealed class BlastPlayer
     public string? CarryingBombId { get; set; }   // bomb id if carrying a bomb
     public string? CarryingPlayerId { get; set; } // player id if carrying a stunned player
 
+    // Deliberate throwing intent belongs to the carrier, never the client or target.
+    public bool Aiming { get; set; }
+    public bool AimSet { get; set; }
+    public float AimX { get; set; }
+    public float AimZ { get; set; } = 1;
+    public float AimRange { get; set; } = BombThrowRules.DefaultAimRange;
+    internal float AimTurnAge,AimRangeAge;
+    internal int AimTurnSign,AimRangeSign;
+
     // Power-ups.
     public int BombCapacity { get; set; } = PowerUpRules.StartingBombs;  // max active bombs
     public int FireLevel { get; set; } = 1;      // 1–3 normal, pumping raises effective level
@@ -242,6 +251,7 @@ public sealed class BlastBomb
     public float FlyVX { get; set; } // velocity when flying (XZ plane)
     public float FlyVZ { get; set; }
     public float FlyVY { get; set; } // vertical velocity (for arc)
+    public float? LandingY { get; set; } // exact support after a thrown landing, including cover tops
     public float FlyY { get; set; }  // current Y above landing tier
 
     public int FireLevel { get; set; } = 1;   // 1–3
@@ -330,7 +340,7 @@ public sealed class SoftBlockGrid
 }
 
 /// <summary>One player's input as received from the client.</summary>
-public readonly record struct InputState(float X, float Z, bool A, bool B, bool R)
+public readonly record struct InputState(float X, float Z, bool A, bool B, bool R, bool Aim = false)
 {
     public float Length => MathF.Sqrt(X * X + Z * Z);
 }

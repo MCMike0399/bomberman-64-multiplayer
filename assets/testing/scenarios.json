@@ -153,6 +153,29 @@
       "manual": false
     },
     {
+      "id": "aim-inputs",
+      "method": "AimInputs",
+      "domains": [
+        "input",
+        "mechanics"
+      ],
+      "headless": false,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "precision-aim",
+      "method": "PrecisionAim",
+      "domains": [
+        "mechanics",
+        "rendering",
+        "input"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
       "id": "kick-physics",
       "method": "KickPhysics",
       "domains": [
@@ -352,6 +375,8 @@
         "placement",
         "bomb-handling",
         "charge-aim",
+        "aim-inputs",
+        "precision-aim",
         "kick-physics",
         "body-contacts",
         "grapple",
@@ -394,6 +419,7 @@
         "ramp",
         "bomb-handling",
         "charge-aim",
+        "precision-aim",
         "kick-physics",
         "body-contacts",
         "grapple",
@@ -426,7 +452,8 @@
       "steps": [
         "asset-audit",
         "movement",
-        "charge-aim"
+        "charge-aim",
+        "precision-aim"
       ],
       "domains": [
         "animation",

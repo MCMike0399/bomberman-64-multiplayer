@@ -35,6 +35,7 @@ public partial class PlaytestDriver
         var role=NamedButton("Slot0Role") as OptionButton??throw new InvalidOperationException("Slot0Role missing");
         role.GrabFocus();await KeyPress(Key.Enter);var popup=role.GetPopup();
         Check(popup.Visible,"actual roster popup opens for WASD input");
+        await PopupReady(popup,"WASD role");
         async Task Popup(Key key)
         {
             Godot.Input.ParseInputEvent(new InputEventKey {WindowId=popup.GetWindowId(),PhysicalKeycode=key,Keycode=key,Pressed=true});await Frames(1);

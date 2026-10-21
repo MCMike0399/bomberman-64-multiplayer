@@ -40,4 +40,4 @@ public sealed record MatchOptions
     }
 }
 
-public readonly record struct PlayerInput(float X, float Z, bool A = false, bool B = false, bool R = false);
+public readonly record struct PlayerInput(float X, float Z, bool A = false, bool B = false, bool R = false, bool Aim = false);

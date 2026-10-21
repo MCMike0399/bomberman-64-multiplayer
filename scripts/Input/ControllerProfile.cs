@@ -28,9 +28,11 @@ public static class ControllerProfile
     public static JoyButton CancelButton(ControllerFamily family)=>family==ControllerFamily.Nintendo?JoyButton.A:JoyButton.B;
     public static string Actions(ControllerFamily family,int keyboardSeat=0)
     {
-        if(family==ControllerFamily.Keyboard)return keyboardSeat==0?"J / SPACE  BOMB / KICK   K / SHIFT  CARRY   L / R  REMOTE":"N / ENTER  BOMB / KICK   M / CTRL  CARRY   , / BACKSPACE  REMOTE";
-        return $"{ButtonName(family,BombButton(family))}  BOMB / KICK   {ButtonName(family,CarryButton(family))} / {ButtonName(family,JoyButton.LeftShoulder)}  CARRY   {ButtonName(family,RemoteButton(family))} / {ButtonName(family,JoyButton.RightShoulder)}  REMOTE";
+        if(family==ControllerFamily.Keyboard)return keyboardSeat==0?"J  BOMB   SPACE  CARRY   SHIFT  AIM   R / L  REMOTE":"N / ENTER  BOMB   M / NUM 1  CARRY   CTRL  AIM   , / BACKSPACE  REMOTE";
+        return $"{ButtonName(family,BombButton(family))}  BOMB   {ButtonName(family,CarryButton(family))} / {ButtonName(family,JoyButton.LeftShoulder)}  CARRY   {AimName(family)}  AIM   {ButtonName(family,RemoteButton(family))} / {ButtonName(family,JoyButton.RightShoulder)}  REMOTE";
     }
+    public static string AimName(ControllerFamily family)=>family switch
+    {ControllerFamily.Nintendo=>"ZR",ControllerFamily.PlayStation=>"R2",ControllerFamily.Xbox=>"RT",ControllerFamily.Keyboard=>"Shift",_=>"R trigger"};
     public static string Menu(ControllerFamily family)
     {
         if(family==ControllerFamily.Keyboard)return "WASD / ARROWS  SELECT   ENTER  CONFIRM   ESC  BACK   F11  SCREEN";

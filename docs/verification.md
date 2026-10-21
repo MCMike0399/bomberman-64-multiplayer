@@ -1,4 +1,29 @@
-# Iteration fifteen: motion, charged throws and reproducible delivery — 2026-10-21
+# Iteration sixteen: compact chibi motion and deliberate throws — 2026-10-21
+
+| Check | Result |
+|---|---|
+| Gameplay / client / AI / audio | **133 / 118 / 36 / 19** checks passed |
+| AI long-match matrix | **36 scenarios** passed |
+| Published server and real network | Existing 2–8-player/reconnect/bot smoke plus two-client precision aim passed (51.7 seconds); exact staged server packaged |
+| Final exported Mac regression | **1,928 assertions, 153 captures**, zero runtime errors (134.078 seconds) |
+| Exported package smoke | **218 assertions**, headless bundled-asset/motion/throw checks |
+| Focused native aim input | **99 assertions, four captures**, actual keyboard and canonical controller paths |
+| Compact-leg motion | **45 assertions**, including fixed limb length, hip attachment and continuity at multiple sampling rates |
+| Normal-speed aim recording | **32 assertions, seven captures**, 334 decoded frames at 30 FPS |
+
+The final exported run is `artifacts/iteration16-verified-all/playtest/20261021T222206.448549Z-all`. Its complete controller attempt passed first time with **zero focus retries**. Package evidence is `artifacts/iteration16-package-verified`; managed/server delivery evidence is `artifacts/iteration16-final-managed`. The preceding core-headless run (`artifacts/iteration16-headless3`) passed 783 assertions; later test-only snapshot waits add explicit accepted-state checks, and the final exported suite above exercises them. No fresh physical-controller certification is inferred from synthetic events.
+
+The user rejected the extending white legs. A regression measured 2.49× stem extension and a .27-unit hip gap in the prior animation. The final legs retain fixed length and hip attachment; boot pitch/reach/recovery are continuous. The suit is about 8% slimmer while helmet, gloves and boot sizes preserve the chibi silhouette. [Inspected official renders, original references and actual measurements](iteration16-character.md).
+
+Space now holds a bomb, J places/pumps and Shift enters precision aim; controller right triggers provide the same mode. Native Switch 2 polling was found to omit trigger axes despite synthetic events passing. It now samples all six canonical SDL axes, with a regression through the same sampling/publication code. P2 prompt detection and small-stick movement with ignored Aim were also corrected. [Original control evidence](iteration16-controls-research.md), [authority and fairness rules](iteration16-aim.md).
+
+Static throw prediction and authority now share swept terrain/cover collision, actual water height, perched landings and support-loss gravity. A native regression caught a trailing-shore collision that incorrectly stopped a bomb leaving land; it now descends into water while forward walls still block. Another earlier test assumed two render frames guaranteed two fresh authoritative updates. The recorded nudge was a valid one-degree input; the final test waits for accepted state changes instead of asserting that timing assumption. Failed runs remain in ignored artifacts rather than being relabeled as success.
+
+Native popup readiness now waits for actual visibility/item focus without setting either. Earlier combined runs observed an initially unfocused popup or application focus interruption; focused popup/navigation checks and the final full suite pass. The Mac app remains locally ad-hoc signed; native Metal evidence here is local, with the optional hosted graphical lane still disabled. No external server deployment or notarization is claimed.
+
+The installed v0.16.0 app matches the tested export byte-for-byte, passes strict recursive signature verification, and completed a windowed Launch Services gameplay smoke. The project-owned localhost server was rebuilt/restarted with the matching aim protocol. Remote servers were not modified.
+
+## Iteration fifteen baseline — 2026-10-21
 
 | Check | Result |
 |---|---|

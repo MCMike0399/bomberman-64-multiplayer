@@ -44,7 +44,7 @@ public sealed class LocalMatch
         {
             x = float.IsFinite(input.X) ? input.X : 0,
             z = float.IsFinite(input.Z) ? input.Z : 0,
-            a = input.A, b = input.B, r = input.R,
+            a = input.A, b = input.B, r = input.R, aim = input.Aim,
         });
         var sequence = ++_sequence;
         _context.Sequences[player.PlayerId] = sequence;

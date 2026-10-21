@@ -13,10 +13,12 @@ var clock = Stopwatch.StartNew();
 var games = await Api(HttpMethod.Get, "/realtime/v1/games");
 Check(games.GetProperty("value").EnumerateArray().Any(g => g.GetProperty("id").GetString() == "blast"), "blast game registered");
 
+if(args.Contains("--aim-only")){await NetworkAimChecks.Run(new Uri(origin));return;}
 if(args.Contains("--appearance-only")){await LobbyAppearanceCatchup();return;}
 await QuickPlay();
 if (args.Contains("--quick-only")) return;
 await ProductSessions();
+await NetworkAimChecks.Run(new Uri(origin));
 await LobbyAppearanceCatchup();
 if (args.Contains("--client-only")) return;
 

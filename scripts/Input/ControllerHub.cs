@@ -90,15 +90,16 @@ public partial class ControllerHub : Node
             var family=DeviceFamily(pad);
             stick=new(Input.GetJoyAxis(pad,JoyAxis.LeftX),Input.GetJoyAxis(pad,JoyAxis.LeftY),
                 Button(pad,ControllerProfile.BombButton(family)),Button(pad,ControllerProfile.CarryButton(family))||Button(pad,JoyButton.LeftShoulder),
-                Button(pad,ControllerProfile.RemoteButton(family))||Button(pad,JoyButton.RightShoulder));
+                Button(pad,ControllerProfile.RemoteButton(family))||Button(pad,JoyButton.RightShoulder),
+                Input.GetJoyAxis(pad,JoyAxis.TriggerRight)>.35f);
             dpad=new((Button(pad,JoyButton.DpadRight)?1:0)-(Button(pad,JoyButton.DpadLeft)?1:0),
                 (Button(pad,JoyButton.DpadDown)?1:0)-(Button(pad,JoyButton.DpadUp)?1:0));
         }
         // Release menu-confirm before it can drop a bomb in the newly entered match.
         if(!_armed[seat])
         {
-            _armed[seat]=!keyboard.A&&!keyboard.B&&!keyboard.R&&!stick.A&&!stick.B&&!stick.R;
-            keyboard=keyboard with {A=false,B=false,R=false};stick=stick with {A=false,B=false,R=false};
+            _armed[seat]=!keyboard.A&&!keyboard.B&&!keyboard.R&&!keyboard.Aim&&!stick.A&&!stick.B&&!stick.R&&!stick.Aim;
+            keyboard=keyboard with {A=false,B=false,R=false,Aim=false};stick=stick with {A=false,B=false,R=false,Aim=false};
             if(seat<2){_keyboardBomb[seat]=false;_keyboardRemote[seat]=false;}
             if(id is {} pending)_taps.Remove(pending);
         }
@@ -188,10 +189,7 @@ public partial class ControllerHub : Node
         foreach(var pad in _native.Devices)
         {
             int id=NativeId(pad.Id);
-            for(int axis=0;axis<2;axis++)
-            {
-                PublishNativeAxis(id,axis,_native.Axis(pad.Id,axis));
-            }
+            PublishNativeAxes(id,axis=>_native.Axis(pad.Id,axis));
             for(int button=0;button<=14;button++)
             {
                 bool value=_native.Button(pad.Id,button);_nativeButtons.TryGetValue((id,button),out bool previous);
@@ -207,6 +205,21 @@ public partial class ControllerHub : Node
         {
             Input.ParseInputEvent(new InputEventJoypadButton {Device=key.Device,ButtonIndex=(JoyButton)key.Button,Pressed=false});_nativeButtons.Remove(key);
         }
+        Input.FlushBufferedEvents();
+    }
+    // SDL and Godot use the same six canonical axes: both sticks, then L/R triggers.
+    // Keep sampling shared with the synthetic backend snapshot regression so a
+    // missing production trigger cannot be concealed by direct event injection.
+    private void PublishNativeAxes(int id,Func<int,float> sample)
+    {
+        for(int axis=0;axis<6;axis++)PublishNativeAxis(id,axis,sample(axis));
+    }
+    internal void NativeAxesForPlaytest(int id,IReadOnlyList<float> snapshot)
+    {
+        if(!OS.GetCmdlineUserArgs().Any(a=>a.StartsWith("--playtest="))||id<1000||
+            _testDevices is null||!_testDevices.Any(device=>device.RuntimeId==id)||snapshot.Count!=6)
+            throw new InvalidOperationException("Native axis snapshots require a registered playtest device and six canonical axes.");
+        PublishNativeAxes(id,axis=>snapshot[axis]);
         Input.FlushBufferedEvents();
     }
     private void PublishNativeAxis(int id,int axis,float value)
@@ -234,7 +247,7 @@ public partial class ControllerHub : Node
         if(@event is InputEventKey {Pressed:true,Echo:false} key)
         {
             var pressed=key.PhysicalKeycode==Key.None?key.Keycode:key.PhysicalKeycode;
-            int keyboardSeat=pressed is Key.N or Key.M or Key.Comma or Key.Left or Key.Right or Key.Up or Key.Down or Key.Kp0 or Key.Kp1 or Key.Kp2?1:0;
+            int keyboardSeat=pressed is Key.N or Key.M or Key.Comma or Key.Left or Key.Right or Key.Up or Key.Down or Key.Kp0 or Key.Kp1 or Key.Kp2 or Key.Enter or Key.Backspace or Key.Ctrl?1:0;
             if(ActiveKeyboardSeat!=keyboardSeat){ActiveKeyboardSeat=keyboardSeat;PromptChanged?.Invoke();}
             SetActiveFamily(ControllerFamily.Keyboard);
             if(_inMatch&&_focused)for(int seat=0;seat<2;seat++)

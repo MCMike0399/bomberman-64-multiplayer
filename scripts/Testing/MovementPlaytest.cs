@@ -49,13 +49,15 @@ public partial class PlaytestDriver
     }
     private void StrideQuality()
     {
+        CompactLegs();
+        BootContinuity();
         var endPoses=new List<float>();
         foreach(int fps in new[]{30,60,120})
         {
             var model=new BomberModel(new ArtMaterials(),Colors.White,"stride check");
             try
             {
-                float dt=1f/fps,previous=0,maxLift=0,minLift=0,minBody=1,maxBody=-1,maxCompression=0;int contacts=0,leftSupport=0,flight=0;
+                float dt=1f/fps,previous=0,maxLift=0,minLift=0,minBody=1,maxBody=-1,maxCompression=0,maxFootSeparation=0;int contacts=0,leftSupport=0,flight=0;
                 for(int frame=0;frame<fps*4;frame++)
                 {
                     model.Animate(dt,dt*4.5f);
@@ -64,16 +66,17 @@ public partial class PlaytestDriver
                     previous=pose;
                     maxLift=Mathf.Max(maxLift,Mathf.Max(model.LeftFootLift,model.RightFootLift));
                     minLift=Mathf.Min(minLift,Mathf.Min(model.LeftFootLift,model.RightFootLift));
+                    maxFootSeparation=Mathf.Max(maxFootSeparation,Mathf.Abs(model.LeftFootLift-model.RightFootLift));
                     minBody=Mathf.Min(minBody,model.WalkBodyHeight);maxBody=Mathf.Max(maxBody,model.WalkBodyHeight);maxCompression=Mathf.Max(maxCompression,model.WalkCompression);
                     if(Mathf.Abs(model.LeftFootLift)<.01f)leftSupport++;
                     if(model.LeftFootLift>.01f&&model.RightFootLift>.01f)flight++;
                 }
                 endPoses.Add(model.WalkPose);
-                Event("walk-stride",new {fps,distance=18,contacts,maxLift,minLift,minBody,maxBody,maxCompression,supportFraction=leftSupport/(fps*4f),flightFraction=flight/(fps*4f)});
+                Event("walk-stride",new {fps,distance=18,contacts,maxLift,minLift,minBody,maxBody,maxCompression,maxFootSeparation,supportFraction=leftSupport/(fps*4f),flightFraction=flight/(fps*4f)});
                 Check(contacts is >=8 and <=10,"normal travel uses deliberate strides rather than tiny rapid steps at "+fps+" FPS");
-                Check(leftSupport/(fps*4f)>.25f&&leftSupport/(fps*4f)<.5f&&flight/(fps*4f)>.1f&&flight/(fps*4f)<.4f,"cartoon trot alternates short planted contacts and readable light flight at "+fps+" FPS");
-                Check(maxLift>.09f&&maxLift<.2f&&minLift>-.02f,"gathered recovery boots visibly clear the floor without sinking or a large jump at "+fps+" FPS");
-                Check(maxBody-minBody>.035f&&maxBody-minBody<.11f&&maxCompression>.01f&&maxCompression<.06f,"trot body springs and compresses within a small cartoon bounce at "+fps+" FPS");
+                Check(maxFootSeparation>.03f&&maxFootSeparation<.13f,"short rigid legs retain a readable alternating boot silhouette at "+fps+" FPS");
+                Check(maxLift>.025f&&maxLift<.12f&&minLift>-.02f,"compact recovery boots clear the floor without sinking or a large jump at "+fps+" FPS");
+                Check(maxBody-minBody>.015f&&maxBody-minBody<.065f&&maxCompression>.005f&&maxCompression<.03f,"body springs gently within the short rigid leg range at "+fps+" FPS");
                 float beforeStop=model.WalkPose;bool noExtraStep=true;
                 for(int frame=0;frame<fps;frame++)
                 {
@@ -86,5 +89,52 @@ public partial class PlaytestDriver
             finally {model.Free();}
         }
         Check(endPoses.Max()-endPoses.Min()<.002f,"equal displacement reaches the same stride pose at 30/60/120 FPS");
+    }
+    private void CompactLegs()
+    {
+        var model=new BomberModel(new ArtMaterials(),Colors.White,"compact legs");
+        try
+        {
+            float maxStretch=0,maxHipGap=0;
+            for(int frame=0;frame<240;frame++)
+            {
+                model.Animate(1f/60,4.5f/60);
+                maxStretch=Mathf.Max(maxStretch,model.WalkLegStretch);maxHipGap=Mathf.Max(maxHipGap,model.WalkHipSeparation);
+            }
+            Event("compact-legs",new {maxStretch,maxHipGap});
+            Check(Mathf.Abs(maxStretch-1)<.001f,"walking white legs retain their short fixed length throughout the stride");
+            Check(maxHipGap<.001f,"walking legs stay attached to their actual hips throughout the stride");
+        }
+        finally {model.Free();}
+    }
+    private void BootContinuity()
+    {
+        // Sample real composed boot transforms, including the leg and body. The
+        // fine pass exposes a boundary snap that coarse movie frames can hide.
+        foreach(int fps in new[]{30,60,120,1200})
+        {
+            var model=new BomberModel(new ArtMaterials(),Colors.White,"boot continuity");
+            try
+            {
+                float dt=1f/fps,maxAngularSpeed=0,maxAcceleration=0;
+                for(int frame=0;frame<fps;frame++)model.Animate(dt,dt*4.5f);
+                var left=model.LeftBootOrientation;var right=model.RightBootOrientation;
+                var leftCenter=model.LeftBootCenter;var rightCenter=model.RightBootCenter;
+                var leftVelocity=Vector3.Zero;var rightVelocity=Vector3.Zero;
+                for(int frame=0;frame<fps*2;frame++)
+                {
+                    model.Animate(dt,dt*4.5f);
+                    maxAngularSpeed=Mathf.Max(maxAngularSpeed,Mathf.Max(left.AngleTo(model.LeftBootOrientation),right.AngleTo(model.RightBootOrientation))/dt);
+                    var nextLeftVelocity=(model.LeftBootCenter-leftCenter)/dt;var nextRightVelocity=(model.RightBootCenter-rightCenter)/dt;
+                    if(frame>0)maxAcceleration=Mathf.Max(maxAcceleration,Mathf.Max((nextLeftVelocity-leftVelocity).Length(),(nextRightVelocity-rightVelocity).Length())/dt);
+                    leftVelocity=nextLeftVelocity;rightVelocity=nextRightVelocity;leftCenter=model.LeftBootCenter;rightCenter=model.RightBootCenter;
+                    left=model.LeftBootOrientation;right=model.RightBootOrientation;
+                }
+                Event("boot-continuity",new {fps,maxAngularSpeed,maxAcceleration});
+                Check(maxAngularSpeed<16,"actual boot orientation stays continuous across toe-off and touchdown at "+fps+" FPS");
+                Check(maxAcceleration<400,"actual boot recovery avoids a velocity corner at "+fps+" FPS");
+            }
+            finally {model.Free();}
+        }
     }
 }
