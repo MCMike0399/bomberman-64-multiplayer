@@ -22,33 +22,33 @@ internal static class BombActionsChecks
             Assert(F(B(m),"fuse")<fuse,"Thrown bomb fuse failed to resume.");
             Step(m,100);Assert(State(m).GetProperty("bombs").GetArrayLength()==0,"A-lifted thrown bomb never exploded.");
         });
-        Check("bomb placement is ahead with room to retreat and a running fuse",()=>{
+        Check("bomb placement is near the feet with room to retreat and a running fuse",()=>{
             var m=Match();m.SetInput(0,new PlayerInput(0,0,true));Step(m,2);
             var p=P(m);var b=B(m);
-            Assert(F(b,"z")-F(p,"z")>=.75f,"Bomb was placed under the player instead of ahead.");
+            Assert(Math.Abs(F(b,"z")-F(p,"z"))<=.3f,"Bomb was not placed near the feet.");
             m.SetInput(0,new PlayerInput(0,-1));Step(m,12);
             Assert(F(P(m),"z")<F(p,"z")-1,"Placed bomb trapped its owner.");
             Step(m,72);Assert(State(m).GetProperty("bombs").GetArrayLength()==0,"Normal bomb never exploded.");
         });
-        Check("A hold cannot create through stone or lift after walking away",()=>{
+        Check("A hold stays outside adjacent stone and cannot lift after walking away",()=>{
             var blocked=Match(wall:true);blocked.SetInput(0,new PlayerInput(0,0,true));Step(blocked,20);
-            Assert(State(blocked).GetProperty("bombs").GetArrayLength()==0&&P(blocked).GetProperty("carrying").ValueKind==JsonValueKind.Null,"A hold bypassed blocked front placement.");
+            Assert(State(blocked).GetProperty("bombs").GetArrayLength()==1&&P(blocked).GetProperty("carrying").GetString()=="bomb","Supported foot placement beside stone did not lift.");
             var m=Match();m.SetInput(0,new PlayerInput(0,0,true));Step(m,2);
             m.SetInput(0,new PlayerInput(0,-1,true));Step(m,12);
             Assert(P(m).GetProperty("carrying").ValueKind==JsonValueKind.Null&&B(m).GetProperty("state").GetInt32()==0,"A hold lifted a distant fresh bomb.");
             m.SetInput(0,default);Step(m,90);
             Assert(State(m).GetProperty("bombs").GetArrayLength()==0,"Distant A candidate paused its fuse.");
         });
-        Check("placement rejects a blocked front instead of placing underfoot",()=>{
+        Check("foot placement remains outside adjacent stone",()=>{
             var m=Match(wall:true);m.SetInput(0,new PlayerInput(0,0,true));Step(m,2);
-            Assert(State(m).GetProperty("bombs").GetArrayLength()==0,"Bomb placed into front wall or underneath player.");
+            Assert(State(m).GetProperty("bombs").GetArrayLength()==1&&F(B(m),"z")+BlastBomb.Radius<=4.001f,"Foot placement was rejected or penetrated adjacent stone.");
         });
-        Check("front placement never overlaps another bomb or player",()=>{
+        Check("foot placement never overlaps another bomb or player",()=>{
             var m=Match();m.SetInput(0,new PlayerInput(0,0,true));Step(m,2);
             m.SetInput(0,default);Step(m,2);m.SetInput(0,new PlayerInput(0,0,true));Step(m,2);
-            Assert(State(m).GetProperty("bombs").GetArrayLength()==1,"Duplicate front bombs overlapped.");
+            Assert(State(m).GetProperty("bombs").GetArrayLength()==1,"Second A created overlapping duplicate bombs.");
             var occupied=Match(frontPlayer:true);occupied.SetInput(0,new PlayerInput(0,0,true));Step(occupied,2);
-            Assert(State(occupied).GetProperty("bombs").GetArrayLength()==0,"Front bomb overlapped another player.");
+            Assert(State(occupied).GetProperty("bombs").GetArrayLength()==1&&F(B(occupied),"z")+BlastBomb.Radius+.4f<=4.501f,"Foot bomb overlapped the adjacent player.");
         });
         Check("remote bomb waits for its command while normal bombs use a fuse",()=>{
             var m=Match(remote:true);m.SetInput(0,new PlayerInput(0,0,true));Step(m,2);
@@ -60,7 +60,7 @@ internal static class BombActionsChecks
         });
         Check("kick keeps the stick angle and runs decisively ahead of the kicker",()=>{
             var m=Match();m.SetInput(0,new PlayerInput(0,0,true));Step(m,2);
-            m.SetInput(0,new PlayerInput(.3f,1));Step(m,2);var start=B(m);
+            m.SetInput(0,default);Step(m,2);m.SetInput(0,new PlayerInput(.3f,1,A:true));AwaitKick(m);var start=B(m);
             Step(m,6);var end=B(m);var dx=F(end,"x")-F(start,"x");var dz=F(end,"z")-F(start,"z");
             Assert(dz>1.2f,"Kick advances too slowly and feels like gradual pushing.");
             Assert(dx/dz>.22f&&dx/dz<.38f,"Kick snapped continuous stick angle to a grid direction.");
@@ -68,7 +68,7 @@ internal static class BombActionsChecks
         });
         Check("fast rolling bomb stops its full radius before stone",()=>{
             var m=Match(farWall:true);m.SetInput(0,new PlayerInput(0,0,true));Step(m,2);
-            m.SetInput(0,new PlayerInput(0,1));Step(m,12);m.SetInput(0,default);Step(m,8);
+            m.SetInput(0,default);Step(m,2);m.SetInput(0,new PlayerInput(0,1,A:true));Step(m,12);m.SetInput(0,default);Step(m,8);
             var b=B(m);Assert(F(b,"z")<=6-.35f+.01f,"Rolling bomb penetrated stone with its radius.");
             Assert(b.GetProperty("state").GetInt32()==0,"Bomb did not stop at stone.");
         });
@@ -81,6 +81,7 @@ internal static class BombActionsChecks
         var m=new LocalMatch(new MatchOptions {HumanPlayers=2,BotPlayers=0,Practice=true},new StageLayout {Id="fixture",Width=11,Height=11,Cells=cells,Spawns=[(3,3),frontPlayer?(3,4):(9,9)],SoftBlockDensity=0,InitialItems=remote?[(3,3,"remote")]:[]});
         Step(m,64);return m;
     }
+    static void AwaitKick(LocalMatch m){for(int i=0;i<15;i++){m.Tick();if(B(m).GetProperty("state").GetInt32()==1)return;}throw new InvalidOperationException("Deliberate kick never released.");}
     static void Step(LocalMatch m,int n){for(int i=0;i<n;i++)m.Tick();}
     static JsonElement State(LocalMatch m){using var d=JsonDocument.Parse(m.StateJson!);return d.RootElement.GetProperty("d").Clone();}
     static JsonElement P(LocalMatch m)=>State(m).GetProperty("players")[0];

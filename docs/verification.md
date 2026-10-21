@@ -1,4 +1,31 @@
-# Verified iteration eleven — 2026-10-20
+# Verified iteration twelve — 2026-10-20
+
+| Check | Result |
+|---|---|
+| Gameplay integration | **104 checks passed**, including seven placement/departure and four exclusive-mode regressions |
+| Client/session/input | 93 checks passed |
+| AI | 21 checks passed, including six stock-map combat outcomes and near-foot placement proximity |
+| Full standalone Mac regression | **1,545 assertions, 120 captures**, zero runtime errors or capture fallbacks |
+| Final standalone placement recording | 19 assertions, four captures, full MP4 decode passed |
+| Independent HTTP/WebSocket networking | 2–8 humans and one human + seven server bots passed (43.5 seconds) |
+| Installed app | v0.12.0; strict signature verification, export comparison and Launch Services gameplay smoke passed |
+
+The final full run is `artifacts/iteration12-final/20261021T043748.523851Z-all`, 62.230 seconds including startup, windowed, using the self-contained app and rebuilt localhost authority. It preserves all earlier gameplay, controller, menus, camera, blast, flood, ghost and network coverage. The test durations are local observations, not performance guarantees.
+
+Two separate placement failures were reproduced and fixed. A valid fractional position on empty flat ground was rejected by the old far-forward footprint/connectivity check. Separately, the full controller suite exposed a moving A hold retrieving the bomb from behind; a regression then reproduced that behavior before movement was made to cancel the fresh-bomb auto-lift candidate. Stationary hold/lift, deliberate second-A kick, normal leave-and-return contact kicks, fuse timing and finite capacity remain verified. Genuine capacity/space rejection now has a visible cue.
+
+The camera's measured temple width at 1280×800 grows from 55.94% in the final v0.11.0 run to 63.51%, while the new framing checks cover full 2.1-unit player headroom and actual pillar crowns at two window aspects on all three maps. Default bombs are 22% larger and pickups 20% larger. Following the user's oversized-maximum feedback, pump growth is reduced: measured target scales 1.5398, 1.8598, and 2.1798 for three stages at base fire, with a 2.3 target cap. Blast strength is unchanged. Real captures confirm the blue remote shell and green indicators after walking clear, exclusive modes, and the smaller fully pumped silhouette.
+
+The final placement movie is `artifacts/iteration12-video-final/20261021T043939.632698Z-placement`: 298 frames / 9.933 seconds, 1280×800 at 30 FPS with original game audio. The public [near-foot placement clip](videos/near-foot-placement.mp4) starts at 4.933 seconds and lasts 1.567 seconds at 1× speed. It is actual rendered gameplay with a temporary inspection camera and ordinary positioning inputs, followed by real engine keyboard and synthetic Switch bridge events. No actor state was rewritten and no frames were generated. The first drop, departure and stationary trail were inspected across extracted frames; the complete MP4 and short clip decoded successfully. Original reference footage remains ignored. Fixed-step recording is not a real-time frame-rate or physical-controller test.
+
+The installed app matches the export byte-for-byte. Launch Services smoke reached 117 gameplay snapshots with zero stderr output.
+
+An additional final-app scripted run, `20261021T044207.082914Z-script`, passed four checks and captured an unobscured blue remote after the player walked away. The source visual runs verified all maps/aspects, item collection and capped pumping before final export. The earlier full-run controller failure and red test artifacts are retained locally rather than overwritten as success.
+
+[Original-game placement, remote color and the unresolved equal-power red-radius question](iteration12-bombs-research.md). Mode exclusivity is the user's requested rule. No extra red radius multiplier was inferred from uncontrolled footage. No new physical-controller session, external deployment, notarization or Game Mode gain is claimed.
+
+## Iteration eleven baseline — 2026-10-20
+
 
 | Check | Result |
 |---|---|

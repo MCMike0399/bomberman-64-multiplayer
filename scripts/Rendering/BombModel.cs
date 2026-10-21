@@ -5,12 +5,14 @@ namespace BlastCircuit.Rendering;
 /// <summary>Charge, fuse and release animation driven by accepted authoritative bomb state.</summary>
 public partial class BombModel : Node3D
 {
+    public const float BaseVisualScale=1.22f;
     private readonly Node3D _shape=new();
     private readonly MeshInstance3D _shell,_spark;
     private readonly ArtMaterials _art;
     private int _pumps=-1;
-    private float _size=1,_targetSize=1,_pulse,_fuse=2.5f,_clock;
+    private float _size=BaseVisualScale,_targetSize=BaseVisualScale,_pulse,_fuse=2.5f,_clock;
     private bool _remote;
+    private readonly Node3D _remoteIndicators=new();
     private bool _shot;
     private Vector3 _previous,_shotDirection=Vector3.Forward;
     private readonly Node3D _trail=new();
@@ -24,6 +26,13 @@ public partial class BombModel : Node3D
         Cylinder(_shape,new(0,.69f,0),.09f,.12f,art.Color(new("ac8b3a"),.35f));
         var fuse=Cylinder(_shape,new(.035f,.81f,0),.027f,.2f,art.Color(new("e7c989")));fuse.RotationDegrees=new(0,0,-24);
         _spark=Sphere(_shape,new(.076f,.91f,0),Vector3.One*.1f,art.Color(new("ffcf51"),.3f,true));
+        _shape.AddChild(_remoteIndicators);_remoteIndicators.Visible=false;
+        var indicator=art.Color(new("a9ed69"),.35f,true);
+        for(int i=0;i<4;i++)
+        {
+            float angle=i*Mathf.Pi*.5f;
+            Sphere(_remoteIndicators,new(Mathf.Sin(angle)*.342f,.38f,Mathf.Cos(angle)*.342f),Vector3.One*.085f,indicator);
+        }
         AddChild(_trail);_trail.Visible=false;
         var streakMaterial=new StandardMaterial3D {AlbedoColor=new Color(1,.94f,.75f,.5f),ShadingMode=BaseMaterial3D.ShadingModeEnum.Unshaded,Transparency=BaseMaterial3D.TransparencyEnum.Alpha};
         for(int i=0;i<3;i++)
@@ -37,9 +46,9 @@ public partial class BombModel : Node3D
         bool pumped=_pumps>=0&&pumps>_pumps;
         if(pumped)_pulse=1;
         _pumps=pumps;_remote=remote;_fuse=fuse;CarrierId=carrier;
-        _shot=motion==1&&carrier is null;
-        _targetSize=1+Math.Max(0,level-1)*.08f+pumps*.48f;
-        _shell.MaterialOverride=_art.Color(red?new("d82e43"):new("222536"),.2f);
+        _shot=motion==1&&carrier is null;_remoteIndicators.Visible=remote;
+        _targetSize=Math.Min(2.3f,BaseVisualScale+Math.Max(0,level-1)*.04f+pumps*.32f);
+        _shell.MaterialOverride=_art.Color(remote?new("2478e8"):red?new("d82e43"):new("222536"),.2f);
         return pumped;
     }
     public override void _Process(double delta)

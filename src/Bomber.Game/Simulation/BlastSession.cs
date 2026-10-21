@@ -634,7 +634,7 @@ public sealed partial class BlastSession : GameSession
         {
             if (b.State != BombState.Resting) continue;
             if (Math.Abs(BombY(b) - _stage.SurfaceAt(x, z)) > .6f) continue;
-            if (b.OwnerId == mover.Id && b.FuseTimer >= BlastBomb.FuseSeconds - 0.2f) continue; // pass through own just-placed bomb briefly
+            if (b.OwnerId == mover.Id && b.OwnerMayLeave) continue; // first departure is geometric, not a time-limited escape
             var distance = Dist2(b.X,b.Z,x,z);
             var previousDistance = Dist2(b.X,b.Z,mover.X,mover.Z);
             var clearance = (PlayerRadius + BlastBomb.Radius) * (PlayerRadius + BlastBomb.Radius);
@@ -680,7 +680,7 @@ public sealed partial class BlastSession : GameSession
 
         foreach (var b in _bombs)
         {
-            if (b.State != BombState.Resting || Math.Abs(BombY(b) - p.Y) > .6f) continue;
+            if (b.State != BombState.Resting || b.OwnerMayLeave&&b.OwnerId==p.Id || Math.Abs(BombY(b) - p.Y) > .6f) continue;
             var dx = b.X - p.X;
             var dz = b.Z - p.Z;
             var dist = MathF.Sqrt(dx * dx + dz * dz);
@@ -712,18 +712,20 @@ public sealed partial class BlastSession : GameSession
 
     private void TryPlaceBomb(ISessionContext context, BlastPlayer p, bool hold = false)
     {
-        if (p.ActiveBombs >= p.BombCapacity) return;
+        if (p.ActiveBombs >= p.BombCapacity)
+        {Present("bomb-blocked",playerId:p.Id,x:p.X,y:p.Y,z:p.Z,reason:"capacity");return;}
 
-        var x = p.X + p.FacingX * (PlayerRadius + BlastBomb.Radius + .07f);
-        var z = p.Z + p.FacingZ * (PlayerRadius + BlastBomb.Radius + .07f);
+        float x=p.X,z=p.Z;
+        if(!hold&&!TryBombPlacement(p,p.FacingX,p.FacingZ,0,out x,out z))
+        {Present("bomb-blocked",playerId:p.Id,x:p.X,y:p.Y,z:p.Z,reason:"space");return;}
         var cx = (int)MathF.Floor(x);
         var cz = (int)MathF.Floor(z);
-        if (!hold && !CanPlaceBombAt(p, x, z)) return;
 
         var bomb = new BlastBomb
         {
             Id = NextBombId(),
             OwnerId = p.Id,
+            OwnerMayLeave = !hold,
             X = x, Z = z,
             CellX = cx, CellZ = cz, Tier = (int)MathF.Round(_stage.SurfaceAt(x, z)),
             FireLevel = p.FireLevel,
@@ -864,6 +866,11 @@ public sealed partial class BlastSession : GameSession
         {
             var b = _bombs[i];
             if (b.Exploded) { _bombs.RemoveAt(i); continue; }
+
+            if(b.OwnerMayLeave&&(b.State!=BombState.Resting||b.OwnerId is null||
+                !_players.TryGetValue(b.OwnerId,out var placingOwner)||!placingOwner.Alive||placingOwner.Ghost||
+                Math.Abs(placingOwner.Y-BombY(b))>.6f||Dist2(b.X,b.Z,placingOwner.X,placingOwner.Z)>.8f*.8f))
+                b.OwnerMayLeave=false;
 
             // A remote cannot wait for a command its owner can no longer send. Keep
             // active owners' deliberate remote semantics, but resume a real fuse for
@@ -1437,6 +1444,7 @@ public sealed partial class BlastSession : GameSession
         {
             id = b.Id,
             ownerId = b.OwnerId,
+            ownerCanExit=b.OwnerMayLeave,
             carrierId = b.State == BombState.Carried ? _players.Values.FirstOrDefault(p=>p.CarryingBombId==b.Id)?.Id : null,
             effectiveLevel = b.EffectiveLevel,
             x = MathF.Round(b.X, 2),

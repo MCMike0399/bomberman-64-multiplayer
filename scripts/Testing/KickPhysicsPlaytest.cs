@@ -33,16 +33,16 @@ public partial class PlaytestDriver
         float victimStartX=GrappleValue(GrapplePlayer(1),"x"),victimGround=GrappleValue(GrapplePlayer(1),"y");
         Input(0,new PlayerInput(1,0));await Frames(1);
         Input(0,new PlayerInput(0,0,A:true));await Frames(2);Input(0,default);await Frames(2);
-        Check(KickBomb.GetProperty("state").GetInt32()==0,"precontact bomb is planted ahead in the real corridor");
+        Check(KickBomb.GetProperty("state").GetInt32()==0,"precontact bomb is planted near the feet in the real corridor");
         float startX=GrappleValue(KickBomb,"x"),ground=GrappleValue(KickBomb,"y");
         await Capture("kick-precontact");
         int kickCueBefore=Cue("kick");
-        Input(0,new PlayerInput(1,0));
-        await WaitState(_=>GrapplePlayer(0).GetProperty("kickWindup").GetSingle()>0,"contact first plants the kicker in an authoritative wind-up",20);
+        Input(0,new PlayerInput(0,0,A:true));
+        await WaitState(_=>GrapplePlayer(0).GetProperty("kickWindup").GetSingle()>0,"a fresh primary press plants the kicker in an authoritative wind-up",20);
         Check(KickBomb.GetProperty("state").GetInt32()==0&&Cue("kick")==kickCueBefore,"anticipation holds the bomb and defers the impact sound until launch");
         Check(TraversalModel(0).KickPose<0,"actual character leg anticipates the accepted kick");
         await Capture("kick-planted-windup",0);
-        await WaitState(_=>State.GetProperty("bombs").GetArrayLength()>0&&KickBomb.GetProperty("state").GetInt32()==1,"ordinary player contact launches the planted bomb",20);
+        await WaitState(_=>State.GetProperty("bombs").GetArrayLength()>0&&KickBomb.GetProperty("state").GetInt32()==1,"deliberate primary kick launches the planted bomb",20);
         Input(0,default);await Frames(2);
         Check(GrappleValue(KickBomb,"y")>ground+.04f,"kicked bomb rises through authoritative short hop");
         Check(GrappleValue(KickBomb,"x")>startX+.45f,"kick carries bomb decisively ahead without continued pushing");
@@ -79,7 +79,7 @@ public partial class PlaytestDriver
         Input(0,new PlayerInput(.7071f,-.7071f));await Frames(1);
         Input(0,new PlayerInput(0,0,A:true));await Frames(2);Input(0,default);await Frames(2);
         string cornerId=KickBomb.GetProperty("id").GetString()!;
-        Input(0,new PlayerInput(.7071f,-.7071f));
+        Input(0,new PlayerInput(0,0,A:true));
         await WaitState(_=>State.GetProperty("bombs").GetArrayLength()>0&&KickBomb.GetProperty("state").GetInt32()==1,"normal diagonal kick reaches the actual temple corner",20);
         Input(0,default);
         await WaitState(_=>State.GetProperty("bombs").GetArrayLength()>0&&KickBomb.GetProperty("state").GetInt32()==0,"normal bomb stops against solid raised corner",20);
@@ -100,7 +100,7 @@ public partial class PlaytestDriver
         await GrappleWalk(0,lane,13);Input(0,new PlayerInput(0,1));await Frames(1);
         Input(0,new PlayerInput(0,0,A:true));await Frames(2);Input(0,default);await Frames(2);
         Check(State.GetProperty("bombs").GetArrayLength()==1,"terrace witness places a real bomb on the bridge before the courtyard drop");
-        float terraceStart=GrappleValue(KickBomb,"z");Input(0,new PlayerInput(0,1));
+        float terraceStart=GrappleValue(KickBomb,"z");Input(0,new PlayerInput(0,0,A:true));
         await WaitState(_=>KickBomb.GetProperty("state").GetInt32()==1,"ordinary bridge contact releases committed kick",20);Input(0,default);
         await WaitState(_=>KickBomb.GetProperty("state").GetInt32()==3,"kicked bomb leaves real bridge edge through gravity",20);
         Check(GrappleValue(KickBomb,"y")<1&&GrappleValue(KickBomb,"y")>0,"courtyard shot falls between actual terrain levels");

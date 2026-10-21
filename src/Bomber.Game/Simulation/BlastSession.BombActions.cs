@@ -17,6 +17,7 @@ public sealed partial class BlastSession
             if(p.CarryingBombId is not null) PumpBomb(p);
             else if(p.CarryingPlayerId is null)
             {
+                if(!input.B&&TryPrimaryKick(p))return;
                 var count=_bombs.Count;
                 TryPlaceBomb(context,p,input.B);
                 if(_bombs.Count>count)
@@ -26,7 +27,7 @@ public sealed partial class BlastSession
                 }
             }
         }
-        if(!input.A)
+        if(!input.A||input.Length>.1f)
         {
             p.PrimaryHoldTimer=0;p.PrimaryBombCandidateId=null;
         }
@@ -52,18 +53,40 @@ public sealed partial class BlastSession
 
     private static void LaunchKickedBomb(BlastBomb bomb,float vx,float vz,string? touchedBy)
     {
-        bomb.State=BombState.Rolling;bomb.LastTouchedById=touchedBy;bomb.ResumeRollingAfterFall=false;
+        bomb.State=BombState.Rolling;bomb.LastTouchedById=touchedBy;bomb.ResumeRollingAfterFall=false;bomb.OwnerMayLeave=false;
         bomb.VX=vx;bomb.VZ=vz;bomb.KickHopRemaining=BlastBomb.KickHopSeconds;
+    }
+
+    // A small front bias reads as a foot-level drop. If that bias touches
+    // stone, the supported position at the feet remains a valid placement.
+    private bool TryBombPlacement(BlastPlayer p,float aimX,float aimZ,float advance,out float x,out float z)
+    {
+        x=p.X+aimX*(advance+.18f);z=p.Z+aimZ*(advance+.18f);
+        if(CanPlaceBombAt(p,x,z))return true;
+        x=p.X+aimX*advance;z=p.Z+aimZ*advance;
+        return CanPlaceBombAt(p,x,z);
+    }
+
+    private bool TryPrimaryKick(BlastPlayer p)
+    {
+        var bomb=_bombs.Where(b=>!b.Exploded&&b.State==BombState.Resting&&Math.Abs(BombY(b)-p.Y)<.6f&&
+            Dist2(b.X,b.Z,p.X,p.Z)<=.9f*.9f&&
+            (b.X-p.X)*p.FacingX+(b.Z-p.Z)*p.FacingZ>=-.05f)
+            .OrderBy(b=>Dist2(b.X,b.Z,p.X,p.Z)).FirstOrDefault();
+        if(bomb is null)return false;
+        // A fresh button edge is a deliberate new strike, including a wall stop.
+        _presentedKickContacts.Remove((p.Id,bomb.Id));
+        BeginKick(p,bomb,p.FacingX,p.FacingZ);return true;
     }
 
     private bool CanPlaceBombAt(BlastPlayer player,float x,float z)
     {
         var cell=_stage.At((int)MathF.Floor(x),(int)MathF.Floor(z));
-        if (!cell.IsPassable || !BombTerrainClear(x,z,(int)MathF.Floor(player.X),(int)MathF.Floor(player.Z))) return false;
+        if (!cell.IsPassable || !BombTerrainClear(x,z,(int)MathF.Floor(player.X),(int)MathF.Floor(player.Z),allowDescent:true)) return false;
         var y=_stage.SurfaceAt(x,z);
         if (Math.Abs(y-player.Y)>.6f) return false;
         foreach(var other in _players.Values)
-            if(other.Alive&&!other.Ghost&&other.CarriedById is null&&!other.Airborne&&Math.Abs(other.Y-y)<.6f&&
+            if(other.Id!=player.Id&&other.Alive&&!other.Ghost&&other.CarriedById is null&&!other.Airborne&&Math.Abs(other.Y-y)<.6f&&
                 Dist2(x,z,other.X,other.Z)<(PlayerRadius+BlastBomb.Radius)*(PlayerRadius+BlastBomb.Radius)) return false;
         foreach(var bomb in _bombs)
             if(!bomb.Exploded&&bomb.State!=BombState.Carried&&Math.Abs(BombY(bomb)-y)<.6f&&

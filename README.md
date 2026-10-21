@@ -74,7 +74,7 @@ The default is loopback. No external hosting, domain, TLS, firewall changes or p
 | Action | Keyboard 1 | Keyboard 2 | Xbox | Switch 2 | PS5 |
 |---|---|---|---|---|---|
 | Move | WASD | Arrows | Stick / D-pad | Stick / D-pad | Stick / D-pad |
-| Bomb / pump | J or Space | N or Enter | A | A | Cross |
+| Bomb / kick / pump | J or Space | N or Enter | A | A | Cross |
 | Carry / throw | K or Shift | M or Ctrl | X or LB | B or L | Square or L1 |
 | Remote detonation | L or R | Comma or Backspace | B or RB | X or R | Circle or R1 |
 | Leave battle | Esc | Esc | Menu | + | Options |
@@ -100,7 +100,9 @@ It downloads checksum-pinned SDL 3.4.18 and libusb 1.0.29, builds inside ignored
 
 Left-stick menu navigation uses deliberate threshold crossings and repeat while held, including setup, lobbies and results. It accepts gradual pushes, stabilizes diagonal choices, and changes direction immediately on reversal. The Switch 2 USB path is tested through the same native event bridge used during play; [physical versus synthetic evidence](docs/verification.md) remains explicit.
 
-Tap the bomb button to place a bomb **in front** of the player. Hold it for a quarter-second to lift that same bomb; release, then tap it again to pump. Press carry to throw the A-lifted bomb. On Switch this is **A: tap/place, hold/lift, tap/pump; B: throw**. The older hold-carry pickup and release-to-throw path also works, as does carry + bomb to create a bomb overhead. Walking into a resting bomb triggers one kick and sends it down the chosen continuous direction faster than running speed; it is not a gradual push. Normal fuses resume after throwing. Remote bombs wait for the remote command, with an explicit HUD hint. Explosions use spherical distance and cover occlusion rather than a classic grid cross. Pickups upgrade blast size, bomb capacity, remote detonation, red piercing bombs or a protective heart. Ghosts and sudden death are enabled by default. A latched ghost rides visibly on top and adds limited steering interference; the living player retains control and can shake it off. Walking off a high terrace starts a gravity fall to lower terrain; upward cliffs and solid walls still block movement. With one minute left, the Pyramid-inspired Sunken Temple warns of rising water; its lower court floods before the upper terraces. Other arenas retain closing columns. Permanent stone and terrain block blasts; red bombs penetrate breakable cover. Last survivor earns a round win; first to the win target wins the match.
+Tap the bomb button to drop a bomb **near your feet**. You can walk away and leave it stationary, including while laying a trail with separate taps. A fresh second press while beside the bomb deliberately kicks it. Hold the original placement press while standing still for a quarter-second to lift that same bomb; release, then tap again to pump. Press carry to throw the A-lifted bomb. On Switch this is **A: place/kick, hold first press to lift, tap while carrying to pump; B: throw**. The older hold-carry pickup and release-to-throw path also works, as does carry + bomb to create a bomb overhead. Once clear of your own new placement, walking back into a resting bomb triggers one kick and sends it down the chosen continuous direction faster than running speed; it is not a gradual push. Normal fuses resume after throwing. Remote bombs wait for the remote command, with an explicit HUD hint.
+
+Explosions use spherical distance and cover occlusion rather than a classic grid cross. Pickups upgrade blast size, bomb capacity, remote detonation, red piercing bombs or a protective heart. Ghosts and sudden death are enabled by default. A latched ghost rides visibly on top and adds limited steering interference; the living player retains control and can shake it off. Walking off a high terrace starts a gravity fall to lower terrain; upward cliffs and solid walls still block movement. With one minute left, the Pyramid-inspired Sunken Temple warns of rising water; its lower court floods before the upper terraces. Other arenas retain closing columns. Permanent stone and terrain block blasts; red bombs penetrate breakable cover. Last survivor earns a round win; first to the win target wins the match.
 
 ## Knockdowns and player grabs
 
@@ -120,9 +122,11 @@ Water contact uses the actual visible water height. Merely grazing the shoreline
 
 ## Battle progression
 
-Breakable stone objects can drop weighted upgrades. Fire raises normal blast strength to level 3; bomb upgrades raise simultaneous capacity to 8. Red power penetrates breakable cover, remote bombs detonate on command, and one heart absorbs one blast without stacking. Water remains lethal. Equipment resets between rounds.
+Breakable stone objects can drop weighted upgrades. Fire raises normal blast strength to level 3; bomb upgrades raise simultaneous capacity to 8. Red power penetrates breakable cover. Blue remote bombs with green indicators detonate on command. Picking up either special upgrade replaces the other for newly placed bombs. Existing red bombs retain their original fuse; an existing remote resumes its normal fuse if its owner switches to red and can no longer command it. One heart absorbs one blast without stacking. Water remains lethal. Equipment resets between rounds.
 
-Three accepted pump presses add three effective blast levels, reaching level 6 with maximum fire upgrades. Bombs visibly inflate beyond the character's head. Timed bombs pause their fuse while carried and resume it after release. These numerical choices and the flood curve are project tuning; [manual and gameplay-video research](docs/gameplay-research.md) distinguishes confirmed observations from assumptions.
+Three accepted pump presses add three effective blast levels, reaching level 6 with maximum fire upgrades. The default bomb is larger for readability, but pumped visual growth is restrained: three pumps are about 1.8× the default size, with a visual target cap of 2.3. This does not change blast strength. Pickups are also larger and the camera fits the stage more closely. Timed bombs pause their fuse while carried and resume it after release. These numerical choices and the flood curve are project tuning; [manual and gameplay-video research](docs/gameplay-research.md) distinguishes confirmed observations from assumptions.
+
+The original manual establishes increased destructive power for red bombs, but the inspected sources do not establish a separate radius multiplier at identical fire and pump levels. This build keeps radius tied to those levels and gives red its cover penetration. [Placement, color and red-power research](docs/iteration12-bombs-research.md).
 
 Bots pursue useful upgrades, pressure reachable opponents, predict visible fuse/chain danger, plan an escape before placing bombs, and seek high ground before flooding. Difficulty changes reaction time rather than movement speed, damage or hidden knowledge. See the [AI behavior tests and measured tradeoffs](tests/Bomber.Ai.Tests/README.md).
 
@@ -200,11 +204,15 @@ python3 tools/playtest/run.py --scenario presentation
 
 ## Screenshots
 
-The gallery contains real exported-app captures. Kick, shoreline and grapple images are updated for v0.11.0; unchanged scenes retain their verified earlier captures. Kick closeups use a temporary inspection camera on actual actors. The controller tester shows device detection, not new physical button testing.
+The gallery contains real exported-app captures. Gameplay images are updated for v0.12.0; unchanged menus and model profiles retain their verified earlier captures. The bomb-trail closeup uses a temporary inspection camera on actual actors. The controller tester shows device detection, not new physical button testing.
 
-[Watch the recorded kick and small stumble](docs/videos/kick-and-stumble.mp4) — four seconds at normal simulation speed, with game audio. [Recording receipt and measurements](docs/verification.md).
+[Watch near-foot placement and leaving bombs behind](docs/videos/near-foot-placement.mp4) — actual v0.12.0 gameplay at normal simulation speed, with game audio. [Recording receipt and measurements](docs/verification.md). The [earlier kick/stumble clip](docs/videos/kick-and-stumble.mp4) documents v0.11.0.
 
 ![Sunken Temple battle](docs/images/temple-battle.png)
+
+![Leaving a stationary bomb trail](docs/images/bomb-trail.png)
+
+![Blue remote bomb after walking clear](docs/images/blue-remote.png)
 
 ![Mode selection](docs/images/mode-select.png)
 

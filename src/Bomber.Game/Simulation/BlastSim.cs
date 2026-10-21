@@ -227,6 +227,7 @@ public sealed class BlastBomb
 
     public string? OwnerId { get; set; }
     public string? LastTouchedById { get; set; }
+    public bool OwnerMayLeave { get; set; } // one-way permission to leave a new near-foot placement
     public float X { get; set; }
     public float Z { get; set; }
     public int Tier { get; set; }

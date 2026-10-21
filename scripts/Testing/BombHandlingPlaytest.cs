@@ -22,12 +22,12 @@ public partial class PlaytestDriver
         Input(0,new PlayerInput(0,0,A:true));await Frames(3);
         Check(State.GetProperty("bombs").GetArrayLength()==1,"Nintendo A places exactly one normal bomb");
         var bomb=HandlingBomb;
-        Check(Math.Abs(bomb.GetProperty("x").GetSingle()-px)<.05f&&bomb.GetProperty("z").GetSingle()>pz+.7f&&bomb.GetProperty("z").GetSingle()<pz+.95f,"normal bomb is placed visibly in front rather than under the player");
+        Check(Math.Abs(bomb.GetProperty("x").GetSingle()-px)<.05f&&Math.Abs(bomb.GetProperty("z").GetSingle()-pz)<=.3f,"normal bomb is placed near the feet with only a small forward bias");
         Check(!bomb.GetProperty("remote").GetBoolean()&&bomb.GetProperty("state").GetInt32()==0,"short A starts a resting normal fused bomb");
         float fuse=bomb.GetProperty("fuse").GetSingle();
-        await Capture("bomb-a-front-placement",0);
+        await Capture("bomb-a-foot-placement",0);
         await Frames(10);
-        Check(Player.GetProperty("carrying").GetString()=="bomb"&&HandlingBomb.GetProperty("state").GetInt32()==2,"holding Nintendo A alone lifts its fresh front bomb");
+        Check(Player.GetProperty("carrying").GetString()=="bomb"&&HandlingBomb.GetProperty("state").GetInt32()==2,"holding Nintendo A alone lifts its fresh near-foot bomb");
         Check(Cue("lift")==lifts+1,"A-only lift produces one accepted lift cue");
         Check(HandlingBomb.GetProperty("fuse").GetSingle()<=fuse,"normal bomb retains its ordinary fuse metadata after lift");
         Input(0,default);await Frames(4);

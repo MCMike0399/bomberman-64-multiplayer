@@ -5,12 +5,13 @@ namespace BlastCircuit.Rendering;
 /// <summary>Distinct silhouettes communicate the reward before the player touches it.</summary>
 public partial class PowerupModel : Node3D
 {
+    public const float VisualScale=1.20f;
     private readonly Node3D _icon=new();
     private float _time;
     public string Kind {get;}
     public PowerupModel(ArtMaterials art,string kind)
     {
-        Kind=kind;AddChild(_icon);
+        Kind=kind;Scale=Vector3.One*VisualScale;AddChild(_icon);
         var white=art.Color(new("fff9dc"),.4f);var ink=art.Color(new("253453"),.3f);var gold=art.Color(new("ffd653"),.4f,true);
         Cylinder(this,new(0,-.3f,0),.3f,.05f,gold);
         switch(kind)

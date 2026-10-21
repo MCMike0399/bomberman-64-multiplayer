@@ -55,9 +55,9 @@ public partial class PlaytestDriver
             await Capture("action-lift-throw");_root.Back();await Frames(3);
             _root.StartLocal(new SessionSettings(Stage:"rock-garden",Bots:0),1,practice:true);
             await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"kick practice reaches fight",150);
-            // Set the front before placing; walk into that actual front bomb.
+            // Set the facing before a near-foot drop, then deliberately kick with a fresh A edge.
             Input(0,new PlayerInput(1,0));await Frames(1);Input(0,new PlayerInput(0,0,A:true));await Frames(2);Input(0,default);await Frames(7);
-            Input(0,new PlayerInput(1,0));await WaitState(_=>Cue("kick")>kicks,"front bomb contact accepts a real kick",25);Input(0,default);await Frames(2);
+            Input(0,new PlayerInput(0,0,A:true));await WaitState(_=>Cue("kick")>kicks,"second primary press accepts a real kick",25);Input(0,default);await Frames(2);
             Check(Cue("kick")>kicks,"actual contact kick plays its own cue");await Capture("action-kick");_root.Back();await Frames(3);
             _root.StartLocal(new SessionSettings(Stage:"sunken-temple",Bots:0),1,practice:true);
             await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"water fall practice reaches fight",150);

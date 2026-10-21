@@ -63,7 +63,7 @@ internal static class GrappleChecks
         var m=new LocalMatch(new MatchOptions {HumanPlayers=3,BotPlayers=0,Practice=true},arena);Step(m,64);
         m.SetInput(0,new PlayerInput(1,0));Step(m,2);
         m.SetInput(0,new PlayerInput(0,0,true));Step(m,2);
-        m.SetInput(0,new PlayerInput(1,0));
+        m.SetInput(0,default);Step(m,2);m.SetInput(0,new PlayerInput(1,0,A:true));
         for(int i=0;i<45&&!P(m,1).GetProperty("stunned").GetBoolean();i++)m.Tick();
         m.SetInput(0,default);Assert(P(m,1).GetProperty("stunned").GetBoolean(),"Fixture: moving bomb did not hit victim. "+m.StateJson);
         Assert(P(m,1).GetProperty("airborne").GetBoolean(),"Fixture: bomb impact did not launch victim.");
@@ -77,7 +77,7 @@ internal static class GrappleChecks
         var cells=new CellDef[17,13];for(int x=0;x<17;x++)for(int z=0;z<13;z++)cells[x,z]=CellDef.Floor0;
         var f=new AppearanceFixture(customStage:new StageLayout {Id="fixture",Width=17,Height=13,Cells=cells,Spawns=[(2,3),(5,3),(9,4)],SoftBlockDensity=0,InitialItems=[(2,3,"remote")]},humans:3);
         void Input(int seat,float x=0,float z=0,bool a=false,bool b=false)=>f.Message(seat,JsonSerializer.Serialize(new {x,z,a,b,r=false}),"input");
-        f.Step(64);Input(0,1);f.Step(2);Input(0,a:true);f.Step(2);Input(0,1);
+        f.Step(64);Input(0,1);f.Step(2);Input(0,a:true);f.Step(2);Input(0);f.Step(2);Input(0,1,a:true);
         for(int i=0;i<45&&!f.Snapshot.GetProperty("players")[1].GetProperty("stunned").GetBoolean();i++)f.Step(1);
         Input(0);
         Assert(f.Snapshot.GetProperty("players")[1].GetProperty("airborne").GetBoolean(),"Callback fixture did not launch victim.");

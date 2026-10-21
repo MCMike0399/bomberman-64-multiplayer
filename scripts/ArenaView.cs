@@ -225,6 +225,7 @@ public partial class ArenaView : Node3D
             if(player!=null&&_entities.TryGetValue("p:"+player,out var actor)&&actor is BomberModel model)model.React(kind);
             switch(kind)
             {
+                case "bomb-blocked":PowerupMessage(PositionOf(e),reason=="capacity"?"BOMBS OUT!":"NEED ROOM!",false);CountEffect(kind);break;
                 case "bomb-drop":case "bomb-carry":_audio.Bomb();break;
                 case "kick-windup":CountEffect(kind);break;
                 case "kick":

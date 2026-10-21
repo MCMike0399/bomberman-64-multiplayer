@@ -13,6 +13,8 @@ public partial class BomberModel : Node3D
     private float _downBlend;
     public float KnockdownPose=>_downBlend;
     public void RecoveryPose(bool held,bool airborne){_heldVictim=held;_airborne=airborne;}
+    private float _dropPulse;
+    public float PlacementPose=>_dropPulse;
     private float _time,_walkPhase,_speed,_carryBlend,_pumpPulse,_throwPulse,_kickPulse,_liftPulse,_deathPulse,_victoryPulse;
     private int _charge;
     private readonly ArtMaterials _art;
@@ -47,6 +49,7 @@ public partial class BomberModel : Node3D
     {
         switch(kind)
         {
+            case "bomb-drop":_dropPulse=1;break;
             case "kick":_kickWinding=false;_kickPulse=1;break;
             case "kick-cancel":_kickWinding=false;_kickPulse=0;break;
             case "lift":_liftPulse=1;break;
@@ -230,6 +233,8 @@ public partial class BomberModel : Node3D
         float acceleration=Mathf.Clamp((_speed-previousSpeed)/Mathf.Max(dt,.001f),-3,3);
         _carryBlend=Mathf.MoveToward(_carryBlend,_carrying?1:0,dt*6);
         _pumpPulse=Mathf.MoveToward(_pumpPulse,0,dt*3.6f);_throwPulse=Mathf.MoveToward(_throwPulse,0,dt*4.5f);
+        _dropPulse=Mathf.MoveToward(_dropPulse,0,dt/.18f);
+        float drop=Mathf.Sin(_dropPulse*Mathf.Pi);
         _kickWindupRemaining=Mathf.Max(0,_kickWindupRemaining-dt);
         _kickPulse=Mathf.MoveToward(_kickPulse,0,dt/.22f);_liftPulse=Mathf.MoveToward(_liftPulse,0,dt*3.2f);
         _deathPulse=Mathf.MoveToward(_deathPulse,0,dt*1.8f);_victoryPulse=Mathf.MoveToward(_victoryPulse,0,dt*.7f);
@@ -253,11 +258,11 @@ public partial class BomberModel : Node3D
         float left=Mathf.Lerp(-.1f-walk*.55f+breath*.025f,-2.9f-pump*.18f,_carryBlend)-toss*1.7f-lift*.2f-victory*2.7f;
         float right=Mathf.Lerp(-.14f+walk*.55f-breath*.018f,-2.9f-pump*.18f,_carryBlend)-toss*1.7f-lift*.2f-victory*2.7f;
         _leftArm.Rotation=new(left-kick*.35f,-.07f,Mathf.Lerp(-.48f+breath*.025f,-.12f-_charge*.035f,_carryBlend));
-        _rightArm.Rotation=new(right+kick*.4f,.07f,Mathf.Lerp(.50f-breath*.025f,.12f+_charge*.035f,_carryBlend));
+        _rightArm.Rotation=new(right+kick*.4f-drop*.45f,.07f,Mathf.Lerp(.50f-breath*.025f,.12f+_charge*.035f,_carryBlend));
         _body.Position=new(sway*.009f,stepBob+breath*.009f-pump*.08f+lift*.04f+victory*.08f-death*.18f+(_ghost?.18f+Mathf.Sin(_time*3)*.08f:0),0);
         _body.Scale=new(1+pump*.06f,1-pump*.09f-death*.18f,1+pump*.06f);
         _body.Rotation=new(_speed*.055f+acceleration*.012f-_carryBlend*_charge*.025f+toss*.12f,-walk*.025f,(_stunned?Mathf.Sin(_time*9)*.22f:0)+death*.48f+walk*.042f+sway*.012f);
-        _body.Position+=new Vector3(0,0,kick*.045f);
+        _body.Position+=new Vector3(0,-drop*.035f,kick*.045f+drop*.018f);
         _body.Rotation+=new Vector3(-kick*.16f,kick*.1f,0);
         _body.Position=_body.Position.Lerp(new Vector3(0,.22f,0),_downBlend);
         _body.Rotation=_body.Rotation.Lerp(new Vector3(_airborne?Mathf.Sin(_time*8)*.3f:0,0,1.35f+(_heldVictim?Mathf.Sin(_time*12)*.045f:0)),_downBlend);

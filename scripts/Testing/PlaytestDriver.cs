@@ -62,6 +62,7 @@ public partial class PlaytestDriver : Node
                 case "model-profile": await ModelProfiles(); break;
                 case "movement": await MovementQuality(); break;
                 case "traversal": await TraversalAndGhosts(); break;
+                case "placement": await PlacementQuality(); break;
                 case "bomb-handling": await BombHandling(); break;
                 case "kick-physics": await KickPhysics(); break;
                 case "body-contacts": await BodyContacts(); break;
@@ -76,7 +77,7 @@ public partial class PlaytestDriver : Node
                 case "roster": await RosterSelection(); break;
                 case "framing": await Framing(); break;
                 case "fullscreen": await Fullscreen(); break;
-                case "all": await Menus(); await SetupMenus(); await ControllerInputs(); await AnalogPopupMenus(); await RosterSelection(); await Framing(); await ModelProfiles(); await MovementQuality(); await TraversalAndGhosts(); await BombHandling(); await KickPhysics(); await BodyContacts(); await GrappleActions(); await LocalActions(); await Ramps(); await Powerups(); await PumpGrowth(); await PresentationEffects(); await HurryWater(); await Combat(); await Results(); await Network(); break;
+                case "all": await Menus(); await SetupMenus(); await ControllerInputs(); await AnalogPopupMenus(); await RosterSelection(); await Framing(); await ModelProfiles(); await MovementQuality(); await TraversalAndGhosts(); await PlacementQuality(); await BombHandling(); await KickPhysics(); await BodyContacts(); await GrappleActions(); await LocalActions(); await Ramps(); await Powerups(); await PumpGrowth(); await PresentationEffects(); await HurryWater(); await Combat(); await Results(); await Network(); break;
                 default: throw new ArgumentException("Unknown scenario: "+_scenario);
             }
         }
@@ -239,9 +240,9 @@ public partial class PlaytestDriver : Node
         float minX=1,minY=1,maxX=0,maxY=0;int points=0;bool behind=false;
         for(var i=0;i<cells.GetArrayLength();i++)
         {
-            var cell=cells[i];int kind=cell.GetProperty("k").GetInt32();if(kind is not (0 or 4))continue;
+            var cell=cells[i];int kind=cell.GetProperty("k").GetInt32();if(kind is 2 or 3)continue;
             float y=kind==4?cell.GetProperty("rt").GetSingle():cell.GetProperty("t").GetSingle();
-            foreach(float dx in new[]{0f,1f})foreach(float dz in new[]{0f,1f})foreach(float head in new[]{0f,1.7f})
+            foreach(float dx in new[]{0f,1f})foreach(float dz in new[]{0f,1f})foreach(float head in new[]{0f,kind==1?1.21f:2.1f})
             {
                 var world=new Vector3(i%width+dx,y*1.35f+head,i/width+dz);
                 behind|=camera.IsPositionBehind(world);var p=camera.UnprojectPosition(world)/viewport;
@@ -372,16 +373,17 @@ public partial class PlaytestDriver : Node
         await MoveTo(12.5f,12.5f,120);
         Check(Player.GetProperty("bombs").GetInt32()==initialCapacity+1,"walking onto bomb increases capacity by exactly one");
         await MoveTo(12.5f,13.5f,60);
-        Check(Player.GetProperty("red").GetBoolean(),"walking onto red power enables strong bombs");
+        Check(Player.GetProperty("red").GetBoolean()&&!Player.GetProperty("remote").GetBoolean(),"walking onto red power selects red bomb mode");
         await MoveTo(10.5f,13.5f,80);
         Check(Player.GetProperty("heart").GetBoolean(),"walking onto heart grants extra hit");
         await MoveTo(8.5f,13.5f,80);
-        Check(Player.GetProperty("remote").GetBoolean(),"walking onto remote enables command detonation");
+        Check(Player.GetProperty("remote").GetBoolean()&&!Player.GetProperty("red").GetBoolean(),"walking onto remote replaces red with command detonation");
         Check(Player.GetProperty("pickupSerial").GetInt64()>=6,"six real pickups accepted by authority");
         Check(Visual.GetProperty("powerups").GetInt32()==0,"collected pickup models disappear");
         await Capture("powerups-collected-hud");
         Input(0,new PlayerInput(0,0,A:true));await Frames(4);Input(0,default);await Frames(4);
-        Check(State.GetProperty("bombs").EnumerateArray().Any(b=>b.GetProperty("red").GetBoolean()&&b.GetProperty("remote").GetBoolean()),"collected powerups change newly placed bomb");
+        Check(State.GetProperty("bombs").EnumerateArray().Any(b=>!b.GetProperty("red").GetBoolean()&&b.GetProperty("remote").GetBoolean()),"latest remote pickup determines newly placed bomb mode");
+        await Capture("powerups-remote-bomb");
         Input(0,new PlayerInput(0,0,R:true));await Frames(4);Input(0,default);await Frames(4);
         Check(State.GetProperty("hazards").GetArrayLength()>0,"remote action detonates upgraded bomb");
         // In-battle HUD buttons deliberately stay out of D-pad focus navigation.
@@ -400,6 +402,7 @@ public partial class PlaytestDriver : Node
         Check(Player.GetProperty("carrying").GetString()=="bomb","hold lift and press bomb creates carried bomb");
         Input(0,new PlayerInput(0,0,B:true));await Frames(12);
         float previous=Visual.GetProperty("largestBombScale").GetSingle();
+        float baseScale=previous;
         await Capture("pump-stage-0");
         for(var charge=1;charge<=3;charge++)
         {
@@ -409,12 +412,13 @@ public partial class PlaytestDriver : Node
             Input(0,new PlayerInput(0,0,B:true));await Frames(12);
             Check(State.GetProperty("bombs")[0].GetProperty("pumps").GetInt32()==charge,$"accepted pump stage{charge}");
             var scale=Visual.GetProperty("largestBombScale").GetSingle();
+            Check(scale<=2.3f,$"pumped bomb stays within readable size limit at stage{charge}");
             Check(scale>previous+.2f,$"rendered bomb grows at pump stage{charge}");previous=scale;
             Event("pump-visual",new {charge,scale,visual=Visual});
             await Capture($"pump-stage-{charge}");
         }
         Check(Visual.GetProperty("carriedBombs").GetInt32()==1,"charged model remains attached to carrier socket");
-        Check(previous>2,"fully charged bomb visibly exceeds twice base scale");
+        Check(previous>baseScale*1.7f,"fully charged bomb stays visibly larger than its unpumped model");
         Check(Visual.GetProperty("pumpAnimations").GetInt32()>=3,"three accepted pumps trigger body animation");
         Check(Player.GetProperty("pumpSerial").GetInt64()>=3,"authority publishes three accepted pump events");
         Input(0,new PlayerInput(1,0));await Frames(4);

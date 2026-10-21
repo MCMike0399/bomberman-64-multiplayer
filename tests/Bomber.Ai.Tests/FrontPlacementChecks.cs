@@ -22,13 +22,19 @@ internal static class FrontPlacementChecks
             foreach(var item in state.GetProperty("items").EnumerateArray())drops.Add(item.GetProperty("id").GetString()!);
             foreach(var e in state.GetProperty("events").EnumerateArray())
             {
-                var kind=e.GetProperty("kind").GetString();if(kind=="bomb-drop")placed.Add(e.GetProperty("entityId").GetString()!);
+                var kind=e.GetProperty("kind").GetString();
+                if(kind=="bomb-drop"&&placed.Add(e.GetProperty("entityId").GetString()!))
+                {
+                    var owner=state.GetProperty("players").EnumerateArray().Single(p=>p.GetProperty("id").GetString()==e.GetProperty("playerId").GetString());
+                    float dx=e.GetProperty("x").GetSingle()-owner.GetProperty("x").GetSingle(),dz=e.GetProperty("z").GetSingle()-owner.GetProperty("z").GetSingle();
+                    if(dx*dx+dz*dz>.6f*.6f)throw new Exception("Bot placement diverged from the ordinary near-foot action.");
+                }
                 if(kind=="blast")blasts.Add(e.GetProperty("entityId").GetString()!);
             }
         }
         Console.WriteLine($"OBSERVE {stage} bots={bots} placed={placed.Count} blasts={blasts.Count} coverDestroyed={initial-minCover} drops={drops.Count}");
-        if(placed.Count<2||blasts.Count<2)throw new Exception($"Bots failed repeated real front-placement combat on {stage}, bots={bots}.");
+        if(placed.Count<2||blasts.Count<2)throw new Exception($"Bots failed repeated real near-foot placement combat on {stage}, bots={bots}.");
         if(initial<=minCover||drops.Count==0)throw new Exception($"Stock {stage}, bots={bots} no longer destroys cover and reveals real item drops within a one-minute seed64 match.");
-        Console.WriteLine($"PASS {stage} bots={bots}: ordinary front placement destroys cover and reveals real items");
+        Console.WriteLine($"PASS {stage} bots={bots}: ordinary near-foot placement destroys cover and reveals real items");
     }
 }

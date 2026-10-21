@@ -1,7 +1,7 @@
 namespace Bomber.Game.Simulation;
 
 /// <summary>Battle tuning. Capacity/range caps and non-stacking hearts follow the manual;
-/// starting inventory, drop chance and relative item weights are project choices.</summary>
+/// starting inventory, exclusive bomb modes, drop chance and relative item weights are project choices.</summary>
 public static class PowerUpRules
 {
     public const int StartingBombs = 3;
@@ -24,8 +24,8 @@ public static class PowerUpRules
         {
             case "fire": player.FireLevel=Math.Min(player.FireLevel+1,MaximumNormalFire);break;
             case "bomb": player.BombCapacity=Math.Min(player.BombCapacity+1,MaximumBombs);break;
-            case "remote": player.HasRemote=true;break;
-            case "red": player.HasRed=true;break;
+            case "remote": player.HasRemote=true;player.HasRed=false;break;
+            case "red": player.HasRed=true;player.HasRemote=false;break;
             case "heart": player.HasHeart=true;break;
             default: return;
         }

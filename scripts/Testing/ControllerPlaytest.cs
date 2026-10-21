@@ -236,7 +236,7 @@ public partial class PlaytestDriver
         await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"held-primary trial reaches fight",150);await Frames(4);
         CtlButton(pad.RuntimeId,bomb,true);CtlAxis(pad.RuntimeId,JoyAxis.LeftX,1);await Frames(10);CtlAxis(pad.RuntimeId,JoyAxis.LeftX,0);await Frames(2);
         Check(State.GetProperty("bombs").GetArrayLength()==1,pad.Name+": holding bomb while moving never auto-repeats");
-        CtlButton(pad.RuntimeId,bomb,false);CtlAxis(pad.RuntimeId,JoyAxis.LeftX,-1);await Frames(2);CtlAxis(pad.RuntimeId,JoyAxis.LeftX,0);
+        CtlButton(pad.RuntimeId,bomb,false);CtlAxis(pad.RuntimeId,JoyAxis.LeftX,1);await Frames(2);CtlAxis(pad.RuntimeId,JoyAxis.LeftX,0);
         CtlButton(pad.RuntimeId,bomb,true);await Frames(2);CtlButton(pad.RuntimeId,bomb,false);await Frames(2);
         Check(State.GetProperty("bombs").GetArrayLength()==2,pad.Name+": release and repress creates second bomb");
         CtlButton(pad.RuntimeId,JoyButton.LeftShoulder,true);await Frames(2);Check(CtlPlayer(0).GetProperty("carrying").GetString()=="bomb",pad.Name+": left shoulder lifts real bomb");

@@ -75,7 +75,7 @@ internal static class BombTravelChecks
     }
     static LocalMatch Match(Func<int,int,CellDef> cell,bool remote=true,bool victim=false){var cells=new CellDef[40,45];for(int x=0;x<40;x++)for(int z=0;z<45;z++)cells[x,z]=cell(x,z);cells[35,40]=CellDef.Floor0;
         var m=new LocalMatch(new MatchOptions{HumanPlayers=2,BotPlayers=0,Practice=true},new StageLayout{Id="bomb-travel",Width=40,Height=45,Cells=cells,Spawns=[(3,3),victim?(3,14):(35,40)],SoftBlockDensity=0,InitialItems=remote?[(3,3,"remote")]:[]});Step(m,64);return m;}
-    static void Kick(LocalMatch m,bool diagonal=false){m.SetInput(0,new PlayerInput(0,0,A:true));Step(m,2);m.SetInput(0,new PlayerInput(diagonal?1:0,1));
+    static void Kick(LocalMatch m,bool diagonal=false){m.SetInput(0,new PlayerInput(0,0,A:true));Step(m,2);m.SetInput(0,default);Step(m,2);m.SetInput(0,new PlayerInput(diagonal?1:0,1,A:true));
         for(int i=0;i<15;i++){Step(m,1);if(Bomb(m).GetProperty("state").GetInt32()!=0){m.SetInput(0,default);return;}}
         throw new InvalidOperationException("Fixture did not launch kick.");}
     static void RequireFall(LocalMatch m,int ticks){bool falling=false;for(int i=0;i<ticks;i++){Step(m,1);falling|=Bomb(m).GetProperty("state").GetInt32()==3;}Assert(falling,"Collision fixture never reached the falling state.");}

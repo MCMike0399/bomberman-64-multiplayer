@@ -2,7 +2,7 @@ using System.Text.Json;
 using Bomber.Game;
 using Bomber.Game.Simulation;
 
-var passed = BombTravelChecks.Run() + KickTimingChecks.Run() + BodyContactChecks.Run() + BombImpactChecks.Run() + TraversalAndGhostChecks.Run() + BombActionsChecks.Run() + GrappleChecks.Run();
+var passed = BombPlacementChecks.Run() + PowerUpModeChecks.Run() + BombTravelChecks.Run() + KickTimingChecks.Run() + BodyContactChecks.Run() + BombImpactChecks.Run() + TraversalAndGhostChecks.Run() + BombActionsChecks.Run() + GrappleChecks.Run();
 Run("participant bounds and stage validation", () =>
 {
     foreach (var options in new[] {
@@ -320,22 +320,32 @@ Run("holding lift then bomb creates held bomb and pumps cap at six effective lev
     var exploded=false;match.Message+=json=>{var d=Data(json);if(d.TryGetProperty("hazards",out var h)&&h.GetArrayLength()>0)exploded=true;};
     Step(match,100);Assert(exploded,"Pumped thrown bomb never exploded.");
 });
-Run("remote bomb chain reaction observes cover and red piercing", () =>
+Run("separate remote and red bomb chain reactions observe cover and piercing", () =>
 {
     foreach(var shield in new[]{false,true})foreach(var red in new[]{false,true})
     {
-        var cells=FlatArena([(1,3)]).Cells;
-        var gear=new List<(int,int,string)> {(1,3,"remote"),(1,3,"fire"),(1,3,"fire")};if(red)gear.Add((1,3,"red"));
-        var arena=new StageLayout {Id="fixture",Width=9,Height=9,Cells=cells,Spawns=[(1,3)],SoftBlockDensity=0,InitialItems=gear,
+        var cells=FlatArena([(1,4)]).Cells;
+        var gear=new List<(int,int,string)> {(1,4,red?"red":"remote"),(1,4,"fire"),(1,4,"fire")};
+        var arena=new StageLayout {Id="fixture",Width=9,Height=9,Cells=cells,Spawns=[(1,4)],SoftBlockDensity=0,InitialItems=gear,
             FixedSoftBlocks=shield?new HashSet<(int,int)> {(2,4)}:new HashSet<(int,int)>()};
         var match=new LocalMatch(new MatchOptions {HumanPlayers=1,BotPlayers=0,Practice=true},arena);Fight(match);
         match.SetInput(0,new PlayerInput(0,0,true));Step(match,2);match.SetInput(0,default);Step(match,2);
-        Walk(match,1.5f,1.5f);
-        Assert(Math.Abs(State(match).GetProperty("bombs")[0].GetProperty("z").GetSingle()-4.32f)<.01f,"Walking away accidentally kicked the bomb behind the player.");
-        Walk(match,3.5f,1.5f);Walk(match,3.5f,3.5f);
+        var firstBombZ=State(match).GetProperty("bombs")[0].GetProperty("z").GetSingle();
+        Walk(match,1.5f,2.5f);
+        Assert(Math.Abs(State(match).GetProperty("bombs")[0].GetProperty("z").GetSingle()-firstBombZ)<.01f,"Walking away accidentally kicked the bomb behind the player.");
+        Walk(match,3.5f,2.5f);Walk(match,3.5f,4.5f);
         match.SetInput(0,new PlayerInput(0,0,true));Step(match,2);match.SetInput(0,default);Step(match,4);
-        Assert(State(match).GetProperty("bombs").GetArrayLength()==2,"Remote bombs expired before remote command.");
-        match.SetInput(0,new PlayerInput(0,0,false,false,true));Step(match,2);
+        var placed=State(match).GetProperty("bombs").EnumerateArray().ToArray();
+        Assert(placed.Length==2,"Bombs expired before the chain-reaction fixture was ready.");
+        Assert(placed.All(b=>b.GetProperty("red").GetBoolean()==red&&b.GetProperty("remote").GetBoolean()!=red),"Fixture combined special modes or selected the wrong bomb type.");
+        if(red)
+        {
+            // Red retains its normal fuse; it no longer borrows remote control to
+            // make this fixture convenient. Inspect the first explosion so the
+            // second bomb cannot pass merely by reaching its own fuse later.
+            for(var ticks=0;ticks<300&&State(match).GetProperty("hazards").GetArrayLength()==0;ticks++)Step(match,1);
+        }
+        else {match.SetInput(0,new PlayerInput(0,0,false,false,true));Step(match,2);}
         var hazards=State(match).GetProperty("hazards").GetArrayLength();
         Assert(hazards==(shield&&!red?1:2),"Chain reaction ignored visibility or red cover piercing: shield="+shield+" red="+red+" hazards="+hazards+" state="+State(match));
         if(shield)
@@ -455,7 +465,7 @@ Run("walking back into a bomb kicks across the blocked final movement step", () 
     match.SetInput(0,new PlayerInput(-.2f,0));Step(match,2);
     match.SetInput(0,new PlayerInput(0,0,true));Step(match,2);match.SetInput(0,default);Step(match,2);
     var bombX=State(match).GetProperty("bombs")[0].GetProperty("x").GetSingle();
-    match.SetInput(0,new PlayerInput(.95f,0));Step(match,8);
+    match.SetInput(0,new PlayerInput(.95f,0));Step(match,14);
     Assert(Player(match).GetProperty("x").GetSingle()>bombX+1.8f,"Repro did not move away from front bomb.");
     Assert(!Events(match).Any(e=>Kind(e)=="kick"),"Walking away kicked the bomb behind the player.");
     match.SetInput(0,new PlayerInput(-1,0));Step(match,2);
@@ -471,11 +481,13 @@ Run("presentation ground placement lift and repeated blocked contact are distinc
     match.SetInput(0,new PlayerInput(0,0,true));Step(match,2);match.SetInput(0,default);Step(match,2);
     match.SetInput(0,new PlayerInput(0,0,false,true));Step(match,2);
     Assert(Events(match).Count(e=>Kind(e)=="bomb-drop")==1&&Events(match).Count(e=>Kind(e)=="lift")==1,"Accepted ground placement/lift missing.");
-    arena=FlatArena([(3,3)]);arena.Cells[3,5]=CellDef.Pillar;
+    arena=FlatArena([(3,3)]);arena.Cells[3,6]=CellDef.Pillar;
     match=new LocalMatch(new MatchOptions {HumanPlayers=1,BotPlayers=0,Practice=true},arena);Fight(match);
-    match.SetInput(0,new PlayerInput(0,0,true));Step(match,2);match.SetInput(0,new PlayerInput(0,.4f));Step(match,18);
+    match.SetInput(0,new PlayerInput(0,0,true));Step(match,2);match.SetInput(0,default);Step(match,2);
+    match.SetInput(0,new PlayerInput(0,.4f,A:true));
+    for(int tick=0;tick<50&&Events(match).Count(e=>Kind(e)=="kick")<2;tick++)match.Tick();
     var kicks=Events(match).Count(e=>Kind(e)=="kick");
-    Assert(kicks==2,"Expected initial roll and a fresh contact after the fast bomb rolled away.");
+    Assert(kicks==2,"Expected initial roll and a fresh contact after the fast bomb rolled away. "+State(match));
     Step(match,12);
     Assert(Events(match).Count(e=>Kind(e)=="kick")==kicks,"Continuous blocked contact emitted duplicate kicks.");
 });

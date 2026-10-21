@@ -22,7 +22,8 @@ public sealed class BattleCameraRig(Camera3D camera)
             foreach(float dx in new[]{0f,1f})foreach(float dz in new[]{0f,1f})
             {
                 _bounds.Add(new(x+dx,y,z+dz));
-                _bounds.Add(new(x+dx,y+2.1f,z+dz));
+                // Match solid pillar crowns and keep standing-player headroom on walkable cells.
+                _bounds.Add(new(x+dx,y+(kind==1?1.21f:2.1f),z+dz));
             }
         }
         Fit();
@@ -32,7 +33,7 @@ public sealed class BattleCameraRig(Camera3D camera)
         if(_bounds.Count==0)return;
         var viewport=camera.GetViewport().GetVisibleRect().Size;
         if(viewport.X<=0||viewport.Y<=0)return;
-        var direction=new Vector3(0,.64f,.768f).Normalized();
+        var direction=new Vector3(0,.60f,.80f);
         // Centered frontal view keeps the broad stepped silhouette and visible vertical risers.
         bool Place(float distance)
         {
@@ -42,8 +43,10 @@ public sealed class BattleCameraRig(Camera3D camera)
             {
                 Vector2 min=new(float.MaxValue,float.MaxValue),max=new(float.MinValue,float.MinValue);
                 foreach(var point in _bounds){var screen=camera.UnprojectPosition(point)/viewport;min=min.Min(screen);max=max.Max(screen);}
-                var delta=(min+max)*.5f-new Vector2(.5f,.515f);
-                if(pass==4)return min.X>=.035f&&max.X<=.965f&&min.Y>=.155f&&max.Y<=.875f;
+                // Keep the full playable silhouette inside the HUD-safe band while using more
+                // of the available screen for the arena instead of the surrounding water.
+                var delta=(min+max)*.5f-new Vector2(.5f,.5175f);
+                if(pass==4)return min.X>=.025f&&max.X<=.975f&&min.Y>=.145f&&max.Y<=.89f;
                 var origin=camera.UnprojectPosition(_center);
                 float pixelsX=(camera.UnprojectPosition(_center+camera.GlobalBasis.X)-origin).Length();
                 float pixelsY=(camera.UnprojectPosition(_center+camera.GlobalBasis.Y)-origin).Length();
