@@ -224,7 +224,7 @@ public partial class GameRoot : Node3D
             if(!envelope.TryGetProperty("d",out var data))continue;
             switch(envelope.GetProperty("t").GetString())
             {
-                case "stage":LatestStage=data.Clone();_arena.Stage(data);break;
+                case "stage":LatestStage=data.Clone();_arena.Stage(data);_hud.Stage(data);break;
                 case "state":
                     LatestState=data.Clone();SnapshotCount++;_arena.State(data,envelope.TryGetProperty("k",out var stateTick)&&stateTick.ValueKind==JsonValueKind.Number?stateTick.GetInt64():-1);_hud.State(data);
                     if(ScreenName=="Lobby")EnterMatch();

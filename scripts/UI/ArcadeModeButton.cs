@@ -27,10 +27,10 @@ public partial class ArcadeModeButton : Button
         // The narrow gold shoulder, dark sidewall and inset face are separate solid surfaces.
         ArcadeBackdrop.ChamferBox(_plaque,new(0,-.10f,-.18f),new(7.25f,1.20f,.32f),ArcadeBackdrop.Surface("0d1734",.32f,.35f));
         ArcadeBackdrop.ChamferBox(_plaque,new(0,0,0),new(7.25f,1.19f,.30f),ArcadeBackdrop.Surface("bda66d",.26f,.65f));
-        _face=ArcadeBackdrop.Surface("344e88",.29f,.08f);_face.AlbedoColor=FaceColor;
+        _face=ArcadeBackdrop.Surface("344e88",.29f,.08f);_face.AlbedoColor=FaceColor;_face.EmissionEnabled=true;_face.Emission=Colors.Black;
         ArcadeBackdrop.ChamferBox(_plaque,new(0,.01f,.18f),new(7.08f,1.03f,.17f),_face);
         ArcadeBackdrop.ChamferBox(_plaque,new(-3.39f,.01f,.29f),new(.13f,.89f,.06f),new StandardMaterial3D {AlbedoColor=Accent,Roughness=.27f,Metallic=.2f},.02f);
-        var title=_title=new Label3D {Text=Text,Position=new(.08f,.02f,.30f),FontSize=63,PixelSize=.008f,OutlineSize=5,OutlineModulate=new Color("162347"),Modulate=new Color("fff2d4"),NoDepthTest=false,Shaded=false};_plaque.AddChild(title);
+        var title=_title=new Label3D {Text=Text,Font=ArcadeTheme.Display,Position=new(.08f,.0f,.30f),FontSize=52,PixelSize=.008f,OutlineSize=12,OutlineModulate=ArcadeTheme.Ink,Modulate=ArcadeTheme.Cream,NoDepthTest=false,Shaded=false};_plaque.AddChild(title);
     }
     public override void _Process(double delta)
     {
@@ -39,9 +39,12 @@ public partial class ArcadeModeButton : Button
         bool focused=HasFocus()||IsHovered();float target=ButtonPressed?-.08f:focused?.09f:0;
         _lift=Mathf.Lerp(_lift,target,1-Mathf.Exp(-(float)delta*14));
         _plaque.Position=new(0,_lift,_lift*1.8f);_plaque.RotationDegrees=new(focused?-2:0,-2,0);
-        _face.AlbedoColor=_face.AlbedoColor.Lerp(focused?new Color("ffe496"):FaceColor,1-Mathf.Exp(-(float)delta*12));
-        _title.OutlineSize=focused?0:5;
-        _title.Modulate=focused?new Color("24203b"):new Color("fff2db");_title.OutlineModulate=focused?new Color("efd38a"):new Color("242943");
+        _face.AlbedoColor=_face.AlbedoColor.Lerp(focused?new Color("ffe27a"):FaceColor,1-Mathf.Exp(-(float)delta*12));
+        // A little warm emission keeps the lit face gold instead of olive under the cool rim light.
+        _face.Emission=_face.Emission.Lerp(focused?new Color("b07c1c"):Colors.Black,1-Mathf.Exp(-(float)delta*12));
+        // Focus lights the face gold and flips the title to ink, matching the 2D keys.
+        _title.OutlineSize=focused?0:12;
+        _title.Modulate=focused?ArcadeTheme.Ink:ArcadeTheme.Cream;
         _viewport.RenderTargetUpdateMode=SubViewport.UpdateMode.Once;
     }
 }

@@ -33,7 +33,7 @@ public partial class PlaytestDriver
         Check(NamedButton("Winstovictory").HasFocus(),"up returns from timer to win target");
         await Capture("setup-local-native");
         _root.Navigate("HostSetup");await Frames(5);
-        Check(NamedButton("LaunchMatch").Text=="SAVE ROOM SETTINGS","host launch has save action");
+        Check(NamedButton("LaunchMatch").Text=="Save Room Settings","host launch has save action");
         await Adjust("CPUrivals",Key.Right);Check(menu.OnlineSettings.Bots==4,"host CPU rail reaches room settings");await Adjust("CPUrivals",Key.Left);Check(menu.OnlineSettings.Bots==3,"host CPU rail reverses");
         await Adjust("StageSelector",Key.Right);await Adjust("Winstovictory",Key.Right);await Adjust("Roundtime",Key.Right);await Adjust("CPUlevel",Key.Right);await Adjust("Suddendeath",Key.Right);await Adjust("Ghostcomeback",Key.Right);
         var saved=menu.OnlineSettings;
@@ -41,7 +41,7 @@ public partial class PlaytestDriver
         await Capture("setup-host-native");await ActivateNamed("LaunchMatch");Check(_root.ScreenName=="Online","save room settings returns to online menu");
         _root.Navigate("HostSetup");await Frames(3);Check(menu.OnlineSettings==saved,"saved private room settings persist when reopened");
         _root.Navigate("Practice");await Frames(4);
-        Check(NamedButton("LaunchMatch").Text=="ENTER PRACTICE","practice launch has correct action");
+        Check(NamedButton("LaunchMatch").Text=="Start Practice","practice launch has correct action");
         foreach(var name in new[]{"Winstovictory","Roundtime","CPUlevel","Suddendeath","Ghostcomeback"})Check(NamedButton(name).Disabled,"practice disables irrelevant rule: "+name);
         await Adjust("StageSelector",Key.Right);Check(menu.Settings.Stage=="up-and-down","practice can choose another authority arena");
         await Capture("setup-practice-native");await ActivateNamed("LaunchMatch");
@@ -49,7 +49,7 @@ public partial class PlaytestDriver
         Check(State.GetProperty("players").GetArrayLength()==1,"practice starts with one contender");
         _root.Back();await Frames(3);
         menu.Configure(new SessionSettings(),1);_root.Navigate("Setup");await Frames(3);
-        Check(NamedButton("LaunchMatch").Text=="LET’S GO!"&&!NamedButton("Winstovictory").Disabled,"local setup restores launch and editable rules after practice");
+        Check(NamedButton("LaunchMatch").Text=="Start Battle"&&!NamedButton("Winstovictory").Disabled,"local setup restores launch and editable rules after practice");
         _root.Navigate("Modes");await Frames(3);
     }
 }

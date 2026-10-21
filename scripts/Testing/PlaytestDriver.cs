@@ -278,7 +278,7 @@ public partial class PlaytestDriver : Node
         Check(Roster.GetProperty("slots")[2].GetProperty("role").GetString()=="cpu","real role popup restores CPU seat");
         await Capture("roster-mixed-ready");
         await Click("CONTINUE TO RULES");Check(_root.ScreenName=="Setup","roster continues to match rules");
-        await Click("LET’S GO");
+        await Click("Start Battle");
         await WaitState(s=>s.GetProperty("players").GetArrayLength()==4,"roster starts four-contender match",150);
         var packed=State.GetProperty("players").EnumerateArray().OrderBy(p=>p.GetProperty("slot").GetInt32()).ToArray();
         Check(packed.Select(p=>p.GetProperty("appearance").GetInt32()).SequenceEqual(new[]{6,3,1,6}),"noncontiguous roster appearances reach packed human and CPU authority slots");
@@ -487,7 +487,7 @@ public partial class PlaytestDriver : Node
         var preview=(_root.FindChild("WinnerPreview",true,false) as BlastCircuit.UI.CharacterPreview)!;
         Check(preview.Appearance==winner.GetProperty("appearance").GetInt32()&&preview.Celebrating,"results celebrate the actual winner's selected suit");
         await Frames(12);
-        var replayButton=VisibleButton("PLAY AGAIN");var modeButton=VisibleButton("MODE SELECT");
+        var replayButton=VisibleButton("Play Again");var modeButton=VisibleButton("Mode Select");
         replayButton.GrabFocus();await KeyPress(Key.D);Check(modeButton.HasFocus(),"D moves across Results actions");
         await KeyPress(Key.A);Check(replayButton.HasFocus(),"A returns to the Results replay action");
         await Capture("results-cpu-victory");
@@ -524,7 +524,7 @@ public partial class PlaytestDriver : Node
         Event("lobby-ui",new {text=lobbyText});
         Check(lobbyText.Contains("Harness host",StringComparison.Ordinal),"lobby renders host name in visible UI");
         Check(lobbyText.Contains("Harness peer",StringComparison.Ordinal),"lobby renders peer name in visible UI");
-        Check(lobbyText.Contains("BATTLE BEGINS IN",StringComparison.Ordinal),"lobby renders real countdown text");
+        Check(lobbyText.Contains("Battle begins in",StringComparison.Ordinal),"lobby renders real countdown text");
         await Capture("network-lobby");
         await WaitState(s=>s.GetProperty("phase").GetInt32()==1 && s.GetProperty("players").GetArrayLength()==2,"engine receives two-human authoritative fight",900);
         await WaitState(s=>s.GetProperty("players").EnumerateArray().Any(p=>p.GetProperty("id").GetString()==host.PlayerId&&p.GetProperty("appearance").GetInt32()==4)&&s.GetProperty("players").EnumerateArray().Any(p=>p.GetProperty("id").GetString()==peer.PlayerId&&p.GetProperty("appearance").GetInt32()==6),"network authority reflects both chosen appearances",180);

@@ -1,4 +1,19 @@
-# Verified iteration thirteen — 2026-10-21
+# Verified interface style pass — 2026-10-21
+
+This pass replaces the 2D interface layer: the Godot fallback font, glyph arrows and ad hoc panels give way to bundled Dela Gothic One and M PLUS Rounded 1c (OFL, Latin subsets) and a shared stamped-key style. It also adds drawn icons, keycap input prompts, a fuse-clock round timer and participant tokens. Simulation, networking protocol and input routing are unchanged; the HUD additionally reads the existing `roundSeconds` and `winsTarget` fields from stage snapshots.
+
+| Check | Result |
+|---|---|
+| Game build | Zero warnings/errors |
+| Gameplay integration | 104 checks passed |
+| Client/session/input | 95 checks passed |
+| AI behavior | 36 checks passed |
+| Audio | 19 checks passed |
+| Full windowed source regression, `--start-server --scenario all --timeout 600` | **1,575 assertions, 131 captures**, zero runtime errors (112.9 seconds) |
+
+The passing run is `artifacts/playtest/20261021T143630.905825Z-all`. Harness label checks were updated for the new copy (Title Case buttons, "Start Battle", "Battle begins in", "Medium"); they still locate the same native controls and assert the same behavior. Two earlier full runs did not pass. One missed a single synthetic mouse release on the roster Back button at 1280×800 immediately after a fresh build; the same menu scenario then passed five consecutive standalone runs and the later full run. The other hit the runner's default 120-second wall clock while the network step was still passing; the suite now takes about 113 seconds, so a longer `--timeout` is advisable. README gallery images for menus, roster, setup, room settings, controls, results, difficulty selection, AI matches, flooding and the eight-player HUD were refreshed from the passing run.
+
+## Iteration thirteen baseline — 2026-10-21
 
 | Check | Result |
 |---|---|

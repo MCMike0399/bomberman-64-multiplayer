@@ -7,7 +7,7 @@ public partial class StagePreview : Control
     public override void _Ready(){MouseFilter=MouseFilterEnum.Ignore;}
     public override void _Draw()
     {
-        var ink=ArcadeTheme.Ink;DrawStyleBox(ArcadeTheme.Panel(new Color("92dddf"),ink,3,16),new Rect2(Vector2.Zero,Size));
+        var ink=ArcadeTheme.Ink;var frame=ArcadeTheme.Panel(new Color("8fd9da"),ink,3,16);frame.ShadowColor=ink;frame.ShadowSize=1;frame.ShadowOffset=new(0,5);DrawStyleBox(frame,new Rect2(Vector2.Zero,Size));
         var center=new Vector2(Size.X*.5f,Size.Y*.51f);
         const float scale=17;
         for(int z=0;z<11;z++)for(int x=0;x<13;x++)
@@ -21,6 +21,10 @@ public partial class StagePreview : Control
             if(x%3==0&&z%3==0&&x>0&&z>0)
             {DrawRect(new Rect2(p-new Vector2(7,23),new Vector2(14,23)),new Color("d1b879"));DrawRect(new Rect2(p-new Vector2(9,26),new Vector2(18,5)),new Color("fff0b6"));}
         }
-        var font=ThemeDB.FallbackFont;DrawString(font,new Vector2(20,Size.Y-18),StageIndex==0?"SUNKEN TEMPLE   /   4 LEVELS":StageIndex==1?"ROCK GARDEN   /   OPEN ARENA":"UP & DOWN   /   3 LEVELS",HorizontalAlignment.Left,-1,17,ink);
+        string name=StageIndex==0?"Sunken Temple":StageIndex==1?"Rock Garden":"Up & Down",detail=StageIndex==0?"4 levels":StageIndex==1?"Open arena":"3 levels";
+        var at=new Vector2(20,Size.Y-18);
+        DrawStringOutline(ArcadeTheme.Display,at,name,HorizontalAlignment.Left,-1,18,6,ArcadeTheme.Cream);DrawString(ArcadeTheme.Display,at,name,HorizontalAlignment.Left,-1,18,ink);
+        float width=ArcadeTheme.Display.GetStringSize(name,HorizontalAlignment.Left,-1,18).X;
+        DrawString(ArcadeTheme.Body,at+new Vector2(width+12,0),detail,HorizontalAlignment.Left,-1,15,new Color(ink,.75f));
     }
 }

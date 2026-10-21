@@ -10,7 +10,7 @@ public partial class PlaytestDriver
     private async Task WasdMenus()
     {
         CtlReleaseAll();await ControllerFocusReady();_root.Navigate("Modes");await Frames(3);
-        var local=VisibleButton("LOCAL BATTLE");var online=VisibleButton("ONLINE BATTLE");
+        var local=VisibleButton("Local Battle");var online=VisibleButton("Online Battle");
         local.GrabFocus();await KeyPress(Key.S);
         Check(online.HasFocus(),"S moves native main-menu focus down");await KeyPress(Key.W);
         Check(local.HasFocus(),"W moves native main-menu focus up");
@@ -28,7 +28,7 @@ public partial class PlaytestDriver
         Check(NamedButton("Winstovictory").HasFocus(),"W returns to the prior setup rule");
         NamedButton("CPUlevel").GrabFocus();await KeyPress(Key.A);
         Check(menu.Settings.BotDifficulty=="easy","A selects Easy CPU difficulty");await KeyPress(Key.D);
-        Check(menu.Settings.BotDifficulty is "normal" or "medium"&&VisibleText(_root).Contains("MEDIUM"),"D displays Medium CPU difficulty");
+        Check(menu.Settings.BotDifficulty is "normal" or "medium"&&VisibleText(_root).Contains("Medium"),"D displays Medium CPU difficulty");
         await KeyPress(Key.D);Check(menu.Settings.BotDifficulty=="hard","D selects Hard CPU difficulty");await KeyPress(Key.A);
         await Capture("wasd-difficulty-selector");
         _root.Navigate("Roster");await Frames(4);

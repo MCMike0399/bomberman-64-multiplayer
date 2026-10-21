@@ -91,6 +91,8 @@ def main():
     shutil.copy2(ROOT / "src/Bomber.Game/Simulation/LICENSE", notices / "Simulation-MIT.txt")
     for name in ["Godot-MIT.txt", "Godot-COPYRIGHT.txt"]:
         shutil.copy2(ROOT / "docs/licenses" / name, notices / name)
+    for font_license in sorted((ROOT / "assets/fonts").glob("OFL-*.txt")):
+        shutil.copy2(font_license, notices / font_license.name)
     runtime_config = next(app.rglob("Bomberman64Multiplayer.runtimeconfig.json"))
     runtime_version = json.loads(runtime_config.read_text())["runtimeOptions"]["includedFrameworks"][0]["version"]
     packages = Path(os.environ.get("NUGET_PACKAGES", str(Path.home() / ".nuget/packages")))
