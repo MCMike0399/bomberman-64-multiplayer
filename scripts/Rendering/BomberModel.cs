@@ -25,7 +25,10 @@ public partial class BomberModel : Node3D
     private Color _suitColor;
     public int PumpAnimationCount {get;private set;}
     public float WalkPose=>_leftLeg.Rotation.X;
-    public float KickPose=>_kickPulse;
+    private bool _kickWinding;
+    private float _kickWindupRemaining;
+    public float KickPose=>_kickWinding?-(1-Mathf.Clamp(_kickWindupRemaining/(4f/30f),0,1)):_kickPulse;
+    public void KickWindup(float remaining){_kickWinding=remaining>0;_kickWindupRemaining=remaining;}
     public float CarryBlend=>_carryBlend;
     public float PumpIntensity=>Mathf.Sin(_pumpPulse*Mathf.Pi);
     public Vector3 BombSocket=>_body.ToGlobal(new Vector3(0,Mathf.Lerp(.25f,1.47f,_carryBlend)+Mathf.Sin(_pumpPulse*Mathf.Pi)*.09f,.08f));
@@ -44,7 +47,8 @@ public partial class BomberModel : Node3D
     {
         switch(kind)
         {
-            case "kick":_kickPulse=1;break;
+            case "kick":_kickWinding=false;_kickPulse=1;break;
+            case "kick-cancel":_kickWinding=false;_kickPulse=0;break;
             case "lift":_liftPulse=1;break;
             case "throw":_throwPulse=1;break;
             case "pump":_pumpPulse=1;break;
@@ -226,11 +230,13 @@ public partial class BomberModel : Node3D
         float acceleration=Mathf.Clamp((_speed-previousSpeed)/Mathf.Max(dt,.001f),-3,3);
         _carryBlend=Mathf.MoveToward(_carryBlend,_carrying?1:0,dt*6);
         _pumpPulse=Mathf.MoveToward(_pumpPulse,0,dt*3.6f);_throwPulse=Mathf.MoveToward(_throwPulse,0,dt*4.5f);
-        _kickPulse=Mathf.MoveToward(_kickPulse,0,dt/.34f);_liftPulse=Mathf.MoveToward(_liftPulse,0,dt*3.2f);
+        _kickWindupRemaining=Mathf.Max(0,_kickWindupRemaining-dt);
+        _kickPulse=Mathf.MoveToward(_kickPulse,0,dt/.22f);_liftPulse=Mathf.MoveToward(_liftPulse,0,dt*3.2f);
         _deathPulse=Mathf.MoveToward(_deathPulse,0,dt*1.8f);_victoryPulse=Mathf.MoveToward(_victoryPulse,0,dt*.7f);
         float pump=Mathf.Sin(_pumpPulse*Mathf.Pi),toss=Mathf.Sin(_throwPulse*Mathf.Pi);
         float kickTime=1-_kickPulse;
-        float kick=_kickPulse<=0?0:kickTime<.15f?-.22f*(kickTime/.15f):kickTime<.4f?Mathf.Lerp(-.22f,1,Mathf.SmoothStep(0,1,(kickTime-.15f)/.25f)):1-Mathf.SmoothStep(0,1,(kickTime-.4f)/.6f);
+        float kick=_kickWinding?-.5f*(1-Mathf.Clamp(_kickWindupRemaining/(4f/30f),0,1)):
+            _kickPulse<=0?0:1-Mathf.SmoothStep(0,1,kickTime);
         float lift=Mathf.Sin(_liftPulse*Mathf.Pi),death=Mathf.Sin(_deathPulse*Mathf.Pi),victory=Mathf.Sin(_victoryPulse*Mathf.Pi);
         float walk=Mathf.Sin(_walkPhase)*_speed;
         float idle=(1-_speed)*(1-_carryBlend)*(1-death);

@@ -90,3 +90,13 @@ Mouse automation moves the OS pointer to the target before injecting press/relea
 - `grapple`: waits for actual kick flight to land and walks to the displaced victim before grabbing; impact captures are uniquely numbered.
 
 These are included in `all`. Run only one graphical Godot instance at a time. For changed authority code, rebuild/restart your project-owned local server before networking tests; an already reachable server may otherwise run an older assembly.
+
+## Record and inspect gameplay
+
+```sh
+python3 tools/playtest/run.py --app "artifacts/exports/Blast Circuit.app" --scenario kick-physics --record --ffmpeg /path/to/ffmpeg
+```
+
+`--record` uses [Godot Movie Maker](https://docs.godotengine.org/en/stable/tutorials/animation/creating_movies.html) to capture actual rendered frames and game audio at 30 FPS. It saves the original AVI, encodes a 1× H.264/AAC MP4, decodes every frame to validate the export, and records frame count/duration/source in `recording.json`. FFmpeg is an optional external dependency; pass `--ffmpeg` or set `FFMPEG`. An export/decode failure fails the run. Headless recording is rejected. Fixed-step capture demonstrates simulation motion, not real-time GPU throughput.
+
+The focused `kick-physics` scenario temporarily uses an inspection camera on the actual actors; `all` keeps the battle camera. Both assert planted anticipation, delayed strike sound, short measured victim displacement/height, corner fuses and a real courtyard drop followed by resumed rolling. No entity position is edited. `traversal` also covers dry shoreline grazing, falling above water, and elimination at the actual rendered water height. Inspect the MP4 and full-size captures alongside `kick-impact-measurements` in the trace; passing geometry assertions alone do not prove good animation.

@@ -163,6 +163,13 @@ public sealed class BlastPlayer
     public float AirVZ { get; set; }
     public float AirVY { get; set; }
 
+    // A contact kick commits a direction for its brief planted anticipation.
+    public string? KickBombId { get; set; }
+    public float KickWindupRemaining { get; set; }
+    public float KickRecoveryRemaining { get; set; }
+    public float KickDirectionX { get; set; }
+    public float KickDirectionZ { get; set; }
+
     // Carrying.
     public bool CarryFromPrimary { get; set; }
     public string? PrimaryBombCandidateId { get; set; }
@@ -230,6 +237,7 @@ public sealed class BlastBomb
     public float VX { get; set; }    // velocity when rolling
     public float VZ { get; set; }
     public float KickHopRemaining { get; set; }
+    public bool ResumeRollingAfterFall { get; set; } // terrain drop preserves an existing kick
     public float FlyVX { get; set; } // velocity when flying (XZ plane)
     public float FlyVZ { get; set; }
     public float FlyVY { get; set; } // vertical velocity (for arc)
@@ -247,8 +255,8 @@ public sealed class BlastBomb
     public const float RollSpeed = 12f;   // cells/sec while rolling
     public const float KickHopSeconds = .28f;
     public const float KickHopHeight = .18f;
-    public const float ImpactHorizontalSpeed = 4.2f;
-    public const float ImpactUpSpeed = 4.5f;
+    public const float ImpactHorizontalSpeed = 2.2f;
+    public const float ImpactUpSpeed = 2.6f;
     public const float FlySpeed = 6f;    // cells/sec horizontal throw
     public const float Gravity = 9.8f;
     public const float ThrowAngle = 50f; // degrees

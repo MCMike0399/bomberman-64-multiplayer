@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Launch real Godot gameplay and retain machine-readable failure evidence."""
 import argparse
+import shutil
 import datetime
 import json
 import os
@@ -26,7 +27,9 @@ def healthy(origin):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--scenario', choices=['all', 'menu', 'setup', 'grapple', 'controller-popups', 'local-actions', 'ramp', 'network', 'combat', 'results', 'powerup-collect', 'pump-growth', 'hurry-water', 'roster', 'framing', 'fullscreen', 'controllers', 'controller-inventory', 'controller-observe', 'presentation', 'model-profile', 'movement', 'traversal', 'bomb-handling', 'kick-physics', 'body-contacts', 'script'], default='all')
+    parser.add_argument('--ffmpeg', default=os.environ.get('FFMPEG', 'ffmpeg'), help='FFmpeg executable for --record export and decode validation')
     parser.add_argument('--script', type=Path, help='JSON scenario, see temple-walk.json')
+    parser.add_argument('--record', action='store_true', help='Record actual gameplay at 30 FPS and export a validated MP4; requires ffmpeg')
     parser.add_argument('--headless', action='store_true', help='Explicitly disable screenshot capture')
     display = parser.add_mutually_exclusive_group()
     display.add_argument('--windowed', action='store_true', help='Use windowed testing (the default)')
@@ -43,6 +46,10 @@ def main():
         parser.error('--scenario script requires --script')
     if args.scenario == 'fullscreen' and (args.windowed or args.headless):
         parser.error('--scenario fullscreen requires a graphical fullscreen launch')
+    if args.record and args.headless:
+        parser.error('--record requires graphical rendering')
+    if args.record and not shutil.which(args.ffmpeg):
+        parser.error('--record requires ffmpeg; set --ffmpeg or FFMPEG')
     windowed = args.headless or not (args.fullscreen or args.scenario == 'fullscreen')
     run_id = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%S.%fZ') + '-' + args.scenario
     folder = args.output.resolve() / run_id
@@ -78,6 +85,8 @@ def main():
         else:
             command = [args.godot, '--path', str(ROOT)]
         command += ['--max-fps', '30', '--fixed-fps', '30', '--disable-vsync']
+        if args.record:
+            command += ['--write-movie', str(folder / 'gameplay.avi')]
         if windowed:
             command.append('--windowed')
         if args.headless:
@@ -109,9 +118,21 @@ def main():
         if not args.headless and not summary['screenshots']:
             result['passed'] = False
             result['errors'].append('Graphical scenario produced no screenshots')
+        if args.record:
+            recording = folder / 'gameplay.avi'
+            movie = folder / 'gameplay.mp4'
+            with (folder / 'video-export.log').open('w') as export_log:
+                subprocess.run([args.ffmpeg, '-y', '-i', str(recording), '-c:v', 'libx264', '-preset', 'fast', '-crf', '18', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-movflags', '+faststart', str(movie)], stdout=export_log, stderr=subprocess.STDOUT, check=True, timeout=120)
+            decoded = subprocess.run([args.ffmpeg, '-v', 'error', '-i', str(movie), '-map', '0:v:0', '-f', 'null', '-', '-progress', 'pipe:1'], capture_output=True, text=True, check=True, timeout=120)
+            progress = dict(line.split('=', 1) for line in decoded.stdout.splitlines() if '=' in line)
+            if int(progress.get('frame', '0')) <= 0 or int(progress.get('out_time_us', '0')) <= 0 or decoded.stderr.strip():
+                raise RuntimeError('Recording failed full decode validation: ' + decoded.stderr)
+            result['recording'] = {'path': str(movie), 'source': str(recording), 'playbackSpeed': 1, 'fps': 30, 'decodedFrames': int(progress['frame']), 'seconds': int(progress['out_time_us']) / 1e6}
+            (folder / 'recording.json').write_text(json.dumps(result['recording'], indent=2) + '\n')
         if not result['passed']:
             result['errors'].append(summary.get('failure') or 'One or more required runtime, screenshot or assertion checks failed')
     except Exception as error:
+        result['passed'] = False
         result['errors'].append(str(error))
     finally:
         if runtime and runtime.poll() is None:

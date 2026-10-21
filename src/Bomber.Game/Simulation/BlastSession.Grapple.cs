@@ -105,7 +105,7 @@ public sealed partial class BlastSession
                     if(!AirborneTerrainBlocks(p.X,nz,p))p.Z=nz;
                     p.AirVY-=9.8f*stepDt;p.SurfaceY+=p.AirVY*stepDt;
                     var cell=_stage.At((int)MathF.Floor(p.X),(int)MathF.Floor(p.Z));
-                    float ground=_stage.SurfaceAt(p.X,p.Z);
+                    float ground=PlayerLandingHeight(p.X,p.Z);
                     if(p.Y<=ground)
                     {
                         bool falling=p.Falling;p.Airborne=false;p.Falling=false;p.SurfaceY=ground;p.Tier=(int)MathF.Round(ground);

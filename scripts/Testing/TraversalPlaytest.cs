@@ -39,6 +39,25 @@ public partial class PlaytestDriver
         Check(GrappleValue(GrapplePlayer(0),"y")==3,"walking against the upper cliff face cannot instantly climb back up");
         Check((GrappleValue(GrapplePlayer(0),"x")-(ledge.Direction>0?12:9))*ledge.Direction>=-.01f,"upper cliff retains a solid face after landing");
         await Capture("temple-upward-cliff-blocked");
+
+        int shoreX=Enumerable.Range(5,11).First(x=>Clear(x,20)&&Clear(x,21));
+        await GrappleWalk(0,shoreX,21);
+        Input(0,new PlayerInput(0,.35f));
+        await WaitState(_=>GrappleValue(GrapplePlayer(0),"z")>=21.72f,"ordinary inputs reach the dry shoreline with body radius over water",40);
+        Input(0,default);await Frames(8);
+        var shore=GrapplePlayer(0);
+        Check(GrappleValue(shore,"z")<22&&GrappleValue(shore,"y")==0&&!shore.GetProperty("airborne").GetBoolean(),"grazing the shore leaves the feet supported by real land");
+        await Capture("temple-shore-grazing-dry");
+        Input(0,new PlayerInput(0,.6f));
+        await WaitState(_=>GrapplePlayer(0).GetProperty("falling").GetBoolean(),"crossing the low shore starts a real gravity fall",30);
+        Input(0,default);shore=GrapplePlayer(0);
+        Check(GrappleValue(shore,"y")<0&&GrappleValue(shore,"y")>State.GetProperty("waterLevel").GetSingle(),"low shoreline fall stays alive between dry land and the visible water plane");
+        Check(Math.Abs(Visual.GetProperty("waterHeight").GetSingle()-State.GetProperty("waterLevel").GetSingle()*TempleStageView.HeightScale)<.01f,"shoreline contact plane matches the actual rendered water height");
+        await Capture("temple-shore-falling-before-contact",0);
+        await WaitState(s=>s.GetProperty("events").EnumerateArray().Any(e=>e.GetProperty("kind").GetString()=="death"&&e.GetProperty("reason").GetString()=="water"),"ordinary shoreline fall reaches water and produces a real death",90);
+        var shoreDeath=State.GetProperty("events").EnumerateArray().Last(e=>e.GetProperty("kind").GetString()=="death"&&e.GetProperty("reason").GetString()=="water");
+        Check(Math.Abs(shoreDeath.GetProperty("y").GetSingle()-State.GetProperty("waterLevel").GetSingle())<.001f,"shoreline death is accepted exactly at water contact height");
+        await Capture("temple-shore-actual-water-contact");
         _root.Back();await Frames(3);
 
         foreach(int seat in new[]{0,1,2})Input(seat,default);

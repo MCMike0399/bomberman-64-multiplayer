@@ -52,7 +52,7 @@ public sealed partial class BlastSession
 
     private static void LaunchKickedBomb(BlastBomb bomb,float vx,float vz,string? touchedBy)
     {
-        bomb.State=BombState.Rolling;bomb.LastTouchedById=touchedBy;
+        bomb.State=BombState.Rolling;bomb.LastTouchedById=touchedBy;bomb.ResumeRollingAfterFall=false;
         bomb.VX=vx;bomb.VZ=vz;bomb.KickHopRemaining=BlastBomb.KickHopSeconds;
     }
 
@@ -71,7 +71,7 @@ public sealed partial class BlastSession
         return true;
     }
 
-    private bool BombTerrainClear(float x,float z,int originX,int originZ)
+    private bool BombTerrainClear(float x,float z,int originX,int originZ,bool allowDescent=false)
     {
         if(x<BlastBomb.Radius||z<BlastBomb.Radius||x>_stage.Width-BlastBomb.Radius||z>_stage.Height-BlastBomb.Radius) return false;
         for(var cx=(int)MathF.Floor(x-BlastBomb.Radius);cx<=(int)MathF.Floor(x+BlastBomb.Radius);cx++)
@@ -81,7 +81,8 @@ public sealed partial class BlastSession
                 if(dx*dx+dz*dz>=BlastBomb.Radius*BlastBomb.Radius) continue;
                 var cell=_stage.At(cx,cz);
                 if(cell.Kind==CellKind.Pillar||_softBlocks.IsAlive(cx,cz)||
-                    (cell.IsPassable&&!CellsConnected(originX,originZ,cx,cz))) return false;
+                    (cell.IsPassable&&!CellsConnected(originX,originZ,cx,cz)&&
+                     !(allowDescent&&BombCellsDescend(originX,originZ,cx,cz)))) return false;
             }
         return true;
     }

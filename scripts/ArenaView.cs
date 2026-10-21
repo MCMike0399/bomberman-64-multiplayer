@@ -118,6 +118,7 @@ public partial class ArenaView : Node3D
                 node=new BomberModel(_art,color,$"P{slot+1}");_dynamic.AddChild(node);_entities[id]=node;node.Position=PositionOf(p);
             }
             ((BomberModel)node).SetSuitColor(color);
+            ((BomberModel)node).KickWindup(F(p,"kickWindup"));
             _targets[id]=PositionOf(p);
             if(!_playerMotion.TryGetValue(id,out var motion))_playerMotion[id]=new SnapshotMotion(node.Position,_snapshotTick);
             else motion.Push(_targets[id],_snapshotTick);
@@ -225,6 +226,7 @@ public partial class ArenaView : Node3D
             switch(kind)
             {
                 case "bomb-drop":case "bomb-carry":_audio.Bomb();break;
+                case "kick-windup":CountEffect(kind);break;
                 case "kick":
                     _audio.Kick();CountEffect("kick");
                     var heading=player!=null&&_entities.TryGetValue("p:"+player,out var kicker)?kicker.Basis.Z:Vector3.Forward;
@@ -247,7 +249,15 @@ public partial class ArenaView : Node3D
                     bool water=reason is "water" or "fall";
                     if(water)_audio.Splash();else _audio.Death();
                     var pos=PositionOf(e);
-                    if(water)pos.Y=WaterHeight;
+                    if(water)
+                    {
+                        // Death is an immediate state transition. Finish the buffered fall
+                        // at its accepted contact point, but never rewind a practice respawn.
+                        if(player!=null&&_entities.TryGetValue("p:"+player,out var exiting)&&
+                            _targets.TryGetValue("p:"+player,out var latest)&&latest.DistanceTo(pos)<.3f)
+                        {exiting.Position=latest;_playerMotion["p:"+player]=new SnapshotMotion(latest,_snapshotTick);}
+                        pos.Y=WaterHeight;
+                    }
                     _effects.AddChild(new ExitEffect(_art,water){Position=pos+Vector3.Up*(water?.12f:.8f)});CountEffect(water?"splash":"death");break;
                 case "round-ready":_audio.RoundReady();break;
                 case "fight":_audio.Fight();break;

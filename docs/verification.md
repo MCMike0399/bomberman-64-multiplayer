@@ -1,4 +1,27 @@
-# Verified iteration ten — 2026-10-20
+# Verified iteration eleven — 2026-10-20
+
+| Check | Result |
+|---|---|
+| Gameplay integration | **93 checks passed**: 11 new terrain-travel, 5 kick timing/short-impact and 5 shoreline cases |
+| Client/session/input | 93 checks passed |
+| AI | 21 checks passed, including actual combat outcomes |
+| Full standalone Mac regression | **1,524 assertions, 115 captures**, zero runtime errors or capture fallbacks |
+| Recorded standalone kick/impact/terrain scenario | 79 assertions, 11 captures, zero runtime errors; complete MP4 decode passed |
+| Independent HTTP/WebSocket networking | 2–8 humans and one human + seven server bots passed (43.4 seconds) |
+| Installed app | v0.11.0; strict signature check, export equality and Launch Services gameplay smoke passed |
+
+The final full run is `artifacts/iteration11-final/20261021T001659.140575Z-all`, 97.855 seconds including startup. The app runs independently of the source project, windowed, against the rebuilt project-owned localhost server. The earlier run failed when the old grapple witness started its carrier too far from the now-nearby victim to reach them before recovery. The final test starts the carrier closer and still requires ordinary movement, body clearance, accepted grab, escape and throw. No actor state is teleported or rewritten.
+
+The final recorded run is `artifacts/iteration11-video-final/20261021T001910.741104Z-kick-physics`: 754 frames, 25.133 seconds, 1280×800, 30 FPS, original game audio. It uses a temporary inspection camera on the same actual stock-temple actors for the first hit and restores the battle camera afterward. The 1× [four-second kick/stumble clip](videos/kick-and-stumble.mp4) is cut from 10.633 seconds, with no timing changes, generated frames or reference-game assets. Its H.264/AAC output was fully decoded and its beginning, wind-up, strike, low hop, nearby landing and recovery inspected across extracted frames. Fixed-step Movie Maker capture verifies simulation/presentation, not real-time rendering throughput or input latency.
+
+The actual hit measures a 0.301-unit rise and 1.10-unit horizontal displacement. The old impulse fails the bounded-stumble regression at 0.995 units of rise. A sustained kick now crosses the actual lower courtyard lip and resumes rolling on landing; unit-level ordinary-input cases also cover more than two seconds of unobstructed travel, repeated drops and full-radius corner collision. [Original-video observations versus project tuning](iteration11-kick-research.md).
+
+The water regression reproduced death at height 0 while the visible plane was −1. The final stock-temple traversal checks dry radius grazing, a live falling actor between floor and water, and a death event exactly at the water plane. The full suite retains flooding, ordinary ledge descent, ghost interactions, normal/remote fuse semantics and controller mappings. This iteration did not require another physical-controller input session; existing physical observations remain distinct from synthetic input coverage.
+
+The installed `~/Applications/Blast Circuit.app` matches the tested export byte-for-byte and passes strict recursive signature verification. Launch Services smoke reached 117 gameplay snapshots with zero stderr. The app remains locally ad-hoc signed; no notarization, external deployment or Game Mode performance claim is made. Menus and approved head geometry are unchanged.
+
+## Iteration ten baseline — 2026-10-20
+
 
 | Check | Result |
 |---|---|

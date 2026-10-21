@@ -10,7 +10,7 @@ internal static class BombImpactChecks
         int count=0;var failures=new List<string>();
         void Check(string name,Action check){try{check();count++;Console.WriteLine("PASS "+name);}catch(Exception e){failures.Add(name+": "+e.Message);Console.WriteLine("FAIL "+failures[^1]);}}
         Check("kick launches decisively with a short visible hop",()=>{
-            var m=Match();Place(m);m.SetInput(0,new PlayerInput(0,1));Step(m,2);
+            var m=Match();Place(m);m.SetInput(0,new PlayerInput(0,1));AwaitKick(m);
             var first=Bomb(m);Step(m,4);var next=Bomb(m);
             Assert(F(first,"y")>.02f||F(next,"y")>.02f,"A kick has no launch hop; it only slides across the floor.");
             Assert(F(next,"z")-F(first,"z")>1.4f,"Kick lacks a decisive shooting impulse.");
@@ -33,7 +33,7 @@ internal static class BombImpactChecks
             Step(m,100);Assert(Bombs(m).GetArrayLength()==0,"Billiard corner bomb retained capacity forever.");
         });
         Check("moving remote responds immediately to its command",()=>{
-            var m=Match(remote:true);Place(m);m.SetInput(0,new PlayerInput(0,1));Step(m,2);
+            var m=Match(remote:true);Place(m);m.SetInput(0,new PlayerInput(0,1));AwaitKick(m);
             Assert(Bomb(m).GetProperty("state").GetInt32()==1,"Moving remote fixture did not kick.");
             m.SetInput(0,new PlayerInput(0,0,R:true));Step(m,2);
             Assert(Bombs(m).GetArrayLength()==0,"Remote ignored command while moving, forcing the owner to wait for a wall.");
@@ -88,6 +88,7 @@ internal static class BombImpactChecks
     }
     static CellDef[,] Cells(){var c=new CellDef[15,15];for(int x=0;x<15;x++)for(int z=0;z<15;z++)c[x,z]=CellDef.Floor0;return c;}
     static LocalMatch Match(bool victim=false,bool wall=false,bool remote=false,bool chain=false,bool corner=false){var c=Cells();if(corner)for(int z=0;z<15;z++)c[6,z]=CellDef.Pillar;if(wall)for(int x=0;x<15;x++)c[x,6]=CellDef.Pillar;var m=new LocalMatch(new MatchOptions{HumanPlayers=2,BotPlayers=0,Practice=true},new StageLayout{Id="fixture",Width=15,Height=15,Cells=c,Spawns=[(3,3),victim||chain?(3,6):(12,12)],SoftBlockDensity=0,InitialItems=remote?[(3,3,"remote")]:[]});Step(m,64);return m;}
+    static void AwaitKick(LocalMatch m){for(int i=0;i<15;i++){m.Tick();if(Bomb(m).GetProperty("state").GetInt32()==1)return;}throw new InvalidOperationException("Contact kick never released after anticipation.");}
     static void Place(LocalMatch m){m.SetInput(0,new PlayerInput(0,0,true));Step(m,2);}
     static void Step(LocalMatch m,int n){for(int i=0;i<n;i++)m.Tick();}
     static JsonElement State(LocalMatch m){using var d=JsonDocument.Parse(m.StateJson!);return d.RootElement.GetProperty("d").Clone();}

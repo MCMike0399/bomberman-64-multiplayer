@@ -2,7 +2,7 @@ using System.Text.Json;
 using Bomber.Game;
 using Bomber.Game.Simulation;
 
-var passed = BodyContactChecks.Run() + BombImpactChecks.Run() + TraversalAndGhostChecks.Run() + BombActionsChecks.Run() + GrappleChecks.Run();
+var passed = BombTravelChecks.Run() + KickTimingChecks.Run() + BodyContactChecks.Run() + BombImpactChecks.Run() + TraversalAndGhostChecks.Run() + BombActionsChecks.Run() + GrappleChecks.Run();
 Run("participant bounds and stage validation", () =>
 {
     foreach (var options in new[] {
@@ -460,7 +460,7 @@ Run("walking back into a bomb kicks across the blocked final movement step", () 
     Assert(!Events(match).Any(e=>Kind(e)=="kick"),"Walking away kicked the bomb behind the player.");
     match.SetInput(0,new PlayerInput(-1,0));Step(match,2);
     Assert(!Events(match).Any(e=>Kind(e)=="kick"),"Bomb was kicked before this tick could reach contact.");
-    Step(match,8);
+    for(int i=0;i<16&&!Events(match).Any(e=>Kind(e)=="kick");i++)match.Tick();
     Assert(Events(match).Any(e=>Kind(e)=="kick"),"Movement collision stopped the player outside the fixed kick distance.");
     Assert(State(match).GetProperty("bombs")[0].GetProperty("x").GetSingle()<bombX-.05f,"Accepted kick did not roll the actual bomb.");
 });
@@ -491,6 +491,8 @@ Run("presentation deaths retain explosion water and fall reasons through practic
         var stage=FlatArena([(1,3)]);for(var z=0;z<9;z++)stage.Cells[0,z]=kind==CellKind.Water?CellDef.Water:CellDef.Void;
         match=new LocalMatch(new MatchOptions {HumanPlayers=1,BotPlayers=0,Practice=true},stage);Fight(match);
         match.SetInput(0,new PlayerInput(-1,0));Step(match,6);
+        // Crossing the edge begins a real fall; wait for contact below the floor.
+        match.SetInput(0,default);Step(match,20);
         death=Events(match).First(e=>Kind(e)=="death");
         Assert(death.GetProperty("reason").GetString()==(kind==CellKind.Water?"water":"fall"),"Terrain death has incorrect cause.");
     }

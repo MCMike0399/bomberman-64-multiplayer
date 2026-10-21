@@ -104,7 +104,7 @@ Tap the bomb button to place a bomb **in front** of the player. Hold it for a qu
 
 ## Knockdowns and player grabs
 
-A kicked bomb shoots ahead at 12 cells/second with a short hop, a leg follow-through, speed streaks and a sharp impact cue. Contact knocks an opponent upward and away before a finite landing recovery; following your own outgoing kick no longer hits you from behind. Falling bombs can also knock players down. A visible hit message, stars and **DOWN / HELD** status explain what happened.
+Contact starts a short planted kick: about 0.13 seconds of anticipation, then a strike and about 0.17 seconds of gradual return to running. The bomb travels at 12 cells/second, with no short distance cap, and keeps momentum when falling from a terrace onto lower ground. Walls still block it. A hit causes a low hop and short stumble before finite landing recovery; following your own outgoing kick no longer hits you from behind. Falling bombs can also knock players down. A visible hit message, stars and **DOWN / HELD** status explain what happened.
 
 Alternate movement directions or tap the action buttons to recover faster. Holding one direction/button does not repeatedly count as effort. Hold **carry** near a downed opponent to pick them up, walk with them, and release carry to throw them through an arc. The victim can wiggle/tap to escape; an inactive hold also times out. Both controller and keyboard inputs use the same authoritative recovery rules, and bots recover through those inputs too. Disconnects release held players safely.
 
@@ -113,6 +113,8 @@ These mechanics run in the shared local/server simulation. Rebuild the independe
 Players now meet through height-aware body contacts: opposing runners block, glancing contact preserves sideways movement, and idle opponents yield slowly instead of becoming an immovable barrier. Movement uses a 100 ms snapshot buffer to absorb uneven arrivals without changing input speed or direction. This adds roughly 33 ms of visual delay over the previous interpolation; it does not predict network movement.
 
 Normal and pumped bombs keep their timed fuse when stopped in a corner. Active remote bombs still wait for the owner’s command, including while moving. If the owner leaves, dies or loses the ability to detonate, the abandoned remote resumes its remaining ordinary fuse. [Kick research, timing policy and regression evidence](docs/iteration10-kick-research.md).
+
+Water contact uses the actual visible water height. Merely grazing the shoreline with the side of the player’s body is safe while the feet remain on land; stepping off starts a fall, and contact with the water remains lethal. [Original footage comparisons and iteration-eleven tuning](docs/iteration11-kick-research.md).
 
 [Earlier movement, bombs, traversal and AI fixes](docs/iteration9-gameplay.md).
 
@@ -198,7 +200,9 @@ python3 tools/playtest/run.py --scenario presentation
 
 ## Screenshots
 
-The gallery contains real exported-app captures. Temple, kick, body-contact and grapple images come from the v0.10.0 windowed regression; unchanged menus, head profiles and other scenes retain their verified earlier captures. The controller tester shows device detection, not new physical button testing.
+The gallery contains real exported-app captures. Kick, shoreline and grapple images are updated for v0.11.0; unchanged scenes retain their verified earlier captures. Kick closeups use a temporary inspection camera on actual actors. The controller tester shows device detection, not new physical button testing.
+
+[Watch the recorded kick and small stumble](docs/videos/kick-and-stumble.mp4) — four seconds at normal simulation speed, with game audio. [Recording receipt and measurements](docs/verification.md).
 
 ![Sunken Temple battle](docs/images/temple-battle.png)
 
@@ -230,9 +234,15 @@ Model inspection uses the actual in-game character with a temporary close-up cam
 
 ![Player throw arc](docs/images/player-throw.png)
 
+![Planted anticipation before the strike](docs/images/kick-windup.png)
+
 ![Contact kick launching a bomb](docs/images/kick-launch.png)
 
-![Kicked bomb knocking an opponent upward](docs/images/kick-impact.png)
+![Low nearby stumble after a kicked-bomb hit](docs/images/kick-impact.png)
+
+![Kicked bomb continuing across the lower courtyard](docs/images/kick-courtyard.png)
+
+![Falling below the shore before water contact](docs/images/shore-fall.png)
 
 ![Player bodies meeting on the temple walkway](docs/images/body-contact.png)
 
