@@ -10,7 +10,7 @@ import json
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[2]
-REVISION = 'b0758339984bbeead1b3d1236f31e980aaa5f20e'
+REVISION = 'e3c46ab795a8095d55b75790d76ea2786559be7f'
 
 
 def failure_category(stderr):
@@ -22,7 +22,7 @@ def failure_category(stderr):
         (('host key verification failed', 'host identification has changed', 'host key is known'), 'SSH host-key verification failed'),
         (('could not resolve hostname', 'could not resolve host'), 'GitHub DNS resolution failed'),
         (('connection refused', 'connection timed out', 'network is unreachable'), 'SSH network connection failed'),
-        (('not our ref', "couldn't find remote ref"), 'Pinned revision is unavailable'),
+        (('not our ref', "couldn't find remote ref", 'reference is not a tree'), 'Pinned revision is unavailable'),
         (('repository not found', 'could not read from remote repository'), 'Repository access was rejected'),
     ]
     for markers, label in categories:
@@ -70,11 +70,19 @@ def main():
             ['git', 'init', '--quiet', str(destination)],
             ['git', '-C', str(destination), 'fetch', '--quiet', '--depth=1',
              origin, REVISION],
-            ['git', '-C', str(destination), 'checkout', '--quiet', '--detach', 'FETCH_HEAD'],
+            ['git', '-C', str(destination), 'checkout', '--quiet', '--detach', REVISION],
         ]
         for command in commands:
             try:
                 result = subprocess.run(command, env=environment, capture_output=True, timeout=120)
+                if (result.returncode and command[3:4] == ['fetch']
+                        and failure_category(result.stderr) == 'Pinned revision is unavailable'):
+                    # Some servers deny direct requests for old/unadvertised
+                    # commit IDs. Fetch advertised history, then still require
+                    # the exact pinned object: never substitute a branch tip.
+                    advertised = ['git', '-C', str(destination), 'fetch', '--quiet', origin,
+                                  '+refs/heads/*:refs/remotes/bootstrap/*', '+refs/tags/*:refs/tags/*']
+                    result = subprocess.run(advertised, env=environment, capture_output=True, timeout=120)
             except subprocess.TimeoutExpired:
                 raise SystemExit('Pinned kernel fetch timed out; verify network access to GitHub.') from None
             if result.returncode:

@@ -36,7 +36,9 @@ def stop(process):
                 # remaining dedicated group, too (never a shared shell group).
                 try:
                     os.killpg(process.pid, signal.SIGKILL)
-                except ProcessLookupError:
+                except (ProcessLookupError, PermissionError):
+                    # macOS may retain a protected zombie group briefly after
+                    # its owned leader was reaped; primary errors still fail.
                     pass
             return
         except ProcessLookupError:

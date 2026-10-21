@@ -196,7 +196,7 @@ It starts a local match and exits after eight seconds with `GODOT_SMOKE_OK`. `--
 
 ## Code and dependencies
 
-[Architecture](docs/architecture.md) describes the boundaries, protocol and scaling path. The repository consumes a separately supplied burbuja-kernel checkout at `burbuja-kernel/`, revision `b0758339984bbeead1b3d1236f31e980aaa5f20e`. Build and runtime use source project references for the kernel. The product now owns its adapted simulation in `src/Bomber.Game/Simulation`, retaining MIT provenance, so map and collision changes do not mutate the generic kernel. Preserve the kernel checkout and its license.
+[Architecture](docs/architecture.md) describes the boundaries, protocol and scaling path. The repository consumes a separately supplied burbuja-kernel checkout at `burbuja-kernel/`, revision `e3c46ab795a8095d55b75790d76ea2786559be7f`. Build and runtime use source project references for the kernel. The product now owns its adapted simulation in `src/Bomber.Game/Simulation`, retaining MIT provenance, so map and collision changes do not mutate the generic kernel. Preserve the kernel checkout and its license.
 
 
 ## macOS Game Mode
@@ -205,7 +205,7 @@ The game already uses native Metal. The `macOS Metal` export preset declares App
 
 ## Character, UI and effects
 
-The current menu is a live 3D theatre: characters share lighting and floor shadows, mode plaques have solid bevels and selection motion, and the camera has restrained parallax. The eight-seat roster uses a green stage with short MAN/COM/OFF controls; the winner celebrates on a lit podium in a dimensional arcade theatre, with a physical standings board, metallic medals and raised replay buttons. The helmet is softly oval in v0.15.0 (slightly shorter vertically, with fuller front-to-back roundness and the same width), centered slightly forward to balance its rear volume, with a separate rounded faceplate and a softer neck connection. The compact pear torso, short relaxed arms and full pink boots retain the approved proportions. Walking now uses longer support phases, rolling hip weight, asymmetric glove swings and a softly following helmet. A small suit compression adds character while the head retains its approved round proportions. Stopping settles the pose without extra steps or changing gameplay speed. [Walk tuning, original-footage observations and regression tests](docs/iteration15-walk.md).
+The current menu is a live 3D theatre: characters share lighting and floor shadows, mode plaques have solid bevels and selection motion, and the camera has restrained parallax. The eight-seat roster uses a green stage with short MAN/COM/OFF controls; the winner celebrates on a lit podium in a dimensional arcade theatre, with a physical standings board, metallic medals and raised replay buttons. The helmet is softly oval in v0.15.0 (slightly shorter vertically, with fuller front-to-back roundness and the same width), centered slightly forward to balance its rear volume, with a separate rounded faceplate and a softer neck connection. The compact pear torso, short relaxed arms and full pink boots retain the approved proportions. Movement now uses a playful cartoon trot: short planted pushes, gathered boot arcs, a brief light flight, a coordinated body spring and glove follow-through. The suit compresses at contact while the head retains its softly oval proportions. Stopping settles the pose without extra steps or changing gameplay speed. [Walk tuning, original-footage observations and regression tests](docs/iteration15-walk.md).
 
 Match setup now displays an actual lit miniature of the selected arena and a native arrow-controlled rules rail.
 
@@ -226,7 +226,7 @@ python3 tools/playtest/run.py --scenario presentation
 
 The gallery contains real exported-app captures. Model front/side/three-quarter images and the walking clip are refreshed for the final v0.15.0 softly oval helmet. AI, difficulty-selection and WASD menu images are updated for v0.13.0; other scenes retain their verified earlier captures. The bomb-trail closeup uses a temporary inspection camera on actual actors. The controller tester shows device detection, not new physical button testing.
 
-[Watch the livelier walking animation](docs/videos/walk-personality.mp4) — a normal-speed, five-second excerpt of real practice movement with a temporary side inspection camera. [Reference observations and measured contacts](docs/iteration15-walk.md).
+[Watch the livelier walking animation](docs/videos/walk-personality.mp4) — a normal-speed, 4.7-second excerpt of real practice movement with a temporary side inspection camera. [Reference observations and measured contacts](docs/iteration15-walk.md).
 
 [Watch Easy, Medium and Hard in actual gameplay](docs/videos/ai-difficulties.mp4) — three labeled six-second excerpts, normal simulation speed and game audio. [AI behavior and test results](docs/iteration13-ai.md).
 

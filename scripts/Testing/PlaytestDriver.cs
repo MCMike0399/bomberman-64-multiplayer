@@ -298,8 +298,10 @@ public partial class PlaytestDriver : Node
         var center=target.GetViewport().GetScreenTransform()*target.GetGlobalTransformWithCanvas()*(target.Size/2);
         Event("mouse-click",new {label,x=center.X,y=center.Y,windowWidth=GetWindow().Size.X,windowHeight=GetWindow().Size.Y});
         Godot.Input.ParseInputEvent(new InputEventMouseMotion {Position=center,GlobalPosition=center});
+        // Deliver one ordinary click as a paired event burst. Splitting it over
+        // rendered frames lets a pending native warp-motion cancel the press.
+        // Native control hit testing and pressed/released signals still run.
         Godot.Input.ParseInputEvent(new InputEventMouseButton {Position=center,GlobalPosition=center,ButtonIndex=MouseButton.Left,Pressed=true});
-        await Frames(1);
         Godot.Input.ParseInputEvent(new InputEventMouseButton {Position=center,GlobalPosition=center,ButtonIndex=MouseButton.Left,Pressed=false});
         await Frames(3);
     }

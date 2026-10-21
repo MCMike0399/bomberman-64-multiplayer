@@ -79,6 +79,26 @@ class PublicationBoundaryTests(unittest.TestCase):
 
 
 class CredentialBoundaryTests(unittest.TestCase):
+    def test_unadvertised_pin_fallback_never_substitutes_branch_tip(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            calls = []
+            def fake_git(command, **kwargs):
+                calls.append(command)
+                if command[1] == 'init':
+                    (root / 'burbuja-kernel').mkdir()
+                if '--depth=1' in command:
+                    return subprocess.CompletedProcess(command, 128, stderr=b'fatal: not our ref')
+                return subprocess.CompletedProcess(command, 0, stderr=b'')
+            environment = {'KERNEL_REPOSITORY': 'private-owner/private-name', 'KERNEL_DEPLOY_KEY': 'fixture-key'}
+            metadata = io.BytesIO(b'{"ssh_keys":["ssh-ed25519 example"]}')
+            with patch.object(bootstrap, 'ROOT', root), patch.dict(os.environ, environment, clear=True), patch.object(bootstrap.urllib.request, 'urlopen', return_value=metadata), patch.object(bootstrap.subprocess, 'run', side_effect=fake_git), patch.object(bootstrap.subprocess, 'check_output', return_value=bootstrap.REVISION + '\n'), contextlib.redirect_stdout(io.StringIO()):
+                bootstrap.main()
+            self.assertTrue(any('+refs/heads/*:refs/remotes/bootstrap/*' in command for command in calls))
+            checkout = calls[-1]
+            self.assertEqual(bootstrap.REVISION, checkout[-1])
+            self.assertNotIn('FETCH_HEAD', checkout)
+
     def test_safe_failure_categories_never_reflect_private_diagnostics(self):
         examples = [(b'git@private.example: Permission denied (publickey). secret-owner/repo', 'authentication'),
                     (b'Load key /secret/key: error in libcrypto; secret-owner/repo', 'format'),

@@ -57,7 +57,10 @@ def stop(process):
                 # remaining dedicated group, too (never a shared shell group).
                 try:
                     os.killpg(process.pid, signal.SIGKILL)
-                except ProcessLookupError:
+                except (ProcessLookupError, PermissionError):
+                    # On macOS a fully terminated orphan/zombie group can
+                    # report EPERM instead of ESRCH after its leader is reaped.
+                    # The direct owned process has already completed above.
                     pass
             return
         except ProcessLookupError:

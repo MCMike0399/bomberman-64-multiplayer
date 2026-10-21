@@ -38,7 +38,7 @@ The first iteration linked the kernel example. This iteration makes the adapted 
 - `src/Bomber.Game/Simulation/BlastSim.cs`
 - `src/Bomber.Game/Simulation/BlastStages.cs`
 
-Source baseline: kernel revision `b0758339984bbeead1b3d1236f31e980aaa5f20e`, MIT license in `burbuja-kernel/LICENSE`. The source checkout must still be present for kernel contract and hosting references. The server is this product's executable; it does not modify the generic kernel or run its example host. Simulation source retains provenance and the upstream MIT notice.
+Original simulation baseline: kernel revision `b0758339984bbeead1b3d1236f31e980aaa5f20e`. The current external dependency pin is `e3c46ab795a8095d55b75790d76ea2786559be7f`, its rewritten-history equivalent with identical runtime/source/build files; the only tree differences are sanitized Markdown documentation. MIT license in `burbuja-kernel/LICENSE`. The source checkout must still be present for kernel contract and hosting references. The server is this product's executable; it does not modify the generic kernel or run its example host. Simulation source retains provenance and the upstream MIT notice.
 
 ## Simulation and game flow
 

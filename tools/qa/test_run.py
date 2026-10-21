@@ -20,6 +20,17 @@ SPEC.loader.exec_module(qa)
 
 
 class HarnessTests(unittest.TestCase):
+    @unittest.skipUnless(os.name == 'posix', 'POSIX process-group cleanup')
+    def test_post_reap_zombie_group_permission_error_is_harmless(self):
+        process = Mock(pid=12345)
+        process.poll.return_value = None
+        with patch.object(qa.os, 'killpg', side_effect=[None, PermissionError('terminated group')]):
+            qa.stop(process)
+        process.wait.assert_called_once_with(timeout=5)
+        with patch.object(qa.os, 'killpg', side_effect=PermissionError('live owned process')):
+            with self.assertRaises(PermissionError):
+                qa.stop(process)
+
     def test_soak_rejects_recorded_failures_inactivity_liveness_and_duplicate_rows(self):
         result = {'Stage': 'fixture', 'Difficulty': 'fixture', 'Bots': 3, 'Seed': 0,
                   'Ticks': 10, 'ActiveTicks': 5, 'EligibleBotTicks': 6, 'MovingBotTicks': 3,

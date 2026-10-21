@@ -30,7 +30,7 @@ public partial class PlaytestDriver
             async Task WalkLeg(float direction,float target,string label)
             {
                 float startX=Player.GetProperty("x").GetSingle(),startRender=model.GlobalPosition.X,startZ=model.GlobalPosition.Z,previous=startRender,maxLift=0,minPose=1,maxPose=-1;
-                var displacements=new List<float>();int frames=0,support=0;
+                var displacements=new List<float>();int frames=0,support=0,flight=0;
                 Input(0,new PlayerInput(direction,0));
                 while((target-Player.GetProperty("x").GetSingle())*direction>.08f&&frames<75)
                 {
@@ -39,15 +39,16 @@ public partial class PlaytestDriver
                     if(frames>8)displacements.Add((x-previous)*direction);
                     previous=x;minPose=Mathf.Min(minPose,model.WalkPose);maxPose=Mathf.Max(maxPose,model.WalkPose);
                     maxLift=Mathf.Max(maxLift,Mathf.Max(model.LeftFootLift,model.RightFootLift));
-                    if(model.LeftFootLift<.001f||model.RightFootLift<.001f)support++;
+                    if(Mathf.Abs(model.LeftFootLift)<.01f||Mathf.Abs(model.RightFootLift)<.01f)support++;
+                    if(model.LeftFootLift>.01f&&model.RightFootLift>.01f)flight++;
                     Sample(label);
                 }
                 float travel=(Player.GetProperty("x").GetSingle()-startX)*direction;
                 Check(frames<75&&travel>7.5f,"ordinary input traverses the clear courtyard toward "+label);
                 Check(displacements.Count>20&&displacements.Min()>.03f,"actual walking keeps continuous displacement through supporting-foot contacts: "+label);
-                Check(minPose<-.3f&&maxPose>.3f&&maxLift>.03f&&maxLift<.05f&&support==frames,"actual scene alternates readable low supporting and returning feet: "+label);
+                Check(minPose<-.3f&&maxPose>.3f&&maxLift>.09f&&maxLift<.2f&&support>frames*.5f&&flight>frames*.1f,"actual scene alternates planted push-off, gathered boots and brief flight: "+label);
                 Check(Mathf.Abs(model.GlobalPosition.Z-startZ)<.1f&&Player.GetProperty("fx").GetSingle()*direction>.99f,"direction reversal keeps the real actor on the courtyard path: "+label);
-                Event("walking-showcase-leg",new {label,frames,seconds=frames/30f,authorityTravel=travel,renderTravel=(model.GlobalPosition.X-startRender)*direction,minStep=displacements.Min(),maxStep=displacements.Max(),minPose,maxPose,maxLift,support});
+                Event("walking-showcase-leg",new {label,frames,seconds=frames/30f,authorityTravel=travel,renderTravel=(model.GlobalPosition.X-startRender)*direction,minStep=displacements.Min(),maxStep=displacements.Max(),minPose,maxPose,maxLift,support,flight});
             }
             await WalkLeg(1,14.5f,"right");
             await Capture("walk-feel-turn",0);
@@ -59,7 +60,7 @@ public partial class PlaytestDriver
                 Follow();await Frames(1);Sample("settle");
                 if(i==15)settledX=model.GlobalPosition.X;
             }
-            Check(Mathf.Abs(model.GlobalPosition.X-settledX)<.005f&&Mathf.Abs(model.WalkPose)<.002f&&model.LeftFootLift<.001f&&model.RightFootLift<.001f,"actual walking settles to planted rest without root drift after release");
+            Check(Mathf.Abs(model.GlobalPosition.X-settledX)<.005f&&Mathf.Abs(model.WalkPose)<.002f&&Mathf.Abs(model.LeftFootLift)<.02f&&Mathf.Abs(model.RightFootLift)<.02f,"actual walking settles to planted rest without root drift after release");
             Check(Player.GetProperty("alive").GetBoolean()&&!Player.GetProperty("stunned").GetBoolean(),"recorded walking path completes without respawn or action interruption");
             await Capture("walk-feel-side-settled",0);
             Event("walking-showcase-end",new {movieFrame=Engine.GetProcessFrames(),end=model.GlobalPosition.ToString()});
