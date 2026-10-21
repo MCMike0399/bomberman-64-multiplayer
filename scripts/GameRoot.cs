@@ -43,6 +43,8 @@ public partial class GameRoot : Node3D
     public JsonElement? LatestState { get; private set; }
     public JsonElement? LatestStage { get; private set; }
     public ISession? ActiveSession=>_session;
+    public IReadOnlyList<BlastCircuit.Rendering.ThrowPreviewState> ThrowPreviews=>_arena.ThrowPreviews;
+    public IReadOnlyList<BlastCircuit.BombRenderPose> BombRenderPoses=>_arena.BombRenderPoses;
     public object VisualState=>new {waterHeight=_arena.WaterHeight,largestBombScale=_arena.LargestBombScale,pumpAnimations=_arena.PumpAnimationCount,pumpIntensity=_arena.PumpIntensity,carriedBombs=_arena.CarriedBombs,powerups=_arena.VisiblePowerups};
     public JsonElement? LatestLobby=>_lobby;
     public object RosterState=>_menu.RosterState;
@@ -217,7 +219,13 @@ public partial class GameRoot : Node3D
             }
         }
         var session=_session;if(session==null)return;
-        if(ScreenName=="Match")for(int i=0;i<session.LocalPlayerCount;i++)session.SendInput(i,_injected.TryGetValue(i,out var input)?input:PlayerControls.Read(i,session.LocalPlayerCount));
+        if(ScreenName=="Match")for(int i=0;i<session.LocalPlayerCount;i++)
+        {
+            var input=_injected.TryGetValue(i,out var injected)?injected:PlayerControls.Read(i,session.LocalPlayerCount);
+            session.SendInput(i,input);
+            var playerId=session is NetworkSession network?network.PlayerId:$"local-{i}";
+            if(playerId!=null)_arena.SetLocalInput(playerId,input);
+        }
         session.Advance(delta);
         foreach(var envelope in session.DrainMessages())
         {

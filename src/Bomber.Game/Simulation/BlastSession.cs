@@ -807,18 +807,19 @@ public sealed partial class BlastSession : GameSession
         var bomb = _bombs.FirstOrDefault(b => b.Id == p.CarryingBombId);
         if (bomb is null) { p.CarryingBombId = null; return; }
 
-        var stickMag = Math.Clamp(input.Length, 0.2f, 1f);
-        var speed = BlastBomb.FlySpeed * stickMag;
-        var angle = MathF.PI * 55f / 180f; // throw angle up from horizontal
+        // A released stick still throws decisively clear of the carrier. Pumps
+        // project the larger blast farther away, rewarding the setup with space.
+        var speed = BombThrowRules.Speed(input.Length,bomb.Pumps);
+        var velocity = BombThrowRules.Velocity(p.FacingX,p.FacingZ,input.Length,bomb.Pumps);
 
         bomb.State = BombState.Flying;
         bomb.LastTouchedById=p.Id;
         bomb.X = p.X;
         bomb.Z = p.Z;
-        bomb.FlyVX = p.FacingX * speed;
-        bomb.FlyVZ = p.FacingZ * speed;
-        bomb.FlyVY = speed * MathF.Tan(angle) * 0.5f;
-        bomb.FlyY = p.Y + 0.9f; // launch slightly above tier
+        bomb.FlyVX = velocity.X;
+        bomb.FlyVZ = velocity.Z;
+        bomb.FlyVY = velocity.Y;
+        bomb.FlyY = p.Y + BombThrowRules.LaunchHeight; // launch slightly above tier
         bomb.Tier = p.Tier;
 
         p.CarryingBombId = null;
@@ -903,7 +904,7 @@ public sealed partial class BlastSession : GameSession
     }
 
     private float BombY(BlastBomb bomb) => bomb.State == BombState.Flying ? bomb.FlyY :
-        bomb.State == BombState.Carried ? (_players.Values.FirstOrDefault(p => p.CarryingBombId == bomb.Id)?.Y ?? bomb.Tier) + .9f :
+        bomb.State == BombState.Carried ? (_players.Values.FirstOrDefault(p => p.CarryingBombId == bomb.Id)?.Y ?? bomb.Tier) + BombThrowRules.LaunchHeight :
         _stage.SurfaceAt(bomb.X, bomb.Z) + (bomb.State==BombState.Rolling && bomb.KickHopRemaining>0
             ? BlastBomb.KickHopHeight*MathF.Sin(MathF.PI*bomb.KickHopRemaining/BlastBomb.KickHopSeconds) : 0);
 
@@ -996,10 +997,8 @@ public sealed partial class BlastSession : GameSession
     private void TickFlyingBomb(ISessionContext context, BlastBomb b, float dt)
     {
         if(b.ResumeRollingAfterFall){TickFallingKickedBomb(context,b,dt);return;}
-        b.X += b.FlyVX * dt;
-        b.Z += b.FlyVZ * dt;
-        b.FlyVY -= BlastBomb.Gravity * dt;
-        b.FlyY += b.FlyVY * dt;
+        var flight=BombThrowRules.Advance(new(b.X,b.FlyY,b.Z),new(b.FlyVX,b.FlyVY,b.FlyVZ),dt);
+        b.X=flight.Position.X;b.Z=flight.Position.Z;b.FlyY=flight.Position.Y;b.FlyVY=flight.Velocity.Y;
 
         var landingY = _stage.SurfaceAt(b.X, b.Z);
 

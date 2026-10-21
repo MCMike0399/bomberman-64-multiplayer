@@ -2,7 +2,7 @@ using System.Text.Json;
 using Bomber.Game;
 using Bomber.Game.Simulation;
 
-var passed = BombPlacementChecks.Run() + PowerUpModeChecks.Run() + BombTravelChecks.Run() + KickTimingChecks.Run() + BodyContactChecks.Run() + BombImpactChecks.Run() + TraversalAndGhostChecks.Run() + BombActionsChecks.Run() + GrappleChecks.Run();
+var passed = CarryChargeChecks.Run() + BombPlacementChecks.Run() + PowerUpModeChecks.Run() + BombTravelChecks.Run() + KickTimingChecks.Run() + BodyContactChecks.Run() + BombImpactChecks.Run() + TraversalAndGhostChecks.Run() + BombActionsChecks.Run() + GrappleChecks.Run();
 Run("participant bounds and stage validation", () =>
 {
     foreach (var options in new[] {
@@ -302,8 +302,8 @@ Run("power-up limits weighted choices and round inventory reset", () =>
 });
 Run("holding lift then bomb creates held bomb and pumps cap at six effective levels", () =>
 {
-    var arena=FlatArena([(3,3)]);
-    arena=new StageLayout {Id=arena.Id,Width=9,Height=9,Cells=arena.Cells,Spawns=arena.Spawns,SoftBlockDensity=0,InitialItems=[(3,3,"fire"),(3,3,"fire")]};
+    var arena=FlatArena([(3,3)],15);
+    arena=new StageLayout {Id=arena.Id,Width=arena.Width,Height=arena.Height,Cells=arena.Cells,Spawns=arena.Spawns,SoftBlockDensity=0,InitialItems=[(3,3,"fire"),(3,3,"fire")]};
     var match=new LocalMatch(new MatchOptions {HumanPlayers=1,BotPlayers=0,Practice=true},arena);Fight(match);
     match.SetInput(0,new PlayerInput(0,0,false,true));Step(match,2);
     match.SetInput(0,new PlayerInput(0,0,true,true));Step(match,2);
@@ -445,7 +445,7 @@ Run("late lobby joins and reconnects receive existing authoritative appearances"
 });
 Run("presentation events record only accepted held actions and one authoritative blast", () =>
 {
-    var match = new LocalMatch(new MatchOptions {HumanPlayers=1,BotPlayers=0,Practice=true},FlatArena([(3,3)])); Fight(match);
+    var match = new LocalMatch(new MatchOptions {HumanPlayers=1,BotPlayers=0,Practice=true},FlatArena([(3,3)],15)); Fight(match);
     match.SetInput(0,new PlayerInput(0,0,false,true));Step(match,2);
     match.SetInput(0,new PlayerInput(0,0,true,true));Step(match,2);
     for(var i=0;i<8;i++){match.SetInput(0,new PlayerInput(0,0,false,true));Step(match,2);match.SetInput(0,new PlayerInput(0,0,true,true));Step(match,2);}
@@ -553,10 +553,10 @@ static void Walk(LocalMatch match,float x,float z)
     }
     var last=Player(match);throw new InvalidOperationException($"Could not walk to {x},{z}; stuck at {last.GetProperty("x")},{last.GetProperty("y")},{last.GetProperty("z")}");
 }
-static StageLayout FlatArena((int X,int Z)[] spawns)
+static StageLayout FlatArena((int X,int Z)[] spawns,int size=9)
 {
-    var cells=new CellDef[9,9];for(var x=0;x<9;x++)for(var z=0;z<9;z++)cells[x,z]=CellDef.Floor0;
-    return new StageLayout {Id="fixture",Width=9,Height=9,Cells=cells,Spawns=spawns,SoftBlockDensity=0};
+    var cells=new CellDef[size,size];for(var x=0;x<size;x++)for(var z=0;z<size;z++)cells[x,z]=CellDef.Floor0;
+    return new StageLayout {Id="fixture",Width=size,Height=size,Cells=cells,Spawns=spawns,SoftBlockDensity=0};
 }
 
 static JsonElement[] Events(LocalMatch match)=>State(match).GetProperty("events").EnumerateArray().ToArray();

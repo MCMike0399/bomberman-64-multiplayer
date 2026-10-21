@@ -111,7 +111,7 @@ public partial class BattleHud : Control
             if(p.GetProperty("carrying").GetString()=="bomb")
             {
                 bool latched=p.TryGetProperty("carryFromPrimary",out var primaryCarry)&&primaryCarry.GetBoolean();
-                return $"{who} has a bomb overhead. {PromptBar.Spoken(primary)} pumps it, "+(latched?$"{PromptBar.Spoken(carry)} throws it":$"release {PromptBar.Spoken(carry)} to throw");
+                return $"{who}: {PromptBar.Spoken(primary)} pumps farther, "+(latched?$"{PromptBar.Spoken(carry)} throws it":$"release {PromptBar.Spoken(carry)} to throw");
             }
             if(state.GetProperty("bombs").EnumerateArray().Any(b=>b.GetProperty("remote").GetBoolean()&&b.GetProperty("ownerId").GetString()==p.GetProperty("id").GetString()))
                 return $"{who}'s remote bombs are waiting. {PromptBar.Spoken(remote)} sets them off";

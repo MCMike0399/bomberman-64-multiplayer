@@ -43,6 +43,27 @@ public partial class TempleStageView : Node3D
         }
         return tier*HeightScale;
     }
+    public Bomber.Game.Simulation.CellKind AimCellKind(float x,float z)
+    {
+        int cx=(int)MathF.Floor(x),cz=(int)MathF.Floor(z);
+        return cx<0||cz<0||cx>=Width||cz>=Depth?Bomber.Game.Simulation.CellKind.Void:
+            (Bomber.Game.Simulation.CellKind)_cells[cz*Width+cx].GetProperty("k").GetInt32();
+    }
+    // Conservative advisory arc: never draw through a column of cover or beyond the stage.
+    public bool AimObstructed(float x,float z,byte[] cover)
+    {
+        const float radius=Bomber.Game.Simulation.BlastBomb.Radius;
+        if(x<radius||z<radius||x>Width-radius||z>Depth-radius)return true;
+        for(int cx=(int)MathF.Floor(x-radius);cx<=(int)MathF.Floor(x+radius);cx++)
+        for(int cz=(int)MathF.Floor(z-radius);cz<=(int)MathF.Floor(z+radius);cz++)
+        {
+            float dx=x-Math.Clamp(x,cx,cx+1f),dz=z-Math.Clamp(z,cz,cz+1f);
+            if(dx*dx+dz*dz>=radius*radius)continue;
+            int index=cz*Width+cx;
+            if(_cells[index].GetProperty("k").GetInt32()==1||index/8<cover.Length&&(cover[index/8]&(1<<(index%8)))!=0)return true;
+        }
+        return false;
+    }
     public void Build(JsonElement data)
     {
         Width=data.GetProperty("width").GetInt32();Depth=data.GetProperty("height").GetInt32();_cells=data.GetProperty("cells").Clone();

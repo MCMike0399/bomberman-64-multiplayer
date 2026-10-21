@@ -126,15 +126,31 @@ Water contact uses the actual visible water height. Merely grazing the shoreline
 
 Breakable stone objects can drop weighted upgrades. Fire raises normal blast strength to level 3; bomb upgrades raise simultaneous capacity to 8. Red power penetrates breakable cover. Blue remote bombs with green indicators detonate on command. Picking up either special upgrade replaces the other for newly placed bombs. Existing red bombs retain their original fuse; an existing remote resumes its normal fuse if its owner switches to red and can no longer command it. One heart absorbs one blast without stacking. Water remains lethal. Equipment resets between rounds.
 
-Three accepted pump presses add three effective blast levels, reaching level 6 with maximum fire upgrades. The default bomb is larger for readability, but pumped visual growth is restrained: three pumps are about 1.8× the default size, with a visual target cap of 2.3. This does not change blast strength. Pickups are also larger and the camera fits the stage more closely. Timed bombs pause their fuse while carried and resume it after release. These numerical choices and the flood curve are project tuning; [manual and gameplay-video research](docs/gameplay-research.md) distinguishes confirmed observations from assumptions.
+Three accepted pump presses add three effective blast levels, reaching level 6 with maximum fire upgrades. The default bomb is larger for readability, but pumped visual growth is restrained: three pumps are about 1.8× the default size, with a visual target cap of 2.3. This does not change blast strength. Pickups are also larger and the camera fits the stage more closely. Timed bombs pause their fuse while carried and resume it after release. Pumping also adds throw reach. While a local player carries a bomb, an advisory dotted arc shows the static trajectory and landing point; water and void endpoints instead show where it sinks or falls away. Moving players and bombs can interrupt that forecast. Neutral throws now clear the carrier, and the released model starts at hand height instead of dipping toward their helmet. [Carry/throw diagnosis and evidence](docs/iteration15-charge.md). These numerical choices and the flood curve are project tuning; [manual and gameplay-video research](docs/gameplay-research.md) distinguishes confirmed observations from assumptions.
 
 The original manual establishes increased destructive power for red bombs, but the inspected sources do not establish a separate radius multiplier at identical fire and pump levels. This build keeps radius tied to those levels and gives red its cover penetration. [Placement, color and red-power research](docs/iteration12-bombs-research.md).
 
 Bots pursue useful upgrades, pressure reachable opponents, predict visible fuse/chain danger, plan an escape before placing bombs, and seek high ground before flooding. Easy, Medium, and Hard change reaction time, search depth, spacing, bomb cadence, and escape-route awareness. Easy gives more room but still periodically attacks; Hard applies more sustained pressure and avoids contested dead ends more strongly. Every level shares the same speed, damage and visible information. Progress tracking and body-aware movement prevent repeated blocked routes from becoming permanent freezes. See the [AI behavior tests and measured tradeoffs](tests/Bomber.Ai.Tests/README.md).
 
+## Verification and CI delivery
+
+Local development and CI use the same orchestrator:
+
+```bash
+python3 tools/qa/run.py --profile public
+python3 tools/qa/run.py --profile managed
+python3 tools/qa/run.py --profile headless
+python3 tools/qa/run.py --profile graphical
+python3 tools/qa/run.py --profile package
+```
+
+`public` works without private kernel access; the other profiles require the pinned dependency. Managed verification tests the exact staged portable server before archiving it. Graphical verification exercises the real windowed game and records viewport evidence. Package verification builds the Apple Silicon app with the Switch 2 USB backend and runs its embedded game through headless smoke checks. JSON/JUnit receipts, failure triage and scenario provenance make incomplete or stale runs fail explicitly.
+
+[GitHub Verification](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/workflows/ci.yml) runs public contracts on PRs and protected dependency builds on trusted main. Successful builds deliver separate Mac client and portable server artifacts. A manual workflow validates both artifacts before preparing a draft release. Native Metal CI requires an isolated graphical runner and is currently disabled; local graphical QA remains required for visual changes. [Pipeline configuration, artifacts and deployment boundaries](docs/ci.md).
+
 ## Repeatable playtests and triage
 
-The agent harness plays through the actual Godot scene using inputs and product sessions:
+The agent harness plays through the actual Godot scene using inputs and product sessions. Its shared [scenario catalog](assets/testing/scenarios.json) drives both C# dispatch and Python validation; `--list` shows every scenario and capability:
 
 ```bash
 python3 tools/playtest/run.py --build --start-server --scenario all
@@ -189,7 +205,7 @@ The game already uses native Metal. The `macOS Metal` export preset declares App
 
 ## Character, UI and effects
 
-The current menu is a live 3D theatre: characters share lighting and floor shadows, mode plaques have solid bevels and selection motion, and the camera has restrained parallax. The eight-seat roster uses a green stage with short MAN/COM/OFF controls; the winner celebrates on a lit podium in a dimensional arcade theatre, with a physical standings board, metallic medals and raised replay buttons. The helmet is now near-spherical, centered slightly forward to balance its rear volume, with a separate rounded faceplate and a softer neck connection. The compact pear torso, short relaxed arms and full pink boots retain the approved proportions. Walking, breathing and head motion are independently phased.
+The current menu is a live 3D theatre: characters share lighting and floor shadows, mode plaques have solid bevels and selection motion, and the camera has restrained parallax. The eight-seat roster uses a green stage with short MAN/COM/OFF controls; the winner celebrates on a lit podium in a dimensional arcade theatre, with a physical standings board, metallic medals and raised replay buttons. The helmet is softly oval in v0.15.0 (slightly shorter vertically, with fuller front-to-back roundness and the same width), centered slightly forward to balance its rear volume, with a separate rounded faceplate and a softer neck connection. The compact pear torso, short relaxed arms and full pink boots retain the approved proportions. Walking now uses longer support phases, rolling hip weight, asymmetric glove swings and a softly following helmet. A small suit compression adds character while the head retains its approved round proportions. Stopping settles the pose without extra steps or changing gameplay speed. [Walk tuning, original-footage observations and regression tests](docs/iteration15-walk.md).
 
 Match setup now displays an actual lit miniature of the selected arena and a native arrow-controlled rules rail.
 
@@ -208,7 +224,9 @@ python3 tools/playtest/run.py --scenario presentation
 
 ## Screenshots
 
-The gallery contains real exported-app captures. AI, difficulty-selection and WASD menu images are updated for v0.13.0; other scenes retain their verified earlier captures. The bomb-trail closeup uses a temporary inspection camera on actual actors. The controller tester shows device detection, not new physical button testing.
+The gallery contains real exported-app captures. Model front/side/three-quarter images and the walking clip are refreshed for the final v0.15.0 softly oval helmet. AI, difficulty-selection and WASD menu images are updated for v0.13.0; other scenes retain their verified earlier captures. The bomb-trail closeup uses a temporary inspection camera on actual actors. The controller tester shows device detection, not new physical button testing.
+
+[Watch the livelier walking animation](docs/videos/walk-personality.mp4) — a normal-speed, five-second excerpt of real practice movement with a temporary side inspection camera. [Reference observations and measured contacts](docs/iteration15-walk.md).
 
 [Watch Easy, Medium and Hard in actual gameplay](docs/videos/ai-difficulties.mp4) — three labeled six-second excerpts, normal simulation speed and game audio. [AI behavior and test results](docs/iteration13-ai.md).
 
@@ -244,7 +262,7 @@ The gallery contains real exported-app captures. AI, difficulty-selection and WA
 
 ![Actual winning character](docs/images/battle-results.png)
 
-Model inspection uses the actual in-game character with a temporary close-up camera:
+The v0.15.0 model inspections below show the softly oval helmet on the actual in-game character with a temporary close-up camera:
 
 ![Character front](docs/images/model-front.png)
 
@@ -277,7 +295,7 @@ The game uses original procedural visuals. No original game ROM, Nintendo/Hudson
 
 Current bomb and flood checks:
 
-![A fully pumped bomb held overhead](docs/images/bomb-charge.png)
+![Charged throw with an advisory landing arc](docs/images/charge-aim.png)
 
 ![Pyramid-inspired lower courtyard flooding](docs/images/rising-water.png)
 

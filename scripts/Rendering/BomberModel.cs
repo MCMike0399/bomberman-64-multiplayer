@@ -20,13 +20,18 @@ public partial class BomberModel : Node3D
     private readonly ArtMaterials _art;
     private readonly List<MeshInstance3D> _suitParts=[],_torsoParts=[];
     private readonly Node3D _head=new();
-    private const float HeadCenter=1.085f,HelmetHalfHeight=.38f,HelmetDepth=.395f,HelmetForward=.045f,FaceCenterY=-.010f,EyeCenterY=.010f;
+    private MeshInstance3D _leftBoot=null!,_rightBoot=null!;
+    private float _leftFootLift,_rightFootLift;
+    private Vector3 _headStrideLag;
+    private const float HeadCenter=1.085f,HelmetHalfHeight=.375f,HelmetDepth=.405f,HelmetForward=.045f,FaceCenterY=-.010f,EyeCenterY=.010f;
     private static ArrayMesh? _helmetMesh,_torsoMesh,_faceMesh,_faceRimMesh;
     private static readonly Dictionary<float,ArrayMesh> EyeMeshes=[];
     private readonly List<MeshInstance3D> _eyes=[];
     private Color _suitColor;
     public int PumpAnimationCount {get;private set;}
     public float WalkPose=>_leftLeg.Rotation.X;
+    public float LeftFootLift=>(_leftLeg.Transform*_leftBoot.Position).Y-.145f;
+    public float RightFootLift=>(_rightLeg.Transform*_rightBoot.Position).Y-.145f;
     private bool _kickWinding;
     private float _kickWindupRemaining;
     public float KickPose=>_kickWinding?-(1-Mathf.Clamp(_kickWindupRemaining/(4f/30f),0,1)):_kickPulse;
@@ -87,8 +92,8 @@ public partial class BomberModel : Node3D
             var eye=new MeshInstance3D {Mesh=eyeMesh,MaterialOverride=dark,Position=new(x,EyeCenterY,0)};
             _head.AddChild(eye);_eyes.Add(eye);
         }
-        Cylinder(_head,new(0,.382f,HelmetForward),.058f,.1f,dark);
-        Sphere(_head,new(0,.466f,HelmetForward),new(.225f,.225f,.225f),pink);
+        Cylinder(_head,new(0,HelmetHalfHeight+.002f,HelmetForward),.058f,.1f,dark);
+        Sphere(_head,new(0,HelmetHalfHeight+.086f,HelmetForward),new(.225f,.225f,.225f),pink);
         _leftArm.Position=new(-.265f,.68f,0);_rightArm.Position=new(.265f,.68f,0);
         _body.AddChild(_leftArm);_body.AddChild(_rightArm);
         foreach(var arm in new[]{_leftArm,_rightArm})
@@ -104,6 +109,7 @@ public partial class BomberModel : Node3D
             Sphere(leg,new(0,-.075f,0),new(.15f,.19f,.15f),white);
             float outward=leg==_leftLeg?-.24f:.17f;
             var boot=Sphere(leg,new(outward*.11f,-.225f,leg==_leftLeg?.09f:.065f),new(.315f,.25f,.38f),pink);boot.Rotation=new(0,outward,0);
+            if(leg==_leftLeg)_leftBoot=boot;else _rightBoot=boot;
         }
         AddChild(_stars);
         for(int i=0;i<3;i++)
@@ -227,7 +233,10 @@ public partial class BomberModel : Node3D
     }
     public void Animate(float dt,float distance)
     {
-        _time+=dt;_walkPhase+=Mathf.Min(distance,.3f)*5.8f;
+        _time+=dt;
+        // One complete left/right stride covers 1.9 units, independent of frame rate.
+        // Distance drives the gait; stopping never advances the feet in place.
+        _walkPhase=Mathf.PosMod(_walkPhase+Mathf.Clamp(distance,0,.3f)/1.9f,1);
         float previousSpeed=_speed;
         _speed=Mathf.Lerp(_speed,Mathf.Min(1,distance/Mathf.Max(dt,.001f)/3),1-Mathf.Exp(-10*dt));
         float acceleration=Mathf.Clamp((_speed-previousSpeed)/Mathf.Max(dt,.001f),-3,3);
@@ -243,33 +252,52 @@ public partial class BomberModel : Node3D
         float kick=_kickWinding?-.5f*(1-Mathf.Clamp(_kickWindupRemaining/(4f/30f),0,1)):
             _kickPulse<=0?0:1-Mathf.SmoothStep(0,1,kickTime);
         float lift=Mathf.Sin(_liftPulse*Mathf.Pi),death=Mathf.Sin(_deathPulse*Mathf.Pi),victory=Mathf.Sin(_victoryPulse*Mathf.Pi);
-        float walk=Mathf.Sin(_walkPhase)*_speed;
+        var leftStep=FootStride(_walkPhase);var rightStep=FootStride(Mathf.PosMod(_walkPhase+.5f,1));
+        float walk=(rightStep.Reach-leftStep.Reach)*.5f*_speed;
+        _leftFootLift=leftStep.Lift*_speed;_rightFootLift=rightStep.Lift*_speed;
         float idle=(1-_speed)*(1-_carryBlend)*(1-death);
         float breath=Mathf.Sin(_time*2.35f)*idle;
         float sway=Mathf.Sin(_time*1.2f)*idle;
-        float stepBob=(1-Mathf.Cos(_walkPhase*2))*.014f*_speed;
+        float stepBob=(_leftFootLift+_rightFootLift)*.32f;
         _downBlend=Mathf.MoveToward(_downBlend,(_stunned||_heldVictim||_airborne)&&!_ghost?1:0,dt*8);
-        _leftLeg.Rotation=new(walk*.95f,0,0);_rightLeg.Rotation=new(-walk*.95f*(1-Mathf.Max(kick,0))-kick*1.45f,0,kick*.12f);
-        _leftLeg.Position=new(-.16f,.37f+Mathf.Max(0,-walk)*.055f,-walk*.08f);
-        _rightLeg.Position=new(.16f,.37f+Mathf.Max(0,walk)*.055f,walk*.08f+kick*.12f);
+        // Weight arrives over the supporting hip before the shoulders and helmet
+        // catch up. This offset phrasing gives the short-legged walk some swagger.
+        float freeStride=_speed*(1-_carryBlend*.78f)*(1-_downBlend)*(1-death)*(1-Mathf.Max(Mathf.Abs(kick),Mathf.Max(drop,toss)));
+        float hipWeight=-Mathf.Sin((_walkPhase-.07f)*Mathf.Tau)*freeStride;
+        float armSwing=Mathf.Sin((_walkPhase-.16f)*Mathf.Tau)*freeStride;
+        float otherArmSwing=Mathf.Sin((_walkPhase-.13f)*Mathf.Tau)*freeStride;
+        float contact=(.5f+.5f*Mathf.Cos(_walkPhase*Mathf.Tau*2))*freeStride;
+        float spring=Mathf.Sin(_walkPhase*Mathf.Tau*2-.45f)*freeStride;
+        float suitSquash=contact*.015f;
+        _headStrideLag=_headStrideLag.Lerp(new Vector3(spring,armSwing,hipWeight),1-Mathf.Exp(-12*dt));
+        float leftAngle=-leftStep.Reach*.63f*_speed,rightAngle=-rightStep.Reach*.63f*_speed*(1-Mathf.Max(kick,0));
+        _leftLeg.Rotation=new(leftAngle,0,0);_rightLeg.Rotation=new(rightAngle-kick*1.45f,0,kick*.12f);
+        // Compensate each boot's pivot arc so support stays low and only the
+        // returning foot clears the floor. Boots retain their original shape/yaw.
+        _leftLeg.Position=new(-.16f,.37f+FootPivotHeight(leftAngle,.09f)+_leftFootLift,leftStep.Reach*.13f*_speed);
+        _rightLeg.Position=new(.16f,.37f+FootPivotHeight(rightAngle,.065f)+_rightFootLift,rightStep.Reach*.13f*_speed+kick*.12f);
+        _leftBoot.Rotation=new(-leftAngle,_leftBoot.Rotation.Y,0);_rightBoot.Rotation=new(-rightAngle,_rightBoot.Rotation.Y,0);
         float spread=.265f+_charge*.065f*_carryBlend;
-        _leftArm.Position=new(-spread,.68f+_carryBlend*.12f,0);_rightArm.Position=new(spread,.68f+_carryBlend*.12f,0);
+        _leftArm.Position=new(-spread,.68f+_carryBlend*.12f+Mathf.Max(0,-armSwing)*.028f,0);_rightArm.Position=new(spread,.68f+_carryBlend*.12f+Mathf.Max(0,otherArmSwing)*.022f,0);
         _leftArm.Scale=_rightArm.Scale=new(1,1+_carryBlend*.8f,1);
-        float left=Mathf.Lerp(-.1f-walk*.55f+breath*.025f,-2.9f-pump*.18f,_carryBlend)-toss*1.7f-lift*.2f-victory*2.7f;
-        float right=Mathf.Lerp(-.14f+walk*.55f-breath*.018f,-2.9f-pump*.18f,_carryBlend)-toss*1.7f-lift*.2f-victory*2.7f;
-        _leftArm.Rotation=new(left-kick*.35f,-.07f,Mathf.Lerp(-.48f+breath*.025f,-.12f-_charge*.035f,_carryBlend));
-        _rightArm.Rotation=new(right+kick*.4f-drop*.45f,.07f,Mathf.Lerp(.50f-breath*.025f,.12f+_charge*.035f,_carryBlend));
-        _body.Position=new(sway*.009f,stepBob+breath*.009f-pump*.08f+lift*.04f+victory*.08f-death*.18f+(_ghost?.18f+Mathf.Sin(_time*3)*.08f:0),0);
-        _body.Scale=new(1+pump*.06f,1-pump*.09f-death*.18f,1+pump*.06f);
-        _body.Rotation=new(_speed*.055f+acceleration*.012f-_carryBlend*_charge*.025f+toss*.12f,-walk*.025f,(_stunned?Mathf.Sin(_time*9)*.22f:0)+death*.48f+walk*.042f+sway*.012f);
+        float left=Mathf.Lerp(-.1f-armSwing*.86f+breath*.025f,-2.9f-pump*.18f,_carryBlend)-toss*1.7f-lift*.2f-victory*2.7f;
+        float right=Mathf.Lerp(-.14f+otherArmSwing*.76f-breath*.018f,-2.9f-pump*.18f,_carryBlend)-toss*1.7f-lift*.2f-victory*2.7f;
+        _leftArm.Rotation=new(left-kick*.35f,-.07f-armSwing*.08f,Mathf.Lerp(-.48f+breath*.025f-armSwing*.055f,-.12f-_charge*.035f,_carryBlend));
+        _rightArm.Rotation=new(right+kick*.4f-drop*.45f,.07f-otherArmSwing*.07f,Mathf.Lerp(.50f-breath*.025f-otherArmSwing*.045f,.12f+_charge*.035f,_carryBlend));
+        _body.Position=new(sway*.009f+hipWeight*.032f,stepBob+spring*.006f+breath*.009f-pump*.08f+lift*.04f+victory*.08f-death*.18f+(_ghost?.18f+Mathf.Sin(_time*3)*.08f:0),0);
+        _body.Scale=new(1+pump*.06f+suitSquash*.5f,1-pump*.09f-death*.18f-suitSquash,1+pump*.06f+suitSquash*.5f);
+        _body.Rotation=new(_speed*.065f+spring*.018f+acceleration*.012f-_carryBlend*_charge*.025f+toss*.12f,-armSwing*.07f,(_stunned?Mathf.Sin(_time*9)*.22f:0)+death*.48f-hipWeight*.075f+walk*.018f+sway*.012f);
         _body.Position+=new Vector3(0,-drop*.035f,kick*.045f+drop*.018f);
         _body.Rotation+=new Vector3(-kick*.16f,kick*.1f,0);
         _body.Position=_body.Position.Lerp(new Vector3(0,.22f,0),_downBlend);
         _body.Rotation=_body.Rotation.Lerp(new Vector3(_airborne?Mathf.Sin(_time*8)*.3f:0,0,1.35f+(_heldVictim?Mathf.Sin(_time*12)*.045f:0)),_downBlend);
         // Counter the suit's step roll so the big head floats with a soft, attentive lag.
         float glance=Mathf.Sin(_time*.73f)*Mathf.Pow(Mathf.Max(0,Mathf.Sin(_time*.31f)),6)*idle;
-        _head.Position=new(0,HeadCenter-stepBob*.25f,0);
-        _head.Rotation=new(breath*.025f-_speed*.035f-pump*.08f,glance*.11f+walk*.02f,-walk*.055f-sway*.025f);
+        _head.Position=new(-_headStrideLag.Z*.014f,HeadCenter-stepBob*.4f-spring*.004f,0);
+        // The suit compresses slightly at contact; the approved round helmet
+        // keeps its proportions while its pose follows with a soft delayed nod.
+        _head.Scale=new(1/(1+suitSquash*.5f),1/(1-suitSquash),1/(1+suitSquash*.5f));
+        _head.Rotation=new(breath*.025f-_speed*.035f-pump*.08f-_headStrideLag.X*.016f,glance*.11f+_headStrideLag.Y*.035f,_headStrideLag.Z*.085f-sway*.025f);
         // Short asynchronous-looking blinks keep the roster alive without hiding the face in combat.
         float blinkPhase=_time%4.7f;
         float eyeHeight=blinkPhase>4.52f?Mathf.Max(.12f,Mathf.Abs(blinkPhase-4.61f)/.09f):1;
@@ -277,5 +305,15 @@ public partial class BomberModel : Node3D
         _stars.Rotation=new(0,_time*3,0);
         _nameLabel.Position=new(0,1.87f+_carryBlend*(.65f+_charge*.35f),0);
         Scale=Vector3.One*(_ghost?.85f:1.12f);
+    }
+    private static float FootPivotHeight(float angle,float forward)=>.225f*(Mathf.Cos(angle)-1)+forward*Mathf.Sin(angle);
+    private static (float Reach,float Lift) FootStride(float phase)
+    {
+        // A longer grounded support and brief eased return give the step a
+        // readable contact, rather than continuously pedalling both feet.
+        const float support=.64f;
+        if(phase<support)return (1-2*phase/support,0);
+        float swing=(phase-support)/(1-support),arc=Mathf.Sin(swing*Mathf.Pi);
+        return (Mathf.Lerp(-1,1,Mathf.SmoothStep(0,1,swing)),arc*arc*.045f);
     }
 }

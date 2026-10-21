@@ -2,6 +2,8 @@ using Godot;
 using System.Text.Json;
 using BlastCircuit.Rendering;
 using Bomber.Client;
+using Bomber.Game;
+using Bomber.Game.Simulation;
 using static BlastCircuit.Rendering.ArtGeometry;
 namespace BlastCircuit;
 
@@ -10,6 +12,10 @@ public partial class ArenaView : Node3D
 {
     public static readonly Color[] Colors=ArtMaterials.PlayerColors;
     private readonly ArtMaterials _art=new();
+    private readonly Dictionary<string,PlayerInput> _localInputs=[];
+    private readonly Dictionary<string,BombThrowPreview> _throwPreviews=[];
+    public IReadOnlyList<ThrowPreviewState> ThrowPreviews {get;private set;}=[];
+    public void SetLocalInput(string playerId,PlayerInput input)=>_localInputs[playerId]=input;
     private readonly Node3D _dynamic=new(),_effects=new();
     private readonly Dictionary<string,Node3D> _entities=[];
     private readonly Dictionary<string,Vector3> _targets=[];
@@ -33,6 +39,13 @@ public partial class ArenaView : Node3D
     private bool _wasHurry;
     private readonly Dictionary<string,int> _pickups=[];
     public float WaterHeight=>_terrain?.WaterHeight??0;
+    public IReadOnlyList<BombRenderPose> BombRenderPoses=>_entities.Where(pair=>pair.Value is BombModel).Select(pair=>
+    {
+        var bomb=(BombModel)pair.Value;float? socketY=null;
+        if(bomb.CarrierId is {} carrier&&_entities.TryGetValue("p:"+carrier,out var player)&&player is BomberModel actor)socketY=actor.BombSocket.Y;
+        var position=bomb.GlobalPosition;
+        return new BombRenderPose(pair.Key,bomb.CarrierId,position.X,position.Y,position.Z,socketY);
+    }).ToArray();
     public float LargestBombScale=>_entities.Values.OfType<BombModel>().Select(b=>b.VisualScale).DefaultIfEmpty(0).Max();
     public int PumpAnimationCount=>_entities.Values.OfType<BomberModel>().Sum(p=>p.PumpAnimationCount);
     public float PumpIntensity=>_entities.Values.OfType<BomberModel>().Select(p=>p.PumpIntensity).DefaultIfEmpty(0).Max();
@@ -70,6 +83,7 @@ public partial class ArenaView : Node3D
     private void UpdateProcessing(){ProcessMode=IsVisibleInTree()?ProcessModeEnum.Inherit:ProcessModeEnum.Disabled;if(!IsVisibleInTree())_audio?.StopAll();}
     public void ResetMatch()
     {
+        _localInputs.Clear();ClearThrowPreviews();
         _playerMotion.Clear();_facings.Clear();_ghostHosts.Clear();_snapshotTick=0;
         _audio.StopAll();
         foreach(Node child in _dynamic.GetChildren())child.QueueFree();
@@ -80,7 +94,7 @@ public partial class ArenaView : Node3D
     {
         string id=data.GetProperty("id").GetString()!;
         if(_stage==id)return;
-        _stage=id;
+        _stage=id;ClearThrowPreviews();
         _playerMotion.Clear();_facings.Clear();_ghostHosts.Clear();
         _terrain?.QueueFree();_terrain=new TempleStageView(_art);AddChild(_terrain);_terrain.Build(data);
         foreach(Node child in _dynamic.GetChildren())child.QueueFree();
@@ -181,6 +195,7 @@ public partial class ArenaView : Node3D
         {
             _entities[id].QueueFree();_entities.Remove(id);_targets.Remove(id);_playerMotion.Remove(id);_facings.Remove(id);_ghostHosts.Remove(id);
         }
+        UpdateThrowPreviews(data,bits);
         Present(_presentation.Read(data));
         int left=(int)F(data,"closedLeft"),right=(int)F(data,"closedRight");
         for(int x=0;x<_terrain.Width;x++)
@@ -192,6 +207,36 @@ public partial class ArenaView : Node3D
             }
             if(!closed&&_walls.Remove(x,out var wall))wall.QueueFree();
         }
+    }
+    private void ClearThrowPreviews()
+    {
+        foreach(var view in _throwPreviews.Values)view.QueueFree();
+        _throwPreviews.Clear();ThrowPreviews=[];
+    }
+    private void UpdateThrowPreviews(JsonElement data,byte[] cover)
+    {
+        if(_terrain==null)return;
+        var states=new List<ThrowPreviewState>();var seen=new HashSet<string>();
+        foreach(var player in data.GetProperty("players").EnumerateArray())
+        {
+            var id=player.GetProperty("id").GetString()!;
+            if(!_localInputs.TryGetValue(id,out var input)||player.GetProperty("bot").GetBoolean()||!player.GetProperty("alive").GetBoolean()||
+                player.GetProperty("ghost").GetBoolean()||player.GetProperty("stunned").GetBoolean()||player.GetProperty("carrying").GetString()!="bomb")continue;
+            var bomb=data.GetProperty("bombs").EnumerateArray().FirstOrDefault(b=>b.TryGetProperty("carrierId",out var carrier)&&carrier.GetString()==id);
+            if(bomb.ValueKind==JsonValueKind.Undefined)continue;
+            int pumps=bomb.GetProperty("pumps").GetInt32();
+            var origin=new System.Numerics.Vector3(F(player,"x"),F(player,"y")+BombThrowRules.LaunchHeight,F(player,"z"));
+            var velocity=BombThrowRules.Velocity(F(player,"fx"),F(player,"fz"),MathF.Sqrt(input.X*input.X+input.Z*input.Z),pumps);
+            var projection=BombThrowRules.Project(origin,velocity,(x,z)=>_terrain.Surface(x,z)/TempleStageView.HeightScale,
+                point=>_terrain.AimObstructed(point.X,point.Z,cover),bomb.GetProperty("remote").GetBoolean()?5:F(bomb,"fuse"),_terrain.AimCellKind);
+            if(!_throwPreviews.TryGetValue(id,out var view))
+            {view=new BombThrowPreview();_effects.AddChild(view);_throwPreviews[id]=view;}
+            view.Update(projection,pumps,player.GetProperty("slot").GetInt32());seen.Add(id);
+            states.Add(new(id,pumps,projection.Last.X,projection.Last.Y,projection.Last.Z,projection.End.ToString(),projection.Points.Count,view.LandingMarkerVisible,view.EndpointLabel));
+        }
+        foreach(var id in _throwPreviews.Keys.Where(id=>!seen.Contains(id)).ToArray())
+        {_throwPreviews[id].QueueFree();_throwPreviews.Remove(id);}
+        ThrowPreviews=states;
     }
     public override void _Process(double delta)
     {
@@ -291,3 +336,5 @@ public partial class ArenaView : Node3D
     private static float F(JsonElement e,string key)=>e.GetProperty(key).GetSingle();
     private static Vector3 PositionOf(JsonElement e)=>new(F(e,"x"),F(e,"y")*TempleStageView.HeightScale,F(e,"z"));
 }
+
+public sealed record BombRenderPose(string Id,string? CarrierId,float X,float Y,float Z,float? SocketY);

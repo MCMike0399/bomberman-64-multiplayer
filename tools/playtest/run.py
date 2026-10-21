@@ -12,8 +12,40 @@ import subprocess
 import sys
 import time
 import urllib.request
+import hashlib
+import signal
+import tempfile
+from contracts import catalog, expanded, validate_summary, junit
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def stop(process):
+    """Reap only the process group launched by this harness."""
+    if process.poll() is not None and os.name != 'posix':
+        return
+    for force in (False, True):
+        try:
+            if os.name == 'posix':
+                os.killpg(process.pid, signal.SIGKILL if force else signal.SIGTERM)
+            else:
+                process.kill() if force else process.terminate()
+            process.wait(timeout=5)
+            if os.name == 'posix':
+                # The direct child may exit before its descendants. Reap its
+                # remaining dedicated group, too (never a shared shell group).
+                try:
+                    os.killpg(process.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+            return
+        except ProcessLookupError:
+            process.wait()
+            return
+        except subprocess.TimeoutExpired:
+            continue
+    process.wait()
+
 
 
 def healthy(origin):
@@ -26,7 +58,9 @@ def healthy(origin):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--scenario', choices=['all', 'menu', 'wasd-menu', 'setup', 'grapple', 'controller-popups', 'local-actions', 'ramp', 'network', 'combat', 'ai-play', 'results', 'powerup-collect', 'pump-growth', 'hurry-water', 'roster', 'framing', 'fullscreen', 'controllers', 'controller-inventory', 'controller-observe', 'presentation', 'model-profile', 'movement', 'traversal', 'bomb-handling', 'placement', 'kick-physics', 'body-contacts', 'script'], default='all')
+    scenarios = catalog()
+    parser.add_argument('--scenario', choices=list(scenarios), default='all')
+    parser.add_argument('--list', action='store_true', help='Print scenario metadata without launching Godot')
     parser.add_argument('--ffmpeg', default=os.environ.get('FFMPEG', 'ffmpeg'), help='FFmpeg executable for --record export and decode validation')
     parser.add_argument('--script', type=Path, help='JSON scenario, see temple-walk.json')
     parser.add_argument('--record', action='store_true', help='Record actual gameplay at 30 FPS and export a validated MP4; requires ffmpeg')
@@ -39,9 +73,19 @@ def main():
     parser.add_argument('--server', default='http://127.0.0.1:18496')
     parser.add_argument('--start-server', action='store_true', help='Start local server if unreachable; stop only the process this runner owns')
     parser.add_argument('--build', action='store_true', help='Build Godot and server projects first')
-    parser.add_argument('--timeout', type=float, default=120)
+    parser.add_argument('--timeout', type=float, help='Override the catalog timeout (full suites default to 600 seconds)')
     parser.add_argument('--output', type=Path, default=ROOT / 'artifacts' / 'playtest')
     args = parser.parse_args()
+    if args.list:
+        print(json.dumps({'schemaVersion': 1, 'scenarios': list(scenarios.values())}, indent=2))
+        return 0
+    if args.script and args.scenario != 'script':
+        parser.error('--script must use --scenario script; it cannot stand in for a full suite')
+    if args.headless and not scenarios[args.scenario]['headless']:
+        parser.error('Scenario requires graphics; use core-headless for headless gameplay coverage')
+    args.timeout = args.timeout if args.timeout is not None else scenarios[args.scenario]['timeout']
+    if args.timeout <= 0:
+        parser.error('--timeout must be positive')
     if args.scenario == 'script' and not args.script:
         parser.error('--scenario script requires --script')
     if args.scenario == 'fullscreen' and (args.windowed or args.headless):
@@ -57,20 +101,34 @@ def main():
     owned_server = None
     runtime = None
     server_log = None
+    graphical_lock = None
+    summary = None
     started = time.monotonic()
     result = {'passed': False, 'scenario': args.scenario, 'headless': args.headless, 'folder': str(folder),
-              'platform': platform.platform(), 'errors': [], 'serverOrigin': args.server}
+              'schemaVersion': 1, 'platform': platform.platform(), 'errors': [], 'serverOrigin': args.server,
+              'domains': scenarios[args.scenario]['domains'], 'expandedScenarios': expanded(args.scenario, scenarios),
+              'catalogSha256': hashlib.sha256((ROOT / 'assets/testing/scenarios.json').read_bytes()).hexdigest()}
     try:
+        revision = subprocess.run(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True, capture_output=True)
+        result['revision'] = revision.stdout.strip() if revision.returncode == 0 else 'unavailable'
+        result['dirtyWorktree'] = subprocess.run(['git', 'diff', '--quiet'], cwd=ROOT).returncode != 0
+        if not args.headless and os.name == 'posix':
+            import fcntl
+            graphical_lock = open(Path(tempfile.gettempdir()) / ('blast-circuit-qa-' + str(os.getuid()) + '.lock'), 'a')
+            try:
+                fcntl.flock(graphical_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                raise RuntimeError('Another graphical playtest owns the desktop. Run graphical scenarios sequentially.')
         if args.build:
             with (folder / 'build.log').open('w') as build_log:
                 for project in ['Bomberman64Multiplayer.csproj', 'src/Bomber.Server/Bomber.Server.csproj']:
                     subprocess.run(['dotnet', 'build', project, '--nologo', '-m:1'], cwd=ROOT, stdout=build_log, stderr=subprocess.STDOUT, check=True, timeout=90)
-        needs_network = args.scenario in ['all', 'network']
+        needs_network = 'network' in expanded(args.scenario, scenarios)
         if needs_network and not healthy(args.server):
             if not args.start_server:
                 raise RuntimeError('Authoritative server is unavailable; start scripts/server.sh or use --start-server')
             server_log = (folder / 'server.log').open('w')
-            owned_server = subprocess.Popen(['dotnet', 'src/Bomber.Server/bin/Debug/net10.0/Bomber.Server.dll', '--urls', args.server], cwd=ROOT, stdout=server_log, stderr=subprocess.STDOUT)
+            owned_server = subprocess.Popen(['dotnet', 'src/Bomber.Server/bin/Debug/net10.0/Bomber.Server.dll', '--urls', args.server], cwd=ROOT, stdout=server_log, stderr=subprocess.STDOUT, start_new_session=True)
             deadline = time.monotonic() + 15
             while not healthy(args.server):
                 if owned_server.poll() is not None or time.monotonic() > deadline:
@@ -98,7 +156,7 @@ def main():
             command.append('--playtest-file=' + str(args.script.resolve()))
         result['command'] = command
         with (folder / 'runtime.log').open('w') as log:
-            runtime = subprocess.Popen(command, cwd=folder if args.app else ROOT, stdout=log, stderr=subprocess.STDOUT)
+            runtime = subprocess.Popen(command, cwd=folder if args.app else ROOT, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
             runtime.wait(timeout=args.timeout)
         result['exitCode'] = runtime.returncode
         summary_path = folder / 'summary.json'
@@ -110,9 +168,11 @@ def main():
         runtime_errors = list(dict.fromkeys(runtime_errors))
         result['runtimeErrors'] = runtime_errors
         summary = json.loads(summary_path.read_text())
+        receipt_errors = validate_summary(summary, folder, args.scenario, args.headless)
+        result['errors'].extend(receipt_errors)
         result['assertions'] = summary['assertions']
         result['screenshots'] = len(summary['screenshots'])
-        result['passed'] = runtime.returncode == 0 and summary['passed'] and summary['assertions'] > 0 and not runtime_errors
+        result['passed'] = runtime.returncode == 0 and summary['passed'] and summary['assertions'] > 0 and not runtime_errors and not receipt_errors
         if runtime_errors:
             result['errors'].append('Runtime log contains engine/script errors; inspect runtimeErrors and runtime.log')
         if not args.headless and not summary['screenshots']:
@@ -135,24 +195,26 @@ def main():
         result['passed'] = False
         result['errors'].append(str(error))
     finally:
-        if runtime and runtime.poll() is None:
-            runtime.terminate()
-            try:
-                runtime.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                runtime.kill()
-                runtime.wait()
-        if owned_server:
-            owned_server.terminate()
-            try:
-                owned_server.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                owned_server.kill()
-                owned_server.wait()
+        for process in (runtime, owned_server):
+            if process:
+                try:
+                    stop(process)
+                except Exception as error:
+                    result['passed'] = False
+                    result['errors'].append('Owned process cleanup failed: ' + str(error))
         if server_log:
             server_log.close()
+        if graphical_lock:
+            graphical_lock.close()
         result['seconds'] = round(time.monotonic() - started, 3)
         (folder / 'runner-summary.json').write_text(json.dumps(result, indent=2) + '\n')
+        junit(folder / 'junit.xml', result, summary)
+        progress = folder / 'progress.json'
+        try:
+            state = json.loads(progress.read_text()) if progress.exists() else {}
+        except (OSError, ValueError):
+            state = {'unavailable': 'progress receipt incomplete'}
+        (folder / 'triage.md').write_text('# Playtest receipt\n\n' + ('PASS' if result['passed'] else 'FAIL') + ': ' + args.scenario + '\n\n' + '\n'.join(result['errors']) + '\n\nLast progress: `' + json.dumps(state) + '`\n')
         print(json.dumps(result, indent=2))
     return 0 if result['passed'] else 1
 

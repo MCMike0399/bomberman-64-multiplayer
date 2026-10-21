@@ -47,41 +47,10 @@ public partial class PlaytestDriver : Node
             await Frames(3);
             if(!_headless)await WindowMode(_windowedRequested?Window.ModeEnum.Windowed:Window.ModeEnum.Fullscreen,"launch reaches requested display mode");
             Event("begin",new { scenario=_scenario,display=DisplayServer.GetName(),deterministicSeed=64 });
+            _catalogHash=Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Godot.FileAccess.GetFileAsBytes("res://assets/testing/scenarios.json"))).ToLowerInvariant();
             var file=Arg("--playtest-file","");
-            if(file.Length>0) await Script(file);
-            else switch(_scenario)
-            {
-                case "menu": await Menus(); break;
-                case "wasd-menu": await WasdMenus(); await Results(); break;
-                case "setup": await SetupMenus(); break;
-                case "grapple": await GrappleActions(); break;
-                case "controller-popups": await AnalogPopupMenus(); break;
-                case "controllers": await ControllerInputs(); break;
-                case "controller-inventory": await ControllerInventory(); break;
-                case "controller-observe": await ControllerObserve(); break;
-                case "presentation": await PresentationEffects(); break;
-                case "model-profile": await ModelProfiles(); break;
-                case "movement": await MovementQuality(); break;
-                case "traversal": await TraversalAndGhosts(); break;
-                case "placement": await PlacementQuality(); break;
-                case "bomb-handling": await BombHandling(); break;
-                case "kick-physics": await KickPhysics(); break;
-                case "body-contacts": await BodyContacts(); break;
-                case "local-actions": await LocalActions(); break;
-                case "ramp": await Ramps(); break;
-                case "network": await Network(); break;
-                case "ai-play": await AiMatches(); break;
-                case "combat": await Combat(); break;
-                case "results": await Results(); break;
-                case "powerup-collect": await Powerups(); break;
-                case "pump-growth": await PumpGrowth(); break;
-                case "hurry-water": await HurryWater(); break;
-                case "roster": await RosterSelection(); break;
-                case "framing": await Framing(); break;
-                case "fullscreen": await Fullscreen(); break;
-                case "all": await Menus(); await WasdMenus(); await SetupMenus(); await ControllerInputs(); await AnalogPopupMenus(); await RosterSelection(); await Framing(); await ModelProfiles(); await MovementQuality(); await TraversalAndGhosts(); await PlacementQuality(); await BombHandling(); await KickPhysics(); await BodyContacts(); await GrappleActions(); await LocalActions(); await Ramps(); await Powerups(); await PumpGrowth(); await PresentationEffects(); await HurryWater(); await AiMatches(); await Combat(); await Results(); await Network(); break;
-                default: throw new ArgumentException("Unknown scenario: "+_scenario);
-            }
+            if(file.Length>0){int before=_checks.Count;await Script(file);if(_checks.Count==before)throw new InvalidOperationException("Script produced no checks");_completedScenarios.Add("script");}
+            else await RunRegisteredScenario(_scenario);
         }
         catch(Exception error)
         {
@@ -90,7 +59,7 @@ public partial class PlaytestDriver : Node
         }
         finally
         {
-            var summary=new { scenario=_scenario,passed=failure==null,frames=_frame,seconds=_clock.Elapsed.TotalSeconds,
+            var summary=new { schemaVersion=1,catalogSha256=_catalogHash,completedScenarios=_completedScenarios,scenario=_scenario,passed=failure==null,frames=_frame,seconds=_clock.Elapsed.TotalSeconds,
                 assertions=_checks.Count,checks=_checks,screenshots=_screenshots,captureFallbacks=_captureFallbacks,screenshotMode=_headless?"disabled-headless":"graphical",
                 failure=failure?.ToString(),screen=_root.ScreenName,snapshots=_root.SnapshotCount,finalState=_root.LatestState };
             File.WriteAllText(Path.Combine(_output,"summary.json"),JsonSerializer.Serialize(summary,new JsonSerializerOptions { WriteIndented=true }));
@@ -268,9 +237,17 @@ public partial class PlaytestDriver : Node
         Check(Roster.GetProperty("slots")[0].GetProperty("appearance").GetInt32()==6,"real appearance button changes selected suit");
         Check(Roster.GetProperty("slots")[0].GetProperty("previewAppearance").GetInt32()==6,"visible shared-stage model uses chosen appearance");
         Check(Roster.GetProperty("sharedStage").GetBoolean()&&Roster.GetProperty("slots")[0].GetProperty("previewVisible").GetBoolean(),"roster diagnostics refer to visible shared-stage characters");
-        var before=Roster.GetProperty("slots")[0].GetProperty("walkPose").GetSingle();await Frames(5);
-        var after=Roster.GetProperty("slots")[0].GetProperty("walkPose").GetSingle();
-        Check(Math.Abs(after-before)>.03f,"selected 3D character actually changes walking pose");
+        // Two samples can coincide on opposite sides of a contact even while the
+        // character is walking. Observe most of a stride, including both reaches.
+        var initialPose=Roster.GetProperty("slots")[0];
+        double beforeClock=initialPose.GetProperty("animationTime").GetDouble();
+        var poses=new List<float> {initialPose.GetProperty("walkPose").GetSingle()};
+        for(int i=0;i<24;i++){await Frames(1);poses.Add(Roster.GetProperty("slots")[0].GetProperty("walkPose").GetSingle());}
+        float minimumPose=poses.Min(),maximumPose=poses.Max();
+        double elapsedAnimation=Roster.GetProperty("slots")[0].GetProperty("animationTime").GetDouble()-beforeClock;
+        Event("roster-walking-excursion",new {selected=Roster.GetProperty("selected").GetInt32(),minimumPose,maximumPose,elapsedAnimation,poses});
+        Check(minimumPose<-.15f&&maximumPose>.15f&&maximumPose-minimumPose>.4f,"selected 3D character actually changes walking pose");
+        Check(elapsedAnimation>.5,"visible roster animation clock advances while the selected character walks");
         await Capture("roster-selected-walking");
         await SelectRole("Slot2Role",0);
         Check(Roster.GetProperty("slots")[2].GetProperty("role").GetString()=="off","real role popup changes CPU seat to off");
@@ -566,6 +543,7 @@ public partial class PlaytestDriver : Node
         for(var i=0;i<count;i++)
         {
             await ToSignal(GetTree(),SceneTree.SignalName.ProcessFrame); _frame++;
+            if(_frame%30==0)ProgressCheckpoint();
             if(_lastSnapshot!=_root.SnapshotCount)
             {
                 _lastSnapshot=_root.SnapshotCount;
@@ -617,7 +595,15 @@ public partial class PlaytestDriver : Node
         }
         else await fence;
         var path=Path.Combine(_output,label+".png");
-        var error=GetViewport().GetTexture().GetImage().SavePng(path);
+        using var pixels=GetViewport().GetTexture().GetImage();
+        if(pixels.IsEmpty())throw new IOException("Renderer returned an empty capture");
+        var colors=new HashSet<int>();float low=1,high=0;
+        for(int y=0;y<pixels.GetHeight();y+=Math.Max(1,pixels.GetHeight()/18))
+            for(int x=0;x<pixels.GetWidth();x+=Math.Max(1,pixels.GetWidth()/32))
+            {var color=pixels.GetPixel(x,y);colors.Add(((int)(color.R*31)<<10)|((int)(color.G*31)<<5)|(int)(color.B*31));float light=(color.R+color.G+color.B)/3;low=Math.Min(low,light);high=Math.Max(high,light);}
+        if(colors.Count<8||high-low<.05f)throw new IOException("Capture appears blank or unrendered: "+label);
+        Event("capture-health",new {label,width=pixels.GetWidth(),height=pixels.GetHeight(),colors=colors.Count,contrast=high-low});
+        var error=pixels.SavePng(path);
         if(error!=Error.Ok)throw new IOException($"Screenshot failed: {error}");
         _screenshots.Add(path);Event("screenshot",new {label,path});
     }

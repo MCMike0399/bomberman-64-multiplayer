@@ -12,7 +12,26 @@ The default Godot path is the installed macOS .NET editor; override with `--godo
 
 Each run gets a unique artifact directory under `artifacts/playtest/` with `runtime.log`, `runner-summary.json`, `summary.json`, `trace.jsonl` and graphical screenshots. Build/startup logs are included when those actions are requested. The runner records timeout, missing summary, nonzero exit and engine/script/unhandled errors in runtime.log as failures, even when in-engine assertions passed. Graphical runs must produce screenshots. Graphical runs capture actual viewport pixels after a bounded `RenderingServer.FramePostDraw` fence. If a background macOS window stops producing draw callbacks for 500 ms, capture explicitly redraws and synchronizes the real renderer on the main thread before readback; every fallback is recorded in the trace and summary. The network scenario asserts visible host/peer labels and countdown as well as server state. `--headless` intentionally disables screenshots and reports `screenshotMode: disabled-headless`, with every omitted capture recorded in the trace.
 
-Built-in scenarios:
+## Scenario catalog and extension
+
+`assets/testing/scenarios.json` is the shared source of truth for Python tooling and native C# dispatch. `python3 tools/playtest/run.py --list` prints the full catalog. `all` is the windowed graphical regression (600-second limit); `core-headless` deliberately omits native UI/window journeys; `package-smoke` checks bundled assets, movement and charge/throw behavior. Manual controller observations remain separate.
+
+For a new scenario:
+
+1. Add a partial `PlaytestDriver` file in `scripts/Testing` with a private parameterless `async Task` method. Exercise ordinary inputs/product sessions and assert observable outcomes using `Check`; do not teleport actors or substitute fabricated state.
+2. Register its ID, method name, domains, headless capability, manual flag and timeout in the catalog. Add the ID to relevant suite `steps`. Graphical-only children cannot belong to a headless suite.
+3. Cover the actual failure first when fixing a regression. Keep rendering/physical-device assertions separate from simulation-only claims. For assets, extend [AssetAudit](../../docs/asset-audit.md) using actual production resources.
+4. Run the focused scenario, then the relevant canonical QA profile. An exported app must be rebuilt after catalog changes: its bundled SHA-256 must match the runner's catalog.
+
+Reports require the exact completed scenario list, positive assertion counts, matching catalog hash and valid capture files. Native captures inspect pixel diversity/contrast; the runner validates PNG integrity and confines paths to the run directory. These catch blank/missing evidence, not subjective artistic quality. Each run emits `junit.xml`, `triage.md` and periodic `progress.json`; crashes/timeouts retain the last active scenario. Graphical runs take an exclusive desktop lock. Dedicated process groups ensure cleanup stops only owned children. CI uses [the canonical QA profiles](../../docs/ci.md), including a fresh ephemeral server port rather than reusing a developer server.
+
+New focused scenarios include:
+
+- `asset-audit`: actual fonts, glyphs, model/material geometry, UI bounds and a graphical inspection gallery; headless mode explicitly omits GPU evidence.
+- `walk-feel`: real courtyard travel, reversal and stopping with measured boot contacts and a temporary following inspection camera. Suitable for normal-speed recording.
+- `charge-aim`: ordinary carry/pump/throw inputs, preview ownership, projected landing, actual hand-to-release continuity and water-endpoint behavior.
+
+Earlier built-in scenarios:
 
 - `menu`: actual focused keyboard activation through local/online/practice buttons and back, plus transformed mouse clicks at 1280×800 and 1024×640, with screenshots.
 - `local-actions`: one-human practice, place/lift/pump/throw, checking authoritative bomb/carrier states and leaving the session.
@@ -113,3 +132,7 @@ The focused `kick-physics` scenario temporarily uses an inspection camera on the
 - `ai-play`: three actual four-player temple matches, one for each difficulty, with a stationary human observer. It records all CPU motion, bomb/explosion activity and bounded eligible idle windows, and captures opening/midfight/outcome views. `--record` produces inspectable gameplay and game audio.
 
 Both are included in `all`. For long deterministic AI sweeps outside Godot, use `dotnet run -c Release --project tests/Bomber.Ai.Tests -- --soak --output=artifacts/ai/soak.json`; see that suite’s README for safe-exit liveness and fairness criteria. Native popup tests first navigate to a known endpoint through real keys: after earlier mouse tests the popup may initially hover its last item, where another Down/S cannot change focus.
+
+### Native focus interruptions
+
+Synthetic controller coverage still uses the production focus guard. On a shared desktop, switching foreground apps invalidates a held-input interval even if the raw stick values remain set. The harness records actual window/application focus loss and restarts that complete controller scenario from released inputs and a fresh session, at most three times. Invalid attempt assertions are excluded from the passing receipt and retained in the trace; functional failures are never retried. Deliberate focus-loss/rearm tests remain in place. Keep the game window foreground during graphical input QA; exhausted focus retries fail explicitly. [Diagnosis and limits](../../docs/iteration15-controller-focus.md).

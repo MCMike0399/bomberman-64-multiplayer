@@ -1,0 +1,471 @@
+{
+  "schemaVersion": 1,
+  "scenarios": [
+    {
+      "id": "menu",
+      "method": "Menus",
+      "domains": [
+        "ui"
+      ],
+      "headless": false,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "wasd-navigation",
+      "method": "WasdMenus",
+      "domains": [
+        "ui",
+        "input"
+      ],
+      "headless": false,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "setup",
+      "method": "SetupMenus",
+      "domains": [
+        "ui"
+      ],
+      "headless": false,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "grapple",
+      "method": "GrappleActions",
+      "domains": [
+        "physics",
+        "mechanics"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "controller-popups",
+      "method": "AnalogPopupMenus",
+      "domains": [
+        "ui",
+        "input"
+      ],
+      "headless": false,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "controllers",
+      "method": "ControllerInputs",
+      "domains": [
+        "input",
+        "mechanics"
+      ],
+      "headless": false,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "controller-inventory",
+      "method": "ControllerInventory",
+      "domains": [
+        "input"
+      ],
+      "headless": false,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "presentation",
+      "method": "PresentationEffects",
+      "domains": [
+        "assets",
+        "audio",
+        "rendering"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "model-profile",
+      "method": "ModelProfiles",
+      "domains": [
+        "assets",
+        "models"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "movement",
+      "method": "MovementQuality",
+      "domains": [
+        "animation",
+        "physics"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "traversal",
+      "method": "TraversalAndGhosts",
+      "domains": [
+        "physics",
+        "mechanics"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "placement",
+      "method": "PlacementQuality",
+      "domains": [
+        "input",
+        "mechanics"
+      ],
+      "headless": false,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "bomb-handling",
+      "method": "BombHandling",
+      "domains": [
+        "mechanics"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "charge-aim",
+      "method": "ChargeAim",
+      "domains": [
+        "mechanics",
+        "rendering"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "kick-physics",
+      "method": "KickPhysics",
+      "domains": [
+        "physics",
+        "mechanics"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "body-contacts",
+      "method": "BodyContacts",
+      "domains": [
+        "physics"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "local-actions",
+      "method": "LocalActions",
+      "domains": [
+        "mechanics"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "ramp",
+      "method": "Ramps",
+      "domains": [
+        "physics"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "network",
+      "method": "Network",
+      "domains": [
+        "network",
+        "ui"
+      ],
+      "headless": false,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "ai-play",
+      "method": "AiMatches",
+      "domains": [
+        "ai",
+        "gameplay"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "combat",
+      "method": "Combat",
+      "domains": [
+        "ai",
+        "gameplay"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "results",
+      "method": "Results",
+      "domains": [
+        "ui",
+        "gameplay"
+      ],
+      "headless": false,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "powerup-collect",
+      "method": "Powerups",
+      "domains": [
+        "mechanics",
+        "assets"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "pump-growth",
+      "method": "PumpGrowth",
+      "domains": [
+        "animation",
+        "mechanics"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "hurry-water",
+      "method": "HurryWater",
+      "domains": [
+        "physics",
+        "gameplay"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "roster",
+      "method": "RosterSelection",
+      "domains": [
+        "ui"
+      ],
+      "headless": false,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "framing",
+      "method": "Framing",
+      "domains": [
+        "rendering",
+        "ui"
+      ],
+      "headless": false,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "fullscreen",
+      "method": "Fullscreen",
+      "domains": [
+        "display",
+        "input"
+      ],
+      "headless": false,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "asset-audit",
+      "method": "AssetAudit",
+      "domains": [
+        "assets",
+        "models",
+        "ui"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "controller-observe",
+      "method": "ControllerObserve",
+      "domains": [
+        "input"
+      ],
+      "headless": false,
+      "timeout": 180,
+      "manual": true
+    },
+    {
+      "id": "script",
+      "domains": [
+        "custom"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false,
+      "script": true
+    },
+    {
+      "id": "all",
+      "steps": [
+        "asset-audit",
+        "menu",
+        "wasd-navigation",
+        "setup",
+        "controllers",
+        "controller-popups",
+        "roster",
+        "framing",
+        "model-profile",
+        "movement",
+        "walk-feel",
+        "traversal",
+        "placement",
+        "bomb-handling",
+        "charge-aim",
+        "kick-physics",
+        "body-contacts",
+        "grapple",
+        "local-actions",
+        "ramp",
+        "powerup-collect",
+        "pump-growth",
+        "presentation",
+        "hurry-water",
+        "ai-play",
+        "combat",
+        "results",
+        "network"
+      ],
+      "domains": [
+        "ai",
+        "animation",
+        "assets",
+        "audio",
+        "gameplay",
+        "input",
+        "mechanics",
+        "models",
+        "network",
+        "physics",
+        "rendering",
+        "ui"
+      ],
+      "headless": false,
+      "timeout": 600,
+      "manual": false
+    },
+    {
+      "id": "core-headless",
+      "steps": [
+        "asset-audit",
+        "model-profile",
+        "movement",
+        "local-actions",
+        "ramp",
+        "bomb-handling",
+        "charge-aim",
+        "kick-physics",
+        "body-contacts",
+        "grapple",
+        "traversal",
+        "powerup-collect",
+        "pump-growth",
+        "presentation",
+        "hurry-water",
+        "ai-play",
+        "combat"
+      ],
+      "domains": [
+        "ai",
+        "animation",
+        "assets",
+        "audio",
+        "gameplay",
+        "mechanics",
+        "models",
+        "physics",
+        "rendering",
+        "ui"
+      ],
+      "headless": true,
+      "timeout": 600,
+      "manual": false
+    },
+    {
+      "id": "package-smoke",
+      "steps": [
+        "asset-audit",
+        "movement",
+        "charge-aim"
+      ],
+      "domains": [
+        "animation",
+        "assets",
+        "mechanics",
+        "models",
+        "physics",
+        "rendering",
+        "ui"
+      ],
+      "headless": true,
+      "timeout": 600,
+      "manual": false
+    },
+    {
+      "id": "wasd-menu",
+      "steps": [
+        "wasd-navigation",
+        "results"
+      ],
+      "domains": [
+        "gameplay",
+        "input",
+        "ui"
+      ],
+      "headless": false,
+      "timeout": 600,
+      "manual": false
+    },
+    {
+      "id": "walk-feel",
+      "method": "WalkingShowcase",
+      "domains": [
+        "animation",
+        "models"
+      ],
+      "headless": false,
+      "timeout": 180,
+      "manual": false
+    }
+  ]
+}

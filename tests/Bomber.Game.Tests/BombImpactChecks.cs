@@ -40,18 +40,18 @@ internal static class BombImpactChecks
         });
         Check("corner collision keeps normal and pumped bombs on their fuse",()=>{
             foreach(bool pumped in new[]{false,true}){
-                var m=Match(wall:true);
+                var wallZ=pumped?12:6;var m=Match(wall:true,wallZ:wallZ);
                 if(pumped){
                     m.SetInput(0,new PlayerInput(0,0,true));Step(m,10);m.SetInput(0,default);Step(m,2);
                     m.SetInput(0,new PlayerInput(0,0,true));Step(m,2);
                     m.SetInput(0,new PlayerInput(0,-1));Step(m,2);
                     m.SetInput(0,new PlayerInput(0,.4f,B:true));Step(m,2);
-                    m.SetInput(0,new PlayerInput(0,-1));Step(m,6);m.SetInput(0,default);Step(m,18);
-                    m.SetInput(0,new PlayerInput(0,1));Step(m,24);
+                    m.SetInput(0,new PlayerInput(0,-1));Step(m,6);m.SetInput(0,default);Step(m,2);
+                    m.SetInput(0,new PlayerInput(0,1));Step(m,43);
                 }
                 else {Place(m);m.SetInput(0,new PlayerInput(0,1,A:true));Step(m,12);}
-                m.SetInput(0,default);Step(m,pumped?2:16);var b=Bomb(m);
-                Assert(F(b,"z")>5.5f&&F(b,"z")<=6-BlastBomb.Radius+.01f,$"Corner collision did not settle correctly: pumped={pumped}, bomb={b}.");
+                m.SetInput(0,default);Step(m,pumped?12:16);var b=Bomb(m);
+                Assert(F(b,"z")>wallZ-.5f&&F(b,"z")<=wallZ-BlastBomb.Radius+.01f,$"Corner collision did not settle correctly: pumped={pumped}, bomb={b}.");
                 Step(m,100);Assert(Bombs(m).GetArrayLength()==0,"Corner-stopped bomb never auto-exploded.");
             }
         });
@@ -87,7 +87,7 @@ internal static class BombImpactChecks
         return count;
     }
     static CellDef[,] Cells(){var c=new CellDef[15,15];for(int x=0;x<15;x++)for(int z=0;z<15;z++)c[x,z]=CellDef.Floor0;return c;}
-    static LocalMatch Match(bool victim=false,bool wall=false,bool remote=false,bool chain=false,bool corner=false){var c=Cells();if(corner)for(int z=0;z<15;z++)c[6,z]=CellDef.Pillar;if(wall)for(int x=0;x<15;x++)c[x,6]=CellDef.Pillar;var m=new LocalMatch(new MatchOptions{HumanPlayers=2,BotPlayers=0,Practice=true},new StageLayout{Id="fixture",Width=15,Height=15,Cells=c,Spawns=[(3,3),victim||chain?(3,6):(12,12)],SoftBlockDensity=0,InitialItems=remote?[(3,3,"remote")]:[]});Step(m,64);return m;}
+    static LocalMatch Match(bool victim=false,bool wall=false,bool remote=false,bool chain=false,bool corner=false,int wallZ=6){var c=Cells();if(corner)for(int z=0;z<15;z++)c[6,z]=CellDef.Pillar;if(wall)for(int x=0;x<15;x++)c[x,wallZ]=CellDef.Pillar;var m=new LocalMatch(new MatchOptions{HumanPlayers=2,BotPlayers=0,Practice=true},new StageLayout{Id="fixture",Width=15,Height=15,Cells=c,Spawns=[(3,3),victim||chain?(3,6):(12,12)],SoftBlockDensity=0,InitialItems=remote?[(3,3,"remote")]:[]});Step(m,64);return m;}
     static void AwaitKick(LocalMatch m){for(int i=0;i<15;i++){m.Tick();if(Bomb(m).GetProperty("state").GetInt32()==1)return;}throw new InvalidOperationException("Contact kick never released after anticipation.");}
     static void Place(LocalMatch m){m.SetInput(0,new PlayerInput(0,0,true));Step(m,2);m.SetInput(0,default);Step(m,2);}
     static void Step(LocalMatch m,int n){for(int i=0;i<n;i++)m.Tick();}

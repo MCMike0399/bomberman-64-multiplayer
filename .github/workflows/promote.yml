@@ -1,0 +1,57 @@
+name: Prepare draft release
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Successful main Verification run ID
+        type: string
+        required: true
+      version:
+        description: Bundle version, for example 0.15.0
+        type: string
+        required: true
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: draft-release-${{ inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      revision: ${{ steps.run.outputs.revision }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - id: run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.run_id }}
+          VERSION: ${{ inputs.version }}
+        run: python3 tools/ci/promote_release.py --check-only --run-id "$RUN_ID" --version "$VERSION"
+
+  draft:
+    needs: validate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.run_id }}
+          VERSION: ${{ inputs.version }}
+          EXPECTED_SHA: ${{ needs.validate.outputs.revision }}
+        run: python3 tools/ci/promote_release.py --run-id "$RUN_ID" --version "$VERSION" --expected-sha "$EXPECTED_SHA"

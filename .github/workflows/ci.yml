@@ -1,0 +1,200 @@
+name: Verification
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verification-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  public:
+    name: Public contracts and audio
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: 10.0.x
+      - run: python3 tools/qa/run.py --profile public
+      - if: always()
+        run: python3 tools/ci/stage_reports.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: public-receipts
+          path: artifacts/ci-reports
+          retention-days: 7
+          if-no-files-found: warn
+      - name: Describe verification coverage
+        if: always()
+        env:
+          PRIVATE_ENABLED: ${{ vars.KERNEL_CI_ENABLED }}
+          GRAPHICAL_ENABLED: ${{ vars.MACOS_QA_ENABLED }}
+        run: |
+          {
+            echo '### Verification capabilities'
+            echo 'Public checks run without the private dependency on every PR.'
+            echo "Trusted private build enabled: ${PRIVATE_ENABLED:-false}."
+            echo "Metal graphical runner enabled: ${GRAPHICAL_ENABLED:-false}."
+            echo 'Private builds and graphical checks never execute PR code. See docs/ci.md for setup and coverage limits.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  managed:
+    name: Trusted managed and network
+    needs: public
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.KERNEL_CI_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Fetch pinned private dependency
+        env:
+          KERNEL_REPOSITORY: ${{ secrets.KERNEL_REPOSITORY }}
+          KERNEL_READ_TOKEN: ${{ secrets.KERNEL_READ_TOKEN }}
+          KERNEL_DEPLOY_KEY: ${{ secrets.KERNEL_DEPLOY_KEY }}
+        run: python3 tools/ci/bootstrap_kernel.py
+      - run: python3 tools/qa/run.py --profile managed
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: Blast-Circuit-server-dotnet10
+          path: |
+            artifacts/Blast-Circuit-server-dotnet10.zip
+            artifacts/Blast-Circuit-server-dotnet10.zip.sha256
+            artifacts/server-build-metadata.json
+          retention-days: 14
+          if-no-files-found: error
+      - if: always()
+        run: python3 tools/ci/stage_reports.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: managed-receipts
+          path: artifacts/ci-reports
+          retention-days: 7
+          if-no-files-found: warn
+
+  headless:
+    name: Trusted Godot headless
+    needs: public
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.KERNEL_CI_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Fetch pinned private dependency
+        env:
+          KERNEL_REPOSITORY: ${{ secrets.KERNEL_REPOSITORY }}
+          KERNEL_READ_TOKEN: ${{ secrets.KERNEL_READ_TOKEN }}
+          KERNEL_DEPLOY_KEY: ${{ secrets.KERNEL_DEPLOY_KEY }}
+        run: python3 tools/ci/bootstrap_kernel.py
+      - run: python3 tools/ci/install_godot.py --destination "$RUNNER_TEMP/godot"
+      - run: python3 tools/qa/run.py --profile headless
+      - if: always()
+        run: python3 tools/ci/stage_reports.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: headless-receipts
+          path: artifacts/ci-reports
+          retention-days: 7
+          if-no-files-found: warn
+
+  graphical:
+    name: Trusted macOS Metal journey
+    needs: public
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.KERNEL_CI_ENABLED == 'true' && vars.MACOS_QA_ENABLED == 'true'
+    runs-on: [self-hosted, macOS, ARM64, blast-metal]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Fetch pinned private dependency
+        env:
+          KERNEL_REPOSITORY: ${{ secrets.KERNEL_REPOSITORY }}
+          KERNEL_READ_TOKEN: ${{ secrets.KERNEL_READ_TOKEN }}
+          KERNEL_DEPLOY_KEY: ${{ secrets.KERNEL_DEPLOY_KEY }}
+        run: python3 tools/ci/bootstrap_kernel.py
+      - run: python3 tools/qa/run.py --profile graphical
+        env:
+          GODOT: /Applications/Godot_mono.app/Contents/MacOS/Godot
+      - if: always()
+        run: python3 tools/ci/stage_reports.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: metal-receipts
+          path: artifacts/ci-reports
+          retention-days: 7
+          if-no-files-found: warn
+
+  package:
+    name: Trusted Apple Silicon package
+    needs: [managed, headless]
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.KERNEL_CI_ENABLED == 'true'
+    runs-on: macos-15
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Fetch pinned private dependency
+        env:
+          KERNEL_REPOSITORY: ${{ secrets.KERNEL_REPOSITORY }}
+          KERNEL_READ_TOKEN: ${{ secrets.KERNEL_READ_TOKEN }}
+          KERNEL_DEPLOY_KEY: ${{ secrets.KERNEL_DEPLOY_KEY }}
+        run: python3 tools/ci/bootstrap_kernel.py
+      - run: python3 tools/ci/install_godot.py --destination "$RUNNER_TEMP/godot" --templates
+      - run: python3 tools/qa/run.py --profile package
+      - name: Archive tested app preserving permissions and symlinks
+        working-directory: artifacts
+        run: |
+          ditto -c -k --sequesterRsrc --keepParent "exports/Blast Circuit.app" Blast-Circuit-macos-arm64.zip
+          shasum -a 256 Blast-Circuit-macos-arm64.zip > Blast-Circuit-macos-arm64.zip.sha256
+      - name: Record artifact source and bundle identity
+        run: python3 tools/ci/package_metadata.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: Blast-Circuit-macos-arm64-ad-hoc
+          path: |
+            artifacts/Blast-Circuit-macos-arm64.zip
+            artifacts/Blast-Circuit-macos-arm64.zip.sha256
+            artifacts/build-metadata.json
+          retention-days: 14
+          if-no-files-found: error
+      - if: always()
+        run: python3 tools/ci/stage_reports.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: package-receipts
+          path: artifacts/ci-reports
+          retention-days: 7
+          if-no-files-found: warn

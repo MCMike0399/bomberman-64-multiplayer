@@ -1,4 +1,30 @@
-# Verified interface style pass — 2026-10-21
+# Iteration fifteen: motion, charged throws and reproducible delivery — 2026-10-21
+
+| Check | Result |
+|---|---|
+| Gameplay / client / AI / audio | **113 / 95 / 36 / 19** checks passed |
+| AI long-match matrix | **36 scenarios**, positive activity and bounded idle validated |
+| Portable Release server | Real HTTP/WebSocket smoke against the exact staged delivery passed; ZIP and file manifest verified |
+| Full exported Mac regression | **1,782 assertions, 142 captures**, zero runtime errors; controller section completed on its first attempt |
+| Headless core | **743 assertions**, no graphical claim |
+| Final softly oval model | **13 assertions, five actual captures**, zero runtime errors |
+| Final exported package smoke | **175 assertions**, bundled assets, movement and carry/throw checked headlessly |
+| Tooling contracts | **37 tests** across runner, QA, CI and release validation; both workflows lint clean |
+
+The full exported run is `artifacts/iteration15-sphere-all/playtest/20261021T160601.868496Z-all` (109.423 seconds). The user then asked to make the helmet slightly shorter vertically. That small geometry-only refinement was exported and rechecked through `artifacts/iteration15-oval-package` and `artifacts/iteration15-oval-model`; the final README model images come from this later app. The earlier full run is not presented as footage of the final helmet dimensions. Headless core evidence is `artifacts/iteration15-final-headless`; managed delivery evidence is `artifacts/iteration15-managed-delivery-fixed`.
+
+Walking uses longer grounded support, hip weight shift, asymmetric glove swings, restrained suit compression and delayed helmet follow. Geometry and motion retain separate controls. [Original-video observations, tuning and actual movement witness](iteration15-walk.md).
+
+Two carry failures were reproduced: low neutral launch speed dropped a thrown charged bomb onto its owner, and mismatched launch height made the rendered bomb dip toward the helmet immediately after release. Shared authority/preview math now gives a decisive neutral throw, charge-dependent reach and a hand-height launch. No self-hit immunity was added. Static local aiming distinguishes safe landings from water/void removal; dynamic actors can interrupt the prediction. Final focused native evidence has **105 assertions and seven captures**. [Red/green evidence and boundaries](iteration15-charge.md).
+
+The harness now shares a catalog between Python and C#, requires exact completed scenario coverage and catalog hashes, validates real captures, records periodic progress, and emits JSON/JUnit failure receipts. [Asset audit](asset-audit.md) covers fonts, original model/material geometry and visible UI bounds. The canonical [QA/CI profiles](ci.md) own isolated server processes and publish separate tested client/server artifacts; public PR checks never receive kernel access. Native Metal CI remains disabled pending an isolated graphical runner; the local Metal run above is the graphical evidence.
+
+Earlier failed runs remain retained. One roster assertion sampled two near-identical points in an active stride; it now measures a complete pose excursion. Other runs lost native focus to foreground applications while measuring held controller input. The harness now restarts only an explicitly interrupted controller scenario, with a three-attempt cap, fresh inputs/session, and logged discarded attempts. Functional failures are not retried; production focus safety and its intentional focus-loss tests remain intact. The passing full run needed **zero retries**. [Controller diagnosis](iteration15-controller-focus.md).
+
+The final v0.15.0 app is installed at `~/Applications/Blast Circuit.app`, matches the tested export byte-for-byte, and passes strict recursive signature verification. Launch Services gameplay smoke passed. This remains an ad-hoc signed development app; no notarization, fresh physical-controller session, external server deployment or measured Game Mode gain is claimed.
+
+## Prior interface style pass — 2026-10-21
+
 
 This pass replaces the 2D interface layer: the Godot fallback font, glyph arrows and ad hoc panels give way to bundled Dela Gothic One and M PLUS Rounded 1c (OFL, Latin subsets) and a shared stamped-key style. It also adds drawn icons, keycap input prompts, a fuse-clock round timer and participant tokens. Simulation, networking protocol and input routing are unchanged; the HUD additionally reads the existing `roundSeconds` and `winsTarget` fields from stage snapshots.
 
