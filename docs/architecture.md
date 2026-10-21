@@ -180,3 +180,11 @@ Water/Void cells have tier metadata zero, which is not their collision surface. 
 Red and remote are exclusive inventory modes by the user’s requested rule. Latest pickup wins for future bombs; existing bomb snapshots retain their own mode except for the established orphaned-remote fuse fallback when the owner loses command ability. Red’s radius formula remains identical at equal fire/pump levels; penetration is separate.
 
 Visual scale is independent of authority collision/blast radius: default bomb scale 1.22, pickup scale 1.20, and bomb target min(2.3, 1.22 + .04 × (fire−1) + .32 × pumps). Remote shells are blue with green indicators. Camera fitting uses actual pillar bounds and player headroom, tighter safe margins, and a slightly lower angle; terrain/actor visibility remains a tested constraint.
+
+## Difficulty profiles and progress-aware navigation
+
+`BotDifficultyProfile` is an immutable decision policy shared by local and server simulation. Easy/Medium/Hard vary reaction, search budget, spacing, cadence, item priorities and escape-route awareness. Medium accepts both `medium` and legacy `normal`; no physics or resource advantage is assigned to a difficulty. The goal evaluator rewards useful visible items/cover/opponents and reachable escape routes, with limited goal persistence. Cautious bots periodically attempt an attack instead of maintaining distance forever.
+
+`BlastSession.BotNavigation` observes actual displacement and distinguishes deliberate recovery/carry/flight/kick pauses. Failed waypoints expire from a short avoidance memory; neutral local optima receive a bounded safe exploration step. Steering probes the ordinary movement collision path and visible player bodies, then commits briefly to a legal alternate direction when a diagonal centering move is blocked. All recovery remains ordinary authoritative input, with unchanged speed and collision constraints.
+
+`--soak` evaluates stock-map scenarios independently of policy tests and records zero-input stalls, requested movement, safe exits, pressure, pickups and rounds. Five targeted fixtures reproduce specific collision/navigation failures. `ai-play` records actual Godot matches at each difficulty; `wasd-menu` drives native UI actions and verifies that text fields still type letters. Neither recording rewrites actor state.

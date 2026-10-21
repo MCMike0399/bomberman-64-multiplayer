@@ -11,6 +11,8 @@ Check(wire["round-seconds"] == "90" && wire["bots"] == "2" && wire["sudden-death
 Throws(() => new SessionSettings(Bots: 8).ToWireSettings(), "Reject excessive bots");
 Throws(() => new SessionSettings(Stage: "invalid").ToWireSettings(), "Reject unknown stage");
 Throws(() => new SessionSettings(BotDifficulty: "impossible").ToWireSettings(), "Reject unknown CPU difficulty");
+Check(new SessionSettings(BotDifficulty: "medium").ToWireSettings()["bot-difficulty"]=="medium", "Medium difficulty is accepted by client contracts");
+Check(new SessionSettings(BotDifficulty: "normal").ToWireSettings()["bot-difficulty"]=="normal", "Legacy normal difficulty remains wire compatible");
 Check(new SessionSettings(BotDifficulty: "hard").ToWireSettings()["bot-difficulty"]=="hard", "Selected difficulty reaches the kernel lobby settings");
 Throws(() => new LocalSession(new SessionSettings(Bots: 0), 1), "Solo session needs a bot");
 Throws(() => new LocalSession(new SessionSettings(Bots: 7), 2), "Enforce eight-player cap");

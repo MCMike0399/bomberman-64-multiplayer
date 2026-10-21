@@ -14,17 +14,20 @@ public sealed partial class BlastSession
     private string?[] _aiNearestOwner=null!;
     private int _aiGeneration,_aiFieldTick=-1;
     private float _aiReaction=.12f,_aiSteeringInterval=4f/30;
+    private BotDifficultyProfile _aiProfile=BotDifficultyProfile.Medium;
+    private readonly Dictionary<string,int> _aiCommittedGoals=new(StringComparer.Ordinal);
     private readonly List<BlastBomb> _aiCandidateBombs=new(65);
     private readonly BlastBomb _aiCandidate=new() {Id="planning"};
     private readonly Dictionary<string,float> _aiLastBomb=new(StringComparer.Ordinal);
     private void BotInitialize(GameSessionOptions options)
     {
-        _aiReaction=options.Settings.TryGetValue("bot-difficulty",out var difficulty)?difficulty switch{"easy"=>.24f,"hard"=>.08f,_=>.12f}:.12f;
+        _aiProfile=BotDifficultyProfile.For(options.Settings.GetValueOrDefault("bot-difficulty"));
+        _aiReaction=_aiProfile.ReactionSeconds;
         _aiSteeringInterval=MathF.Ceiling(_aiReaction*30)/30;
         _aiGraph=NavigationGraph.For(_stage);_aiDanger=new(_aiGraph,_stage);_aiPlacementDanger=new(_aiGraph,_stage);
         int count=_aiGraph.Count;_aiQueue=new int[count];_aiSeen=new int[count];_aiFirst=new int[count];_aiDepth=new int[count];_aiItemKind=new byte[count];_aiCover=new bool[count];_aiNearest=new float[count];_aiSecondNearest=new float[count];_aiNearestOwner=new string?[count];
     }
-    private void BotReset(){_aiFieldTick=-1;_aiLastBomb.Clear();foreach(var p in _players.Values){p.BotThinkTimer=0;p.BotPlacingBomb=false;p.BotBombTapPending=false;}}
+    private void BotReset(){BotResetNavigation();_aiFieldTick=-1;_aiLastBomb.Clear();_aiCommittedGoals.Clear();foreach(var p in _players.Values){p.BotThinkTimer=0;p.BotPlacingBomb=false;p.BotBombTapPending=false;}}
     private void BotRefreshField()
     {
         if(_aiFieldTick==_tickCount)return;
@@ -50,6 +53,7 @@ public sealed partial class BlastSession
     }
     private void BotThink(BlastPlayer bot,float dt)
     {
+        BotObserveProgress(bot,dt);
         // Execute the already planned tap/retreat on successive authority ticks.
         // This releases A before hold-to-lift and lets the owner leave the newly placed bomb before reconsidering.
         if(bot.BotBombTapPending)
@@ -69,7 +73,7 @@ public sealed partial class BlastSession
         bool urgent=!BotSafe(_aiDanger,start,0,3.05f);
         if(urgent)
         {
-            int escape=BotSearch(bot,start,_aiDanger,true,12);
+            int escape=BotSearch(bot,start,_aiDanger,true,_aiProfile.EscapeDepth);
             if(escape<0)escape=BotLeastRiskStep(bot,start);
             bot.BotPlacingBomb=false;BotSteer(bot,start,escape);return;
         }
@@ -85,11 +89,11 @@ public sealed partial class BlastSession
         }
         if(bot.HasRemote&&!bot.PrevR&&BotRemoteOpportunity(bot))
         {bot.Input=new InputState(0,0,false,false,true);return;}
-        int waypoint=BotSearch(bot,start,_aiDanger,false,_aiGraph.Count);
+        int waypoint=BotSearch(bot,start,_aiDanger,false,_aiProfile.TacticalDepth);
         bool useful=BotAdjacentCover(start)||BotEnemyInRange(bot.X,bot.Y,bot.Z,bot.FireLevel*.9f+.4f,bot.Id,bot.HasRed);
         bool centered=Math.Abs(bot.X-(start%_stage.Width+.5f))+Math.Abs(bot.Z-(start/_stage.Width+.5f))<.2f;
         if(!_practice&&useful&&centered&&!bot.PrevA&&bot.ActiveBombs<bot.BombCapacity&&_aiDanger.BombOwners[start] is null&&
-            (!_aiLastBomb.TryGetValue(bot.Id,out var last)||_roundTimer-last>.65f))
+            (!_aiLastBomb.TryGetValue(bot.Id,out var last)||_roundTimer-last>_aiProfile.BombCooldown))
         {
             float best=0,aimX=0,aimZ=0;
             // Evaluate the same near-foot placement and blocked-offset fallback as
@@ -115,7 +119,14 @@ public sealed partial class BlastSession
         int reach=(int)MathF.Ceiling(radius);
         for(int cx=(int)x-reach;cx<=(int)x+reach;cx++)for(int cz=(int)z-reach;cz<=(int)z+reach;cz++)
             if(_softBlocks.IsAlive(cx,cz)&&InBlast(x,z,y,radius,cx+.5f,cz+.5f,_stage.At(cx,cz).Tier,bot.HasRed))score++;
-        if(BotEnemyInRange(x,y,z,radius,bot.Id,bot.HasRed))score+=2;
+        if(BotEnemyInRange(x,y,z,radius,bot.Id,bot.HasRed))score+=2+_aiProfile.PressureWeight;
+        // A deliberate pressure bomb also limits a nearby opponent's visible routes.
+        // No future movement or hidden drops are predicted.
+        foreach(var enemy in _players.Values)if(enemy.Id!=bot.Id&&enemy.Alive&&!enemy.Ghost)
+        {
+            float distance=Math.Abs(enemy.X-x)+Math.Abs(enemy.Z-z)+Math.Abs(enemy.Y-y)*2;
+            if(distance>radius&&distance<radius+1.5f&&BotExitCount(_aiGraph.Cell(enemy.X,enemy.Z))<=2)score+=_aiProfile.PressureWeight;
+        }
         return score;
     }
     private bool BotBombPlan(BlastPlayer bot,int start,float aimX,float aimZ,float advance,out int escape)
@@ -128,7 +139,7 @@ public sealed partial class BlastSession
         _aiCandidate.FuseTimer=BlastBomb.FuseSeconds-.25f;_aiCandidate.State=BombState.Resting;
         _aiCandidateBombs.Clear();_aiCandidateBombs.AddRange(_bombs);_aiCandidateBombs.Add(_aiCandidate);
         _aiPlacementDanger.Build(_softBlocks,_aiCandidateBombs,_hazards);
-        escape=BotSearch(bot,start,_aiPlacementDanger,true,8);
+        escape=BotSearch(bot,start,_aiPlacementDanger,true,_aiProfile.EscapeDepth);
         return escape>=0&&escape!=start;
     }
     private bool BotSafe(TimedDangerField field,int cell,float enter,float leave)
@@ -147,7 +158,15 @@ public sealed partial class BlastSession
     {
         int x=cell%_stage.Width,z=cell/_stage.Width;
         if(_softBlocks.IsAlive(x,z))return false;
-        return cell==start||danger.BombOwners[cell] is null;
+        if(cell==start)return true;
+        if(danger.BombOwners[cell] is not null||BotAvoidsCell(bot,cell))return false;
+        // Terrain edges alone do not describe routes through visible player bodies.
+        // Use the same body clearance as authority contacts at the destination.
+        float px=x+.5f,pz=z+.5f,y=_aiGraph.Height[cell];
+        foreach(var other in _players.Values)
+            if(other.Id!=bot.Id&&HasBody(other)&&Math.Abs(other.Y-y)<HeadHeight-.05f&&
+                Dist2(px,pz,other.X,other.Z)<(PlayerRadius*2+.04f)*(PlayerRadius*2+.04f))return false;
+        return true;
     }
     /// <summary>Reusable finite BFS workspace. Arrival times reject routes that cross a blast before it expires.
     /// Searches do not allocate queues, closures, hash sets or opponent sets per decision.</summary>
@@ -155,15 +174,15 @@ public sealed partial class BlastSession
     {
         if(++_aiGeneration==int.MaxValue){Array.Clear(_aiSeen);_aiGeneration=1;}
         int head=0,tail=0;_aiQueue[tail++]=start;_aiSeen[start]=_aiGeneration;_aiDepth[start]=0;_aiFirst[start]=start;
-        float bestScore=float.NegativeInfinity;int best=-1;
+        float bestScore=float.NegativeInfinity;int best=-1,bestCell=-1;
         while(head<tail)
         {
             int cell=_aiQueue[head++],depth=_aiDepth[cell];float arrival=depth*(1/PlayerSpeed+.045f);
-            if(BotSafe(danger,cell,arrival,arrival+(escape?3.1f:.45f)))
+            if(BotSafe(danger,cell,arrival,arrival+(escape?_aiProfile.SafetyHorizonSeconds:.45f)))
             {
                 if(escape)return _aiFirst[cell];
                 float score=BotGoalScore(bot,cell,depth);
-                if(score>bestScore){bestScore=score;best=_aiFirst[cell];}
+                if(score>bestScore){bestScore=score;best=_aiFirst[cell];bestCell=cell;}
             }
             if(depth>=maxDepth)continue;
             for(int d=0;d<4;d++)
@@ -177,16 +196,46 @@ public sealed partial class BlastSession
                 _aiSeen[next]=_aiGeneration;_aiDepth[next]=depth+1;_aiFirst[next]=cell==start?next:_aiFirst[cell];_aiQueue[tail++]=next;
             }
         }
+        if(!escape&&bestCell>=0)BotCommitGoal(bot,bestCell);
         return best;
+    }
+    private void BotCommitGoal(BlastPlayer bot,int cell)
+    {
+        if(cell>=0)_aiCommittedGoals[bot.Id]=cell;
+    }
+    private int BotExitCount(int cell)
+    {
+        if(cell<0)return 0;
+        int exits=0;
+        for(int d=0;d<4;d++)
+        {
+            int next=_aiGraph.Edges[cell*4+d];
+            if(next>=0&&!_softBlocks.IsAlive(next%_stage.Width,next/_stage.Width)&&_aiDanger.BombOwners[next] is null)exits++;
+        }
+        return exits;
     }
     private float BotGoalScore(BlastPlayer bot,int cell,int depth)
     {
         float score=-depth*.45f;
-        score+=_aiItemKind[cell] switch {1=>bot.HasHeart?2:26,2=>bot.HasRemote?2:22,3=>bot.HasRed?2:21,4=>bot.FireLevel>=3?2:20,5=>bot.BombCapacity>=8?2:18,_=>0};
-        if(BotAdjacentCover(cell))score+=4;
+        score+=_aiProfile.ItemUtilityScale*(_aiItemKind[cell] switch {1=>bot.HasHeart?2:26,2=>bot.HasRemote?2:22,3=>bot.HasRed?2:21,4=>bot.FireLevel>=3?2:20,5=>bot.BombCapacity>=8?2:18,_=>0});
+        if(BotAdjacentCover(cell))score+=3;
         float x=cell%_stage.Width+.5f,z=cell/_stage.Width+.5f,y=_aiGraph.Height[cell];
         float nearest=_aiNearestOwner[cell]==bot.Id?_aiSecondNearest[cell]:_aiNearest[cell];
-        if(float.IsFinite(nearest))score+=10-nearest*.8f;
+        if(float.IsFinite(nearest))
+        {
+            // Easy leaves room to breathe; Hard contests bomb range and closes routes.
+            // A cautious policy still takes an occasional turn attacking: commit to
+            // ordinary bomb range after six seconds without placing, then regain space.
+            float lastBomb=_aiLastBomb.TryGetValue(bot.Id,out float placed)?placed:0;
+            float preferred=_roundTimer-lastBomb>6?Math.Min(1,_aiProfile.PreferredEnemyDistance):_aiProfile.PreferredEnemyDistance;
+            score+=10-Math.Abs(nearest-preferred)*_aiProfile.PressureWeight;
+            if(nearest<5)score-=(4-BotExitCount(cell))*_aiProfile.TrapPenalty;
+        }
+        if(_aiCommittedGoals.TryGetValue(bot.Id,out int goal))
+        {
+            int distance=Math.Abs(cell%_stage.Width-goal%_stage.Width)+Math.Abs(cell/_stage.Width-goal/_stage.Width);
+            score+=_aiProfile.GoalCommitmentBonus/(1+distance);
+        }
         // Once water is close, prefer a reachable higher refuge instead of idling on a doomed low terrace.
         if(WaterLevelAfter(12)>=y)score+=y*3;
         return score;
@@ -199,9 +248,9 @@ public sealed partial class BlastSession
     }
     private bool BotRemoteOpportunity(BlastPlayer bot)
     {
-        foreach(var b in _bombs)if(!b.Exploded&&b.OwnerId==bot.Id&&b.IsRemote&&b.State==BombState.Resting)
+        foreach(var b in _bombs)if(!b.Exploded&&b.OwnerId==bot.Id&&b.IsRemote&&b.State!=BombState.Carried)
         {
-            // The authority detonates the oldest resting remote. Do not evaluate a different bomb.
+            // Match authority selection: the oldest eligible remote may be rolling or flying.
             if(InBlast(b.X,b.Z,BombY(b),b.BlastRadius+.45f,bot.X,bot.Z,bot.Y,b.IsRed))return false;
             return BotEnemyInRange(b.X,BombY(b),b.Z,b.BlastRadius,bot.Id,b.IsRed)||BotAdjacentCover(_aiGraph.Cell(b.X,b.Z));
         }
@@ -222,6 +271,8 @@ public sealed partial class BlastSession
     }
     private void BotSteer(BlastPlayer bot,int start,int waypoint)
     {
+        waypoint=BotIdleWaypoint(bot,start,waypoint);
+        BotTrackWaypoint(bot,waypoint);
         if(waypoint<0){bot.Input=default;return;}
         int cx=start%_stage.Width,cz=start/_stage.Width,tx=waypoint%_stage.Width,tz=waypoint/_stage.Width;
         float x=tx+.5f,z=tz+.5f;
@@ -229,6 +280,6 @@ public sealed partial class BlastSession
         if(tz!=cz&&Math.Abs(bot.X-(cx+.5f))>.07f)z=cz+.5f;
         float dx=x-bot.X,dz=z-bot.Z,length=MathF.Sqrt(dx*dx+dz*dz);
         float speed=Math.Min(1,length/(PlayerSpeed*_aiSteeringInterval));
-        bot.Input=length<.02f?default:new InputState(dx/length*speed,dz/length*speed,false,false,false);
+        bot.Input=BotUnblockedInput(bot,start,length<.02f?default:new InputState(dx/length*speed,dz/length*speed,false,false,false));
     }
 }

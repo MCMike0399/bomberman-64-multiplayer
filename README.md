@@ -32,7 +32,7 @@ On macOS, the installed editor can also launch it directly:
 
 The game opens fullscreen. **F11** or **Alt+Enter** switches between fullscreen and a window; run `./scripts/client.sh --windowed -- --display-windowed` for a windowed launch.
 
-Choose **LOCAL BATTLE**, then set each of the eight roster slots to **Human**, **CPU**, or **Off** and choose a suit color. The selected character walks on a shared lit 3D stage using the same articulated model seen in battle. Continue to the miniature arena stage and arrow-controlled rules, choose Easy/Normal/Hard CPU difficulty, then start with **2–8 total participants**. **PRACTICE** lets one player explore the map and rehearse bomb handling without CPU opponents. Six visible training pickups teach bomb capacity, fire, red power, remote detonation and hearts; **RESET PRACTICE** restores the cache. One human can play with up to seven bots. Local play works without a server. Two keyboard seats are available; additional local seats require connected gamepads. With three or more local humans, the first two seats use keyboards and up to six gamepads fill seats 3–8 in connection order. With one or two humans, the corresponding gamepads also work as optional controls.
+Choose **LOCAL BATTLE**, then set each of the eight roster slots to **Human**, **CPU**, or **Off** and choose a suit color. The selected character walks on a shared lit 3D stage using the same articulated model seen in battle. Continue to the miniature arena stage and arrow-controlled rules, choose Easy/Medium/Hard CPU difficulty, then start with **2–8 total participants**. **PRACTICE** lets one player explore the map and rehearse bomb handling without CPU opponents. Six visible training pickups teach bomb capacity, fire, red power, remote detonation and hearts; **RESET PRACTICE** restores the cache. One human can play with up to seven bots. Local play works without a server. Two keyboard seats are available; additional local seats require connected gamepads. With three or more local humans, the first two seats use keyboards and up to six gamepads fill seats 3–8 in connection order. With one or two humans, the corresponding gamepads also work as optional controls.
 
 ## macOS app
 
@@ -78,6 +78,8 @@ The default is loopback. No external hosting, domain, TLS, firewall changes or p
 | Carry / throw | K or Shift | M or Ctrl | X or LB | B or L | Square or L1 |
 | Remote detonation | L or R | Comma or Backspace | B or RB | X or R | Circle or R1 |
 | Leave battle | Esc | Esc | Menu | + | Options |
+
+Menus accept **WASD or arrow keys**, with Enter to confirm and Esc to go back; text fields still accept letters normally.
 
 Keyboard 2 also supports numpad 0 / 1 / 2 for bomb / carry / remote. Switch uses its **printed A to confirm and B to go back**. Xbox/PlayStation retain bottom-button confirm and right-button back, with matching prompts. F11 or Alt+Enter toggles fullscreen.
 
@@ -128,7 +130,7 @@ Three accepted pump presses add three effective blast levels, reaching level 6 w
 
 The original manual establishes increased destructive power for red bombs, but the inspected sources do not establish a separate radius multiplier at identical fire and pump levels. This build keeps radius tied to those levels and gives red its cover penetration. [Placement, color and red-power research](docs/iteration12-bombs-research.md).
 
-Bots pursue useful upgrades, pressure reachable opponents, predict visible fuse/chain danger, plan an escape before placing bombs, and seek high ground before flooding. Difficulty changes reaction time rather than movement speed, damage or hidden knowledge. See the [AI behavior tests and measured tradeoffs](tests/Bomber.Ai.Tests/README.md).
+Bots pursue useful upgrades, pressure reachable opponents, predict visible fuse/chain danger, plan an escape before placing bombs, and seek high ground before flooding. Easy, Medium, and Hard change reaction time, search depth, spacing, bomb cadence, and escape-route awareness. Easy gives more room but still periodically attacks; Hard applies more sustained pressure and avoids contested dead ends more strongly. Every level shares the same speed, damage and visible information. Progress tracking and body-aware movement prevent repeated blocked routes from becoming permanent freezes. See the [AI behavior tests and measured tradeoffs](tests/Bomber.Ai.Tests/README.md).
 
 ## Repeatable playtests and triage
 
@@ -204,7 +206,9 @@ python3 tools/playtest/run.py --scenario presentation
 
 ## Screenshots
 
-The gallery contains real exported-app captures. Gameplay images are updated for v0.12.0; unchanged menus and model profiles retain their verified earlier captures. The bomb-trail closeup uses a temporary inspection camera on actual actors. The controller tester shows device detection, not new physical button testing.
+The gallery contains real exported-app captures. AI, difficulty-selection and WASD menu images are updated for v0.13.0; other scenes retain their verified earlier captures. The bomb-trail closeup uses a temporary inspection camera on actual actors. The controller tester shows device detection, not new physical button testing.
+
+[Watch Easy, Medium and Hard in actual gameplay](docs/videos/ai-difficulties.mp4) — three labeled six-second excerpts, normal simulation speed and game audio. [AI behavior and test results](docs/iteration13-ai.md).
 
 [Watch near-foot placement and leaving bombs behind](docs/videos/near-foot-placement.mp4) — actual v0.12.0 gameplay at normal simulation speed, with game audio. [Recording receipt and measurements](docs/verification.md). The [earlier kick/stumble clip](docs/videos/kick-and-stumble.mp4) documents v0.11.0.
 
@@ -214,7 +218,15 @@ The gallery contains real exported-app captures. Gameplay images are updated for
 
 ![Blue remote bomb after walking clear](docs/images/blue-remote.png)
 
-![Mode selection](docs/images/mode-select.png)
+![Mode selection with WASD navigation](docs/images/mode-select.png)
+
+![Easy Medium Hard selection](docs/images/ai-difficulty-menu.png)
+
+![Easy CPU match](docs/images/ai-easy.png)
+
+![Medium CPU match](docs/images/ai-medium.png)
+
+![Hard CPU match](docs/images/ai-hard.png)
 
 ![Animated eight-seat roster](docs/images/battle-roster.png)
 

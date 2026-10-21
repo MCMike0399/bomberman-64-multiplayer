@@ -20,7 +20,7 @@ public sealed record SessionSettings(string Stage = "sunken-temple", int Bots = 
 {
     public Dictionary<string, string> ToWireSettings()
     {
-        if (BotDifficulty is not ("easy" or "normal" or "hard")) throw new ArgumentException("Unknown CPU difficulty.");
+        if (BotDifficulty is not ("easy" or "medium" or "normal" or "hard")) throw new ArgumentException("Unknown CPU difficulty.");
         if (Stage is not ("sunken-temple" or "rock-garden" or "up-and-down")) throw new ArgumentException("Unknown stage.");
         if (Bots is < 0 or > 7 || Wins is < 1 or > 5 || RoundSeconds is < 60 or > 300)
             throw new ArgumentOutOfRangeException(nameof(Bots), "Bots 0–7, wins 1–5, round seconds 60–300.");

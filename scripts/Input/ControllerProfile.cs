@@ -33,7 +33,7 @@ public static class ControllerProfile
     }
     public static string Menu(ControllerFamily family)
     {
-        if(family==ControllerFamily.Keyboard)return "ARROWS  SELECT   ENTER  CONFIRM   ESC  BACK   F11  SCREEN";
+        if(family==ControllerFamily.Keyboard)return "WASD / ARROWS  SELECT   ENTER  CONFIRM   ESC  BACK   F11  SCREEN";
         return $"STICK / D-PAD  SELECT   {ButtonName(family,ConfirmButton(family))}  CONFIRM   {ButtonName(family,CancelButton(family))}  BACK   F11  SCREEN";
     }
     public static string ButtonName(ControllerFamily family,JoyButton button)

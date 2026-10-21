@@ -26,7 +26,7 @@ def healthy(origin):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--scenario', choices=['all', 'menu', 'setup', 'grapple', 'controller-popups', 'local-actions', 'ramp', 'network', 'combat', 'results', 'powerup-collect', 'pump-growth', 'hurry-water', 'roster', 'framing', 'fullscreen', 'controllers', 'controller-inventory', 'controller-observe', 'presentation', 'model-profile', 'movement', 'traversal', 'bomb-handling', 'placement', 'kick-physics', 'body-contacts', 'script'], default='all')
+    parser.add_argument('--scenario', choices=['all', 'menu', 'wasd-menu', 'setup', 'grapple', 'controller-popups', 'local-actions', 'ramp', 'network', 'combat', 'ai-play', 'results', 'powerup-collect', 'pump-growth', 'hurry-water', 'roster', 'framing', 'fullscreen', 'controllers', 'controller-inventory', 'controller-observe', 'presentation', 'model-profile', 'movement', 'traversal', 'bomb-handling', 'placement', 'kick-physics', 'body-contacts', 'script'], default='all')
     parser.add_argument('--ffmpeg', default=os.environ.get('FFMPEG', 'ffmpeg'), help='FFmpeg executable for --record export and decode validation')
     parser.add_argument('--script', type=Path, help='JSON scenario, see temple-walk.json')
     parser.add_argument('--record', action='store_true', help='Record actual gameplay at 30 FPS and export a validated MP4; requires ffmpeg')

@@ -106,3 +106,10 @@ The focused `kick-physics` scenario temporarily uses an inspection camera on the
 `--scenario placement` verifies two separate concerns: an A press with zero active bombs at the previously rejected fractional flat-ground position, and near-foot placement/departure/deliberate second-A kick. It uses actual keyboard and synthetic Switch native-bridge events; positioning uses ordinary movement and releases the input override before button trials. It also records a stationary three-bomb trail, placement sound/hand motion and explained capacity rejection. `--record` produces actual footage with a temporary inspection camera in this focused scenario; `all` retains the normal battle camera.
 
 `powerup-collect` verifies latest-pickup exclusive red/remote modes and captures an actual blue remote bomb. `pump-growth` checks distinct increases plus the restrained target cap. `framing` verifies full walkable terrain, 2.1-unit player headroom and actual pillar crowns at both test aspect ratios. Legacy kick fixtures now use a deliberate second A or a true leave-and-return approach, rather than relying on accidental kicks during placement departure.
+
+## Iteration-thirteen AI and keyboard navigation
+
+- `wasd-menu`: actual W/S main-menu focus, A/D arena and difficulty dials, W/S roster popup navigation, arrow compatibility, ordinary text entry, and A/D Results actions. It uses real window focus and native Godot action events.
+- `ai-play`: three actual four-player temple matches, one for each difficulty, with a stationary human observer. It records all CPU motion, bomb/explosion activity and bounded eligible idle windows, and captures opening/midfight/outcome views. `--record` produces inspectable gameplay and game audio.
+
+Both are included in `all`. For long deterministic AI sweeps outside Godot, use `dotnet run -c Release --project tests/Bomber.Ai.Tests -- --soak --output=artifacts/ai/soak.json`; see that suite’s README for safe-exit liveness and fairness criteria. Native popup tests first navigate to a known endpoint through real keys: after earlier mouse tests the popup may initially hover its last item, where another Down/S cannot change focus.

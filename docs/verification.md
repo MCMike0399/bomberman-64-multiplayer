@@ -1,4 +1,32 @@
-# Verified iteration twelve — 2026-10-20
+# Verified iteration thirteen — 2026-10-21
+
+| Check | Result |
+|---|---|
+| Targeted AI behavior, recovery and fairness policy | **36 checks passed**, including five navigation regressions, tactical difficulty choices, all-level open-arena pressure, and moving-remote safety |
+| Long-match AI matrix | **36 scenarios + four starting-state/alias fairness checks passed** across three maps, three levels, two bot counts and two seeds |
+| Gameplay integration | 104 checks passed |
+| Client/session/input | 95 checks passed |
+| Full standalone Mac regression | **1,575 assertions, 131 captures**, zero runtime errors or capture fallbacks |
+| Recorded standalone AI matches | 13 assertions, nine captures, full MP4 decode passed |
+| Independent HTTP/WebSocket networking | 2–8 humans and one human + seven server bots passed (43.3 seconds) |
+| Installed app | v0.13.0; strict signature, export equality and Launch Services gameplay smoke passed |
+
+The final full standalone run is `artifacts/iteration13/final/20261021T133414.618134Z-all`, 136.754 seconds including startup. It uses windowed QA, the self-contained app and the rebuilt project-owned localhost authority. A source integration run also passed. The first full run exposed a harness assumption: a popup could already hover its last item after earlier mouse tests, so Down/S could not move farther. The corrected test reaches the first item using actual W presses before checking S and W, preserving native routing rather than setting focus state directly.
+
+The initial AI matrix reproduced long standstills in 30 of 36 scenarios. The final same matrix had none of its 12-second safe-exit liveness violations: longest eligible standstill with a safe exit was 1.87 seconds, compared with 85.03 seconds in the initial measurement; longest continuously blocked movement command was 0.10 seconds. It covers 3,172 simulated seconds, 54 completed rounds, 1,953 bombs, 734 visible opponent-pressure opportunities and 436 pickups. These are bounded seeded observations, not a guarantee for every layout or a human fun score. [Measurement definitions and test commands](../tests/Bomber.Ai.Tests/README.md).
+
+All three difficulties now produce actual opponent-threatening bombs and explosions in a 30-second open-arena fixture. This initially failed for Easy, whose wide preferred spacing could otherwise persist forever. Same-fixture tests separately distinguish cautious spacing, contested dead-end avoidance and Medium-versus-Hard route choices; changing reaction timing alone would not satisfy those checks. Starting terrain, spawns, inventory and physics remain equal. The legacy `normal` setting is deterministic-equivalent to Medium.
+
+The final recording is `artifacts/iteration13/video-final/20261021T133736.826927Z-ai-play`: 2,037 frames / 67.9 seconds, 1280×800, 30 FPS with game audio. It runs three real matches with a stationary human observer and captures ordinary CPU movement, bombing, blasts and outcomes. The public [AI difficulty comparison](videos/ai-difficulties.mp4) cuts six seconds from each match at 1× speed (source starts 7.567, 29.667 and 51.767 seconds), adds explicitly labeled QA difficulty captions, and includes three chapters. It is about 18 seconds long. Every clip was decoded and inspected across its opening, action and ending frames; no actor states were edited or gameplay frames fabricated. Fixed-step recording is not a real-time GPU performance claim.
+
+A separate nine-run Release CPU benchmark observed per-run p95 active-tick times of 0.102–0.378 ms and a largest single tick of 4.666 ms on Apple M5 Pro. These simulation-only local measurements exclude networking and rendering and do not establish fleet capacity. The warmed-search regression retains zero allocations over 1,000 decisions.
+
+WASD testing covers main-menu focus, setup navigation, difficulty selection, roster popups, Results actions and ordinary text entry. Arrow keys remain usable. No new physical-controller session is claimed. The installed app matches the tested export byte-for-byte, passes strict recursive signature validation and reached 118 gameplay snapshots through Launch Services with zero stderr. Local ad-hoc signing, production-deployment and Game Mode boundaries remain unchanged.
+
+[AI architecture and navigation diagnosis](iteration13-ai.md), [harness recording](../tools/playtest/README.md).
+
+## Iteration twelve baseline — 2026-10-20
+
 
 | Check | Result |
 |---|---|

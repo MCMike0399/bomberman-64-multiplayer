@@ -116,7 +116,7 @@ public partial class ArcadeMenu : Control
         _wins=new SpinBox {Name="Wins",MinValue=1,MaxValue=5,Value=3};state.AddChild(_wins);
         _bots=new SpinBox {Name="Bots",MinValue=0,MaxValue=7,Value=3};state.AddChild(_bots);
         _rounds=new SpinBox {Name="RoundSeconds",MinValue=60,MaxValue=300,Step=30,Value=120};state.AddChild(_rounds);
-        _difficulty=new OptionButton {Name="Difficulty"};foreach(var title in new[]{"Easy","Normal","Hard"})_difficulty.AddItem(title);_difficulty.Select(1);state.AddChild(_difficulty);
+        _difficulty=new OptionButton {Name="Difficulty"};foreach(var title in new[]{"Easy","Medium","Hard"})_difficulty.AddItem(title);_difficulty.Select(1);state.AddChild(_difficulty);
         _sudden=new CheckButton {Name="SuddenDeath",ButtonPressed=true};state.AddChild(_sudden);
         _ghosts=new CheckButton {Name="Ghosts",ButtonPressed=true};state.AddChild(_ghosts);
         _stageDial=new ArcadeRuleDial {Name="StageSelector",Position=new(80,602),Size=new(640,76),Caption="ARENA",ReadValue=()=>_stage.GetItemText(_stage.Selected).ToUpperInvariant(),ChangeValue=direction=>{_stage.Select((_stage.Selected+direction+3)%3);UpdateStageDescription();}};
@@ -312,7 +312,7 @@ public partial class ArcadeMenu : Control
     }
     public void Configure(SessionSettings settings,int humans=1)
     {
-        _difficulty.Select(Array.IndexOf(new[]{"easy","normal","hard"},settings.BotDifficulty));_stage.Select(Math.Max(0,Array.IndexOf(StageIds,settings.Stage)));_bots.Value=settings.Bots;_wins.Value=settings.Wins;_rounds.Value=settings.RoundSeconds;_sudden.ButtonPressed=settings.SuddenDeath;_ghosts.ButtonPressed=settings.Ghosts;_localPlayers.ConfigureCounts(humans,settings.Bots);UpdateStageDescription();
+        _difficulty.Select(Array.IndexOf(new[]{"easy","normal","hard"},settings.BotDifficulty=="medium"?"normal":settings.BotDifficulty));_stage.Select(Math.Max(0,Array.IndexOf(StageIds,settings.Stage)));_bots.Value=settings.Bots;_wins.Value=settings.Wins;_rounds.Value=settings.RoundSeconds;_sudden.ButtonPressed=settings.SuddenDeath;_ghosts.ButtonPressed=settings.Ghosts;_localPlayers.ConfigureCounts(humans,settings.Bots);UpdateStageDescription();
     }
     private void UpdateStageDescription()
     {

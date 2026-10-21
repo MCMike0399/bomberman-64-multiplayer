@@ -3,6 +3,9 @@ using System.Text.Json;
 using Bomber.Game.Simulation;
 using Bomber.Game.Simulation.Ai;
 
+if(args.Contains("--liveness")){NavigationLivenessChecks.Run();return;}
+if(args.Contains("--soak")){GameplaySoakChecks.Run(args);return;}
+
 if(args.Contains("--benchmark"))
 {
     var results=new List<object>();
@@ -45,7 +48,7 @@ if(args.Contains("--benchmark"))
     var output=args.FirstOrDefault(a=>a.StartsWith("--output="));if(output!=null)File.WriteAllText(output[9..],json+"\n");
     return;
 }
-var checks=FrontPlacementChecks.Run();
+var checks=FrontPlacementChecks.Run()+NavigationLivenessChecks.Run();
 void Check(bool passed,string name){if(!passed)throw new Exception(name);checks++;Console.WriteLine("PASS "+name);}
 void Fight(Fixture f){f.Step(62);}
 
@@ -87,6 +90,50 @@ int Decisions(string level){var f=new Fixture(Fixture.Flat(spawns:[(2,2),(10,10)
 int easy=Decisions("easy"),normal=Decisions("normal"),hard=Decisions("hard");
 Check(easy<normal&&normal<hard,$"difficulty changes reaction opportunities fairly (easy={easy},normal={normal},hard={hard})");
 
+// Force exactly one tactical decision from identical visible positions; reaction timing cannot explain it.
+float SpacingDecision(string level)
+{
+    var f=new Fixture(Fixture.Flat(spawns:[(2,2),(10,10)]),2,difficulty:level);Fight(f);
+    f.Session.AiTestPosition("cpu-0",5.5f,6.5f);f.Session.AiTestPosition("cpu-1",8.5f,6.5f);
+    f.Session.AiTestThink("cpu-0");var input=f.Session.AiTestPlayers.First(p=>p.Slot==0).Input;return input.X-Math.Abs(input.Z);
+}
+float easySpacing=SpacingDecision("easy"),mediumSpacing=SpacingDecision("medium"),hardSpacing=SpacingDecision("hard");
+Check(easySpacing<0&&hardSpacing>0,$"same visible opponent makes Easy give space and Hard contest range in one decision ({easySpacing}, {mediumSpacing}, {hardSpacing})");
+
+float TrapDecision(string level)
+{
+    var f=new Fixture(Fixture.Flat(spawns:[(5,5),(7,3)]),2,difficulty:level);
+    f.Session.AiTestPosition("cpu-0",5.5f,5.5f);f.Session.AiTestPosition("cpu-1",7.5f,3.5f);
+    foreach(var (x,z) in new[]{(4,4),(5,3),(6,4)})f.Session.AiTestSetSoft(x,z,true);
+    f.Session.AiTestAddItem(5,4,"heart");f.Session.AiTestAddItem(6,5,"heart");
+    f.Session.AiTestThink("cpu-0");return f.Session.AiTestPlayers.First(p=>p.Slot==0).Input.X;
+}
+float easyTrap=TrapDecision("easy"),mediumTrap=TrapDecision("medium"),hardTrap=TrapDecision("hard");
+Check(easyTrap==0&&mediumTrap>0&&hardTrap>0,$"equal visible pickups make Medium and Hard favor the open route over a dead end ({easyTrap}, {mediumTrap}, {hardTrap})");
+
+float RiskDecision(string level)
+{
+    var f=new Fixture(Fixture.Flat(spawns:[(5,5),(7,3)]),2,difficulty:level);
+    f.Session.AiTestPosition("cpu-0",5.5f,5.5f);f.Session.AiTestPosition("cpu-1",7.5f,3.5f);
+    foreach(var (x,z) in new[]{(4,4),(5,3),(6,4),(2,5)})f.Session.AiTestSetSoft(x,z,true);
+    f.Session.AiTestAddItem(5,4,"heart");f.Session.AiTestAddItem(3,5,"heart");
+    f.Session.AiTestThink("cpu-0");return f.Session.AiTestPlayers.First(p=>p.Slot==0).Input.X;
+}
+float mediumRisk=RiskDecision("medium"),hardRisk=RiskDecision("hard");
+Check(mediumRisk==0&&hardRisk<0,$"Hard trades a shorter contested pickup for a longer escape-friendly route ({mediumRisk}, {hardRisk})");
+
+foreach(var state in new[]{BombState.Rolling,BombState.Flying})
+{
+    var f=new Fixture(Fixture.Flat(spawns:[(3,5),(9,10)]),2);
+    f.Session.AiTestPosition("cpu-0",3.5f,5.5f);f.Session.AiTestPosition("cpu-1",9.5f,10.5f);
+    var oldest=new BlastBomb {Id="oldest-moving",OwnerId="cpu-0",IsRemote=true,State=state,X=4.5f,Z=5.5f,CellX=4,CellZ=5};
+    f.Session.AiTestAddBomb(oldest);
+    f.Session.AiTestAddBomb(new BlastBomb {Id="second-resting",OwnerId="cpu-0",IsRemote=true,X=9.5f,Z=9.5f,CellX=9,CellZ=9});
+    Check(!f.Session.AiTestRemoteOpportunity("cpu-0"),$"{state} oldest remote threatening its owner prevents detonating a safe second remote");
+    oldest.X=9.5f;oldest.Z=9.5f;oldest.CellX=9;oldest.CellZ=9;
+    Check(f.Session.AiTestRemoteOpportunity("cpu-0"),$"{state} oldest remote threatening only an opponent remains eligible for detonation");
+}
+
 foreach(string stage in new[]{"rock-garden","up-and-down","sunken-temple"})
 {
     var a=new Fixture(BlastStages.Get(stage),seed:9876);var b=new Fixture(BlastStages.Get(stage),seed:9876);
@@ -97,6 +144,21 @@ foreach(string stage in new[]{"rock-garden","up-and-down","sunken-temple"})
         for(int i=0;i<pa.Length;i++)if(pa[i].X!=pb[i].X||pa[i].Z!=pb[i].Z||pa[i].Alive!=pb[i].Alive||pa[i].Input!=pb[i].Input)throw new Exception("AI replay divergence at "+stage+" tick "+tick);
     }
     Check(true,"eight-bot fixed-seed replay is deterministic on "+stage);
+}
+foreach(string level in new[]{"easy","medium","hard"})
+{
+    var arena=Fixture.Flat(spawns:[(3,6),(9,6)]);var f=new Fixture(arena,2,difficulty:level);
+    f.Session.AiTestAddHuman("cpu-1",1);f.Session.AiTestPosition("cpu-1",9.5f,6.5f);
+    var opponent=f.Session.AiTestPlayers.First(p=>p.Slot==1);
+    var attackIds=new HashSet<string>();bool exploded=false;
+    for(int tick=0;tick<900;tick++)
+    {
+        f.Step();
+        foreach(var bomb in f.Session.AiTestBombs)
+            if(bomb.OwnerId=="cpu-0"&&BlastGeometry.Contains(arena,new SoftBlockGrid(13,13),bomb.X,0,bomb.Z,bomb.BlastRadius,opponent.X,opponent.Y,opponent.Z,bomb.IsRed))attackIds.Add(bomb.Id);
+        if(attackIds.Count>0&&f.Session.AiTestHazards.Any(h=>BlastGeometry.Contains(arena,new SoftBlockGrid(13,13),h.X,h.Y,h.Z,h.Radius,opponent.X,opponent.Y,opponent.Z,h.IsRed))){exploded=true;break;}
+    }
+    Check(attackIds.Count>0&&exploded,$"{level} approaches a stationary visible opponent and explodes a real pressure bomb within 30 seconds");
 }
 var combat=new Fixture(Fixture.Flat(),8);var fresh=new HashSet<string>();int pressure=0;
 for(int tick=0;tick<360;tick++)

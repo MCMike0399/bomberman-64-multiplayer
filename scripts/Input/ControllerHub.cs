@@ -57,6 +57,8 @@ public partial class ControllerHub : Node
     private static void ConfigureMenuActions()
     {
         static void Add(string action,InputEvent input){if(!InputMap.ActionHasEvent(action,input))InputMap.ActionAddEvent(action,input);}
+        foreach(var (action,key) in new[]{("ui_up",Key.W),("ui_left",Key.A),("ui_down",Key.S),("ui_right",Key.D)})
+            Add(action,new InputEventKey {PhysicalKeycode=key});
         // Face buttons need per-device semantics (Nintendo printed A/B differs from Xbox).
         // Install exact device bindings on discovery, including embedded PopupMenus.
         foreach(string action in new[]{"ui_accept","ui_cancel"})

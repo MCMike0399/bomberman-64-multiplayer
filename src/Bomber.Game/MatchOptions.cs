@@ -34,7 +34,7 @@ public sealed record MatchOptions
         if (PlayerAppearances.Count != 0 && (PlayerAppearances.Count != HumanPlayers + BotPlayers || PlayerAppearances.Any(index=>index is < 0 or > 7)))
             throw new ArgumentException("Appearances must contain one index (0–7) per active participant.",nameof(PlayerAppearances));
         if (Stage is not ("sunken-temple" or "rock-garden" or "up-and-down")) throw new ArgumentException("Unknown stage.", nameof(Stage));
-        if (BotDifficulty is not ("easy" or "normal" or "hard")) throw new ArgumentException("Unknown bot difficulty.",nameof(BotDifficulty));
+        if (BotDifficulty is not ("easy" or "medium" or "normal" or "hard")) throw new ArgumentException("Unknown bot difficulty.",nameof(BotDifficulty));
         if (Wins is < 1 or > 5) throw new ArgumentOutOfRangeException(nameof(Wins));
         if (RoundSeconds is < 60 or > 300) throw new ArgumentOutOfRangeException(nameof(RoundSeconds));
     }

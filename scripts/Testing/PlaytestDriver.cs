@@ -52,6 +52,7 @@ public partial class PlaytestDriver : Node
             else switch(_scenario)
             {
                 case "menu": await Menus(); break;
+                case "wasd-menu": await WasdMenus(); await Results(); break;
                 case "setup": await SetupMenus(); break;
                 case "grapple": await GrappleActions(); break;
                 case "controller-popups": await AnalogPopupMenus(); break;
@@ -69,6 +70,7 @@ public partial class PlaytestDriver : Node
                 case "local-actions": await LocalActions(); break;
                 case "ramp": await Ramps(); break;
                 case "network": await Network(); break;
+                case "ai-play": await AiMatches(); break;
                 case "combat": await Combat(); break;
                 case "results": await Results(); break;
                 case "powerup-collect": await Powerups(); break;
@@ -77,7 +79,7 @@ public partial class PlaytestDriver : Node
                 case "roster": await RosterSelection(); break;
                 case "framing": await Framing(); break;
                 case "fullscreen": await Fullscreen(); break;
-                case "all": await Menus(); await SetupMenus(); await ControllerInputs(); await AnalogPopupMenus(); await RosterSelection(); await Framing(); await ModelProfiles(); await MovementQuality(); await TraversalAndGhosts(); await PlacementQuality(); await BombHandling(); await KickPhysics(); await BodyContacts(); await GrappleActions(); await LocalActions(); await Ramps(); await Powerups(); await PumpGrowth(); await PresentationEffects(); await HurryWater(); await Combat(); await Results(); await Network(); break;
+                case "all": await Menus(); await WasdMenus(); await SetupMenus(); await ControllerInputs(); await AnalogPopupMenus(); await RosterSelection(); await Framing(); await ModelProfiles(); await MovementQuality(); await TraversalAndGhosts(); await PlacementQuality(); await BombHandling(); await KickPhysics(); await BodyContacts(); await GrappleActions(); await LocalActions(); await Ramps(); await Powerups(); await PumpGrowth(); await PresentationEffects(); await HurryWater(); await AiMatches(); await Combat(); await Results(); await Network(); break;
                 default: throw new ArgumentException("Unknown scenario: "+_scenario);
             }
         }
@@ -485,6 +487,9 @@ public partial class PlaytestDriver : Node
         var preview=(_root.FindChild("WinnerPreview",true,false) as BlastCircuit.UI.CharacterPreview)!;
         Check(preview.Appearance==winner.GetProperty("appearance").GetInt32()&&preview.Celebrating,"results celebrate the actual winner's selected suit");
         await Frames(12);
+        var replayButton=VisibleButton("PLAY AGAIN");var modeButton=VisibleButton("MODE SELECT");
+        replayButton.GrabFocus();await KeyPress(Key.D);Check(modeButton.HasFocus(),"D moves across Results actions");
+        await KeyPress(Key.A);Check(replayButton.HasFocus(),"A returns to the Results replay action");
         await Capture("results-cpu-victory");
         await Click("PLAY AGAIN");await Frames(4);
         Check(_root.ScreenName=="Match" && _root.ActiveSession!=null,"results replay button starts fresh match");
