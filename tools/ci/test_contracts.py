@@ -79,6 +79,50 @@ class PublicationBoundaryTests(unittest.TestCase):
 
 
 class CredentialBoundaryTests(unittest.TestCase):
+    def test_metadata_token_authenticates_only_https_and_never_reaches_git_or_output(self):
+        for rejected in (False, True):
+            with self.subTest(git_rejected=rejected), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                metadata_token = 'fixture-metadata-token'
+                requests = []
+                def metadata(request, timeout):
+                    requests.append(request)
+                    self.assertEqual('https://api.github.com/meta', request.full_url)
+                    self.assertEqual('Bearer ' + metadata_token, request.get_header('Authorization'))
+                    return io.BytesIO(b'{"ssh_keys":["ssh-ed25519 example"]}')
+                def check_environment(command, environment):
+                    self.assertNotIn('GITHUB_METADATA_TOKEN', environment)
+                    self.assertNotIn(metadata_token, ' '.join(command))
+                def fake_git(command, **kwargs):
+                    check_environment(command, kwargs['env'])
+                    ssh = shlex.split(kwargs['env']['GIT_SSH_COMMAND'])
+                    key = Path(ssh[ssh.index('-i') + 1])
+                    for path in key.parent.iterdir():
+                        self.assertNotIn(metadata_token, path.read_text())
+                    if command[1] == 'init':
+                        (root / 'burbuja-kernel').mkdir()
+                    return subprocess.CompletedProcess(command, 128 if rejected else 0,
+                        stderr=('private diagnostic ' + metadata_token).encode())
+                def revision(command, **kwargs):
+                    check_environment(command, kwargs['env'])
+                    return bootstrap.REVISION + '\n'
+                environment = {'KERNEL_REPOSITORY': 'private-owner/private-name',
+                    'KERNEL_DEPLOY_KEY': 'fixture-private-key', 'GITHUB_METADATA_TOKEN': metadata_token}
+                output = io.StringIO()
+                with patch.object(bootstrap, 'ROOT', root), patch.dict(os.environ, environment, clear=True), \
+                        patch.object(bootstrap.urllib.request, 'urlopen', side_effect=metadata), \
+                        patch.object(bootstrap.subprocess, 'run', side_effect=fake_git), \
+                        patch.object(bootstrap.subprocess, 'check_output', side_effect=revision), \
+                        contextlib.redirect_stdout(output), contextlib.redirect_stderr(output):
+                    if rejected:
+                        with self.assertRaises(SystemExit) as failure:
+                            bootstrap.main()
+                        self.assertNotIn(metadata_token, str(failure.exception))
+                    else:
+                        bootstrap.main()
+                self.assertEqual(1, len(requests))
+                self.assertNotIn(metadata_token, output.getvalue())
+
     def test_unadvertised_pin_fallback_never_substitutes_branch_tip(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

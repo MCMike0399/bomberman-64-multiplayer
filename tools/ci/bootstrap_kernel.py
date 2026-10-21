@@ -35,6 +35,7 @@ def main():
     repository = os.environ.get('KERNEL_REPOSITORY', '')
     token = os.environ.get('KERNEL_READ_TOKEN', '')
     deploy_key = os.environ.get('KERNEL_DEPLOY_KEY', '')
+    metadata_token = os.environ.get('GITHUB_METADATA_TOKEN', '')
     if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+', repository) or not (token or deploy_key):
         raise SystemExit('Configure KERNEL_REPOSITORY (owner/name) and KERNEL_DEPLOY_KEY or KERNEL_READ_TOKEN secrets before trusted CI.')
     destination = ROOT / 'burbuja-kernel'
@@ -42,13 +43,18 @@ def main():
         raise SystemExit('CI requires a clean workspace: burbuja-kernel already exists; refusing to overwrite it.')
     with tempfile.TemporaryDirectory(prefix='blast-git-auth-') as temporary:
         environment = dict(os.environ, GIT_TERMINAL_PROMPT='0', GIT_CONFIG_NOSYSTEM='1', GIT_CONFIG_GLOBAL=os.devnull)
+        environment.pop('GITHUB_METADATA_TOKEN', None)
         if deploy_key:
             key = Path(temporary) / 'deploy-key'
             key.write_text(deploy_key.rstrip() + '\n')
             key.chmod(0o600)
-            # Obtain GitHub's published host keys through authenticated HTTPS,
-            # rather than trusting unauthenticated ssh-keyscan output.
-            request = urllib.request.Request('https://api.github.com/meta', headers={'User-Agent': 'blast-circuit-ci'})
+            # TLS authenticates GitHub's published host-key metadata; the optional
+            # workflow token authenticates the API caller to avoid shared-runner
+            # anonymous rate limits. Private Git access still uses only the deploy key.
+            headers = {'User-Agent': 'blast-circuit-ci'}
+            if metadata_token:
+                headers['Authorization'] = 'Bearer ' + metadata_token
+            request = urllib.request.Request('https://api.github.com/meta', headers=headers)
             with urllib.request.urlopen(request, timeout=30) as response:
                 host_keys = json.load(response)['ssh_keys']
             if not host_keys or any('\n' in item for item in host_keys):
@@ -89,7 +95,7 @@ def main():
                 # Git errors can contain the private origin. Never echo captured output.
                 raise SystemExit('Pinned kernel fetch failed: ' + failure_category(result.stderr)
                                  + f' (exit {result.returncode}). Verify the scoped deploy key and pinned revision.')
-    actual = subprocess.check_output(['git', '-C', str(destination), 'rev-parse', 'HEAD'], text=True).strip()
+    actual = subprocess.check_output(['git', '-C', str(destination), 'rev-parse', 'HEAD'], text=True, env=environment).strip()
     if actual != REVISION:
         raise SystemExit('Kernel checkout revision mismatch.')
     (destination / '.gdignore').touch()

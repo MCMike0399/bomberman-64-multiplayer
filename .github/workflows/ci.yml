@@ -68,6 +68,7 @@ jobs:
           KERNEL_REPOSITORY: ${{ secrets.KERNEL_REPOSITORY }}
           KERNEL_READ_TOKEN: ${{ secrets.KERNEL_READ_TOKEN }}
           KERNEL_DEPLOY_KEY: ${{ secrets.KERNEL_DEPLOY_KEY }}
+          GITHUB_METADATA_TOKEN: ${{ github.token }}
         run: python3 tools/ci/bootstrap_kernel.py
       - run: python3 tools/qa/run.py --profile managed
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -107,6 +108,7 @@ jobs:
           KERNEL_REPOSITORY: ${{ secrets.KERNEL_REPOSITORY }}
           KERNEL_READ_TOKEN: ${{ secrets.KERNEL_READ_TOKEN }}
           KERNEL_DEPLOY_KEY: ${{ secrets.KERNEL_DEPLOY_KEY }}
+          GITHUB_METADATA_TOKEN: ${{ github.token }}
         run: python3 tools/ci/bootstrap_kernel.py
       - run: python3 tools/ci/install_godot.py --destination "$RUNNER_TEMP/godot"
       - run: python3 tools/qa/run.py --profile headless
@@ -138,6 +140,7 @@ jobs:
           KERNEL_REPOSITORY: ${{ secrets.KERNEL_REPOSITORY }}
           KERNEL_READ_TOKEN: ${{ secrets.KERNEL_READ_TOKEN }}
           KERNEL_DEPLOY_KEY: ${{ secrets.KERNEL_DEPLOY_KEY }}
+          GITHUB_METADATA_TOKEN: ${{ github.token }}
         run: python3 tools/ci/bootstrap_kernel.py
       - run: python3 tools/qa/run.py --profile graphical
         env:
@@ -170,6 +173,7 @@ jobs:
           KERNEL_REPOSITORY: ${{ secrets.KERNEL_REPOSITORY }}
           KERNEL_READ_TOKEN: ${{ secrets.KERNEL_READ_TOKEN }}
           KERNEL_DEPLOY_KEY: ${{ secrets.KERNEL_DEPLOY_KEY }}
+          GITHUB_METADATA_TOKEN: ${{ github.token }}
         run: python3 tools/ci/bootstrap_kernel.py
       - run: python3 tools/ci/install_godot.py --destination "$RUNNER_TEMP/godot" --templates
       - run: python3 tools/qa/run.py --profile package
