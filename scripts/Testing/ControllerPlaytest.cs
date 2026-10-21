@@ -44,7 +44,8 @@ public partial class PlaytestDriver
         VerifyFocus();
         for(int i=0;i<count;i++){await Frames(1);VerifyFocus();}
     }
-    private async Task ControllerInputs()
+    private async Task ControllerInputs()=>await WithControllerFocusRetries(ControllerInputsAttempt,"controllers");
+    private async Task WithControllerFocusRetries(Func<Task> scenario,string context)
     {
         for(int attempt=1;attempt<=3;attempt++)
         {
@@ -52,15 +53,15 @@ public partial class PlaytestDriver
             try
             {
                 _controllerFocusTrial=true;
-                await ControllerInputsAttempt();
-                Event("controller-focus-result",new {attempts=attempt,interruptedAttempts=attempt-1});return;
+                await scenario();
+                Event("controller-focus-result",new {context,attempts=attempt,interruptedAttempts=attempt-1});return;
             }
             catch(ControllerFocusInterruptedException) when(attempt<3)
             {
                 int discarded=_checks.Count-checksBefore;
                 _checks.RemoveRange(checksBefore,discarded);
                 _screenshots.RemoveRange(capturesBefore,_screenshots.Count-capturesBefore);
-                Event("controller-focus-retry",new {attempt,discardedAssertions=discarded,reason="observed native focus loss; restart the complete controller scenario with fresh session and released inputs"});
+                Event("controller-focus-retry",new {context,attempt,discardedAssertions=discarded,reason="observed native focus loss; restart the complete controller scenario with fresh session and released inputs"});
                 await ControllerFocusReady();
             }
             finally {_controllerFocusTrial=false;}

@@ -15,10 +15,20 @@ internal static class AimedThrowChecks
                 Assert(arc.End==ThrowProjectionEnd.Landing&&Math.Abs(arc.Last.Z-range)<.001f,"Deliberate range drifted from discrete landing.");
             }
         });
+        Check("right aim turns clockwise and left aim counterclockwise at every cardinal heading",()=>{
+            foreach(var heading in new[]{new Vector2(1,0),new Vector2(0,1),new Vector2(-1,0),new Vector2(0,-1)})
+            foreach(float control in new[]{1f,-1f}){
+                var angle=control*BombThrowRules.AimTurnSpeed*BombThrowRules.SimulationStep;
+                // Top view: +X is right and +Z is down, so clockwise East turns toward South.
+                var expected=new Vector2(heading.X*MathF.Cos(angle)-heading.Y*MathF.Sin(angle),heading.X*MathF.Sin(angle)+heading.Y*MathF.Cos(angle));
+                var aimed=BombThrowRules.AdjustAim(new(heading.X,heading.Y,4.5f),control,0,BombThrowRules.SimulationStep);
+                Assert(Vector2.Distance(expected,new(aimed.X,aimed.Z))<.0001f,$"Aim control {control} turned heading {heading} toward the wrong side: actual=({aimed.X},{aimed.Z}), expected={expected}.");
+            }
+        });
         Check("relative aim has bounded shared rates and retains neutral intent",()=>{
             var aim=new ThrowAim(0,1,4.5f);
             var turned=BombThrowRules.AdjustAim(aim,1,0,BombThrowRules.SimulationStep);
-            Assert(Math.Abs(MathF.Atan2(turned.X,turned.Z)-BombThrowRules.AimTurnSpeed*BombThrowRules.SimulationStep)<.0001f,"Turn rate exceeded authority limit.");
+            Assert(Math.Abs(MathF.Atan2(turned.X,turned.Z)+BombThrowRules.AimTurnSpeed*BombThrowRules.SimulationStep)<.0001f,"Turn rate exceeded authority limit.");
             Assert(BombThrowRules.AdjustAim(turned,0,0,BombThrowRules.SimulationStep)==turned,"Neutral reset deliberate intent.");
             var far=aim;var near=aim;
             for(int i=0;i<300;i++){far=BombThrowRules.AdjustAim(far,0,-1,BombThrowRules.SimulationStep);near=BombThrowRules.AdjustAim(near,0,1,BombThrowRules.SimulationStep);}
@@ -40,7 +50,7 @@ internal static class AimedThrowChecks
                 var m=Match();Lift(m);var before=Player(m);
                 var input=new PlayerInput(turn?1:0,turn?0:-1,B:true,Aim:true);
                 m.SetInput(0,input);Step(m,1);m.SetInput(0,new PlayerInput(0,0,B:true,Aim:true));Step(m,1);var nudged=Player(m);
-                float Value(JsonElement p)=>turn?MathF.Atan2(N(p,"aimX"),N(p,"aimZ")):N(p,"aimRange");
+                float Value(JsonElement p)=>turn?-MathF.Atan2(N(p,"aimX"),N(p,"aimZ")):N(p,"aimRange");
                 var nudge=Value(nudged)-Value(before);
                 var expected=(turn?BombThrowRules.AimTurnSpeed:BombThrowRules.AimRangeSpeed)*BombThrowRules.SimulationStep*BombThrowRules.AimFineScale;
                 Assert(Math.Abs(nudge-expected)<.0001f,"First-tick aim did not start at fine speed.");
@@ -52,7 +62,7 @@ internal static class AimedThrowChecks
             foreach(bool turn in new[]{true,false}){
                 var m=Match();Lift(m);
                 PlayerInput Intent(float axis)=>new(turn?axis:0,turn?0:-axis,B:true,Aim:true);
-                float Value(JsonElement p)=>turn?MathF.Atan2(N(p,"aimX"),N(p,"aimZ")):N(p,"aimRange");
+                float Value(JsonElement p)=>turn?-MathF.Atan2(N(p,"aimX"),N(p,"aimZ")):N(p,"aimRange");
                 m.SetInput(0,Intent(1));Step(m,14);var before=Value(Player(m));
                 m.SetInput(0,Intent(-1));Step(m,1);m.SetInput(0,Intent(0));Step(m,1);var reversed=Value(Player(m));
                 var expected=(turn?BombThrowRules.AimTurnSpeed:BombThrowRules.AimRangeSpeed)*BombThrowRules.SimulationStep*BombThrowRules.AimFineScale;

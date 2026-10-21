@@ -28,7 +28,9 @@ public static class BombThrowRules
         if(length>1){turn/=length;range/=length;}
         dt=float.IsFinite(dt)?Math.Clamp(dt,0,.1f):0;
         if(turn==0&&range==0)return aim;
-        var angle=MathF.Atan2(aim.X,aim.Z)+turn*AimTurnSpeed*dt;
+        // +Z points down in the arena's top view. Atan2(X,Z) increases
+        // counterclockwise, so a positive right-turn control subtracts angle.
+        var angle=MathF.Atan2(aim.X,aim.Z)-turn*AimTurnSpeed*dt;
         return new(MathF.Sin(angle),MathF.Cos(angle),Math.Clamp(aim.Range-range*AimRangeSpeed*dt,MinAimRange,MaxAimRange));
     }
 

@@ -2,16 +2,16 @@
 
 | Check | Result |
 |---|---|
-| Gameplay / client / AI / audio | **133 / 118 / 36 / 19** checks passed |
+| Gameplay / client / AI / audio | **134 / 118 / 36 / 19** checks passed |
 | AI long-match matrix | **36 scenarios** passed |
 | Published server and real network | Existing 2–8-player/reconnect/bot smoke plus two-client precision aim passed (51.7 seconds); exact staged server packaged |
 | Final exported Mac regression | **1,928 assertions, 153 captures**, zero runtime errors (134.078 seconds) |
 | Exported package smoke | **218 assertions**, headless bundled-asset/motion/throw checks |
-| Focused native aim input | **99 assertions, four captures**, actual keyboard and canonical controller paths |
+| Focused native aim input | **103 assertions, four captures**, actual keyboard and canonical controller paths |
 | Compact-leg motion | **45 assertions**, including fixed limb length, hip attachment and continuity at multiple sampling rates |
-| Normal-speed aim recording | **32 assertions, seven captures**, 334 decoded frames at 30 FPS |
+| Normal-speed aim recording | **32 assertions, seven captures**, 335 decoded frames at 30 FPS |
 
-The final exported run is `artifacts/iteration16-verified-all/playtest/20261021T222206.448549Z-all`. Its complete controller attempt passed first time with **zero focus retries**. Package evidence is `artifacts/iteration16-package-verified`; managed/server delivery evidence is `artifacts/iteration16-final-managed`. The preceding core-headless run (`artifacts/iteration16-headless3`) passed 783 assertions; later test-only snapshot waits add explicit accepted-state checks, and the final exported suite above exercises them. No fresh physical-controller certification is inferred from synthetic events.
+The full exported run is `artifacts/iteration16-verified-all/playtest/20261021T222206.448549Z-all`. A subsequent direction review found right/left aiming mirrored on the stage; a new all-cardinal regression reproduced it, and right now turns clockwise. The correction was verified with 134 game checks, 103 native input checks, real network aim/server tests and a rebuilt exported-app smoke/aim recording. The earlier full UI suite was not represented as a new run after that narrow correction. Its complete controller attempt passed first time with **zero focus retries**. Package evidence is `artifacts/iteration16-direction-package`; managed/server delivery evidence is `artifacts/iteration16-direction-managed`. The preceding core-headless run (`artifacts/iteration16-headless3`) passed 783 assertions; later test-only snapshot waits add explicit accepted-state checks, and the final exported suite above exercises them. No fresh physical-controller certification is inferred from synthetic events.
 
 The user rejected the extending white legs. A regression measured 2.49× stem extension and a .27-unit hip gap in the prior animation. The final legs retain fixed length and hip attachment; boot pitch/reach/recovery are continuous. The suit is about 8% slimmer while helmet, gloves and boot sizes preserve the chibi silhouette. [Inspected official renders, original references and actual measurements](iteration16-character.md).
 

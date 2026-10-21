@@ -87,7 +87,8 @@ public partial class PlaytestDriver
         Input(0,default);_root.Back();await Frames(3);
     }
 
-    private async Task AimInputs()
+    private async Task AimInputs()=>await WithControllerFocusRetries(AimInputsAttempt,"aim-inputs");
+    private async Task AimInputsAttempt()
     {
         var hub=ControllerHub.Current;float? keyboardRange=null,keyboardTurn=null;
         Event("aim-input-mode",new{source="ordinary synthetic keyboard/canonical events; Switch uses production native bridge",physicalInputClaim=false,triggerThreshold=.35f});
@@ -153,6 +154,8 @@ public partial class PlaytestDriver
                 Turn(true);await ControllerFrames(8);Turn(false);await ControllerFrames(2);
                 float turn=MathF.Acos(Math.Clamp(ax*AimNumber(Player,"aimX")+az*AimNumber(Player,"aimZ"),-1,1));
                 Check(turn>.15f&&turn<BombThrowRules.AimTurnSpeed*8/30f,name+": native turn starts with fine nudges below the maximum angular rate");
+                Check(ax*AimNumber(Player,"aimZ")-az*AimNumber(Player,"aimX")>.05f,
+                    name+": right input turns aim clockwise on the stage");
                 if(keyboardTurn is {} expectedTurn)Check(Math.Abs(turn-expectedTurn)<.025f,name+": native turn adjustment matches keyboard through the shared ramp");
                 else keyboardTurn=turn;
                 Check(Math.Abs(AimNumber(Player,"x")-px)<.02f&&Math.Abs(AimNumber(Player,"z")-pz)<.02f,name+": native aim directions do not move the carrier");
