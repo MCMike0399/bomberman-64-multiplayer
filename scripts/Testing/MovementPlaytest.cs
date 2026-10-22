@@ -51,6 +51,7 @@ public partial class PlaytestDriver
     {
         CompactLegs();
         WalkPhrasing();
+        WholeBodyWalk();
         BootContinuity();
         var endPoses=new List<float>();
         foreach(int fps in new[]{30,60,120})
@@ -74,7 +75,7 @@ public partial class PlaytestDriver
                 }
                 endPoses.Add(model.WalkPose);
                 Event("walk-stride",new {fps,distance=18,contacts,maxLift,minLift,minBody,maxBody,maxCompression,maxFootSeparation,supportFraction=leftSupport/(fps*4f),flightFraction=flight/(fps*4f)});
-                Check(contacts is >=8 and <=10,"normal travel uses deliberate strides rather than tiny rapid steps at "+fps+" FPS");
+                Check(contacts is >=7 and <=8,"normal travel uses deliberate strides rather than tiny rapid steps at "+fps+" FPS");
                 Check(maxFootSeparation>.03f&&maxFootSeparation<.13f,"short rigid legs retain a readable alternating boot silhouette at "+fps+" FPS");
                 Check(maxLift>.025f&&maxLift<.12f&&minLift>-.02f,"compact recovery boots clear the floor without sinking or a large jump at "+fps+" FPS");
                 Check(maxBody-minBody>.015f&&maxBody-minBody<.065f&&maxCompression>.005f&&maxCompression<.03f,"body springs gently within the short rigid leg range at "+fps+" FPS");
@@ -90,6 +91,34 @@ public partial class PlaytestDriver
             finally {model.Free();}
         }
         Check(endPoses.Max()-endPoses.Min()<.002f,"equal displacement reaches the same stride pose at 30/60/120 FPS");
+    }
+    private void WholeBodyWalk()
+    {
+        foreach(int fps in new[]{30,60,120})
+        {
+            var model=new BomberModel(new ArtMaterials(),Colors.White,"whole body walk");
+            try
+            {
+                float dt=1f/fps,minX=1,maxX=-1,minRoll=1,maxRoll=-1,minHead=1,maxHead=-1,minShoulder=1,maxShoulder=-1;
+                for(int i=0;i<fps;i++)model.Animate(dt,4.5f*dt);
+                for(int i=0;i<fps*3;i++)
+                {
+                    model.Animate(dt,4.5f*dt);
+                    minX=Mathf.Min(minX,model.WalkBodyOffset.X);maxX=Mathf.Max(maxX,model.WalkBodyOffset.X);
+                    minRoll=Mathf.Min(minRoll,model.WalkBodyRotation.Z);maxRoll=Mathf.Max(maxRoll,model.WalkBodyRotation.Z);
+                    minHead=Mathf.Min(minHead,model.WalkHeadRotation.Z);maxHead=Mathf.Max(maxHead,model.WalkHeadRotation.Z);
+                    minShoulder=Mathf.Min(minShoulder,model.WalkShoulderRotation.Y);maxShoulder=Mathf.Max(maxShoulder,model.WalkShoulderRotation.Y);
+                }
+                Event("whole-body-walk",new{fps,lateralTravel=maxX-minX,weightRoll=maxRoll-minRoll,headCounterRoll=maxHead-minHead,shoulderTurn=maxShoulder-minShoulder});
+                // Art-direction bounds: readable weight transfer at the battle camera,
+                // while keeping the head balanced and the short-leg silhouette intact.
+                Check(maxX-minX>.035f&&maxX-minX<.07f,"walking transfers visible body weight between supporting sides at "+fps);
+                Check(maxRoll-minRoll>.085f&&maxRoll-minRoll<.18f,"hips visibly lean through the stride without a toy-like rigid trunk at "+fps);
+                Check(maxShoulder-minShoulder>.12f&&maxShoulder-minShoulder<.24f,"shoulders follow the stride independently from the hips at "+fps);
+                Check(maxHead-minHead>.045f&&maxHead-minHead<.15f,"head balances the body with readable counter-motion at "+fps);
+            }
+            finally{model.Free();}
+        }
     }
     private void WalkPhrasing()
     {

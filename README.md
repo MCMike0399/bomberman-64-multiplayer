@@ -38,6 +38,14 @@ Choose **LOCAL BATTLE**, then set each of the eight roster slots to **Human**, *
 
 The Apple Silicon app bundles the game, .NET runtime, original assets, and optional Switch 2 USB backend. It runs independently of the Godot editor and source checkout; local play needs no server. The built app is installed at `~/Applications/Blast Circuit.app` on the development Mac. Open it from Finder; normal play starts fullscreen, and **F11** switches to a window.
 
+To remove duplicate builds after verifying the installed version:
+
+```sh
+python3 tools/cleanup-macos-builds.py --apply --include-export --expected-installed-version 0.18.0
+```
+
+Omit `--apply` to preview the selection. The cleanup keeps the installed app, removes other matching bundles and their Launch Services registrations, and preserves unrelated apps, ZIPs and test receipts.
+
 To rebuild from source, first install the matching **Godot 4.7.2 .NET export templates**, restore the kernel dependency above, and optionally build the USB adapter. Then run:
 
 ```bash
@@ -75,12 +83,12 @@ The default is loopback. No external hosting, domain, TLS, firewall changes or p
 |---|---|---|---|---|---|
 | Move | WASD | Arrows | Stick / D-pad | Stick / D-pad | Stick / D-pad |
 | Bomb / kick / pump | J | N or Enter | A | A | Cross |
-| Hold carry / release throw | Space | M or Numpad 1 | X or LB | B or L | Square or L1 |
-| Precision aim while carrying | K (Shift alias) | Ctrl | RT | ZR | R2 |
-| Remote detonation | L or R | Comma or Backspace | B or RB | X or R | Circle or R1 |
+| Hold carry / release throw | K | M or Numpad 1 | X or LB | B or L | Square or L1 |
+| Precision aim while carrying | L (Shift alias) | Ctrl | RT | ZR | R2 |
+| Remote detonation | I or R | Comma or Backspace | B or RB | X or R | Circle or R1 |
 | Leave battle | Esc | Esc | Menu | + | Options |
 
-**Ready, aim, throw:** keep your left hand on WASD and your right hand around J/K/L. Hold Space near a bomb to lift it, or hold Space and tap J to create one overhead. Keep Space held and tap J to pump. Hold K: A/D turn the aim, W/S change the distance. Small nudges start slowly; sustained input sweeps faster. Release Space to throw; L detonates remote bombs. Shift also aims and R also detonates. Controllers use the same sequence with carry, bomb and right trigger; the left stick or D-pad adjusts aim. Releasing the aim modifier lets you reposition while keeping the selected direction and range. [Keyboard research and evidence limits](docs/iteration17-keyboard-research.md).
+**Ready, aim, throw:** keep your left hand on WASD and your right hand around J/K/L. Hold K near a bomb to lift it, or hold K and tap J to create one overhead. Keep K held and tap J to pump. Hold L: A/D turn the aim, W/S change the distance. Small nudges start slowly; sustained input sweeps faster. Release K to throw; I detonates remote bombs. Shift also aims and R also detonates. Controllers use the same sequence with carry, bomb and right trigger; the left stick or D-pad adjusts aim. Releasing the aim modifier lets you reposition while keeping the selected direction and range. [Keyboard research and evidence limits](docs/iteration17-keyboard-research.md).
 
 Deliberate aim covers 2–9 cells on level ground, with a high lob that can reach upper terraces. The outlined reticle stays visible over scenery: a ring marks a landing, an X marks a blocked or unsafe endpoint, and an edge arrow points toward an endpoint outside the frame. It has no added text labels. The prediction accounts for terrain height, cover, walls and fuse expiry; moving opponents can still interrupt the flight. Pumping increases blast power without shifting an aimed landing. There is no target lock or aim assist: leading a moving opponent and choosing when to stand still are the skill. [Reticle diagnosis](docs/iteration17-reticle.md); [original manual controls and project choices](docs/iteration16-controls-research.md).
 
@@ -174,7 +182,7 @@ Runs save screenshots, authoritative state traces, assertion results, engine log
 
 ## Verify
 
-[Iteration seventeen changes and focused evidence](docs/iteration17-overview.md) cover the keyboard layout, clean reticle, opening upgrades and compact gait. [Verification results and captured evidence](docs/verification.md) record the broader checks.
+[Current walking, keyboard and installation changes](docs/iteration18-walking.md) cover this iteration. [Earlier reticle and opening-reward changes](docs/iteration17-overview.md) remain documented. [Verification results and captured evidence](docs/verification.md) record the broader checks.
 
 The checks below are executable integration tests, run with `dotnet run`:
 
@@ -212,7 +220,7 @@ The game already uses native Metal. The `macOS Metal` export preset declares App
 
 ## Character, UI and effects
 
-The current menu is a live 3D theatre: characters share lighting and floor shadows, mode plaques have solid bevels and selection motion, and the camera has restrained parallax. The eight-seat roster uses a green stage with short MAN/COM/OFF controls; the winner celebrates on a lit podium in a dimensional arcade theatre, with a physical standings board, metallic medals and raised replay buttons. The helmet is softly oval (slightly shorter vertically, with fuller front-to-back roundness and the same width), centered slightly forward to balance its rear volume, with a separate rounded faceplate and a softer neck connection. The compact pear torso, short relaxed arms and full pink boots retain the approved proportions. The suit is a little slimmer while retaining the large helmet, gloves and boots. Short, fixed-length legs stay attached at the hips. Bounded eased steps remove the earlier recovery overshoot, and boot counter-rotation keeps the soles rolling gently through the stride. A restrained body spring and delayed glove/head follow-through preserve the cartoon motion. [Current gait checks and recording](docs/iteration17-overview.md). The head retains its softly oval proportions. [Character references and measured corrections](docs/iteration16-character.md). Stopping settles the pose without extra steps or changing gameplay speed. [Walk tuning, original-footage observations and regression tests](docs/iteration15-walk.md).
+The current menu is a live 3D theatre: characters share lighting and floor shadows, mode plaques have solid bevels and selection motion, and the camera has restrained parallax. The eight-seat roster uses a green stage with short MAN/COM/OFF controls; the winner celebrates on a lit podium in a dimensional arcade theatre, with a physical standings board, metallic medals and raised replay buttons. The helmet is softly oval (slightly shorter vertically, with fuller front-to-back roundness and the same width), centered slightly forward to balance its rear volume, with a separate rounded faceplate and a softer neck connection. The compact pear torso, short relaxed arms and full pink boots retain the approved proportions. The suit is a little slimmer while retaining the large helmet, gloves and boots. Short, fixed-length legs stay attached at the hips. Bounded eased steps remove the earlier recovery overshoot, and boot counter-rotation keeps the soles rolling gently through the stride. The waist transfers weight, shoulders turn independently, opposite arms follow each foot, and the head counterbalances the motion. A slower distance-driven cadence leaves more time for each step without slowing the player. [Current gait checks and recording](docs/iteration18-walking.md). The head retains its softly oval proportions. [Character references and measured corrections](docs/iteration16-character.md). Stopping settles the pose without extra steps or changing gameplay speed. [Walk tuning, original-footage observations and regression tests](docs/iteration15-walk.md).
 
 Match setup now displays an actual lit miniature of the selected arena and a native arrow-controlled rules rail.
 
@@ -231,7 +239,7 @@ python3 tools/playtest/run.py --scenario presentation
 
 ## Screenshots
 
-The gallery contains real exported-app captures. Model front/side/three-quarter images and the walking clip are refreshed for v0.16.0’s slimmer suit and compact, fixed-length legs. AI, difficulty-selection and WASD menu images are updated for v0.13.0; other scenes retain their verified earlier captures. The bomb-trail closeup uses a temporary inspection camera on actual actors. The controller tester shows device detection, not new physical button testing.
+The gallery contains real exported-app captures. Model views, controls, gameplay and walking clips are refreshed for v0.18.0. The walking clip shows side and three-quarter inspection views followed by the ordinary gameplay camera. Other historical clips retain their documented versions. The bomb-trail closeup uses a temporary inspection camera on actual actors. The controller tester shows device detection, not new physical button testing.
 
 [Watch precision aiming and a charged throw](docs/videos/precision-aim.mp4) — actual practice gameplay, normal speed, with the ordinary battle camera. The range changes, pumping keeps the chosen endpoint, and release commits the lob.
 
@@ -243,7 +251,7 @@ The gallery contains real exported-app captures. Model front/side/three-quarter 
 
 ![Larger reward icon after breaking temple cover](docs/images/opening-loot.png)
 
-[Watch the compact chibi walking animation](docs/videos/walk-personality.mp4) — normal-speed movement, first with a temporary inspection camera and then the normal battle camera. [References and fixed-leg continuity checks](docs/iteration16-character.md); [current gait and focused checks](docs/iteration17-overview.md).
+[Watch the compact chibi walking animation](docs/videos/walk-personality.mp4) — normal-speed movement, with side and three-quarter inspection views followed by the normal battle camera. [References and fixed-leg continuity checks](docs/iteration16-character.md); [current gait and focused checks](docs/iteration18-walking.md).
 
 [Watch Easy, Medium and Hard in actual gameplay](docs/videos/ai-difficulties.mp4) — three labeled six-second excerpts, normal simulation speed and game audio. [AI behavior and test results](docs/iteration13-ai.md).
 

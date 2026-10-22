@@ -135,16 +135,19 @@ public partial class PlaytestDriver
                 }
                 JoyButton primary=pad is null?JoyButton.A:ControllerProfile.BombButton(ControllerProfile.Family(pad.Name));
                 JoyButton carry=pad is null?JoyButton.X:ControllerProfile.CarryButton(ControllerProfile.Family(pad.Name));
-                void Carry(bool down){if(pad is null)CtlKey(Key.Space,down);else CtlButton(pad.RuntimeId,carry,down);}
+                void Carry(bool down){if(pad is null)CtlKey(Key.K,down);else CtlButton(pad.RuntimeId,carry,down);}
                 void Primary(bool down){if(pad is null)CtlKey(Key.J,down);else CtlButton(pad.RuntimeId,primary,down);}
-                void Aim(float value){if(pad is null)CtlKey(Key.K,value>.35f);else Axis(JoyAxis.TriggerRight,value);}
+                void Aim(float value){if(pad is null)CtlKey(Key.L,value>.35f);else Axis(JoyAxis.TriggerRight,value);}
                 void Range(bool down){if(pad is null)CtlKey(Key.W,down);else Axis(JoyAxis.LeftY,down?-1:0);}
                 void Turn(bool down){if(pad is null)CtlKey(Key.D,down);else Axis(JoyAxis.LeftX,down?1:0);}
-                Carry(true);await ControllerFrames(2);Primary(true);await ControllerFrames(2);Primary(false);await ControllerFrames(2);
+                Carry(true);await ControllerFrames(2);
+                if(pad is null){var intent=PlayerControls.Read(0,1);Check(intent.B&&!intent.Aim,"keyboard K holds carry without entering aim");}
+                Primary(true);await ControllerFrames(2);Primary(false);await ControllerFrames(2);
                 Check(Player.GetProperty("carrying").GetString()=="bomb",name+": native carry plus primary creates the held bomb");
                 if(pad is not null){Aim(.3f);await ControllerFrames(2);Check(!Player.GetProperty("aiming").GetBoolean(),name+": below-threshold right trigger does not enter aim");}
                 Aim(1);await ControllerFrames(4);float startRange=AimNumber(Player,"aimRange"),px=AimNumber(Player,"x"),pz=AimNumber(Player,"z");
-                Check(Player.GetProperty("aiming").GetBoolean(),name+": K or canonical right trigger enters the authoritative aim stance");
+                Check(Player.GetProperty("aiming").GetBoolean(),name+": L or canonical right trigger enters the authoritative aim stance");
+                if(pad is null){var intent=PlayerControls.Read(0,1);Check(intent.B&&intent.Aim,"keyboard K plus L keeps carry and aim held together");}
                 Range(true);await ControllerFrames(8);Range(false);await ControllerFrames(2);
                 float delta=AimNumber(Player,"aimRange")-startRange;
                 Check(delta>.2f&&delta<BombThrowRules.AimRangeSpeed*8/30f,name+": native range starts with fine nudges below the maximum sweep rate");
@@ -164,6 +167,7 @@ public partial class PlaytestDriver
                 await Capture("precision-input-"+(pad?.RuntimeId.ToString()??"keyboard"),0);
                 Aim(0);await ControllerFrames(3);
                 Check(Player.GetProperty("carrying").GetString()=="bomb"&&!Player.GetProperty("aiming").GetBoolean(),name+": releasing aim preserves the held bomb");
+                if(pad is null){var intent=PlayerControls.Read(0,1);Check(intent.B&&!intent.Aim,"releasing L keeps K carry active");}
                 Carry(false);await ControllerFrames(4);
                 Check(Player.GetProperty("carrying").ValueKind==JsonValueKind.Null,name+": native carry release throws after aim");
                 Event("aim-native-result",new{name,delta,turn,physicalInputClaim=false});

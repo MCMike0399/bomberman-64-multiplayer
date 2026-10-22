@@ -101,17 +101,17 @@ public partial class BattleHud : Control
         if(recovering.Length>0)return string.Join(", ",recovering.Select(p=>"P"+(p.GetProperty("slot").GetInt32()+1)))+" dizzy: wiggle the stick and tap buttons to recover";
         var family=ControllerHub.Current.ActiveFamily;
         string primary=family==ControllerFamily.Keyboard?"J":ControllerProfile.ButtonName(family,ControllerProfile.BombButton(family));
-        string carry=family==ControllerFamily.Keyboard?"SPACE":ControllerProfile.ButtonName(family,ControllerProfile.CarryButton(family));
-        string remote=family==ControllerFamily.Keyboard?"L / R":ControllerProfile.ButtonName(family,ControllerProfile.RemoteButton(family));
+        string carry=family==ControllerFamily.Keyboard?"K":ControllerProfile.ButtonName(family,ControllerProfile.CarryButton(family));
+        string remote=family==ControllerFamily.Keyboard?"I / R":ControllerProfile.ButtonName(family,ControllerProfile.RemoteButton(family));
         foreach(var p in players.Where(p=>!p.GetProperty("bot").GetBoolean()&&p.GetProperty("alive").GetBoolean()&&!p.GetProperty("ghost").GetBoolean()))
         {
             int seat=p.GetProperty("slot").GetInt32();
-            if(family==ControllerFamily.Keyboard){primary=seat==1?"N / ENTER":"J";carry=seat==1?"M":"SPACE";remote=seat==1?", / BACKSPACE":"L / R";}
+            if(family==ControllerFamily.Keyboard){primary=seat==1?"N / ENTER":"J";carry=seat==1?"M":"K";remote=seat==1?", / BACKSPACE":"I / R";}
             string who="P"+(seat+1);
             if(p.GetProperty("carrying").GetString()=="bomb")
             {
                 bool latched=p.TryGetProperty("carryFromPrimary",out var primaryCarry)&&primaryCarry.GetBoolean();
-                string aim=family==ControllerFamily.Keyboard?(seat==1?"Ctrl":"K"):ControllerProfile.AimName(family);
+                string aim=family==ControllerFamily.Keyboard?(seat==1?"Ctrl":"L"):ControllerProfile.AimName(family);
                 string release=latched?$"{PromptBar.Spoken(carry)} throws":$"release {PromptBar.Spoken(carry)} to throw";
                 if(p.TryGetProperty("aiming",out var aiming)&&aiming.GetBoolean())
                     return $"{who}: left/right turns · up/down sets range · nudge to fine-tune · {release}";

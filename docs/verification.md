@@ -1,5 +1,25 @@
-# Iteration seventeen: visible aiming and livelier local play — 2026-10-21
+# Iteration eighteen: coordinated walking and keyboard correction — 2026-10-21
 
+| Check | Result |
+|---|---|
+| Whole-rig movement | **59 checks**, including body/shoulder/head motion at 30/60/120 FPS |
+| Full exported Mac journey | **2,064 assertions, 172 captures, zero runtime errors** |
+| Headless core / bundled package smoke | **840 / 247 assertions** passed |
+| Final walking recording | **52 checks, 5 captures**, 608 decoded frames / 20.2667 seconds |
+| Native reticle recording with new keys | **40 checks, 15 captures**, 413 decoded frames / 13.7667 seconds |
+| Tooling | Public contracts pass, including six duplicate-app cleanup safety tests |
+
+The full exported run is `artifacts/iteration18-final-graphical/playtest/20261022T022345.367662Z-all` (162.332 seconds including build/import). Reticle inputs lost real application focus twice; the existing bounded retry restarted whole trials and the third completed. Functional assertions were not selectively retried. A later visual review found that the new three-quarter *inspection camera* hid the actor behind the court wall. Only that harness camera was corrected; a fresh export/package smoke and focused 52-check walking recording verify the final view. Gameplay rendering, controls and motion are identical to the full passing run.
+
+The body was moving, but too subtly to carry the gait. A new whole-body regression failed on .024-unit lateral travel before the change. A waist pivot now separates shoulder follow-through from hip motion; opposite arms share the foot phrasing, the head counterbalances, and the stride cadence slows while player speed remains unchanged. Head proportions and fixed short legs remain intact. [Measured bounds, rig details and limits](iteration18-walking.md).
+
+Keyboard controls are **J bomb, K carry, L aim, I remote**, with Shift/R aliases. Native checks verify K+J pickup, K+L simultaneous hold/aim, release-L retention, and release-K throw. Space has no gameplay action. The reticle has no new labels. Controller mappings and second-keyboard controls are unchanged; synthetic tests do not certify fresh physical-controller behavior.
+
+The final [walking clip](videos/walk-personality.mp4) contains 397 frames / 13.2333 seconds at 1×, 1280×800/30 FPS. Source `iteration18-final-walk-clear/20261022T022833.287351Z-walk-feel` segments are [199,340) side, [344,472) three-quarter, and [476,604) normal battle camera. Every section was decoded and visually inspected; actor movement comes from ordinary inputs. The full [reticle clip](videos/throw-reticle.mp4) comes from `iteration18-reticle-video/20261022T022900.857695Z-reticle` and distinguishes normal match actions, separate renderer contracts and actual Results cleanup. Screenshots and controls in README were refreshed.
+
+The installed v0.18.0 app matches all 217 export files and passes strict signature verification. Duplicate app bundles are removed only after installation and launch verification, using exact identity and payload checks; ZIPs, receipts and unrelated applications are preserved. Eight duplicate bundles were removed; the final filesystem inventory and Spotlight both report only `~/Applications/Blast Circuit.app`. Its Launch Services gameplay smoke produced 58 snapshots and zero stderr. Two renamed backups had no Launch Services registration; that explicit missing-entry case is now handled and tested, while unrelated errors stop deletion. Final cleanup evidence is retained under `artifacts/iteration18-install`. Hosted checks are verified after push; local Metal evidence remains separate from the intentionally disabled hosted GPU lane.
+
+## Iteration seventeen baseline — 2026-10-21
 | Check | Result |
 |---|---|
 | Gameplay / client / AI / audio | **136 / 118 / 52 / 19** checks passed |

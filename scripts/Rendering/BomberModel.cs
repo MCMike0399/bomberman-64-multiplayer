@@ -6,6 +6,7 @@ namespace BlastCircuit.Rendering;
 public partial class BomberModel : Node3D
 {
     private readonly Node3D _body=new(),_leftArm=new(),_rightArm=new(),_leftLeg=new(),_rightLeg=new();
+    private readonly Node3D _upperBody=new(),_upperParts=new();
     private Node3D _stars=new();
     private Label3D _nameLabel=null!;
     private bool _carrying,_stunned,_ghost;
@@ -32,6 +33,10 @@ public partial class BomberModel : Node3D
     public int PumpAnimationCount {get;private set;}
     public float WalkPose=>_leftLeg.Rotation.X;
     public float WalkBodyHeight=>_body.Position.Y;
+    public Vector3 WalkBodyOffset=>_body.Position;
+    public Vector3 WalkBodyRotation=>_body.Rotation;
+    public Vector3 WalkHeadRotation=>_head.Rotation;
+    public Vector3 WalkShoulderRotation=>_upperBody.Rotation;
     public float WalkCompression=>1-_body.Scale.Y;
     public float LeftFootLift=>(_body.Transform*(_leftLeg.Transform*_leftBoot.Position)).Y-.145f;
     public float RightFootLift=>(_body.Transform*(_rightLeg.Transform*_rightBoot.Position)).Y-.145f;
@@ -47,7 +52,7 @@ public partial class BomberModel : Node3D
     public void KickWindup(float remaining){_kickWinding=remaining>0;_kickWindupRemaining=remaining;}
     public float CarryBlend=>_carryBlend;
     public float PumpIntensity=>Mathf.Sin(_pumpPulse*Mathf.Pi);
-    public Vector3 BombSocket=>_body.ToGlobal(new Vector3(0,Mathf.Lerp(.25f,1.47f,_carryBlend)+Mathf.Sin(_pumpPulse*Mathf.Pi)*.09f,.08f));
+    public Vector3 BombSocket=>_upperParts.ToGlobal(new Vector3(0,Mathf.Lerp(.25f,1.47f,_carryBlend)+Mathf.Sin(_pumpPulse*Mathf.Pi)*.09f,.08f));
     public void Pump(int charge){_charge=charge;_pumpPulse=1;PumpAnimationCount++;}
     public void ShowName(bool visible)=>_nameLabel.Visible=visible;
     public void SetSuitColor(Color color)
@@ -80,16 +85,20 @@ public partial class BomberModel : Node3D
         var suit=art.Color(color,.46f);var white=art.Color(new("fff7e9"),.48f);var pink=art.Color(new("ee4a90"),.42f);
         var face=art.Color(new("ffe0b7"),.78f);var dark=art.Color(new("272341"),.55f);var gold=art.Color(new("ffd15a"),.36f);
         AddChild(_body);
+        // Upper-body pivot at the waist: shoulders can follow the planted hips
+        // without dragging the short legs or rotating the helmet around the floor.
+        _upperBody.Position=new(0,.37f,0);_upperParts.Position=new(0,-.37f,0);
+        _body.AddChild(_upperBody);_upperBody.AddChild(_upperParts);
         // The suit is a compact pear: tucked shoulders over a slightly fuller waist.
         var torso=new MeshInstance3D {Name="Torso",Mesh=_torsoMesh??=CreateHelmet(false),MaterialOverride=art.Color(TorsoColor(color),.46f),
             Position=new(0,.53f,0),Scale=new(.395f/.854f,.38f/.79f,.37f/.73f),Rotation=new(0,0,Mathf.Pi)};
-        _body.AddChild(torso);_torsoParts.Add(torso);
-        _torsoParts.Add(Sphere(_body,new(0,.722f,0),new(.16f,.065f,.16f),art.Color(TorsoColor(color),.46f)));
-        RoundedBox(_body,new(0,.405f,.015f),new(.395f,.085f,.34f),dark);
-        RoundedBox(_body,new(0,.41f,.195f),new(.13f,.12f,.055f),gold,.35f);
-        RoundedBox(_body,new(0,.41f,.227f),new(.066f,.06f,.012f),dark,.2f);
+        _upperParts.AddChild(torso);_torsoParts.Add(torso);
+        _torsoParts.Add(Sphere(_upperParts,new(0,.722f,0),new(.16f,.065f,.16f),art.Color(TorsoColor(color),.46f)));
+        RoundedBox(_upperParts,new(0,.405f,.015f),new(.395f,.085f,.34f),dark);
+        RoundedBox(_upperParts,new(0,.41f,.195f),new(.13f,.12f,.055f),gold,.35f);
+        RoundedBox(_upperParts,new(0,.41f,.227f),new(.066f,.06f,.012f),dark,.2f);
         // A softly rounded helmet sits over a slimmer suit; the shallow face remains easy to read.
-        _head.Position=new(0,HeadCenter,0);_body.AddChild(_head);
+        _head.Position=new(0,HeadCenter,0);_upperParts.AddChild(_head);
         var helmet=new MeshInstance3D {Name="HelmetShell",Mesh=_helmetMesh??=CreateHelmet(),MaterialOverride=suit};
         _head.AddChild(helmet);_suitParts.Add(helmet);
         _head.AddChild(new MeshInstance3D {Name="FaceRim",Mesh=_faceRimMesh??=CreateCurvedFacePatch(.646f,.466f,0,FaceCenterY,.009f),MaterialOverride=art.Color(new("8b755c"),.8f),Position=new(0,FaceCenterY,0)});
@@ -104,7 +113,7 @@ public partial class BomberModel : Node3D
         Cylinder(_head,new(0,HelmetHalfHeight+.002f,HelmetForward),.058f,.1f,dark);
         Sphere(_head,new(0,HelmetHalfHeight+.086f,HelmetForward),new(.225f,.225f,.225f),pink);
         _leftArm.Position=new(-.25f,.68f,0);_rightArm.Position=new(.25f,.68f,0);
-        _body.AddChild(_leftArm);_body.AddChild(_rightArm);
+        _upperParts.AddChild(_leftArm);_upperParts.AddChild(_rightArm);
         foreach(var arm in new[]{_leftArm,_rightArm})
         {
             Sphere(arm,new(0,-.073f,0),new(.13f,.19f,.13f),white);
@@ -244,9 +253,9 @@ public partial class BomberModel : Node3D
     public void Animate(float dt,float distance)
     {
         _time+=dt;
-        // One complete left/right stride covers 1.9 units, independent of frame rate.
+        // One complete left/right stride covers 2.4 units, independent of frame rate.
         // Distance drives the gait; stopping never advances the feet in place.
-        _walkPhase=Mathf.PosMod(_walkPhase+Mathf.Clamp(distance,0,.3f)/1.9f,1);
+        _walkPhase=Mathf.PosMod(_walkPhase+Mathf.Clamp(distance,0,.3f)/2.4f,1);
         float previousSpeed=_speed;
         _speed=Mathf.Lerp(_speed,Mathf.Min(1,distance/Mathf.Max(dt,.001f)/3),1-Mathf.Exp(-10*dt));
         float acceleration=Mathf.Clamp((_speed-previousSpeed)/Mathf.Max(dt,.001f),-3,3);
@@ -278,8 +287,9 @@ public partial class BomberModel : Node3D
         float hop=Mathf.Pow(Mathf.Sin(beat*Mathf.Pi),2);
         float bodyHop=hop*.025f*freeStride,suitSquash=compression*.012f*freeStride;
         float hipWeight=-Mathf.Sin((_walkPhase-.06f)*Mathf.Tau)*freeStride;
-        float pawPhase=(_walkPhase-.1f)*Mathf.Tau;
-        var pawTargets=new Vector2(Mathf.Sin(pawPhase)+Mathf.Sin(pawPhase*2)*.16f,Mathf.Sin(pawPhase+.16f)+Mathf.Sin(pawPhase*2+.3f)*.12f)*freeStride;
+        // Opposite arm follows the leading foot, with a little soft lag. Sharing
+        // foot phrasing keeps the whole stride coherent instead of independent waves.
+        var pawTargets=new Vector2(-leftStep.Reach,rightStep.Reach)*freeStride;
         _gloveStrideLag=_gloveStrideLag.Lerp(pawTargets,1-Mathf.Exp(-20*dt));
         float armSwing=_gloveStrideLag.X,otherArmSwing=_gloveStrideLag.Y;
         _headStrideLag=_headStrideLag.Lerp(new Vector3(hop*freeStride,armSwing,hipWeight),1-Mathf.Exp(-16*dt));
@@ -292,11 +302,11 @@ public partial class BomberModel : Node3D
         float spread=.25f+_charge*.065f*_carryBlend;
         _leftArm.Position=new(-spread,.68f+_carryBlend*.12f+Mathf.Max(0,-armSwing)*.018f,-armSwing*.025f);_rightArm.Position=new(spread,.68f+_carryBlend*.12f+Mathf.Max(0,otherArmSwing)*.015f,otherArmSwing*.02f);
         _leftArm.Scale=new(1,1+_carryBlend*.8f-Mathf.Max(0,-armSwing)*.06f,1);_rightArm.Scale=new(1,1+_carryBlend*.8f-Mathf.Max(0,otherArmSwing)*.05f,1);
-        float left=Mathf.Lerp(-.1f-armSwing*.55f+breath*.025f,-2.9f-pump*.18f,_carryBlend)-toss*1.7f-lift*.2f-victory*2.7f;
-        float right=Mathf.Lerp(-.14f+otherArmSwing*.48f-breath*.018f,-2.9f-pump*.18f,_carryBlend)-toss*1.7f-lift*.2f-victory*2.7f;
+        float left=Mathf.Lerp(-.1f-armSwing*.75f+breath*.025f,-2.9f-pump*.18f,_carryBlend)-toss*1.7f-lift*.2f-victory*2.7f;
+        float right=Mathf.Lerp(-.14f+otherArmSwing*.68f-breath*.018f,-2.9f-pump*.18f,_carryBlend)-toss*1.7f-lift*.2f-victory*2.7f;
         _leftArm.Rotation=new(left-kick*.35f,-.07f-armSwing*.08f,Mathf.Lerp(-.48f+breath*.025f-armSwing*.055f,-.12f-_charge*.035f,_carryBlend));
         _rightArm.Rotation=new(right+kick*.4f-drop*.45f,.07f-otherArmSwing*.07f,Mathf.Lerp(.50f-breath*.025f-otherArmSwing*.045f,.12f+_charge*.035f,_carryBlend));
-        _body.Position=new(sway*.009f+hipWeight*.012f,bodyHop-compression*.005f*freeStride+breath*.009f-pump*.08f+lift*.04f+victory*.08f-death*.18f+(_ghost?.18f+Mathf.Sin(_time*3)*.08f:0),0);
+        _body.Position=new(sway*.009f+hipWeight*.024f,bodyHop-compression*.005f*freeStride+breath*.009f-pump*.08f+lift*.04f+victory*.08f-death*.18f+(_ghost?.18f+Mathf.Sin(_time*3)*.08f:0),0);
         _body.Scale=new(1+pump*.06f+suitSquash*.5f,1-pump*.09f-death*.18f-suitSquash,1+pump*.06f+suitSquash*.5f);
         _body.Rotation=new(_speed*.08f+hop*.022f*freeStride+acceleration*.012f-_carryBlend*_charge*.025f+toss*.12f,-armSwing*.035f,(_stunned?Mathf.Sin(_time*9)*.22f:0)+death*.48f-hipWeight*.04f+walk*.012f+sway*.012f);
         _body.Position+=new Vector3(0,-drop*.035f,kick*.045f+drop*.018f);
@@ -305,11 +315,13 @@ public partial class BomberModel : Node3D
         _body.Rotation=_body.Rotation.Lerp(new Vector3(_airborne?Mathf.Sin(_time*8)*.3f:0,0,1.35f+(_heldVictim?Mathf.Sin(_time*12)*.045f:0)),_downBlend);
         // Short rigid limbs rotate from the hip. Their white stems and pink
         // boots share one transform, so recovery never lengthens a leg.
+        float shoulderTurn=armSwing*.095f*(1-_carryBlend*.85f);
+        _upperBody.Rotation=new(hop*.025f*freeStride,shoulderTurn,hipWeight*.022f);
         float glance=Mathf.Sin(_time*.73f)*Mathf.Pow(Mathf.Max(0,Mathf.Sin(_time*.31f)),6)*idle;
         _head.Position=new(-_headStrideLag.Z*.008f,HeadCenter-_headStrideLag.X*.005f,0);
         // Keep the approved round helmet while the suit compresses at touchdown.
         _head.Scale=new(1/(1+suitSquash*.5f),1/(1-suitSquash),1/(1+suitSquash*.5f));
-        _head.Rotation=new(breath*.025f-_speed*.075f-pump*.08f+_headStrideLag.X*.025f,glance*.11f+_headStrideLag.Y*.025f,_headStrideLag.Z*.035f-sway*.025f);
+        _head.Rotation=new(breath*.025f-_speed*.075f-pump*.08f+_headStrideLag.X*.025f,glance*.11f-shoulderTurn*.62f+_headStrideLag.Y*.025f,_headStrideLag.Z*.05f-sway*.025f);
         // Short asynchronous-looking blinks keep the roster alive without hiding the face in combat.
         float blinkPhase=_time%4.7f;
         float eyeHeight=blinkPhase>4.52f?Mathf.Max(.12f,Mathf.Abs(blinkPhase-4.61f)/.09f):1;

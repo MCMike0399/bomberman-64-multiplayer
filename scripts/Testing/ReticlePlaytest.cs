@@ -19,9 +19,9 @@ public partial class PlaytestDriver
             await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"normal two-human temple match starts",180);
             _root.InjectInput(0,null);_root.InjectInput(1,null);
             await ControllerFocusReady();_controllerFocusTrial=true;
-            CtlKey(Key.Space,true);await ControllerFrames(2);
+            CtlKey(Key.K,true);await ControllerFrames(2);
             CtlKey(Key.J,true);await ControllerFrames(2);CtlKey(Key.J,false);await ControllerFrames(4);
-            Check(Player.GetProperty("carrying").GetString()=="bomb","normal match Space plus J carries a bomb overhead");
+            Check(Player.GetProperty("carrying").GetString()=="bomb","normal match K plus J carries a bomb overhead");
             var preview=_root.ThrowPreviews.Single();Event("normal-reticle",preview);
             await Capture("normal-reticle-overhead",0);
             Check(preview.EndpointMarkerVisible,"normal carrier has a visible endpoint reticle even near stock cover");
@@ -34,7 +34,7 @@ public partial class PlaytestDriver
                 Check(preview.EndpointMarkerVisible,"normal carrier endpoint remains marked facing "+key+" even when cover truncates the arc");
                 ReticlePixels(preview);
             }
-            CtlKey(Key.Shift,true);CtlKey(Key.S,true);await ControllerFrames(38);CtlKey(Key.S,false);await ControllerFrames(3);
+            CtlKey(Key.L,true);CtlKey(Key.S,true);await ControllerFrames(38);CtlKey(Key.S,false);await ControllerFrames(3);
             preview=_root.ThrowPreviews.Single();Event("normal-reticle-short",preview);await Capture("normal-reticle-short",0);
             Check(preview.EndpointMarkerVisible,"short-range ordinary keyboard aim retains a visible endpoint marker");
             Check(preview.End=="Obstructed"&&!preview.LandingMarkerVisible,"stock cover produces a warning cross without suggesting a safe landing");
@@ -68,7 +68,7 @@ public partial class PlaytestDriver
                 ReticlePixels(new("probe",0,1000,0,1000,"Void",1,false,probe.EndpointLabel,ScreenX:probe.EndpointScreenPosition.X,ScreenY:probe.EndpointScreenPosition.Y));
             }
             finally {probe.QueueFree();}
-            CtlKey(Key.Shift,false);CtlKey(Key.Space,false);await ControllerFrames(4);
+            CtlKey(Key.L,false);CtlKey(Key.K,false);await ControllerFrames(4);
             Check(_root.ThrowPreviews.Count==0,"releasing the final carrier removes every endpoint overlay");
             await ReticleResultsLifecycle();
         }
