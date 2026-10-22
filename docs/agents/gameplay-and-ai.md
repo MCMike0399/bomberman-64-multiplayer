@@ -1,0 +1,220 @@
+# Gameplay and AI maintenance
+
+Read this guide before changing authoritative actions, terrain collision, rewards,
+bot navigation or difficulty. Use the source links for current constants; iteration
+documents explain why a rule exists and may describe superseded behavior.
+For keys, prompts and device input, read [input and UI](input-and-ui.md).
+
+## Establish the failing behavior first
+
+1. Identify the session: local normal battle, practice or network; record stage,
+   seed, human/CPU slots, difficulty and the ordinary input sequence.
+2. Observe accepted player/bomb state and the actual symptom in the same run.
+   A bomb overhead, an accepted `aiming` flag and a visible target are separate facts.
+3. Build a bounded assertion that fails on the symptom before editing its rules.
+   Use a managed fixture for authority logic and a native journey for input/rendering.
+4. Minimize while keeping the failing path. Practice clears conditions that can
+   matter in a normal match; an empty courtyard does not reproduce cover collision.
+5. Change the owning layer; repeat the original journey and the focused regression.
+   Finish when the original failure is absent and related invariants still hold.
+
+## Authority, transport and presentation
+
+- [BlastSession](../../src/Bomber.Game/Simulation/BlastSession.cs) owns game state;
+  its partial files share that authority. [BlastSim](../../src/Bomber.Game/Simulation/BlastSim.cs)
+  defines entities and terrain semantics; [BlastStages](../../src/Bomber.Game/Simulation/BlastStages.cs)
+  builds the actual arenas.
+- [LocalMatch](../../src/Bomber.Game/LocalMatch.cs) adapts the kernel session context
+  to deterministic local time/randomness. [LocalSession](../../src/Bomber.Client/LocalSession.cs)
+  advances that same simulation through the engine-facing `ISession` interface.
+- [NetworkSession](../../src/Bomber.Client/NetworkSession.cs) uses HTTP and WebSocket
+  messages. The independent [Bomber.Server](../../src/Bomber.Server/Program.cs) registers
+  `BomberRealtimeGame` on Burbuja.Hosting. Online play uses the same product rules.
+- Local play needs neither an HTTP server nor Docker. Network verification requires
+  an actual available server; local success cannot certify server delivery.
+- The generic kernel owns transport/lobby infrastructure, not bomb or bot policy.
+  Keep game fixes in this repository's product simulation; preserve its MIT provenance.
+- Authority is 30 Hz; complete snapshots arrive at 15 Hz. Await accepted state rather
+  than assuming two rendered frames equal two new snapshots.
+- [GameRoot](../../scripts/GameRoot.cs) composes sessions and input;
+  [ArenaView](../../scripts/ArenaView.cs) renders accepted state.
+  [SnapshotMotion](../../scripts/Rendering/SnapshotMotion.cs) smooths presentation.
+  Render interpolation, animation and camera work cannot fix authoritative collision.
+- Inputs express intent, never positions/hits. Maintain local/network input queues,
+  snapshot fields and validation together when extending a gameplay action.
+- A separately running server must be rebuilt/restarted when authority changes are
+  delivered. Inspect its ownership/version first; external deployment is separate work.
+  [Architecture and network boundaries](../architecture.md).
+
+## Bomb actions: preserve both input paths
+
+`A`, `B`, `R` below mean semantic primary, carry and remote actions, not physical keys.
+Current bindings belong to [PlayerControls](../../scripts/PlayerControls.cs), the README
+and the input guide; older iteration tables are historical.
+
+- [BombActions](../../src/Bomber.Game/Simulation/BlastSession.BombActions.cs) owns
+  primary edges, hold candidates, placement validation and deliberate contextual kicks.
+- A primary tap places near the feet, with a small forward bias and supported-center
+  fallback. Exclude the placing owner when validating its initial overlap.
+- `OwnerMayLeave` grants one geometric departure from that overlap. Clear it on
+  separation, height change, pickup/launch or owner loss; it is not blast immunity.
+- Walking away leaves the fresh bomb stationary. Returning into it after separation,
+  or making a fresh primary press beside it, can deliberately initiate the kick.
+- Holding the original primary placement while stationary lifts that same bomb after
+  the hold threshold. Movement intent cancels the candidate so a departing player
+  does not retrieve a bomb from behind and accidentally pump instead of planting.
+- Carry-held plus primary creates directly overhead. Further accepted primary edges
+  pump a carried bomb. Holding primary does not generate repeated pump presses.
+- Primary-lifted bombs throw on a carry press; carry-held pickup/create throws on
+  carry release. Preserve `CarryFromPrimary` and edge consumption for both paths.
+- Placement rejection publishes `bomb-blocked` for capacity/space feedback. Diagnose
+  input acceptance, inventory, support and overlap before changing offsets or radii.
+  [Placement regression](../iteration12-bombs-research.md),
+  [action checks](../../tests/Bomber.Game.Tests/BombActionsChecks.cs),
+  [placement checks](../../tests/Bomber.Game.Tests/BombPlacementChecks.cs).
+
+## Throws, precision aim and fuse ownership
+
+- [BombThrowRules](../../src/Bomber.Game/Simulation/BombThrowRules.cs) supplies shared
+  launch/flight/static projection math; [ThrowAim](../../src/Bomber.Game/Simulation/BlastSession.ThrowAim.cs)
+  owns accepted direction/range, fine-start ramps and reset/retention rules.
+- Aiming plants the carrier. Horizontal intent rotates relatively; vertical intent
+  changes range. Releasing Aim restores movement while retaining the selected aim;
+  ending the carry/new carry resets it. Right input turns clockwise on the arena.
+- Digital taps and partial analog intent use the same bounded fine-start adjustment.
+  Ordinary movement returns to full normalized speed when Aim is inapplicable.
+- Pumps increase blast power; they do not change deliberately selected range.
+  Ordinary non-aim throws retain their separate movement/pump-dependent launch rule.
+- Project the full bomb footprint against terrain, cover and pillar tops. Keep launch,
+  gravity and landing-height equations aligned between authority and preview.
+- The projection is advisory: moving players/bombs and future terrain/water changes
+  can interrupt it. A visible marker is not a guaranteed hit or automatic targeting.
+- The endpoint renders shapes only: safe landing ring, warning X, offscreen arrow.
+  `EndpointLabel` is diagnostic metadata, not visible text. Match/phase gating and
+  explicit hide-before-QueueFree prevent a carrier's overlay surviving into Results.
+  [Reticle diagnosis](../iteration17-reticle.md), [aim rules](../iteration16-aim.md).
+- Timed bombs pause their fuse while carried and resume afterward. Stopping a normal
+  bomb against a corner must retain its fuse; wall contact never grants remote mode.
+- Blue remotes wait while their owner can command them. Losing owner/connection,
+  living status or remote capability resumes the remaining ordinary fuse.
+- Remote command selects the oldest eligible owned remote, including moving bombs.
+  AI opportunity evaluation must inspect the exact bomb authority would detonate.
+- Red and remote inventory modes are exclusive: latest pickup wins for future bombs.
+  Existing bombs keep their own mode, subject to the orphaned-remote fallback above.
+  Red penetrates soft cover; equal fire/pump levels share the radius formula.
+  [PowerUpRules](../../src/Bomber.Game/Simulation/PowerUpRules.cs),
+  [mode checks](../../tests/Bomber.Game.Tests/PowerUpModeChecks.cs).
+
+## Contact, terrain and recovery
+
+- [Kicks](../../src/Bomber.Game/Simulation/BlastSession.Kicks.cs) commits direction
+  during a planted wind-up and revalidates the bomb at strike time. Fuses continue;
+  stun/fall/death/disconnect/reset cancel pending strikes; consumed edges stay consumed.
+- [BombTravel](../../src/Bomber.Game/Simulation/BlastSession.BombTravel.cs) sweeps the
+  full radius. A visible launch hop does not let a rolling shot pass through a wall.
+  Billiard transfer preserves fuse/mode; impact knockdown uses capped impulses.
+- A kicked bomb can leave a downward lip, fall and resume rolling on landing.
+  `ResumeRollingAfterFall` distinguishes that behavior from ordinary carried throws.
+  Ignore only the existing trailing ledge overlap; preserve uphill and pillar collision.
+- [BodyContacts](../../src/Bomber.Game/Simulation/BlastSession.BodyContacts.cs) resolves
+  height-aware player circles with terrain-aware shared corrections. Preserve tangent
+  travel and bounded yielding; ghosts/carried players are not solid blocking bodies.
+- [Grapple](../../src/Bomber.Game/Simulation/BlastSession.Grapple.cs) owns finite stumble,
+  held victims, effort cooldowns and thrown-player flight. Direction changes/fresh action
+  edges accelerate recovery; holding a single direction/button does not repeat effort.
+- A carrier may lift a downed opponent, move, then throw. Hold relationships are paired;
+  escape, expiry, death, disconnect and reset must detach both sides safely.
+  Recovery consumes its action edges even on the get-up tick.
+- Ghost latching is finite, follows its victim and supports shake-off reversals.
+  Keep ghost nuisance/expiry authoritative; ghost contact can destroy a pickup.
+- `StageLayout.SurfaceAt` and `CanCross`/`CanWalk` in BlastSim are distinct: ramps
+  support connected walking; directed downward exits may initiate falling.
+- Water/void tier metadata is not the landing plane. Use actual water/void heights;
+  a player's center leaving support starts falling, while radius-only shoreline grazing
+  remains safe. Keep accepted water-death presentation from rewinding a practice respawn.
+- [FloodRules](../../src/Bomber.Game/Simulation/FloodRules.cs) owns flood timing.
+  [TempleStageView](../../scripts/Rendering/TempleStageView.cs) applies render height scale
+  (currently 1.35) to authority Y. Decorative bedrock, foam, icons and camera fitting
+  cannot add walkable floor, ramps or collision height.
+  [Travel/water diagnosis](../iteration11-kick-research.md).
+
+## Inventory, cover and pickup rendering
+
+- [Loot placement](../../src/Bomber.Game/Simulation/BlastSession.Loot.cs) uses terrain
+  distance and seeded placement to supply nearby cover around each temple spawn.
+  The first destroyed crate assigned to a spawn zone gives a useful fire/bomb reward;
+  later crates use the weighted pool/drop chance in PowerUpRules.
+- Inventory caps, exclusive modes and pickup counters belong to PowerUpRules and
+  authority item processing. New cover rewards survive their revealing explosion;
+  test through the full fuse/hazard lifetime before collecting.
+- [PowerupModel](../../scripts/Rendering/PowerupModel.cs) separates icon geometry from
+  its base plate. Icon scale/lift is visual; changing its size must not alter pickup
+  collision, inventory or plate dimensions accidentally.
+- `loot-opening` verifies normal battle plant → retreat → surviving reward → collection,
+  matching real inventory/counters and item-model removal. Its focused inspection camera
+  is identified separately from normal battle-camera evidence.
+  [Loot checks](../../tests/Bomber.Game.Tests/LootAvailabilityChecks.cs).
+
+## AI policy and known failure mechanisms
+
+- [Bots](../../src/Bomber.Game/Simulation/BlastSession.Bots.cs) selects ordinary intent;
+  [BotNavigation](../../src/Bomber.Game/Simulation/BlastSession.BotNavigation.cs) observes
+  displacement and steers around visible bodies/collision.
+- [NavigationGraph](../../src/Bomber.Game/Simulation/Ai/NavigationGraph.cs) caches directed
+  stage walk edges. An open graph edge does not prove an off-center body can turn.
+- [TimedDangerField](../../src/Bomber.Game/Simulation/Ai/TimedDangerField.cs) predicts
+  visible fuse/chain/hazard intervals conservatively. Merged intervals may reject a
+  real safe gap; they must not invent a safe passage through an active threat.
+- Difficulty profiles change reaction, depth, spacing, cadence and tactical utilities;
+  keep equal speed, collisions, resources, damage and visible information.
+  `medium` and legacy wire `normal` select the same Medium profile.
+  Exact policy values live in [BotDifficultyProfile](../../src/Bomber.Game/Simulation/Ai/BotDifficultyProfile.cs).
+- Preserve escape validation and timed route safety when increasing pressure.
+  Easy has occasional attack intent so cautious spacing cannot suppress every attack.
+- A body backed against stone needs body-aware route checks. Off-center diagonal
+  contact needs ordinary axis-separated motion probes and brief alternate steering.
+- Measure zero-input idle as well as blocked requested movement. Neutral score optima
+  can freeze without issuing movement. Bounded safe exploration and expiring failed
+  waypoints recover without teleporting, increasing speed or bypassing collision.
+- Exclude legitimate stun/held/airborne/kick pauses from stall diagnosis.
+- Goal commitment stabilizes travel; expire it on reaching the committed cell so the
+  reward cannot keep a bot in its post-blast refuge indefinitely.
+- Stock Pyramid exposed a second optimum: geometric distance favored the lower court
+  over the ramp detour into real blast range. Attack-intent scoring now rewards actual
+  visible blast positions. Changing reaction delay alone does not fix that route choice.
+  [AI fixture definitions and measured limits](../../tests/Bomber.Ai.Tests/README.md).
+
+## Choose the test that owns the symptom
+
+| Symptom | Read first | Focused regression/journey |
+| --- | --- | --- |
+| Tap ignored, depart/pickup wrong | BombActions, placement validation | BombPlacementChecks; `placement`, `bomb-handling` |
+| Kick stops at a ledge, fuse stalls | Kicks, BombTravel, UpdateBombs | KickTimingChecks, BombTravelChecks; `kick-physics` |
+| Stuck crowd, recovery or victim hold | BodyContacts, Grapple | BodyContactChecks, GrappleChecks; `body-contacts`, `grapple` |
+| Shore death or ramp mismatch | BlastSim, landing heights, FloodRules | TraversalAndGhostChecks; `traversal`, `hurry-water` |
+| Aim misses or guide disappears | BombThrowRules, ThrowAim, ArenaView | AimedThrowChecks; `precision-aim`, `reticle` |
+| Missing upgrade/icon | Loot, PowerUpRules, PowerupModel | LootAvailabilityChecks; `loot-opening`, `asset-audit` |
+| Bot freeze | BotNavigation, body collision, timed search | NavigationLivenessChecks; `--liveness`, `--soak` |
+| Bot retreats forever or never threatens | BotGoalScore, commitment, blast geometry | `--pressure`, `--stock-human-pressure`; `ai-play` |
+
+Managed entrypoints: `dotnet run --project tests/Bomber.Game.Tests` and
+`dotnet run --project tests/Bomber.Ai.Tests -- --stock-human-pressure`.
+Native journey: `python3 tools/playtest/run.py --scenario reticle`.
+See [testing and delivery](testing-and-delivery.md) for safe execution and evidence gates.
+
+## Interpret evidence and original references correctly
+
+- Pressure is visible opponent-threatening blast opportunity, not raw bomb count,
+  confirmed damage, wins or fun. Track first pressure, maximum gap, safe exits, pickups,
+  deaths and completed rounds; preserve active/eligible time denominators.
+- Compare policies with identical stage/loot/seed/slots. Normalized rates are descriptive
+  when routes, survival, resources and round counts diverge; report mixed results.
+- Sustaining an invulnerable human target is an isolated fixture, not an ordinary match.
+  State fixture edits explicitly; recorded gameplay must use ordinary inputs.
+- Use [primary-source research](../research.md), [manual controls](../iteration16-controls-research.md)
+  and [recorded observations](../gameplay-research.md) before claiming original behavior.
+  Footage can show a kick/throw without revealing which button caused it; pump growth
+  alone does not establish exact timing/radius/distance formulas.
+- Store reference media outside distributed game assets. Distinguish publisher claims,
+  direct frame observations, inference and project tuning. Read the latest correction
+  before reusing older controls, gait or numerical choices from an iteration note.

@@ -1,0 +1,169 @@
+# Input, menus, aiming and UI
+
+Read this guide before changing bindings, device sampling, menu navigation,
+controller prompts, throw previews or shared UI primitives. It records decisions
+that source alone cannot explain. Source and the current README remain the
+lookup for exact values; older iteration documents retain historical evidence.
+
+## Current controls and compatibility
+
+The v0.18 mapping supersedes the Space-carry/K-aim/L-remote mapping in v0.17
+and earlier positional Nintendo mappings. The user requested keyboard-only play
+with both hands on keys and restored K carry because Space felt awkward.
+
+| Action | Keyboard 1 | Keyboard 2 | Xbox | Switch printed labels | PlayStation |
+|---|---|---|---|---|---|
+| Move | WASD | Arrows | Stick / D-pad | Stick / D-pad | Stick / D-pad |
+| Bomb, contextual kick, pump | J | N / Enter / Num 0 | A | A | Cross |
+| Hold carry, release throw | K | M / Num 1 | X / LB | B / L | Square / L1 |
+| Precision aim | L / Shift | Ctrl | RT | ZR | R2 |
+| Remote detonation | I / R | Comma / Backspace / Num 2 | B / RB | X / R | Circle / R1 |
+| Menu confirm / back | Enter / Esc | Enter / Esc | A / B | A / B | Cross / Circle |
+
+Space has no gameplay action. F11 or Alt+Enter toggles fullscreen.
+Keep both held-state sampling and short-press detection consistent when changing
+bindings: [PlayerControls](../../scripts/PlayerControls.cs) owns keyboard states,
+`BombKey` and `RemoteKey`; [ControllerProfile](../../scripts/Input/ControllerProfile.cs)
+owns family semantics and prompt labels. Update the README, controller panel,
+HUD hints and native tests together.
+
+The positional action table in early controller research is historical; use
+the current table above and `ControllerProfile` for product actions.
+Godot `JoyButton` identifiers are canonical physical positions, not printed
+Nintendo letters: `A` is south/printed B; `B` is east/printed A; `Y` is
+north/printed X. Translate actions through `ControllerProfile`, preserving the
+backend's canonical IDs. Nintendo confirms with printed A and backs with B.
+
+## Input path and fairness
+
+- [ControllerHub](../../scripts/Input/ControllerHub.cs) discovers devices,
+  publishes native input, tracks active prompt family/keyboard seat, guards focus,
+  and combines held state with bomb/remote press edges through `Read`.
+- [MatchControllerBindings](../../src/Bomber.Client/MatchControllerBindings.cs)
+  fixes device seats during a match; [LocalControllerLayout](../../src/Bomber.Client/LocalControllerLayout.cs)
+  handles the keyboard/gamepad layout. Consult these before changing hotplug.
+- [InputPolicy](../../src/Bomber.Client/InputPolicy.cs) resolves D-pad, stick and
+  keyboard directions without summing device speed. Ordinary movement normalizes
+  nonzero direction after radial stick drift rejection; diagonals gain no speed.
+- [GameRoot](../../scripts/GameRoot.cs) sends local commands to
+  [LocalSession](../../src/Bomber.Client/LocalSession.cs) or
+  [NetworkSession](../../src/Bomber.Client/NetworkSession.cs).
+  Both adapters retain action edges, including Aim, for authority consumption.
+
+Precision aim preserves partial analog strength; ordinary running stays equally
+fast for keyboard, D-pad and partial/full sticks. If Aim is held without a bomb,
+the ignored stance must still normalize any nonzero movement at the authority.
+Preserve speed, aim caps and command semantics across local/network/device paths.
+
+## Carry and aim recipe
+
+1. Start Practice or a normal local match. Hold K near a ground bomb to lift it,
+   or hold K and tap J to create one overhead. Keep K down throughout this recipe.
+2. Tap J while carrying to pump. Hold L to plant the carrier in precision stance.
+3. Use A/D to turn and W/S to change range. Short nudges begin slowly; sustained
+   same-direction input accelerates. Right turns clockwise on the arena map.
+4. Release L while retaining K: the bomb stays overhead, the chosen aim persists,
+   and WASD moves again. Re-enter L to adjust. Release K to throw.
+5. I or R detonates owned remote bombs. Shift is an alternative aim modifier.
+
+A separate primary-button flow exists: tap J to place, keep the original press
+held while stationary to lift that bomb, release J, then tap J to pump. This
+primary-lifted carry is latched; pressing K throws it. Distinguish that from
+hold-K carry, which throws on release. Controllers follow the same two paths.
+Walking into a resting bomb and a deliberate second primary press near it both
+support contextual kicking; no extra dedicated kick key is required.
+
+Aim is authority-owned, with no target lock or auto-aim. New carry, drop or throw
+resets chosen intent. Pumping changes blast strength while deliberate aim keeps
+its selected range. Read [precision throw research](../iteration16-aim.md)
+when changing the underlying throw policy.
+
+## Switch 2 USB: preserve the real sampling path
+
+Read [controller research](../controller-research.md) before touching
+[SdlGamepadBackend](../../scripts/Input/SdlGamepadBackend.cs) or
+[controller bootstrap/patches](../../tools/controllers/). Godot's bundled backend
+at the time of implementation did not expose Switch 2 Pro USB reliably.
+The optional adapter uses pinned SDL/libusb and a narrowly patched hybrid reader:
+USB bulk interface 1 initializes the pad; a separate nonexclusive macOS HID reader
+receives live reports from interface 0. Successful enumeration alone proves
+neither motion nor button delivery. Preserve both patches and their cleanup.
+The reader requires one uniquely identified USB controller and rejects ambiguous
+same-model devices rather than borrowing the wrong stream.
+
+`ControllerHub.PollNative` must sample all six canonical axes, including both
+triggers, through `PublishNativeAxes`. An earlier implementation sampled only
+axes 0/1: synthetic injected right-trigger tests passed while real ZR aiming
+would fail. `NativeAxesForPlaytest` deliberately shares the production sampler;
+retain this seam when refactoring, rather than testing only event publication.
+Aim uses canonical right trigger above its threshold in `ControllerHub.Read`.
+
+The installed adapter implements USB, not Switch 2 Bluetooth. Third-party BLE
+bridges exist; their claims are not this project's hardware evidence. Preserve
+that boundary in docs and do not infer wireless support from USB detection.
+Physical Xbox/Switch stick and button observations exist in controller research;
+DualSense and newer trigger paths have synthetic coverage unless a separate
+physical observation explicitly records them. Label synthetic results as such.
+
+## Menus, focus and hotplug
+
+WASD and arrows belong in native Godot `ui_*` actions. Keep ordinary text entry
+working; global key interception can steal W/A/S/D from text fields. Install
+per-device face-button confirm/cancel actions for embedded popup menus as well.
+Use [MenuStickNavigation](../../src/Bomber.Client/MenuStickNavigation.cs) for
+sampled held-stick navigation, hysteresis and repeat: an axis that gradually
+crosses the engage threshold or stops sending changed reports must still work.
+
+`ScreenName` controls menu-navigation enablement independently of match binding
+lifetime; Lobby and Results can retain bindings while requiring menu behavior.
+Actual window/application focus gates gameplay. Focus loss releases commands;
+restoration requires a fresh neutral/rearm interval before held actions resume.
+Hotplug must preserve unaffected seats and clear disconnected-device state.
+P2 Ctrl/Enter/Backspace presses must select P2 prompts, not P1 labels.
+
+Native harnesses require real foreground focus. Their bounded focus retries
+restart the whole interrupted scenario from released controls and a fresh
+session; functional failures remain failures. Keep invalid-attempt evidence.
+For popup tests, reach a known endpoint with real keys before testing the next
+movement: prior mouse hover can leave the last item selected. See the
+[native focus guidance](../../tools/playtest/README.md#native-focus-interruptions).
+
+## Reticle rendering and lifecycle
+
+The user explicitly requested shape-only endpoints with no extra labels.
+[ThrowEndpointReticle](../../scripts/Rendering/ThrowEndpointReticle.cs) draws an
+outlined ring/crosshair, an unsafe gold cross or an offscreen edge arrow.
+`EndpointLabel` is diagnostic metadata, never visible copy.
+
+The stock Temple can produce `Obstructed` even on a short ordinary throw.
+Rendering only `Landing` previously made the carried-bomb reticle disappear.
+[BombThrowPreview](../../scripts/Rendering/BombThrowPreview.cs) uses a screen-space
+CanvasLayer at layer 2 so terrain cannot hide the marker. Keep its world arc and
+shared static projection, semantic endpoint colors and local-player ownership.
+Moving actors, bombs and future water changes can interrupt the forecast.
+
+[ArenaView](../../scripts/ArenaView.cs) gates previews to active Match Fight/Hurry
+and valid local carriers. Call `HidePreview` before deferred `QueueFree`:
+CanvasLayer descendants can otherwise survive visibly above Results even when
+an ancestor's 3D visibility changes. The normal-duel lifecycle regression reaches
+actual victory with a survivor carrying; it does not forge a Results snapshot.
+
+## UI identity and verification lookup
+
+Extend [ArcadeTheme](../../scripts/UI/ArcadeTheme.cs), its `PromptBar` keycaps and
+[BattleHud](../../scripts/UI/BattleHud.cs) primitives. Dela Gothic One carries
+headings/buttons/values; M PLUS Rounded 1c carries body labels. Retain their OFL
+notices. Stamped keys use ink outlines/lips and gold focus; the fuse clock and
+player tokens are the HUD's visual identity. Favor readable mixed-case copy,
+drawn icons and clear control focus over decorative uppercase labels or glyph
+arrows. Copy changes can also require exact native harness lookup updates.
+
+Find scenario membership/headless support in the single
+[catalog](../../assets/testing/scenarios.json), dispatched by
+[ScenarioCatalog](../../scripts/Testing/ScenarioCatalog.cs). Use `controllers`
+for mappings, seats, focus/hotplug and menus; `aim-inputs` for native K/J/L and
+canonical pad parity; `precision-aim` for authority range/turn/landing;
+`reticle` for actual marker pixels and Results cleanup; `wasd-menu` for native
+menu/text-field behavior. Native scenarios are synthetic production-path tests,
+not physical certification. Read [runner usage](../../tools/playtest/README.md)
+for commands, recording and timeout behavior before running them.

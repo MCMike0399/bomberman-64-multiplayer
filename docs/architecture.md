@@ -1,190 +1,168 @@
 # Architecture
 
-The design separates authoritative rules, session transport, and Godot presentation. Local practice and the online server instantiate the same simulation. A renderer consumes stage/state messages and sends movement/button intent; it never decides hits, wins or item ownership.
+Current architectural overview at the v0.18 runtime baseline. For maintenance
+procedures and the reasons behind decisions, start at the [agent handoff](agents/README.md).
+Exact constants, protocols and dependency pins remain in source/configuration.
+
+## Authority, transport and presentation
 
 ```mermaid
 flowchart TD
-    Controls[PlayerControls] --> Root[GameRoot composition root]
+    Controls[ControllerHub / PlayerControls] --> Root[GameRoot composition root]
     Root --> Session[ISession]
     Session --> Local[LocalSession]
     Session --> Network[NetworkSession]
     Local --> Facade[LocalMatch]
-    Facade --> Rules[BlastSession / BlastSim / BlastStages]
-    Network -->|HTTP + WebSocket JSON| Kernel[Burbuja.Hosting + Realtime]
+    Facade --> Rules[Product BlastSession / BlastSim / BlastStages]
+    Network -->|HTTP + WebSocket JSON| Kernel[Independent Burbuja.Hosting + Realtime server]
     Kernel --> Registration[BomberRealtimeGame]
     Registration --> Rules
-    Session -->|stage/state snapshots| Root
-    Root --> View[ArenaView + HUD]
+    Session -->|stage and state snapshots| Root
+    Root --> View[ArenaView / HUD / presentation events]
+    View --> Motion[SnapshotMotion / procedural models / camera / audio]
 ```
 
-## Modules and ownership
-
-| Module | Responsibilities | Dependencies |
+| Module | Owns | Dependency boundary |
 |---|---|---|
-| `src/Bomber.Game` | Match options, validated local roster, fixed-step authority adapter and realtime game registration | Kernel realtime contracts; product-owned Blast simulation |
-| `src/Bomber.Client` | `ISession`, local accumulator, network authentication/lobbies, reconnect, input sequencing, bounded message handoff | `Bomber.Game`, .NET HTTP/WebSocket APIs; no Godot dependency |
-| `src/Bomber.Server` | Independent ASP.NET executable, configuration and registration of the `blast` game | `Bomber.Game`, `Burbuja.Hosting` |
-| `scripts/GameRoot.cs` | Godot composition root, match menu, session lifecycle, input dispatch and HUD | Session interface and presentation |
-| `scripts/PlayerControls.cs` | Two keyboard layouts and gamepad intent | Godot input and `PlayerInput` value type |
-| `scripts/ArenaView.cs` | Procedural stage/entity geometry, lighting, visual smoothing and effects | Godot; decoded snapshots |
-
-`ISession` is the engine-facing seam: `Advance`, `SendInput`, `DrainMessages`, connection status, join code and disposal. `LocalSession` and `NetworkSession` implement it. The session module can be exercised without starting Godot; the simulation can be exercised without starting a server.
-
-`LocalMatch` adapts the kernel's `ISessionContext` interface to local players and deterministic time/randomness. `BomberRealtimeGame` implements `IRealtimeGame`; the online host registers it through dependency injection. The kernel owns authentication, reservations, lobby lifecycle, matchmaking, server placement, transport and rate limits. Game-specific rules stay in the game layer.
-
-The first iteration linked the kernel example. This iteration makes the adapted simulation product-owned so terrain, AI, and combat fixes belong to this game:
-
-- `src/Bomber.Game/Simulation/BlastSession.cs`
-- `src/Bomber.Game/Simulation/BlastSim.cs`
-- `src/Bomber.Game/Simulation/BlastStages.cs`
-
-Original simulation baseline: kernel revision `b0758339984bbeead1b3d1236f31e980aaa5f20e`. The current external dependency pin is `e3c46ab795a8095d55b75790d76ea2786559be7f`, its rewritten-history equivalent with identical runtime/source/build files; the only tree differences are sanitized Markdown documentation. MIT license in `burbuja-kernel/LICENSE`. The source checkout must still be present for kernel contract and hosting references. The server is this product's executable; it does not modify the generic kernel or run its example host. Simulation source retains provenance and the upstream MIT notice.
-
-## Simulation and game flow
-
-A single owner calls each session sequentially. Authority ticks at **30 Hz** and emits complete snapshots every other tick (**15 Hz**). Local play uses an accumulator with bounded catch-up after a paused window. The online kernel supplies its own fixed-tick lobby loop and load accounting. Bot decisions run inside the authority with the session's seeded random source.
-
-The match has ready, fight, hurry and round-over phases. Authority owns continuous planar movement, terrain tiers/ramps, bomb placement/kicks/carrying/pumping/throws, spherical blasts and occlusion, chain reactions, destructible blocks, items, stun/ghost state, round scoring and match completion. Static stage data describes cells, tier/ramp transitions and spawns. State snapshots carry current entities and a compact soft-block grid.
-
-The original publisher manual does not specify the exact equations or constants. This implementation's fuse, radii, movement and bot policy are project choices. Eight participants extends the original four-player battle mode. [Research](research.md) records sources and known differences.
-
-## Transport and responsiveness
-
-The client uses .NET `HttpClient` for guest identity, queue and lobby operations, and `ClientWebSocket` for the kernel application protocol. It does not depend on Godot RPC or Godot's high-level multiplayer wire format. A reservation may identify a different owning server; clients honor that returned address. HTTPS connections reject a downgrade to an insecure socket.
-
-Client input looks like `{t:"input",s:sequence,d:{x,z,a,b,r}}`. Authority normalizes and validates movement; clients cannot submit positions or hits. Server envelopes carry `{t,k,d}`, where `k` is the authoritative tick. Snapshots include per-player input acknowledgements. The network adapter sends current movement at 30 Hz and preserves bounded button transitions; it avoids a growing queue of obsolete movement commands. The handoff buffer coalesces state snapshots while retaining stage/control messages within a fixed capacity.
-
-Network receives run outside the engine thread. They hand detached JSON messages to a bounded buffer; Godot drains it on its own thread. `ArenaView` smooths entities toward the latest authoritative positions. There is **no client prediction, rollback, or reconciliation replay**, and this smoothing is not a timestamp-buffered interpolation system. TCP/WebSocket's reliable ordered delivery can delay newer snapshots behind lost packets. Internet play needs latency/loss measurement before making responsiveness claims.
-
-Disconnects clear authoritative human movement, and the kernel holds a seat for its reconnect grace. The client attempts reservation/socket reconnect with the same guest identity; this is not a persistent-account or save/resume system. A late human takes their kernel seat and replaces any bot occupying that slot, keeping the arena within eight participants.
-
-## Scaling and deployment boundary
-
-The independent host currently enables one in-process lobby server with capacity for eight lobbies and least-loaded placement. This is configuration, not an eight-lobby throughput benchmark. Every lobby has its own simulation state and bounded transport buffers. Single-authority ownership keeps the game loop free of cross-thread shared mutable entities.
-
-The generic kernel can expose multiple lobby servers and use its Redis/Valkey backplane for a multi-node fleet. Placement and fleet routing are kernel concerns; they do not require adding network details to bombs or players. Scaling requires configuring node/server identities, public socket addresses, shared guest signing keys and the backplane plugin. See the kernel's [realtime guide](../burbuja-kernel/docs/realtime-lobbies.md) and [Redis plugin guide](../burbuja-kernel/plugins/Burbuja.Plugins.Realtime.Redis/README.md).
-
-The intended deployment is an independent kernel host on the user's own server hardware, with Godot clients connecting to its lobby and WebSocket endpoints. The product does not require Docker or Compose. `Bomber.Server` registers the game on `Burbuja.Hosting`; an existing generic kernel host needs the equivalent game registration.
-
-This product has been exercised on one local server. Multi-node operation, failover, distributed load, TLS/public hosting and production capacity have not been verified here. No external infrastructure was provisioned.
-
-## Evidence and remaining work
-
-The executable game checks cover deterministic bot replay, participant limits, terrain, fuse/explosion behavior, input handling and round reset. Client contract checks exercise local sessions and transport serialization. Network smoke uses separate real WebSocket clients for 2–8 humans, private codes, authoritative movement, reconnect and server bots. The Godot smoke mode loads and runs the actual scene; it complements the plain C# checks.
-
-The game uses original procedural meshes and effects. The client now has articulated procedural characters, walking/carrying/stun poses, synthesized original sound cues, destructible-cover debris, and warm sandstone/water materials. Broader physical-controller coverage, accessibility, gameplay balancing and adverse-network testing remain further work. Neither tests nor this architecture document claim exact reproduction of the original game's undocumented behavior.
-
-
-## Sunken Temple geometry and presentation
-
-`sunken-temple` is an original 21×23-cell reconstruction of the supplied reference composition. Tier 1 forms the island, tier 0 the recessed cobbled court, and tiers 2–4 the rear pyramid. Broad stair cells connect these surfaces. The rear shrine occupies real hard cells rather than placing invisible decoration in a walkable route. Destructible cover is limited and important approaches remain open.
-
-The authority computes continuous surface height on ramps. Radius-aware movement rejects discontinuous terrain edges; bot searches use the same crossing rules. Explosions use three-dimensional distance and sample intervening terrain/cover before removing destroyed blocks. Presentation scales authoritative height consistently by 1.35 and builds visible steps from the same cell descriptors.
-
-`ArenaView` owns snapshot reconciliation and delegates terrain to `TempleStageView`, shared mesh construction to `ArtGeometry`, materials to `ArtMaterials`, articulated characters to `BomberModel`, and procedural audio to `BattleAudio`. The fitted perspective camera exposes the courtyard walls and stair risers while keeping playable bounds clear of the HUD. Desktop uses Forward+ (Metal on macOS), soft shadows, ambient occlusion and MSAA. Rendering does not modify authoritative positions or hit outcomes.
-
-The UI has separate modes, setup, online connection, lobby, match and results screens. Lobby information comes from actual kernel events; there is no pretend ready/start handshake. Local practice permits one human, clear paths and no match time limit. Eight-seat matches keep the compact portrait strip above the playfield.
-
-## Playtest and failure evidence
-
-`tools/playtest/run.py` launches the real Godot executable and optionally manages a local kernel process. `scripts/Testing/PlaytestDriver.cs` uses the composition root's normal sessions and injects movement/button intent. UI checks exercise actual engine input. Route assertions observe position and altitude; they do not teleport players. Every scenario records assertions, detached state snapshots, screenshots when graphical, and runtime logs. The runner rejects nonzero engine exits, missing reports, assertion failures, timeouts and engine/script errors.
-
-`--scenario script --script <file.json>` lets another agent specify navigation, held inputs, bounded movement goals, captures and state checks. Failure bundles live in unique folders under `artifacts/playtest/`; this keeps the exact failure witness separate from a later passing rerun. Headless runs explicitly disable image evidence. See the [harness guide](../tools/playtest/README.md) for commands and the script schema.
-
-
-## Iteration-three gameplay modules
-
-The simulation now separates bot behavior into `BlastSession.Bots.cs` and `Simulation/Ai`. Immutable navigation edges are cached; each lobby owns reusable search arrays, shared opponent/cover observations and timed danger fields. Predicted chain reactions and flood safety use the same blast/terrain rules as authoritative movement. Reaction profiles change decision timing without changing a player's physical capabilities. There is no external model call in the tick loop. [AI tests and measurements](../tests/Bomber.Ai.Tests/README.md) document both gains and CPU tradeoffs.
-
-`FloodRules` owns the Pyramid-inspired water curve and `PowerUpRules` owns drop weights, caps and inventory reset. Temple snapshots publish `hurryMode`, `waterLevel`, `waterStartsIn`, `waterRiseRate` and `hurryStartsIn`; other maps retain columns. Bots forecast the same water curve. Exact constants are documented project tuning informed by the [original manual and inspected gameplay footage](gameplay-research.md).
-
-Bomb snapshots now identify owner and carrier, pump count and effective level. Player snapshots include accepted pump and pickup serials. `BombModel` animates growth and fuse feedback; `BomberModel` supplies the lift/pump/throw pose and carry socket; `PowerupModel` gives each upgrade a distinct silhouette. Visual attachment never changes authoritative positions or hit results. A new match clears dynamic presentation state while static terrain can be reused.
-
-The engine harness checks actual model scale, active pumping pose, accepted inputs, inventory, flood height and survival. Training pickups exist only in local practice and use ordinary collection rules. Practice reset rebuilds a fresh match; there is no network debug-spawn or teleport command.
-
-
-## Roster and presentation polish
-
-`LocalRoster` validates and serializes eight editable Human/CPU/Off seats. Runtime seats are deliberately ordered humans first, then CPUs; color choices are reordered with them, so disabled or interleaved seats cannot change control bindings. `MatchOptions.PlayerAppearances` is validated and cloned at the authority boundary.
-
-Online appearance commands contain only an index, `{t:"appearance",d:{index:0}}`. The authority binds changes to the authenticated sender, validates indices 0–7 and sends current choices to joining and reconnecting players. Match snapshots and final scores include appearance independently of slot; this is cosmetic state and does not affect simulation randomness or outcomes.
-
-`ArcadeBackdrop` owns a live 3D menu stage. Mode and roster characters use the same world, light and floor, so their shadows and perspective agree. `RosterSelection` retains native focusable controls and exposes diagnostics from those actual visible models. `ArcadeModeButton` keeps native Button semantics while rendering a solid beveled plaque and eased selection response. Menu viewports suspend drawing when hidden. `CharacterPreview` remains for isolated online/winner previews. All scenes reuse `BomberModel`; its cached egg/pear meshes, animations and appearance updates are independent of match simulation. `BattleCameraRig` fits terrain and standing-character bounds after stage or viewport changes, preserves a perspective view, and adds shake relative to the fitted offset. `DisplayModeController` owns fullscreen shortcuts separately from match input.
-
-
-## Controller input boundary
-
-`InputPolicy` is engine-independent: it rejects non-finite axes, applies a radial stick deadzone, normalizes accepted direction to unit speed and resolves D-pad, stick and keyboard precedence without adding vectors. The authoritative server still owns movement, collision, bomb edges and speed limits.
-
-`MatchControllerBindings` reserves a controller identity for each eligible human seat for the duration of a match. Device-list reordering never transfers control between players. A unique reconnect can recover its seat under a new runtime ID; ambiguous replacements remain unassigned. The API supports explicit assignment, while the current UI requires restarting a match to resolve that ambiguous case.
-
-`ControllerHub` adapts Godot devices and the optional native USB backend to the same canonical events. It owns short-tap latches, action release gates at match entry/focus restoration, per-seat hotplug changes and family-aware prompts. `PlayerControls` reads physical keyboard keys and delegates policy to the hub. The live tester consumes face-button navigation so testing an action does not accidentally leave the screen. Native device IDs use a separate range; the controller harness exercises that range as well.
-
-`SdlGamepadBackend` loads a separate, input-only SDL library on the engine thread, opens only the Switch 2 Pro USB VID/PID, preserves queued button edges, and releases its handles on shutdown. The macOS build keeps bulk initialization and nonexclusive HID reports separate. Xbox/DualSense stay on Godot's backend. Generated libraries are ignored, preserve upstream notices, and are not part of the independent server. [Controller research](controller-research.md) records the source pins, macOS patches and wireless limitations.
-
-
-## Accepted presentation events
-
-`BlastSession.Presentation` publishes a monotonic per-match sequence and at most 128 recent immutable event records alongside snapshots. Accepted drops, held creation, lifts, kicks, pumps, throws, blasts, eliminations/respawns and round/flood transitions use the same local/server path without consuming simulation randomness. Continuous contact with a blocked bomb is deduplicated; the movement segment closes the former gap between bomb collision and kick detection. Final accepted actions are flushed before the match-ended envelope.
-
-`PresentationCursor` baselines the first state, consumes newer sequence numbers once in order, ignores older snapshots, and resets on a new match or reconnect. `ArenaView` owns presentation dispatch, while `ExplosionView`, `ExitEffect` and `BattleAudio` own their visual/audio lifetimes. The new game server is required for complete event cues; older snapshots retain only the older inferred placement/pump/blast/hurry fallback.
-
-Blast visuals use authoritative radius and hazard age, with a visible danger boundary while active and a nonhazardous dissipating tail. Small/medium/large effects differ in billow geometry and timing; dense chains reduce decorative lobes while retaining the boundary. Audio uses cached original PCM, bounded voice starts and local gain. Starting/leaving a match stops old voices. The graphical presentation scenario records actual mixer samples, checks cue deduplication, exercises real actions and verifies effect cleanup; pure audio tests inspect generated clips separately.
-
-
-## macOS packaging
-
-`tools/package-macos.py` derives an ARM64 template from the installed official Universal 2 template, exports the solution and self-contained managed runtime, adds native controller libraries/notices, and applies/verifies a local ad-hoc signature. Exporter log errors are failures even when the process exits zero. `ControllerHub` selects source-tree libraries in the editor and bundle-relative libraries in exported builds. The app harness omits the source path and runs from its evidence directory.
-
-`model-profile` is an inspection scenario: normal inputs rotate the actual authoritative player, and a temporary camera captures four sides of that player's real rendered model. It checks torso/helmet mesh depth, then restores the normal camera. It does not spawn a substitute character or change game state directly.
-
-
-## Recovery, carries and menu input roles
-
-`BlastSession.Grapple` owns finite knockdowns, rate-limited victim input effort, paired carry relationships and thrown-player physics. Snapshots expose recovery/holder/airborne state; accepted presentation events explain hits and releases. Both sides of a hold are detached on leave/reset/death, and disconnect releases safely. Bot recovery uses ordinary inputs. Numerical tuning is centralized in the grapple partial module; no client can set a stun timer or holder.
-
-`MenuStickNavigation` converts sampled held axes into deliberate steps with engage/release hysteresis, diagonal stability and repeat timing. It is independent of report frequency. `GameRoot.ScreenName` owns `ControllerHub.MenuNavigationEnabled`, separately from the lifetime of gameplay bindings; retained online lobby or results sessions therefore do not disable visible menu navigation. Switch synthetic regressions use the exact native-publication helper used by SDL reports, while physical observations stay separately labeled.
-
-`ArcadeRuleDial` retains native Godot focus/action semantics for stage/rule arrows. The setup stage preview builds the same authority cells through `TempleStageView`; it does not load a screenshot or invented collision map. The visual water/foundation are presentation-only and never expand walkable authority terrain.
-
-
-## Iteration-nine control and physics boundaries
-
-`SnapshotMotion` interpolates a bounded envelope-tick sample queue with a continuously advancing playback clock. A 100 ms buffer absorbs uneven packet arrivals without resetting interpolation; a bounded 1.15× catch-up prevents backlog growth, starvation holds until buffered again, and discontinuities snap. It does not extrapolate or predict. Smooth facing and distance-driven stride remain cosmetic. Ghost rider presentation follows its host; ghost nuisance strength, expiry and shake-off stay authoritative.
-
-`BlastSession.BombActions` centralizes primary-hold candidate/latch behavior and full-circle front-placement validation. A primary-lifted bomb throws on the carry press; legacy carry release remains supported. Rolling collision is substepped at the faster continuous-vector kick speed. `CanWalk` supplies directed downward graph edges while `CanCross` preserves strict ramp connectivity; falling is distinct from thrown-player recovery.
-
-AI planning uses the actual valid forward bomb location and ordinary orientation/tap/retreat inputs, rather than planning an underfoot bomb and accidentally kicking the real one away. Outcome tests require blasts, destroyed cover and drops. Nintendo per-device action buttons now follow printed A/B/X; Xbox/PlayStation remain unchanged.
-
-
-## Body contacts and kick impacts
-
-`BlastSession.BodyContacts` resolves height-aware player circles after movement/flight and before rider synchronization. Alternating pair order and repeated terrain-aware corrections share pressure through crowds. Tangential travel survives; idle/stunned yielding is capped across all neighbors per tick. Ghosts and carried players do not become blocking bodies. Released, overlapping holds receive full separation repair.
-
-Bomb travel sweeps the full radius in short increments. The launch hop is presentation height and does not permit a shot through walls; accepted player impact enters the existing authoritative flight/recovery system through a capped impulse helper. Billiard transfer retains both fuses. Remote authority verifies its owner remains able to command it; orphaned remotes resume the ordinary fuse and publish `remote-fuse`. A wall impact alone does not change remote mode.
-
-## Committed kicks, terrace travel and water contact
-
-`BlastSession.Kicks` owns a four-tick planted anticipation and five-tick movement recovery at the 30 Hz authority rate. Direction commits on contact; the strike revalidates that its bomb is still resting, reachable and intact. Bomb fuses keep running. Consumed button edges do not replay afterward. Accepted wind-up/strike/cancellation and snapshot timers drive the renderer. Knockdown, falling, death, disconnect and reset cancel pending strikes. Continuous blocked contact does not repeatedly restart the action.
-
-`BlastSession.BombTravel` handles gravity only for kicked bombs that leave a downward edge. A flag distinguishes these from ordinary carried throws. Swept radius checks preserve pillars and uphill faces; a bomb may escape its existing trailing overlap with the ledge it just left. Landing restores the shot’s horizontal momentum, including remaining substeps in the same tick. Billiards and contact preserve ordinary fuse rules. Numerical kick speed is unchanged.
-
-Water/Void cells have tier metadata zero, which is not their collision surface. Player and kicked-bomb landing use the actual water plane (or the below-stage void plane), so a low shore creates a real fall instead of immediate death at the top of the wall. Land support is based on the player center; body-radius grazing alone is not lethal. The renderer completes a buffered water-death position at the accepted contact point, skipping that correction when practice has already respawned the actor elsewhere.
-
-## Near-foot placement and exclusive special modes
-
-`TryBombPlacement` is shared by the authoritative action and AI planning. It tries a small .18-unit forward bias at the feet, then the supported player center. It validates terrain, other players and existing bombs while excluding the placing owner. The old .82 forward offset could make the radius touch a cell two grid steps from the player, which the one-edge connectivity predicate incorrectly rejected even on flat ground. Foot-level placement removes that invalid reach and permits ordinary placement beside stone.
-
-`OwnerMayLeave` is a geometric, single-departure permission for the owner’s initial overlap. It expires once clear, at a different height, or when the bomb is picked up/launched or its owner is no longer living. It neither pauses the fuse nor makes a blast harmless. Returning after separation uses normal contact collision and the committed kick. A fresh primary edge beside a bomb can deliberately start that same kick; simple departure cannot. Rejected space/capacity actions publish one `bomb-blocked` cue per press. The placement animation is cosmetic and does not pause walking. Any movement intent cancels the fresh-bomb hold-to-lift candidate; otherwise a near-foot bomb could be retrieved from behind after the player had already started departing.
-
-Red and remote are exclusive inventory modes by the user’s requested rule. Latest pickup wins for future bombs; existing bomb snapshots retain their own mode except for the established orphaned-remote fuse fallback when the owner loses command ability. Red’s radius formula remains identical at equal fire/pump levels; penetration is separate.
-
-Visual scale is independent of authority collision/blast radius: default bomb scale 1.22, pickup scale 1.20, and bomb target min(2.3, 1.22 + .04 × (fire−1) + .32 × pumps). Remote shells are blue with green indicators. Camera fitting uses actual pillar bounds and player headroom, tighter safe margins, and a slightly lower angle; terrain/actor visibility remains a tested constraint.
-
-## Difficulty profiles and progress-aware navigation
-
-`BotDifficultyProfile` is an immutable decision policy shared by local and server simulation. Easy/Medium/Hard vary reaction, search budget, spacing, cadence, item priorities and escape-route awareness. Medium accepts both `medium` and legacy `normal`; no physics or resource advantage is assigned to a difficulty. The goal evaluator rewards useful visible items/cover/opponents and reachable escape routes, with limited goal persistence. Cautious bots periodically attempt an attack instead of maintaining distance forever.
-
-`BlastSession.BotNavigation` observes actual displacement and distinguishes deliberate recovery/carry/flight/kick pauses. Failed waypoints expire from a short avoidance memory; neutral local optima receive a bounded safe exploration step. Steering probes the ordinary movement collision path and visible player bodies, then commits briefly to a legal alternate direction when a diagonal centering move is blocked. All recovery remains ordinary authoritative input, with unchanged speed and collision constraints.
-
-`--soak` evaluates stock-map scenarios independently of policy tests and records zero-input stalls, requested movement, safe exits, pressure, pickups and rounds. Five targeted fixtures reproduce specific collision/navigation failures. `ai-play` records actual Godot matches at each difficulty; `wasd-menu` drives native UI actions and verifies that text fields still type letters. Neither recording rewrites actor state.
+| `src/Bomber.Game` | Match options/rosters, local authority adapter, realtime registration and game rules | Kernel realtime contracts; no Godot rendering |
+| `src/Bomber.Client` | `ISession`, local accumulator, HTTP/WebSocket lobby/reconnect/input handling, bounded message handoff, input policies | Game and .NET APIs; no Godot dependency |
+| `src/Bomber.Server` | Independent ASP.NET executable and registration of the `blast` game | Game and Burbuja.Hosting |
+| `scripts/Input`, `PlayerControls` | Device/focus/menu handling and physical-to-semantic intent | Godot plus client input policies |
+| `scripts/GameRoot.cs` | Screen/session lifecycle, input dispatch, accepted messages and HUD composition | Session interface and presentation |
+| `scripts/ArenaView.cs` | Accepted entity reconciliation, motion, presentation event routing and render ownership | Godot; never authority for hits/wins/items |
+| `scripts/Rendering`, `scripts/UI` | Original procedural assets, effects/audio, stage/camera, shared menu/HUD primitives | Render and interaction state |
+
+`ISession` exposes advancement, input submission, message draining, status/join
+code and disposal. `LocalSession` and `NetworkSession` implement that seam.
+`LocalMatch` adapts the kernel session context to deterministic local time and
+randomness. `BomberRealtimeGame` registers the same product simulation online.
+Game-specific bomb, terrain, collision and bot fixes belong in `Bomber.Game`,
+not the generic kernel. The adapted simulation retains its MIT notice.
+
+The ignored external `burbuja-kernel` checkout supplies hosting/contracts. Restore
+it with the checked-in bootstrap tools and current pin; preserve the public/private
+boundary. [Trusted CI and dependency handling](ci.md) explains provisioning.
+
+## Simulation and messages
+
+Each session has one sequential owner. Authority runs at 30 Hz and emits complete
+snapshots every other tick (15 Hz). Local play uses bounded accumulator catch-up;
+the online kernel supplies its fixed-tick lobby loop. Bots use the session's seeded
+random source and ordinary semantic input. Ready, Fight, Hurry and RoundOver are
+separate phases; UI screen state is also separate from authority phase.
+
+Authority owns continuous movement, tier/ramp support and falls, placement/kicks,
+carrying/pumping/throws/aim, spherical blasts and occlusion, chains, destructible
+cover, upgrades, body contacts, recovery/grapples/ghosts, flood, scores and outcomes.
+Static stage messages describe cells, ramps and spawns; state messages carry
+accepted entities, soft-block bits, acknowledgements and presentation events.
+
+Input expresses direction and semantic primary/carry/remote/aim intent. Network
+messages use the kernel application protocol, not Godot RPC. The current input
+payload includes `x`, `z`, `a`, `b`, `r` and optional `aim`; inspect serialization
+and backward-compatible defaults before extending it. Clients never submit accepted
+positions, hits, item ownership or winners.
+
+The client uses `HttpClient` for identity/queue/lobbies and `ClientWebSocket` for
+realtime. Reservations can identify another owning server; the client honors it
+and rejects an insecure socket downgrade from HTTPS. Movement is sent at 30 Hz
+while bounded action transitions are retained. Off-thread receives hand detached
+JSON to a bounded buffer: stale state can coalesce while stage/control messages
+remain ordered. Godot drains this buffer on its own thread.
+
+Disconnect clears human commands; the kernel retains a seat for its reconnect
+grace. Reconnect uses the existing guest identity/reservation, not persistent
+accounts or saved-match recovery. A joining human replaces the bot in its assigned
+seat while the match stays within eight total participants. A mid-match join is
+marked ghost/pending-round-start rather than becoming an immediately living
+competitor; the next round initializes participation.
+
+## Motion and presentation
+
+Player roots use `SnapshotMotion`: a tick-stamped interpolation buffer with roughly
+100 ms playback delay, bounded samples, starvation hold and discontinuity snaps.
+This replaced the earlier per-arrival smoothing described in old iteration notes.
+Facing is smoothed separately. Other entities retain their own presentation paths.
+There is no prediction/rollback reconciliation; reliable ordered WebSocket delivery
+still requires adverse-network measurements before Internet responsiveness claims.
+
+`ArenaView` advances root motion and feeds actual rendered planar travel into the
+character gait. `BomberModel` separates hip/leg motion from a waist-pivot upper
+body; hands and carried-bomb socket share transforms. Original meshes and sounds
+are generated by code, with cached geometry/material/audio resources. Timed
+presentation events drive action poses/cues, independently of gameplay mutation.
+
+`TempleStageView` builds surfaces from authoritative cells. Tier height converts
+through `HeightScale` (currently 1.35) consistently across entities, bombs, water
+and previews. Upward cliff faces block traversal; directed downhill edges permit
+ordinary falls. Visual stone, foundation and water detail do not create support.
+`BattleCameraRig` fits terrain/character bounds and applies shake relative to that
+fit. Forward+/Metal, shadows, SSAO and MSAA are presentation configuration, not
+proof of performance or macOS Game Mode. [Visual maintenance guide](agents/visuals-and-animation.md).
+
+Throw preview and authoritative static travel share `BombThrowRules`, including
+swept collision, terrain support, water/void and fuse outcomes. Dynamic actors and
+future water changes remain outside the advisory forecast. Only local controlled
+carriers receive markers; screen-space endpoints remain visible over cover and
+are gated by Match plus Fight/Hurry, with explicit cleanup before Results.
+
+## Product seams
+
+- **Bomb actions/travel:** separate session partials own primary hold/edges,
+  contextual kicks, motion/fuse transitions, precision intent and grapples.
+  These remain one authority, not independently mutable competing services.
+- **Terrain/rewards:** immutable stage definitions and crossing rules feed both
+  movement and navigation. `FloodRules`, `PowerUpRules` and the loot partial own
+  flood curves, inventory modes/caps and deterministic cover rewards.
+- **AI:** cached terrain edges and lobby-owned reusable search buffers use timed
+  hazards and ordinary collision. Difficulty profiles vary decisions, not physical
+  ability. Progress-aware recovery handles body/centering/neutral deadlocks; goals
+  expire on arrival and attack utility can justify necessary ramp detours.
+- **Roster:** `LocalRoster` validates Human/CPU/Off seats and orders humans before
+  CPUs for runtime bindings; appearance follows the reordered seat. Online cosmetic
+  appearance is validated for the authenticated sender and does not alter physics.
+- **Screens:** Modes, Roster, Setup, Online, Lobby, Match and Results have explicit
+  lifecycles. Match binding lifetime does not imply that menu navigation is disabled
+  on Lobby/Results. Lobby information comes from actual server events.
+- **UI:** shared native focusable controls, stamped keycaps, portrait tokens and a
+  fuse clock sit over live 3D menu stages. Match and menu reuse the same character.
+- **Practice:** one local human, clear training paths, unlimited time and a fixed
+  learning cache. Reset creates a fresh match. Practice success is not proof that
+  ordinary covered battle layouts work; no network debug-spawn API is exposed.
+
+Keep these seams deep enough that a bug can be tested at its owner. Prefer a
+focused helper/partial when it isolates a real rule over a pattern hierarchy that
+adds indirection without separate policy or lifetime. Keep transport DTOs, Godot
+nodes and authority entities distinct; pair a pure test with an actual journey
+when the failure crosses their boundary.
+
+## Independent server and scaling limits
+
+The intended server runs independently on the user's hardware; Godot connects to
+its lobby/socket endpoints. Docker/Compose is not required. `Bomber.Server` registers
+this game on Burbuja.Hosting; another kernel host needs equivalent registration.
+Local play needs no server. The canonical QA profiles create an owned ephemeral
+loopback server rather than treating a stale developer listener as fresh evidence.
+
+The host currently uses configured in-process lobby capacity and least-loaded
+placement. Capacity settings are not throughput benchmarks. Each lobby has its
+own authority state and bounded buffers. The kernel's optional Redis/Valkey
+backplane and routing can support fleet configuration, but multi-node operation,
+failover, shared signing/public addresses and production load were not established
+by this session. Kernel guides are available inside the restored private checkout.
+No external deployment follows merely from building a server ZIP.
+
+## Verification and delivery
+
+Managed executables test rules/client/AI/audio; network smoke uses real independent
+HTTP/WebSocket clients, mixed bots, reconnect and input behavior. Godot journeys
+exercise actual scenes and ordinary input. `assets/testing/scenarios.json` is the
+single Python/C# catalog, and receipts validate exact completed coverage and hash.
+Headless geometry/state checks and graphical pixels/recordings answer different
+questions. [Testing and delivery](agents/testing-and-delivery.md) owns the workflow.
+
+The tested Mac app is self-contained and ad-hoc signed. Normal launch is fullscreen;
+QA defaults windowed. After verified installation, identity-checked cleanup leaves
+one app at `~/Applications/Blast Circuit.app`, retaining ZIPs and receipts. The
+public boundary excludes kernel source, private configuration, raw traces and
+reference artwork; distributed art/audio is original with required notices.

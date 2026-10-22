@@ -1,5 +1,7 @@
 # Blast Circuit
 
+For development handoffs, start with [AGENTS.md](AGENTS.md) and the [agent guides](docs/agents/README.md): current decisions, debugging, model tuning, tests and delivery pitfalls.
+
 A playable Godot C# arena battle game inspired by Bomberman 64, with original procedural art, 2–8 participants, local play, online private lobbies, matchmaking and server-controlled bots. The featured Sunken Temple arena has a stepped sandstone pyramid, a recessed courtyard, broad stairs and surrounding water. Animated characters, original synthesized action cues, expanding blast clouds, splashes and debris run in the Godot client.
 
 The original game supports four simultaneous players. Eight-player support and the numerical simulation tuning are decisions for this project. See [research and sources](docs/research.md).

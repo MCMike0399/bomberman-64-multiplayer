@@ -1,5 +1,7 @@
 # Controller compatibility research
 
+> Historical evidence: this document records its iteration. Read the [current maintenance guide](agents/input-and-ui.md) before reusing controls, animation tuning or compatibility claims.
+
 Verified 2026-10-20 against the installed engine, physical device enumeration and upstream source. Device detection, mapped controls, simulated events and observed human input are distinct evidence levels.
 
 ## Godot and Switch 2

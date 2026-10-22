@@ -1,5 +1,7 @@
 # Iteration seventeen: keyboard play, visible aiming and useful openings
 
+> Historical evidence: this document records its iteration. Read the [current maintenance guide](agents/README.md) before reusing controls, animation tuning or compatibility claims.
+
 ## Current behavior
 
 - **Both hands on the keyboard:** WASD moves; Space holds carry and releases to throw; J places, kicks contextually and pumps; K holds precision aim; L detonates remotes. Shift remains an Aim alias and R a remote alias. K no longer carries. Controller actions and bounded precision rates remain shared. [Persona 5 Royal screenshot observations, primary sources and inference limits](iteration17-keyboard-research.md).
