@@ -35,6 +35,7 @@ public partial class GameRoot : Node3D
         private set
         {
             _screenName=value;
+            _arena?.SetBattleActive(value=="Match");
             // Input role follows the visible screen; lobby/results retain match bindings.
             if(ControllerHub.Current is {} hub)hub.MenuNavigationEnabled=value is not ("Match" or "Controls");
         }

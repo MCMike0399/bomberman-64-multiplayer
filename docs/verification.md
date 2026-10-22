@@ -1,5 +1,33 @@
-# Iteration sixteen: compact chibi motion and deliberate throws — 2026-10-21
+# Iteration seventeen: visible aiming and livelier local play — 2026-10-21
 
+| Check | Result |
+|---|---|
+| Gameplay / client / AI / audio | **136 / 118 / 52 / 19** checks passed |
+| AI long-match matrix | **36 scenarios**, longest eligible safe idle 1.63 seconds |
+| Exact staged server and real HTTP/WebSocket smoke | Passed, **51.8 seconds**, including two-client aim; portable server packaged |
+| Full exported Mac regression | **2,028 assertions, 171 captures, zero runtime errors**, 105.096 seconds including build/import |
+| Headless core / bundled package smoke | **828 / 235 assertions** passed |
+| Exported text-free reticle recording | **40 checks, 15 captures**, 406 decoded frames at 30 FPS |
+| Exported walking recording | **36 checks, 4 captures**, 473 decoded frames at 30 FPS |
+| Installed app | **v0.17.0**, all 217 files match export, strict signature and Launch Services smoke passed |
+
+The final full run is `artifacts/iteration17-final-graphical/playtest/20261022T001243.090587Z-all`. It exercises the exported app with an owned ephemeral local server, not an old running developer server. Managed, public, headless and package receipts are under their corresponding `artifacts/iteration17-final-*` folders. No new physical-controller certification is inferred from synthetic input events. The installed app produced 57 gameplay snapshots and zero stderr. The matching project-owned localhost server was refreshed; external servers were not changed.
+
+The missing reticle was reproduced in a normal local Sunken Temple match with a bomb overhead. Cover produced an `Obstructed` endpoint, but the old renderer only showed a landing marker. Safe endpoints now have an outlined ring; blocked/unsafe endpoints an X; offscreen endpoints an edge arrow. There are **no reticle text labels**. A second regression ends a real duel while its winner still carries a bomb and verifies that Results clears the overlay. [Diagnosis and checks](iteration17-reticle.md).
+
+Keyboard play uses WASD + Space carry, J bomb/pump, K aim and L remote; Shift/R remain aliases. Native input checks confirm that K cannot also carry/release a bomb. [Observed Persona 5 Royal PC UI and design limits](iteration17-keyboard-research.md).
+
+Walking retains short fixed legs and approved head proportions. The old return curve exceeded intended reach by 40% and compressed almost an entire body drop into one 30 FPS frame. Bounded eased reaches and a symmetric bounce reduce actual maximum leg angle from .671 to .480 radians and maximum per-frame body-Y change from .0240 to .0139, with smaller glove/shoulder swings. Measurements establish continuity, not subjective charm. The [new walking clip](videos/walk-personality.mp4) is 269 frames / 8.9667 seconds at 1×: 4.7 seconds with an inspection camera, then 4.2667 seconds with the normal battle camera. Source is `iteration17-final-walk-video/20261022T001628.599125Z-walk-feel`; selected source frames are [196,337) and [341,469). Both segments were decoded and visually inspected.
+
+The [text-free reticle recording](videos/throw-reticle.mp4) is the full 406-frame / 13.5333-second export from `iteration17-final-reticle-video/20261022T001520.532290Z-reticle`. It contains normal local keyboard play, explicitly separate renderer contracts, and an ordinary duel ending while carrying. It is not a performance benchmark. README screenshots were refreshed from the final exported run, including model angles, current controls, temple, enlarged pickup icon and clean reticle.
+
+Loot now has balanced nearby temple cover, an opening fire/bomb reward per spawn area and a 60% later drop chance. Pickup symbols scale 1.30× while plates stay unchanged. The native `loot-opening` journey uses ordinary movement, placement, fuse, blast survival and collection; it verifies inventory and model removal without editing actor state.
+
+AI tests reproduced both reached-goal loitering and refusal to take a necessary ramp detour. In matched stock-Pyramid Medium seed64, pressure rose 4→7 over 30 seconds and longest gap fell 12.27→6.93 seconds with no bot death. Other seeds/difficulties vary; normalized soak pressure rose 1.83% overall, 1.20% Medium, 26.47% Hard, while Easy fell 14.51%. No speed, inventory, cooldown or escape-safety advantage was added. [Fixture definitions, measured tables and limits](../tests/Bomber.Ai.Tests/README.md).
+
+Local Mac signing remains ad-hoc. Hosted graphical CI remains intentionally disabled; local Metal captures supply that evidence. Hosted verification for this commit is checked after push, separately from these local receipts.
+
+## Iteration sixteen baseline — 2026-10-21
 | Check | Result |
 |---|---|
 | Gameplay / client / AI / audio | **134 / 118 / 36 / 19** checks passed |

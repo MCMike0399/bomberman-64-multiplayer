@@ -137,14 +137,14 @@ public partial class PlaytestDriver
                 JoyButton carry=pad is null?JoyButton.X:ControllerProfile.CarryButton(ControllerProfile.Family(pad.Name));
                 void Carry(bool down){if(pad is null)CtlKey(Key.Space,down);else CtlButton(pad.RuntimeId,carry,down);}
                 void Primary(bool down){if(pad is null)CtlKey(Key.J,down);else CtlButton(pad.RuntimeId,primary,down);}
-                void Aim(float value){if(pad is null)CtlKey(Key.Shift,value>.35f);else Axis(JoyAxis.TriggerRight,value);}
+                void Aim(float value){if(pad is null)CtlKey(Key.K,value>.35f);else Axis(JoyAxis.TriggerRight,value);}
                 void Range(bool down){if(pad is null)CtlKey(Key.W,down);else Axis(JoyAxis.LeftY,down?-1:0);}
                 void Turn(bool down){if(pad is null)CtlKey(Key.D,down);else Axis(JoyAxis.LeftX,down?1:0);}
                 Carry(true);await ControllerFrames(2);Primary(true);await ControllerFrames(2);Primary(false);await ControllerFrames(2);
                 Check(Player.GetProperty("carrying").GetString()=="bomb",name+": native carry plus primary creates the held bomb");
                 if(pad is not null){Aim(.3f);await ControllerFrames(2);Check(!Player.GetProperty("aiming").GetBoolean(),name+": below-threshold right trigger does not enter aim");}
                 Aim(1);await ControllerFrames(4);float startRange=AimNumber(Player,"aimRange"),px=AimNumber(Player,"x"),pz=AimNumber(Player,"z");
-                Check(Player.GetProperty("aiming").GetBoolean(),name+": Shift or canonical right trigger enters the authoritative aim stance");
+                Check(Player.GetProperty("aiming").GetBoolean(),name+": K or canonical right trigger enters the authoritative aim stance");
                 Range(true);await ControllerFrames(8);Range(false);await ControllerFrames(2);
                 float delta=AimNumber(Player,"aimRange")-startRange;
                 Check(delta>.2f&&delta<BombThrowRules.AimRangeSpeed*8/30f,name+": native range starts with fine nudges below the maximum sweep rate");
@@ -162,7 +162,9 @@ public partial class PlaytestDriver
                 Primary(true);await ControllerFrames(2);Primary(false);await ControllerFrames(2);
                 Check(HandlingBomb.GetProperty("pumps").GetInt32()==1&&Math.Abs(AimNumber(Player,"aimRange")-(startRange+delta))<.01f,name+": native primary pumps while preserving selected range");
                 await Capture("precision-input-"+(pad?.RuntimeId.ToString()??"keyboard"),0);
-                Aim(0);Carry(false);await ControllerFrames(4);
+                Aim(0);await ControllerFrames(3);
+                Check(Player.GetProperty("carrying").GetString()=="bomb"&&!Player.GetProperty("aiming").GetBoolean(),name+": releasing aim preserves the held bomb");
+                Carry(false);await ControllerFrames(4);
                 Check(Player.GetProperty("carrying").ValueKind==JsonValueKind.Null,name+": native carry release throws after aim");
                 Event("aim-native-result",new{name,delta,turn,physicalInputClaim=false});
                 _controllerFocusTrial=false;CtlReleaseAll();_root.Back();await Frames(3);

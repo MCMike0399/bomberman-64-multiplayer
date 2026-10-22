@@ -50,6 +50,7 @@ public partial class PlaytestDriver
     private void StrideQuality()
     {
         CompactLegs();
+        WalkPhrasing();
         BootContinuity();
         var endPoses=new List<float>();
         foreach(int fps in new[]{30,60,120})
@@ -89,6 +90,25 @@ public partial class PlaytestDriver
             finally {model.Free();}
         }
         Check(endPoses.Max()-endPoses.Min()<.002f,"equal displacement reaches the same stride pose at 30/60/120 FPS");
+    }
+    private void WalkPhrasing()
+    {
+        var model=new BomberModel(new ArtMaterials(),Colors.White,"walk phrasing");
+        try
+        {
+            for(int i=0;i<60;i++)model.Animate(1f/30,4.5f/30);
+            float previous=model.WalkBodyHeight,maxStep=0,maxReach=0;
+            for(int i=0;i<180;i++)
+            {
+                model.Animate(1f/30,4.5f/30);
+                maxStep=Mathf.Max(maxStep,Mathf.Abs(model.WalkBodyHeight-previous));
+                maxReach=Mathf.Max(maxReach,Mathf.Abs(model.WalkPose));previous=model.WalkBodyHeight;
+            }
+            Event("walk-phrasing",new {maxStep,maxReach});
+            Check(maxReach<.53f,"short legs stay within their intended swing without recovery overshoot");
+            Check(maxStep<.015f,"body does not drop almost its entire bounce in one 30 FPS frame");
+        }
+        finally {model.Free();}
     }
     private void CompactLegs()
     {

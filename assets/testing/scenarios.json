@@ -2,6 +2,17 @@
   "schemaVersion": 1,
   "scenarios": [
     {
+      "id": "reticle",
+      "method": "ReticleVisibility",
+      "domains": [
+        "input",
+        "rendering"
+      ],
+      "headless": false,
+      "timeout": 120,
+      "manual": false
+    },
+    {
       "id": "menu",
       "method": "Menus",
       "domains": [
@@ -376,6 +387,7 @@
         "bomb-handling",
         "charge-aim",
         "aim-inputs",
+        "reticle",
         "precision-aim",
         "kick-physics",
         "body-contacts",
@@ -383,6 +395,7 @@
         "local-actions",
         "ramp",
         "powerup-collect",
+        "loot-opening",
         "pump-growth",
         "presentation",
         "hurry-water",
@@ -425,6 +438,7 @@
         "grapple",
         "traversal",
         "powerup-collect",
+        "loot-opening",
         "pump-growth",
         "presentation",
         "hurry-water",
@@ -491,6 +505,18 @@
         "models"
       ],
       "headless": false,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "loot-opening",
+      "method": "LootOpening",
+      "domains": [
+        "gameplay",
+        "mechanics",
+        "assets"
+      ],
+      "headless": true,
       "timeout": 180,
       "manual": false
     }

@@ -8,7 +8,7 @@ public static class PowerUpRules
     public const int MaximumBombs = 8;
     public const int MaximumNormalFire = 3;
     public const int MaximumMegaFire = 6;
-    public const double DropChance = .30;
+    public const double DropChance = .60;
     public static string ChooseDrop(Random random) => random.Next(100) switch
     {
         < 35 => "fire", < 65 => "bomb", < 77 => "remote", < 90 => "red", _ => "heart",

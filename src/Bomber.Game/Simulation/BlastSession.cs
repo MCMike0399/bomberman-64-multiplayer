@@ -1111,7 +1111,7 @@ public sealed partial class BlastSession : GameSession
         foreach (var (x, z) in hits)
         {
             _softBlocks.Set(x, z, false);
-            if (context.Random.NextDouble() < PowerUpRules.DropChance) DropItem(context, x, z, _stage.At(x, z).Tier);
+            DropCoverItem(context, x, z);
         }
     }
 
@@ -1132,9 +1132,9 @@ public sealed partial class BlastSession : GameSession
 
     // ─── items ────────────────────────────────────────────────────────────────
 
-    private void DropItem(ISessionContext context, int cx, int cz, int tier)
+    private void DropItem(ISessionContext context, int cx, int cz, int tier, string? guaranteedType = null)
     {
-        var type = PowerUpRules.ChooseDrop(context.Random);
+        var type = guaranteedType ?? PowerUpRules.ChooseDrop(context.Random);
         _items.Add(new BlastItem { Id = NextItemId(), CellX = cx, CellZ = cz, Tier = tier, Type = type });
     }
 
@@ -1341,6 +1341,7 @@ public sealed partial class BlastSession : GameSession
     private void PlaceSoftBlocks(Random rng)
     {
         _softBlocks = new SoftBlockGrid(_stage.Width, _stage.Height);
+        _coverLootZones.Clear();_claimedLootZones.Clear();
         if (_stage.FixedSoftBlocks is { } fixedBlocks)
         {
             foreach(var cell in fixedBlocks) _softBlocks.Set(cell.Item1,cell.Item2,true);
@@ -1351,6 +1352,7 @@ public sealed partial class BlastSession : GameSession
             new[] { (s.X, s.Z), (s.X + 1, s.Z), (s.X - 1, s.Z), (s.X, s.Z + 1), (s.X, s.Z - 1) }));
 
         var placed = 0;
+        var candidates = new List<(int X,int Z)>();
         for (var x = 0; x < _stage.Width; x++)
             for (var z = 0; z < _stage.Height; z++)
             {
@@ -1359,9 +1361,11 @@ public sealed partial class BlastSession : GameSession
                 if (spawnCells.Contains((x, z))) continue;
                 if (_stage.ClearCells.Contains((x, z))) continue;
                 if (new[] { (1, 0), (-1, 0), (0, 1), (0, -1) }.Any(d => _stage.At(x + d.Item1, z + d.Item2).Kind == CellKind.Ramp)) continue;
+                if (_stage.Id == BlastStages.SunkenTemple) { candidates.Add((x,z)); continue; }
                 if (placed < _stage.MaxSoftBlocks && rng.NextDouble() < _stage.SoftBlockDensity)
                 { _softBlocks.Set(x, z, true); placed++; }
             }
+        if (_stage.Id == BlastStages.SunkenTemple) PlaceTempleCover(rng,candidates);
     }
 
     // ─── hurry: column closure ────────────────────────────────────────────────

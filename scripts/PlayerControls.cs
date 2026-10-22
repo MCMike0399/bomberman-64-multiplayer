@@ -10,7 +10,7 @@ public static class PlayerControls
     internal static PlayerInput Keyboard(int seat)
     {
         if(seat==0)return new(Axis(Key.A,Key.D),Axis(Key.W,Key.S),
-            Down(Key.J,Key.J),Down(Key.Space,Key.K),Down(Key.L,Key.R),Input.IsPhysicalKeyPressed(Key.Shift));
+            Input.IsPhysicalKeyPressed(Key.J),Input.IsPhysicalKeyPressed(Key.Space),Down(Key.L,Key.R),Down(Key.K,Key.Shift));
         if(seat==1)return new(Axis(Key.Left,Key.Right),Axis(Key.Up,Key.Down),
             Down(Key.N,Key.Enter,Key.Kp0),Down(Key.M,Key.Kp1),Down(Key.Comma,Key.Backspace,Key.Kp2),Input.IsPhysicalKeyPressed(Key.Ctrl));
         return default;

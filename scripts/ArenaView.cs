@@ -14,6 +14,12 @@ public partial class ArenaView : Node3D
     private readonly ArtMaterials _art=new();
     private readonly Dictionary<string,PlayerInput> _localInputs=[];
     private readonly Dictionary<string,BombThrowPreview> _throwPreviews=[];
+    private bool _battleActive;
+    public void SetBattleActive(bool active)
+    {
+        _battleActive=active;
+        if(!active)ClearThrowPreviews();
+    }
     public IReadOnlyList<ThrowPreviewState> ThrowPreviews {get;private set;}=[];
     public void SetLocalInput(string playerId,PlayerInput input)=>_localInputs[playerId]=input;
     private readonly Node3D _dynamic=new(),_effects=new();
@@ -80,7 +86,12 @@ public partial class ArenaView : Node3D
         VisibilityChanged+=UpdateProcessing;
         UpdateProcessing();
     }
-    private void UpdateProcessing(){ProcessMode=IsVisibleInTree()?ProcessModeEnum.Inherit:ProcessModeEnum.Disabled;if(!IsVisibleInTree())_audio?.StopAll();}
+    private void UpdateProcessing()
+    {
+        ProcessMode=IsVisibleInTree()?ProcessModeEnum.Inherit:ProcessModeEnum.Disabled;
+        if(!IsVisibleInTree())_audio?.StopAll();
+        if(_camera!=null)foreach(var preview in _throwPreviews.Values)preview.UpdateScreen(_camera);
+    }
     public void ResetMatch()
     {
         _localInputs.Clear();ClearThrowPreviews();
@@ -210,11 +221,13 @@ public partial class ArenaView : Node3D
     }
     private void ClearThrowPreviews()
     {
-        foreach(var view in _throwPreviews.Values)view.QueueFree();
+        foreach(var view in _throwPreviews.Values){view.HidePreview();view.QueueFree();}
         _throwPreviews.Clear();ThrowPreviews=[];
     }
     private void UpdateThrowPreviews(JsonElement data,byte[] cover)
     {
+        if(!_battleActive||data.GetProperty("phase").GetInt32() is not (1 or 2))
+        {ClearThrowPreviews();return;}
         if(_terrain==null)return;
         var states=new List<ThrowPreviewState>();var seen=new HashSet<string>();
         foreach(var player in data.GetProperty("players").EnumerateArray())
@@ -238,10 +251,11 @@ public partial class ArenaView : Node3D
             if(!_throwPreviews.TryGetValue(id,out var view))
             {view=new BombThrowPreview();_effects.AddChild(view);_throwPreviews[id]=view;}
             view.Update(projection,pumps,player.GetProperty("slot").GetInt32(),aimSet,aiming,range);seen.Add(id);
-            states.Add(new(id,pumps,projection.Last.X,projection.Last.Y,projection.Last.Z,projection.End.ToString(),projection.Points.Count,view.LandingMarkerVisible,view.EndpointLabel,aimSet,aiming,range));
+            view.UpdateScreen(_camera);
+            states.Add(new(id,pumps,projection.Last.X,projection.Last.Y,projection.Last.Z,projection.End.ToString(),projection.Points.Count,view.LandingMarkerVisible,view.EndpointLabel,aimSet,aiming,range,view.EndpointMarkerVisible,view.EndpointScreenPosition.X,view.EndpointScreenPosition.Y,view.EndpointEdgeClamped));
         }
         foreach(var id in _throwPreviews.Keys.Where(id=>!seen.Contains(id)).ToArray())
-        {_throwPreviews[id].QueueFree();_throwPreviews.Remove(id);}
+        {_throwPreviews[id].HidePreview();_throwPreviews[id].QueueFree();_throwPreviews.Remove(id);}
         ThrowPreviews=states;
     }
     public override void _Process(double delta)
@@ -264,6 +278,7 @@ public partial class ArenaView : Node3D
                 bomb.Position=bomb.Position.Lerp(_dynamic.ToLocal(actor.BombSocket),1-Mathf.Exp(-24*dt));
         foreach(var id in _explosions.Keys.Where(id=>!GodotObject.IsInstanceValid(_explosions[id])).ToArray())_explosions.Remove(id);
         _shake=Mathf.MoveToward(_shake,0,dt*.6f);_cameraRig.Shake((float)_clock,_shake);
+        foreach(var preview in _throwPreviews.Values)preview.UpdateScreen(_camera);
     }
     public override void _ExitTree(){if(_cameraRig!=null)GetViewport().SizeChanged-=_cameraRig.Fit;VisibilityChanged-=UpdateProcessing;}
     private void CountEffect(string key)=>_effectCounts[key]=_effectCounts.GetValueOrDefault(key)+1;

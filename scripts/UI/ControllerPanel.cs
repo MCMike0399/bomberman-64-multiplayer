@@ -18,7 +18,7 @@ public partial class ControllerPanel : VBoxContainer
         var scroll=new ScrollContainer {CustomMinimumSize=new(0,150),SizeFlagsVertical=SizeFlags.ExpandFill};AddChild(scroll);
         _live=ArcadeTheme.Text(scroll,"",16);_live.SizeFlagsHorizontal=SizeFlags.ExpandFill;_live.AutowrapMode=TextServer.AutowrapMode.WordSmart;
         var cards=ArcadeTheme.Row(this,18);
-        Card(cards,"Keyboard 1",[("Move",["W","A","S","D"]),("Bomb / pump",["J"]),("Hold to carry",["Space","K"]),("Precision aim",["Shift"]),("Detonate",["L","R"])]);
+        Card(cards,"Keyboard 1",[("Move",["W","A","S","D"]),("Bomb / pump",["J"]),("Hold to carry",["Space"]),("Precision aim",["K","Shift"]),("Detonate",["L","R"])]);
         Card(cards,"Keyboard 2",[("Move",["Arrows"]),("Bomb",["N","Enter","Num 0"]),("Hold to carry",["M","Num 1"]),("Precision aim",["Ctrl"]),("Detonate",[",","Backspace","Num 2"])]);
         Card(cards,"Gamepads",[("Move",["Stick","D-pad"]),("Bomb",["A","A","Cross"]),("Hold to carry",["X","B","Square"]),("Precision aim",["RT","ZR","R2"]),("Detonate",["B","X","Circle"])],"Xbox, Switch and PlayStation, in that order. LB, L or L1 also carries; RB, R or R1 also detonates.");
         var notes=ArcadeTheme.Text(this,"Hold carry near a bomb, or hold carry + tap bomb to ready one. Tap bomb to pump. Hold aim: left/right turns, up/down adjusts range. Nudge for precision; hold to sweep. Release carry to throw. Walk into a planted bomb to kick.",16,ArcadeTheme.Muted);

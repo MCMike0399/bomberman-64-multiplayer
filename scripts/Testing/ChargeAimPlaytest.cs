@@ -76,7 +76,7 @@ public partial class PlaytestDriver
         Input(0,new PlayerInput(0,0,A:true));await Frames(14);Input(0,default);await Frames(16);
         var waterPreview=_root.ThrowPreviews.Single();Event("charge-water-preview",waterPreview);
         Check(waterPreview.End=="Water"&&!waterPreview.LandingMarkerVisible&&waterPreview.EndpointLabel.Contains("sinks"),
-            "real stock-temple water endpoint shows a sink advisory and no landing ring");
+            "real stock-temple water endpoint retains water semantics without a safe landing ring");
         await Capture("charge-aim-water-endpoint",0);
         Input(0,new PlayerInput(0,0,B:true));await Frames(3);Input(0,default);
         await WaitState(s=>s.GetProperty("bombs").GetArrayLength()==0,"real throw disappears on the predicted water cell",100);

@@ -111,7 +111,7 @@ public partial class BattleHud : Control
             if(p.GetProperty("carrying").GetString()=="bomb")
             {
                 bool latched=p.TryGetProperty("carryFromPrimary",out var primaryCarry)&&primaryCarry.GetBoolean();
-                string aim=family==ControllerFamily.Keyboard?(seat==1?"Ctrl":"Shift"):ControllerProfile.AimName(family);
+                string aim=family==ControllerFamily.Keyboard?(seat==1?"Ctrl":"K"):ControllerProfile.AimName(family);
                 string release=latched?$"{PromptBar.Spoken(carry)} throws":$"release {PromptBar.Spoken(carry)} to throw";
                 if(p.TryGetProperty("aiming",out var aiming)&&aiming.GetBoolean())
                     return $"{who}: left/right turns · up/down sets range · nudge to fine-tune · {release}";

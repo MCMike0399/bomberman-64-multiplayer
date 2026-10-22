@@ -34,7 +34,20 @@ public partial class PlaytestDriver
             specimens.Add((name,bomb));
         }
         foreach(string kind in new[]{"fire","bomb","remote","red","heart"})
-        {var pickup=new PowerupModel(art,kind);pickup._Process(.2);specimens.Add((kind+" pickup",pickup));}
+        {
+            var pickup=new PowerupModel(art,kind);
+            var pickupIcon=pickup.GetNode<Node3D>("Icon");
+            var plate=pickup.GetChildren().OfType<MeshInstance3D>().Single();
+            Check(pickup.Scale.IsEqualApprox(Vector3.One*1.20f)&&plate.Scale.IsEqualApprox(Vector3.One)&&plate.Position.IsEqualApprox(new(0,-.3f,0))&&
+                plate.Mesh is CylinderMesh cylinder&&Mathf.IsEqualApprox(cylinder.TopRadius,.3f)&&Mathf.IsEqualApprox(cylinder.Height,.05f),
+                "pickup plate retains original geometry and root scale: "+kind);
+            Check(pickupIcon.Scale.IsEqualApprox(Vector3.One*1.30f),"pickup actual icon subtree is thirty percent larger: "+kind);
+            // Evaluate the low point of the ordinary bob using real generated mesh bounds.
+            pickup._Process(Mathf.Pi/2);
+            var iconBounds=AuditSubtreeBounds(pickupIcon,Transform3D.Identity);
+            Check(iconBounds.Position.Y>-.275f,"enlarged pickup icon clears its plate at bottom of bob: "+kind);
+            specimens.Add((kind+" pickup",pickup));
+        }
         var surfaces=new Node3D();
         var shaderMaterials=new[]{art.Stone(),art.Masonry(),art.Bedrock(),art.Water()};
         for(int i=0;i<shaderMaterials.Length;i++)ArtGeometry.Box(surfaces,new(i*1.5f,0,0),Vector3.One,shaderMaterials[i]);
@@ -67,6 +80,17 @@ public partial class PlaytestDriver
         {
             foreach(var (_,model) in specimens)if(GodotObject.IsInstanceValid(model))model.Free();
         }
+    }
+    private static Aabb AuditSubtreeBounds(Node3D node,Transform3D parent)
+    {
+        var transform=parent*node.Transform;Aabb? result=null;
+        if(node is MeshInstance3D {Mesh: { } mesh})result=transform*mesh.GetAabb();
+        foreach(var child in node.GetChildren().OfType<Node3D>())
+        {
+            var bounds=AuditSubtreeBounds(child,transform);
+            result=result is { } existing?existing.Merge(bounds):bounds;
+        }
+        return result??new Aabb();
     }
     private static bool AuditResourcePresent(string path)=>ResourceLoader.Exists(path)&&GD.Load<Resource>(path)!=null;
     private static IEnumerable<Node> AuditDescendants(Node parent)

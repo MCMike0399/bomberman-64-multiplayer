@@ -6,7 +6,7 @@ Run the behavioral checks without Godot or a network server:
 dotnet run -c Release --project tests/Bomber.Ai.Tests
 ```
 
-The 36 checks cover cached legal terrain edges, timed chain reactions, expired hazards, deliberate power-up pursuit, fuse escape, climbing before flooding, fair difficulty response rates, eight-bot deterministic replay on all three maps, repeated bomb pressure against opponents, and reuse of search memory. Existing game integration checks separately exercise safe own-bomb placement, trapped-bot refusal and actual stair movement.
+The 52 checks cover cached legal terrain edges, timed chain reactions, expired hazards, deliberate power-up pursuit, fuse escape, climbing before flooding, fair difficulty response rates, eight-bot deterministic replay on all three maps, repeated bomb pressure against opponents, and reuse of search memory. Existing game integration checks separately exercise safe own-bomb placement, trapped-bot refusal and actual stair movement.
 
 The planner sees current entities, visible bomb fuses and the known flood schedule. It never consumes future item randomness or changes movement speed, damage, blast radius or inventory. The menu offers **Easy, Medium, Hard**; `medium` and legacy `normal` select the same profile, with `normal` retained as the default wire value for saved clients.
 
@@ -66,3 +66,48 @@ Iteration 13's recorded matrix passed all 36 scenarios and four fairness checks.
 ## Iteration-thirteen local timing sample
 
 A fresh Release benchmark on Apple M5 Pro ran eight bots on all three maps with three seeds (nine runs, 14,891 active authority ticks). Per-run p95 active-tick times ranged from 0.102 to 0.378 ms; the largest single observed active tick was 4.666 ms. These are single-run local measurements, not a comparative speedup or production-capacity guarantee. Transport, serialization and Godot rendering remain excluded. The separate warmed-search regression still reports zero allocated bytes across 1,000 decisions. Evidence: `artifacts/iteration13/benchmark.json`.
+
+## Iteration-seventeen repeated human pressure
+
+```sh
+dotnet run -c Release --project tests/Bomber.Ai.Tests -- --pressure --output=artifacts/iteration17/ai/pressure-after.json
+dotnet run -c Release --project tests/Bomber.Ai.Tests -- --stock-human-pressure --output=artifacts/iteration17/ai/stock-human-after.json
+```
+
+The normal suite includes twelve 30-second open-arena fixtures: Easy/Medium/Hard, seeds 64/9876, and stationary/moving human opponents. Four additional fixtures use stock Sunken Temple/Pyramid, one human in slot zero and one Medium/Hard bot in slot one, both seeds, original spawns/cover/items, and a stationary human. The moving open-arena opponent follows a square using ordinary 35% movement input. Only the human target's invulnerability timer is renewed to sustain one fight; bots retain ordinary resources, damage, collision and visible information. Stock observations stop on bot death or after 30 seconds. No bot deaths occurred in the recorded cases.
+
+Pressure counts newly placed bombs whose real visible blast geometry reaches the current human. It does not count hits or predict future movement. The longest gap includes initial approach and the final measurement tail. Open fixtures have no drops or cover and intentionally give identical observations for both seeds; the stock fixtures retain seeded cover and item drops and record initial cover fingerprints to verify matching baselines. Inventory availability in open fixtures counts ticks with spare capacity, without claiming an escape-safe placement exists on every tick.
+
+Medium and Hard must create at least six pressure bombs in 30 seconds, start within four seconds in the open arena/six on Pyramid, and leave no gap longer than six/eight seconds respectively. The stock bound allows ramp and pickup detours. Easy has a forgiving minimum of one, twelve seconds to begin, and a twenty-second maximum gap. All require a full 900 active ticks and no bot death. The earlier all-level regression still separately requires a real threatening explosion. `--measure-only` records observations without enforcing thresholds.
+
+Two passivity causes were reproduced with red regressions. A reached tactical goal kept awarding its commitment bonus, discouraging reengagement after retreat. Commitment now expires upon reaching its cell and still stabilizes routes while traveling. On Pyramid, Medium could also retreat into the lower court and idle below a cliff after all bombs had expired: the eight-step ramp detour cost more than the geometric distance reward for getting closer. Goals that reach an opponent's actual visible blast range now receive a pressure reward during attack intent. This lets a valid detour beat that local optimum. Easy receives that reward only during its existing occasional attack turn. Cooldowns, reaction intervals, difficulty profiles, timed route safety, escape validation and physical rules remain unchanged.
+
+| Open difficulty | Stationary pressure bombs, before → after | Stationary maximum gap, seconds | Moving pressure bombs, before → after | Moving maximum gap, seconds |
+|---|---|---|---|---|
+| Easy | 4 → 4 | 7.20 → 7.20 | 2 → 2 | 10.67 → 13.20 |
+| Medium | 4 → 11 | 8.53 → 2.80 | 8 → 9 | 5.87 → 5.33 |
+| Hard | 6 → 15 | 9.20 → 2.70 | 10 → 10 | 5.10 → 4.20 |
+
+| Stock Pyramid | Human-pressure bombs, before → after | First pressure, seconds | Maximum gap, seconds | Bot pickups, before → after |
+|---|---|---|---|---|
+| Medium / 64 | 4 → 7 | 3.07 → 3.07 | 12.27 → 6.93 | 3 → 3 |
+| Medium / 9876 | 8 → 8 | 3.07 → 3.07 | 3.87 → 3.87 | 0 → 0 |
+| Hard / 64 | 9 → 8 | 2.90 → 2.90 | 3.90 → 4.20 | 3 → 1 |
+| Hard / 9876 | 8 → 7 | 2.90 → 2.90 | 3.90 → 4.20 | 2 → 0 |
+
+Stock revealed-item counts were 4 → 4, 1 → 1, 4 → 2 and 2 → 1 in that row order; destroyed cover was 4 → 4, 2 → 2, 4 → 2 and 3 → 2. Every scenario started with 30 cover blocks, and before/after initial-cover fingerprints matched for each seed. The Pyramid results support reduced Medium seed-64 passivity, while Hard creates fewer bombs in those stock cases. They do not establish a universal increase in attacks.
+
+The normal suite passes 52 checks, including zero allocations across 1,000 warmed decisions. All 36 soak scenarios and fairness checks pass: maximum safe-exit stationary window 1.63 seconds and blocked-command window 0.13 seconds. With identical iteration-seventeen loot/stage rules on both sides, the soak produced 2,197 → 2,179 bombs, 740 → 723 opponent-pressure bombs and 61 → 72 completed rounds; deaths rose from 267 to 296. Whole-match outcomes, item routes and durations diverge after a policy change.
+
+The matched soak records eligible bot exposure, allowing pooled rates rather than raw totals alone. The denominator is `sum(EligibleBotTicks) / 30`: living, non-ghost bots in Fight/Hurry outside held, stunned, airborne, falling and kick recovery states. Unrestricted living-bot time is not recorded. These are rates per **eligible bot-second**:
+
+| Scope | Eligible bot-seconds, before → after | Bombs/second, before → after | Opponent-pressure bombs/second, before → after |
+|---|---|---|---|
+| All | 7,745.17 → 7,431.57 | .28366 → .29321 | .09554 → .09729 |
+| Easy | 3,350.03 → 3,152.00 | .18716 → .19511 | .08239 → .07043 |
+| Medium | 2,673.50 → 2,532.73 | .29961 → .32889 | .10885 → .11016 |
+| Hard | 1,721.63 → 1,746.83 | .44667 → .41847 | .10049 → .12709 |
+
+Overall exposure-normalized bomb frequency rises 3.37% and pressure rises 1.83%; Medium pressure rises 1.20%, Hard rises 26.47%, and Easy falls 14.51%. Numerators count new bombs on active ticks and are not separately filtered by eligibility, so these are exposure-normalized summaries rather than conditional placement probabilities. Pooled rates weight longer/larger bot exposures; deaths, resources, routes, round restarts and eligibility still diverge. These seeded observations do not prove higher difficulty win rates, improved survival, or fun; human playtesting remains necessary.
+
+Nine local Release timing samples with eight bots had per-run p95 active-tick times of 0.078–0.312 ms and a largest tick of 5.045 ms. The matched prior-policy sample was 0.066–0.414 ms, largest 5.570 ms. These are single local simulation-only samples and do not establish a speedup or production capacity. Artifacts are under `artifacts/iteration17/ai/`: `pressure-before.json`, `pressure-after.json`, `stock-human-before.json`, `stock-human-after.json`, `soak-matched-before.json`, `soak-after.json`, `soak-normalized.json`, `benchmark-matched-before.json`, `benchmark-after.json` and `summary.json`.

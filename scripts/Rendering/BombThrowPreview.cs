@@ -10,17 +10,23 @@ public partial class BombThrowPreview : Node3D
     private readonly MeshInstance3D[] _dots=new MeshInstance3D[24];
     private readonly StandardMaterial3D _material=new(){ShadingMode=BaseMaterial3D.ShadingModeEnum.Unshaded,EmissionEnabled=true};
     private readonly MeshInstance3D _target;
-    private readonly Label3D _label;
+    private string _endpointLabel="";
+    private readonly ThrowEndpointReticle _reticle=new();
+    private Vector3 _endpoint;
+    private ThrowProjectionEnd _end;
+    public bool EndpointMarkerVisible=>_reticle.IsVisibleInTree();
+    public Vector2 EndpointScreenPosition=>_reticle.Position;
+    public bool EndpointEdgeClamped=>_reticle.EdgeClamped;
     public bool LandingMarkerVisible=>_target.Visible;
-    public string EndpointLabel=>_label.Text;
+    // Semantic diagnostics retained for existing contracts; no label is rendered.
+    public string EndpointLabel=>_endpointLabel;
     public BombThrowPreview()
     {
         for(int i=0;i<_dots.Length;i++)_dots[i]=Sphere(this,Vector3.Zero,Vector3.One*.105f,_material);
         _target=new(){Mesh=new TorusMesh{InnerRadius=.31f,OuterRadius=.39f,Rings=32,RingSegments=6},MaterialOverride=_material};AddChild(_target);
         Box(_target,Vector3.Zero,new(.18f,.014f,.035f),_material);
         Box(_target,Vector3.Zero,new(.035f,.014f,.18f),_material);
-        _label=new Label3D{Font=ArcadeTheme.Body,FontSize=32,PixelSize=.012f,Billboard=BaseMaterial3D.BillboardModeEnum.Enabled,
-            OutlineModulate=ArcadeTheme.Ink,OutlineSize=8,NoDepthTest=false};AddChild(_label);
+        var overlay=new CanvasLayer{Layer=2};AddChild(overlay);overlay.AddChild(_reticle);
     }
     public void Update(ThrowProjection projection,int pumps,int slot,bool aimSet=false,bool aiming=false,float range=0)
     {
@@ -37,10 +43,9 @@ public partial class BombThrowPreview : Node3D
         var last=projection.Last;
         _target.Position=new(last.X,last.Y*TempleStageView.HeightScale+.055f,last.Z);
         _target.Visible=projection.End==ThrowProjectionEnd.Landing;
+        _endpoint=_target.Position;_end=projection.End;
         _target.Scale=Vector3.One*(aiming?1.08f:1);
-        _label.Position=_target.Position+Vector3.Up*.42f;
-        _label.Modulate=color;
-        _label.Text=projection.End switch{
+        _endpointLabel=projection.End switch{
             ThrowProjectionEnd.Obstructed=>$"P{slot+1} · blocked landing",
             ThrowProjectionEnd.Fuse=>$"P{slot+1} · fuse ends here",
             ThrowProjectionEnd.Water=>$"P{slot+1} · sinks here",
@@ -48,5 +53,7 @@ public partial class BombThrowPreview : Node3D
             _=>aimSet?$"P{slot+1} · {range:0.0} range · {pumps}/3":$"P{slot+1} · {pumps}/3 · aim"
         };
     }
+    public void HidePreview(){Visible=false;_reticle.Visible=false;}
+    public void UpdateScreen(Camera3D camera)=>_reticle.Update(camera,_endpoint,_end,_material.AlbedoColor,IsVisibleInTree());
 }
-public sealed record ThrowPreviewState(string PlayerId,int Pumps,float X,float Y,float Z,string End,int Points,bool LandingMarkerVisible,string EndpointLabel,bool AimSet=false,bool Aiming=false,float AimRange=0);
+public sealed record ThrowPreviewState(string PlayerId,int Pumps,float X,float Y,float Z,string End,int Points,bool LandingMarkerVisible,string EndpointLabel,bool AimSet=false,bool Aiming=false,float AimRange=0,bool EndpointMarkerVisible=false,float ScreenX=0,float ScreenY=0,bool EdgeClamped=false);

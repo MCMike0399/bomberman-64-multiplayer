@@ -172,6 +172,10 @@ public sealed partial class BlastSession
     /// Searches do not allocate queues, closures, hash sets or opponent sets per decision.</summary>
     private int BotSearch(BlastPlayer bot,int start,TimedDangerField danger,bool escape,int maxDepth)
     {
+        // Commitment stabilizes travel, but an already reached goal must not pay
+        // the bot to stay there after its bomb's danger has cleared.
+        if(!escape&&_aiCommittedGoals.TryGetValue(bot.Id,out int reached)&&reached==start)
+            _aiCommittedGoals.Remove(bot.Id);
         if(++_aiGeneration==int.MaxValue){Array.Clear(_aiSeen);_aiGeneration=1;}
         int head=0,tail=0;_aiQueue[tail++]=start;_aiSeen[start]=_aiGeneration;_aiDepth[start]=0;_aiFirst[start]=start;
         float bestScore=float.NegativeInfinity;int best=-1,bestCell=-1;
@@ -229,6 +233,10 @@ public sealed partial class BlastSession
             float lastBomb=_aiLastBomb.TryGetValue(bot.Id,out float placed)?placed:0;
             float preferred=_roundTimer-lastBomb>6?Math.Min(1,_aiProfile.PreferredEnemyDistance):_aiProfile.PreferredEnemyDistance;
             score+=10-Math.Abs(nearest-preferred)*_aiProfile.PressureWeight;
+            // Reaching actual visible blast range is worth a detour. Pure geometric
+            // distance can otherwise keep a bot below a cliff instead of using its ramp.
+            if(preferred<=1&&BotEnemyInRange(x,y,z,bot.FireLevel*.9f+.4f,bot.Id,bot.HasRed))
+                score+=3*_aiProfile.PressureWeight;
             if(nearest<5)score-=(4-BotExitCount(cell))*_aiProfile.TrapPenalty;
         }
         if(_aiCommittedGoals.TryGetValue(bot.Id,out int goal))

@@ -6,12 +6,15 @@ namespace BlastCircuit.Rendering;
 public partial class PowerupModel : Node3D
 {
     public const float VisualScale=1.20f;
+    public const float IconScale=1.30f;
+    private const float IconLift=.16f;
     private readonly Node3D _icon=new();
     private float _time;
     public string Kind {get;}
     public PowerupModel(ArtMaterials art,string kind)
     {
-        Kind=kind;Scale=Vector3.One*VisualScale;AddChild(_icon);
+        Kind=kind;Scale=Vector3.One*VisualScale;
+        _icon.Name="Icon";_icon.Scale=Vector3.One*IconScale;_icon.Position=new(0,IconLift,0);AddChild(_icon);
         var white=art.Color(new("fff9dc"),.4f);var ink=art.Color(new("253453"),.3f);var gold=art.Color(new("ffd653"),.4f,true);
         Cylinder(this,new(0,-.3f,0),.3f,.05f,gold);
         switch(kind)
@@ -43,6 +46,6 @@ public partial class PowerupModel : Node3D
     }
     public override void _Process(double delta)
     {
-        _time+=(float)delta;_icon.Position=new(0,Mathf.Sin(_time*3)*.075f,0);_icon.Rotation=new(0,_time*1.1f,0);
+        _time+=(float)delta;_icon.Position=new(0,IconLift+Mathf.Sin(_time*3)*.075f,0);_icon.Rotation=new(0,_time*1.1f,0);
     }
 }

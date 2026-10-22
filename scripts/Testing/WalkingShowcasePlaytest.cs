@@ -69,6 +69,14 @@ public partial class PlaytestDriver
             Check(Player.GetProperty("alive").GetBoolean()&&!Player.GetProperty("stunned").GetBoolean(),"recorded walking path completes without respawn or action interruption");
             await Capture("walk-feel-side-settled",0);
             Event("walking-showcase-end",new {movieFrame=Engine.GetProcessFrames(),end=model.GlobalPosition.ToString()});
+            // Review the same real movement at the player's ordinary camera too;
+            // a close-up alone cannot establish the in-match feel.
+            battleCamera.MakeCurrent();await Frames(4);
+            Event("walking-gameplay-begin",new {movieFrame=Engine.GetProcessFrames(),camera="normal battle"});
+            await WalkLeg(1,14.5f,"gameplay-right");
+            await WalkLeg(-1,6.5f,"gameplay-left");
+            Input(0,default);await Frames(20);await Capture("walk-feel-gameplay",0);
+            Event("walking-gameplay-end",new {movieFrame=Engine.GetProcessFrames()});
         }
         finally
         {
