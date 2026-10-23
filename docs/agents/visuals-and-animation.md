@@ -51,7 +51,7 @@ new mascot design. Current authored dimensions, before runtime transforms:
 | Helmet | Width .854, height .750, depth .810; half-height .375, half-depth .405 |
 | Helmet balance | Shell center biased .045 forward; face stays separate and curved |
 | Torso | Approximately .395 wide × .380 high × .370 deep |
-| Legs | Fixed .190-high white stems, attached at fixed hips; boots share limb transform |
+| Legs | Fixed .190-high white stems; boots share limb transform. Hips may tuck up (≤ .055) and slide fore/aft (≤ .065) only inside the belt, never down or apart |
 | Extremities | Preserve broad pink boot/glove mesh dimensions when tuning gait |
 
 Local face-forward is +Z. Inspect actual mesh bounds and composed transforms,
@@ -85,8 +85,11 @@ that separation; resetting a lerp on each 15 Hz snapshot caused visible pulsing.
 There is no client movement prediction or rollback replay.
 
 Gait phase advances from actual travel, not raw stick values or wall-clock time.
-The v0.18 complete left/right cycle spans 2.4 world units. Rendered gameplay speed
-is unchanged; slower cadence gives the same distance fewer, more readable steps.
+The v0.20 complete left/right cycle spans **1.5 world units** (about six steps per
+second at full speed). Do not lengthen it for "readability": a rigid stubby leg can
+only sweep about .14 units each way, so longer strides make the planted boot skate.
+That skating (95% of body speed in v0.18) was the main reason earlier walks read as
+cheap toys. `movement` now measures world-space boot slip while down.
 A blocked player should not keep running in place; after release the current pose
 settles without taking another step. Test equal travel at 30/60/120 FPS and inspect
 starts, reversals and stops, not only a steady loop.
@@ -102,8 +105,13 @@ BomberModel root (accepted position/facing)
         torso/belt, arms/gloves, head/face
 ```
 
-Shoulders follow the foot phrasing with lag, arms counter the leading leg, and
-the head counterbalances the torso. The carry socket follows `upperParts` with
+Each boot heel-strikes toe-up, grips while sweeping back, rolls off the toe,
+follows through, tucks while passing and whips forward already matching the floor.
+The body has a short airborne beat, squashes toward the planted boots and leans
+into the run with the legs compensated. Damped springs (fixed 240 Hz substeps)
+give gloves, lean, turn bank, head and the crown antenna momentum, lag and
+overshoot; avoid replacing them with phase-locked sines. The antenna pivots inside
+the crown and is soft-limited. See [iteration twenty](../iteration20-walking.md). The carry socket follows `upperParts` with
 the hands; a new pivot without updating the socket can separate bomb and hands.
 Keep local/world conversions explicit (`ToGlobal`, arena-local attachment and
 `TempleStageView.HeightScale`). `BombThrowRules` owns authority launch height;
@@ -120,11 +128,13 @@ changing a cosmetic socket cannot repair a low physical throw launch.
 | Tiny restrained v0.17 upper-body motion | Leg/boot tests passed | Add actual body/shoulder/head measurements and inspect at battle scale; v0.18 doubles lateral weight travel |
 | Side-only inspection | Side view hid torso twist and head balance | Include front/three-quarter and normal camera views |
 | Three-quarter camera behind court wall | Actor/state checks and screenshot capture passed | Inspect image content; move the inspection camera so the entire body is unobstructed |
+| Longer, slower strides for readability (v0.15–v0.18) | Continuity and whole-body bounds passed | Planted boots skated at ~95% of body speed; measure grip, keep cadence matched to leg reach |
+| Phase-locked upper body, welded antenna | Lateral/roll/shoulder spans passed | No momentum on starts/stops; use springs for follow-through and settle |
 | “Passing tests means charming” | Numeric bounds describe mechanics | State measured facts; user approval and perceived feel remain separate |
 
 [MovementPlaytest](../../scripts/Testing/MovementPlaytest.cs) measures actual rig
-transforms, fixed stem length/hip attachment, bounded reach, body/head/shoulder
-motion and composed boot continuity. The 1200 Hz diagnostic catches curve-boundary
+transforms, fixed stem length/hip attachment, bounded reach, boot grip while down,
+body/head/shoulder/antenna motion and composed boot continuity. The 1200 Hz diagnostic catches curve-boundary
 velocity corners; it is not a rendering-performance claim. Foot-center height
 and support/flight fractions are diagnostics, not proof of a planted sole or
 terrain IK. Avoid tightening those metrics until they force the rejected stretch.

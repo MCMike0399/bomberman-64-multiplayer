@@ -60,9 +60,20 @@ public partial class PlaytestDriver
             try
             {
                 float dt=1f/fps,previous=0,maxLift=0,minLift=0,minBody=1,maxBody=-1,maxCompression=0,maxFootSeparation=0;int contacts=0,leftSupport=0,flight=0;
+                // World-space boot travel while a boot is down. The root advances
+                // along local +Z, so a gripping sole cancels that travel.
+                float travel=0,slip=0,supportTravel=0,leftWorld=0,rightWorld=0;bool leftDown=false,rightDown=false;
                 for(int frame=0;frame<fps*4;frame++)
                 {
-                    model.Animate(dt,dt*4.5f);
+                    model.Animate(dt,dt*4.5f);travel+=dt*4.5f;
+                    float leftNow=travel+model.LeftBootCenter.Z*model.Scale.Z,rightNow=travel+model.RightBootCenter.Z*model.Scale.Z;
+                    bool leftContact=model.LeftFootLift<.02f,rightContact=model.RightFootLift<.02f;
+                    if(frame>fps)
+                    {
+                        if(leftDown&&leftContact){slip+=Mathf.Abs(leftNow-leftWorld);supportTravel+=dt*4.5f;}
+                        if(rightDown&&rightContact){slip+=Mathf.Abs(rightNow-rightWorld);supportTravel+=dt*4.5f;}
+                    }
+                    leftWorld=leftNow;rightWorld=rightNow;leftDown=leftContact;rightDown=rightContact;
                     float pose=model.WalkPose;
                     if(previous<0&&pose>=0)contacts++;
                     previous=pose;
@@ -74,11 +85,14 @@ public partial class PlaytestDriver
                     if(model.LeftFootLift>.01f&&model.RightFootLift>.01f)flight++;
                 }
                 endPoses.Add(model.WalkPose);
-                Event("walk-stride",new {fps,distance=18,contacts,maxLift,minLift,minBody,maxBody,maxCompression,maxFootSeparation,supportFraction=leftSupport/(fps*4f),flightFraction=flight/(fps*4f)});
-                Check(contacts is >=7 and <=8,"normal travel uses deliberate strides rather than tiny rapid steps at "+fps+" FPS");
+                float skating=supportTravel>0?slip/supportTravel:1;
+                Event("walk-stride",new {fps,distance=18,contacts,maxLift,minLift,minBody,maxBody,maxCompression,maxFootSeparation,supportFraction=leftSupport/(fps*4f),flightFraction=flight/(fps*4f),skating});
+                Check(skating<.3f,"planted boots grip the floor instead of skating with the body at "+fps+" FPS");
+                // 1.5-unit strides: quick enough for short legs to grip the floor.
+                Check(contacts is >=11 and <=13,"normal travel uses a short-legged scamper matched to ground speed at "+fps+" FPS");
                 Check(maxFootSeparation>.03f&&maxFootSeparation<.13f,"short rigid legs retain a readable alternating boot silhouette at "+fps+" FPS");
-                Check(maxLift>.025f&&maxLift<.12f&&minLift>-.02f,"compact recovery boots clear the floor without sinking or a large jump at "+fps+" FPS");
-                Check(maxBody-minBody>.015f&&maxBody-minBody<.065f&&maxCompression>.005f&&maxCompression<.03f,"body springs gently within the short rigid leg range at "+fps+" FPS");
+                Check(maxLift>.025f&&maxLift<.135f&&minLift>-.02f,"compact recovery boots clear the floor without sinking or a large jump at "+fps+" FPS");
+                Check(maxBody-minBody>.015f&&maxBody-minBody<.065f&&maxCompression>.02f&&maxCompression<.07f,"body squashes into contacts within the short rigid leg range at "+fps+" FPS");
                 float beforeStop=model.WalkPose;bool noExtraStep=true;
                 for(int frame=0;frame<fps;frame++)
                 {
@@ -99,7 +113,7 @@ public partial class PlaytestDriver
             var model=new BomberModel(new ArtMaterials(),Colors.White,"whole body walk");
             try
             {
-                float dt=1f/fps,minX=1,maxX=-1,minRoll=1,maxRoll=-1,minHead=1,maxHead=-1,minShoulder=1,maxShoulder=-1;
+                float dt=1f/fps,minX=1,maxX=-1,minRoll=1,maxRoll=-1,minHead=1,maxHead=-1,minShoulder=1,maxShoulder=-1,minAntenna=1,maxAntenna=-1;
                 for(int i=0;i<fps;i++)model.Animate(dt,4.5f*dt);
                 for(int i=0;i<fps*3;i++)
                 {
@@ -108,14 +122,22 @@ public partial class PlaytestDriver
                     minRoll=Mathf.Min(minRoll,model.WalkBodyRotation.Z);maxRoll=Mathf.Max(maxRoll,model.WalkBodyRotation.Z);
                     minHead=Mathf.Min(minHead,model.WalkHeadRotation.Z);maxHead=Mathf.Max(maxHead,model.WalkHeadRotation.Z);
                     minShoulder=Mathf.Min(minShoulder,model.WalkShoulderRotation.Y);maxShoulder=Mathf.Max(maxShoulder,model.WalkShoulderRotation.Y);
+                    minAntenna=Mathf.Min(minAntenna,model.AntennaRotation.X);maxAntenna=Mathf.Max(maxAntenna,model.AntennaRotation.X);
                 }
-                Event("whole-body-walk",new{fps,lateralTravel=maxX-minX,weightRoll=maxRoll-minRoll,headCounterRoll=maxHead-minHead,shoulderTurn=maxShoulder-minShoulder});
+                // Release: the antenna keeps swinging from momentum, then settles upright.
+                float stopSwing=0;
+                for(int i=0;i<fps/2;i++){model.Animate(dt,0);stopSwing=Mathf.Max(stopSwing,Mathf.Abs(model.AntennaRotation.X));}
+                for(int i=0;i<fps*2;i++)model.Animate(dt,0);
+                float settledAntenna=model.AntennaRotation.Length();
+                Event("whole-body-walk",new{fps,lateralTravel=maxX-minX,weightRoll=maxRoll-minRoll,headCounterRoll=maxHead-minHead,shoulderTurn=maxShoulder-minShoulder,antennaSwing=maxAntenna-minAntenna,stopSwing,settledAntenna});
                 // Art-direction bounds: readable weight transfer at the battle camera,
                 // while keeping the head balanced and the short-leg silhouette intact.
                 Check(maxX-minX>.035f&&maxX-minX<.07f,"walking transfers visible body weight between supporting sides at "+fps);
                 Check(maxRoll-minRoll>.085f&&maxRoll-minRoll<.18f,"hips visibly lean through the stride without a toy-like rigid trunk at "+fps);
                 Check(maxShoulder-minShoulder>.12f&&maxShoulder-minShoulder<.24f,"shoulders follow the stride independently from the hips at "+fps);
                 Check(maxHead-minHead>.045f&&maxHead-minHead<.15f,"head balances the body with readable counter-motion at "+fps);
+                Check(maxAntenna-minAntenna>.08f&&maxAntenna-minAntenna<.9f,"antenna trails the helmet with springy follow-through at "+fps);
+                Check(stopSwing>.05f&&settledAntenna<.01f,"antenna sways from momentum on stopping, then settles upright at "+fps);
             }
             finally{model.Free();}
         }
@@ -126,16 +148,20 @@ public partial class PlaytestDriver
         try
         {
             for(int i=0;i<60;i++)model.Animate(1f/30,4.5f/30);
-            float previous=model.WalkBodyHeight,maxStep=0,maxReach=0;
+            float previous=model.WalkBodyHeight,maxStep=0,maxReach=0,low=1,high=-1;
             for(int i=0;i<180;i++)
             {
                 model.Animate(1f/30,4.5f/30);
                 maxStep=Mathf.Max(maxStep,Mathf.Abs(model.WalkBodyHeight-previous));
+                low=Mathf.Min(low,model.WalkBodyHeight);high=Mathf.Max(high,model.WalkBodyHeight);
                 maxReach=Mathf.Max(maxReach,Mathf.Abs(model.WalkPose));previous=model.WalkBodyHeight;
             }
-            Event("walk-phrasing",new {maxStep,maxReach});
-            Check(maxReach<.53f,"short legs stay within their intended swing without recovery overshoot");
-            Check(maxStep<.015f,"body does not drop almost its entire bounce in one 30 FPS frame");
+            Event("walk-phrasing",new {maxStep,maxReach,bounce=high-low});
+            // .62 rad swing, 7% swing follow-through, plus .11 rad that keeps the boots under the run lean.
+            Check(maxReach<.79f,"short legs stay within their intended swing without recovery overshoot");
+            // About five 30 FPS frames per step: even a pure sine bob moves 59% of its
+            // range in one frame. Guard the rejected pop of nearly the whole bounce.
+            Check(maxStep<.75f*(high-low),"body does not drop almost its entire bounce in one 30 FPS frame");
         }
         finally {model.Free();}
     }
@@ -144,13 +170,16 @@ public partial class PlaytestDriver
         var model=new BomberModel(new ArtMaterials(),Colors.White,"compact legs");
         try
         {
-            float maxStretch=0,maxHipGap=0;
+            float maxStretch=0,maxHipGap=0,maxSlide=0,maxTuck=0;
             for(int frame=0;frame<240;frame++)
             {
                 model.Animate(1f/60,4.5f/60);
                 maxStretch=Mathf.Max(maxStretch,model.WalkLegStretch);maxHipGap=Mathf.Max(maxHipGap,model.WalkHipSeparation);
+                maxSlide=Mathf.Max(maxSlide,model.WalkHipSlide);maxTuck=Mathf.Max(maxTuck,model.WalkLegTuck);
             }
-            Event("compact-legs",new {maxStretch,maxHipGap});
+            Event("compact-legs",new {maxStretch,maxHipGap,maxSlide,maxTuck});
+            // The belt spans y .36..45 and z -.155..+.185 around the hips: slide and tuck stay inside the suit.
+            Check(maxSlide<.075f&&maxTuck<.06f,"hip slide and passing tuck stay hidden under the belt");
             Check(Mathf.Abs(maxStretch-1)<.001f,"walking white legs retain their short fixed length throughout the stride");
             Check(maxHipGap<.001f,"walking legs stay attached to their actual hips throughout the stride");
         }

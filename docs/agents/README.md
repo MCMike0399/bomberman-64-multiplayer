@@ -2,8 +2,8 @@
 
 The user resumed gameplay work on 2026-10-23 for controller ergonomics, aiming
 and knockdown/blast separation (iteration19). The first eighteen iterations
-remain historical evidence. Current installed runtime: **v0.19.1**
-(see [verification](../verification.md)). Previous runtime baseline: **v0.18.0**, commit
+remain historical evidence. Iteration20 then rebuilt the walk. Current installed
+runtime: **v0.20.0** (see [verification](../verification.md)). Previous runtime baseline: **v0.18.0**, commit
 `316a330d7d895a92f98c1a60be7d571ec445a8a3`. Later documentation commits may follow.
 Verify the live branch, source, tools and installed version before relying on
 that baseline. Start with [project instructions](../../AGENTS.md).
@@ -49,9 +49,10 @@ update the current guide rather than silently reviving old behavior.
   historical. The input guide explains both primary-hold and carry-held flows.
 - The reticle is shape-only. It remains visible for obstructed/unsafe outcomes
   and clears on Results; diagnostic metadata is not visible text.
-- Keep the compact chibi body and short fixed white legs. The current walk uses
-  coordinated hip/shoulder/arm/head motion and a 2.4-unit distance-driven cycle.
-  The latest pass is tested, **not declared artistically approved by the user**.
+- Keep the compact chibi body and short fixed white legs. Iteration20 replaces the
+  2.4-unit glide with a 1.5-unit gripping scamper (heel/toe roll, passing tuck,
+  squash, spring-driven gloves/head/lean and a wobbling antenna). Tested, **not yet
+  approved by the user**. [Why and what changed](../iteration20-walking.md).
 - A dimensional arcade menu, restrained shared palette, stamped controls and
   clear focus are preferred over webpage-like card grids or flat backgrounds.
 - Sunken Temple uses the tiered pyramid/courtyard composition, readable sandstone,
@@ -100,7 +101,8 @@ These are sources and explanations, not instructions to recreate older designs:
 | [Walk experiments](../iteration15-walk.md), [compact character](../iteration16-character.md) | Rejected robot/stretched-leg solutions; continuity alone did not preserve charm |
 | [Charge and launch](../iteration15-charge.md), [deliberate aiming](../iteration16-aim.md) | Carry socket versus authority height, shared throw projection, fair fine adjustments |
 | [Reticle diagnosis](../iteration17-reticle.md), [iteration seventeen](../iteration17-overview.md) | Obstruction visibility, Results lifecycle, loot openings and mixed AI evidence |
-| [Current walk and controls](../iteration18-walking.md) | Independent waist pivot, whole-body review, restored K carry, duplicate-app cleanup |
+| [Walk and controls v0.18](../iteration18-walking.md) | Independent waist pivot, whole-body review, restored K carry, duplicate-app cleanup |
+| [Current walk](../iteration20-walking.md) | Measured boot skating, cadence matched to leg reach, spring follow-through, antenna |
 
 Reference files under ignored artifacts and old temporary clipboard paths may
 not exist on a new machine. Follow the durable source URLs in research docs;

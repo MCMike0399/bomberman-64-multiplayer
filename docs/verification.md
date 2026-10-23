@@ -1,3 +1,17 @@
+# v0.20.0: gripping cartoon scamper — 2026-10-23
+
+The walk was rebuilt after the user again found it stiff and cheap-looking; see [iteration twenty](iteration20-walking.md). The new movement check reproduced planted-boot skating at **.948** of body speed before the change (`artifacts/iteration20-walk-red`); the rebuilt gait measures **.04–.08** across 30/60/120 FPS. Gameplay rules, speed, collision, networking and controls are unchanged.
+
+| Check | Result |
+|---|---|
+| Movement (source) | **69 assertions**, including skating, hidden tuck/slide, antenna follow-through |
+| Recorded `walk-feel` (source) | **52 assertions**, side/three-quarter/battle camera, frames inspected |
+| Full source graphical journey | **2,203 assertions, 177 captures**, zero runtime errors (`artifacts/iteration20-graphical`) |
+| Bundled package smoke | **258 assertions**, zero runtime errors (`artifacts/iteration20-package`) |
+| Full exported Mac journey | **2,202 assertions, 177 captures**, 32 scenarios, zero runtime errors (`artifacts/iteration20-exported-graphical/playtest/20261023T144212.754142Z-all`) |
+
+The installed **v0.20.0** (build 21) app matches all **217** tested export files, passes strict signature verification, and produced **57 gameplay snapshots** with zero stderr in Launch Services smoke. Identity-checked cleanup removed the v0.19.1 backup and the export, leaving only `~/Applications/Blast Circuit.app`. Receipts: `artifacts/iteration20-install`. Before/after clip: `artifacts/iteration20-walk-compare.mp4`. The new walk is mechanically verified, not yet approved by the user.
+
 # v0.19.1: adjacent Switch B charging — 2026-10-23
 
 The user's physical Switch 2 follow-up found Y+A still uncomfortable. Printed **B** is now an additional primary/bomb input: hold **Y** and tap **B** to ready/pump, then release Y to throw. A remains available, X remains remote detonation, and menu B remains Back. Both held-button sampling and short-tap buffering recognize the alias. HUD hints, Controls, and the README teach the new combination.

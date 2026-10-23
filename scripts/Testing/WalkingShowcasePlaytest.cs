@@ -53,7 +53,7 @@ public partial class PlaytestDriver
                 float travel=(Player.GetProperty("x").GetSingle()-startX)*direction;
                 Check(frames<75&&travel>7.5f,"ordinary input traverses the clear courtyard toward "+label);
                 Check(displacements.Count>20&&displacements.Min()>.03f,"actual walking keeps continuous displacement through supporting-foot contacts: "+label);
-                Check(minPose<-.3f&&maxPose>.3f&&maxLift>.025f&&maxLift<.12f&&Mathf.Abs(maxLegStretch-1)<.001f&&maxHipGap<.001f,"actual scene alternates compact boots with fixed short legs attached at the hips: "+label);
+                Check(minPose<-.3f&&maxPose>.3f&&maxLift>.025f&&maxLift<.135f&&Mathf.Abs(maxLegStretch-1)<.001f&&maxHipGap<.001f,"actual scene alternates compact boots with fixed short legs attached at the hips: "+label);
                 Check(maxBodyX-minBodyX>.035f&&maxShoulder-minShoulder>.12f,"actual movement shows weight transfer and independent shoulder follow-through: "+label);
                 Check(maxSoleAngularSpeed<16,"actual scene boots roll continuously through travel and reversal: "+label);
                 Check(Mathf.Abs(model.GlobalPosition.Z-startZ)<.1f&&Player.GetProperty("fx").GetSingle()*direction>.99f,"direction reversal keeps the real actor on the courtyard path: "+label);
