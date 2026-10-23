@@ -19,9 +19,11 @@ static class StockHumanPressureChecks
         string? output=args.FirstOrDefault(a=>a.StartsWith("--output="))?[9..];
         if(output!=null){Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(output))!);File.WriteAllText(output,json+"\n");}
         if(args.Contains("--stock-human-pressure"))Console.WriteLine(json);
+        // Wider stock Pyramid includes a longer opening-crate route: allow eight seconds
+        // for first pressure while retaining six threats, bounded gaps and no self-deaths.
         if(!args.Contains("--measure-only"))
             foreach(var r in results)
-                if(r.ActiveTicks!=900||r.HumanPressureBombs<6||r.FirstHumanPressureTick<0||r.FirstHumanPressureTick>180||r.LongestHumanPressureGapTicks>240||r.BotDeaths>0)
+                if(r.ActiveTicks!=900||r.HumanPressureBombs<6||r.FirstHumanPressureTick<0||r.FirstHumanPressureTick>240||r.LongestHumanPressureGapTicks>240||r.BotDeaths>0)
                     throw new Exception($"Passive/unsafe stock Pyramid {r.Difficulty} seed={r.Seed}: pressure={r.HumanPressureBombs}, first={r.FirstHumanPressureTick}, gap={r.LongestHumanPressureGapTicks}, deaths={r.BotDeaths}");
         Console.WriteLine((args.Contains("--measure-only")?"MEASURE":"PASS")+" 4 stock Pyramid human-facing pressure scenarios");return results.Count;
     }
@@ -54,7 +56,7 @@ static class StockHumanPressureChecks
                 if(BlastGeometry.Contains(arena,soft,bomb.X,bomb.Tier,bomb.Z,bomb.BlastRadius,human.X,human.Y,human.Z,bomb.IsRed))
                 {pressure++;if(first<0)first=tick;gap=Math.Max(gap,tick-last);last=tick;}
             }
-            if(!bot.Alive){deaths++;break;}
+            if(!bot.Alive){deaths++;Console.WriteLine("DEATH_TRACE "+level+" "+seed+" "+JsonSerializer.Serialize(Field<object>(f.Session,"_presentationEvents")));break;}
         }
         gap=Math.Max(gap,active-last);
         int cover=0;for(int x=0;x<arena.Width;x++)for(int z=0;z<arena.Height;z++)if(soft.IsAlive(x,z))cover++;

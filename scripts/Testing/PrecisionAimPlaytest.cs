@@ -14,7 +14,7 @@ public partial class PlaytestDriver
     private ThrowPreviewState PrecisionPreview=>_root.ThrowPreviews.Single();
     private async Task PrecisionCarrySetup()
     {
-        await HandlingPractice();await GrappleWalk(0,6,18);
+        await HandlingPractice();await GrappleWalk(0,8,18);
         // This entire row is deliberately clear in the stock stage. No fixture or actor writes.
         Input(0,new PlayerInput(1,0));await Frames(2);
         Input(0,new PlayerInput(0,0,A:true,B:true));await Frames(2);
@@ -60,7 +60,7 @@ public partial class PlaytestDriver
         for(int pump=0;pump<3;pump++)
         {
             Input(0,new PlayerInput(0,0,A:true,B:true,Aim:true));await Frames(2);
-            Input(0,new PlayerInput(0,0,B:true,Aim:true));await Frames(2);
+            Input(0,new PlayerInput(0,0,B:true,Aim:true));await Frames(14);
         }
         var pumped=PrecisionPreview;
         Check(pumped.Pumps==3&&Math.Abs(pumped.X-far.X)<.03f&&Math.Abs(pumped.Z-far.Z)<.03f&&Math.Abs(pumped.Y-far.Y)<.03f,"three real pump presses enlarge power while preserving the deliberately selected landing");
@@ -97,7 +97,7 @@ public partial class PlaytestDriver
                 CtlReleaseAll();hub.OverrideDevicesForPlaytest(pad is null?[]:[pad]);
                 // Navigation uses ordinary authority movement, then native controls perform
                 // their own create/carry actions on a fresh empty-handed player.
-                await HandlingPractice();await GrappleWalk(0,6,18);
+                await HandlingPractice();await GrappleWalk(0,8,18);
                 Input(0,new PlayerInput(1,0));await Frames(2);Input(0,default);await Frames(2);
                 _root.InjectInput(0,null);await ControllerFocusReady();_controllerFocusTrial=true;
                 string name=pad is null?"Keyboard":pad.Name+(rightStick?" right stick":" left stick");
@@ -140,7 +140,7 @@ public partial class PlaytestDriver
                 void Turn(bool down){if(pad is null)CtlKey(Key.D,down);else Axis(rightStick?JoyAxis.RightX:JoyAxis.LeftX,down?1:0);}
                 Carry(true);await ControllerFrames(2);
                 if(pad is null){var intent=PlayerControls.Read(0,1);Check(intent.B&&!intent.Aim,"keyboard K holds carry without entering aim");}
-                Primary(true);await ControllerFrames(2);Primary(false);await ControllerFrames(2);
+                Primary(true);await ControllerFrames(2);Primary(false);await ControllerFrames(14);
                 Check(Player.GetProperty("carrying").GetString()=="bomb",name+": native carry plus primary creates the held bomb");
                 if(pad is not null){Aim(.3f);await ControllerFrames(2);Check(!Player.GetProperty("aiming").GetBoolean(),name+": below-threshold right trigger does not enter aim");}
                 Aim(1);await ControllerFrames(4);float startRange=AimNumber(Player,"aimRange"),px=AimNumber(Player,"x"),pz=AimNumber(Player,"z");
@@ -162,7 +162,7 @@ public partial class PlaytestDriver
                 else keyboardTurn=turn;
                 Check(Math.Abs(AimNumber(Player,"x")-px)<.02f&&Math.Abs(AimNumber(Player,"z")-pz)<.02f,name+": native aim directions do not move the carrier");
                 var selectedRange=AimNumber(Player,"aimRange");
-                Primary(true);await ControllerFrames(2);Primary(false);await ControllerFrames(2);
+                Primary(true);await ControllerFrames(2);Primary(false);await ControllerFrames(14);
                 Check(HandlingBomb.GetProperty("pumps").GetInt32()==1&&Math.Abs(AimNumber(Player,"aimRange")-selectedRange)<.01f,name+": native primary pumps while preserving selected range");
                 await Capture("precision-input-"+(pad?.RuntimeId.ToString()??"keyboard")+(rightStick?"-right":"-left"),0);
                 Aim(0);await ControllerFrames(3);

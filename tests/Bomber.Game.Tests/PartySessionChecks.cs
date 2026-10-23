@@ -21,8 +21,20 @@ internal static class PartySessionChecks
         var peer = c.Add("peer", 1); game.OnPlayerJoined(c, peer);
         Send(peer, "party.start", new {leaderId="host"}); Tick(4);
         Check(!c.Messages.Any(m => m.Type == "state"), "guest cannot spoof leader start");
+        var changed=new Dictionary<string,string>{{"stage","up-and-down"},{"bots","0"},{"wins","1"},{"round-seconds","180"},{"ghosts","off"},{"sudden-death","off"},{"bot-difficulty","easy"}};
+        Send(peer,"party.settings",changed);
+        Check(Last("party.status").GetProperty("settings").GetProperty("stage").GetString()=="rock-garden","guest cannot change room rules");
+        Send(host,"party.settings",changed);
+        Check(Last("party.status").GetProperty("settings").GetProperty("stage").GetString()=="up-and-down","leader edits room without changing identity");
+        changed["wins"]="99";Send(host,"party.settings",changed);
+        Check(Last("party.status").GetProperty("settings").GetProperty("wins").GetString()=="1","invalid rules are rejected atomically");
+        Send(host,"party.settings",c.Settings);
+        Send(host,"party.settings",new Dictionary<string,string>{{"round-seconds","90"}});
         Send(host, "appearance", new {index=6}); Send(host, "appearance", new {index="invalid"}); Send(host, "party.start", new {}); Tick(70);
         Check(c.Messages.Any(m => m.Type == "state"), "leader starts simulation");
+        Check(Last("stage").GetProperty("roundSeconds").GetInt32()==90,"next match uses saved room rules");
+        Send(host,"party.settings",new Dictionary<string,string>{{"round-seconds","300"}});
+        Check(Last("party.status").GetProperty("settings").GetProperty("round-seconds").GetString()=="90","leader cannot edit rules during a match");
         Check(Last("state").GetProperty("players").EnumerateArray().Any(p=>p.GetProperty("id").GetString()=="host"&&p.GetProperty("appearance").GetInt32()==6), "lobby suit enters match");
         int match=Last("party.status").GetProperty("match").GetInt32();
         Send(host,"party.start",new {});
@@ -41,7 +53,7 @@ internal static class PartySessionChecks
         Check(Last("party.status").GetProperty("leaderId").GetString()=="peer","disconnect transfers leadership");
         c.Connected.Add("host");game.OnPlayerConnectionChanged(c,host,true);
         Check(Last("party.status").GetProperty("leaderId").GetString()=="peer","reconnect preserves elected leader");
-        Console.WriteLine("PASS 13 persistent party authority checks");return 13;
+        Console.WriteLine("PASS 18 persistent party authority checks");return 18;
         void Tick(int ticks){for(int i=0;i<ticks;i++){c.Tick++;game.OnTick(c);}}
         void Send(RealtimePlayer p,string type,object data)=>game.OnMessage(c,p,new(type,JsonSerializer.SerializeToElement(data),null,c.Now));
         JsonElement Last(string type)=>c.Messages.Last(m=>m.Type==type).Data;

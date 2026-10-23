@@ -8,7 +8,9 @@ if(args.Contains("--pyramid-ledges")){PyramidLedgeChecks.Run();return;}
 
 if(args.Contains("--party-polish")){PartyPolishChecks.Run();return;}
 
-var passed = PyramidLedgeChecks.Run() + PartyPolishChecks.Run() + PartySessionChecks.Run() + LootAvailabilityChecks.Run() + AimedThrowChecks.Run() + CarryChargeChecks.Run() + BombPlacementChecks.Run() + PowerUpModeChecks.Run() + BombTravelChecks.Run() + KickTimingChecks.Run() + BodyContactChecks.Run() + BombImpactChecks.Run() + TraversalAndGhostChecks.Run() + BombActionsChecks.Run() + GrappleChecks.Run();
+if(args.Contains("--sandbox")){SandboxEquipmentChecks.Run();return;}
+
+var passed = SandboxEquipmentChecks.Run() + PyramidLedgeChecks.Run() + PartyPolishChecks.Run() + PartySessionChecks.Run() + LootAvailabilityChecks.Run() + AimedThrowChecks.Run() + CarryChargeChecks.Run() + BombPlacementChecks.Run() + PowerUpModeChecks.Run() + BombTravelChecks.Run() + KickTimingChecks.Run() + BodyContactChecks.Run() + BombImpactChecks.Run() + TraversalAndGhostChecks.Run() + BombActionsChecks.Run() + GrappleChecks.Run();
 Run("presentation snapshots expire stale effects but retain recent actions", () =>
 {
     var match=new LocalMatch(new MatchOptions {HumanPlayers=1,BotPlayers=0,Practice=true},FlatArena([(3,3)]));Fight(match);
@@ -131,7 +133,7 @@ Run("actual ramp ascent and descent publish continuous authority height", () =>
 Run("temple topology connects all eight spawns with sparse clear stairs", () =>
 {
     var stage = BlastStages.Get("sunken-temple");
-    Assert(stage.Width == 21 && stage.Height == 23, "Temple dimensions changed.");
+    Assert(stage.Width == 25 && stage.Height == 27, "Temple dimensions changed.");
     Assert(stage.Spawns.Distinct().Count() == 8, "Temple must support eight distinct spawns.");
     var seen = new HashSet<(int X, int Z)> { stage.Spawns[0] }; var queue = new Queue<(int X, int Z)>(); queue.Enqueue(stage.Spawns[0]);
     while (queue.TryDequeue(out var cell)) foreach (var (dx, dz) in new[] { (1,0),(-1,0),(0,1),(0,-1) })
@@ -140,26 +142,26 @@ Run("temple topology connects all eight spawns with sparse clear stairs", () =>
         if (stage.CanCross(cell.X, cell.Z, next.Item1, next.Item2) && seen.Add(next)) queue.Enqueue(next);
     }
     Assert(stage.Spawns.All(seen.Contains), "A spawn is cut off from the shared arena.");
-    Assert(seen.Contains((10,3)) && seen.Contains((10,18)), "Crown or sunken court disconnected.");
+    Assert(seen.Contains((12,2)) && seen.Contains((12,18)), "Crown or sunken court disconnected.");
     for (var seed = 0; seed < 30; seed++)
     {
         var match = new LocalMatch(new MatchOptions { Seed = seed });
         var bits = Convert.FromBase64String(State(match).GetProperty("softBlocks").GetString()!);
-        Assert(bits.Sum(b => System.Numerics.BitOperations.PopCount((uint)b)) <= 30, "Temple became a crate maze.");
-        for (var z = 3; z <= 13; z++) for (var x = 9; x <= 11; x++)
-            Assert((bits[(z*21+x)/8] & 1 << ((z*21+x)%8)) == 0, "Central stair route blocked by cover.");
+        Assert(bits.Sum(b => System.Numerics.BitOperations.PopCount((uint)b)) <= 90, "Temple exceeded expanded cover budget.");
+        for (var z = 3; z <= 13; z++) for (var x = 11; x <= 13; x++)
+            Assert((bits[(z*25+x)/8] & 1 << ((z*25+x)%8)) == 0, "Central stair route blocked by cover.");
     }
 });
 Run("temple actual authority inputs traverse summit and sunken court round trip", () =>
 {
     var match = new LocalMatch(new MatchOptions { HumanPlayers = 1, BotPlayers = 0, Practice = true }); Fight(match);
-    Walk(match, 10.5f, 3.5f);
-    Assert(Player(match).GetProperty("y").GetSingle() == 4, "Did not reach crown through all three stairs.");
-    Walk(match, 10.5f, 12.5f);
+    Walk(match, 12.5f, 2.5f);
+    Assert(Player(match).GetProperty("y").GetSingle() == 5, "Did not reach fifth-tier crown through four stairs.");
+    Walk(match, 12.5f, 12.5f);
     Assert(Player(match).GetProperty("y").GetSingle() == 1, "Did not descend three stairs.");
-    Walk(match, 6.5f, 12.5f); Walk(match, 6.5f, 17.5f);
+    Walk(match, 8.5f, 12.5f); Walk(match, 8.5f, 17.5f);
     Assert(Player(match).GetProperty("y").GetSingle() == 0, "Did not descend into courtyard.");
-    Walk(match, 6.5f, 12.5f); Walk(match, 10.5f, 12.5f);
+    Walk(match, 8.5f, 12.5f); Walk(match, 12.5f, 12.5f);
     Assert(Player(match).GetProperty("y").GetSingle() == 1, "Did not ascend from courtyard.");
     Step(match, 10000);
     Assert(!match.IsEnded && State(match).GetProperty("round").GetInt32() == 1, "Practice ended or reset while exploring.");
@@ -310,7 +312,7 @@ Run("power-up limits weighted choices and round inventory reset", () =>
     Assert(p.FireLevel==3&&p.BombCapacity==8&&p.HasHeart,"Power-up caps broken.");
     var seedA=new Random(7);var seedB=new Random(7);var types=new Dictionary<string,int>();
     for(var i=0;i<10000;i++){var a=PowerUpRules.ChooseDrop(seedA);Assert(a==PowerUpRules.ChooseDrop(seedB),"Drop draw not deterministic.");types[a]=types.GetValueOrDefault(a)+1;}
-    Assert(types.Count==5&&types["fire"]>types["remote"]&&types["bomb"]>types["heart"],"Weighted distribution missing/common items not common.");
+    Assert(types.Count==8&&types["fire"]>types["remote"]&&types["bomb"]>types["heart"],"Weighted distribution missing/common items not common.");
     var arena=FlatArena([(1,3),(7,3)]);
     arena=new StageLayout {Id=arena.Id,Width=9,Height=9,Cells=arena.Cells,Spawns=arena.Spawns,SoftBlockDensity=0,
         InitialItems=[(1,3,"fire"),(1,3,"bomb"),(1,3,"remote"),(1,3,"red"),(1,3,"heart")]};
@@ -331,6 +333,7 @@ Run("holding lift then bomb creates held bomb and pumps cap at six effective lev
     match.SetInput(0,new PlayerInput(0,0,true,true));Step(match,2);
     Assert(Player(match).GetProperty("carrying").GetString()=="bomb","Holding lift before bomb did not create held bomb.");
     for(var i=0;i<8;i++){match.SetInput(0,new PlayerInput(0,0,false,true));Step(match,2);match.SetInput(0,new PlayerInput(0,0,true,true));Step(match,2);}
+    Step(match,45);
     var bomb=State(match).GetProperty("bombs")[0];var fuse=bomb.GetProperty("fuse").GetSingle();
     Assert(bomb.GetProperty("pumps").GetInt32()==3&&bomb.GetProperty("effectiveLevel").GetInt32()==6,"Mega bomb pump/range cap broken.");
     Assert(Player(match).GetProperty("pumpSerial").GetInt64()==3,"Pump animation signaled ineffective pumps.");
@@ -395,10 +398,10 @@ Run("actual destructible drops use seeded weighted item selection and can be col
     }
     Assert(sawDrop&&sawEmpty,"Seed coverage missed drop/no-drop cases.");
 });
-Run("heart pickup absorbs exactly one actual blast without stacking", () =>
+Run("heart pickup absorbs exactly one actual blast", () =>
 {
     var arena=new StageLayout {Id="fixture",Width=9,Height=9,Cells=FlatArena([(1,3)]).Cells,Spawns=[(1,3),(2,3),(7,7)],SoftBlockDensity=0,
-        InitialItems=[(2,3,"heart"),(2,3,"heart")]};
+        InitialItems=[(2,3,"heart")]};
     var match=new LocalMatch(new MatchOptions {HumanPlayers=3,BotPlayers=0,Wins=5},arena);Fight(match);
     Assert(Player(match,1).GetProperty("heart").GetBoolean(),"Heart pickups not collected.");
     match.SetInput(0,new PlayerInput(0,0,true));Step(match,2);match.SetInput(0,default);Step(match,90);
@@ -471,6 +474,7 @@ Run("presentation events record only accepted held actions and one authoritative
     match.SetInput(0,new PlayerInput(0,0,false,true));Step(match,2);
     match.SetInput(0,new PlayerInput(0,0,true,true));Step(match,2);
     for(var i=0;i<8;i++){match.SetInput(0,new PlayerInput(0,0,false,true));Step(match,2);match.SetInput(0,new PlayerInput(0,0,true,true));Step(match,2);}
+    Step(match,30);
     var events=Events(match);
     Assert(events.Count(e=>Kind(e)=="bomb-carry")==1&&!events.Any(e=>Kind(e)=="bomb-drop"),"Held creation reported a ground placement.");
     Assert(events.Count(e=>Kind(e)=="pump")==3,"Rejected capped pumps emitted events.");

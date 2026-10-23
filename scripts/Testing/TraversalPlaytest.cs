@@ -18,7 +18,7 @@ public partial class PlaytestDriver
         var layout=BlastStages.Get("sunken-temple");
         var cover=Convert.FromBase64String(State.GetProperty("softBlocks").GetString()!);
         bool Clear(int x,int z)=>(cover[(z*layout.Width+x)/8]&(1<<((z*layout.Width+x)%8)))==0;
-        var ledges=new[]{(X:11,Z:3,Direction:1),(X:11,Z:4,Direction:1),(X:9,Z:3,Direction:-1),(X:9,Z:4,Direction:-1)};
+        var ledges=new[]{(X:16,Z:4,Direction:1),(X:8,Z:4,Direction:-1)};
         var available=ledges.Where(l=>Clear(l.X+l.Direction,l.Z)).ToArray();
         Check(available.Length>0,"stock temple has an uncovered crown ledge for ordinary traversal");
         var ledge=available[0];await GrappleWalk(0,ledge.X,ledge.Z);
@@ -37,16 +37,16 @@ public partial class PlaytestDriver
         await Capture("temple-ledge-landed");
         Input(0,new PlayerInput(-ledge.Direction,0));await Frames(12);Input(0,default);await Frames(2);
         Check(GrappleValue(GrapplePlayer(0),"y")==3,"walking against the upper cliff face cannot instantly climb back up");
-        Check((GrappleValue(GrapplePlayer(0),"x")-(ledge.Direction>0?12:9))*ledge.Direction>=-.01f,"upper cliff retains a solid face after landing");
+        Check((GrappleValue(GrapplePlayer(0),"x")-(ledge.Direction>0?17:8))*ledge.Direction>=-.01f,"upper cliff retains a solid face after landing");
         await Capture("temple-upward-cliff-blocked");
 
-        int shoreX=Enumerable.Range(5,11).First(x=>Clear(x,20)&&Clear(x,21));
-        await GrappleWalk(0,shoreX,21);
+        int shoreX=Enumerable.Range(5,11).First(x=>Clear(x,24)&&Clear(x,25));
+        await GrappleWalk(0,shoreX,25);
         Input(0,new PlayerInput(0,.35f));
-        await WaitState(_=>GrappleValue(GrapplePlayer(0),"z")>=21.72f,"ordinary inputs reach the dry shoreline with body radius over water",40);
+        await WaitState(_=>GrappleValue(GrapplePlayer(0),"z")>=25.72f,"ordinary inputs reach the dry shoreline with body radius over water",40);
         Input(0,default);await Frames(8);
         var shore=GrapplePlayer(0);
-        Check(GrappleValue(shore,"z")<22&&GrappleValue(shore,"y")==0&&!shore.GetProperty("airborne").GetBoolean(),"grazing the shore leaves the feet supported by real land");
+        Check(GrappleValue(shore,"z")<26&&GrappleValue(shore,"y")==0&&!shore.GetProperty("airborne").GetBoolean(),"grazing the shore leaves the feet supported by real land");
         await Capture("temple-shore-grazing-dry");
         Input(0,new PlayerInput(0,.6f));
         await WaitState(_=>GrapplePlayer(0).GetProperty("falling").GetBoolean(),"crossing the low shore starts a real gravity fall",30);
@@ -63,7 +63,7 @@ public partial class PlaytestDriver
         foreach(int seat in new[]{0,1,2})Input(seat,default);
         _root.StartLocal(new SessionSettings(Stage:"sunken-temple",Bots:0),3,practice:false);
         await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"three-human real match reaches fight for ghost interaction",150);
-        await GrappleWalk(0,10,13);await GrappleWalk(1,13,13);
+        await GrappleWalk(0,12,13);await GrappleWalk(1,15,13);
         Input(0,new PlayerInput(0,1));await Frames(1);
         Input(0,new PlayerInput(0,0,A:true));await Frames(2);Input(0,default);
         await WaitState(_=>GrapplePlayer(0).GetProperty("ghost").GetBoolean(),"real fuse explosion produces a live ghost in an ordinary match",120);

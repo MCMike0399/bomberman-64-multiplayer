@@ -19,6 +19,12 @@ public interface ISession : IAsyncDisposable
 public sealed record SessionSettings(string Stage = "sunken-temple", int Bots = 3, int Wins = 2,
     int RoundSeconds = 120, bool SuddenDeath = true, bool Ghosts = true, string BotDifficulty = "normal")
 {
+    public static SessionSettings FromWire(IReadOnlyDictionary<string,string> settings)
+    {
+        int Number(string key,int fallback)=>settings.TryGetValue(key,out var value)&&int.TryParse(value,out int number)?number:fallback;
+        bool Flag(string key)=>settings.GetValueOrDefault(key,"on") is "on" or "true";
+        return new(settings.GetValueOrDefault("stage","sunken-temple"),Number("bots",3),Number("wins",2),Number("round-seconds",120),Flag("sudden-death"),Flag("ghosts"),settings.GetValueOrDefault("bot-difficulty","normal"));
+    }
     public Dictionary<string, string> ToWireSettings()
     {
         if (BotDifficulty is not ("easy" or "medium" or "normal" or "hard")) throw new ArgumentException("Unknown CPU difficulty.");

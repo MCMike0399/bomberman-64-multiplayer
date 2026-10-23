@@ -16,7 +16,7 @@ public partial class GameRoot : Node3D
     private ISession? _session;
     private CancellationTokenSource? _connectCancel;
     private readonly Dictionary<int,PlayerInput> _injected=[];
-    private bool _connecting,_practice,_setupForHost,_smoke;
+    private bool _connecting,_practice,_setupForHost,_smoke,_editingRoom;
     private string _capture="gameplay";
     private double _elapsed,_smokeDuration=8;
     private SessionSettings _lastSettings=new();
@@ -100,10 +100,18 @@ public partial class GameRoot : Node3D
 
     public void Navigate(string screen)
     {
+        if(screen=="HostSetup"&&_session is NetworkSession room)
+        {
+            if(!room.IsLeader||room.Party?.Phase!="lobby"){_menu.Notice("Only the room leader can change waiting-room rules.");return;}
+            _editingRoom=true;_setupForHost=true;
+            if(room.Party.Settings is {} rules)_menu.Configure(SessionSettings.FromWire(rules));
+            ScreenName="Setup";_arena.Visible=false;_hud.Visible=false;_menu.SetOverlay(false);_menu.Visible=true;_menu.ShowScreen("HostSetup");return;
+        }
         if(screen=="Settings")
         {
             _settingsReturn=ScreenName;ScreenName="Settings";_menu.SetOverlay(_session!=null&&LatestState!=null);_menu.Visible=true;_hud.Visible=false;_menu.ShowScreen("Settings");return;
         }
+        _editingRoom=false;
         _menu.SetOverlay(false);
         if(screen is not ("Modes" or "Controls" or "Roster" or "Setup" or "Practice" or "HostSetup" or "Online" or "Lobby" or "Match" or "Results"))throw new ArgumentException("Unknown screen.",nameof(screen));
         if(screen is "Modes" or "Controls" or "Roster" or "Online" or "Setup" or "Practice" or "HostSetup")
@@ -122,6 +130,11 @@ public partial class GameRoot : Node3D
     }
     private void StartConfigured()
     {
+        if(_editingRoom)
+        {
+            if(_session is NetworkSession {IsLeader:true,Party.Phase:"lobby"} room)room.SetRoomSettings(_menu.OnlineSettings);
+            _editingRoom=false;ShowPartyLobby();return;
+        }
         if(_setupForHost){Navigate("Online");return;}
         int humans=_menu.HumanCount;
         if(humans>LocalControllerLayout.Capacity(ControllerHub.Current.PlayableCount))
@@ -177,7 +190,7 @@ public partial class GameRoot : Node3D
     }
     private void EnterMatch()
     {
-        ScreenName="Match";_menu.Visible=false;_arena.Visible=true;_hud.Visible=true;GetViewport().GuiReleaseFocus();
+        _editingRoom=false;ScreenName="Match";_menu.Visible=false;_arena.Visible=true;_hud.Visible=true;GetViewport().GuiReleaseFocus();
     }
     public void InjectInput(int seat,PlayerInput? input)
     {
@@ -185,6 +198,7 @@ public partial class GameRoot : Node3D
     }
     public void Back()
     {
+        if(_editingRoom&&ScreenName=="Setup"){_editingRoom=false;ShowPartyLobby();return;}
         if(ScreenName=="Settings"){RestoreScreen(_settingsReturn);return;}
         if(ScreenName=="Pause"){ResumeGame();return;}
         if(_connecting){CancelConnection();_menu.SetBusy(false,"Connection cancelled.");ScreenName="Online";_menu.ShowScreen("Online");return;}
@@ -325,6 +339,7 @@ public partial class GameRoot : Node3D
                     else if(party.Phase=="lobby"&&ScreenName is "Match" or "Results")ShowPartyLobby();
                     else if(party.Phase=="lobby"&&ScreenName is "Pause" or "Settings")_pauseReturn="Lobby";
                     break;
+                case "party.error":_menu.Notice(data.GetProperty("message").GetString()??"Room settings rejected.");break;
                 case "party.result":
                     _result=data.Clone();session.ReleaseInputs();ControllerHub.Current.StopVibration();ScreenName="Results";_hud.Visible=false;_menu.SetOverlay(false);_menu.Visible=true;_menu.ShowResults(LatestState,_result,true);break;
                 case "appearance":

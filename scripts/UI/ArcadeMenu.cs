@@ -12,7 +12,7 @@ public partial class ArcadeMenu : Control
     private readonly Dictionary<string,int> _lobbyAppearances=[];
     private readonly Dictionary<string,CharacterPreview> _lobbyPreviews=[];
     public event Action? LocalRequested, ReplayRequested, BackRequested, StartRoomRequested, ResumeRequested, SettingsChanged, TestVibrationRequested, CheckUpdatesRequested, InstallUpdateRequested;
-    private Button _startRoom=null!,_copyCode=null!;
+    private Button _startRoom=null!,_copyCode=null!,_roomRules=null!;
     private string? _roomCode;
     public event Action? IdentityChanged;
     private ArcadeModeButton _replay=null!;
@@ -216,6 +216,7 @@ public partial class ArcadeMenu : Control
         _partyHint=Copy(box,"Share the room code with friends. The leader starts each battle.",17);_partyHint.AddThemeColorOverride("font_color",ArcadeTheme.Muted);
         var actions=ArcadeTheme.Row(box,18);
         _startRoom=ArcadeTheme.Button(actions,"Start game",()=>StartRoomRequested?.Invoke(),true);_startRoom.Name="StartRoom";_startRoom.Disabled=true;
+        _roomRules=ArcadeTheme.Button(actions,"Room settings",()=>Navigation?.Invoke("HostSetup"));_roomRules.Name="EditRoomSettings";_roomRules.Visible=false;
         ArcadeTheme.Button(actions,"Settings",()=>Navigation?.Invoke("Settings")).Name="LobbySettings";
     }
     private VBoxContainer _results=null!;
@@ -337,7 +338,7 @@ public partial class ArcadeMenu : Control
     }
     public void ResetLobby()
     {
-        _party=null;_localPlayer=null;_countdown=null;_roomCode=null;_copyCode.Disabled=true;_copyCode.FocusMode=FocusModeEnum.None;_startRoom.Disabled=true;_startRoom.Visible=false;
+        _party=null;_localPlayer=null;_countdown=null;_roomCode=null;_copyCode.Disabled=true;_copyCode.FocusMode=FocusModeEnum.None;_startRoom.Disabled=true;_startRoom.Visible=false;_roomRules.Visible=false;
         _lobbyAppearances.Clear();_lobbyPreviews.Clear();
         foreach(var child in _roster.GetChildren()){_roster.RemoveChild(child);child.QueueFree();}
     }
@@ -422,10 +423,10 @@ public partial class ArcadeMenu : Control
     }
     private void ApplyParty()
     {
-        _startRoom.Visible=_party!=null;
+        _startRoom.Visible=_party!=null;_roomRules.Visible=_party!=null;
         if(_party is not {} data)return;
         var status=PartyStatus.Parse(data);bool leader=status.LeaderId==_localPlayer;
-        _startRoom.Disabled=!leader||!status.CanStart;
+        _startRoom.Disabled=!leader||!status.CanStart;_roomRules.Disabled=!leader||status.Phase!="lobby";
         string leaderName=data.GetProperty("players").EnumerateArray().FirstOrDefault(p=>p.GetProperty("playerId").GetString()==status.LeaderId) is var player&&player.ValueKind==JsonValueKind.Object?player.GetProperty("displayName").GetString()??"Leader":"Leader";
         _lobbyStatus.Text=status.Phase switch {"starting"=>"Starting the battle…","results"=>"Battle complete — returning to the room…","playing"=>"Battle in progress",_=>leader?status.CanStart?"You are the leader. Start when everyone is here.":"Waiting for another player or CPU rival.":$"Waiting for {leaderName} to start."};
         _partyHint.Text=$"Leader: {leaderName}  •  CPU rivals: {status.Bots}\nShare the room code. Start / + focuses Start game; confirm to begin.";

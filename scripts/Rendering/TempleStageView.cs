@@ -172,19 +172,14 @@ public partial class TempleStageView : Node3D
     }
     private void Shrine()
     {
-        float y=4*HeightScale;
-        var sandstone=_art.Masonry();var gold=_art.Color(new("eac46a"));var dark=_art.Color(new("6d4f27"));
-        Box(this,new(10.5f,y+.48f,2.5f),new(2.8f,.96f,.82f),sandstone,.035f);
-        Box(this,new(10.5f,y+.98f,2.5f),new(3.02f,.13f,.96f),gold,.035f);
-        Box(this,new(10.5f,y+.58f,2.932f),new(1.8f,.58f,.05f),dark,.05f);
-        Box(this,new(10.5f,y+.58f,2.97f),new(1.55f,.42f,.045f),_art.Color(new("e88699"),.44f),.04f);
-        for(int i=-1;i<=1;i++)Box(this,new(10.5f+i*.15f,y+.58f,3.003f),new(.045f,.28f,.025f),dark);
-        foreach(float x in new[]{9.14f,11.86f})
-        {
-            Box(this,new(x,y+.61f,2.9f),new(.2f,1.05f,.23f),gold,.035f);
-            Box(this,new(x,y+1.13f,2.9f),new(.26f,.12f,.29f),gold,.025f);
-        }
+        // A shallow summit mosaic keeps every playable tile visible and unobstructed.
+        float y=5*HeightScale+.012f;
+        var gold=_art.Color(new("eac46a"));var dark=_art.Color(new("6d4f27"));
+        Box(this,new(Width*.5f,y,1.95f),new(2.7f,.02f,1.7f),gold,.015f);
+        Box(this,new(Width*.5f,y+.015f,1.95f),new(2.3f,.015f,1.3f),dark,.015f);
+        for(int i=-1;i<=1;i++)Box(this,new(Width*.5f+i*.5f,y+.03f,1.95f),new(.2f,.015f,.8f),gold);
     }
+
     public Node3D CreateCover(int cell)
     {
         int x=cell%Width,z=cell/Width;var root=new Node3D {Position=new(x+.5f,Surface(x+.5f,z+.5f),z+.5f)};

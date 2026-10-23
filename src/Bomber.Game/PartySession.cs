@@ -10,13 +10,14 @@ public sealed class PartySession(GameSessionOptions options) : GameSession
     private readonly Dictionary<string, RealtimePlayer> _members = [];
     private readonly Dictionary<string, int> _appearances = [];
     private BlastSession? _match;
+    private IReadOnlyDictionary<string,string> _settings=options.Settings;
     private string? _leader;
     private string _phase = "lobby";
     private int _matchNumber;
     private bool _requested;
     private DateTimeOffset _started, _returnAt;
     private MatchResult? _result, _pendingResult;
-    private int Bots => options.Settings.TryGetValue("bots", out var text) && int.TryParse(text, out var count) ? Math.Clamp(count, 0, 7) : 0;
+    private int Bots => _settings.TryGetValue("bots", out var text) && int.TryParse(text, out var count) ? Math.Clamp(count, 0, 7) : 0;
     public override int? MinPlayersToStart => 1;
 
     public override void OnPlayerJoined(ISessionContext context, RealtimePlayer player)
@@ -60,6 +61,13 @@ public sealed class PartySession(GameSessionOptions options) : GameSession
     public override void OnMessage(ISessionContext context, RealtimePlayer player, InboundMessage message)
     {
         if (!_members.ContainsKey(player.PlayerId)) return;
+        if(message.Type=="party.settings")
+        {
+            if(message.Format!=FrameFormat.Text||player.PlayerId!=_leader||_phase!="lobby"||!context.IsConnected(player.PlayerId))return;
+            if(RoomRules.TryUpdate(_settings,message.Data,out var settings)){_settings=settings;Publish(context);}
+            else context.Send(player.PlayerId,"party.error",new {message="Invalid room settings. No rules were changed."});
+            return;
+        }
         if (message.Type == "party.start")
         {
             if (message.Format != FrameFormat.Text || player.PlayerId != _leader || _phase != "lobby" || !context.IsConnected(player.PlayerId) || !EnoughPlayers(context)) return;
@@ -78,7 +86,7 @@ public sealed class PartySession(GameSessionOptions options) : GameSession
     private void Start(ISessionContext context)
     {
         _requested = false; _phase = "playing"; _matchNumber++; _started = context.Now; _result = _pendingResult = null;
-        _match = new BlastSession(options);
+        _match = new BlastSession(options with { Settings = _settings });
         Publish(context);
         var initializing = new MatchContext(this, context, true);
         foreach (var player in _members.Values.OrderBy(p => p.Slot))
@@ -106,7 +114,7 @@ public sealed class PartySession(GameSessionOptions options) : GameSession
     private void Publish(ISessionContext context) => context.Broadcast("party.status", new
     {
         leaderId = _leader, phase = _phase, match = _matchNumber,
-        canStart = _phase == "lobby" && EnoughPlayers(context), bots = Bots,
+        canStart = _phase == "lobby" && EnoughPlayers(context), bots = Bots, settings = _settings,
         players = _members.Values.OrderBy(p => p.Slot).Select(p => new { playerId = p.PlayerId, displayName = PlayerNames.Display(p.DisplayName,p.Slot), slot = p.Slot, connected = context.IsConnected(p.PlayerId) }).ToArray()
     });
     private static void SendResult(ISessionContext context, MatchResult result, string? recipient = null)
@@ -119,7 +127,7 @@ public sealed class PartySession(GameSessionOptions options) : GameSession
         public string LobbyId => room.LobbyId;
         public string GameId => room.GameId;
         public LobbyState State => initializing ? LobbyState.Open : LobbyState.Running;
-        public IReadOnlyDictionary<string, string> Settings => room.Settings;
+        public IReadOnlyDictionary<string, string> Settings => owner._settings;
         public IReadOnlyList<RealtimePlayer> Players => room.Players;
         public bool IsConnected(string id) => room.IsConnected(id);
         public long? LastSequence(string id) => room.LastSequence(id);

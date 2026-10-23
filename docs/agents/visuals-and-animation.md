@@ -201,3 +201,12 @@ Finish a visual change when the reported view/action has an inspected before/aft
 required numeric invariants pass, shared poses remain sound, the ordinary battle
 camera is checked, and published screenshots/clips match delivered code. Record
 what remains subjective instead of claiming that all tests prove artistic success.
+
+## Iteration23 sandbox visuals
+
+Remote blue bombs hide the complete combustion fuse assembly, retaining their
+command indicators. Red bombs keep a red shell but use blue blast cores, rings,
+shells and billows. Purple bouncing and mint fast bombs match their pickup colors;
+Focus uses a cyan target symbol. Charge progress drives tension before the accepted
+pump animation. The fifth-tier Pyramid summit is a low mosaic, keeping playable
+space and rear water falls visible. Recheck camera fit on all enlarged arenas.

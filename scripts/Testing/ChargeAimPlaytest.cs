@@ -18,7 +18,7 @@ public partial class PlaytestDriver
             Input(0,new PlayerInput(0,0,A:true));await Frames(14);Input(0,default);await Frames(4);
             Check(Player.GetProperty("carrying").GetString()=="bomb","standing A hold lifts normally before aim preview");
             for(int charge=0;charge<pumps;charge++)
-            {Input(0,new PlayerInput(0,0,A:true));await Frames(3);Input(0,default);await Frames(3);}
+            {Input(0,new PlayerInput(0,0,A:true));await Frames(3);Input(0,default);await Frames(13);}
             await Frames(12);
             Check(_root.ThrowPreviews.Count==1,"only the locally controlled carrier gets a throw guide");
             ThrowPreviewState preview=_root.ThrowPreviews.Single();
@@ -70,7 +70,7 @@ public partial class PlaytestDriver
         // The shared arc reaches the visible water plane (-1). Approach the
         // shore through ordinary movement so this throw lands in the water row,
         // rather than on dry ground or past the outer map boundary.
-        await HandlingPractice();await GrappleWalk(0,6,17);
+        await HandlingPractice();await GrappleWalk(0,8,21);
         Input(0,new PlayerInput(0,1));await Frames(3);Input(0,default);await Frames(3);
         Check(Player.GetProperty("fz").GetSingle()>.9f,"shore witness faces south after its real courtyard walk");
         Input(0,new PlayerInput(0,0,A:true));await Frames(14);Input(0,default);await Frames(16);

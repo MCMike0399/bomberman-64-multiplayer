@@ -12,15 +12,16 @@ uniform vec4 hot : source_color = vec4(1.0,.78,.22,1.0);
 uniform float age=0.0;
 uniform float duration=.7;
 uniform bool shell=false;
+uniform bool blue=false;
 void fragment(){
  float p=clamp(age/duration,0.0,1.0);
  float rim=pow(1.0-max(dot(normalize(NORMAL),normalize(VIEW)),0.0),2.0);
  float swirl=sin(UV.x*26.0+age*12.0)*sin(UV.y*19.0-age*9.0)*.5+.5;
- vec3 flame=mix(hot.rgb*.65,vec3(1.0,.37,.015),swirl*.6+.2);
+ vec3 flame=mix(hot.rgb*.65,(blue?vec3(.02,.42,1.0):vec3(1.0,.37,.015)),swirl*.6+.2);
  flame+=vec3(.13,.035,0.0)*max(NORMAL.y,0.0);
  float smoke=smoothstep(.34,.55,age);
  ALBEDO=mix(flame,vec3(.42,.34,.27),smoke);
- if(shell){ ALBEDO=vec3(1.0,.63,.12); ALPHA=rim*.22*(1.0-smoothstep(.31,.4,age)); }
+ if(shell){ ALBEDO=blue?vec3(.12,.72,1.0):vec3(1.0,.63,.12); ALPHA=rim*.22*(1.0-smoothstep(.31,.4,age)); }
  else { ALPHA=(.48+swirl*.16)*(1.0-smoothstep(.22,1.0,p)); }
 }
 """};
@@ -42,12 +43,12 @@ void fragment(){
         _radius=radius;_age=initialAge;
         Tier=radius<=1.6f?"small":radius<=2.7f?"medium":"large";
         _duration=Tier=="small"?.52f:Tier=="medium"?.74f:1.05f;
-        _cloud=new() {Shader=CloudShader};_cloud.SetShaderParameter("hot",red?new Color("ed3058"):new Color("ff6508"));_cloud.SetShaderParameter("duration",_duration);
-        _boundary=new() {Shader=CloudShader};_boundary.SetShaderParameter("shell",true);_boundary.SetShaderParameter("hot",new Color("ffc44d"));
+        _cloud=new() {Shader=CloudShader};_cloud.SetShaderParameter("hot",red?new Color("32afff"):new Color("ff6508"));_cloud.SetShaderParameter("duration",_duration);_cloud.SetShaderParameter("blue",red);
+        _boundary=new() {Shader=CloudShader};_boundary.SetShaderParameter("shell",true);_boundary.SetShaderParameter("blue",red);_boundary.SetShaderParameter("hot",new Color("ffc44d"));
         // Full authoritative extent is readable from the first frame, before the center finishes blooming.
         _shell=Sphere(this,Vector3.Zero,Vector3.One*radius*2,_boundary);
-        _core=Sphere(this,Vector3.Zero,Vector3.One,art.Color(new Color("fff6b0"),.8f,true));
-        _ring=new MeshInstance3D {Mesh=RingMesh,MaterialOverride=art.Color(new Color(1,.86f,.47f,.75f),.9f,true)};AddChild(_ring);
+        _core=Sphere(this,Vector3.Zero,Vector3.One,art.Color(red?new Color("d2f5ff"):new Color("fff6b0"),.8f,true));
+        _ring=new MeshInstance3D {Mesh=RingMesh,MaterialOverride=art.Color(red?new Color(.2f,.8f,1,.75f):new Color(1,.86f,.47f,.75f),.9f,true)};AddChild(_ring);
         int count=reducedDetail?4:Tier=="small"?6:Tier=="medium"?10:14;
         for(int i=0;i<count;i++)
         {

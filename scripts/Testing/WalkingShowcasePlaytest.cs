@@ -11,7 +11,7 @@ public partial class PlaytestDriver
         Event("walking-showcase-policy",new {stage="sunken-temple",ordinaryInput=true,stateMutation=false,camera="side inspection following the actual match actor",playbackSpeed=1});
         _root.StartLocal(new SessionSettings(Stage:"sunken-temple",Bots:0),1,practice:true);
         await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"walking showcase reaches actual temple practice",150);
-        await GrappleWalk(0,6,18);
+        await GrappleWalk(0,8,18);
         var model=TraversalModel(0);var battleCamera=_root.GetViewport().GetCamera3D()!;
         var inspection=new Camera3D {Fov=38,Near=.05f,Far=100};_root.AddChild(inspection);
         var inspectionOffset=new Vector3(0,.65f,4.8f);
@@ -59,9 +59,9 @@ public partial class PlaytestDriver
                 Check(Mathf.Abs(model.GlobalPosition.Z-startZ)<.1f&&Player.GetProperty("fx").GetSingle()*direction>.99f,"direction reversal keeps the real actor on the courtyard path: "+label);
                 Event("walking-showcase-leg",new {label,frames,seconds=frames/30f,authorityTravel=travel,renderTravel=(model.GlobalPosition.X-startRender)*direction,minStep=displacements.Min(),maxStep=displacements.Max(),minPose,maxPose,maxLift,support,flight,maxSoleAngularSpeed,maxLegStretch,maxHipGap});
             }
-            await WalkLeg(1,14.5f,"right");
+            await WalkLeg(1,16.5f,"right");
             await Capture("walk-feel-turn",0);
-            await WalkLeg(-1,6.5f,"left");
+            await WalkLeg(-1,8.5f,"left");
             Input(0,default);Event("walking-showcase-release",new {movieFrame=Engine.GetProcessFrames()});
             float settledX=0;
             for(int i=0;i<30;i++)
@@ -75,16 +75,16 @@ public partial class PlaytestDriver
             Event("walking-showcase-end",new {movieFrame=Engine.GetProcessFrames(),end=model.GlobalPosition.ToString()});
             inspectionOffset=new Vector3(-1.7f,1.25f,3.8f);Follow();await Frames(4);
             Event("walking-threequarter-begin",new {movieFrame=Engine.GetProcessFrames(),camera="three-quarter inspection"});
-            await WalkLeg(1,14.5f,"threequarter-right");
-            await WalkLeg(-1,6.5f,"threequarter-left");
+            await WalkLeg(1,16.5f,"threequarter-right");
+            await WalkLeg(-1,8.5f,"threequarter-left");
             Input(0,default);await Frames(20);await Capture("walk-feel-threequarter",0);
             Event("walking-threequarter-end",new {movieFrame=Engine.GetProcessFrames()});
             // Review the same real movement at the player's ordinary camera too;
             // a close-up alone cannot establish the in-match feel.
             battleCamera.MakeCurrent();await Frames(4);
             Event("walking-gameplay-begin",new {movieFrame=Engine.GetProcessFrames(),camera="normal battle"});
-            await WalkLeg(1,14.5f,"gameplay-right");
-            await WalkLeg(-1,6.5f,"gameplay-left");
+            await WalkLeg(1,16.5f,"gameplay-right");
+            await WalkLeg(-1,8.5f,"gameplay-left");
             Input(0,default);await Frames(20);await Capture("walk-feel-gameplay",0);
             Event("walking-gameplay-end",new {movieFrame=Engine.GetProcessFrames()});
         }

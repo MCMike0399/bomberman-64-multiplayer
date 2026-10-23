@@ -175,7 +175,7 @@ public partial class ArenaView : Node3D
             _targets[id]=PositionOf(b);
             string? carrier=b.TryGetProperty("carrierId",out var carriedBy)&&carriedBy.ValueKind==JsonValueKind.String?carriedBy.GetString():null;
             var model=(BombModel)node;
-            if(model.UpdateState((int)F(b,"pumps"),(int)F(b,"level"),b.GetProperty("red").GetBoolean(),b.GetProperty("remote").GetBoolean(),F(b,"fuse"),carrier,(int)F(b,"state")))
+            if(model.UpdateState((int)F(b,"pumps"),(int)F(b,"level"),b.GetProperty("red").GetBoolean(),b.GetProperty("remote").GetBoolean(),F(b,"fuse"),carrier,(int)F(b,"state"),b.TryGetProperty("mode",out var bombMode)?bombMode.GetString()!:"normal",b.TryGetProperty("charge",out var charge)?charge.GetSingle():0))
             {
                 if(!eventsAvailable)_audio.Pump(model.Charge);
                 if(carrier!=null&&_entities.TryGetValue("p:"+carrier,out var player)&&player is BomberModel bomber)bomber.Pump(model.Charge);
@@ -242,12 +242,14 @@ public partial class ArenaView : Node3D
             bool aimSet=player.TryGetProperty("aimSet",out var set)&&set.GetBoolean();
             bool aiming=player.TryGetProperty("aiming",out var active)&&active.GetBoolean();
             float range=aimSet?F(player,"aimRange"):0;
-            var velocity=aimSet?BombThrowRules.AimedVelocity(F(player,"aimX"),F(player,"aimZ"),range):
+            float motionRate=bomb.TryGetProperty("motionRate",out var rate)?rate.GetSingle():1;
+            bool bounce=bomb.TryGetProperty("mode",out var mode)&&mode.GetString()=="bounce";
+            var velocity=aimSet?BombThrowRules.AimedVelocity(F(player,"aimX"),F(player,"aimZ"),range,motionRate,pumps):
                 BombThrowRules.Velocity(F(player,"fx"),F(player,"fz"),MathF.Sqrt(input.X*input.X+input.Z*input.Z),pumps);
             var projection=BombThrowRules.Project(origin,velocity,_terrain.AimSurface,_=>false,
                 bomb.GetProperty("remote").GetBoolean()?5:F(bomb,"fuse"),_terrain.AimCellKind,
                 (x,z)=>_terrain.AimCellKind(x+.5f,z+.5f),(x,z)=>_terrain.AimHasCover(x,z,cover),
-                waterLevel:_stage==BlastStages.SunkenTemple&&data.GetProperty("phase").GetInt32()==2?F(data,"waterLevel"):null);
+                waterLevel:_stage==BlastStages.SunkenTemple&&data.GetProperty("phase").GetInt32()==2?F(data,"waterLevel"):null,motionRate:motionRate,bounce:bounce,gravityScale:BombThrowRules.Weight(pumps),pumps:pumps);
             if(!_throwPreviews.TryGetValue(id,out var view))
             {view=new BombThrowPreview();_effects.AddChild(view);_throwPreviews[id]=view;}
             view.Update(projection,pumps,player.GetProperty("slot").GetInt32(),aimSet,aiming,range);seen.Add(id);
@@ -340,7 +342,7 @@ public partial class ArenaView : Node3D
     }
     private void PowerupMessage(Vector3 position,string kind,bool maximum=false)
     {
-        string text=kind switch {"fire"=>maximum?"MAX BLAST!":"BLAST UP!","bomb"=>maximum?"MAX BOMBS!":"BOMB UP!","remote"=>"REMOTE!","red"=>"POWER BOMB!","heart"=>"HEART!",_=>kind};
+        string text=kind switch {"fire"=>maximum?"MAX BLAST!":"BLAST UP!","bomb"=>maximum?"MAX BOMBS!":"BOMB UP!","remote"=>"REMOTE!","red"=>"POWER BOMB!","heart"=>"HEART!","bounce"=>"BOUNCE BOMBS!","fast"=>"FAST BOMBS!","focus"=>"QUICK CHARGE!",_=>kind};
         var label=new Label3D {Text=text,Position=position+new Vector3(0,2.2f,0),FontSize=34,PixelSize=.012f,Billboard=BaseMaterial3D.BillboardModeEnum.Enabled,NoDepthTest=true,OutlineSize=10,Modulate=new Color("ffe571"),OutlineModulate=new Color("233657")};
         _effects.AddChild(label);var tween=label.CreateTween().SetParallel();tween.TweenProperty(label,"position",label.Position+Vector3.Up*.9f,1.2);tween.TweenProperty(label,"modulate:a",0f,1.2);tween.Chain().TweenCallback(Callable.From(label.QueueFree));
     }

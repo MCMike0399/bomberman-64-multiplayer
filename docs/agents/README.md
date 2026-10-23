@@ -35,9 +35,14 @@ update the current guide rather than silently reviving old behavior.
 
 ## Current decisions that supersede earlier experiments
 
+- Iteration23: wider five-tier Pyramid with rear pitfalls; enlarged other arenas;
+  replaceable bomb/ability slots, bouncing/fast bombs, Focus charging/assist, heavier
+  charged throws, blue red-bomb blasts and no ghost/bomb interaction. Leaders can
+  edit waiting-room rules through the existing match editor. See the gameplay guide.
+
 - Source party polish (2026-10-23, not yet installed): Copy code, saved online name/server,
   named character/HUD labels, first-to-two and 1:00 + 1:00 defaults, immediate flood,
-  water ghost returns, sealed rear temple passage and diagonal stair kick fix.
+  water ghost returns, rear temple barrier (superseded by the v0.23 open pitfall) and diagonal stair kick fix.
   Right shoulder now stops kicked bombs; remote remains on the face button.
   See [input/UI](input-and-ui.md), [gameplay](gameplay-and-ai.md) and [verification](../verification.md).
 

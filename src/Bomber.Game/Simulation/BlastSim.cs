@@ -190,12 +190,15 @@ public sealed class BlastPlayer
     // Power-ups.
     public int BombCapacity { get; set; } = PowerUpRules.StartingBombs;  // max active bombs
     public int FireLevel { get; set; } = 1;      // 1–3 normal, pumping raises effective level
-    public bool HasRemote { get; set; }
-    public bool HasRed { get; set; }
+    public string BombType { get; set; } = "normal";
+    public string Ability { get; set; } = "none";
+    public bool HasRemote { get=>BombType=="remote";set{if(value)BombType="remote";else if(HasRemote)BombType="normal";} }
+    public bool HasRed { get=>BombType=="red";set{if(value)BombType="red";else if(HasRed)BombType="normal";} }
+    public bool HasFocus => Ability=="focus";
     public long PickupSerial { get; set; }
     public string? LastPickup { get; set; }
     public long PumpSerial { get; set; }
-    public bool HasHeart { get; set; }
+    public bool HasHeart { get=>Ability=="heart";set{if(value)Ability="heart";else if(HasHeart)Ability="none";} }
 
     // Score.
     public int Wins { get; set; }
@@ -278,8 +281,17 @@ public sealed class BlastBomb
 
     public int FireLevel { get; set; } = 1;   // 1–3
     public int Pumps { get; set; }             // 0–3 additional pumps
-    public bool IsRed { get; set; }            // piercing blast
-    public bool IsRemote { get; set; }         // detonated by owner's R button
+    public string Mode { get; set; } = "normal";
+    public bool IsRed { get=>Mode=="red";set{if(value)Mode="red";else if(IsRed)Mode="normal";} }
+    public bool IsRemote { get=>Mode=="remote";set{if(value)Mode="remote";else if(IsRemote)Mode="normal";} }
+    public bool IsBouncy => Mode=="bounce";
+    public bool IsFast => Mode=="fast";
+    public float MotionRate => IsFast?1.5f:1f;
+    public float GravityScale => BombThrowRules.Weight(Pumps);
+    public int Bounces { get; set; }
+    public int RequestedPumps { get; set; }
+    public float ChargeRemaining { get; set; }
+    public float ChargeDuration { get; set; }
 
     public float FuseTimer { get; set; } = FuseSeconds;
     public bool Exploded { get; set; }
@@ -297,7 +309,7 @@ public sealed class BlastBomb
 
     /// <summary>Effective blast radius: 0.9 cells per effective level plus 0.4; mega levels cap at six.</summary>
     public int EffectiveLevel => Math.Clamp(FireLevel + Pumps, 1, Pumps > 0 ? PowerUpRules.MaximumMegaFire : PowerUpRules.MaximumNormalFire);
-    public float BlastRadius => EffectiveLevel * .9f + .4f;
+    public float BlastRadius => (EffectiveLevel * .9f + .4f) * (IsRed?1.25f:1f);
 }
 
 /// <summary>A short-lived spherical blast zone after an explosion.</summary>
@@ -322,7 +334,10 @@ public sealed class BlastItem
     public int CellX { get; init; }
     public int CellZ { get; init; }
     public int Tier { get; init; }
-    public string Type { get; init; } = "";  // "fire", "bomb", "remote", "red", "heart"
+    public string Type { get; init; } = "";
+    public float LifeRemaining { get; set; } = PowerUpRules.ItemLifetime;
+    public string? DroppedBy { get; init; }
+    public float OwnerLockRemaining { get; set; }
 
     public float X => CellX + 0.5f;
     public float Z => CellZ + 0.5f;

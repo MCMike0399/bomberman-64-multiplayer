@@ -70,6 +70,9 @@ int target=graph.Cell(5.5f,3.5f);
 Check(!danger.Safe(target,.55f,.8f),"a short fuse advances a neighboring bomb's predicted chain time");
 Check(danger.Safe(target,1.1f,1.3f),"an expired chain hazard releases its route rather than blocking it forever");
 Check(danger.Safe(target,0,.3f),"timed planning allows crossing before a visible fuse instead of treating all bombs as active blasts");
+var fringeChain=new[]{new BlastBomb{Id="fringe-early",X=3.5f,Z=3.5f,FuseTimer=.45f},new BlastBomb{Id="fringe-late",X=5.2f,Z=3.5f,FuseTimer=2.5f}};
+danger.Build(soft,fringeChain,Array.Empty<BlastHazard>());
+Check(danger.Begins[3*flat.Width+6]<.5f,"danger includes the authority's half-cell bomb chain margin");
 danger.Build(soft,Array.Empty<BlastBomb>(),new[]{new BlastHazard {Id="blast",X=5.5f,Z=3.5f,Y=0,Radius=1.3f,LifeTimer=.4f}});
 Check(!danger.Safe(target,0,.2f)&&danger.Safe(target,.6f,.8f),"existing blast zones remain unsafe for their real remaining lifetime");
 

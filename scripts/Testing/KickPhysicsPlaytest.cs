@@ -19,9 +19,9 @@ public partial class PlaytestDriver
     {
         Event("kick-physics-policy",new {stage="sunken-temple",source="ordinary three-human practice movement and actions",fixtures=false,stateMutation=false});
         await StartKickPractice();
-        await GrappleWalk(0,8,13);
+        await GrappleWalk(0,10,13);
         Check(GrapplePlayer(0).GetProperty("remote").GetBoolean(),"kick witness collects actual remote training pickup");
-        await GrappleWalk(0,7,13);await GrappleWalk(1,12,13);await GrappleWalk(2,15,12);
+        await GrappleWalk(0,9,13);await GrappleWalk(1,14,13);await GrappleWalk(2,17,12);
         Camera3D? inspection=null;var arenaCamera=_root.GetViewport().GetCamera3D()!;
         if(_scenario=="kick-physics")
         {
@@ -72,9 +72,9 @@ public partial class PlaytestDriver
         await Capture("kick-remote-command");
         if(inspection!=null){arenaCamera.MakeCurrent();inspection.QueueFree();await Frames(3);}
 
-        await StartKickPractice();await GrappleWalk(0,3,12);
+        await StartKickPractice();await GrappleWalk(0,1,12);
         Check(!GrapplePlayer(0).GetProperty("remote").GetBoolean(),"corner witness uses a normal bomb without remote pickup");
-        // The outside corner of the raised rear terrace is solid at (5,11),
+        // The outside corner of the raised rear terrace is solid at (3,10),
         // approached from the guaranteed-clear tier-one row twelve.
         Input(0,new PlayerInput(.7071f,-.7071f));await Frames(1);
         Input(0,new PlayerInput(0,0,A:true));await Frames(2);Input(0,default);await Frames(2);
@@ -84,19 +84,19 @@ public partial class PlaytestDriver
         Input(0,default);
         await WaitState(_=>State.GetProperty("bombs").GetArrayLength()>0&&KickBomb.GetProperty("state").GetInt32()==0,"normal bomb stops against solid raised corner",20);
         float x=GrappleValue(KickBomb,"x"),z=GrappleValue(KickBomb,"z"),fuse=GrappleValue(KickBomb,"fuse");
-        Check(x>4&&x<5&&z>11&&z<12,"corner stop remains outside the upper terrace footprint");
+        Check(x>2&&x<3&&z>11&&z<12,"corner stop remains outside the upper terrace footprint");
         Check(fuse>0&&fuse<BlastBomb.FuseSeconds,"corner collision retains a running normal fuse");
         await Capture("kick-normal-corner-fuse");
         // Walk away using normal controls while the actual bomb keeps ticking.
-        Input(0,new PlayerInput(-.6f,.8f));await Frames(18);Input(0,default);
+        Input(0,new PlayerInput(0,1));await Frames(22);Input(0,default);
         await WaitState(_=>!State.GetProperty("bombs").EnumerateArray().Any(b=>b.GetProperty("id").GetString()==cornerId),"corner-stopped normal bomb autoexplodes without a remote command",100);
         Check(State.GetProperty("hazards").GetArrayLength()>0,"corner fuse ends in a real rendered explosion");
-        Check(GrappleValue(GrapplePlayer(0),"x")<3,"corner witness retreats beyond the collected fire-up blast instead of silently respawning");
+        Check(GrappleValue(GrapplePlayer(0),"z")>14,"corner witness retreats beyond the collected fire-up blast instead of silently respawning");
         await Capture("kick-normal-corner-exploded");
         await StartKickPractice();
         var layout=BlastStages.Get("sunken-temple");var cover=Convert.FromBase64String(State.GetProperty("softBlocks").GetString()!);
         bool ClearLane(int column)=>Enumerable.Range(15,7).All(row=>(cover[(row*layout.Width+column)/8]&(1<<((row*layout.Width+column)%8)))==0);
-        int lane=Enumerable.Range(9,3).First(ClearLane);
+        int lane=Enumerable.Range(11,3).First(ClearLane);
         await GrappleWalk(0,lane,13);Input(0,new PlayerInput(0,1));await Frames(1);
         Input(0,new PlayerInput(0,0,A:true));await Frames(2);Input(0,default);await Frames(2);
         Check(State.GetProperty("bombs").GetArrayLength()==1,"terrace witness places a real bomb on the bridge before the courtyard drop");

@@ -106,10 +106,10 @@ internal static class AimedThrowChecks
                 m.SetInput(0,new PlayerInput(0,-1,B:true,Aim:true));Step(m,18);
                 for(int i=0;i<pumps;i++){
                     m.SetInput(0,new PlayerInput(0,0,A:true,B:true,Aim:true));Step(m,2);
-                    m.SetInput(0,new PlayerInput(0,0,B:true,Aim:true));Step(m,2);
+                    m.SetInput(0,new PlayerInput(0,0,B:true,Aim:true));Step(m,14);
                 }
                 var p=Player(m);var origin=new Vector3(N(p,"x"),N(p,"y")+BombThrowRules.LaunchHeight,N(p,"z"));
-                var projection=BombThrowRules.Project(origin,BombThrowRules.AimedVelocity(N(p,"aimX"),N(p,"aimZ"),N(p,"aimRange")),(x,z)=>0,_=>false);
+                var projection=BombThrowRules.Project(origin,BombThrowRules.AimedVelocity(N(p,"aimX"),N(p,"aimZ"),N(p,"aimRange"),pumps:pumps),(x,z)=>0,_=>false,gravityScale:BombThrowRules.Weight(pumps));
                 var fuse=N(Bomb(m),"fuse");m.SetInput(0,default);Step(m,64);
                 var actual=Bomb(m);
                 Assert(Math.Abs(N(actual,"x")-projection.Last.X)<.011f&&Math.Abs(N(actual,"z")-projection.Last.Z)<.011f,"Authority did not honor retained landing intent.");

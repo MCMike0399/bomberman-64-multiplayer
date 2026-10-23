@@ -55,7 +55,7 @@ public sealed partial class BlastSession
     {
         bomb.LandingY=null;
         bomb.State=BombState.Rolling;bomb.LastTouchedById=touchedBy;bomb.ResumeRollingAfterFall=false;bomb.OwnerMayLeave=false;
-        bomb.VX=vx;bomb.VZ=vz;bomb.KickHopRemaining=BlastBomb.KickHopSeconds;
+        bomb.VX=vx;bomb.VZ=vz;bomb.KickHopRemaining=bomb.IsBouncy?0:BlastBomb.KickHopSeconds;
     }
 
     // A small front bias reads as a foot-level drop. If that bias touches

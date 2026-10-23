@@ -15,7 +15,7 @@ internal static class BombActionsChecks
             Assert(F(B(m),"fuse")==fuse&&B(m).GetProperty("pumps").GetInt32()==0,"Held A repeated pumping or advanced carried fuse.");
             m.SetInput(0,default);Step(m,2);
             Assert(P(m).GetProperty("carrying").GetString()=="bomb","Releasing A unexpectedly threw the bomb.");
-            m.SetInput(0,new PlayerInput(0,0,true));Step(m,2);
+            m.SetInput(0,new PlayerInput(0,0,true));Step(m,16);
             Assert(B(m).GetProperty("pumps").GetInt32()==1,"Fresh A tap failed to inflate the carried bomb.");
             m.SetInput(0,new PlayerInput(0,0,B:true));Step(m,2);
             Assert(P(m).GetProperty("carrying").ValueKind==JsonValueKind.Null&&B(m).GetProperty("state").GetInt32()==3,"B press failed to throw latched carry.");

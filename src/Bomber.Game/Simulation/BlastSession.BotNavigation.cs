@@ -81,7 +81,10 @@ public sealed partial class BlastSession
         }
         int next=_aiGraph.Cell(x,z);
         if(next<0)return false;
-        if(next!=start&&(!BotOpen(next,start,bot,_aiDanger)||!BotSafe(_aiDanger,next,0,_aiProfile.SafetyHorizonSeconds)))return false;
+        // An escape crosses threatened cells before the fuse; requiring a safe
+        // destination for the entire horizon here contradicts the timed route.
+        float horizon=BotSafe(_aiDanger,start,0,_aiProfile.SafetyHorizonSeconds)?_aiProfile.SafetyHorizonSeconds:.4f;
+        if(next!=start&&(!BotOpen(next,start,bot,_aiDanger)||!BotSafe(_aiDanger,next,0,horizon)))return false;
         return true;
     }
     private InputState BotUnblockedInput(BlastPlayer bot,int start,InputState desired)

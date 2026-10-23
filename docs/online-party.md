@@ -90,7 +90,7 @@ access if macOS asks. No global Gatekeeper change is needed.
 1. Everyone opens **Online Battle**, enters their own name and the shared server URL.
 2. One person chooses **Create private room**, selects CPU count and rules, and shares the room code.
 3. Everyone else chooses **Join room** and enters that code.
-4. The leader chooses **Start game** once everyone is ready. Start / + focuses that button; A / Enter confirms.
+4. The leader can open **Room settings** to edit the match rules in the same room, then chooses **Start game** once everyone is ready. Start / + focuses that button; A / Enter confirms.
 
 Choose zero CPUs for humans only. Private rooms wait for an explicit leader start,
 including solo rooms with CPUs. At least two total participants are required.

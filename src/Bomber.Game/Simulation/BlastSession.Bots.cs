@@ -11,7 +11,7 @@ public sealed partial class BlastSession
     private byte[] _aiItemKind=null!;
     private bool[] _aiCover=null!;
     private float[] _aiNearest=null!,_aiSecondNearest=null!;
-    private string?[] _aiNearestOwner=null!;
+    private string?[] _aiNearestOwner=null!,_aiItemDropper=null!;
     private int _aiGeneration,_aiFieldTick=-1;
     private float _aiReaction=.12f,_aiSteeringInterval=4f/30;
     private BotDifficultyProfile _aiProfile=BotDifficultyProfile.Medium;
@@ -25,16 +25,16 @@ public sealed partial class BlastSession
         _aiReaction=_aiProfile.ReactionSeconds;
         _aiSteeringInterval=MathF.Ceiling(_aiReaction*30)/30;
         _aiGraph=NavigationGraph.For(_stage);_aiDanger=new(_aiGraph,_stage);_aiPlacementDanger=new(_aiGraph,_stage);
-        int count=_aiGraph.Count;_aiQueue=new int[count];_aiSeen=new int[count];_aiFirst=new int[count];_aiDepth=new int[count];_aiItemKind=new byte[count];_aiCover=new bool[count];_aiNearest=new float[count];_aiSecondNearest=new float[count];_aiNearestOwner=new string?[count];
+        int count=_aiGraph.Count;_aiQueue=new int[count];_aiSeen=new int[count];_aiFirst=new int[count];_aiDepth=new int[count];_aiItemKind=new byte[count];_aiCover=new bool[count];_aiNearest=new float[count];_aiSecondNearest=new float[count];_aiNearestOwner=new string?[count];_aiItemDropper=new string?[count];
     }
     private void BotReset(){BotResetNavigation();_aiFieldTick=-1;_aiLastBomb.Clear();_aiCommittedGoals.Clear();foreach(var p in _players.Values){p.BotThinkTimer=0;p.BotPlacingBomb=false;p.BotBombTapPending=false;}}
     private void BotRefreshField()
     {
         if(_aiFieldTick==_tickCount)return;
-        _aiFieldTick=_tickCount;_aiDanger.Build(_softBlocks,_bombs,_hazards);Array.Clear(_aiItemKind);
+        _aiFieldTick=_tickCount;_aiDanger.Build(_softBlocks,_bombs,_hazards);Array.Clear(_aiItemKind);Array.Clear(_aiItemDropper);
         foreach(var item in _items)
         {
-            int cell=_aiGraph.Cell(item.X,item.Z);if(cell>=0)_aiItemKind[cell]=item.Type switch{"heart"=>1,"remote"=>2,"red"=>3,"fire"=>4,_=>5};
+            int cell=_aiGraph.Cell(item.X,item.Z);if(cell>=0){_aiItemDropper[cell]=item.DroppedBy;_aiItemKind[cell]=item.Type switch{"heart"=>1,"remote"=>2,"red"=>3,"fire"=>4,"bounce"=>6,"fast"=>7,"focus"=>8,_=>5};}
         }
         // Shared observation grids avoid scanning every opponent/cover cell separately for every bot search.
         for(int cell=0;cell<_aiGraph.Count;cell++)
@@ -70,13 +70,14 @@ public sealed partial class BlastSession
         if(bot.StunTimer>0||bot.CarriedById is not null)
         {bool effort=(_tickCount/4+bot.Slot)%2==0;bot.Input=new InputState(effort?1:-1,0,effort,false,false);return;}
         // Fair information: current visible entities and timers only; never sample the match RNG or future drops.
-        bool urgent=!BotSafe(_aiDanger,start,0,3.05f);
+        bool urgent=!BotSafe(_aiDanger,start,0,4.05f);
         if(urgent)
         {
             int escape=BotSearch(bot,start,_aiDanger,true,_aiProfile.EscapeDepth);
             if(escape<0)escape=BotLeastRiskStep(bot,start);
             bot.BotPlacingBomb=false;BotSteer(bot,start,escape);return;
         }
+        bool rejectedPlacement=false;
         if(bot.BotPlacingBomb)
         {
             bot.BotPlacingBomb=false;
@@ -86,13 +87,16 @@ public sealed partial class BlastSession
                 bot.BotGoalX=escape%_stage.Width;bot.BotGoalZ=escape/_stage.Width;
                 bot.BotBombTapPending=true;bot.Input=new InputState(0,0,true,false,false);return;
             }
+            // The orienting step changed the footprint/escape route. Resume real
+            // navigation before retrying instead of oscillating between tiny turns.
+            rejectedPlacement=true;
         }
         if(bot.HasRemote&&!bot.PrevR&&BotRemoteOpportunity(bot))
         {bot.Input=new InputState(0,0,false,false,true);return;}
         int waypoint=BotSearch(bot,start,_aiDanger,false,_aiProfile.TacticalDepth);
-        bool useful=BotAdjacentCover(start)||BotEnemyInRange(bot.X,bot.Y,bot.Z,bot.FireLevel*.9f+.4f,bot.Id,bot.HasRed);
+        bool useful=BotAdjacentCover(start)||BotEnemyInRange(bot.X,bot.Y,bot.Z,(bot.FireLevel*.9f+.4f)*(bot.HasRed?1.25f:1),bot.Id,bot.HasRed);
         bool centered=Math.Abs(bot.X-(start%_stage.Width+.5f))+Math.Abs(bot.Z-(start/_stage.Width+.5f))<.2f;
-        if(!_practice&&useful&&centered&&!bot.PrevA&&bot.ActiveBombs<bot.BombCapacity&&_aiDanger.BombOwners[start] is null&&
+        if(!rejectedPlacement&&!_practice&&useful&&centered&&!bot.PrevA&&bot.ActiveBombs<bot.BombCapacity&&_aiDanger.BombOwners[start] is null&&
             (!_aiLastBomb.TryGetValue(bot.Id,out var last)||_roundTimer-last>_aiProfile.BombCooldown))
         {
             float best=0,aimX=0,aimZ=0;
@@ -115,7 +119,7 @@ public sealed partial class BlastSession
     }
     private float BotBombUtility(BlastPlayer bot,float x,float z)
     {
-        float score=0,y=_stage.SurfaceAt(x,z),radius=bot.FireLevel*.9f+.4f;
+        float score=0,y=_stage.SurfaceAt(x,z),radius=(bot.FireLevel*.9f+.4f)*(bot.HasRed?1.25f:1);
         int reach=(int)MathF.Ceiling(radius);
         for(int cx=(int)x-reach;cx<=(int)x+reach;cx++)for(int cz=(int)z-reach;cz<=(int)z+reach;cz++)
             if(_softBlocks.IsAlive(cx,cz)&&InBlast(x,z,y,radius,cx+.5f,cz+.5f,_stage.At(cx,cz).Tier,bot.HasRed))score++;
@@ -135,8 +139,8 @@ public sealed partial class BlastSession
         if(!TryBombPlacement(bot,aimX,aimZ,advance,out float x,out float z)||BotBombUtility(bot,x,z)<=0)return false;
         _aiCandidate.OwnerId=bot.Id;_aiCandidate.X=x;_aiCandidate.Z=z;
         _aiCandidate.CellX=(int)x;_aiCandidate.CellZ=(int)z;_aiCandidate.Tier=(int)MathF.Round(_stage.SurfaceAt(x,z));
-        _aiCandidate.FireLevel=bot.FireLevel;_aiCandidate.Pumps=0;_aiCandidate.IsRed=bot.HasRed;_aiCandidate.IsRemote=false;
-        _aiCandidate.FuseTimer=BlastBomb.FuseSeconds-.25f;_aiCandidate.State=BombState.Resting;
+        _aiCandidate.FireLevel=bot.FireLevel;_aiCandidate.Pumps=0;_aiCandidate.Mode=bot.HasRemote?"normal":bot.BombType;
+        _aiCandidate.FuseTimer=(_aiCandidate.IsBouncy?3.5f:BlastBomb.FuseSeconds)-.25f;_aiCandidate.State=BombState.Resting;
         _aiCandidateBombs.Clear();_aiCandidateBombs.AddRange(_bombs);_aiCandidateBombs.Add(_aiCandidate);
         _aiPlacementDanger.Build(_softBlocks,_aiCandidateBombs,_hazards);
         escape=BotSearch(bot,start,_aiPlacementDanger,true,_aiProfile.EscapeDepth);
@@ -221,7 +225,7 @@ public sealed partial class BlastSession
     private float BotGoalScore(BlastPlayer bot,int cell,int depth)
     {
         float score=-depth*.45f;
-        score+=_aiProfile.ItemUtilityScale*(_aiItemKind[cell] switch {1=>bot.HasHeart?2:26,2=>bot.HasRemote?2:22,3=>bot.HasRed?2:21,4=>bot.FireLevel>=3?2:20,5=>bot.BombCapacity>=8?2:18,_=>0});
+        score+=(_aiItemDropper[cell]==bot.Id?0:_aiProfile.ItemUtilityScale)*(_aiItemKind[cell] switch {1=>bot.HasHeart?0:26,2=>bot.HasRemote?0:22,3=>bot.HasRed?0:21,4=>bot.FireLevel>=3?0:20,5=>bot.BombCapacity>=8?0:18,6=>bot.BombType=="bounce"?0:21,7=>bot.BombType=="fast"?0:21,8=>bot.HasFocus?0:8,_=>0});
         if(BotAdjacentCover(cell))score+=3;
         float x=cell%_stage.Width+.5f,z=cell/_stage.Width+.5f,y=_aiGraph.Height[cell];
         float nearest=_aiNearestOwner[cell]==bot.Id?_aiSecondNearest[cell]:_aiNearest[cell];
@@ -235,7 +239,7 @@ public sealed partial class BlastSession
             score+=10-Math.Abs(nearest-preferred)*_aiProfile.PressureWeight;
             // Reaching actual visible blast range is worth a detour. Pure geometric
             // distance can otherwise keep a bot below a cliff instead of using its ramp.
-            if(preferred<=1&&BotEnemyInRange(x,y,z,bot.FireLevel*.9f+.4f,bot.Id,bot.HasRed))
+            if(preferred<=1&&BotEnemyInRange(x,y,z,(bot.FireLevel*.9f+.4f)*(bot.HasRed?1.25f:1),bot.Id,bot.HasRed))
                 score+=3*_aiProfile.PressureWeight;
             if(nearest<5)score-=(4-BotExitCount(cell))*_aiProfile.TrapPenalty;
         }

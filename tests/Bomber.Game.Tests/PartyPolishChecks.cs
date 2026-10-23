@@ -56,7 +56,7 @@ internal static class PartyPolishChecks
         });
         Check("temple rear does not contain a hidden walkable corridor",()=>{
             var stage=BlastStages.Get(BlastStages.SunkenTemple);
-            Assert(Enumerable.Range(5,11).All(x=>!stage.At(x,1).IsPassable),"Rear row behind the pyramid remains walkable.");
+            Assert(Enumerable.Range(0,stage.Width).All(x=>stage.At(x,0).IsElimination) && Enumerable.Range(1,23).Where(x=>x<10||x>14).All(x=>stage.At(x,1).IsElimination),"Rear edge must be a fall into water, including the sides of the new summit.");
         });
         if(failures.Count>0)throw new InvalidOperationException(string.Join("; ",failures));return passed;
     }

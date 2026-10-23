@@ -27,14 +27,12 @@ internal static class CarryChargeChecks
             Assert(Number(Bomb(m),"fuse")<fuse,"Thrown fuse did not resume.");
             Step(m,90);Assert(State(m).GetProperty("bombs").GetArrayLength()==0,"Charged throw never exploded.");
         });
-        Check("each pump adds forward pressure and enough room to retreat from its bigger blast",()=>{
-            float previous=0;
+        Check("weighted charged throws still clear their owner with room to retreat",()=>{
             for(int pumps=0;pumps<=3;pumps++){
                 var m=Match();Lift(m);Pump(m,pumps);m.SetInput(0,new PlayerInput(0,0,B:true));Step(m,2);m.SetInput(0,default);Step(m,48);
                 var distance=Number(Bomb(m),"z")-Number(Player(m),"z");
-                Assert(distance>previous+.4f,"Pump did not improve projection.");
+                Assert(distance>3,"Weighted throw did not clear the carrier.");
                 Assert(distance>Bomb(m).GetProperty("effectiveLevel").GetInt32()*.9f+.4f,"Neutral charged blast overlaps throw position.");
-                previous=distance;
             }
         });
         Check("thrown bomb still knocks down an opponent",()=>{
@@ -58,7 +56,7 @@ internal static class CarryChargeChecks
                 var m=Match();Lift(m);Pump(m,pumps);
                 var p=Player(m);
                 var projected=BombThrowRules.Project(new(Number(p,"x"),Number(p,"y")+BombThrowRules.LaunchHeight,Number(p,"z")),
-                    BombThrowRules.Velocity(Number(p,"fx"),Number(p,"fz"),0,pumps),(x,z)=>0,_=>false,Number(Bomb(m),"fuse"));
+                    BombThrowRules.Velocity(Number(p,"fx"),Number(p,"fz"),0,pumps),(x,z)=>0,_=>false,Number(Bomb(m),"fuse"),gravityScale:BombThrowRules.Weight(pumps));
                 m.SetInput(0,new PlayerInput(0,0,B:true));Step(m,2);m.SetInput(0,default);Step(m,48);
                 Assert(Math.Abs(Number(Bomb(m),"x")-projected.Last.X)<.01f&&Math.Abs(Number(Bomb(m),"z")-projected.Last.Z)<.01f,
                      $"Shared target {projected.Last}, actual {Bomb(m)}, pumps={pumps}.");
@@ -95,7 +93,7 @@ internal static class CarryChargeChecks
         var m=new LocalMatch(new MatchOptions{HumanPlayers=2,BotPlayers=0,Practice=true},new StageLayout{Id="fixture",Width=21,Height=21,Cells=c,Spawns=[(6,6),victim?(6,9):elimination is not null?(18,6):(18,18)],SoftBlockDensity=0});Step(m,64);return m;
     }
     static void Lift(LocalMatch m){m.SetInput(0,new PlayerInput(0,0,A:true));Step(m,10);Assert(Player(m).GetProperty("carrying").GetString()=="bomb","Fixture did not lift.");m.SetInput(0,default);Step(m,2);}
-    static void Pump(LocalMatch m,int pumps){for(int i=0;i<pumps;i++){m.SetInput(0,new PlayerInput(0,0,A:true));Step(m,2);m.SetInput(0,default);Step(m,2);}}
+    static void Pump(LocalMatch m,int pumps){for(int i=0;i<pumps;i++){m.SetInput(0,new PlayerInput(0,0,A:true));Step(m,2);m.SetInput(0,default);Step(m,14);}}
     static void Step(LocalMatch m,int ticks){for(int i=0;i<ticks;i++)m.Tick();}
     static JsonElement State(LocalMatch m){using var d=JsonDocument.Parse(m.StateJson!);return d.RootElement.GetProperty("d").Clone();}
     static JsonElement Player(LocalMatch m,int index=0)=>State(m).GetProperty("players")[index];

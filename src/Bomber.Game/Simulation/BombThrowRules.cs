@@ -36,18 +36,21 @@ public static class BombThrowRules
 
     /// <summary>Range is the landing distance on level ground; elevation and combat can change it.
     /// Pumps affect the blast, never this deliberate range. Uses the authority's discrete flight clock.</summary>
-    public static Vector3 AimedVelocity(float directionX,float directionZ,float range)
+    public static Vector3 AimedVelocity(float directionX,float directionZ,float range,float motionRate=1,int pumps=0)
     {
         var position=new Vector3(0,LaunchHeight,0);
         var velocity=new Vector3(0,AimLiftSpeed,0);
         var ticks=0;
-        do {var flight=Advance(position,velocity,SimulationStep);position=flight.Position;velocity=flight.Velocity;ticks++;}while(position.Y>0&&ticks<150);
+        do {var flight=Advance(position,velocity,SimulationStep*motionRate,Weight(pumps));position=flight.Position;velocity=flight.Velocity;ticks++;}while(position.Y>0&&ticks<150);
         var length=MathF.Sqrt(directionX*directionX+directionZ*directionZ);
         if(!float.IsFinite(length)||length<.001f){directionX=0;directionZ=1;length=1;}
         range=float.IsFinite(range)?Math.Clamp(range,MinAimRange,MaxAimRange):DefaultAimRange;
-        var speed=range/(ticks*SimulationStep);
+        var speed=range/(ticks*SimulationStep*motionRate);
         return new(directionX/length*speed,AimLiftSpeed,directionZ/length*speed);
     }
+    public static float Weight(int pumps) => 1 + .2f*Math.Clamp(pumps,0,3);
+    public static bool CanBounce(int count,float verticalSpeed) => count<3 && verticalSpeed < -2;
+    public static float BounceVelocity(float verticalSpeed) => MathF.Abs(verticalSpeed)*.62f;
     public static float Speed(float stickMagnitude,int pumps) =>
         BlastBomb.FlySpeed * (.75f + .25f * Math.Clamp(stickMagnitude,0,1)) + Math.Clamp(pumps,0,3) * .65f;
     public static Vector3 Velocity(float facingX,float facingZ,float stickMagnitude,int pumps)
@@ -55,18 +58,18 @@ public static class BombThrowRules
         var speed=Speed(stickMagnitude,pumps);
         return new(facingX*speed,speed*MathF.Tan(MathF.PI*55/180)*.5f,facingZ*speed);
     }
-    public static ThrowFlight Advance(Vector3 position,Vector3 velocity,float dt)
+    public static ThrowFlight Advance(Vector3 position,Vector3 velocity,float dt,float gravityScale=1)
     {
         position.X+=velocity.X*dt;position.Z+=velocity.Z*dt;
-        velocity.Y-=BlastBomb.Gravity*dt;position.Y+=velocity.Y*dt;
+        velocity.Y-=BlastBomb.Gravity*gravityScale*dt;position.Y+=velocity.Y*dt;
         return new(position,velocity);
     }
     /// <summary>The same swept static footprint is used by the server and advisory guide.
     /// A wall removes horizontal velocity; gravity and the remaining fuse continue normally.</summary>
     public static ThrowFlight AdvanceStatic(Vector3 position,Vector3 velocity,float dt,Func<float,float,float> surface,
-        Func<int,int,CellKind> cellKind,Func<int,int,bool> hasCover)
+        Func<int,int,CellKind> cellKind,Func<int,int,bool> hasCover,bool bounce=false,float gravityScale=1)
     {
-        var flight=Advance(position,velocity,dt);
+        var flight=Advance(position,velocity,dt,gravityScale);
         int steps=Math.Max(1,(int)MathF.Ceiling(Vector2.Distance(new(position.X,position.Z),new(flight.Position.X,flight.Position.Z))/.1f));
         if(velocity.X==0&&velocity.Z==0)return flight;
         var last=position;
@@ -74,7 +77,13 @@ public static class BombThrowRules
         {
             var candidate=Vector3.Lerp(position,flight.Position,(float)step/steps);
             if(StaticObstructed(candidate,velocity,surface,cellKind,hasCover))
-                return new(new(last.X,flight.Position.Y,last.Z),new(0,flight.Velocity.Y,0));
+            {
+                if(!bounce)return new(new(last.X,flight.Position.Y,last.Z),new(0,flight.Velocity.Y,0));
+                bool hitX=StaticObstructed(new(candidate.X,candidate.Y,last.Z),velocity,surface,cellKind,hasCover);
+                bool hitZ=StaticObstructed(new(last.X,candidate.Y,candidate.Z),velocity,surface,cellKind,hasCover);
+                if(!hitX&&!hitZ)hitX=hitZ=true;
+                return new(new(last.X,flight.Position.Y,last.Z),new(hitX?-velocity.X:velocity.X,flight.Velocity.Y,hitZ?-velocity.Z:velocity.Z));
+            }
             last=candidate;
         }
         return flight;
@@ -113,17 +122,17 @@ public static class BombThrowRules
     /// <summary>Static scenery only. Players, moving bombs and future changes may interrupt the arc.</summary>
     public static ThrowProjection Project(Vector3 origin,Vector3 velocity,Func<float,float,float> surface,
         Func<Vector3,bool> obstructed,float fuseSeconds=BlastBomb.FuseSeconds,Func<float,float,CellKind>? landingKind=null,
-        Func<int,int,CellKind>? cellKind=null,Func<int,int,bool>? hasCover=null,float? waterLevel=null)
+        Func<int,int,CellKind>? cellKind=null,Func<int,int,bool>? hasCover=null,float? waterLevel=null,float motionRate=1,bool bounce=false,float gravityScale=1,int pumps=0)
     {
         var points=new List<Vector3>{origin};
         var position=origin;
-        bool stopped=false;
+        bool stopped=false;int bounces=0;
         for(int tick=0;tick<150;tick++)
         {
             fuseSeconds-=SimulationStep;
             if(fuseSeconds<=0)return new(points,ThrowProjectionEnd.Fuse);
-            var flight=cellKind is null?Advance(position,velocity,SimulationStep):
-                AdvanceStatic(position,velocity,SimulationStep,surface,cellKind,hasCover??((x,z)=>false));
+            var flight=cellKind is null?Advance(position,velocity,SimulationStep*motionRate,gravityScale):
+                AdvanceStatic(position,velocity,SimulationStep*motionRate,surface,cellKind,hasCover??((x,z)=>false),bounce,gravityScale);
             stopped|=(velocity.X!=0||velocity.Z!=0)&&flight.Velocity.X==0&&flight.Velocity.Z==0;
             position=flight.Position;velocity=flight.Velocity;
             if(obstructed(position))return new(points,ThrowProjectionEnd.Obstructed);
@@ -139,6 +148,8 @@ public static class BombThrowRules
                 position.Y=floor;points.Add(position);
                 var end=landingKind?.Invoke(position.X,position.Z) switch{
                     CellKind.Water=>ThrowProjectionEnd.Water,CellKind.Void=>ThrowProjectionEnd.Void,_=>stopped?ThrowProjectionEnd.Obstructed:ThrowProjectionEnd.Landing};
+                if(bounce && pumps>0 && end is not (ThrowProjectionEnd.Water or ThrowProjectionEnd.Void) && CanBounce(bounces,velocity.Y))
+                { bounces++;velocity.Y=BounceVelocity(velocity.Y);continue; }
                 return new(points,end);
             }
             points.Add(position);

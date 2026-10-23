@@ -36,7 +36,7 @@ public partial class PlaytestDriver
         await Capture("bomb-a-held-release",0);
         for(int charge=1;charge<=3;charge++)
         {
-            Input(0,new PlayerInput(0,0,A:true));await Frames(3);
+            Input(0,new PlayerInput(0,0,A:true));await Frames(16);
             Check(HandlingBomb.GetProperty("pumps").GetInt32()==charge,$"fresh Nintendo A press pumps held bomb to stage {charge}");
             await Frames(8);
             Check(HandlingBomb.GetProperty("pumps").GetInt32()==charge,"holding A does not repeat a pump");
@@ -58,7 +58,7 @@ public partial class PlaytestDriver
         Input(0,default);await Frames(3);
         Check(Player.GetProperty("carrying").ValueKind==JsonValueKind.Null&&HandlingBomb.GetProperty("state").GetInt32()==3,"legacy Nintendo B release still throws its picked-up bomb");
 
-        await HandlingPractice();await GrappleWalk(0,8,13);
+        await HandlingPractice();await GrappleWalk(0,10,13);
         Check(Player.GetProperty("remote").GetBoolean(),"remote behavior is enabled by collecting the real temple cache pickup");
         // Turn toward the broad terrace; holding A lifts the bomb through the same ordinary input path.
         Input(0,new PlayerInput(1,0));await Frames(1);Input(0,new PlayerInput(0,0,A:true));await Frames(13);Input(0,default);await Frames(3);

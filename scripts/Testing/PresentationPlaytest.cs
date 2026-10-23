@@ -23,7 +23,7 @@ public partial class PlaytestDriver
                 else
                 {
                     Input(0,new PlayerInput(0,0,A:true,B:true));await Frames(2);Input(0,new PlayerInput(0,0,B:true));await Frames(2);
-                    for(int i=0;i<pumps;i++){Input(0,new PlayerInput(0,0,A:true,B:true));await Frames(2);Input(0,new PlayerInput(0,0,B:true));await Frames(3);}
+                    for(int i=0;i<pumps;i++){Input(0,new PlayerInput(0,0,A:true,B:true));await Frames(2);Input(0,new PlayerInput(0,0,B:true));await Frames(14);}
                     Input(0,default);await Frames(3);
                     Check(Cue("pump")-pumpBefore==pumps,"accepted pumps each play once: "+tier);
                     Check(Cue("throw")==throwBefore+1,"accepted throw plays once: "+tier);
@@ -39,6 +39,7 @@ public partial class PlaytestDriver
                 Check(Cue("blast")==before+1,"repeated history never replays blast: "+tier);
                 if(tier=="large")
                 {
+                    await WaitState(_=>Presentation.GetProperty("explosions").EnumerateArray().Any(x=>x.GetProperty("phase").GetString()=="vapor"),"large blast reaches its dissipating phase",12);
                     Check(Presentation.GetProperty("explosions").EnumerateArray().Any(x=>x.GetProperty("phase").GetString()=="vapor"&&!x.GetProperty("hazard").GetBoolean()),"large blast has a nonhazardous dissipating phase");
                     await Capture("blast-large-vapor",0);
                 }

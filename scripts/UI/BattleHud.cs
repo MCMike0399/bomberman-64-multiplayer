@@ -75,6 +75,8 @@ public partial class BattleHud : Control
             token.Status=ghost?TokenStatus.Ghost:!alive?TokenStatus.Out:held?TokenStatus.Held:p.GetProperty("stunned").GetBoolean()?TokenStatus.Dizzy:TokenStatus.Alive;
             token.Bombs=p.GetProperty("bombs").GetInt32();token.Fire=p.GetProperty("fire").GetInt32();
             token.Red=p.GetProperty("red").GetBoolean();token.Remote=p.GetProperty("remote").GetBoolean();token.Heart=p.GetProperty("heart").GetBoolean();
+            token.BombType=p.TryGetProperty("bombType",out var type)?type.GetString()!:"normal";
+            token.Focus=p.TryGetProperty("ability",out var ability)&&ability.GetString()=="focus";
             token.WinTarget=_winsTarget;token.Wins=p.GetProperty("wins").GetInt32();
             token.Refresh();
         }
@@ -113,6 +115,9 @@ public partial class BattleHud : Control
                 bool latched=p.TryGetProperty("carryFromPrimary",out var primaryCarry)&&primaryCarry.GetBoolean();
                 string aim=family==ControllerFamily.Keyboard?(seat==1?"Ctrl":"L"):ControllerProfile.AimName(family);
                 string release=latched?$"{PromptBar.Spoken(carry)} throws":$"release {PromptBar.Spoken(carry)} to throw";
+                var held=state.GetProperty("bombs").EnumerateArray().FirstOrDefault(b=>b.TryGetProperty("carrierId",out var id)&&id.GetString()==p.GetProperty("id").GetString());
+                if(held.ValueKind!=JsonValueKind.Undefined&&held.TryGetProperty("charging",out var charging)&&charging.GetBoolean())
+                    return $"{who}: charging {held.GetProperty("pumps").GetInt32()+1}/3 · {held.GetProperty("charge").GetSingle():P0} · {release}";
                 if(p.TryGetProperty("aiming",out var aiming)&&aiming.GetBoolean())
                     return $"{who}: {(family==ControllerFamily.Keyboard?(seat==1?"arrows":"WASD"):"either stick")} moves the target · nudge to fine-tune · {release}";
                 return $"{who}: {PromptBar.Spoken(primary)} pumps · hold {aim} to aim · {release}";
@@ -163,6 +168,8 @@ public partial class PlayerToken : Control
     public bool Red {get;set;}
     public bool Remote {get;set;}
     public bool Heart {get;set;}
+    public string BombType {get;set;}="normal";
+    public bool Focus {get;set;}
     public int WinTarget {get;set;}=2;
     public TokenStatus Status {get;set;}
     private int _wins=-1;
@@ -211,6 +218,9 @@ public partial class PlayerToken : Control
         float x=88;
         if(Red){ArcadeIcons.Bomb(this,new(x,y),6,ArcadeTheme.Red,.5f);x+=17;}
         if(Remote){ArcadeIcons.Bomb(this,new(x,y+1),6,new Color("3b62b8"),0,0,true);x+=17;}
+        if(BombType is "bounce" or "fast")
+        {ArcadeIcons.Bomb(this,new(x,y),6,new Color(BombType=="bounce"?"a365ea":"43d9a1"),.5f);x+=17;}
+        if(Focus){DrawArc(new(x,y),5,0,Mathf.Tau,20,ArcadeTheme.Aqua,2);DrawCircle(new(x,y),1.5f,ArcadeTheme.Cream);}
         if(Heart&&x<Size.X-6)ArcadeIcons.Heart(this,new(x,y),6.5f);
         if(Status is TokenStatus.Dizzy or TokenStatus.Held)Badge(Status==TokenStatus.Held?"Held":"Dizzy",ArcadeTheme.Gold);
         else if(Status==TokenStatus.Ghost)Badge("Ghost",ArcadeTheme.Aqua);

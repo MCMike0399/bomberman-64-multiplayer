@@ -2,6 +2,19 @@
   "schemaVersion": 1,
   "scenarios": [
     {
+      "id": "sandbox",
+      "method": "SandboxEquipment",
+      "domains": [
+        "gameplay",
+        "assets",
+        "mechanics",
+        "rendering"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
       "id": "party-polish",
       "method": "PartyPolish",
       "domains": [
@@ -396,6 +409,7 @@
     {
       "id": "all",
       "steps": [
+        "sandbox",
         "party-polish",
         "player-settings",
         "asset-audit",
@@ -453,6 +467,7 @@
     {
       "id": "core-headless",
       "steps": [
+        "sandbox",
         "asset-audit",
         "model-profile",
         "movement",

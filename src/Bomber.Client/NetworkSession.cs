@@ -24,6 +24,12 @@ public sealed class NetworkSession : ISession
     private int _appearance;
     private int _appearancePending, _startPending;
     private PartyStatus? _party;
+    private byte[]? _pendingRules;
+    public void SetRoomSettings(SessionSettings settings)
+    {
+        if(!IsLeader||Party?.Phase!="lobby")throw new InvalidOperationException("Only the waiting room leader can change the rules.");
+        Interlocked.Exchange(ref _pendingRules,JsonSerializer.SerializeToUtf8Bytes(new {t="party.settings",d=settings.ToWireSettings()}));
+    }
     private readonly TaskCompletionSource _partyReady = new(TaskCreationOptions.RunContinuationsAsynchronously);
     public PartyStatus? Party => Volatile.Read(ref _party);
     public bool IsLeader => Party is { LeaderId: not null } party && party.LeaderId == PlayerId;
@@ -153,7 +159,7 @@ public sealed class NetworkSession : ISession
                 if (Status.StartsWith("Ended", StringComparison.Ordinal)) return;
                 if (++retries > 5) { Fail("Connection lost. Return to the menu to reconnect."); return; }
                 Volatile.Write(ref _status, $"Reconnecting ({retries}/5)");
-                ReleaseInputs(); Interlocked.Exchange(ref _startPending, 0);
+                ReleaseInputs(); Interlocked.Exchange(ref _startPending, 0);Interlocked.Exchange(ref _pendingRules,null);
                 _socket?.Dispose();
                 while (!ct.IsCancellationRequested)
                 {
@@ -233,6 +239,8 @@ public sealed class NetworkSession : ISession
         {
             if (Interlocked.Exchange(ref _appearancePending,0)!=0)
                 await socket.SendAsync(EncodeAppearance(Volatile.Read(ref _appearance)).AsMemory(),WebSocketMessageType.Text,true,ct);
+            if(Interlocked.Exchange(ref _pendingRules,null) is {} rules)
+                await socket.SendAsync(rules.AsMemory(),WebSocketMessageType.Text,true,ct);
             if (Interlocked.Exchange(ref _startPending, 0) != 0)
                 await socket.SendAsync(JsonSerializer.SerializeToUtf8Bytes(new { t = "party.start", d = new {} }).AsMemory(), WebSocketMessageType.Text, true, ct);
             PlayerInput input;

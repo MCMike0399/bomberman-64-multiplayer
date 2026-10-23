@@ -33,8 +33,8 @@ public partial class PlaytestDriver
         foreach(int seat in new[]{0,1,2})Input(seat,default);
         _root.StartLocal(new SessionSettings(Stage:"sunken-temple",Bots:0),3,practice:true);
         await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"body contact practice reaches fight",150);
-        await GrappleWalk(2,15,12);
-        await GrappleWalk(0,8,13);await GrappleWalk(1,12,13);
+        await GrappleWalk(2,17,12);
+        await GrappleWalk(0,10,13);await GrappleWalk(1,14,13);
 
         for(int sample=0;sample<16;sample++)
         {

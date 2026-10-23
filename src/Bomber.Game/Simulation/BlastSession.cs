@@ -254,7 +254,7 @@ public sealed partial class BlastSession : GameSession
         _hazards.Clear();
         _items.Clear();
         foreach(var item in _stage.InitialItems.Concat(_practice ? _stage.TrainingItems : []))
-            _items.Add(new BlastItem { Id=NextItemId(),CellX=item.X,CellZ=item.Z,Tier=_stage.At(item.X,item.Z).Tier,Type=item.Type });
+            _items.Add(new BlastItem { Id=NextItemId(),CellX=item.X,CellZ=item.Z,Tier=_stage.At(item.X,item.Z).Tier,Type=item.Type,LifeRemaining=-1 });
 
         // Restore pending joiners and reset living players.
         foreach (var p in _players.Values)
@@ -497,24 +497,17 @@ public sealed partial class BlastSession : GameSession
             p.PrevB = input.B;
             p.PrevR = input.R;p.PrevStop=input.Stop;
 
-            if(stopPress)StopKickedBombs(p);
-            if(AdvanceKick(p,dt))continue;
-
-            UpdateThrowAim(p,input,dt);
-
-            // Ghost-specific actions.
-            if (p.Ghost)
+            // Ghosts retain movement/latching, but no bomb input or collision path.
+            if(p.Ghost)
             {
-                if(p.LatchedToId is null&&!p.Aiming)MovePlayer(p, input, dt);
-                // Ghost tries to latch onto a nearby living player.
-                if (_ghostsEnabled && p.LatchedToId is null)
-                    TryLatch(p);
-                // Ghost interactions: kick / pick up bombs.
-                if (bPress) TryGhostPickUp(context, p);
-                else if (bRelease && p.CarryingBombId is not null) ThrowBomb(context, p, input);
-                if (aPress && p.CarryingBombId is not null) PumpBomb(p);
+                ClearKick(p);ClearThrowAim(p);
+                if(p.LatchedToId is null)MovePlayer(p,input,dt);
+                if(_ghostsEnabled&&p.LatchedToId is null)TryLatch(p);
                 continue;
             }
+            if(stopPress)StopKickedBombs(p);
+            if(AdvanceKick(p,dt))continue;
+            UpdateThrowAim(p,input,dt);
 
             // A planted aim stance exchanges movement for deliberate direction and range.
             if(!p.Aiming)
@@ -561,7 +554,7 @@ public sealed partial class BlastSession : GameSession
         }
 
         // Check kick: walk into a resting bomb.
-        CheckKick(p, input, startX, startZ, dt);
+        if(!p.Ghost)CheckKick(p, input, startX, startZ, dt);
     }
 
     private void MovePlayerCarrying(BlastPlayer p, InputState input, float dt)
@@ -645,6 +638,7 @@ public sealed partial class BlastSession : GameSession
                 }
             }
 
+        if(mover.Ghost)return false;
         // Resting/stationary bombs on the same tier block movement.
         foreach (var b in _bombs)
         {
@@ -745,8 +739,8 @@ public sealed partial class BlastSession : GameSession
             X = x, Z = z,
             CellX = cx, CellZ = cz, Tier = (int)MathF.Round(_stage.SurfaceAt(x, z)),
             FireLevel = p.FireLevel,
-            IsRed = p.HasRed,
-            IsRemote = p.HasRemote,
+            Mode = p.BombType,
+            FuseTimer = p.BombType=="bounce"?3.5f:BlastBomb.FuseSeconds,
         };
         _bombs.Add(bomb);
         p.ActiveBombs++;
@@ -786,15 +780,9 @@ public sealed partial class BlastSession : GameSession
         }
     }
 
-    private void TryGhostPickUp(ISessionContext context, BlastPlayer p)
-    {
-        // Ghosts can pick up and throw bombs.
-        TryPickUpBombOnly(p);
-    }
-
     private void TryPickUpBombOnly(BlastPlayer p)
     {
-        if (p.CarryingBombId is not null) return;
+        if (p.Ghost || p.CarryingBombId is not null) return;
         var bomb = _bombs.Where(b => b.State == BombState.Resting && Math.Abs(BombY(b) - p.Y) < .6f)
             .OrderBy(b => Dist2(b.X, b.Z, p.X, p.Z))
             .FirstOrDefault(b => Dist2(b.X, b.Z, p.X, p.Z) <= (PlayerRadius + BlastBomb.Radius + 0.3f) * (PlayerRadius + BlastBomb.Radius + 0.3f));
@@ -825,11 +813,12 @@ public sealed partial class BlastSession : GameSession
 
         // A released stick still throws decisively clear of the carrier. Pumps
         // project the larger blast farther away, rewarding the setup with space.
-        var velocity = p.AimSet ? BombThrowRules.AimedVelocity(p.AimX,p.AimZ,p.AimRange) :
+        var velocity = p.AimSet ? BombThrowRules.AimedVelocity(p.AimX,p.AimZ,p.AimRange,bomb.MotionRate,bomb.Pumps) :
             BombThrowRules.Velocity(p.FacingX,p.FacingZ,input.Length,bomb.Pumps);
         var speed = MathF.Sqrt(velocity.X*velocity.X+velocity.Z*velocity.Z);
 
         bomb.State = BombState.Flying;
+        bomb.RequestedPumps=0; bomb.ChargeRemaining=0; bomb.Bounces=0;
         bomb.LandingY=null;
         bomb.LastTouchedById=p.Id;
         bomb.X = p.X;
@@ -865,7 +854,10 @@ public sealed partial class BlastSession : GameSession
     {
         var bomb = _bombs.FirstOrDefault(b => b.Id == p.CarryingBombId);
         if (bomb is null) return;
-        if (bomb.Pumps < 3) { bomb.Pumps++; p.PumpSerial++; PresentBomb("pump", bomb, p.Id, bomb.Pumps); }
+        if (bomb.Pumps + bomb.RequestedPumps >= 3) return;
+        bomb.RequestedPumps++;
+        if(bomb.ChargeRemaining<=0)
+            bomb.ChargeRemaining=bomb.ChargeDuration=p.HasFocus?PowerUpRules.FocusPumpSeconds:PowerUpRules.NormalPumpSeconds;
     }
 
     // ─── remote detonation ────────────────────────────────────────────────────
@@ -886,6 +878,7 @@ public sealed partial class BlastSession : GameSession
         {
             var b = _bombs[i];
             if (b.Exploded) { _bombs.RemoveAt(i); continue; }
+            if(b.State!=BombState.Carried){b.RequestedPumps=0;b.ChargeRemaining=0;}
 
             if(b.OwnerMayLeave&&(b.State!=BombState.Resting||b.OwnerId is null||
                 !_players.TryGetValue(b.OwnerId,out var placingOwner)||!placingOwner.Alive||placingOwner.Ghost||
@@ -922,9 +915,22 @@ public sealed partial class BlastSession : GameSession
                         TickFlyingBomb(context,b,dt);
                     }
                     break;
-                case BombState.Rolling: TickRollingBomb(context, b, dt); break;
-                case BombState.Flying: TickFlyingBomb(context, b, dt); break;
-                case BombState.Carried: UpdateCarriedBombPosition(b); break;
+                case BombState.Rolling: TickRollingBomb(context, b, dt*b.MotionRate); break;
+                case BombState.Flying: TickFlyingBomb(context, b, dt*b.MotionRate); break;
+                case BombState.Carried:
+                    UpdateCarriedBombPosition(b);
+                    if(b.RequestedPumps>0)
+                    {
+                        b.ChargeRemaining-=dt;
+                        if(b.ChargeRemaining<=.00001f)
+                        {
+                            b.Pumps++;b.RequestedPumps--;
+                            var carrier=_players.Values.FirstOrDefault(p=>p.CarryingBombId==b.Id);
+                            if(carrier!=null){carrier.PumpSerial++;PresentBomb("pump",b,carrier.Id,b.Pumps);}
+                            b.ChargeRemaining=b.RequestedPumps>0 ? b.ChargeDuration=carrier?.HasFocus==true?PowerUpRules.FocusPumpSeconds:PowerUpRules.NormalPumpSeconds : 0;
+                        }
+                    }
+                    break;
             }
         }
     }
@@ -958,8 +964,16 @@ public sealed partial class BlastSession : GameSession
         var cell = _stage.At(cx, cz);
         if (!BombTerrainClear(nx, nz, (int)MathF.Floor(b.X), (int)MathF.Floor(b.Z),allowDescent:true,movingBomb:b))
         {
-            b.State = BombState.Resting;
-            b.VX = b.VZ = 0;
+            if(b.IsBouncy)
+            {
+                bool xClear=BombTerrainClear(nx,b.Z,(int)MathF.Floor(b.X),(int)MathF.Floor(b.Z),true,b);
+                bool zClear=BombTerrainClear(b.X,nz,(int)MathF.Floor(b.X),(int)MathF.Floor(b.Z),true,b);
+                if(!xClear)b.VX=-b.VX;
+                if(!zClear)b.VZ=-b.VZ;
+                if(xClear&&zClear){b.VX=-b.VX;b.VZ=-b.VZ;}
+                b.Bounces++;PresentBomb("bounce",b,b.LastTouchedById);
+            }
+            else {b.State=BombState.Resting;b.VX=b.VZ=0;}
             return;
         }
 
@@ -1024,7 +1038,7 @@ public sealed partial class BlastSession : GameSession
     {
         if(b.ResumeRollingAfterFall){TickFallingKickedBomb(context,b,dt);return;}
         var flight=BombThrowRules.AdvanceStatic(new(b.X,b.FlyY,b.Z),new(b.FlyVX,b.FlyVY,b.FlyVZ),dt,
-            BombLandingHeight,(x,z)=>_stage.At(x,z).Kind,(x,z)=>_softBlocks.IsAlive(x,z));
+            BombLandingHeight,(x,z)=>_stage.At(x,z).Kind,(x,z)=>_softBlocks.IsAlive(x,z),b.IsBouncy,b.GravityScale);
         b.X=flight.Position.X;b.Z=flight.Position.Z;b.FlyY=flight.Position.Y;b.FlyVY=flight.Velocity.Y;b.FlyVX=flight.Velocity.X;b.FlyVZ=flight.Velocity.Z;
 
         var landingY = StaticBombLandingHeight(b.X, b.Z);
@@ -1038,7 +1052,10 @@ public sealed partial class BlastSession : GameSession
             {
                 // Head hit: stun the player, bomb bounces (continues).
                 KnockDown(p,2.0f,"falling-bomb",b.Id,b.LastTouchedById??b.OwnerId);
-                b.FlyVY = MathF.Abs(b.FlyVY) * 0.6f; // bounce upward
+                // A head impact dissipates energy instead of relaunching a large bomb.
+                b.FlyVY=Math.Min(MathF.Abs(b.FlyVY)*.3f,b.IsBouncy?3.2f:2.0f)/b.GravityScale;
+                float retention=b.IsBouncy?.7f:.5f/b.GravityScale;
+                b.FlyVX*=retention;b.FlyVZ*=retention;
             }
         }
 
@@ -1051,6 +1068,11 @@ public sealed partial class BlastSession : GameSession
             {
                 b.Exploded = true;
                 DecrementOwnerBombs(b.OwnerId);
+            }
+            else if(b.IsBouncy && b.Pumps>0 && BombThrowRules.CanBounce(b.Bounces,b.FlyVY))
+            {
+                b.Bounces++; b.FlyVY=BombThrowRules.BounceVelocity(b.FlyVY);
+                PresentBomb("bounce",b,b.LastTouchedById);
             }
             else
             {
@@ -1149,6 +1171,8 @@ public sealed partial class BlastSession : GameSession
         for (var i = _items.Count - 1; i >= 0; i--)
         {
             var item = _items[i];
+            if(item.LifeRemaining>=0){item.LifeRemaining-=(float)context.TickDelta.TotalSeconds;if(item.LifeRemaining<=0){_items.RemoveAt(i);continue;}}
+            item.OwnerLockRemaining=Math.Max(0,item.OwnerLockRemaining-(float)context.TickDelta.TotalSeconds);
             // Check if any player (or ghost) walks over it.
             foreach (var p in _players.Values)
             {
@@ -1163,11 +1187,12 @@ public sealed partial class BlastSession : GameSession
                     }
                     continue;
                 }
-                if (!p.Alive || p.Tier != item.Tier) continue;
+                if (!p.Alive || p.Tier != item.Tier || !PowerUpRules.CanCollect(p,item.Type) || item.DroppedBy==p.Id&&item.OwnerLockRemaining>0) continue;
                 if (Dist2(p.X, p.Z, item.X, item.Z) < (PlayerRadius + 0.4f) * (PlayerRadius + 0.4f))
                 {
-                    ApplyItem(p, item.Type);
+                    var replaced=PowerUpRules.Exchange(p,item.Type);
                     _items.RemoveAt(i);
+                    if(replaced!=null)DropEquipment(p,replaced);
                     goto nextItem;
                 }
             }
@@ -1176,6 +1201,10 @@ public sealed partial class BlastSession : GameSession
     }
 
     private static void ApplyItem(BlastPlayer p,string type) => PowerUpRules.Apply(p,type);
+    private void DropEquipment(BlastPlayer player,string type)
+    {
+        _items.Add(new BlastItem {Id=NextItemId(),CellX=(int)MathF.Floor(player.X),CellZ=(int)MathF.Floor(player.Z),Tier=player.Tier,Type=type,DroppedBy=player.Id,OwnerLockRemaining=PowerUpRules.SwapPickupDelay});
+    }
 
     // ─── player hits ──────────────────────────────────────────────────────────
 
@@ -1218,7 +1247,7 @@ public sealed partial class BlastSession : GameSession
         ClearRecovery(p);
         p.InvincibleTimer = 2.0f;
         // Lose carried power-ups as ghost.
-        p.HasRed = false; p.HasRemote = false;
+        p.BombType="normal";p.Ability="none";
         p.BombCapacity = 1; p.FireLevel = 1;
         if(reason is "water" or "fall") ReturnGhostToLand(p);
     }
@@ -1271,9 +1300,8 @@ public sealed partial class BlastSession : GameSession
     private void DropPowerUpOnDeath(BlastPlayer p)
     {
         string? type = null;
-        if (p.HasHeart) type = "heart";
-        else if (p.HasRed) type = "red";
-        else if (p.HasRemote) type = "remote";
+        if(p.Ability!="none")type=p.Ability;
+        else if(p.BombType!="normal")type=p.BombType;
         else if (p.FireLevel > 1) type = "fire";
         else if (p.BombCapacity > PowerUpRules.StartingBombs) type = "bomb";
 
@@ -1481,6 +1509,7 @@ public sealed partial class BlastSession : GameSession
             pickupSerial = p.PickupSerial,
             lastPickup = p.LastPickup,
             pumpSerial = p.PumpSerial,
+            bombType = p.BombType, ability = p.Ability,
             red = p.HasRed,
             remote = p.HasRemote,
             wins = p.Wins,
@@ -1499,6 +1528,8 @@ public sealed partial class BlastSession : GameSession
             z = MathF.Round(b.Z, 2),
             level = b.FireLevel,
             pumps = b.Pumps,
+            mode = b.Mode, bounces = b.Bounces, motionRate = b.MotionRate, gravityScale=b.GravityScale,
+            charge = b.ChargeDuration>0?Math.Clamp(1-b.ChargeRemaining/b.ChargeDuration,0,1):0, charging = b.RequestedPumps>0,
             red = b.IsRed,
             remote = b.IsRemote,
             fuse = MathF.Round(b.FuseTimer, 2),
@@ -1522,7 +1553,7 @@ public sealed partial class BlastSession : GameSession
             id = it.Id,
             cx = it.CellX,
             cz = it.CellZ,
-            type = it.Type,
+            type = it.Type, life = it.LifeRemaining, dropped = it.DroppedBy!=null,
             y = _stage.SurfaceAt(it.X, it.Z),
         });
 

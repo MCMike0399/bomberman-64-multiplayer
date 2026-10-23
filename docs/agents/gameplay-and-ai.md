@@ -83,6 +83,10 @@ reset simulation state and scores; neither bots nor a full room authorize start.
 Kernel connection lifecycle and its six-hour room limit remain separate from
 the product's lobby/playing/results phases. The kernel may tick a waiting party
 without starting its simulation. `party.status` carries that product state.
+The leader may send `party.settings` only while waiting in the lobby; edits are
+validated atomically, broadcast in `party.status.settings`, and used for the next
+match. The existing HostSetup editor stays in the same room when opened from its
+Room settings button. Guests and mid-match edits cannot change rules.
 Only new private rooms opt in via `party=on`; quick play and legacy API rooms
 retain their previous lifecycle. Keep the external kernel pin unchanged.
 
@@ -108,7 +112,9 @@ and the input guide; older iteration tables are historical.
   the hold threshold. Movement intent cancels the candidate so a departing player
   does not retrieve a bomb from behind and accidentally pump instead of planting.
 - Carry-held plus primary creates directly overhead. Further accepted primary edges
-  pump a carried bomb. Holding primary does not generate repeated pump presses.
+  queue a charge level on the carried bomb (maximum three). Normal charge takes
+  .45 seconds per level; Focus takes .15. Throwing cancels incomplete levels.
+  Holding primary does not generate repeated requests; the HUD shows progress.
 - Primary-lifted bombs throw on a carry press; carry-held pickup/create throws on
   carry release. Preserve `CarryFromPrimary` and edge consumption for both paths.
 - Placement rejection publishes `bomb-blocked` for capacity/space feedback. Diagnose
@@ -145,9 +151,23 @@ and the input guide; older iteration tables are historical.
   living status or remote capability resumes the remaining ordinary fuse.
 - Remote command selects the oldest eligible owned remote, including moving bombs.
   AI opportunity evaluation must inspect the exact bomb authority would detonate.
-- Red and remote inventory modes are exclusive: latest pickup wins for future bombs.
-  Existing bombs keep their own mode, subject to the orphaned-remote fallback above.
-  Red penetrates soft cover; equal fire/pump levels share the radius formula.
+- One bomb slot holds red, remote, bouncing or fast equipment; one independent
+  ability slot holds heart protection or Focus. Capacity/fire still stack. A
+  replacement drops the old equipment for anyone else to collect immediately;
+  the former holder has a 1.5-second pickup lock. Drops expire after 20 seconds.
+  Duplicate equipment and capped stacks remain for others. Practice pickups persist.
+- Existing bombs keep their mode, subject to orphaned-remote fallback. Red blasts
+  pierce soft cover and have 25% more physical radius; their flame is blue.
+  Fast bombs move at 1.5x their normal kick/flight clock without speeding the fuse.
+  Bouncing bombs reflect from walls, roll normally when kicked, and rebound up to three times from charged thrown landings and
+  retain a finite 3.5-second fuse. Stop cancels kicked-bomb travel; gravity still settles a bomb over a drop.
+  Uncharged throws settle on first landing. The user explicitly rejected automatic
+  hopping during rolls; do not restore that superseded experiment. All other normal fuses remain 2.5 seconds.
+- Each charge level increases gravity by 20%. Head contacts cap upward rebound
+  and dissipate horizontal speed; large bombs must not relaunch like balloons.
+  Authority, preview and deliberate aimed launch share the same weight/flight math.
+- Focus nudges a neutral aimed cursor toward a visible living opponent within
+  1.1 cells, at .7 cells/second. Explicit steering wins; no hard lock through stone.
   [PowerUpRules](../../src/Bomber.Game/Simulation/PowerUpRules.cs),
   [mode checks](../../tests/Bomber.Game.Tests/PowerUpModeChecks.cs).
 
@@ -195,8 +215,13 @@ and the input guide; older iteration tables are historical.
   during Fight when ghosts are enabled. Keep the death event at the actual contact plane,
   emit a separate ghost respawn, and prevent held outward input from immediately re-killing
   the ghost. Sudden death still removes ghosts and disables new comebacks.
-- The temple rear two rows are solid stepped masonry, including the side approaches.
-  Collision and visible geometry come from those same cells; no hidden rear passage remains.
+- The user's latest correction supersedes the v0.22 rear barrier: the temple's
+  rear edge is an open water pitfall, with no hidden walkway or invisible wall.
+  The 25x27 arena has five raised tiers, broader upper platforms, and a larger
+  courtyard. Rock Garden is 23x15; Up & Down is 23x19. More cover supplies the
+  expanded equipment pool. The summit uses a flat mosaic rather than a blocking prop.
+- Ghosts pass through bombs and cannot place, carry, kick, stop, pump, throw or
+  detonate them. Movement, finite latching and water/void comeback remain.
 - Default battle rules are first to two wins, 120 total seconds including 60 seconds of
   sudden death. Water begins rising immediately at Hurry; the former 15-second delay is
   superseded. Custom round lengths and sudden-death/ghost toggles remain available.
@@ -286,3 +311,11 @@ See [testing and delivery](testing-and-delivery.md) for safe execution and evide
 - Store reference media outside distributed game assets. Distinguish publisher claims,
   direct frame observations, inference and project tuning. Read the latest correction
   before reusing older controls, gait or numerical choices from an iteration note.
+
+Iteration23 AI regressions: match authority's extra .5-cell bomb chain margin;
+allow safe timed transit through threatened cells during an escape instead of
+requiring those cells to remain safe for the whole planning horizon. Bots ignore
+utility from their own swapped equipment. If orienting invalidates a planned
+bomb placement, they navigate before retrying, avoiding endless tiny turns. The enlarged stock Pyramid pressure
+check allows eight seconds to first pressure (previous smaller map: six), retains
+six threatening bombs in 30 seconds, an eight-second maximum gap and zero deaths.

@@ -316,7 +316,7 @@ public partial class PlaytestDriver : Node
         Input(0,default); await Frames(4);
         Input(0,new PlayerInput(0,0,B:true)); await Frames(4);
         Check(Player.GetProperty("carrying").GetString()=="bomb","lift input carries bomb");
-        Input(0,new PlayerInput(0,0,A:true,B:true)); await Frames(4);
+        Input(0,new PlayerInput(0,0,A:true,B:true)); await Frames(16);
         Check(State.GetProperty("bombs")[0].GetProperty("pumps").GetInt32()>=1,"pump input enlarges held bomb");
         await Capture("bomb-held-pumped");
         Input(0,new PlayerInput(1,0)); await Frames(4);
@@ -330,11 +330,11 @@ public partial class PlaytestDriver : Node
     {
         _root.StartLocal(new SessionSettings(Stage:"sunken-temple",Bots:0),1,practice:true);
         await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"ramp practice reaches fight",150);
-        Check(Math.Abs(Player.GetProperty("x").GetSingle()-10.5f)<.1,"temple spawn centered on staircase corridor");
-        await MoveTo(10.5f,3.5f,200);
-        Check(Player.GetProperty("y").GetSingle()>=4,"walked all three stair flights to crown tier4");
+        Check(Math.Abs(Player.GetProperty("x").GetSingle()-12.5f)<.1,"temple spawn centered on staircase corridor");
+        await MoveTo(12.5f,2.5f,200);
+        Check(Player.GetProperty("y").GetSingle()>=5,"walked all four stair flights to crown tier5");
         await Capture("temple-crown");
-        await MoveTo(10.5f,12.5f,200);
+        await MoveTo(12.5f,12.5f,200);
         Check(Player.GetProperty("y").GetSingle()<=1,"walked back down to base terrace tier1");
         await Capture("temple-descended");
         _root.Back(); await Frames(4);
@@ -347,20 +347,20 @@ public partial class PlaytestDriver : Node
         var initialCapacity=Player.GetProperty("bombs").GetInt32();
         Check(Visual.GetProperty("powerups").GetInt32()>=6,"six training pickup models visible");
         await Capture("powerups-visible-cache");
-        await MoveTo(8.5f,12.5f,80);
+        await MoveTo(10.5f,12.5f,80);
         Check(Player.GetProperty("fire").GetInt32()==2,"walking onto first flame increases fire level");
-        await MoveTo(7.5f,12.5f,60);
+        await MoveTo(9.5f,12.5f,60);
         Check(Player.GetProperty("fire").GetInt32()==3,"second flame reaches regular fire cap3");
-        await MoveTo(12.5f,12.5f,120);
+        await MoveTo(14.5f,12.5f,120);
         Check(Player.GetProperty("bombs").GetInt32()==initialCapacity+1,"walking onto bomb increases capacity by exactly one");
-        await MoveTo(12.5f,13.5f,60);
+        await MoveTo(14.5f,13.5f,60);
         Check(Player.GetProperty("red").GetBoolean()&&!Player.GetProperty("remote").GetBoolean(),"walking onto red power selects red bomb mode");
-        await MoveTo(10.5f,13.5f,80);
+        await MoveTo(12.5f,13.5f,80);
         Check(Player.GetProperty("heart").GetBoolean(),"walking onto heart grants extra hit");
-        await MoveTo(8.5f,13.5f,80);
+        await MoveTo(10.5f,13.5f,80);
         Check(Player.GetProperty("remote").GetBoolean()&&!Player.GetProperty("red").GetBoolean(),"walking onto remote replaces red with command detonation");
         Check(Player.GetProperty("pickupSerial").GetInt64()>=6,"six real pickups accepted by authority");
-        Check(Visual.GetProperty("powerups").GetInt32()==0,"collected pickup models disappear");
+        Check(State.GetProperty("items").EnumerateArray().All(i=>i.GetProperty("dropped").GetBoolean() || i.GetProperty("type").GetString() is "bounce" or "fast" or "focus"),"collected pickups disappear while new equipment and swap drops remain");
         await Capture("powerups-collected-hud");
         Input(0,new PlayerInput(0,0,A:true));await Frames(4);Input(0,default);await Frames(4);
         Check(State.GetProperty("bombs").EnumerateArray().Any(b=>!b.GetProperty("red").GetBoolean()&&b.GetProperty("remote").GetBoolean()),"latest remote pickup determines newly placed bomb mode");
@@ -387,7 +387,7 @@ public partial class PlaytestDriver : Node
         await Capture("pump-stage-0");
         for(var charge=1;charge<=3;charge++)
         {
-            Input(0,new PlayerInput(0,0,A:true,B:true));await Frames(4);
+            Input(0,new PlayerInput(0,0,A:true,B:true));await Frames(16);
             Check(Visual.GetProperty("pumpIntensity").GetSingle()>.1f,$"body squash pose is active during pump{charge}");
             await Capture($"pump-action-{charge}");
             Input(0,new PlayerInput(0,0,B:true));await Frames(12);
@@ -414,7 +414,7 @@ public partial class PlaytestDriver : Node
         await WaitState(s=>s.GetProperty("phase").GetInt32()==2,"one-minute temple round enters hurry",180);
         Check(State.GetProperty("hurryMode").GetString()=="water","temple sudden death selects water mode");
         float initial=Visual.GetProperty("waterHeight").GetSingle();
-        await MoveTo(10.5f,3.5f,200);
+        await MoveTo(12.5f,2.5f,200);
         Check(Player.GetProperty("y").GetSingle()>=4,"human climbs to flood-safe crown using inputs");
         await Capture("hurry-water-highground");
         await WaitState(s=>s.GetProperty("waterLevel").GetSingle()>=.25f,"rising water submerges lowest court",3000);
@@ -509,6 +509,17 @@ public partial class PlaytestDriver : Node
         Check(DisplayServer.ClipboardGet()==host.JoinCode,"copy button writes the actual room code to clipboard");
         Check(NamedButton("CopyRoomCode").Text=="Copied!","copy button confirms success");
         await Capture("network-lobby");
+        string roomIdentity=host.LobbyId!;
+        await ActivateNamed("EditRoomSettings");
+        Check(_root.ScreenName=="Setup"&&host.LobbyId==roomIdentity,"leader opens existing rules editor without leaving room");
+        var rules=_root.FindChildren("*","",true,false).OfType<BlastCircuit.UI.ArcadeRuleDial>().First(d=>d.Caption=="Wins to victory");
+        rules.GrabFocus();CtlKey(Key.Right,true);await Frames(1);CtlKey(Key.Right,false);await Frames(2);
+        await Capture("network-room-rules");
+        await ActivateNamed("LaunchMatch");
+        for(int i=0;i<180&&host.Party?.Settings?.GetValueOrDefault("wins")!="3";i++){await Frames(1);await Task.Delay(16);}
+        Check(host.Party?.Settings?.GetValueOrDefault("wins")=="3"&&_root.ScreenName=="Lobby"&&host.LobbyId==roomIdentity,"saved match rules are accepted by server in the same room");
+        for(int i=0;i<180&&peer.Party?.Settings?.GetValueOrDefault("wins")!="3";i++){await Frames(1);await Task.Delay(16);}
+        Check(peer.Party?.Settings?.GetValueOrDefault("wins")=="3","room guest receives the leader's saved rules");
         CtlButton(0,JoyButton.Start,true);await Frames(1);CtlButton(0,JoyButton.Start,false);await Frames(2);
         Check(NamedButton("StartRoom").HasFocus()&&_root.ScreenName=="Lobby","Start focuses Start game without starting it");
         await ActivateNamed("StartRoom");

@@ -48,7 +48,15 @@ public sealed partial class BlastSession
             {
                 // A wall stops horizontal travel, but an unsupported bomb still
                 // falls to the surface below instead of hanging on the wall.
-                nx=b.X;nz=b.Z;b.FlyVX=b.FlyVZ=0;
+                if(b.IsBouncy)
+                {
+                    bool hitX=!FallingKickTerrainClear(b,nx,b.Z),hitZ=!FallingKickTerrainClear(b,b.X,nz);
+                    if(!hitX&&!hitZ)hitX=hitZ=true;
+                    if(hitX)b.FlyVX=-b.FlyVX;if(hitZ)b.FlyVZ=-b.FlyVZ;
+                    b.Bounces++;PresentBomb("bounce",b,b.LastTouchedById);
+                }
+                else b.FlyVX=b.FlyVZ=0;
+                nx=b.X;nz=b.Z;
             }
             foreach(var p in _players.Values)
             {
@@ -70,7 +78,7 @@ public sealed partial class BlastSession
                 nx=b.X;nz=b.Z;b.FlyVX=b.FlyVZ=0;break;
             }
             b.X=nx;b.Z=nz;b.CellX=(int)MathF.Floor(nx);b.CellZ=(int)MathF.Floor(nz);
-            b.FlyVY-=BlastBomb.Gravity*stepTime;b.FlyY+=b.FlyVY*stepTime;
+            b.FlyVY-=BlastBomb.Gravity*b.GravityScale*stepTime;b.FlyY+=b.FlyVY*stepTime;
             var landingY=BombLandingHeight(nx,nz);
             if(b.FlyY>landingY)continue;
             b.FlyY=landingY;
@@ -78,8 +86,9 @@ public sealed partial class BlastSession
             {
                 b.Exploded=true;DecrementOwnerBombs(b.OwnerId);return;
             }
-            b.VX=b.FlyVX;b.VZ=b.FlyVZ;b.FlyVX=b.FlyVZ=b.FlyVY=0;
-            b.ResumeRollingAfterFall=false;b.Tier=(int)MathF.Round(landingY);
+            b.VX=b.FlyVX;b.VZ=b.FlyVZ;b.Tier=(int)MathF.Round(landingY);
+            b.FlyVX=b.FlyVZ=b.FlyVY=0;
+            b.ResumeRollingAfterFall=false;
             b.State=b.VX*b.VX+b.VZ*b.VZ>0?BombState.Rolling:BombState.Resting;
         }
     }

@@ -33,6 +33,27 @@ public partial class PowerupModel : Node3D
                 Sphere(_icon,new(.07f,.41f,0),Vector3.One*.07f,art.Color(new("eb4567")));
                 Sphere(_icon,new(0,.08f,.11f),Vector3.One*.09f,art.Color(new("ed4b55")));
                 Box(_icon,new(0,-.08f,.1f),new(.16f,.055f,.035f),ink,.01f);break;
+            case "bounce":
+                var purple=art.Color(new("a365ea"),.35f);
+                Sphere(_icon,new(0,.14f,0),Vector3.One*.3f,purple);
+                for(int i=0;i<3;i++)Cylinder(_icon,new(0,-.22f+i*.09f,0),.16f-i*.025f,.035f,white);
+                break;
+            case "fast":
+                var mint=art.Color(new("43d9a1"),.35f,true);
+                for(int i=0;i<2;i++)
+                {
+                    var upper=Box(_icon,new(-.12f+i*.22f,.09f,0),new(.26f,.075f,.1f),mint,.02f);upper.RotationDegrees=new(0,0,-40);
+                    var lower=Box(_icon,new(-.12f+i*.22f,-.09f,0),new(.26f,.075f,.1f),mint,.02f);lower.RotationDegrees=new(0,0,40);
+                }
+                break;
+            case "focus":
+                var cyan=art.Color(new("70e6ff"),.35f,true);
+                foreach(float side in new[]{-1f,1f})
+                {
+                    Box(_icon,new(side*.22f,0,0),new(.07f,.18f,.08f),cyan,.01f);
+                    Box(_icon,new(0,side*.22f,0),new(.18f,.07f,.08f),cyan,.01f);
+                }
+                Sphere(_icon,Vector3.Zero,Vector3.One*.13f,white);break;
             default:
                 Sphere(_icon,Vector3.Zero,Vector3.One*.4f,kind=="red"?art.Color(new("e8384e"),.25f):ink);
                 Cylinder(_icon,new(0,.24f,0),.035f,.14f,gold);

@@ -212,3 +212,15 @@ canonical pad parity; `precision-aim` for authority range/turn/landing;
 menu/text-field behavior. Native scenarios are synthetic production-path tests,
 not physical certification. Read [runner usage](../../tools/playtest/README.md)
 for commands, recording and timeout behavior before running them.
+
+## Iteration23 equipment and lobby editing
+
+Room settings is available to the waiting lobby's leader and reuses HostSetup
+without disconnecting or changing the room code. General Settings remains each
+player's own audio, vibration and update preferences. Start still requires the
+leader's explicit action.
+
+Each primary tap queues one charge level; the progress hint shows the active
+level and percent. Normal charge is .45 seconds/level; Focus is .15, with gentle
+assist only while the aimed cursor is neutral. The bomb slot and ability slot
+have separate HUD symbols. Ghosts have no bomb controls or bomb collision.

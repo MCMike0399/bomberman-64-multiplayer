@@ -10,7 +10,7 @@ namespace Bomber.Testing;
 public partial class PlaytestDriver
 {
     private static readonly GamepadDevice[] QaPads=[new(12,"qa-xbox-series","Xbox Series Controller"),new(1001,"qa-switch2-pro","Switch 2 Pro Controller"),new(14,"qa-dualsense","DualSense Wireless Controller")];
-    private static readonly Key[] QaKeys=[Key.W,Key.A,Key.S,Key.D,Key.J,Key.K,Key.L,Key.I,Key.Space,Key.Shift,Key.R,Key.Left,Key.Right,Key.Up,Key.Down,Key.N,Key.M,Key.Comma,Key.Enter,Key.Ctrl,Key.Backspace,Key.Kp0,Key.Kp1,Key.Kp2];
+    private static readonly Key[] QaKeys=[Key.W,Key.A,Key.S,Key.D,Key.J,Key.K,Key.L,Key.I,Key.O,Key.Period,Key.Kp3,Key.Space,Key.Shift,Key.R,Key.Left,Key.Right,Key.Up,Key.Down,Key.N,Key.M,Key.Comma,Key.Enter,Key.Ctrl,Key.Backspace,Key.Kp0,Key.Kp1,Key.Kp2];
     private static readonly JoyButton[] QaButtons=[JoyButton.A,JoyButton.B,JoyButton.X,JoyButton.Y,JoyButton.LeftShoulder,JoyButton.RightShoulder,JoyButton.DpadLeft,JoyButton.DpadRight,JoyButton.DpadUp,JoyButton.DpadDown,JoyButton.Start];
     private async Task ControllerInventory()
     {
@@ -306,14 +306,14 @@ public partial class PlaytestDriver
         CtlButton(pad.RuntimeId,JoyButton.A,false);await ControllerFrames(2);
         Check(CtlPlayer(0).GetProperty("carrying").GetString()=="bomb"&&State.GetProperty("bombs").GetArrayLength()==1,
             "Switch Y plus B creates one bomb overhead without releasing Y");
-        CtlButton(pad.RuntimeId,JoyButton.A,true);await ControllerFrames(8);
+        CtlButton(pad.RuntimeId,JoyButton.A,true);await ControllerFrames(16);
         var intent=PlayerControls.Read(0,1);
         Check(intent.A&&intent.B&&!intent.R,"Switch Y plus B carries and pumps without requesting remote detonation");
         Check(State.GetProperty("bombs")[0].GetProperty("pumps").GetInt32()==1,"holding Switch B pumps once without auto-repeat");
         CtlButton(pad.RuntimeId,JoyButton.A,false);await ControllerFrames(2);
-        CtlButton(pad.RuntimeId,JoyButton.A,true);CtlButton(pad.RuntimeId,JoyButton.A,false);await ControllerFrames(4);
+        CtlButton(pad.RuntimeId,JoyButton.A,true);CtlButton(pad.RuntimeId,JoyButton.A,false);await ControllerFrames(16);
         Check(State.GetProperty("bombs")[0].GetProperty("pumps").GetInt32()==2,"sub-frame Switch B tap survives native buffering and pumps again");
-        CtlButton(pad.RuntimeId,JoyButton.B,true);await ControllerFrames(2);CtlButton(pad.RuntimeId,JoyButton.B,false);await ControllerFrames(2);
+        CtlButton(pad.RuntimeId,JoyButton.B,true);await ControllerFrames(2);CtlButton(pad.RuntimeId,JoyButton.B,false);await ControllerFrames(14);
         Check(State.GetProperty("bombs")[0].GetProperty("pumps").GetInt32()==3,"Switch printed A remains a pump alternative with Y held");
         CtlButton(pad.RuntimeId,JoyButton.Y,true);intent=PlayerControls.Read(0,1);
         Check(intent.R&&!intent.A&&intent.B,"Switch printed X remains remote only while Y holds the bomb");
@@ -339,7 +339,7 @@ public partial class PlaytestDriver
         Check(State.GetProperty("bombs").GetArrayLength()==1&&State.GetProperty("bombs")[0].GetProperty("id").GetString()==bombId,pad.Name+": primary hold carries the same bomb without another placement");
         CtlButton(pad.RuntimeId,primary,false);await ControllerFrames(2);
         Check(CtlPlayer(0).GetProperty("carrying").GetString()=="bomb",pad.Name+": releasing primary preserves the carried bomb");
-        CtlButton(pad.RuntimeId,primary,true);await ControllerFrames(2);CtlButton(pad.RuntimeId,primary,false);await ControllerFrames(2);
+        CtlButton(pad.RuntimeId,primary,true);await ControllerFrames(2);CtlButton(pad.RuntimeId,primary,false);await ControllerFrames(14);
         Check(State.GetProperty("bombs")[0].GetProperty("pumps").GetInt32()==1,pad.Name+": fresh primary press pumps the carried bomb once");
         CtlButton(pad.RuntimeId,carry,true);await ControllerFrames(2);
         Check(CtlPlayer(0).GetProperty("carrying").ValueKind==JsonValueKind.Null&&State.GetProperty("bombs")[0].GetProperty("state").GetInt32()==3,pad.Name+": printed carry button throws the primary-held bomb on press");

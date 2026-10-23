@@ -29,7 +29,7 @@ public sealed partial class BlastSession
         return axis*scale;
     }
 
-    private static void UpdateThrowAim(BlastPlayer player,InputState input,float dt)
+    private void UpdateThrowAim(BlastPlayer player,InputState input,float dt)
     {
         if(player.CarryingBombId is null){ClearThrowAim(player);return;}
         player.Aiming=input.Aim;
@@ -47,6 +47,25 @@ public sealed partial class BlastSession
         var x=RampAimAxis(input.X,ref player.AimCursorXAge,ref player.AimCursorXSign,dt);
         var z=RampAimAxis(input.Z,ref player.AimCursorZAge,ref player.AimCursorZSign,dt);
         var aim=BombThrowRules.AdjustAim(new(player.AimX,player.AimZ,player.AimRange),x,z,dt);
+        if(player.HasFocus && input.Length<.001f)
+        {
+            float tx=player.X+aim.X*aim.Range,tz=player.Z+aim.Z*aim.Range;
+            var target=_players.Values.Where(p=>p.Id!=player.Id&&p.Alive&&!p.Ghost&&
+                Dist2(tx,tz,p.X,p.Z)<1.1f*1.1f &&
+                !BlastGeometry.Occluded(_stage,_softBlocks,player.X,player.Y+.8f,player.Z,p.X,p.Y+.8f,p.Z))
+                .OrderBy(p=>Dist2(tx,tz,p.X,p.Z)).FirstOrDefault();
+            if(target!=null)
+            {
+                float dx=target.X-tx,dz=target.Z-tz,length=MathF.Sqrt(dx*dx+dz*dz);
+                float step=Math.Min(length,.7f*dt);
+                if(length>.001f)
+                {
+                    tx+=dx/length*step;tz+=dz/length*step;
+                    dx=tx-player.X;dz=tz-player.Z;length=MathF.Sqrt(dx*dx+dz*dz);
+                    if(length>.001f)aim=new(dx/length,dz/length,Math.Min(length,BombThrowRules.MaxAimRange));
+                }
+            }
+        }
         player.AimX=aim.X;player.AimZ=aim.Z;player.AimRange=aim.Range;
         player.FacingX=aim.X;player.FacingZ=aim.Z;
     }

@@ -10,6 +10,7 @@ public sealed partial class BlastSession
 
     private void BeginKick(BlastPlayer p,BlastBomb bomb,float nx,float nz)
     {
+        if(p.Ghost)return;
         if(!_presentedKickContacts.Add((p.Id,bomb.Id)))return;
         p.KickBombId=bomb.Id;p.KickWindupRemaining=KickWindupSeconds;
         p.KickDirectionX=nx;p.KickDirectionZ=nz;

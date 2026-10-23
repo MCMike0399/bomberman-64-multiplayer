@@ -34,7 +34,7 @@ On macOS, the installed editor can also launch it directly:
 
 The game opens fullscreen. **F11** or **Alt+Enter** switches between fullscreen and a window; run `./scripts/client.sh --windowed -- --display-windowed` for a windowed launch.
 
-Choose **LOCAL BATTLE**, then set each of the eight roster slots to **Human**, **CPU**, or **Off** and choose a suit color. The selected character walks on a shared lit 3D stage using the same articulated model seen in battle. Continue to the miniature arena stage and arrow-controlled rules, choose Easy/Medium/Hard CPU difficulty, then start with **2–8 total participants**. **PRACTICE** lets one player explore the map and rehearse bomb handling without CPU opponents. Six visible training pickups teach bomb capacity, fire, red power, remote detonation and hearts; **RESET PRACTICE** restores the cache. One human can play with up to seven bots. Local play works without a server. Two keyboard seats are available; additional local seats require connected gamepads. With three or more local humans, the first two seats use keyboards and up to six gamepads fill seats 3–8 in connection order. With one or two humans, the corresponding gamepads also work as optional controls.
+Choose **LOCAL BATTLE**, then set each of the eight roster slots to **Human**, **CPU**, or **Off** and choose a suit color. The selected character walks on a shared lit 3D stage using the same articulated model seen in battle. Continue to the miniature arena stage and arrow-controlled rules, choose Easy/Medium/Hard CPU difficulty, then start with **2–8 total participants**. **PRACTICE** lets one player explore the map and rehearse bomb handling without CPU opponents. Nine visible training pickups teach bomb capacity, fire, red power, remote detonation, hearts, bouncing bombs, fast bombs and Focus; **RESET PRACTICE** restores the cache. One human can play with up to seven bots. Local play works without a server. Two keyboard seats are available; additional local seats require connected gamepads. With three or more local humans, the first two seats use keyboards and up to six gamepads fill seats 3–8 in connection order. With one or two humans, the corresponding gamepads also work as optional controls.
 
 ## macOS app
 
@@ -69,7 +69,7 @@ For local development, start that independent server in another terminal:
 
 It listens at `http://127.0.0.1:18496`. Enter that URL in the game and choose **ONLINE BATTLE → CREATE PRIVATE ROOM**, then use **Copy code** to share the lobby’s join code. Another game instance can enter the same URL and use **JOIN ROOM**. The room waits until its leader chooses **Start game**, including when CPU rivals are enabled. For a human-only match, set CPU players to zero. Each online game instance controls one human seat. After the results, everyone returns to the same room and code; the leader starts the next match.
 
-**QUICK PLAY** uses the kernel matchmaking queue. It needs another compatible queued player; use a private lobby for solo bot practice online. The setup screen configures stage, CPU count and difficulty, win target, round duration, sudden death and ghosts. The private lobby displays the real server roster and its leader. If the leader disconnects, leadership transfers to another connected player. Type your name in **Your name — click to edit**. The name and server URL are saved automatically between launches. Your chosen name appears above your bomber and on the HUD; unnamed players use P1, P2, and so on. Choose your suit in the online setup; the authority preserves that appearance through rounds and reconnects.
+**QUICK PLAY** uses the kernel matchmaking queue. It needs another compatible queued player; use a private lobby for solo bot practice online. The setup screen configures stage, CPU count and difficulty, win target, round duration, sudden death and ghosts. The private lobby displays the real server roster and its leader. The leader can open **Room settings** while waiting to change the match rules without leaving the room; guests receive the accepted rules. If the leader disconnects, leadership transfers to another connected player. Type your name in **Your name — click to edit**. The name and server URL are saved automatically between launches. Your chosen name appears above your bomber and on the HUD; unnamed players use P1, P2, and so on. Choose your suit in the online setup; the authority preserves that appearance through rounds and reconnects.
 
 For a LAN server, bind to a reachable interface and enter the server machine's address on each client:
 
@@ -97,7 +97,7 @@ Normal battle defaults to **one minute of normal play + one minute of sudden dea
 
 **Stop a kick:** O (keyboard 1), period / numpad 3 (keyboard 2), or the right shoulder stops bombs you last kicked. Fuses keep running; a falling bomb still falls. Remote detonation stays on its face button. The original N64 R stop control is confirmed in the [Nintendo manual](https://manuals.plus/m/a8e88edc86a9ce47e982bda2351d4c7d9fe8c079505b31257b5768b4c5e9907e).
 
-Deliberate aim covers 0–9 cells on level ground, with a high lob that can reach upper terraces. The target can cross through your position to aim behind you; a close self-lob can hit you. The outlined reticle stays visible over scenery: a ring marks a landing, an X marks a blocked or unsafe endpoint, and an edge arrow points toward an endpoint outside the frame. It has no added text labels. The prediction accounts for terrain height, cover, walls and fuse expiry; moving opponents can still interrupt the flight. Pumping increases blast power without shifting an aimed landing. There is no target lock or aim assist: leading a moving opponent and choosing when to stand still are the skill. [Reticle diagnosis](docs/iteration17-reticle.md); [original manual controls and project choices](docs/iteration16-controls-research.md).
+Deliberate aim covers 0–9 cells on level ground, with a high lob that can reach upper terraces. The target can cross through your position to aim behind you; a close self-lob can hit you. The outlined reticle stays visible over scenery: a ring marks a landing, an X marks a blocked or unsafe endpoint, and an edge arrow points toward an endpoint outside the frame. It has no added text labels. The prediction accounts for terrain height, cover, walls and fuse expiry; moving opponents can still interrupt the flight. Pumping increases blast power without shifting an aimed landing. The Focus ability charges faster and gently nudges a neutral aiming cursor toward a nearby visible opponent. Any deliberate stick/key adjustment takes priority; it never hard-locks a target. [Reticle diagnosis](docs/iteration17-reticle.md); [original manual controls and project choices](docs/iteration16-controls-research.md).
 
 Menus accept **WASD or arrow keys**, with Enter to confirm and Esc to go back; text fields still accept letters normally. **Start / Menu / + / Options** focuses the primary action in menus, including **Start game** for the lobby leader. During play, Esc or Start opens **Resume game / Settings / Leave game**. Local play pauses; online play continues with your inputs released.
 
@@ -128,7 +128,29 @@ Left-stick menu navigation uses deliberate threshold crossings and repeat while 
 
 Tap the bomb button to drop a bomb **near your feet**. You can walk away and leave it stationary, including while laying a trail with separate taps. A fresh second press while beside the bomb deliberately kicks it. Hold the original placement press while standing still for a quarter-second to lift that same bomb; release, then tap again to pump. Press carry to throw the A-lifted bomb. On Switch, hold A or B after placement to lift; tap the primary button to pump, then press L or Y to throw. The older hold-carry pickup and release-to-throw path also works, as does carry + bomb to create a bomb overhead. Once clear of your own new placement, walking back into a resting bomb triggers one kick and sends it down the chosen continuous direction faster than running speed; it is not a gradual push. Normal fuses resume after throwing. Remote bombs wait for the remote command, with an explicit HUD hint.
 
-Explosions use spherical distance and cover occlusion rather than a classic grid cross. Pickups upgrade blast size, bomb capacity, remote detonation, red piercing bombs or a protective heart. Ghosts and sudden death are enabled by default. A latched ghost rides visibly on top and adds limited steering interference; the living player retains control and can shake it off. Walking off a high terrace starts a gravity fall to lower terrain; upward cliffs and solid walls still block movement. With one minute left, the Pyramid-inspired Sunken Temple warns of rising water; its lower court floods before the upper terraces. Other arenas retain closing columns. Permanent stone and terrain block blasts; red bombs penetrate breakable cover. Last survivor earns a round win; first to the win target wins the match.
+Explosions use spherical distance and cover occlusion rather than a classic grid cross. Pickups increase blast size and bomb capacity, equip a bomb type, or grant one player ability. Ghosts and sudden death are enabled by default. Ghosts pass through bombs and cannot place, carry, kick, stop, charge, throw or detonate them. A latched ghost rides visibly on top and adds limited steering interference; the living player retains control and can shake it off. Walking off a high terrace starts a gravity fall to lower terrain; upward cliffs and solid walls still block movement. With one minute left, the Pyramid-inspired Sunken Temple warns of rising water; its lower court floods before the upper terraces. Other arenas retain closing columns. Permanent stone and terrain block blasts; red bombs penetrate breakable cover. Last survivor earns a round win; first to the win target wins the match.
+
+## Equipment and charging
+
+Bomb capacity (up to eight) and normal blast strength (up to three) stack.
+One bomb-type slot holds red, remote, bouncing or fast bombs; a separate ability
+slot holds a protective heart or Focus. Picking a replacement drops the previous
+equipment for other players. The old holder cannot immediately reclaim it, and
+the dropped item disappears after 20 seconds. Duplicate equipment and capped
+upgrades remain available for others.
+
+Red bombs produce blue explosions with 25% more radius and penetrate breakable
+cover. Blue remote bombs use command indicators with no burning fuse. Purple
+bouncing bombs roll normally, ricochet off walls, and rebound on the ground after
+a charged throw. Stop still halts kicked bombs. Mint fast bombs travel 50% faster. Their
+travel never resets the fuse. Normal charging takes 0.45 seconds per level;
+Focus takes 0.15. Each tap queues one level, up to three. Throwing early uses only
+completed levels. Larger charged bombs have stronger gravity and a much smaller
+head-hit rebound; the reticle uses the same flight rules.
+
+Sunken Temple now spans 25×27 cells, with wider platforms, a fifth raised tier,
+a larger courtyard, more breakable cover and open water pitfalls behind the
+summit. Rock Garden is 23×15 and Up & Down is 23×19.
 
 ## Knockdowns and player grabs
 

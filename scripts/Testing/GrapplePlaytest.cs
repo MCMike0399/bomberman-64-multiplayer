@@ -67,8 +67,8 @@ public partial class PlaytestDriver
         foreach(int seat in new[]{0,1,2})Input(seat,default);
         _root.StartLocal(new SessionSettings(Stage:"sunken-temple",Bots:0),3,practice:true);
         await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"three-human grapple training reaches fight",150);
-        await GrappleWalk(0,8,13);Check(GrapplePlayer(0).GetProperty("remote").GetBoolean(),"kicker collects the real training remote pickup");
-        await GrappleWalk(0,7,13);await GrappleWalk(1,11,13);await GrappleWalk(2,13,12);
+        await GrappleWalk(0,10,13);Check(GrapplePlayer(0).GetProperty("remote").GetBoolean(),"kicker collects the real training remote pickup");
+        await GrappleWalk(0,9,13);await GrappleWalk(1,13,13);await GrappleWalk(2,15,12);
         int knockBefore=GrappleEffect("knockdown"),kickCueBefore=Cue("kick");
         // Face along the victim's real corridor before near-foot placement; a second primary press deliberately strikes.
         Input(0,new PlayerInput(1,0));await Frames(1);Input(0,new PlayerInput(0,0,A:true));await Frames(2);Input(0,default);await Frames(7);Input(0,new PlayerInput(0,0,A:true));

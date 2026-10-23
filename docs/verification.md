@@ -1,3 +1,39 @@
+# v0.23.0 sandbox and lobby update — local verification, 2026-10-23
+
+Implemented the wider five-tier Pyramid with rear water pitfalls, larger legacy
+arenas and more cover, leader-only room-rule editing, two replaceable equipment
+slots, bouncing/fast bombs and Focus, timed charging, heavier charged throws,
+blue amplified red-bomb explosions, fuse-free remote bomb art, and ghost/bomb
+interaction removal. The latest bounce correction is explicit: ordinary rolls
+ricochet from walls; only charged throws rebound from ground. Stop still works.
+
+Final local gates passed before the release commit/push: **1,372 game / 143 client /
+53 AI / 19 audio** checks, **36 AI soak scenarios**, and real HTTP/WebSocket smoke
+against the staged Release server. Public contracts passed. Headless core passed
+**826** assertions; rebuilt Apple Silicon package smoke passed **252**. The final
+export completed **all 35 windowed scenarios in one run: 2,227 assertions,
+195 captures, zero runtime errors**. Reviewed captures include the wider Pyramid,
+rear fall, both lobby settings buttons, live room-rule editor, ordinary rolling
+bounce bomb and blue blast. Controller input coverage is synthetic, not a new
+physical-device claim.
+
+Receipts: `artifacts/iteration23/{public2,managed4,headless-final,package-final}`
+and `graphical-final/playtest/20261023T194106.163994Z-all`. Focus interruptions and
+superseded geometry/test assumptions remain in earlier receipts. The final run
+includes ordinary input/real pickups, shared throw projection, expiry and equipment
+sharing, host settings reaching the guest, and a real two-client match.
+
+New regressions exposed and fixed: slight stick input must override Focus; ghosts
+must not kick or grab bombs; AI chain prediction must include the authority's
+half-cell margin; timed escape movement must permit crossing threatened tiles
+before the fuse; failed orient/place attempts must resume navigation. Final soak
+has no stationary-with-open-exit failure. Stock Pyramid's larger-map first-pressure
+budget is eight seconds (old smaller map: six), retaining six threats per 30 seconds,
+a maximum eight-second gap, and zero self-deaths in its four seeded fixtures.
+
+Publication, remote deployment and installed-copy receipts will be added after
+successful CI and delivery. The v0.22 history below remains dated evidence.
+
 # v0.22.0 combined release — 2026-10-23
 
 The party-polish work below is now integrated with the server performance patch:
