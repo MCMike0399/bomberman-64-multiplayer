@@ -36,6 +36,24 @@ internal static class PartyPolishChecks
             m.SetInput(0,new PlayerInput(0,0,A:true));Step(m,2);m.SetInput(0,default);Step(m,2);m.SetInput(0,new PlayerInput(1,0,A:true));Step(m,8);m.SetInput(0,default);Step(m,28);
             var b=State(m).GetProperty("bombs")[0];Assert(F(b,"x")>12&&b.GetProperty("state").GetInt32()==1,"Ramp lip stopped a descending kick: "+b);
         });
+        Check("batched press and release preserve bomb and kick-stop taps",()=>{
+            var cells=new CellDef[15,15];for(int x=0;x<15;x++)for(int z=0;z<15;z++)cells[x,z]=CellDef.Floor0;
+            var m=new LocalMatch(new MatchOptions{HumanPlayers=2,BotPlayers=0},new StageLayout{Id="input-batch",Width=15,Height=15,Cells=cells,Spawns=[(3,3),(12,12)],SoftBlockDensity=0});Step(m,64);
+            // TCP can deliver both client frames before the next authority tick.
+            m.SetInput(0,new PlayerInput(0,0,A:true));m.SetInput(0,default);Step(m,2);
+            Assert(State(m).GetProperty("bombs").GetArrayLength()==1,"A press/release batch was overwritten before simulation.");
+            m.SetInput(0,new PlayerInput(0,0,A:true));Step(m,8);m.SetInput(0,default);Step(m,2);
+            Assert(State(m).GetProperty("bombs")[0].GetProperty("state").GetInt32()==1,"Batched-input fixture never kicked.");
+            m.SetInput(0,new PlayerInput(0,0,Stop:true));m.SetInput(0,default);Step(m,2);
+            Assert(State(m).GetProperty("bombs")[0].GetProperty("state").GetInt32()==0,"Stop press/release batch was overwritten before simulation.");
+            Assert(State(m).GetProperty("events").EnumerateArray().Count(e=>e.GetProperty("kind").GetString()=="kick-stop")==1,"Stop tap was missing or repeated.");
+        });
+        Check("disconnect clears accepted but unconsumed button transitions",()=>{
+            var f=new AppearanceFixture();f.Step(64);
+            f.Message(0,"{\"a\":true}","input");
+            f.Session.OnPlayerConnectionChanged(f,f.Players[0],false);f.Step(2);
+            Assert(f.Snapshot.GetProperty("bombs").GetArrayLength()==0,"Disconnected player's queued press fired after release.");
+        });
         Check("temple rear does not contain a hidden walkable corridor",()=>{
             var stage=BlastStages.Get(BlastStages.SunkenTemple);
             Assert(Enumerable.Range(5,11).All(x=>!stage.At(x,1).IsPassable),"Rear row behind the pyramid remains walkable.");

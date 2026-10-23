@@ -2,11 +2,27 @@ using System.Text.Json;
 using Bomber.Game;
 using Bomber.Game.Simulation;
 
+if(args.Contains("--snapshot-performance")){SnapshotPerformance.Run(args);return;}
+
 if(args.Contains("--pyramid-ledges")){PyramidLedgeChecks.Run();return;}
 
 if(args.Contains("--party-polish")){PartyPolishChecks.Run();return;}
 
 var passed = PyramidLedgeChecks.Run() + PartyPolishChecks.Run() + PartySessionChecks.Run() + LootAvailabilityChecks.Run() + AimedThrowChecks.Run() + CarryChargeChecks.Run() + BombPlacementChecks.Run() + PowerUpModeChecks.Run() + BombTravelChecks.Run() + KickTimingChecks.Run() + BodyContactChecks.Run() + BombImpactChecks.Run() + TraversalAndGhostChecks.Run() + BombActionsChecks.Run() + GrappleChecks.Run();
+Run("presentation snapshots expire stale effects but retain recent actions", () =>
+{
+    var match=new LocalMatch(new MatchOptions {HumanPlayers=1,BotPlayers=0,Practice=true},FlatArena([(3,3)]));Fight(match);
+    var sequence=State(match).GetProperty("presentationSeq").GetInt64();
+    Step(match,150);
+    Assert(Events(match).Length==0,"Idle snapshots keep retransmitting expired presentation history.");
+    Assert(State(match).GetProperty("presentationSeq").GetInt64()==sequence,"Expiring history must not reset the presentation cursor.");
+    match.SetInput(0,new PlayerInput(0,0,true));Step(match,2);match.SetInput(0,default);
+    var placed=Events(match).Single(e=>Kind(e)=="bomb-drop").GetProperty("seq").GetInt64();
+    Step(match,30);
+    Assert(Events(match).Any(e=>e.GetProperty("seq").GetInt64()==placed),"A short delivery gap lost a fresh effect.");
+    Step(match,95);
+    Assert(!Events(match).Any(e=>e.GetProperty("seq").GetInt64()==placed),"Old effect outlived the recovery window.");
+});
 Run("participant bounds and stage validation", () =>
 {
     foreach (var options in new[] {
@@ -515,18 +531,20 @@ Run("presentation deaths retain explosion water and fall reasons through practic
         Assert(death.GetProperty("reason").GetString()==(kind==CellKind.Water?"water":"fall"),"Terrain death has incorrect cause.");
     }
 });
-Run("presentation history survives round reset reconnect and remains bounded with consecutive ids", () =>
+Run("presentation cursors survive resets and reconnects; retained history stays recent and bounded", () =>
 {
     var f=new AppearanceFixture();f.Step(62);var before=f.Snapshot.GetProperty("presentationSeq").GetInt64();
     f.Session.OnPlayerConnectionChanged(f,f.Players[0],false);f.Session.OnPlayerConnectionChanged(f,f.Players[0],true);f.Step(2);
     Assert(f.Snapshot.GetProperty("presentationSeq").GetInt64()==before,"Reconnect reset or invented events.");
     f.Step(3800);
     var events=f.Snapshot.GetProperty("events").EnumerateArray().ToArray();
-    Assert(events.Any(e=>Kind(e)=="round-ready"&&e.GetProperty("round").GetInt32()==2)&&events.Any(e=>e.GetProperty("round").GetInt32()==1),"Round reset cleared presentation history.");
+    Assert(events.Any(e=>e.GetProperty("round").GetInt32()==2)&&f.Snapshot.GetProperty("presentationSeq").GetInt64()>before,"Round reset lost fresh events or reset the sequence.");
+    Assert(events.All(e=>e.GetProperty("round").GetInt32()==2),"Long-expired round-one effects are still transmitted.");
     var match=new LocalMatch(new MatchOptions {HumanPlayers=1,BotPlayers=0,Practice=true},FlatArena([(3,3)]));Fight(match);
     for(var i=0;i<50;i++){match.SetInput(0,new PlayerInput(0,0,true));Step(match,2);match.SetInput(0,default);Step(match,88);match.SetInput(0,default);Step(match,2);}
     events=Events(match);
-    Assert(events.Length==128&&events[0].GetProperty("seq").GetInt64()>1,"Presentation history grew without a cap.");
+    Assert(events.Length is >0 and <=128&&events[0].GetProperty("seq").GetInt64()>1,"Presentation history is empty or unbounded.");
+    Assert(events.All(e=>e.GetProperty("tick").GetInt32()>=match.TickNumber-120),"Snapshot retained effects outside its four-second window.");
     for(var i=1;i<events.Length;i++)Assert(events[i].GetProperty("seq").GetInt64()==events[i-1].GetProperty("seq").GetInt64()+1,"Event sequence has gaps/duplicates.");
     Assert(events[^1].GetProperty("seq").GetInt64()==State(match).GetProperty("presentationSeq").GetInt64(),"Snapshot cursor disagrees with retained tail.");
 });

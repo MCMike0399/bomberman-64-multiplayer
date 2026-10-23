@@ -2,10 +2,14 @@ namespace Bomber.Game.Simulation;
 
 public sealed partial class BlastSession
 {
-    // Kept across round resets. Snapshots repeat the bounded history so transient actions survive
-    // the 30 Hz authority / 15 Hz snapshot boundary and brief packet gaps. Consumers baseline their
+    // Sequence numbers survive round resets. Snapshots repeat four seconds of recent effects
+    // so transient actions survive the snapshot boundary and brief delivery gaps. Old effects
+    // must not consume bandwidth forever just because a battle has become quiet. Consumers baseline their
     // cursor on first state/reconnect, then consume seq > cursor, never infer actions from positions.
     private const int PresentationHistoryLimit = 128;
+    private const int PresentationHistoryTicks = 4 * LocalMatch.TickRate;
+    private bool _presentationDirty = true;
+    private PresentationEvent[] _snapshotEvents = [];
     private readonly Queue<PresentationEvent> _presentationEvents = new();
     private long _presentationSeq;
     private readonly HashSet<(string PlayerId, string BombId)> _presentedKickContacts = [];
@@ -28,6 +32,16 @@ public sealed partial class BlastSession
         _presentationEvents.Enqueue(new PresentationEvent(++_presentationSeq, _tickCount, _roundNum,
             kind, entityId, playerId, x, y, z, magnitude, radius, reason, causedBy));
         if (_presentationEvents.Count > PresentationHistoryLimit) _presentationEvents.Dequeue();
+        _presentationDirty = true;
+    }
+
+    private PresentationEvent[] SnapshotPresentationEvents()
+    {
+        while (_presentationEvents.TryPeek(out var oldest) && oldest.Tick < _tickCount - PresentationHistoryTicks)
+        { _presentationEvents.Dequeue(); _presentationDirty = true; }
+        if (_presentationDirty)
+        { _snapshotEvents = _presentationEvents.ToArray(); _presentationDirty = false; }
+        return _snapshotEvents;
     }
 
     private void PresentBomb(string kind, BlastBomb bomb, string? playerId, float magnitude = 0) =>

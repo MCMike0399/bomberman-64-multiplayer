@@ -1,4 +1,35 @@
-# Source party polish — 2026-10-23 (not released)
+# v0.22.0 combined validation — 2026-10-23
+
+The party-polish work below is now integrated with the server performance patch:
+room-code copying, saved/chosen names, first-to-two defaults and explicit timing,
+kick-stop input, pyramid downhill traversal/rear closure, water-ghost recovery,
+four-second snapshot history and server performance diagnostics.
+
+The merged Release server passed **950 gameplay cases** (including the 789-case
+pyramid sweep), **143 client / 52 AI / 19 audio** checks, **36 AI soak scenarios**,
+and the complete real HTTP/WebSocket smoke. Headless core passed **895** assertions;
+package smoke passed **258**. The combined exported app completed **all 34 native
+scenarios in one passing run: 2,288 assertions, 184 captures, zero runtime errors**.
+Receipts: `artifacts/iteration22-combined/managed-fixed`, `headless`, `package`,
+and `graphical/playtest/20261023T182011.666245Z-all`. Actual lobby/copy confirmation,
+ghost return and setup captures were reviewed.
+
+Integration exposed a real short-input problem: a press and release delivered in
+one server step overwrote each other before simulation. A deterministic authority
+regression first failed on a batched bomb tap, then passed for bomb and kick-stop.
+Humans now retain up to 16 action transitions, consume one per tick with the newest
+movement axes, and clear the queue on disconnect/round/respawn resets. The network
+stop test also uses the temple's clear row, avoiding random nearby cover that can
+stop a bomb before a round trip completes. Its brief Stop tap is observed by a
+second client, including stationary X/Z afterward. The failed first merged network
+receipt is retained under `artifacts/iteration22-combined/managed`.
+
+The performance-only change was measured separately against the v0.21 baseline;
+see [server performance](server-performance.md). Those same-state comparisons must
+not be confused with the intentional gameplay changes in this combined version.
+Published/installed/deployment receipts are recorded after release verification.
+
+# Party-polish source verification before integration — 2026-10-23
 
 Implemented lobby Copy code with clipboard confirmation; explicit name editing and
 saved name/server URL; chosen names on the character and HUD with seat fallback;

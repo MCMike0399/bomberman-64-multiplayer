@@ -128,7 +128,7 @@ public sealed partial class BlastSession : GameSession
         if (!connected && _players.TryGetValue(player.PlayerId, out var p))
         {
             DropCarriedBombs(p); // a lost connection safely releases a hold instead of launching its victim
-            p.Input=default;p.PrevB=false;
+            p.ClearInput();p.PrevB=false;
         }
         if (connected)
         {
@@ -194,7 +194,7 @@ public sealed partial class BlastSession : GameSession
             var z = Finite(raw.Z);
             var len = MathF.Sqrt(x * x + z * z);
             if (len > 1f) { x /= len; z /= len; }
-            p.Input = new InputState(x, z, raw.A, raw.B, raw.R, raw.Aim, raw.Stop);
+            p.ReceiveInput(new InputState(x, z, raw.A, raw.B, raw.R, raw.Aim, raw.Stop));
         }
     }
 
@@ -203,6 +203,7 @@ public sealed partial class BlastSession : GameSession
         if (_matchEndScheduled)
             return;
 
+        foreach(var player in _players.Values)if(!player.IsBot)player.AdvanceReceivedInput();
         _tickCount++;
         var dt = (float)context.TickDelta.TotalSeconds;
 
@@ -272,7 +273,7 @@ public sealed partial class BlastSession : GameSession
             p.LatchReverseCount = 0;
             p.ActiveBombs = 0;
             PowerUpRules.Reset(p);
-            p.Input = default;
+            p.ClearInput();
             p.PrevA = false;
             p.PrevB = false;
             p.PrevR = false;p.PrevStop=false;
@@ -1261,7 +1262,7 @@ public sealed partial class BlastSession : GameSession
         player.Alive = true; player.Ghost = false; player.PendingRoundStart = false;
         ClearRecovery(player); player.InvincibleTimer = 1.5f;
         player.CarryFromPrimary=false;player.PrimaryBombCandidateId=null;player.PrimaryHoldTimer=0;
-        player.Input = default; player.PrevA = player.PrevB = player.PrevR = player.PrevStop = false;
+        player.ClearInput(); player.PrevA = player.PrevB = player.PrevR = player.PrevStop = false;
         PowerUpRules.Reset(player);
         player.ActiveBombs = _bombs.Count(b => b.OwnerId == player.Id && !b.Exploded);
         player.FacingX = 0; player.FacingZ = 1; player.BotThinkTimer = 0;
@@ -1530,8 +1531,9 @@ public sealed partial class BlastSession : GameSession
         context.Broadcast("state", new
         {
             round = _roundNum,
+            serverTime = context.Now.ToUnixTimeMilliseconds(),
             presentationSeq = _presentationSeq,
-            events = _presentationEvents.ToArray(),
+            events = SnapshotPresentationEvents(),
             phase = (int)_phase,
             timeLeft = MathF.Round(timeLeft, 1),
             closedLeft = _closedLeft,

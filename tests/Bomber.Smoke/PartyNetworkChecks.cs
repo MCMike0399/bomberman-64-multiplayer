@@ -60,7 +60,7 @@ internal static class PartyNetworkChecks
     }
     private static async Task KickStopAndNames(Uri origin)
     {
-        var settings=new SessionSettings(Stage:"rock-garden",Bots:0,SuddenDeath:false);
+        var settings=new SessionSettings(Stage:"sunken-temple",Bots:0,SuddenDeath:false);
         await using var host=await NetworkSession.ConnectAsync(origin,"",settings);
         await using var peer=await NetworkSession.ConnectAsync(origin,"Mika",settings,NetworkMode.JoinCode,host.JoinCode);
         await Start(host);
@@ -69,17 +69,22 @@ internal static class PartyNetworkChecks
         if(players.Single(p=>p.GetProperty("id").GetString()==host.PlayerId).GetProperty("name").GetString()!="P1"||
             players.Single(p=>p.GetProperty("id").GetString()==peer.PlayerId).GetProperty("name").GetString()!="Mika")
             throw new Exception("Online chosen/blank names did not reach authority snapshots.");
+        // Use the temple's permanently clear horizontal row, not a random cover cell
+        // a fast kicked bomb can reach before a network round trip completes.
+        host.SendInput(0,new PlayerInput(1,0));
+        await State(host,s=>s.GetProperty("players").EnumerateArray().Any(p=>p.GetProperty("id").GetString()==host.PlayerId&&p.GetProperty("fx").GetSingle()>.9f));
+        host.SendInput(0,default);
         host.SendInput(0,new PlayerInput(0,0,A:true));host.SendInput(0,default);
         await State(host,s=>s.GetProperty("bombs").GetArrayLength()==1);await Task.Delay(100);
         host.SendInput(0,new PlayerInput(0,0,A:true));host.SendInput(0,default);
         await State(host,s=>s.GetProperty("bombs").GetArrayLength()==1&&s.GetProperty("bombs")[0].GetProperty("state").GetInt32()==1);
         host.SendInput(0,new PlayerInput(0,0,Stop:true));host.SendInput(0,default);
         var stopped=await State(peer,s=>s.GetProperty("events").EnumerateArray().Any(e=>e.GetProperty("kind").GetString()=="kick-stop"));
-        var bomb=stopped.GetProperty("bombs")[0];float z=bomb.GetProperty("z").GetSingle();
+        var bomb=stopped.GetProperty("bombs")[0];float x=bomb.GetProperty("x").GetSingle(),z=bomb.GetProperty("z").GetSingle();
         if(bomb.GetProperty("state").GetInt32()!=0)throw new Exception("Queued network stop tap did not stop the kicked bomb.");
         await Task.Delay(150);
         var later=await State(host,s=>s.GetProperty("bombs").GetArrayLength()==1&&s.GetProperty("bombs")[0].GetProperty("state").GetInt32()==0);
-        if(later.GetProperty("bombs")[0].GetProperty("z").GetSingle()!=z)throw new Exception("Stopped online bomb kept drifting.");
+        if(later.GetProperty("bombs")[0].GetProperty("z").GetSingle()!=z||later.GetProperty("bombs")[0].GetProperty("x").GetSingle()!=x)throw new Exception("Stopped online bomb kept drifting.");
         Console.WriteLine("PASS real network queued kick-stop tap, peer observation, chosen name and unnamed seat fallback");
     }
     private static async Task Until(Func<bool> predicate,string label)

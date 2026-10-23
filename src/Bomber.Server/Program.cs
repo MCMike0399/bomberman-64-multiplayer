@@ -10,7 +10,7 @@ await using var app = BurbujaApplication.CreateApp(new WebApplicationOptions
 }, new BurbujaHostOptions
 {
     DefaultLandingRoute = "/game",
-    ConfigureBuilder = builder => builder.Services.AddSingleton<IRealtimeGame, BomberRealtimeGame>(),
+    ConfigureBuilder = builder => { builder.Services.AddSingleton<IRealtimeGame, BomberRealtimeGame>(); builder.Services.AddHostedService<Bomber.Server.PerformanceReporter>(); },
 });
 app.MapGet("/game", () => Results.Ok(new { game = "blast", client = "Godot C#", protocol = "/realtime/v1", tickRate = LocalMatch.TickRate })).AllowAnonymous();
 await app.RunAsync();

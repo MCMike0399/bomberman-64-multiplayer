@@ -210,6 +210,26 @@ public sealed class BlastPlayer
 
     // Input tracking.
     public InputState Input { get; set; }
+    private readonly Queue<(bool A,bool B,bool R,bool Aim,bool Stop)> _pendingButtons = [];
+    private (bool A,bool B,bool R,bool Aim,bool Stop) _receivedButtons;
+    public void ReceiveInput(InputState input)
+    {
+        var buttons=(input.A,input.B,input.R,input.Aim,input.Stop);
+        if(buttons!=_receivedButtons)
+        {
+            if(_pendingButtons.Count==16)_pendingButtons.Dequeue();
+            _pendingButtons.Enqueue(buttons);
+        }
+        _receivedButtons=buttons;Input=input;
+    }
+    public void AdvanceReceivedInput()
+    {
+        // TCP may deliver a press and release in one lobby step. Keep their order,
+        // consume at most one transition per tick, and always use the newest axes.
+        if(_pendingButtons.TryDequeue(out var buttons))
+            Input=Input with {A=buttons.A,B=buttons.B,R=buttons.R,Aim=buttons.Aim,Stop=buttons.Stop};
+    }
+    public void ClearInput(){Input=default;_receivedButtons=default;_pendingButtons.Clear();}
     public bool PrevA { get; set; }
     public bool PrevB { get; set; }
     public bool PrevR { get; set; }
