@@ -39,6 +39,24 @@ The user authorized publishing v0.21 and enabling signed releases after successf
 trusted main verification. The public release workflow is gated by those checks;
 its hosted run and published assets are separate from the local receipts above.
 
+The public release is now [v0.21.0](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.21.0), built from `c9febec6df5a396b2ca923d4a060c102a0c80744`.
+[Verification 39982931556](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/39982931556)
+passed public, managed/network, headless and clean Apple Silicon packaging; the
+optional self-hosted Metal job stayed disabled. [Automatic publication 39983991742](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/39983991742)
+signed and published the checked artifacts. The downloaded release's signature,
+app hash, identity/source metadata and server inventory were independently verified.
+The production updater discovered v0.21 from v0.20 through the real public feed,
+verified/downloaded it, and correctly offered nothing to an already-current v0.21.
+
+The canonical installed app and Downloads ZIP were then replaced with the exact
+published CI artifact (all 217 files matched; strict signature passed). That build
+passed Launch Services smoke with **57 snapshots**, the real DiveMac network
+journey with **27 assertions**, and settings/menu/haptic routing with **35
+assertions**, all without runtime errors. The published ZIP SHA-256 is
+`e96fba1ff14652dda02841d336d4046a127ed9d2c88459ca301343b416135058`.
+Receipts: `artifacts/iteration21-delivery/published`. Future new-version main builds
+publish automatically only after the required verification gates pass.
+
 # v0.20.0: gripping cartoon scamper — 2026-10-23
 
 The walk was rebuilt after the user again found it stiff and cheap-looking; see [iteration twenty](iteration20-walking.md). The new movement check reproduced planted-boot skating at **.948** of body speed before the change (`artifacts/iteration20-walk-red`); the rebuilt gait measures **.04–.08** across 30/60/120 FPS. Gameplay rules, speed, collision, networking and controls are unchanged.
