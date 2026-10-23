@@ -1,4 +1,4 @@
-# v0.22.0 combined validation — 2026-10-23
+# v0.22.0 combined release — 2026-10-23
 
 The party-polish work below is now integrated with the server performance patch:
 room-code copying, saved/chosen names, first-to-two defaults and explicit timing,
@@ -27,7 +27,27 @@ receipt is retained under `artifacts/iteration22-combined/managed`.
 The performance-only change was measured separately against the v0.21 baseline;
 see [server performance](server-performance.md). Those same-state comparisons must
 not be confused with the intentional gameplay changes in this combined version.
-Published/installed/deployment receipts are recorded after release verification.
+[Verification 40003769404](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40003769404)
+and [automatic publication 40004810095](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40004810095)
+succeeded for merge `89d90a8082e7a091fad1f5318eff94e543336bf5`.
+The [v0.22.0 release](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.22.0)
+was downloaded and independently checked against its signed manifest and app/server
+inventories. DiveMac runs that exact verified CI server; its complete real network
+smoke passed in **81.9 seconds**, including queued Stop and chosen/blank names.
+
+The actual installed v0.21 updater then fetched the public v0.22 release, verified
+it, replaced the app and confirmed a healthy relaunch. All **217 installed files**
+match the published archive and strict signature verification passed. The published
+app passed the feature journey (**36 checks / 5 captures**) and real DiveMac network
+journey (**32 checks / 2 captures**), with zero runtime errors. Receipts are under
+`artifacts/iteration22-combined/published` and `real-update`. The current ZIP is also
+in Downloads. SHA-256: `a583fff7dc1752c4bf571f419c7ea8bea5d14e2acae2a6fa702af6014e571bc7`.
+
+A fresh production 3-human/3-CPU sample averaged **7.5 KB snapshots / 0.322 MB/s
+aggregate snapshot traffic**, versus roughly **26 KB / 1.07 MB/s** in the clean
+baseline probe. These different-seed live samples are descriptive; the controlled
+performance-only comparison established the byte/allocation reduction separately.
+Rare delivery jitter remains possible; it is not represented as eliminated.
 
 # Party-polish source verification before integration — 2026-10-23
 
