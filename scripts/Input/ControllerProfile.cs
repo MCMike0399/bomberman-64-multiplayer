@@ -31,8 +31,8 @@ public static class ControllerProfile
     public static JoyButton CancelButton(ControllerFamily family)=>family==ControllerFamily.Nintendo?JoyButton.A:JoyButton.B;
     public static string Actions(ControllerFamily family,int keyboardSeat=0)
     {
-        if(family==ControllerFamily.Keyboard)return keyboardSeat==0?"J  BOMB   K  CARRY   L  AIM   I  REMOTE":"N / ENTER  BOMB   M / NUM 1  CARRY   CTRL  AIM   , / BACKSPACE  REMOTE";
-        return $"{BombName(family)}  BOMB   {ButtonName(family,JoyButton.LeftShoulder)} / {ButtonName(family,CarryButton(family))}  CARRY   {AimName(family)}  AIM   {ButtonName(family,RemoteButton(family))} / {ButtonName(family,JoyButton.RightShoulder)}  REMOTE";
+        if(family==ControllerFamily.Keyboard)return keyboardSeat==0?"J  BOMB   K  CARRY   L  AIM   I  REMOTE   O  STOP":"N / ENTER  BOMB   M / NUM 1  CARRY   CTRL  AIM   ,  REMOTE   .  STOP";
+        return $"{BombName(family)}  BOMB   {ButtonName(family,JoyButton.LeftShoulder)} / {ButtonName(family,CarryButton(family))}  CARRY   {AimName(family)}  AIM   {ButtonName(family,RemoteButton(family))}  REMOTE   {ButtonName(family,JoyButton.RightShoulder)}  STOP";
     }
     public static string AimName(ControllerFamily family)=>family switch
     {ControllerFamily.Nintendo=>"ZR",ControllerFamily.PlayStation=>"R2",ControllerFamily.Xbox=>"RT",ControllerFamily.Keyboard=>"L",_=>"R trigger"};

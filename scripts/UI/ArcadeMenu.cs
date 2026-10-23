@@ -12,7 +12,9 @@ public partial class ArcadeMenu : Control
     private readonly Dictionary<string,int> _lobbyAppearances=[];
     private readonly Dictionary<string,CharacterPreview> _lobbyPreviews=[];
     public event Action? LocalRequested, ReplayRequested, BackRequested, StartRoomRequested, ResumeRequested, SettingsChanged, TestVibrationRequested, CheckUpdatesRequested, InstallUpdateRequested;
-    private Button _startRoom=null!;
+    private Button _startRoom=null!,_copyCode=null!;
+    private string? _roomCode;
+    public event Action? IdentityChanged;
     private ArcadeModeButton _replay=null!;
     private Label _partyHint=null!,_pauseHint=null!,_settingsNotice=null!,_volumeLabel=null!;
     private CheckButton _vibration=null!;
@@ -136,7 +138,7 @@ public partial class ArcadeMenu : Control
         // These native settings nodes remain the single source of truth for configure/API/harness callers.
         var state=new VBoxContainer {Name="SetupSettings",Visible=false};screen.AddChild(state);
         _stage=new OptionButton {Name="Stage"};foreach(var title in new[]{"Sunken Temple","Rock Garden","Up & Down"})_stage.AddItem(title);state.AddChild(_stage);
-        _wins=new SpinBox {Name="Wins",MinValue=1,MaxValue=5,Value=3};state.AddChild(_wins);
+        _wins=new SpinBox {Name="Wins",MinValue=1,MaxValue=5,Value=2};state.AddChild(_wins);
         _bots=new SpinBox {Name="Bots",MinValue=0,MaxValue=7,Value=3};state.AddChild(_bots);
         _rounds=new SpinBox {Name="RoundSeconds",MinValue=60,MaxValue=300,Step=30,Value=120};state.AddChild(_rounds);
         _difficulty=new OptionButton {Name="Difficulty"};foreach(var title in new[]{"Easy","Medium","Hard"})_difficulty.AddItem(title);_difficulty.Select(1);state.AddChild(_difficulty);
@@ -149,7 +151,8 @@ public partial class ArcadeMenu : Control
         _rosterSummary=ArcadeTheme.Text(screen,"",18,ArcadeTheme.Muted);_rosterSummary.Position=new(822,140);
         var rail=new VBoxContainer {Position=new(800,184),Size=new(535,415)};rail.AddThemeConstantOverride("separation",3);screen.AddChild(rail);
         Dial(rail,"Wins to victory",()=>((int)_wins.Value).ToString(),direction=>_wins.Value=Cycle((int)_wins.Value,direction,1,5));
-        Dial(rail,"Round time",()=>TimeSpan.FromSeconds(_rounds.Value).ToString(@"m\:ss"),direction=>_rounds.Value=Cycle((int)_rounds.Value,direction*30,60,300));
+        var roundTime=Dial(rail,"Normal + sudden",()=>_sudden.ButtonPressed?$@"{TimeSpan.FromSeconds(_rounds.Value-60):m\:ss} + 1:00":TimeSpan.FromSeconds(_rounds.Value).ToString(@"m\:ss"),direction=>_rounds.Value=Cycle((int)_rounds.Value,direction*30,60,300));
+        roundTime.Name="Roundtime";_sudden.Toggled+=enabled=>roundTime.Caption=enabled?"Normal + sudden":"Round time";
         Dial(rail,"CPU level",()=>_difficulty.GetItemText(_difficulty.Selected),direction=>_difficulty.Select((_difficulty.Selected+direction+3)%3));
         var bots=Dial(rail,"CPU rivals",()=>((int)_bots.Value).ToString(),direction=>_bots.Value=Cycle((int)_bots.Value,direction,0,7));_hostBotBox=bots;
         Dial(rail,"Sudden death",()=>_sudden.ButtonPressed?"On":"Off",_=>_sudden.ButtonPressed=!_sudden.ButtonPressed);
@@ -176,8 +179,11 @@ public partial class ArcadeMenu : Control
         _onlinePreview=new CharacterPreview {CustomMinimumSize=new(280,226),Selected=true};identity.AddChild(_onlinePreview);
         _onlineAppearanceButton=ArcadeTheme.Button(identity,"Suit: White",()=>SetOnlineAppearance((_onlineAppearance+1)%8));_onlineAppearanceButton.Name="OnlineAppearance";_onlineAppearanceButton.AddThemeFontSizeOverride("font_size",17);
         _onlineAppearanceButton.Icon=ArcadeIcons.Swatch(ArcadeTheme.Players[0]);_onlineAppearanceButton.AddThemeConstantOverride("h_separation",10);
-        _name=ArcadeTheme.Field(identity,"Player name","Player");_name.MaxLength=24;
-        _server=ArcadeTheme.Field(identity,"Server address","http://127.0.0.1:18496");
+        _name=ArcadeTheme.Field(identity,"Your name — click to edit","","Type your name");_name.Name="PlayerName";_name.MaxLength=24;
+        Copy(identity,"Shown above your bomber. Leave blank for P1, P2…",15);
+        _name.TextChanged+=_=>IdentityChanged?.Invoke();
+        _server=ArcadeTheme.Field(identity,"Server address","http://127.0.0.1:18496");_server.Name="ServerUrl";
+        _server.TextChanged+=_=>IdentityChanged?.Invoke();
         var host=ArcadeTheme.Column(columns,14);host.CustomMinimumSize=new(400,0);
         Section(host,"Host a room");
         Copy(host,"Invite friends with a private room code. Pick the arena, CPU rivals and win target first.");
@@ -204,6 +210,7 @@ public partial class ArcadeMenu : Control
         var codeCaption=ArcadeTheme.Text(code,"Room code",18,ArcadeTheme.Muted);codeCaption.VerticalAlignment=VerticalAlignment.Center;
         var codePlate=new PanelContainer();var codeStyle=ArcadeTheme.Key(ArcadeTheme.Sand,false,false,12,18);codePlate.AddThemeStyleboxOverride("panel",codeStyle);code.AddChild(codePlate);
         _joinCode=new Label {Text="…"};_joinCode.AddThemeFontOverride("font",ArcadeTheme.Display);_joinCode.AddThemeFontSizeOverride("font_size",36);_joinCode.AddThemeColorOverride("font_color",ArcadeTheme.Ink);codePlate.AddChild(_joinCode);
+        _copyCode=ArcadeTheme.Button(code,"Copy code",()=>{if(_roomCode is {} room){DisplayServer.ClipboardSet(room);_copyCode.Text="Copied!";}});_copyCode.Name="CopyRoomCode";_copyCode.Disabled=true;_copyCode.FocusMode=FocusModeEnum.None;
         _lobbyStatus=ArcadeTheme.Text(box,"Connecting to your room…",24);
         _roster=new GridContainer {Columns=2,CustomMinimumSize=new(900,255)};_roster.AddThemeConstantOverride("h_separation",16);_roster.AddThemeConstantOverride("v_separation",10);box.AddChild(_roster);
         _partyHint=Copy(box,"Share the room code with friends. The leader starts each battle.",17);_partyHint.AddThemeColorOverride("font_color",ArcadeTheme.Muted);
@@ -309,11 +316,12 @@ public partial class ArcadeMenu : Control
     }
     public void ShowLobby(JsonElement? lobby,string? code,string connection)
     {
-        _joinCode.Text=code??"Matchmaking";
+        _roomCode=string.IsNullOrWhiteSpace(code)?null:code;_joinCode.Text=_roomCode??"Matchmaking";
+        _copyCode.Disabled=_roomCode is null;_copyCode.FocusMode=_roomCode is null?FocusModeEnum.None:FocusModeEnum.All;_copyCode.Text="Copy code";
         _lobbyStatus.Text=connection;
         if(lobby is not { } data)return;
         var status=LobbyStatus.Parse(data);
-        if(status.JoinCode is { } roomCode)_joinCode.Text=roomCode;
+        if(status.JoinCode is { } roomCode){_roomCode=roomCode;_joinCode.Text=roomCode;_copyCode.Disabled=false;_copyCode.FocusMode=FocusModeEnum.All;}
         foreach(var child in _roster.GetChildren()){_roster.RemoveChild(child);child.QueueFree();}_lobbyPreviews.Clear();
         foreach(var member in status.Players)
         {
@@ -329,7 +337,7 @@ public partial class ArcadeMenu : Control
     }
     public void ResetLobby()
     {
-        _party=null;_localPlayer=null;_countdown=null;_startRoom.Disabled=true;_startRoom.Visible=false;
+        _party=null;_localPlayer=null;_countdown=null;_roomCode=null;_copyCode.Disabled=true;_copyCode.FocusMode=FocusModeEnum.None;_startRoom.Disabled=true;_startRoom.Visible=false;
         _lobbyAppearances.Clear();_lobbyPreviews.Clear();
         foreach(var child in _roster.GetChildren()){_roster.RemoveChild(child);child.QueueFree();}
     }
@@ -386,6 +394,7 @@ public partial class ArcadeMenu : Control
     }
     public void ConfigurePreferences(PlayerPreferences preferences)
     {
+        _name.Text=preferences.PlayerName;_server.Text=preferences.ServerUrl;
         _automaticUpdates.SetPressedNoSignal(preferences.AutomaticUpdates);
         _vibration.SetPressedNoSignal(preferences.Vibration);_volume.SetValueNoSignal(preferences.Volume*100);
         _volumeLabel.Text=$"Sound volume: {preferences.Volume*100:0}%";
@@ -409,7 +418,7 @@ public partial class ArcadeMenu : Control
     {
         _party=data.Clone();_localPlayer=localPlayer;_countdown=null;
         var lobby=JsonSerializer.SerializeToElement(new {state="open",players=data.GetProperty("players")});
-        ShowLobby(lobby,_joinCode.Text,"Connected");
+        ShowLobby(lobby,_roomCode,"Connected");
     }
     private void ApplyParty()
     {

@@ -107,7 +107,7 @@ public sealed class PartySession(GameSessionOptions options) : GameSession
     {
         leaderId = _leader, phase = _phase, match = _matchNumber,
         canStart = _phase == "lobby" && EnoughPlayers(context), bots = Bots,
-        players = _members.Values.OrderBy(p => p.Slot).Select(p => new { playerId = p.PlayerId, displayName = p.DisplayName, slot = p.Slot, connected = context.IsConnected(p.PlayerId) }).ToArray()
+        players = _members.Values.OrderBy(p => p.Slot).Select(p => new { playerId = p.PlayerId, displayName = PlayerNames.Display(p.DisplayName,p.Slot), slot = p.Slot, connected = context.IsConnected(p.PlayerId) }).ToArray()
     });
     private static void SendResult(ISessionContext context, MatchResult result, string? recipient = null)
     {

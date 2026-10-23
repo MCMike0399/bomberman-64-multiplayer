@@ -36,6 +36,20 @@ public sealed partial class BlastSession
         return true;
     }
 
+    private void StopKickedBombs(BlastPlayer player)
+    {
+        foreach(var bomb in _bombs)
+        {
+            if(bomb.Exploded||bomb.LastTouchedById!=player.Id)continue;
+            if(bomb.State==BombState.Rolling)
+            {bomb.VX=bomb.VZ=0;bomb.State=BombState.Resting;bomb.KickHopRemaining=0;}
+            else if(bomb.State==BombState.Flying&&bomb.ResumeRollingAfterFall)
+                bomb.FlyVX=bomb.FlyVZ=0; // gravity continues; never suspend a bomb over a drop
+            else continue;
+            PresentBomb("kick-stop",bomb,player.Id);
+        }
+    }
+
     private static float KickMovementScale(BlastPlayer p)=>p.KickRecoveryRemaining<=0?1:
         .2f+.8f*(1-p.KickRecoveryRemaining/KickRecoverySeconds);
 }

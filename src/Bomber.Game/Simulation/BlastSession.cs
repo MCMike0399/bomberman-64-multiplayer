@@ -74,7 +74,7 @@ public sealed partial class BlastSession : GameSession
         _practice = practice;
         _stage = arena ?? BlastStages.Get(options.Settings.TryGetValue("stage", out var s) ? s : "sunken-temple");
 
-        _winsTarget = TryInt(options, "wins", 3, 1, 5);
+        _winsTarget = TryInt(options, "wins", 2, 1, 5);
         _roundSeconds = TryInt(options, "round-seconds", 120, 60, 300);
         _suddenDeath = TryBool(options, "sudden-death", true);
         _ghostsEnabled = TryBool(options, "ghosts", true);
@@ -95,7 +95,7 @@ public sealed partial class BlastSession : GameSession
             Id = player.PlayerId,
             Slot = player.Slot,
             Appearance = DefaultAppearance(player.Slot),
-            DisplayName = player.DisplayName,
+            DisplayName = PlayerNames.Display(player.DisplayName,player.Slot),
         };
 
         // A player who joins mid-match waits for the next round as a ghost spectator.
@@ -194,7 +194,7 @@ public sealed partial class BlastSession : GameSession
             var z = Finite(raw.Z);
             var len = MathF.Sqrt(x * x + z * z);
             if (len > 1f) { x /= len; z /= len; }
-            p.Input = new InputState(x, z, raw.A, raw.B, raw.R, raw.Aim);
+            p.Input = new InputState(x, z, raw.A, raw.B, raw.R, raw.Aim, raw.Stop);
         }
     }
 
@@ -275,7 +275,7 @@ public sealed partial class BlastSession : GameSession
             p.Input = default;
             p.PrevA = false;
             p.PrevB = false;
-            p.PrevR = false;
+            p.PrevR = false;p.PrevStop=false;
         }
 
         // Assign spawn positions.
@@ -481,7 +481,7 @@ public sealed partial class BlastSession : GameSession
             {
                 p.AirVX=input.X*PlayerSpeed;p.AirVZ=input.Z*PlayerSpeed;
                 if(input.Length>.1f){p.FacingX=input.X/input.Length;p.FacingZ=input.Z/input.Length;}
-                p.PrevA=input.A;p.PrevB=input.B;p.PrevR=input.R;
+                p.PrevA=input.A;p.PrevB=input.B;p.PrevR=input.R;p.PrevStop=input.Stop;
                 continue;
             }
             if (ProcessRecovery(p,p.Input,dt)) continue;
@@ -491,10 +491,12 @@ public sealed partial class BlastSession : GameSession
             var bPress = input.B && !p.PrevB;
             var bRelease = !input.B && p.PrevB;
             var rPress = input.R && !p.PrevR;
+            var stopPress = input.Stop && !p.PrevStop;
             p.PrevA = input.A;
             p.PrevB = input.B;
-            p.PrevR = input.R;
+            p.PrevR = input.R;p.PrevStop=input.Stop;
 
+            if(stopPress)StopKickedBombs(p);
             if(AdvanceKick(p,dt))continue;
 
             UpdateThrowAim(p,input,dt);
@@ -619,6 +621,8 @@ public sealed partial class BlastSession : GameSession
 
     private bool CollidesWithSolid(float x, float z, int tier, BlastPlayer mover)
     {
+        // Ghosts stay on land after their comeback, including when the fall input is still held.
+        if(mover.Ghost&&_stage.At((int)MathF.Floor(x),(int)MathF.Floor(z)).IsElimination)return true;
         // Check a small set of cells the circle could touch.
         for (var cx = (int)MathF.Floor(x - PlayerRadius); cx <= (int)MathF.Floor(x + PlayerRadius); cx++)
             for (var cz = (int)MathF.Floor(z - PlayerRadius); cz <= (int)MathF.Floor(z + PlayerRadius); cz++)
@@ -951,7 +955,7 @@ public sealed partial class BlastSession : GameSession
         var cz = (int)nz;
 
         var cell = _stage.At(cx, cz);
-        if (!BombTerrainClear(nx, nz, (int)MathF.Floor(b.X), (int)MathF.Floor(b.Z),allowDescent:true))
+        if (!BombTerrainClear(nx, nz, (int)MathF.Floor(b.X), (int)MathF.Floor(b.Z),allowDescent:true,movingBomb:b))
         {
             b.State = BombState.Resting;
             b.VX = b.VZ = 0;
@@ -1215,6 +1219,20 @@ public sealed partial class BlastSession : GameSession
         // Lose carried power-ups as ghost.
         p.HasRed = false; p.HasRemote = false;
         p.BombCapacity = 1; p.FireLevel = 1;
+        if(reason is "water" or "fall") ReturnGhostToLand(p);
+    }
+
+    private void ReturnGhostToLand(BlastPlayer p)
+    {
+        var cells=Enumerable.Range(0,_stage.Width).SelectMany(x=>Enumerable.Range(0,_stage.Height).Select(z=>(X:x,Z:z)))
+            .Where(c=>_stage.At(c.X,c.Z).IsPassable&&!_softBlocks.IsAlive(c.X,c.Z)&&
+                !WaterUnsafe(c.X+.5f,c.Z+.5f))
+            .OrderBy(c=>Dist2(p.X,p.Z,c.X+.5f,c.Z+.5f)).ToArray();
+        if(cells.Length==0){p.Alive=false;return;}
+        var cell=cells[0];p.X=cell.X+.5f;p.Z=cell.Z+.5f;
+        p.SurfaceY=_stage.SurfaceAt(p.X,p.Z);p.Tier=(int)MathF.Round(p.SurfaceY);
+        ClearKick(p);p.PrimaryBombCandidateId=null;p.PrimaryHoldTimer=0;
+        Present("respawn",p.Id,p.Id,p.X,p.Y,p.Z,reason:"ghost");
     }
 
     /// <summary>Local training recovers through the ordinary elimination path. Online sessions never
@@ -1243,7 +1261,7 @@ public sealed partial class BlastSession : GameSession
         player.Alive = true; player.Ghost = false; player.PendingRoundStart = false;
         ClearRecovery(player); player.InvincibleTimer = 1.5f;
         player.CarryFromPrimary=false;player.PrimaryBombCandidateId=null;player.PrimaryHoldTimer=0;
-        player.Input = default; player.PrevA = player.PrevB = player.PrevR = false;
+        player.Input = default; player.PrevA = player.PrevB = player.PrevR = player.PrevStop = false;
         PowerUpRules.Reset(player);
         player.ActiveBombs = _bombs.Count(b => b.OwnerId == player.Id && !b.Exploded);
         player.FacingX = 0; player.FacingZ = 1; player.BotThinkTimer = 0;
@@ -1605,6 +1623,7 @@ public sealed partial class BlastSession : GameSession
         public bool B { get; set; }
         public bool R { get; set; }
         public bool Aim { get; set; }
+        public bool Stop { get; set; }
     }
 
 }

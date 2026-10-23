@@ -35,6 +35,12 @@ update the current guide rather than silently reviving old behavior.
 
 ## Current decisions that supersede earlier experiments
 
+- Source party polish (2026-10-23, not yet installed): Copy code, saved online name/server,
+  named character/HUD labels, first-to-two and 1:00 + 1:00 defaults, immediate flood,
+  water ghost returns, sealed rear temple passage and diagonal stair kick fix.
+  Right shoulder now stops kicked bombs; remote remains on the face button.
+  See [input/UI](input-and-ui.md), [gameplay](gameplay-and-ai.md) and [verification](../verification.md).
+
 - v0.21 private rooms wait for their leader, including rooms with CPUs; results return to the same room. Esc/Start opens a game menu. Settings saves volume, vibration (default off) and automatic update checks (default on). [Party setup](../online-party.md), [signed updates](../automatic-updates.md).
 
 - Iteration19 recommends shoulder carry (L/LB/L1); Switch Y replaces B as its

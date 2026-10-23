@@ -18,9 +18,9 @@ public partial class ControllerPanel : VBoxContainer
         var scroll=new ScrollContainer {CustomMinimumSize=new(0,150),SizeFlagsVertical=SizeFlags.ExpandFill};AddChild(scroll);
         _live=ArcadeTheme.Text(scroll,"",16);_live.SizeFlagsHorizontal=SizeFlags.ExpandFill;_live.AutowrapMode=TextServer.AutowrapMode.WordSmart;
         var cards=ArcadeTheme.Row(this,18);
-        Card(cards,"Keyboard 1",[("Move",["W","A","S","D"]),("Bomb / pump",["J"]),("Hold to carry",["K"]),("Precision aim",["L","Shift"]),("Detonate",["I","R"])]);
-        Card(cards,"Keyboard 2",[("Move",["Arrows"]),("Bomb",["N","Enter","Num 0"]),("Hold to carry",["M","Num 1"]),("Precision aim",["Ctrl"]),("Detonate",[",","Backspace","Num 2"])]);
-        Card(cards,"Gamepads",[("Move",["Stick","D-pad"]),("Bomb",["A","A/B","Cross"]),("Hold to carry",["LB","L","L1"]),("Precision aim",["RT","ZR","R2"]),("Detonate",["B","X","Circle"])],"Xbox, Switch and PlayStation, in that order. X, Y or Square also carries; RB, R or R1 also detonates.");
+        Card(cards,"Keyboard 1",[("Move",["W","A","S","D"]),("Bomb / pump",["J"]),("Hold to carry",["K"]),("Precision aim",["L","Shift"]),("Detonate",["I","R"]),("Stop kick",["O"])]);
+        Card(cards,"Keyboard 2",[("Move",["Arrows"]),("Bomb",["N","Enter","Num 0"]),("Hold to carry",["M","Num 1"]),("Precision aim",["Ctrl"]),("Detonate",[",","Backspace","Num 2"]),("Stop kick",[".","Num 3"])]);
+        Card(cards,"Gamepads",[("Move",["Stick","D-pad"]),("Bomb",["A","A/B","Cross"]),("Hold to carry",["LB","L","L1"]),("Precision aim",["RT","ZR","R2"]),("Detonate",["B","X","Circle"]),("Stop kick",["RB","R","R1"])],"Xbox, Switch and PlayStation, in that order. X, Y or Square also carries; the right shoulder stops your kicked bombs.");
         var notes=ArcadeTheme.Text(this,"Hold carry and tap bomb to ready or pump. On Switch, hold Y and tap B (A also works). Hold aim and use either stick to move the target. On keyboard, hold K to carry and L + WASD to aim. Nudge for precision; hold to sweep. Release carry to throw.",16,ArcadeTheme.Muted);
         notes.AutowrapMode=TextServer.AutowrapMode.WordSmart;
         UpdateStatus();

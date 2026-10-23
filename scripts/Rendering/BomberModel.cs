@@ -71,6 +71,7 @@ public partial class BomberModel : Node3D
     public float PumpIntensity=>Mathf.Sin(_pumpPulse*Mathf.Pi);
     public Vector3 BombSocket=>_upperParts.ToGlobal(new Vector3(0,Mathf.Lerp(.25f,1.47f,_carryBlend)+Mathf.Sin(_pumpPulse*Mathf.Pi)*.09f,.08f));
     public void Pump(int charge){_charge=charge;_pumpPulse=1;PumpAnimationCount++;}
+    public string DisplayName=>_nameLabel.Text;
     public void ShowName(bool visible)=>_nameLabel.Visible=visible;
     public void SetSuitColor(Color color)
     {
@@ -156,7 +157,7 @@ public partial class BomberModel : Node3D
             star.RotationDegrees=new(0,0,45);
         }
         _stars.Visible=false;
-        _nameLabel=new Label3D {Text=name,Font=BlastCircuit.UI.ArcadeTheme.Display,Position=new(0,1.87f,0),FontSize=28,PixelSize=.009f,Billboard=BaseMaterial3D.BillboardModeEnum.Enabled,Modulate=new Color("fff7d5"),OutlineModulate=new Color("232942"),OutlineSize=10,NoDepthTest=true};AddChild(_nameLabel);
+        _nameLabel=new Label3D {Text=name,Font=BlastCircuit.UI.ArcadeTheme.Display,Position=new(0,1.87f,0),FontSize=28,PixelSize=.009f,Billboard=BaseMaterial3D.BillboardModeEnum.Enabled,Modulate=new Color("fff7d5"),OutlineModulate=new Color("232942"),OutlineSize=10,NoDepthTest=true};_nameLabel.PixelSize*=Math.Min(1,220f/Math.Max(1,_nameLabel.Font.GetStringSize(name,HorizontalAlignment.Left,-1,28).X));AddChild(_nameLabel);
         var shadow=Cylinder(this,new(0,.018f,0),.34f,.008f,art.Color(new Color(.13f,.1f,.08f,.22f)));shadow.CastShadow=GeometryInstance3D.ShadowCastingSetting.Off;
     }
     private static float FaceHemisphereZ(float x,float headY)

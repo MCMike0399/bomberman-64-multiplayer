@@ -213,6 +213,7 @@ public sealed class BlastPlayer
     public bool PrevA { get; set; }
     public bool PrevB { get; set; }
     public bool PrevR { get; set; }
+    public bool PrevStop { get; set; }
 
     // Bot AI state.
     public float BotThinkTimer { get; set; }
@@ -341,7 +342,7 @@ public sealed class SoftBlockGrid
 }
 
 /// <summary>One player's input as received from the client.</summary>
-public readonly record struct InputState(float X, float Z, bool A, bool B, bool R, bool Aim = false)
+public readonly record struct InputState(float X, float Z, bool A, bool B, bool R, bool Aim = false, bool Stop = false)
 {
     public float Length => MathF.Sqrt(X * X + Z * Z);
 }

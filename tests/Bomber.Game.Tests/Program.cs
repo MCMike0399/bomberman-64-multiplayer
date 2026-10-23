@@ -2,7 +2,11 @@ using System.Text.Json;
 using Bomber.Game;
 using Bomber.Game.Simulation;
 
-var passed = PartySessionChecks.Run() + LootAvailabilityChecks.Run() + AimedThrowChecks.Run() + CarryChargeChecks.Run() + BombPlacementChecks.Run() + PowerUpModeChecks.Run() + BombTravelChecks.Run() + KickTimingChecks.Run() + BodyContactChecks.Run() + BombImpactChecks.Run() + TraversalAndGhostChecks.Run() + BombActionsChecks.Run() + GrappleChecks.Run();
+if(args.Contains("--pyramid-ledges")){PyramidLedgeChecks.Run();return;}
+
+if(args.Contains("--party-polish")){PartyPolishChecks.Run();return;}
+
+var passed = PyramidLedgeChecks.Run() + PartyPolishChecks.Run() + PartySessionChecks.Run() + LootAvailabilityChecks.Run() + AimedThrowChecks.Run() + CarryChargeChecks.Run() + BombPlacementChecks.Run() + PowerUpModeChecks.Run() + BombTravelChecks.Run() + KickTimingChecks.Run() + BodyContactChecks.Run() + BombImpactChecks.Run() + TraversalAndGhostChecks.Run() + BombActionsChecks.Run() + GrappleChecks.Run();
 Run("participant bounds and stage validation", () =>
 {
     foreach (var options in new[] {
@@ -265,13 +269,15 @@ Run("flood thresholds use actual elevation and temple hurry does not close colum
 {
     Assert(FloodRules.Level(59,120)==-1,"Water rose before one-minute warning.");
     Assert(FloodRules.Level(60,120)==-.75f,"Hurry water start changed.");
-    Assert(!FloodRules.Submerged(0,FloodRules.Level(83.99f,120)),"Floor0 drowned too early.");
-    Assert(FloodRules.Submerged(0,FloodRules.Level(84,120)),"Exact floor0 flood threshold did not drown.");
-    Assert(!FloodRules.Submerged(1,FloodRules.Level(95.99f,120))&&FloodRules.Submerged(1,FloodRules.Level(96,120)),"Floor1 threshold incorrect.");
+    Assert(!FloodRules.Submerged(0,FloodRules.Level(68.99f,120)),"Floor0 drowned too early.");
+    Assert(FloodRules.Submerged(0,FloodRules.Level(69,120)),"Exact floor0 flood threshold did not drown.");
+    Assert(!FloodRules.Submerged(1,FloodRules.Level(80.99f,120))&&FloodRules.Submerged(1,FloodRules.Level(81,120)),"Floor1 threshold incorrect.");
     var cells=new CellDef[9,9];for(var x=0;x<9;x++)for(var z=0;z<9;z++)cells[x,z]=CellDef.Floor0;
     cells[4,3]=CellDef.Floor1;cells[7,3]=new CellDef {Kind=CellKind.Floor,Tier=4};
     var arena=new StageLayout {Id="sunken-temple",Width=9,Height=9,Cells=cells,Spawns=[(1,3),(4,3),(7,3)],SoftBlockDensity=0};
     var match=new LocalMatch(new MatchOptions {HumanPlayers=3,BotPlayers=0,RoundSeconds=60,Wins=5},arena);
+    var waterfallEvents=new HashSet<long>();
+    match.Message+=json=>{var data=Data(json);if(data.TryGetProperty("events",out var events))foreach(var e in events.EnumerateArray())if(Kind(e)=="waterfall")waterfallEvents.Add(e.GetProperty("seq").GetInt64());};
     while(State(match).GetProperty("waterLevel").GetSingle()<0)Step(match,2);
     Assert(!Player(match).GetProperty("alive").GetBoolean()&&!Player(match).GetProperty("ghost").GetBoolean(),"Submerged court player survived or became ghost.");
     Assert(Player(match,1).GetProperty("alive").GetBoolean()&&Player(match,2).GetProperty("alive").GetBoolean(),"Higher tiers drowned at court threshold.");
@@ -279,7 +285,7 @@ Run("flood thresholds use actual elevation and temple hurry does not close colum
     while(State(match).GetProperty("waterLevel").GetSingle()<1)Step(match,2);
     Assert(!Player(match,1).GetProperty("alive").GetBoolean()&&Player(match,2).GetProperty("alive").GetBoolean(),"Water did not independently eliminate next tier.");
     Assert(State(match).GetProperty("phase").GetInt32()==3&&Player(match,2).GetProperty("wins").GetInt32()==1,"Last high survivor did not win flooded round.");
-    Assert(Events(match).Count(e=>Kind(e)=="waterfall")==1,"Flood rise did not emit exactly one waterfall event.");
+    Assert(waterfallEvents.Count==1,"Flood rise did not emit exactly one waterfall event.");
     Assert(Events(match).Where(e=>Kind(e)=="death").All(e=>e.GetProperty("reason").GetString()=="water"),"Flood deaths lost their water cause.");
 });
 Run("power-up limits weighted choices and round inventory reset", () =>

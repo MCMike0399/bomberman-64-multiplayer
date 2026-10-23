@@ -65,20 +65,20 @@ internal static class TraversalAndGhostChecks
                 Step(m,2);
             }
             Assert(belowFloor,"Upper shoreline fall drowned at the water cell's fictitious tier-zero floor.");
-            Assert(P(m).GetProperty("ghost").GetBoolean()&&F(P(m),"y")==State(m).GetProperty("waterLevel").GetSingle(),
+            Assert(P(m).GetProperty("ghost").GetBoolean()&&State(m).GetProperty("events").EnumerateArray().Any(e=>e.GetProperty("kind").GetString()=="death"&&F(e,"y")==State(m).GetProperty("waterLevel").GetSingle()),
                 "Water elimination did not occur on the published water plane.");
         });
         Check("void crossing falls below ground and remains lethal",()=>{
             var m=Match(water:true,voidEdge:true);m.SetInput(0,new PlayerInput(-1,0));Step(m,5);
             Assert(P(m).GetProperty("airborne").GetBoolean()&&!P(m).GetProperty("ghost").GetBoolean(),"Void killed at an imaginary floor.");
             m.SetInput(0,default);Step(m,25);
-            Assert(P(m).GetProperty("ghost").GetBoolean()&&F(P(m),"y")<0,"Void no longer eliminates a real fall.");
+            Assert(P(m).GetProperty("ghost").GetBoolean()&&State(m).GetProperty("events").EnumerateArray().Any(e=>e.GetProperty("kind").GetString()=="death"&&F(e,"y")<0),"Void no longer eliminates a real fall.");
         });
         Check("rising water stays below feet until contact and still drowns grounded players",()=>{
             var cells=new CellDef[11,11];for(int x=0;x<11;x++)for(int z=0;z<11;z++)cells[x,z]=x>=4?CellDef.Floor2:CellDef.Floor0;
             var m=new LocalMatch(new MatchOptions {HumanPlayers=3,BotPlayers=0,RoundSeconds=60},
                 new StageLayout {Id=BlastStages.SunkenTemple,Width=11,Height=11,Cells=cells,Spawns=[(2,3),(8,7),(9,9)],SoftBlockDensity=0});
-            Step(m,664);
+            Step(m,214);
             Assert(State(m).GetProperty("waterLevel").GetSingle()<0&&!P(m).GetProperty("ghost").GetBoolean()&&P(m).GetProperty("alive").GetBoolean(),"Flood drowned dry feet.");
             Step(m,180);
             Assert(!P(m).GetProperty("alive").GetBoolean()&&State(m).GetProperty("waterLevel").GetSingle()>=0,"Flood contact stopped being lethal.");

@@ -24,8 +24,8 @@ public partial class ControllerHub : Node
     public string BackendStatus {get;private set;}="Godot controller backend";
     private List<ControllerDevice> _devices=[];
     private IReadOnlyList<GamepadDevice>? _testDevices;
-    private readonly bool[] _keyboardBomb=new bool[2],_keyboardRemote=new bool[2],_armed=new bool[8];
-    private readonly Dictionary<int,(bool Bomb,bool Remote)> _taps=[];
+    private readonly bool[] _keyboardBomb=new bool[2],_keyboardRemote=new bool[2],_keyboardStop=new bool[2],_armed=new bool[8];
+    private readonly Dictionary<int,(bool Bomb,bool Remote,bool Stop)> _taps=[];
     private bool _focused=true,_inMatch,_vibrationEnabled;
     public int VibrationRequestCount {get;private set;}
     public bool VibrationEnabled {get=>_vibrationEnabled;set{_vibrationEnabled=value;if(!value)StopVibration();}}
@@ -110,8 +110,8 @@ public partial class ControllerHub : Node
             stick=new(Input.GetJoyAxis(pad,JoyAxis.LeftX),Input.GetJoyAxis(pad,JoyAxis.LeftY),
                 Button(pad,ControllerProfile.BombButton(family))||(ControllerProfile.AlternateBombButton(family) is {} alternate&&Button(pad,alternate)),
                 Button(pad,ControllerProfile.CarryButton(family))||Button(pad,JoyButton.LeftShoulder),
-                Button(pad,ControllerProfile.RemoteButton(family))||Button(pad,JoyButton.RightShoulder),
-                Input.GetJoyAxis(pad,JoyAxis.TriggerRight)>.35f);
+                Button(pad,ControllerProfile.RemoteButton(family)),
+                Input.GetJoyAxis(pad,JoyAxis.TriggerRight)>.35f,Button(pad,JoyButton.RightShoulder));
             dpad=new((Button(pad,JoyButton.DpadRight)?1:0)-(Button(pad,JoyButton.DpadLeft)?1:0),
                 (Button(pad,JoyButton.DpadDown)?1:0)-(Button(pad,JoyButton.DpadUp)?1:0));
             aimStick=new(Input.GetJoyAxis(pad,JoyAxis.RightX),Input.GetJoyAxis(pad,JoyAxis.RightY));
@@ -119,20 +119,20 @@ public partial class ControllerHub : Node
         // Release menu-confirm before it can drop a bomb in the newly entered match.
         if(!_armed[seat])
         {
-            _armed[seat]=!keyboard.A&&!keyboard.B&&!keyboard.R&&!keyboard.Aim&&!stick.A&&!stick.B&&!stick.R&&!stick.Aim;
-            keyboard=keyboard with {A=false,B=false,R=false,Aim=false};stick=stick with {A=false,B=false,R=false,Aim=false};
-            if(seat<2){_keyboardBomb[seat]=false;_keyboardRemote[seat]=false;}
+            _armed[seat]=!keyboard.A&&!keyboard.B&&!keyboard.R&&!keyboard.Aim&&!keyboard.Stop&&!stick.A&&!stick.B&&!stick.R&&!stick.Aim&&!stick.Stop;
+            keyboard=keyboard with {A=false,B=false,R=false,Aim=false,Stop=false};stick=stick with {A=false,B=false,R=false,Aim=false,Stop=false};
+            if(seat<2){_keyboardBomb[seat]=false;_keyboardRemote[seat]=false;_keyboardStop[seat]=false;}
             if(id is {} pending)_taps.Remove(pending);
         }
         else
         {
             if(seat<2)
             {
-                keyboard=keyboard with {A=keyboard.A||_keyboardBomb[seat],R=keyboard.R||_keyboardRemote[seat]};
-                _keyboardBomb[seat]=false;_keyboardRemote[seat]=false;
+                keyboard=keyboard with {A=keyboard.A||_keyboardBomb[seat],R=keyboard.R||_keyboardRemote[seat],Stop=keyboard.Stop||_keyboardStop[seat]};
+                _keyboardBomb[seat]=false;_keyboardRemote[seat]=false;_keyboardStop[seat]=false;
             }
             if(id is {} device&&_taps.Remove(device,out var taps))
-                stick=stick with {A=stick.A||taps.Bomb,R=stick.R||taps.Remote};
+                stick=stick with {A=stick.A||taps.Bomb,R=stick.R||taps.Remote,Stop=stick.Stop||taps.Stop};
         }
         return InputPolicy.Resolve(keyboard,stick,dpad,aimStick);
     }
@@ -268,7 +268,7 @@ public partial class ControllerHub : Node
         if(@event is InputEventKey {Pressed:true,Echo:false} key)
         {
             var pressed=key.PhysicalKeycode==Key.None?key.Keycode:key.PhysicalKeycode;
-            int keyboardSeat=pressed is Key.N or Key.M or Key.Comma or Key.Left or Key.Right or Key.Up or Key.Down or Key.Kp0 or Key.Kp1 or Key.Kp2 or Key.Enter or Key.Backspace or Key.Ctrl?1:0;
+            int keyboardSeat=pressed is Key.N or Key.M or Key.Comma or Key.Left or Key.Right or Key.Up or Key.Down or Key.Kp0 or Key.Kp1 or Key.Kp2 or Key.Enter or Key.Backspace or Key.Ctrl or Key.Period or Key.Kp3?1:0;
             if(ActiveKeyboardSeat!=keyboardSeat){ActiveKeyboardSeat=keyboardSeat;PromptChanged?.Invoke();}
             SetActiveFamily(ControllerFamily.Keyboard);
             if(_inMatch&&_focused)for(int seat=0;seat<2;seat++)
@@ -276,6 +276,7 @@ public partial class ControllerHub : Node
                 var physical=key.PhysicalKeycode==Key.None?key.Keycode:key.PhysicalKeycode;
                 _keyboardBomb[seat]|=PlayerControls.BombKey(seat,physical);
                 _keyboardRemote[seat]|=PlayerControls.RemoteKey(seat,physical);
+                _keyboardStop[seat]|=PlayerControls.StopKey(seat,physical);
             }
         }
         else if(@event is InputEventJoypadButton {Pressed:true} button)
@@ -287,7 +288,7 @@ public partial class ControllerHub : Node
                 _taps.TryGetValue(button.Device,out var old);
                 var family=DeviceFamily(button.Device);
                 _taps[button.Device]=(old.Bomb||ControllerProfile.IsBombButton(family,button.ButtonIndex),
-                    old.Remote||button.ButtonIndex==ControllerProfile.RemoteButton(family)||button.ButtonIndex==JoyButton.RightShoulder);
+                    old.Remote||button.ButtonIndex==ControllerProfile.RemoteButton(family),old.Stop||button.ButtonIndex==JoyButton.RightShoulder);
             }
         }
         else if(@event is InputEventJoypadMotion motion)
@@ -316,7 +317,7 @@ public partial class ControllerHub : Node
         if(what==NotificationApplicationFocusOut){_focused=false;StopVibration();ClearEdges();}
         if(what==NotificationApplicationFocusIn){_focused=true;Array.Fill(_armed,false);}
     }
-    private void ClearEdges(){Array.Clear(_keyboardBomb);Array.Clear(_keyboardRemote);_taps.Clear();_menuSticks.Clear();}
+    private void ClearEdges(){Array.Clear(_keyboardBomb);Array.Clear(_keyboardRemote);Array.Clear(_keyboardStop);_taps.Clear();_menuSticks.Clear();}
     internal void OverrideDevicesForPlaytest(IReadOnlyList<GamepadDevice> devices)
     {
         if(!OS.GetCmdlineUserArgs().Any(a=>a.StartsWith("--playtest=")))throw new InvalidOperationException("Device substitution is restricted to the playtest harness.");

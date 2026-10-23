@@ -13,6 +13,17 @@ public sealed partial class BlastSession
             (_stage.CanWalk(ax,az,ax,bz)&&_stage.CanWalk(ax,bz,bx,bz));
     }
 
+    // A shallow diagonal ramp entry may already lower the center before its
+    // trailing circle clears the upper floor. Permit only an overlap that existed
+    // at the previous position and is shrinking; new uphill contact still blocks.
+    private static bool BombEscapesCell(BlastBomb bomb,float x,float z,int cx,int cz)
+    {
+        static float Distance(float px,float pz,int ix,int iz)
+        {float dx=px-Math.Clamp(px,ix,ix+1f),dz=pz-Math.Clamp(pz,iz,iz+1f);return dx*dx+dz*dz;}
+        float previous=Distance(bomb.X,bomb.Z,cx,cz);
+        return previous<BlastBomb.Radius*BlastBomb.Radius&&Distance(x,z,cx,cz)>previous+.000001f;
+    }
+
     private float BombLandingHeight(float x,float z) =>
         _stage.At((int)MathF.Floor(x),(int)MathF.Floor(z)).Kind switch
         {

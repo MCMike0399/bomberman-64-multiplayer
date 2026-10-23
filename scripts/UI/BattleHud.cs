@@ -18,7 +18,7 @@ public partial class BattleHud : Control
     private readonly Dictionary<int,PlayerToken> _tokens=[];
     private string _signature="";
     private float _hurryAge,_bannerAge;
-    private int _phaseNumber=-1,_round,_winsTarget=3;
+    private int _phaseNumber=-1,_round,_winsTarget=2;
     private float _roundSeconds;
     public override void _Ready()
     {
@@ -70,8 +70,8 @@ public partial class BattleHud : Control
             bool held=p.TryGetProperty("carriedBy",out var carrier)&&carrier.ValueKind==JsonValueKind.String;
             int appearance=p.TryGetProperty("appearance",out var suit)?suit.GetInt32():slot;
             token.Suit=BlastCircuit.Rendering.ArtMaterials.PlayerColors[Math.Clamp(appearance,0,7)];
-            token.Tag="P"+(slot+1);
-            token.PlayerName=p.GetProperty("bot").GetBoolean()?"CPU":p.GetProperty("name").GetString()??"";
+            token.Tag=Bomber.Game.PlayerNames.Display(p.GetProperty("name").GetString(),slot);
+            token.PlayerName=p.GetProperty("bot").GetBoolean()?"CPU":"";
             token.Status=ghost?TokenStatus.Ghost:!alive?TokenStatus.Out:held?TokenStatus.Held:p.GetProperty("stunned").GetBoolean()?TokenStatus.Dizzy:TokenStatus.Alive;
             token.Bombs=p.GetProperty("bombs").GetInt32();token.Fire=p.GetProperty("fire").GetInt32();
             token.Red=p.GetProperty("red").GetBoolean();token.Remote=p.GetProperty("remote").GetBoolean();token.Heart=p.GetProperty("heart").GetBoolean();
@@ -98,7 +98,7 @@ public partial class BattleHud : Control
     private static string Hint(JsonElement state,JsonElement[] players)
     {
         var recovering=players.Where(p=>p.GetProperty("alive").GetBoolean()&&!p.GetProperty("ghost").GetBoolean()&&p.GetProperty("stunned").GetBoolean()).ToArray();
-        if(recovering.Length>0)return string.Join(", ",recovering.Select(p=>"P"+(p.GetProperty("slot").GetInt32()+1)))+" dizzy: wiggle the stick and tap buttons to recover";
+        if(recovering.Length>0)return string.Join(", ",recovering.Select(p=>Bomber.Game.PlayerNames.Display(p.GetProperty("name").GetString(),p.GetProperty("slot").GetInt32())))+" dizzy: wiggle the stick and tap buttons to recover";
         var family=ControllerHub.Current.ActiveFamily;
         string primary=family==ControllerFamily.Keyboard?"J":ControllerProfile.BombName(family);
         string carry=family==ControllerFamily.Keyboard?"K":ControllerProfile.ButtonName(family,JoyButton.LeftShoulder)+" / "+ControllerProfile.ButtonName(family,ControllerProfile.CarryButton(family));
@@ -107,7 +107,7 @@ public partial class BattleHud : Control
         {
             int seat=p.GetProperty("slot").GetInt32();
             if(family==ControllerFamily.Keyboard){primary=seat==1?"N / ENTER":"J";carry=seat==1?"M":"K";remote=seat==1?", / BACKSPACE":"I / R";}
-            string who="P"+(seat+1);
+            string who=Bomber.Game.PlayerNames.Display(p.GetProperty("name").GetString(),seat);
             if(p.GetProperty("carrying").GetString()=="bomb")
             {
                 bool latched=p.TryGetProperty("carryFromPrimary",out var primaryCarry)&&primaryCarry.GetBoolean();
@@ -163,7 +163,7 @@ public partial class PlayerToken : Control
     public bool Red {get;set;}
     public bool Remote {get;set;}
     public bool Heart {get;set;}
-    public int WinTarget {get;set;}=3;
+    public int WinTarget {get;set;}=2;
     public TokenStatus Status {get;set;}
     private int _wins=-1;
     private float _pop;
@@ -191,7 +191,7 @@ public partial class PlayerToken : Control
         plate.ShadowColor=new Color(ink,.8f);plate.ShadowSize=1;plate.ShadowOffset=new(0,4);
         DrawStyleBox(plate,new Rect2(2,16,Size.X-4,Size.Y-20));
         var display=ArcadeTheme.Display;var body=ArcadeTheme.Body;
-        Outlined(display,new(58,43),Tag,17,outOfRound?ArcadeTheme.Muted:ArcadeTheme.Gold,5);
+        Outlined(display,new(8,61),Fit(display,Tag,13,Size.X-16),13,outOfRound?ArcadeTheme.Muted:ArcadeTheme.Gold,5);
         // Wins: one star per point toward the target; the newest star pops when earned.
         // Win stars are pinned along the plate's top edge, clear of the number and name.
         int stars=Math.Clamp(Math.Max(WinTarget,Wins),1,5);const float step=13;
@@ -202,7 +202,7 @@ public partial class PlayerToken : Control
             ArcadeIcons.Star(this,center,5.4f*scale,i<Wins?ArcadeTheme.Gold:new Color("4a5288"));
         }
         if(outOfRound){Stamp("Out",ArcadeTheme.Red,-.14f);return;}
-        Outlined(body,new(58,61),Fit(body,PlayerName,13,Size.X-64),13,ArcadeTheme.Cream,4);
+        if(Status==TokenStatus.Alive)Outlined(body,new(58,43),Fit(body,PlayerName,13,Size.X-64),13,ArcadeTheme.Cream,4);
         float y=80;
         ArcadeIcons.Bomb(this,new(16,y),6.5f,new Color("6271c4"),.55f);
         Outlined(display,new(26,y+6),Bombs.ToString(),15,ArcadeTheme.Cream,4);
@@ -227,7 +227,7 @@ public partial class PlayerToken : Control
     {
         var font=ArcadeTheme.Display;const int size=24;
         var width=font.GetStringSize(text,HorizontalAlignment.Left,-1,size).X;
-        DrawSetTransform(new(Size.X/2+26,Size.Y/2+14),angle,Vector2.One);
+        DrawSetTransform(new(Size.X/2+26,38),angle,Vector2.One);
         DrawStringOutline(font,new(-width/2,size*.36f),text,HorizontalAlignment.Left,-1,size,8,ArcadeTheme.Ink);
         DrawString(font,new(-width/2,size*.36f),text,HorizontalAlignment.Left,-1,size,color);
         DrawSetTransform(Vector2.Zero,0,Vector2.One);
@@ -236,7 +236,7 @@ public partial class PlayerToken : Control
     {
         var font=ArcadeTheme.Body;const int size=12;
         var width=font.GetStringSize(text,HorizontalAlignment.Left,-1,size).X+14;
-        var rect=new Rect2(27-width/2,44,width,18);
+        var rect=new Rect2(Size.X-width-6,28,width,18);
         var style=ArcadeTheme.Panel(fill,ArcadeTheme.Ink,2,9,0);DrawStyleBox(style,rect);
         DrawString(font,rect.Position+new Vector2(7,14),text,HorizontalAlignment.Left,-1,size,ArcadeTheme.Ink);
     }

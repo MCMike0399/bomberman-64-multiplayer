@@ -5,6 +5,11 @@ using Bomber.Game;
 var checks = await UpdateChecks.Run();
 void Check(bool condition, string name) { if (!condition) throw new Exception(name); checks++; }
 void Throws(Action action, string name) { try { action(); } catch (ArgumentException) { checks++; return; } throw new Exception(name); }
+Check(new SessionSettings().Wins==2&&new MatchOptions().Wins==2&&new SessionSettings().RoundSeconds==120,"Defaults give first to two and one minute normal plus one minute sudden death");
+Check(PlayerNames.Display("",3)=="P4"&&PlayerNames.Display("Player",2)=="P3"&&PlayerNames.Display(" Alex ",1)=="Alex","Names preserve chosen identity and default to the actual seat");
+using(var stop=JsonDocument.Parse(NetworkSession.EncodeInput(new PlayerInput(0,0,Stop:true),1)))
+    Check(stop.RootElement.GetProperty("d").GetProperty("stop").GetBoolean()&&!stop.RootElement.GetProperty("d").GetProperty("r").GetBoolean(),"Stop is independent from remote detonation on the wire");
+Check(InputPolicy.Resolve(default,new PlayerInput(0,0,Stop:true)).Stop,"Device policy retains stop input");
 var settings = new SessionSettings(Stage: "up-and-down", Bots: 2, Wins: 5, RoundSeconds: 90, SuddenDeath: false);
 var wire = settings.ToWireSettings();
 Check(wire["round-seconds"] == "90" && wire["bots"] == "2" && wire["sudden-death"] == "off" && wire["ghosts"] == "on", "Kernel uses string-valued, hyphenated lobby settings");

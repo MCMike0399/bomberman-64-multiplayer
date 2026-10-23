@@ -140,6 +140,8 @@ public static class BlastStages
             cells[x, 5] = CellDef.Ramp(3, 4, 0, -1);
             cells[x, 2] = new CellDef { Kind = CellKind.Pillar, Tier = 4 };
         }
+        for(int x=1;x<=19;x++)for(int z=1;z<=2;z++)
+            cells[x,z]=new CellDef {Kind=CellKind.Pillar,Tier=x>=9&&x<=11?4:x>=7&&x<=13?3:x>=5&&x<=15?2:1};
         foreach (var x in new[] { 5, 6, 7, 13, 14, 15 }) cells[x, 14] = CellDef.Ramp(0, 1, 0, -1);
         return new StageLayout
         {

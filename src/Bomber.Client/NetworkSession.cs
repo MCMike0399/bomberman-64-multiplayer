@@ -18,7 +18,7 @@ public sealed class NetworkSession : ISession
     private string? _token, _lobbyId, _ticketId;
     private string _status = "Connecting";
     private PlayerInput _input;
-    private readonly Queue<(bool A, bool B, bool R, bool Aim)> _buttons = new();
+    private readonly Queue<(bool A, bool B, bool R, bool Aim, bool Stop)> _buttons = new();
     private long _sequence;
     private int _disposed;
     private int _appearance;
@@ -68,7 +68,7 @@ public sealed class NetworkSession : ISession
     {
         var wireSettings = settings.ToWireSettings();
         if (mode == NetworkMode.CreatePrivate) wireSettings["party"] = "on";
-        var guest = await RequestAsync(HttpMethod.Post, "guests", new { displayName = name }, ct);
+        var guest = await RequestAsync(HttpMethod.Post, "guests", new { displayName = string.IsNullOrWhiteSpace(name)?PlayerNames.UnnamedGuest:name.Trim() }, ct);
         _token = guest.GetProperty("token").GetString()!;
         PlayerId = guest.GetProperty("playerId").GetString();
         JsonElement reservation;
@@ -239,7 +239,7 @@ public sealed class NetworkSession : ISession
             lock (_inputGate)
             {
                 input = _input;
-                if (_buttons.TryDequeue(out var buttons)) input = input with { A = buttons.A, B = buttons.B, R = buttons.R, Aim = buttons.Aim };
+                if (_buttons.TryDequeue(out var buttons)) input = input with { A = buttons.A, B = buttons.B, R = buttons.R, Aim = buttons.Aim, Stop = buttons.Stop };
             }
             var bytes = EncodeInput(input, Interlocked.Increment(ref _sequence));
             await socket.SendAsync(bytes.AsMemory(), WebSocketMessageType.Text, true, ct);
@@ -250,7 +250,7 @@ public sealed class NetworkSession : ISession
     {
         t = "input", s = sequence,
         d = new { x = float.IsFinite(input.X) ? Math.Clamp(input.X, -1, 1) : 0,
-            z = float.IsFinite(input.Z) ? Math.Clamp(input.Z, -1, 1) : 0, a = input.A, b = input.B, r = input.R, aim = input.Aim }
+            z = float.IsFinite(input.Z) ? Math.Clamp(input.Z, -1, 1) : 0, a = input.A, b = input.B, r = input.R, aim = input.Aim, stop = input.Stop }
     });
 
     private async Task<JsonElement> RequestAsync(HttpMethod method, string path, object? body, CancellationToken ct)
@@ -294,10 +294,10 @@ public sealed class NetworkSession : ISession
         if (Volatile.Read(ref _disposed) != 0) return;
         lock (_inputGate)
         {
-            if ((_input.A, _input.B, _input.R, _input.Aim) != (input.A, input.B, input.R, input.Aim))
+            if ((_input.A, _input.B, _input.R, _input.Aim, _input.Stop) != (input.A, input.B, input.R, input.Aim, input.Stop))
             {
                 if (_buttons.Count == 16) _buttons.Dequeue();
-                _buttons.Enqueue((input.A, input.B, input.R, input.Aim));
+                _buttons.Enqueue((input.A, input.B, input.R, input.Aim, input.Stop));
             }
             _input = input;
         }

@@ -22,7 +22,7 @@ public partial class PlaytestDriver
         await Adjust("StageSelector",Key.Right);Check(menu.Settings.Stage=="up-and-down","right selects authority Up & Down");await Capture("setup-up-and-down");
         await Adjust("StageSelector",Key.Right);Check(menu.Settings.Stage=="sunken-temple","arena selection wraps to temple");
         await Adjust("StageSelector",Key.Left);Check(menu.Settings.Stage=="up-and-down","left wraps to previous arena");await Adjust("StageSelector",Key.Right);
-        await Adjust("Winstovictory",Key.Right);Check(menu.Settings.Wins==4,"wins dial changes settings");await Adjust("Winstovictory",Key.Left);Check(menu.Settings.Wins==3,"wins dial reverses");
+        await Adjust("Winstovictory",Key.Right);Check(menu.Settings.Wins==3,"wins dial changes settings");await Adjust("Winstovictory",Key.Left);Check(menu.Settings.Wins==2,"wins dial reverses");
         await Adjust("Roundtime",Key.Right);Check(menu.Settings.RoundSeconds==150,"time dial advances thirty seconds");await Adjust("Roundtime",Key.Left);Check(menu.Settings.RoundSeconds==120,"time dial reverses");
         await Adjust("CPUlevel",Key.Right);Check(menu.Settings.BotDifficulty=="hard","CPU dial changes difficulty");await Adjust("CPUlevel",Key.Left);Check(menu.Settings.BotDifficulty=="normal","CPU dial reverses");
         await Adjust("Suddendeath",Key.Right);Check(!menu.Settings.SuddenDeath,"sudden death dial disables rule");await Adjust("Suddendeath",Key.Left);Check(menu.Settings.SuddenDeath,"sudden death dial restores rule");
@@ -37,7 +37,7 @@ public partial class PlaytestDriver
         await Adjust("CPUrivals",Key.Right);Check(menu.OnlineSettings.Bots==4,"host CPU rail reaches room settings");await Adjust("CPUrivals",Key.Left);Check(menu.OnlineSettings.Bots==3,"host CPU rail reverses");
         await Adjust("StageSelector",Key.Right);await Adjust("Winstovictory",Key.Right);await Adjust("Roundtime",Key.Right);await Adjust("CPUlevel",Key.Right);await Adjust("Suddendeath",Key.Right);await Adjust("Ghostcomeback",Key.Right);
         var saved=menu.OnlineSettings;
-        Check(saved==new SessionSettings("rock-garden",3,4,150,false,false,"hard"),"all arcade controls produce exact private-room settings");
+        Check(saved==new SessionSettings("rock-garden",3,3,150,false,false,"hard"),"all arcade controls produce exact private-room settings");
         await Capture("setup-host-native");await ActivateNamed("LaunchMatch");Check(_root.ScreenName=="Online","save room settings returns to online menu");
         _root.Navigate("HostSetup");await Frames(3);Check(menu.OnlineSettings==saved,"saved private room settings persist when reopened");
         _root.Navigate("Practice");await Frames(4);

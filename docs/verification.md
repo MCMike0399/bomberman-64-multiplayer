@@ -1,3 +1,60 @@
+# Source party polish — 2026-10-23 (not released)
+
+Implemented lobby Copy code with clipboard confirmation; explicit name editing and
+saved name/server URL; chosen names on the character and HUD with seat fallback;
+first-to-two wins and an explicit 1:00 normal + 1:00 sudden-death default; immediate
+water rise; water/void ghost returns to dry ground; a sealed rear temple passage;
+and a separate kick-stop command (O / period / right shoulder).
+
+The original [Nintendo manual](https://manuals.plus/m/a8e88edc86a9ce47e982bda2351d4c7d9fe8c079505b31257b5768b4c5e9907e)
+confirms N64 R stops a kicked bomb. The product keeps keyboard R as a remote alias,
+uses controller R/RB/R1 for stop, retains timed fuses and continues gravity when
+stopping an airborne kick. This is a project mapping, not an exact physics claim.
+
+The bomb report reproduced at four mirrored diagonal courtyard stair entries.
+The center had descended slightly while its trailing radius still overlapped the
+upper floor; the next rolling sweep treated that existing overlap as an uphill
+wall. Allowing only shrinking existing overlap fixes it without weakening pillars,
+new uphill contacts or placement. The exhaustive fixture covers **789** downhill
+cardinal/diagonal edge and alignment cases on exact pyramid terrain, with cover
+removed to isolate geometry. A native journey also kicks across a real stair corner.
+Water casualties previously became ghosts at the water plane and were eliminated
+again on the next movement tick. They now return to clear dry land and stay on it.
+Ghosts remain disabled during sudden death and when the room disables comeback.
+
+Managed validation passed **947 gameplay cases, 143 client checks, 52 AI checks,
+19 audio checks, 36 AI soak scenarios and real HTTP/WebSocket smoke**, against the
+staged Release server: `artifacts/qa/party-polish-managed-final/summary.json`.
+The focused native feature journey passed **36 assertions / 5 captures**, and the
+controller journey passed **767 assertions / 13 captures**, both with zero runtime
+errors. Receipts: `artifacts/playtest/20261023T171231.458679Z-party-polish` and
+`artifacts/playtest/20261023T173434.663953Z-controllers`.
+
+Final headless core passed **895 assertions**, zero runtime errors
+(`artifacts/qa/party-polish-headless`). All **34** windowed catalog scenarios have
+passing completed-leaf coverage: the full run in `artifacts/qa/party-polish-graphical-complete`
+completed 33 scenarios before the new network-name assertion mistakenly used a
+local-player lookup. After correcting that helper, the separate native network
+journey passed **32 assertions / 2 captures**, including actual clipboard content,
+chosen-name meshes and HUD text. The same owned server then passed the expanded
+2–8-client smoke, including a queued brief Stop tap observed by the other client
+and an empty-name guest becoming P1. Receipt: `artifacts/qa/party-polish-network`.
+The full-run receipt remains failed; composed completed-leaf coverage is recorded
+explicitly in `artifacts/qa/party-polish-windowed-coverage.json`, with no missing
+catalog leaves. Reviewed actual online, setup, ghost, diagonal-kick, lobby and
+network gameplay captures. Before/fixed ledge receipts are retained in
+`artifacts/qa/party-polish-repro`.
+
+The first UI test incorrectly assigned server text programmatically (Godot does
+not emit TextChanged for that); the corrected test types through native input.
+Visual review corrected clipped timing copy and badges overlapping names.
+The full suite caught and corrected a disabled Copy code button taking controller
+focus, plus old win-target expectations. Earlier failed receipts are retained.
+Performance-task changes were moved into an independent checkout before final
+verification; they are not included here. No installed app, release or external
+server is changed by this source verification. Controller evidence is synthetic,
+not a fresh physical-device observation.
+
 # v0.21.0: persistent parties, player settings and signed updates — 2026-10-23
 
 Private rooms now wait for an authenticated leader's Start game command, including

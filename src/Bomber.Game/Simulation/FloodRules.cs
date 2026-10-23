@@ -1,10 +1,10 @@
 namespace Bomber.Game.Simulation;
 
 /// <summary>Pyramid-inspired sudden-death flooding. The one-minute warning follows the manual;
-/// the delayed rise approximates observed Pyramid footage. Heights and rate remain project tuning.</summary>
+/// water rises immediately at the warning. Heights and rate remain project tuning.</summary>
 public static class FloodRules
 {
-    public const float RiseDelay = 15;
+    public const float RiseDelay = 0;
     public const float InitialLevel = -.75f;
     public const float RisePerSecond = 1f/12f;
     public static float Level(float fightSeconds,int roundSeconds)

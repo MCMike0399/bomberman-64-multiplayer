@@ -91,7 +91,7 @@ public partial class TempleStageView : Node3D
             }
             if(kind==1)
             {
-                if(temple && z==2 && x>=9 && x<=11)continue;
+                if(temple && z<=2)continue;
                 Pillar(new(x+.5f,y,z+.5f));
             }
             if(!courtyard && kind!=4)

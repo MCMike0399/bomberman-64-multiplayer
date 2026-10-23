@@ -505,6 +505,9 @@ public partial class PlaytestDriver : Node
         Check(lobbyText.Contains("Harness peer",StringComparison.Ordinal),"lobby renders peer name in visible UI");
         Check(lobbyText.Contains("You are the leader",StringComparison.Ordinal),"lobby identifies the leader and manual start");
         await Task.Delay(4200);await Frames(2);Check(_root.ScreenName=="Lobby"&&_root.LatestState==null,"full private lobby does not automatically start");
+        await ActivateNamed("CopyRoomCode");
+        Check(DisplayServer.ClipboardGet()==host.JoinCode,"copy button writes the actual room code to clipboard");
+        Check(NamedButton("CopyRoomCode").Text=="Copied!","copy button confirms success");
         await Capture("network-lobby");
         CtlButton(0,JoyButton.Start,true);await Frames(1);CtlButton(0,JoyButton.Start,false);await Frames(2);
         Check(NamedButton("StartRoom").HasFocus()&&_root.ScreenName=="Lobby","Start focuses Start game without starting it");
@@ -514,6 +517,8 @@ public partial class PlaytestDriver : Node
         Check(State.GetProperty("hurryMode").GetString()=="water","network server supplies temple-specific water sudden death");
         Check(State.TryGetProperty("waterLevel",out var networkWater)&&networkWater.ValueKind==JsonValueKind.Number,"network server publishes authoritative water height");
         Check(State.TryGetProperty("presentationSeq",out _)&&State.TryGetProperty("events",out _),"network server publishes accepted presentation events");
+        Check(_root.FindChildren("*","",true,false).OfType<BlastCircuit.Rendering.BomberModel>().Any(model=>model.DisplayName=="Harness host"&&model.IsVisibleInTree()),"network character label uses chosen player name");
+        Check(_root.FindChildren("*","",true,false).OfType<BlastCircuit.UI.PlayerToken>().Any(t=>t.Tag=="Harness host"),"HUD uses the same chosen name");
         int bombCueBefore=_root.BattleAudio.Counts.GetValueOrDefault("bomb");
         var before=Player.GetProperty("z").GetSingle();
         Input(0,new PlayerInput(0,-1,A:true));

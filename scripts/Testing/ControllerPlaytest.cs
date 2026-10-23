@@ -271,8 +271,11 @@ public partial class PlaytestDriver
         var reverse=PlayerControls.Read(0,1);Check(Math.Abs(reverse.X+.6f)<.001f&&Math.Abs(reverse.Z+.8f)<.001f,pad.Name+": gameplay reversal reaches production read without stale direction");
         CtlAxis(pad.RuntimeId,JoyAxis.LeftY,0);CtlAxis(pad.RuntimeId,JoyAxis.LeftX,0);
         CtlButton(pad.RuntimeId,JoyButton.DpadRight,true);Check(PlayerControls.Read(0,1).X>.99f,"D-pad provides gameplay movement");CtlButton(pad.RuntimeId,JoyButton.DpadRight,false);
-        foreach(var button in new[]{remote,JoyButton.RightShoulder})
+        foreach(var button in new[]{remote})
         {CtlButton(pad.RuntimeId,button,true);Check(PlayerControls.Read(0,1).R,"remote alias reaches command: "+button);CtlButton(pad.RuntimeId,button,false);_ = PlayerControls.Read(0,1);}
+        CtlButton(pad.RuntimeId,JoyButton.RightShoulder,true);CtlButton(pad.RuntimeId,JoyButton.RightShoulder,false);
+        var stopIntent=PlayerControls.Read(0,1);Check(stopIntent.Stop&&!stopIntent.R,pad.Name+": sub-frame shoulder tap stops without detonating");
+        Check(!PlayerControls.Read(0,1).Stop,pad.Name+": stop tap is consumed once");
         CtlButton(pad.RuntimeId,carry,true);var carryIntent=PlayerControls.Read(0,1);Check(carryIntent.B&&!carryIntent.A&&!carryIntent.R,pad.Name+": carry face button reaches only carry");CtlButton(pad.RuntimeId,carry,false);
         CtlButton(pad.RuntimeId,bomb,true);CtlButton(pad.RuntimeId,bomb,false);await ControllerFrames(4);
         Check(State.GetProperty("bombs").GetArrayLength()==1,pad.Name+": sub-frame primary tap places one real bomb");

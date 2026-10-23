@@ -44,7 +44,7 @@ public sealed class LocalMatch
         {
             x = float.IsFinite(input.X) ? input.X : 0,
             z = float.IsFinite(input.Z) ? input.Z : 0,
-            a = input.A, b = input.B, r = input.R, aim = input.Aim,
+            a = input.A, b = input.B, r = input.R, aim = input.Aim, stop = input.Stop,
         });
         var sequence = ++_sequence;
         _context.Sequences[player.PlayerId] = sequence;
@@ -86,7 +86,7 @@ public sealed class LocalMatch
             _emit = emit;
             Settings = options.ToSettings();
             Random = new Random(options.Seed);
-            Players = Enumerable.Range(0, options.HumanPlayers).Select(i => new RealtimePlayer($"local-{i}", $"Player {i + 1}", i, new Dictionary<string, string>())).ToArray();
+            Players = Enumerable.Range(0, options.HumanPlayers).Select(i => new RealtimePlayer($"local-{i}", $"P{i + 1}", i, new Dictionary<string, string>())).ToArray();
         }
         public string LobbyId => "local";
         public string GameId => "blast";

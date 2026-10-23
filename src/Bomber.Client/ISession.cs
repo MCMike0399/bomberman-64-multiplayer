@@ -16,7 +16,7 @@ public interface ISession : IAsyncDisposable
     IReadOnlyList<JsonElement> DrainMessages();
 }
 
-public sealed record SessionSettings(string Stage = "sunken-temple", int Bots = 3, int Wins = 3,
+public sealed record SessionSettings(string Stage = "sunken-temple", int Bots = 3, int Wins = 2,
     int RoundSeconds = 120, bool SuddenDeath = true, bool Ghosts = true, string BotDifficulty = "normal")
 {
     public Dictionary<string, string> ToWireSettings()

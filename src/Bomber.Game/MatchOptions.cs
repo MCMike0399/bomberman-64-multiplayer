@@ -7,7 +7,7 @@ public sealed record MatchOptions
     public int HumanPlayers { get; init; } = 1;
     public int BotPlayers { get; init; } = 3;
     public string Stage { get; init; } = "sunken-temple";
-    public int Wins { get; init; } = 3;
+    public int Wins { get; init; } = 2;
     public int RoundSeconds { get; init; } = 120;
     public bool SuddenDeath { get; init; } = true;
     public bool Ghosts { get; init; } = true;
@@ -40,4 +40,4 @@ public sealed record MatchOptions
     }
 }
 
-public readonly record struct PlayerInput(float X, float Z, bool A = false, bool B = false, bool R = false, bool Aim = false);
+public readonly record struct PlayerInput(float X, float Z, bool A = false, bool B = false, bool R = false, bool Aim = false, bool Stop = false);

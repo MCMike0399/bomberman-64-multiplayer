@@ -12,7 +12,7 @@ public sealed record LobbyStatus(string State, string? JoinCode, DateTimeOffset?
         var players = new List<LobbyParticipant>();
         if (data.TryGetProperty("players", out var roster) || data.TryGetProperty("members", out roster))
             foreach (var p in roster.EnumerateArray())
-                players.Add(new LobbyParticipant(p.GetProperty("playerId").GetString()!, p.GetProperty("displayName").GetString()!, p.GetProperty("slot").GetInt32(), p.GetProperty("connected").GetBoolean()));
+                players.Add(new LobbyParticipant(p.GetProperty("playerId").GetString()!, Bomber.Game.PlayerNames.Display(p.GetProperty("displayName").GetString(),p.GetProperty("slot").GetInt32()), p.GetProperty("slot").GetInt32(), p.GetProperty("connected").GetBoolean()));
         DateTimeOffset? countdown = null;
         if (data.TryGetProperty("countdownEndsAt", out var time))
         {

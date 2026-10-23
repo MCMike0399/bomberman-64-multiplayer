@@ -140,7 +140,7 @@ public partial class ArenaView : Node3D
             var color=Colors[Math.Clamp(appearance,0,Colors.Length-1)];
             if(!_entities.TryGetValue(id,out var node))
             {
-                node=new BomberModel(_art,color,$"P{slot+1}");_dynamic.AddChild(node);_entities[id]=node;node.Position=PositionOf(p);
+                node=new BomberModel(_art,color,Bomber.Game.PlayerNames.Display(p.GetProperty("name").GetString(),slot));_dynamic.AddChild(node);_entities[id]=node;node.Position=PositionOf(p);
             }
             ((BomberModel)node).SetSuitColor(color);
             ((BomberModel)node).KickWindup(F(p,"kickWindup"));

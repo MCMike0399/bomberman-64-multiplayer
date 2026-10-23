@@ -64,6 +64,24 @@ internal static class BombTravelChecks
             var m=Match((x,z)=>z<8?CellDef.Floor2:CellDef.Floor0,remote:false);Kick(m);Step(m,80);
             Assert(State(m).GetProperty("bombs").GetArrayLength()==0,"Falling or landing paused/restarted the normal fuse.");
         });
+        Check("stop kick belongs to the kicker and preserves normal fuse",()=>{
+            var m=Match((x,z)=>CellDef.Floor0,remote:false);Kick(m);Step(m,8);
+            m.SetInput(1,new PlayerInput(0,0,Stop:true));Step(m,2);
+            Assert(Bomb(m).GetProperty("state").GetInt32()==1,"Another player stopped the kicker's shot.");
+            m.SetInput(0,new PlayerInput(0,0,Stop:true));Step(m,2);var b=Bomb(m);float z=F(b,"z"),fuse=F(b,"fuse");
+            Assert(b.GetProperty("state").GetInt32()==0,"Stop did not halt rolling bomb.");Step(m,8);
+            Assert(F(Bomb(m),"z")==z&&F(Bomb(m),"fuse")<fuse,"Stopped bomb moved or paused its fuse.");Step(m,80);
+            Assert(State(m).GetProperty("bombs").GetArrayLength()==0,"Stopped timed bomb never exploded.");
+        });
+        Check("stop falling kick removes drift while gravity and remote control survive",()=>{
+            var m=Match((x,z)=>z<8?CellDef.Floor2:CellDef.Floor0);Kick(m);
+            for(int i=0;i<30&&Bomb(m).GetProperty("state").GetInt32()!=3;i++)Step(m,1);
+            Assert(Bomb(m).GetProperty("state").GetInt32()==3,"Fixture failed to reach falling kick.");
+            m.SetInput(0,new PlayerInput(0,0,Stop:true));Step(m,2);float z=F(Bomb(m),"z");Step(m,40);
+            Assert(Bomb(m).GetProperty("state").GetInt32()==0&&F(Bomb(m),"y")==0&&F(Bomb(m),"z")==z,"Stop left falling bomb suspended or drifting.");
+            Assert(Bomb(m).GetProperty("remote").GetBoolean(),"Stop changed remote mode.");m.SetInput(0,new PlayerInput(0,0,R:true));Step(m,2);
+            Assert(State(m).GetProperty("bombs").GetArrayLength()==0,"Stopped remote ignores detonation.");
+        });
         Check("ordinary carried throw lands resting without acquiring kick momentum",()=>{
             var m=Match((x,z)=>CellDef.Floor0);m.SetInput(0,new PlayerInput(0,0,A:true));Step(m,10);m.SetInput(0,default);Step(m,2);
             Assert(Bomb(m).GetProperty("state").GetInt32()==2,"Throw fixture did not lift its bomb.");

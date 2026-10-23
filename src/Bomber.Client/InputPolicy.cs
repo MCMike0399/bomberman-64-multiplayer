@@ -29,7 +29,7 @@ public static class InputPolicy
             }
         }
         if(direction==Vector2.Zero)direction=Direction(keyboard.X,keyboard.Z);
-        return new(direction.X,direction.Y,keyboard.A||stick.A||dpad.A,keyboard.B||stick.B||dpad.B,keyboard.R||stick.R||dpad.R,aim);
+        return new(direction.X,direction.Y,keyboard.A||stick.A||dpad.A,keyboard.B||stick.B||dpad.B,keyboard.R||stick.R||dpad.R,aim,keyboard.Stop||stick.Stop||dpad.Stop);
     }
     private static Vector2 AnalogAim(float x,float z)
     {

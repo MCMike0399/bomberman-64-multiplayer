@@ -7,7 +7,8 @@ lookup for exact values; older iteration documents retain historical evidence.
 
 ## Current controls and compatibility
 
-The iteration19 controller mapping supersedes printed-B carry and promotes the
+The current right shoulder stops kicked bombs; it no longer aliases remote detonation.
+Keyboard R remains a remote alias. The iteration19 controller mapping supersedes printed-B carry and promotes the
 left shoulder; keyboard remains v0.18. The v0.18 keyboard mapping supersedes the Space-carry/K-aim/L-remote mapping in v0.17
 and earlier positional Nintendo mappings. The user requested keyboard-only play
 with both hands on keys and restored K carry because Space felt awkward.
@@ -18,7 +19,8 @@ with both hands on keys and restored K carry because Space felt awkward.
 | Bomb, contextual kick, pump | J | N / Enter / Num 0 | A | A / B | Cross |
 | Hold carry, release throw | K | M / Num 1 | LB / X | L / Y | L1 / Square |
 | Precision aim | L / Shift | Ctrl | RT | ZR | R2 |
-| Remote detonation | I / R | Comma / Backspace / Num 2 | B / RB | X / R | Circle / R1 |
+| Remote detonation | I / R | Comma / Backspace / Num 2 | B | X | Circle |
+| Stop kicked bombs | O | Period / Num 3 | RB | R | R1 |
 | Menu confirm / back | Enter / Esc | Enter / Esc | A / B | A / B | Cross / Circle |
 
 v0.19.1 adds printed Switch B as a primary/bomb alias so **hold Y + tap B**
@@ -43,7 +45,7 @@ backend's canonical IDs. Nintendo confirms with printed A and backs with B.
 
 - [ControllerHub](../../scripts/Input/ControllerHub.cs) discovers devices,
   publishes native input, tracks active prompt family/keyboard seat, guards focus,
-  and combines held state with bomb/remote press edges through `Read`.
+  and combines held state with bomb/remote/stop press edges through `Read`.
 - [MatchControllerBindings](../../src/Bomber.Client/MatchControllerBindings.cs)
   fixes device seats during a match; [LocalControllerLayout](../../src/Bomber.Client/LocalControllerLayout.cs)
   handles the keyboard/gamepad layout. Consult these before changing hotplug.
@@ -155,7 +157,14 @@ inputs and rearm controller actions when opening/resuming so held confirmation
 buttons do not plant bombs. Tests may call `Back()` to explicitly exit a match;
 that helper does not model the new Esc key path.
 
-`PlayerPreferences` stores volume and vibration in `user://preferences.cfg`.
+`PlayerPreferences` stores volume, vibration, update choice, online name and server URL
+in `user://preferences.cfg`. Name/server edits save immediately through native TextChanged;
+startup restores both without connecting automatically. Programmatic LineEdit.Text assignments
+do not emit TextChanged, so persistence tests must type through the real input path.
+The online screen labels the name field explicitly; blank/legacy generic guest names
+resolve to P1, P2, etc. Authority names feed character labels, HUD and results.
+Long world labels scale to a bounded width; HUD names ellipsize. Copy code uses the
+actual current join code and disables itself for matchmaking/no-code lobbies.
 Vibration defaults OFF. QA uses a temporary per-process file and must not alter
 personal preferences. Feedback follows already-deduplicated accepted arena
 presentation events for each local seat. Godot owns ordinary pad rumble; the

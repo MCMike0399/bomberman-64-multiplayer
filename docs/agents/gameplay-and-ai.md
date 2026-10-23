@@ -135,6 +135,13 @@ and the input guide; older iteration tables are historical.
 - A kicked bomb can leave a downward lip, fall and resume rolling on landing.
   `ResumeRollingAfterFall` distinguishes that behavior from ordinary carried throws.
   Ignore only the existing trailing ledge overlap; preserve uphill and pillar collision.
+  Shallow diagonal ramp entries need the same escaping-overlap check while still rolling:
+  the center may descend less than the falling threshold before its rear clears the upper
+  floor. `PyramidLedgeChecks` reproduces the four courtyard stair corners and sweeps all
+  downhill cardinal/diagonal edges at three alignments with stock geometry and no cover.
+- Stop is a separate edge-triggered intent. Only the last kicker can stop a rolling shot;
+  its original owner keeps remote/fuse ownership. Stopping a falling kick removes horizontal
+  velocity while retaining gravity; it never pauses a fuse or stops an ordinary carried throw.
 - [BodyContacts](../../src/Bomber.Game/Simulation/BlastSession.BodyContacts.cs) resolves
   height-aware player circles with terrain-aware shared corrections. Preserve tangent
   travel and bounded yielding; ghosts/carried players are not solid blocking bodies.
@@ -157,6 +164,15 @@ and the input guide; older iteration tables are historical.
 - Water/void tier metadata is not the landing plane. Use actual water/void heights;
   a player's center leaving support starts falling, while radius-only shoreline grazing
   remains safe. Keep accepted water-death presentation from rewinding a practice respawn.
+- Water/void casualties return to the nearest unblocked dry land cell as interactive ghosts
+  during Fight when ghosts are enabled. Keep the death event at the actual contact plane,
+  emit a separate ghost respawn, and prevent held outward input from immediately re-killing
+  the ghost. Sudden death still removes ghosts and disables new comebacks.
+- The temple rear two rows are solid stepped masonry, including the side approaches.
+  Collision and visible geometry come from those same cells; no hidden rear passage remains.
+- Default battle rules are first to two wins, 120 total seconds including 60 seconds of
+  sudden death. Water begins rising immediately at Hurry; the former 15-second delay is
+  superseded. Custom round lengths and sudden-death/ghost toggles remain available.
 - [FloodRules](../../src/Bomber.Game/Simulation/FloodRules.cs) owns flood timing.
   [TempleStageView](../../scripts/Rendering/TempleStageView.cs) applies render height scale
   (currently 1.35) to authority Y. Decorative bedrock, foam, icons and camera fitting

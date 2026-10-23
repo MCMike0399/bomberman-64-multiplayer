@@ -2,6 +2,19 @@
   "schemaVersion": 1,
   "scenarios": [
     {
+      "id": "party-polish",
+      "method": "PartyPolish",
+      "domains": [
+        "ui",
+        "input",
+        "settings",
+        "gameplay"
+      ],
+      "headless": false,
+      "timeout": 180,
+      "manual": false
+    },
+    {
       "id": "player-settings",
       "method": "PlayerSettingsMenu",
       "domains": [
@@ -383,6 +396,7 @@
     {
       "id": "all",
       "steps": [
+        "party-polish",
         "player-settings",
         "asset-audit",
         "menu",

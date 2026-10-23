@@ -95,7 +95,7 @@ public sealed partial class BlastSession
         return true;
     }
 
-    private bool BombTerrainClear(float x,float z,int originX,int originZ,bool allowDescent=false)
+    private bool BombTerrainClear(float x,float z,int originX,int originZ,bool allowDescent=false,BlastBomb? movingBomb=null)
     {
         if(x<BlastBomb.Radius||z<BlastBomb.Radius||x>_stage.Width-BlastBomb.Radius||z>_stage.Height-BlastBomb.Radius) return false;
         for(var cx=(int)MathF.Floor(x-BlastBomb.Radius);cx<=(int)MathF.Floor(x+BlastBomb.Radius);cx++)
@@ -106,7 +106,8 @@ public sealed partial class BlastSession
                 var cell=_stage.At(cx,cz);
                 if(cell.Kind==CellKind.Pillar||_softBlocks.IsAlive(cx,cz)||
                     (cell.IsPassable&&!CellsConnected(originX,originZ,cx,cz)&&
-                     !(allowDescent&&BombCellsDescend(originX,originZ,cx,cz)))) return false;
+                     !(allowDescent&&BombCellsDescend(originX,originZ,cx,cz))&&
+                     !(movingBomb is not null&&BombEscapesCell(movingBomb,x,z,cx,cz)))) return false;
             }
         return true;
     }

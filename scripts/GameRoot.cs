@@ -77,6 +77,7 @@ public partial class GameRoot : Node3D
         _menu.TestVibrationRequested+=()=>_menu.SettingsNotice(ControllerHub.Current.TestVibration()?"Vibration sent to your controller.":_preferences.Vibration?"Connect a controller that supports vibration.":"Enable controller vibration first.");
         if(OS.GetCmdlineUserArgs().Any(a=>a.StartsWith("--playtest=")))PreferencesPath=$"user://qa-preferences-{OS.GetProcessId()}.cfg";
         _preferences=PlayerPreferences.Load(PreferencesPath);_menu.ConfigurePreferences(_preferences);ApplyPreferences();
+        _menu.IdentityChanged+=SavePreferences;
         _arena.PlayerFeedback+=PlayerFeedback;
         _updater=new BlastCircuit.Updates.GameUpdater();AddChild(_updater);
         _menu.CheckUpdatesRequested+=()=>{_ = _updater.Check();};
@@ -260,6 +261,7 @@ public partial class GameRoot : Node3D
     }
     private void SavePreferences()
     {
+        _preferences.PlayerName=_menu.PlayerName;_preferences.ServerUrl=_menu.ServerUrl;
         _preferences.AutomaticUpdates=_menu.AutomaticUpdates;
         _preferences.Vibration=_menu.VibrationEnabled;_preferences.Volume=_menu.SoundVolume;ApplyPreferences();
         if(_preferences.Save(PreferencesPath)!=Error.Ok)_menu.SettingsNotice("Could not save settings on this Mac.");

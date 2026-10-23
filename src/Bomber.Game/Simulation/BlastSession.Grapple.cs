@@ -22,7 +22,7 @@ public sealed partial class BlastSession
         bool direction=magnitude>.20f&&(previous<.04f||input.X*p.RecoveryX+input.Z*p.RecoveryZ<.2f);
         bool press=(input.A&&!p.PrevA)||(input.B&&!p.PrevB)||(input.R&&!p.PrevR);
         p.RecoveryX=input.X;p.RecoveryZ=input.Z;
-        p.PrevA=input.A;p.PrevB=input.B;p.PrevR=input.R;
+        p.PrevA=input.A;p.PrevB=input.B;p.PrevR=input.R;p.PrevStop=input.Stop;
         p.StruggleCooldown=Math.Max(0,p.StruggleCooldown-dt);
         float effort=0;
         if(!p.Airborne&&(direction||press)&&p.StruggleCooldown<=0)
