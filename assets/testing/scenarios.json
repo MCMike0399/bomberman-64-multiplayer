@@ -2,6 +2,18 @@
   "schemaVersion": 1,
   "scenarios": [
     {
+      "id": "player-settings",
+      "method": "PlayerSettingsMenu",
+      "domains": [
+        "ui",
+        "input",
+        "settings"
+      ],
+      "headless": false,
+      "timeout": 120,
+      "manual": false
+    },
+    {
       "id": "reticle",
       "method": "ReticleVisibility",
       "domains": [
@@ -371,6 +383,7 @@
     {
       "id": "all",
       "steps": [
+        "player-settings",
         "asset-audit",
         "menu",
         "wasd-navigation",
@@ -416,6 +429,7 @@
         "network",
         "physics",
         "rendering",
+        "settings",
         "ui"
       ],
       "headless": false,

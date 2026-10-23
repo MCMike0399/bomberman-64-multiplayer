@@ -139,6 +139,31 @@ For popup tests, reach a known endpoint with real keys before testing the next
 movement: prior mouse hover can leave the last item selected. See the
 [native focus guidance](../../tools/playtest/README.md#native-focus-interruptions).
 
+## Party menus and player settings (v0.21)
+
+Private rooms created by the current client opt into product-owned `PartySession`.
+Only the authenticated leader can start. A completed match produces results,
+then returns everyone to the same room/code after five seconds; no auto-rematch.
+Disconnect transfers leadership to a connected member. Quick play retains its
+queue-driven lifecycle. Both client and server must be updated for this flow.
+
+Esc/Start during gameplay opens the game menu. Leave is an explicit button.
+Start in menus focuses the primary action (the leader's Start game in a room);
+confirm activates it. Settings is reachable from Modes, Lobby and the game menu.
+Local authority pauses in the menu; online authority continues. Clear queued
+inputs and rearm controller actions when opening/resuming so held confirmation
+buttons do not plant bombs. Tests may call `Back()` to explicitly exit a match;
+that helper does not model the new Esc key path.
+
+`PlayerPreferences` stores volume and vibration in `user://preferences.cfg`.
+Vibration defaults OFF. QA uses a temporary per-process file and must not alter
+personal preferences. Feedback follows already-deduplicated accepted arena
+presentation events for each local seat. Godot owns ordinary pad rumble; the
+Switch 2 adapter uses SDL_RumbleGamepad. Stop on disable, focus loss, leaving and
+menu entry; pulses are bounded. Test requests on synthetic pads prove routing,
+not physical motor behavior. `player-settings` and `network` cover native menus,
+persistence, pause behavior and manual room start.
+
 ## Reticle rendering and lifecycle
 
 The user explicitly requested shape-only endpoints with no extra labels.

@@ -7,6 +7,10 @@ on:
         description: Successful main Verification run ID
         type: string
         required: true
+      publish:
+        description: Publish the verified signed release
+        type: boolean
+        default: false
       version:
         description: Bundle version, for example 0.15.0
         type: string
@@ -49,9 +53,21 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
+          ref: ${{ needs.validate.outputs.revision }}
       - env:
           GH_TOKEN: ${{ github.token }}
           RUN_ID: ${{ inputs.run_id }}
           VERSION: ${{ inputs.version }}
           EXPECTED_SHA: ${{ needs.validate.outputs.revision }}
-        run: python3 tools/ci/promote_release.py --run-id "$RUN_ID" --version "$VERSION" --expected-sha "$EXPECTED_SHA"
+          BLAST_UPDATE_SIGNING_KEY: ${{ secrets.BLAST_UPDATE_SIGNING_KEY }}
+          PUBLISH_RELEASE: ${{ inputs.publish }}
+        run: |
+          set -euo pipefail
+          umask 077
+          key="$RUNNER_TEMP/blast-update-signing.pem"
+          trap 'rm -f "$key"' EXIT
+          test -n "$BLAST_UPDATE_SIGNING_KEY"
+          printf '%s\n' "$BLAST_UPDATE_SIGNING_KEY" > "$key"
+          args=(--run-id "$RUN_ID" --version "$VERSION" --expected-sha "$EXPECTED_SHA" --signing-key "$key")
+          if [[ "$PUBLISH_RELEASE" == true ]]; then args+=(--publish); fi
+          python3 tools/ci/promote_release.py "${args[@]}"

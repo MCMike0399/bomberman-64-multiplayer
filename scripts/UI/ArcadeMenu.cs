@@ -11,7 +11,20 @@ public partial class ArcadeMenu : Control
     public event Action<int>? AppearanceChanged;
     private readonly Dictionary<string,int> _lobbyAppearances=[];
     private readonly Dictionary<string,CharacterPreview> _lobbyPreviews=[];
-    public event Action? LocalRequested, ReplayRequested, BackRequested;
+    public event Action? LocalRequested, ReplayRequested, BackRequested, StartRoomRequested, ResumeRequested, SettingsChanged, TestVibrationRequested, CheckUpdatesRequested, InstallUpdateRequested;
+    private Button _startRoom=null!;
+    private ArcadeModeButton _replay=null!;
+    private Label _partyHint=null!,_pauseHint=null!,_settingsNotice=null!,_volumeLabel=null!;
+    private CheckButton _vibration=null!;
+    private HSlider _volume=null!;
+    private CheckButton _automaticUpdates=null!;
+    private Label _updateStatus=null!;
+    private Button _checkUpdates=null!,_installUpdate=null!,_settingsButton=null!;
+    public bool AutomaticUpdates=>_automaticUpdates.ButtonPressed;
+    private JsonElement? _party;
+    private string? _localPlayer;
+    public bool VibrationEnabled=>_vibration.ButtonPressed;
+    public float SoundVolume=>(float)_volume.Value/100;
     public event Action<NetworkMode>? OnlineRequested;
     private Control _content=null!;
     private ArcadeBackdrop _background=null!;
@@ -58,7 +71,7 @@ public partial class ArcadeMenu : Control
         Theme=ArcadeTheme.Create();SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         _background=new ArcadeBackdrop();AddChild(_background);_background.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         _content=new Control();AddChild(_content);_content.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-        BuildModes();BuildControls();BuildRoster();BuildSetup();BuildOnline();BuildLobby();BuildResults();
+        BuildModes();BuildControls();BuildRoster();BuildSetup();BuildOnline();BuildLobby();BuildResults();BuildSettings();BuildPause();
         var footer=new HBoxContainer {AnchorTop=1,AnchorBottom=1,AnchorRight=1,OffsetTop=-60,OffsetBottom=-12,OffsetLeft=58,OffsetRight=-58,Alignment=BoxContainer.AlignmentMode.Center};AddChild(footer);
         _inputFooter=new PromptBar();footer.AddChild(_inputFooter);UpdateInputFooter();ControllerHub.Current.PromptChanged+=UpdateInputFooter;
         var spacer=new Control {SizeFlagsHorizontal=SizeFlags.ExpandFill};footer.AddChild(spacer);
@@ -90,6 +103,7 @@ public partial class ArcadeMenu : Control
         Mode(menu,"Practice",()=>Navigation?.Invoke("Practice"),ArcadeTheme.Indigo,ArcadeTheme.Pink);
         var controls=ArcadeTheme.Quiet(ArcadeTheme.Button(menu,"Controls",()=>Navigation?.Invoke("Controls")));controls.Name="OpenControls";controls.CustomMinimumSize=new(0,48);
         controls.SizeFlagsHorizontal=SizeFlags.ShrinkCenter;
+        var settings=ArcadeTheme.Quiet(ArcadeTheme.Button(menu,"Settings",()=>Navigation?.Invoke("Settings")));settings.Name="OpenSettings";settings.CustomMinimumSize=new(0,48);settings.SizeFlagsHorizontal=SizeFlags.ShrinkCenter;_settingsButton=settings;
     }
     private void BuildControls()
     {
@@ -170,7 +184,7 @@ public partial class ArcadeMenu : Control
         var preview=new StagePreview {CustomMinimumSize=new(360,185)};host.AddChild(preview);
         ArcadeTheme.Button(host,"Room settings",()=>Navigation?.Invoke("HostSetup"));
         _onlineButtons.Add(ArcadeTheme.Button(host,"Create private room",()=>OnlineRequested?.Invoke(NetworkMode.CreatePrivate),true));
-        Copy(host,"With CPU rivals a room can start with just you. Share the code while friends connect.",15).AddThemeColorOverride("font_color",ArcadeTheme.Muted);
+        Copy(host,"Share the code while friends connect. The room leader chooses when to start.",15).AddThemeColorOverride("font_color",ArcadeTheme.Muted);
         var join=ArcadeTheme.Column(columns,14);join.SizeFlagsHorizontal=SizeFlags.ExpandFill;
         Section(join,"Join a friend");
         _code=ArcadeTheme.Field(join,"Room code","","Enter code");_code.MaxLength=16;
@@ -192,7 +206,10 @@ public partial class ArcadeMenu : Control
         _joinCode=new Label {Text="…"};_joinCode.AddThemeFontOverride("font",ArcadeTheme.Display);_joinCode.AddThemeFontSizeOverride("font_size",36);_joinCode.AddThemeColorOverride("font_color",ArcadeTheme.Ink);codePlate.AddChild(_joinCode);
         _lobbyStatus=ArcadeTheme.Text(box,"Connecting to your room…",24);
         _roster=new GridContainer {Columns=2,CustomMinimumSize=new(900,255)};_roster.AddThemeConstantOverride("h_separation",16);_roster.AddThemeConstantOverride("v_separation",10);box.AddChild(_roster);
-        Copy(box,"The battle starts once enough players connect. Share the room code with friends; the server fills any CPU seats.",17).AddThemeColorOverride("font_color",ArcadeTheme.Muted);
+        _partyHint=Copy(box,"Share the room code with friends. The leader starts each battle.",17);_partyHint.AddThemeColorOverride("font_color",ArcadeTheme.Muted);
+        var actions=ArcadeTheme.Row(box,18);
+        _startRoom=ArcadeTheme.Button(actions,"Start game",()=>StartRoomRequested?.Invoke(),true);_startRoom.Name="StartRoom";_startRoom.Disabled=true;
+        ArcadeTheme.Button(actions,"Settings",()=>Navigation?.Invoke("Settings")).Name="LobbySettings";
     }
     private VBoxContainer _results=null!;
     private void BuildResults()
@@ -214,11 +231,12 @@ public partial class ArcadeMenu : Control
         _resultRows=ArcadeTheme.Column(standings,4);_resultRows.SizeFlagsHorizontal=SizeFlags.ExpandFill;
         var scores=ArcadeTheme.Text(_results,"",1);scores.Name="Standings";scores.Visible=false;
         var row=ArcadeTheme.Row(_results,25);
-        var replay=new ArcadeModeButton {Text="Play Again",CustomMinimumSize=new(590,88),FaceColor=Coral,Accent=ArcadeTheme.Gold,SizeFlagsHorizontal=SizeFlags.ExpandFill};replay.Pressed+=()=>ReplayRequested?.Invoke();row.AddChild(replay);
+        var replay=new ArcadeModeButton {Text="Play Again",CustomMinimumSize=new(590,88),FaceColor=Coral,Accent=ArcadeTheme.Gold,SizeFlagsHorizontal=SizeFlags.ExpandFill};replay.Pressed+=()=>ReplayRequested?.Invoke();row.AddChild(replay);_replay=replay;
         var modes=new ArcadeModeButton {Text="Mode Select",CustomMinimumSize=new(590,88),FaceColor=ArcadeTheme.Indigo,Accent=ArcadeTheme.Pink,SizeFlagsHorizontal=SizeFlags.ExpandFill};modes.Pressed+=()=>Navigation?.Invoke("Modes");row.AddChild(modes);
     }
-    public void ShowResults(JsonElement? state,JsonElement? result)
+    public void ShowResults(JsonElement? state,JsonElement? result,bool party=false)
     {
+        _replay.Text=party?"Return to lobby":"Play Again";
         var text="The battle has ended.";
         JsonElement? rows=null;
         if(result is { } final && final.TryGetProperty("details",out var details) && details.ValueKind==JsonValueKind.Object && details.TryGetProperty("scoreboard",out var scoreboard)) rows=scoreboard;
@@ -256,6 +274,7 @@ public partial class ArcadeMenu : Control
     }
     public void ShowScreen(string screen)
     {
+        _background.Visible=screen is not ("Pause" or "Settings") || !_overlayBackground;
         _background.Page=screen;_background.Quiet=screen=="Roster";_background.Results=screen=="Results";_background.QueueRedraw();
         _screen=screen=="Practice"||screen=="HostSetup"?"Setup":screen;
         _practice=screen=="Practice";
@@ -304,11 +323,13 @@ public partial class ArcadeMenu : Control
             var name=ArcadeTheme.Text(row,member.Name,18);name.SizeFlagsHorizontal=SizeFlags.ExpandFill;name.ClipText=true;name.VerticalAlignment=VerticalAlignment.Center;
             var state=ArcadeTheme.Text(row,member.Connected?"Connected":"Reconnecting",14,member.Connected?ArcadeTheme.Aqua:ArcadeTheme.Red);state.VerticalAlignment=VerticalAlignment.Center;
         }
-        _countdown=status.CountdownEndsAt;
+        _countdown=_party is null?status.CountdownEndsAt:null;
         _lobbyStatus.Text=status.State switch {"countdown"=>"The battle is about to begin!","running"=>"Entering the arena…",_=>"Waiting for players…"};
+        ApplyParty();
     }
     public void ResetLobby()
     {
+        _party=null;_localPlayer=null;_countdown=null;_startRoom.Disabled=true;_startRoom.Visible=false;
         _lobbyAppearances.Clear();_lobbyPreviews.Clear();
         foreach(var child in _roster.GetChildren()){_roster.RemoveChild(child);child.QueueFree();}
     }
@@ -326,6 +347,79 @@ public partial class ArcadeMenu : Control
     public void Configure(SessionSettings settings,int humans=1)
     {
         _difficulty.Select(Array.IndexOf(new[]{"easy","normal","hard"},settings.BotDifficulty=="medium"?"normal":settings.BotDifficulty));_stage.Select(Math.Max(0,Array.IndexOf(StageIds,settings.Stage)));_bots.Value=settings.Bots;_wins.Value=settings.Wins;_rounds.Value=settings.RoundSeconds;_sudden.ButtonPressed=settings.SuddenDeath;_ghosts.ButtonPressed=settings.Ghosts;_localPlayers.ConfigureCounts(humans,settings.Bots);UpdateStageDescription();
+    }
+    private bool _overlayBackground;
+    public void SetOverlay(bool overlay)=>_overlayBackground=overlay;
+    private void BuildSettings()
+    {
+        var screen=Screen("Settings");var box=Card(screen,new(150,95),new(1140,690));
+        ArcadeTheme.Heading(box,"Settings",42);
+        Copy(box,"Your preferences are saved on this Mac.",18);
+        var columns=ArcadeTheme.Row(box,40);
+        var player=ArcadeTheme.Column(columns,14);player.CustomMinimumSize=new(500,440);
+        var updates=ArcadeTheme.Column(columns,14);updates.CustomMinimumSize=new(500,440);
+        _volumeLabel=ArcadeTheme.Text(player,"Sound volume: 80%",22);
+        _volume=new HSlider {Name="SoundVolume",MinValue=0,MaxValue=100,Step=5,Value=80,CustomMinimumSize=new(460,48)};player.AddChild(_volume);
+        _volume.ValueChanged+=value=>{_volumeLabel.Text=$"Sound volume: {value:0}%";SettingsChanged?.Invoke();};
+        _vibration=new CheckButton {Name="Vibration",Text="Controller vibration",CustomMinimumSize=new(460,60)};player.AddChild(_vibration);
+        _vibration.Toggled+=_=>SettingsChanged?.Invoke();
+        Copy(player,"Vibration is off by default. Enable it for bomb and impact feedback on supported controllers.",18);
+        ArcadeTheme.Button(player,"Test vibration",()=>TestVibrationRequested?.Invoke()).Name="TestVibration";
+        _settingsNotice=Copy(player,"",16);
+        Section(updates,"Game updates");
+        _automaticUpdates=new CheckButton {Name="AutomaticUpdates",Text="Check automatically",ButtonPressed=true};updates.AddChild(_automaticUpdates);
+        _automaticUpdates.Toggled+=_=>SettingsChanged?.Invoke();
+        _updateStatus=Copy(updates,"",17);
+        Copy(updates,"New versions download in the background. Finish your game, then restart to install.",18);
+        _checkUpdates=ArcadeTheme.Button(updates,"Check for updates",()=>CheckUpdatesRequested?.Invoke());_checkUpdates.Name="CheckUpdates";
+        _installUpdate=ArcadeTheme.Button(updates,"Update and restart",()=>InstallUpdateRequested?.Invoke(),true);_installUpdate.Name="InstallUpdate";_installUpdate.Visible=false;
+        ArcadeTheme.Button(box,"Back",()=>BackRequested?.Invoke()).Name="SettingsBack";
+    }
+    private void BuildPause()
+    {
+        var screen=Screen("Pause");var box=Card(screen,new(420,150),new(600,520));
+        ArcadeTheme.Heading(box,"Game menu",42);
+        _pauseHint=Copy(box,"",18);
+        ArcadeTheme.Button(box,"Resume game",()=>ResumeRequested?.Invoke(),true).Name="ResumeGame";
+        ArcadeTheme.Button(box,"Settings",()=>Navigation?.Invoke("Settings")).Name="PauseSettings";
+        ArcadeTheme.Button(box,"Leave game",()=>Navigation?.Invoke("Modes")).Name="LeaveGame";
+    }
+    public void ConfigurePreferences(PlayerPreferences preferences)
+    {
+        _automaticUpdates.SetPressedNoSignal(preferences.AutomaticUpdates);
+        _vibration.SetPressedNoSignal(preferences.Vibration);_volume.SetValueNoSignal(preferences.Volume*100);
+        _volumeLabel.Text=$"Sound volume: {preferences.Volume*100:0}%";
+    }
+    public void UpdateStatus(string version,string status,bool busy,bool ready,bool canInstall)
+    {
+        _updateStatus.Text=$"{version} · {status}";
+        _settingsButton.Text=ready?"Settings · Update ready":"Settings";
+        _checkUpdates.Disabled=busy||ready;_installUpdate.Visible=ready;_installUpdate.Disabled=busy||!canInstall;
+        _installUpdate.TooltipText=canInstall?"Restart to install the verified update.":"Leave your current room before updating.";
+    }
+    public void SettingsNotice(string text)=>_settingsNotice.Text=text;
+    public void ShowPause(bool online)
+    { _pauseHint.Text=online?"The online match continues while this menu is open.":"The local game is paused.";ShowScreen("Pause"); }
+    public void FocusStart()
+    {
+        Control? target=_screen switch {"Lobby"=>_startRoom.Visible&&!_startRoom.Disabled?_startRoom:null,"Setup"=>_launch,"Pause"=>_screens["Pause"].FindChild("ResumeGame",true,false) as Control,_=>FirstFocusable(_screens[_screen])};
+        target?.GrabFocus();
+    }
+    public void ShowParty(JsonElement data,string? localPlayer)
+    {
+        _party=data.Clone();_localPlayer=localPlayer;_countdown=null;
+        var lobby=JsonSerializer.SerializeToElement(new {state="open",players=data.GetProperty("players")});
+        ShowLobby(lobby,_joinCode.Text,"Connected");
+    }
+    private void ApplyParty()
+    {
+        _startRoom.Visible=_party!=null;
+        if(_party is not {} data)return;
+        var status=PartyStatus.Parse(data);bool leader=status.LeaderId==_localPlayer;
+        _startRoom.Disabled=!leader||!status.CanStart;
+        string leaderName=data.GetProperty("players").EnumerateArray().FirstOrDefault(p=>p.GetProperty("playerId").GetString()==status.LeaderId) is var player&&player.ValueKind==JsonValueKind.Object?player.GetProperty("displayName").GetString()??"Leader":"Leader";
+        _lobbyStatus.Text=status.Phase switch {"starting"=>"Starting the battle…","results"=>"Battle complete — returning to the room…","playing"=>"Battle in progress",_=>leader?status.CanStart?"You are the leader. Start when everyone is here.":"Waiting for another player or CPU rival.":$"Waiting for {leaderName} to start."};
+        _partyHint.Text=$"Leader: {leaderName}  •  CPU rivals: {status.Bots}\nShare the room code. Start / + focuses Start game; confirm to begin.";
     }
     private void UpdateStageDescription()
     {

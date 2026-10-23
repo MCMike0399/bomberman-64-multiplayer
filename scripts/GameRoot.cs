@@ -28,7 +28,12 @@ public partial class GameRoot : Node3D
     private string _lastName="Player",_lastCode="";
     private JsonElement? _lobby;
     private JsonElement? _result;
-    private string _screenName="Modes";
+    private string _screenName="Modes", _settingsReturn="Modes", _pauseReturn="Match";
+    private int _partyMatch=-1;
+    private PlayerPreferences _preferences=new();
+    private BlastCircuit.Updates.GameUpdater _updater=null!;
+    public string PreferencesPath {get;private set;}="user://preferences.cfg";
+    public PlayerPreferences Preferences=>_preferences;
     public string ScreenName
     {
         get=>_screenName;
@@ -65,7 +70,17 @@ public partial class GameRoot : Node3D
         _menu.AppearanceChanged+=index=>{if(_session is NetworkSession network)network.SetAppearance(index);};
         _menu.Navigation+=Navigate;_menu.BackRequested+=Back;_menu.ReplayRequested+=Replay;
         _menu.LocalRequested+=StartConfigured;_menu.OnlineRequested+=StartConfiguredOnline;
-        _hud.LeaveRequested+=Back;_hud.RestartRequested+=Replay;
+        _hud.LeaveRequested+=OpenGameMenu;_hud.RestartRequested+=Replay;
+        _menu.StartRoomRequested+=()=>{if(_session is NetworkSession network)network.RequestStart();};
+        _menu.ResumeRequested+=ResumeGame;
+        _menu.SettingsChanged+=SavePreferences;
+        _menu.TestVibrationRequested+=()=>_menu.SettingsNotice(ControllerHub.Current.TestVibration()?"Vibration sent to your controller.":_preferences.Vibration?"Connect a controller that supports vibration.":"Enable controller vibration first.");
+        if(OS.GetCmdlineUserArgs().Any(a=>a.StartsWith("--playtest=")))PreferencesPath=$"user://qa-preferences-{OS.GetProcessId()}.cfg";
+        _preferences=PlayerPreferences.Load(PreferencesPath);_menu.ConfigurePreferences(_preferences);ApplyPreferences();
+        _arena.PlayerFeedback+=PlayerFeedback;
+        _updater=new BlastCircuit.Updates.GameUpdater();AddChild(_updater);
+        _menu.CheckUpdatesRequested+=()=>{_ = _updater.Check();};
+        _menu.InstallUpdateRequested+=async ()=>{if(_session==null&&!_connecting&&await _updater.Install())GetTree().Quit();};
         var args=OS.GetCmdlineUserArgs();
         _smoke=args.Any(a=>a.StartsWith("--smoke"));
         var duration=args.FirstOrDefault(a=>a.StartsWith("--smoke-seconds="));
@@ -84,6 +99,11 @@ public partial class GameRoot : Node3D
 
     public void Navigate(string screen)
     {
+        if(screen=="Settings")
+        {
+            _settingsReturn=ScreenName;ScreenName="Settings";_menu.SetOverlay(_session!=null&&LatestState!=null);_menu.Visible=true;_hud.Visible=false;_menu.ShowScreen("Settings");return;
+        }
+        _menu.SetOverlay(false);
         if(screen is not ("Modes" or "Controls" or "Roster" or "Setup" or "Practice" or "HostSetup" or "Online" or "Lobby" or "Match" or "Results"))throw new ArgumentException("Unknown screen.",nameof(screen));
         if(screen is "Modes" or "Controls" or "Roster" or "Online" or "Setup" or "Practice" or "HostSetup")
         {
@@ -147,7 +167,7 @@ public partial class GameRoot : Node3D
     private void Begin(ISession session,bool online)
     {
         _uiAudio.MenuConfirm();
-        ReleaseSession();_arena.ResetMatch();_session=session;LatestStage=null;LatestState=null;_result=null;_lobby=null;SnapshotCount=0;_injected.Clear();_hud.Reset();_hud.Practice=_practice;_menu.ResetLobby();
+        ReleaseSession();_arena.ResetMatch();_session=session;LatestStage=null;LatestState=null;_result=null;_lobby=null;SnapshotCount=0;_injected.Clear();_hud.Reset();_hud.Practice=_practice;_menu.ResetLobby();_partyMatch=-1;
         ControllerHub.Current.BeginMatch(session.LocalPlayerCount);
         if(online)
         {ScreenName="Lobby";_menu.ShowScreen("Lobby");_menu.ShowLobby(null,session.JoinCode,session.Status);_menu.Visible=true;_hud.Visible=false;_arena.Visible=false;}
@@ -164,12 +184,15 @@ public partial class GameRoot : Node3D
     }
     public void Back()
     {
+        if(ScreenName=="Settings"){RestoreScreen(_settingsReturn);return;}
+        if(ScreenName=="Pause"){ResumeGame();return;}
         if(_connecting){CancelConnection();_menu.SetBusy(false,"Connection cancelled.");ScreenName="Online";_menu.ShowScreen("Online");return;}
         if(_session!=null){ReleaseSession();Navigate("Modes");return;}
         if(ScreenName=="Setup"&&_setupForHost)Navigate("Online");else if(ScreenName=="Setup"&&!_menu.Practice)Navigate("Roster");else Navigate("Modes");
     }
     private void Replay()
     {
+        if(_session is NetworkSession {Party:not null}){ShowPartyLobby();return;}
         ReleaseSession();
         if(_lastServer is { } server)
         {
@@ -195,15 +218,67 @@ public partial class GameRoot : Node3D
     {try{await session.DisposeAsync();}catch(Exception error){GD.PushWarning("Session cleanup: "+error.Message);}}
     public override void _UnhandledInput(InputEvent @event)
     {
-        // B remains the remote-detonation button during play. Start opens the way back.
-        bool battle=ScreenName=="Match";
+        bool start=@event is InputEventJoypadButton {Pressed:true,ButtonIndex:JoyButton.Start};
         bool cancel=@event is InputEventKey {Pressed:true,Echo:false,Keycode:Key.Escape}
-            || (!battle && ScreenName!="Controls" && @event.IsActionPressed("ui_cancel"))
-            || ((battle||ScreenName=="Controls") && @event is InputEventJoypadButton {Pressed:true,ButtonIndex:JoyButton.Start});
-        if(cancel){Back();GetViewport().SetInputAsHandled();}
+            || (ScreenName is not ("Match" or "Controls") && @event.IsActionPressed("ui_cancel"));
+        if(start)
+        {
+            if(ScreenName=="Match")OpenGameMenu();
+            else if(ScreenName=="Controls")Back();
+            else _menu.FocusStart();
+            GetViewport().SetInputAsHandled();return;
+        }
+        if(cancel)
+        {
+            if(ScreenName is "Match" or "Lobby")OpenGameMenu();else Back();
+            GetViewport().SetInputAsHandled();
+        }
+    }
+    private void OpenGameMenu()
+    {
+        if(_session==null)return;
+        _pauseReturn=ScreenName;_session.ReleaseInputs();_injected.Clear();ControllerHub.Current.RearmControls();ControllerHub.Current.StopVibration();
+        ScreenName="Pause";_hud.Visible=false;_menu.SetOverlay(LatestState!=null);_menu.Visible=true;_menu.ShowPause(_session is NetworkSession);
+    }
+    private void ResumeGame(){_session?.ReleaseInputs();ControllerHub.Current.RearmControls();RestoreScreen(_pauseReturn);}
+    private void RestoreScreen(string screen)
+    {
+        if(screen=="Pause"){ScreenName="Pause";_menu.Visible=true;_menu.SetOverlay(LatestState!=null);_menu.ShowPause(_session is NetworkSession);return;}
+        if(screen=="Match"&&_session!=null){EnterMatch();return;}
+        if(screen=="Lobby"&&_session!=null){ShowPartyLobby();return;}
+        Navigate(screen);
+    }
+    private void ShowPartyLobby()
+    {
+        _session?.ReleaseInputs();ControllerHub.Current.StopVibration();ControllerHub.Current.RearmControls();
+        ScreenName="Lobby";_arena.Visible=false;_hud.Visible=false;_menu.SetOverlay(false);_menu.Visible=true;_menu.ShowScreen("Lobby");
+    }
+    private void ApplyPreferences()
+    {
+        _uiAudio.Volume=_preferences.Volume;_arena.Audio.Volume=_preferences.Volume;
+        ControllerHub.Current.VibrationEnabled=_preferences.Vibration;
+    }
+    private void SavePreferences()
+    {
+        _preferences.AutomaticUpdates=_menu.AutomaticUpdates;
+        _preferences.Vibration=_menu.VibrationEnabled;_preferences.Volume=_menu.SoundVolume;ApplyPreferences();
+        if(_preferences.Save(PreferencesPath)!=Error.Ok)_menu.SettingsNotice("Could not save settings on this Mac.");
+    }
+    private void PlayerFeedback(string kind,string? player)
+    {
+        if(ScreenName!="Match"||_session==null||player==null)return;
+        for(int seat=0;seat<_session.LocalPlayerCount;seat++)
+        {
+            var id=_session is NetworkSession network?network.PlayerId:$"local-{seat}";
+            if(id!=player)continue;
+            var pulse=kind switch {"death"=>(.7f,.9f,.25f),"knockdown"=>(.5f,.7f,.18f),"kick"=>(.3f,.2f,.1f),"pump"=>(.25f,.15f,.08f),"bomb-drop"=>(.15f,0f,.05f),_=>(0f,0f,0f)};
+            if(pulse.Item3>0)ControllerHub.Current.VibrateSeat(seat,pulse.Item1,pulse.Item2,pulse.Item3);
+        }
     }
     public override void _Process(double delta)
     {
+        _updater.Tick(delta,_preferences.AutomaticUpdates,_session==null&&!_connecting);
+        _menu.UpdateStatus(_updater.Version,_updater.Status,_updater.Busy,_updater.UpdateReady,_session==null&&!_connecting);
         if(_smoke)
         {
             _elapsed+=delta;
@@ -227,7 +302,7 @@ public partial class GameRoot : Node3D
             var playerId=session is NetworkSession network?network.PlayerId:$"local-{i}";
             if(playerId!=null)_arena.SetLocalInput(playerId,input);
         }
-        session.Advance(delta);
+        if(session is not LocalSession || ScreenName=="Match")session.Advance(delta);
         foreach(var envelope in session.DrainMessages())
         {
             if(!envelope.TryGetProperty("d",out var data))continue;
@@ -238,6 +313,18 @@ public partial class GameRoot : Node3D
                     LatestState=data.Clone();SnapshotCount++;_arena.State(data,envelope.TryGetProperty("k",out var stateTick)&&stateTick.ValueKind==JsonValueKind.Number?stateTick.GetInt64():-1);_hud.State(data);
                     if(ScreenName=="Lobby")EnterMatch();
                     break;
+                case "party.status":
+                    var party=PartyStatus.Parse(data);_menu.ShowParty(data,(session as NetworkSession)?.PlayerId);
+                    if(party.Phase=="playing"&&party.Match!=_partyMatch)
+                    {
+                        _partyMatch=party.Match;_arena.ResetMatch();_hud.Reset();LatestState=null;LatestStage=null;ControllerHub.Current.RearmControls();
+                        EnterMatch();
+                    }
+                    else if(party.Phase=="lobby"&&ScreenName is "Match" or "Results")ShowPartyLobby();
+                    else if(party.Phase=="lobby"&&ScreenName is "Pause" or "Settings")_pauseReturn="Lobby";
+                    break;
+                case "party.result":
+                    _result=data.Clone();session.ReleaseInputs();ControllerHub.Current.StopVibration();ScreenName="Results";_hud.Visible=false;_menu.SetOverlay(false);_menu.Visible=true;_menu.ShowResults(LatestState,_result,true);break;
                 case "appearance":
                     if(data.TryGetProperty("playerId",out var owner)&&data.TryGetProperty("index",out var suit))_menu.SetLobbyAppearance(owner.GetString()!,suit.GetInt32());
                     break;
@@ -258,5 +345,5 @@ public partial class GameRoot : Node3D
         if(session.IsEnded&&session.Status.StartsWith("Error",StringComparison.Ordinal)&&ScreenName!="Results")
         {ScreenName="Results";_hud.Visible=false;_menu.Visible=true;_menu.ShowResults(LatestState,JsonSerializer.SerializeToElement(new {reason=session.Status}));}
     }
-    public override void _ExitTree(){CancelConnection();ReleaseSession();}
+    public override void _ExitTree(){CancelConnection();ReleaseSession();if(PreferencesPath.StartsWith("user://qa-"))DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(PreferencesPath));}
 }

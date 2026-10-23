@@ -26,7 +26,26 @@ public partial class ControllerHub : Node
     private IReadOnlyList<GamepadDevice>? _testDevices;
     private readonly bool[] _keyboardBomb=new bool[2],_keyboardRemote=new bool[2],_armed=new bool[8];
     private readonly Dictionary<int,(bool Bomb,bool Remote)> _taps=[];
-    private bool _focused=true,_inMatch;
+    private bool _focused=true,_inMatch,_vibrationEnabled;
+    public int VibrationRequestCount {get;private set;}
+    public bool VibrationEnabled {get=>_vibrationEnabled;set{_vibrationEnabled=value;if(!value)StopVibration();}}
+    public void RearmControls(){ClearEdges();Array.Fill(_armed,false);}
+    public bool VibrateSeat(int seat,float weak,float strong,float seconds)=>Bindings?.DeviceIdForSeat(seat) is {} id && Vibrate(id,weak,strong,seconds);
+    public bool TestVibration()=>_devices.FirstOrDefault(d=>d.Mapped) is {} pad && Vibrate(pad.Device.RuntimeId,.35f,.5f,.2f);
+    private bool Vibrate(int id,float weak,float strong,float seconds)
+    {
+        if(!_vibrationEnabled||!_focused||seconds<=0)return false;
+        weak=Math.Clamp(weak,0,1);strong=Math.Clamp(strong,0,1);seconds=Math.Clamp(seconds,0,.5f);
+        if(_testDevices!=null){VibrationRequestCount++;return true;}
+        if(id>=1000){bool ok=_native?.Rumble(id-1000,strong,weak,(uint)(seconds*1000))??false;if(ok)VibrationRequestCount++;return ok;}
+        if(!Input.HasJoyVibration(id))return false;
+        Input.StartJoyVibration(id,weak,strong,seconds);VibrationRequestCount++;return true;
+    }
+    public void StopVibration()
+    {
+        foreach(var pad in _devices)
+        {int id=pad.Device.RuntimeId;if(id>=1000)_native?.Rumble(id-1000,0,0,0);else Input.StopJoyVibration(id);}
+    }
     private double _refreshClock;
     private readonly Dictionary<int,MenuStickNavigation> _menuSticks=[];
     private SdlGamepadBackend? _native;
@@ -78,7 +97,7 @@ public partial class ControllerHub : Node
         RefreshDevices();Bindings=new(humanCount,_devices.Where(d=>d.Mapped).Select(d=>d.Device).ToArray());_inMatch=true;MenuNavigationEnabled=false;ClearEdges();
         Array.Fill(_armed,false);
     }
-    public void EndMatch(){_inMatch=false;MenuNavigationEnabled=true;Bindings=null;ClearEdges();}
+    public void EndMatch(){StopVibration();_inMatch=false;MenuNavigationEnabled=true;Bindings=null;ClearEdges();}
     public PlayerInput Read(int seat)
     {
         if(!_focused||!_inMatch||Bindings==null)return default;
@@ -294,7 +313,7 @@ public partial class ControllerHub : Node
     {if(ActiveFamily==family)return;ActiveFamily=family;PromptChanged?.Invoke();}
     public override void _Notification(int what)
     {
-        if(what==NotificationApplicationFocusOut){_focused=false;ClearEdges();}
+        if(what==NotificationApplicationFocusOut){_focused=false;StopVibration();ClearEdges();}
         if(what==NotificationApplicationFocusIn){_focused=true;Array.Fill(_armed,false);}
     }
     private void ClearEdges(){Array.Clear(_keyboardBomb);Array.Clear(_keyboardRemote);_taps.Clear();_menuSticks.Clear();}
@@ -312,5 +331,5 @@ public partial class ControllerHub : Node
         string pad=index is {} i?playable[i].Device.Name:"";
         return keyboard.Length>0?(pad.Length>0?$"{keyboard}  •  {pad}":keyboard):pad.Length>0?pad:"CONNECT GAMEPAD";
     }
-    public override void _ExitTree(){Input.JoyConnectionChanged-=OnConnection;_native?.Dispose();}
+    public override void _ExitTree(){StopVibration();Input.JoyConnectionChanged-=OnConnection;_native?.Dispose();}
 }

@@ -1,3 +1,44 @@
+# v0.21.0: persistent parties, player settings and signed updates — 2026-10-23
+
+Private rooms now wait for an authenticated leader's Start game command, including
+solo-host rooms with CPUs. A completed match returns all connected players to the
+same room/code after results; the next match also needs the leader to start it.
+Disconnect transfers leadership. Esc/Start opens a game menu; local authority
+pauses, while online authority continues with neutral local inputs. Settings saves
+volume, vibration (off by default) and automatic update checks (on by default).
+
+| Check | Result |
+|---|---|
+| Gameplay / client / AI / audio | **152 / 139 / 52 / 19** checks passed |
+| AI soak | **36 scenarios**, longest eligible safe idle 1.63 seconds |
+| Staged server HTTP/WebSocket | Full smoke passed, including eight production party clients, manual start, same-room results/rematch and leader transfer |
+| Headless core / bundled smoke | **895 / 258 assertions**, zero runtime errors |
+| Full rebuilt export | **2,245 assertions, 179 captures**, zero runtime errors |
+| Actual DiveMac Docker route | Full network smoke passed in **75.0 seconds**; installed native journey **27 assertions, 2 captures**, zero runtime errors |
+| macOS updater integration | Real app handoff and successful launch passed; a deliberately broken signed executable restored and relaunched the previous app |
+| Publication tooling | Public contracts, signature/download boundaries, promotion guards and actionlint passed |
+
+Final receipts: `artifacts/iteration21-delivery/`; updater installation/rollback:
+`artifacts/iteration21-party/update-integration`. The installed v0.21.0/build22
+matches all 217 validated export files, passes strict signature verification,
+and Launch Services smoke produced 58 snapshots with zero stderr. A fresh ZIP is
+also in Downloads for the one-time upgrade from pre-updater builds.
+
+The initial authority regression failed because a solo room with bots generated
+state without a leader command. The first full GUI run exposed an obsolete test
+expecting the lobby's sole Leave button to retain focus; the lobby now also has
+Settings. The updated check verifies real analog navigation to Settings, and the
+complete exported run above passed. Earlier receipts remain under
+`artifacts/iteration21-party/`.
+
+Vibration tests cover disabled-by-default behavior, saved configuration, backend
+routing and one pulse per accepted event, not fresh physical motor observation.
+The updater fixture verifies signatures, archive checks and the production
+installer in isolated locations; it is not evidence of a published GitHub release.
+The user authorized publishing v0.21 and enabling signed releases after successful
+trusted main verification. The public release workflow is gated by those checks;
+its hosted run and published assets are separate from the local receipts above.
+
 # v0.20.0: gripping cartoon scamper — 2026-10-23
 
 The walk was rebuilt after the user again found it stiff and cheap-looking; see [iteration twenty](iteration20-walking.md). The new movement check reproduced planted-boot skating at **.948** of body speed before the change (`artifacts/iteration20-walk-red`); the rebuilt gait measures **.04–.08** across 30/60/120 FPS. Gameplay rules, speed, collision, networking and controls are unchanged.

@@ -64,6 +64,7 @@ public sealed class LocalSession : ISession
         }
         _inputs[localPlayer] = input;
     }
+    public void ReleaseInputs() { Array.Clear(_inputs); foreach(var queue in _buttons) queue.Clear(); }
     public IReadOnlyList<JsonElement> DrainMessages() => _messages.Drain();
     public ValueTask DisposeAsync()
     {

@@ -47,7 +47,7 @@ public partial class BattleHud : Control
         _restart=ArcadeTheme.Quiet(ArcadeTheme.Button(row,"Reset practice",()=>RestartRequested?.Invoke()));_restart.Visible=false;
         var escape=new HBoxContainer {MouseFilter=MouseFilterEnum.Ignore};escape.AddThemeConstantOverride("separation",0);row.AddChild(escape);
         escape.AddChild(PromptBar.Keycap("Esc",13));
-        var leave=ArcadeTheme.Quiet(ArcadeTheme.Button(escape,"Leave",()=>LeaveRequested?.Invoke()));
+        var leave=ArcadeTheme.Quiet(ArcadeTheme.Button(escape,"Menu",()=>LeaveRequested?.Invoke()));
         foreach(var button in new[]{_restart,leave}){button.CustomMinimumSize=new(0,40);button.AddThemeFontSizeOverride("font_size",15);button.FocusMode=FocusModeEnum.None;}
     }
     private void UpdateControls()=>_controls.SetPrompt(ControllerProfile.Actions(ControllerHub.Current.ActiveFamily,ControllerHub.Current.ActiveKeyboardSeat));

@@ -17,6 +17,7 @@ if(args.Contains("--aim-only")){await NetworkAimChecks.Run(new Uri(origin));retu
 if(args.Contains("--appearance-only")){await LobbyAppearanceCatchup();return;}
 await QuickPlay();
 if (args.Contains("--quick-only")) return;
+await PartyNetworkChecks.Run(new Uri(origin));
 await ProductSessions();
 await NetworkAimChecks.Run(new Uri(origin));
 await LobbyAppearanceCatchup();
@@ -129,6 +130,7 @@ async Task ProductSessions()
     Check(!string.IsNullOrEmpty(host.JoinCode), "product client creates a shareable join code");
     await using var joiner = await NetworkSession.ConnectAsync(new Uri(origin),"Product joiner",new SessionSettings(Bots:0), NetworkMode.JoinCode,host.JoinCode,appearance:7);
     Check(host.LobbyId == joiner.LobbyId,"product clients join same lobby");
+    await PartyNetworkChecks.Start(host);
     var ready=await ProductState(host,d => d.GetProperty("phase").GetInt32()==1 && d.GetProperty("players").GetArrayLength()==2 &&
         d.GetProperty("players").EnumerateArray().Any(p=>p.GetProperty("id").GetString()==host.PlayerId&&p.GetProperty("appearance").GetInt32()==4) &&
         d.GetProperty("players").EnumerateArray().Any(p=>p.GetProperty("id").GetString()==joiner.PlayerId&&p.GetProperty("appearance").GetInt32()==7));

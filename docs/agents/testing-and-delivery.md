@@ -104,6 +104,14 @@ for the change; do not broadly kill Godot/dotnet or alter external hosts.
 Host/network/provider changes require the applicable canonical operational
 reference. Server artifact creation is separate from deploying a service.
 
+For explicitly authorized remote party hosting, follow [the party guide](../online-party.md).
+The Compose context comes only from a verified portable server ZIP. Keep deployment
+and relay ownership separate from other host services. Verify real clients through
+the actual relay address, then the installed app's `network` journey. A local probe
+of the LAN address does not establish reachability from a friend's Mac. Use the
+helper's launchd ownership for a relay that survives the tool/terminal launcher;
+an orphaned `ssh -f` process may be cleaned up by the execution environment.
+
 ## Extend the harness with meaningful gameplay
 
 `assets/testing/scenarios.json` is the common Python/C# catalog. Add a private
@@ -228,3 +236,14 @@ skipped optional Metal job is not rendering evidence. A downloadable artifact
 is not an installed app, notarization, physical-device validation or a deployed
 server. Draft promotion verifies app/server artifacts from the same successful
 run and creates a draft only; publication/host operations need their own scope.
+
+## Automatic updater checks
+
+Read [automatic updates](../automatic-updates.md) before changing release signing,
+downloads or installation. The client signature key is public; the signing secret
+stays outside Git. Release fixtures must never be published. Test both successful
+relaunch and failed-launch rollback with the production installer and an isolated
+app location. Run the existing public contracts and actionlint for workflow edits.
+A local updater fixture does not prove hosted CI or a public release; verify those
+separately when publication is authorized. Preserve the user's update preference
+and avoid replacement while a match/session is active.

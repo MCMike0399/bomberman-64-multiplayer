@@ -11,6 +11,7 @@ internal static class NetworkAimChecks
         var settings=new SessionSettings(Stage:"rock-garden",Bots:0,SuddenDeath:false);
         await using var host=await NetworkSession.ConnectAsync(origin,"Precision aim host",settings);
         await using var observer=await NetworkSession.ConnectAsync(origin,"Precision aim observer",settings,NetworkMode.JoinCode,host.JoinCode);
+        await PartyNetworkChecks.Start(host);
         var id=host.PlayerId!;
         var ready=await Wait(observer,frame=>Data(frame).GetProperty("phase").GetInt32()==1);
         var initial=Player(ready,id);var x=F(initial,"x");var z=F(initial,"z");

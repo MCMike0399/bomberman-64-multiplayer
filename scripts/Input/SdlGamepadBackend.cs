@@ -86,6 +86,10 @@ public sealed class SdlGamepadBackend : IDisposable
     {ThreadCheck();return button>=0&&button<32&&_pads.TryGetValue(id,out var p)&&_api.Button(p.Handle,button);}
     public IReadOnlyList<NativeButtonEdge> DrainButtonEdges()
     {ThreadCheck();var value=_edges.ToArray();_edges.Clear();return value;}
+    public bool Rumble(int id,float low,float high,uint milliseconds)
+    {
+        ThreadCheck();return _pads.TryGetValue(id,out var pad)&&_api.Rumble(pad.Handle,(ushort)(Math.Clamp(low,0,1)*65535),(ushort)(Math.Clamp(high,0,1)*65535),milliseconds);
+    }
     public void Dispose()
     {
         if(_disposed)return;ThreadCheck();
@@ -111,11 +115,13 @@ public sealed class SdlGamepadBackend : IDisposable
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] [return:MarshalAs(UnmanagedType.I1)] private delegate bool ButtonFn(nint pad,int button);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate void FreeFn(nint pointer);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] [return:MarshalAs(UnmanagedType.I1)] private delegate bool PollFn(nint evt);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] [return:MarshalAs(UnmanagedType.I1)] private delegate bool RumbleFn(nint pad,ushort low,ushort high,uint milliseconds);
     private sealed class Api : IDisposable
     {
         private nint _library;
         public readonly HintFn SetHint;public readonly InitFn Init;public readonly FlagsFn Quit;
         public readonly VoidFn Pump,Update;public readonly VersionFn Version;public readonly IdsFn GetGamepads;public readonly OpenFn Open;
+        public readonly RumbleFn Rumble;
         public readonly CloseFn Close;public readonly NameFn Name;public readonly IdentFn Vendor,Product;
         public readonly GuidFn Guid;public readonly GuidTextFn GuidString;public readonly AxisFn Axis;
         public readonly ButtonFn Button;public readonly FreeFn Free;public readonly PollFn PollEvent;
@@ -127,6 +133,7 @@ public sealed class SdlGamepadBackend : IDisposable
             T Bind<T>(string name)where T:Delegate=>Marshal.GetDelegateForFunctionPointer<T>(NativeLibrary.GetExport(_library,name));
             try
             {
+                Rumble=Bind<RumbleFn>("SDL_RumbleGamepad");
                 SetHint=Bind<HintFn>("SDL_SetHint");Init=Bind<InitFn>("SDL_InitSubSystem");Quit=Bind<FlagsFn>("SDL_QuitSubSystem");
                 Pump=Bind<VoidFn>("SDL_PumpEvents");Update=Bind<VoidFn>("SDL_UpdateGamepads");Version=Bind<VersionFn>("SDL_GetVersion");GetGamepads=Bind<IdsFn>("SDL_GetGamepads");
                 Open=Bind<OpenFn>("SDL_OpenGamepad");Close=Bind<CloseFn>("SDL_CloseGamepad");Name=Bind<NameFn>("SDL_GetGamepadName");

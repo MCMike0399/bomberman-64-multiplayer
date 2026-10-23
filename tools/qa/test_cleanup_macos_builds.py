@@ -41,6 +41,19 @@ class CleanupTests(unittest.TestCase):
         for path in [unrelated, receipt, self.installed, self.export]:
             self.assertTrue(path.exists())
 
+    def test_running_update_keeps_its_rollback_bundle(self):
+        backup = self.bundle("Applications/.blast-update-fixture/previous.app")
+        lock = self.root / "Applications/.blast-update-lock"
+        lock.mkdir()
+        rows = cleanup.plan([self.root], self.installed, self.export, True)
+        self.assertEqual("keep-active-update", next(row["action"] for row in rows if row["path"] == str(backup)))
+        with patch.object(cleanup, "LSREGISTER", self.root / "missing-lsregister"):
+            cleanup.apply(rows, self.installed, "0.18.0")
+        self.assertTrue(backup.is_dir())
+        lock.rmdir()
+        rows = cleanup.plan([self.root], self.installed, self.export, True)
+        self.assertEqual("remove", next(row["action"] for row in rows if row["path"] == str(backup)))
+
     def test_wrong_installed_version_aborts_before_removal(self):
         backup = self.bundle("artifacts/Old.app")
         rows = cleanup.plan([self.root], self.installed, self.export, True)

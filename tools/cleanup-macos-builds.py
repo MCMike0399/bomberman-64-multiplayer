@@ -61,7 +61,9 @@ def plan(roots, installed, export, include_export=False):
     rows = discover(roots)
     for row in rows:
         path = Path(row["path"])
-        row["action"] = ("keep-installed" if path == installed else
+        active_update = any(parent.name.startswith(".blast-update-") and (parent.parent / ".blast-update-lock").is_dir()
+                            for parent in path.parents)
+        row["action"] = ("keep-active-update" if active_update else "keep-installed" if path == installed else
                          "keep-export" if path == export and not include_export else "remove")
     return rows
 

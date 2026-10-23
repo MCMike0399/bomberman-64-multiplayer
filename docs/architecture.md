@@ -152,6 +152,12 @@ failover, shared signing/public addresses and production load were not establish
 by this session. Kernel guides are available inside the restored private checkout.
 No external deployment follows merely from building a server ZIP.
 
+The [party deployment](online-party.md) adds a single-host Compose runtime from
+the verified portable server archive. An organizer's Mac can relay the loopback
+server port over SSH to friends on its current LAN. The server still owns bots
+and matches; the relay carries HTTP/WebSocket bytes only. It neither joins friends
+to a private tailnet nor changes their VPN configuration.
+
 ## Verification and delivery
 
 Managed executables test rules/client/AI/audio; network smoke uses real independent

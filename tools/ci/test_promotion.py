@@ -123,5 +123,38 @@ class PromotionTests(unittest.TestCase):
         self.assertNotIn('--latest', created)
 
 
+    def test_publication_requires_a_signing_key(self):
+        calls = []
+        def github(*arguments):
+            calls.append(arguments)
+            if arguments[0] == 'api': return '[]'
+            if arguments[:2] == ('run', 'download'):
+                destination = Path(arguments[arguments.index('--dir') + 1])
+                write_package(destination) if arguments[arguments.index('--name') + 1] == promotion.ARTIFACT else write_server(destination)
+            return ''
+        with patch.object(promotion, 'inspect_run', return_value=SHA), patch.object(promotion, 'gh', side_effect=github):
+            with self.assertRaisesRegex(RuntimeError, 'signing-key'):
+                promotion.main(['--run-id', '12', '--version', '0.15.0', '--repository', REPO, '--publish'])
+        self.assertFalse(any(call[:2] == ('release', 'create') for call in calls))
+
+    def test_explicit_signed_publication_attaches_manifest_and_signature(self):
+        calls = []
+        def github(*arguments):
+            calls.append(arguments)
+            if arguments[0] == 'api': return '[]'
+            if arguments[:2] == ('run', 'download'):
+                destination = Path(arguments[arguments.index('--dir') + 1])
+                write_package(destination) if arguments[arguments.index('--name') + 1] == promotion.ARTIFACT else write_server(destination)
+            return ''
+        with patch.object(promotion, 'inspect_run', return_value=SHA), patch.object(promotion, 'gh', side_effect=github), patch.object(promotion.subprocess, 'run') as signer, contextlib.redirect_stdout(io.StringIO()):
+            promotion.main(['--run-id', '12', '--version', '0.15.0', '--repository', REPO, '--publish', '--signing-key', '/fixture/private-key'])
+        signer.assert_called_once()
+        created = calls[-1]
+        self.assertIn('--latest', created)
+        self.assertNotIn('--draft', created)
+        self.assertTrue(any(value.endswith('/Blast-Circuit-update.json') for value in created))
+        self.assertTrue(any(value.endswith('/Blast-Circuit-update.json.sig') for value in created))
+
+
 if __name__ == '__main__':
     unittest.main()

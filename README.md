@@ -59,7 +59,7 @@ The script creates a project-local ARM64 template from the official Universal 2 
 
 ## Play online
 
-Godot is a client of a separate authoritative kernel process. The intended deployment is the kernel on your own server hardware, with clients entering that server's reachable address in **Online Battle**. The server must register the `blast` game; `Bomber.Server` provides that registration on top of `Burbuja.Hosting`. No Docker or Compose stack is required.
+Godot is a client of a separate authoritative kernel process. The intended deployment is the kernel on your own server hardware, with clients entering that server's reachable address in **Online Battle**. The server must register the `blast` game; `Bomber.Server` provides that registration on top of `Burbuja.Hosting`. For a remote Docker server and friends together on Wi-Fi, use the [party deployment guide](docs/online-party.md). Friends can connect through the organizer's Mac without changing their VPN accounts.
 
 For local development, start that independent server in another terminal:
 
@@ -67,9 +67,9 @@ For local development, start that independent server in another terminal:
 ./scripts/server.sh
 ```
 
-It listens at `http://127.0.0.1:18496`. Enter that URL in the game and choose **ONLINE BATTLE → CREATE PRIVATE ROOM**, then share the lobby’s displayed join code. Another game instance can enter the same URL and use **JOIN ROOM**. For a human-only match, set CPU players to zero; with bots enabled a lobby can start with one connected human. Each online game instance controls one human seat.
+It listens at `http://127.0.0.1:18496`. Enter that URL in the game and choose **ONLINE BATTLE → CREATE PRIVATE ROOM**, then share the lobby’s displayed join code. Another game instance can enter the same URL and use **JOIN ROOM**. The room waits until its leader chooses **Start game**, including when CPU rivals are enabled. For a human-only match, set CPU players to zero. Each online game instance controls one human seat. After the results, everyone returns to the same room and code; the leader starts the next match.
 
-**QUICK PLAY** uses the kernel matchmaking queue. It needs another compatible queued player; use a private lobby for solo bot practice online. The setup screen configures stage, CPU count and difficulty, win target, round duration, sudden death and ghosts. The lobby displays the real server roster and countdown. Choose your suit in the online setup; the authority preserves that appearance through rounds and reconnects.
+**QUICK PLAY** uses the kernel matchmaking queue. It needs another compatible queued player; use a private lobby for solo bot practice online. The setup screen configures stage, CPU count and difficulty, win target, round duration, sudden death and ghosts. The private lobby displays the real server roster and its leader. If the leader disconnects, leadership transfers to another connected player. Choose your suit in the online setup; the authority preserves that appearance through rounds and reconnects.
 
 For a LAN server, bind to a reachable interface and enter the server machine's address on each client:
 
@@ -77,7 +77,7 @@ For a LAN server, bind to a reachable interface and enter the server machine's a
 ./scripts/server.sh --urls http://0.0.0.0:18496
 ```
 
-The default is loopback. No external hosting, domain, TLS, firewall changes or production deployment was performed. Public hosting needs its own deployment and security configuration. Native desktop C# is the target; this project does not provide a browser build.
+The default is loopback. The party deployment supports a remote Compose server through an SSH relay; public hosting needs its own deployment and security configuration. Native desktop C# is the target; this project does not provide a browser build.
 
 ## Controls
 
@@ -88,13 +88,17 @@ The default is loopback. No external hosting, domain, TLS, firewall changes or p
 | Hold carry / release throw | K | M or Numpad 1 | LB or X | L or Y | L1 or Square |
 | Precision aim while carrying | L (Shift alias) | Ctrl | RT | ZR | R2 |
 | Remote detonation | I or R | Comma or Backspace | B or RB | X or R | Circle or R1 |
-| Leave battle | Esc | Esc | Menu | + | Options |
+| Game menu | Esc | Esc | Menu | + | Options |
 
 **Ready, aim, throw:** keep your left hand on WASD and your right hand around J/K/L. Hold K near a bomb to lift it, or hold K and tap J to create one overhead. Keep K held and tap J to pump. Hold L and use WASD to move the landing target in the same direction on the arena. Small nudges start slowly; sustained input sweeps faster. Release K to throw; I detonates remote bombs. Shift also aims and R also detonates. On controller, hold L/LB/L1 to carry and tap A/A/Cross to ready or pump. Hold ZR/RT/R2 and use either stick or the D-pad to move the target; release carry to throw. Switch Y, Xbox X and PlayStation Square remain face-button carry alternatives. On Switch you can hold Y and tap the adjacent B to ready or pump a bomb; A also works, and X stays remote detonation. Releasing the aim modifier lets you reposition while keeping the selected direction and range. [Controller and keyboard design research](docs/iteration19-controls-research.md).
 
 Deliberate aim covers 0–9 cells on level ground, with a high lob that can reach upper terraces. The target can cross through your position to aim behind you; a close self-lob can hit you. The outlined reticle stays visible over scenery: a ring marks a landing, an X marks a blocked or unsafe endpoint, and an edge arrow points toward an endpoint outside the frame. It has no added text labels. The prediction accounts for terrain height, cover, walls and fuse expiry; moving opponents can still interrupt the flight. Pumping increases blast power without shifting an aimed landing. There is no target lock or aim assist: leading a moving opponent and choosing when to stand still are the skill. [Reticle diagnosis](docs/iteration17-reticle.md); [original manual controls and project choices](docs/iteration16-controls-research.md).
 
-Menus accept **WASD or arrow keys**, with Enter to confirm and Esc to go back; text fields still accept letters normally.
+Menus accept **WASD or arrow keys**, with Enter to confirm and Esc to go back; text fields still accept letters normally. **Start / Menu / + / Options** focuses the primary action in menus, including **Start game** for the lobby leader. During play, Esc or Start opens **Resume game / Settings / Leave game**. Local play pauses; online play continues with your inputs released.
+
+**Settings** is available from the main menu, room and game menu. Sound volume and controller vibration are saved on this Mac. Vibration is **off by default**; enable it and use **Test vibration** to check your controller. Supported controllers receive brief feedback for accepted bomb placement, pumping, kicks, impacts and deaths.
+
+From v0.21, **Settings → Game updates** checks for signed GitHub releases automatically. When a new version is ready, leave your room and choose **Update and restart**. A failed launch restores the previous app. Older versions need one manual upgrade to get this feature. [Update and release details](docs/automatic-updates.md).
 
 Keyboard 2 also supports numpad 0 / 1 / 2 for bomb / carry / remote. Switch uses its **printed A to confirm and B to go back**. Xbox/PlayStation retain bottom-button confirm and right-button back, with matching prompts. F11 or Alt+Enter toggles fullscreen.
 

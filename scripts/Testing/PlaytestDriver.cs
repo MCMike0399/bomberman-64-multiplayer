@@ -493,18 +493,22 @@ public partial class PlaytestDriver : Node
             if(_root.LatestLobby is {} rawLobby)
             {
                 var status=LobbyStatus.Parse(rawLobby);
-                fullLobby=status.Players.Count==2 && status.Players.All(p=>p.Connected) && status.State=="countdown";
+                fullLobby=status.Players.Count==2 && status.Players.All(p=>p.Connected) && host.Party?.CanStart==true;
             }
         }
-        Check(fullLobby,"engine lobby receives two connected humans and real countdown");
+        Check(fullLobby,"engine lobby receives two connected humans and manual start authority");
         Event("lobby",_root.LatestLobby!.Value);
-        Check(_root.ScreenName=="Lobby","connected humans remain in actual countdown lobby");
+        Check(_root.ScreenName=="Lobby","connected humans remain in waiting party lobby");
         var lobbyText=VisibleText(_root);
         Event("lobby-ui",new {text=lobbyText});
         Check(lobbyText.Contains("Harness host",StringComparison.Ordinal),"lobby renders host name in visible UI");
         Check(lobbyText.Contains("Harness peer",StringComparison.Ordinal),"lobby renders peer name in visible UI");
-        Check(lobbyText.Contains("Battle begins in",StringComparison.Ordinal),"lobby renders real countdown text");
+        Check(lobbyText.Contains("You are the leader",StringComparison.Ordinal),"lobby identifies the leader and manual start");
+        await Task.Delay(4200);await Frames(2);Check(_root.ScreenName=="Lobby"&&_root.LatestState==null,"full private lobby does not automatically start");
         await Capture("network-lobby");
+        CtlButton(0,JoyButton.Start,true);await Frames(1);CtlButton(0,JoyButton.Start,false);await Frames(2);
+        Check(NamedButton("StartRoom").HasFocus()&&_root.ScreenName=="Lobby","Start focuses Start game without starting it");
+        await ActivateNamed("StartRoom");
         await WaitState(s=>s.GetProperty("phase").GetInt32()==1 && s.GetProperty("players").GetArrayLength()==2,"engine receives two-human authoritative fight",900);
         await WaitState(s=>s.GetProperty("players").EnumerateArray().Any(p=>p.GetProperty("id").GetString()==host.PlayerId&&p.GetProperty("appearance").GetInt32()==4)&&s.GetProperty("players").EnumerateArray().Any(p=>p.GetProperty("id").GetString()==peer.PlayerId&&p.GetProperty("appearance").GetInt32()==6),"network authority reflects both chosen appearances",180);
         Check(State.GetProperty("hurryMode").GetString()=="water","network server supplies temple-specific water sudden death");
@@ -528,6 +532,12 @@ public partial class PlaytestDriver : Node
         Input(0,default); await Frames(4);
         Check(_root.BattleAudio.Counts.GetValueOrDefault("bomb")==bombCueBefore+1,"network bomb event plays once across repeated snapshots");
         await Capture("network-two-humans");
+        await KeyPress(Key.Escape);Check(_root.ScreenName=="Pause"&&ReferenceEquals(_root.ActiveSession,host),"online Esc opens menu without disconnecting");
+        int pausedSnapshots=_root.SnapshotCount;await Task.Delay(300);await Frames(3);
+        Check(_root.SnapshotCount>pausedSnapshots,"online authority continues while menu is open");
+        await ActivateNamed("PauseSettings");Check(_root.ScreenName=="Settings"&&ReferenceEquals(_root.ActiveSession,host),"online player settings keep the room connection");
+        await KeyPress(Key.Escape);await ActivateNamed("ResumeGame");
+        Check(_root.ScreenName=="Match"&&ReferenceEquals(_root.ActiveSession,host),"online menu resumes the same match");
         _root.Back(); await Frames(4);
     }
     private static string VisibleText(Node node)

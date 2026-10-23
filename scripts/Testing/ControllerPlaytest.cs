@@ -388,7 +388,7 @@ public partial class PlaytestDriver
         _root.Navigate("Lobby");await ControllerFrames(3);
         var probe=new ControllerMenuProbe();AddChild(probe);
         CtlAxis(1001,JoyAxis.LeftY,.65f);await ControllerFrames(2);
-        Check(probe.DownSteps==1&&FindButton("LEAVE ROOM").HasFocus(),"lobby analog navigation reaches the real menu while match bindings remain attached");
+        Check(probe.DownSteps==1&&NamedButton("LobbySettings").HasFocus(),"lobby analog navigation reaches Settings while match bindings remain attached");
         await ControllerFrames(14);Check(probe.DownSteps>=2,"lobby held analog navigation repeats while match bindings remain attached");probe.QueueFree();
         CtlAxis(1001,JoyAxis.LeftY,0);await ControllerFrames(2);
         Check(ReferenceEquals(bindings,hub.Bindings),"lobby navigation preserves controller assignments");

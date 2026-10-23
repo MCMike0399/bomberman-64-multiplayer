@@ -12,6 +12,7 @@ public interface ISession : IAsyncDisposable
     bool IsEnded { get; }
     void Advance(double deltaSeconds);
     void SendInput(int localPlayer, PlayerInput input);
+    void ReleaseInputs();
     IReadOnlyList<JsonElement> DrainMessages();
 }
 

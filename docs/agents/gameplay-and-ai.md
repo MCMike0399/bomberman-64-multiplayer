@@ -46,6 +46,23 @@ For keys, prompts and device input, read [input and UI](input-and-ui.md).
   delivered. Inspect its ownership/version first; external deployment is separate work.
   [Architecture and network boundaries](../architecture.md).
 
+## Persistent private parties
+
+`PartySession` wraps fresh `BlastSession` matches inside one kernel lobby. It
+owns authenticated leader election, an explicit `party.start` command, saved
+suits and the five-second results-to-lobby transition. Its context intercepts
+`EndMatch` so a finished game does not close the party's transport. New matches
+reset simulation state and scores; neither bots nor a full room authorize start.
+Kernel connection lifecycle and its six-hour room limit remain separate from
+the product's lobby/playing/results phases. The kernel may tick a waiting party
+without starting its simulation. `party.status` carries that product state.
+Only new private rooms opt in via `party=on`; quick play and legacy API rooms
+retain their previous lifecycle. Keep the external kernel pin unchanged.
+
+`PartySessionChecks` and `PartyNetworkChecks` cover waiting, leader authorization,
+results, repeated matches, identity retention and leadership transfer. The
+latter must run against the exact staged server before remote deployment.
+
 ## Bomb actions: preserve both input paths
 
 `A`, `B`, `R` below mean semantic primary, carry and remote actions, not physical keys.

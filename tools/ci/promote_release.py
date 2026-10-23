@@ -10,6 +10,7 @@ import re
 import subprocess
 import tempfile
 import zipfile
+import sys
 
 ARTIFACT = 'Blast-Circuit-macos-arm64-ad-hoc'
 ARCHIVE = 'Blast-Circuit-macos-arm64.zip'
@@ -112,6 +113,8 @@ def main(argv=None):
     parser.add_argument('--repository', default=os.environ.get('GITHUB_REPOSITORY', ''))
     parser.add_argument('--expected-sha')
     parser.add_argument('--check-only', action='store_true')
+    parser.add_argument('--signing-key', type=Path)
+    parser.add_argument('--publish', action='store_true', help='Publish the verified signed release instead of creating a draft')
     args = parser.parse_args(argv)
     if not re.fullmatch(r'[1-9][0-9]*', args.run_id) or not re.fullmatch(r'v?[0-9]+\.[0-9]+\.[0-9]+', args.version):
         parser.error('Use a positive numeric run ID and a version such as 0.15.0')
@@ -136,6 +139,13 @@ def main(argv=None):
         archive = inspect_package(directory, revision, version)
         gh('run', 'download', args.run_id, '--repo', args.repository, '--name', SERVER_ARTIFACT, '--dir', str(directory))
         server = inspect_server(directory, revision, version)
+        signed = []
+        if args.signing_key:
+            signer = Path(__file__).resolve().parents[1] / 'updates/sign_release.py'
+            subprocess.run([sys.executable, str(signer), '--archive', str(archive), '--key', str(args.signing_key), '--output', str(directory)], check=True)
+            signed = [str(directory / 'Blast-Circuit-update.json'), str(directory / 'Blast-Circuit-update.json.sig')]
+        elif args.publish or tuple(map(int, version.split('.'))) >= (0, 21, 0):
+            raise RuntimeError('This release requires --signing-key for authenticated in-app updates')
         notes = directory / 'release-notes.txt'
         notes.write_text(f'Apple Silicon client and portable .NET 10 server from {revision}.\n\n'
                          f'Verification: https://github.com/{args.repository}/actions/runs/{args.run_id}\n\n'
@@ -143,9 +153,9 @@ def main(argv=None):
                          'Ad-hoc signature; Apple notarization and physical controller validation are not claimed.\n')
         gh('release', 'create', 'v' + version, str(archive), str(directory / (ARCHIVE + '.sha256')),
            str(server), str(directory / (SERVER_ARCHIVE + '.sha256')), str(directory / 'server-build-metadata.json'),
-           str(directory / 'build-metadata.json'), '--repo', args.repository, '--draft', '--target', revision,
+           str(directory / 'build-metadata.json'), *signed, '--repo', args.repository, *(['--latest'] if args.publish else ['--draft']), '--target', revision,
            '--title', 'Blast Circuit v' + version, '--notes-file', str(notes))
-        print('Created draft release v' + version + ' at ' + revision)
+        print(('Published signed release v' if args.publish else 'Created draft release v') + version + ' at ' + revision)
 
 
 if __name__ == '__main__':

@@ -282,12 +282,14 @@ public partial class ArenaView : Node3D
     }
     public override void _ExitTree(){if(_cameraRig!=null)GetViewport().SizeChanged-=_cameraRig.Fit;VisibilityChanged-=UpdateProcessing;}
     private void CountEffect(string key)=>_effectCounts[key]=_effectCounts.GetValueOrDefault(key)+1;
+    public event Action<string,string?>? PlayerFeedback;
     private void Present(IReadOnlyList<JsonElement> events)
     {
         foreach(var e in events)
         {
             string kind=e.GetProperty("kind").GetString()!,reason=e.GetProperty("reason").GetString()??"";
             string? player=e.GetProperty("playerId").GetString();
+            PlayerFeedback?.Invoke(kind,player);
             if(player!=null&&_entities.TryGetValue("p:"+player,out var actor)&&actor is BomberModel model)model.React(kind);
             switch(kind)
             {

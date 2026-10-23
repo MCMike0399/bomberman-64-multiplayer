@@ -2,7 +2,7 @@ using System.Text.Json;
 using Bomber.Client;
 using Bomber.Game;
 
-var checks = 0;
+var checks = await UpdateChecks.Run();
 void Check(bool condition, string name) { if (!condition) throw new Exception(name); checks++; }
 void Throws(Action action, string name) { try { action(); } catch (ArgumentException) { checks++; return; } throw new Exception(name); }
 var settings = new SessionSettings(Stage: "up-and-down", Bots: 2, Wins: 5, RoundSeconds: 90, SuddenDeath: false);

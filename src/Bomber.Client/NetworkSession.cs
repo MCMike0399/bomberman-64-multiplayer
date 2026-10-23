@@ -22,7 +22,13 @@ public sealed class NetworkSession : ISession
     private long _sequence;
     private int _disposed;
     private int _appearance;
-    private int _appearancePending;
+    private int _appearancePending, _startPending;
+    private PartyStatus? _party;
+    private readonly TaskCompletionSource _partyReady = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    public PartyStatus? Party => Volatile.Read(ref _party);
+    public bool IsLeader => Party is { LeaderId: not null } party && party.LeaderId == PlayerId;
+    public void RequestStart() { if (IsLeader && Party?.CanStart == true) Interlocked.Exchange(ref _startPending, 1); }
+    public void ReleaseInputs() { lock (_inputGate) { _input = default; _buttons.Clear(); } }
     public int LocalPlayerCount => 1;
     public string Status => Volatile.Read(ref _status);
     public bool IsEnded => Status.StartsWith("Ended", StringComparison.Ordinal) || Status.StartsWith("Error:", StringComparison.Ordinal);
@@ -45,13 +51,23 @@ public sealed class NetworkSession : ISession
     {
         if (appearance is < 0 or > 7) throw new ArgumentOutOfRangeException(nameof(appearance));
         var session = new NetworkSession(server, null) { _appearance = appearance };
-        try { await session.InitializeAsync(displayName, settings, mode, joinCode, cancellationToken).ConfigureAwait(false); return session; }
+        try
+        {
+            await session.InitializeAsync(displayName, settings, mode, joinCode, cancellationToken).ConfigureAwait(false);
+            if(mode==NetworkMode.CreatePrivate)
+            {
+                try { await session._partyReady.Task.WaitAsync(TimeSpan.FromSeconds(10),cancellationToken).ConfigureAwait(false); }
+                catch(TimeoutException) { throw new InvalidOperationException("This server needs the party update before it can host leader-controlled rooms."); }
+            }
+            return session;
+        }
         catch { await session.DisposeAsync().ConfigureAwait(false); throw; }
     }
 
     private async Task InitializeAsync(string name, SessionSettings settings, NetworkMode mode, string? code, CancellationToken ct)
     {
         var wireSettings = settings.ToWireSettings();
+        if (mode == NetworkMode.CreatePrivate) wireSettings["party"] = "on";
         var guest = await RequestAsync(HttpMethod.Post, "guests", new { displayName = name }, ct);
         _token = guest.GetProperty("token").GetString()!;
         PlayerId = guest.GetProperty("playerId").GetString();
@@ -137,7 +153,7 @@ public sealed class NetworkSession : ISession
                 if (Status.StartsWith("Ended", StringComparison.Ordinal)) return;
                 if (++retries > 5) { Fail("Connection lost. Return to the menu to reconnect."); return; }
                 Volatile.Write(ref _status, $"Reconnecting ({retries}/5)");
-                lock (_inputGate) { _input = default; _buttons.Clear(); }
+                ReleaseInputs(); Interlocked.Exchange(ref _startPending, 0);
                 _socket?.Dispose();
                 while (!ct.IsCancellationRequested)
                 {
@@ -190,6 +206,12 @@ public sealed class NetworkSession : ISession
                 throw new IOException("Server sent an invalid message.");
             if (type.GetString() == "sys.ended") Volatile.Write(ref _status, "Ended: Match complete");
             if (type.GetString() == "sys.welcome") Interlocked.Exchange(ref _appearancePending, 1);
+            if (type.GetString() == "party.status")
+            {
+                var party = PartyStatus.Parse(message.GetProperty("d"));
+                if (Party?.Phase != party.Phase || Party?.Match != party.Match) ReleaseInputs();
+                Volatile.Write(ref _party, party);_partyReady.TrySetResult();
+            }
             _messages.Add(message);
         }
     }
@@ -211,6 +233,8 @@ public sealed class NetworkSession : ISession
         {
             if (Interlocked.Exchange(ref _appearancePending,0)!=0)
                 await socket.SendAsync(EncodeAppearance(Volatile.Read(ref _appearance)).AsMemory(),WebSocketMessageType.Text,true,ct);
+            if (Interlocked.Exchange(ref _startPending, 0) != 0)
+                await socket.SendAsync(JsonSerializer.SerializeToUtf8Bytes(new { t = "party.start", d = new {} }).AsMemory(), WebSocketMessageType.Text, true, ct);
             PlayerInput input;
             lock (_inputGate)
             {

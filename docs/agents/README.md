@@ -3,7 +3,7 @@
 The user resumed gameplay work on 2026-10-23 for controller ergonomics, aiming
 and knockdown/blast separation (iteration19). The first eighteen iterations
 remain historical evidence. Iteration20 then rebuilt the walk. Current installed
-runtime: **v0.20.0** (see [verification](../verification.md)). Previous runtime baseline: **v0.18.0**, commit
+runtime: **v0.21.0** (see [verification](../verification.md)). Previous runtime baseline: **v0.18.0**, commit
 `316a330d7d895a92f98c1a60be7d571ec445a8a3`. Later documentation commits may follow.
 Verify the live branch, source, tools and installed version before relying on
 that baseline. Start with [project instructions](../../AGENTS.md).
@@ -35,6 +35,8 @@ update the current guide rather than silently reviving old behavior.
 
 ## Current decisions that supersede earlier experiments
 
+- v0.21 private rooms wait for their leader, including rooms with CPUs; results return to the same room. Esc/Start opens a game menu. Settings saves volume, vibration (default off) and automatic update checks (default on). [Party setup](../online-party.md), [signed updates](../automatic-updates.md).
+
 - Iteration19 recommends shoulder carry (L/LB/L1); Switch Y replaces B as its
   face alternative. v0.19.1 also lets Switch B ready/pump while Y is held;
   A still works and X remains remote. Hold the aim trigger and steer the target with either stick.
@@ -59,7 +61,7 @@ update the current guide rather than silently reviving old behavior.
   grounded foundations and animated water. Art geometry and collision are separate.
 - AI difficulty changes decisions, not physics/resources. Measure pressure and
   reengagement, not only bombs placed; mixed benchmark outcomes must remain visible.
-- The Mac has one installed v0.19.1 app. The previous bundle and export were
+- The Mac has one installed v0.21.0 app. The previous bundle and export were
   removed after installation verification; a missing `artifacts/exports/*.app` is expected.
   Rebuild only when needed, then clean duplicates after the next verified install.
 
