@@ -2,7 +2,23 @@ using System.Text.Json;
 using Bomber.Game;
 using Bomber.Game.Simulation;
 
+if(args.Contains("--snapshot-performance")){SnapshotPerformance.Run(args);return;}
+
 var passed = PartySessionChecks.Run() + LootAvailabilityChecks.Run() + AimedThrowChecks.Run() + CarryChargeChecks.Run() + BombPlacementChecks.Run() + PowerUpModeChecks.Run() + BombTravelChecks.Run() + KickTimingChecks.Run() + BodyContactChecks.Run() + BombImpactChecks.Run() + TraversalAndGhostChecks.Run() + BombActionsChecks.Run() + GrappleChecks.Run();
+Run("presentation snapshots expire stale effects but retain recent actions", () =>
+{
+    var match=new LocalMatch(new MatchOptions {HumanPlayers=1,BotPlayers=0,Practice=true},FlatArena([(3,3)]));Fight(match);
+    var sequence=State(match).GetProperty("presentationSeq").GetInt64();
+    Step(match,150);
+    Assert(Events(match).Length==0,"Idle snapshots keep retransmitting expired presentation history.");
+    Assert(State(match).GetProperty("presentationSeq").GetInt64()==sequence,"Expiring history must not reset the presentation cursor.");
+    match.SetInput(0,new PlayerInput(0,0,true));Step(match,2);match.SetInput(0,default);
+    var placed=Events(match).Single(e=>Kind(e)=="bomb-drop").GetProperty("seq").GetInt64();
+    Step(match,30);
+    Assert(Events(match).Any(e=>e.GetProperty("seq").GetInt64()==placed),"A short delivery gap lost a fresh effect.");
+    Step(match,95);
+    Assert(!Events(match).Any(e=>e.GetProperty("seq").GetInt64()==placed),"Old effect outlived the recovery window.");
+});
 Run("participant bounds and stage validation", () =>
 {
     foreach (var options in new[] {
@@ -272,6 +288,8 @@ Run("flood thresholds use actual elevation and temple hurry does not close colum
     cells[4,3]=CellDef.Floor1;cells[7,3]=new CellDef {Kind=CellKind.Floor,Tier=4};
     var arena=new StageLayout {Id="sunken-temple",Width=9,Height=9,Cells=cells,Spawns=[(1,3),(4,3),(7,3)],SoftBlockDensity=0};
     var match=new LocalMatch(new MatchOptions {HumanPlayers=3,BotPlayers=0,RoundSeconds=60,Wins=5},arena);
+    var waterfallEvents=new HashSet<long>();
+    match.Message+=json=>{var data=Data(json);if(data.TryGetProperty("events",out var events))foreach(var e in events.EnumerateArray())if(Kind(e)=="waterfall")waterfallEvents.Add(e.GetProperty("seq").GetInt64());};
     while(State(match).GetProperty("waterLevel").GetSingle()<0)Step(match,2);
     Assert(!Player(match).GetProperty("alive").GetBoolean()&&!Player(match).GetProperty("ghost").GetBoolean(),"Submerged court player survived or became ghost.");
     Assert(Player(match,1).GetProperty("alive").GetBoolean()&&Player(match,2).GetProperty("alive").GetBoolean(),"Higher tiers drowned at court threshold.");
@@ -279,7 +297,7 @@ Run("flood thresholds use actual elevation and temple hurry does not close colum
     while(State(match).GetProperty("waterLevel").GetSingle()<1)Step(match,2);
     Assert(!Player(match,1).GetProperty("alive").GetBoolean()&&Player(match,2).GetProperty("alive").GetBoolean(),"Water did not independently eliminate next tier.");
     Assert(State(match).GetProperty("phase").GetInt32()==3&&Player(match,2).GetProperty("wins").GetInt32()==1,"Last high survivor did not win flooded round.");
-    Assert(Events(match).Count(e=>Kind(e)=="waterfall")==1,"Flood rise did not emit exactly one waterfall event.");
+    Assert(waterfallEvents.Count==1,"Flood rise did not emit exactly one waterfall event.");
     Assert(Events(match).Where(e=>Kind(e)=="death").All(e=>e.GetProperty("reason").GetString()=="water"),"Flood deaths lost their water cause.");
 });
 Run("power-up limits weighted choices and round inventory reset", () =>
@@ -509,18 +527,20 @@ Run("presentation deaths retain explosion water and fall reasons through practic
         Assert(death.GetProperty("reason").GetString()==(kind==CellKind.Water?"water":"fall"),"Terrain death has incorrect cause.");
     }
 });
-Run("presentation history survives round reset reconnect and remains bounded with consecutive ids", () =>
+Run("presentation cursors survive resets and reconnects; retained history stays recent and bounded", () =>
 {
     var f=new AppearanceFixture();f.Step(62);var before=f.Snapshot.GetProperty("presentationSeq").GetInt64();
     f.Session.OnPlayerConnectionChanged(f,f.Players[0],false);f.Session.OnPlayerConnectionChanged(f,f.Players[0],true);f.Step(2);
     Assert(f.Snapshot.GetProperty("presentationSeq").GetInt64()==before,"Reconnect reset or invented events.");
     f.Step(3800);
     var events=f.Snapshot.GetProperty("events").EnumerateArray().ToArray();
-    Assert(events.Any(e=>Kind(e)=="round-ready"&&e.GetProperty("round").GetInt32()==2)&&events.Any(e=>e.GetProperty("round").GetInt32()==1),"Round reset cleared presentation history.");
+    Assert(events.Any(e=>e.GetProperty("round").GetInt32()==2)&&f.Snapshot.GetProperty("presentationSeq").GetInt64()>before,"Round reset lost fresh events or reset the sequence.");
+    Assert(events.All(e=>e.GetProperty("round").GetInt32()==2),"Long-expired round-one effects are still transmitted.");
     var match=new LocalMatch(new MatchOptions {HumanPlayers=1,BotPlayers=0,Practice=true},FlatArena([(3,3)]));Fight(match);
     for(var i=0;i<50;i++){match.SetInput(0,new PlayerInput(0,0,true));Step(match,2);match.SetInput(0,default);Step(match,88);match.SetInput(0,default);Step(match,2);}
     events=Events(match);
-    Assert(events.Length==128&&events[0].GetProperty("seq").GetInt64()>1,"Presentation history grew without a cap.");
+    Assert(events.Length is >0 and <=128&&events[0].GetProperty("seq").GetInt64()>1,"Presentation history is empty or unbounded.");
+    Assert(events.All(e=>e.GetProperty("tick").GetInt32()>=match.TickNumber-120),"Snapshot retained effects outside its four-second window.");
     for(var i=1;i<events.Length;i++)Assert(events[i].GetProperty("seq").GetInt64()==events[i-1].GetProperty("seq").GetInt64()+1,"Event sequence has gaps/duplicates.");
     Assert(events[^1].GetProperty("seq").GetInt64()==State(match).GetProperty("presentationSeq").GetInt64(),"Snapshot cursor disagrees with retained tail.");
 });

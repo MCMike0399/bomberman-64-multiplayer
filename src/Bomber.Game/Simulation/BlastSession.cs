@@ -1512,8 +1512,9 @@ public sealed partial class BlastSession : GameSession
         context.Broadcast("state", new
         {
             round = _roundNum,
+            serverTime = context.Now.ToUnixTimeMilliseconds(),
             presentationSeq = _presentationSeq,
-            events = _presentationEvents.ToArray(),
+            events = SnapshotPresentationEvents(),
             phase = (int)_phase,
             timeLeft = MathF.Round(timeLeft, 1),
             closedLeft = _closedLeft,

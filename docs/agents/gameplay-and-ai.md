@@ -46,6 +46,23 @@ For keys, prompts and device input, read [input and UI](input-and-ui.md).
   delivered. Inspect its ownership/version first; external deployment is separate work.
   [Architecture and network boundaries](../architecture.md).
 
+## Snapshot and performance budget
+
+Presentation snapshots retain at most 128 accepted effects from the latest four
+seconds. IDs continue across rounds; repeated snapshots share an immutable cached
+array until an event arrives or expires. Preserve the 96-tick coalesced-client
+recovery contract. Long-running tests must observe effects as snapshots arrive,
+not assume old effects remain in the latest packet forever. `serverTime` is a
+diagnostic generation timestamp; it is not an authority input or prediction clock.
+
+Use [the server performance guide](../server-performance.md) for the three-human,
+three-CPU probe and fixed-seed encoding benchmark. Compare state hashes as well as
+bytes/timing when optimizing. The server's five-second `game_perf` log reports the
+kernel's most recent one-second tick window and cumulative drops/overruns; process
+GC/CPU counters cover the separately labeled sampling interval. Delivery gaps can
+remain even with fast simulation, so do not infer server CPU trouble from a client
+freeze alone or promise that a bandwidth reduction eliminates all network jitter.
+
 ## Persistent private parties
 
 `PartySession` wraps fresh `BlastSession` matches inside one kernel lobby. It
