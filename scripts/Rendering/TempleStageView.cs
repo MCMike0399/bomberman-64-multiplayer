@@ -16,6 +16,10 @@ public partial class TempleStageView : Node3D
     private float _targetWater=-.53f;
     private bool _waterInitialized;
     public float WaterHeight=>_water?.Position.Y??-.53f;
+    public void SetLighting(StageLighting lighting)
+    {
+        if(_water?.MaterialOverride is ShaderMaterial material)lighting.ApplyWater(material);
+    }
     public void SetWaterLevel(float tierLevel)
     {
         _targetWater=tierLevel*HeightScale;
@@ -27,6 +31,7 @@ public partial class TempleStageView : Node3D
         var p=_water.Position;p.Y=Mathf.Lerp(p.Y,_targetWater,1-Mathf.Exp(-7*(float)delta));_water.Position=p;
         if(_water.MaterialOverride is ShaderMaterial water)water.SetShaderParameter("flood_amount",Mathf.Clamp((_targetWater+.53f)/(4*HeightScale),0,1));
         _stone.SetShaderParameter("water_height",p.Y);
+        _cobble.SetShaderParameter("water_height",p.Y);
         _masonry.SetShaderParameter("water_height",p.Y);
         _bedrock.SetShaderParameter("water_height",p.Y);
     }

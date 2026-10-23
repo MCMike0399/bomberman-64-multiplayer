@@ -163,12 +163,58 @@ waterline cannot change where authority actually kills or supports a player.
 
 Stone detail uses shader variation/relief and wetness. Water uses several bent,
 nonparallel wave components with matching analytic slopes, depth-derived contact
-foam, Fresnel coloring and flood-dependent motion. Its fragment `NORMAL` is in
+foam, sky reflections and flood-dependent motion. Its fragment `NORMAL` is in
 view space; depth reconstruction handles renderer conventions. The transparent
 pass with full alpha is deliberate: sampled depth must contain opaque shore
 geometry rather than the water itself. Preserve that rationale when refactoring.
 Read [the rendering investigation](../iteration8-rendering.md) before replacing
-this shader. Verify normal and hurry/flood states from more than one camera.
+this shader; its fixed daytime Fresnel tint was superseded by the four lighting
+profiles below. Verify normal and hurry/flood states from more than one camera.
+
+### Four stage lighting variants (2026-10-23)
+
+The user requested **Morning, Midday, Afternoon and Night**, selected personally
+for local play and by the server online. Settings → Local lighting persists in
+`PlayerPreferences` as `video/stageLighting`; Midday is the default. Changing it
+while locally paused updates the current arena without restarting the match.
+Online preference edits save the local choice but never override server lighting.
+
+[StageLighting](../../scripts/Rendering/StageLighting.cs) owns the four coordinated
+key/fill/ambient, sky, fog and water profiles. Morning uses soft warm lateral light;
+Midday has a higher sun and turquoise water; Afternoon uses amber light, longer
+shadows and mauve reflections; Night uses blue moonlight, indigo water and enough
+fill to retain silhouettes, stairs and aiming markers. All three stages reuse
+these profiles. Menu theatre lighting remains separately authored.
+
+`ArenaView` supplies a procedural sky radiance map for specular reflections.
+The fill is `LightOnly` so it cannot invent a second sun. Explicit ambient color
+keeps shadow readability independent of the reflected sky. This follows Godot's
+[sky radiance contract](https://docs.godotengine.org/en/4.7/tutorials/shaders/shader_reference/sky_shader.html)
+and [spatial normal/material outputs](https://docs.godotengine.org/en/4.7/tutorials/shaders/shader_reference/spatial_shader.html).
+These are sky reflections, not reflections of characters or terrain; SSR and
+refraction remain off. Fine water ripples fade with pixel footprint, and normal
+variance softens distant specular highlights. Stone grain is similarly filtered;
+cobble now receives relief and the same irregular, shinier wet band as masonry.
+Authority water height, flood damping and the opaque-depth sampling pass remain.
+
+`BlastSession` publishes `stageLighting` on every state snapshot. The lobby seed
+selects the first profile, then successive rounds cycle all four; selection never
+consumes gameplay RNG. Late join/reconnect uses the same complete snapshot.
+Missing/unknown lighting from older servers falls back to Midday. An updated
+server is required for online variation; a client update alone cannot provide it.
+
+`stage-lighting` exercises the native settings dial, persistence and paused
+session continuity, all twelve stage/time combinations, nighttime bomb aiming,
+and actual flooding from battle and shoreline inspection cameras. It belongs
+to graphical `all`. `network` checks both clients' shared lighting and rejects a
+personal override; managed game checks cover round cycling, seeds and reconnect.
+
+Source verification is retained in `artifacts/iteration24/`: managed passed
+1,475 game / 143 client / 53 AI / 19 audio checks, 36 soaks and a real staged
+server smoke; headless passed 868 checks. The final graphical receipt and
+captures are in `graphical/playtest/20261023T232734.727626Z-all/`. The four looks
+were inspected on every stage and from flooded-shore cameras. This is source
+verification, not a published client/server or user approval of the art direction.
 
 Production uses Forward+ and Metal on macOS with shadows/SSAO/MSAA and restrained
 glow. A headless shader-source assertion cannot prove GPU compilation, balanced

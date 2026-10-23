@@ -3,6 +3,7 @@ using Bomber.Client;
 using Bomber.Game;
 using BlastCircuit.UI;
 using BlastCircuit.InputDevices;
+using BlastCircuit.Rendering;
 using System.Text.Json;
 namespace BlastCircuit;
 
@@ -183,6 +184,7 @@ public partial class GameRoot : Node3D
         _uiAudio.MenuConfirm();
         ReleaseSession();_arena.ResetMatch();_session=session;LatestStage=null;LatestState=null;_result=null;_lobby=null;SnapshotCount=0;_injected.Clear();_hud.Reset();_hud.Practice=_practice;_menu.ResetLobby();_partyMatch=-1;
         ControllerHub.Current.BeginMatch(session.LocalPlayerCount);
+        ApplyStageLighting();
         if(online)
         {ScreenName="Lobby";_menu.ShowScreen("Lobby");_menu.ShowLobby(null,session.JoinCode,session.Status);_menu.Visible=true;_hud.Visible=false;_arena.Visible=false;}
         else EnterMatch();
@@ -272,11 +274,21 @@ public partial class GameRoot : Node3D
     {
         _uiAudio.Volume=_preferences.Volume;_arena.Audio.Volume=_preferences.Volume;
         ControllerHub.Current.VibrationEnabled=_preferences.Vibration;
+        ApplyStageLighting();
+    }
+    private void ApplyStageLighting()
+    {
+        var time=_preferences.StageLighting;
+        if(_session is NetworkSession)
+            time=LatestState is {} state&&state.TryGetProperty("stageLighting",out var lighting)&&lighting.ValueKind==JsonValueKind.String
+                ?StageLighting.FromWire(lighting.GetString()):StageTime.Midday;
+        if(_arena.TimeOfDay!=time)_arena.SetTimeOfDay(time);
     }
     private void SavePreferences()
     {
         _preferences.PlayerName=_menu.PlayerName;_preferences.ServerUrl=_menu.ServerUrl;
         _preferences.AutomaticUpdates=_menu.AutomaticUpdates;
+        _preferences.StageLighting=_menu.LocalStageTime;
         _preferences.Vibration=_menu.VibrationEnabled;_preferences.Volume=_menu.SoundVolume;ApplyPreferences();
         if(_preferences.Save(PreferencesPath)!=Error.Ok)_menu.SettingsNotice("Could not save settings on this Mac.");
     }
@@ -326,7 +338,7 @@ public partial class GameRoot : Node3D
             {
                 case "stage":LatestStage=data.Clone();_arena.Stage(data);_hud.Stage(data);break;
                 case "state":
-                    LatestState=data.Clone();SnapshotCount++;_arena.State(data,envelope.TryGetProperty("k",out var stateTick)&&stateTick.ValueKind==JsonValueKind.Number?stateTick.GetInt64():-1);_hud.State(data);
+                    LatestState=data.Clone();SnapshotCount++;ApplyStageLighting();_arena.State(data,envelope.TryGetProperty("k",out var stateTick)&&stateTick.ValueKind==JsonValueKind.Number?stateTick.GetInt64():-1);_hud.State(data);
                     if(ScreenName=="Lobby")EnterMatch();
                     break;
                 case "party.status":

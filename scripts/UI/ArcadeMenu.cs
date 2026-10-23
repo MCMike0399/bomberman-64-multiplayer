@@ -2,6 +2,7 @@ using Godot;
 using Bomber.Client;
 using System.Text.Json;
 using BlastCircuit.InputDevices;
+using BlastCircuit.Rendering;
 namespace BlastCircuit.UI;
 
 /// <summary>Mode, setup, connection, lobby and result screens; emits intent to the composition root.</summary>
@@ -27,6 +28,7 @@ public partial class ArcadeMenu : Control
     private string? _localPlayer;
     public bool VibrationEnabled=>_vibration.ButtonPressed;
     public float SoundVolume=>(float)_volume.Value/100;
+    public StageTime LocalStageTime {get;private set;}=StageTime.Midday;
     public event Action<NetworkMode>? OnlineRequested;
     private Control _content=null!;
     private ArcadeBackdrop _background=null!;
@@ -375,6 +377,11 @@ public partial class ArcadeMenu : Control
         Copy(player,"Vibration is off by default. Enable it for bomb and impact feedback on supported controllers.",18);
         ArcadeTheme.Button(player,"Test vibration",()=>TestVibrationRequested?.Invoke()).Name="TestVibration";
         _settingsNotice=Copy(player,"",16);
+        var lighting=new ArcadeRuleDial {Name="StageLighting",Caption="Local lighting",ValueWidth=160,
+            ReadValue=()=>StageLighting.For(LocalStageTime).Label,
+            ChangeValue=direction=>{LocalStageTime=(StageTime)(((int)LocalStageTime+direction+4)%4);SettingsChanged?.Invoke();}};
+        player.AddChild(lighting);
+        Copy(player,"Morning, midday, afternoon or night. Online rounds use the server's lighting.",16);
         Section(updates,"Game updates");
         _automaticUpdates=new CheckButton {Name="AutomaticUpdates",Text="Check automatically",ButtonPressed=true};updates.AddChild(_automaticUpdates);
         _automaticUpdates.Toggled+=_=>SettingsChanged?.Invoke();
@@ -399,6 +406,7 @@ public partial class ArcadeMenu : Control
         _automaticUpdates.SetPressedNoSignal(preferences.AutomaticUpdates);
         _vibration.SetPressedNoSignal(preferences.Vibration);_volume.SetValueNoSignal(preferences.Volume*100);
         _volumeLabel.Text=$"Sound volume: {preferences.Volume*100:0}%";
+        LocalStageTime=preferences.StageLighting;
     }
     public void UpdateStatus(string version,string status,bool busy,bool ready,bool canInstall)
     {

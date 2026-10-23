@@ -1,3 +1,32 @@
+# v0.24.0 stage lighting — source verified, 2026-10-23
+
+All three stages now support **Morning, Midday, Afternoon and Night**. Settings →
+Local lighting saves a personal choice for local play. Online snapshots carry
+the server's choice: the match seed selects the first variant and successive
+rounds cycle all four without consuming gameplay randomness. Late joins and
+reconnects use the same snapshot, and local preference edits cannot override it.
+The v0.23.1 **35% ordinary item drop probability** is preserved.
+
+Lighting profiles coordinate sunlight/moonlight, fill, ambient, sky, fog and
+water. Procedural sky reflections replace the fixed daytime water tint; filtered
+fine ripples, depth-limited shoreline foam and wet stone relief improve surface
+response. A close flood capture exposed foam along submerged tile seams; vertical
+depth gating removes that grid while retaining exposed contact edges. No terrain,
+collision, character proportions or authority water rules changed.
+
+Source gates passed **1,475 game / 143 client / 53 AI / 19 audio checks**, **36 AI
+soaks**, a real staged-server network smoke, and **868 headless assertions**.
+The final windowed graphical run completed **37 scenarios, 2,426 assertions,
+225 captures and zero runtime errors**, including all twelve stage/time views,
+night aiming, real flooding, settings persistence and server lighting precedence.
+Normal arena views and four close shoreline views were visually inspected.
+This does not imply user artistic approval or new physical-controller testing.
+
+Source receipts: `artifacts/iteration24/{baseline,first-look,managed,headless,graphical}`;
+final native run `graphical/playtest/20261023T232734.727626Z-all/`.
+Release candidate: **v0.24.0/build27**. Publication and deployment receipts follow
+after the matching signed artifacts are verified.
+
 # v0.23.1 item drop tuning — delivered, 2026-10-23
 
 Ordinary destroyed blocks now drop an item with **35% probability**, down from

@@ -528,6 +528,8 @@ public partial class PlaytestDriver : Node
         Check(State.GetProperty("hurryMode").GetString()=="water","network server supplies temple-specific water sudden death");
         Check(State.TryGetProperty("waterLevel",out var networkWater)&&networkWater.ValueKind==JsonValueKind.Number,"network server publishes authoritative water height");
         Check(State.TryGetProperty("presentationSeq",out _)&&State.TryGetProperty("events",out _),"network server publishes accepted presentation events");
+        var serverLighting=State.GetProperty("stageLighting").GetString();
+        Check(LightingArena.TimeOfDay==BlastCircuit.Rendering.StageLighting.FromWire(serverLighting),"online arena applies server lighting");
         Check(_root.FindChildren("*","",true,false).OfType<BlastCircuit.Rendering.BomberModel>().Any(model=>model.DisplayName=="Harness host"&&model.IsVisibleInTree()),"network character label uses chosen player name");
         Check(_root.FindChildren("*","",true,false).OfType<BlastCircuit.UI.PlayerToken>().Any(t=>t.Tag=="Harness host"),"HUD uses the same chosen name");
         int bombCueBefore=_root.BattleAudio.Counts.GetValueOrDefault("bomb");
@@ -541,6 +543,7 @@ public partial class PlaytestDriver : Node
                 if(message.GetProperty("t").GetString()=="state")
                 {
                     var d=message.GetProperty("d");
+                    Check(d.GetProperty("stageLighting").GetString()==serverLighting,"both network clients receive the same round lighting");
                     observed=d.GetProperty("players").EnumerateArray().Any(p=>p.GetProperty("id").GetString()==host.PlayerId && Math.Abs(p.GetProperty("z").GetSingle()-before)>.15);
                 }
         }
@@ -548,6 +551,11 @@ public partial class PlaytestDriver : Node
         Input(0,default); await Frames(4);
         Check(_root.BattleAudio.Counts.GetValueOrDefault("bomb")==bombCueBefore+1,"network bomb event plays once across repeated snapshots");
         await Capture("network-two-humans");
+        var savedLighting=_root.Preferences.StageLighting;
+        var otherLighting=(BlastCircuit.Rendering.StageTime)(((int)LightingArena.TimeOfDay+1)%4);
+        await SelectLocalLighting(otherLighting);
+        Check(ReferenceEquals(_root.ActiveSession,host)&&LightingArena.TimeOfDay==BlastCircuit.Rendering.StageLighting.FromWire(serverLighting),"personal preference cannot override online server lighting");
+        await SelectLocalLighting(savedLighting);
         await KeyPress(Key.Escape);Check(_root.ScreenName=="Pause"&&ReferenceEquals(_root.ActiveSession,host),"online Esc opens menu without disconnecting");
         int pausedSnapshots=_root.SnapshotCount;await Task.Delay(300);await Frames(3);
         Check(_root.SnapshotCount>pausedSnapshots,"online authority continues while menu is open");

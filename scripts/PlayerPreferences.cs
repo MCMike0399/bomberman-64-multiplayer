@@ -1,4 +1,5 @@
 using Godot;
+using BlastCircuit.Rendering;
 namespace BlastCircuit;
 
 /// <summary>Device-local choices, including the name used when joining a server.</summary>
@@ -9,6 +10,7 @@ public sealed class PlayerPreferences
     public bool Vibration { get; set; }
     public bool AutomaticUpdates { get; set; } = true;
     public float Volume { get; set; } = .8f;
+    public StageTime StageLighting {get;set;}=StageTime.Midday;
     public static PlayerPreferences Load(string path)
     {
         var value = new PlayerPreferences();
@@ -18,6 +20,8 @@ public sealed class PlayerPreferences
         var server=file.GetValue("online","server",value.ServerUrl);
         if(name.VariantType==Variant.Type.String)value.PlayerName=name.AsString();
         if(server.VariantType==Variant.Type.String)value.ServerUrl=server.AsString();
+        var lighting=file.GetValue("video","stageLighting","midday");
+        if(lighting.VariantType==Variant.Type.String)value.StageLighting=Rendering.StageLighting.FromWire(lighting.AsString());
         var automatic = file.GetValue("player", "automaticUpdates", true);
         if (automatic.VariantType == Variant.Type.Bool) value.AutomaticUpdates = automatic.AsBool();
         var vibration = file.GetValue("player", "vibration", false);
@@ -35,6 +39,7 @@ public sealed class PlayerPreferences
         file.SetValue("player", "vibration", Vibration);
         file.SetValue("player", "automaticUpdates", AutomaticUpdates);
         file.SetValue("player", "volume", Volume);
+        file.SetValue("video","stageLighting",Rendering.StageLighting.ToWire(StageLighting));
         return file.Save(path);
     }
 }

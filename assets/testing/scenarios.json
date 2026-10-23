@@ -2,6 +2,18 @@
   "schemaVersion": 1,
   "scenarios": [
     {
+      "id": "stage-lighting",
+      "method": "StageLightingTour",
+      "domains": [
+        "rendering",
+        "settings",
+        "ui"
+      ],
+      "headless": false,
+      "timeout": 180,
+      "manual": false
+    },
+    {
       "id": "cover-layout",
       "method": "RegionalCoverTour",
       "domains": [
@@ -425,6 +437,7 @@
         "sandbox",
         "party-polish",
         "player-settings",
+        "stage-lighting",
         "asset-audit",
         "menu",
         "wasd-navigation",

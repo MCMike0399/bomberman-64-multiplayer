@@ -173,6 +173,13 @@ menu entry; pulses are bounded. Test requests on synthetic pads prove routing,
 not physical motor behavior. `player-settings` and `network` cover native menus,
 persistence, pause behavior and manual room start.
 
+Settings also contains **Local lighting**: Morning, Midday (default), Afternoon
+and Night. It saves `video/stageLighting`, applies immediately to local arenas,
+and is retained while online rounds use the server's snapshot choice. The dial
+uses the existing arrow/A-D/controller navigation. See the
+[rendering guide](visuals-and-animation.md#four-stage-lighting-variants-2026-10-23)
+for the palettes, older-server fallback and `stage-lighting` graphical witness.
+
 ## Reticle rendering and lifecycle
 
 The user explicitly requested shape-only endpoints with no extra labels.

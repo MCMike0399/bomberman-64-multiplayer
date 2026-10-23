@@ -35,6 +35,10 @@ public partial class ArenaView : Node3D
     private readonly PresentationCursor _presentation=new();
     private readonly Dictionary<int,Node3D> _walls=[];
     private TempleStageView? _terrain;
+    private Godot.Environment _environment=null!;
+    private ProceduralSkyMaterial _sky=null!;
+    private DirectionalLight3D _keyLight=null!,_fillLight=null!;
+    public StageTime TimeOfDay {get;private set;}=StageTime.Midday;
     private Camera3D _camera=null!;
     private BattleCameraRig _cameraRig=null!;
     private BattleAudio _audio=null!;
@@ -66,25 +70,42 @@ public partial class ArenaView : Node3D
     public override void _Ready()
     {
         AddChild(_dynamic);AddChild(_effects);_audio=new BattleAudio();AddChild(_audio);
-        var environment=new Godot.Environment
+        _sky=new ProceduralSkyMaterial {SkyCurve=.22f,GroundCurve=.3f,SunAngleMax=8,SunCurve=.08f,UseDebanding=true};
+        _environment=new Godot.Environment
         {
-            BackgroundMode=Godot.Environment.BGMode.Color,BackgroundColor=new Color("70afbd"),
-            AmbientLightSource=Godot.Environment.AmbientSource.Color,AmbientLightColor=new Color("a4b6d4"),AmbientLightEnergy=.29f,
-            TonemapMode=Godot.Environment.ToneMapper.Filmic,ReflectedLightSource=Godot.Environment.ReflectionSource.Disabled,
+            BackgroundMode=Godot.Environment.BGMode.Sky,Sky=new Sky {SkyMaterial=_sky},
+            AmbientLightSource=Godot.Environment.AmbientSource.Color,AmbientLightSkyContribution=0,
+            TonemapMode=Godot.Environment.ToneMapper.Filmic,ReflectedLightSource=Godot.Environment.ReflectionSource.Sky,
             SsaoEnabled=true,SsaoRadius=.7f,SsaoIntensity=1.65f,SsaoPower=1.25f,
             GlowEnabled=true,GlowIntensity=.17f,GlowBloom=0,
             AdjustmentEnabled=true,AdjustmentContrast=1.08f,AdjustmentSaturation=1.02f,
-            FogEnabled=true,FogLightColor=new Color("78b3bf"),FogDensity=.0007f
+            FogEnabled=true,FogDensity=.0007f
         };
-        AddChild(new WorldEnvironment {Environment=environment});
-        var sun=new DirectionalLight3D {RotationDegrees=new(-46,-34,0),LightColor=new Color("ffe8c7"),LightEnergy=.92f,ShadowEnabled=true,
-            DirectionalShadowMaxDistance=65,ShadowBias=.025f,ShadowNormalBias=.45f,LightAngularDistance=1.8f};AddChild(sun);
-        AddChild(new DirectionalLight3D {RotationDegrees=new(-25,135,0),LightColor=new Color("9fbae5"),LightEnergy=.12f});
+        AddChild(new WorldEnvironment {Environment=_environment});
+        _keyLight=new DirectionalLight3D {ShadowEnabled=true,
+            DirectionalShadowMaxDistance=65,ShadowBias=.025f,ShadowNormalBias=.45f,LightAngularDistance=1.8f};AddChild(_keyLight);
+        _fillLight=new DirectionalLight3D {RotationDegrees=new(-25,135,0),SkyMode=DirectionalLight3D.SkyModeEnum.LightOnly};AddChild(_fillLight);
+        SetTimeOfDay(TimeOfDay);
         _camera=new Camera3D {Projection=Camera3D.ProjectionType.Perspective,Fov=36,Near=.1f,Far=180,Current=true};AddChild(_camera);
         _cameraRig=new BattleCameraRig(_camera);
         GetViewport().SizeChanged+=_cameraRig.Fit;
         VisibilityChanged+=UpdateProcessing;
         UpdateProcessing();
+    }
+    public void SetTimeOfDay(StageTime time)
+    {
+        TimeOfDay=Enum.IsDefined(time)?time:StageTime.Midday;
+        if(_environment==null)return;
+        var look=StageLighting.For(TimeOfDay);
+        _keyLight.RotationDegrees=look.KeyRotation;_keyLight.LightColor=look.KeyColor;_keyLight.LightEnergy=look.KeyEnergy;
+        _keyLight.LightAngularDistance=TimeOfDay==StageTime.Afternoon?2.4f:1.8f;
+        _fillLight.LightColor=look.Fill;_fillLight.LightEnergy=look.FillEnergy;
+        _environment.AmbientLightColor=look.Ambient;_environment.AmbientLightEnergy=look.AmbientEnergy;
+        _environment.FogLightColor=look.Horizon;
+        _sky.SkyTopColor=look.Zenith;_sky.SkyHorizonColor=look.Horizon;
+        _sky.GroundHorizonColor=look.Horizon;_sky.GroundBottomColor=look.Ground;
+        _sky.SkyEnergyMultiplier=look.SkyEnergy;_sky.GroundEnergyMultiplier=look.SkyEnergy;
+        _terrain?.SetLighting(look);
     }
     private void UpdateProcessing()
     {
@@ -108,6 +129,7 @@ public partial class ArenaView : Node3D
         _stage=id;ClearThrowPreviews();
         _playerMotion.Clear();_facings.Clear();_ghostHosts.Clear();
         _terrain?.QueueFree();_terrain=new TempleStageView(_art);AddChild(_terrain);_terrain.Build(data);
+        _terrain.SetLighting(StageLighting.For(TimeOfDay));
         foreach(Node child in _dynamic.GetChildren())child.QueueFree();
         foreach(Node child in _effects.GetChildren())child.QueueFree();
         _entities.Clear();_targets.Clear();_blocks.Clear();_explosions.Clear();_presentation.Reset();_walls.Clear();_pickups.Clear();_lastRound=-1;_wasHurry=false;

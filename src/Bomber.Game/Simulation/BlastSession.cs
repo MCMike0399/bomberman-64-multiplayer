@@ -28,6 +28,8 @@ public sealed partial class BlastSession : GameSession
     private readonly bool _suddenDeath;
     private readonly bool _ghostsEnabled;
     private readonly int _botCount;
+    private readonly int _lightingOffset;
+    private static readonly string[] StageLightings=["morning","midday","afternoon","night"];
 
     /// <summary>CPU players fill the arena, so a lobby with bots starts with one human, as in the original.</summary>
     public override int? MinPlayersToStart => _botCount > 0 ? 1 : null;
@@ -72,6 +74,8 @@ public sealed partial class BlastSession : GameSession
     {
         _localAppearances = appearances?.ToArray() ?? [];
         _practice = practice;
+        // Cosmetic selection must not consume gameplay RNG (cover, loot or bots).
+        _lightingOffset=(int)((uint)options.Seed%4);
         _stage = arena ?? BlastStages.Get(options.Settings.TryGetValue("stage", out var s) ? s : "sunken-temple");
 
         _winsTarget = TryInt(options, "wins", 2, 1, 5);
@@ -1564,6 +1568,7 @@ public sealed partial class BlastSession : GameSession
         {
             round = _roundNum,
             serverTime = context.Now.ToUnixTimeMilliseconds(),
+            stageLighting = StageLightings[(_lightingOffset+Math.Max(0,_roundNum-1))%4],
             presentationSeq = _presentationSeq,
             events = SnapshotPresentationEvents(),
             phase = (int)_phase,

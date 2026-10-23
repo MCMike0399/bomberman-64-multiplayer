@@ -65,6 +65,12 @@ recovery contract. Long-running tests must observe effects as snapshots arrive,
 not assume old effects remain in the latest packet forever. `serverTime` is a
 diagnostic generation timestamp; it is not an authority input or prediction clock.
 
+`stageLighting` is cosmetic server-owned snapshot state: morning, midday,
+afternoon or night. The lobby seed picks the first variant; rounds cycle all four
+without consuming gameplay RNG. Include it in complete snapshots for late joiners
+and reconnects. Local clients use their saved preference instead. See the
+[lighting contract](visuals-and-animation.md#four-stage-lighting-variants-2026-10-23).
+
 Use [the server performance guide](../server-performance.md) for the three-human,
 three-CPU probe and fixed-seed encoding benchmark. Compare state hashes as well as
 bytes/timing when optimizing. The server's five-second `game_perf` log reports the
