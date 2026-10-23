@@ -474,6 +474,7 @@ public sealed partial class BlastSession : GameSession
 
             // Count down timers.
             if (p.InvincibleTimer > 0) p.InvincibleTimer = Math.Max(0,p.InvincibleTimer-dt);
+            if (p.ImpactProtectionTimer > 0) p.ImpactProtectionTimer = Math.Max(0,p.ImpactProtectionTimer-dt);
             if(p.Falling||p.Airborne||p.StunTimer>0||p.CarriedById is not null)ClearKick(p);
             if(p.KickRecoveryRemaining>0)p.KickRecoveryRemaining=Math.Max(0,p.KickRecoveryRemaining-dt);
             if(p.Falling)
@@ -849,7 +850,7 @@ public sealed partial class BlastSession : GameSession
         victim.X=p.X;victim.Z=p.Z;victim.SurfaceY=p.Y+PlayerCarryHeight;
         victim.AirVX=p.FacingX*(2+strength*3);victim.AirVZ=p.FacingZ*(2+strength*3);victim.AirVY=3.8f;
         victim.StunTimer=.65f;victim.RecoveryTotal=.65f;victim.KnockdownReason="thrown";
-        victim.InvincibleTimer=.35f;p.CarryingPlayerId=null;
+        victim.ImpactProtectionTimer=ImpactProtectionSeconds;p.CarryingPlayerId=null;
         Present("player-throw",victim.Id,p.Id,p.X,p.Y+PlayerCarryHeight,p.Z,strength,reason:"player");
     }
 
@@ -971,7 +972,7 @@ public sealed partial class BlastSession : GameSession
         // Check collision with a player (stun) or another resting bomb (billiard).
         foreach (var p in _players.Values)
         {
-            if (!p.Alive || p.Ghost || p.StunTimer > 0 || p.InvincibleTimer > 0 || p.CarriedById is not null || p.Airborne || Math.Abs(p.Y - _stage.SurfaceAt(nx, nz)) > .6f) continue;
+            if (!CanReceiveBombImpact(p) || p.Airborne || Math.Abs(p.Y - _stage.SurfaceAt(nx, nz)) > .6f) continue;
             // A player following an outgoing kick must not collide with its trailing edge.
             if((p.X-b.X)*b.VX+(p.Z-b.Z)*b.VZ<=0)continue;
             if (Dist2(nx, nz, p.X, p.Z) < (PlayerRadius + BlastBomb.Radius) * (PlayerRadius + BlastBomb.Radius))
@@ -1026,7 +1027,7 @@ public sealed partial class BlastSession : GameSession
         // A head hit is a bomb coming down onto a player's head; on the way up it clears the thrower.
         foreach (var p in _players.Values)
         {
-            if (!p.Alive || p.Ghost || p.InvincibleTimer > 0) continue;
+            if (!CanReceiveBombImpact(p)) continue;
             if (b.FlyVY > 0 || b.FlyY > p.Y + HeadHeight || b.FlyY < p.Y) continue;
             if (Dist2(b.X, b.Z, p.X, p.Z) < (PlayerRadius + BlastBomb.Radius) * (PlayerRadius + BlastBomb.Radius))
             {

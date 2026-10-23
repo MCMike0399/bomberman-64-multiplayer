@@ -15,24 +15,23 @@ internal static class AimedThrowChecks
                 Assert(arc.End==ThrowProjectionEnd.Landing&&Math.Abs(arc.Last.Z-range)<.001f,"Deliberate range drifted from discrete landing.");
             }
         });
-        Check("right aim turns clockwise and left aim counterclockwise at every cardinal heading",()=>{
+        Check("aim cursor follows arena directions regardless of facing",()=>{
             foreach(var heading in new[]{new Vector2(1,0),new Vector2(0,1),new Vector2(-1,0),new Vector2(0,-1)})
-            foreach(float control in new[]{1f,-1f}){
-                var angle=control*BombThrowRules.AimTurnSpeed*BombThrowRules.SimulationStep;
-                // Top view: +X is right and +Z is down, so clockwise East turns toward South.
-                var expected=new Vector2(heading.X*MathF.Cos(angle)-heading.Y*MathF.Sin(angle),heading.X*MathF.Sin(angle)+heading.Y*MathF.Cos(angle));
-                var aimed=BombThrowRules.AdjustAim(new(heading.X,heading.Y,4.5f),control,0,BombThrowRules.SimulationStep);
-                Assert(Vector2.Distance(expected,new(aimed.X,aimed.Z))<.0001f,$"Aim control {control} turned heading {heading} toward the wrong side: actual=({aimed.X},{aimed.Z}), expected={expected}.");
+            foreach(var control in new[]{Vector2.UnitX,-Vector2.UnitX,Vector2.UnitY,-Vector2.UnitY}){
+                var expected=heading*4.5f+control*BombThrowRules.AimCursorSpeed*BombThrowRules.SimulationStep;
+                var aimed=BombThrowRules.AdjustAim(new(heading.X,heading.Y,4.5f),control.X,control.Y,BombThrowRules.SimulationStep);
+                Assert(Vector2.Distance(expected,new Vector2(aimed.X,aimed.Z)*aimed.Range)<.0001f,"Cursor moved in a different direction from the input.");
             }
         });
-        Check("relative aim has bounded shared rates and retains neutral intent",()=>{
-            var aim=new ThrowAim(0,1,4.5f);
-            var turned=BombThrowRules.AdjustAim(aim,1,0,BombThrowRules.SimulationStep);
-            Assert(Math.Abs(MathF.Atan2(turned.X,turned.Z)+BombThrowRules.AimTurnSpeed*BombThrowRules.SimulationStep)<.0001f,"Turn rate exceeded authority limit.");
-            Assert(BombThrowRules.AdjustAim(turned,0,0,BombThrowRules.SimulationStep)==turned,"Neutral reset deliberate intent.");
-            var far=aim;var near=aim;
-            for(int i=0;i<300;i++){far=BombThrowRules.AdjustAim(far,0,-1,BombThrowRules.SimulationStep);near=BombThrowRules.AdjustAim(near,0,1,BombThrowRules.SimulationStep);}
-            Assert(far.Range==BombThrowRules.MaxAimRange&&near.Range==BombThrowRules.MinAimRange,"Aim range escaped bounds.");
+        Check("cursor crosses the carrier smoothly and clamps at maximum range",()=>{
+            var aim=new ThrowAim(0,1,.2f);
+            var center=BombThrowRules.AdjustAim(aim,0,-1,BombThrowRules.SimulationStep);
+            Assert(center.Range<.00001f,"Cursor cannot reach the carrier's center.");
+            var behind=BombThrowRules.AdjustAim(center,0,-1,BombThrowRules.SimulationStep);
+            Assert(behind.Z<-.99f&&Math.Abs(behind.Range-.2f)<.0001f,"Cursor got stuck trying to aim behind the carrier.");
+            Assert(BombThrowRules.AdjustAim(behind,0,0,BombThrowRules.SimulationStep)==behind,"Neutral reset deliberate intent.");
+            for(int i=0;i<300;i++)behind=BombThrowRules.AdjustAim(behind,0,-1,BombThrowRules.SimulationStep);
+            Assert(behind.Range==BombThrowRules.MaxAimRange,"Cursor escaped the shared radius cap.");
         });
         Check("diagonal aim cannot adjust faster than normalized controller intent",()=>{
             var start=new ThrowAim(0,1,4.5f);
@@ -48,11 +47,11 @@ internal static class AimedThrowChecks
         Check("single tick aim nudges start fine and sustained input reaches shared speed",()=>{
             foreach(bool turn in new[]{true,false}){
                 var m=Match();Lift(m);var before=Player(m);
-                var input=new PlayerInput(turn?1:0,turn?0:-1,B:true,Aim:true);
+                var input=new PlayerInput(turn?1:0,turn?0:1,B:true,Aim:true);
                 m.SetInput(0,input);Step(m,1);m.SetInput(0,new PlayerInput(0,0,B:true,Aim:true));Step(m,1);var nudged=Player(m);
-                float Value(JsonElement p)=>turn?-MathF.Atan2(N(p,"aimX"),N(p,"aimZ")):N(p,"aimRange");
+                float Value(JsonElement p)=>N(p,turn?"aimX":"aimZ")*N(p,"aimRange");
                 var nudge=Value(nudged)-Value(before);
-                var expected=(turn?BombThrowRules.AimTurnSpeed:BombThrowRules.AimRangeSpeed)*BombThrowRules.SimulationStep*BombThrowRules.AimFineScale;
+                var expected=BombThrowRules.AimCursorSpeed*BombThrowRules.SimulationStep*BombThrowRules.AimFineScale;
                 Assert(Math.Abs(nudge-expected)<.0001f,"First-tick aim did not start at fine speed.");
                 m.SetInput(0,input);Step(m,14);before=Player(m);Step(m,2);var steady=Value(Player(m))-Value(before);
                 Assert(steady>nudge*7.9f&&steady<nudge*8.1f,"Sustained input failed to reach bounded full speed.");
@@ -61,11 +60,11 @@ internal static class AimedThrowChecks
         Check("neutral and reversal reset each aim axis to fine speed",()=>{
             foreach(bool turn in new[]{true,false}){
                 var m=Match();Lift(m);
-                PlayerInput Intent(float axis)=>new(turn?axis:0,turn?0:-axis,B:true,Aim:true);
-                float Value(JsonElement p)=>turn?-MathF.Atan2(N(p,"aimX"),N(p,"aimZ")):N(p,"aimRange");
+                PlayerInput Intent(float axis)=>new(turn?axis:0,turn?0:axis,B:true,Aim:true);
+                float Value(JsonElement p)=>N(p,turn?"aimX":"aimZ")*N(p,"aimRange");
                 m.SetInput(0,Intent(1));Step(m,14);var before=Value(Player(m));
                 m.SetInput(0,Intent(-1));Step(m,1);m.SetInput(0,Intent(0));Step(m,1);var reversed=Value(Player(m));
-                var expected=(turn?BombThrowRules.AimTurnSpeed:BombThrowRules.AimRangeSpeed)*BombThrowRules.SimulationStep*BombThrowRules.AimFineScale;
+                var expected=BombThrowRules.AimCursorSpeed*BombThrowRules.SimulationStep*BombThrowRules.AimFineScale;
                 Assert(Math.Abs(before-reversed-expected)<.0001f,"Direction reversal retained accelerated aim speed.");
                 m.SetInput(0,Intent(1));Step(m,1);m.SetInput(0,Intent(0));Step(m,1);
                 Assert(Math.Abs(Value(Player(m))-reversed-expected)<.0001f,"Neutral failed to rearm a fine nudge.");
@@ -78,7 +77,7 @@ internal static class AimedThrowChecks
             foreach(var property in new[]{"aimX","aimZ","aimRange"})Assert(Math.Abs(N(Player(keyboard),property)-N(Player(controller),property))<.0001f,"Ramped keyboard intent gained speed over controller.");
             var full=Match();var partial=Match();Lift(full);Lift(partial);
             full.SetInput(0,new PlayerInput(1,0,B:true,Aim:true));partial.SetInput(0,new PlayerInput(.5f,0,B:true,Aim:true));Step(full,14);Step(partial,14);
-            var fullAngle=MathF.Atan2(N(Player(full),"aimX"),N(Player(full),"aimZ"));var partialAngle=MathF.Atan2(N(Player(partial),"aimX"),N(Player(partial),"aimZ"));
+            var fullAngle=N(Player(full),"aimX")*N(Player(full),"aimRange");var partialAngle=N(Player(partial),"aimX")*N(Player(partial),"aimRange");
             Assert(Math.Abs(fullAngle-partialAngle*2)<.0001f,"Partial stick intent lost proportional fine control.");
         });
         Check("ignored aim modifier preserves normal walking without a carried bomb",()=>{
@@ -117,11 +116,13 @@ internal static class AimedThrowChecks
                 Assert(N(actual,"fuse")<fuse&&!Player(m).GetProperty("aimSet").GetBoolean(),"Throw did not resume fuse or clear old intent.");
             }
         });
-        Check("minimum deliberate range never hits its stationary owner",()=>{
-            var m=Match();Lift(m);m.SetInput(0,new PlayerInput(0,1,B:true,Aim:true));Step(m,60);
-            Assert(N(Player(m),"aimRange")==BombThrowRules.MinAimRange,"Minimum fixture did not clamp.");
-            m.SetInput(0,default);
-            for(int i=0;i<65;i++){m.Tick();Assert(!Player(m).GetProperty("stunned").GetBoolean(),"Minimum deliberate lob hit its owner.");}
+        Check("close aimed lobs retain real self-hit risk",()=>{
+            var m=Match();Lift(m);m.SetInput(0,new PlayerInput(0,-1,B:true,Aim:true));
+            for(int tick=0;tick<40&&N(Player(m),"aimRange")>.15f;tick++)m.Tick();
+            Assert(N(Player(m),"aimRange")<.15f,"Fixture did not aim at the carrier's feet.");
+            m.SetInput(0,default);bool hit=false;
+            for(int i=0;i<65;i++){m.Tick();hit|=Player(m).GetProperty("stunned").GetBoolean();}
+            Assert(hit,"An aimed self-lob granted contact immunity.");
         });
         Check("a deliberate high lob reaches raised tier four and matches advisory",()=>{
             var m=Match(raised:true);Lift(m);m.SetInput(0,new PlayerInput(0,0,B:true,Aim:true));Step(m,2);
@@ -146,7 +147,7 @@ internal static class AimedThrowChecks
         });
         Check("aimed bombs rest on shared cover and pillar tops without sinking",()=>{
             foreach(var kind in new[]{CellKind.Floor,CellKind.Pillar}){
-                var m=Match(support:kind);Lift(m);m.SetInput(0,new PlayerInput(0,-1,B:true,Aim:true));Step(m,10);
+                var m=Match(support:kind);Lift(m);m.SetInput(0,new PlayerInput(0,1,B:true,Aim:true));Step(m,6);
                 m.SetInput(0,new PlayerInput(0,0,B:true,Aim:true));Step(m,2);
                 m.SetInput(0,default);Step(m,64);var bomb=Bomb(m);
                 var expected=kind==CellKind.Pillar?BombThrowRules.PillarHeight:BombThrowRules.CoverHeight;
@@ -155,7 +156,7 @@ internal static class AimedThrowChecks
             }
         });
         Check("destroying a perched bomb support starts gravity and preserves remote fuse",()=>{
-            var m=Match(support:CellKind.Floor);Lift(m);m.SetInput(0,new PlayerInput(0,-1,B:true,Aim:true));Step(m,10);
+            var m=Match(support:CellKind.Floor);Lift(m);m.SetInput(0,new PlayerInput(0,1,B:true,Aim:true));Step(m,6);
             m.SetInput(0,new PlayerInput(0,0,B:true,Aim:true));Step(m,2);m.SetInput(0,default);Step(m,64);
             var fuse=N(Bomb(m),"fuse");
             // Isolate support invalidation from the explosion's separate chain-reaction rule.

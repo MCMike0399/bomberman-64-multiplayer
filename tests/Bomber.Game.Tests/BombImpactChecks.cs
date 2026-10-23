@@ -9,6 +9,46 @@ internal static class BombImpactChecks
     {
         int count=0;var failures=new List<string>();
         void Check(string name,Action check){try{check();count++;Console.WriteLine("PASS "+name);}catch(Exception e){failures.Add(name+": "+e.Message);Console.WriteLine("FAIL "+failures[^1]);}}
+        Check("remote snipe explosion kills its freshly knocked down victim",()=>{
+            foreach(bool practice in new[]{false,true}){
+            var m=Match(victim:true,remote:true,practice:practice);Place(m);
+            m.SetInput(0,new PlayerInput(0,1,A:true));
+            for(int i=0;i<25&&!Player(m,1).GetProperty("stunned").GetBoolean();i++)m.Tick();
+            Assert(Player(m,1).GetProperty("stunned").GetBoolean(),"Fixture did not knock down the victim.");
+            var bomb=Bomb(m);var victim=Player(m,1);
+            Assert(Math.Abs(F(bomb,"z")-F(victim,"z"))<1,"Remote is no longer beside its victim.");
+            m.SetInput(0,new PlayerInput(0,0,R:true));Step(m,2);
+            Assert(Bombs(m).GetArrayLength()==0,"Remote command did not explode the bomb.");
+            Assert(State(m).GetProperty("events").EnumerateArray().Any(e=>
+                e.GetProperty("kind").GetString()=="death"&&e.GetProperty("playerId").GetString()=="local-1"&&
+                e.GetProperty("reason").GetString()=="explosion"),
+                "Freshly knocked down victim survived a point-blank remote explosion. "+State(m));
+            }
+        });
+        Check("a heart still absorbs a blast after knockdown without repeat hazard damage",()=>{
+            var m=Match(victim:true,remote:true,heart:true,practice:false);Place(m);
+            m.SetInput(0,new PlayerInput(0,1,A:true));
+            for(int i=0;i<25&&!Player(m,1).GetProperty("stunned").GetBoolean();i++)m.Tick();
+            Assert(Player(m,1).GetProperty("stunned").GetBoolean()&&Player(m,1).GetProperty("heart").GetBoolean(),"Fixture did not hit the heart holder.");
+            m.SetInput(0,new PlayerInput(0,0,R:true));Step(m,2);
+            Assert(!Player(m,1).GetProperty("heart").GetBoolean(),"Knockdown immunity prevented the blast from consuming the heart.");
+            Step(m,18);
+            Assert(Player(m,1).GetProperty("alive").GetBoolean()&&!Player(m,1).GetProperty("ghost").GetBoolean(),"Lingering blast bypassed legitimate heart protection.");
+        });
+        Check("successive bomb contacts can chain knockdowns after a short impact cooldown",()=>{
+            var m=Match(remote:true,practice:false);
+            m.SetInput(0,new PlayerInput(0,0,A:true,B:true));Step(m,2);
+            m.SetInput(0,new PlayerInput(0,-1,B:true,Aim:true));
+            for(int tick=0;tick<40&&F(Player(m,0),"aimRange")>.15f;tick++)m.Tick();
+            Assert(F(Player(m,0),"aimRange")<.15f,"Fixture did not aim a remote over the carrier.");
+            m.SetInput(0,default);Step(m,120);
+            var events=State(m).GetProperty("events").EnumerateArray().ToArray();
+            var hits=events.Where(e=>e.GetProperty("kind").GetString()=="knockdown").ToArray();
+            Assert(hits.Length>=2,"Bouncing bomb could not chain a second knockdown.");
+            for(int i=1;i<hits.Length;i++)
+                Assert(hits[i].GetProperty("tick").GetInt64()-hits[i-1].GetProperty("tick").GetInt64()>=10,"One continuous contact retriggered without an impact cooldown.");
+            Assert(!events.Any(e=>e.GetProperty("kind").GetString()=="recover"&&e.GetProperty("seq").GetInt64()<hits[1].GetProperty("seq").GetInt64()),"Second hit waited until full recovery instead of chaining the knockdown.");
+        });
         Check("kick launches decisively with a short visible hop",()=>{
             var m=Match();Place(m);m.SetInput(0,new PlayerInput(0,1,A:true));AwaitKick(m);
             var first=Bomb(m);Step(m,4);var next=Bomb(m);
@@ -87,7 +127,7 @@ internal static class BombImpactChecks
         return count;
     }
     static CellDef[,] Cells(){var c=new CellDef[15,15];for(int x=0;x<15;x++)for(int z=0;z<15;z++)c[x,z]=CellDef.Floor0;return c;}
-    static LocalMatch Match(bool victim=false,bool wall=false,bool remote=false,bool chain=false,bool corner=false,int wallZ=6){var c=Cells();if(corner)for(int z=0;z<15;z++)c[6,z]=CellDef.Pillar;if(wall)for(int x=0;x<15;x++)c[x,wallZ]=CellDef.Pillar;var m=new LocalMatch(new MatchOptions{HumanPlayers=2,BotPlayers=0,Practice=true},new StageLayout{Id="fixture",Width=15,Height=15,Cells=c,Spawns=[(3,3),victim||chain?(3,6):(12,12)],SoftBlockDensity=0,InitialItems=remote?[(3,3,"remote")]:[]});Step(m,64);return m;}
+    static LocalMatch Match(bool victim=false,bool wall=false,bool remote=false,bool chain=false,bool corner=false,int wallZ=6,bool practice=true,bool heart=false){var c=Cells();if(corner)for(int z=0;z<15;z++)c[6,z]=CellDef.Pillar;if(wall)for(int x=0;x<15;x++)c[x,wallZ]=CellDef.Pillar;var m=new LocalMatch(new MatchOptions{HumanPlayers=2,BotPlayers=0,Practice=practice},new StageLayout{Id="fixture",Width=15,Height=15,Cells=c,Spawns=[(3,3),victim||chain?(3,6):(12,12)],SoftBlockDensity=0,InitialItems=heart?[(3,3,"remote"),(3,6,"heart")]:remote?[(3,3,"remote")]:[]});Step(m,64);return m;}
     static void AwaitKick(LocalMatch m){for(int i=0;i<15;i++){m.Tick();if(Bomb(m).GetProperty("state").GetInt32()==1)return;}throw new InvalidOperationException("Contact kick never released after anticipation.");}
     static void Place(LocalMatch m){m.SetInput(0,new PlayerInput(0,0,true));Step(m,2);m.SetInput(0,default);Step(m,2);}
     static void Step(LocalMatch m,int n){for(int i=0;i<n;i++)m.Tick();}

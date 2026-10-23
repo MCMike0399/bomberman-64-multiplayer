@@ -100,8 +100,8 @@ public partial class BattleHud : Control
         var recovering=players.Where(p=>p.GetProperty("alive").GetBoolean()&&!p.GetProperty("ghost").GetBoolean()&&p.GetProperty("stunned").GetBoolean()).ToArray();
         if(recovering.Length>0)return string.Join(", ",recovering.Select(p=>"P"+(p.GetProperty("slot").GetInt32()+1)))+" dizzy: wiggle the stick and tap buttons to recover";
         var family=ControllerHub.Current.ActiveFamily;
-        string primary=family==ControllerFamily.Keyboard?"J":ControllerProfile.ButtonName(family,ControllerProfile.BombButton(family));
-        string carry=family==ControllerFamily.Keyboard?"K":ControllerProfile.ButtonName(family,ControllerProfile.CarryButton(family));
+        string primary=family==ControllerFamily.Keyboard?"J":ControllerProfile.BombName(family);
+        string carry=family==ControllerFamily.Keyboard?"K":ControllerProfile.ButtonName(family,JoyButton.LeftShoulder)+" / "+ControllerProfile.ButtonName(family,ControllerProfile.CarryButton(family));
         string remote=family==ControllerFamily.Keyboard?"I / R":ControllerProfile.ButtonName(family,ControllerProfile.RemoteButton(family));
         foreach(var p in players.Where(p=>!p.GetProperty("bot").GetBoolean()&&p.GetProperty("alive").GetBoolean()&&!p.GetProperty("ghost").GetBoolean()))
         {
@@ -114,7 +114,7 @@ public partial class BattleHud : Control
                 string aim=family==ControllerFamily.Keyboard?(seat==1?"Ctrl":"L"):ControllerProfile.AimName(family);
                 string release=latched?$"{PromptBar.Spoken(carry)} throws":$"release {PromptBar.Spoken(carry)} to throw";
                 if(p.TryGetProperty("aiming",out var aiming)&&aiming.GetBoolean())
-                    return $"{who}: left/right turns · up/down sets range · nudge to fine-tune · {release}";
+                    return $"{who}: {(family==ControllerFamily.Keyboard?(seat==1?"arrows":"WASD"):"either stick")} moves the target · nudge to fine-tune · {release}";
                 return $"{who}: {PromptBar.Spoken(primary)} pumps · hold {aim} to aim · {release}";
             }
             if(state.GetProperty("bombs").EnumerateArray().Any(b=>b.GetProperty("remote").GetBoolean()&&b.GetProperty("ownerId").GetString()==p.GetProperty("id").GetString()))

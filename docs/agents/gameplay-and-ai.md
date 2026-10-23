@@ -78,9 +78,11 @@ and the input guide; older iteration tables are historical.
 - [BombThrowRules](../../src/Bomber.Game/Simulation/BombThrowRules.cs) supplies shared
   launch/flight/static projection math; [ThrowAim](../../src/Bomber.Game/Simulation/BlastSession.ThrowAim.cs)
   owns accepted direction/range, fine-start ramps and reset/retention rules.
-- Aiming plants the carrier. Horizontal intent rotates relatively; vertical intent
-  changes range. Releasing Aim restores movement while retaining the selected aim;
-  ending the carry/new carry resets it. Right input turns clockwise on the arena.
+- Aiming plants the carrier. X/Z intent moves a landing cursor in arena directions,
+  with a shared 6-cell/second limit and fine-start ramp. Range is 0–9 cells; the
+  cursor can pass through the carrier to aim behind them, and self-lobs can hit.
+  Releasing Aim restores movement while retaining selected direction/range; ending
+  the carry/new carry resets it. This supersedes the old relative rotation model.
 - Digital taps and partial analog intent use the same bounded fine-start adjustment.
   Ordinary movement returns to full normalized speed when Aim is inapplicable.
 - Pumps increase blast power; they do not change deliberately selected range.
@@ -122,6 +124,12 @@ and the input guide; older iteration tables are historical.
 - [Grapple](../../src/Bomber.Game/Simulation/BlastSession.Grapple.cs) owns finite stumble,
   held victims, effort cooldowns and thrown-player flight. Direction changes/fresh action
   edges accelerate recovery; holding a single direction/button does not repeat effort.
+- Bomb contact grants only 0.35 seconds of impact protection, independent of
+  `InvincibleTimer` (heart/respawn damage protection). Grounded downed players
+  can be hit again after that cooldown. Knockdown, throw and hold escape must
+  never grant blast immunity; genuine blast geometry still determines hits.
+  `BombImpactChecks` covers remote hit → immediate detonation, heart consumption
+  and contact chains; the `grapple` native journey includes a remote snipe.
 - A carrier may lift a downed opponent, move, then throw. Hold relationships are paired;
   escape, expiry, death, disconnect and reset must detach both sides safely.
   Recovery consumes its action edges even on the get-up tick.

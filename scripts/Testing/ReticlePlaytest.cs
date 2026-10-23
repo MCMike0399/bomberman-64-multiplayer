@@ -34,7 +34,11 @@ public partial class PlaytestDriver
                 Check(preview.EndpointMarkerVisible,"normal carrier endpoint remains marked facing "+key+" even when cover truncates the arc");
                 ReticlePixels(preview);
             }
-            CtlKey(Key.L,true);CtlKey(Key.S,true);await ControllerFrames(38);CtlKey(Key.S,false);await ControllerFrames(3);
+            // Facing south, move the cursor north toward the nearby cover. Stop
+            // on accepted range rather than relying on the old polar-aim clamp.
+            CtlKey(Key.L,true);await ControllerFrames(3);CtlKey(Key.W,true);
+            for(int frame=0;frame<40&&AimNumber(Player,"aimRange")>2.1f;frame++)await ControllerFrames(1);
+            CtlKey(Key.W,false);await ControllerFrames(3);
             preview=_root.ThrowPreviews.Single();Event("normal-reticle-short",preview);await Capture("normal-reticle-short",0);
             Check(preview.EndpointMarkerVisible,"short-range ordinary keyboard aim retains a visible endpoint marker");
             Check(preview.End=="Obstructed"&&!preview.LandingMarkerVisible,"stock cover produces a warning cross without suggesting a safe landing");

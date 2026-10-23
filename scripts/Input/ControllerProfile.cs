@@ -22,14 +22,17 @@ public static class ControllerProfile
         _=>("South","West","East","L shoulder","Start")
     };
     public static JoyButton BombButton(ControllerFamily family)=>family==ControllerFamily.Nintendo?JoyButton.B:JoyButton.A;
-    public static JoyButton CarryButton(ControllerFamily family)=>family==ControllerFamily.Nintendo?JoyButton.A:JoyButton.X;
+    public static JoyButton? AlternateBombButton(ControllerFamily family)=>family==ControllerFamily.Nintendo?JoyButton.A:null;
+    public static bool IsBombButton(ControllerFamily family,JoyButton button)=>button==BombButton(family)||button==AlternateBombButton(family);
+    public static string BombName(ControllerFamily family)=>family==ControllerFamily.Nintendo?"A / B":ButtonName(family,BombButton(family));
+    public static JoyButton CarryButton(ControllerFamily family)=>JoyButton.X;
     public static JoyButton RemoteButton(ControllerFamily family)=>family==ControllerFamily.Nintendo?JoyButton.Y:JoyButton.B;
     public static JoyButton ConfirmButton(ControllerFamily family)=>BombButton(family);
     public static JoyButton CancelButton(ControllerFamily family)=>family==ControllerFamily.Nintendo?JoyButton.A:JoyButton.B;
     public static string Actions(ControllerFamily family,int keyboardSeat=0)
     {
         if(family==ControllerFamily.Keyboard)return keyboardSeat==0?"J  BOMB   K  CARRY   L  AIM   I  REMOTE":"N / ENTER  BOMB   M / NUM 1  CARRY   CTRL  AIM   , / BACKSPACE  REMOTE";
-        return $"{ButtonName(family,BombButton(family))}  BOMB   {ButtonName(family,CarryButton(family))} / {ButtonName(family,JoyButton.LeftShoulder)}  CARRY   {AimName(family)}  AIM   {ButtonName(family,RemoteButton(family))} / {ButtonName(family,JoyButton.RightShoulder)}  REMOTE";
+        return $"{BombName(family)}  BOMB   {ButtonName(family,JoyButton.LeftShoulder)} / {ButtonName(family,CarryButton(family))}  CARRY   {AimName(family)}  AIM   {ButtonName(family,RemoteButton(family))} / {ButtonName(family,JoyButton.RightShoulder)}  REMOTE";
     }
     public static string AimName(ControllerFamily family)=>family switch
     {ControllerFamily.Nintendo=>"ZR",ControllerFamily.PlayStation=>"R2",ControllerFamily.Xbox=>"RT",ControllerFamily.Keyboard=>"L",_=>"R trigger"};

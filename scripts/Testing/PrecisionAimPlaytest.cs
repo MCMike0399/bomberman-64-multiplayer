@@ -31,33 +31,31 @@ public partial class PlaytestDriver
         Check(initial.Aiming&&initial.AimSet&&initial.End=="Landing"&&initial.LandingMarkerVisible,"explicit aim establishes a visible deliberate landing on clear floor");
         Check(_root.ThrowPreviews.Count==1&&initial.PlayerId==Player.GetProperty("id").GetString(),"guide belongs only to the controlled local carrier");
         await Capture("precision-aim-initial",0);
-        float headingX=AimNumber(Player,"aimX"),headingZ=AimNumber(Player,"aimZ");
-        Input(0,new PlayerInput(1,0,B:true,Aim:true));
-        // Observe the first accepted nudge, rather than assuming two render
-        // frames always contain two fresh 15 Hz state snapshots.
-        await WaitState(_=>Math.Abs(AimNumber(Player,"aimX")-headingX)+Math.Abs(AimNumber(Player,"aimZ")-headingZ)>.005f,
-            "first deliberate nudge arrives in an authoritative snapshot",6);
-        float nudge=MathF.Acos(Math.Clamp(headingX*AimNumber(Player,"aimX")+headingZ*AimNumber(Player,"aimZ"),-1,1));
-        Input(0,new PlayerInput(1,0,B:true,Aim:true));await Frames(6);
-        float held=MathF.Acos(Math.Clamp(headingX*AimNumber(Player,"aimX")+headingZ*AimNumber(Player,"aimZ"),-1,1));
+        float TargetZ()=>AimNumber(Player,"aimZ")*AimNumber(Player,"aimRange");
+        float initialZ=TargetZ();
+        Input(0,new PlayerInput(0,-1,B:true,Aim:true));
+        await WaitState(_=>TargetZ()<initialZ-.01f,"first upward cursor nudge arrives in an authoritative snapshot",6);
+        float nudge=initialZ-TargetZ();
+        await Frames(6);float held=initialZ-TargetZ();
         Event("precision-aim-nudge",new{nudge,held});
-        Check(nudge>.005f&&held>nudge*2&&held<1.2f,"short direction nudge makes a finer turn than holding the same bounded aim input");
-        Check(Math.Abs(AimNumber(Player,"x")-x)<.02f&&Math.Abs(AimNumber(Player,"z")-z)<.02f,"turning the landing direction plants the real carrier");
-        Input(0,new PlayerInput(-1,0,B:true,Aim:true));await Frames(8);
+        Check(nudge>.01f&&held>nudge*2&&held<1.8f,"a short cursor nudge is finer than holding the same direction");
+        Check(Math.Abs(AimNumber(Player,"x")-x)<.02f&&Math.Abs(AimNumber(Player,"z")-z)<.02f,"moving the target plants the real carrier");
         Input(0,new PlayerInput(0,1,B:true,Aim:true));
+        await WaitState(_=>TargetZ()>=initialZ-.05f,"down input brings the cursor back along the clear courtyard",20);
+        Input(0,new PlayerInput(-1,0,B:true,Aim:true));
         await WaitState(_=>AimNumber(Player,"aimRange")<initial.AimRange-1,
-            "nearer range adjustment reaches the authority",40);
+            "left input moves the eastward target nearer",40);
         Input(0,new PlayerInput(0,0,B:true,Aim:true));await Frames(4);
         var near=PrecisionPreview;
-        Check(near.AimRange<initial.AimRange-.8f&&near.End=="Landing","nearer aim moves the selected landing inward on clear stock floor");
+        Check(near.AimRange<initial.AimRange-.8f&&near.End=="Landing","nearer cursor moves the selected landing inward on clear stock floor");
         await Capture("precision-aim-near",0);
-        Input(0,new PlayerInput(0,-1,B:true,Aim:true));
+        Input(0,new PlayerInput(1,0,B:true,Aim:true));
         await WaitState(_=>AimNumber(Player,"aimRange")>near.AimRange+2,
-            "farther range adjustment reaches the authority",50);
+            "right input moves the target farther east",50);
         Input(0,new PlayerInput(0,0,B:true,Aim:true));await Frames(4);
         var far=PrecisionPreview;
         Event("precision-aim-range",new{near,far});
-        Check(far.AimRange>near.AimRange+1.9f&&far.End=="Landing"&&far.X>near.X+1.4f,"held farther input continuously extends the actual landing guide");
+        Check(far.AimRange>near.AimRange+1.9f&&far.End=="Landing"&&far.X>near.X+1.4f,"holding right moves the landing guide right on the arena");
         await Capture("precision-aim-far",0);
         for(int pump=0;pump<3;pump++)
         {
@@ -94,7 +92,7 @@ public partial class PlaytestDriver
         Event("aim-input-mode",new{source="ordinary synthetic keyboard/canonical events; Switch uses production native bridge",physicalInputClaim=false,triggerThreshold=.35f});
         try
         {
-            foreach(var pad in new GamepadDevice?[]{null,QaPads[0],QaPads[1],QaPads[2]})
+            foreach(var (pad,rightStick) in new (GamepadDevice? Pad,bool RightStick)[]{(null,false),(QaPads[0],false),(QaPads[1],false),(QaPads[2],false),(QaPads[0],true),(QaPads[1],true),(QaPads[2],true)})
             {
                 CtlReleaseAll();hub.OverrideDevicesForPlaytest(pad is null?[]:[pad]);
                 // Navigation uses ordinary authority movement, then native controls perform
@@ -102,7 +100,7 @@ public partial class PlaytestDriver
                 await HandlingPractice();await GrappleWalk(0,6,18);
                 Input(0,new PlayerInput(1,0));await Frames(2);Input(0,default);await Frames(2);
                 _root.InjectInput(0,null);await ControllerFocusReady();_controllerFocusTrial=true;
-                string name=pad?.Name??"Keyboard";
+                string name=pad is null?"Keyboard":pad.Name+(rightStick?" right stick":" left stick");
                 if(pad is null)
                 {
                     foreach(var key in new[]{Key.Ctrl,Key.Enter,Key.Backspace})
@@ -134,12 +132,12 @@ public partial class PlaytestDriver
                     Event("native-axis-snapshot-test",new{source="synthetic backend values through production sampling/publication",physicalInputClaim=false,axes=6});
                 }
                 JoyButton primary=pad is null?JoyButton.A:ControllerProfile.BombButton(ControllerProfile.Family(pad.Name));
-                JoyButton carry=pad is null?JoyButton.X:ControllerProfile.CarryButton(ControllerProfile.Family(pad.Name));
+                JoyButton carry=JoyButton.LeftShoulder;
                 void Carry(bool down){if(pad is null)CtlKey(Key.K,down);else CtlButton(pad.RuntimeId,carry,down);}
                 void Primary(bool down){if(pad is null)CtlKey(Key.J,down);else CtlButton(pad.RuntimeId,primary,down);}
                 void Aim(float value){if(pad is null)CtlKey(Key.L,value>.35f);else Axis(JoyAxis.TriggerRight,value);}
-                void Range(bool down){if(pad is null)CtlKey(Key.W,down);else Axis(JoyAxis.LeftY,down?-1:0);}
-                void Turn(bool down){if(pad is null)CtlKey(Key.D,down);else Axis(JoyAxis.LeftX,down?1:0);}
+                void Range(bool down){if(pad is null)CtlKey(Key.W,down);else Axis(rightStick?JoyAxis.RightY:JoyAxis.LeftY,down?-1:0);}
+                void Turn(bool down){if(pad is null)CtlKey(Key.D,down);else Axis(rightStick?JoyAxis.RightX:JoyAxis.LeftX,down?1:0);}
                 Carry(true);await ControllerFrames(2);
                 if(pad is null){var intent=PlayerControls.Read(0,1);Check(intent.B&&!intent.Aim,"keyboard K holds carry without entering aim");}
                 Primary(true);await ControllerFrames(2);Primary(false);await ControllerFrames(2);
@@ -148,23 +146,25 @@ public partial class PlaytestDriver
                 Aim(1);await ControllerFrames(4);float startRange=AimNumber(Player,"aimRange"),px=AimNumber(Player,"x"),pz=AimNumber(Player,"z");
                 Check(Player.GetProperty("aiming").GetBoolean(),name+": L or canonical right trigger enters the authoritative aim stance");
                 if(pad is null){var intent=PlayerControls.Read(0,1);Check(intent.B&&intent.Aim,"keyboard K plus L keeps carry and aim held together");}
+                float CursorX()=>AimNumber(Player,"aimX")*AimNumber(Player,"aimRange");
+                float CursorZ()=>AimNumber(Player,"aimZ")*AimNumber(Player,"aimRange");
+                float startZ=CursorZ();
                 Range(true);await ControllerFrames(8);Range(false);await ControllerFrames(2);
-                float delta=AimNumber(Player,"aimRange")-startRange;
-                Check(delta>.2f&&delta<BombThrowRules.AimRangeSpeed*8/30f,name+": native range starts with fine nudges below the maximum sweep rate");
-                if(keyboardRange is {} expectedRange)Check(Math.Abs(delta-expectedRange)<.035f,name+": native range adjustment matches the keyboard through the shared ramp");
+                float delta=startZ-CursorZ();
+                Check(delta>.2f&&delta<BombThrowRules.AimCursorSpeed*8/30f,name+": up moves the target up below the shared maximum cursor rate");
+                if(keyboardRange is {} expectedRange)Check(Math.Abs(delta-expectedRange)<.035f,name+": upward cursor motion matches keyboard through the shared ramp");
                 else keyboardRange=delta;
-                float ax=AimNumber(Player,"aimX"),az=AimNumber(Player,"aimZ");
+                float startX=CursorX(),beforeZ=CursorZ();
                 Turn(true);await ControllerFrames(8);Turn(false);await ControllerFrames(2);
-                float turn=MathF.Acos(Math.Clamp(ax*AimNumber(Player,"aimX")+az*AimNumber(Player,"aimZ"),-1,1));
-                Check(turn>.15f&&turn<BombThrowRules.AimTurnSpeed*8/30f,name+": native turn starts with fine nudges below the maximum angular rate");
-                Check(ax*AimNumber(Player,"aimZ")-az*AimNumber(Player,"aimX")>.05f,
-                    name+": right input turns aim clockwise on the stage");
-                if(keyboardTurn is {} expectedTurn)Check(Math.Abs(turn-expectedTurn)<.025f,name+": native turn adjustment matches keyboard through the shared ramp");
+                float turn=CursorX()-startX;
+                Check(turn>.2f&&turn<BombThrowRules.AimCursorSpeed*8/30f&&Math.Abs(CursorZ()-beforeZ)<.01f,name+": right moves the target right without rotating its other axis");
+                if(keyboardTurn is {} expectedTurn)Check(Math.Abs(turn-expectedTurn)<.035f,name+": rightward cursor motion matches keyboard through the shared ramp");
                 else keyboardTurn=turn;
                 Check(Math.Abs(AimNumber(Player,"x")-px)<.02f&&Math.Abs(AimNumber(Player,"z")-pz)<.02f,name+": native aim directions do not move the carrier");
+                var selectedRange=AimNumber(Player,"aimRange");
                 Primary(true);await ControllerFrames(2);Primary(false);await ControllerFrames(2);
-                Check(HandlingBomb.GetProperty("pumps").GetInt32()==1&&Math.Abs(AimNumber(Player,"aimRange")-(startRange+delta))<.01f,name+": native primary pumps while preserving selected range");
-                await Capture("precision-input-"+(pad?.RuntimeId.ToString()??"keyboard"),0);
+                Check(HandlingBomb.GetProperty("pumps").GetInt32()==1&&Math.Abs(AimNumber(Player,"aimRange")-selectedRange)<.01f,name+": native primary pumps while preserving selected range");
+                await Capture("precision-input-"+(pad?.RuntimeId.ToString()??"keyboard")+(rightStick?"-right":"-left"),0);
                 Aim(0);await ControllerFrames(3);
                 Check(Player.GetProperty("carrying").GetString()=="bomb"&&!Player.GetProperty("aiming").GetBoolean(),name+": releasing aim preserves the held bomb");
                 if(pad is null){var intent=PlayerControls.Read(0,1);Check(intent.B&&!intent.Aim,"releasing L keeps K carry active");}

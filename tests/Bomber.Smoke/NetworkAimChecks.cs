@@ -19,11 +19,11 @@ internal static class NetworkAimChecks
         host.SendInput(0,new PlayerInput(0,0,A:true,B:true));
         var lifted=await Wait(observer,frame=>Player(frame,id).GetProperty("carrying").GetString()=="bomb");
         var heldFuse=F(Bomb(lifted,id),"fuse");
-        host.SendInput(0,new PlayerInput(-.4f,1,B:true,Aim:true));
+        host.SendInput(0,new PlayerInput(0,1,B:true,Aim:true));
         var adjusted=await Wait(observer,frame=>{
             var p=Player(frame,id);
             return p.GetProperty("aiming").GetBoolean()&&p.GetProperty("aimSet").GetBoolean()&&
-                F(p,"aimRange")<=BombThrowRules.MinAimRange+.001f&&F(p,"aimX")>.05f;
+                F(p,"aimRange")>=BombThrowRules.MaxAimRange-.001f&&F(p,"aimZ")>.99f;
         },frame=>AssertPlanted(frame,id,x,z));
         host.SendInput(0,new PlayerInput(0,0,B:true,Aim:true));
         var stable=await Wait(observer,frame=>Tick(frame)>=Tick(adjusted)+6,frame=>AssertPlanted(frame,id,x,z));
@@ -69,7 +69,7 @@ internal static class NetworkAimChecks
         void Step(int ticks){for(int i=0;i<ticks;i++)local.Advance(1d/30);}
         Step(64);
         local.SendInput(0,new PlayerInput(0,0,A:true,B:true));Step(2);
-        local.SendInput(0,new PlayerInput(-.4f,1,B:true,Aim:true));Step(48);
+        local.SendInput(0,new PlayerInput(0,1,B:true,Aim:true));Step(48);
         local.SendInput(0,new PlayerInput(0,0,B:true));Step(2);
         var state=local.DrainMessages().Last(m=>m.GetProperty("t").GetString()=="state");
         var p=Player(state,"local-0");

@@ -149,7 +149,8 @@ public sealed class BlastPlayer
 
     // Timed state.
     public float StunTimer { get; set; }       // seconds remaining stunned
-    public float InvincibleTimer { get; set; } // seconds remaining invincible after stun
+    public float InvincibleTimer { get; set; } // damage protection from a heart or respawn
+    public float ImpactProtectionTimer { get; set; } // brief bomb-contact cooldown; never blocks blasts
     public string? KnockdownReason { get; set; }
     public string? CarriedById { get; set; }
     public float RecoveryTotal { get; set; }
@@ -183,8 +184,8 @@ public sealed class BlastPlayer
     public float AimX { get; set; }
     public float AimZ { get; set; } = 1;
     public float AimRange { get; set; } = BombThrowRules.DefaultAimRange;
-    internal float AimTurnAge,AimRangeAge;
-    internal int AimTurnSign,AimRangeSign;
+    internal float AimCursorXAge,AimCursorZAge;
+    internal int AimCursorXSign,AimCursorZSign;
 
     // Power-ups.
     public int BombCapacity { get; set; } = PowerUpRules.StartingBombs;  // max active bombs

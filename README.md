@@ -43,7 +43,7 @@ The Apple Silicon app bundles the game, .NET runtime, original assets, and optio
 To remove duplicate builds after verifying the installed version:
 
 ```sh
-python3 tools/cleanup-macos-builds.py --apply --include-export --expected-installed-version 0.18.0
+python3 tools/cleanup-macos-builds.py --apply --include-export --expected-installed-version 0.19.1
 ```
 
 Omit `--apply` to preview the selection. The cleanup keeps the installed app, removes other matching bundles and their Launch Services registrations, and preserves unrelated apps, ZIPs and test receipts.
@@ -84,15 +84,15 @@ The default is loopback. No external hosting, domain, TLS, firewall changes or p
 | Action | Keyboard 1 | Keyboard 2 | Xbox | Switch 2 | PS5 |
 |---|---|---|---|---|---|
 | Move | WASD | Arrows | Stick / D-pad | Stick / D-pad | Stick / D-pad |
-| Bomb / kick / pump | J | N or Enter | A | A | Cross |
-| Hold carry / release throw | K | M or Numpad 1 | X or LB | B or L | Square or L1 |
+| Bomb / kick / pump | J | N or Enter | A | A or B | Cross |
+| Hold carry / release throw | K | M or Numpad 1 | LB or X | L or Y | L1 or Square |
 | Precision aim while carrying | L (Shift alias) | Ctrl | RT | ZR | R2 |
 | Remote detonation | I or R | Comma or Backspace | B or RB | X or R | Circle or R1 |
 | Leave battle | Esc | Esc | Menu | + | Options |
 
-**Ready, aim, throw:** keep your left hand on WASD and your right hand around J/K/L. Hold K near a bomb to lift it, or hold K and tap J to create one overhead. Keep K held and tap J to pump. Hold L: A/D turn the aim, W/S change the distance. Small nudges start slowly; sustained input sweeps faster. Release K to throw; I detonates remote bombs. Shift also aims and R also detonates. Controllers use the same sequence with carry, bomb and right trigger; the left stick or D-pad adjusts aim. Releasing the aim modifier lets you reposition while keeping the selected direction and range. [Keyboard research and evidence limits](docs/iteration17-keyboard-research.md).
+**Ready, aim, throw:** keep your left hand on WASD and your right hand around J/K/L. Hold K near a bomb to lift it, or hold K and tap J to create one overhead. Keep K held and tap J to pump. Hold L and use WASD to move the landing target in the same direction on the arena. Small nudges start slowly; sustained input sweeps faster. Release K to throw; I detonates remote bombs. Shift also aims and R also detonates. On controller, hold L/LB/L1 to carry and tap A/A/Cross to ready or pump. Hold ZR/RT/R2 and use either stick or the D-pad to move the target; release carry to throw. Switch Y, Xbox X and PlayStation Square remain face-button carry alternatives. On Switch you can hold Y and tap the adjacent B to ready or pump a bomb; A also works, and X stays remote detonation. Releasing the aim modifier lets you reposition while keeping the selected direction and range. [Controller and keyboard design research](docs/iteration19-controls-research.md).
 
-Deliberate aim covers 2–9 cells on level ground, with a high lob that can reach upper terraces. The outlined reticle stays visible over scenery: a ring marks a landing, an X marks a blocked or unsafe endpoint, and an edge arrow points toward an endpoint outside the frame. It has no added text labels. The prediction accounts for terrain height, cover, walls and fuse expiry; moving opponents can still interrupt the flight. Pumping increases blast power without shifting an aimed landing. There is no target lock or aim assist: leading a moving opponent and choosing when to stand still are the skill. [Reticle diagnosis](docs/iteration17-reticle.md); [original manual controls and project choices](docs/iteration16-controls-research.md).
+Deliberate aim covers 0–9 cells on level ground, with a high lob that can reach upper terraces. The target can cross through your position to aim behind you; a close self-lob can hit you. The outlined reticle stays visible over scenery: a ring marks a landing, an X marks a blocked or unsafe endpoint, and an edge arrow points toward an endpoint outside the frame. It has no added text labels. The prediction accounts for terrain height, cover, walls and fuse expiry; moving opponents can still interrupt the flight. Pumping increases blast power without shifting an aimed landing. There is no target lock or aim assist: leading a moving opponent and choosing when to stand still are the skill. [Reticle diagnosis](docs/iteration17-reticle.md); [original manual controls and project choices](docs/iteration16-controls-research.md).
 
 Menus accept **WASD or arrow keys**, with Enter to confirm and Esc to go back; text fields still accept letters normally.
 
@@ -100,7 +100,7 @@ Keyboard 2 also supports numpad 0 / 1 / 2 for bomb / carry / remote. Switch uses
 
 Choose **CONTROLS & CONTROLLER TEST** on the main menu to inspect connected pads and live inputs. Face buttons stay in the tester; Menu / + / Options or Esc leaves it. The roster shows which pad accompanies each human seat. Two-human matches allow one pad per player alongside the two keyboard layouts; larger matches reserve the first two humans for keyboards and assign pads to the remaining humans.
 
-All devices run at the same maximum running speed, including diagonal keyboard movement. Stick direction is continuous through 360 degrees. Character rendering now interpolates between authoritative snapshots rather than repeatedly catching up to each one, and the stride/turn animation follows that smooth motion. Sticks retain their analog direction but use full running speed beyond the **20% radial deadzone**. Precision aim preserves stick magnitude for fine adjustment; keyboard taps use the same slow-start ramp and both devices share maximum turning/range rates. D-pad input takes priority over stick input, which takes priority over keyboard movement; directions are never added together. Short bomb taps are buffered, holding bomb does not auto-repeat, and actions must be released after entering a match or returning focus. Disconnecting a pad reserves its seat without moving another player's controls. Identical controllers that both reconnect under ambiguous identities require restarting the match to assign them safely.
+All devices run at the same maximum running speed, including diagonal keyboard movement. Stick direction is continuous through 360 degrees. Character rendering now interpolates between authoritative snapshots rather than repeatedly catching up to each one, and the stride/turn animation follows that smooth motion. Sticks retain their analog direction but use full running speed beyond the **20% radial deadzone**. Precision aim preserves stick magnitude for fine adjustment; keyboard taps use the same slow-start ramp and all devices share a six-cell/second cursor limit. While aiming, an active right stick takes priority; otherwise D-pad input takes priority over the left stick, then keyboard. Directions are never added together. Short bomb taps are buffered, holding bomb does not auto-repeat, and actions must be released after entering a match or returning focus. Disconnecting a pad reserves its seat without moving another player's controls. Identical controllers that both reconnect under ambiguous identities require restarting the match to assign them safely.
 
 ### Switch 2 USB on macOS
 
@@ -123,7 +123,7 @@ Explosions use spherical distance and cover occlusion rather than a classic grid
 
 ## Knockdowns and player grabs
 
-Contact starts a short planted kick: about 0.13 seconds of anticipation, then a strike and about 0.17 seconds of gradual return to running. The bomb travels at 12 cells/second, with no short distance cap, and keeps momentum when falling from a terrace onto lower ground. Walls still block it. A hit causes a low hop and short stumble before finite landing recovery; following your own outgoing kick no longer hits you from behind. Falling bombs can also knock players down. A visible hit message, stars and **DOWN / HELD** status explain what happened.
+Contact starts a short planted kick: about 0.13 seconds of anticipation, then a strike and about 0.17 seconds of gradual return to running. The bomb travels at 12 cells/second, with no short distance cap, and keeps momentum when falling from a terrace onto lower ground. Walls still block it. A hit causes a low hop and short stumble before finite landing recovery; following your own outgoing kick no longer hits you from behind. Falling bombs can also knock players down. A visible hit message, stars and **DOWN / HELD** status explain what happened. Bomb impacts grant only a brief 0.35-second contact cooldown: a later hit can chain another knockdown, and explosions remain lethal during knockdown, holding and recovery. Hearts and practice respawns retain their separate damage protection.
 
 Alternate movement directions or tap the action buttons to recover faster. Holding one direction/button does not repeatedly count as effort. Hold **carry** near a downed opponent to pick them up, walk with them, and release carry to throw them through an arc. The victim can wiggle/tap to escape; an inactive hold also times out. Both controller and keyboard inputs use the same authoritative recovery rules, and bots recover through those inputs too. Disconnects release held players safely.
 
@@ -241,9 +241,9 @@ python3 tools/playtest/run.py --scenario presentation
 
 ## Screenshots
 
-The gallery contains real exported-app captures. Model views, controls, gameplay and walking clips are refreshed for v0.18.0. The walking clip shows side and three-quarter inspection views followed by the ordinary gameplay camera. Other historical clips retain their documented versions. The bomb-trail closeup uses a temporary inspection camera on actual actors. The controller tester shows device detection, not new physical button testing.
+The gallery contains real exported-app captures. Controls and aiming/reticle images are refreshed for v0.19.0; model, other gameplay images and walking clips retain their v0.18.0 receipts. The walking clip shows side and three-quarter inspection views followed by the ordinary gameplay camera. Other historical clips retain their documented versions. The bomb-trail closeup uses a temporary inspection camera on actual actors. The controller tester uses explicitly labeled synthetic QA devices; it does not establish new physical button testing.
 
-[Watch precision aiming and a charged throw](docs/videos/precision-aim.mp4) — actual practice gameplay, normal speed, with the ordinary battle camera. The range changes, pumping keeps the chosen endpoint, and release commits the lob.
+[Historical precision-aim and charged-throw demo](docs/videos/precision-aim.mp4) — v0.16 practice gameplay at normal speed with the ordinary battle camera. It uses the earlier turn/range controls; v0.19 moves the target in arena directions. Pumping and release-to-throw behavior remain the same.
 
 ![Choosing a charged bomb's landing point](docs/images/precision-aim.png)
 

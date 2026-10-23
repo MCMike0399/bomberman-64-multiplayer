@@ -6,6 +6,15 @@ static class AimInputChecks
 {
     public static async Task Run(Action<bool,string> check)
     {
+        var walking=new PlayerInput(.6f,.8f,B:true);
+        check(InputPolicy.Resolve(default,walking,aimStick:new PlayerInput(-1,0))==InputPolicy.Resolve(default,walking),
+            "Right stick cannot steal ordinary movement without the aim modifier");
+        var aimHeld=walking with {Aim=true};
+        check(InputPolicy.Resolve(default,aimHeld,aimStick:new PlayerInput(.1f,.1f))==InputPolicy.Resolve(default,aimHeld),
+            "Right-stick drift leaves left-stick precision control available");
+        var selected=InputPolicy.Resolve(default,aimHeld,new PlayerInput(0,1),new PlayerInput(-.6f,0));
+        check(Math.Abs(selected.X+.5f)<.0001f&&selected.Z==0&&selected.B&&selected.Aim,
+            "Deliberate right-stick aim takes priority without adding left-stick or D-pad speed");
         foreach(bool aiming in new[]{false,true})
         {
             using var packet=JsonDocument.Parse(NetworkSession.EncodeInput(new PlayerInput(.25f,-.5f,B:true,Aim:aiming),17));
@@ -32,21 +41,22 @@ static class AimInputChecks
             check(state.GetProperty("events").EnumerateArray().Count(e=>e.GetProperty("kind").GetString()=="throw"&&e.GetProperty("playerId").GetString()=="local-0")==1,"Queued release creates exactly one authoritative throw");
         }
 
-        // Three production adapter seats receive equivalent device-resolved commands.
+        // Four production adapter seats receive equivalent device-resolved commands.
         // Compare changes rather than absolute headings so spawn facing is irrelevant.
-        await using(var local=await Carrying(3,check))
+        await using(var local=await Carrying(4,check))
         {
             var before=Latest(local);
             var keyboard=InputPolicy.Resolve(new PlayerInput(1,-1,B:true,Aim:true));
             var stick=InputPolicy.Resolve(default,new PlayerInput(MathF.Sqrt(.5f),-MathF.Sqrt(.5f),B:true,Aim:true));
             var dpad=InputPolicy.Resolve(default,default,new PlayerInput(1,-1,B:true,Aim:true));
-            local.SendInput(0,keyboard);local.SendInput(1,stick);local.SendInput(2,dpad);Step(local,12);
+            var right=InputPolicy.Resolve(default,new PlayerInput(0,0,B:true,Aim:true),aimStick:new PlayerInput(MathF.Sqrt(.5f),-MathF.Sqrt(.5f)));
+            local.SendInput(0,keyboard);local.SendInput(1,stick);local.SendInput(2,dpad);local.SendInput(3,right);Step(local,12);
             var after=Latest(local);
-            for(int seat=0;seat<3;seat++)
+            for(int seat=0;seat<4;seat++)
                 check(SamePosition(Player(before,seat),Player(after,seat))&&Player(after,seat).GetProperty("aiming").GetBoolean(),"Device-resolved aim plants actual LocalSession seat "+seat);
-            var changes=Enumerable.Range(0,3).Select(seat=>Change(Player(before,seat),Player(after,seat))).ToArray();
-            check(changes[0].Angle>0&&changes[0].Range>0,"Deliberate input actually rotates and extends authoritative landing aim");
-            check(Near(changes[0].Angle,changes[1].Angle)&&Near(changes[0].Angle,changes[2].Angle)&&Near(changes[0].Range,changes[1].Range)&&Near(changes[0].Range,changes[2].Range),"Keyboard diagonal, full-stick diagonal and D-pad share angular and range rates through LocalSession");
+            var changes=Enumerable.Range(0,4).Select(seat=>Change(Player(before,seat),Player(after,seat))).ToArray();
+            check(changes[0].X>0&&changes[0].Z<0,"Deliberate input moves the authoritative cursor right and up");
+            check(changes.Skip(1).All(change=>Near(change.X,changes[0].X)&&Near(change.Z,changes[0].Z)),"Keyboard diagonal, both full-stick diagonals and D-pad share cursor rates through LocalSession");
         }
 
         await using(var local=await Carrying(2,check))
@@ -55,13 +65,13 @@ static class AimInputChecks
             local.SendInput(0,InputPolicy.Resolve(default,new PlayerInput(.5f,0,B:true,Aim:true)));
             local.SendInput(1,InputPolicy.Resolve(default,new PlayerInput(1,0,B:true,Aim:true)));Step(local,8);
             var after=Latest(local);var fine=Change(Player(before,0),Player(after,0));var full=Change(Player(before,1),Player(after,1));
-            check(fine.Angle>0&&fine.Angle<full.Angle,"Partial stick permits a finer authoritative turn without exceeding full-stick rate");
+            check(fine.X>0&&fine.X<full.X,"Partial stick permits a finer authoritative cursor nudge without exceeding full-stick rate");
             check(SamePosition(Player(before,0),Player(after,0))&&SamePosition(Player(before,1),Player(after,1)),"Partial and full stick aim both preserve planted carrier position");
             local.SendInput(0,InputPolicy.Resolve(default,new PlayerInput(0,.5f,B:true,Aim:true)));
             local.SendInput(1,InputPolicy.Resolve(default,new PlayerInput(0,1,B:true,Aim:true)));Step(local,6);
             var ranged=Latest(local);
-            float fineRange=N(Player(after,0),"aimRange")-N(Player(ranged,0),"aimRange");
-            float fullRange=N(Player(after,1),"aimRange")-N(Player(ranged,1),"aimRange");
+            float fineRange=Cursor(Player(ranged,0)).Y-Cursor(Player(after,0)).Y;
+            float fullRange=Cursor(Player(ranged,1)).Y-Cursor(Player(after,1)).Y;
             check(fineRange>0&&fineRange<fullRange,"Partial stick permits finer range adjustment through the same command pipeline");
         }
     }
@@ -85,10 +95,10 @@ static class AimInputChecks
     private static float N(JsonElement value,string key)=>value.GetProperty(key).GetSingle();
     private static bool Near(float a,float b)=>Math.Abs(a-b)<.0001f;
     private static bool SamePosition(JsonElement a,JsonElement b)=>Near(N(a,"x"),N(b,"x"))&&Near(N(a,"z"),N(b,"z"));
-    private static (float Angle,float Range) Change(JsonElement before,JsonElement after)
+    private static System.Numerics.Vector2 Cursor(JsonElement p)=>new(N(p,"aimX")*N(p,"aimRange"),N(p,"aimZ")*N(p,"aimRange"));
+    private static (float X,float Z) Change(JsonElement before,JsonElement after)
     {
-        float initial=MathF.Atan2(N(before,"fx"),N(before,"fz"));
-        float final=MathF.Atan2(N(after,"aimX"),N(after,"aimZ"));
-        return (MathF.Abs(MathF.IEEERemainder(final-initial,2*MathF.PI)),N(after,"aimRange")-N(before,"aimRange"));
+        var delta=Cursor(after)-new System.Numerics.Vector2(N(before,"fx"),N(before,"fz"))*N(before,"aimRange");
+        return (delta.X,delta.Y);
     }
 }

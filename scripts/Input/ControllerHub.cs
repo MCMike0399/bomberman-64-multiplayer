@@ -84,16 +84,18 @@ public partial class ControllerHub : Node
         if(!_focused||!_inMatch||Bindings==null)return default;
         var keyboard=PlayerControls.Keyboard(seat);
         int? id=Bindings.DeviceIdForSeat(seat);
-        PlayerInput stick=default,dpad=default;
+        PlayerInput stick=default,dpad=default,aimStick=default;
         if(id is {} pad)
         {
             var family=DeviceFamily(pad);
             stick=new(Input.GetJoyAxis(pad,JoyAxis.LeftX),Input.GetJoyAxis(pad,JoyAxis.LeftY),
-                Button(pad,ControllerProfile.BombButton(family)),Button(pad,ControllerProfile.CarryButton(family))||Button(pad,JoyButton.LeftShoulder),
+                Button(pad,ControllerProfile.BombButton(family))||(ControllerProfile.AlternateBombButton(family) is {} alternate&&Button(pad,alternate)),
+                Button(pad,ControllerProfile.CarryButton(family))||Button(pad,JoyButton.LeftShoulder),
                 Button(pad,ControllerProfile.RemoteButton(family))||Button(pad,JoyButton.RightShoulder),
                 Input.GetJoyAxis(pad,JoyAxis.TriggerRight)>.35f);
             dpad=new((Button(pad,JoyButton.DpadRight)?1:0)-(Button(pad,JoyButton.DpadLeft)?1:0),
                 (Button(pad,JoyButton.DpadDown)?1:0)-(Button(pad,JoyButton.DpadUp)?1:0));
+            aimStick=new(Input.GetJoyAxis(pad,JoyAxis.RightX),Input.GetJoyAxis(pad,JoyAxis.RightY));
         }
         // Release menu-confirm before it can drop a bomb in the newly entered match.
         if(!_armed[seat])
@@ -113,7 +115,7 @@ public partial class ControllerHub : Node
             if(id is {} device&&_taps.Remove(device,out var taps))
                 stick=stick with {A=stick.A||taps.Bomb,R=stick.R||taps.Remote};
         }
-        return InputPolicy.Resolve(keyboard,stick,dpad);
+        return InputPolicy.Resolve(keyboard,stick,dpad,aimStick);
     }
     private static bool Button(int id,JoyButton button)=>Input.IsJoyButtonPressed(id,button);
     private void OnConnection(long id,bool connected)=>RefreshDevices();
@@ -265,7 +267,7 @@ public partial class ControllerHub : Node
             {
                 _taps.TryGetValue(button.Device,out var old);
                 var family=DeviceFamily(button.Device);
-                _taps[button.Device]=(old.Bomb||button.ButtonIndex==ControllerProfile.BombButton(family),
+                _taps[button.Device]=(old.Bomb||ControllerProfile.IsBombButton(family,button.ButtonIndex),
                     old.Remote||button.ButtonIndex==ControllerProfile.RemoteButton(family)||button.ButtonIndex==JoyButton.RightShoulder);
             }
         }

@@ -41,7 +41,7 @@ public sealed partial class BlastSession
             }
             foreach(var p in _players.Values)
             {
-                if(!p.Alive||p.Ghost||p.StunTimer>0||p.InvincibleTimer>0||p.CarriedById is not null||
+                if(!CanReceiveBombImpact(p)||
                     p.Airborne||Math.Abs(p.Y-b.FlyY)>.6f)continue;
                 if((p.X-b.X)*b.FlyVX+(p.Z-b.Z)*b.FlyVZ<=0)continue;
                 if(Dist2(nx,nz,p.X,p.Z)>=(PlayerRadius+BlastBomb.Radius)*(PlayerRadius+BlastBomb.Radius))continue;

@@ -8,30 +8,30 @@ public static class BombThrowRules
     // Settled rendered hands are ~1.65 world units high (the actor is scaled 1.12).
     public const float LaunchHeight = 1.22f;
     public const float SimulationStep = 1f / 30;
-    public const float MinAimRange = 2f;
+    public const float MinAimRange = 0f;
     public const float MaxAimRange = 9f;
     public const float DefaultAimRange = 4.5f;
-    public const float AimTurnSpeed = MathF.PI * 2 / 3; // 120 degrees per second
-    public const float AimRangeSpeed = 3f;
+    public const float AimCursorSpeed = 6f; // arena cells per second, shared by every input device
     public const float AimFineScale = .25f;
     public const float AimRampSeconds = .3f;
     public const float AimLiftSpeed = 8.5f;
     public const float PillarHeight = .9f;
     public const float CoverHeight = .61f;
 
-    /// <summary>Relative controls: right turns clockwise; up extends the lob. Neutral retains intent.</summary>
-    public static ThrowAim AdjustAim(ThrowAim aim,float turn,float range,float dt)
+    /// <summary>Move the landing cursor in arena X/Z. It can cross the carrier to aim behind them.
+    /// Neutral retains intent; radial clamping and normalized input prevent diagonal speed gains.</summary>
+    public static ThrowAim AdjustAim(ThrowAim aim,float x,float z,float dt)
     {
-        turn=float.IsFinite(turn)?Math.Clamp(turn,-1,1):0;
-        range=float.IsFinite(range)?Math.Clamp(range,-1,1):0;
-        var length=MathF.Sqrt(turn*turn+range*range);
-        if(length>1){turn/=length;range/=length;}
+        x=float.IsFinite(x)?Math.Clamp(x,-1,1):0;
+        z=float.IsFinite(z)?Math.Clamp(z,-1,1):0;
+        var length=MathF.Sqrt(x*x+z*z);
+        if(length>1){x/=length;z/=length;}
         dt=float.IsFinite(dt)?Math.Clamp(dt,0,.1f):0;
-        if(turn==0&&range==0)return aim;
-        // +Z points down in the arena's top view. Atan2(X,Z) increases
-        // counterclockwise, so a positive right-turn control subtracts angle.
-        var angle=MathF.Atan2(aim.X,aim.Z)-turn*AimTurnSpeed*dt;
-        return new(MathF.Sin(angle),MathF.Cos(angle),Math.Clamp(aim.Range-range*AimRangeSpeed*dt,MinAimRange,MaxAimRange));
+        if(x==0&&z==0)return aim;
+        var target=new Vector2(aim.X,aim.Z)*aim.Range+new Vector2(x,z)*AimCursorSpeed*dt;
+        var distance=target.Length();
+        if(distance<.00001f)return new(aim.X,aim.Z,0);
+        return new(target.X/distance,target.Y/distance,Math.Min(distance,MaxAimRange));
     }
 
     /// <summary>Range is the landing distance on level ground; elevation and combat can change it.

@@ -13,6 +13,7 @@ public partial class PlaytestDriver
     private async Task GrappleActions()
     {
         Event("grapple-input-policy",new {source="ordinary authoritative three-human training sessions; real movement/action inputs",fixtures=false,stateMutation=false});
+        await PrepareGrapple(detonateAtImpact:true);
         await PrepareGrapple();
         int recoverBefore=GrappleEffect("recover");
         var passive=GrappleValue(GrapplePlayer(1),"recoveryRemaining");
@@ -60,7 +61,7 @@ public partial class PlaytestDriver
         _root.Back();await Frames(3);
     }
     private int _grappleTrial;
-    private async Task PrepareGrapple()
+    private async Task PrepareGrapple(bool detonateAtImpact=false)
     {
         if(_root.ActiveSession!=null){_root.Back();await Frames(3);}
         foreach(int seat in new[]{0,1,2})Input(seat,default);
@@ -79,6 +80,17 @@ public partial class PlaytestDriver
         Check(!GrapplePlayer(0).GetProperty("stunned").GetBoolean(),"kicker avoids outgoing bomb self-hit");
         Check(GrappleEffect("knockdown")>knockBefore&&Cue("kick")>kickCueBefore,"knockdown event reaches actual renderer and cue path");
         Check(GrapplePlayer(1).GetProperty("airborne").GetBoolean(),"bomb impact launches victim through real authority flight");
+        if(detonateAtImpact)
+        {
+            Check(!GrapplePlayer(1).GetProperty("heart").GetBoolean(),"remote-snipe victim has no heart to absorb the explosion");
+            string victimId=GrapplePlayer(1).GetProperty("id").GetString()!;
+            Input(0,new PlayerInput(0,0,R:true));
+            await WaitState(s=>s.GetProperty("events").EnumerateArray().Any(e=>
+                e.GetProperty("kind").GetString()=="death"&&e.GetProperty("playerId").GetString()==victimId&&
+                e.GetProperty("reason").GetString()=="explosion"),"remote detonation eliminates the freshly knocked down victim",12);
+            Check(State.GetProperty("bombs").GetArrayLength()==0,"the actual sniping remote explodes on command during knockdown");
+            await Capture("grapple-remote-snipe-explosion");Input(0,default);return;
+        }
         await Capture($"grapple-impact-flight-{++_grappleTrial}");
         await WaitState(_=>!GrapplePlayer(1).GetProperty("airborne").GetBoolean(),"bomb-impact victim lands before grounded recovery or grab",65);
         Check(GrapplePlayer(1).GetProperty("stunned").GetBoolean()&&!GrapplePlayer(1).GetProperty("ghost").GetBoolean(),"bomb-impact landing preserves a finite grounded recovery window");

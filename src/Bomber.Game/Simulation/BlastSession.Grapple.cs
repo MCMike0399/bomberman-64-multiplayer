@@ -4,11 +4,15 @@ namespace Bomber.Game.Simulation;
 public sealed partial class BlastSession
 {
     private const float HoldSeconds=3.2f,EffortSeconds=.24f,EffortCooldown=.10f,PlayerCarryHeight=1.4f;
+    private const float ImpactProtectionSeconds=.35f;
+    private static bool CanReceiveBombImpact(BlastPlayer p)=>p.Alive&&!p.Ghost&&
+        p.InvincibleTimer<=0&&p.ImpactProtectionTimer<=0&&p.CarriedById is null;
     private static void ClearRecovery(BlastPlayer p)
     {
         p.StunTimer=0;p.CarriedById=null;p.HoldRemaining=0;p.RecoveryTotal=0;
         p.StruggleCooldown=0;p.RecoveryX=p.RecoveryZ=0;p.KnockdownReason=null;
         p.Airborne=false;p.Falling=false;p.AirVX=p.AirVY=p.AirVZ=0;
+        p.ImpactProtectionTimer=0;
     }
     private bool ProcessRecovery(BlastPlayer p,InputState input,float dt)
     {
@@ -42,11 +46,11 @@ public sealed partial class BlastSession
     }
     private void KnockDown(BlastPlayer p,float duration,string reason,string? entity,string? causedBy)
     {
-        if(p.InvincibleTimer>0||p.CarriedById is not null)return;
+        if(!CanReceiveBombImpact(p))return;
         DropCarriedBombs(p);
         p.StunTimer=duration;p.RecoveryTotal=duration;p.KnockdownReason=reason;
         p.StruggleCooldown=0;p.RecoveryX=p.Input.X;p.RecoveryZ=p.Input.Z;
-        p.InvincibleTimer=duration+.45f;
+        p.ImpactProtectionTimer=ImpactProtectionSeconds;
         Present("knockdown",entity,p.Id,p.X,p.Y,p.Z,duration,reason:reason,causedBy:causedBy);
     }
     private void BeginHold(BlastPlayer carrier,BlastPlayer victim)
@@ -67,7 +71,7 @@ public sealed partial class BlastSession
         }
         victim.CarriedById=null;victim.HoldRemaining=0;victim.StunTimer=0;victim.KnockdownReason=null;
         victim.SurfaceY=_stage.SurfaceAt(victim.X,victim.Z);victim.Tier=(int)MathF.Round(victim.Y);
-        victim.InvincibleTimer=Math.Max(victim.InvincibleTimer,.6f);
+        victim.ImpactProtectionTimer=Math.Max(victim.ImpactProtectionTimer,.6f);
         Present("player-release",victim.Id,victim.Id,victim.X,victim.Y,victim.Z,reason:reason,causedBy:carrierId);
     }
     private bool AirborneTerrainBlocks(float x,float z,BlastPlayer p)

@@ -253,6 +253,7 @@ public partial class PlaytestDriver
         var family=ControllerProfile.Family(pad.Name);
         var bomb=ControllerProfile.BombButton(family);var carry=ControllerProfile.CarryButton(family);var remote=ControllerProfile.RemoteButton(family);
         Check(ControllerProfile.ButtonName(family,bomb)==(family==ControllerFamily.PlayStation?"Cross":"A"),pad.Name+": primary prompt matches the physical printed button");
+        Check(ControllerProfile.ButtonName(family,carry)==(family==ControllerFamily.PlayStation?"Square":family==ControllerFamily.Nintendo?"Y":"X"),pad.Name+": face carry uses the west button for a comfortable alternate grip");
         await ControllerFocusReady();
         CtlReleaseAll();ControllerHub.Current.OverrideDevicesForPlaytest([pad]);CtlButton(pad.RuntimeId,bomb,true);
         _root.StartLocal(new SessionSettings(Stage:"rock-garden",Bots:0),1,practice:true);
@@ -288,6 +289,37 @@ public partial class PlaytestDriver
         Check(State.GetProperty("bombs").EnumerateArray().Any(b=>b.GetProperty("state").GetInt32()==3),pad.Name+": thrown bomb enters flight");
         await Capture("controllers-bomb-"+pad.RuntimeId);CtlReleaseAll();_root.Back();await ControllerFrames(3);
         await ControllerPrimaryHoldEvents(pad);
+        if(family==ControllerFamily.Nintendo)await ControllerNintendoCharge(pad);
+    }
+    private async Task ControllerNintendoCharge(GamepadDevice pad)
+    {
+        CtlReleaseAll();CtlButton(pad.RuntimeId,JoyButton.A,true); // Printed B.
+        _root.StartLocal(new SessionSettings(Stage:"rock-garden",Bots:0),1,practice:true);
+        await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"Switch B alias trial reaches fight",150);
+        Check(State.GetProperty("bombs").GetArrayLength()==0,"held Switch B must be released before gameplay arms");
+        CtlButton(pad.RuntimeId,JoyButton.A,false);await ControllerFrames(4);
+        CtlButton(pad.RuntimeId,JoyButton.X,true);await ControllerFrames(2); // Printed Y stays held.
+        CtlButton(pad.RuntimeId,JoyButton.A,true);await ControllerFrames(2);
+        CtlButton(pad.RuntimeId,JoyButton.A,false);await ControllerFrames(2);
+        Check(CtlPlayer(0).GetProperty("carrying").GetString()=="bomb"&&State.GetProperty("bombs").GetArrayLength()==1,
+            "Switch Y plus B creates one bomb overhead without releasing Y");
+        CtlButton(pad.RuntimeId,JoyButton.A,true);await ControllerFrames(8);
+        var intent=PlayerControls.Read(0,1);
+        Check(intent.A&&intent.B&&!intent.R,"Switch Y plus B carries and pumps without requesting remote detonation");
+        Check(State.GetProperty("bombs")[0].GetProperty("pumps").GetInt32()==1,"holding Switch B pumps once without auto-repeat");
+        CtlButton(pad.RuntimeId,JoyButton.A,false);await ControllerFrames(2);
+        CtlButton(pad.RuntimeId,JoyButton.A,true);CtlButton(pad.RuntimeId,JoyButton.A,false);await ControllerFrames(4);
+        Check(State.GetProperty("bombs")[0].GetProperty("pumps").GetInt32()==2,"sub-frame Switch B tap survives native buffering and pumps again");
+        CtlButton(pad.RuntimeId,JoyButton.B,true);await ControllerFrames(2);CtlButton(pad.RuntimeId,JoyButton.B,false);await ControllerFrames(2);
+        Check(State.GetProperty("bombs")[0].GetProperty("pumps").GetInt32()==3,"Switch printed A remains a pump alternative with Y held");
+        CtlButton(pad.RuntimeId,JoyButton.Y,true);intent=PlayerControls.Read(0,1);
+        Check(intent.R&&!intent.A&&intent.B,"Switch printed X remains remote only while Y holds the bomb");
+        CtlButton(pad.RuntimeId,JoyButton.Y,false);await ControllerFrames(2);
+        await Capture("controllers-switch-y-b-charge");
+        CtlButton(pad.RuntimeId,JoyButton.X,false);await ControllerFrames(4);
+        Check(CtlPlayer(0).GetProperty("carrying").ValueKind==JsonValueKind.Null&&State.GetProperty("bombs")[0].GetProperty("state").GetInt32()==3,
+            "releasing Switch Y throws the B-charged bomb");
+        CtlReleaseAll();_root.Back();await ControllerFrames(3);
     }
     private async Task ControllerPrimaryHoldEvents(GamepadDevice pad)
     {

@@ -20,8 +20,8 @@ public partial class ControllerPanel : VBoxContainer
         var cards=ArcadeTheme.Row(this,18);
         Card(cards,"Keyboard 1",[("Move",["W","A","S","D"]),("Bomb / pump",["J"]),("Hold to carry",["K"]),("Precision aim",["L","Shift"]),("Detonate",["I","R"])]);
         Card(cards,"Keyboard 2",[("Move",["Arrows"]),("Bomb",["N","Enter","Num 0"]),("Hold to carry",["M","Num 1"]),("Precision aim",["Ctrl"]),("Detonate",[",","Backspace","Num 2"])]);
-        Card(cards,"Gamepads",[("Move",["Stick","D-pad"]),("Bomb",["A","A","Cross"]),("Hold to carry",["X","B","Square"]),("Precision aim",["RT","ZR","R2"]),("Detonate",["B","X","Circle"])],"Xbox, Switch and PlayStation, in that order. LB, L or L1 also carries; RB, R or R1 also detonates.");
-        var notes=ArcadeTheme.Text(this,"Hold carry near a bomb, or hold carry + tap bomb to ready one. Tap bomb to pump. Hold aim: left/right turns, up/down adjusts range. Nudge for precision; hold to sweep. Release carry to throw. Walk into a planted bomb to kick.",16,ArcadeTheme.Muted);
+        Card(cards,"Gamepads",[("Move",["Stick","D-pad"]),("Bomb",["A","A/B","Cross"]),("Hold to carry",["LB","L","L1"]),("Precision aim",["RT","ZR","R2"]),("Detonate",["B","X","Circle"])],"Xbox, Switch and PlayStation, in that order. X, Y or Square also carries; RB, R or R1 also detonates.");
+        var notes=ArcadeTheme.Text(this,"Hold carry and tap bomb to ready or pump. On Switch, hold Y and tap B (A also works). Hold aim and use either stick to move the target. On keyboard, hold K to carry and L + WASD to aim. Nudge for precision; hold to sweep. Release carry to throw.",16,ArcadeTheme.Muted);
         notes.AutowrapMode=TextServer.AutowrapMode.WordSmart;
         UpdateStatus();
     }
@@ -52,7 +52,7 @@ public partial class ControllerPanel : VBoxContainer
                 var buttons=Enumerable.Range(0,16).Where(b=>Input.IsJoyButtonPressed(id,(JoyButton)b)).Select(b=>ControllerProfile.ButtonName(d.Family,(JoyButton)b));
                 return $"Pad {i+1}: {d.Device.Name}, {d.Backend}, {(d.Mapped?"ready":"unmapped")}\n"+
                     $"Stick {Input.GetJoyAxis(id,JoyAxis.LeftX):+0.00;-0.00;0.00}, {Input.GetJoyAxis(id,JoyAxis.LeftY):+0.00;-0.00;0.00}    "+
-                    $"Aim {ControllerProfile.AimName(d.Family)} {Input.GetJoyAxis(id,JoyAxis.TriggerRight):0.00}    Held: {string.Join(", ",buttons).PadRight(1,'—')}    Bomb {Label(ControllerProfile.BombButton(d.Family))}, carry {Label(ControllerProfile.CarryButton(d.Family))}, detonate {Label(ControllerProfile.RemoteButton(d.Family))}";
+                    $"Aim {ControllerProfile.AimName(d.Family)} {Input.GetJoyAxis(id,JoyAxis.TriggerRight):0.00}    Held: {string.Join(", ",buttons).PadRight(1,'—')}    Bomb {ControllerProfile.BombName(d.Family)}, carry {Label(JoyButton.LeftShoulder)} / {Label(ControllerProfile.CarryButton(d.Family))}, detonate {Label(ControllerProfile.RemoteButton(d.Family))}";
             }));
     }
 }

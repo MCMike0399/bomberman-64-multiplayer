@@ -14,8 +14,8 @@ public sealed partial class BlastSession
 
     private static void ClearAimRamp(BlastPlayer player)
     {
-        player.AimTurnAge=player.AimRangeAge=0;
-        player.AimTurnSign=player.AimRangeSign=0;
+        player.AimCursorXAge=player.AimCursorZAge=0;
+        player.AimCursorXSign=player.AimCursorZSign=0;
     }
 
     private static float RampAimAxis(float axis,ref float age,ref int previousSign,float dt)
@@ -44,9 +44,9 @@ public sealed partial class BlastSession
             player.AimX=player.FacingX;player.AimZ=player.FacingZ;
             player.AimRange=BombThrowRules.DefaultAimRange;player.AimSet=true;
         }
-        var turn=RampAimAxis(input.X,ref player.AimTurnAge,ref player.AimTurnSign,dt);
-        var range=RampAimAxis(input.Z,ref player.AimRangeAge,ref player.AimRangeSign,dt);
-        var aim=BombThrowRules.AdjustAim(new(player.AimX,player.AimZ,player.AimRange),turn,range,dt);
+        var x=RampAimAxis(input.X,ref player.AimCursorXAge,ref player.AimCursorXSign,dt);
+        var z=RampAimAxis(input.Z,ref player.AimCursorZAge,ref player.AimCursorZSign,dt);
+        var aim=BombThrowRules.AdjustAim(new(player.AimX,player.AimZ,player.AimRange),x,z,dt);
         player.AimX=aim.X;player.AimZ=aim.Z;player.AimRange=aim.Range;
         player.FacingX=aim.X;player.FacingZ=aim.Z;
     }

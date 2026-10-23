@@ -1,8 +1,9 @@
 # Agent handoff
 
-This is the maintained handoff after the first eighteen iterations, recorded
-2026-10-22. Gameplay development is paused at the user's request; this handoff
-does not authorize a new feature pass. Runtime baseline: **v0.18.0**, commit
+The user resumed gameplay work on 2026-10-23 for controller ergonomics, aiming
+and knockdown/blast separation (iteration19). The first eighteen iterations
+remain historical evidence. Current installed runtime: **v0.19.1**
+(see [verification](../verification.md)). Previous runtime baseline: **v0.18.0**, commit
 `316a330d7d895a92f98c1a60be7d571ec445a8a3`. Later documentation commits may follow.
 Verify the live branch, source, tools and installed version before relying on
 that baseline. Start with [project instructions](../../AGENTS.md).
@@ -34,6 +35,15 @@ update the current guide rather than silently reviving old behavior.
 
 ## Current decisions that supersede earlier experiments
 
+- Iteration19 recommends shoulder carry (L/LB/L1); Switch Y replaces B as its
+  face alternative. v0.19.1 also lets Switch B ready/pump while Y is held;
+  A still works and X remains remote. Hold the aim trigger and steer the target with either stick.
+  Keyboard L + WASD steers the same map-plane cursor. Relative turn/range controls
+  are superseded. [Research and alternatives](../iteration19-controls-research.md).
+- Knockdowns have a brief impact-only cooldown and allow subsequent hit chains.
+  Knockdown, hold escape and thrown-player protection do not stop explosions;
+  hearts and respawns retain separate damage protection.
+
 - Keyboard is **J bomb, K hold carry, L hold aim, I remote**; WASD moves/adjusts
   aim, Shift/R remain aliases. Earlier Space-carry and K-aim instructions are
   historical. The input guide explains both primary-hold and carry-held flows.
@@ -48,8 +58,8 @@ update the current guide rather than silently reviving old behavior.
   grounded foundations and animated water. Art geometry and collision are separate.
 - AI difficulty changes decisions, not physics/resources. Measure pressure and
   reengagement, not only bombs placed; mixed benchmark outcomes must remain visible.
-- The Mac has one installed app. Old exports and renamed backup bundles were
-  removed after v0.18.0 verification; a missing `artifacts/exports/*.app` is expected.
+- The Mac has one installed v0.19.1 app. The previous bundle and export were
+  removed after installation verification; a missing `artifacts/exports/*.app` is expected.
   Rebuild only when needed, then clean duplicates after the next verified install.
 
 ## A reliable small-agent work packet

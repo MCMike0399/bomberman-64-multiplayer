@@ -7,18 +7,23 @@ lookup for exact values; older iteration documents retain historical evidence.
 
 ## Current controls and compatibility
 
-The v0.18 mapping supersedes the Space-carry/K-aim/L-remote mapping in v0.17
+The iteration19 controller mapping supersedes printed-B carry and promotes the
+left shoulder; keyboard remains v0.18. The v0.18 keyboard mapping supersedes the Space-carry/K-aim/L-remote mapping in v0.17
 and earlier positional Nintendo mappings. The user requested keyboard-only play
 with both hands on keys and restored K carry because Space felt awkward.
 
 | Action | Keyboard 1 | Keyboard 2 | Xbox | Switch printed labels | PlayStation |
 |---|---|---|---|---|---|
 | Move | WASD | Arrows | Stick / D-pad | Stick / D-pad | Stick / D-pad |
-| Bomb, contextual kick, pump | J | N / Enter / Num 0 | A | A | Cross |
-| Hold carry, release throw | K | M / Num 1 | X / LB | B / L | Square / L1 |
+| Bomb, contextual kick, pump | J | N / Enter / Num 0 | A | A / B | Cross |
+| Hold carry, release throw | K | M / Num 1 | LB / X | L / Y | L1 / Square |
 | Precision aim | L / Shift | Ctrl | RT | ZR | R2 |
 | Remote detonation | I / R | Comma / Backspace / Num 2 | B / RB | X / R | Circle / R1 |
 | Menu confirm / back | Enter / Esc | Enter / Esc | A / B | A / B | Cross / Circle |
+
+v0.19.1 adds printed Switch B as a primary/bomb alias so **hold Y + tap B**
+readies and pumps without reaching across to A. Both held state and sub-frame
+taps use the alias; B remains menu Back, X remains remote, and A still works.
 
 Space has no gameplay action. F11 or Alt+Enter toggles fullscreen.
 Keep both held-state sampling and short-press detection consistent when changing
@@ -60,8 +65,10 @@ Preserve speed, aim caps and command semantics across local/network/device paths
 1. Start Practice or a normal local match. Hold K near a ground bomb to lift it,
    or hold K and tap J to create one overhead. Keep K down throughout this recipe.
 2. Tap J while carrying to pump. Hold L to plant the carrier in precision stance.
-3. Use A/D to turn and W/S to change range. Short nudges begin slowly; sustained
-   same-direction input accelerates. Right turns clockwise on the arena map.
+3. Use WASD to move the target in arena directions. Short nudges begin slowly;
+   sustained same-direction input accelerates. Controllers hold ZR/RT/R2 and use
+   either stick or D-pad; promote L/LB/L1 for carry so the thumb stays free.
+   Active right-stick intent wins while aiming, then D-pad/left stick/keyboard.
 4. Release L while retaining K: the bomb stays overhead, the chosen aim persists,
    and WASD moves again. Re-enter L to adjust. Release K to throw.
 5. I or R detonates owned remote bombs. Shift is an alternative aim modifier.
@@ -73,7 +80,11 @@ hold-K carry, which throws on release. Controllers follow the same two paths.
 Walking into a resting bomb and a deliberate second primary press near it both
 support contextual kicking; no extra dedicated kick key is required.
 
-Aim is authority-owned, with no target lock or auto-aim. New carry, drop or throw
+Aim is authority-owned, with no target lock or auto-aim. The cursor has a shared
+6-cell/second limit, a 25% fine start and 0.3-second ramp; analog input retains
+partial strength. Deliberate range is 0–9 cells so the cursor crosses the carrier
+to aim behind them. Close self-lobs are dangerous, not protected.
+[Design alternatives and primary sources](../iteration19-controls-research.md). New carry, drop or throw
 resets chosen intent. Pumping changes blast strength while deliberate aim keeps
 its selected range. Read [precision throw research](../iteration16-aim.md)
 when changing the underlying throw policy.

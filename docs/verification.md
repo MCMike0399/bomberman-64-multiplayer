@@ -1,4 +1,37 @@
-# Iteration eighteen: coordinated walking and keyboard correction — 2026-10-21
+# v0.19.1: adjacent Switch B charging — 2026-10-23
+
+The user's physical Switch 2 follow-up found Y+A still uncomfortable. Printed **B** is now an additional primary/bomb input: hold **Y** and tap **B** to ready/pump, then release Y to throw. A remains available, X remains remote detonation, and menu B remains Back. Both held-button sampling and short-tap buffering recognize the alias. HUD hints, Controls, and the README teach the new combination.
+
+The rebuilt exported app passed **764 controller assertions with 13 captures and zero runtime errors**, including Y+B creation, held B pumping once, a sub-frame B pump, A compatibility, X remaining remote-only, release-Y flight, and neutral arming. Receipt: `artifacts/iteration19-b-charge-controls/20261023T141935.379905Z-controllers`. Package/headless smoke passed **248 assertions** in `artifacts/iteration19-b-charge-package`. The Y+B gameplay capture and Controls screen were visually inspected. This is synthetic native-path verification, not a new physical-controller observation. Simulation, networking and other controller-family mappings are unchanged by this follow-up.
+
+The installed **v0.19.1** app matches all **217** tested export files, passes strict signature verification, and produced **58 gameplay snapshots** with zero stderr in Launch Services smoke. Identity-checked cleanup leaves only the canonical installed app. Installation receipts: `artifacts/iteration19-b-charge-install`.
+
+## Iteration nineteen: controller carry, cursor aiming and blast-vulnerable knockdowns — 2026-10-23
+
+| Check | Result |
+|---|---|
+| Gameplay / client / AI / audio | **139 / 123 / 52 / 19** checks passed |
+| AI soak | **36 scenarios**, longest eligible safe idle 1.63 seconds |
+| Real HTTP/WebSocket smoke | Passed against the exact newly staged Release server, including retained cursor aim |
+| Source headless core | **885 assertions**, zero runtime errors |
+| Full exported Mac journey | **2,184 assertions, 176 captures**, zero runtime errors, 169.696 seconds |
+| Final exported controller follow-up | **756 assertions, 12 captures**, zero runtime errors |
+| Final bundled package smoke | **248 assertions**, zero runtime errors |
+| Public contracts | Passed, including process cleanup and bundle identity checks |
+
+The complete exported run is `artifacts/iteration19-delivery-graphical/playtest/20261023T134026.118677Z-all`. Its controller, aim-input and reticle trials all completed on their first attempts. Visual review then caught one stale B-carry label in the Controls panel. Only that panel's static/live label copy changed afterward. The rebuilt final export passed `artifacts/iteration19-final-package` and the full controller scenario at `artifacts/iteration19-final-controls/20261023T134407.112609Z-controllers`, also with no focus retries. The complete gameplay suite is explicitly the run before that narrow panel-copy correction.
+
+The first graphical attempt exhausted its real-focus retries; the next completed input checks but exposed a stale reticle test that still pressed S to shorten a throw. The test now uses W to move a south-facing cursor inward and stops on accepted range, preserving its obstructed-warning assertion. A separate 40-check reticle run and the complete run above pass. Earlier failures remain under `iteration19-exported-graphical*`; they are not counted as successful runs. A public-profile process test initially encountered sandbox-denied `ps`; the final unsandboxed profile passed. Managed/source/package/public receipts use the corresponding `iteration19-*` directories.
+
+The new controller recipe promotes **L/LB/L1 carry**, with **Y/X/Square** face alternatives for Switch/Xbox/PlayStation. Hold **ZR/RT/R2** and steer the target with either stick or D-pad. Keyboard retains **J bomb, K carry, L aim, I remote**; L + WASD moves the target in arena directions. Both input families share a 6-cell/second cap and fine-start ramp. The 0–9-cell range lets the cursor cross through the carrier; close self-lobs retain their actual hit risk. There is no target lock. The [research note](iteration19-controls-research.md) compares three designs against primary sources and records the selected policy and limits.
+
+A retained failing authority test reproduced a remote bomb knocking down a player, exploding beside them, and failing to kill despite overlap. `KnockDown` wrote the same timer checked by blast damage. Contact now uses an independent 0.35-second impact cooldown; blast damage still respects real heart/respawn protection. Grounded stunned players can be hit again after the cooldown. Tests cover normal and practice snipes, heart consumption without repeated lingering-blast damage, and chained falling-bomb knockdowns. The native `grapple` journey collects a real remote pickup, kicks its bomb into another human seat, and detonates during impact flight; the death event and practice respawn are observed. Red/green logs remain in `artifacts/iteration19-regressions`.
+
+The installed **v0.19.0** app matches all **217** files in the validated export, passes strict recursive signature verification, and completes Launch Services gameplay smoke with **58 snapshots** and zero stderr. `artifacts/iteration19-install` retains manifests, logs and cleanup receipts. Identity-checked cleanup removed the previous backup and the export; only `~/Applications/Blast Circuit.app` remains launchable in the scanned locations.
+
+Updated Controls, keyboard aim, blocked-reticle and remote-snipe captures were visually reviewed. Controller events are synthetic, including Switch values through the production six-axis sampler; this does not certify fresh physical hardware behavior or human-rated comfort. The portable server was staged and tested on an owned ephemeral loopback listener. Existing external servers require the matching new build; this pass does not deploy them. Hosted CI evidence is separate from these local verification receipts.
+
+## Iteration eighteen: coordinated walking and keyboard correction — 2026-10-21
 
 | Check | Result |
 |---|---|
