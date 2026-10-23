@@ -1,4 +1,4 @@
-# v0.23.0 sandbox and lobby update — local verification, 2026-10-23
+# v0.23.0 sandbox and lobby update — delivered, 2026-10-23
 
 Implemented the wider five-tier Pyramid with rear water pitfalls, larger legacy
 arenas and more cover, leader-only room-rule editing, two replaceable equipment
@@ -41,8 +41,34 @@ detours; CPU goals now distinguish useful upgrades and rival threats from crate
 farming. Its fixed stock pressure cases produce five to seven threats in 30 seconds
 with no self-deaths. The previous six-threat minimum is superseded explicitly.
 
-Publication, remote deployment and installed-copy receipts will be added after
-successful CI and delivery. The v0.22 history below remains dated evidence.
+[Verification 40018017728](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40018017728)
+and [automatic publication 40018980790](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40018980790)
+succeeded for source `62d5378ba735ec133f01495aa9045a0dd939e3d7`.
+[v0.23.0](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.23.0)
+is published with signed update metadata and matching Mac/server artifacts.
+All required CI jobs passed; the optional hosted Metal lane was skipped, with
+actual rendering evidence supplied by the local exported run above.
+
+The public manifest signature, archive hashes, version/source metadata and all
+42 server runtime files were independently verified. The chosen Docker host now
+runs that exact runtime; the previous deployment was retained for rollback.
+The complete remote HTTP/WebSocket smoke passed through the existing LAN relay
+in **81.3 seconds**, including 2–8 humans, reconnect, party lifecycle and seven CPUs.
+
+The production updater from the actual installed v0.22 app downloaded the public
+release and completed a healthy **v0.22 → v0.23** in-place replacement. The installed
+v0.23.0/build25 app matches all **217** public archive files/symlinks and passes strict
+recursive code-signature verification. Its normal-map reward journey passed
+**43 assertions / 6 captures**; its actual remote lobby/settings/game journey passed
+**37 assertions / 3 captures**, both with zero errors. The Downloads ZIP and existing
+party share now contain the exact public ZIP; identity-checked cleanup leaves only
+`~/Applications/Blast Circuit.app` launchable.
+
+Public Mac ZIP: 64,733,282 bytes,
+SHA-256 `957a1d54e3b1541f0d1cfdea5e61f3d1b76ac4087c1b720d48e52e72fcd8e4ac`.
+Delivery receipts are under `artifacts/iteration23/public-release`,
+`installed-public-update`, `installed-cover`, `installed-network`, and the
+`divemac-*`/cleanup receipts. The v0.22 history below remains dated evidence.
 
 # v0.22.0 combined release — 2026-10-23
 

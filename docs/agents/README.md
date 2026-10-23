@@ -3,7 +3,7 @@
 The user resumed gameplay work on 2026-10-23 for controller ergonomics, aiming
 and knockdown/blast separation (iteration19). The first eighteen iterations
 remain historical evidence. Iteration20 then rebuilt the walk. Current installed
-runtime: **v0.22.0** (see [verification](../verification.md)). Previous runtime baseline: **v0.18.0**, commit
+runtime: **v0.23.0** (see [verification](../verification.md)). Previous runtime baseline: **v0.18.0**, commit
 `316a330d7d895a92f98c1a60be7d571ec445a8a3`. Later documentation commits may follow.
 Verify the live branch, source, tools and installed version before relying on
 that baseline. Start with [project instructions](../../AGENTS.md).
@@ -40,7 +40,7 @@ update the current guide rather than silently reviving old behavior.
   charged throws, blue red-bomb blasts and no ghost/bomb interaction. Leaders can
   edit waiting-room rules through the existing match editor. See the gameplay guide.
 
-- Source party polish (2026-10-23, not yet installed): Copy code, saved online name/server,
+- v0.22 party polish (delivered 2026-10-23): Copy code, saved online name/server,
   named character/HUD labels, first-to-two and 1:00 + 1:00 defaults, immediate flood,
   water ghost returns, rear temple barrier (superseded by the v0.23 open pitfall) and diagonal stair kick fix.
   Right shoulder now stops kicked bombs; remote remains on the face button.
@@ -72,7 +72,7 @@ update the current guide rather than silently reviving old behavior.
   grounded foundations and animated water. Art geometry and collision are separate.
 - AI difficulty changes decisions, not physics/resources. Measure pressure and
   reengagement, not only bombs placed; mixed benchmark outcomes must remain visible.
-- The Mac has one installed v0.22.0 app. The previous bundle and export were
+- The Mac has one installed v0.23.0 app. The previous bundle and export were
   removed after installation verification; a missing `artifacts/exports/*.app` is expected.
   Rebuild only when needed, then clean duplicates after the next verified install.
 

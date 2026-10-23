@@ -2,7 +2,7 @@
 
 The server runs `Bomber.Server`, which registers Blast Circuit on the Burbuja
 kernel and owns all match rules and CPU players. Each Mac app controls one human.
-There are at most eight participants per room. Use the current v0.21 client and server for leader-controlled rooms and persistent
+There are at most eight participants per room. Use the current v0.23 client and server for leader-controlled rooms and persistent
 parties. Older clients use the legacy automatic-match protocol.
 
 For friends together on one Wi-Fi, an organizer's Mac can relay the game port
