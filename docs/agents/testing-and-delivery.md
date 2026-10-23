@@ -104,13 +104,10 @@ for the change; do not broadly kill Godot/dotnet or alter external hosts.
 Host/network/provider changes require the applicable canonical operational
 reference. Server artifact creation is separate from deploying a service.
 
-For explicitly authorized remote party hosting, follow [the party guide](../online-party.md).
-The Compose context comes only from a verified portable server ZIP. Keep deployment
-and relay ownership separate from other host services. Verify real clients through
-the actual relay address, then the installed app's `network` journey. A local probe
-of the LAN address does not establish reachability from a friend's Mac. Use the
-helper's launchd ownership for a relay that survives the tool/terminal launcher;
-an orphaned `ssh -f` process may be cleaned up by the execution environment.
+For authorized server updates, follow the [shared-server guide](../online-server.md).
+It owns deployment and completion checks for the service used by all players.
+The [historical party guide](../online-party.md) applies only to an explicit
+same-Wi-Fi party or relay task.
 
 ## Extend the harness with meaningful gameplay
 

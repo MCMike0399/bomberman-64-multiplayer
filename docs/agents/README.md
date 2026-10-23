@@ -3,7 +3,8 @@
 The user resumed gameplay work on 2026-10-23 for controller ergonomics, aiming
 and knockdown/blast separation (iteration19). The first eighteen iterations
 remain historical evidence. Iteration20 then rebuilt the walk. Current installed
-runtime: **v0.23.0** (see [verification](../verification.md)). Previous runtime baseline: **v0.18.0**, commit
+runtime: **v0.23.0**; latest published client/server: **v0.23.1**
+(see [verification](../verification.md)). Previous runtime baseline: **v0.18.0**, commit
 `316a330d7d895a92f98c1a60be7d571ec445a8a3`. Later documentation commits may follow.
 Verify the live branch, source, tools and installed version before relying on
 that baseline. Start with [project instructions](../../AGENTS.md).
@@ -35,6 +36,11 @@ update the current guide rather than silently reviving old behavior.
 
 ## Current decisions that supersede earlier experiments
 
+- Shared online service (2026-10-23): the server is for all users. Routine
+  releases follow [shared-server delivery](../online-server.md); former friends-party
+  relay, Wi-Fi and ZIP-sharing checks are conditional historical procedures.
+  Public hosting is deferred to a separate task; maintain the existing server.
+
 - Iteration23: wider five-tier Pyramid with rear pitfalls; enlarged other arenas;
   replaceable bomb/ability slots, bouncing/fast bombs, Focus charging/assist, heavier
   charged throws, blue red-bomb blasts and no ghost/bomb interaction. Leaders can
@@ -46,7 +52,7 @@ update the current guide rather than silently reviving old behavior.
   Right shoulder now stops kicked bombs; remote remains on the face button.
   See [input/UI](input-and-ui.md), [gameplay](gameplay-and-ai.md) and [verification](../verification.md).
 
-- v0.21 private rooms wait for their leader, including rooms with CPUs; results return to the same room. Esc/Start opens a game menu. Settings saves volume, vibration (default off) and automatic update checks (default on). [Party setup](../online-party.md), [signed updates](../automatic-updates.md).
+- v0.21 private rooms wait for their leader, including rooms with CPUs; results return to the same room. Esc/Start opens a game menu. Settings saves volume, vibration (default off) and automatic update checks (default on). [Online server](../online-server.md), [signed updates](../automatic-updates.md).
 
 - Iteration19 recommends shoulder carry (L/LB/L1); Switch Y replaces B as its
   face alternative. v0.19.1 also lets Switch B ready/pump while Y is held;

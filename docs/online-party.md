@@ -1,5 +1,10 @@
 # A party with a remote Docker server
 
+Historical same-Wi-Fi setup, superseded as the default on 2026-10-23. The current
+goal is a shared online service for all users; use the
+[shared-server guide](online-server.md) for routine releases and deployments.
+Read this page only for an explicit LAN party or relay task.
+
 The server runs `Bomber.Server`, which registers Blast Circuit on the Burbuja
 kernel and owns all match rules and CPU players. Each Mac app controls one human.
 There are at most eight participants per room. Use the current v0.23 client and server for leader-controlled rooms and persistent

@@ -59,7 +59,7 @@ The script creates a project-local ARM64 template from the official Universal 2 
 
 ## Play online
 
-Godot is a client of a separate authoritative kernel process. The intended deployment is the kernel on your own server hardware, with clients entering that server's reachable address in **Online Battle**. The server must register the `blast` game; `Bomber.Server` provides that registration on top of `Burbuja.Hosting`. For a remote Docker server and friends together on Wi-Fi, use the [party deployment guide](docs/online-party.md). Friends can connect through the organizer's Mac without changing their VPN accounts.
+Godot connects to a separate authoritative server intended for all users. Players enter the maintained service address in **Online Battle** and use Quick Play or private rooms. The server runs independently of any player's Mac. `Bomber.Server` registers the `blast` game on top of `Burbuja.Hosting`. See [shared-server hosting and releases](docs/online-server.md).
 
 For local development, start that independent server in another terminal:
 
@@ -77,7 +77,7 @@ For a LAN server, bind to a reachable interface and enter the server machine's a
 ./scripts/server.sh --urls http://0.0.0.0:18496
 ```
 
-The default is loopback. The party deployment supports a remote Compose server through an SSH relay; public hosting needs its own deployment and security configuration. Native desktop C# is the target; this project does not provide a browser build.
+The development default is loopback. General access requires a maintained public HTTPS endpoint that forwards HTTP and WebSocket traffic to the server; a player's LAN relay is not the public hosting path. Native desktop C# is the target; this project does not provide a browser build.
 
 Normal battle defaults to **one minute of normal play + one minute of sudden death**, with **first to two round wins** taking the match. Room settings remain configurable. Temple water starts rising as soon as sudden death begins. Before sudden death, falling into water returns you to dry ground as a ghost when ghost comeback is enabled.
 

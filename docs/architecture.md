@@ -152,11 +152,12 @@ failover, shared signing/public addresses and production load were not establish
 by this session. Kernel guides are available inside the restored private checkout.
 No external deployment follows merely from building a server ZIP.
 
-The [party deployment](online-party.md) adds a single-host Compose runtime from
-the verified portable server archive. An organizer's Mac can relay the loopback
-server port over SSH to friends on its current LAN. The server still owns bots
-and matches; the relay carries HTTP/WebSocket bytes only. It neither joins friends
-to a private tailnet nor changes their VPN configuration.
+The [shared online service](online-server.md) serves all users from a maintained
+server address. The existing single-host Compose runtime uses the verified
+portable server archive. Public reachability requires a configured endpoint;
+an operator tunnel establishes service behavior only. The former same-Wi-Fi
+relay setup is a conditional historical path in the
+[party guide](online-party.md).
 
 ## Verification and delivery
 

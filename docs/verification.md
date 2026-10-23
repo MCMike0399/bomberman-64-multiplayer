@@ -1,4 +1,4 @@
-# v0.23.1 item drop tuning — 2026-10-23
+# v0.23.1 item drop tuning — delivered, 2026-10-23
 
 Ordinary destroyed blocks now drop an item with **35% probability**, down from
 70%, to reduce clutter. Each spawn area's guaranteed opening fire/bomb reward,
@@ -21,6 +21,32 @@ strict recursive code-signature verification also passed. Controller coverage
 remains synthetic, with no new physical-device claim.
 
 Receipts: `artifacts/loot-rate-tuning/{red.log,managed-retry,public,headless,loot-opening,package,graphical}`.
+
+Source `845cc4179c35233cc7ccc958b7b4b8123278a645` is pushed to main.
+[Verification 40038592623](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40038592623)
+and [signed publication 40039336510](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40039336510)
+passed. [v0.23.1](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.23.1)
+is the latest stable release. The public update signature, Mac archive hash,
+bundle identity/version and server inventory were independently verified.
+
+The existing server now runs the exact published v0.23.1 runtime, with all **42**
+file hashes verified and a healthy game registration endpoint. There were no
+active or waiting rooms at cutover; the previous deployment remains available
+for rollback. One real client lobby/match journey through a temporary operator
+SSH tunnel passed **37 assertions / 3 captures / zero runtime errors**. It used
+the v0.23.1 exported app and release-matched runner/catalog, preserving unrelated
+source work that began during CI. The full multi-client suite already passed
+against CI's staged artifact, so it was not repeated on the live host.
+
+The user clarified that the service is intended for all users and the former
+same-Wi-Fi friends-party workflow is no longer active. The
+[shared-server guide](online-server.md) now owns routine deployment scope;
+public hosting is deferred to a separate task. No LAN party setup, sharing ZIPs,
+local app replacement or public endpoint changes were part of this release.
+
+Public Mac ZIP: 64,733,322 bytes, SHA-256
+`c93ce00b97e76b8c14551d3be9b40b5b16a47e5eb3f457eea184af8502609eed`.
+Delivery receipts: `artifacts/loot-rate-tuning/{public-release,ci-result.json,publication-result.json,server-deploy.log,server-runtime-verified.json,deployed-network}`.
 
 # v0.23.0 sandbox and lobby update — delivered, 2026-10-23
 
