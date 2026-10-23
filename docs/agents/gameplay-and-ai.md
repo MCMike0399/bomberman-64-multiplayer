@@ -244,8 +244,9 @@ and the input guide; older iteration tables are historical.
   Rock Garden has 110 blocks in balanced pillar regions; Up & Down has 88 in
   outer-ring/wide-platform pockets, keeping the summit and connectors clear.
 - The ordinary drop pool is 35% Fire, 35% Bomb, 7% remote, 7% red, 6% bouncing,
-  4% fast, 3% heart and 3% Focus. The separate chance of any ordinary drop remains
-  70%; guaranteed opening rewards make actual basic-upgrade share slightly higher.
+  4% fast, 3% heart and 3% Focus. The separate chance of any ordinary drop is
+  35% (reduced from 70% to limit item clutter); guaranteed opening rewards remain,
+  making the actual overall drop rate and basic-upgrade share slightly higher.
   These are project choices, not claimed original-game rates. See
   [primary reference observations](../iteration23-block-distribution-research.md).
 - Richer farming areas intentionally permit collection detours. CPU goals use

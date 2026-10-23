@@ -5,7 +5,7 @@ public static class PowerUpRules
 {
     public const int StartingBombs=3,MaximumBombs=8,MaximumNormalFire=3,MaximumMegaFire=6;
     public const float ItemLifetime=20,SwapPickupDelay=1.5f,NormalPumpSeconds=.45f,FocusPumpSeconds=.15f;
-    public const double DropChance=.70;
+    public const double DropChance=.35;
     public static bool IsBombType(string type)=>type is "red" or "remote" or "bounce" or "fast";
     public static bool IsAbility(string type)=>type is "heart" or "focus";
     public static string ChooseDrop(Random random)=>random.Next(100) switch

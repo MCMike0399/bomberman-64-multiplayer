@@ -1,3 +1,27 @@
+# v0.23.1 item drop tuning — 2026-10-23
+
+Ordinary destroyed blocks now drop an item with **35% probability**, down from
+70%, to reduce clutter. Each spawn area's guaranteed opening fire/bomb reward,
+regional cover layout and weighted item mix remain unchanged. Local and online
+matches use the same authoritative rule.
+
+The existing real-destruction regression first failed at a 70.6% ordinary drop
+rate. After tuning, 32 seeds per stock map measured 34.1% on Sunken Temple,
+34.6% on Rock Garden and 33.9% on Up & Down, with opening rewards and all eight
+item types preserved. Managed verification passed **1,473 game / 143 client /
+53 AI / 19 audio** checks, **36 AI soak scenarios**, and complete HTTP/WebSocket
+smoke against the staged Release server. Public checks, **868** headless core
+assertions, the **25**-assertion opening-loot journey and **252** rebuilt Mac
+package assertions also passed. The first sandboxed managed run could not start
+its temporary server; the outside-sandbox retry passed the full profile.
+
+The v0.23.1/build26 export passed all **36 windowed scenarios: 2,268 assertions,
+201 captures, zero runtime errors**. The actual court reward capture was reviewed;
+strict recursive code-signature verification also passed. Controller coverage
+remains synthetic, with no new physical-device claim.
+
+Receipts: `artifacts/loot-rate-tuning/{red.log,managed-retry,public,headless,loot-opening,package,graphical}`.
+
 # v0.23.0 sandbox and lobby update — delivered, 2026-10-23
 
 Implemented the wider five-tier Pyramid with rear water pitfalls, larger legacy

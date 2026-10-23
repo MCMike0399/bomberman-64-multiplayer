@@ -45,9 +45,11 @@ internal static class LootAvailabilityChecks
             foreach(var item in items.EnumerateArray())
             {string kind=item.GetProperty("type").GetString()!;kinds[kind]=kinds.GetValueOrDefault(kind)+1;drops++;}
         }
-        Assert((double)drops/covers is >.65 and <.79,"Actual arena item availability is unexpectedly scarce or saturated.");
+        int openingDrops=32*stage.Spawns.Length;
+        double ordinaryDropRate=(double)(drops-openingDrops)/(covers-openingDrops);
+        Assert(ordinaryDropRate is >.30 and <.40,$"Ordinary cover drop rate {ordinaryDropRate:P1} should stay near 35% to limit item clutter.");
         Assert(kinds.Count==8&&kinds["bomb"]>kinds["remote"]&&kinds["fire"]>kinds["heart"],"Arena drops lost their diverse, useful weighting.");
-        Console.WriteLine($"PASS {stage.Name} loot: {covers/32d:F2} covers, {drops/32d:F2} actual drops per round across 32 seeds; all eight spawn areas have two nearby crates");
+        Console.WriteLine($"PASS {stage.Name} loot: {covers/32d:F2} covers, {drops/32d:F2} actual drops per round across 32 seeds; {ordinaryDropRate:P1} ordinary drop rate; all eight spawn areas have two nearby crates");
         foreach(bool reverse in new[]{false,true})
         {
             var match=Match(832,id);var zones=Zones(match);
