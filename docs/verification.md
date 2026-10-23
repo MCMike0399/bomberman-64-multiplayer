@@ -7,18 +7,18 @@ blue amplified red-bomb explosions, fuse-free remote bomb art, and ghost/bomb
 interaction removal. The latest bounce correction is explicit: ordinary rolls
 ricochet from walls; only charged throws rebound from ground. Stop still works.
 
-Final local gates passed before the release commit/push: **1,372 game / 143 client /
+Final local gates passed before the release commit/push: **1,473 game / 143 client /
 53 AI / 19 audio** checks, **36 AI soak scenarios**, and real HTTP/WebSocket smoke
 against the staged Release server. Public contracts passed. Headless core passed
-**826** assertions; rebuilt Apple Silicon package smoke passed **252**. The final
-export completed **all 35 windowed scenarios in one run: 2,227 assertions,
-195 captures, zero runtime errors**. Reviewed captures include the wider Pyramid,
+**868** assertions; rebuilt Apple Silicon package smoke passed **252**. The final
+export completed **all 36 windowed scenarios in one run: 2,268 assertions,
+201 captures, zero runtime errors**. Reviewed captures include the wider Pyramid,
 rear fall, both lobby settings buttons, live room-rule editor, ordinary rolling
 bounce bomb and blue blast. Controller input coverage is synthetic, not a new
 physical-device claim.
 
-Receipts: `artifacts/iteration23/{public2,managed4,headless-final,package-final}`
-and `graphical-final/playtest/20261023T194106.163994Z-all`. Focus interruptions and
+Receipts: `artifacts/iteration23/{cover-public,cover-managed,cover-headless,cover-package}`
+and `cover-graphical-retry/playtest/20261023T201421.112911Z-all`. Focus interruptions and
 superseded geometry/test assumptions remain in earlier receipts. The final run
 includes ordinary input/real pickups, shared throw projection, expiry and equipment
 sharing, host settings reaching the guest, and a real two-client match.
@@ -28,8 +28,18 @@ must not kick or grab bombs; AI chain prediction must include the authority's
 half-cell margin; timed escape movement must permit crossing threatened tiles
 before the fuse; failed orient/place attempts must resume navigation. Final soak
 has no stationary-with-open-exit failure. Stock Pyramid's larger-map first-pressure
-budget is eight seconds (old smaller map: six), retaining six threats per 30 seconds,
+budget is eight seconds (old smaller map: six), retaining five threats per 30 seconds,
 a maximum eight-second gap, and zero self-deaths in its four seeded fixtures.
+
+The final follow-up adds map-specific regional quotas and clustered cover, rather
+than uniform density: 90 Pyramid blocks emphasizing the lower court, 110 balanced
+Rock Garden blocks, and 88 Up & Down blocks on wider platforms/outer pockets.
+Fire/Bomb each receive 35% of ordinary drops. Layout and opening-reward checks
+cover 32 seeds per map; a native journey reaches the lower court, destroys cover,
+retreats, and collects its actual reward. The richer loot layout permits farming
+detours; CPU goals now distinguish useful upgrades and rival threats from crate
+farming. Its fixed stock pressure cases produce five to seven threats in 30 seconds
+with no self-deaths. The previous six-threat minimum is superseded explicitly.
 
 Publication, remote deployment and installed-copy receipts will be added after
 successful CI and delivery. The v0.22 history below remains dated evidence.

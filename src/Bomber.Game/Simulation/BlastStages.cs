@@ -45,7 +45,13 @@ public static class BlastStages
         {
             Id = RockGarden, Name = "Rock Garden",
             Width = W, Height = H,
-            Cells = cells, Spawns = spawns,
+            Cells = cells, Spawns = spawns,SoftBlockDensity=.6,MaxSoftBlocks=110,
+            CoverAreas=[
+                new("pillar-center",.5,7,15,0,14){Centers=[(8,4),(14,4),(8,10),(14,10)]},
+                new("west-pockets",.25,0,6,0,14){Centers=[(4,3),(4,11)]},
+                new("east-pockets",.25,16,22,0,14){Centers=[(18,3),(18,11)]}],
+            ClearCells=Enumerable.Range(0,W).SelectMany(x=>Enumerable.Range(0,H).Select(z=>(X:x,Z:z)))
+                .Where(c=>c.Z is 6 or 8||c.X is 2 or 11 or 20).ToHashSet(),
         };
     }
 
@@ -72,7 +78,16 @@ public static class BlastStages
         {
             Id = UpAndDown, Name = "Up & Down",
             Width = W, Height = H,
-            Cells = cells, Spawns = spawns,
+            Cells = cells, Spawns = spawns,SoftBlockDensity=.6,MaxSoftBlocks=96,
+            CoverAreas=[
+                new("northwest-ring",.2,2,10,2,8,0,0){Centers=[(4,4),(8,3)]},
+                new("northeast-ring",.2,12,20,2,8,0,0){Centers=[(18,4),(14,3)]},
+                new("southwest-ring",.2,2,10,10,16,0,0){Centers=[(4,14),(8,15)]},
+                new("southeast-ring",.2,12,20,10,16,0,0){Centers=[(18,14),(14,15)]},
+                new("wide-platforms",.2,7,15,6,12,1,1){Centers=[(8,7),(14,11)]}],
+            ClearCells=Enumerable.Range(0,W).SelectMany(x=>Enumerable.Range(0,H).Select(z=>(X:x,Z:z)))
+                .Where(c=>c.X==11||c.Z==9||cells[c.X,c.Z].Tier>=2||
+                    cells[c.X,c.Z].Tier==0&&(c.X is 5 or 17||c.Z is 5 or 13)).ToHashSet(),
         };
     }
 
@@ -102,11 +117,18 @@ public static class BlastStages
         return new StageLayout
         {
             Id = SunkenTemple, Name = "Sunken Temple", Width = width, Height = height, Cells = cells,
-            SoftBlockDensity = .26, MaxSoftBlocks = 90,
+            SoftBlockDensity = .4, MaxSoftBlocks = 90,
+            CoverAreas=[
+                new("west-court",.3,5,11,15,25,0,0){Centers=[(6,17),(6,23),(10,23)]},
+                new("east-court",.3,13,19,15,25,0,0){Centers=[(18,17),(18,23),(14,23)]},
+                new("west-walkway",.075,1,4,15,25,1,1){Centers=[(1,21),(4,24)]},
+                new("east-walkway",.075,20,23,15,25,1,1){Centers=[(23,21),(20,24)]},
+                new("side-terraces",.15,3,21,3,10,2,3){Centers=[(5,8),(19,8),(7,4),(17,4)]},
+                new("base-approaches",.1,1,23,3,14,1,1){Centers=[(3,11),(21,11)]}],
             TrainingItems = [(10,12,"fire"),(9,12,"fire"),(14,12,"bomb"),(10,13,"remote"),(14,13,"red"),(12,13,"heart"),(16,12,"bounce"),(17,13,"fast"),(8,13,"focus")],
             ClearCells = Enumerable.Range(0, width).SelectMany(x => Enumerable.Range(0, height).Select(z => (X:x,Z:z)))
-                .Where(c => (c.X >= 11 && c.X <= 13 && c.Z <= 13) || c.Z is 12 or 13 or 16 or 18 ||
-                    ((c.X >= 5 && c.X <= 9 || c.X >= 15 && c.X <= 19) && c.Z >= 13)).ToHashSet(),
+                .Where(c => cells[c.X,c.Z].Tier>=4 || (c.X>=11&&c.X<=13&&c.Z<=13) || c.Z is 12 or 13 ||
+                    c.Z>=15&&(c.X is 3 or 8 or 12 or 16 or 21 || c.Z==20)).ToHashSet(),
             Spawns = [(12,12),(7,12),(17,12),(4,9),(20,6),(6,6),(10,18),(14,18)],
         };
     }

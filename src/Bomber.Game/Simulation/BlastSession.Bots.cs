@@ -18,7 +18,7 @@ public sealed partial class BlastSession
     private readonly Dictionary<string,int> _aiCommittedGoals=new(StringComparer.Ordinal);
     private readonly List<BlastBomb> _aiCandidateBombs=new(65);
     private readonly BlastBomb _aiCandidate=new() {Id="planning"};
-    private readonly Dictionary<string,float> _aiLastBomb=new(StringComparer.Ordinal);
+    private readonly Dictionary<string,float> _aiLastBomb=new(StringComparer.Ordinal),_aiLastThreat=new(StringComparer.Ordinal);
     private void BotInitialize(GameSessionOptions options)
     {
         _aiProfile=BotDifficultyProfile.For(options.Settings.GetValueOrDefault("bot-difficulty"));
@@ -27,7 +27,7 @@ public sealed partial class BlastSession
         _aiGraph=NavigationGraph.For(_stage);_aiDanger=new(_aiGraph,_stage);_aiPlacementDanger=new(_aiGraph,_stage);
         int count=_aiGraph.Count;_aiQueue=new int[count];_aiSeen=new int[count];_aiFirst=new int[count];_aiDepth=new int[count];_aiItemKind=new byte[count];_aiCover=new bool[count];_aiNearest=new float[count];_aiSecondNearest=new float[count];_aiNearestOwner=new string?[count];_aiItemDropper=new string?[count];
     }
-    private void BotReset(){BotResetNavigation();_aiFieldTick=-1;_aiLastBomb.Clear();_aiCommittedGoals.Clear();foreach(var p in _players.Values){p.BotThinkTimer=0;p.BotPlacingBomb=false;p.BotBombTapPending=false;}}
+    private void BotReset(){BotResetNavigation();_aiFieldTick=-1;_aiLastBomb.Clear();_aiLastThreat.Clear();_aiCommittedGoals.Clear();foreach(var p in _players.Values){p.BotThinkTimer=0;p.BotPlacingBomb=false;p.BotBombTapPending=false;}}
     private void BotRefreshField()
     {
         if(_aiFieldTick==_tickCount)return;
@@ -106,6 +106,10 @@ public sealed partial class BlastSession
             {
                 float angle=direction*MathF.Tau/32,nx=MathF.Cos(angle),nz=MathF.Sin(angle);
                 if(!TryBombPlacement(bot,nx,nz,.12f*PlayerSpeed*_aiSteeringInterval,out float x,out float z))continue;
+                // Once engagement is due, follow an open route toward the rival
+                // instead of stopping at every incidental crate along that route.
+                if(_roundTimer-_aiLastThreat.GetValueOrDefault(bot.Id)>4&&waypoint>=0&&waypoint!=start&&
+                    !BotEnemyInRange(x,_stage.SurfaceAt(x,z),z,(bot.FireLevel*.9f+.4f)*(bot.HasRed?1.25f:1),bot.Id,bot.HasRed))continue;
                 float score=BotBombUtility(bot,x,z);
                 if(score>best){best=score;aimX=nx;aimZ=nz;}
             }
@@ -225,22 +229,36 @@ public sealed partial class BlastSession
     private float BotGoalScore(BlastPlayer bot,int cell,int depth)
     {
         float score=-depth*.45f;
-        score+=(_aiItemDropper[cell]==bot.Id?0:_aiProfile.ItemUtilityScale)*(_aiItemKind[cell] switch {1=>bot.HasHeart?0:26,2=>bot.HasRemote?0:22,3=>bot.HasRed?0:21,4=>bot.FireLevel>=3?0:20,5=>bot.BombCapacity>=8?0:18,6=>bot.BombType=="bounce"?0:21,7=>bot.BombType=="fast"?0:21,8=>bot.HasFocus?0:8,_=>0});
+        bool attackDue=_roundTimer-_aiLastThreat.GetValueOrDefault(bot.Id)>4;
+        // Evaluate marginal value, not just pickup presence. Extra capacity and
+        // interchangeable equipment must not send a well-equipped CPU farming forever.
+        float itemUtility=_aiItemKind[cell] switch {
+            1=>bot.HasHeart?0:26,
+            2=>bot.HasRemote?0:bot.BombType=="normal"?22:5,
+            3=>bot.HasRed?0:bot.BombType=="normal"?21:5,
+            4=>bot.FireLevel>=3?0:bot.FireLevel==1?20:14,
+            5=>bot.BombCapacity>=8?0:bot.BombCapacity<=3?18:bot.BombCapacity==4?8:3,
+            6=>bot.BombType=="bounce"?0:bot.BombType=="normal"?21:5,
+            7=>bot.BombType=="fast"?0:bot.BombType=="normal"?21:5,
+            8=>bot.Ability=="none"?6:0,_=>0};
+        // Rich farming pockets are useful between attacks; they should not reset
+        // the engagement clock indefinitely. A missing heart retains survival value.
+        if(attackDue&&_aiItemKind[cell]!=1)itemUtility*=.25f;
+        score+=(_aiItemDropper[cell]==bot.Id?0:_aiProfile.ItemUtilityScale)*itemUtility;
         if(BotAdjacentCover(cell))score+=3;
         float x=cell%_stage.Width+.5f,z=cell/_stage.Width+.5f,y=_aiGraph.Height[cell];
         float nearest=_aiNearestOwner[cell]==bot.Id?_aiSecondNearest[cell]:_aiNearest[cell];
         if(float.IsFinite(nearest))
         {
             // Easy leaves room to breathe; Hard contests bomb range and closes routes.
-            // A cautious policy still takes an occasional turn attacking: commit to
-            // ordinary bomb range after six seconds without placing, then regain space.
-            float lastBomb=_aiLastBomb.TryGetValue(bot.Id,out float placed)?placed:0;
-            float preferred=_roundTimer-lastBomb>6?Math.Min(1,_aiProfile.PreferredEnemyDistance):_aiProfile.PreferredEnemyDistance;
+            // Farming a crate does not count as engaging an opponent. After a
+            // bounded collection interval, favor reachable attack range again.
+            float preferred=attackDue?Math.Min(1,_aiProfile.PreferredEnemyDistance):_aiProfile.PreferredEnemyDistance;
             score+=10-Math.Abs(nearest-preferred)*_aiProfile.PressureWeight;
             // Reaching actual visible blast range is worth a detour. Pure geometric
             // distance can otherwise keep a bot below a cliff instead of using its ramp.
             if(preferred<=1&&BotEnemyInRange(x,y,z,(bot.FireLevel*.9f+.4f)*(bot.HasRed?1.25f:1),bot.Id,bot.HasRed))
-                score+=3*_aiProfile.PressureWeight;
+                score+=(attackDue?11:3)*_aiProfile.PressureWeight;
             if(nearest<5)score-=(4-BotExitCount(cell))*_aiProfile.TrapPenalty;
         }
         if(_aiCommittedGoals.TryGetValue(bot.Id,out int goal))

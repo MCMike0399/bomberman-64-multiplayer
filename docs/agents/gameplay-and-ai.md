@@ -233,10 +233,28 @@ and the input guide; older iteration tables are historical.
 
 ## Inventory, cover and pickup rendering
 
-- [Loot placement](../../src/Bomber.Game/Simulation/BlastSession.Loot.cs) uses terrain
-  distance and seeded placement to supply nearby cover around each temple spawn.
-  The first destroyed crate assigned to a spawn zone gives a useful fire/bomb reward;
-  later crates use the weighted pool/drop chance in PowerUpRules.
+- [Loot placement](../../src/Bomber.Game/Simulation/BlastSession.Loot.cs) uses map-owned
+  `CoverAreas`: regional budget shares and cluster centers, with seeded weighted
+  sampling. Each stock map first gets two nearby reachable crates per spawn, then
+  fills its regional quotas without blocking spawn clearance, ramps or reserved lanes.
+  The first destroyed crate assigned to each spawn zone gives a fire/bomb reward.
+- Pyramid targets 60% of 90 blocks in the lower court, 15% along the lower wings,
+  and a lighter remainder on upper side terraces/base approaches. Its top two tiers
+  and ascent stay clear; thin court lanes replace the old broad empty strips.
+  Rock Garden has 110 blocks in balanced pillar regions; Up & Down has 88 in
+  outer-ring/wide-platform pockets, keeping the summit and connectors clear.
+- The ordinary drop pool is 35% Fire, 35% Bomb, 7% remote, 7% red, 6% bouncing,
+  4% fast, 3% heart and 3% Focus. The separate chance of any ordinary drop remains
+  70%; guaranteed opening rewards make actual basic-upgrade share slightly higher.
+  These are project choices, not claimed original-game rates. See
+  [primary reference observations](../iteration23-block-distribution-research.md).
+- Richer farming areas intentionally permit collection detours. CPU goals use
+  marginal upgrade value and an engagement clock that crate farming cannot reset.
+  After four seconds without threatening a rival, CPUs favor a reachable attack
+  and do not stop to bomb incidental cover while an open route toward that rival exists.
+  The stock pressure contract now requires five threatening bombs in 30 seconds
+  (previous layout: six), while retaining eight-second first/gap bounds and zero
+  self-deaths. Preserve the measured tradeoff instead of claiming unchanged pressure.
 - Inventory caps, exclusive modes and pickup counters belong to PowerUpRules and
   authority item processing. New cover rewards survive their revealing explosion;
   test through the full fuse/hazard lifetime before collecting.
@@ -318,4 +336,4 @@ requiring those cells to remain safe for the whole planning horizon. Bots ignore
 utility from their own swapped equipment. If orienting invalidates a planned
 bomb placement, they navigate before retrying, avoiding endless tiny turns. The enlarged stock Pyramid pressure
 check allows eight seconds to first pressure (previous smaller map: six), retains
-six threatening bombs in 30 seconds, an eight-second maximum gap and zero deaths.
+five threatening bombs in 30 seconds, an eight-second maximum gap and zero deaths.

@@ -9,7 +9,7 @@ public static class PowerUpRules
     public static bool IsBombType(string type)=>type is "red" or "remote" or "bounce" or "fast";
     public static bool IsAbility(string type)=>type is "heart" or "focus";
     public static string ChooseDrop(Random random)=>random.Next(100) switch
-    {<25=>"fire",<48=>"bomb",<60=>"remote",<72=>"red",<82=>"bounce",<90=>"fast",<96=>"heart",_=>"focus"};
+    {<35=>"fire",<70=>"bomb",<77=>"remote",<84=>"red",<90=>"bounce",<94=>"fast",<97=>"heart",_=>"focus"};
     public static void Reset(BlastPlayer player)
     {player.FireLevel=1;player.BombCapacity=StartingBombs;player.BombType="normal";player.Ability="none";player.LastPickup=null;}
     public static bool CanCollect(BlastPlayer p,string type)=>type switch

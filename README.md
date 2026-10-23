@@ -150,7 +150,12 @@ head-hit rebound; the reticle uses the same flight rules.
 
 Sunken Temple now spans 25×27 cells, with wider platforms, a fifth raised tier,
 a larger courtyard, more breakable cover and open water pitfalls behind the
-summit. Rock Garden is 23×15 and Up & Down is 23×19.
+summit. Most of its cover is concentrated in lower farming pockets, with clear
+stair and crossing lanes. Rock Garden is 23×15 with pillar-area clusters; Up &
+Down is 23×19 with cover on broad platforms and outer pockets. Layouts vary by
+seed while preserving those areas and safe openings. Fire and Bomb upgrades each
+make up 35% of ordinary drops; other equipment shares the remaining 30%.
+[Original-game layout observations and project tuning](docs/iteration23-block-distribution-research.md).
 
 ## Knockdowns and player grabs
 

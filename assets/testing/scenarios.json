@@ -2,6 +2,18 @@
   "schemaVersion": 1,
   "scenarios": [
     {
+      "id": "cover-layout",
+      "method": "RegionalCoverTour",
+      "domains": [
+        "gameplay",
+        "assets",
+        "ai"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
       "id": "sandbox",
       "method": "SandboxEquipment",
       "domains": [
@@ -409,6 +421,7 @@
     {
       "id": "all",
       "steps": [
+        "cover-layout",
         "sandbox",
         "party-polish",
         "player-settings",
@@ -467,6 +480,7 @@
     {
       "id": "core-headless",
       "steps": [
+        "cover-layout",
         "sandbox",
         "asset-audit",
         "model-profile",

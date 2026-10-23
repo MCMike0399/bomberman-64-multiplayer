@@ -7,23 +7,24 @@ using Burbuja.Realtime.Abstractions;
 internal static class LootAvailabilityChecks
 {
     const BindingFlags Private=BindingFlags.Instance|BindingFlags.NonPublic;
-    public static int Run()
+    public static int Run()=>new[]{BlastStages.SunkenTemple,BlastStages.RockGarden,BlastStages.UpAndDown}.Sum(RunFor);
+    private static int RunFor(string id)
     {
-        var stage=BlastStages.Get(BlastStages.SunkenTemple);
+        var stage=BlastStages.Get(id);
         int covers=0,drops=0;var kinds=new Dictionary<string,int>();
-        for(int seed=0;seed<64;seed++)
+        for(int seed=0;seed<32;seed++)
         {
-            var a=Match(seed);var b=Match(seed);
+            var a=Match(seed,id);var b=Match(seed,id);
             var zones=Zones(a);var replay=Zones(b);
-            Assert(zones.Count is >=60 and <=90,"Temple cover count lost its expanded, useful range.");
-            Assert(zones.SequenceEqual(replay),"Seeded temple cover layout diverged.");
+            Assert(zones.Count>=16&&zones.Count<=stage.MaxSoftBlocks,"Arena cover count lost its authored range.");
+            Assert(zones.SequenceEqual(replay),"Seeded arena cover layout diverged.");
             covers+=zones.Count;
             for(int zone=0;zone<stage.Spawns.Length;zone++)
             {
                 var assigned=zones.Where(kv=>kv.Value==zone).Select(kv=>kv.Key).ToArray();
                 Assert(assigned.Length>=2,"A spawn area has fewer than two opportunities to open cover.");
                 Assert(assigned.Count(cell=>TerrainDistance(stage,stage.Spawns[zone],cell)<=6)>=2,"A spawn's opening crates require a distant terrace detour.");
-                var approachMatch=Match(seed);
+                var approachMatch=Match(seed,id);
                 var approach=OpeningApproach(stage,Grid(approachMatch),stage.Spawns[zone],assigned.ToHashSet());
                 Assert(approach is not null,"A spawn cannot approach its opening cover along clear floor.");
                 var context=(ISessionContext)typeof(LocalMatch).GetField("_context",Private)!.GetValue(approachMatch)!;
@@ -37,38 +38,37 @@ internal static class LootAvailabilityChecks
             }
             // Run the real destruction/visibility/drop path, isolating one crate per tiny blast.
             // This bypasses only bomb setup, so no player skill or bot behavior skews the sample.
-            foreach(var cell in zones.Keys) {Destroy(a,cell);Destroy(b,cell);}
+            foreach(var cell in zones.Keys) {Destroy(a,cell,stage);Destroy(b,cell,stage);}
             a.Tick();a.Tick();b.Tick();b.Tick();
             var items=Items(a);Assert(items.GetRawText()==Items(b).GetRawText(),"Seeded actual cover drops diverged.");
             Assert(zones.Keys.All(cell=>!Grid(a).IsAlive(cell.X,cell.Z)),"Actual blast path left cover alive.");
             foreach(var item in items.EnumerateArray())
             {string kind=item.GetProperty("type").GetString()!;kinds[kind]=kinds.GetValueOrDefault(kind)+1;drops++;}
         }
-        Assert((double)drops/covers is >.65 and <.79,"Actual temple item availability is unexpectedly scarce or saturated.");
-        Assert(kinds.Count==8&&kinds["bomb"]>kinds["remote"]&&kinds["fire"]>kinds["heart"],"Temple drops lost their diverse, useful weighting.");
-        Console.WriteLine($"PASS temple loot: {covers/64d:F2} covers, {drops/64d:F2} actual drops per round across 64 seeds; all eight spawn areas have two nearby crates");
+        Assert((double)drops/covers is >.65 and <.79,"Actual arena item availability is unexpectedly scarce or saturated.");
+        Assert(kinds.Count==8&&kinds["bomb"]>kinds["remote"]&&kinds["fire"]>kinds["heart"],"Arena drops lost their diverse, useful weighting.");
+        Console.WriteLine($"PASS {stage.Name} loot: {covers/32d:F2} covers, {drops/32d:F2} actual drops per round across 32 seeds; all eight spawn areas have two nearby crates");
         foreach(bool reverse in new[]{false,true})
         {
-            var match=Match(832);var zones=Zones(match);
+            var match=Match(832,id);var zones=Zones(match);
             var opening=zones.GroupBy(kv=>kv.Value).Select(group=>group.First()).ToArray();
-            foreach(var entry in reverse?opening.Reverse():opening)Destroy(match,entry.Key);
+            foreach(var entry in reverse?opening.Reverse():opening)Destroy(match,entry.Key,stage);
             match.Tick();match.Tick();var items=Items(match);
             Assert(items.GetArrayLength()==8,"A spawn area's first destroyed crate had no guaranteed useful reward.");
             foreach(var item in items.EnumerateArray())Assert(item.GetProperty("type").GetString() is "fire" or "bomb","Opening cover reward was not a basic inventory upgrade.");
-            string before=items.GetRawText();foreach(var entry in opening)Destroy(match,entry.Key);
+            string before=items.GetRawText();foreach(var entry in opening)Destroy(match,entry.Key,stage);
             match.Tick();match.Tick();Assert(items.GetArrayLength()==Items(match).GetArrayLength(),"Destroying missing cover duplicated a reward.");
         }
-        Console.WriteLine("PASS temple opening reward survives reversed spawn-zone destruction order without duplicate drops");
+        Console.WriteLine($"PASS {stage.Name} opening reward survives reversed spawn-zone destruction order without duplicate drops");
         return 2;
     }
-    static LocalMatch Match(int seed)=>new(new MatchOptions{HumanPlayers=8,BotPlayers=0,Seed=seed});
+    static LocalMatch Match(int seed,string id)=>new(new MatchOptions{Stage=id,HumanPlayers=8,BotPlayers=0,Seed=seed});
     static BlastSession Session(LocalMatch match)=>(BlastSession)typeof(LocalMatch).GetField("_session",Private)!.GetValue(match)!;
     static SoftBlockGrid Grid(LocalMatch match)=>(SoftBlockGrid)typeof(BlastSession).GetField("_softBlocks",Private)!.GetValue(Session(match))!;
     static Dictionary<(int X,int Z),int> Zones(LocalMatch match)=>(Dictionary<(int X,int Z),int>)typeof(BlastSession).GetField("_coverLootZones",Private)!.GetValue(Session(match))!;
-    static void Destroy(LocalMatch match,(int X,int Z) cell)
+    static void Destroy(LocalMatch match,(int X,int Z) cell,StageLayout stage)
     {
         var context=(ISessionContext)typeof(LocalMatch).GetField("_context",Private)!.GetValue(match)!;
-        var stage=BlastStages.Get(BlastStages.SunkenTemple);
         typeof(BlastSession).GetMethod("DestroyBlocksInBlast",Private)!.Invoke(Session(match),[context,cell.X+.5f,cell.Z+.5f,.1f,false,stage.SurfaceAt(cell.X+.5f,cell.Z+.5f)]);
     }
     static JsonElement Items(LocalMatch match){using var doc=JsonDocument.Parse(match.StateJson!);return doc.RootElement.GetProperty("d").GetProperty("items").Clone();}

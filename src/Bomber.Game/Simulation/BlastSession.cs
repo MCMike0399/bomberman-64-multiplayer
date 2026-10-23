@@ -743,6 +743,7 @@ public sealed partial class BlastSession : GameSession
             FuseTimer = p.BombType=="bounce"?3.5f:BlastBomb.FuseSeconds,
         };
         _bombs.Add(bomb);
+        if(p.IsBot&&BotEnemyInRange(bomb.X,BombY(bomb),bomb.Z,bomb.BlastRadius,p.Id,bomb.IsRed))_aiLastThreat[p.Id]=_roundTimer;
         p.ActiveBombs++;
         if (hold) { bomb.State = BombState.Carried; p.CarryingBombId = bomb.Id; UpdateCarriedBombPosition(bomb); }
         PresentBomb(hold ? "bomb-carry" : "bomb-drop", bomb, p.Id);
@@ -1409,11 +1410,11 @@ public sealed partial class BlastSession : GameSession
                 if (spawnCells.Contains((x, z))) continue;
                 if (_stage.ClearCells.Contains((x, z))) continue;
                 if (new[] { (1, 0), (-1, 0), (0, 1), (0, -1) }.Any(d => _stage.At(x + d.Item1, z + d.Item2).Kind == CellKind.Ramp)) continue;
-                if (_stage.Id == BlastStages.SunkenTemple) { candidates.Add((x,z)); continue; }
+                if (_stage.CoverAreas.Count>0) { candidates.Add((x,z)); continue; }
                 if (placed < _stage.MaxSoftBlocks && rng.NextDouble() < _stage.SoftBlockDensity)
                 { _softBlocks.Set(x, z, true); placed++; }
             }
-        if (_stage.Id == BlastStages.SunkenTemple) PlaceTempleCover(rng,candidates);
+        if (_stage.CoverAreas.Count>0) PlaceRegionalCover(rng,candidates);
     }
 
     // ─── hurry: column closure ────────────────────────────────────────────────

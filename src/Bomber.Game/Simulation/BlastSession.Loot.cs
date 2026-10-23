@@ -8,7 +8,7 @@ public sealed partial class BlastSession
 
     // Seed nearby cover before filling the rest of the arena. Terrain distance keeps crates on
     // each spawn's reachable terrace, and a shuffle avoids the old west-to-east cap bias.
-    private void PlaceTempleCover(Random random,List<(int X,int Z)> candidates)
+    private void PlaceRegionalCover(Random random,List<(int X,int Z)> candidates)
     {
         random.Shuffle(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(candidates));
         var distances = _stage.Spawns.Select(SpawnDistances).ToArray();
@@ -26,6 +26,28 @@ public sealed partial class BlastSession
                 var cell=candidates.MinBy(cell=>Distance(zone,cell));
                 if(Distance(zone,cell)!=int.MaxValue)Place(cell,zone);
             }
+        // Give each map's authored farming areas a stable share of the budget.
+        // Nearby opening cover already placed above counts toward its area's quota.
+        var areas=_stage.CoverAreas;
+        double totalWeight=areas.Sum(a=>a.Share);
+        var exact=areas.Select(a=>target*a.Share/totalWeight).ToArray();
+        var quotas=exact.Select(q=>(int)Math.Floor(q)).ToArray();
+        foreach(int index in Enumerable.Range(0,areas.Count).OrderByDescending(i=>exact[i]-quotas[i]).Take(target-quotas.Sum()))quotas[index]++;
+        for(int index=0;index<areas.Count;index++)
+        {
+            var area=areas[index];
+            bool Includes((int X,int Z) cell)=>area.Contains(cell.X,cell.Z,_stage.At(cell.X,cell.Z));
+            int remaining=Math.Max(0,quotas[index]-_coverLootZones.Keys.Count(Includes));
+            var selected=candidates.Where(Includes).Select(cell=>(Cell:cell,Key:area.Priority(cell.X,cell.Z,random)))
+                .OrderBy(entry=>entry.Key).Take(remaining).Select(entry=>entry.Cell).ToArray();
+            foreach(var cell in selected)
+            {
+                if(_coverLootZones.Count>=target)break;
+                Place(cell,Nearest(cell));
+            }
+        }
+        // Small areas may not fit their share after safety exclusions. Redistribute
+        // that remainder among eligible cells; never relax a spawn/ramp/path exclusion.
         foreach(var cell in candidates.ToArray())
         {
             if(_coverLootZones.Count>=target)break;

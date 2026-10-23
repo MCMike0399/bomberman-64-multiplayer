@@ -20,10 +20,11 @@ static class StockHumanPressureChecks
         if(output!=null){Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(output))!);File.WriteAllText(output,json+"\n");}
         if(args.Contains("--stock-human-pressure"))Console.WriteLine(json);
         // Wider stock Pyramid includes a longer opening-crate route: allow eight seconds
-        // for first pressure while retaining six threats, bounded gaps and no self-deaths.
+        // for first pressure while retaining five threats, bounded gaps and no self-deaths. Rich regional loot
+        // now permits a farming detour; larger early blasts also need longer escapes.
         if(!args.Contains("--measure-only"))
             foreach(var r in results)
-                if(r.ActiveTicks!=900||r.HumanPressureBombs<6||r.FirstHumanPressureTick<0||r.FirstHumanPressureTick>240||r.LongestHumanPressureGapTicks>240||r.BotDeaths>0)
+                if(r.ActiveTicks!=900||r.HumanPressureBombs<5||r.FirstHumanPressureTick<0||r.FirstHumanPressureTick>240||r.LongestHumanPressureGapTicks>240||r.BotDeaths>0)
                     throw new Exception($"Passive/unsafe stock Pyramid {r.Difficulty} seed={r.Seed}: pressure={r.HumanPressureBombs}, first={r.FirstHumanPressureTick}, gap={r.LongestHumanPressureGapTicks}, deaths={r.BotDeaths}");
         Console.WriteLine((args.Contains("--measure-only")?"MEASURE":"PASS")+" 4 stock Pyramid human-facing pressure scenarios");return results.Count;
     }

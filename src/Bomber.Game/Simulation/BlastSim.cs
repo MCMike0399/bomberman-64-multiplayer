@@ -49,6 +49,21 @@ public sealed class CellDef
         new() { Kind = CellKind.Ramp, Tier = 1, RampFromTier = 1, RampToTier = 2, RampDX = dx, RampDZ = dz };
 }
 
+/// <summary>An authored farming area: budget share plus optional cluster centers.
+/// Shares describe this game's tuning, not reconstructed original-game probabilities.</summary>
+public sealed record CoverArea(string Name,double Share,int X0,int X1,int Z0,int Z1,int MinTier=0,int MaxTier=5)
+{
+    public IReadOnlyList<(int X,int Z)> Centers {get;init;}=[];
+    public bool Contains(int x,int z,CellDef cell)=>x>=X0&&x<=X1&&z>=Z0&&z<=Z1&&cell.Tier>=MinTier&&cell.Tier<=MaxTier;
+    public double Priority(int x,int z,Random random)
+    {
+        // Weighted sampling without replacement clusters cells, while retaining
+        // variation instead of stamping an identical wall into every round.
+        double distance=Centers.Count==0?0:Centers.Min(c=>(x-c.X)*(x-c.X)+(z-c.Z)*(z-c.Z));
+        return -Math.Log(Math.Max(random.NextDouble(),1e-12))*(1+distance/4);
+    }
+}
+
 /// <summary>The static layout of one stage.</summary>
 public sealed class StageLayout
 {
@@ -62,6 +77,7 @@ public sealed class StageLayout
     public IReadOnlyList<(int X,int Z,string Type)> TrainingItems { get; init; } = [];
     internal IReadOnlyList<(int X,int Z,string Type)> InitialItems { get; init; } = [];
     internal IReadOnlySet<(int X,int Z)>? FixedSoftBlocks { get; init; }
+    public IReadOnlyList<CoverArea> CoverAreas {get;init;}=[];
     public double SoftBlockDensity { get; init; } = .45;
     public int MaxSoftBlocks { get; init; } = int.MaxValue;
     public IReadOnlySet<(int X, int Z)> ClearCells { get; init; } = new HashSet<(int, int)>();
