@@ -213,8 +213,11 @@ Source verification is retained in `artifacts/iteration24/`: managed passed
 1,475 game / 143 client / 53 AI / 19 audio checks, 36 soaks and a real staged
 server smoke; headless passed 868 checks. The final graphical receipt and
 captures are in `graphical/playtest/20261023T232734.727626Z-all/`. The four looks
-were inspected on every stage and from flooded-shore cameras. This is source
-verification, not a published client/server or user approval of the art direction.
+were inspected on every stage and from flooded-shore cameras. The same complete
+graphical suite passed on the rebuilt v0.24.0 export (2,426 checks / 225 captures).
+The signed release and existing shared server are delivered; see
+[verification](../verification.md). Agent inspection does not imply user approval
+of the art direction.
 
 Production uses Forward+ and Metal on macOS with shadows/SSAO/MSAA and restrained
 glow. A headless shader-source assertion cannot prove GPU compilation, balanced

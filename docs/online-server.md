@@ -35,6 +35,12 @@ Local app replacement, Downloads copies, party ZIPs, Wi-Fi peer checks and relay
 setup belong only to a task explicitly requesting those operations. A docs-only
 correction needs documentation review, with no game build or deployment.
 
+The public lobby-list endpoint excludes private rooms. An empty list alone does
+not establish a safe restart. Use the authenticated fleet view, or complete
+current-process lifecycle logs covering creation and closure of every room.
+If log rotation removed startup/history, fail the idle check rather than assuming
+the service is empty. Keep raw operational logs out of Git.
+
 ## Hosting and reachability
 
 The portable server requires ASP.NET Core Runtime 10 or .NET SDK 10:

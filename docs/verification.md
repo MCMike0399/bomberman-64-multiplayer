@@ -1,4 +1,4 @@
-# v0.24.0 stage lighting — source verified, 2026-10-23
+# v0.24.0 stage lighting — delivered, 2026-10-23
 
 All three stages now support **Morning, Midday, Afternoon and Night**. Settings →
 Local lighting saves a personal choice for local play. Online snapshots carry
@@ -24,8 +24,39 @@ This does not imply user artistic approval or new physical-controller testing.
 
 Source receipts: `artifacts/iteration24/{baseline,first-look,managed,headless,graphical}`;
 final native run `graphical/playtest/20261023T232734.727626Z-all/`.
-Release candidate: **v0.24.0/build27**. Publication and deployment receipts follow
-after the matching signed artifacts are verified.
+The rebuilt **v0.24.0/build27** Mac export passed **252 package-smoke assertions**
+and the complete **37-scenario graphical suite: 2,426 assertions, 225 captures,
+zero runtime errors**. The four exported lighting looks were reviewed, and the
+strict recursive signature check passed. Its 217-file/symlink inventory and a
+local archive are retained under `artifacts/iteration24/`.
+
+Runtime source `4f774e8ce9858e2f414c41694e8c947b82cd4d3a` is pushed to main.
+[Verification 40040566256](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40040566256)
+and [signed publication 40041286969](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40041286969)
+passed. [v0.24.0](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.24.0)
+is published with matching Mac/server artifacts. The public manifest signature,
+archive checksums, source/version metadata, bundle identity and server inventory
+were independently verified. The Mac ZIP is 64,744,057 bytes, SHA-256
+`9bf50e059b8d08f3061a170454142be9b2e6d35303488f482a9fedf2e7650a89`.
+A partial CLI download timed out; an HTTP/1.1 resume completed it and the final
+hash matched. The three AppleDouble license metadata entries are outside the
+217 runtime app files and were checked against their corresponding ZIP members.
+
+The existing shared server runs the exact published runtime: **42 running file
+hashes matched**, the game registration endpoint is healthy, and network exposure
+is unchanged. Complete process lifecycle logs confirmed no active or waiting
+public/private rooms before the restart; the previous deployment is retained for
+rollback. One bounded release-matched exported-client journey through a temporary
+operator SSH tunnel passed **50 assertions / 3 captures / zero runtime errors**.
+The actual two-player match was visually inspected and the tunnel was closed.
+
+Unrelated QA-launcher work began during publication. Its new isolated default
+rejected a custom server before launching; the successful final check used the
+runner and catalog frozen from the release commit. Those ongoing edits were
+preserved and excluded from this release. No local app replacement, party sharing
+or public hosting configuration was performed.
+
+Delivery receipts: `artifacts/iteration24/{release-public,release-package,release-graphical,public-release,ci-result.json,publication-result.json,server-deploy.log,server-runtime-verified.json,deployed-network}`.
 
 # v0.23.1 item drop tuning — delivered, 2026-10-23
 
@@ -55,7 +86,7 @@ Source `845cc4179c35233cc7ccc958b7b4b8123278a645` is pushed to main.
 [Verification 40038592623](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40038592623)
 and [signed publication 40039336510](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40039336510)
 passed. [v0.23.1](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.23.1)
-is the latest stable release. The public update signature, Mac archive hash,
+was published successfully. The public update signature, Mac archive hash,
 bundle identity/version and server inventory were independently verified.
 
 The existing server now runs the exact published v0.23.1 runtime, with all **42**

@@ -3,7 +3,7 @@
 The user resumed gameplay work on 2026-10-23 for controller ergonomics, aiming
 and knockdown/blast separation (iteration19). The first eighteen iterations
 remain historical evidence. Iteration20 then rebuilt the walk. Current installed
-runtime: **v0.23.0**; latest published client/server: **v0.23.1**
+runtime: **v0.23.0**; latest published client/server: **v0.24.0**
 (see [verification](../verification.md)). Previous runtime baseline: **v0.18.0**, commit
 `316a330d7d895a92f98c1a60be7d571ec445a8a3`. Later documentation commits may follow.
 Verify the live branch, source, tools and installed version before relying on
@@ -35,6 +35,11 @@ update the current guide rather than silently reviving old behavior.
 | [Latest verification](../verification.md) | Exact observed results and limitations, with earlier iterations below |
 
 ## Current decisions that supersede earlier experiments
+
+- v0.24: Morning, Midday, Afternoon and Night on all stages. Settings → Local
+  lighting controls local play; online rounds use the server's snapshot choice.
+  Coordinated sky reflections, water and wet stone shading; the 35% item drop
+  chance from v0.23.1 is preserved. See [rendering](visuals-and-animation.md).
 
 - Shared online service (2026-10-23): the server is for all users. Routine
   releases follow [shared-server delivery](../online-server.md); former friends-party
