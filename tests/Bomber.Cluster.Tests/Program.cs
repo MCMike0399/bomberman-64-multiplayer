@@ -22,4 +22,26 @@ foreach (string[] invalid in new[] { Array.Empty<string>(), new[] { "" }, new[] 
     try { _ = new PreferredServerPlacement(invalid); throw new Exception("Invalid order accepted"); }
     catch (ArgumentException) { Check(true, "invalid deployment order rejected"); }
 }
+var file = Path.Combine(Path.GetTempPath(), "blast-pressure-" + Guid.NewGuid().ToString("N") + ".json");
+var now = DateTimeOffset.UtcNow;
+var pressure = new PressureSnapshot(file, () => now);
+var aware = new LobbyBalancer([], new PreferredServerPlacement(["primary", "fallback"], pressure), allowCrossRegion: true);
+void Snapshot(double at, params string[] excluded) => File.WriteAllText(file, System.Text.Json.JsonSerializer.Serialize(new { at, excludedServers = excluded }));
+try
+{
+    Check(aware.Choose([Node("primary"), Node("fallback")], request) == "primary", "missing monitor preserves bounded baseline");
+    Snapshot(now.ToUnixTimeMilliseconds()/1000.0, "primary");
+    Check(aware.Choose([Node("primary"), Node("fallback")], request) == "fallback", "pressured primary moves new rooms to fallback");
+    Check(aware.Choose([Node("primary"), Node("fallback")], request with { Region = "primary" }) == null, "pressure cannot be bypassed with a region");
+    Snapshot(now.ToUnixTimeMilliseconds()/1000.0, "primary", "fallback");
+    Check(aware.Choose([Node("primary"), Node("fallback")], request) == null, "both pressured hosts reject new rooms");
+    Snapshot(now.AddSeconds(-91).ToUnixTimeMilliseconds()/1000.0, "primary");
+    Check(aware.Choose([Node("primary"), Node("fallback")], request) == "primary", "stale monitor is not a new game availability dependency");
+    File.WriteAllText(file, "{bad");
+    Check(aware.Choose([Node("primary"), Node("fallback")], request) == "primary", "partial or corrupt observation preserves baseline");
+    Snapshot(now.ToUnixTimeMilliseconds()/1000.0);
+    Check(aware.Choose([Node("primary",0,LobbyServerState.Draining), Node("fallback")], request) == "fallback", "recovery never overrides an operator drain");
+    Check(aware.Choose([Node("primary"), Node("fallback",1)], request) == "primary", "recovery restores primary preference without moving existing rooms");
+}
+finally { File.Delete(file); }
 Console.WriteLine($"ALL CLUSTER PLACEMENT CHECKS PASSED ({checks})");

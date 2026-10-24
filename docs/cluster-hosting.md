@@ -93,6 +93,45 @@ requests, outside game frames. See the kernel's opt-in compression contract and
 
 ## Capacity and failure checks
 
+### Pressure-aware placement extension
+
+`Blast.Cluster` 1.1.0 optionally reads `BlastCluster:AdmissionFile`, configured as
+`/run/blast-admission/placement.json`. The host mounts the **directory**
+`./admission` read-only, so atomic file replacements become visible inside Docker
+(a single-file bind would retain the old inode). The document contains Unix
+`at` and `excludedServers`. Fresh exclusions filter placement before the kernel
+makes its atomic capacity claim. They do not alter operator drains, move active
+matches, or change configured room/CPU/memory limits. Empty exclusions restore
+the normal primary-first policy, even while the fallback still hosts rooms.
+
+The private Burbuja host monitor observes CPU, thermal/power state, memory reserve
+and protected-service health. Three consecutive bad samples defer new rooms;
+six healthy samples restore preference. `tools/cluster/admission_publish.py`
+publishes those recommendations on both game hosts. Its source inventory remains
+private. Heavy transcription runs on the compute host, and its offline training
+workers lower priority while transcription or realtime demand needs headroom.
+
+A missing, corrupt, oversized, future-dated or older-than-90-second placement
+snapshot falls back to the existing measured, resource-capped placement policy.
+Thus the monitor is not a new availability dependency for the game. Heavy file
+compute uses a separate fail-closed admission policy because its input can wait.
+Manual drains remain authoritative throughout monitoring failure or recovery.
+
+Updates replace only the optional placement plugin and add its read-only mount,
+one drained/empty node at a time. Keep the existing verified server runtime,
+kernel revision, credentials and measured capacities. Back up the old plugin and
+Compose file. Before promotion, run `dotnet run --project tests/Bomber.Cluster.Tests`
+and the public/managed QA profiles; verify both public sockets after installation.
+`tools/cluster/placement-probe.mjs` verifies one owned private room and waits for
+its **60-second empty-room retirement**, not merely seat removal. A zero-player
+room still consumes capacity during that timeout, especially on a one-room node.
+
+The 2026-10-24 extension passed 19 placement checks and the public/managed suites.
+Public probes verified the updated fallback and primary, forced-pressure overflow
+to the fallback, and recovery to the primary. An early overflow probe correctly
+received no-capacity while its previous empty fallback probe room still owned the
+only slot; subsequent checks retained that failure and waited for retirement.
+
 The capacity probe uses real HTTP reservations, eight participants per room and
 normal authoritative inputs. It exercises all three stages, maximum permitted rule
 caps, repeated action edges at the client's actual 30 Hz cadence, and optional Hard

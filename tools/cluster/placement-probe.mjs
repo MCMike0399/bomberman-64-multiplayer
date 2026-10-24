@@ -1,0 +1,51 @@
+// Real public admission + owning-node socket. Creates and removes one private room.
+import fs from 'node:fs/promises';
+const [origin, expected, output, region] = process.argv.slice(2);
+if (!origin || !expected || !output) throw Error('Usage: placement-probe.mjs ORIGIN EXPECTED_SERVER OUTPUT [REGION]');
+let token, room, socket, failure, cleaned = false;
+async function api(route, body) {
+  const response = await fetch(new URL('/realtime/v1/' + route, origin), {
+    method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { 'x-player-token': token } : {}) },
+    body: JSON.stringify(body), signal: AbortSignal.timeout(10000)
+  });
+  const value = response.status === 204 ? null : await response.json();
+  if (!response.ok) throw Error(`HTTP ${response.status}: ${value?.error?.code}`);
+  return value;
+}
+try {
+  token = (await api('guests', { displayName: 'Placement verification' })).token;
+  const created = await api('lobbies', { game: 'blast', visibility: 'private', ...(region ? { region } : {}), settings: { party: 'on', bots: '0' } });
+  room = created.lobby;
+  if (room.serverId !== expected) throw Error(`Expected ${expected}, got ${room.serverId}`);
+  const url = new URL(created.reservation.connectUrl, origin);
+  url.protocol = ['https:', 'wss:'].includes(url.protocol) ? 'wss:' : 'ws:';
+  if (origin.startsWith('https:') && url.protocol !== 'wss:') throw Error('Insecure socket route');
+  socket = new WebSocket(url);
+  await new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(Error('No owning-node welcome')), 10000);
+    socket.addEventListener('message', e => { if (JSON.parse(e.data).t === 'sys.welcome') { clearTimeout(timer); resolve(); } });
+    socket.addEventListener('error', () => { clearTimeout(timer); reject(Error('Socket failed')); });
+  });
+} catch (error) { failure = error.message; }
+finally {
+  socket?.close();
+  if (room) try {
+    await api(`lobbies/${room.lobbyId}/leave`, {});
+    // An empty private room still owns capacity until the kernel's empty timeout.
+    // Wait for actual retirement so another probe does not consume its last slot.
+    const until = Date.now() + 75000;
+    while (Date.now() < until) {
+      const response = await fetch(new URL(`/realtime/v1/lobbies/${room.lobbyId}`, origin),
+        { headers: { 'x-player-token': token }, signal: AbortSignal.timeout(5000) });
+      if (response.status === 404) { cleaned = true; break; }
+      if (!response.ok) throw Error(`HTTP ${response.status}`);
+      if (['closed','ended'].includes((await response.json()).state)) { cleaned = true; break; }
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    if (!cleaned) throw Error('Room did not retire within its expected empty timeout');
+  } catch (error) { failure ??= 'Cleanup: '+error.message; }
+  await fs.writeFile(output, JSON.stringify({ passed: !failure, server: room?.serverId, roomId: room?.lobbyId,
+    cleaned, failure, publicEndpoint: origin }, null, 2));
+}
+if (failure) { console.error(failure); process.exitCode = 1; }
+else console.log('PASS public placement and owning-node socket: '+expected);

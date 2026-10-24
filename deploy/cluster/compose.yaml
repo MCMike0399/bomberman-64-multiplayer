@@ -17,6 +17,7 @@ services:
       - ./runtime:/app:ro
       - ./plugins/Realtime.Redis:/app/plugins/Realtime.Redis:ro
       - ./plugins/Blast.Cluster:/app/plugins/Blast.Cluster:ro
+      - ./admission:/run/blast-admission:ro
     environment:
       Kernel__Role: worker
       Kernel__NodeId: ${BLAST_NODE:?Unique node ID}
@@ -33,6 +34,7 @@ services:
       Realtime__EnableWebSocketCompression: "true"
       BlastCluster__ServerOrder__0: blast-pi
       BlastCluster__ServerOrder__1: blast-divemac
+      BlastCluster__AdmissionFile: /run/blast-admission/placement.json
       Auth__ApiKeys__0__Key: ${BLAST_OPERATOR_KEY:?Private operator key}
       Auth__ApiKeys__0__PrincipalId: blast-operator
       Auth__ApiKeys__0__Roles__0: Owner
