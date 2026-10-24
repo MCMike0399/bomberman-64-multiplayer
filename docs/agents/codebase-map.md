@@ -79,7 +79,8 @@ playtest arguments are present.
   exactly (case-sensitive). Godot binds scripts by file path: the source
   generator only emits `ScriptPath` for the declaration in the matching file.
 - Split a large class with `Class.Concern.cs` partials beside it; they share the
-  class namespace. Keep fields and initialized properties in the main file so
+  class namespace. The harness keeps its older convention: `PlaytestDriver`
+  partials are named `*Playtest.cs` (no class of that name exists). Keep fields and initialized properties in the main file so
   field-initialization order stays in one place.
 - Commit `.uid` sidecars and move them with their scripts. Godot creates one for
   each new script during an editor import; commit it with the script.
@@ -133,6 +134,12 @@ needs adding to the public profile's folder list in `tools/qa/run.py`.
    pulling a move logs autoload errors for the old paths, which fails QA's
    `godot-resource-import` step once. Deleting `.godot/` (a regenerable cache)
    or running the import a second time clears it; fresh CI checkouts are clean.
+5. On macOS, a case-only folder rename leaves the old-cased directory on disk if
+   it still holds untracked files such as `.DS_Store`. Git then writes the new
+   files into it, and the export can store a wrong-cased path the PCK cannot
+   resolve. After pulling, `ls scenes scripts` should show only lowercase
+   folders; move stray untracked files and remove leftover `Scenes/`,
+   `scripts/UI/`, `scripts/Testing/`, `scripts/Rendering/` or `scripts/Updates/`.
 
 ## 2026-10-24 layout migration
 

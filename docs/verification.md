@@ -1,3 +1,23 @@
+# Codebase restructure — source verification (no release)
+
+2026-10-24, branch `refactor/codebase-structure`: a pure reorganization (feature
+folders, partial splits, tool/doc moves; see the [codebase map](agents/codebase-map.md)).
+No version bump: the release baseline remains **v0.26.1/build 30** below.
+
+Fresh worktrees of this branch and of `main` (`0a4dba4`), kernel `64ec8db`, Godot
+4.7.2 mono and .NET 10.0.400 on Apple Silicon: `public`, `managed`, `headless` and
+`package` passed. Compared with `main`, the game, client, AI, audio and cluster
+suite logs and the 36-scenario AI soak receipt were identical (excluding timings);
+network smoke passed; the headless playtest had the same 868 checks; and the packaged
+app had the same 217-file list, identity `io.github.mcmike0399.blastcircuit`
+0.26.1/30, strict codesign and the same 252 `package-smoke` checks. Line-multiset
+comparisons confirmed that the split files moved members verbatim.
+
+Not run: graphical/windowed Metal QA (no isolated VM on the verifying Mac),
+physical controllers and installation. A checkout with an older `.godot/` cache
+logs old-path autoload errors on its first import after pulling; a second import
+or deleting `.godot/` clears them.
+
 # UI layout polish and smoother menu characters — v0.26.1 delivered
 
 2026-10-24: Online, Advanced settings, Settings, Lobby and Results text/fields now
