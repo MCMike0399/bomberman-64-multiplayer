@@ -9,7 +9,7 @@ The development build is installed at `~/Applications/Blast Circuit.app`. Normal
 Requirements: the pinned kernel source dependency, .NET 10 SDK, Godot 4.7.2 .NET, matching .NET export templates, and macOS command-line tools. The optional Switch 2 backend can be built with `tools/controllers/bootstrap-sdl.sh` first.
 
 ```bash
-python3 tools/package-macos.py
+python3 tools/packaging/package-macos.py
 open "artifacts/exports/Blast Circuit.app"
 ```
 

@@ -4,6 +4,8 @@ import ast
 from pathlib import Path
 import subprocess
 
+import doc_links
+
 ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -19,11 +21,13 @@ def main():
     # Include newly created tooling when running locally before the first commit.
     for path in (ROOT / 'tools').rglob('*.py'):
         ast.parse(path.read_text(), filename=str(path.relative_to(ROOT)))
+    # Relative documentation links/anchors must survive file moves.
+    failures.extend(doc_links.broken_links(ROOT, doc_links.tracked_markdown(ROOT)))
     for failure in failures:
         print(failure)
     if failures:
         return 1
-    print('Python syntax and tracked private-material boundary checks passed.')
+    print('Python syntax, documentation link and tracked private-material boundary checks passed.')
     return 0
 
 

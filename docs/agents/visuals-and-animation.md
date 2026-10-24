@@ -24,15 +24,15 @@ failed approaches; exact live values remain in source. Use the
 
 | Concern | Source / focused witness |
 | --- | --- |
-| Character mesh, rig, face and poses | [BomberModel](../../scripts/Rendering/BomberModel.cs); `model-profile`, `movement`, `walk-feel` |
-| Root interpolation and facing | [SnapshotMotion](../../scripts/Rendering/SnapshotMotion.cs), [ArenaView](../../scripts/ArenaView.cs); `movement` |
-| Reusable mesh helpers | [ArtGeometry](../../scripts/Rendering/ArtGeometry.cs); `asset-audit` |
-| Bomb shell/growth and pickup symbol | [BombModel](../../scripts/Rendering/BombModel.cs), [PowerupModel](../../scripts/Rendering/PowerupModel.cs); `pump-growth`, `loot-opening` |
-| Terrain visuals and height conversion | [TempleStageView](../../scripts/Rendering/TempleStageView.cs); `traversal`, `framing`, `hurry-water` |
-| Stone/water shaders and lighting | [ArtMaterials](../../scripts/Rendering/ArtMaterials.cs), ArenaView; graphical `asset-audit`, `presentation` |
-| Perspective framing/shake | [BattleCameraRig](../../scripts/Rendering/BattleCameraRig.cs); `framing` at supported aspect ratios |
-| Blast/action/exit visuals | [ExplosionView](../../scripts/Rendering/ExplosionView.cs), [KickBurst](../../scripts/Rendering/KickBurst.cs), [ExitEffect](../../scripts/Rendering/ExitEffect.cs); `presentation`, `kick-physics` |
-| Event/audio playback | [BattleAudio](../../scripts/Rendering/BattleAudio.cs), [SoundSynth](../../scripts/Rendering/SoundSynth.cs); audio executable tests plus `presentation` |
+| Character mesh, rig, face and poses | [BomberModel](../../scripts/arena/models/BomberModel.cs); `model-profile`, `movement`, `walk-feel` |
+| Root interpolation and facing | [SnapshotMotion](../../scripts/arena/SnapshotMotion.cs), [ArenaView](../../scripts/arena/ArenaView.cs); `movement` |
+| Reusable mesh helpers | [ArtGeometry](../../scripts/rendering/ArtGeometry.cs); `asset-audit` |
+| Bomb shell/growth and pickup symbol | [BombModel](../../scripts/arena/models/BombModel.cs), [PowerupModel](../../scripts/arena/models/PowerupModel.cs); `pump-growth`, `loot-opening` |
+| Terrain visuals and height conversion | [TempleStageView](../../scripts/arena/TempleStageView.cs); `traversal`, `framing`, `hurry-water` |
+| Stone/water shaders and lighting | [ArtMaterials](../../scripts/rendering/ArtMaterials.cs), ArenaView; graphical `asset-audit`, `presentation` |
+| Perspective framing/shake | [BattleCameraRig](../../scripts/arena/BattleCameraRig.cs); `framing` at supported aspect ratios |
+| Blast/action/exit visuals | [ExplosionView](../../scripts/arena/effects/ExplosionView.cs), [KickBurst](../../scripts/arena/effects/KickBurst.cs), [ExitEffect](../../scripts/arena/effects/ExitEffect.cs); `presentation`, `kick-physics` |
+| Event/audio playback | [BattleAudio](../../scripts/audio/BattleAudio.cs), [SoundSynth](../../scripts/audio/SoundSynth.cs); audio executable tests plus `presentation` |
 
 These are original code-generated meshes/materials/audio, not imported original
 Bomberman assets. Menus and matches reuse the same character. Locate the actual
@@ -68,7 +68,7 @@ and preserve neck transition, front-to-back balance and readable eye placement.
 The user preferred a middle point: a separate plate without a paper-thin side
 profile, a slightly shorter oval head, and no massive rear/forehead volume.
 
-[ModelProfilePlaytest](../../scripts/Testing/ModelProfilePlaytest.cs) checks actual
+[ModelProfilePlaytest](../../scripts/testing/ModelProfilePlaytest.cs) checks actual
 shell ellipsoid vertices, outward unit normals, torso depth, nonzero face depth
 and nondegenerate clockwise face triangles. Godot mesh winding matters: apparently
 missing faces may be backface culling, not a request to add thickness. Keep normals,
@@ -111,7 +111,7 @@ The body has a short airborne beat, squashes toward the planted boots and leans
 into the run with the legs compensated. Damped springs (fixed 240 Hz substeps)
 give gloves, lean, turn bank, head and the crown antenna momentum, lag and
 overshoot; avoid replacing them with phase-locked sines. The antenna pivots inside
-the crown and is soft-limited. See [iteration twenty](../iteration20-walking.md). The carry socket follows `upperParts` with
+the crown and is soft-limited. See [iteration twenty](../history/iteration20-walking.md). The carry socket follows `upperParts` with
 the hands; a new pivot without updating the socket can separate bomb and hands.
 Keep local/world conversions explicit (`ToGlobal`, arena-local attachment and
 `TempleStageView.HeightScale`). `BombThrowRules` owns authority launch height;
@@ -132,14 +132,14 @@ changing a cosmetic socket cannot repair a low physical throw launch.
 | Phase-locked upper body, welded antenna | Lateral/roll/shoulder spans passed | No momentum on starts/stops; use springs for follow-through and settle |
 | “Passing tests means charming” | Numeric bounds describe mechanics | State measured facts; user approval and perceived feel remain separate |
 
-[MovementPlaytest](../../scripts/Testing/MovementPlaytest.cs) measures actual rig
+[MovementPlaytest](../../scripts/testing/MovementPlaytest.cs) measures actual rig
 transforms, fixed stem length/hip attachment, bounded reach, boot grip while down,
 body/head/shoulder/antenna motion and composed boot continuity. The 1200 Hz diagnostic catches curve-boundary
 velocity corners; it is not a rendering-performance claim. Foot-center height
 and support/flight fractions are diagnostics, not proof of a planted sole or
 terrain IK. Avoid tightening those metrics until they force the rejected stretch.
 
-[WalkingShowcasePlaytest](../../scripts/Testing/WalkingShowcasePlaytest.cs) walks
+[WalkingShowcasePlaytest](../../scripts/testing/WalkingShowcasePlaytest.cs) walks
 ordinary inputs across the real clear courtyard, reverses, settles and repeats
 through side, three-quarter and normal battle views. It logs authority/render
 positions and rig poses, so a future agent can tell travel stutter from gait issues.
@@ -167,7 +167,7 @@ foam, sky reflections and flood-dependent motion. Its fragment `NORMAL` is in
 view space; depth reconstruction handles renderer conventions. The transparent
 pass with full alpha is deliberate: sampled depth must contain opaque shore
 geometry rather than the water itself. Preserve that rationale when refactoring.
-Read [the rendering investigation](../iteration8-rendering.md) before replacing
+Read [the rendering investigation](../history/iteration8-rendering.md) before replacing
 this shader; its fixed daytime Fresnel tint was superseded by the four lighting
 profiles below. Verify normal and hurry/flood states from more than one camera.
 
@@ -179,7 +179,7 @@ for local play and by the server online. Settings → Local lighting persists in
 while locally paused updates the current arena without restarting the match.
 Online preference edits save the local choice but never override server lighting.
 
-[StageLighting](../../scripts/Rendering/StageLighting.cs) owns the four coordinated
+[StageLighting](../../scripts/arena/StageLighting.cs) owns the four coordinated
 key/fill/ambient, sky, fog and water profiles. Morning uses soft warm lateral light;
 Midday has a higher sun and turquoise water; Afternoon uses amber light, longer
 shadows and mauve reflections; Night uses blue moonlight, indigo water and enough
@@ -293,7 +293,7 @@ limits; listen to captured output as well as checking sample statistics.
 
 ## References and finish criteria
 
-Use [character references](../iteration16-character.md), [current rig decisions](../iteration18-walking.md)
+Use [character references](../history/iteration16-character.md), [current rig decisions](../history/iteration18-walking.md)
 and [asset audit boundaries](../asset-audit.md). Official 2D action art, official 3D
 renders, original-game footage and user screenshots answer different questions.
 Long-limbed modern artwork is not permission to undo the compact original-game

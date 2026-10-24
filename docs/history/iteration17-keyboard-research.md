@@ -1,6 +1,6 @@
 # Iteration seventeen: two hands on the keyboard
 
-> Historical evidence: this document records its iteration. Read the [current maintenance guide](agents/input-and-ui.md) before reusing controls, animation tuning or compatibility claims.
+> Historical evidence: this document records its iteration. Read the [current maintenance guide](../agents/input-and-ui.md) before reusing controls, animation tuning or compatibility claims.
 
 Investigated 2026-10-21. User direction: keyboard only, both hands, no mouse requirement; preserve Space hold to carry / release to throw. This is an ergonomics proposal, not a claim of a player-approved layout.
 

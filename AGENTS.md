@@ -15,6 +15,7 @@ Read the relevant guide before editing its area:
 | Character geometry, walking, camera, shaders, effects or audio | [Visuals and animation](docs/agents/visuals-and-animation.md) |
 | Keyboard/gamepads, menus, HUD, prompts or reticle | [Input and UI](docs/agents/input-and-ui.md) |
 | Bug reproduction, harness, test selection, recording, packaging or CI | [Testing and delivery](docs/agents/testing-and-delivery.md) |
+| Adding, moving or renaming files; folder, namespace and naming rules | [Codebase map](docs/agents/codebase-map.md) |
 
 ## Working rules
 

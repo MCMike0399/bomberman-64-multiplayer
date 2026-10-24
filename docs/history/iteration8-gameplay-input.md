@@ -37,4 +37,4 @@ The game suite covers real rolling contact, no outgoing self-hit, accelerated ve
 
 The graphical `grapple` scenario uses the normal temple map and three real local seats. Players walk to the training remote pickup, position themselves, kick a bomb into a victim, recover, carry/escape and throw/land through ordinary inputs. It checks actual renderer/audio events and captures visible behavior.
 
-The `controller-popups` scenario tests the configured embedded Godot role popup and setup dials with gradual Switch bridge input and south-button acceptance. The setup scenario also verifies exact room settings, persistence and practice launch. [Final exported-app results](verification.md).
+The `controller-popups` scenario tests the configured embedded Godot role popup and setup dials with gradual Switch bridge input and south-button acceptance. The setup scenario also verifies exact room settings, persistence and practice launch. [Final exported-app results](../verification.md).

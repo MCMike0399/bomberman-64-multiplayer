@@ -27,10 +27,15 @@ flowchart TD
 | `src/Bomber.Game` | Match options/rosters, local authority adapter, realtime registration and game rules | Kernel realtime contracts; no Godot rendering |
 | `src/Bomber.Client` | `ISession`, local accumulator, HTTP/WebSocket lobby/reconnect/input handling, bounded message handoff, input policies | Game and .NET APIs; no Godot dependency |
 | `src/Bomber.Server` | Independent ASP.NET executable and registration of the `blast` game | Game and Burbuja.Hosting |
-| `scripts/Input`, `PlayerControls` | Device/focus/menu handling and physical-to-semantic intent | Godot plus client input policies |
-| `scripts/GameRoot.cs` | Screen/session lifecycle, input dispatch, accepted messages and HUD composition | Session interface and presentation |
-| `scripts/ArenaView.cs` | Accepted entity reconciliation, motion, presentation event routing and render ownership | Godot; never authority for hits/wins/items |
-| `scripts/Rendering`, `scripts/UI` | Original procedural assets, effects/audio, stage/camera, shared menu/HUD primitives | Render and interaction state |
+| `src/Bomber.Cluster` | Optional pressure-aware placement plugin for the public cluster | Kernel core/realtime abstractions |
+| `scripts/input_devices` | Device/focus/menu handling and physical-to-semantic intent (`ControllerHub`, `PlayerControls`) | Godot plus client input policies |
+| `scripts/app` (`GameRoot`) | Screen/session lifecycle, input dispatch, accepted messages and HUD composition | Session interface and presentation |
+| `scripts/arena` (`ArenaView`) | Accepted entity reconciliation, terrain, camera, lighting, motion and presentation event routing | Godot; never authority for hits/wins/items |
+| `scripts/arena/models`, `arena/effects`, `rendering`, `audio` | Original procedural models, effects, shared geometry/materials/presets and synthesized audio | Render state only |
+| `scripts/ui` (`menu`, `hud`) | Shared stamped controls, menu screens and battle HUD | Interaction state; emits intent to `GameRoot` |
+| `scripts/testing` | Catalog-driven playtest harness shipped in the game assembly | Drives ordinary input and sessions |
+
+Folder layout, naming rules and partial-class seams are in the [codebase map](agents/codebase-map.md).
 
 `ISession` exposes advancement, input submission, message draining, status/join
 code and disposal. `LocalSession` and `NetworkSession` implement that seam.

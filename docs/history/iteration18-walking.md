@@ -10,7 +10,7 @@ The waist now transfers visibly between supporting sides. An independent pivot a
 
 The final focused movement run (`artifacts/iteration18-walk-green/20261022T021855.589562Z-movement`) passes 59 checks. Across 30/60/120 FPS, actual body roll spans about .093–.095 radians, shoulder turn spans .164 radians and head counter-roll spans .080–.081 radians. Maximum leg angle remains .480 radians; the largest body-Y change in a 30 FPS frame falls from .0139 to .0112. Fixed limb length, hip attachment, boot continuity, smooth snapshot interpolation and settling remain required.
 
-`walk-feel` now records side and three-quarter inspection views followed by the normal battle camera. Each leg of the ordinary gameplay journey checks continuous displacement, alternating compact boots, actual lateral body movement and independent shoulder follow-through. It does not edit actor snapshots or animation state to create its footage. [Final exported-app evidence](verification.md).
+`walk-feel` now records side and three-quarter inspection views followed by the normal battle camera. Each leg of the ordinary gameplay journey checks continuous displacement, alternating compact boots, actual lateral body movement and independent shoulder follow-through. It does not edit actor snapshots or animation state to create its footage. [Final exported-app evidence](../verification.md).
 
 ## Keyboard correction
 

@@ -16,10 +16,10 @@ upscaling on its own.
 The baseline code has two relevant facts:
 
 - [project.godot](../project.godot) enables 4× MSAA for the root viewport.
-  [ArcadeBackdrop](../scripts/UI/ArcadeBackdrop.cs),
-  [ArcadeModeButton](../scripts/UI/ArcadeModeButton.cs),
-  [CharacterPreview](../scripts/UI/CharacterPreview.cs) and
-  [ResultMedals](../scripts/UI/ResultMedals.cs) explicitly select **2×** for their
+  [ArcadeBackdrop](../scripts/ui/menu/ArcadeBackdrop.cs),
+  [ArcadeModeButton](../scripts/ui/ArcadeModeButton.cs),
+  [CharacterPreview](../scripts/ui/menu/CharacterPreview.cs) and
+  [ResultMedals](../scripts/ui/menu/ResultMedals.cs) explicitly select **2×** for their
   separate 3D viewports. Raising the root setting alone misses the visible menu.
 - Those components use `SubViewportContainer.Stretch=true`. Godot resizes their
   render targets to the container's local size divided by `StretchShrink`;
@@ -156,16 +156,16 @@ objects. [RenderingServer shadow APIs](https://docs.godotengine.org/en/4.7/class
    per direction, also in the scaled-down menu diorama. Lower tessellation and
    skipping genuinely invisible microdetail are candidates; inspect displacement,
    coastline and flooding at ordinary and close cameras before accepting them.
-   [ArtMaterials](../scripts/Rendering/ArtMaterials.cs),
-   [TempleStageView](../scripts/Rendering/TempleStageView.cs).
+   [ArtMaterials](../scripts/rendering/ArtMaterials.cs),
+   [TempleStageView](../scripts/arena/TempleStageView.cs).
 5. **Preserve authored lighting rather than adding expensive features by default.**
    The arena already has sky reflections, SSAO, glow, filmic tonemapping and fog.
    SSR, SDFGI, volumetric fog, depth of field and motion blur are not prerequisites
    for modern stylized graphics. First improve sampling, stable highlights and
    contact shadows. The existing four coordinated lighting profiles are an art
    constraint, not an optimization target.
-   [ArenaView](../scripts/ArenaView.cs),
-   [StageLighting](../scripts/Rendering/StageLighting.cs).
+   [ArenaView](../scripts/arena/ArenaView.cs),
+   [StageLighting](../scripts/arena/StageLighting.cs).
 
 ## Wider codebase performance review
 
@@ -175,10 +175,10 @@ The renderer changes are deliberately separate from these remaining seams:
 | --- | --- | --- |
 | Local authority | [LocalSession](../src/Bomber.Client/LocalSession.cs) advances on the Godot thread at fixed 30 Hz, with at most five catch-up ticks. [LocalMatch](../src/Bomber.Game/LocalMatch.cs) encodes snapshots, then the adapter parses/buffers them. | Keep simulation cadence independent of quality. A typed local snapshot path might reduce allocations, but requires parity/lifetime evidence before changing that boundary. |
 | Network | [NetworkSession](../src/Bomber.Client/NetworkSession.cs) sends input asynchronously at 30 Hz and allocates a receive stream per envelope. [MessageBuffer](../src/Bomber.Client/ISession.cs) already coalesces state snapshots while retaining control messages. | Do not reduce input rates for Low. A bounded receive-buffer improvement needs fragmented-frame and ownership tests; no current client profile establishes this as the limiting cost. |
-| Snapshot presentation | [ArenaView](../scripts/ArenaView.cs) decodes/scans the cover bitset per snapshot and creates temporary collections. | Change detection is a possible allocation reduction; preserve initial, reset and destruction behavior. Profile before redesigning. |
-| Animation | Actor interpolation, carried sockets and [BomberModel](../scripts/Rendering/BomberModel.cs) spring animation run each frame; spring integration uses fixed 240 Hz substeps. | Preserve timing and the approved silhouette across presets. Numerical animation simplification is not justified by the current evidence. |
-| Terrain | [ArtGeometry](../scripts/Rendering/ArtGeometry.cs) already caches meshes. The stage creates many instances, but measured empty-practice root draw calls are only 48/73/115 across Garden/Up-and-Down/Pyramid. | Node count alone is not draw-call count. Defer manual batching until a submission bottleneck is measured; static regional batches must keep destructible cover separate. |
-| Battle effects | [ExplosionView](../scripts/Rendering/ExplosionView.cs) uses transparent lobes, with existing crowd reduction after 16 tracked explosions. [BombThrowPreview](../scripts/Rendering/BombThrowPreview.cs) creates 24 cosmetic trajectory dots with default shadow casting. | Eight-player explosion overdraw and unnecessary marker shadows are future focused candidates. Preserve full danger extent and trajectory information; empty-practice results cannot rank their costs. |
+| Snapshot presentation | [ArenaView](../scripts/arena/ArenaView.cs) decodes/scans the cover bitset per snapshot and creates temporary collections. | Change detection is a possible allocation reduction; preserve initial, reset and destruction behavior. Profile before redesigning. |
+| Animation | Actor interpolation, carried sockets and [BomberModel](../scripts/arena/models/BomberModel.cs) spring animation run each frame; spring integration uses fixed 240 Hz substeps. | Preserve timing and the approved silhouette across presets. Numerical animation simplification is not justified by the current evidence. |
+| Terrain | [ArtGeometry](../scripts/rendering/ArtGeometry.cs) already caches meshes. The stage creates many instances, but measured empty-practice root draw calls are only 48/73/115 across Garden/Up-and-Down/Pyramid. | Node count alone is not draw-call count. Defer manual batching until a submission bottleneck is measured; static regional batches must keep destructible cover separate. |
+| Battle effects | [ExplosionView](../scripts/arena/effects/ExplosionView.cs) uses transparent lobes, with existing crowd reduction after 16 tracked explosions. [BombThrowPreview](../scripts/arena/effects/BombThrowPreview.cs) creates 24 cosmetic trajectory dots with default shadow casting. | Eight-player explosion overdraw and unnecessary marker shadows are future focused candidates. Preserve full danger extent and trajectory information; empty-practice results cannot rank their costs. |
 
 The [managed snapshot probe](../tests/Bomber.Game.Tests/SnapshotPerformance.cs)
 measures tick/encoding work, while the [network probe](../tests/Bomber.Performance.Probe/Program.cs)

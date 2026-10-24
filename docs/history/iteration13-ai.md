@@ -16,7 +16,7 @@ Remote-bomb decisions now examine the exact oldest non-carried remote that the a
 
 ## Verification and boundaries
 
-The independent 36-scenario soak covers three stages, three difficulties, three/seven bots and two deterministic seeds. It measures zero-input standstills as well as blocked commands, excludes legitimate movement interruption, and distinguishes a safe available exit from a trapped wait. The first run exposed 30 failing scenarios; fixes were rerun against the same matrix. Four additional fairness checks preserve starting resources/spawns/terrain and equivalence of Medium with the older Normal setting. See [methodology and results](../tests/Bomber.Ai.Tests/README.md).
+The independent 36-scenario soak covers three stages, three difficulties, three/seven bots and two deterministic seeds. It measures zero-input standstills as well as blocked commands, excludes legitimate movement interruption, and distinguishes a safe available exit from a trapped wait. The first run exposed 30 failing scenarios; fixes were rerun against the same matrix. Four additional fairness checks preserve starting resources/spawns/terrain and equivalence of Medium with the older Normal setting. See [methodology and results](../../tests/Bomber.Ai.Tests/README.md).
 
 These tests establish specific behavior and liveness under the tested conditions. They do not prove that Hard always wins, that every arbitrary layout is solvable, or that subjective pacing is finished. The actual Godot scene is also exercised and recorded for all three levels through `--scenario ai-play`, with a stationary human observer and ordinary CPU play; no entity state is rewritten.
 

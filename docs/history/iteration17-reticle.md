@@ -19,6 +19,6 @@ The text-free source run `artifacts/iteration17-reticle-clean/20261021T235725.66
 - The normal-match journey verifies Space+J, four movement directions, a real blocked endpoint, two simultaneous carriers, independent release and cleanup.
 - Pixel checks require both colored marker pixels and a contrasting outline. Separate renderer contracts cover all five endpoint types and an offscreen arrow; these are not claimed as authority gameplay outcomes.
 - A later integration review caught a lifecycle bug: Results retains the arena background, so arena visibility alone could leave a winner's marker over the menu. Preview creation now requires Match and Fight/Hurry; clearing immediately hides nodes before deferred deletion. A normal duel regression lets the opponent die to their own ordinary bomb while the survivor still carries, then verifies the actual Results transition removes the overlay.
-- Final exported-app evidence is recorded in [verification](verification.md). Headless projection checks establish throw semantics, not GPU visibility.
+- Final exported-app evidence is recorded in [verification](../verification.md). Headless projection checks establish throw semantics, not GPU visibility.
 
 `reticle` belongs to graphical `all`, not a headless suite. Before/after captures use the normal battle camera. No global gameplay debug labels were added.

@@ -81,7 +81,7 @@ head bounds are retained.
   carry, knockdown, kick-windup and held poses inspected.
 - Full source graphical profile (`artifacts/iteration20-graphical`): 2,203
   assertions, 177 captures, 32 scenarios, zero runtime errors. The exported
-  v0.20.0 app passed 2,202/177 and was installed; see [verification](verification.md).
+  v0.20.0 app passed 2,202/177 and was installed; see [verification](../verification.md).
 - Before/after clip at normal speed: `artifacts/iteration20-walk-compare.mp4`.
 
 Whether this reads as charming and "original" is the user's call; these checks

@@ -29,8 +29,8 @@ taps use the alias; B remains menu Back, X remains remote, and A still works.
 
 Space has no gameplay action. F11 or Alt+Enter toggles fullscreen.
 Keep both held-state sampling and short-press detection consistent when changing
-bindings: [PlayerControls](../../scripts/PlayerControls.cs) owns keyboard states,
-`BombKey` and `RemoteKey`; [ControllerProfile](../../scripts/Input/ControllerProfile.cs)
+bindings: [PlayerControls](../../scripts/input_devices/PlayerControls.cs) owns keyboard states,
+`BombKey` and `RemoteKey`; [ControllerProfile](../../scripts/input_devices/ControllerProfile.cs)
 owns family semantics and prompt labels. Update the README, controller panel,
 HUD hints and native tests together.
 
@@ -43,7 +43,7 @@ backend's canonical IDs. Nintendo confirms with printed A and backs with B.
 
 ## Input path and fairness
 
-- [ControllerHub](../../scripts/Input/ControllerHub.cs) discovers devices,
+- [ControllerHub](../../scripts/input_devices/ControllerHub.cs) discovers devices,
   publishes native input, tracks active prompt family/keyboard seat, guards focus,
   and combines held state with bomb/remote/stop press edges through `Read`.
 - [MatchControllerBindings](../../src/Bomber.Client/MatchControllerBindings.cs)
@@ -52,7 +52,7 @@ backend's canonical IDs. Nintendo confirms with printed A and backs with B.
 - [InputPolicy](../../src/Bomber.Client/InputPolicy.cs) resolves D-pad, stick and
   keyboard directions without summing device speed. Ordinary movement normalizes
   nonzero direction after radial stick drift rejection; diagonals gain no speed.
-- [GameRoot](../../scripts/GameRoot.cs) sends local commands to
+- [GameRoot](../../scripts/app/GameRoot.cs) sends local commands to
   [LocalSession](../../src/Bomber.Client/LocalSession.cs) or
   [NetworkSession](../../src/Bomber.Client/NetworkSession.cs).
   Both adapters retain action edges, including Aim, for authority consumption.
@@ -86,15 +86,15 @@ Aim is authority-owned, with no target lock or auto-aim. The cursor has a shared
 6-cell/second limit, a 25% fine start and 0.3-second ramp; analog input retains
 partial strength. Deliberate range is 0–9 cells so the cursor crosses the carrier
 to aim behind them. Close self-lobs are dangerous, not protected.
-[Design alternatives and primary sources](../iteration19-controls-research.md). New carry, drop or throw
+[Design alternatives and primary sources](../history/iteration19-controls-research.md). New carry, drop or throw
 resets chosen intent. Pumping changes blast strength while deliberate aim keeps
-its selected range. Read [precision throw research](../iteration16-aim.md)
+its selected range. Read [precision throw research](../history/iteration16-aim.md)
 when changing the underlying throw policy.
 
 ## Switch 2 USB: preserve the real sampling path
 
-Read [controller research](../controller-research.md) before touching
-[SdlGamepadBackend](../../scripts/Input/SdlGamepadBackend.cs) or
+Read [controller research](../history/controller-research.md) before touching
+[SdlGamepadBackend](../../scripts/input_devices/SdlGamepadBackend.cs) or
 [controller bootstrap/patches](../../tools/controllers/). Godot's bundled backend
 at the time of implementation did not expose Switch 2 Pro USB reliably.
 The optional adapter uses pinned SDL/libusb and a narrowly patched hybrid reader:
@@ -196,18 +196,18 @@ continuity. [Rendering budgets and rationale](../graphics-research.md).
 ## Reticle rendering and lifecycle
 
 The user explicitly requested shape-only endpoints with no extra labels.
-[ThrowEndpointReticle](../../scripts/Rendering/ThrowEndpointReticle.cs) draws an
+[ThrowEndpointReticle](../../scripts/arena/effects/ThrowEndpointReticle.cs) draws an
 outlined ring/crosshair, an unsafe gold cross or an offscreen edge arrow.
 `EndpointLabel` is diagnostic metadata, never visible copy.
 
 The stock Temple can produce `Obstructed` even on a short ordinary throw.
 Rendering only `Landing` previously made the carried-bomb reticle disappear.
-[BombThrowPreview](../../scripts/Rendering/BombThrowPreview.cs) uses a screen-space
+[BombThrowPreview](../../scripts/arena/effects/BombThrowPreview.cs) uses a screen-space
 CanvasLayer at layer 2 so terrain cannot hide the marker. Keep its world arc and
 shared static projection, semantic endpoint colors and local-player ownership.
 Moving actors, bombs and future water changes can interrupt the forecast.
 
-[ArenaView](../../scripts/ArenaView.cs) gates previews to active Match Fight/Hurry
+[ArenaView](../../scripts/arena/ArenaView.cs) gates previews to active Match Fight/Hurry
 and valid local carriers. Call `HidePreview` before deferred `QueueFree`:
 CanvasLayer descendants can otherwise survive visibly above Results even when
 an ancestor's 3D visibility changes. The normal-duel lifecycle regression reaches
@@ -215,8 +215,8 @@ actual victory with a survivor carrying; it does not forge a Results snapshot.
 
 ## UI identity and verification lookup
 
-Extend [ArcadeTheme](../../scripts/UI/ArcadeTheme.cs), its `PromptBar` keycaps and
-[BattleHud](../../scripts/UI/BattleHud.cs) primitives. Dela Gothic One carries
+Extend [ArcadeTheme](../../scripts/ui/ArcadeTheme.cs), its `PromptBar` keycaps and
+[BattleHud](../../scripts/ui/hud/BattleHud.cs) primitives. Dela Gothic One carries
 headings/buttons/values; M PLUS Rounded 1c carries body labels. Retain their OFL
 notices. Stamped keys use ink outlines/lips and gold focus; the fuse clock and
 player tokens are the HUD's visual identity. Favor readable mixed-case copy,
@@ -240,7 +240,7 @@ results data are presentation fixtures; `network` and `results` cover the real p
 
 Find scenario membership/headless support in the single
 [catalog](../../assets/testing/scenarios.json), dispatched by
-[ScenarioCatalog](../../scripts/Testing/ScenarioCatalog.cs). Use `controllers`
+[ScenarioCatalog](../../scripts/testing/ScenarioCatalog.cs). Use `controllers`
 for mappings, seats, focus/hotplug and menus; `aim-inputs` for native K/J/L and
 canonical pad parity; `precision-aim` for authority range/turn/landing;
 `reticle` for actual marker pixels and Results cleanup; `wasd-menu` for native

@@ -1,6 +1,6 @@
 # Iteration sixteen: compact chibi limbs and continuous recovery
 
-> Historical evidence: this document records its iteration. Read the [current maintenance guide](agents/visuals-and-animation.md) before reusing controls, animation tuning or compatibility claims.
+> Historical evidence: this document records its iteration. Read the [current maintenance guide](../agents/visuals-and-animation.md) before reusing controls, animation tuning or compatibility claims.
 
 The latest feedback rejects the visibly extending legs in the first iteration-sixteen recording. Earlier continuity checks passed, but did not guard the character's compact proportions. The final source removes the extension entirely: short white leg stems and pink boots rotate together from fixed hips. Head and face geometry remain unchanged. Artistic success still requires the new actual-game recording and user review.
 

@@ -1,6 +1,6 @@
 # Iteration seventeen: keyboard play, visible aiming and useful openings
 
-> Historical evidence: this document records its iteration. Read the [current maintenance guide](agents/README.md) before reusing controls, animation tuning or compatibility claims.
+> Historical evidence: this document records its iteration. Read the [current maintenance guide](../agents/README.md) before reusing controls, animation tuning or compatibility claims.
 
 ## Current behavior
 
@@ -11,7 +11,7 @@
 
 ## Focused evidence
 
-The table preserves focused source-build receipts. Final exported-app, installation and full-suite evidence is in [verification](verification.md). Graphical checks use real rendered pixels; synthetic keyboard/controller events do not certify physical hardware.
+The table preserves focused source-build receipts. Final exported-app, installation and full-suite evidence is in [verification](../verification.md). Graphical checks use real rendered pixels; synthetic keyboard/controller events do not certify physical hardware.
 
 | Scenario | Result | Evidence under `artifacts/` |
 | --- | --- | --- |
@@ -30,4 +30,4 @@ Walking verification checks fixed limb length and hip attachment, boot orientati
 
 ## AI status and limits
 
-AI work addresses post-blast reengagement and a stock-stage route choice that can favor a lower-court position over a ramp detour into actual blast range. Reached goals now expire, and reachable positions within visible blast range earn pressure utility so bots can take the necessary ramp detour. In the matched stock-Pyramid Medium seed64 case, human-pressure bombs rose from 4 to 7 over 30 seconds and the longest gap fell from 12.27 to 6.93 seconds, with no bot death. The other Medium case stayed at 8; Hard cases produced slightly fewer bombs while retaining short pressure gaps. All 52 AI checks and 36 soak scenarios pass. Normalized whole-soak pressure rose 1.83% overall (Medium +1.20%, Hard +26.47%, Easy −14.51%). These bounded observations do not establish universal aggression, survival or fun improvements. See [AI fixture definitions and limits](../tests/Bomber.Ai.Tests/README.md) before interpreting those results.
+AI work addresses post-blast reengagement and a stock-stage route choice that can favor a lower-court position over a ramp detour into actual blast range. Reached goals now expire, and reachable positions within visible blast range earn pressure utility so bots can take the necessary ramp detour. In the matched stock-Pyramid Medium seed64 case, human-pressure bombs rose from 4 to 7 over 30 seconds and the longest gap fell from 12.27 to 6.93 seconds, with no bot death. The other Medium case stayed at 8; Hard cases produced slightly fewer bombs while retaining short pressure gaps. All 52 AI checks and 36 soak scenarios pass. Normalized whole-soak pressure rose 1.83% overall (Medium +1.20%, Hard +26.47%, Easy −14.51%). These bounded observations do not establish universal aggression, survival or fun improvements. See [AI fixture definitions and limits](../../tests/Bomber.Ai.Tests/README.md) before interpreting those results.

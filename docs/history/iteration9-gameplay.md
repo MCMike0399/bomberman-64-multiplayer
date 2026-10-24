@@ -44,4 +44,4 @@ Bots now plan a valid forward bomb location, orient through ordinary movement in
 
 Results now use a dimensional arcade theatre, lit winner podium, physical board, metallic medals and raised action plaques. The final helmet is a continuous near-spherical ellipsoid centered slightly forward; its separate rounded faceplate and body are retained.
 
-The full exported-app suite passed 1,303 assertions with 95 captures. Subsequent head-only refinements were checked in the exported app from five angles, including actual mesh volume, ellipsoid continuity, normals and triangle winding. See [verification](verification.md) for exact runs and [harness instructions](../tools/playtest/README.md) for reproduction.
+The full exported-app suite passed 1,303 assertions with 95 captures. Subsequent head-only refinements were checked in the exported app from five angles, including actual mesh volume, ellipsoid continuity, normals and triangle winding. See [verification](../verification.md) for exact runs and [harness instructions](../../tools/playtest/README.md) for reproduction.

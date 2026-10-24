@@ -37,8 +37,8 @@ trajectory previews consistent with flight rules; it does not establish the
 best aim controls for this arena. Blast Circuit already shares projection and
 flight rules and should preserve that boundary.
 
-Before this change, [ControllerHub](../scripts/Input/ControllerHub.cs) already
-accepted L/LB/L1 for carry, but [ControllerProfile](../scripts/Input/ControllerProfile.cs)
+Before this change, [ControllerHub](../../scripts/input_devices/ControllerHub.cs) already
+accepted L/LB/L1 for carry, but [ControllerProfile](../../scripts/input_devices/ControllerProfile.cs)
 presented the face button first. Precision aim used horizontal input to rotate
 and vertical input to change distance. The right stick did not select the aim
 vector. [The previous aim design](iteration16-aim.md) explains its deliberate
