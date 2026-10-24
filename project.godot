@@ -2,14 +2,14 @@ config_version=5
 
 [application]
 config/name="Blast Circuit"
-run/main_scene="res://Scenes/Main.tscn"
+run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("4.7", "C#", "Forward Plus")
 config/icon="res://icon.svg"
 
 [autoload]
 
-DisplayMode="*res://scripts/DisplayModeController.cs"
-Controllers="*res://scripts/Input/ControllerHub.cs"
+DisplayMode="*res://scripts/app/DisplayModeController.cs"
+Controllers="*res://scripts/input_devices/ControllerHub.cs"
 
 [display]
 window/size/mode=0

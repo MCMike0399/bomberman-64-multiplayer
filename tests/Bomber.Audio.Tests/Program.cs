@@ -1,4 +1,4 @@
-using BlastCircuit.Rendering;
+using BlastCircuit.Audio;
 using System.Security.Cryptography;
 
 var clips=SoundSynth.GenerateAll();
