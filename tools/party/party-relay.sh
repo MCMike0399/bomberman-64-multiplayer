@@ -56,7 +56,7 @@ case "$action" in
     launchctl remove "$label"
     ;;
   *)
-    echo 'Usage: bash tools/party-relay.sh start [LAN_IP] | status | stop'
+    echo 'Usage: bash tools/party/party-relay.sh start [LAN_IP] | status | stop'
     echo 'Optional env: BLAST_SSH_HOST, BLAST_SERVER_PORT, BLAST_RELAY_PORT'
     ;;
 esac

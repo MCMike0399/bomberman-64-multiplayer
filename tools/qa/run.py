@@ -290,7 +290,7 @@ def ensure_controller_backend(suite):
 def execute(suite, app=None):
     if suite.profile == 'public':
         suite.step('public-boundaries', [sys.executable, 'tools/ci/public_checks.py'])
-        for folder in ('ci', 'playtest', 'qa', 'cluster'):
+        for folder in ('ci', 'cluster', 'packaging', 'party', 'playtest', 'qa'):
             suite.step(folder + '-contracts', [sys.executable, '-m', 'unittest', 'discover', '-s', 'tools/' + folder, '-p', 'test_*.py'])
         suite.build('tests/Bomber.Audio.Tests')
         suite.step('audio', ['dotnet', 'run', '--no-build', '--project', 'tests/Bomber.Audio.Tests'], footer=FOOTERS['Bomber.Audio.Tests'])
@@ -322,7 +322,7 @@ def execute(suite, app=None):
     if suite.profile == 'package':
         app = app or ROOT / 'artifacts/exports/Blast Circuit.app'
         ensure_controller_backend(suite)
-        suite.require('macos-export', [sys.executable, 'tools/package-macos.py', '--godot', suite.godot, '--output', str(app)], timeout=600)
+        suite.require('macos-export', [sys.executable, 'tools/packaging/package-macos.py', '--godot', suite.godot, '--output', str(app)], timeout=600)
         suite.steps.append({'name': 'controller-bundle-audit', 'passed': True, 'seconds': 0,
                             'evidence': controller_files(app / 'Contents/Frameworks/Controllers')})
         suite.playtest('package-smoke', app=app, headless=True)

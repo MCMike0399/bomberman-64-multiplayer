@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 dotnet build Bomberman64Multiplayer.csproj --nologo
 if [[ -n "${GODOT_BIN:-}" ]]; then
   game_editor="$GODOT_BIN"

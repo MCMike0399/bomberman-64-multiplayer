@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 revision=64ec8db830bb058de8ba2aa92b6f195165cd06d4
 repository="${KERNEL_REPOSITORY:-}"
 if [ -e burbuja-kernel ]; then

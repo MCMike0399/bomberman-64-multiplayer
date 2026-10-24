@@ -6,7 +6,7 @@ import tempfile
 import unittest
 import zipfile
 
-SPEC = importlib.util.spec_from_file_location('party_server', Path(__file__).resolve().parents[1] / 'prepare-party-server.py')
+SPEC = importlib.util.spec_from_file_location('party_server', Path(__file__).resolve().parent / 'prepare-party-server.py')
 party = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(party)
 

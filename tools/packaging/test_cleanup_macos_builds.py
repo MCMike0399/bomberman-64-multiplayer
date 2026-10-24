@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-SPEC = importlib.util.spec_from_file_location("cleanup", Path(__file__).resolve().parents[1] / "cleanup-macos-builds.py")
+SPEC = importlib.util.spec_from_file_location("cleanup", Path(__file__).resolve().parent / "cleanup-macos-builds.py")
 cleanup = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(cleanup)
 
