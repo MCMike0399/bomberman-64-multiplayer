@@ -10,6 +10,8 @@ The public address is `https://blast.burbuja-lab.dev`. Raspberrypi is the primar
 game node; DiveMac keeps a resource-capped idle worker ready for overflow. Both
 share matchmaking and room codes. Follow [cluster operations](cluster-hosting.md)
 for routing, capacity limits, node updates and the limits of failure recovery.
+The [v0.26 delivery receipt](cluster-release-026.md) records the published client,
+verified installations, conservative operating caps and measured evidence.
 
 ## Release and deploy
 
