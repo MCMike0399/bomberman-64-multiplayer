@@ -1,4 +1,4 @@
-# UI layout polish and smoother menu characters — v0.26.1 source
+# UI layout polish and smoother menu characters — v0.26.1 delivered
 
 2026-10-24: Online, Advanced settings, Settings, Lobby and Results text/fields now
 stay inside their boxes (vector `ArcadeToggle`, fitted arena preview, suit dial,
@@ -12,9 +12,33 @@ Isolated-VM receipts under `artifacts/playtest/`: the new `ui-layout` scenario p
 (pre-bump export); `ui-layout` and `results` passed again on the installed export.
 That build (labelled 0.26.0/29) was installed locally at the user's request: 217
 files matched, strict codesign and LaunchServices smoke (59 snapshots) passed.
-Receipt: `artifacts/ui-polish-install-20261024/`. The 0.26.1 version bump itself
-has not been packaged, published or installed; no bare-metal frame-rate
-measurement or user approval of the look is claimed.
+Receipt: `artifacts/ui-polish-install-20261024/` (the historical pre-release installation).
+
+**Published and installed 2026-10-24:** [v0.26.1](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.26.1)
+ships **0.26.1/build 30** from `46cf598ff8b105c0e141ef1c22149f5cd11cda5e`, including
+UI commit `7769b54` and the optional pressure-aware cluster plugin. The exact
+[Verification run](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40129951585)
+passed public, managed/network, headless and Apple Silicon package gates;
+[publishing](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40130620187)
+completed successfully. The release is stable, neither draft nor prerelease.
+
+Both archive checksums, source/identity receipts and the server's per-file
+inventory passed. The update manifest's P-256 signature verified against the
+public key shipped in the client. Mac ZIP SHA-256:
+`e34e64fb449bb7308c44e6799363476d209646469ff8f7942a828c66762431f2`.
+The installed public archive matched all **217 files**, passed strict recursive
+code-signature checks, and passed a fresh windowed LaunchServices smoke with
+**59 snapshots** and an inspected viewport capture. Identity-checked cleanup
+left only the canonical installed app. Receipts: `artifacts/release-0261/`,
+including `verification.json` and `install/{receipt.json,gameplay.png,cleanup-after.json}`.
+
+The public service's read-only game catalog still advertises Blast at 30 Hz and
+2–8 players. Client protocol, game authority and server source are unchanged
+from v0.26.0; the shared runtime was not redeployed for this UI release. The
+optional placement-plugin update has separate [cluster evidence](cluster-hosting.md).
+No bare-metal frame-rate measurement of the full-rate menu previews, Apple
+notarization, new physical-controller validation or user approval of the look
+is claimed.
 
 # Graphics presets, native profiling and first-use preparation — source preview
 
