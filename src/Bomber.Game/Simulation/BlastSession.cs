@@ -23,6 +23,7 @@ public sealed partial class BlastSession : GameSession
 
     private readonly int[] _localAppearances;
     private readonly bool _practice;
+    private readonly AdvancedRules _advanced;
     private readonly int _winsTarget;
     private readonly int _roundSeconds;
     private readonly bool _suddenDeath;
@@ -74,6 +75,7 @@ public sealed partial class BlastSession : GameSession
     {
         _localAppearances = appearances?.ToArray() ?? [];
         _practice = practice;
+        _advanced=AdvancedRules.FromSettings(options.Settings);
         // Cosmetic selection must not consume gameplay RNG (cover, loot or bots).
         _lightingOffset=(int)((uint)options.Seed%4);
         _stage = arena ?? BlastStages.Get(options.Settings.TryGetValue("stage", out var s) ? s : "sunken-temple");
@@ -257,8 +259,8 @@ public sealed partial class BlastSession : GameSession
         _presentedKickContacts.Clear();
         _hazards.Clear();
         _items.Clear();
-        foreach(var item in _stage.InitialItems.Concat(_practice ? _stage.TrainingItems : []))
-            _items.Add(new BlastItem { Id=NextItemId(),CellX=item.X,CellZ=item.Z,Tier=_stage.At(item.X,item.Z).Tier,Type=item.Type,LifeRemaining=-1 });
+        foreach(var item in _stage.InitialItems.Concat(_practice ? _stage.TrainingItems : []).Where(item=>_advanced.Allows(item.Type)))
+            _items.Add(new BlastItem { Id=NextItemId(),CellX=item.X,CellZ=item.Z,Tier=_stage.At(item.X,item.Z).Tier,Type=item.Type,LifeRemaining=_advanced.ItemSeconds });
 
         // Restore pending joiners and reset living players.
         foreach (var p in _players.Values)
@@ -276,7 +278,7 @@ public sealed partial class BlastSession : GameSession
             p.LatchTimer = 0;
             p.LatchReverseCount = 0;
             p.ActiveBombs = 0;
-            PowerUpRules.Reset(p);
+            PowerUpRules.Reset(p,_advanced);
             p.ClearInput();
             p.PrevA = false;
             p.PrevB = false;
@@ -372,6 +374,11 @@ public sealed partial class BlastSession : GameSession
             return;
         }
 
+        foreach(var player in _players.Values)
+        {
+            player.StatusRemaining=Math.Max(0,player.StatusRemaining-dt);
+            if(player.StatusRemaining==0 || !player.Alive || player.Ghost){player.StatusEffect="none";player.StatusRemaining=0;}
+        }
         // Tick bots.
         foreach (var p in _players.Values)
             if (p.IsBot && p.Alive && !p.Ghost)
@@ -484,7 +491,7 @@ public sealed partial class BlastSession : GameSession
             if(p.KickRecoveryRemaining>0)p.KickRecoveryRemaining=Math.Max(0,p.KickRecoveryRemaining-dt);
             if(p.Falling)
             {
-                p.AirVX=input.X*PlayerSpeed;p.AirVZ=input.Z*PlayerSpeed;
+                p.AirVX=input.X*PlayerSpeed*p.StatusSpeed;p.AirVZ=input.Z*PlayerSpeed*p.StatusSpeed;
                 if(input.Length>.1f){p.FacingX=input.X/input.Length;p.FacingZ=input.Z/input.Length;}
                 p.PrevA=input.A;p.PrevB=input.B;p.PrevR=input.R;p.PrevStop=input.Stop;
                 continue;
@@ -543,7 +550,7 @@ public sealed partial class BlastSession : GameSession
     {
         var startX = p.X;
         var startZ = p.Z;
-        var speed=PlayerSpeed*KickMovementScale(p);
+        var speed=PlayerSpeed*p.StatusSpeed*KickMovementScale(p);
         ApplyMoveDelta(p, input.X * speed * dt, input.Z * speed * dt,dt);
 
         // Update facing for non-zero input.
@@ -563,7 +570,7 @@ public sealed partial class BlastSession : GameSession
 
     private void MovePlayerCarrying(BlastPlayer p, InputState input, float dt)
     {
-        ApplyMoveDelta(p, input.X * PlayerSpeed * dt, input.Z * PlayerSpeed * dt,dt);
+        ApplyMoveDelta(p, input.X * PlayerSpeed * p.StatusSpeed * dt, input.Z * PlayerSpeed * p.StatusSpeed * dt,dt);
         if (!p.AimSet && input.X * input.X + input.Z * input.Z > 0.01f)
         {
             p.FacingX = input.X; p.FacingZ = input.Z;
@@ -703,8 +710,8 @@ public sealed partial class BlastSession : GameSession
             {
                 // Movement collision can stop up to one tick short of touching the bomb. Test
                 // this tick's intended segment, rather than enlarging the proximity radius.
-                var stepX = input.X * PlayerSpeed * dt;
-                var stepZ = input.Z * PlayerSpeed * dt;
+                var stepX = input.X * PlayerSpeed * p.StatusSpeed * dt;
+                var stepZ = input.Z * PlayerSpeed * p.StatusSpeed * dt;
                 var along = Math.Clamp(((b.X - startX) * stepX + (b.Z - startZ) * stepZ) /
                     (stepX * stepX + stepZ * stepZ), 0, 1);
                 var clearance = PlayerRadius + BlastBomb.Radius;
@@ -1167,8 +1174,9 @@ public sealed partial class BlastSession : GameSession
 
     private void DropItem(ISessionContext context, int cx, int cz, int tier, string? guaranteedType = null)
     {
-        var type = guaranteedType ?? PowerUpRules.ChooseDrop(context.Random);
-        _items.Add(new BlastItem { Id = NextItemId(), CellX = cx, CellZ = cz, Tier = tier, Type = type });
+        var type = guaranteedType ?? PowerUpRules.ChooseDrop(context.Random,_advanced);
+        if(type is null || !_advanced.Allows(type))return;
+        _items.Add(new BlastItem { Id = NextItemId(), CellX = cx, CellZ = cz, Tier = tier, Type = type, LifeRemaining=_advanced.ItemSeconds });
     }
 
     private void TickItems(ISessionContext context)
@@ -1208,7 +1216,7 @@ public sealed partial class BlastSession : GameSession
     private static void ApplyItem(BlastPlayer p,string type) => PowerUpRules.Apply(p,type);
     private void DropEquipment(BlastPlayer player,string type)
     {
-        _items.Add(new BlastItem {Id=NextItemId(),CellX=(int)MathF.Floor(player.X),CellZ=(int)MathF.Floor(player.Z),Tier=player.Tier,Type=type,DroppedBy=player.Id,OwnerLockRemaining=PowerUpRules.SwapPickupDelay});
+        _items.Add(new BlastItem {Id=NextItemId(),CellX=(int)MathF.Floor(player.X),CellZ=(int)MathF.Floor(player.Z),Tier=player.Tier,Type=type,LifeRemaining=_advanced.ItemSeconds,DroppedBy=player.Id,OwnerLockRemaining=PowerUpRules.SwapPickupDelay});
     }
 
     // ─── player hits ──────────────────────────────────────────────────────────
@@ -1233,6 +1241,7 @@ public sealed partial class BlastSession : GameSession
         Present("death", p.Id, p.Id, p.X, p.Y, p.Z, reason: reason, causedBy: causedBy);
         if (_practice) { RespawnPracticePlayer(p); Present("respawn", p.Id, p.Id, p.X, p.Y, p.Z, reason: reason); return; }
         p.Alive = false;
+        p.StatusEffect="none";p.StatusRemaining=0;
         DropCarriedBombs(p);
 
         // Drop one collected item power-up (designer choice).
@@ -1297,7 +1306,7 @@ public sealed partial class BlastSession : GameSession
         ClearRecovery(player); player.InvincibleTimer = 1.5f;
         player.CarryFromPrimary=false;player.PrimaryBombCandidateId=null;player.PrimaryHoldTimer=0;
         player.ClearInput(); player.PrevA = player.PrevB = player.PrevR = player.PrevStop = false;
-        PowerUpRules.Reset(player);
+        PowerUpRules.Reset(player,_advanced);
         player.ActiveBombs = _bombs.Count(b => b.OwnerId == player.Id && !b.Exploded);
         player.FacingX = 0; player.FacingZ = 1; player.BotThinkTimer = 0;
     }
@@ -1310,8 +1319,8 @@ public sealed partial class BlastSession : GameSession
         else if (p.FireLevel > 1) type = "fire";
         else if (p.BombCapacity > PowerUpRules.StartingBombs) type = "bomb";
 
-        if (type is null) return;
-        _items.Add(new BlastItem { Id = NextItemId(), CellX = (int)p.X, CellZ = (int)p.Z, Tier = p.Tier, Type = type });
+        if (type is null || !_advanced.Allows(type)) return;
+        _items.Add(new BlastItem { Id = NextItemId(), CellX = (int)p.X, CellZ = (int)p.Z, Tier = p.Tier, Type = type, LifeRemaining=_advanced.ItemSeconds });
     }
 
     // ─── ghost latch ─────────────────────────────────────────────────────────
@@ -1394,7 +1403,7 @@ public sealed partial class BlastSession : GameSession
     private void PlaceSoftBlocks(Random rng)
     {
         _softBlocks = new SoftBlockGrid(_stage.Width, _stage.Height);
-        _coverLootZones.Clear();_claimedLootZones.Clear();
+        _coverLootZones.Clear();
         if (_stage.FixedSoftBlocks is { } fixedBlocks)
         {
             foreach(var cell in fixedBlocks) _softBlocks.Set(cell.Item1,cell.Item2,true);
@@ -1515,6 +1524,7 @@ public sealed partial class BlastSession : GameSession
             lastPickup = p.LastPickup,
             pumpSerial = p.PumpSerial,
             bombType = p.BombType, ability = p.Ability,
+            statusEffect=p.StatusEffect,statusRemaining=p.StatusRemaining,statusScale=p.StatusScale,maxFire=p.MaxFire,maxBombs=p.MaxBombs,
             red = p.HasRed,
             remote = p.HasRemote,
             wins = p.Wins,

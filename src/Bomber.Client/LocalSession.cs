@@ -23,7 +23,7 @@ public sealed class LocalSession : ISession
         LocalPlayerCount = humanCount;
         _inputs = new PlayerInput[humanCount];
         _buttons = Enumerable.Range(0, humanCount).Select(_ => new Queue<(bool A, bool B, bool R, bool Aim, bool Stop)>()).ToArray();
-        _match = new LocalMatch(new MatchOptions { HumanPlayers = humanCount, BotPlayers = settings.Bots,
+        _match = new LocalMatch(new MatchOptions { HumanPlayers = humanCount, BotPlayers = settings.Bots, Advanced=settings.Advanced,
             Stage = settings.Stage, BotDifficulty = settings.BotDifficulty, Wins = settings.Wins, RoundSeconds = settings.RoundSeconds,
             SuddenDeath = settings.SuddenDeath, Ghosts = settings.Ghosts, Seed = seed, Practice = practice, PlayerAppearances = playerAppearances ?? Array.Empty<int>() });
         _match.Message += OnMessage;

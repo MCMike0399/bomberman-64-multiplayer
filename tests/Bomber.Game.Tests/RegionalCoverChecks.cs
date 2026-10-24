@@ -55,9 +55,9 @@ internal static class RegionalCoverChecks
         }
         var random=new Random(287);var counts=new Dictionary<string,int>();
         for(int i=0;i<10000;i++){string type=PowerUpRules.ChooseDrop(random);counts[type]=counts.GetValueOrDefault(type)+1;}
-        Assert(counts["fire"] is >3200 and <3800&&counts["bomb"] is >3200 and <3800,"Fire and Bomb are not the dominant individual drops.");
-        Assert((counts["fire"]+counts["bomb"])/10000d is >.68 and <.72&&counts.Count==8,"Basic upgrades are not a clear majority while preserving all equipment.");
-        Console.WriteLine("PASS Fire and Bomb make up about 70% of the varied drop pool");return checks+1;
+        Assert(counts["fire"] is >2700 and <3300&&counts["bomb"] is >2700 and <3300,"Fire and Bomb are not the dominant individual drops.");
+        Assert((counts["fire"]+counts["bomb"])/10000d is >.58 and <.62&&counts.Count==12,"Basic upgrades are not a clear majority while preserving all equipment.");
+        Console.WriteLine("PASS Fire and Bomb make up about 60% of the varied drop pool");return checks+1;
     }
     static void Assert(bool value,string message){if(!value)throw new Exception(message);}
 }

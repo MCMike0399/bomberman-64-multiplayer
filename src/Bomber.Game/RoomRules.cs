@@ -11,14 +11,14 @@ public static class RoomRules
         foreach(var property in data.EnumerateObject())
         {
             if(property.Name=="party")continue;
-            if(property.Name is not ("stage" or "bots" or "wins" or "round-seconds" or "ghosts" or "sudden-death" or "bot-difficulty")||property.Value.ValueKind!=JsonValueKind.String)return false;
+            if(!AdvancedRules.SettingKeys.Contains(property.Name) && property.Name is not ("stage" or "bots" or "wins" or "round-seconds" or "ghosts" or "sudden-death" or "bot-difficulty")||property.Value.ValueKind!=JsonValueKind.String)return false;
             candidate[property.Name]=property.Value.GetString()!;
         }
         if(!int.TryParse(candidate.GetValueOrDefault("bots","3"),out int bots)||!int.TryParse(candidate.GetValueOrDefault("wins","2"),out int wins)||!int.TryParse(candidate.GetValueOrDefault("round-seconds","120"),out int seconds))return false;
         bool ReadBool(string key,out bool value){string text=candidate.GetValueOrDefault(key,"on");value=text is "on" or "true";return text is "on" or "off" or "true" or "false";}
         if(!ReadBool("ghosts",out bool ghosts)||!ReadBool("sudden-death",out bool sudden))return false;
         var options=new MatchOptions{HumanPlayers=bots==0?2:1,BotPlayers=bots,Wins=wins,RoundSeconds=seconds,Stage=candidate.GetValueOrDefault("stage","sunken-temple"),BotDifficulty=candidate.GetValueOrDefault("bot-difficulty","normal"),Ghosts=ghosts,SuddenDeath=sudden};
-        try{options.Validate();}catch(ArgumentException){return false;}
+        try{options=options with {Advanced=AdvancedRules.FromSettings(candidate)};options.Validate();}catch(Exception ex) when(ex is ArgumentException or FormatException or OverflowException){return false;}
         settings=options.ToSettings();return true;
     }
 }

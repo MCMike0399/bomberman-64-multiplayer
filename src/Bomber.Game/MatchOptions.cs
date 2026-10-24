@@ -4,6 +4,7 @@ namespace Bomber.Game;
 
 public sealed record MatchOptions
 {
+    public AdvancedRules Advanced { get; init; } = new();
     public int HumanPlayers { get; init; } = 1;
     public int BotPlayers { get; init; } = 3;
     public string Stage { get; init; } = "sunken-temple";
@@ -16,7 +17,9 @@ public sealed record MatchOptions
     public bool Practice { get; init; }
     public int Seed { get; init; } = 64;
 
-    public IReadOnlyDictionary<string, string> ToSettings() => new Dictionary<string, string>
+    public IReadOnlyDictionary<string, string> ToSettings()
+    {
+        var settings = new Dictionary<string, string>
     {
         ["stage"] = Stage,
         ["bot-difficulty"] = BotDifficulty,
@@ -26,9 +29,12 @@ public sealed record MatchOptions
         ["ghosts"] = Ghosts ? "on" : "off",
         ["bots"] = BotPlayers.ToString(CultureInfo.InvariantCulture),
     };
+        Advanced.WriteTo(settings);return settings;
+    }
 
     internal void Validate()
     {
+        Advanced.Validate();
         if (HumanPlayers is < 1 or > 8 || BotPlayers is < 0 or > 7 || HumanPlayers + BotPlayers > 8 || HumanPlayers + BotPlayers < (Practice ? 1 : 2))
             throw new ArgumentOutOfRangeException(nameof(HumanPlayers), "A match needs 2–8 total participants and at least one human.");
         if (PlayerAppearances.Count != 0 && (PlayerAppearances.Count != HumanPlayers + BotPlayers || PlayerAppearances.Any(index=>index is < 0 or > 7)))

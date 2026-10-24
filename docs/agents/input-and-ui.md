@@ -234,3 +234,14 @@ Each primary tap queues one charge level; the progress hint shows the active
 level and percent. Normal charge is .45 seconds/level; Focus is .15, with gentle
 assist only while the aimed cursor is neutral. The bomb slot and ability slot
 have separate HUD symbols. Ghosts have no bomb controls or bomb collision.
+
+## Advanced match page (v0.25)
+
+Match/Practice/Room settings → Advanced settings provides independent item drop
+chance, authored block budget percentage, item lifetime, blast/bomb stack caps,
+temporary effect duration and twelve per-item toggles. Escape/Back restores the
+originating setup without disconnecting the room or losing edits. Restore defaults
+updates both values and toggles. Status text and remaining seconds appear in the
+player HUD; pickups blink for their final three seconds. `advanced-settings`
+exercises native navigation, toggles, ordinary pickups, size restoration and
+authoritative/rendered expiration.

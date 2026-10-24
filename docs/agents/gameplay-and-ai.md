@@ -160,8 +160,8 @@ and the input guide; older iteration tables are historical.
 - One bomb slot holds red, remote, bouncing or fast equipment; one independent
   ability slot holds heart protection or Focus. Capacity/fire still stack. A
   replacement drops the old equipment for anyone else to collect immediately;
-  the former holder has a 1.5-second pickup lock. Drops expire after 20 seconds.
-  Duplicate equipment and capped stacks remain for others. Practice pickups persist.
+  the former holder has a 1.5-second pickup lock. All items expire after the configured lifetime (20 seconds by default), including
+  practice caches. Duplicate equipment and capped stacks remain for others until expiry.
 - Existing bombs keep their mode, subject to orphaned-remote fallback. Red blasts
   pierce soft cover and have 25% more physical radius; their flame is blue.
   Fast bombs move at 1.5x their normal kick/flight clock without speeding the fuse.
@@ -243,18 +243,32 @@ and the input guide; older iteration tables are historical.
   `CoverAreas`: regional budget shares and cluster centers, with seeded weighted
   sampling. Each stock map first gets two nearby reachable crates per spawn, then
   fills its regional quotas without blocking spawn clearance, ramps or reserved lanes.
-  The first destroyed crate assigned to each spawn zone gives a fire/bomb reward.
+  Every destroyed crate uses the same independent configured drop chance; there are
+  no guaranteed opening rewards.
 - Pyramid targets 60% of 90 blocks in the lower court, 15% along the lower wings,
   and a lighter remainder on upper side terraces/base approaches. Its top two tiers
   and ascent stay clear; thin court lanes replace the old broad empty strips.
   Rock Garden has 110 blocks in balanced pillar regions; Up & Down has 88 in
   outer-ring/wide-platform pockets, keeping the summit and connectors clear.
-- The ordinary drop pool is 35% Fire, 35% Bomb, 7% remote, 7% red, 6% bouncing,
-  4% fast, 3% heart and 3% Focus. The separate chance of any ordinary drop is
-  35% (reduced from 70% to limit item clutter); guaranteed opening rewards remain,
-  making the actual overall drop rate and basic-upgrade share slightly higher.
-  These are project choices, not claimed original-game rates. See
-  [primary reference observations](../iteration23-block-distribution-research.md).
+- Advanced match settings (v0.25) default to a uniform independent 55% chance per
+  destroyed block. Item weights are Fire/Bomb 30% each, remote/red 7% each, bounce
+  6%, fast 4%, heart/Focus/Tiny/Big 3% each, Haste/Slow 2% each. Disabled types are
+  removed before drawing and remaining weights are renormalized. An empty pool
+  yields nothing. Death/swap/training items also respect the enabled pool.
+- `AdvancedRules` owns drop chance (0–100%), block amount (0–100% of the authored
+  regional budget), item lifetime (5–60s), blast cap (1–5), bomb cap (1–8), effect
+  duration (5–30s) and per-item exclusions. Defaults: 55%, 100%, 20s, 5, 5, 10s.
+  Starting capacity is min(3, configured cap); blast starts at one, and three
+  pumps can raise a maximum five-stack blast to effective level eight.
+- Tiny uniformly scales the model to .65 and movement to 1.5; Big uses 1.4/.65.
+  Haste/Slow affect movement only at 1.5/.65. One temporary effect replaces the
+  previous one; expiry/death/respawn/round reset clears it. Collision dimensions
+  remain unchanged so growth cannot trap a player. AI uses the same speed and
+  cap rules. See [original manual research](../status-items-research.md); separate
+  Haste/Slow are project extensions rather than claimed original pickups.
+- Local and online rules share serialization and validation. Waiting-room edits
+  remain leader-only and atomic; the advanced subpage must retain the live room,
+  its code, practice mode and unsaved basic settings when navigating back.
 - Richer farming areas intentionally permit collection detours. CPU goals use
   marginal upgrade value and an engagement clock that crate farming cannot reset.
   After four seconds without threatening a rival, CPUs favor a reachable attack
@@ -262,6 +276,10 @@ and the input guide; older iteration tables are historical.
   The stock pressure contract now requires five threatening bombs in 30 seconds
   (previous layout: six), while retaining eight-second first/gap bounds and zero
   self-deaths. Preserve the measured tradeoff instead of claiming unchanged pressure.
+- Low-magnitude bot steering must still probe collision and track failed progress.
+  A .1 threshold in recovery allowed a .075 command to stall for 16 seconds in
+  Rock Garden Easy / seven bots / seed 64 with the new loot. The focused
+  `--soak --idle-regression` retains that real case; full soak remains required.
 - Inventory caps, exclusive modes and pickup counters belong to PowerUpRules and
   authority item processing. New cover rewards survive their revealing explosion;
   test through the full fuse/hazard lifetime before collecting.

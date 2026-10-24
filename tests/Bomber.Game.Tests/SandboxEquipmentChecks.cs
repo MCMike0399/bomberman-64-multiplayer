@@ -17,7 +17,7 @@ internal static class SandboxEquipmentChecks
                 Assert(p.BombType==type,"Stacking upgrade replaced equipment.");
             }
             PowerUpRules.Exchange(p,"heart");Assert(PowerUpRules.Exchange(p,"focus")=="heart","Ability replacement did not drop heart.");
-            Assert(p.HasFocus&&p.BombType=="fast"&&p.FireLevel==3&&p.BombCapacity==7,"Equipment slots interfered.");
+            Assert(p.HasFocus&&p.BombType=="fast"&&p.FireLevel==5&&p.BombCapacity==5,"Equipment slots interfered.");
             Assert(!PowerUpRules.CanCollect(p,"fast")&&!PowerUpRules.CanCollect(p,"focus")&&!PowerUpRules.CanCollect(p,"fire"),"Duplicate equipment or capped stack consumed.");
         });
         Check("replacement drops old equipment with a pickup lock and finite arena lifetime",()=>{

@@ -51,6 +51,13 @@ static class GameplaySoakChecks
     }
     public static void Run(string[] args)
     {
+        if(args.Contains("--idle-regression"))
+        {
+            var result=Measure(BlastStages.Get("rock-garden"),"easy",7,64,1800);
+            Console.WriteLine(JsonSerializer.Serialize(result));
+            if(result.LongestOpenIdleTicks>IdleLimitTicks)throw new Exception("Low-magnitude steering stalled with a safe exit.");
+            Console.WriteLine("PASS status-item stock seed retains bot liveness");return;
+        }
         int ticks=IntArgument(args,"--ticks=",2700);
         int fairnessChecks=CheckFairness();
         var results=new List<Result>();

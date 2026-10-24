@@ -31,7 +31,7 @@ public sealed partial class BlastSession
         if(Dist2(bot.X,bot.Z,motion.IdleX,motion.IdleZ)>.12f*.12f)
         {motion.IdleElapsed=0;motion.IdleX=bot.X;motion.IdleZ=bot.Z;}
         else motion.IdleElapsed+=dt;
-        if(bot.Input.Length<.1f){motion.X=bot.X;motion.Z=bot.Z;motion.Elapsed=0;return;}
+        if(bot.Input.Length<.001f){motion.X=bot.X;motion.Z=bot.Z;motion.Elapsed=0;return;}
         motion.Elapsed+=dt;
         if(motion.Elapsed<.6f)return;
         if(Dist2(bot.X,bot.Z,motion.X,motion.Z)<.12f*.12f&&motion.Waypoint>=0&&motion.Waypoint!=_aiGraph.Cell(bot.X,bot.Z))
@@ -68,7 +68,7 @@ public sealed partial class BlastSession
     {
         // Probe the same axis-separated collision checks as ordinary authority
         // movement. A graph edge can be open while an off-center body cannot turn.
-        float step=PlayerSpeed/30,x=bot.X,z=bot.Z;
+        float step=(PlayerSpeed*bot.StatusSpeed)/30,x=bot.X,z=bot.Z;
         if(!CollidesWithSolid(x+dx*step,z,bot.Tier,bot))x+=dx*step;
         if(!CollidesWithSolid(x,z+dz*step,bot.Tier,bot))z+=dz*step;
         float minimumProgress=step*MathF.Sqrt(dx*dx+dz*dz)*.1f;
@@ -92,7 +92,7 @@ public sealed partial class BlastSession
         var motion=BotMotionFor(bot);
         if(_tickCount<motion.RecoveryUntil&&BotDirectionMoves(bot,start,motion.RecoveryX,motion.RecoveryZ))
             return new InputState(motion.RecoveryX,motion.RecoveryZ,false,false,false);
-        if(desired.Length<.1f||BotDirectionMoves(bot,start,desired.X,desired.Z))return desired;
+        if(desired.Length<.001f||BotDirectionMoves(bot,start,desired.X,desired.Z))return desired;
         float best=float.NegativeInfinity,bx=0,bz=0;
         for(int d=0;d<8;d++)
         {

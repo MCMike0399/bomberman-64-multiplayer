@@ -4,7 +4,6 @@ namespace Bomber.Game.Simulation;
 public sealed partial class BlastSession
 {
     private readonly Dictionary<(int X,int Z),int> _coverLootZones = [];
-    private readonly HashSet<int> _claimedLootZones = [];
 
     // Seed nearby cover before filling the rest of the arena. Terrain distance keeps crates on
     // each spawn's reachable terrace, and a shuffle avoids the old west-to-east cap bias.
@@ -15,6 +14,7 @@ public sealed partial class BlastSession
         int Distance(int zone,(int X,int Z) cell) => distances[zone][cell.Z*_stage.Width+cell.X];
         int Nearest((int X,int Z) cell) => Enumerable.Range(0,distances.Length).MinBy(zone=>Distance(zone,cell));
         int target = Math.Min(_stage.MaxSoftBlocks,Math.Max(_stage.Spawns.Length*2,(int)Math.Round(candidates.Count*_stage.SoftBlockDensity)));
+        target=(int)Math.Round(target*_advanced.BlockPercent/100d);
         void Place((int X,int Z) cell,int zone)
         {
             candidates.Remove(cell);_softBlocks.Set(cell.X,cell.Z,true);_coverLootZones.Add(cell,zone);
@@ -73,11 +73,7 @@ public sealed partial class BlastSession
 
     private void DropCoverItem(ISessionContext context,int x,int z)
     {
-        // Every spawn area gets one useful opening reward, independently of destruction order.
-        // Later crates retain the varied weighted pool; one reward cannot max out an inventory.
-        if(_coverLootZones.TryGetValue((x,z),out int zone)&&_claimedLootZones.Add(zone))
-            DropItem(context,x,z,_stage.At(x,z).Tier,zone%2==0?"fire":"bomb");
-        else if(context.Random.NextDouble()<PowerUpRules.DropChance)
+        if(context.Random.NextDouble()<_advanced.DropPercent/100d)
             DropItem(context,x,z,_stage.At(x,z).Tier);
     }
 }

@@ -38,9 +38,24 @@ internal static class PartyNetworkChecks
         var state=await State(peer,s=>s.GetProperty("round").GetInt32()==1);
         if(state.GetProperty("players").EnumerateArray().Any(p=>p.GetProperty("wins").GetInt32()!=0))throw new Exception("Rematch kept old scores.");
         await host.DisposeAsync();await Until(()=>peer.IsLeader,"leader leave transfers room leadership");
+        await AdvancedRoom(origin);
         await EightPlayerRoom(origin);
         await KickStopAndNames(origin);
         Console.WriteLine("PASS persistent private party: manual leader start, real match end, same-code lobby return, rematch and leader transfer");
+    }
+    private static async Task AdvancedRoom(Uri origin)
+    {
+        var settings=new SessionSettings(Bots:0,SuddenDeath:false);
+        await using var host=await NetworkSession.ConnectAsync(origin,"Rules leader",settings);
+        await using var peer=await NetworkSession.ConnectAsync(origin,"Rules guest",settings,NetworkMode.JoinCode,host.JoinCode);
+        await Until(()=>host.Party?.CanStart==true&&peer.Party!=null,"advanced room ready");
+        var custom=settings with{Advanced=new AdvancedRules{DropPercent=0,BlockPercent=0,MaxFire=4,MaxBombs=2,ItemSeconds=5,EffectSeconds=5,DisabledItems=string.Join(',',AdvancedRules.ItemTypes)}};
+        host.SetRoomSettings(custom);
+        await Until(()=>peer.Party?.Settings is {} rules&&SessionSettings.FromWire(rules).Advanced==custom.Advanced,"peer receives full advanced rules edit");
+        await Start(host);
+        var snapshot=await State(peer,s=>s.GetProperty("phase").GetInt32()==1);
+        if(Convert.FromBase64String(snapshot.GetProperty("softBlocks").GetString()!).Any(b=>b!=0)||snapshot.GetProperty("players").EnumerateArray().Any(p=>p.GetProperty("bombs").GetInt32()!=2||p.GetProperty("maxFire").GetInt32()!=4))throw new Exception("Online authority ignored advanced settings.");
+        Console.WriteLine("PASS real network advanced rules edit reaches peer and controls cover, starting inventory and caps");
     }
     private static async Task EightPlayerRoom(Uri origin)
     {

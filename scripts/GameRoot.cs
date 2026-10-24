@@ -101,6 +101,7 @@ public partial class GameRoot : Node3D
 
     public void Navigate(string screen)
     {
+        if(screen=="Advanced" && ScreenName=="Setup"){ScreenName="Advanced";_menu.ShowAdvanced();return;}
         if(screen=="HostSetup"&&_session is NetworkSession room)
         {
             if(!room.IsLeader||room.Party?.Phase!="lobby"){_menu.Notice("Only the room leader can change waiting-room rules.");return;}
@@ -200,6 +201,7 @@ public partial class GameRoot : Node3D
     }
     public void Back()
     {
+        if(ScreenName=="Advanced"){ScreenName="Setup";_menu.CloseAdvanced();return;}
         if(_editingRoom&&ScreenName=="Setup"){_editingRoom=false;ShowPartyLobby();return;}
         if(ScreenName=="Settings"){RestoreScreen(_settingsReturn);return;}
         if(ScreenName=="Pause"){ResumeGame();return;}

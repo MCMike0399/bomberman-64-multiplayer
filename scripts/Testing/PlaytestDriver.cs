@@ -350,7 +350,7 @@ public partial class PlaytestDriver : Node
         await MoveTo(10.5f,12.5f,80);
         Check(Player.GetProperty("fire").GetInt32()==2,"walking onto first flame increases fire level");
         await MoveTo(9.5f,12.5f,60);
-        Check(Player.GetProperty("fire").GetInt32()==3,"second flame reaches regular fire cap3");
+        Check(Player.GetProperty("fire").GetInt32()==3,"second flame reaches blast stack 3");
         await MoveTo(14.5f,12.5f,120);
         Check(Player.GetProperty("bombs").GetInt32()==initialCapacity+1,"walking onto bomb increases capacity by exactly one");
         await MoveTo(14.5f,13.5f,60);
@@ -360,7 +360,7 @@ public partial class PlaytestDriver : Node
         await MoveTo(10.5f,13.5f,80);
         Check(Player.GetProperty("remote").GetBoolean()&&!Player.GetProperty("red").GetBoolean(),"walking onto remote replaces red with command detonation");
         Check(Player.GetProperty("pickupSerial").GetInt64()>=6,"six real pickups accepted by authority");
-        Check(State.GetProperty("items").EnumerateArray().All(i=>i.GetProperty("dropped").GetBoolean() || i.GetProperty("type").GetString() is "bounce" or "fast" or "focus"),"collected pickups disappear while new equipment and swap drops remain");
+        Check(State.GetProperty("items").EnumerateArray().All(i=>i.GetProperty("dropped").GetBoolean() || i.GetProperty("type").GetString() is "bounce" or "fast" or "focus" or "tiny" or "big" or "haste" or "slow"),"collected pickups disappear while new equipment and swap drops remain");
         await Capture("powerups-collected-hud");
         Input(0,new PlayerInput(0,0,A:true));await Frames(4);Input(0,default);await Frames(4);
         Check(State.GetProperty("bombs").EnumerateArray().Any(b=>!b.GetProperty("red").GetBoolean()&&b.GetProperty("remote").GetBoolean()),"latest remote pickup determines newly placed bomb mode");
@@ -512,6 +512,11 @@ public partial class PlaytestDriver : Node
         string roomIdentity=host.LobbyId!;
         await ActivateNamed("EditRoomSettings");
         Check(_root.ScreenName=="Setup"&&host.LobbyId==roomIdentity,"leader opens existing rules editor without leaving room");
+        await ActivateNamed("AdvancedSettings");
+        Check(_root.ScreenName=="Advanced"&&ReferenceEquals(host,_root.ActiveSession),"online advanced page retains the live room");
+        await ActivateNamed("Itemdropchance");await ActivateNamed("Allow_slow");
+        await Capture("network-advanced-rules");await ActivateNamed("AdvancedBack");
+        Check(_root.ScreenName=="Setup"&&host.LobbyId==roomIdentity,"advanced Back preserves existing room identity");
         var rules=_root.FindChildren("*","",true,false).OfType<BlastCircuit.UI.ArcadeRuleDial>().First(d=>d.Caption=="Wins to victory");
         rules.GrabFocus();CtlKey(Key.Right,true);await Frames(1);CtlKey(Key.Right,false);await Frames(2);
         await Capture("network-room-rules");
@@ -520,6 +525,7 @@ public partial class PlaytestDriver : Node
         Check(host.Party?.Settings?.GetValueOrDefault("wins")=="3"&&_root.ScreenName=="Lobby"&&host.LobbyId==roomIdentity,"saved match rules are accepted by server in the same room");
         for(int i=0;i<180&&peer.Party?.Settings?.GetValueOrDefault("wins")!="3";i++){await Frames(1);await Task.Delay(16);}
         Check(peer.Party?.Settings?.GetValueOrDefault("wins")=="3","room guest receives the leader's saved rules");
+        Check(peer.Party?.Settings?.GetValueOrDefault("drop-percent")=="60"&&peer.Party.Settings.GetValueOrDefault("disabled-items")=="slow","advanced room settings reach the peer");
         CtlButton(0,JoyButton.Start,true);await Frames(1);CtlButton(0,JoyButton.Start,false);await Frames(2);
         Check(NamedButton("StartRoom").HasFocus()&&_root.ScreenName=="Lobby","Start focuses Start game without starting it");
         await ActivateNamed("StartRoom");

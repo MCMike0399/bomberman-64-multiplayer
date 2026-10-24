@@ -1,5 +1,6 @@
 using Godot;
 using Bomber.Client;
+using Bomber.Game;
 using System.Text.Json;
 using BlastCircuit.InputDevices;
 using BlastCircuit.Rendering;
@@ -53,6 +54,8 @@ public partial class ArcadeMenu : Control
     private LineEdit _server=null!,_name=null!,_code=null!;
     private readonly Dictionary<string,Control> _screens=[];
     private bool _practice;
+    private AdvancedRules _advanced=new();
+    private string _advancedReturn="Setup";
     private string _screen="Modes";
     private DateTimeOffset? _countdown;
     private readonly List<Button> _onlineButtons=[];
@@ -67,7 +70,7 @@ public partial class ArcadeMenu : Control
     public bool Practice=>_practice;
     public SessionSettings Settings => BuildSettings(_practice?0:_localPlayers.Roster.CpuPlayers);
     public SessionSettings OnlineSettings=>BuildSettings((int)_bots.Value);
-    private SessionSettings BuildSettings(int bots)=>new(StageIds[_stage.Selected],bots,(int)_wins.Value,(int)_rounds.Value,_sudden.ButtonPressed,_ghosts.ButtonPressed,new[]{"easy","normal","hard"}[_difficulty.Selected]);
+    private SessionSettings BuildSettings(int bots)=>new(StageIds[_stage.Selected],bots,(int)_wins.Value,(int)_rounds.Value,_sudden.ButtonPressed,_ghosts.ButtonPressed,new[]{"easy","normal","hard"}[_difficulty.Selected]){Advanced=_advanced};
     private static readonly string[] StageIds=["sunken-temple","rock-garden","up-and-down"];
     private static readonly Color Coral=new("f06a55"),Lagoon=new("2a8c92");
     public override void _Ready()
@@ -75,7 +78,7 @@ public partial class ArcadeMenu : Control
         Theme=ArcadeTheme.Create();SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         _background=new ArcadeBackdrop();AddChild(_background);_background.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         _content=new Control();AddChild(_content);_content.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-        BuildModes();BuildControls();BuildRoster();BuildSetup();BuildOnline();BuildLobby();BuildResults();BuildSettings();BuildPause();
+        BuildModes();BuildControls();BuildRoster();BuildSetup();BuildAdvanced();BuildOnline();BuildLobby();BuildResults();BuildSettings();BuildPause();
         var footer=new HBoxContainer {AnchorTop=1,AnchorBottom=1,AnchorRight=1,OffsetTop=-60,OffsetBottom=-12,OffsetLeft=58,OffsetRight=-58,Alignment=BoxContainer.AlignmentMode.Center};AddChild(footer);
         _inputFooter=new PromptBar();footer.AddChild(_inputFooter);UpdateInputFooter();ControllerHub.Current.PromptChanged+=UpdateInputFooter;
         var spacer=new Control {SizeFlagsHorizontal=SizeFlags.ExpandFill};footer.AddChild(spacer);
@@ -161,10 +164,48 @@ public partial class ArcadeMenu : Control
         Dial(rail,"Ghost comeback",()=>_ghosts.ButtonPressed?"On":"Off",_=>_ghosts.ButtonPressed=!_ghosts.ButtonPressed);
         _editPlayers=ArcadeTheme.Quiet(ArcadeTheme.Button(rail,"Change players",()=>Navigation?.Invoke("Roster")));_editPlayers.Name="EditPlayers";_editPlayers.CustomMinimumSize=new(0,43);_editPlayers.AddThemeFontSizeOverride("font_size",16);
         _editPlayers.SizeFlagsHorizontal=SizeFlags.ShrinkCenter;
+        var advanced=ArcadeTheme.Quiet(ArcadeTheme.Button(rail,"Advanced settings",()=>Navigation?.Invoke("Advanced")));advanced.Name="AdvancedSettings";advanced.CustomMinimumSize=new(0,43);advanced.AddThemeFontSizeOverride("font_size",16);
         _notice=ArcadeTheme.Text(screen,"",16);_notice.Position=new(824,625);_notice.Size=new(490,58);_notice.AutowrapMode=TextServer.AutowrapMode.WordSmart;
         _launch=new ArcadeModeButton {Name="LaunchMatch",Text="Start Battle",Position=new(797,699),Size=new(550,86),FaceColor=Coral,Accent=ArcadeTheme.Gold};screen.AddChild(_launch);_launch.Pressed+=()=>LocalRequested?.Invoke();
         UpdateStageDescription();
     }
+    private void BuildAdvanced()
+    {
+        var screen=Screen("Advanced");var box=Card(screen,new(64,42),new(1312,758));
+        ArcadeTheme.Heading(box,"Advanced match settings",38);
+        Copy(box,"Each destroyed block rolls independently. Uncollected items disappear after their lifetime.",18);
+        var columns=ArcadeTheme.Row(box,28);
+        var rules=ArcadeTheme.Column(columns,4);rules.CustomMinimumSize=new(600,0);
+        var items=ArcadeTheme.Column(columns,4);items.CustomMinimumSize=new(590,0);
+        void Rule(Node parent,string name,Func<string> read,Action<int> change)
+        {parent.AddChild(new ArcadeRuleDial{Name=name.Replace(" ",""),Caption=name,ReadValue=read,ChangeValue=change,ValueWidth=125});}
+        Rule(rules,"Item drop chance",()=>$"{_advanced.DropPercent}%",d=>_advanced=_advanced with{DropPercent=Cycle(_advanced.DropPercent,d*5,0,100)});
+        Rule(rules,"Block amount",()=>$"{_advanced.BlockPercent}%",d=>_advanced=_advanced with{BlockPercent=Cycle(_advanced.BlockPercent,d*5,0,100)});
+        Rule(rules,"Item lifetime",()=>$"{_advanced.ItemSeconds}s",d=>_advanced=_advanced with{ItemSeconds=Cycle(_advanced.ItemSeconds,d*5,5,60)});
+        Rule(rules,"Blast stack cap",()=>_advanced.MaxFire.ToString(),d=>_advanced=_advanced with{MaxFire=Cycle(_advanced.MaxFire,d,1,5)});
+        Rule(rules,"Bomb stack cap",()=>_advanced.MaxBombs.ToString(),d=>_advanced=_advanced with{MaxBombs=Cycle(_advanced.MaxBombs,d,1,8)});
+        Rule(rules,"Buff / debuff duration",()=>$"{_advanced.EffectSeconds}s",d=>_advanced=_advanced with{EffectSeconds=Cycle(_advanced.EffectSeconds,d*5,5,30)});
+        Copy(rules,"Tiny: smaller and faster. Big: larger and slower.\nHaste and Slow change movement speed only.\nA new effect replaces the previous one.",17);
+        ArcadeTheme.Button(rules,"Restore defaults",()=>{_advanced=new();foreach(string type in AdvancedRules.ItemTypes)((CheckButton)_screens["Advanced"].FindChild("Allow_"+type,true,false)).SetPressedNoSignal(true);}).Name="ResetAdvanced";
+        Section(items,"Allowed items");
+        var grid=new GridContainer{Columns=2};grid.AddThemeConstantOverride("h_separation",12);items.AddChild(grid);
+        foreach(var type in AdvancedRules.ItemTypes)
+        {
+            string label=type switch{"fire"=>"Blast up","bomb"=>"Bomb up","remote"=>"Remote","red"=>"Power bomb","bounce"=>"Bounce","fast"=>"Fast bomb","heart"=>"Heart","focus"=>"Focus","tiny"=>"Tiny","big"=>"Big","haste"=>"Haste",_=>"Slow"};
+            var toggle=new CheckButton{Name="Allow_"+type,Text=label,CustomMinimumSize=new(275,52),ButtonPressed=true};grid.AddChild(toggle);
+            toggle.Toggled+=enabled=>{var disabled=AdvancedRules.ItemTypes.Where(t=>t==type?!enabled:!_advanced.Allows(t));_advanced=_advanced with{DisabledItems=string.Join(',',disabled)};};
+        }
+        Copy(items,"Disabled items cannot appear in blocks, training pickups or equipment drops. With every item off, blocks drop nothing.",17);
+        ArcadeTheme.Button(box,"Back to match settings",()=>BackRequested?.Invoke()).Name="AdvancedBack";
+    }
+    public void ShowAdvanced()
+    {
+        _advancedReturn=_practice?"Practice":_hostBotBox.Visible?"HostSetup":"Setup";
+        ShowScreen("Advanced");
+        foreach(string type in AdvancedRules.ItemTypes)
+            ((CheckButton)_screens["Advanced"].FindChild("Allow_"+type,true,false)).SetPressedNoSignal(_advanced.Allows(type));
+    }
+    public void CloseAdvanced()=>ShowScreen(_advancedReturn);
     private ArcadeRuleDial Dial(Node parent,string caption,Func<string> value,Action<int> change)
     {
         var dial=new ArcadeRuleDial {Name=caption.Replace(" ",""),Caption=caption,ReadValue=value,ChangeValue=change};parent.AddChild(dial);_ruleDials.Add(dial);return dial;
@@ -287,7 +328,7 @@ public partial class ArcadeMenu : Control
         _background.Visible=screen is not ("Pause" or "Settings") || !_overlayBackground;
         _background.Page=screen;_background.Quiet=screen=="Roster";_background.Results=screen=="Results";_background.QueueRedraw();
         _screen=screen=="Practice"||screen=="HostSetup"?"Setup":screen;
-        _practice=screen=="Practice";
+        if(screen!="Advanced")_practice=screen=="Practice";
         _setupTitle.Text=_practice?"Practice Setup":screen=="HostSetup"?"Private Room Settings":"Match Setup";
         _launch.Text=screen=="HostSetup"?"Save Room Settings":_practice?"Start Practice":"Start Battle";
         foreach(var dial in _ruleDials)dial.Disabled=_practice;
@@ -357,6 +398,7 @@ public partial class ArcadeMenu : Control
     }
     public void Configure(SessionSettings settings,int humans=1)
     {
+        _advanced=settings.Advanced;
         _difficulty.Select(Array.IndexOf(new[]{"easy","normal","hard"},settings.BotDifficulty=="medium"?"normal":settings.BotDifficulty));_stage.Select(Math.Max(0,Array.IndexOf(StageIds,settings.Stage)));_bots.Value=settings.Bots;_wins.Value=settings.Wins;_rounds.Value=settings.RoundSeconds;_sudden.ButtonPressed=settings.SuddenDeath;_ghosts.ButtonPressed=settings.Ghosts;_localPlayers.ConfigureCounts(humans,settings.Bots);UpdateStageDescription();
     }
     private bool _overlayBackground;

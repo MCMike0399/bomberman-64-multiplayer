@@ -2,6 +2,19 @@
   "schemaVersion": 1,
   "scenarios": [
     {
+      "id": "advanced-settings",
+      "method": "AdvancedSettingsTour",
+      "domains": [
+        "gameplay",
+        "ui",
+        "settings",
+        "rendering"
+      ],
+      "headless": false,
+      "timeout": 180,
+      "manual": false
+    },
+    {
       "id": "stage-lighting",
       "method": "StageLightingTour",
       "domains": [
@@ -433,6 +446,7 @@
     {
       "id": "all",
       "steps": [
+        "advanced-settings",
         "cover-layout",
         "sandbox",
         "party-polish",

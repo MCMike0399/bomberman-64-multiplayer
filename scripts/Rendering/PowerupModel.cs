@@ -19,6 +19,20 @@ public partial class PowerupModel : Node3D
         Cylinder(this,new(0,-.3f,0),.3f,.05f,gold);
         switch(kind)
         {
+            case "tiny":case "big":
+                var size=kind=="tiny"?.22f:.42f;
+                var tint=art.Color(new(kind=="tiny"?"70e6ff":"f6a156"),.35f,true);
+                Sphere(_icon,new(0,.08f,0),Vector3.One*size,white);
+                Box(_icon,new(0,-.17f,0),new(size*.7f,.2f,size*.65f),tint,.04f);
+                foreach(float side in new[]{-1f,1f})
+                    Box(_icon,new(side*.24f,kind=="tiny"?-.04f:.18f,0),new(.07f,.23f,.07f),tint,.02f);
+                break;
+            case "haste":case "slow":
+                var boot=art.Color(new(kind=="haste"?"ffdc56":"9b92e7"),.35f,true);
+                Box(_icon,new(0,-.04f,.04f),new(.4f,.19f,.26f),boot,.06f);
+                Box(_icon,new(-.1f,.12f,0),new(.18f,.25f,.22f),boot,.04f);
+                for(int i=0;i<(kind=="haste"?3:1);i++)Box(_icon,new(-.29f,.18f-i*.12f,0),new(.17f,.035f,.05f),white,.01f);
+                break;
             case "fire":
                 Sphere(_icon,new(0,-.025f,0),new(.34f,.48f,.27f),art.Color(new("ff7438"),.45f,true));
                 Sphere(_icon,new(.06f,.2f,0),new(.13f,.28f,.12f),art.Color(new("ffb93c"),.4f,true));

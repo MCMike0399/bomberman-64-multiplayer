@@ -34,7 +34,7 @@ public sealed partial class BlastSession
         _aiFieldTick=_tickCount;_aiDanger.Build(_softBlocks,_bombs,_hazards);Array.Clear(_aiItemKind);Array.Clear(_aiItemDropper);
         foreach(var item in _items)
         {
-            int cell=_aiGraph.Cell(item.X,item.Z);if(cell>=0){_aiItemDropper[cell]=item.DroppedBy;_aiItemKind[cell]=item.Type switch{"heart"=>1,"remote"=>2,"red"=>3,"fire"=>4,"bounce"=>6,"fast"=>7,"focus"=>8,_=>5};}
+            int cell=_aiGraph.Cell(item.X,item.Z);if(cell>=0){_aiItemDropper[cell]=item.DroppedBy;_aiItemKind[cell]=item.Type switch{"heart"=>1,"remote"=>2,"red"=>3,"fire"=>4,"bounce"=>6,"fast"=>7,"focus"=>8,"tiny" or "haste"=>9,"big" or "slow"=>10,_=>5};}
         }
         // Shared observation grids avoid scanning every opponent/cover cell separately for every bot search.
         for(int cell=0;cell<_aiGraph.Count;cell++)
@@ -105,7 +105,7 @@ public sealed partial class BlastSession
             for(int direction=0;direction<32;direction++)
             {
                 float angle=direction*MathF.Tau/32,nx=MathF.Cos(angle),nz=MathF.Sin(angle);
-                if(!TryBombPlacement(bot,nx,nz,.12f*PlayerSpeed*_aiSteeringInterval,out float x,out float z))continue;
+                if(!TryBombPlacement(bot,nx,nz,.12f*(PlayerSpeed*bot.StatusSpeed)*_aiSteeringInterval,out float x,out float z))continue;
                 // Once engagement is due, follow an open route toward the rival
                 // instead of stopping at every incidental crate along that route.
                 if(_roundTimer-_aiLastThreat.GetValueOrDefault(bot.Id)>4&&waypoint>=0&&waypoint!=start&&
@@ -113,7 +113,7 @@ public sealed partial class BlastSession
                 float score=BotBombUtility(bot,x,z);
                 if(score>best){best=score;aimX=nx;aimZ=nz;}
             }
-            if(best>0&&BotBombPlan(bot,start,aimX,aimZ,.12f*PlayerSpeed*_aiSteeringInterval,out _))
+            if(best>0&&BotBombPlan(bot,start,aimX,aimZ,.12f*(PlayerSpeed*bot.StatusSpeed)*_aiSteeringInterval,out _))
             {
                 // Orient using ordinary movement, then place on the next reaction.
                 bot.BotPlacingBomb=true;bot.Input=new InputState(aimX*.12f,aimZ*.12f,false,false,false);return;
@@ -189,7 +189,7 @@ public sealed partial class BlastSession
         float bestScore=float.NegativeInfinity;int best=-1,bestCell=-1;
         while(head<tail)
         {
-            int cell=_aiQueue[head++],depth=_aiDepth[cell];float arrival=depth*(1/PlayerSpeed+.045f);
+            int cell=_aiQueue[head++],depth=_aiDepth[cell];float arrival=depth*(1/(PlayerSpeed*bot.StatusSpeed)+.045f);
             if(BotSafe(danger,cell,arrival,arrival+(escape?_aiProfile.SafetyHorizonSeconds:.45f)))
             {
                 if(escape)return _aiFirst[cell];
@@ -201,7 +201,7 @@ public sealed partial class BlastSession
             {
                 int next=_aiGraph.Edges[cell*4+((d+bot.Slot)%4)];
                 if(next<0||_aiSeen[next]==_aiGeneration||!BotOpen(next,start,bot,danger))continue;
-                float nextArrival=(depth+1)*(1/PlayerSpeed+.045f);
+                float nextArrival=(depth+1)*(1/(PlayerSpeed*bot.StatusSpeed)+.045f);
                 if(!BotSafe(danger,next,arrival,nextArrival+.08f))continue;
                 // The current tile may already be burning; allow leaving it rather than freezing in place.
                 if(cell!=start&&!BotSafe(danger,cell,arrival,nextArrival))continue;
@@ -233,11 +233,12 @@ public sealed partial class BlastSession
         // Evaluate marginal value, not just pickup presence. Extra capacity and
         // interchangeable equipment must not send a well-equipped CPU farming forever.
         float itemUtility=_aiItemKind[cell] switch {
+            9=>bot.StatusEffect=="none"?12:0,10=>-20,
             1=>bot.HasHeart?0:26,
             2=>bot.HasRemote?0:bot.BombType=="normal"?22:5,
             3=>bot.HasRed?0:bot.BombType=="normal"?21:5,
-            4=>bot.FireLevel>=3?0:bot.FireLevel==1?20:14,
-            5=>bot.BombCapacity>=8?0:bot.BombCapacity<=3?18:bot.BombCapacity==4?8:3,
+            4=>bot.FireLevel>=bot.MaxFire?0:bot.FireLevel==1?20:14,
+            5=>bot.BombCapacity>=bot.MaxBombs?0:bot.BombCapacity<=3?18:bot.BombCapacity==4?8:3,
             6=>bot.BombType=="bounce"?0:bot.BombType=="normal"?21:5,
             7=>bot.BombType=="fast"?0:bot.BombType=="normal"?21:5,
             8=>bot.Ability=="none"?6:0,_=>0};
@@ -309,7 +310,7 @@ public sealed partial class BlastSession
         if(tx!=cx&&Math.Abs(bot.Z-(cz+.5f))>.07f)x=cx+.5f;
         if(tz!=cz&&Math.Abs(bot.X-(cx+.5f))>.07f)z=cz+.5f;
         float dx=x-bot.X,dz=z-bot.Z,length=MathF.Sqrt(dx*dx+dz*dz);
-        float speed=Math.Min(1,length/(PlayerSpeed*_aiSteeringInterval));
+        float speed=Math.Min(1,length/((PlayerSpeed*bot.StatusSpeed)*_aiSteeringInterval));
         bot.Input=BotUnblockedInput(bot,start,length<.02f?default:new InputState(dx/length*speed,dz/length*speed,false,false,false));
     }
 }

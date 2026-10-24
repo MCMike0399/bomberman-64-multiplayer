@@ -34,7 +34,10 @@ On macOS, the installed editor can also launch it directly:
 
 The game opens fullscreen. **F11** or **Alt+Enter** switches between fullscreen and a window; run `./scripts/client.sh --windowed -- --display-windowed` for a windowed launch.
 
-Choose **LOCAL BATTLE**, then set each of the eight roster slots to **Human**, **CPU**, or **Off** and choose a suit color. The selected character walks on a shared lit 3D stage using the same articulated model seen in battle. Continue to the miniature arena stage and arrow-controlled rules, choose Easy/Medium/Hard CPU difficulty, then start with **2–8 total participants**. **PRACTICE** lets one player explore the map and rehearse bomb handling without CPU opponents. Nine visible training pickups teach bomb capacity, fire, red power, remote detonation, hearts, bouncing bombs, fast bombs and Focus; **RESET PRACTICE** restores the cache. One human can play with up to seven bots. Local play works without a server. Two keyboard seats are available; additional local seats require connected gamepads. With three or more local humans, the first two seats use keyboards and up to six gamepads fill seats 3–8 in connection order. With one or two humans, the corresponding gamepads also work as optional controls.
+Choose **LOCAL BATTLE**, then set each of the eight roster slots to **Human**, **CPU**, or **Off** and choose a suit color. The selected character walks on a shared lit 3D stage using the same articulated model seen in battle. Continue to the miniature arena stage and arrow-controlled rules, choose Easy/Medium/Hard CPU difficulty, then start with **2–8 total participants**. **PRACTICE** lets one player explore the map and rehearse bomb handling without CPU opponents. Thirteen expiring training pickups teach bomb capacity, fire, red power, remote detonation, hearts, bouncing bombs, fast bombs Focus and temporary size/speed effects; **RESET PRACTICE** restores the cache. One human can play with up to seven bots. Local play works without a server. Two keyboard seats are available; additional local seats require connected gamepads. With three or more local humans, the first two seats use keyboards and up to six gamepads fill seats 3–8 in connection order. With one or two humans, the corresponding gamepads also work as optional controls.
+
+**Advanced settings** in match configuration controls item drop chance (55% by default), block amount, item lifetime (20 seconds), blast and bomb stack caps (five each), temporary effect duration (10 seconds), and which items may spawn. Every destroyed block rolls independently. Uncollected items expire in battle and practice. Tiny makes you smaller/faster; Big makes you larger/slower; Haste and Slow change only movement speed. A new temporary effect replaces the previous one. Room leaders can set the same rules before starting an online match.
+
 
 ## macOS app
 
@@ -132,12 +135,12 @@ Explosions use spherical distance and cover occlusion rather than a classic grid
 
 ## Equipment and charging
 
-Bomb capacity (up to eight) and normal blast strength (up to three) stack.
+Bomb capacity and normal blast strength stack to five by default; both caps are configurable.
 One bomb-type slot holds red, remote, bouncing or fast bombs; a separate ability
 slot holds a protective heart or Focus. Picking a replacement drops the previous
 equipment for other players. The old holder cannot immediately reclaim it, and
-the dropped item disappears after 20 seconds. Duplicate equipment and capped
-upgrades remain available for others.
+the dropped item disappears after the configured lifetime (20 seconds by default).
+Duplicate equipment and capped upgrades remain available for others until expiry.
 
 Red bombs produce blue explosions with 25% more radius and penetrate breakable
 cover. Blue remote bombs use command indicators with no burning fuse. Purple
@@ -154,7 +157,7 @@ summit. Most of its cover is concentrated in lower farming pockets, with clear
 stair and crossing lanes. Rock Garden is 23×15 with pillar-area clusters; Up &
 Down is 23×19 with cover on broad platforms and outer pockets. Layouts vary by
 seed while preserving those areas and safe openings. Fire and Bomb upgrades each
-make up 35% of ordinary drops; other equipment shares the remaining 30%.
+make up 30% of the default drop pool; equipment and temporary effects share the remaining 40%.
 [Original-game layout observations and project tuning](docs/iteration23-block-distribution-research.md).
 
 ## Knockdowns and player grabs
@@ -175,9 +178,9 @@ Water contact uses the actual visible water height. Merely grazing the shoreline
 
 ## Battle progression
 
-Breakable stone objects can drop weighted upgrades. Fire raises normal blast strength to level 3; bomb upgrades raise simultaneous capacity to 8. Red power penetrates breakable cover. Blue remote bombs with green indicators detonate on command. Picking up either special upgrade replaces the other for newly placed bombs. Existing red bombs retain their original fuse; an existing remote resumes its normal fuse if its owner switches to red and can no longer command it. One heart absorbs one blast without stacking. Water remains lethal. Equipment resets between rounds.
+Breakable stone objects can drop weighted upgrades. Fire and bomb upgrades stack to five by default; advanced settings controls both caps. Red power penetrates breakable cover. Blue remote bombs with green indicators detonate on command. Picking up either special upgrade replaces the other for newly placed bombs. Existing red bombs retain their original fuse; an existing remote resumes its normal fuse if its owner switches to red and can no longer command it. One heart absorbs one blast without stacking. Water remains lethal. Equipment resets between rounds.
 
-Three accepted pump presses add three effective blast levels, reaching level 6 with maximum fire upgrades. The default bomb is larger for readability, but pumped visual growth is restrained: three pumps are about 1.8× the default size, with a visual target cap of 2.3. This does not change blast strength. Pickups are also larger and the camera fits the stage more closely. Timed bombs pause their fuse while carried and resume it after release. Pumping adds reach to ordinary throws; deliberate aim keeps the chosen range. While a local player carries a bomb, a dotted arc shows the shared static trajectory and landing point; water and void endpoints instead show where it sinks or falls away. Moving players and bombs can interrupt that forecast. Neutral throws now clear the carrier, and the released model starts at hand height instead of dipping toward their helmet. [Carry/throw diagnosis and evidence](docs/iteration15-charge.md). These numerical choices and the flood curve are project tuning; [manual and gameplay-video research](docs/gameplay-research.md) distinguishes confirmed observations from assumptions.
+Three accepted pump presses add three effective blast levels, reaching level 8 with the default maximum of five fire stacks. The default bomb is larger for readability, but pumped visual growth is restrained: three pumps are about 1.8× the default size, with a visual target cap of 2.3. This does not change blast strength. Pickups are also larger and the camera fits the stage more closely. Timed bombs pause their fuse while carried and resume it after release. Pumping adds reach to ordinary throws; deliberate aim keeps the chosen range. While a local player carries a bomb, a dotted arc shows the shared static trajectory and landing point; water and void endpoints instead show where it sinks or falls away. Moving players and bombs can interrupt that forecast. Neutral throws now clear the carrier, and the released model starts at hand height instead of dipping toward their helmet. [Carry/throw diagnosis and evidence](docs/iteration15-charge.md). These numerical choices and the flood curve are project tuning; [manual and gameplay-video research](docs/gameplay-research.md) distinguishes confirmed observations from assumptions.
 
 The original manual establishes increased destructive power for red bombs, but the inspected sources do not establish a separate radius multiplier at identical fire and pump levels. This build keeps radius tied to those levels and gives red its cover penetration. [Placement, color and red-power research](docs/iteration12-bombs-research.md).
 

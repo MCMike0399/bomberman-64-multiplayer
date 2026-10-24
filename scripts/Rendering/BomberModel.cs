@@ -9,6 +9,7 @@ public partial class BomberModel : Node3D
     private readonly Node3D _upperBody=new(),_upperParts=new();
     private Node3D _stars=new();
     private Label3D _nameLabel=null!;
+    public float StatusScale {get;set;}=1;
     private bool _carrying,_stunned,_ghost;
     private bool _heldVictim,_airborne;
     private float _downBlend;
@@ -372,7 +373,7 @@ public partial class BomberModel : Node3D
         foreach(var eye in _eyes)eye.Scale=new(1,eyeHeight,1);
         _stars.Rotation=new(0,_time*3,0);
         _nameLabel.Position=new(0,1.87f+_carryBlend*(.65f+_charge*.35f),0);
-        Scale=Vector3.One*(_ghost?.85f:1.12f);
+        Scale=Vector3.One*(_ghost?.85f:1.12f*StatusScale);
     }
     /// <summary>Eases toward a limit instead of stopping dead against it.</summary>
     private static float SoftLimit(float value,float limit)=>limit*(float)Math.Tanh(value/limit);

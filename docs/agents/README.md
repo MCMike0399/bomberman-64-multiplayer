@@ -36,6 +36,11 @@ update the current guide rather than silently reviving old behavior.
 
 ## Current decisions that supersede earlier experiments
 
+- v0.25 source: Advanced match settings, independent 55% crate drops without
+  guaranteed openings, expiring practice/map items, default five-stack blast/bomb
+  caps and temporary Tiny/Big/Haste/Slow effects. The gameplay and input guides
+  own the current rules. See verification for delivery status.
+
 - v0.24: Morning, Midday, Afternoon and Night on all stages. Settings → Local
   lighting controls local play; online rounds use the server's snapshot choice.
   Coordinated sky reflections, water and wet stone shading; the 35% item drop

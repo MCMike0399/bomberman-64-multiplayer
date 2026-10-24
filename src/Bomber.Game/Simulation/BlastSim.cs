@@ -203,9 +203,17 @@ public sealed class BlastPlayer
     internal float AimCursorXAge,AimCursorZAge;
     internal int AimCursorXSign,AimCursorZSign;
 
+    public int MaxFire {get;set;}=5;
+    public int MaxBombs {get;set;}=5;
+    public float EffectDuration {get;set;}=10;
+    public string StatusEffect {get;set;}="none";
+    public float StatusRemaining {get;set;}
+    public float StatusSpeed=>StatusEffect switch {"tiny" or "haste"=>1.5f,"big" or "slow"=>.65f,_=>1};
+    public float StatusScale=>StatusEffect switch {"tiny"=>.65f,"big"=>1.4f,_=>1};
+
     // Power-ups.
     public int BombCapacity { get; set; } = PowerUpRules.StartingBombs;  // max active bombs
-    public int FireLevel { get; set; } = 1;      // 1–3 normal, pumping raises effective level
+    public int FireLevel { get; set; } = 1;      // 1–5 normal, pumping raises effective level
     public string BombType { get; set; } = "normal";
     public string Ability { get; set; } = "none";
     public bool HasRemote { get=>BombType=="remote";set{if(value)BombType="remote";else if(HasRemote)BombType="normal";} }
@@ -295,7 +303,7 @@ public sealed class BlastBomb
     public float? LandingY { get; set; } // exact support after a thrown landing, including cover tops
     public float FlyY { get; set; }  // current Y above landing tier
 
-    public int FireLevel { get; set; } = 1;   // 1–3
+    public int FireLevel { get; set; } = 1;   // 1–5
     public int Pumps { get; set; }             // 0–3 additional pumps
     public string Mode { get; set; } = "normal";
     public bool IsRed { get=>Mode=="red";set{if(value)Mode="red";else if(IsRed)Mode="normal";} }
@@ -323,7 +331,7 @@ public sealed class BlastBomb
     public const float ThrowAngle = 50f; // degrees
     public const float Radius = 0.35f;
 
-    /// <summary>Effective blast radius: 0.9 cells per effective level plus 0.4; mega levels cap at six.</summary>
+    /// <summary>Effective blast radius: 0.9 cells per effective level plus 0.4; mega levels cap at eight.</summary>
     public int EffectiveLevel => Math.Clamp(FireLevel + Pumps, 1, Pumps > 0 ? PowerUpRules.MaximumMegaFire : PowerUpRules.MaximumNormalFire);
     public float BlastRadius => (EffectiveLevel * .9f + .4f) * (IsRed?1.25f:1f);
 }

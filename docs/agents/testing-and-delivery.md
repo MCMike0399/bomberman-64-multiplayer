@@ -251,3 +251,19 @@ app location. Run the existing public contracts and actionlint for workflow edit
 A local updater fixture does not prove hosted CI or a public release; verify those
 separately when publication is authorized. Preserve the user's update preference
 and avoid replacement while a match/session is active.
+
+## Advanced rules verification (v0.25)
+
+`AdvancedRulesChecks` covers validation, empty/filtered pools, custom caps and real
+status pickup/movement/expiry; `ItemExpirationChecks` retains the formerly
+unlimited map/training item regression. Actual crate-destruction sampling in
+`LootAvailabilityChecks` checks the independent 55% default across 32 seeds per
+map. `advanced-settings` is the graphical menu/status/expiration journey;
+`network` also edits the advanced page in a live room and checks peer settings.
+
+The existing `loot-opening` and `cover-layout` collection journeys explicitly
+select 100% drops and a basic-upgrade-only pool through ordinary match settings
+to keep their pickup/rendering evidence deterministic. They do not certify the
+default drop probability; managed actual-destruction samples do. `sandbox`
+selects a 60-second lifetime for its long equipment tour. Default and short
+lifetimes have separate authority and graphical expiration witnesses.

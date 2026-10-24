@@ -33,8 +33,7 @@ internal static class LootAvailabilityChecks
                     [context,from.X+.5f,from.Z+.5f,1.3f,false,stage.SurfaceAt(from.X+.5f,from.Z+.5f)]);
                 Assert(!Grid(approachMatch).IsAlive(cover.X,cover.Z),"Ordinary starting blast from reachable floor did not open nearby cover.");
                 approachMatch.Tick();approachMatch.Tick();
-                Assert(Items(approachMatch).EnumerateArray().Any(item=>item.GetProperty("type").GetString() is "fire" or "bomb"),
-                    "Opening cover reached from a spawn failed to produce a useful reward.");
+
             }
             // Run the real destruction/visibility/drop path, isolating one crate per tiny blast.
             // This bypasses only bomb setup, so no player skill or bot behavior skews the sample.
@@ -45,10 +44,10 @@ internal static class LootAvailabilityChecks
             foreach(var item in items.EnumerateArray())
             {string kind=item.GetProperty("type").GetString()!;kinds[kind]=kinds.GetValueOrDefault(kind)+1;drops++;}
         }
-        int openingDrops=32*stage.Spawns.Length;
+        int openingDrops=0;
         double ordinaryDropRate=(double)(drops-openingDrops)/(covers-openingDrops);
-        Assert(ordinaryDropRate is >.30 and <.40,$"Ordinary cover drop rate {ordinaryDropRate:P1} should stay near 35% to limit item clutter.");
-        Assert(kinds.Count==8&&kinds["bomb"]>kinds["remote"]&&kinds["fire"]>kinds["heart"],"Arena drops lost their diverse, useful weighting.");
+        Assert(ordinaryDropRate is >.50 and <.60,$"Ordinary cover drop rate {ordinaryDropRate:P1} should stay near 55% to limit item clutter.");
+        Assert(kinds.Count==12&&kinds["bomb"]>kinds["remote"]&&kinds["fire"]>kinds["heart"],"Arena drops lost their diverse, useful weighting.");
         Console.WriteLine($"PASS {stage.Name} loot: {covers/32d:F2} covers, {drops/32d:F2} actual drops per round across 32 seeds; {ordinaryDropRate:P1} ordinary drop rate; all eight spawn areas have two nearby crates");
         foreach(bool reverse in new[]{false,true})
         {
@@ -56,12 +55,12 @@ internal static class LootAvailabilityChecks
             var opening=zones.GroupBy(kv=>kv.Value).Select(group=>group.First()).ToArray();
             foreach(var entry in reverse?opening.Reverse():opening)Destroy(match,entry.Key,stage);
             match.Tick();match.Tick();var items=Items(match);
-            Assert(items.GetArrayLength()==8,"A spawn area's first destroyed crate had no guaranteed useful reward.");
-            foreach(var item in items.EnumerateArray())Assert(item.GetProperty("type").GetString() is "fire" or "bomb","Opening cover reward was not a basic inventory upgrade.");
+            Assert(items.GetArrayLength()<8,"Opening crates still bypass the uniform chance.");
+
             string before=items.GetRawText();foreach(var entry in opening)Destroy(match,entry.Key,stage);
             match.Tick();match.Tick();Assert(items.GetArrayLength()==Items(match).GetArrayLength(),"Destroying missing cover duplicated a reward.");
         }
-        Console.WriteLine($"PASS {stage.Name} opening reward survives reversed spawn-zone destruction order without duplicate drops");
+        Console.WriteLine($"PASS {stage.Name} uniform opening rolls obey reversed destruction order without duplicate drops");
         return 2;
     }
     static LocalMatch Match(int seed,string id)=>new(new MatchOptions{Stage=id,HumanPlayers=8,BotPlayers=0,Seed=seed});

@@ -165,6 +165,7 @@ public partial class ArenaView : Node3D
                 node=new BomberModel(_art,color,Bomber.Game.PlayerNames.Display(p.GetProperty("name").GetString(),slot));_dynamic.AddChild(node);_entities[id]=node;node.Position=PositionOf(p);
             }
             ((BomberModel)node).SetSuitColor(color);
+            ((BomberModel)node).StatusScale=p.TryGetProperty("statusScale",out var statusScale)?statusScale.GetSingle():1;
             ((BomberModel)node).KickWindup(F(p,"kickWindup"));
             _targets[id]=PositionOf(p);
             if(!_playerMotion.TryGetValue(id,out var motion))_playerMotion[id]=new SnapshotMotion(node.Position,_snapshotTick);
@@ -181,7 +182,7 @@ public partial class ArenaView : Node3D
                 if(_pickups.TryGetValue(id,out int previous)&&value>previous&&p.TryGetProperty("lastPickup",out var pickup))
                 {
                     string kind=pickup.GetString()??"";
-                    bool maximum=kind=="fire"&&F(p,"fire")>=3||kind=="bomb"&&F(p,"bombs")>=8;
+                    bool maximum=kind=="fire"&&F(p,"fire")>=(p.TryGetProperty("maxFire",out var mf)?mf.GetInt32():5)||kind=="bomb"&&F(p,"bombs")>=(p.TryGetProperty("maxBombs",out var mb)?mb.GetInt32():5);
                     PowerupMessage(node.Position,kind,maximum);_audio.Pickup();
                 }
                 _pickups[id]=value;
@@ -223,6 +224,7 @@ public partial class ArenaView : Node3D
                 float x=F(item,"cx")+.5f,z=F(item,"cz")+.5f;node=new PowerupModel(_art,item.GetProperty("type").GetString()??"");
                 node.Position=new(x,_terrain.Surface(x,z)+.48f,z);_dynamic.AddChild(node);_entities[id]=node;
             }
+            if(item.TryGetProperty("life",out var remaining)){float seconds=remaining.GetSingle();node.Visible=seconds<0||seconds>3||((int)(seconds*6)%2==0);}
         }
         foreach(string id in _entities.Keys.Where(k=>!seen.Contains(k)).ToArray())
         {
@@ -364,7 +366,7 @@ public partial class ArenaView : Node3D
     }
     private void PowerupMessage(Vector3 position,string kind,bool maximum=false)
     {
-        string text=kind switch {"fire"=>maximum?"MAX BLAST!":"BLAST UP!","bomb"=>maximum?"MAX BOMBS!":"BOMB UP!","remote"=>"REMOTE!","red"=>"POWER BOMB!","heart"=>"HEART!","bounce"=>"BOUNCE BOMBS!","fast"=>"FAST BOMBS!","focus"=>"QUICK CHARGE!",_=>kind};
+        string text=kind switch {"fire"=>maximum?"MAX BLAST!":"BLAST UP!","bomb"=>maximum?"MAX BOMBS!":"BOMB UP!","remote"=>"REMOTE!","red"=>"POWER BOMB!","heart"=>"HEART!","bounce"=>"BOUNCE BOMBS!","fast"=>"FAST BOMBS!","focus"=>"QUICK CHARGE!","tiny"=>"TINY + QUICK!","big"=>"BIG + SLOW!","haste"=>"HASTE!","slow"=>"SLOWED!",_=>kind};
         var label=new Label3D {Text=text,Position=position+new Vector3(0,2.2f,0),FontSize=34,PixelSize=.012f,Billboard=BaseMaterial3D.BillboardModeEnum.Enabled,NoDepthTest=true,OutlineSize=10,Modulate=new Color("ffe571"),OutlineModulate=new Color("233657")};
         _effects.AddChild(label);var tween=label.CreateTween().SetParallel();tween.TweenProperty(label,"position",label.Position+Vector3.Up*.9f,1.2);tween.TweenProperty(label,"modulate:a",0f,1.2);tween.Chain().TweenCallback(Callable.From(label.QueueFree));
     }

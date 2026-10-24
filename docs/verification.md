@@ -1,3 +1,47 @@
+# Advanced match rules and temporary items — v0.25.0
+
+The 2026-10-24 change adds a dedicated Advanced settings page for local/practice
+and waiting online rooms. Each destroyed block independently rolls the configured
+chance (55% by default), without the former guaranteed opening reward. Item
+lifetime, authored block amount, blast/bomb caps, effect duration and twelve
+item exclusions share local/server validation. Default caps are five; normal
+starting inventory remains one fire / up to three bombs.
+
+Initial map/training items previously used an unlimited lifetime. The retained
+`--item-expiration` regression failed before the fix and now passes for both
+battle and practice. Every item source uses the configured lifetime, with a
+three-second visual blink. Tiny/Big combine size and speed; Haste/Slow are
+speed-only project extensions. The [Nintendo manual research](status-items-research.md)
+distinguishes those choices from the original game's documented behavior.
+Collision dimensions remain unchanged; temporary states expire and reset.
+
+Local receipts under `artifacts/iteration25/`:
+
+- `public-retry`: public/CI/harness contracts and original audio pass. The first
+  sandboxed attempt could not inspect its own child processes.
+- `managed-final`: 2,705 game, 143 client, 53 AI and 19 audio checks, all 36 AI
+  soaks, verified portable server packaging and real HTTP/WebSocket smoke.
+  The network test edits advanced rules, observes the peer's accepted settings,
+  and starts a match whose cover and inventory follow those rules.
+- A newly exposed Rock Garden Easy / seven bots / seed 64 stall reproduced with
+  `--soak --idle-regression`. Collision recovery had ignored small steering
+  commands that movement accepts. Its longest open stationary window fell from
+  16 seconds to 1.93 seconds; the full 36-case soak also passes at 1.93 seconds.
+- `headless`: 868 checks across 21 scenario leaves. `package-final2`:
+  v0.25.0/build 28 exported, signed and passed 252 bundled smoke assertions.
+- `graphical-final2/playtest/20261024T171024.662672Z-all`: the final v0.25.0
+  export passed all 38 leaves, 2,477 assertions and 233 captures with zero runtime
+  errors in the isolated Metal VM. Advanced settings, Tiny/Big models, the
+  before/after expiration arena and live room settings captures were inspected.
+  The new journey also verifies Haste/Slow pickup, expiry and restored scale.
+  The final game suite was rerun after moving the practice pickups and retained
+  all 2,705 passing checks (`game-after-pickup-placement.log`).
+
+Earlier graphical attempts retained useful failures: the new practice items
+were moved off ramps onto flat ground; the new witness was scoped to the arena
+rather than menu preview models, and waits for accepted pickup snapshots.
+Native hardware coverage and Apple notarization are not claimed by VM evidence.
+
 # Isolated agent QA — 2026-10-24
 
 Graphical macOS QA now runs the unmodified exported game in a dedicated local

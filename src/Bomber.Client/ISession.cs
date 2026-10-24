@@ -19,11 +19,12 @@ public interface ISession : IAsyncDisposable
 public sealed record SessionSettings(string Stage = "sunken-temple", int Bots = 3, int Wins = 2,
     int RoundSeconds = 120, bool SuddenDeath = true, bool Ghosts = true, string BotDifficulty = "normal")
 {
+    public AdvancedRules Advanced {get;init;}=new();
     public static SessionSettings FromWire(IReadOnlyDictionary<string,string> settings)
     {
         int Number(string key,int fallback)=>settings.TryGetValue(key,out var value)&&int.TryParse(value,out int number)?number:fallback;
         bool Flag(string key)=>settings.GetValueOrDefault(key,"on") is "on" or "true";
-        return new(settings.GetValueOrDefault("stage","sunken-temple"),Number("bots",3),Number("wins",2),Number("round-seconds",120),Flag("sudden-death"),Flag("ghosts"),settings.GetValueOrDefault("bot-difficulty","normal"));
+        return new(settings.GetValueOrDefault("stage","sunken-temple"),Number("bots",3),Number("wins",2),Number("round-seconds",120),Flag("sudden-death"),Flag("ghosts"),settings.GetValueOrDefault("bot-difficulty","normal")){Advanced=AdvancedRules.FromSettings(settings)};
     }
     public Dictionary<string, string> ToWireSettings()
     {
@@ -31,10 +32,11 @@ public sealed record SessionSettings(string Stage = "sunken-temple", int Bots = 
         if (Stage is not ("sunken-temple" or "rock-garden" or "up-and-down")) throw new ArgumentException("Unknown stage.");
         if (Bots is < 0 or > 7 || Wins is < 1 or > 5 || RoundSeconds is < 60 or > 300)
             throw new ArgumentOutOfRangeException(nameof(Bots), "Bots 0–7, wins 1–5, round seconds 60–300.");
-        return new() { ["stage"] = Stage, ["bots"] = Bots.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        var settings = new Dictionary<string,string>() { ["stage"] = Stage, ["bots"] = Bots.ToString(System.Globalization.CultureInfo.InvariantCulture),
             ["wins"] = Wins.ToString(System.Globalization.CultureInfo.InvariantCulture),
             ["round-seconds"] = RoundSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture),
             ["bot-difficulty"] = BotDifficulty, ["sudden-death"] = SuddenDeath ? "on" : "off", ["ghosts"] = Ghosts ? "on" : "off" };
+        Advanced.WriteTo(settings);return settings;
     }
 }
 
