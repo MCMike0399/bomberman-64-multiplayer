@@ -226,6 +226,11 @@ Medium (default) or High; see [research and preset budgets](../graphics-research
 alone does not affect those separate worlds. Keep native Buttons for focus/input
 and redraw cached plaques when their state, size, visibility or preset changes.
 Opaque menus disable the hidden arena's root 3D pass; paused-match overlays retain it.
+Animated menu worlds (backdrop theatre, lobby/online/winner `CharacterPreview`)
+render every display frame on Medium/High and at 30 Hz on Low
+(`GraphicsQuality.MenuFrameInterval`). Character previews use a small studio rig:
+shadowed warm key, cool fill, a rear rim light, sky-fed reflections behind a
+transparent background, and SSAO except on Low.
 
 Low uses 2× MSAA, 85% 3D resolution with spatial FSR, 1024 shadows and no SSAO/glow.
 Medium uses native resolution, 4× MSAA, 2048 shadows and half-resolution SSAO.

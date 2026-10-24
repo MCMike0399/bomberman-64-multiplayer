@@ -9,6 +9,8 @@ public partial class CharacterPreview : RenderSurface
     private SubViewport _viewport=null!;
     private Node3D _world=null!;
     private Camera3D _camera=null!;
+    private Godot.Environment _environment=null!;
+    private int _graphicsRevision=-1;
     private BomberModel? _model;
     private int _appearance;
     private bool? _lastEnabled;
@@ -34,9 +36,18 @@ public partial class CharacterPreview : RenderSurface
         MouseFilter=MouseFilterEnum.Ignore;
         _viewport=new SubViewport {Size=new Vector2I(320,240),TransparentBg=true,OwnWorld3D=true,RenderTargetUpdateMode=SubViewport.UpdateMode.Disabled};SetViewport(_viewport);
         _world=new Node3D();_viewport.AddChild(_world);
-        _world.AddChild(new WorldEnvironment {Environment=new Godot.Environment {BackgroundMode=Godot.Environment.BGMode.Color,BackgroundColor=new Color("fff6dc"),AmbientLightSource=Godot.Environment.AmbientSource.Color,AmbientLightColor=new Color("fff0cd"),AmbientLightEnergy=.5f,TonemapMode=Godot.Environment.ToneMapper.Filmic}});
-        _world.AddChild(new DirectionalLight3D {RotationDegrees=new(-35,-30,0),LightColor=new Color("fff2c9"),LightEnergy=1.3f,ShadowEnabled=ResultsPresentation});
-        _world.AddChild(new DirectionalLight3D {RotationDegrees=new(-20,150,0),LightColor=new Color("c2d9ff"),LightEnergy=.45f});
+        // A small studio: warm key with soft contact shadows, cool fill, and a rim that separates the helmet
+        // from the navy menus. A sky feeds reflections only, so glossy suits and gloves catch highlights
+        // while the transparent background still shows the menu behind.
+        var studio=new ProceduralSkyMaterial {SkyTopColor=new Color("8fa2e8"),SkyHorizonColor=new Color("fff0d2"),GroundHorizonColor=new Color("e6cf9c"),GroundBottomColor=new Color("3a3f6e"),SunAngleMax=20,UseDebanding=true};
+        _environment=new Godot.Environment {BackgroundMode=Godot.Environment.BGMode.Color,BackgroundColor=new Color("fff6dc"),Sky=new Sky {SkyMaterial=studio},
+            AmbientLightSource=Godot.Environment.AmbientSource.Color,AmbientLightColor=new Color("f6ebd2"),AmbientLightEnergy=.42f,ReflectedLightSource=Godot.Environment.ReflectionSource.Sky,
+            TonemapMode=Godot.Environment.ToneMapper.Filmic,TonemapExposure=1.05f,AdjustmentEnabled=true,AdjustmentContrast=1.06f,AdjustmentSaturation=1.06f,
+            SsaoRadius=.35f,SsaoIntensity=1.1f,SsaoPower=1.3f};
+        _world.AddChild(new WorldEnvironment {Environment=_environment});
+        _world.AddChild(new DirectionalLight3D {RotationDegrees=new(-38,-32,0),LightColor=new Color("fff0c8"),LightEnergy=1.45f,ShadowEnabled=true,ShadowBias=.03f,ShadowNormalBias=.6f,ShadowBlur=1.6f,DirectionalShadowMaxDistance=12,DirectionalShadowMode=DirectionalLight3D.ShadowMode.Orthogonal});
+        _world.AddChild(new DirectionalLight3D {RotationDegrees=new(-18,145,0),LightColor=new Color("bcd2ff"),LightEnergy=.5f});
+        _world.AddChild(new DirectionalLight3D {RotationDegrees=new(-28,172,0),LightColor=new Color("ffe2f1"),LightEnergy=.75f});
         var camera=_camera=new Camera3D {Position=new(0,1.52f,3.9f),Projection=Camera3D.ProjectionType.Orthogonal,Size=2.05f,Current=true};_world.AddChild(camera);camera.LookAt(new Vector3(0,.86f,0));
         if(Platform)ArtGeometry.Cylinder(_world,new Vector3(0,-.04f,0),.7f,.07f,Materials.Color(new Color("efc455")));
         if(ResultsPresentation)
@@ -66,7 +77,12 @@ public partial class CharacterPreview : RenderSurface
         base._Process(delta);
         if(!IsVisibleInTree()||_model==null)return;
         _camera.Size=ResultsPresentation?2.85f:Math.Max(2.05f,1.05f/Math.Max(.2f,Size.X/Math.Max(1,Size.Y)));
-        _clock+=delta;_untilDraw+=delta;if(_untilDraw<1d/30)return;
+        if(_graphicsRevision!=GraphicsQuality.Revision)
+        {
+            // Contact shading reads on the close-up winner and lobby seats; Low keeps the cheaper look.
+            _environment.SsaoEnabled=GraphicsQuality.Current!=GraphicsPreset.Low;_graphicsRevision=GraphicsQuality.Revision;
+        }
+        _clock+=delta;_untilDraw+=delta;if(_untilDraw<GraphicsQuality.MenuFrameInterval)return;
         float dt=(float)Math.Min(_untilDraw,.1);_untilDraw=0;
         if(Celebrating){_untilCelebrate-=dt;if(_untilCelebrate<=0){_model.React("victory");_untilCelebrate=1.6f;}}
         _model.Animate(dt,Selected&&EnabledSeat&&!Celebrating?dt*2.1f:0);

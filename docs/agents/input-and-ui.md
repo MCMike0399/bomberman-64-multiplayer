@@ -223,6 +223,21 @@ player tokens are the HUD's visual identity. Favor readable mixed-case copy,
 drawn icons and clear control focus over decorative uppercase labels or glyph
 arrows. Copy changes can also require exact native harness lookup updates.
 
+Layout polish (2026-10-24): settings toggles use `ArcadeToggle`, a native
+CheckButton with one key height in both states, a tinted off face and a vector
+switch centered on the label line (the stock icon centered on the whole key and
+the pressed style dropped the text). Secondary copy uses muted `Hint` text.
+Results standings are positioned every frame from the 3D board's projected face
+(`ArcadeBackdrop.ResultsBoardFace`), with rows sized to the player count, because
+the backdrop camera has mouse parallax. Screens whose first tree button is Back
+or Leave declare a `DefaultFocus` instead. The bundled Japanese fonts draw U+2026
+as centered dots, so visible copy uses three periods. `ui-layout` captures the
+online, advanced, settings, eight-seat lobby and four/eight-player results pages
+and fails when a control leaves its card, a field cannot show its text, or
+standings leave the visible board (the stage floor hides its lower edge, so the
+face is clipped there and large fields cap the board height). Its lobby and
+results data are presentation fixtures; `network` and `results` cover the real paths.
+
 Find scenario membership/headless support in the single
 [catalog](../../assets/testing/scenarios.json), dispatched by
 [ScenarioCatalog](../../scripts/Testing/ScenarioCatalog.cs). Use `controllers`

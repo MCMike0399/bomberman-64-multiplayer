@@ -44,7 +44,11 @@ public partial class ArcadeMenu : Control
     private RosterSelection _localPlayers=null!;
     private Label _rosterSummary=null!;
     private Control _hostBotBox=null!;
-    private Button _editPlayers=null!,_onlineAppearanceButton=null!;
+    private Button _editPlayers=null!;
+    private ArcadeRuleDial _onlineAppearanceButton=null!;
+    private StagePreview? _onlineStage;
+    private VBoxContainer _standingsBoard=null!;
+    private float _standingsRowHeight;
     private CharacterPreview _onlinePreview=null!;
     private CharacterPreview _winnerPreview=null!;
     private VBoxContainer _resultRows=null!;
@@ -132,7 +136,6 @@ public partial class ArcadeMenu : Control
     {
         if(appearance is <0 or >7)throw new ArgumentOutOfRangeException(nameof(appearance));
         _onlineAppearance=appearance;_onlinePreview.SetAppearance(appearance);
-        _onlineAppearanceButton.Text="Suit: "+ArcadeTheme.Word(RosterSelection.AppearanceNames[appearance]);_onlineAppearanceButton.Icon=ArcadeIcons.Swatch(ArcadeTheme.Players[appearance]);
         AppearanceChanged?.Invoke(appearance);
     }
     private void BuildSetup()
@@ -174,9 +177,9 @@ public partial class ArcadeMenu : Control
         var screen=Screen("Advanced");var box=Card(screen,new(64,42),new(1312,758));
         ArcadeTheme.Heading(box,"Advanced match settings",38);
         Copy(box,"Each destroyed block rolls independently. Uncollected items disappear after their lifetime.",18);
-        var columns=ArcadeTheme.Row(box,28);
-        var rules=ArcadeTheme.Column(columns,4);rules.CustomMinimumSize=new(600,0);
-        var items=ArcadeTheme.Column(columns,4);items.CustomMinimumSize=new(590,0);
+        var columns=ArcadeTheme.Row(box,40);columns.SizeFlagsVertical=SizeFlags.ExpandFill;
+        var rules=ArcadeTheme.Column(columns,4);rules.SizeFlagsHorizontal=SizeFlags.ExpandFill;
+        var items=ArcadeTheme.Column(columns,10);items.SizeFlagsHorizontal=SizeFlags.ExpandFill;
         void Rule(Node parent,string name,Func<string> read,Action<int> change)
         {parent.AddChild(new ArcadeRuleDial{Name=name.Replace(" ",""),Caption=name,ReadValue=read,ChangeValue=change,ValueWidth=125});}
         Rule(rules,"Item drop chance",()=>$"{_advanced.DropPercent}%",d=>_advanced=_advanced with{DropPercent=Cycle(_advanced.DropPercent,d*5,0,100)});
@@ -185,18 +188,30 @@ public partial class ArcadeMenu : Control
         Rule(rules,"Blast stack cap",()=>_advanced.MaxFire.ToString(),d=>_advanced=_advanced with{MaxFire=Cycle(_advanced.MaxFire,d,1,5)});
         Rule(rules,"Bomb stack cap",()=>_advanced.MaxBombs.ToString(),d=>_advanced=_advanced with{MaxBombs=Cycle(_advanced.MaxBombs,d,1,8)});
         Rule(rules,"Buff / debuff duration",()=>$"{_advanced.EffectSeconds}s",d=>_advanced=_advanced with{EffectSeconds=Cycle(_advanced.EffectSeconds,d*5,5,30)});
-        Copy(rules,"Tiny: smaller and faster. Big: larger and slower.\nHaste and Slow change movement speed only.\nA new effect replaces the previous one.",17);
-        ArcadeTheme.Button(rules,"Restore defaults",()=>{_advanced=new();foreach(string type in AdvancedRules.ItemTypes)((CheckButton)_screens["Advanced"].FindChild("Allow_"+type,true,false)).SetPressedNoSignal(true);}).Name="ResetAdvanced";
+        // Notes line up with the dial captions, not the dial hit area.
+        Hint(Inset(rules,22,12),"Tiny: smaller and faster. Big: larger and slower. Haste and Slow change movement speed only. A new effect replaces the previous one.");
         Section(items,"Allowed items");
-        var grid=new GridContainer{Columns=2};grid.AddThemeConstantOverride("h_separation",12);items.AddChild(grid);
+        var grid=new GridContainer{Columns=2};grid.AddThemeConstantOverride("h_separation",14);grid.AddThemeConstantOverride("v_separation",10);items.AddChild(grid);
         foreach(var type in AdvancedRules.ItemTypes)
         {
             string label=type switch{"fire"=>"Blast up","bomb"=>"Bomb up","remote"=>"Remote","red"=>"Power bomb","bounce"=>"Bounce","fast"=>"Fast bomb","heart"=>"Heart","focus"=>"Focus","tiny"=>"Tiny","big"=>"Big","haste"=>"Haste",_=>"Slow"};
-            var toggle=new CheckButton{Name="Allow_"+type,Text=label,CustomMinimumSize=new(275,52),ButtonPressed=true};grid.AddChild(toggle);
+            var toggle=new ArcadeToggle{Name="Allow_"+type,Text=label,CustomMinimumSize=new(0,52),SizeFlagsHorizontal=SizeFlags.ExpandFill,ButtonPressed=true};grid.AddChild(toggle);
             toggle.Toggled+=enabled=>{var disabled=AdvancedRules.ItemTypes.Where(t=>t==type?!enabled:!_advanced.Allows(t));_advanced=_advanced with{DisabledItems=string.Join(',',disabled)};};
         }
-        Copy(items,"Disabled items cannot appear in blocks, training pickups or equipment drops. With every item off, blocks drop nothing.",17);
-        ArcadeTheme.Button(box,"Back to match settings",()=>BackRequested?.Invoke()).Name="AdvancedBack";
+        Hint(Inset(items,0,4),"Disabled items cannot appear in blocks, training pickups or equipment drops. With every item off, blocks drop nothing.");
+        var actions=ArcadeTheme.Row(box,18);
+        var reset=ArcadeTheme.Quiet(ArcadeTheme.Button(actions,"Restore defaults",()=>{_advanced=new();foreach(string type in AdvancedRules.ItemTypes)((CheckButton)_screens["Advanced"].FindChild("Allow_"+type,true,false)).SetPressedNoSignal(true);}));
+        reset.Name="ResetAdvanced";reset.CustomMinimumSize=new(240,52);
+        actions.AddChild(new Control {SizeFlagsHorizontal=SizeFlags.ExpandFill});
+        var back=ArcadeTheme.Button(actions,"Back to match settings",()=>BackRequested?.Invoke());back.Name="AdvancedBack";back.CustomMinimumSize=new(420,52);
+    }
+    /// <summary>Secondary explanatory copy: wrapped, smaller and muted so it never competes with controls.</summary>
+    private static Label Hint(Node parent,string text,int size=16)
+    {var label=Copy(parent,text,size);label.AddThemeColorOverride("font_color",ArcadeTheme.Muted);return label;}
+    private static MarginContainer Inset(Node parent,int left,int top=0)
+    {
+        var margin=new MarginContainer();margin.AddThemeConstantOverride("margin_left",left);margin.AddThemeConstantOverride("margin_top",top);
+        parent.AddChild(margin);return margin;
     }
     public void ShowAdvanced()
     {
@@ -215,25 +230,29 @@ public partial class ArcadeMenu : Control
     {
         var screen=Screen("Online");var box=Card(screen,new(74,62),new(1292,724));
         var header=ArcadeTheme.Row(box);ArcadeTheme.Heading(header,"Online Battle",40).SizeFlagsHorizontal=SizeFlags.ExpandFill;
-        ArcadeTheme.Quiet(ArcadeTheme.Button(header,"Back",()=>BackRequested?.Invoke()));
+        var back=ArcadeTheme.Quiet(ArcadeTheme.Button(header,"Back",()=>BackRequested?.Invoke()));back.Name="OnlineBack";back.SizeFlagsVertical=SizeFlags.ShrinkCenter;back.CustomMinimumSize=new(120,48);
         var columns=ArcadeTheme.Row(box,36);columns.SizeFlagsVertical=SizeFlags.ExpandFill;
-        var identity=ArcadeTheme.Column(columns,8);identity.CustomMinimumSize=new(300,0);
+        var identity=ArcadeTheme.Column(columns,8);identity.CustomMinimumSize=new(330,0);
         Section(identity,"Your bomber");
-        _onlinePreview=new CharacterPreview {CustomMinimumSize=new(280,226),Selected=true};identity.AddChild(_onlinePreview);
-        _onlineAppearanceButton=ArcadeTheme.Button(identity,"Suit: White",()=>SetOnlineAppearance((_onlineAppearance+1)%8));_onlineAppearanceButton.Name="OnlineAppearance";_onlineAppearanceButton.AddThemeFontSizeOverride("font_size",17);
-        _onlineAppearanceButton.Icon=ArcadeIcons.Swatch(ArcadeTheme.Players[0]);_onlineAppearanceButton.AddThemeConstantOverride("h_separation",10);
+        _onlinePreview=new CharacterPreview {CustomMinimumSize=new(300,196),Selected=true};identity.AddChild(_onlinePreview);
+        // A dial like the setup rules: left/right walks the suits both ways, confirm steps forward.
+        _onlineAppearanceButton=new ArcadeRuleDial {Name="OnlineAppearance",Caption="Suit",ValueWidth=150,
+            ReadValue=()=>ArcadeTheme.Word(RosterSelection.AppearanceNames[_onlineAppearance]),ChangeValue=direction=>SetOnlineAppearance((_onlineAppearance+direction+8)%8)};
+        identity.AddChild(_onlineAppearanceButton);
         _name=ArcadeTheme.Field(identity,"Your name — click to edit","","Type your name");_name.Name="PlayerName";_name.MaxLength=24;
-        Copy(identity,"Shown above your bomber. Leave blank for P1, P2…",15);
+        Hint(identity,"Shown above your bomber. Leave it blank to appear as P1, P2 and so on.",15);
         _name.TextChanged+=_=>IdentityChanged?.Invoke();
         _server=ArcadeTheme.Field(identity,"Server address",NetworkSession.DefaultServerUrl);_server.Name="ServerUrl";
-        _server.TextChanged+=_=>IdentityChanged?.Invoke();
+        // Full LAN URLs ("http://192.168.x.y:port") fit the column; longer hosts scroll and show in the tooltip.
+        _server.AddThemeFontSizeOverride("font_size",16);_server.TooltipText=_server.Text;
+        _server.TextChanged+=text=>{_server.TooltipText=text;IdentityChanged?.Invoke();};
         var host=ArcadeTheme.Column(columns,14);host.CustomMinimumSize=new(400,0);
         Section(host,"Host a room");
         Copy(host,"Invite friends with a private room code. Pick the arena, CPU rivals and win target first.");
-        var preview=new StagePreview {CustomMinimumSize=new(360,185)};host.AddChild(preview);
+        _onlineStage=new StagePreview {CustomMinimumSize=new(400,206),StageIndex=_stage.Selected};host.AddChild(_onlineStage);
         ArcadeTheme.Button(host,"Room settings",()=>Navigation?.Invoke("HostSetup"));
         _onlineButtons.Add(ArcadeTheme.Button(host,"Create private room",()=>OnlineRequested?.Invoke(NetworkMode.CreatePrivate),true));
-        Copy(host,"Share the code while friends connect. The room leader chooses when to start.",15).AddThemeColorOverride("font_color",ArcadeTheme.Muted);
+        Hint(host,"Share the code while friends connect. The room leader chooses when to start.",15);
         var join=ArcadeTheme.Column(columns,14);join.SizeFlagsHorizontal=SizeFlags.ExpandFill;
         Section(join,"Join a friend");
         _code=ArcadeTheme.Field(join,"Room code","","Enter code");_code.MaxLength=16;
@@ -247,14 +266,14 @@ public partial class ArcadeMenu : Control
     }
     private void BuildLobby()
     {
-        var screen=Screen("Lobby");var box=Card(screen,new(220,90),new(1000,660));
+        var screen=Screen("Lobby");var box=Card(screen,new(220,48),new(1000,744));
         var header=ArcadeTheme.Row(box);ArcadeTheme.Heading(header,"Battle Room",40).SizeFlagsHorizontal=SizeFlags.ExpandFill;ArcadeTheme.Button(header,"Leave room",()=>BackRequested?.Invoke());
         var code=ArcadeTheme.Row(box,16);
         var codeCaption=ArcadeTheme.Text(code,"Room code",18,ArcadeTheme.Muted);codeCaption.VerticalAlignment=VerticalAlignment.Center;
         var codePlate=new PanelContainer();var codeStyle=ArcadeTheme.Key(ArcadeTheme.Sand,false,false,12,18);codePlate.AddThemeStyleboxOverride("panel",codeStyle);code.AddChild(codePlate);
-        _joinCode=new Label {Text="…"};_joinCode.AddThemeFontOverride("font",ArcadeTheme.Display);_joinCode.AddThemeFontSizeOverride("font_size",36);_joinCode.AddThemeColorOverride("font_color",ArcadeTheme.Ink);codePlate.AddChild(_joinCode);
+        _joinCode=new Label {Text="..."};_joinCode.AddThemeFontOverride("font",ArcadeTheme.Display);_joinCode.AddThemeFontSizeOverride("font_size",36);_joinCode.AddThemeColorOverride("font_color",ArcadeTheme.Ink);codePlate.AddChild(_joinCode);
         _copyCode=ArcadeTheme.Button(code,"Copy code",()=>{if(_roomCode is {} room){DisplayServer.ClipboardSet(room);_copyCode.Text="Copied!";}});_copyCode.Name="CopyRoomCode";_copyCode.Disabled=true;_copyCode.FocusMode=FocusModeEnum.None;
-        _lobbyStatus=ArcadeTheme.Text(box,"Connecting to your room…",24);
+        _lobbyStatus=ArcadeTheme.Text(box,"Connecting to your room...",24);
         _roster=new GridContainer {Columns=2,CustomMinimumSize=new(900,255)};_roster.AddThemeConstantOverride("h_separation",16);_roster.AddThemeConstantOverride("v_separation",10);box.AddChild(_roster);
         _partyHint=Copy(box,"Share the room code with friends. The leader starts each battle.",17);_partyHint.AddThemeColorOverride("font_color",ArcadeTheme.Muted);
         var actions=ArcadeTheme.Row(box,18);
@@ -276,14 +295,49 @@ public partial class ArcadeMenu : Control
         var champion=ArcadeTheme.Column(body,0);champion.CustomMinimumSize=new(475,0);
         _winnerPreview=new CharacterPreview {Name="WinnerPreview",Platform=false,ResultsPresentation=true,CustomMinimumSize=new(475,440),SizeFlagsHorizontal=SizeFlags.ExpandFill,SizeFlagsVertical=SizeFlags.ExpandFill};champion.AddChild(_winnerPreview);
         ArcadeTheme.Text(champion,"Last one standing",19,ArcadeTheme.Gold).HorizontalAlignment=HorizontalAlignment.Center;
-        var standings=ArcadeTheme.Column(body,10);standings.SizeFlagsHorizontal=SizeFlags.ExpandFill;
-        var heading=ArcadeTheme.Row(standings);ArcadeTheme.Heading(heading,"Final standings",28).SizeFlagsHorizontal=SizeFlags.ExpandFill;
-        var winsCaption=ArcadeTheme.Text(heading,"Round wins",16,ArcadeTheme.Muted);winsCaption.VerticalAlignment=VerticalAlignment.Bottom;
-        _resultRows=ArcadeTheme.Column(standings,4);_resultRows.SizeFlagsHorizontal=SizeFlags.ExpandFill;
+        // The standings are printed onto the 3D board: FitStandings keeps them inside its projected face.
+        _standingsBoard=ArcadeTheme.Column(screen,6);_standingsBoard.Name="StandingsBoard";_standingsBoard.Position=new(660,200);_standingsBoard.Size=new(600,400);
+        var heading=ArcadeTheme.Row(_standingsBoard);ArcadeTheme.Heading(heading,"Final standings",28).SizeFlagsHorizontal=SizeFlags.ExpandFill;
+        var winsCaption=ArcadeTheme.Text(heading,"Round wins",16,ArcadeTheme.Muted);winsCaption.VerticalAlignment=VerticalAlignment.Center;winsCaption.SizeFlagsVertical=SizeFlags.Fill;
+        _resultRows=ArcadeTheme.Column(_standingsBoard,4);_resultRows.SizeFlagsHorizontal=SizeFlags.ExpandFill;
         var scores=ArcadeTheme.Text(_results,"",1);scores.Name="Standings";scores.Visible=false;
         var row=ArcadeTheme.Row(_results,25);
         var replay=new ArcadeModeButton {Text="Play Again",CustomMinimumSize=new(590,88),FaceColor=Coral,Accent=ArcadeTheme.Gold,SizeFlagsHorizontal=SizeFlags.ExpandFill};replay.Pressed+=()=>ReplayRequested?.Invoke();row.AddChild(replay);_replay=replay;
         var modes=new ArcadeModeButton {Text="Mode Select",CustomMinimumSize=new(590,88),FaceColor=ArcadeTheme.Indigo,Accent=ArcadeTheme.Pink,SizeFlagsHorizontal=SizeFlags.ExpandFill};modes.Pressed+=()=>Navigation?.Invoke("Modes");row.AddChild(modes);
+    }
+    public override void _Process(double delta)
+    {
+        if(_screen=="Results"&&_standingsBoard.IsVisibleInTree())FitStandings();
+    }
+    /// <summary>Places the standings inside the board's velvet face as the parallax camera moves, and sizes rows to the player count.</summary>
+    private void FitStandings()
+    {
+        if(_background.ResultsBoardFace() is not {} face)return;
+        var toScreen=_screens["Results"].GetGlobalTransform().AffineInverse()*_background.GetGlobalTransform();
+        var topLeft=toScreen*face.Position;var bottomRight=toScreen*face.End;
+        var inner=new Rect2(topLeft,bottomRight-topLeft).GrowIndividual(-28,-16,-30,-18);
+        _standingsBoard.Position=inner.Position.Round();_standingsBoard.Size=inner.Size.Round();
+        int count=Math.Max(1,_resultRows.GetChildCount());
+        float row=Mathf.Floor(Math.Clamp((inner.Size.Y-46-4*(count-1))/count,26,52));
+        if(Mathf.IsEqualApprox(row,_standingsRowHeight))return;
+        _standingsRowHeight=row;
+        foreach(var child in _resultRows.GetChildren())SizeResultRow((Control)child,row);
+    }
+    private static void SizeResultRow(Control row,float height)
+    {
+        row.CustomMinimumSize=new(0,height);
+        foreach(var part in row.GetChildren().OfType<Control>())
+        {
+            if(part is RankBadge)part.CustomMinimumSize=new(height-6,height-6);
+            else if(part is BomberPortrait)part.CustomMinimumSize=new(height-4,height);
+            else if(part is ResultMedals)part.CustomMinimumSize=new(170,Math.Min(44,height));
+            // Text shrinks with dense eight-player boards so the row, not its glyphs, sets the height.
+            else if(part is Label label)
+            {
+                bool score=label.GetThemeFont("font")==ArcadeTheme.Display;
+                label.AddThemeFontSizeOverride("font_size",(int)Math.Min(score?26:22,height*(score?.6f:.58f)));
+            }
+        }
     }
     public void ShowResults(JsonElement? state,JsonElement? result,bool party=false)
     {
@@ -297,7 +351,7 @@ public partial class ArcadeMenu : Control
         {
             var ordered=scores.EnumerateArray().OrderByDescending(p=>p.GetProperty("wins").GetInt32()).ToArray();
             foreach(var child in _resultRows.GetChildren()){_resultRows.RemoveChild(child);child.QueueFree();}
-            _background.SetResultCount(ordered.Length);
+            _background.SetResultCount(ordered.Length);_standingsRowHeight=0;
             foreach(var (player,rank) in ordered.Select((p,i)=>(p,i)))AddResultRow(player,rank);
             text=string.Join("\n",ordered.Select((p,i)=>$"{i+1:00}    {p.GetProperty("name").GetString()}     {p.GetProperty("wins").GetInt32()} "+(p.GetProperty("wins").GetInt32()==1?"WIN":"WINS")));
             if(ordered.Length>0&&result is {} completed&&completed.TryGetProperty("reason",out var won)&&won.GetString() is "won" or "bot_won")
@@ -314,14 +368,16 @@ public partial class ArcadeMenu : Control
     {
         int slot=player.GetProperty("slot").GetInt32();
         int appearance=player.TryGetProperty("appearance",out var suit)?suit.GetInt32():slot;
-        var row=ArcadeTheme.Row(_resultRows,12);row.CustomMinimumSize=new(650,50);
-        row.AddChild(new RankBadge {Rank=rank+1,CustomMinimumSize=new(42,46)});
-        var character=new BomberPortrait {CustomMinimumSize=new(45,48),Suit=ArcadeTheme.Players[Math.Clamp(appearance,0,7)]};row.AddChild(character);
+        var row=ArcadeTheme.Row(_resultRows,12);
+        row.AddChild(new RankBadge {Rank=rank+1,SizeFlagsVertical=SizeFlags.ShrinkCenter});
+        var character=new BomberPortrait {Suit=ArcadeTheme.Players[Math.Clamp(appearance,0,7)],SizeFlagsVertical=SizeFlags.ShrinkCenter};row.AddChild(character);
         var name=ArcadeTheme.Text(row,player.GetProperty("name").GetString()??"Player",22,rank==0?ArcadeTheme.Gold:ArcadeTheme.Cream);name.SizeFlagsHorizontal=SizeFlags.ExpandFill;name.VerticalAlignment=VerticalAlignment.Center;
         name.ClipText=true;name.TextOverrunBehavior=TextServer.OverrunBehavior.TrimEllipsis;
         int wins=player.GetProperty("wins").GetInt32();
-        row.AddChild(new ResultMedals {Wins=wins,CustomMinimumSize=new(170,48)});
-        var count=ArcadeTheme.Text(row,wins.ToString(),26,ArcadeTheme.Gold,true);count.CustomMinimumSize=new(38,0);count.HorizontalAlignment=HorizontalAlignment.Right;count.VerticalAlignment=VerticalAlignment.Center;
+        row.AddChild(new ResultMedals {Wins=wins,SizeFlagsVertical=SizeFlags.ShrinkCenter});
+        // A zero recedes so the eye lands on actual round wins.
+        var count=ArcadeTheme.Text(row,wins.ToString(),26,wins>0?ArcadeTheme.Gold:ArcadeTheme.Muted,true);count.CustomMinimumSize=new(38,0);count.HorizontalAlignment=HorizontalAlignment.Right;count.VerticalAlignment=VerticalAlignment.Center;
+        SizeResultRow(row,_standingsRowHeight>0?_standingsRowHeight:48);
     }
     public void ShowScreen(string screen)
     {
@@ -343,8 +399,15 @@ public partial class ArcadeMenu : Control
         foreach(var pair in _screens)pair.Value.Visible=pair.Key==_screen;
         if(screen=="Roster")_localPlayers.CallDeferred(nameof(RosterSelection.FocusFirst));
         else if(_screen=="Setup")_stageDial.CallDeferred(Control.MethodName.GrabFocus);
-        else {var first=FirstFocusable(_screens[_screen]);first?.CallDeferred(Control.MethodName.GrabFocus);}
+        else {var first=DefaultFocus(_screen)??FirstFocusable(_screens[_screen]);first?.CallDeferred(Control.MethodName.GrabFocus);}
     }
+    /// <summary>Screens whose first button in tree order is Back/Leave start on their first real choice instead.</summary>
+    private Control? DefaultFocus(string screen)=>screen switch
+    {
+        "Online"=>_onlineAppearanceButton,
+        "Lobby"=>_startRoom.Visible&&!_startRoom.Disabled?_startRoom:!_copyCode.Disabled?_copyCode:_screens["Lobby"].FindChild("LobbySettings",true,false) as Control,
+        _=>null
+    };
     private static Control? FirstFocusable(Node node)
     {foreach(var child in node.GetChildren()){if(child is Button button&&button.Visible&&!button.Disabled)return button;var found=FirstFocusable(child);if(found!=null)return found;}return null;}
     public void Notice(string message)
@@ -369,14 +432,15 @@ public partial class ArcadeMenu : Control
         foreach(var child in _roster.GetChildren()){_roster.RemoveChild(child);child.QueueFree();}_lobbyPreviews.Clear();
         foreach(var member in status.Players)
         {
-            var panel=new PanelContainer {CustomMinimumSize=new(440,60)};panel.AddThemeStyleboxOverride("panel",ArcadeTheme.Panel(new Color("28305e"),new Color("394a8f"),2,14,6));_roster.AddChild(panel);
-            var row=ArcadeTheme.Row(panel,10);var preview=new CharacterPreview {CustomMinimumSize=new(54,60),Selected=member.Connected};row.AddChild(preview);preview.SetAppearance(_lobbyAppearances.TryGetValue(member.Id,out int appearance)?appearance:member.Slot%8);_lobbyPreviews[member.Id]=preview;
+            var seatStyle=ArcadeTheme.Panel(new Color("28305e"),new Color("394a8f"),2,14,6);seatStyle.ContentMarginLeft=8;seatStyle.ContentMarginRight=16;
+            var panel=new PanelContainer {CustomMinimumSize=new(440,70)};panel.AddThemeStyleboxOverride("panel",seatStyle);_roster.AddChild(panel);
+            var row=ArcadeTheme.Row(panel,12);var preview=new CharacterPreview {CustomMinimumSize=new(60,66),Selected=member.Connected};row.AddChild(preview);preview.SetAppearance(_lobbyAppearances.TryGetValue(member.Id,out int appearance)?appearance:member.Slot%8);_lobbyPreviews[member.Id]=preview;
             var seat=ArcadeTheme.Text(row,$"P{member.Slot+1}",18,ArcadeTheme.Gold,true);seat.VerticalAlignment=VerticalAlignment.Center;
             var name=ArcadeTheme.Text(row,member.Name,18);name.SizeFlagsHorizontal=SizeFlags.ExpandFill;name.ClipText=true;name.VerticalAlignment=VerticalAlignment.Center;
             var state=ArcadeTheme.Text(row,member.Connected?"Connected":"Reconnecting",14,member.Connected?ArcadeTheme.Aqua:ArcadeTheme.Red);state.VerticalAlignment=VerticalAlignment.Center;
         }
         _countdown=_party is null?status.CountdownEndsAt:null;
-        _lobbyStatus.Text=status.State switch {"countdown"=>"The battle is about to begin!","running"=>"Entering the arena…",_=>"Waiting for players…"};
+        _lobbyStatus.Text=status.State switch {"countdown"=>"The battle is about to begin!","running"=>"Entering the arena...",_=>"Waiting for players..."};
         ApplyParty();
     }
     public void ResetLobby()
@@ -416,7 +480,7 @@ public partial class ArcadeMenu : Control
         _volumeLabel=ArcadeTheme.Text(player,"Sound volume: 80%",22);
         _volume=new HSlider {Name="SoundVolume",MinValue=0,MaxValue=100,Step=5,Value=80,CustomMinimumSize=new(460,48)};player.AddChild(_volume);
         _volume.ValueChanged+=value=>{_volumeLabel.Text=$"Sound volume: {value:0}%";SettingsChanged?.Invoke();};
-        _vibration=new CheckButton {Name="Vibration",Text="Controller vibration",CustomMinimumSize=new(460,60)};player.AddChild(_vibration);
+        _vibration=new ArcadeToggle {Name="Vibration",Text="Controller vibration",CustomMinimumSize=new(460,56)};player.AddChild(_vibration);
         _vibration.Toggled+=_=>SettingsChanged?.Invoke();
         Copy(player,"Vibration is off by default. Enable it for bomb and impact feedback on supported controllers.",18);
         ArcadeTheme.Button(player,"Test vibration",()=>TestVibrationRequested?.Invoke()).Name="TestVibration";
@@ -432,7 +496,7 @@ public partial class ArcadeMenu : Control
         updates.AddChild(graphics);
         _graphicsDescription=Copy(updates,GraphicsQuality.Description(Graphics),16);
         Section(updates,"Game updates");
-        _automaticUpdates=new CheckButton {Name="AutomaticUpdates",Text="Check automatically",ButtonPressed=true};updates.AddChild(_automaticUpdates);
+        _automaticUpdates=new ArcadeToggle {Name="AutomaticUpdates",Text="Check automatically",CustomMinimumSize=new(0,56),ButtonPressed=true};updates.AddChild(_automaticUpdates);
         _automaticUpdates.Toggled+=_=>SettingsChanged?.Invoke();
         _updateStatus=Copy(updates,"",17);
         Copy(updates,"New versions download in the background. Finish your game, then restart to install.",18);
@@ -486,12 +550,13 @@ public partial class ArcadeMenu : Control
         var status=PartyStatus.Parse(data);bool leader=status.LeaderId==_localPlayer;
         _startRoom.Disabled=!leader||!status.CanStart;_roomRules.Disabled=!leader||status.Phase!="lobby";
         string leaderName=data.GetProperty("players").EnumerateArray().FirstOrDefault(p=>p.GetProperty("playerId").GetString()==status.LeaderId) is var player&&player.ValueKind==JsonValueKind.Object?player.GetProperty("displayName").GetString()??"Leader":"Leader";
-        _lobbyStatus.Text=status.Phase switch {"starting"=>"Starting the battle…","results"=>"Battle complete — returning to the room…","playing"=>"Battle in progress",_=>leader?status.CanStart?"You are the leader. Start when everyone is here.":"Waiting for another player or CPU rival.":$"Waiting for {leaderName} to start."};
+        _lobbyStatus.Text=status.Phase switch {"starting"=>"Starting the battle...","results"=>"Battle complete — returning to the room...","playing"=>"Battle in progress",_=>leader?status.CanStart?"You are the leader. Start when everyone is here.":"Waiting for another player or CPU rival.":$"Waiting for {leaderName} to start."};
         _partyHint.Text=$"Leader: {leaderName}  •  CPU rivals: {status.Bots}\nShare the room code. Start / + focuses Start game; confirm to begin.";
     }
     private void UpdateStageDescription()
     {
         _background.SelectArena(StageIds[_stage.Selected]);
+        if(_onlineStage!=null){_onlineStage.StageIndex=_stage.Selected;_onlineStage.QueueRedraw();}
         _stageDescription.Text=_stage.Selected switch {0=>"Climb the outer walkways. Send a pumped bomb\nover the ledge. Watch the water below.",1=>"An open arena with pillars and breakable blocks.\nFind an escape before lighting the fuse.",_=>"Fight across three connected terraces.\nUse ramps to move between elevations."};
     }
 }

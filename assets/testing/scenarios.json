@@ -49,6 +49,17 @@
       "manual": false
     },
     {
+      "id": "ui-layout",
+      "method": "UiLayout",
+      "domains": [
+        "ui",
+        "rendering"
+      ],
+      "headless": false,
+      "timeout": 180,
+      "manual": false
+    },
+    {
       "id": "stage-lighting",
       "method": "StageLightingTour",
       "domains": [
@@ -483,6 +494,7 @@
         "first-use-rendering",
         "graphics-settings",
         "advanced-settings",
+        "ui-layout",
         "cover-layout",
         "sandbox",
         "party-polish",

@@ -10,7 +10,7 @@ namespace BlastCircuit.UI;
 public static class ArcadeTheme
 {
     public static readonly Color Ink=new("193560"), Night=new("1d1a3f"), Cream=new("fff6dc"), Sand=new("f2d48c"), Gold=new("ffcf52"),
-        Red=new("ef5a4f"), Pink=new("f184b1"), Aqua=new("4cc3c8"), Indigo=new("3d5aa8"), Muted=new("aab2d8");
+        Red=new("ef5a4f"), Pink=new("f184b1"), Aqua=new("4cc3c8"), Indigo=new("3d5aa8"), Muted=new("aab2d8"), Off=new("bcbdd8");
     public static readonly Color[] Players = [new("f8f6ed"),new("354052"),new("ed5665"),new("7296ee"),new("59bf8c"),new("f0c53d"),new("d581d8"),new("62d4dc")];
     private static Font? _display,_body;
     public static Font Display=>_display??=LoadFont("res://assets/fonts/DelaGothicOne-Regular.ttf");
@@ -36,7 +36,13 @@ public static class ArcadeTheme
         t.SetFont("font","PopupMenu",Display);t.SetFontSize("font_size","PopupMenu",22);
         t.SetColor("font_color","PopupMenu",Ink);t.SetColor("font_hover_color","PopupMenu",Ink);
         t.SetStylebox("panel","PopupMenu",Panel(Cream,Ink,3,12,8));t.SetStylebox("hover","PopupMenu",Panel(Gold,Ink,0,8,8));
-        t.SetColor("font_color","CheckButton",Cream);t.SetColor("font_focus_color","CheckButton",Cream);t.SetColor("font_color","SpinBox",Cream);
+        // Toggles keep one raised key height in both states; the face tint and the drawn switch carry on/off.
+        t.SetStylebox("normal","CheckButton",Key(Off));t.SetStylebox("hover","CheckButton",Key(Off.Lightened(.22f)));
+        t.SetStylebox("pressed","CheckButton",Key(Sand));t.SetStylebox("hover_pressed","CheckButton",Key(Sand.Lightened(.28f)));
+        t.SetStylebox("focus","CheckButton",FocusRing());t.SetStylebox("disabled","CheckButton",Key(new Color("8f93b4"),flat:true));
+        foreach(var state in new[]{"font_color","font_hover_color","font_focus_color"})t.SetColor(state,"CheckButton",new Color(Ink,.78f));
+        foreach(var state in new[]{"font_pressed_color","font_hover_pressed_color"})t.SetColor(state,"CheckButton",Ink);
+        t.SetColor("font_color","SpinBox",Cream);
         t.SetColor("font_color","TooltipLabel",Ink);t.SetStylebox("panel","TooltipPanel",Panel(Cream,Ink,2,8,8));
         return t;
     }

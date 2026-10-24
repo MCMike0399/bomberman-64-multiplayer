@@ -9,6 +9,8 @@ public static class GraphicsQuality
     public static GraphicsPreset Current {get;private set;}=GraphicsPreset.Medium;
     public static int Revision {get;private set;}
     public static Viewport.Msaa Antialiasing=>Current==GraphicsPreset.Low?Viewport.Msaa.Msaa2X:Viewport.Msaa.Msaa4X;
+    /// <summary>Seconds between animated menu-world renders: Low keeps 30 Hz, other presets follow the display.</summary>
+    public static double MenuFrameInterval=>Current==GraphicsPreset.Low?1d/30:0;
     public static GraphicsPreset FromWire(string? value)=>value switch
     { "low"=>GraphicsPreset.Low,"high"=>GraphicsPreset.High,_=>GraphicsPreset.Medium };
     public static string ToWire(GraphicsPreset value)=>value switch

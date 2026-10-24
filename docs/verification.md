@@ -1,3 +1,21 @@
+# UI layout polish and smoother menu characters — v0.26.1 source
+
+2026-10-24: Online, Advanced settings, Settings, Lobby and Results text/fields now
+stay inside their boxes (vector `ArcadeToggle`, fitted arena preview, suit dial,
+standings fitted to the projected 3D board, taller lobby seats, period ellipses).
+Menu character previews and the backdrop render every frame on Medium/High (30 Hz
+on Low) with a shadowed key/fill/rim studio rig. Version **0.26.1/build 30**.
+
+Isolated-VM receipts under `artifacts/playtest/`: the new `ui-layout` scenario plus
+`results`, `menu`, `advanced-settings`, `wasd-navigation`, `setup`, `player-settings`,
+`party-polish`, `network` and `graphics-settings` passed with zero runtime errors
+(pre-bump export); `ui-layout` and `results` passed again on the installed export.
+That build (labelled 0.26.0/29) was installed locally at the user's request: 217
+files matched, strict codesign and LaunchServices smoke (59 snapshots) passed.
+Receipt: `artifacts/ui-polish-install-20261024/`. The 0.26.1 version bump itself
+has not been packaged, published or installed; no bare-metal frame-rate
+measurement or user approval of the look is claimed.
+
 # Graphics presets, native profiling and first-use preparation — source preview
 
 2026-10-24: Low/Medium/High graphics preferences, output-resolution menu worlds,

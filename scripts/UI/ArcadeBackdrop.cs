@@ -26,6 +26,7 @@ public partial class ArcadeBackdrop : RenderSurface
     private Vector2 _parallax;
     private double _clock,_untilDraw;
     private bool _wasResults;
+    private float _boardCenter,_boardHeight;
     private int _graphicsRevision=-1;
     public override void _Ready()
     {
@@ -119,12 +120,28 @@ public partial class ArcadeBackdrop : RenderSurface
     {
         if(_resultsBoard==null)return;
         foreach(var child in _resultsBoard.GetChildren()){_resultsBoard.RemoveChild(child);child.QueueFree();}
-        float height=1.8f+.75f*Math.Clamp(count,3,8),center=6.7f-height/2;
+        // The stage floor hides anything below y≈.5, so large fields get a capped board and denser rows.
+        float height=Math.Min(6.2f,1.8f+.75f*Math.Clamp(count,3,8)),center=6.7f-height/2;
+        _boardCenter=center;_boardHeight=height;
         var navy=Surface("25335f",.38f,.22f);var gold=Surface("c9a257",.3f,.65f);
         ChamferBox(_resultsBoard,new(4,center,.45f),new(11,height,.55f),navy,.16f);
         ChamferBox(_resultsBoard,new(4,center,.76f),new(10.78f,height-.21f,.13f),gold,.12f);
         ChamferBox(_resultsBoard,new(4,center,.85f),new(10.53f,height-.44f,.1f),Surface("343259",.68f),.10f);
         foreach(float x in new[]{-1.13f,9.13f})foreach(float y in new[]{6.33f,6.7f-height+.37f})Sphere(_resultsBoard,new(x,y,.97f),Vector3.One*.11f,Surface("e3c982",.3f,.55f));
+    }
+    /// <summary>The standings board's velvet face in this control's coordinates, inscribed within its perspective outline.</summary>
+    public Rect2? ResultsBoardFace()
+    {
+        if(!Results||_camera==null||_viewport.Size.X<2||_boardHeight<=0)return null;
+        float halfX=10.53f/2-.1f,halfY=(_boardHeight-.44f)/2-.1f;
+        var scale=Size/new Vector2(_viewport.Size.X,_viewport.Size.Y);
+        Vector2 Corner(float x,float y)=>_camera.UnprojectPosition(new Vector3(4+x,_boardCenter+y,.9f))*scale;
+        Vector2 topLeft=Corner(-halfX,halfY),topRight=Corner(halfX,halfY),bottomLeft=Corner(-halfX,-halfY),bottomRight=Corner(halfX,-halfY);
+        float left=Math.Max(topLeft.X,bottomLeft.X),right=Math.Min(topRight.X,bottomRight.X);
+        float top=Math.Max(topLeft.Y,topRight.Y),bottom=Math.Min(bottomLeft.Y,bottomRight.Y);
+        // The theatre floor's front lip sits nearer the camera than the board and can occlude its base.
+        bottom=Math.Min(bottom,_camera.UnprojectPosition(new Vector3(4,.145f,3.55f)).Y*scale.Y);
+        return right>left&&bottom>top?new Rect2(left,top,right-left,bottom-top):null;
     }
     public void SelectArena(string id)
     {
@@ -205,7 +222,7 @@ public partial class ArcadeBackdrop : RenderSurface
             _graphicsRevision=GraphicsQuality.Revision;
         }
         _clock+=delta;_untilDraw+=delta;
-        if(_untilDraw<1d/30)return;float dt=(float)_untilDraw;_untilDraw=0;
+        if(_untilDraw<GraphicsQuality.MenuFrameInterval)return;float dt=(float)Math.Min(_untilDraw,.1);_untilDraw=0;
         for(int i=0;i<_heroes.Count;i++)
         {
             var hero=_heroes[i];hero.Visible=Page=="Modes";

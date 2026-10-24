@@ -95,7 +95,7 @@ public partial class GameRoot : Node3D
             var warmupClock=System.Diagnostics.Stopwatch.StartNew();
             _preparingGraphics=true;
             ScreenName="Loading";_menu.Visible=false;ControllerHub.Current.MenuNavigationEnabled=false;
-            var loading=PreparationOverlay("Getting ready…");
+            var loading=PreparationOverlay("Getting ready...");
             try
             {
                 await EffectWarmup.Draw(this);
@@ -188,7 +188,7 @@ public partial class GameRoot : Node3D
         if(_connecting)throw new InvalidOperationException("A connection is already in progress.");
         ReleaseSession();_menu.SetOnlineAppearance(appearance);_connecting=true;_practice=false;
         var cancellation=new CancellationTokenSource(TimeSpan.FromSeconds(120));_connectCancel=cancellation;
-        ScreenName="Online";_menu.Visible=true;_arena.Visible=false;_hud.Visible=false;_menu.ShowScreen("Online");_menu.SetBusy(true,mode==NetworkMode.QuickPlay?"Searching for players… Cancel to leave the queue.":"Connecting to your battle room…");
+        ScreenName="Online";_menu.Visible=true;_arena.Visible=false;_hud.Visible=false;_menu.ShowScreen("Online");_menu.SetBusy(true,mode==NetworkMode.QuickPlay?"Searching for players... Cancel to leave the queue.":"Connecting to your battle room...");
         try
         {
             var session=await NetworkSession.ConnectAsync(server,name,settings,mode,code,cancellation.Token,appearance);
@@ -341,7 +341,7 @@ public partial class GameRoot : Node3D
         {
             string screen=ScreenName;bool menuVisible=_menu.Visible;var focus=GetViewport().GuiGetFocusOwner();
             _preparingGraphics=true;_menu.Visible=false;ControllerHub.Current.MenuNavigationEnabled=false;
-            var loading=PreparationOverlay("Applying graphics…");
+            var loading=PreparationOverlay("Applying graphics...");
             try {await EffectWarmup.Draw(this);await _arena.PrepareEffects();}
             finally
             {
