@@ -153,7 +153,7 @@ public partial class ArcadeBackdrop : RenderSurface
         var cells=new List<object>();
         for(int z=0;z<layout.Height;z++)for(int x=0;x<layout.Width;x++)
         {
-            var c=layout.Cells[x,z];cells.Add(new {k=(int)c.Kind,t=c.Tier,rf=c.RampFromTier,rt=c.RampToTier,rx=c.RampDX,rz=c.RampDZ});
+            var c=layout.Cells[x,z];cells.Add(new {k=(int)c.Kind,t=c.Tier,rf=c.RampFromTier,rt=c.RampToTier,rx=c.RampDX,rz=c.RampDZ,below=c.Below is {} lower?new {k=(int)lower.Kind,t=lower.Tier,rf=lower.RampFromTier,rt=lower.RampToTier,rx=lower.RampDX,rz=lower.RampDZ}:null});
         }
         var data=JsonSerializer.SerializeToElement(new {id=layout.Id,width=layout.Width,height=layout.Height,cells});
         float scale=8.1f/Math.Max(layout.Width,layout.Height);

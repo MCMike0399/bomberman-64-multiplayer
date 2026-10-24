@@ -171,6 +171,20 @@ Read [the rendering investigation](../history/iteration8-rendering.md) before re
 this shader; its fixed daytime Fresnel tint was superseded by the four lighting
 profiles below. Verify normal and hurry/flood states from more than one camera.
 
+### Up & Down suspended arena (2026-10-24)
+
+[Stage contract](../up-and-down.md), [original references](../up-and-down-research.md).
+`TempleStageView.UpAndDown.cs` builds pale stone piers, recessed square friezes,
+purple perimeter panels and six sloping flights with yellow landing arrows,
+a green summit mosaic, thin suspended links and the low four-panel deck.
+All geometry/materials are original procedural work. Bridge tiles render their
+`below` surfaces separately; no foundation may fill an underpass. Both camera
+fitting and framing checks include lower surfaces and standing headroom.
+The authority's fractional ramp endpoints drive the render slope; visual treads
+sit just above it. The ordinary battle camera remains distinct from oblique
+inspection captures. All four existing lighting profiles and graphics presets
+apply to the new arena.
+
 ### Four stage lighting variants (2026-10-23)
 
 The user requested **Morning, Midday, Afternoon and Night**, selected personally

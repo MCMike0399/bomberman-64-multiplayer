@@ -1,3 +1,10 @@
+if(args.Contains("--up-and-down"))
+{
+    int count=0;
+    UpAndDownChecks.Run((name,check)=>{check();count++;Console.WriteLine("PASS "+name);});
+    Console.WriteLine($"Passed {count} Up & Down integration checks.");return;
+}
+
 if(args.Contains("--snapshot-performance")){SnapshotPerformance.Run(args);return;}
 
 if(args.Contains("--pyramid-ledges")){PyramidLedgeChecks.Run();return;}
@@ -16,6 +23,7 @@ var passed = AdvancedRulesChecks.Run() + ItemExpirationChecks.Run() + RegionalCo
 SnapshotChecks.Run(Run);
 MatchRulesChecks.Run(Run);
 TerrainChecks.Run(Run);
+UpAndDownChecks.Run(Run);
 BotChecks.Run(Run);
 PracticeAndOutcomeChecks.Run(Run);
 ItemsAndHazardsChecks.Run(Run);

@@ -190,18 +190,18 @@ static class GameplaySoakChecks
     {
         var descriptions=new List<string>();
         for(int z=(int)p.Z-1;z<=(int)p.Z+1;z++)for(int x=(int)p.X-1;x<=(int)p.X+1;x++)
-            descriptions.Add($"{x},{z}:{(stage.At(x,z).IsPassable?"floor":"wall")}/h{stage.At(x,z).Tier}/soft{soft.IsAlive(x,z)}");
+            descriptions.Add($"{x},{z}:{(stage.AtHeight(x,z,p.Y).IsPassable?"floor":"wall")}/h{stage.AtHeight(x,z,p.Y).Tier}/soft{soft.IsAlive(x,z)}");
         return string.Join(";",descriptions);
     }
     static int CountCover(SoftBlockGrid soft,StageLayout stage){int count=0;for(int z=0;z<stage.Height;z++)for(int x=0;x<stage.Width;x++)if(soft.IsAlive(x,z))count++;return count;}
     static bool HasSafeExit(BlastPlayer p,BlastSession session,StageLayout stage,NavigationGraph graph,SoftBlockGrid soft,TimedDangerField danger)
     {
-        int cell=graph.Cell(p.X,p.Z);if(cell<0)return false;
+        int cell=graph.Cell(p.X,p.Z,p.Y);if(cell<0)return false;
         for(int d=0;d<4;d++)
         {
             int next=graph.Edges[cell*4+d];if(next<0)continue;
-            int x=next%stage.Width,z=next/stage.Width;
-            if(soft.IsAlive(x,z)||!danger.Safe(next,0,.9f)||session.AiTestBombs.Any(b=>!b.Exploded&&b.CellX==x&&b.CellZ==z))continue;
+            int x=graph.X(next),z=graph.Z(next);
+            if(soft.IsAlive(x,z)||!danger.Safe(next,0,.9f)||session.AiTestBombs.Any(b=>!b.Exploded&&b.CellX==x&&b.CellZ==z&&Math.Abs(b.Tier-graph.Height[next])<.6f))continue;
             if(session.AiTestPlayers.Any(other=>other.Id!=p.Id&&other.Alive&&!other.Ghost&&other.CarriedById==null&&Math.Abs(other.Y-graph.Height[next])<.8f&&(other.X-x-.5f)*(other.X-x-.5f)+(other.Z-z-.5f)*(other.Z-z-.5f)<.85f*.85f))continue;
             return true;
         }

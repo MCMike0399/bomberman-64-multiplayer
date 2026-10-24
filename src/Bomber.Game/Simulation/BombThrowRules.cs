@@ -67,20 +67,25 @@ public static class BombThrowRules
     /// <summary>The same swept static footprint is used by the server and advisory guide.
     /// A wall removes horizontal velocity; gravity and the remaining fuse continue normally.</summary>
     public static ThrowFlight AdvanceStatic(Vector3 position,Vector3 velocity,float dt,Func<float,float,float> surface,
-        Func<int,int,CellKind> cellKind,Func<int,int,bool> hasCover,bool bounce=false,float gravityScale=1)
+        Func<int,int,CellKind> cellKind,Func<int,int,bool> hasCover,bool bounce=false,float gravityScale=1,StageLayout? stage=null)
     {
         var flight=Advance(position,velocity,dt,gravityScale);
+        if(stage is not null)
+        {
+            float ceiling=stage.Ceiling(flight.Position.X,flight.Position.Z,BlastBomb.Radius,position.Y,flight.Position.Y,CoverHeight);
+            if(ceiling<flight.Position.Y)flight=new(new(flight.Position.X,ceiling,flight.Position.Z),new(flight.Velocity.X,Math.Min(0,flight.Velocity.Y),flight.Velocity.Z));
+        }
         int steps=Math.Max(1,(int)MathF.Ceiling(Vector2.Distance(new(position.X,position.Z),new(flight.Position.X,flight.Position.Z))/.1f));
         if(velocity.X==0&&velocity.Z==0)return flight;
         var last=position;
         for(int step=1;step<=steps;step++)
         {
             var candidate=Vector3.Lerp(position,flight.Position,(float)step/steps);
-            if(StaticObstructed(candidate,velocity,surface,cellKind,hasCover))
+            if(StaticObstructed(candidate,velocity,surface,cellKind,hasCover,stage))
             {
                 if(!bounce)return new(new(last.X,flight.Position.Y,last.Z),new(0,flight.Velocity.Y,0));
-                bool hitX=StaticObstructed(new(candidate.X,candidate.Y,last.Z),velocity,surface,cellKind,hasCover);
-                bool hitZ=StaticObstructed(new(last.X,candidate.Y,candidate.Z),velocity,surface,cellKind,hasCover);
+                bool hitX=StaticObstructed(new(candidate.X,candidate.Y,last.Z),velocity,surface,cellKind,hasCover,stage);
+                bool hitZ=StaticObstructed(new(last.X,candidate.Y,candidate.Z),velocity,surface,cellKind,hasCover,stage);
                 if(!hitX&&!hitZ)hitX=hitZ=true;
                 return new(new(last.X,flight.Position.Y,last.Z),new(hitX?-velocity.X:velocity.X,flight.Velocity.Y,hitZ?-velocity.Z:velocity.Z));
             }
@@ -89,7 +94,7 @@ public static class BombThrowRules
         return flight;
     }
     private static bool StaticObstructed(Vector3 position,Vector3 velocity,Func<float,float,float> surface,
-        Func<int,int,CellKind> cellKind,Func<int,int,bool> hasCover)
+        Func<int,int,CellKind> cellKind,Func<int,int,bool> hasCover,StageLayout? stage)
     {
         const float radius=BlastBomb.Radius;
         var centerFloor=surface(position.X,position.Z);
@@ -99,6 +104,7 @@ public static class BombThrowRules
             float nearX=Math.Clamp(position.X,x+.0001f,x+.9999f),nearZ=Math.Clamp(position.Z,z+.0001f,z+.9999f);
             float dx=position.X-nearX,dz=position.Z-nearZ;
             if(dx*dx+dz*dz>=radius*radius)continue;
+            if(stage?.DeckOverlaps(x,z,position.Y,CoverHeight)==true)return true;
             var kind=cellKind(x,z);
             if(kind is CellKind.Water or CellKind.Void)continue;
             bool cover=hasCover(x,z);
@@ -122,17 +128,25 @@ public static class BombThrowRules
     /// <summary>Static scenery only. Players, moving bombs and future changes may interrupt the arc.</summary>
     public static ThrowProjection Project(Vector3 origin,Vector3 velocity,Func<float,float,float> surface,
         Func<Vector3,bool> obstructed,float fuseSeconds=BlastBomb.FuseSeconds,Func<float,float,CellKind>? landingKind=null,
-        Func<int,int,CellKind>? cellKind=null,Func<int,int,bool>? hasCover=null,float? waterLevel=null,float motionRate=1,bool bounce=false,float gravityScale=1,int pumps=0)
+        Func<int,int,CellKind>? cellKind=null,Func<int,int,bool>? hasCover=null,float? waterLevel=null,float motionRate=1,bool bounce=false,float gravityScale=1,int pumps=0,StageLayout? stage=null)
     {
         var points=new List<Vector3>{origin};
         var position=origin;
         bool stopped=false;int bounces=0;
+        float referenceY=position.Y;
+        // Reuse the height-aware callbacks for the whole arc. Recreating captured
+        // delegates per sample would add allocations on every aiming frame.
+        Func<float,float,float> floorAt=(x,z) => stage is null ? surface(x,z) :
+            stage.AtHeight((int)MathF.Floor(x),(int)MathF.Floor(z),referenceY).Kind switch
+            { CellKind.Water => waterLevel ?? -1, CellKind.Void => -1, _ => stage.SurfaceAt(x,z,referenceY) };
+        Func<int,int,CellKind> kindAt=(x,z) => stage is null ? cellKind!(x,z) : stage.AtHeight(x,z,referenceY).Kind;
         for(int tick=0;tick<150;tick++)
         {
+            referenceY=position.Y;
             fuseSeconds-=SimulationStep;
             if(fuseSeconds<=0)return new(points,ThrowProjectionEnd.Fuse);
-            var flight=cellKind is null?Advance(position,velocity,SimulationStep*motionRate,gravityScale):
-                AdvanceStatic(position,velocity,SimulationStep*motionRate,surface,cellKind,hasCover??((x,z)=>false),bounce,gravityScale);
+            var flight=cellKind is null&&stage is null?Advance(position,velocity,SimulationStep*motionRate,gravityScale):
+                AdvanceStatic(position,velocity,SimulationStep*motionRate,floorAt,kindAt,hasCover??((x,z)=>false),bounce,gravityScale,stage);
             stopped|=(velocity.X!=0||velocity.Z!=0)&&flight.Velocity.X==0&&flight.Velocity.Z==0;
             position=flight.Position;velocity=flight.Velocity;
             if(obstructed(position))return new(points,ThrowProjectionEnd.Obstructed);
@@ -141,12 +155,12 @@ public static class BombThrowRules
                 position.Y=level;points.Add(position);
                 return new(points,ThrowProjectionEnd.Water);
             }
-            var floor=cellKind is null?surface(position.X,position.Z):
-                LandingHeight(position.X,position.Z,surface,cellKind,hasCover??((x,z)=>false));
+            var floor=cellKind is null&&stage is null?surface(position.X,position.Z):
+                LandingHeight(position.X,position.Z,floorAt,kindAt,hasCover??((x,z)=>false));
             if(position.Y<=floor)
             {
                 position.Y=floor;points.Add(position);
-                var end=landingKind?.Invoke(position.X,position.Z) switch{
+                var end=(stage is null ? landingKind?.Invoke(position.X,position.Z) : kindAt((int)MathF.Floor(position.X),(int)MathF.Floor(position.Z))) switch{
                     CellKind.Water=>ThrowProjectionEnd.Water,CellKind.Void=>ThrowProjectionEnd.Void,_=>stopped?ThrowProjectionEnd.Obstructed:ThrowProjectionEnd.Landing};
                 if(bounce && pumps>0 && end is not (ThrowProjectionEnd.Water or ThrowProjectionEnd.Void) && CanBounce(bounces,velocity.Y))
                 { bounces++;velocity.Y=BounceVelocity(velocity.Y);continue; }

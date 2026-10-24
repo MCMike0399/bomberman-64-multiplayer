@@ -15,20 +15,14 @@ public sealed partial class BlastSession
         var w = _stage.Width;
         var h = _stage.Height;
         var flat = new object[w * h];
-        for (var z = 0; z < h; z++)
-            for (var x = 0; x < w; x++)
-            {
-                var c = _stage.At(x, z);
-                flat[z * w + x] = new
-                {
-                    k = (int)c.Kind,
-                    t = c.Tier,
-                    rx = c.RampDX,
-                    rz = c.RampDZ,
-                    rf = c.RampFromTier,
-                    rt = c.RampToTier,
-                };
-            }
+        object Cell(CellDef c) => new
+        {
+            k = (int)c.Kind, t = c.Tier, rx = c.RampDX, rz = c.RampDZ,
+            rf = c.RampFromTier, rt = c.RampToTier,
+            below = c.Below is { } lower ? Cell(lower) : null,
+        };
+        for (int z = 0; z < h; z++) for (int x = 0; x < w; x++)
+            flat[z*w+x] = Cell(_stage.At(x,z));
 
         context.Send(playerId, "stage", new
         {
@@ -126,7 +120,7 @@ public sealed partial class BlastSession
             cx = it.CellX,
             cz = it.CellZ,
             type = it.Type, life = it.LifeRemaining, dropped = it.DroppedBy!=null,
-            y = _stage.SurfaceAt(it.X, it.Z),
+            y = _stage.SurfaceAt(it.X, it.Z,it.Tier),
         });
 
         var timeLeft = Math.Max(0, _roundSeconds - _roundTimer);
@@ -142,10 +136,10 @@ public sealed partial class BlastSession
             timeLeft = MathF.Round(timeLeft, 1),
             closedLeft = _closedLeft,
             closedRight = _closedRight,
-            hurryMode = !_suddenDeath || _practice ? "none" : _stage.Id == BlastStages.SunkenTemple ? "water" : "columns",
+            hurryMode = !_suddenDeath || _practice ? "none" : _stage.RisingWater ? "water" : "columns",
             waterLevel = _waterLevel,
-            waterStartsIn = !_practice && _suddenDeath && _stage.Id == BlastStages.SunkenTemple ? Math.Max(0,_roundSeconds-60+FloodRules.RiseDelay-_roundTimer) : -1,
-            waterRiseRate = !_practice && _suddenDeath && _stage.Id == BlastStages.SunkenTemple && _roundTimer >= _roundSeconds-60+FloodRules.RiseDelay ? FloodRules.RisePerSecond : 0,
+            waterStartsIn = !_practice && _suddenDeath && _stage.RisingWater ? Math.Max(0,_roundSeconds-60+FloodRules.RiseDelay-_roundTimer) : -1,
+            waterRiseRate = !_practice && _suddenDeath && _stage.RisingWater && _roundTimer >= _roundSeconds-60+FloodRules.RiseDelay ? FloodRules.RisePerSecond : 0,
             hurryStartsIn = _practice || !_suddenDeath ? -1 : Math.Max(0,_roundSeconds - 60 - _roundTimer),
             players = playerList,
             bombs = bombList,

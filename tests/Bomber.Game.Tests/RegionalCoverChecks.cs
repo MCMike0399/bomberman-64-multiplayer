@@ -43,10 +43,11 @@ internal static class RegionalCoverChecks
                 }
                 else
                 {
-                    Assert(cover.Count(c=>stage.At(c.X,c.Z).Tier==0)>=cover.Count*.7,"Up & Down is overfilled on narrow upper terrain.");
-                    Assert(cover.All(c=>stage.At(c.X,c.Z).Tier<2),"Up & Down summit is cluttered.");
-                    foreach(bool east in new[]{false,true})foreach(bool south in new[]{false,true})Assert(cover.Count(c=>stage.At(c.X,c.Z).Tier==0&&(east?c.X>11:c.X<11)&&(south?c.Z>9:c.Z<9))>=12,"An outer platform lacks its reward pocket.");
-                    Assert(cover.Count is >=75 and <=96,"Up & Down lost its expanded cover budget.");
+                    Assert(cover.Count==12,"Up & Down lost its sparse reference-inspired cover budget.");
+                    Assert(cover.Count(c=>stage.At(c.X,c.Z).Tier==0)==8,"Low reward deck must receive eight cover blocks.");
+                    Assert(cover.Count(c=>c.X<10&&stage.At(c.X,c.Z).Tier==2)==2&&cover.Count(c=>c.X>13&&stage.At(c.X,c.Z).Tier==2)==2,"Middle piers must each receive two blocks.");
+                    Assert(cover.All(c=>stage.At(c.X,c.Z).Below is null&&stage.At(c.X,c.Z).Tier<4),"Cover obstructs a bridge or upper route.");
+
                 }
                 checks++;
             }

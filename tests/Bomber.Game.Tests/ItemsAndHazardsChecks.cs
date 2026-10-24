@@ -17,7 +17,7 @@ internal static class ItemsAndHazardsChecks
             Assert(!FloodRules.Submerged(1,FloodRules.Level(80.99f,120))&&FloodRules.Submerged(1,FloodRules.Level(81,120)),"Floor1 threshold incorrect.");
             var cells=new CellDef[9,9];for(var x=0;x<9;x++)for(var z=0;z<9;z++)cells[x,z]=CellDef.Floor0;
             cells[4,3]=CellDef.Floor1;cells[7,3]=new CellDef {Kind=CellKind.Floor,Tier=4};
-            var arena=new StageLayout {Id="sunken-temple",Width=9,Height=9,Cells=cells,Spawns=[(1,3),(4,3),(7,3)],SoftBlockDensity=0};
+            var arena=new StageLayout {Id="sunken-temple",RisingWater=true,Width=9,Height=9,Cells=cells,Spawns=[(1,3),(4,3),(7,3)],SoftBlockDensity=0};
             var match=new LocalMatch(new MatchOptions {HumanPlayers=3,BotPlayers=0,RoundSeconds=60,Wins=5},arena);
             var waterfallEvents=new HashSet<long>();
             match.Message+=json=>{var data=Data(json);if(data.TryGetProperty("events",out var events))foreach(var e in events.EnumerateArray())if(Kind(e)=="waterfall")waterfallEvents.Add(e.GetProperty("seq").GetInt64());};

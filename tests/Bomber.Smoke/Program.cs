@@ -20,6 +20,7 @@ if (args.Contains("--quick-only")) return;
 await PartyNetworkChecks.Run(new Uri(origin));
 await ProductSessions();
 await NetworkAimChecks.Run(new Uri(origin));
+await UpAndDownNetworkChecks.Run(new Uri(origin));
 await LobbyAppearanceCatchup();
 if (args.Contains("--client-only")) return;
 

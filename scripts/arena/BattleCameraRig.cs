@@ -16,8 +16,15 @@ public sealed class BattleCameraRig(Camera3D camera)
         int i=0;
         foreach(var cell in stage.GetProperty("cells").EnumerateArray())
         {
-            int x=i%width,z=i++/width,kind=cell.GetProperty("k").GetInt32();
-            if(kind is 2 or 3)continue;
+            int x=i%width,z=i++/width;
+            AddCell(cell,x,z);
+        }
+        Fit();
+        void AddCell(JsonElement cell,int x,int z)
+        {
+            if(cell.TryGetProperty("below",out var lower)&&lower.ValueKind==JsonValueKind.Object)AddCell(lower,x,z);
+            int kind=cell.GetProperty("k").GetInt32();
+            if(kind is 2 or 3)return;
             float y=(kind==4?cell.GetProperty("rt"):cell.GetProperty("t")).GetSingle()*TempleStageView.HeightScale;
             foreach(float dx in new[]{0f,1f})foreach(float dz in new[]{0f,1f})
             {
@@ -26,7 +33,6 @@ public sealed class BattleCameraRig(Camera3D camera)
                 _bounds.Add(new(x+dx,y+(kind==1?1.21f:2.1f),z+dz));
             }
         }
-        Fit();
     }
     public void Fit()
     {

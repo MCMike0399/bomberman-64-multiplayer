@@ -1,4 +1,5 @@
 using Godot;
+using Bomber.Game.Simulation;
 using System.Text.Json;
 using static BlastCircuit.Rendering.ArtGeometry;
 using BlastCircuit.Rendering;
@@ -10,6 +11,7 @@ public partial class TempleStageView : Node3D
     public const float HeightScale=1.35f;
     private readonly ArtMaterials _art;
     private JsonElement _cells;
+    public StageLayout Layout {get;private set;} = null!;
     public int Width {get;private set;}
     public int Depth {get;private set;}
     private ShaderMaterial _stone=null!,_cobble=null!,_masonry=null!,_bedrock=null!;
@@ -51,29 +53,20 @@ public partial class TempleStageView : Node3D
         }
     }
     public TempleStageView(ArtMaterials art){_art=art;}
-    public float Surface(float x,float z)
+    public float Surface(float x,float z) => Layout.SurfaceAt(x,z)*HeightScale;
+    public CellKind AimCellKind(float x,float z) => Layout.At((int)MathF.Floor(x),(int)MathF.Floor(z)).Kind;
+    public float AimSurface(float x,float z) => AimCellKind(x,z) switch
     {
-        int cx=Math.Clamp((int)x,0,Width-1),cz=Math.Clamp((int)z,0,Depth-1);
-        var c=_cells[cz*Width+cx];float tier=c.GetProperty("t").GetSingle();
-        if(c.GetProperty("k").GetInt32()==4)
-        {
-            float dx=c.GetProperty("rx").GetSingle(),dz=c.GetProperty("rz").GetSingle();
-            float progress=dx!=0?(dx>0?x-cx:1-(x-cx)):(dz>0?z-cz:1-(z-cz));
-            tier=c.GetProperty("rf").GetSingle()+progress*(c.GetProperty("rt").GetSingle()-c.GetProperty("rf").GetSingle());
-        }
-        return tier*HeightScale;
-    }
-    public Bomber.Game.Simulation.CellKind AimCellKind(float x,float z)
+        CellKind.Water => _targetWater/HeightScale,
+        CellKind.Void => -1,
+        _ => Layout.SurfaceAt(x,z)
+    };
+    private static CellDef ReadCell(JsonElement cell) => new()
     {
-        int cx=(int)MathF.Floor(x),cz=(int)MathF.Floor(z);
-        return cx<0||cz<0||cx>=Width||cz>=Depth?Bomber.Game.Simulation.CellKind.Void:
-            (Bomber.Game.Simulation.CellKind)_cells[cz*Width+cx].GetProperty("k").GetInt32();
-    }
-    public float AimSurface(float x,float z)=>AimCellKind(x,z) switch
-    {
-        Bomber.Game.Simulation.CellKind.Water=>_targetWater/HeightScale,
-        Bomber.Game.Simulation.CellKind.Void=>-1,
-        _=>Surface(x,z)/HeightScale
+        Kind=(CellKind)cell.GetProperty("k").GetInt32(), Tier=cell.GetProperty("t").GetInt32(),
+        RampDX=cell.GetProperty("rx").GetInt32(), RampDZ=cell.GetProperty("rz").GetInt32(),
+        RampFromTier=cell.GetProperty("rf").GetSingle(), RampToTier=cell.GetProperty("rt").GetSingle(),
+        Below=cell.TryGetProperty("below",out var lower)&&lower.ValueKind==JsonValueKind.Object ? ReadCell(lower) : null
     };
     public bool AimHasCover(int x,int z,byte[] cover)
     {
@@ -84,10 +77,14 @@ public partial class TempleStageView : Node3D
     public void Build(JsonElement data)
     {
         Width=data.GetProperty("width").GetInt32();Depth=data.GetProperty("height").GetInt32();_cells=data.GetProperty("cells").Clone();
+        var cells=new CellDef[Width,Depth];
+        for(int z=0;z<Depth;z++)for(int x=0;x<Width;x++)cells[x,z]=ReadCell(_cells[z*Width+x]);
+        Layout=new StageLayout {Id=data.GetProperty("id").GetString()!,Width=Width,Height=Depth,Cells=cells};
         _stone=_art.Stone();_cobble=_art.Stone(true);
         _masonry=_art.Masonry();_bedrock=_art.Bedrock();var wall=_masonry;var cap=_art.Color(new("e8cc82"));
         _water=new MeshInstance3D {Mesh=new PlaneMesh {Size=new Vector2(160,160),SubdivideWidth=180,SubdivideDepth=180},MaterialOverride=_art.Water(),Position=new Vector3(Width/2f,-.53f,Depth/2f),CastShadow=GeometryInstance3D.ShadowCastingSetting.Off};AddChild(_water);
-        bool temple=data.GetProperty("id").GetString()=="sunken-temple";
+        if(Layout.Id==BlastStages.UpAndDown){BuildUpAndDown();return;}
+        bool temple=Layout.Id==BlastStages.SunkenTemple;
         for(int z=0;z<Depth;z++)for(int x=0;x<Width;x++)
         {
             var c=_cells[z*Width+x];int kind=c.GetProperty("k").GetInt32();if(kind is 2 or 3)continue;

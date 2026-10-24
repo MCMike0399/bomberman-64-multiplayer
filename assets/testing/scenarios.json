@@ -2,6 +2,19 @@
   "schemaVersion": 1,
   "scenarios": [
     {
+      "id": "up-and-down",
+      "method": "UpAndDownTour",
+      "domains": [
+        "gameplay",
+        "physics",
+        "rendering",
+        "ai"
+      ],
+      "headless": true,
+      "timeout": 240,
+      "manual": false
+    },
+    {
       "id": "first-use-rendering",
       "method": "FirstUseRendering",
       "domains": [
@@ -496,6 +509,7 @@
         "advanced-settings",
         "ui-layout",
         "cover-layout",
+        "up-and-down",
         "sandbox",
         "party-polish",
         "player-settings",
@@ -556,6 +570,7 @@
       "id": "core-headless",
       "steps": [
         "cover-layout",
+        "up-and-down",
         "sandbox",
         "asset-audit",
         "model-profile",

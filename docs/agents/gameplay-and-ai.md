@@ -212,6 +212,11 @@ and the input guide; older iteration tables are historical.
   Recovery consumes its action edges even on the get-up tick.
 - Ghost latching is finite, follows its victim and supports shake-off reversals.
   Keep ghost nuisance/expiry authoritative; ghost contact can destroy a pickup.
+- `StageLayout.AtHeight`/`SurfaceAt(x,z,y)` select bridge versus underpass from
+  the entity's actual elevation. Navigation uses separate nodes for overlapping
+  floors. `CellDef.Below` is stage-owned geometry, serialized in complete stage
+  messages. Suspended slabs have ceiling, side and blast collision; treating them
+  as solid walls down to the sea removes the confirmed underpasses.
 - `StageLayout.SurfaceAt` and `CanCross`/`CanWalk` in BlastSim are distinct: ramps
   support connected walking; directed downward exits may initiate falling.
 - Water/void tier metadata is not the landing plane. Use actual water/void heights;
@@ -224,14 +229,17 @@ and the input guide; older iteration tables are historical.
 - The user's latest correction supersedes the v0.22 rear barrier: the temple's
   rear edge is an open water pitfall, with no hidden walkway or invisible wall.
   The 25x27 arena has five raised tiers, broader upper platforms, and a larger
-  courtyard. Rock Garden is 23x15; Up & Down is 23x19. More cover supplies the
-  expanded equipment pool. The summit uses a flat mosaic rather than a blocking prop.
+  courtyard. Rock Garden is 23x15. Up & Down is a 24x26 suspended arena with
+  three elevations, six long flights and real underpasses; see the
+  [stage contract](../up-and-down.md). Its twelve cover blocks intentionally
+  replace the former filled terrace layout and 88-block budget. The summit uses a flat mosaic rather than a blocking prop.
 - Ghosts pass through bombs and cannot place, carry, kick, stop, pump, throw or
   detonate them. Movement, finite latching and water/void comeback remain.
 - Default battle rules are first to two wins, 120 total seconds including 60 seconds of
   sudden death. Water begins rising immediately at Hurry; the former 15-second delay is
   superseded. Custom round lengths and sudden-death/ghost toggles remain available.
-- [FloodRules](../../src/Bomber.Game/Simulation/FloodRules.cs) owns flood timing.
+- [FloodRules](../../src/Bomber.Game/Simulation/FloodRules.cs) owns flood timing. Layout `RisingWater` selects this hazard for both Temple and
+  Up & Down; Rock Garden retains closing columns.
   [TempleStageView](../../scripts/arena/TempleStageView.cs) applies render height scale
   (currently 1.35) to authority Y. Decorative bedrock, foam, icons and camera fitting
   cannot add walkable floor, ramps or collision height.
@@ -241,15 +249,17 @@ and the input guide; older iteration tables are historical.
 
 - [Loot placement](../../src/Bomber.Game/Simulation/BlastSession.Loot.cs) uses map-owned
   `CoverAreas`: regional budget shares and cluster centers, with seeded weighted
-  sampling. Each stock map first gets two nearby reachable crates per spawn, then
-  fills its regional quotas without blocking spawn clearance, ramps or reserved lanes.
+  sampling. Temple and Rock Garden first get two nearby reachable crates per spawn, then
+  fill their regional quotas. Up & Down keeps its upper ring clear and puts
+  eight crates on the low deck and two on each middle pier; reaching them requires
+  a deliberate descent. Neither policy blocks spawn clearance, ramps or reserved lanes.
   Every destroyed crate uses the same independent configured drop chance; there are
   no guaranteed opening rewards.
 - Pyramid targets 60% of 90 blocks in the lower court, 15% along the lower wings,
   and a lighter remainder on upper side terraces/base approaches. Its top two tiers
   and ascent stay clear; thin court lanes replace the old broad empty strips.
-  Rock Garden has 110 blocks in balanced pillar regions; Up & Down has 88 in
-  outer-ring/wide-platform pockets, keeping the summit and connectors clear.
+  Rock Garden has 110 blocks in balanced pillar regions. Up & Down has twelve
+  lower/middle blocks, keeping its ring, summit, bridges and flights clear.
 - Advanced match settings (v0.25) default to a uniform independent 55% chance per
   destroyed block. Item weights are Fire/Bomb 30% each, remote/red 7% each, bounce
   6%, fast 4%, heart/Focus/Tiny/Big 3% each, Haste/Slow 2% each. Disabled types are

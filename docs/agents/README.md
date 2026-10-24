@@ -37,6 +37,14 @@ update the current guide rather than silently reviving old behavior.
 
 ## Current decisions that supersede earlier experiments
 
+- Up & Down rebuild (2026-10-24): a suspended upper ring and green crown,
+  two middle piers, a low reward deck, six purple flights, staggered links and
+  real underpasses replace the filled terraces. Twelve cover blocks sit below
+  the ring; sudden death floods upward. [Stage contract](../up-and-down.md),
+  [source research](../up-and-down-research.md). Dimensions, extra spawns and
+  physics remain project tuning.
+
+
 - Repository layout (2026-10-24): Godot code lives in snake_case feature folders
   under `scripts/` with folder-mirroring `BlastCircuit.*` namespaces; the scene is
   `scenes/main.tscn`; shell launchers are in `tools/dev/`; dated iteration notes

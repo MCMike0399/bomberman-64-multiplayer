@@ -70,7 +70,7 @@ public sealed partial class BlastSession
             victim.X=carrier.X;victim.Z=carrier.Z;
         }
         victim.CarriedById=null;victim.HoldRemaining=0;victim.StunTimer=0;victim.KnockdownReason=null;
-        victim.SurfaceY=_stage.SurfaceAt(victim.X,victim.Z);victim.Tier=(int)MathF.Round(victim.Y);
+        victim.SurfaceY=_stage.SurfaceAt(victim.X,victim.Z,victim.Y);victim.Tier=(int)MathF.Round(victim.Y);
         victim.ImpactProtectionTimer=Math.Max(victim.ImpactProtectionTimer,.6f);
         Present("player-release",victim.Id,victim.Id,victim.X,victim.Y,victim.Z,reason:reason,causedBy:carrierId);
     }
@@ -81,9 +81,10 @@ public sealed partial class BlastSession
             {
                 if(!CircleOverlapsCell(x,z,cx,cz))continue;
                 if(EscapingCell(x,z,p,cx,cz))continue;
-                var cell=_stage.At(cx,cz);
+                if(_stage.DeckOverlaps(cx,cz,p.Y,HeadHeight))return true;
+                var cell=_stage.AtHeight(cx,cz,p.Y);
                 if(cell.Kind==CellKind.Pillar||_softBlocks.IsAlive(cx,cz))return true;
-                if(cell.IsPassable&&_stage.SurfaceAt(Math.Clamp(x,cx+.001f,cx+.999f),Math.Clamp(z,cz+.001f,cz+.999f))>p.Y+.02f)return true;
+                if(cell.IsPassable&&_stage.SurfaceAt(Math.Clamp(x,cx+.001f,cx+.999f),Math.Clamp(z,cz+.001f,cz+.999f),p.Y)>p.Y+.02f)return true;
             }
         return false;
     }
@@ -107,9 +108,12 @@ public sealed partial class BlastSession
                     float nx=p.X+p.AirVX*stepDt,nz=p.Z+p.AirVZ*stepDt;
                     if(!AirborneTerrainBlocks(nx,p.Z,p))p.X=nx;
                     if(!AirborneTerrainBlocks(p.X,nz,p))p.Z=nz;
+                    float previousY=p.Y;
                     p.AirVY-=9.8f*stepDt;p.SurfaceY+=p.AirVY*stepDt;
-                    var cell=_stage.At((int)MathF.Floor(p.X),(int)MathF.Floor(p.Z));
-                    float ground=PlayerLandingHeight(p.X,p.Z);
+                    float ceiling=_stage.Ceiling(p.X,p.Z,PlayerRadius,previousY,p.Y,HeadHeight);
+                    if(ceiling<p.Y){p.SurfaceY=ceiling;p.AirVY=Math.Min(0,p.AirVY);}
+                    var cell=_stage.AtHeight((int)MathF.Floor(p.X),(int)MathF.Floor(p.Z),previousY);
+                    float ground=PlayerLandingHeight(p.X,p.Z,previousY);
                     if(p.Y<=ground)
                     {
                         bool falling=p.Falling;p.Airborne=false;p.Falling=false;p.SurfaceY=ground;p.Tier=(int)MathF.Round(ground);
