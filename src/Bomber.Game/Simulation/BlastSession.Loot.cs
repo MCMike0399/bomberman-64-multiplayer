@@ -1,3 +1,5 @@
+// Adapted from burbuja-kernel Example.Blast, MIT (copyright 2026 MCMike0399).
+// Product-owned simulation; original baseline b0758339984bbeead1b3d1236f31e980aaa5f20e.
 using Burbuja.Realtime.Abstractions;
 namespace Bomber.Game.Simulation;
 
@@ -75,5 +77,86 @@ public sealed partial class BlastSession
     {
         if(context.Random.NextDouble()<_advanced.DropPercent/100d)
             DropItem(context,x,z,_stage.At(x,z).Tier);
+    }
+
+    // ─── items ────────────────────────────────────────────────────────────────
+
+    private void DropItem(ISessionContext context, int cx, int cz, int tier, string? guaranteedType = null)
+    {
+        var type = guaranteedType ?? PowerUpRules.ChooseDrop(context.Random,_advanced);
+        if(type is null || !_advanced.Allows(type))return;
+        _items.Add(new BlastItem { Id = NextItemId(), CellX = cx, CellZ = cz, Tier = tier, Type = type, LifeRemaining=_advanced.ItemSeconds });
+    }
+
+    private void TickItems(ISessionContext context)
+    {
+        for (var i = _items.Count - 1; i >= 0; i--)
+        {
+            var item = _items[i];
+            if(item.LifeRemaining>=0){item.LifeRemaining-=(float)context.TickDelta.TotalSeconds;if(item.LifeRemaining<=0){_items.RemoveAt(i);continue;}}
+            item.OwnerLockRemaining=Math.Max(0,item.OwnerLockRemaining-(float)context.TickDelta.TotalSeconds);
+            // Check if any player (or ghost) walks over it.
+            foreach (var p in _players.Values)
+            {
+                if (!p.Alive || p.PendingRoundStart) continue;
+                if (p.Ghost)
+                {
+                    // Ghost touching an item destroys it without effect.
+                    if (p.Tier == item.Tier && Dist2(p.X, p.Z, item.X, item.Z) < PlayerRadius * PlayerRadius)
+                    {
+                        _items.RemoveAt(i);
+                        goto nextItem;
+                    }
+                    continue;
+                }
+                if (!p.Alive || p.Tier != item.Tier || !PowerUpRules.CanCollect(p,item.Type) || item.DroppedBy==p.Id&&item.OwnerLockRemaining>0) continue;
+                if (Dist2(p.X, p.Z, item.X, item.Z) < (PlayerRadius + 0.4f) * (PlayerRadius + 0.4f))
+                {
+                    var replaced=PowerUpRules.Exchange(p,item.Type);
+                    _items.RemoveAt(i);
+                    if(replaced!=null)DropEquipment(p,replaced);
+                    goto nextItem;
+                }
+            }
+            nextItem:;
+        }
+    }
+
+    private static void ApplyItem(BlastPlayer p,string type) => PowerUpRules.Apply(p,type);
+    private void DropEquipment(BlastPlayer player,string type)
+    {
+        _items.Add(new BlastItem {Id=NextItemId(),CellX=(int)MathF.Floor(player.X),CellZ=(int)MathF.Floor(player.Z),Tier=player.Tier,Type=type,LifeRemaining=_advanced.ItemSeconds,DroppedBy=player.Id,OwnerLockRemaining=PowerUpRules.SwapPickupDelay});
+    }
+
+    // ─── soft blocks ─────────────────────────────────────────────────────────
+
+    private void PlaceSoftBlocks(Random rng)
+    {
+        _softBlocks = new SoftBlockGrid(_stage.Width, _stage.Height);
+        _coverLootZones.Clear();
+        if (_stage.FixedSoftBlocks is { } fixedBlocks)
+        {
+            foreach(var cell in fixedBlocks) _softBlocks.Set(cell.Item1,cell.Item2,true);
+            return;
+        }
+        if (_practice) return;
+        var spawnCells = new HashSet<(int, int)>(_stage.Spawns.SelectMany(s =>
+            new[] { (s.X, s.Z), (s.X + 1, s.Z), (s.X - 1, s.Z), (s.X, s.Z + 1), (s.X, s.Z - 1) }));
+
+        var placed = 0;
+        var candidates = new List<(int X,int Z)>();
+        for (var x = 0; x < _stage.Width; x++)
+            for (var z = 0; z < _stage.Height; z++)
+            {
+                var cell = _stage.At(x, z);
+                if (cell.Kind != CellKind.Floor) continue;
+                if (spawnCells.Contains((x, z))) continue;
+                if (_stage.ClearCells.Contains((x, z))) continue;
+                if (new[] { (1, 0), (-1, 0), (0, 1), (0, -1) }.Any(d => _stage.At(x + d.Item1, z + d.Item2).Kind == CellKind.Ramp)) continue;
+                if (_stage.CoverAreas.Count>0) { candidates.Add((x,z)); continue; }
+                if (placed < _stage.MaxSoftBlocks && rng.NextDouble() < _stage.SoftBlockDensity)
+                { _softBlocks.Set(x, z, true); placed++; }
+            }
+        if (_stage.CoverAreas.Count>0) PlaceRegionalCover(rng,candidates);
     }
 }
