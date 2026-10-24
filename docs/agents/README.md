@@ -3,7 +3,7 @@
 The user resumed gameplay work on 2026-10-23 for controller ergonomics, aiming
 and knockdown/blast separation (iteration19). The first eighteen iterations
 remain historical evidence. Iteration20 then rebuilt the walk. Current installed
-runtime: **v0.23.0**; latest published client/server: **v0.24.0**
+runtime: **v0.23.0**; latest published client/server: **v0.25.0**
 (see [verification](../verification.md)). Previous runtime baseline: **v0.18.0**, commit
 `316a330d7d895a92f98c1a60be7d571ec445a8a3`. Later documentation commits may follow.
 Verify the live branch, source, tools and installed version before relying on
@@ -36,7 +36,7 @@ update the current guide rather than silently reviving old behavior.
 
 ## Current decisions that supersede earlier experiments
 
-- v0.25 source: Advanced match settings, independent 55% crate drops without
+- v0.25 delivered: Advanced match settings, independent 55% crate drops without
   guaranteed openings, expiring practice/map items, default five-stack blast/bomb
   caps and temporary Tiny/Big/Haste/Slow effects. The gameplay and input guides
   own the current rules. See verification for delivery status.

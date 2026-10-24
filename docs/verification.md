@@ -37,6 +37,25 @@ Local receipts under `artifacts/iteration25/`:
   The final game suite was rerun after moving the practice pickups and retained
   all 2,705 passing checks (`game-after-pickup-placement.log`).
 
+Delivery completed on 2026-10-24: runtime source
+`daa5f95d55f0c81256e9bd5199ec21a15d74e250` is on main.
+[Verification 40115267087](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40115267087)
+and [signed publication 40115771346](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40115771346)
+succeeded; [v0.25.0 is the stable public release](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.25.0).
+The downloaded update signature, checksums, source/version metadata, 217 Mac
+runtime files and 42 server runtime files were verified. The established shared
+service was updated only after complete lifecycle logs showed no active/waiting
+public or private rooms. It is healthy, with all 42 running files matching the
+public artifact, unchanged network exposure and the previous runtime retained.
+Live production-client checks passed for advanced edits, eight-player rooms,
+manual start, real results/rematch, leadership transfer, movement, bomb actions,
+aiming and reconnect; the temporary operator tunnel was closed afterward.
+Receipts: `public-release/verified-release.json`, `ci-result.json`,
+`publication-result.json`, `server-deploy.log` and `deployed-network.log` beneath
+`artifacts/iteration25/`. The local tested app was archived with all 217 hashes
+verified; identity-checked cleanup removed its temporary launchable export and
+preserved the existing installed app. No manual local installation was requested.
+
 Earlier graphical attempts retained useful failures: the new practice items
 were moved off ramps onto flat ground; the new witness was scoped to the arena
 rather than menu preview models, and waits for accepted pickup snapshots.
