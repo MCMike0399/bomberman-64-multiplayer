@@ -1,3 +1,61 @@
+# PR #1 regression verification — v0.26.2 candidate
+
+2026-10-24: functional verification of the codebase refactor, prepared as
+**0.26.2/build 31**. The tested final export is from `90d71c2`; subsequent
+verification-document edits do not change its runtime. Publication is pending
+the trusted main pipeline at the time of this receipt.
+
+On Apple M5/macOS 26.6.2, Godot 4.7.2 mono, SDK 10.0.400 and kernel `64ec8db`:
+
+| Gate | Observed result |
+| --- | --- |
+| Public contracts and audio | Local suite and GitHub PR check pass, including the new native-startup failure gate |
+| Managed and network | 2,705 game, 145 client, 53 AI, 19 audio and 19 cluster checks; all 36 AI soaks; real 2–8-client HTTP/WebSocket, matchmaking, reconnect and private-party lifecycle checks pass |
+| Headless gameplay | All 21 journeys, 868 assertions pass |
+| Release package | 217-file app, strict signature, native controller startup and 252 exported-app assertions pass |
+| Complete native Metal gameplay | All 41 journeys in catalog order, 2,750 assertions, 257 captures, zero runtime errors/warnings and zero focus retries; approximately 408 seconds including launch |
+| Display | Fullscreen launch, F11 and Alt+Enter transitions pass: 7 assertions, 2 captures |
+| Existing client compatibility | Published v0.26.1 client against the refactored server: 70 assertions, 4 captures, zero runtime errors |
+| Actual updater | Signed fixture feed/download, running-app handoff, successful new launch and failed-launch rollback to v0.26.1 pass |
+
+The complete graphical run covers local/practice sessions, every stage and lighting
+variant, graphics and advanced settings, keyboard and synthetic pad mappings,
+focus/hotplug, terrain, ghosts, all bomb/aim/carry/kick/grapple paths, pickups and
+temporary effects, AI difficulties, flooding, actual results/rematches, and a real
+two-client online journey. Capture review included menus, eight-seat standings,
+character views, aiming overlays, lighting/flooding and combat. The actual audio
+mix was non-silent and unclipped, with zero discarded capture frames. Physical
+inventory found no gamepads; synthetic tests and native backend loading do not
+establish new physical button/rumble coverage or artistic approval.
+
+**Release blocker found and fixed:** a fresh controller build with the macOS 27
+SDK detected `pipe2`, then crashed on macOS 26.6.2 inside libusb initialization.
+The failure reproduced without Godot by calling libusb directly. Both libraries
+now target the app's macOS 14 minimum, and libusb uses its existing `pipe`/`fcntl`
+fallback. A new package gate checks imports/minimum OS and calls actual libusb/SDL
+initialization, including reused libraries. It rejects the original binary;
+the rebuilt backend and full native gameplay pass. No gameplay rules changed.
+
+Native real-time benchmarks at 1920×1200 passed all 47 checks for Low/Medium/High
+menus and actual eight-player combat. An initial comparison against the public
+v0.26.1 archive showed a High-preset difference, but that archive bundles .NET
+10.0.13 while these local builds use 10.0.11. A clean pre-refactor `0a4dba4`
+worktree rebuilt with the same local toolchain and byte-identical controller
+libraries measured 73.5 menu / 42.8 battle FPS on High, versus 73.3 / 44.9 on the
+repeated candidate run. This did not reproduce a refactor-specific slowdown.
+All samples are retained; short-run variation, unavailable Godot GPU counters
+and the different published toolchain prevent stronger performance claims.
+
+Evidence is under ignored `artifacts/pr1-release/`, particularly
+`graphical-native-complete/playtest/20261024T220648.422430Z-all/`,
+`package-native-fix/`, `old-client-new-server/`, `update-integration/`, and the
+four benchmark directories. Earlier failures remain: native startup before the
+fix, unavailable focus on the locked desktop, and an isolated VM run that reached
+AI testing but exhausted its 600-second process budget. The next VM attempt was
+intentionally cancelled when the native desktop became available. The final
+native suite used a 1,200-second budget with unchanged scenarios/assertions and
+an owned ephemeral server; no tests were skipped to obtain the pass.
+
 # Codebase restructure — source verification (no release)
 
 2026-10-24, branch `refactor/codebase-structure`: a pure reorganization (feature
