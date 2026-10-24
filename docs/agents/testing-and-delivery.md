@@ -206,6 +206,13 @@ Actual fullscreen launch likewise does not establish OS Game Mode activation.
 Use the package branch only when shipping changed runtime/assets, not for docs.
 Check toolchain/backend requirements in [macOS packaging](../macos-app.md).
 
+The package gate checks native controller startup even when reusing local libraries.
+Both libraries must target macOS 14 and omit `pipe2`: newer SDKs can detect that
+symbol at link time even when the supported/running OS lacks it. The bootstrap
+selects libusb's `pipe`/`fcntl` fallback, and `check-macos-backend.py` exercises
+actual libusb and SDL gamepad initialization before export. Headless game smoke
+does not initialize that backend and cannot substitute for this check.
+
 ```sh
 python3 tools/qa/run.py --profile package
 python3 tools/qa/run.py --profile graphical --app "artifacts/exports/Blast Circuit.app"

@@ -13,6 +13,11 @@ python3 tools/packaging/package-macos.py
 open "artifacts/exports/Blast Circuit.app"
 ```
 
+For delivery, prefer the `package` QA profile: it also validates native backend
+imports, minimum macOS version and actual libusb/SDL startup before exporting.
+The controller bootstrap targets macOS 14 and disables libusb's unguarded `pipe2`
+path, which newer SDKs can detect even on a host that cannot execute it.
+
 Godot's official 4.7.2 .NET template archive contains Universal 2 binaries. The packaging script makes a project-local ARM64 template with Apple's `lipo`; it leaves the installed template untouched. `export_presets.cfg` selects that generated template. To export through the editor, run the packaging script once to prepare it.
 
 For this build the official archive was downloaded from [Godot's release](https://github.com/godotengine/godot-builds/releases/tag/4.7.2-stable) and verified against its `SHA512-SUMS.txt` before extracting the macOS template. The engine's [macOS export documentation](https://docs.godotengine.org/en/4.7/tutorials/export/exporting_for_macos.html) describes app bundles, signing and notarization.

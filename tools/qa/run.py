@@ -322,6 +322,7 @@ def execute(suite, app=None):
     if suite.profile == 'package':
         app = app or ROOT / 'artifacts/exports/Blast Circuit.app'
         ensure_controller_backend(suite)
+        suite.require('controller-backend-runtime', [sys.executable, 'tools/controllers/check-macos-backend.py', str(ROOT / 'native/macos')])
         suite.require('macos-export', [sys.executable, 'tools/packaging/package-macos.py', '--godot', suite.godot, '--output', str(app)], timeout=600)
         suite.steps.append({'name': 'controller-bundle-audit', 'passed': True, 'seconds': 0,
                             'evidence': controller_files(app / 'Contents/Frameworks/Controllers')})
