@@ -186,8 +186,11 @@ class Suite:
 
     def playtest(self, scenario, origin=None, app=None, headless=False):
         destination = self.output / 'playtest'
+        catalog = json.loads((ROOT / 'assets/testing/scenarios.json').read_text())
+        entry = next(item for item in catalog['scenarios'] if item['id'] == scenario)
+        deadline = entry['timeout']
         command = [sys.executable, 'tools/playtest/run.py', '--scenario', scenario,
-                   '--godot', self.godot, '--timeout', '600', '--output', str(destination),
+                   '--godot', self.godot, '--timeout', str(deadline), '--output', str(destination),
                    '--desktop', self.desktop, '--vm', self.vm]
         if origin:
             command += ['--server', origin]
@@ -195,7 +198,8 @@ class Suite:
             command += ['--app', str(app)]
         if headless:
             command += ['--headless']
-        self.require('playtest-' + scenario, command, timeout=1800 if self.desktop == 'isolated' and not headless else 660,
+        outer_deadline = max(1800, deadline + 60) if self.desktop == 'isolated' and not headless else deadline + 60
+        self.require('playtest-' + scenario, command, timeout=outer_deadline,
                      validate=lambda: validate_playtest(destination, headless))
 
     def finish(self, fatal=None):

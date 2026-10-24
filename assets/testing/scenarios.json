@@ -563,7 +563,7 @@
         "ui"
       ],
       "headless": false,
-      "timeout": 600,
+      "timeout": 900,
       "manual": false
     },
     {

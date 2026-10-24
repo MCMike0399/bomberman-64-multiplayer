@@ -168,7 +168,7 @@ apps after changing this test or its preparation behavior.
 
 ### Registering scenarios
 
-`assets/testing/scenarios.json` is the shared source of truth for Python tooling and native C# dispatch. `python3 tools/playtest/run.py --list` prints the full catalog. `all` is the windowed graphical regression (600-second limit); `core-headless` deliberately omits native UI/window journeys; `package-smoke` checks bundled assets, movement and charge/throw behavior. Manual controller observations remain separate.
+`assets/testing/scenarios.json` is the shared source of truth for Python tooling and native C# dispatch. `python3 tools/playtest/run.py --list` prints the full catalog. `all` is the windowed graphical regression (900-second limit, including the Up & Down traversal/flood journey); `core-headless` deliberately omits native UI/window journeys; `package-smoke` checks bundled assets, movement and charge/throw behavior. Manual controller observations remain separate.
 
 For a new scenario:
 

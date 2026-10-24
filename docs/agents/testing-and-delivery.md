@@ -311,7 +311,11 @@ The initial topology failure is retained in ignored task artifacts.
 `up-and-down` is a real native journey in both `all` and `core-headless`: ordinary
 inputs cross all flights/underpasses, plant beneath the ring, fall into the sea,
 and observe normal three-human play flooding the low and middle levels in order.
-Graphical mode adds battle, oblique and underside inspection captures.
+Graphical mode adds battle, oblique and underside inspection captures. The
+combined graphical suite has a bounded 900-second budget for the longer journey;
+the QA profile reads that deadline from the catalog, retaining outer cleanup
+headroom. The former hardcoded 600 seconds interrupted the extended suite
+after 2,341 passing assertions during verification.
 `framing`, `stage-lighting` and `graphics-settings` retain all-stage coverage.
 These fixtures do not establish original-game numerical physics or physical-pad
 input. See the [stage contract](../up-and-down.md) for the accepted adaptation.
