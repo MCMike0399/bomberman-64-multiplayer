@@ -41,6 +41,11 @@ update the current guide rather than silently reviving old behavior.
   Coordinated sky reflections, water and wet stone shading; the 35% item drop
   chance from v0.23.1 is preserved. See [rendering](visuals-and-animation.md).
 
+- Graphical QA uses an isolated local macOS desktop by default so the developer
+  can keep working. Preserve the complete scenario suite and real guest focus;
+  retain explicit shared-desktop runs for native hardware checks. See
+  [testing](testing-and-delivery.md#own-the-build-desktop-and-server).
+
 - Shared online service (2026-10-23): the server is for all users. Routine
   releases follow [shared-server delivery](../online-server.md); former friends-party
   relay, Wi-Fi and ZIP-sharing checks are conditional historical procedures.

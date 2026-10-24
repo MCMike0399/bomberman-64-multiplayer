@@ -20,6 +20,12 @@ SPEC.loader.exec_module(qa)
 
 
 class HarnessTests(unittest.TestCase):
+    def test_isolated_graphical_profile_uses_guest_server_without_touching_host_listeners(self):
+        suite = Mock(profile='graphical', desktop='isolated', godot='fixture-godot')
+        qa.execute(suite)
+        suite.server.assert_not_called()
+        suite.playtest.assert_called_once_with('all', app=None)
+
     @unittest.skipUnless(os.name == 'posix', 'POSIX process-group cleanup')
     def test_post_reap_zombie_group_permission_error_is_harmless(self):
         process = Mock(pid=12345)

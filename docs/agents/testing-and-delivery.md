@@ -81,12 +81,19 @@ commands use `-m:1`; simultaneous builds in the same checkout can invalidate
 assemblies, imports and evidence. Parallel read-only inspection is safe; use
 isolated checkouts/output paths for independent mutations and builds.
 
-Assign one owner to the graphical desktop. Run one graphical Godot instance at
-a time; the harness takes an exclusive desktop lock. Export/editor launches can
-steal focus, so schedule them outside input trials. Keep the actual game window
-foreground. Native focus loss can invalidate held input while raw axes remain
-correct. The harness retries only proven focus interruptions, from released
-inputs and a fresh session, at most three attempts; functional failures fail.
+On macOS, use the harness's default isolated desktop so the developer can keep
+working. Read [VM setup, execution and evidence limits](../../tools/playtest/README.md#isolated-macos-desktop)
+before provisioning or diagnosing the guest. The real graphical suite runs in
+its own macOS desktop with unchanged focus/input checks. VM startup failure
+fails the run; it never takes over the developer's desktop as a fallback.
+
+Assign one owner per test desktop/VM and one owner for shared builds. Explicit
+`--desktop shared` is for a desktop available for testing or physical-device
+observation; it activates the game and moves that machine's pointer. In either
+mode keep the game foreground **inside its test desktop**. The harness retries
+only proven focus interruptions, from released inputs and a fresh session, at
+most three attempts; functional failures fail. Record guest GPU evidence
+separately from bare-metal performance and physical device evidence.
 
 Native popups have distinct window IDs; use the existing popup helpers and
 canvas-to-screen mouse transforms. Preserve ordinary input/hit testing rather

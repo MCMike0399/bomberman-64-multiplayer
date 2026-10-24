@@ -2,13 +2,90 @@
 
 This drives the real Godot composition root and authoritative simulation through normal product sessions. It never teleports entities or fabricates gameplay screenshots. All assertions are explicit and failing scenarios return nonzero.
 
+On macOS, graphical runs default to a separate local macOS VM so you can keep
+using your desktop. The game still has a real window, Metal renderer and native
+focus inside the guest. `--headless` retains its existing simulation-only meaning.
+See [isolated desktop setup](#isolated-macos-desktop) before the first graphical run.
+
 ```sh
 python3 tools/playtest/run.py --build --start-server --scenario all
 python3 tools/playtest/run.py --scenario ramp --headless
 python3 tools/playtest/run.py --scenario script --script tools/playtest/temple-walk.json
 ```
 
-The default Godot path is the installed macOS .NET editor; override with `--godot` or `GODOT`. Existing healthy kernel servers are reused. `--start-server` starts and later stops a server only when the runner created it. Network scenarios require a real available server and fail if absent.
+The default Godot path is the installed macOS .NET editor; override with `--godot` or `GODOT`. Isolated network tests use their own guest server on a fresh loopback port. On an explicitly shared desktop, existing healthy kernel servers are reused; `--start-server` starts and later stops a server only when the runner created it. Network scenarios require a real available server and fail if absent.
+
+## Isolated macOS desktop
+
+Use an Apple Silicon Mac and a dedicated Tart macOS guest with automatic login,
+the Tart guest agent and Python 3. The initial image download is large; it is
+reused across runs. Install Tart using its [official instructions](https://tart.run/quick-start/),
+then provision once (the implementation was developed against Tart 2.41.1):
+
+```sh
+tart clone ghcr.io/cirruslabs/macos-tahoe-base:latest blast-circuit-qa
+tart set blast-circuit-qa --cpu 4 --memory 8192 --display 1600x1000
+python3 tools/playtest/run.py --scenario menu
+python3 tools/qa/run.py --profile graphical
+```
+
+Set `TART` to the executable if it is outside PATH; `BLAST_QA_VM` or `--vm`
+selects a different **dedicated, stopped** guest. The runner refuses to take over
+a running VM. It boots only while testing, stops its own VM process afterward,
+and never falls back to the user's desktop when startup fails. One lock per VM
+serializes guest ownership. Shared builds/exports still have one owner.
+The runner also recognizes a task-local Tart bundle installed at
+`~/.local/share/blast-circuit-qa/tart.app`; test-artifact cleanup can leave that
+utility and the VM under `~/.tart` intact.
+
+Without `--app`, the runner builds a current self-contained release export with
+the existing package tool. With `--app`, it tests that exact signed bundle.
+Temporary host bundles are removed after the run; file hashes remain in the
+receipt. A read-only payload contains the app, guest launcher, optional script
+and sanitized self-contained server binaries. Only the evidence directory is
+writable from the guest. The checkout, personal home and credentials are not
+mounted. The guest has host-only networking and uses an owned local server;
+custom `--server` URLs require the shared mode.
+
+Tart runs without a host window, clipboard sharing, host audio/microphone or USB
+accessories. Its virtual speaker still lets Godot mix and capture game audio.
+This is **not** Godot `--headless`: the unchanged scenarios exercise real guest
+windows, native focus, ordinary menu hit testing, synthetic production input,
+the renderer and authority. Recording still captures actual frames/audio and
+is encoded and fully decoded on the host. Native raw traces retain guest paths;
+`guest-summary.json` preserves the original summary before screenshot paths are
+translated to local evidence files and checked by the existing validator.
+
+Review `guest-environment.json`, `tested-app-files.json`, `runtime.log`, captures
+and `host-observation.json` alongside the usual receipt. Host observation reads
+foreground/pointer changes and VM resource use, without recording keys,
+clipboard contents, window titles or pointer coordinates. It fails the run if
+the VM itself becomes the host foreground application. Missing measurements are
+reported as errors in that observation, rather than evidence of isolation.
+The runner requires the actual Metal Forward+ startup banner in an isolated
+graphical run. Runtime warnings and optional native-controller backend warnings
+remain visible in the receipt.
+
+Choose a guest OS compatible with the tested app's native libraries. The initial
+macOS 26.6.2 guest rendered the full v0.24 suite successfully, but its loader
+reported that the existing optional libusb binary uses `_pipe2` from macOS 27.
+That guest cannot establish native USB-backend loading. Keep that verification
+on a compatible native test machine or provision a matching guest; preserve the
+warning instead of changing the app or treating synthetic pad checks as hardware
+coverage. [Initial comparison and limits](../../docs/verification.md#isolated-agent-qa--2026-10-24).
+
+| Evidence | What the isolated run establishes |
+| --- | --- |
+| Gameplay, network, menus, focus, synthetic pads | Same scenario catalog, assertions and real product paths inside the guest |
+| Screenshots, movies, audio mix | Actual guest renderer and mixer output; inspect it normally |
+| Native Mac GPU throughput/display behavior | Retain a separate bare-metal run; virtual GPU results do not certify host drivers, HDR or Game Mode |
+| USB/Bluetooth buttons, rumble, physical audio | Retain an explicit physical test on a machine with that device; VM tests do not certify host hardware |
+
+To deliberately use a test machine's current desktop, pass `--desktop shared`
+to either runner. This still activates windows and moves that machine's pointer.
+Use it only when that desktop is available for testing. Physical
+`controller-observe` and `controller-inventory` require this explicit mode. The dedicated graphical CI
+worker uses it as well; provisioning a local VM does not enable a CI runner.
 
 Each run gets a unique artifact directory under `artifacts/playtest/` with `runtime.log`, `runner-summary.json`, `summary.json`, `trace.jsonl` and graphical screenshots. Build/startup logs are included when those actions are requested. The runner records timeout, missing summary, nonzero exit and engine/script/unhandled errors in runtime.log as failures, even when in-engine assertions passed. Graphical runs must produce screenshots. Graphical runs capture actual viewport pixels after a bounded `RenderingServer.FramePostDraw` fence. If a background macOS window stops producing draw callbacks for 500 ms, capture explicitly redraws and synchronizes the real renderer on the main thread before readback; every fallback is recorded in the trace and summary. The network scenario asserts visible host/peer labels and countdown as well as server state. `--headless` intentionally disables screenshots and reports `screenshotMode: disabled-headless`, with every omitted capture recorded in the trace.
 
@@ -69,7 +146,7 @@ QA and debug launches are **windowed by default**. Runner `--fullscreen` explici
 
 Godot native popup menus have their own window ID. Synthetic role-selection keys must use `Input.ParseInputEvent` with `InputEventKey.WindowId = popup.GetWindowId()`. Sending keys to the main window or calling the popup viewport directly can leave the selected item unchanged. The roster scenario opens the actual role control, navigates with arrow keys in that popup window, then confirms with Enter.
 
-Controller event trials explicitly focus the test window and wait for a stable application-focus state. Do not launch a second Godot editor/export process during those trials. Focus-loss suppression is a product feature; bypassing it would hide input-lifecycle regressions. Keep a persistent server running when overlapping network checks, since an independently owned harness server is stopped when that harness exits.
+Controller event trials explicitly focus the test window in the selected desktop and wait for a stable application-focus state. Do not launch another graphical process into that test desktop during those trials. Focus-loss suppression is a product feature; bypassing it would hide input-lifecycle regressions. The isolated guest owns its server for the entire run.
 
 ## Test the standalone macOS app
 
@@ -135,7 +212,7 @@ Both are included in `all`. For long deterministic AI sweeps outside Godot, use 
 
 ### Native focus interruptions
 
-Synthetic controller coverage still uses the production focus guard. On a shared desktop, switching foreground apps invalidates a held-input interval even if the raw stick values remain set. The harness records actual window/application focus loss and restarts that complete controller or aiming-input scenario from released inputs and a fresh session, at most three times. Invalid attempt assertions are excluded from the passing receipt and retained in the trace; functional failures are never retried. Deliberate focus-loss/rearm tests remain in place. Keep the game window foreground during graphical input QA; exhausted focus retries fail explicitly. [Diagnosis and limits](../../docs/iteration15-controller-focus.md).
+Synthetic controller coverage still uses the production focus guard. Switching foreground apps **in the test desktop** invalidates a held-input interval even if raw stick values remain set. Your host desktop is separate during isolated runs. The harness records actual window/application focus loss and restarts that complete controller or aiming-input scenario from released inputs and a fresh session, at most three times. Invalid attempt assertions are excluded from the passing receipt and retained in the trace; functional failures are never retried. Deliberate focus-loss/rearm tests remain in place; exhausted focus retries fail explicitly. [Historical shared-desktop diagnosis](../../docs/iteration15-controller-focus.md).
 
 Mouse click witnesses use the documented screen transform and feed ordinary press/release events as one paired burst before the next rendered frame. Native control hit testing still handles the click. This avoids leaving a synthetic press held across unrelated native pointer-motion events after window resizing; actual screen-transition assertions remain required.
 

@@ -80,8 +80,10 @@ def version(command):
 
 
 class Suite:
-    def __init__(self, profile, output, godot):
+    def __init__(self, profile, output, godot, desktop=None, vm=None):
         self.profile, self.output, self.godot = profile, output, godot
+        self.desktop = desktop or ('isolated' if platform.system() == 'Darwin' else 'shared')
+        self.vm = vm or os.environ.get('BLAST_QA_VM', 'blast-circuit-qa')
         self.steps = []
         self.started = time.monotonic()
         self.provenance = {
@@ -184,14 +186,15 @@ class Suite:
     def playtest(self, scenario, origin=None, app=None, headless=False):
         destination = self.output / 'playtest'
         command = [sys.executable, 'tools/playtest/run.py', '--scenario', scenario,
-                   '--godot', self.godot, '--timeout', '600', '--output', str(destination)]
+                   '--godot', self.godot, '--timeout', '600', '--output', str(destination),
+                   '--desktop', self.desktop, '--vm', self.vm]
         if origin:
             command += ['--server', origin]
         if app:
             command += ['--app', str(app)]
         if headless:
             command += ['--headless']
-        self.require('playtest-' + scenario, command, timeout=660,
+        self.require('playtest-' + scenario, command, timeout=1800 if self.desktop == 'isolated' and not headless else 660,
                      validate=lambda: validate_playtest(destination, headless))
 
     def finish(self, fatal=None):
@@ -324,6 +327,8 @@ def execute(suite, app=None):
         suite.playtest('package-smoke', app=app, headless=True)
     elif suite.profile == 'headless':
         suite.playtest('core-headless', headless=True, app=app)
+    elif suite.desktop == 'isolated':
+        suite.playtest('all', app=app)
     else:
         with suite.server() as origin:
             suite.playtest('all', origin=origin, app=app)
@@ -335,6 +340,9 @@ def main(argv=None):
     parser.add_argument('--output', type=Path)
     parser.add_argument('--godot', default=os.environ.get('GODOT', '/Applications/Godot_mono.app/Contents/MacOS/Godot'))
     parser.add_argument('--app', type=Path)
+    parser.add_argument('--desktop', choices=('isolated', 'shared'),
+                        help='macOS graphical QA defaults to an isolated VM; shared explicitly takes the host desktop')
+    parser.add_argument('--vm', help='Dedicated stopped Tart VM (default: BLAST_QA_VM or blast-circuit-qa)')
     args = parser.parse_args(argv)
     stamp = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%S.%fZ')
     output = (args.output or ROOT / 'artifacts/qa' / (stamp + '-' + args.profile)).resolve()
@@ -345,7 +353,7 @@ def main(argv=None):
         output = output / ('rejected-' + stamp)
         fatal = 'Requested QA output was not empty; use a fresh path for every run'
     output.mkdir(parents=True, exist_ok=True)
-    suite = Suite(args.profile, output, args.godot)
+    suite = Suite(args.profile, output, args.godot, args.desktop, args.vm)
     try:
         if not fatal:
             execute(suite, app=args.app.resolve() if args.app else None)

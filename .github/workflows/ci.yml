@@ -142,7 +142,7 @@ jobs:
           KERNEL_DEPLOY_KEY: ${{ secrets.KERNEL_DEPLOY_KEY }}
           GITHUB_METADATA_TOKEN: ${{ github.token }}
         run: python3 tools/ci/bootstrap_kernel.py
-      - run: python3 tools/qa/run.py --profile graphical
+      - run: python3 tools/qa/run.py --profile graphical --desktop shared
         env:
           GODOT: /Applications/Godot_mono.app/Contents/MacOS/Godot
       - if: always()

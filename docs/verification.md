@@ -1,3 +1,54 @@
+# Isolated agent QA — 2026-10-24
+
+Graphical macOS QA now runs the unmodified exported game in a dedicated local
+macOS VM. Native focus, mouse hit testing, production input, actual Metal
+Forward+ rendering and the existing assertions remain active inside that desktop.
+The host has no VM window, input capture, clipboard sharing or audio pass-through.
+The guest uses 4 CPU cores / 8 GiB RAM and stops after each run. A separate
+explicit `--desktop shared` mode retains native hardware verification on a test
+machine. No production service or installed game was changed.
+
+The v0.24 exported app completed the same **37 scenario leaves**, **2,425
+assertions**, **225 captures** and **zero runtime errors**, including actual
+HTTP/WebSocket play against an owned, self-contained guest server and real audio
+mix capture. Source authority, input and rendering code and the scenario catalog
+were unchanged. The recent native baseline had 2,426 assertions: its bounded
+network loop received one extra peer snapshot and repeated the same lighting
+assertion. Both runs asserted that comparison and peer movement; the alternate
+lighting preference varied with the server's selected lighting. No scenario or
+assertion path was removed.
+
+The guest runner took **235.169 seconds**, versus **232.049 seconds** for the
+recent native baseline (different sessions, not a controlled GPU benchmark).
+The host observer recorded 229 samples, 26 pointer changes, no VM foreground
+activation and a minimum 34% system-wide free-memory reading. Launcher process
+RSS/CPU values are not total guest resource usage. The user reported normal work
+with no interruption or noticeable slowdown. Menu, night-stage and network
+captures were visually inspected; this is not new artistic approval.
+
+Receipts are under `artifacts/isolated-qa/`: `graphical/summary.json`,
+`graphical/playtest/20261024T124419.329218Z-all/`,
+`native-baseline.json` and `coverage-comparison.json`. The separate menu trial
+passed 30 checks / 7 captures; real fullscreen toggles passed 7 checks / 2 captures.
+The walk recording passed 52 checks / 5 captures and exported a 19.4-second
+30 FPS MP4 whose 582 frames were fully decoded. Sampled video frames were
+visually inspected. The default source-export path also passed 30 menu checks /
+7 captures and cleaned up its temporary bundle. Public tooling/audio checks and
+workflow lint also passed. Failure receipts retain the initial signature
+copy issue; using `ditto` preserves the macOS signing metadata. The actual image
+was independently verified against OCI manifest
+`sha256:4aaa751fa7538902d73c767f27a066fc87e83f183069da4e4b5022863abd4c77`;
+the standard downloader failed, and a checksum-verified HTTP/1.1 transfer
+completed it. This was a one-time setup operation, not a new runtime dependency.
+
+Limits: the guest is macOS **26.6.2**, using **Apple Paravirtual device (Apple5)**.
+The existing optional USB library needs `_pipe2` from macOS 27 and reports a
+loader warning in this guest. Synthetic controller tests still pass; USB backend
+loading, physical buttons/rumble, native GPU/display performance and physical
+speaker output require compatible native hardware checks. Those paths remain
+available explicitly; VM receipts do not certify them. The default fails if the
+VM is unavailable rather than taking over the developer's desktop.
+
 # v0.24.0 stage lighting — delivered, 2026-10-23
 
 All three stages now support **Morning, Midday, Afternoon and Night**. Settings →

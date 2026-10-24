@@ -134,7 +134,10 @@ restoration requires a fresh neutral/rearm interval before held actions resume.
 Hotplug must preserve unaffected seats and clear disconnected-device state.
 P2 Ctrl/Enter/Backspace presses must select P2 prompts, not P1 labels.
 
-Native harnesses require real foreground focus. Their bounded focus retries
+Native harnesses require real foreground focus in their test desktop. The
+default macOS VM provides that desktop independently of the user's active apps;
+see [isolated QA](../../tools/playtest/README.md#isolated-macos-desktop).
+Their bounded focus retries
 restart the whole interrupted scenario from released controls and a fresh
 session; functional failures remain failures. Keep invalid-attempt evidence.
 For popup tests, reach a known endpoint with real keys before testing the next

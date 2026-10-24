@@ -32,6 +32,11 @@ These jobs accept only main pushes and manual dispatches of main. There is no `p
 
 ## Graphical runner requirements
 
+Developer macOS runs default to the [isolated local desktop](../tools/playtest/README.md#isolated-macos-desktop).
+The dedicated CI desktop explicitly passes `--desktop shared`, retaining native
+hardware coverage without nesting a VM. This does not change runner registration
+or enable the optional graphical job.
+
 The optional job selects `[self-hosted, macOS, ARM64, blast-metal]`. It needs a logged-in Aqua session with an active display and working Metal, the exact Godot 4.7.2 .NET editor at `/Applications/Godot_mono.app`, Python 3.11+, and .NET 10. Use a dedicated disposable runner, not a developer's everyday login. Avoid concurrent graphical sessions and provide enough disk space for captures; runner job timeout is 30 minutes. The optional USB controller libraries and physical controllers are separate capabilities and are not silently inferred from simulated controller checks.
 
 GitHub warns against self-hosted runners in public repositories because PRs can alter workflow code. A job's main-only `if` condition is not a security boundary against a modified workflow. Before registering this runner, require approval for **all** outside-contributor workflow runs and use an isolated, ephemeral machine with no personal files, persistent credentials or access to production/private networks. Where available, restrict an organization runner group to the selected trusted workflow. If those controls cannot be enforced, keep `MACOS_QA_ENABLED` unset and run graphical QA locally instead. This change does not register or provision a runner. See [GitHub's secure-use guidance](https://docs.github.com/en/actions/reference/security/secure-use) and [runner setup constraints](https://docs.github.com/en/actions/how-tos/manage-runners/self-hosted-runners/add-runners).

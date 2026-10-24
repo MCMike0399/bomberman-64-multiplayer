@@ -59,6 +59,10 @@ def healthy(origin):
 
 
 def main():
+    # QA/agent cancellation must unwind the VM and owned processes as well as Ctrl-C.
+    def cancelled(signum, frame):
+        raise KeyboardInterrupt('Playtest cancelled by signal ' + str(signum))
+    signal.signal(signal.SIGTERM, cancelled)
     parser = argparse.ArgumentParser(description=__doc__)
     scenarios = catalog()
     parser.add_argument('--scenario', choices=list(scenarios), default='all')
@@ -66,6 +70,8 @@ def main():
     parser.add_argument('--ffmpeg', default=os.environ.get('FFMPEG', 'ffmpeg'), help='FFmpeg executable for --record export and decode validation')
     parser.add_argument('--script', type=Path, help='JSON scenario, see temple-walk.json')
     parser.add_argument('--record', action='store_true', help='Record actual gameplay at 30 FPS and export a validated MP4; requires ffmpeg')
+    parser.add_argument('--desktop', choices=('isolated', 'shared'), default='isolated' if platform.system() == 'Darwin' else 'shared', help='Graphical macOS QA uses a private VM by default; shared explicitly uses your desktop')
+    parser.add_argument('--vm', default=os.environ.get('BLAST_QA_VM', 'blast-circuit-qa'), help='Stopped dedicated Tart VM for isolated graphical QA')
     parser.add_argument('--headless', action='store_true', help='Explicitly disable screenshot capture')
     display = parser.add_mutually_exclusive_group()
     display.add_argument('--windowed', action='store_true', help='Use windowed testing (the default)')
@@ -94,6 +100,8 @@ def main():
         parser.error('--scenario fullscreen requires a graphical fullscreen launch')
     if args.record and args.headless:
         parser.error('--record requires graphical rendering')
+    if (scenarios[args.scenario].get('manual') or args.scenario == 'controller-inventory') and args.desktop == 'isolated' and not args.headless:
+        parser.error('Physical controller inventory/observation requires --desktop shared on the device test machine; VM devices do not prove host controller support')
     if args.record and not shutil.which(args.ffmpeg):
         parser.error('--record requires ffmpeg; set --ffmpeg or FFMPEG')
     windowed = args.headless or not (args.fullscreen or args.scenario == 'fullscreen')
@@ -114,53 +122,58 @@ def main():
         revision = subprocess.run(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True, capture_output=True)
         result['revision'] = revision.stdout.strip() if revision.returncode == 0 else 'unavailable'
         result['dirtyWorktree'] = subprocess.run(['git', 'diff', '--quiet'], cwd=ROOT).returncode != 0
-        if not args.headless and os.name == 'posix':
-            import fcntl
-            graphical_lock = open(Path(tempfile.gettempdir()) / ('blast-circuit-qa-' + str(os.getuid()) + '.lock'), 'a')
-            try:
-                fcntl.flock(graphical_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            except BlockingIOError:
-                raise RuntimeError('Another graphical playtest owns the desktop. Run graphical scenarios sequentially.')
-        if args.build:
-            with (folder / 'build.log').open('w') as build_log:
-                for project in ['Bomberman64Multiplayer.csproj', 'src/Bomber.Server/Bomber.Server.csproj']:
-                    subprocess.run(['dotnet', 'build', project, '--nologo', '-m:1'], cwd=ROOT, stdout=build_log, stderr=subprocess.STDOUT, check=True, timeout=90)
-        needs_network = 'network' in expanded(args.scenario, scenarios)
-        if needs_network and not healthy(args.server):
-            if not args.start_server:
-                raise RuntimeError('Authoritative server is unavailable; start scripts/server.sh or use --start-server')
-            server_log = (folder / 'server.log').open('w')
-            owned_server = subprocess.Popen(['dotnet', 'src/Bomber.Server/bin/Debug/net10.0/Bomber.Server.dll', '--urls', args.server], cwd=ROOT, stdout=server_log, stderr=subprocess.STDOUT, start_new_session=True)
-            deadline = time.monotonic() + 15
-            while not healthy(args.server):
-                if owned_server.poll() is not None or time.monotonic() > deadline:
-                    raise RuntimeError('Server startup failed; inspect server.log')
-                time.sleep(.1)
-        if args.app:
-            import plistlib
-            app = args.app.resolve()
-            with (app / 'Contents/Info.plist').open('rb') as plist:
-                executable = plistlib.load(plist)['CFBundleExecutable']
-            command = [str(app / 'Contents/MacOS' / executable)]
+        if not args.headless and args.desktop == 'isolated':
+            from isolated import run as run_isolated
+            run_isolated(args, folder, result, 'network' in expanded(args.scenario, scenarios), windowed)
         else:
-            command = [args.godot, '--path', str(ROOT)]
-        command += ['--max-fps', '30', '--fixed-fps', '30', '--disable-vsync']
-        if args.record:
-            command += ['--write-movie', str(folder / 'gameplay.avi')]
-        if windowed:
-            command.append('--windowed')
-        if args.headless:
-            command.append('--headless')
-        command += ['--', '--playtest=' + args.scenario, '--playtest-output=' + str(folder), '--playtest-server=' + args.server]
-        if windowed:
-            command.append('--display-windowed')
-        if args.script:
-            command.append('--playtest-file=' + str(args.script.resolve()))
-        result['command'] = command
-        with (folder / 'runtime.log').open('w') as log:
-            runtime = subprocess.Popen(command, cwd=folder if args.app else ROOT, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
-            runtime.wait(timeout=args.timeout)
-        result['exitCode'] = runtime.returncode
+            result['desktop'] = {'mode': 'headless' if args.headless else 'shared'}
+            if not args.headless and os.name == 'posix':
+                import fcntl
+                graphical_lock = open(Path(tempfile.gettempdir()) / ('blast-circuit-qa-' + str(os.getuid()) + '.lock'), 'a')
+                try:
+                    fcntl.flock(graphical_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                except BlockingIOError:
+                    raise RuntimeError('Another graphical playtest owns the desktop. Run graphical scenarios sequentially.')
+            if args.build:
+                with (folder / 'build.log').open('w') as build_log:
+                    for project in ['Bomberman64Multiplayer.csproj', 'src/Bomber.Server/Bomber.Server.csproj']:
+                        subprocess.run(['dotnet', 'build', project, '--nologo', '-m:1'], cwd=ROOT, stdout=build_log, stderr=subprocess.STDOUT, check=True, timeout=90)
+            needs_network = 'network' in expanded(args.scenario, scenarios)
+            if needs_network and not healthy(args.server):
+                if not args.start_server:
+                    raise RuntimeError('Authoritative server is unavailable; start scripts/server.sh or use --start-server')
+                server_log = (folder / 'server.log').open('w')
+                owned_server = subprocess.Popen(['dotnet', 'src/Bomber.Server/bin/Debug/net10.0/Bomber.Server.dll', '--urls', args.server], cwd=ROOT, stdout=server_log, stderr=subprocess.STDOUT, start_new_session=True)
+                deadline = time.monotonic() + 15
+                while not healthy(args.server):
+                    if owned_server.poll() is not None or time.monotonic() > deadline:
+                        raise RuntimeError('Server startup failed; inspect server.log')
+                    time.sleep(.1)
+            if args.app:
+                import plistlib
+                app = args.app.resolve()
+                with (app / 'Contents/Info.plist').open('rb') as plist:
+                    executable = plistlib.load(plist)['CFBundleExecutable']
+                command = [str(app / 'Contents/MacOS' / executable)]
+            else:
+                command = [args.godot, '--path', str(ROOT)]
+            command += ['--max-fps', '30', '--fixed-fps', '30', '--disable-vsync']
+            if args.record:
+                command += ['--write-movie', str(folder / 'gameplay.avi')]
+            if windowed:
+                command.append('--windowed')
+            if args.headless:
+                command.append('--headless')
+            command += ['--', '--playtest=' + args.scenario, '--playtest-output=' + str(folder), '--playtest-server=' + args.server]
+            if windowed:
+                command.append('--display-windowed')
+            if args.script:
+                command.append('--playtest-file=' + str(args.script.resolve()))
+            result['command'] = command
+            with (folder / 'runtime.log').open('w') as log:
+                runtime = subprocess.Popen(command, cwd=folder if args.app else ROOT, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
+                runtime.wait(timeout=args.timeout)
+            result['exitCode'] = runtime.returncode
         summary_path = folder / 'summary.json'
         if not summary_path.exists():
             raise RuntimeError('Godot did not write summary.json; inspect runtime.log for compile/launch errors')
@@ -169,12 +182,20 @@ def main():
         result['runtimeErrorCount'] = len(runtime_errors)
         runtime_errors = list(dict.fromkeys(runtime_errors))
         result['runtimeErrors'] = runtime_errors
+        result['runtimeWarnings'] = list(dict.fromkeys(
+            line for line in runtime_text.splitlines() if re.search(r'(^|\s)WARNING:', line)))
+        result['coverageWarnings'] = [line for line in result['runtimeWarnings']
+                                      if 'Optional Switch 2 USB backend:' in line]
+        result['renderer'] = next((line for line in runtime_text.splitlines()
+                                   if 'Using Device #' in line), None)
         summary = json.loads(summary_path.read_text())
         receipt_errors = validate_summary(summary, folder, args.scenario, args.headless)
+        if not args.headless and args.desktop == 'isolated' and not re.match(r'^Metal .*Forward\+', result['renderer'] or ''):
+            receipt_errors.append('Isolated guest did not use the project\'s Metal Forward+ renderer; inspect runtime.log')
         result['errors'].extend(receipt_errors)
         result['assertions'] = summary['assertions']
         result['screenshots'] = len(summary['screenshots'])
-        result['passed'] = runtime.returncode == 0 and summary['passed'] and summary['assertions'] > 0 and not runtime_errors and not receipt_errors
+        result['passed'] = result['exitCode'] == 0 and summary['passed'] and summary['assertions'] > 0 and not runtime_errors and not receipt_errors
         if runtime_errors:
             result['errors'].append('Runtime log contains engine/script errors; inspect runtimeErrors and runtime.log')
         if not args.headless and not summary['screenshots']:
@@ -193,9 +214,9 @@ def main():
             (folder / 'recording.json').write_text(json.dumps(result['recording'], indent=2) + '\n')
         if not result['passed']:
             result['errors'].append(summary.get('failure') or 'One or more required runtime, screenshot or assertion checks failed')
-    except Exception as error:
+    except (Exception, KeyboardInterrupt) as error:
         result['passed'] = False
-        result['errors'].append(str(error))
+        result['errors'].append(str(error) or type(error).__name__)
     finally:
         for process in (runtime, owned_server):
             if process:
