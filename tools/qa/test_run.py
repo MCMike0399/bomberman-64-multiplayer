@@ -142,6 +142,18 @@ class HarnessTests(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, 'incomplete'):
                     qa.ensure_controller_backend(suite)
 
+    def test_package_rejects_native_startup_failure_before_export(self):
+        suite = Mock(profile='package', godot='fixture-godot')
+        def require(name, command, **kwargs):
+            if name == 'controller-backend-runtime':
+                raise RuntimeError('native startup failed')
+        suite.require.side_effect = require
+        with patch.object(qa, 'ensure_controller_backend'):
+            with self.assertRaisesRegex(RuntimeError, 'native startup failed'):
+                qa.execute(suite)
+        self.assertNotIn('macos-export', [call.args[0] for call in suite.require.call_args_list])
+        suite.playtest.assert_not_called()
+
     def suite(self, destination):
         with patch.object(qa, 'version', return_value='fixture'):
             return qa.Suite('public', Path(destination), 'missing-godot-fixture')

@@ -176,7 +176,7 @@ def main():
             needs_network = 'network' in expanded(args.scenario, scenarios)
             if needs_network and not healthy(args.server):
                 if not args.start_server:
-                    raise RuntimeError('Authoritative server is unavailable; start scripts/server.sh or use --start-server')
+                    raise RuntimeError('Authoritative server is unavailable; start tools/dev/server.sh or use --start-server')
                 server_log = (folder / 'server.log').open('w')
                 owned_server = subprocess.Popen(['dotnet', 'src/Bomber.Server/bin/Debug/net10.0/Bomber.Server.dll', '--urls', args.server], cwd=ROOT, stdout=server_log, stderr=subprocess.STDOUT, start_new_session=True)
                 deadline = time.monotonic() + 15

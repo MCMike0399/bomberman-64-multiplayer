@@ -66,7 +66,7 @@ def prepare(args, payload, folder, network, windowed):
             subprocess.run(['ditto', str(args.app.resolve()), str(app)],
                            stdout=log, stderr=subprocess.STDOUT, check=True, timeout=60)
         else:
-            subprocess.run([os.sys.executable, str(ROOT / 'tools/package-macos.py'),
+            subprocess.run([os.sys.executable, str(ROOT / 'tools/packaging/package-macos.py'),
                             '--godot', args.godot, '--output', str(app)], cwd=ROOT,
                            stdout=log, stderr=subprocess.STDOUT, check=True, timeout=600)
         subprocess.run(['codesign', '--verify', '--deep', '--strict', str(app)],

@@ -2,3 +2,13 @@ root = true
 
 [*]
 charset = utf-8
+end_of_line = lf
+
+# Indentation already used by the checked-in sources and tooling.
+[*.{cs,py}]
+indent_style = space
+indent_size = 4
+
+[*.{sh,json,yml,yaml,csproj,props}]
+indent_style = space
+indent_size = 2

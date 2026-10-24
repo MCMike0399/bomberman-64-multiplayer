@@ -36,9 +36,9 @@ For keys, prompts and device input, read [input and UI](input-and-ui.md).
   Keep game fixes in this repository's product simulation; preserve its MIT provenance.
 - Authority is 30 Hz; complete snapshots arrive at 15 Hz. Await accepted state rather
   than assuming two rendered frames equal two new snapshots.
-- [GameRoot](../../scripts/GameRoot.cs) composes sessions and input;
-  [ArenaView](../../scripts/ArenaView.cs) renders accepted state.
-  [SnapshotMotion](../../scripts/Rendering/SnapshotMotion.cs) smooths presentation.
+- [GameRoot](../../scripts/app/GameRoot.cs) composes sessions and input;
+  [ArenaView](../../scripts/arena/ArenaView.cs) renders accepted state.
+  [SnapshotMotion](../../scripts/arena/SnapshotMotion.cs) smooths presentation.
   Render interpolation, animation and camera work cannot fix authoritative collision.
 - Inputs express intent, never positions/hits. Maintain local/network input queues,
   snapshot fields and validation together when extending a gameplay action.
@@ -103,7 +103,7 @@ latter must run against the exact staged server before remote deployment.
 ## Bomb actions: preserve both input paths
 
 `A`, `B`, `R` below mean semantic primary, carry and remote actions, not physical keys.
-Current bindings belong to [PlayerControls](../../scripts/PlayerControls.cs), the README
+Current bindings belong to [PlayerControls](../../scripts/input_devices/PlayerControls.cs), the README
 and the input guide; older iteration tables are historical.
 
 - [BombActions](../../src/Bomber.Game/Simulation/BlastSession.BombActions.cs) owns
@@ -125,7 +125,7 @@ and the input guide; older iteration tables are historical.
   carry release. Preserve `CarryFromPrimary` and edge consumption for both paths.
 - Placement rejection publishes `bomb-blocked` for capacity/space feedback. Diagnose
   input acceptance, inventory, support and overlap before changing offsets or radii.
-  [Placement regression](../iteration12-bombs-research.md),
+  [Placement regression](../history/iteration12-bombs-research.md),
   [action checks](../../tests/Bomber.Game.Tests/BombActionsChecks.cs),
   [placement checks](../../tests/Bomber.Game.Tests/BombPlacementChecks.cs).
 
@@ -150,7 +150,7 @@ and the input guide; older iteration tables are historical.
 - The endpoint renders shapes only: safe landing ring, warning X, offscreen arrow.
   `EndpointLabel` is diagnostic metadata, not visible text. Match/phase gating and
   explicit hide-before-QueueFree prevent a carrier's overlay surviving into Results.
-  [Reticle diagnosis](../iteration17-reticle.md), [aim rules](../iteration16-aim.md).
+  [Reticle diagnosis](../history/iteration17-reticle.md), [aim rules](../history/iteration16-aim.md).
 - Timed bombs pause their fuse while carried and resume afterward. Stopping a normal
   bomb against a corner must retain its fuse; wall contact never grants remote mode.
 - Blue remotes wait while their owner can command them. Losing owner/connection,
@@ -232,10 +232,10 @@ and the input guide; older iteration tables are historical.
   sudden death. Water begins rising immediately at Hurry; the former 15-second delay is
   superseded. Custom round lengths and sudden-death/ghost toggles remain available.
 - [FloodRules](../../src/Bomber.Game/Simulation/FloodRules.cs) owns flood timing.
-  [TempleStageView](../../scripts/Rendering/TempleStageView.cs) applies render height scale
+  [TempleStageView](../../scripts/arena/TempleStageView.cs) applies render height scale
   (currently 1.35) to authority Y. Decorative bedrock, foam, icons and camera fitting
   cannot add walkable floor, ramps or collision height.
-  [Travel/water diagnosis](../iteration11-kick-research.md).
+  [Travel/water diagnosis](../history/iteration11-kick-research.md).
 
 ## Inventory, cover and pickup rendering
 
@@ -283,7 +283,7 @@ and the input guide; older iteration tables are historical.
 - Inventory caps, exclusive modes and pickup counters belong to PowerUpRules and
   authority item processing. New cover rewards survive their revealing explosion;
   test through the full fuse/hazard lifetime before collecting.
-- [PowerupModel](../../scripts/Rendering/PowerupModel.cs) separates icon geometry from
+- [PowerupModel](../../scripts/arena/models/PowerupModel.cs) separates icon geometry from
   its base plate. Icon scale/lift is visual; changing its size must not alter pickup
   collision, inventory or plate dimensions accidentally.
 - `loot-opening` verifies normal battle plant → retreat → surviving reward → collection,
@@ -347,8 +347,8 @@ See [testing and delivery](testing-and-delivery.md) for safe execution and evide
   when routes, survival, resources and round counts diverge; report mixed results.
 - Sustaining an invulnerable human target is an isolated fixture, not an ordinary match.
   State fixture edits explicitly; recorded gameplay must use ordinary inputs.
-- Use [primary-source research](../research.md), [manual controls](../iteration16-controls-research.md)
-  and [recorded observations](../gameplay-research.md) before claiming original behavior.
+- Use [primary-source research](../history/research.md), [manual controls](../history/iteration16-controls-research.md)
+  and [recorded observations](../history/gameplay-research.md) before claiming original behavior.
   Footage can show a kick/throw without revealing which button caused it; pump growth
   alone does not establish exact timing/radius/distance formulas.
 - Store reference media outside distributed game assets. Distinguish publisher claims,

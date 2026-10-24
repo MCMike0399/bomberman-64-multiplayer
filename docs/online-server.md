@@ -53,7 +53,7 @@ dotnet Bomber.Server.dll --urls http://127.0.0.1:18496
 ```
 
 Docker is optional. For the existing single-host Compose deployment,
-`tools/prepare-party-server.py` creates a context from the verified portable
+`tools/party/prepare-party-server.py` creates a context from the verified portable
 artifact; its historical filename does not limit the service to friends.
 See [server delivery](ci.md#portable-server-delivery) for the artifact boundary.
 

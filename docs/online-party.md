@@ -25,7 +25,7 @@ On the development machine, with the pinned external dependency available:
 
 ```sh
 python3 tools/qa/run.py --profile managed
-python3 tools/prepare-party-server.py --output artifacts/party-server
+python3 tools/party/prepare-party-server.py --output artifacts/party-server
 ```
 
 The second command verifies the ZIP checksum and each inventoried runtime file,
@@ -68,9 +68,9 @@ The remote host must already have working SSH authentication. Set its existing
 SSH alias with `BLAST_SSH_HOST` (the local helper defaults to `DiveMac`):
 
 ```sh
-BLAST_SSH_HOST=your-server bash tools/party-relay.sh start
-bash tools/party-relay.sh status
-bash tools/party-relay.sh stop
+BLAST_SSH_HOST=your-server bash tools/party/party-relay.sh start
+bash tools/party/party-relay.sh status
+bash tools/party/party-relay.sh stop
 ```
 
 Use the same `BLAST_SSH_HOST` for status if overriding the default. Start detects

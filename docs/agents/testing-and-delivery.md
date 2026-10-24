@@ -10,8 +10,9 @@ references are [playtests](../../tools/playtest/README.md), [CI](../ci.md),
 
 | Change | Tight loop | Completion gate |
 | --- | --- | --- |
-| Docs only | Read changed instructions; verify links, paths and command flags | Diff/whitespace/link review; no packaging, GPU, install or service restart |
+| Docs only | Read changed instructions; verify links, paths and command flags | `python3 tools/ci/doc_links.py`, diff/whitespace review; no packaging, GPU, install or service restart |
 | Python QA/CI tooling | Relevant `unittest` module plus malformed/failure receipts | `public`; workflow edits also `actionlint .github/workflows/ci.yml` |
+| File moves/renames | `git grep` old paths; build; editor import for `.uid` files | `public` plus the moved area's gate; see [codebase map](codebase-map.md#moving-files-safely) |
 | Simulation/rules | Corresponding executable managed suite with a red regression | `managed`, relevant native journey, `headless` |
 | Client/session/protocol | Client checks and real HTTP/WebSocket repro | `managed` plus `network`; restart only an owned stale server |
 | AI | Focused deterministic regression and matched-seed metrics | Managed AI checks/36-scenario soak plus `ai-play` where visible behavior matters |
@@ -156,9 +157,9 @@ same-Wi-Fi party or relay task.
 
 `assets/testing/scenarios.json` is the common Python/C# catalog. Add a private
 parameterless `async Task` on the `PlaytestDriver` partial class in a new
-`scripts/Testing/*Playtest.cs` file,
+`scripts/testing/*Playtest.cs` file,
 then register method, domains, headless capability, timeout and suite membership.
-Follow existing partial files under `scripts/Testing` for actual naming/layout.
+Follow existing partial files under `scripts/testing` for actual naming/layout.
 Graphical-only children cannot enter a headless suite. Check `--list` afterward.
 
 Drive ordinary product sessions and inputs. Use bounded walking helpers,
@@ -205,6 +206,13 @@ Actual fullscreen launch likewise does not establish OS Game Mode activation.
 Use the package branch only when shipping changed runtime/assets, not for docs.
 Check toolchain/backend requirements in [macOS packaging](../macos-app.md).
 
+The package gate checks native controller startup even when reusing local libraries.
+Both libraries must target macOS 14 and omit `pipe2`: newer SDKs can detect that
+symbol at link time even when the supported/running OS lacks it. The bootstrap
+selects libusb's `pipe`/`fcntl` fallback, and `check-macos-backend.py` exercises
+actual libusb and SDL gamepad initialization before export. Headless game smoke
+does not initialize that backend and cannot substitute for this check.
+
 ```sh
 python3 tools/qa/run.py --profile package
 python3 tools/qa/run.py --profile graphical --app "artifacts/exports/Blast Circuit.app"
@@ -244,8 +252,8 @@ After verified installation, remove other project app copies as the user
 requested, including the export. ZIPs and raw QA receipts remain available.
 
 ```sh
-python3 tools/cleanup-macos-builds.py --dry-run --include-export
-python3 tools/cleanup-macos-builds.py --apply --include-export --expected-installed-version VERSION
+python3 tools/packaging/cleanup-macos-builds.py --dry-run --include-export
+python3 tools/packaging/cleanup-macos-builds.py --apply --include-export --expected-installed-version VERSION
 mdfind 'kMDItemCFBundleIdentifier == "io.github.mcmike0399.blastcircuit"'
 ```
 

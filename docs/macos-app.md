@@ -9,9 +9,14 @@ The development build is installed at `~/Applications/Blast Circuit.app`. Normal
 Requirements: the pinned kernel source dependency, .NET 10 SDK, Godot 4.7.2 .NET, matching .NET export templates, and macOS command-line tools. The optional Switch 2 backend can be built with `tools/controllers/bootstrap-sdl.sh` first.
 
 ```bash
-python3 tools/package-macos.py
+python3 tools/packaging/package-macos.py
 open "artifacts/exports/Blast Circuit.app"
 ```
+
+For delivery, prefer the `package` QA profile: it also validates native backend
+imports, minimum macOS version and actual libusb/SDL startup before exporting.
+The controller bootstrap targets macOS 14 and disables libusb's unguarded `pipe2`
+path, which newer SDKs can detect even on a host that cannot execute it.
 
 Godot's official 4.7.2 .NET template archive contains Universal 2 binaries. The packaging script makes a project-local ARM64 template with Apple's `lipo`; it leaves the installed template untouched. `export_presets.cfg` selects that generated template. To export through the editor, run the packaging script once to prepare it.
 

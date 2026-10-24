@@ -172,7 +172,7 @@ apps after changing this test or its preparation behavior.
 
 For a new scenario:
 
-1. Add a partial `PlaytestDriver` file in `scripts/Testing` with a private parameterless `async Task` method. Exercise ordinary inputs/product sessions and assert observable outcomes using `Check`; do not teleport actors or substitute fabricated state.
+1. Add a partial `PlaytestDriver` file in `scripts/testing` with a private parameterless `async Task` method. Exercise ordinary inputs/product sessions and assert observable outcomes using `Check`; do not teleport actors or substitute fabricated state.
 2. Register its ID, method name, domains, headless capability, manual flag and timeout in the catalog. Add the ID to relevant suite `steps`. Graphical-only children cannot belong to a headless suite.
 3. Cover the actual failure first when fixing a regression. Keep rendering/physical-device assertions separate from simulation-only claims. For assets, extend [AssetAudit](../../docs/asset-audit.md) using actual production resources.
 4. Run the focused scenario, then the relevant canonical QA profile. An exported app must be rebuilt after catalog changes: its bundled SHA-256 must match the runner's catalog.
@@ -289,7 +289,7 @@ Both are included in `all`. For long deterministic AI sweeps outside Godot, use 
 
 ### Native focus interruptions
 
-Synthetic controller coverage still uses the production focus guard. Switching foreground apps **in the test desktop** invalidates a held-input interval even if raw stick values remain set. Your host desktop is separate during isolated runs. The harness records actual window/application focus loss and restarts that complete controller or aiming-input scenario from released inputs and a fresh session, at most three times. Invalid attempt assertions are excluded from the passing receipt and retained in the trace; functional failures are never retried. Deliberate focus-loss/rearm tests remain in place; exhausted focus retries fail explicitly. [Historical shared-desktop diagnosis](../../docs/iteration15-controller-focus.md).
+Synthetic controller coverage still uses the production focus guard. Switching foreground apps **in the test desktop** invalidates a held-input interval even if raw stick values remain set. Your host desktop is separate during isolated runs. The harness records actual window/application focus loss and restarts that complete controller or aiming-input scenario from released inputs and a fresh session, at most three times. Invalid attempt assertions are excluded from the passing receipt and retained in the trace; functional failures are never retried. Deliberate focus-loss/rearm tests remain in place; exhausted focus retries fail explicitly. [Historical shared-desktop diagnosis](../../docs/history/iteration15-controller-focus.md).
 
 Mouse click witnesses use the documented screen transform and feed ordinary press/release events as one paired burst before the next rendered frame. Native control hit testing still handles the click. This avoids leaving a synthetic press held across unrelated native pointer-motion events after window resizing; actual screen-transition assertions remain required.
 

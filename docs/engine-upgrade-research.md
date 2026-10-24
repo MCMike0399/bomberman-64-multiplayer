@@ -83,7 +83,7 @@ D3D12 shader translation that this procedural Metal game may not exercise.
   [#123112](https://github.com/godotengine/godot/pull/123112) covers editor bundle
   metadata; [#119708](https://github.com/godotengine/godot/pull/119708) adds official
   export architecture selection and template architecture validation.
-- The current [packager](../tools/package-macos.py) derives template folders by
+- The current [packager](../tools/packaging/package-macos.py) derives template folders by
   joining the first four dot-separated version fields and appending `.mono`.
   With `4.8.beta1.mono.official…` this incorrectly produces
   `4.8.beta1.mono.mono`. Parse the version through the existing `.mono` component

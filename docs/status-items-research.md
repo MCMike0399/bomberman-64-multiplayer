@@ -2,7 +2,7 @@
 
 Researched 2026-10-24 for advanced match settings and reduced arena clutter.
 This concerns the 1997 3D game, not the unrelated Japanese 2001 title or
-later Super Bomberman games. See also [the gameplay research](gameplay-research.md).
+later Super Bomberman games. See also [the gameplay research](history/gameplay-research.md).
 
 ## Publisher evidence
 

@@ -31,10 +31,17 @@ update the current guide rather than silently reviving old behavior.
 | [Visuals and animation](visuals-and-animation.md) | How is the procedural character built? How do we tune it without losing the silhouette? What counts as visual evidence? |
 | [Input and UI](input-and-ui.md) | What are the current controls? Where do focus, hotplug, native Switch USB and reticle failures occur? |
 | [Testing and delivery](testing-and-delivery.md) | Which tests to run, how to add a meaningful journey, how to record, and how to ship one verified app? |
+| [Codebase map](codebase-map.md) | Where does each kind of code live, which naming rules does Godot enforce, and how do I add or move files safely? |
 | [Architecture](../architecture.md) | Dependency direction, authority/session boundaries, state flow and deployment limits |
 | [Latest verification](../verification.md) | Exact observed results and limitations, with earlier iterations below |
 
 ## Current decisions that supersede earlier experiments
+
+- Repository layout (2026-10-24): Godot code lives in snake_case feature folders
+  under `scripts/` with folder-mirroring `BlastCircuit.*` namespaces; the scene is
+  `scenes/main.tscn`; shell launchers are in `tools/dev/`; dated iteration notes
+  are in `docs/history/`. Large classes are split into `Class.Concern.cs`
+  partials. The [codebase map](codebase-map.md) owns layout and naming rules.
 
 - Graphics settings now provide Low/Medium/High, with Medium as default. Menus
   render at output pixel density and use the same AA policy as the arena;
@@ -82,7 +89,7 @@ update the current guide rather than silently reviving old behavior.
   face alternative. v0.19.1 also lets Switch B ready/pump while Y is held;
   A still works and X remains remote. Hold the aim trigger and steer the target with either stick.
   Keyboard L + WASD steers the same map-plane cursor. Relative turn/range controls
-  are superseded. [Research and alternatives](../iteration19-controls-research.md).
+  are superseded. [Research and alternatives](../history/iteration19-controls-research.md).
 - Knockdowns have a brief impact-only cooldown and allow subsequent hit chains.
   Knockdown, hold escape and thrown-player protection do not stop explosions;
   hearts and respawns retain separate damage protection.
@@ -95,7 +102,7 @@ update the current guide rather than silently reviving old behavior.
 - Keep the compact chibi body and short fixed white legs. Iteration20 replaces the
   2.4-unit glide with a 1.5-unit gripping scamper (heel/toe roll, passing tuck,
   squash, spring-driven gloves/head/lean and a wobbling antenna). Tested, **not yet
-  approved by the user**. [Why and what changed](../iteration20-walking.md).
+  approved by the user**. [Why and what changed](../history/iteration20-walking.md).
 - A dimensional arcade menu, restrained shared palette, stamped controls and
   clear focus are preferred over webpage-like card grids or flat backgrounds.
 - Sunken Temple uses the tiered pyramid/courtyard composition, readable sandstone,
@@ -131,21 +138,21 @@ are not reasons to skip review or create new infrastructure.
 
 ## Research and history map
 
-These are sources and explanations, not instructions to recreate older designs:
+These live in [`docs/history/`](../history/README.md). They are sources and explanations, not instructions to recreate older designs:
 
 | History | Relevant lessons |
 | --- | --- |
-| [Initial research](../research.md), [gameplay research](../gameplay-research.md), [visual research](../visual-research.md) | Original manual/reference observations, 4-player original versus 8-player project, original assets rather than ripped media |
-| [UI/design pass](../iteration7-design.md), [rendering](../iteration8-rendering.md) | Dimensional menus, lighting, stone and water; distinguish art inspiration from copied assets |
-| [Input/gameplay](../iteration8-gameplay-input.md), [iteration nine](../iteration9-gameplay.md) | Continuous movement, impacts, grabbing, ghosts and terrain transitions |
-| [Kick research](../iteration10-kick-research.md), [kick/shore refinement](../iteration11-kick-research.md) | Windup/force, finite bomb travel and restrained victim displacement |
-| [Placement and bomb modes](../iteration12-bombs-research.md) | Foot-level departure, denied input, exclusive red/remote behavior |
-| [AI recovery](../iteration13-ai.md), [AI test definitions](../../tests/Bomber.Ai.Tests/README.md) | Collision deadlocks, timed hazards, matched comparisons and pressure denominators |
-| [Walk experiments](../iteration15-walk.md), [compact character](../iteration16-character.md) | Rejected robot/stretched-leg solutions; continuity alone did not preserve charm |
-| [Charge and launch](../iteration15-charge.md), [deliberate aiming](../iteration16-aim.md) | Carry socket versus authority height, shared throw projection, fair fine adjustments |
-| [Reticle diagnosis](../iteration17-reticle.md), [iteration seventeen](../iteration17-overview.md) | Obstruction visibility, Results lifecycle, loot openings and mixed AI evidence |
-| [Walk and controls v0.18](../iteration18-walking.md) | Independent waist pivot, whole-body review, restored K carry, duplicate-app cleanup |
-| [Current walk](../iteration20-walking.md) | Measured boot skating, cadence matched to leg reach, spring follow-through, antenna |
+| [Initial research](../history/research.md), [gameplay research](../history/gameplay-research.md), [visual research](../history/visual-research.md) | Original manual/reference observations, 4-player original versus 8-player project, original assets rather than ripped media |
+| [UI/design pass](../history/iteration7-design.md), [rendering](../history/iteration8-rendering.md) | Dimensional menus, lighting, stone and water; distinguish art inspiration from copied assets |
+| [Input/gameplay](../history/iteration8-gameplay-input.md), [iteration nine](../history/iteration9-gameplay.md) | Continuous movement, impacts, grabbing, ghosts and terrain transitions |
+| [Kick research](../history/iteration10-kick-research.md), [kick/shore refinement](../history/iteration11-kick-research.md) | Windup/force, finite bomb travel and restrained victim displacement |
+| [Placement and bomb modes](../history/iteration12-bombs-research.md) | Foot-level departure, denied input, exclusive red/remote behavior |
+| [AI recovery](../history/iteration13-ai.md), [AI test definitions](../../tests/Bomber.Ai.Tests/README.md) | Collision deadlocks, timed hazards, matched comparisons and pressure denominators |
+| [Walk experiments](../history/iteration15-walk.md), [compact character](../history/iteration16-character.md) | Rejected robot/stretched-leg solutions; continuity alone did not preserve charm |
+| [Charge and launch](../history/iteration15-charge.md), [deliberate aiming](../history/iteration16-aim.md) | Carry socket versus authority height, shared throw projection, fair fine adjustments |
+| [Reticle diagnosis](../history/iteration17-reticle.md), [iteration seventeen](../history/iteration17-overview.md) | Obstruction visibility, Results lifecycle, loot openings and mixed AI evidence |
+| [Walk and controls v0.18](../history/iteration18-walking.md) | Independent waist pivot, whole-body review, restored K carry, duplicate-app cleanup |
+| [Current walk](../history/iteration20-walking.md) | Measured boot skating, cadence matched to leg reach, spring follow-through, antenna |
 
 Reference files under ignored artifacts and old temporary clipboard paths may
 not exist on a new machine. Follow the durable source URLs in research docs;

@@ -1,3 +1,6 @@
+// Adapted from burbuja-kernel Example.Blast, MIT (copyright 2026 MCMike0399).
+// Product-owned simulation; original baseline b0758339984bbeead1b3d1236f31e980aaa5f20e.
+using Burbuja.Realtime.Abstractions;
 namespace Bomber.Game.Simulation;
 
 public sealed partial class BlastSession
@@ -110,5 +113,158 @@ public sealed partial class BlastSession
                      !(movingBomb is not null&&BombEscapesCell(movingBomb,x,z,cx,cz)))) return false;
             }
         return true;
+    }
+
+    // ─── bomb placement ───────────────────────────────────────────────────────
+
+    private void TryPlaceBomb(ISessionContext context, BlastPlayer p, bool hold = false)
+    {
+        if (p.ActiveBombs >= p.BombCapacity)
+        {Present("bomb-blocked",playerId:p.Id,x:p.X,y:p.Y,z:p.Z,reason:"capacity");return;}
+
+        float x=p.X,z=p.Z;
+        if(!hold&&!TryBombPlacement(p,p.FacingX,p.FacingZ,0,out x,out z))
+        {Present("bomb-blocked",playerId:p.Id,x:p.X,y:p.Y,z:p.Z,reason:"space");return;}
+        var cx = (int)MathF.Floor(x);
+        var cz = (int)MathF.Floor(z);
+
+        var bomb = new BlastBomb
+        {
+            Id = NextBombId(),
+            OwnerId = p.Id,
+            OwnerMayLeave = !hold,
+            X = x, Z = z,
+            CellX = cx, CellZ = cz, Tier = (int)MathF.Round(_stage.SurfaceAt(x, z)),
+            FireLevel = p.FireLevel,
+            Mode = p.BombType,
+            FuseTimer = p.BombType=="bounce"?3.5f:BlastBomb.FuseSeconds,
+        };
+        _bombs.Add(bomb);
+        if(p.IsBot&&BotEnemyInRange(bomb.X,BombY(bomb),bomb.Z,bomb.BlastRadius,p.Id,bomb.IsRed))_aiLastThreat[p.Id]=_roundTimer;
+        p.ActiveBombs++;
+        if (hold) { bomb.State = BombState.Carried; p.CarryingBombId = bomb.Id; UpdateCarriedBombPosition(bomb); }
+        PresentBomb(hold ? "bomb-carry" : "bomb-drop", bomb, p.Id);
+    }
+
+    // ─── pick up / throw ──────────────────────────────────────────────────────
+
+    private void TryPickUp(ISessionContext context, BlastPlayer p)
+    {
+        if (p.CarryingBombId is not null || p.CarryingPlayerId is not null) return;
+
+        // Try a bomb first.
+        var bomb = _bombs.Where(b => b.State == BombState.Resting && Math.Abs(BombY(b) - p.Y) < .6f)
+            .OrderBy(b => Dist2(b.X, b.Z, p.X, p.Z))
+            .FirstOrDefault(b => Dist2(b.X, b.Z, p.X, p.Z) <= (PlayerRadius + BlastBomb.Radius + 0.3f) * (PlayerRadius + BlastBomb.Radius + 0.3f));
+        if (bomb is not null)
+        {
+            bomb.State = BombState.Carried;
+            p.CarryingBombId = bomb.Id;
+            PresentBomb("lift", bomb, p.Id);
+            return;
+        }
+
+        // Try a stunned player (ghosts cannot pick up players).
+        if (!p.Ghost)
+        {
+            var victim = _players.Values
+                .Where(v => v.Id != p.Id && v.Alive && !v.Ghost && v.StunTimer > 0 && v.CarriedById is null && !v.Airborne && Math.Abs(v.Y - p.Y) < .6f)
+                .OrderBy(v => Dist2(v.X, v.Z, p.X, p.Z))
+                .FirstOrDefault(v => Dist2(v.X, v.Z, p.X, p.Z) <= (PlayerRadius * 2 + 0.3f) * (PlayerRadius * 2 + 0.3f));
+            if (victim is not null)
+            {
+                BeginHold(p,victim);
+            }
+        }
+    }
+
+    private void TryPickUpBombOnly(BlastPlayer p)
+    {
+        if (p.Ghost || p.CarryingBombId is not null) return;
+        var bomb = _bombs.Where(b => b.State == BombState.Resting && Math.Abs(BombY(b) - p.Y) < .6f)
+            .OrderBy(b => Dist2(b.X, b.Z, p.X, p.Z))
+            .FirstOrDefault(b => Dist2(b.X, b.Z, p.X, p.Z) <= (PlayerRadius + BlastBomb.Radius + 0.3f) * (PlayerRadius + BlastBomb.Radius + 0.3f));
+        if (bomb is not null)
+        {
+            bomb.State = BombState.Carried;
+            p.CarryingBombId = bomb.Id;
+            PresentBomb("lift", bomb, p.Id);
+        }
+    }
+
+    private void ThrowCarried(ISessionContext context, BlastPlayer p, InputState input)
+    {
+        if (p.CarryingBombId is not null)
+        {
+            ThrowBomb(context, p, input);
+        }
+        else if (p.CarryingPlayerId is not null)
+        {
+            ThrowPlayer(context, p, input);
+        }
+    }
+
+    private void ThrowBomb(ISessionContext context, BlastPlayer p, InputState input)
+    {
+        var bomb = _bombs.FirstOrDefault(b => b.Id == p.CarryingBombId);
+        if (bomb is null) { p.CarryingBombId = null; ClearThrowAim(p); return; }
+
+        // A released stick still throws decisively clear of the carrier. Pumps
+        // project the larger blast farther away, rewarding the setup with space.
+        var velocity = p.AimSet ? BombThrowRules.AimedVelocity(p.AimX,p.AimZ,p.AimRange,bomb.MotionRate,bomb.Pumps) :
+            BombThrowRules.Velocity(p.FacingX,p.FacingZ,input.Length,bomb.Pumps);
+        var speed = MathF.Sqrt(velocity.X*velocity.X+velocity.Z*velocity.Z);
+
+        bomb.State = BombState.Flying;
+        bomb.RequestedPumps=0; bomb.ChargeRemaining=0; bomb.Bounces=0;
+        bomb.LandingY=null;
+        bomb.LastTouchedById=p.Id;
+        bomb.X = p.X;
+        bomb.Z = p.Z;
+        bomb.FlyVX = velocity.X;
+        bomb.FlyVZ = velocity.Z;
+        bomb.FlyVY = velocity.Y;
+        bomb.FlyY = p.Y + BombThrowRules.LaunchHeight; // launch slightly above tier
+        bomb.Tier = p.Tier;
+
+        p.CarryingBombId = null;
+        ClearThrowAim(p);
+        p.CarryFromPrimary = false;
+        PresentBomb("throw", bomb, p.Id, speed);
+    }
+
+    private void ThrowPlayer(ISessionContext context, BlastPlayer p, InputState input)
+    {
+        if (!_players.TryGetValue(p.CarryingPlayerId!, out var victim)) { p.CarryingPlayerId = null; return; }
+
+        var strength=Math.Clamp(input.Length,0.2f,1f);
+        victim.CarriedById=null;victim.HoldRemaining=0;victim.Airborne=true;
+        victim.X=p.X;victim.Z=p.Z;victim.SurfaceY=p.Y+PlayerCarryHeight;
+        victim.AirVX=p.FacingX*(2+strength*3);victim.AirVZ=p.FacingZ*(2+strength*3);victim.AirVY=3.8f;
+        victim.StunTimer=.65f;victim.RecoveryTotal=.65f;victim.KnockdownReason="thrown";
+        victim.ImpactProtectionTimer=ImpactProtectionSeconds;p.CarryingPlayerId=null;
+        Present("player-throw",victim.Id,p.Id,p.X,p.Y+PlayerCarryHeight,p.Z,strength,reason:"player");
+    }
+
+    // ─── pumping ──────────────────────────────────────────────────────────────
+
+    private void PumpBomb(BlastPlayer p)
+    {
+        var bomb = _bombs.FirstOrDefault(b => b.Id == p.CarryingBombId);
+        if (bomb is null) return;
+        if (bomb.Pumps + bomb.RequestedPumps >= 3) return;
+        bomb.RequestedPumps++;
+        if(bomb.ChargeRemaining<=0)
+            bomb.ChargeRemaining=bomb.ChargeDuration=p.HasFocus?PowerUpRules.FocusPumpSeconds:PowerUpRules.NormalPumpSeconds;
+    }
+
+    // ─── remote detonation ────────────────────────────────────────────────────
+
+    private void RemoteDetonate(ISessionContext context, BlastPlayer p)
+    {
+        var mine = _bombs.Where(b => b.OwnerId == p.Id && b.IsRemote && !b.Exploded && b.State != BombState.Carried).ToList();
+        if (mine.Count == 0) return;
+        // Detonate the oldest remote bomb.
+        ExplodeBomb(context, mine[0]);
     }
 }
