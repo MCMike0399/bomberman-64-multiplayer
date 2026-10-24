@@ -23,6 +23,7 @@ public sealed partial class BlastSession
                 {
                     k = (int)c.Kind,
                     t = c.Tier,
+                    oh = c.ObstacleHeight,
                     rx = c.RampDX,
                     rz = c.RampDZ,
                     rf = c.RampFromTier,

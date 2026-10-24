@@ -105,6 +105,10 @@ public static class BlastStages
             cells[x, 0] = cells[x, height - 1] = CellDef.Pillar;
         for (var z = 0; z < height; z++)
             cells[0, z] = cells[width - 1, z] = CellDef.Pillar;
+        for (var z = 0; z < height; z++) for (var x = 0; x < width; x++)
+            if (cells[x,z].Kind == CellKind.Pillar)
+                cells[x,z] = new CellDef { Kind = CellKind.Pillar,
+                    ObstacleHeight = z == 0 ? 3.1f : z == height - 1 ? 2 : 2.9f - .9f * z / (height - 1) };
         // Upper perimeter joins all six bridge ends and the four stair heads.
         for (var x = 1; x < width - 1; x++)
             cells[x, 1] = cells[x, height - 2] = CellDef.Floor2;

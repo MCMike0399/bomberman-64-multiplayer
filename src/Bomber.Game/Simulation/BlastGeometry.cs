@@ -29,7 +29,7 @@ public static class BlastGeometry
             var surface = stage.SurfaceAt(x, z, y);
             if (stage.DeckIntersects(x, z, y, y)) return true;
             if (!cell.IsElimination && surface > y + .02f) return true;
-            if (cell.Kind == CellKind.Pillar && surface + 1.75f > y) return true;
+            if (cell.Kind == CellKind.Pillar && surface + (cell.ObstacleHeight ?? 1.75f) > y) return true;
             if ((cx == acx && cz == acz) || (cx == bcx && cz == bcz)) continue;
             if (!piercing && soft.IsAlive(cx, cz) && stage.SurfaceAt(x,z) <= y && stage.SurfaceAt(x,z) + 1 > y) return true;
         }

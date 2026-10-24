@@ -117,6 +117,18 @@ internal static class TopRulesChecks
             session.AiTestAddBomb(bomb);Step(match,2);
             Assert(bomb.State==BombState.Resting&&bomb.Tier==2&&Math.Abs(bomb.FlyY-2)<.001f,"Falling kick selected support after crossing below the deck.");
         });
+        Check("Top Rules authored castle walls stop low lobs and block elevated blasts", () =>
+        {
+            var stage=BlastStages.Get(BlastStages.TopRules);
+            var flight=BombThrowRules.AdvanceStatic(new(5.5f,2.45f,1.5f),new(0,0,-6),.25f,
+                (x,z)=>stage.SurfaceAt(x,z),(x,z)=>stage.At(x,z).Kind,(_,_)=>false,
+                obstacleHeight:(x,z)=>stage.At(x,z).ObstacleHeight??BombThrowRules.PillarHeight);
+            Assert(flight.Position.Z>=1.3f&&flight.Velocity.Z==0,"Low lob passed through tall rear masonry.");
+            var soft=new SoftBlockGrid(stage.Width,stage.Height);
+            Assert(!BlastGeometry.Contains(stage,soft,5.5f,2.2f,1.5f,3,5.5f,2.2f,-.5f,true),"Elevated blast passed through rear wall.");
+            var cells=Data(Match().StageJson!).GetProperty("cells");
+            Assert(Math.Abs(cells[5].GetProperty("oh").GetSingle()-3.1f)<.001f,"Wall crown was lost on the network boundary.");
+        });
         return passed;
     }
 }

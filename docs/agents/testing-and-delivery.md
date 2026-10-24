@@ -320,7 +320,9 @@ lifetimes have separate authority and graphical expiration witnesses.
 
 ## Top Rules verification
 
-`top-rules` is a standard leaf in `all` and `core-headless`. It drives normal
+`top-rules` is a standard leaf in `all` and `core-headless`. The graphical
+`all` suite keeps `first-use-rendering` first; a Python contract guards its
+fresh-process precondition. It drives normal
 menu keys and gameplay inputs through every staircase, the raised crosswalk,
 lower underpasses/throws, real crate → equipment → lower death-drop presentation,
 night lighting, eight-player CPU battle and inward

@@ -38,7 +38,7 @@ public partial class TempleStageView
             if (kind == (int)CellKind.Pillar)
             {
                 // Rear and side battlements frame the castle; the near wall stays low for visibility.
-                float top = z == 0 ? deck + 1.35f : z == Depth - 1 ? deck - .03f : deck + Mathf.Lerp(1.1f, 0, z / (Depth - 1f));
+                float top = cell.GetProperty("oh").GetSingle() * HeightScale - .11f;
                 Box(this, new(x + .5f, top / 2, z + .5f), new(1, top, 1), stone);
                 Box(this, new(x + .5f, top + .04f, z + .5f), new(1.06f, .14f, 1.06f), cap, .035f);
                 continue;

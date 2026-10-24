@@ -33,6 +33,11 @@ public partial class PlaytestDriver
         await ActivateNamed("LaunchMatch");
         await WaitState(s => s.GetProperty("phase").GetInt32() == 1, "ordinary menu launch starts Top Rules practice", 150);
         Check(_root.LatestStage!.Value.GetProperty("id").GetString() == BlastStages.TopRules, "practice retains the selected castle");
+        var terrain=AuditDescendants(LightingArena).OfType<TempleStageView>().Single();
+        float crown=terrain.GetChildren().OfType<MeshInstance3D>()
+            .Where(n=>Math.Abs(n.Position.X-5.5f)<.01f&&Math.Abs(n.Position.Z-.5f)<.01f)
+            .Max(n=>n.Position.Y+n.Mesh.GetAabb().End.Y);
+        Check(Math.Abs(crown-terrain.AimObstacleHeight(5,0)*TempleStageView.HeightScale)<.01f,"visible rear wall crown and shared throw collision agree");
         foreach (var size in new[] { new Vector2I(1280, 720), new Vector2I(1280, 800) })
         {
             await ResizeWindow(size); CheckFraming(BlastStages.TopRules, size);

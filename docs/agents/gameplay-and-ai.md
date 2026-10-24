@@ -251,6 +251,8 @@ Keep crate collision during ledge departure: filtering crates only by the
 player's rounded height let a falling temple CPU enter a crate. The focused
 `Bomber.Ai.Tests -- --soak --terrain-regression` retains Hard/seven CPUs/seed 64.
 
+Castle wall cells publish an optional `ObstacleHeight`; their visible crowns,
+throw collision and blast blocking agree. Null preserves existing pillar rules.
 Bombs, dropped items, body contacts, blast occlusion, throw authority and advisory
 projection retain the occupied story. Slabs block blasts and upward throws;
 lower horizontal travel remains open. The CPU graph has separate lower nodes

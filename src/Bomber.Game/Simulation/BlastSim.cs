@@ -20,6 +20,8 @@ public sealed class CellDef
 {
     public CellKind Kind { get; init; }
     public int Tier { get; init; }
+    /// <summary>Authored hard-wall height; null preserves existing pillar rules.</summary>
+    public float? ObstacleHeight { get; init; }
     /// <summary>For ramps: the lower tier this ramp connects from.</summary>
     public float RampFromTier { get; init; }
     /// <summary>For ramps: the higher tier this ramp leads to.</summary>

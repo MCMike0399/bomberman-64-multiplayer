@@ -286,7 +286,7 @@ public sealed partial class BlastSession
         if(b.ResumeRollingAfterFall){TickFallingKickedBomb(context,b,dt);return;}
         float supportCeiling=b.FlyY+.25f;
         var flight=BombThrowRules.AdvanceStatic(new(b.X,b.FlyY,b.Z),new(b.FlyVX,b.FlyVY,b.FlyVZ),dt,
-            (x,z)=>BombLandingHeight(x,z,supportCeiling),(x,z)=>_stage.At(x,z).Kind,(x,z)=>_softBlocks.IsAlive(x,z),b.IsBouncy,b.GravityScale,_stage.DeckIntersects);
+            (x,z)=>BombLandingHeight(x,z,supportCeiling),(x,z)=>_stage.At(x,z).Kind,(x,z)=>_softBlocks.IsAlive(x,z),b.IsBouncy,b.GravityScale,_stage.DeckIntersects,(x,z)=>_stage.At(x,z).ObstacleHeight??BombThrowRules.PillarHeight);
         b.X=flight.Position.X;b.Z=flight.Position.Z;b.FlyY=flight.Position.Y;b.FlyVY=flight.Velocity.Y;b.FlyVX=flight.Velocity.X;b.FlyVZ=flight.Velocity.Z;
 
         var landingY = StaticBombLandingHeight(b.X, b.Z,supportCeiling);

@@ -103,6 +103,12 @@ public partial class TempleStageView : Node3D
         float deck=_cells[cz*Width+cx].GetProperty("t").GetSingle();
         return top>=deck-Bomber.Game.Simulation.StageLayout.DeckThickness&&bottom<deck;
     }
+    public float AimObstacleHeight(int x,int z)
+    {
+        if(x<0||z<0||x>=Width||z>=Depth)return Bomber.Game.Simulation.BombThrowRules.PillarHeight;
+        var cell=_cells[z*Width+x];
+        return cell.TryGetProperty("oh",out var height)&&height.ValueKind==JsonValueKind.Number?height.GetSingle():Bomber.Game.Simulation.BombThrowRules.PillarHeight;
+    }
     public bool AimHasCover(int x,int z,byte[] cover)
     {
         if(x<0||z<0||x>=Width||z>=Depth)return false;
