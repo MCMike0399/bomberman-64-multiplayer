@@ -50,6 +50,7 @@ def main():
     if app.suffix != ".app":
         parser.error("--output must end in .app")
     app.parent.mkdir(parents=True, exist_ok=True)
+    run('python3', 'tools/networking/bootstrap_webrtc.py')
     prepare_template(args.godot)
     # The release exporter publishes the complete C# dependency graph and .NET runtime.
     exported = subprocess.run(
@@ -87,6 +88,16 @@ def main():
     # Include notices in the bundle, but never the private kernel checkout or reference media.
     notices = app / "Contents/Resources/Notices"
     notices.mkdir(parents=True, exist_ok=True)
+    for license_file in (ROOT / 'addons/webrtc_native').glob('LICENSE*'):
+        shutil.copy2(license_file, notices / license_file.name)
+    (notices / 'WebRTC-SOURCE.txt').write_text(
+        'Godot webrtc-native 1.2.2-stable (MIT), including libdatachannel (MPL-2.0) and usrsctp (BSD).\n'
+        'Corresponding source, submodule revisions and build instructions:\n'
+        'https://github.com/godotengine/webrtc-native/tree/1.2.2-stable\n'
+        'Unmodified binary archive and release information:\n'
+        'https://github.com/godotengine/webrtc-native/releases/tag/1.2.2-stable\n'
+        'The dynamic extension can be rebuilt/replaced; re-sign the app after replacement.\n'
+    )
     shutil.copy2(ROOT / "LICENSE", notices / "Blast-Circuit-MIT.txt")
     shutil.copy2(ROOT / "src/Bomber.Game/Simulation/LICENSE", notices / "Simulation-MIT.txt")
     for name in ["Godot-MIT.txt", "Godot-COPYRIGHT.txt"]:

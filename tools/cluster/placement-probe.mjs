@@ -1,7 +1,7 @@
 // Real public admission + owning-node socket. Creates and removes one private room.
 import fs from 'node:fs/promises';
-const [origin, expected, output, region] = process.argv.slice(2);
-if (!origin || !expected || !output) throw Error('Usage: placement-probe.mjs ORIGIN EXPECTED_SERVER OUTPUT [REGION]');
+const [origin, expected, output, region, game = 'blast'] = process.argv.slice(2);
+if (!origin || !expected || !output) throw Error('Usage: placement-probe.mjs ORIGIN EXPECTED_SERVER OUTPUT [REGION] [GAME]');
 let token, room, socket, failure, cleaned = false;
 async function api(route, body) {
   const response = await fetch(new URL('/realtime/v1/' + route, origin), {
@@ -14,16 +14,17 @@ async function api(route, body) {
 }
 try {
   token = (await api('guests', { displayName: 'Placement verification' })).token;
-  const created = await api('lobbies', { game: 'blast', visibility: 'private', ...(region ? { region } : {}), settings: { party: 'on', bots: '0' } });
+  const created = await api('lobbies', { game, visibility: 'private', ...(region ? { region } : {}), settings: { party: 'on', bots: '0' } });
   room = created.lobby;
   if (room.serverId !== expected) throw Error(`Expected ${expected}, got ${room.serverId}`);
   const url = new URL(created.reservation.connectUrl, origin);
   url.protocol = ['https:', 'wss:'].includes(url.protocol) ? 'wss:' : 'ws:';
   if (origin.startsWith('https:') && url.protocol !== 'wss:') throw Error('Insecure socket route');
   socket = new WebSocket(url);
+  if (game === 'blast-peer') socket.addEventListener('open', () => socket.send(JSON.stringify({ t: 'peer.hello', d: { version: 1 } })));
   await new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(Error('No owning-node welcome')), 10000);
-    socket.addEventListener('message', e => { if (JSON.parse(e.data).t === 'sys.welcome') { clearTimeout(timer); resolve(); } });
+    socket.addEventListener('message', e => { if (JSON.parse(e.data).t === (game === 'blast-peer' ? 'party.status' : 'sys.welcome')) { clearTimeout(timer); resolve(); } });
     socket.addEventListener('error', () => { clearTimeout(timer); reject(Error('Socket failed')); });
   });
 } catch (error) { failure = error.message; }
@@ -44,7 +45,7 @@ finally {
     }
     if (!cleaned) throw Error('Room did not retire within its expected empty timeout');
   } catch (error) { failure ??= 'Cleanup: '+error.message; }
-  await fs.writeFile(output, JSON.stringify({ passed: !failure, server: room?.serverId, roomId: room?.lobbyId,
+  await fs.writeFile(output, JSON.stringify({ passed: !failure, game, server: room?.serverId, roomId: room?.lobbyId,
     cleaned, failure, publicEndpoint: origin }, null, 2));
 }
 if (failure) { console.error(failure); process.exitCode = 1; }

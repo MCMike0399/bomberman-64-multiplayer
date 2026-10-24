@@ -149,8 +149,10 @@ movement: prior mouse hover can leave the last item selected. See the
 Private rooms created by the current client opt into product-owned `PartySession`.
 Only the authenticated leader can start. A completed match produces results,
 then returns everyone to the same room/code after five seconds; no auto-rematch.
-Disconnect transfers leadership to a connected member. Quick play retains its
-queue-driven lifecycle. Both client and server must be updated for this flow.
+Disconnect transfers leadership to a connected member. Random lobby now enters
+a persistent cluster room with a two-human minimum and explicit host start.
+Host peer room runs authority on a player device and displays the actual direct
+or relay transport. See [peer hosting](../peer-hosting.md). Both client and server must be updated for this flow.
 
 Esc/Start during gameplay opens the game menu. Leave is an explicit button.
 Start in menus focuses the primary action (the leader's Start game in a room);

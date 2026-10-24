@@ -27,3 +27,4 @@ __pycache__/
 .idea/
 /native/macos/*.dylib
 /native/macos/*.txt
+/addons/webrtc_native/

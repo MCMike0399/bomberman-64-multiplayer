@@ -1,3 +1,51 @@
+# Peer hosting verification — v0.27.0 candidate
+
+2026-10-24: **0.27.0/build 32** adds persistent random lobbies and player-hosted
+rooms. The [connection contract](peer-hosting.md) distinguishes cluster authority,
+direct peer traffic, relay fallback and fresh-match host takeover. Publication
+and the final signed-artifact installation are pending at this receipt.
+
+| Gate | Observed result |
+| --- | --- |
+| Public contracts | Pass, including pinned WebRTC archive integrity/path checks and independent QA receipt directories |
+| Managed | 2,727 game, 304 client, 53 AI, 19 audio and 19 cluster checks; all 36 AI soaks pass |
+| Real HTTP/WebSocket | Random waiting-room admission, two-human start gate, manual leader start, peer relay gameplay/results, stalled-host election, socket interruption and former-host reconnect pass; legacy 2–8-player coverage remains passing |
+| Headless | 868 core assertions and 18 real peer assertions pass |
+| Exported package | 252 package assertions plus 18 direct/relay/election/eight-player assertions pass; native controller compatibility and signature checks pass |
+| Full graphical regression | 42 journeys, 2,768 assertions, 262 captures and zero runtime errors in the isolated Metal desktop |
+| Final focused peer UI | 19 assertions, 5 captures, zero errors/warnings on the frozen export, including eight direct players |
+| Cross-machine peer play | Three independent processes on Macintosh and DiveMac use the public primary route, exchange direct gameplay, retain the room after host departure and exchange new direct packets in replacement match 2 |
+
+The graphical review included the updated online choices, the disabled one-player
+start state, room labels and actual peer battles. Physical controller behavior,
+new native GPU throughput and arbitrary Internet NAT/firewall combinations are
+not established by these checks. Intermittent SCTP stream-reset warnings during
+intentional connection teardown remain visible in receipts; no runtime error was
+accepted as a pass. Later host-recovery refinements retain focused exported-peer
+verification, rather than claiming the earlier full render run covered new code.
+
+Two failures were retained and fixed: an eight-player initial roster/snapshot
+burst evicted 12 ICE messages from a shared outbound queue, leaving two peers on
+relay; and a fixed render clock could accelerate player-hosted authority in a
+headless run. Separate bounded signalling traffic and a monotonic 30 Hz authority
+clock pass the retained eight-peer regression. Reconnect and lobby-stall checks
+also guard a restored roster and replacement-host eligibility.
+
+The public random-lobby probe, forced-relay gameplay/results and real retained-seat
+reconnect probe passed. Both cluster nodes received the tested
+candidate serially, after authenticated drain/empty checks, and each mounted
+runtime matched all 42 staged file hashes. Private configuration, kernel/plugin
+pins, limits and other services were preserved; rollback directories remain.
+**Limit:** the full-capacity cluster load probe was refused by the existing guard
+because the fallback had less than 10% idle CPU (and its monitor still referenced
+an intentionally stopped service). Its pressure admission also rejected a bounded
+new-room probe with `no_capacity`. No fallback-load success, higher capacity or
+live cluster-node migration is claimed. Functional direct play through the public
+primary and eight-peer transport tests are separate passing evidence.
+
+Local evidence is retained under ignored `artifacts/p2p/`, including the failed
+reproductions, final frozen gate receipts, captures and cross-machine receipts.
+
 # PR #1 regression verification — v0.26.2 delivered
 
 2026-10-24: functional verification of the codebase refactor, prepared as

@@ -6,12 +6,20 @@ using Bomber.Game;
 namespace Bomber.Client;
 
 /// <summary>Guest-authenticated Burbuja client. Network work never calls the engine; poll DrainMessages.</summary>
-public sealed class NetworkSession : ISession
+public sealed partial class NetworkSession : ISession
 {
     public const string DefaultServerUrl = "https://blast.burbuja-lab.dev";
     private readonly HttpClient _http;
     private readonly CancellationTokenSource _lifetime = new();
     private readonly MessageBuffer _messages = new();
+    private readonly MessageBuffer _wireMessages = new();
+    private readonly System.Collections.Concurrent.ConcurrentQueue<byte[]> _outbound = new();
+    private readonly System.Collections.Concurrent.ConcurrentQueue<byte[]> _controlOutbound = new();
+    private PeerRoomClient? _peer;
+    private Func<IPeerLink>? _peerFactory;
+    public string PeerTransport => _peer?.Transport ?? "Relay";
+    public long DirectPacketsSent => _peer?.DirectSent ?? 0;
+    public long DirectPacketsReceived => _peer?.DirectReceived ?? 0;
     private readonly object _inputGate = new();
     private readonly Uri _origin;
     private ClientWebSocket? _socket;
@@ -24,6 +32,7 @@ public sealed class NetworkSession : ISession
     private int _disposed;
     private int _appearance;
     private int _appearancePending, _startPending;
+    private int _peerHelloSent;
     private PartyStatus? _party;
     private byte[]? _pendingRules;
     public void SetRoomSettings(SessionSettings settings)
@@ -42,6 +51,7 @@ public sealed class NetworkSession : ISession
     public string? JoinCode { get; private set; }
     public string? PlayerId { get; private set; }
     public string? LobbyId => _lobbyId;
+    public string? ConnectionRoute { get; private set; }
 
     private NetworkSession(Uri origin, HttpMessageHandler? handler)
     {
@@ -54,14 +64,15 @@ public sealed class NetworkSession : ISession
     }
 
     public static async Task<NetworkSession> ConnectAsync(Uri server, string displayName, SessionSettings settings,
-        NetworkMode mode = NetworkMode.CreatePrivate, string? joinCode = null, CancellationToken cancellationToken = default, int appearance = 0)
+        NetworkMode mode = NetworkMode.CreatePrivate, string? joinCode = null, CancellationToken cancellationToken = default, int appearance = 0,
+        Func<IPeerLink>? peerFactory = null)
     {
         if (appearance is < 0 or > 7) throw new ArgumentOutOfRangeException(nameof(appearance));
-        var session = new NetworkSession(server, null) { _appearance = appearance };
+        var session = new NetworkSession(server, null) { _appearance = appearance, _peerFactory = peerFactory };
         try
         {
             await session.InitializeAsync(displayName, settings, mode, joinCode, cancellationToken).ConfigureAwait(false);
-            if(mode==NetworkMode.CreatePrivate)
+            if(mode is NetworkMode.CreatePrivate or NetworkMode.CreatePeer or NetworkMode.QuickPlay)
             {
                 try { await session._partyReady.Task.WaitAsync(TimeSpan.FromSeconds(10),cancellationToken).ConfigureAwait(false); }
                 catch(TimeoutException) { throw new InvalidOperationException("This server needs the party update before it can host leader-controlled rooms."); }
@@ -79,9 +90,9 @@ public sealed class NetworkSession : ISession
         _token = guest.GetProperty("token").GetString()!;
         PlayerId = guest.GetProperty("playerId").GetString();
         JsonElement reservation;
-        if (mode == NetworkMode.CreatePrivate)
+        if (mode is NetworkMode.CreatePrivate or NetworkMode.CreatePeer)
         {
-            var created = await RequestAsync(HttpMethod.Post, "lobbies", new { game = "blast", visibility = "private", settings = wireSettings }, ct);
+            var created = await RequestAsync(HttpMethod.Post, "lobbies", new { game = mode == NetworkMode.CreatePeer ? "blast-peer" : "blast", visibility = "private", settings = wireSettings }, ct);
             var lobby = created.GetProperty("lobby");
             JoinCode = lobby.GetProperty("joinCode").GetString();
             _messages.Add(JsonSerializer.SerializeToElement(new { t = "sys.lobby", d = lobby }));
@@ -97,7 +108,7 @@ public sealed class NetworkSession : ISession
         else
         {
             Volatile.Write(ref _status, "Searching for players");
-            var ticket = await RequestAsync(HttpMethod.Post, "queue", new { game = "blast" }, ct);
+            var ticket = await RequestAsync(HttpMethod.Post, "queue", new { game = "blast-lobby" }, ct);
             _ticketId = ticket.GetProperty("ticketId").GetString();
             while (ticket.GetProperty("state").GetString() == "queued")
                 ticket = await RequestAsync(HttpMethod.Get, $"queue/{Uri.EscapeDataString(_ticketId!)}?waitSeconds=10", null, ct);
@@ -122,8 +133,11 @@ public sealed class NetworkSession : ISession
         { ClientContextTakeover = false, ServerContextTakeover = false };
         try
         {
-            await socket.ConnectAsync(ResolveConnectUri(_origin, reservation.GetProperty("connectUrl").GetString()!), timeout.Token);
+            var connectUri = ResolveConnectUri(_origin, reservation.GetProperty("connectUrl").GetString()!);
+            await socket.ConnectAsync(connectUri, timeout.Token);
+            ConnectionRoute = connectUri.AbsolutePath;
             _socket = socket;
+            Interlocked.Exchange(ref _peerHelloSent, 0);
             Interlocked.Exchange(ref _sequence, 0);
             Volatile.Write(ref _status, "Connected");
         }
@@ -220,10 +234,12 @@ public sealed class NetworkSession : ISession
             if (type.GetString() == "party.status")
             {
                 var party = PartyStatus.Parse(message.GetProperty("d"));
+                if (party.Hosting == "peer" && Interlocked.Exchange(ref _peerHelloSent, 1) == 0)
+                    QueuePeer("peer.hello", new { version = 1 });
                 if (Party?.Phase != party.Phase || Party?.Match != party.Match) ReleaseInputs();
                 Volatile.Write(ref _party, party);_partyReady.TrySetResult();
             }
-            _messages.Add(message);
+            _wireMessages.Add(message);
         }
     }
 
@@ -242,12 +258,18 @@ public sealed class NetworkSession : ISession
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1d / 30));
         while (await timer.WaitForNextTickAsync(ct))
         {
+            // The initial eight-player stage/appearance burst must never evict ICE offers or answers.
+            for (int count = 0; count < 16 && _controlOutbound.TryDequeue(out var control); count++)
+                await socket.SendAsync(control.AsMemory(), WebSocketMessageType.Text, true, ct);
+            for (int count = 0; count < 16 && _outbound.TryDequeue(out var packet); count++)
+                await socket.SendAsync(packet.AsMemory(), WebSocketMessageType.Text, true, ct);
             if (Interlocked.Exchange(ref _appearancePending,0)!=0)
                 await socket.SendAsync(EncodeAppearance(Volatile.Read(ref _appearance)).AsMemory(),WebSocketMessageType.Text,true,ct);
             if(Interlocked.Exchange(ref _pendingRules,null) is {} rules)
                 await socket.SendAsync(rules.AsMemory(),WebSocketMessageType.Text,true,ct);
             if (Interlocked.Exchange(ref _startPending, 0) != 0)
                 await socket.SendAsync(JsonSerializer.SerializeToUtf8Bytes(new { t = "party.start", d = new {} }).AsMemory(), WebSocketMessageType.Text, true, ct);
+            if (Party?.Hosting == "peer") continue;
             PlayerInput input;
             lock (_inputGate)
             {
@@ -300,7 +322,11 @@ public sealed class NetworkSession : ISession
         Volatile.Write(ref _status, "Error: " + reason);
         _messages.Add(JsonSerializer.SerializeToElement(new { t = "sys.error", d = new { code = "connection_lost", message = reason } }));
     }
-    public void Advance(double deltaSeconds) { }
+    public void Advance(double deltaSeconds)
+    {
+        PumpMessages();
+        if (Status == "Connected") _peer?.Advance();
+    }
     public void SendInput(int localPlayer, PlayerInput input)
     {
         if (localPlayer != 0) throw new ArgumentOutOfRangeException(nameof(localPlayer));
@@ -315,11 +341,37 @@ public sealed class NetworkSession : ISession
             _input = input;
         }
     }
-    public IReadOnlyList<JsonElement> DrainMessages() => _messages.Drain();
+    public IReadOnlyList<JsonElement> DrainMessages() { PumpMessages(); return _messages.Drain(); }
+
+    private void PumpMessages()
+    {
+        foreach (var message in _wireMessages.Drain())
+        {
+            if (message.GetProperty("t").GetString() == "party.status" && message.GetProperty("d").TryGetProperty("hosting", out var hosting) && hosting.GetString() == "peer")
+                _peer ??= new PeerRoomClient(PlayerId!, _lobbyId!, _peerFactory, QueuePeer, _messages.Add, TakePeerInput);
+            if (_peer?.Handle(message) != true) _messages.Add(message);
+        }
+    }
+    private void QueuePeer(string type, object data)
+    {
+        var queue = type == "peer.frame" ? _outbound : _controlOutbound;
+        if (queue.Count >= (type == "peer.frame" ? 128 : 512)) return;
+        queue.Enqueue(JsonSerializer.SerializeToUtf8Bytes(new { t = type, d = data }));
+    }
+    private byte[] TakePeerInput()
+    {
+        lock (_inputGate)
+        {
+            var input = _input;
+            if (_buttons.TryDequeue(out var buttons)) input = input with { A = buttons.A, B = buttons.B, R = buttons.R, Aim = buttons.Aim, Stop = buttons.Stop };
+            return EncodeInput(input, Interlocked.Increment(ref _sequence));
+        }
+    }
 
     public async ValueTask DisposeAsync()
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+        _peer?.Dispose();
         await _lifetime.CancelAsync();
         _socket?.Abort();
         if (_worker is not null) try { await _worker; } catch (OperationCanceledException) { }

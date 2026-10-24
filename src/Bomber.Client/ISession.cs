@@ -40,7 +40,7 @@ public sealed record SessionSettings(string Stage = "sunken-temple", int Bots = 
     }
 }
 
-public enum NetworkMode { CreatePrivate, JoinCode, QuickPlay }
+public enum NetworkMode { CreatePrivate, JoinCode, QuickPlay, CreatePeer }
 
 /// <summary>Full state snapshots may supersede older snapshots, but stage/control frames stay ordered.</summary>
 internal sealed class MessageBuffer
