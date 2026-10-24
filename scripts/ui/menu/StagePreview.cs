@@ -16,16 +16,17 @@ public partial class StagePreview : Control
         var center=area.GetCenter()+new Vector2(-s,.62f*s);
         for(int z=0;z<11;z++)for(int x=0;x<13;x++)
         {
-            int tier=StageIndex==0?1+(Math.Abs(x-6)>3?2:z<3?3:0):StageIndex==2?x<4?0:x>8?2:1:0;
+            int tier=StageIndex==3?(x is 0 or 3 or 6 or 9 or 12||z is 0 or 5 or 10?2:0):StageIndex==0?1+(Math.Abs(x-6)>3?2:z<3?3:0):StageIndex==2?x<4?0:x>8?2:1:0;
             var p=center+new Vector2((x-z)*s,(x+z-11)*h-tier*h);
             var diamond=new[]{p+new Vector2(0,-h),p+new Vector2(s,0),p+new Vector2(0,h),p+new Vector2(-s,0)};
             var color=(x+z)%2==0?new Color("f9df9d"):new Color("eaca81");
             if(StageIndex==0&&x>3&&x<9&&z>3&&z<8)color=new Color("2d9caf");
+            if(StageIndex==3)color=tier==2?(z==5&&x is 3 or 6 or 9?new Color("e6e4cd"):new Color("787c89")):new Color("942c3c");
             DrawColoredPolygon(diamond,color);DrawPolyline([diamond[0],diamond[1],diamond[2],diamond[3],diamond[0]],new Color("b39253"),1,true);
-            if(x%3==0&&z%3==0&&x>0&&z>0)
+            if(StageIndex!=3&&x%3==0&&z%3==0&&x>0&&z>0)
             {DrawRect(new Rect2(p-new Vector2(.41f*s,1.35f*s),new Vector2(.82f*s,1.35f*s)),new Color("d1b879"));DrawRect(new Rect2(p-new Vector2(.53f*s,1.53f*s),new Vector2(1.06f*s,.3f*s)),new Color("fff0b6"));}
         }
-        string name=StageIndex==0?"Sunken Temple":StageIndex==1?"Rock Garden":"Up & Down",detail=StageIndex==0?"4 levels":StageIndex==1?"Open arena":"3 levels";
+        string name=StageIndex==0?"Sunken Temple":StageIndex==1?"Rock Garden":StageIndex==2?"Up & Down":"Top Rules",detail=StageIndex==0?"4 levels":StageIndex==1?"Open arena":StageIndex==2?"3 levels":"Castle bridges";
         var at=new Vector2(20,Size.Y-14);
         DrawStringOutline(ArcadeTheme.Display,at,name,HorizontalAlignment.Left,-1,18,6,ArcadeTheme.Cream);DrawString(ArcadeTheme.Display,at,name,HorizontalAlignment.Left,-1,18,ink);
         float width=ArcadeTheme.Display.GetStringSize(name,HorizontalAlignment.Left,-1,18).X;

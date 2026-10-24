@@ -171,6 +171,21 @@ Read [the rendering investigation](../history/iteration8-rendering.md) before re
 this shader; its fixed daytime Fresnel tint was superseded by the four lighting
 profiles below. Verify normal and hurry/flood states from more than one camera.
 
+### Top Rules castle presentation
+
+[TempleStageView.TopRules](../../scripts/arena/TempleStageView.TopRules.cs)
+builds original gray masonry, brass-framed slate bridges, pale junctions,
+green stair treads and a patterned crimson court from the authority layout.
+Bridge undersides are thin, with visible space below. Keep decorative banners,
+columns and warm edging outside the actual passage volume. No original textures
+or models ship. The castle has its own steeper battle-camera fit and a low near
+wall so the lower court stays visible; retain HUD-safe framing at 16:9 and 16:10.
+Local lighting and graphics presets continue to apply. The `top-rules` journey
+captures the real menu miniature, four-player opening, lower traversal/aiming,
+upper crosswalk, four stairs, night, eight-player combat, real dropped loot below
+a bridge and inward wall closure. Pickup meshes must use the snapshot's accepted
+`y`; querying the topmost terrain surface moves lower drops onto a bridge.
+
 ### Four stage lighting variants (2026-10-23)
 
 The user requested **Morning, Midday, Afternoon and Night**, selected personally
@@ -183,7 +198,7 @@ Online preference edits save the local choice but never override server lighting
 key/fill/ambient, sky, fog and water profiles. Morning uses soft warm lateral light;
 Midday has a higher sun and turquoise water; Afternoon uses amber light, longer
 shadows and mauve reflections; Night uses blue moonlight, indigo water and enough
-fill to retain silhouettes, stairs and aiming markers. All three stages reuse
+fill to retain silhouettes, stairs and aiming markers. All four stages reuse
 these profiles. Menu theatre lighting remains separately authored.
 
 `ArenaView` supplies a procedural sky radiance map for specular reflections.

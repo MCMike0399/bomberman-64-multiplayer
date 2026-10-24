@@ -39,6 +39,7 @@ internal static class PartyNetworkChecks
         if(state.GetProperty("players").EnumerateArray().Any(p=>p.GetProperty("wins").GetInt32()!=0))throw new Exception("Rematch kept old scores.");
         await host.DisposeAsync();await Until(()=>peer.IsLeader,"leader leave transfers room leadership");
         await AdvancedRoom(origin);
+        await TopRulesRoom(origin);
         await EightPlayerRoom(origin);
         await KickStopAndNames(origin);
         Console.WriteLine("PASS persistent private party: manual leader start, real match end, same-code lobby return, rematch and leader transfer");
@@ -57,6 +58,44 @@ internal static class PartyNetworkChecks
         if(Convert.FromBase64String(snapshot.GetProperty("softBlocks").GetString()!).Any(b=>b!=0)||snapshot.GetProperty("players").EnumerateArray().Any(p=>p.GetProperty("bombs").GetInt32()!=2||p.GetProperty("maxFire").GetInt32()!=4))throw new Exception("Online authority ignored advanced settings.");
         Console.WriteLine("PASS real network advanced rules edit reaches peer and controls cover, starting inventory and caps");
     }
+    private static async Task TopRulesRoom(Uri origin)
+    {
+        var settings=new SessionSettings(Bots:0,SuddenDeath:false){Advanced=new AdvancedRules{BlockPercent=0}};
+        await using var host=await NetworkSession.ConnectAsync(origin,"Castle leader",settings);
+        await using var peer=await NetworkSession.ConnectAsync(origin,"Castle guest",settings,NetworkMode.JoinCode,host.JoinCode);
+        await Until(()=>host.Party?.CanStart==true&&peer.Party!=null,"castle room ready");
+        host.SetRoomSettings(settings with {Stage="top-rules"});
+        await Until(()=>peer.Party?.Settings is {} rules&&SessionSettings.FromWire(rules).Stage=="top-rules","castle selection reaches guest");
+        await Start(host);
+        JsonElement? layout=null;
+        await Until(()=>
+        {
+            foreach(var message in host.DrainMessages())
+                if(message.GetProperty("t").GetString()=="stage")layout=message.GetProperty("d").Clone();
+            return layout!=null;
+        },"castle geometry arrives over WebSocket");
+        if(layout!.Value.GetProperty("id").GetString()!="top-rules"||layout.Value.GetProperty("underpasses").GetArrayLength()<40)
+            throw new Exception("Online castle lost underpass geometry.");
+        await State(host,s=>s.GetProperty("phase").GetInt32()==1);
+        async Task Walk(float x,float z)
+        {
+            var clock=Stopwatch.StartNew();
+            while(clock.Elapsed<TimeSpan.FromSeconds(8))
+            {
+                var snapshot=await State(host,_=>true);
+                var player=snapshot.GetProperty("players").EnumerateArray().Single(p=>p.GetProperty("id").GetString()==host.PlayerId);
+                float dx=x-player.GetProperty("x").GetSingle(),dz=z-player.GetProperty("z").GetSingle();
+                if(Math.Abs(dx)<.18f&&Math.Abs(dz)<.18f){host.SendInput(0,default);return;}
+                host.SendInput(0,new PlayerInput(Math.Clamp(dx*3,-1,1),Math.Clamp(dz*3,-1,1)));
+            }
+            throw new Exception("Online castle route did not reach "+x+","+z);
+        }
+        await Walk(5.5f,1.5f);await Walk(2.5f,1.5f);await Walk(2.5f,6.5f);await Walk(16.5f,6.5f);
+        var observed=await State(peer,s=>s.GetProperty("players").EnumerateArray().Any(p=>p.GetProperty("id").GetString()==host.PlayerId&&p.GetProperty("x").GetSingle()>16&&p.GetProperty("y").GetSingle()==0));
+        if(observed.GetProperty("players").GetArrayLength()!=2)throw new Exception("Castle lost peer during lower traversal.");
+        Console.WriteLine("PASS real network Top Rules room edit, serialized underpasses, staircase descent and peer-observed crossing below three bridges");
+    }
+
     private static async Task EightPlayerRoom(Uri origin)
     {
         var clients=new List<NetworkSession>();

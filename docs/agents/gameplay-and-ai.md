@@ -237,6 +237,38 @@ and the input guide; older iteration tables are historical.
   cannot add walkable floor, ramps or collision height.
   [Travel/water diagnosis](../history/iteration11-kick-research.md).
 
+## Top Rules castle (2026-10-24)
+
+`top-rules` adds the two-story castle researched in [the original manual and footage](../top-rules-research.md).
+Three one-cell raised lanes intersect a central crosswalk; four corner stairs
+join the red court and raised perimeter. Their four-cell flights use fractional
+ramps (half a tier per cell), with continuous authority and rendered treads. `StageLayout.Underpasses` marks thin
+upper slabs with a second tier-zero floor beneath. `SurfaceAt`/`CanCross`/`CanWalk`
+accept a support ceiling; use the actor's preceding accepted height for movement
+and flight. The default remains the topmost support for map authoring/spawns.
+Do not replace bridge cells with full-height cliffs or snap lower actors upward.
+Keep crate collision during ledge departure: filtering crates only by the
+player's rounded height let a falling temple CPU enter a crate. The focused
+`Bomber.Ai.Tests -- --soak --terrain-regression` retains Hard/seven CPUs/seed 64.
+
+Bombs, dropped items, body contacts, blast occlusion, throw authority and advisory
+projection retain the occupied story. Slabs block blasts and upward throws;
+lower horizontal travel remains open. The CPU graph has separate lower nodes
+only on maps with underpasses. Use its `X`/`Z` helpers and height-aware `Cell`
+lookup; dividing a layered node by arena width invents an out-of-bounds Z.
+
+The 19×17 footprint, tier-two decks, extra four starts and twelve seeded lower
+court blocks are Blast Circuit tuning, not recovered original constants. The
+first four starts follow the reference's outer lane ends; upper lanes, stairs
+and lower crossing routes stay clear. Optional sudden death uses shared column
+closure with visible castle walls on both sides. The original glowing edge
+strip's damage behavior remains unknown; our amber edging is decorative.
+
+Focused checks: `Bomber.Game.Tests -- --top-rules`,
+`Bomber.Ai.Tests -- --top-rules`, the `top-rules` native journey and the real
+network castle room/traversal in `PartyNetworkChecks`. The standard AI soak
+now covers four stages (48 combinations).
+
 ## Inventory, cover and pickup rendering
 
 - [Loot placement](../../src/Bomber.Game/Simulation/BlastSession.Loot.cs) uses map-owned

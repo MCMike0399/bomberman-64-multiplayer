@@ -37,6 +37,14 @@ update the current guide rather than silently reviving old behavior.
 
 ## Current decisions that supersede earlier experiments
 
+- Top Rules (2026-10-24 source work) adds the original castle composition with
+  three raised lanes, a central crosswalk, four stairs and real lower passages.
+  Terrain, CPU routing, bombs and aim previews distinguish both stories.
+  [Research and explicit adaptations](../top-rules-research.md); the gameplay,
+  visual and testing guides own maintenance. This does not change the installed
+  or published release by itself.
+
+
 - Repository layout (2026-10-24): Godot code lives in snake_case feature folders
   under `scripts/` with folder-mirroring `BlastCircuit.*` namespaces; the scene is
   `scenes/main.tscn`; shell launchers are in `tools/dev/`; dated iteration notes

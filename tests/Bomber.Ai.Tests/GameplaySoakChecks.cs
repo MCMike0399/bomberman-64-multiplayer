@@ -51,6 +51,13 @@ static class GameplaySoakChecks
     }
     public static void Run(string[] args)
     {
+        if(args.Contains("--terrain-regression"))
+        {
+            var result=Measure(BlastStages.Get("sunken-temple"),"hard",7,64,1800);
+            Console.WriteLine(JsonSerializer.Serialize(result));
+            if(result.LongestOpenIdleTicks>IdleLimitTicks)throw new Exception("Terrain support change stalled a stock temple CPU with a safe exit.");
+            Console.WriteLine("PASS stock temple terrain support retains bot liveness");return;
+        }
         if(args.Contains("--idle-regression"))
         {
             var result=Measure(BlastStages.Get("rock-garden"),"easy",7,64,1800);
@@ -61,7 +68,7 @@ static class GameplaySoakChecks
         int ticks=IntArgument(args,"--ticks=",2700);
         int fairnessChecks=CheckFairness();
         var results=new List<Result>();
-        foreach(string stage in new[]{"rock-garden","up-and-down","sunken-temple"})
+        foreach(string stage in new[]{"rock-garden","up-and-down","sunken-temple","top-rules"})
         foreach(string difficulty in new[]{"easy","medium","hard"})
         foreach(int bots in new[]{3,7})
         foreach(int seed in new[]{64,9876})
@@ -84,7 +91,7 @@ static class GameplaySoakChecks
     static int CheckFairness()
     {
         int checks=0;
-        foreach(string stage in new[]{"rock-garden","up-and-down","sunken-temple"})
+        foreach(string stage in new[]{"rock-garden","up-and-down","sunken-temple","top-rules"})
         {
             string? reference=null;
             foreach(string difficulty in new[]{"easy","medium","hard"})
@@ -179,7 +186,7 @@ static class GameplaySoakChecks
                 }
                 result.LongestIdleTicks=Math.Max(result.LongestIdleTicks,m.Idle);
                 result.LongestBlockedIntentTicks=Math.Max(result.LongestBlockedIntentTicks,m.Blocked);
-                if(m.OpenIdle>result.LongestOpenIdleTicks){result.LongestOpenIdleTicks=m.OpenIdle;result.LongestOpenIdleBot=p.Id;result.LongestOpenIdleAtTick=tick;result.LongestOpenIdleState=$"position=({p.X:F3},{p.Z:F3}) goal=({p.BotGoalX},{p.BotGoalZ}) input=({p.Input.X:F3},{p.Input.Z:F3}) alive={session.AiTestPlayers.Count(other=>other.Alive&&!other.Ghost)} neighbors={DescribeNeighborhood(p,stage,soft)} bodies={string.Join(";",session.AiTestPlayers.Where(other=>other.Id!=p.Id&&other.Alive&&!other.Ghost&&Math.Abs(other.X-p.X)+Math.Abs(other.Z-p.Z)<3).Select(other=>$"{other.Id}@{other.X:F2},{other.Z:F2}"))}";}
+                if(m.OpenIdle>result.LongestOpenIdleTicks){result.LongestOpenIdleTicks=m.OpenIdle;result.LongestOpenIdleBot=p.Id;result.LongestOpenIdleAtTick=tick;result.LongestOpenIdleState=$"position=({p.X:F3},{p.Z:F3}) escapeNode={p.BotEscapeNode} input=({p.Input.X:F3},{p.Input.Z:F3}) alive={session.AiTestPlayers.Count(other=>other.Alive&&!other.Ghost)} neighbors={DescribeNeighborhood(p,stage,soft)} bodies={string.Join(";",session.AiTestPlayers.Where(other=>other.Id!=p.Id&&other.Alive&&!other.Ghost&&Math.Abs(other.X-p.X)+Math.Abs(other.Z-p.Z)<3).Select(other=>$"{other.Id}@{other.X:F2},{other.Z:F2}"))}";}
             }
         }
         result.Wins=session.AiTestPlayers.OrderBy(p=>p.Slot).Select(p=>p.Wins).ToArray();result.EndPhase=session.AiTestPhase.ToString();
@@ -196,11 +203,11 @@ static class GameplaySoakChecks
     static int CountCover(SoftBlockGrid soft,StageLayout stage){int count=0;for(int z=0;z<stage.Height;z++)for(int x=0;x<stage.Width;x++)if(soft.IsAlive(x,z))count++;return count;}
     static bool HasSafeExit(BlastPlayer p,BlastSession session,StageLayout stage,NavigationGraph graph,SoftBlockGrid soft,TimedDangerField danger)
     {
-        int cell=graph.Cell(p.X,p.Z);if(cell<0)return false;
+        int cell=graph.Cell(p.X,p.Z,p.Y);if(cell<0)return false;
         for(int d=0;d<4;d++)
         {
             int next=graph.Edges[cell*4+d];if(next<0)continue;
-            int x=next%stage.Width,z=next/stage.Width;
+            int x=graph.X(next),z=graph.Z(next);
             if(soft.IsAlive(x,z)||!danger.Safe(next,0,.9f)||session.AiTestBombs.Any(b=>!b.Exploded&&b.CellX==x&&b.CellZ==z))continue;
             if(session.AiTestPlayers.Any(other=>other.Id!=p.Id&&other.Alive&&!other.Ghost&&other.CarriedById==null&&Math.Abs(other.Y-graph.Height[next])<.8f&&(other.X-x-.5f)*(other.X-x-.5f)+(other.Z-z-.5f)*(other.Z-z-.5f)<.85f*.85f))continue;
             return true;

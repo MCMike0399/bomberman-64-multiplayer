@@ -26,11 +26,12 @@ public static class BlastGeometry
             var t = (float)i / steps; var x = ax + dx * t; var z = az + dz * t; var y = ay + dy * t;
             var cx = (int)MathF.Floor(x); var cz = (int)MathF.Floor(z);
             var cell = stage.At(cx, cz);
-            var surface = stage.SurfaceAt(x, z);
+            var surface = stage.SurfaceAt(x, z, y);
+            if (stage.DeckIntersects(x, z, y, y)) return true;
             if (!cell.IsElimination && surface > y + .02f) return true;
             if (cell.Kind == CellKind.Pillar && surface + 1.75f > y) return true;
             if ((cx == acx && cz == acz) || (cx == bcx && cz == bcz)) continue;
-            if (!piercing && soft.IsAlive(cx, cz) && surface + 1 > y) return true;
+            if (!piercing && soft.IsAlive(cx, cz) && stage.SurfaceAt(x,z) <= y && stage.SurfaceAt(x,z) + 1 > y) return true;
         }
         return false;
     }

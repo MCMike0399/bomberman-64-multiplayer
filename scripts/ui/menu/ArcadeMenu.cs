@@ -77,7 +77,7 @@ public partial class ArcadeMenu : Control
     public SessionSettings Settings => BuildSettings(_practice?0:_localPlayers.Roster.CpuPlayers);
     public SessionSettings OnlineSettings=>BuildSettings((int)_bots.Value);
     private SessionSettings BuildSettings(int bots)=>new(StageIds[_stage.Selected],bots,(int)_wins.Value,(int)_rounds.Value,_sudden.ButtonPressed,_ghosts.ButtonPressed,new[]{"easy","normal","hard"}[_difficulty.Selected]){Advanced=_advanced};
-    private static readonly string[] StageIds=["sunken-temple","rock-garden","up-and-down"];
+    private static readonly string[] StageIds=["sunken-temple","rock-garden","up-and-down","top-rules"];
     private static readonly Color Coral=new("f06a55"),Lagoon=new("2a8c92");
     public override void _Ready()
     {

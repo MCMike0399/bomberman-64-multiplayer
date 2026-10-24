@@ -21,7 +21,7 @@ internal sealed class TimedDangerField
         for(int i=0;i<bombs.Count;i++)
         {
             var b=bombs[i];_times[i]=b.Exploded||b.State==BombState.Carried?float.PositiveInfinity:b.IsRemote?.65f:Math.Max(0,b.FuseTimer);
-            int cell=_graph.Cell(b.X,b.Z);
+            int cell=_graph.Cell(b.X,b.Z,Height(b));
             if(!b.Exploded&&b.State==BombState.Resting&&cell>=0)BombOwners[cell]=b.OwnerId??"unknown";
         }
         // A visible short fuse can trigger a longer fuse; propagate until the earliest chain time stabilizes.
@@ -51,8 +51,12 @@ internal sealed class TimedDangerField
                     float x=b.X+vx*t*b.MotionRate,z=b.Z+vz*t*b.MotionRate;
                     if(_graph.Cell(x,z)<0)break;
                     // Ricochets can reverse direction at stone; cover the reflected side as well.
-                    if(b.IsBouncy)AddSphere(soft,b.X-vx*t,b.State==BombState.Flying?b.FlyY:_stage.SurfaceAt(b.X-vx*t,b.Z-vz*t),b.Z-vz*t,b.BlastRadius+.45f,b.IsRed,Math.Max(0,time-.15f),time+.65f);
-                    AddSphere(soft,x,_stage.SurfaceAt(x,z),z,b.BlastRadius+.45f,b.IsRed,Math.Max(0,time-.15f),time+.65f);
+                    if(b.IsBouncy)AddSphere(soft,b.X-vx*t,b.State==BombState.Flying?b.FlyY:_stage.SurfaceAt(b.X-vx*t,b.Z-vz*t,(b.State==BombState.Flying?b.FlyY:b.Tier)+.25f),b.Z-vz*t,b.BlastRadius+.45f,b.IsRed,Math.Max(0,time-.15f),time+.65f);
+                    // A short projection can cross a narrow deck between samples.
+                    // Retain the visible airborne altitude as well as possible support.
+                    if(_stage.Underpasses.Count>0&&b.State==BombState.Flying)
+                        AddSphere(soft,x,b.FlyY,z,b.BlastRadius+.45f,b.IsRed,Math.Max(0,time-.15f),time+.65f);
+                    AddSphere(soft,x,_stage.SurfaceAt(x,z,(b.State==BombState.Flying?b.FlyY:b.Tier)+.25f),z,b.BlastRadius+.45f,b.IsRed,Math.Max(0,time-.15f),time+.65f);
                 }
             }
         }
@@ -60,16 +64,19 @@ internal sealed class TimedDangerField
     }
     public void AddHypothetical(SoftBlockGrid soft,BlastBomb bomb,float reactionMargin)
     {AddSphere(soft,bomb.X,Height(bomb),bomb.Z,bomb.BlastRadius+.45f,bomb.IsRed,Math.Max(0,bomb.FuseTimer-reactionMargin),bomb.FuseTimer+.55f);}
-    private float Height(BlastBomb b)=>b.State==BombState.Flying?b.FlyY:_stage.SurfaceAt(b.X,b.Z);
+    private float Height(BlastBomb b)=>b.State==BombState.Flying?b.FlyY:b.LandingY??_stage.SurfaceAt(b.X,b.Z,b.Tier+.25f);
     private void AddSphere(SoftBlockGrid soft,float x,float y,float z,float radius,bool red,float begin,float end)
     {
         int minX=Math.Max(0,(int)MathF.Floor(x-radius)),maxX=Math.Min(_stage.Width-1,(int)MathF.Ceiling(x+radius));
         int minZ=Math.Max(0,(int)MathF.Floor(z-radius)),maxZ=Math.Min(_stage.Height-1,(int)MathF.Ceiling(z+radius));
         for(int cz=minZ;cz<=maxZ;cz++)for(int cx=minX;cx<=maxX;cx++)
         {
-            int cell=cz*_graph.Width+cx;
+            for (int layer=0;layer<_graph.Count/_graph.PlaneCount;layer++)
+            {
+            int cell=cz*_graph.Width+cx+layer*_graph.PlaneCount;
             if(_graph.Walkable[cell]&&BlastGeometry.Contains(_stage,soft,x,y,z,radius,cx+.5f,_graph.Height[cell],cz+.5f,red||begin>0))
             {Begins[cell]=Math.Min(Begins[cell],begin);Ends[cell]=Math.Max(Ends[cell],end);}
+            }
         }
     }
 }

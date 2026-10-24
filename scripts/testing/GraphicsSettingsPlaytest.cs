@@ -48,7 +48,7 @@ public partial class PlaytestDriver
                 AuditVisibleMenu("Settings",size);await Capture("graphics-settings-"+size.X);
                 await KeyPress(Key.Escape);
             }
-            foreach(string stage in new[]{"sunken-temple","rock-garden","up-and-down"})
+            foreach(string stage in new[]{"sunken-temple","rock-garden","up-and-down","top-rules"})
             {
                 _root.StartLocal(new SessionSettings(Stage:stage,Bots:0),1,practice:true);
                 await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"graphics enters "+stage,180);
@@ -63,8 +63,9 @@ public partial class PlaytestDriver
                     Check(environment.SsaoEnabled==(preset!=GraphicsPreset.Low)&&environment.GlowEnabled==(preset!=GraphicsPreset.Low),"arena effects follow "+preset);
                     Check(!view.UseTaa&&view.ScreenSpaceAA==Viewport.ScreenSpaceAAEnum.Disabled,"sharp non-temporal AA policy");
                     var terrain=AuditDescendants(LightingArena).OfType<TempleStageView>().Single();
-                    var water=terrain.GetChildren().OfType<MeshInstance3D>().Single(n=>n.Mesh is PlaneMesh);
-                    Check(((ShaderMaterial)water.MaterialOverride).GetShaderParameter("quality_detail").AsSingle()==(preset==GraphicsPreset.Low?0:1),"live water detail follows preset");
+                    var materials=AuditDescendants(terrain).OfType<MeshInstance3D>().Select(n=>n.MaterialOverride)
+                        .OfType<ShaderMaterial>().Where(m=>m.Shader.Code.Contains("uniform float quality_detail")).Distinct().ToArray();
+                    Check(materials.Length>0&&materials.All(m=>m.GetShaderParameter("quality_detail").AsSingle()==(preset==GraphicsPreset.Low?0:1)),"live terrain shader detail follows preset on "+stage);
                     await Capture("graphics-"+stage+"-"+GraphicsQuality.ToWire(preset));
                     await MeasureGraphics(stage,preset);
                 }

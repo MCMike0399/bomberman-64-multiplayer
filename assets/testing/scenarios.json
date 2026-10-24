@@ -2,6 +2,20 @@
   "schemaVersion": 1,
   "scenarios": [
     {
+      "id": "top-rules",
+      "method": "TopRulesTour",
+      "domains": [
+        "gameplay",
+        "physics",
+        "rendering",
+        "ui",
+        "ai"
+      ],
+      "headless": true,
+      "timeout": 240,
+      "manual": false
+    },
+    {
       "id": "first-use-rendering",
       "method": "FirstUseRendering",
       "domains": [
@@ -491,6 +505,7 @@
     {
       "id": "all",
       "steps": [
+        "top-rules",
         "first-use-rendering",
         "graphics-settings",
         "advanced-settings",
@@ -555,6 +570,7 @@
     {
       "id": "core-headless",
       "steps": [
+        "top-rules",
         "cover-layout",
         "sandbox",
         "asset-audit",

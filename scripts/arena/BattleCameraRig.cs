@@ -8,9 +8,11 @@ public sealed class BattleCameraRig(Camera3D camera)
     private readonly List<Vector3> _bounds=[];
     private Vector3 _center=new(10.5f,2,11.5f);
     private Vector2 _offset;
+    private bool _castle;
     public void SetStage(JsonElement stage)
     {
         _bounds.Clear();
+        _castle=stage.GetProperty("id").GetString()=="top-rules";
         int width=stage.GetProperty("width").GetInt32(),depth=stage.GetProperty("height").GetInt32();
         _center=new(width*.5f,2,depth*.5f);
         int i=0;
@@ -23,7 +25,7 @@ public sealed class BattleCameraRig(Camera3D camera)
             {
                 _bounds.Add(new(x+dx,y,z+dz));
                 // Match solid pillar crowns and keep standing-player headroom on walkable cells.
-                _bounds.Add(new(x+dx,y+(kind==1?1.21f:2.1f),z+dz));
+                _bounds.Add(new(x+dx,y+(kind==1?(_castle?4.25f:1.21f):2.1f),z+dz));
             }
         }
         Fit();
@@ -33,7 +35,7 @@ public sealed class BattleCameraRig(Camera3D camera)
         if(_bounds.Count==0)return;
         var viewport=camera.GetViewport().GetVisibleRect().Size;
         if(viewport.X<=0||viewport.Y<=0)return;
-        var direction=new Vector3(0,.60f,.80f);
+        var direction=_castle?new Vector3(0,.72f,.694f):new Vector3(0,.60f,.80f);
         // Centered frontal view keeps the broad stepped silhouette and visible vertical risers.
         bool Place(float distance)
         {

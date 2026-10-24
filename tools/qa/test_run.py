@@ -42,11 +42,11 @@ class HarnessTests(unittest.TestCase):
                   'Ticks': 10, 'ActiveTicks': 5, 'EligibleBotTicks': 6, 'MovingBotTicks': 3,
                   'Bombs': 1, 'LongestOpenIdleTicks': 1}
         report = {'fairnessChecks': 1, 'idleLimitTicks': 3, 'tickRate': 1,
-                  'results': [dict(result, Seed=seed) for seed in range(36)]}
+                  'results': [dict(result, Seed=seed) for seed in range(48)]}
         with tempfile.TemporaryDirectory() as temporary:
             receipt = Path(temporary) / 'soak.json'
             receipt.write_text(json.dumps(report))
-            self.assertEqual(36, qa.validate_soak(receipt)['scenarios'])
+            self.assertEqual(48, qa.validate_soak(receipt)['scenarios'])
             changes = [('passed', False), ('EligibleBotTicks', 0), ('MovingBotTicks', 0),
                        ('Bombs', 0), ('ActiveTicks', 0), ('LongestOpenIdleTicks', 4), ('Seed', 1)]
             for key, value in changes:

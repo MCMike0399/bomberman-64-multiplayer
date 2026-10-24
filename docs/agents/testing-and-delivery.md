@@ -15,7 +15,7 @@ references are [playtests](../../tools/playtest/README.md), [CI](../ci.md),
 | File moves/renames | `git grep` old paths; build; editor import for `.uid` files | `public` plus the moved area's gate; see [codebase map](codebase-map.md#moving-files-safely) |
 | Simulation/rules | Corresponding executable managed suite with a red regression | `managed`, relevant native journey, `headless` |
 | Client/session/protocol | Client checks and real HTTP/WebSocket repro | `managed` plus `network`; restart only an owned stale server |
-| AI | Focused deterministic regression and matched-seed metrics | Managed AI checks/36-scenario soak plus `ai-play` where visible behavior matters |
+| AI | Focused deterministic regression and matched-seed metrics | Managed AI checks/48-scenario soak plus `ai-play` where visible behavior matters |
 | Input/menu/focus | `controllers`, `aim-inputs`, `wasd-navigation`, or relevant journey | Real windowed graphical checks; physical observation if claiming device support |
 | Rendering/rig/audio | Relevant native scenario and actual images/audio/video | Graphical regression; shipped-app checks for delivery |
 | Packaging/runtime/native backend | Bundle and staged-runtime inspection | `package`, exported-app journey, exact installed-copy verification |
@@ -317,3 +317,15 @@ to keep their pickup/rendering evidence deterministic. They do not certify the
 default drop probability; managed actual-destruction samples do. `sandbox`
 selects a 60-second lifetime for its long equipment tour. Default and short
 lifetimes have separate authority and graphical expiration witnesses.
+
+## Top Rules verification
+
+`top-rules` is a standard leaf in `all` and `core-headless`. It drives normal
+menu keys and gameplay inputs through every staircase, the raised crosswalk,
+lower underpasses/throws, real crate → equipment → lower death-drop presentation,
+night lighting, eight-player CPU battle and inward
+sudden-death walls. Headless results establish state assertions only; inspect
+the graphical captures separately. Managed `--top-rules` checks preserve the
+layered support, falling, kick/throw/slab and CPU path witnesses. The standard
+48-case AI soak includes the new arena. `PartyNetworkChecks` edits a real room
+to Top Rules and observes a host's lower-story traversal from its peer.

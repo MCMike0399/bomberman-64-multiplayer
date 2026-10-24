@@ -1,3 +1,28 @@
+# Top Rules castle — source verification
+
+2026-10-24: original procedural reconstruction of the castle arena identified
+in the [Nintendo manual and original gameplay footage](top-rules-research.md).
+This is PR/source work; the published v0.26.2 baseline below remains separate.
+The [gameplay guide](agents/gameplay-and-ai.md#top-rules-castle-2026-10-24)
+records the two-story support model and explicit project tuning.
+
+The new journey uses real menu/input paths: four-player starts, every staircase,
+upper crosswalk, lower travel and ceiling-aware aiming, eight-player CPU combat,
+night, ordinary crate destruction/collection and a real equipped-item death-drop
+beneath a bridge, followed by inward sudden-death walls. Managed fixtures cover
+slab shielding, kick/throw support, fast descending slab contacts, layered CPU
+routes, occupancy and danger. Real HTTP/WebSocket clients edit a room to Top
+Rules and observe the host descending and crossing beneath all three bridges.
+
+Two regressions were retained before correction: a height-filtered crate contact
+let a falling stock Temple CPU enter a crate (Hard/seven CPUs/seed 64), and a lower
+equipment drop's mesh used the bridge's height despite a correct snapshot. The
+crate repro's maximum open stationary window fell from 13.23s to .53s. The loot
+journey checks the actual production pickup node after real collection and death.
+
+Final receipts and captures are being reviewed; do not treat this paragraph as a
+completed graphical verification claim.
+
 # PR #1 regression verification — v0.26.2 delivered
 
 2026-10-24: functional verification of the codebase refactor, prepared as
