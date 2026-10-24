@@ -1,9 +1,34 @@
-# PR #1 regression verification — v0.26.2 candidate
+# PR #1 regression verification — v0.26.2 delivered
 
 2026-10-24: functional verification of the codebase refactor, prepared as
-**0.26.2/build 31**. The tested final export is from `90d71c2`; subsequent
-verification-document edits do not change its runtime. Publication is pending
-the trusted main pipeline at the time of this receipt.
+**0.26.2/build 31**. The tested local export is from `90d71c2`; subsequent
+verification-document edits do not change its runtime. [PR #1](https://github.com/MCMike0399/bomberman-64-multiplayer/pull/1)
+merged at `081754b9ee580ded19f5ac3372bd7fbdb6a0ecd3`.
+[Trusted verification](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40138710624)
+and [signed publication](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40139306645)
+passed; [v0.26.2 is published stable](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.26.2).
+
+The public downloads independently passed source/version/build identity, archive
+checksums, the update manifest's P-256 signature, native-library compatibility
+and startup, and the complete 217-file Mac / 42-file server inventories. Mac ZIP
+SHA-256: `9f8bc281fcaa863f3d667aef4d4ac72d4784e50f05a99b5172aae584ceee11da`.
+The exact public Mac archive was temporarily extracted, matched against all 217
+archive files and strictly code-signature verified, then passed a graphical
+`package-smoke` in the isolated Metal desktop: **271 assertions, 16 captures,
+zero errors/warnings**. Its temporary bundle was removed afterward.
+
+Both shared game nodes were drained and checked empty before serial installation
+of the public server inventory. Each passed a public one-human/one-bot match with
+authoritative movement and human bomb placement, and each test room retired.
+The primary produced 255 snapshots and the fallback 256 in their bounded probes.
+Resource limits and private configuration were preserved; other sampled container,
+user-unit and HTTP states were unchanged. Rollback copies remain on their hosts.
+The primary still matched all 42 running release files at the final audit. A
+separate, user-confirmed P2P task subsequently replaced the fallback with a
+`0.27.0-candidate`; that concurrent deployment was preserved and is outside this
+release's certification. No user app installation was replaced. Task-created
+comparison worktrees and launchable Mac bundles were cleaned up after retaining
+archives and receipts.
 
 On Apple M5/macOS 26.6.2, Godot 4.7.2 mono, SDK 10.0.400 and kernel `64ec8db`:
 

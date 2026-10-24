@@ -118,6 +118,12 @@ a rebuilt Release export when comparing CPU results; source builds have differen
 runtime overhead. A brief native run does not certify thermal endurance or other
 M-series models, Windows/Linux drivers, or physical controller behavior.
 
+For before/after performance comparisons, match the build toolchain and inspect
+the bundled `*.runtimeconfig.json` servicing version. A published archive and a
+local build can carry different .NET patches despite targeting the same major
+version. PR #1's controlled local baseline removed an apparent High-preset gap
+seen when comparing unlike artifacts; retain all measurements and their limits.
+
 Add `--metal-hud` on macOS to collect Apple GPU durations independently of Godot's
 viewport counters. The harness enables HUD/logging only in the owned game process,
 keeps its overlay transparent, and joins its console batches to PID-filtered
