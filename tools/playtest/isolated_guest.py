@@ -73,6 +73,8 @@ def main():
                 command.append('--display-windowed')
             if request['script']:
                 command.append('--playtest-file=' + str(payload / 'script.json'))
+            if request.get('coldEffects'):
+                command.append('--playtest-cold-effects')
             if origin:
                 command.append('--playtest-server=' + origin)
             (output / 'guest-command.json').write_text(json.dumps(command, indent=2) + '\n')

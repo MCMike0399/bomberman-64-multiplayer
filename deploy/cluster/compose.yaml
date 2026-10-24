@@ -14,6 +14,7 @@ services:
     extra_hosts:
       - "raspberrypi:${BLAST_PI_IP:?Resolve the current Pi tailnet address}"
     volumes:
+      - ./runtime:/app:ro
       - ./plugins/Realtime.Redis:/app/plugins/Realtime.Redis:ro
       - ./plugins/Blast.Cluster:/app/plugins/Blast.Cluster:ro
     environment:

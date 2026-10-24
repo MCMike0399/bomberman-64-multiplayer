@@ -557,6 +557,10 @@ public partial class PlaytestDriver : Node
         Input(0,default); await Frames(4);
         Check(_root.BattleAudio.Counts.GetValueOrDefault("bomb")==bombCueBefore+1,"network bomb event plays once across repeated snapshots");
         await Capture("network-two-humans");
+        var savedGraphics=_root.Preferences.Graphics;
+        await SelectGraphics(BlastCircuit.Rendering.GraphicsPreset.Low);
+        Check(ReferenceEquals(_root.ActiveSession,host)&&LightingArena.TimeOfDay==BlastCircuit.Rendering.StageLighting.FromWire(serverLighting),"graphics preset preserves online connection and server lighting");
+        await SelectGraphics(savedGraphics);
         var savedLighting=_root.Preferences.StageLighting;
         var otherLighting=(BlastCircuit.Rendering.StageTime)(((int)LightingArena.TimeOfDay+1)%4);
         await SelectLocalLighting(otherLighting);

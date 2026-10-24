@@ -225,7 +225,7 @@ public partial class ArcadeMenu : Control
         _name=ArcadeTheme.Field(identity,"Your name — click to edit","","Type your name");_name.Name="PlayerName";_name.MaxLength=24;
         Copy(identity,"Shown above your bomber. Leave blank for P1, P2…",15);
         _name.TextChanged+=_=>IdentityChanged?.Invoke();
-        _server=ArcadeTheme.Field(identity,"Server address","http://127.0.0.1:18496");_server.Name="ServerUrl";
+        _server=ArcadeTheme.Field(identity,"Server address",NetworkSession.DefaultServerUrl);_server.Name="ServerUrl";
         _server.TextChanged+=_=>IdentityChanged?.Invoke();
         var host=ArcadeTheme.Column(columns,14);host.CustomMinimumSize=new(400,0);
         Section(host,"Host a room");
@@ -402,12 +402,14 @@ public partial class ArcadeMenu : Control
         _difficulty.Select(Array.IndexOf(new[]{"easy","normal","hard"},settings.BotDifficulty=="medium"?"normal":settings.BotDifficulty));_stage.Select(Math.Max(0,Array.IndexOf(StageIds,settings.Stage)));_bots.Value=settings.Bots;_wins.Value=settings.Wins;_rounds.Value=settings.RoundSeconds;_sudden.ButtonPressed=settings.SuddenDeath;_ghosts.ButtonPressed=settings.Ghosts;_localPlayers.ConfigureCounts(humans,settings.Bots);UpdateStageDescription();
     }
     private bool _overlayBackground;
+    public GraphicsPreset Graphics {get;private set;}=GraphicsPreset.Medium;
+    private Label _graphicsDescription=null!;
     public void SetOverlay(bool overlay)=>_overlayBackground=overlay;
     private void BuildSettings()
     {
         var screen=Screen("Settings");var box=Card(screen,new(150,95),new(1140,690));
         ArcadeTheme.Heading(box,"Settings",42);
-        Copy(box,"Your preferences are saved on this Mac.",18);
+        Copy(box,"Your preferences are saved on this device.",18);
         var columns=ArcadeTheme.Row(box,40);
         var player=ArcadeTheme.Column(columns,14);player.CustomMinimumSize=new(500,440);
         var updates=ArcadeTheme.Column(columns,14);updates.CustomMinimumSize=new(500,440);
@@ -424,6 +426,11 @@ public partial class ArcadeMenu : Control
             ChangeValue=direction=>{LocalStageTime=(StageTime)(((int)LocalStageTime+direction+4)%4);SettingsChanged?.Invoke();}};
         player.AddChild(lighting);
         Copy(player,"Morning, midday, afternoon or night. Online rounds use the server's lighting.",16);
+        var graphics=new ArcadeRuleDial {Name="GraphicsPreset",Caption="Graphics",ValueWidth=160,
+            ReadValue=()=>Graphics.ToString(),ChangeValue=direction=>
+            {Graphics=(GraphicsPreset)(((int)Graphics+direction+3)%3);_graphicsDescription.Text=GraphicsQuality.Description(Graphics);SettingsChanged?.Invoke();}};
+        updates.AddChild(graphics);
+        _graphicsDescription=Copy(updates,GraphicsQuality.Description(Graphics),16);
         Section(updates,"Game updates");
         _automaticUpdates=new CheckButton {Name="AutomaticUpdates",Text="Check automatically",ButtonPressed=true};updates.AddChild(_automaticUpdates);
         _automaticUpdates.Toggled+=_=>SettingsChanged?.Invoke();
@@ -449,6 +456,7 @@ public partial class ArcadeMenu : Control
         _vibration.SetPressedNoSignal(preferences.Vibration);_volume.SetValueNoSignal(preferences.Volume*100);
         _volumeLabel.Text=$"Sound volume: {preferences.Volume*100:0}%";
         LocalStageTime=preferences.StageLighting;
+        Graphics=preferences.Graphics;_graphicsDescription.Text=GraphicsQuality.Description(Graphics);
     }
     public void UpdateStatus(string version,string status,bool busy,bool ready,bool canInstall)
     {

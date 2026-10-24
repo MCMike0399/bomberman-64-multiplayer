@@ -6,7 +6,7 @@ using System.Text.Json;
 namespace BlastCircuit.UI;
 
 /// <summary>A lit miniature theatre behind the actual menu controls.</summary>
-public partial class ArcadeBackdrop : SubViewportContainer
+public partial class ArcadeBackdrop : RenderSurface
 {
     public bool Quiet {get;set;}
     public bool Results {get;set;}
@@ -26,10 +26,11 @@ public partial class ArcadeBackdrop : SubViewportContainer
     private Vector2 _parallax;
     private double _clock,_untilDraw;
     private bool _wasResults;
+    private int _graphicsRevision=-1;
     public override void _Ready()
     {
-        MouseFilter=MouseFilterEnum.Ignore;Stretch=true;
-        _viewport=new SubViewport {OwnWorld3D=true,Size=new(1440,900),Msaa3D=Viewport.Msaa.Msaa2X,RenderTargetUpdateMode=SubViewport.UpdateMode.Disabled};AddChild(_viewport);
+        MouseFilter=MouseFilterEnum.Ignore;
+        _viewport=new SubViewport {OwnWorld3D=true,Size=new(1440,900),RenderTargetUpdateMode=SubViewport.UpdateMode.Disabled};SetViewport(_viewport);
         _world=new Node3D();_viewport.AddChild(_world);
         _environment=new Godot.Environment {BackgroundMode=Godot.Environment.BGMode.Color,BackgroundColor=new Color("121129"),AmbientLightSource=Godot.Environment.AmbientSource.Color,AmbientLightColor=new Color("8f97c3"),AmbientLightEnergy=.48f,TonemapMode=Godot.Environment.ToneMapper.Filmic,ReflectedLightSource=Godot.Environment.ReflectionSource.Disabled};
         _world.AddChild(new WorldEnvironment {Environment=_environment});
@@ -195,7 +196,14 @@ public partial class ArcadeBackdrop : SubViewportContainer
     {var mesh=new MeshInstance3D {Position=position,Mesh=new CylinderMesh {TopRadius=radius,BottomRadius=radius,Height=height,RadialSegments=48},MaterialOverride=material};parent.AddChild(mesh);return mesh;}
     public override void _Process(double delta)
     {
+        base._Process(delta);
         if(!IsVisibleInTree())return;
+        if(_graphicsRevision!=GraphicsQuality.Revision)
+        {
+            _environment.SsaoEnabled=GraphicsQuality.Current==GraphicsPreset.High;
+            _environment.SsaoRadius=.4f;_environment.SsaoIntensity=.8f;_environment.SsaoPower=1.2f;
+            _graphicsRevision=GraphicsQuality.Revision;
+        }
         _clock+=delta;_untilDraw+=delta;
         if(_untilDraw<1d/30)return;float dt=(float)_untilDraw;_untilDraw=0;
         for(int i=0;i<_heroes.Count;i++)

@@ -3,7 +3,7 @@ using BlastCircuit.Rendering;
 namespace BlastCircuit.UI;
 
 /// <summary>A live miniature world using the same articulated character as the arena.</summary>
-public partial class CharacterPreview : SubViewportContainer
+public partial class CharacterPreview : RenderSurface
 {
     private static readonly ArtMaterials Materials=new();
     private SubViewport _viewport=null!;
@@ -31,8 +31,8 @@ public partial class CharacterPreview : SubViewportContainer
     }
     public override void _Ready()
     {
-        MouseFilter=MouseFilterEnum.Ignore;Stretch=true;
-        _viewport=new SubViewport {Size=new Vector2I(320,240),TransparentBg=true,OwnWorld3D=true,RenderTargetUpdateMode=SubViewport.UpdateMode.Disabled,Msaa3D=Viewport.Msaa.Msaa2X};AddChild(_viewport);
+        MouseFilter=MouseFilterEnum.Ignore;
+        _viewport=new SubViewport {Size=new Vector2I(320,240),TransparentBg=true,OwnWorld3D=true,RenderTargetUpdateMode=SubViewport.UpdateMode.Disabled};SetViewport(_viewport);
         _world=new Node3D();_viewport.AddChild(_world);
         _world.AddChild(new WorldEnvironment {Environment=new Godot.Environment {BackgroundMode=Godot.Environment.BGMode.Color,BackgroundColor=new Color("fff6dc"),AmbientLightSource=Godot.Environment.AmbientSource.Color,AmbientLightColor=new Color("fff0cd"),AmbientLightEnergy=.5f,TonemapMode=Godot.Environment.ToneMapper.Filmic}});
         _world.AddChild(new DirectionalLight3D {RotationDegrees=new(-35,-30,0),LightColor=new Color("fff2c9"),LightEnergy=1.3f,ShadowEnabled=ResultsPresentation});
@@ -63,6 +63,7 @@ public partial class CharacterPreview : SubViewportContainer
     }
     public override void _Process(double delta)
     {
+        base._Process(delta);
         if(!IsVisibleInTree()||_model==null)return;
         _camera.Size=ResultsPresentation?2.85f:Math.Max(2.05f,1.05f/Math.Max(.2f,Size.X/Math.Max(1,Size.Y)));
         _clock+=delta;_untilDraw+=delta;if(_untilDraw<1d/30)return;

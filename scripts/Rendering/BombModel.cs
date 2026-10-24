@@ -5,6 +5,9 @@ namespace BlastCircuit.Rendering;
 /// <summary>Charge, fuse and release animation driven by accepted authoritative bomb state.</summary>
 public partial class BombModel : Node3D
 {
+    // Retain the warm shader variant after the temporary warmup models are freed.
+    private static readonly StandardMaterial3D StreakMaterial=new()
+    {AlbedoColor=new Color(1,.94f,.75f,.5f),ShadingMode=BaseMaterial3D.ShadingModeEnum.Unshaded,Transparency=BaseMaterial3D.TransparencyEnum.Alpha};
     public const float BaseVisualScale=1.22f;
     private readonly Node3D _shape=new(),_fuseAssembly=new();
     private readonly MeshInstance3D _shell,_spark;
@@ -36,10 +39,9 @@ public partial class BombModel : Node3D
             Sphere(_remoteIndicators,new(Mathf.Sin(angle)*.342f,.38f,Mathf.Cos(angle)*.342f),Vector3.One*.085f,indicator);
         }
         AddChild(_trail);_trail.Visible=false;
-        var streakMaterial=new StandardMaterial3D {AlbedoColor=new Color(1,.94f,.75f,.5f),ShadingMode=BaseMaterial3D.ShadingModeEnum.Unshaded,Transparency=BaseMaterial3D.TransparencyEnum.Alpha};
         for(int i=0;i<3;i++)
         {
-            var streak=Box(_trail,new((i-1)*.16f,.18f,-.75f-i*.1f),new(.035f,.025f,.45f+i*.15f),streakMaterial);
+            var streak=Box(_trail,new((i-1)*.16f,.18f,-.75f-i*.1f),new(.035f,.025f,.45f+i*.15f),StreakMaterial);
             streak.CastShadow=GeometryInstance3D.ShadowCastingSetting.Off;
         }
     }

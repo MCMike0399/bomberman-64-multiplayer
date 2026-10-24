@@ -33,6 +33,10 @@ def http(url):
 def sample():
     mac = platform.system() == "Darwin"
     docker = "/Applications/Docker.app/Contents/Resources/bin/docker" if mac else "docker"
+    # Host-specific service inventory stays in private operator configuration.
+    watch = json.loads((Path.home() / "Developer/blast-circuit-cluster/monitor.json").read_text())
+    if not isinstance(watch.get("http"), dict) or not isinstance(watch.get("units"), list):
+        raise RuntimeError("monitor.json requires http and units collections")
     result = {"at": time.time(), "host": platform.node(), "load": os.getloadavg()}
     ids = command([docker, "ps", "-q"]).split()
     # A narrow format avoids collecting credentials from Docker's full inspect output.
@@ -53,8 +57,6 @@ def sample():
         result["vm_stat"] = command(["vm_stat"])
         top = command(["top", "-l", "1", "-n", "0"])
         result["cpu_idle"] = float(re.search(r"([\d.]+)% idle", top)[1])
-        for name, port, path in [("akos", 18487, "/health"), ("pomnibot", 18081, "/health"), ("umo", 8088, "/")]:
-            result["http"][name] = http(f"http://127.0.0.1:{port}{path}")
     else:
         mem = {k: int(v) for k, v in re.findall(r"^(\w+):\s+(\d+)", Path("/proc/meminfo").read_text(), re.M)}
         result["available_mib"] = mem["MemAvailable"] / 1024
@@ -63,15 +65,19 @@ def sample():
         result["temperature"] = float(Path("/sys/class/thermal/thermal_zone0/temp").read_text()) / 1000
         result["throttled"] = int(command(["vcgencmd", "get_throttled"]).strip().split("=")[1], 16)
         result["units"] = {}
-        for name, user in [("pihole-FTL", False), ("chopperbot", True), ("t3code", True), ("service-sentinel", True), ("agentboard", True)]:
-            cmd = ["systemctl"] + (["--user"] if user else []) + ["show", name, "-p", "ActiveState", "-p", "MainPID", "-p", "NRestarts"]
+        for unit in watch["units"]:
+            name = unit["name"]
+            cmd = ["systemctl"] + (["--user"] if unit.get("user") else []) + ["show", name, "-p", "ActiveState", "-p", "MainPID", "-p", "NRestarts"]
             result["units"][name] = dict(line.split("=", 1) for line in command(cmd).splitlines() if "=" in line)
-        dns = command(["dig", "@127.0.0.1", "example.com", "+stats", "+tries=1", "+time=2"])
+    if watch.get("dns"):
+        dns = command(["dig", "@" + watch["dns"]["server"], watch["dns"]["name"], "+stats", "+tries=1", "+time=2"])
         result["dns"] = {"ok": "status: NOERROR" in dns, "ms": int(re.search(r"Query time: (\d+)", dns)[1])}
-        for name, port, path in [("pihole", 8081, "/admin/"), ("seafile", 8377, "/"), ("filebrowser", 8090, "/")]:
-            result["http"][name] = http(f"http://127.0.0.1:{port}{path}")
-        tailnet = command(["tailscale", "ip", "-4"]).strip().splitlines()[0]
-        result["http"]["vaultwarden"] = http(f"http://{tailnet}:8222/")
+    for name, url in watch["http"].items():
+        if name == "game":
+            raise RuntimeError("The built-in game readiness check cannot be replaced")
+        if "{tailnet}" in url:
+            url = url.replace("{tailnet}", command(["tailscale", "ip", "-4"]).strip().splitlines()[0])
+        result["http"][name] = http(url)
     return result
 
 

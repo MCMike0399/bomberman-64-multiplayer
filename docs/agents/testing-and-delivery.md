@@ -95,6 +95,42 @@ only proven focus interruptions, from released inputs and a fresh session, at
 most three attempts; functional failures fail. Record guest GPU evidence
 separately from bare-metal performance and physical device evidence.
 
+For GPU performance work, use the development Mac's physical Apple Silicon GPU
+when needed. The native `graphics-benchmark` scenario is an explicit shared-desktop
+path; it is not part of `all`, and routine graphical regression stays isolated.
+Announce its brief windowed run before launch, keep the game foreground, and stop
+the QA VM/other owned rendering jobs first so they do not compete for the GPU.
+Do not reroute a failed isolated correctness run onto the host automatically.
+
+```sh
+python3 tools/playtest/run.py --scenario graphics-benchmark --desktop shared --build
+python3 tools/playtest/run.py --scenario graphics-benchmark --desktop shared --app /path/to/BlastCircuit.app
+```
+
+The benchmark rejects VM/software GPUs, headless mode and recording. It uses
+uncapped real time with VSync off, a 1920×1200 window, warmup and wall-clock
+sampling across all presets in menus and real eight-player battles. Keep native
+hardware/OS/power state, frame percentiles, actual bomb/explosion witnesses and
+the GPU-counter availability in its receipt. Root GPU timings exclude separate
+menu surfaces; zero/unsupported counters must be reported as unavailable. Prefer
+a rebuilt Release export when comparing CPU results; source builds have different
+runtime overhead. A brief native run does not certify thermal endurance or other
+M-series models, Windows/Linux drivers, or physical controller behavior.
+
+Add `--metal-hud` on macOS to collect Apple GPU durations independently of Godot's
+viewport counters. The harness enables HUD/logging only in the owned game process,
+keeps its overlay transparent, and joins its console batches to PID-filtered
+unified-log timestamps. It does not change global HUD/privacy settings. Read the
+[parser, alignment and metric scope](../../tools/playtest/README.md#native-gpu-performance)
+before interpreting the GPU report. Godot 4.7.2 returns unavailable internal Metal
+GPU times; the evaluated 4.8 beta does support them. [Engine decision](../engine-upgrade-research.md).
+
+For first-use stutter, run `first-use-rendering` in a fresh process. Its optional
+`--cold-effects` disables warmup and should fail on deferred synchronous pipeline
+creation. Preserve both receipts. Fixed-step frame intervals are diagnostic stall
+witnesses, not real-time GPU throughput. The default case tests every quality
+preset and retained shader resources after garbage collection.
+
 Native popups have distinct window IDs; use the existing popup helpers and
 canvas-to-screen mouse transforms. Preserve ordinary input/hit testing rather
 than calling menu callbacks or forcing focus flags to obtain a green receipt.

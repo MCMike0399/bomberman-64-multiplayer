@@ -32,9 +32,13 @@ public partial class GameRoot : Node3D
     private string _screenName="Modes", _settingsReturn="Modes", _pauseReturn="Match";
     private int _partyMatch=-1;
     private PlayerPreferences _preferences=new();
+    private GraphicsPreset? _appliedGraphics;
+    private bool _preparingGraphics,_skipGraphicsPreparation;
+    public bool GraphicsPreparing=>_preparingGraphics;
     private BlastCircuit.Updates.GameUpdater _updater=null!;
     public string PreferencesPath {get;private set;}="user://preferences.cfg";
     public PlayerPreferences Preferences=>_preferences;
+    public double GraphicsWarmupMilliseconds {get;private set;}
     public string ScreenName
     {
         get=>_screenName;
@@ -43,7 +47,7 @@ public partial class GameRoot : Node3D
             _screenName=value;
             _arena?.SetBattleActive(value=="Match");
             // Input role follows the visible screen; lobby/results retain match bindings.
-            if(ControllerHub.Current is {} hub)hub.MenuNavigationEnabled=value is not ("Match" or "Controls");
+            if(ControllerHub.Current is {} hub)hub.MenuNavigationEnabled=!_preparingGraphics&&value is not ("Match" or "Controls");
         }
     }
     public int SnapshotCount { get; private set; }
@@ -61,8 +65,9 @@ public partial class GameRoot : Node3D
     public void ConfigureRosterSlot(int slot,string role,int appearance)=>_menu.ConfigureRosterSlot(slot,role.ToLowerInvariant() switch {"human"=>RosterRole.Human,"cpu"=>RosterRole.Cpu,"off"=>RosterRole.Off,_=>throw new ArgumentException("Role must be human, cpu or off.")},appearance);
     public void SetOnlineAppearance(int appearance)=>_menu.SetOnlineAppearance(appearance);
 
-    public override void _Ready()
+    public override async void _Ready()
     {
+        var args=OS.GetCmdlineUserArgs();
         _uiAudio=new BlastCircuit.Rendering.BattleAudio();AddChild(_uiAudio);
         _arena=new ArenaView();AddChild(_arena);_arena.Visible=false;
         var layer=new CanvasLayer();AddChild(layer);
@@ -83,7 +88,26 @@ public partial class GameRoot : Node3D
         _updater=new BlastCircuit.Updates.GameUpdater();AddChild(_updater);
         _menu.CheckUpdatesRequested+=()=>{_ = _updater.Check();};
         _menu.InstallUpdateRequested+=async ()=>{if(_session==null&&!_connecting&&await _updater.Install())GetTree().Quit();};
-        var args=OS.GetCmdlineUserArgs();
+        bool coldEffects=args.Any(a=>a.StartsWith("--playtest="))&&args.Contains("--playtest-cold-effects");
+        _skipGraphicsPreparation=DisplayServer.GetName()=="headless"||coldEffects;
+        if(!_skipGraphicsPreparation)
+        {
+            var warmupClock=System.Diagnostics.Stopwatch.StartNew();
+            _preparingGraphics=true;
+            ScreenName="Loading";_menu.Visible=false;ControllerHub.Current.MenuNavigationEnabled=false;
+            var loading=PreparationOverlay("Getting ready…");
+            try
+            {
+                await EffectWarmup.Draw(this);
+                await _arena.PrepareEffects();
+            }
+            finally
+            {
+                GraphicsWarmupMilliseconds=warmupClock.Elapsed.TotalMilliseconds;
+                _preparingGraphics=false;
+                loading.QueueFree();ScreenName="Modes";_menu.Visible=true;_menu.ShowScreen("Modes");
+            }
+        }
         _smoke=args.Any(a=>a.StartsWith("--smoke"));
         var duration=args.FirstOrDefault(a=>a.StartsWith("--smoke-seconds="));
         if(duration!=null&&double.TryParse(duration.Split('=')[1],out var seconds))_smokeDuration=Math.Clamp(seconds,1,120);
@@ -237,6 +261,7 @@ public partial class GameRoot : Node3D
     {try{await session.DisposeAsync();}catch(Exception error){GD.PushWarning("Session cleanup: "+error.Message);}}
     public override void _UnhandledInput(InputEvent @event)
     {
+        if(_preparingGraphics)return;
         bool start=@event is InputEventJoypadButton {Pressed:true,ButtonIndex:JoyButton.Start};
         bool cancel=@event is InputEventKey {Pressed:true,Echo:false,Keycode:Key.Escape}
             || (ScreenName is not ("Match" or "Controls") && @event.IsActionPressed("ui_cancel"));
@@ -276,6 +301,12 @@ public partial class GameRoot : Node3D
     {
         _uiAudio.Volume=_preferences.Volume;_arena.Audio.Volume=_preferences.Volume;
         ControllerHub.Current.VibrationEnabled=_preferences.Vibration;
+        if(_appliedGraphics!=_preferences.Graphics)
+        {
+            GraphicsQuality.Apply(_preferences.Graphics,GetViewport());
+            _arena.ApplyGraphicsQuality();
+            _appliedGraphics=_preferences.Graphics;
+        }
         ApplyStageLighting();
     }
     private void ApplyStageLighting()
@@ -286,13 +317,44 @@ public partial class GameRoot : Node3D
                 ?StageLighting.FromWire(lighting.GetString()):StageTime.Midday;
         if(_arena.TimeOfDay!=time)_arena.SetTimeOfDay(time);
     }
-    private void SavePreferences()
+    private CanvasLayer PreparationOverlay(string message)
     {
+        var layer=new CanvasLayer {Layer=100};AddChild(layer);
+        var backdrop=new ColorRect {Color=ArcadeTheme.Night,FocusMode=Control.FocusModeEnum.All};layer.AddChild(backdrop);
+        backdrop.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);backdrop.GrabFocus();
+        var center=new CenterContainer();backdrop.AddChild(center);center.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+        var column=ArcadeTheme.Column(center,24);
+        ArcadeTheme.Heading(column,"Blast Circuit",54).HorizontalAlignment=HorizontalAlignment.Center;
+        ArcadeTheme.Text(column,message,24).HorizontalAlignment=HorizontalAlignment.Center;
+        return layer;
+    }
+    private async void SavePreferences()
+    {
+        bool graphicsChanged=_preferences.Graphics!=_menu.Graphics;
         _preferences.PlayerName=_menu.PlayerName;_preferences.ServerUrl=_menu.ServerUrl;
         _preferences.AutomaticUpdates=_menu.AutomaticUpdates;
         _preferences.StageLighting=_menu.LocalStageTime;
+        _preferences.Graphics=_menu.Graphics;
         _preferences.Vibration=_menu.VibrationEnabled;_preferences.Volume=_menu.SoundVolume;ApplyPreferences();
-        if(_preferences.Save(PreferencesPath)!=Error.Ok)_menu.SettingsNotice("Could not save settings on this Mac.");
+        if(_preferences.Save(PreferencesPath)!=Error.Ok)_menu.SettingsNotice("Could not save settings on this device.");
+        if(graphicsChanged&&!_skipGraphicsPreparation)
+        {
+            string screen=ScreenName;bool menuVisible=_menu.Visible;var focus=GetViewport().GuiGetFocusOwner();
+            _preparingGraphics=true;_menu.Visible=false;ControllerHub.Current.MenuNavigationEnabled=false;
+            var loading=PreparationOverlay("Applying graphics…");
+            try {await EffectWarmup.Draw(this);await _arena.PrepareEffects();}
+            finally
+            {
+                loading.QueueFree();_preparingGraphics=false;
+                if(ScreenName==screen)_menu.Visible=menuVisible;
+                ControllerHub.Current.MenuNavigationEnabled=ScreenName is not ("Match" or "Controls");
+                if(_menu.Visible)
+                {
+                    if(GodotObject.IsInstanceValid(focus)&&focus.IsVisibleInTree())focus.GrabFocus();
+                    else _menu.FocusStart();
+                }
+            }
+        }
     }
     private void PlayerFeedback(string kind,string? player)
     {

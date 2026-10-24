@@ -219,8 +219,57 @@ The signed release and existing shared server are delivered; see
 [verification](../verification.md). Agent inspection does not imply user approval
 of the art direction.
 
-Production uses Forward+ and Metal on macOS with shadows/SSAO/MSAA and restrained
-glow. A headless shader-source assertion cannot prove GPU compilation, balanced
+Production uses Forward+ and Metal on macOS. Settings → Graphics selects Low,
+Medium (default) or High; see [research and preset budgets](../graphics-research.md).
+`GraphicsQuality` owns the live viewport/postprocess/shadow policy, while
+`RenderSurface` sizes decorative menu worlds in output pixels. Root antialiasing
+alone does not affect those separate worlds. Keep native Buttons for focus/input
+and redraw cached plaques when their state, size, visibility or preset changes.
+Opaque menus disable the hidden arena's root 3D pass; paused-match overlays retain it.
+
+Low uses 2× MSAA, 85% 3D resolution with spatial FSR, 1024 shadows and no SSAO/glow.
+Medium uses native resolution, 4× MSAA, 2048 shadows and half-resolution SSAO.
+High keeps native/4×, raises shadows to 4096, uses full-resolution higher-quality
+SSAO, and adds restrained menu contact shading. Medium/High retain the authored
+glow intensity. All menu textures remain at output resolution; no TAA/FXAA.
+Low skips fine shader noise/ripples and contact-hardening sun shadows while
+retaining the same geometry, lighting palettes, shoreline and gameplay.
+Shadow depth bias scales with preset and doubles for Morning/Afternoon; the
+smaller atlas otherwise exposes diagonal self-shadow marks under grazing light.
+
+Stone/water share immutable Shader resources but have independent ShaderMaterial
+uniforms. Stone seams and fine noise use pixel-footprint filtering; wet highlights
+use normal variance. Do not share mutable water height or palette across scenes.
+Stable water uniforms are uploaded only when changed; the shader TIME still animates.
+`graphics-settings` checks native selection, persistence, malformed saved values,
+live scene changes, sampling at supported sizes, idle redraws and all stage/preset
+pairs. `network` also changes quality while retaining the same connection and
+server lighting. Renderer timings in a VM are not native M-series benchmarks;
+zero GPU timing is unavailable evidence, never zero cost.
+
+### First-use effects
+
+`EffectWarmup` renders the real bomb/explosion, kick, exit and ghost/fading
+variants in a temporary 128×128 world with the current MSAA and arena environment.
+Startup shows “Getting ready…”; a changed preset shows “Applying graphics…”
+before restoring control. Local matches remain paused and online sessions keep
+their normal ongoing authority. No simulation, audio or haptics run in the scratch
+world. A bounded draw fallback handles background/new native windows, and actual
+readback confirms rendering before the temporary world is removed.
+
+Warm the current format after MSAA changes. Trying to prewarm several MSAA levels
+once at startup left Low's first effects creating new pipelines. Keep immutable
+shader/material resources alive: the bomb trail material is shared so freeing
+scratch instances cannot discard its warmed variant. Do not reset OS shader caches.
+
+`first-use-rendering` runs before other visual tests in `all`, creates ordinary
+bombs, waits for actual explosions and checks Mesh/Surface/Draw pipeline deltas
+at every preset, including after garbage collection. Background specialization
+is recorded separately. `--cold-effects` is a deliberately failing diagnostic
+that disables preparation only during that scenario; it retains a red witness.
+See [measurements and sources](../graphics-research.md#first-use-rendering-evidence).
+
+A headless shader-source assertion cannot prove GPU compilation, balanced
 lighting or quality. Test the real renderer; profile real-time play separately
 from fixed-step Movie Maker captures before claiming performance improvements.
 Fullscreen is product behavior, windowed is QA behavior; neither proves OS Game Mode.

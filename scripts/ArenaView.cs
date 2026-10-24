@@ -66,6 +66,15 @@ public partial class ArenaView : Node3D
     public BattleAudio Audio=>_audio;
     public object PresentationState=>new {sequence=_presentation.Sequence,audio=_audio.Counts,voicePlays=_audio.VoicePlayCount,droppedCues=_audio.DroppedCueCount,effects=_effectCounts,explosions=_explosions.Values.Where(GodotObject.IsInstanceValid).Select(v=>new {tier=v.Tier,radius=v.Radius,age=v.Age,phase=v.Phase,lobes=v.LobeCount,hazard=v.HazardActive,extent=v.VisualExtent}).ToArray()};
     public void ResetPresentationBaseline()=>_presentation.Reset();
+    public Task PrepareEffects()=>EffectWarmup.Run(GetParent(),_art,_environment,_keyLight,_fillLight);
+    public void ApplyGraphicsQuality()
+    {
+        GraphicsQuality.ApplyArena(_environment);
+        // Smaller shadow texels need more depth bias to avoid speckled self-shadowing.
+        float grazingSun=TimeOfDay is StageTime.Morning or StageTime.Afternoon?2:1;
+        _keyLight.ShadowBias=grazingSun*(GraphicsQuality.Current switch {GraphicsPreset.Low=>.12f,GraphicsPreset.Medium=>.06f,_=>.025f});
+        _keyLight.LightAngularDistance=GraphicsQuality.Current==GraphicsPreset.Low?0:TimeOfDay==StageTime.Afternoon?2.4f:1.8f;
+    }
 
     public override void _Ready()
     {
@@ -98,7 +107,7 @@ public partial class ArenaView : Node3D
         if(_environment==null)return;
         var look=StageLighting.For(TimeOfDay);
         _keyLight.RotationDegrees=look.KeyRotation;_keyLight.LightColor=look.KeyColor;_keyLight.LightEnergy=look.KeyEnergy;
-        _keyLight.LightAngularDistance=TimeOfDay==StageTime.Afternoon?2.4f:1.8f;
+        ApplyGraphicsQuality();
         _fillLight.LightColor=look.Fill;_fillLight.LightEnergy=look.FillEnergy;
         _environment.AmbientLightColor=look.Ambient;_environment.AmbientLightEnergy=look.AmbientEnergy;
         _environment.FogLightColor=look.Horizon;
@@ -110,6 +119,7 @@ public partial class ArenaView : Node3D
     private void UpdateProcessing()
     {
         ProcessMode=IsVisibleInTree()?ProcessModeEnum.Inherit:ProcessModeEnum.Disabled;
+        GetViewport().Disable3D=!IsVisibleInTree();
         if(!IsVisibleInTree())_audio?.StopAll();
         if(_camera!=null)foreach(var preview in _throwPreviews.Values)preview.UpdateScreen(_camera);
     }

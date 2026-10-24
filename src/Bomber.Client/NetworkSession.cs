@@ -8,6 +8,7 @@ namespace Bomber.Client;
 /// <summary>Guest-authenticated Burbuja client. Network work never calls the engine; poll DrainMessages.</summary>
 public sealed class NetworkSession : ISession
 {
+    public const string DefaultServerUrl = "https://blast.burbuja-lab.dev";
     private readonly HttpClient _http;
     private readonly CancellationTokenSource _lifetime = new();
     private readonly MessageBuffer _messages = new();
@@ -115,6 +116,10 @@ public sealed class NetworkSession : ISession
         timeout.CancelAfter(TimeSpan.FromSeconds(10));
         var socket = new ClientWebSocket();
         socket.Options.KeepAliveInterval = TimeSpan.FromSeconds(10);
+        // Realtime frames contain game state/intent; HTTP credentials stay outside this channel.
+        // No shared compression history between messages, and old servers may decline negotiation.
+        socket.Options.DangerousDeflateOptions = new WebSocketDeflateOptions
+        { ClientContextTakeover = false, ServerContextTakeover = false };
         try
         {
             await socket.ConnectAsync(ResolveConnectUri(_origin, reservation.GetProperty("connectUrl").GetString()!), timeout.Token);

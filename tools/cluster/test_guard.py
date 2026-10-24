@@ -9,8 +9,8 @@ class GuardTests(unittest.TestCase):
         self.before = {
             'containers': {'existing': {'health': 'healthy', 'restarts': 0, 'started': 'same'},
                            'blast-cluster-server-1': {'health': 'healthy', 'restarts': 0}},
-            'units': {'chopperbot': {'ActiveState': 'active', 'MainPID': '10', 'NRestarts': '0'}},
-            'http': {'pihole': {'status': 200, 'ms': 20}},
+            'units': {'existing-bot': {'ActiveState': 'active', 'MainPID': '10', 'NRestarts': '0'}},
+            'http': {'existing-health': {'status': 200, 'ms': 20}},
             'swap_used_mib': 700, 'available_mib': 5000, 'temperature': 58,
             'throttled': 0xe0000, 'dns': {'ok': True, 'ms': 0},
         }
@@ -33,14 +33,14 @@ class GuardTests(unittest.TestCase):
 
     def test_dns_and_http_failure_abort(self):
         self.assertTrue(self.changed('dns', {'ok': False, 'ms': 0}))
-        self.assertTrue(self.changed('http', {'pihole': {'status': 0, 'ms': 3000}}))
+        self.assertTrue(self.changed('http', {'existing-health': {'status': 0, 'ms': 3000}}))
 
     def test_unhealthy_baseline_cannot_authorize_load(self):
-        self.before['http']['pihole']['status'] = 503
+        self.before['http']['existing-health']['status'] = 503
         self.assertTrue(violations(self.before, copy.deepcopy(self.before)))
 
     def test_service_restart_aborts_even_if_active(self):
-        self.assertTrue(self.changed('units', {'chopperbot': {'ActiveState': 'active', 'MainPID': '11', 'NRestarts': '1'}}))
+        self.assertTrue(self.changed('units', {'existing-bot': {'ActiveState': 'active', 'MainPID': '11', 'NRestarts': '1'}}))
 
     def test_existing_container_disappearance_aborts(self):
         self.assertTrue(self.changed('containers', {'blast-cluster-server-1': {'health': 'healthy', 'restarts': 0}}))

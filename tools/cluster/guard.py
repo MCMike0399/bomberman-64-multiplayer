@@ -49,7 +49,7 @@ def violations(before, now):
     if now.get("temperature", 0) >= 75 or now.get("throttled", 0) & 15:
         failures.append("Pi temperature/throttling limit")
     if not now.get("dns", {"ok": True})["ok"] or now.get("dns", {"ms": 0})["ms"] > 250:
-        failures.append("Pi-hole DNS degraded")
+        failures.append("DNS probe failed or slowed")
     if now.get("cpu_idle", 100) < 10:
         failures.append("host CPU idle below 10%")
     if "cpu_ticks" in before and "cpu_ticks" in now:

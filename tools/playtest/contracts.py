@@ -44,6 +44,36 @@ def expanded(name, scenarios):
     return [leaf for child in entry['steps'] for leaf in expanded(child, scenarios)] if 'steps' in entry else [name]
 
 
+def validate_benchmark(receipt):
+    """Native timings must never silently accept VM, fixed-step or empty evidence."""
+    errors = []
+    if receipt.get('schemaVersion') != 1 or receipt.get('timingMode') != 'realtime-uncapped':
+        errors.append('Invalid native benchmark schema/timing mode')
+    gpu = receipt.get('gpu', '')
+    if not gpu or any(word in gpu.lower() for word in ('paravirtual', 'llvmpipe', 'swiftshader', 'software')):
+        errors.append('Native benchmark requires a physical GPU')
+    samples = receipt.get('measurements', [])
+    expected = [(scene, preset) for preset in ('Low', 'Medium', 'High') for scene in ('menu', 'eight-player-temple')]
+    if not isinstance(samples, list) or any(not isinstance(s, dict) for s in samples) or [(s.get('scene'), s.get('preset')) for s in samples] != expected:
+        return errors + ['Native benchmark is missing scene/preset coverage']
+    def positive(value):
+        return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) and value > 0
+    for sample in samples:
+        if not isinstance(sample.get('samples'), int) or sample['samples'] < 30:
+            errors.append('Insufficient native frame samples')
+        for field in ('seconds', 'fps', 'frameMedianMs', 'frameP95Ms'):
+            if not positive(sample.get(field)):
+                errors.append('Invalid native measurement: ' + field)
+        for field in ('rootGpuMedianMs', 'rootGpuP95Ms'):
+            if field not in sample or (sample[field] is not None and not positive(sample[field])):
+                errors.append('Unavailable GPU timings must be null, not zero or nonfinite')
+        if sample['scene'] != 'menu' and (sample.get('peakBombs', 0) <= 0 or sample.get('peakHazards', 0) <= 0):
+            errors.append('Native battle benchmark lacks real bomb/explosion evidence')
+        if sample['scene'] != 'menu' and sample.get('rootDrawCallsPeak', 0) <= 0:
+            errors.append('Native battle benchmark did not render its 3D arena')
+    return errors
+
+
 def validate_summary(summary, folder, scenario, headless):
     """Reject false passes, missing captures and artifact paths outside this run."""
     errors = []

@@ -15,6 +15,8 @@ public partial class TempleStageView : Node3D
     private MeshInstance3D _water=null!;
     private float _targetWater=-.53f;
     private bool _waterInitialized;
+    private float _uploadedWater=float.NaN,_uploadedFlood=float.NaN;
+    private int _graphicsRevision=-1;
     public float WaterHeight=>_water?.Position.Y??-.53f;
     public void SetLighting(StageLighting lighting)
     {
@@ -27,13 +29,25 @@ public partial class TempleStageView : Node3D
     }
     public override void _Process(double delta)
     {
-        if(_water==null)return;
-        var p=_water.Position;p.Y=Mathf.Lerp(p.Y,_targetWater,1-Mathf.Exp(-7*(float)delta));_water.Position=p;
-        if(_water.MaterialOverride is ShaderMaterial water)water.SetShaderParameter("flood_amount",Mathf.Clamp((_targetWater+.53f)/(4*HeightScale),0,1));
-        _stone.SetShaderParameter("water_height",p.Y);
-        _cobble.SetShaderParameter("water_height",p.Y);
-        _masonry.SetShaderParameter("water_height",p.Y);
-        _bedrock.SetShaderParameter("water_height",p.Y);
+        if(_water==null||!IsVisibleInTree())return;
+        var water=(ShaderMaterial)_water.MaterialOverride;
+        if(_graphicsRevision!=GraphicsQuality.Revision)
+        {
+            float detail=GraphicsQuality.Current==GraphicsPreset.Low?0:1;
+            foreach(var material in new[]{water,_stone,_cobble,_masonry,_bedrock})material.SetShaderParameter("quality_detail",detail);
+            _graphicsRevision=GraphicsQuality.Revision;
+        }
+        var p=_water.Position;p.Y=Mathf.Lerp(p.Y,_targetWater,1-Mathf.Exp(-7*(float)delta));
+        if(Math.Abs(p.Y-_targetWater)<.0001f)p.Y=_targetWater;
+        if(_water.Position!=p)_water.Position=p;
+        float flood=Mathf.Clamp((_targetWater+.53f)/(4*HeightScale),0,1);
+        if(_uploadedFlood!=flood){water.SetShaderParameter("flood_amount",flood);_uploadedFlood=flood;}
+        if(_uploadedWater!=p.Y)
+        {
+            _stone.SetShaderParameter("water_height",p.Y);_cobble.SetShaderParameter("water_height",p.Y);
+            _masonry.SetShaderParameter("water_height",p.Y);_bedrock.SetShaderParameter("water_height",p.Y);
+            _uploadedWater=p.Y;
+        }
     }
     public TempleStageView(ArtMaterials art){_art=art;}
     public float Surface(float x,float z)

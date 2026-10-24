@@ -1,0 +1,51 @@
+using Godot;
+namespace BlastCircuit.Rendering;
+
+public enum GraphicsPreset { Low, Medium, High }
+
+/// <summary>Device-local rendering policy. Never changes simulation or shared stage lighting.</summary>
+public static class GraphicsQuality
+{
+    public static GraphicsPreset Current {get;private set;}=GraphicsPreset.Medium;
+    public static int Revision {get;private set;}
+    public static Viewport.Msaa Antialiasing=>Current==GraphicsPreset.Low?Viewport.Msaa.Msaa2X:Viewport.Msaa.Msaa4X;
+    public static GraphicsPreset FromWire(string? value)=>value switch
+    { "low"=>GraphicsPreset.Low,"high"=>GraphicsPreset.High,_=>GraphicsPreset.Medium };
+    public static string ToWire(GraphicsPreset value)=>value switch
+    { GraphicsPreset.Low=>"low",GraphicsPreset.High=>"high",_=>"medium" };
+    public static string Description(GraphicsPreset value)=>value switch
+    {
+        GraphicsPreset.Low=>"Lighter effects and softer detail for lower power use.",
+        GraphicsPreset.High=>"Crisp edges, richer contact shading and finer shadows.",
+        _=>"Crisp edges and balanced effects for everyday play."
+    };
+
+    public static void Apply(GraphicsPreset preset,Viewport viewport)
+    {
+        Current=Enum.IsDefined(preset)?preset:GraphicsPreset.Medium;
+        Revision++;
+        ApplyViewport(viewport);
+        viewport.Scaling3DScale=Current==GraphicsPreset.Low?.85f:1;
+        // Spatial upscaling is portable across Metal/Vulkan; UI always stays native.
+        viewport.Scaling3DMode=Current==GraphicsPreset.Low?Viewport.Scaling3DModeEnum.Fsr:Viewport.Scaling3DModeEnum.Bilinear;
+        RenderingServer.DirectionalShadowAtlasSetSize(Current switch {GraphicsPreset.Low=>1024,GraphicsPreset.High=>4096,_=>2048},true);
+        RenderingServer.DirectionalSoftShadowFilterSetQuality(Current switch
+        {GraphicsPreset.Low=>RenderingServer.ShadowQuality.SoftVeryLow,GraphicsPreset.High=>RenderingServer.ShadowQuality.SoftMedium,_=>RenderingServer.ShadowQuality.SoftLow});
+        RenderingServer.EnvironmentSetSsaoQuality(Current==GraphicsPreset.High?RenderingServer.EnvironmentSsaoQuality.High:RenderingServer.EnvironmentSsaoQuality.Medium,
+            Current!=GraphicsPreset.High,.5f,2,50,300);
+        RenderingServer.ScreenSpaceRoughnessLimiterSetActive(true,.25f,.18f);
+    }
+
+    public static void ApplyViewport(Viewport viewport)
+    {
+        viewport.Msaa3D=Antialiasing;
+        viewport.ScreenSpaceAA=Viewport.ScreenSpaceAAEnum.Disabled;
+        viewport.UseTaa=false;
+        viewport.UseDebanding=true;
+    }
+    public static void ApplyArena(Godot.Environment environment)
+    {
+        environment.SsaoEnabled=Current!=GraphicsPreset.Low;
+        environment.GlowEnabled=Current!=GraphicsPreset.Low;
+    }
+}

@@ -32,6 +32,11 @@ using (var input = JsonDocument.Parse(NetworkSession.EncodeInput(new PlayerInput
 var localUrl = NetworkSession.ResolveConnectUri(new Uri("http://127.0.0.1:18496"), "/realtime/v1/connect?token=abc%2Bdef");
 Check(localUrl.Scheme == "ws" && localUrl.Port == 18496 && localUrl.Query == "?token=abc%2Bdef", "Relative socket reservation preserves port and token");
 Check(NetworkSession.ResolveConnectUri(new Uri("https://example.test"), "wss://node.example.test:443/realtime/v1/connect?token=x").Host == "node.example.test", "Fleet socket connects to owning node");
+foreach (string node in new[] { "pi", "divemac" })
+{
+    var fleetUrl = NetworkSession.ResolveConnectUri(new Uri(NetworkSession.DefaultServerUrl), $"{NetworkSession.DefaultServerUrl}/nodes/{node}/realtime/v1/connect?token=abc%2Bdef");
+    Check(fleetUrl.Scheme == "wss" && fleetUrl.AbsolutePath == $"/nodes/{node}/realtime/v1/connect" && fleetUrl.Query == "?token=abc%2Bdef", "Public fleet reservation preserves owning node route and token");
+}
 try { NetworkSession.ResolveConnectUri(new Uri("https://example.test"), "ws://node.example.test/connect"); throw new Exception("downgrade accepted"); } catch (InvalidDataException) { checks++; }
 await using (var local = new LocalSession(new SessionSettings(Bots: 0), 8))
 {

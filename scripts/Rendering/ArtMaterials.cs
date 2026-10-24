@@ -6,6 +6,7 @@ public sealed class ArtMaterials
 {
     public static readonly Color[] PlayerColors = [new("f6f0df"),new("30314a"),new("ec3d50"),new("356be0"),new("56b76b"),new("ffba37"),new("9d56ce"),new("31c9c5")];
     private readonly Dictionary<string, StandardMaterial3D> _cache = [];
+    private static Shader? _stoneShader,_waterShader;
     public StandardMaterial3D Color(Color color, float roughness=.72f, bool glow=false)
     {
         string key=$"{color.ToHtml()}:{roughness}:{glow}";
@@ -20,13 +21,13 @@ public sealed class ArtMaterials
     public ShaderMaterial Bedrock()=>StoneMaterial(3);
     private static ShaderMaterial StoneMaterial(int style)
     {
-        var material=new ShaderMaterial {Shader=new Shader {Code=StoneShader}};
+        var material=new ShaderMaterial {Shader=_stoneShader??=new Shader {Code=StoneShader}};
         material.SetShaderParameter("stone_style",style);
         material.SetShaderParameter("base_color",style==1?new Color("6e6653"):style==3?new Color("77745a"):new Color("c7ad79"));
         material.SetShaderParameter("mortar_color",style==1?new Color("302b21"):style==3?new Color("454b3d"):new Color("75613f"));
         return material;
     }
-    public ShaderMaterial Water()=>new() { Shader=new Shader { Code=WaterShader } };
+    public ShaderMaterial Water()=>new() { Shader=_waterShader??=new Shader {Code=WaterShader} };
     private const string StoneShader="""
 shader_type spatial;
 render_mode diffuse_burley;
@@ -34,6 +35,7 @@ uniform vec4 base_color : source_color = vec4(.85,.71,.36,1);
 uniform vec4 mortar_color : source_color = vec4(.5,.38,.18,1);
 uniform int stone_style=0;
 uniform float water_height=-0.53;
+uniform float quality_detail=1.0;
 varying vec3 world;
 varying vec3 world_normal;
 float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
@@ -46,12 +48,19 @@ void vertex(){
   world=(MODEL_MATRIX*vec4(VERTEX,1.0)).xyz;
   world_normal=normalize(MODEL_NORMAL_MATRIX*NORMAL);
 }
+float filtered_noise(vec2 p){
+  float weight=quality_detail*(1.0-smoothstep(.35,1.1,length(fwidth(p))));
+  // At battle distance these octaves cannot be resolved. Skip their hash work
+  // and converge on the mean instead of changing the material's average color.
+  if(weight<.01)return .5;
+  return mix(.5,noise(p),weight);
+}
 void fragment(){
   // World coordinates keep courses continuous across the authority's individual cells.
   bool top=abs(world_normal.y)>.6;
   vec2 p=top?world.xz:vec2(abs(world_normal.x)>.6?world.z:world.x,world.y);
   // Fade subpixel grain instead of letting it sparkle as the camera moves.
-  float grain=(noise(p*84.0)-.5)*.025*(1.0-smoothstep(.3,1.0,length(fwidth(p*84.0))));
+  float grain=(filtered_noise(p*84.0)-.5)*.025;
   float relief=0.0;
   float dry_roughness=.86;
   if(stone_style==1){
@@ -66,9 +75,10 @@ void fragment(){
       else second=min(second,distance);
     }
     float edge=second-nearest;
-    float bevel=smoothstep(.025,.15,edge);
+    float aa=max(fwidth(edge)*.5,.001);
+    float bevel=smoothstep(.025-aa,.15+aa,edge);
     vec3 stone=base_color.rgb*(.76+hash(owner)*.33+grain);
-    ALBEDO=mix(mortar_color.rgb,stone*(.76+bevel*.24),smoothstep(.018,.075,edge));
+    ALBEDO=mix(mortar_color.rgb,stone*(.76+bevel*.24),smoothstep(.018-aa,.075+aa,edge));
     relief=bevel*.065;
     dry_roughness=.93;
   }else{
@@ -76,13 +86,14 @@ void fragment(){
     q.x+=mod(floor(q.y),2.0)*.5;
     if(stone_style==3)q+=vec2(noise(p*2.0)*.35,noise(p*1.1)*.3);
     vec2 f=fract(q),cell=floor(q);
-    float mineral=noise(p*5.1)*.6+noise(p*16.7)*.3+noise(p*48.0)*.1;
+    float mineral=noise(p*5.1)*.6+filtered_noise(p*16.7)*.3+filtered_noise(p*48.0)*.1;
     float edge=min(min(f.x,1.0-f.x),min(f.y,1.0-f.y));
     // Uneven chamfers and occasional pits stay readable as stone at the game camera.
-    float chippedEdge=edge-(noise(p*24.0)-.5)*.014;
-    float seam=smoothstep(.008,.027,chippedEdge);
-    float bevel=smoothstep(.015,.09,chippedEdge);
-    float pits=smoothstep(.72,.85,noise(p*31.0));
+    float chippedEdge=edge-(filtered_noise(p*24.0)-.5)*.014;
+    float aa=max(length(fwidth(q))*.35,.001);
+    float seam=smoothstep(.008-aa,.027+aa,chippedEdge);
+    float bevel=smoothstep(.015-aa,.09+aa,chippedEdge);
+    float pits=smoothstep(.72,.85,filtered_noise(p*31.0));
     float tone=.84+hash(cell)*.19+(mineral-.5)*.15;
     vec3 stone=base_color.rgb*tone*(.85+bevel*.15);
     stone=mix(stone,stone*vec3(.83,.85,.79),pits*.3);
@@ -100,7 +111,8 @@ void fragment(){
   float wet_edge=water_height+(noise(world.xz*3.5)-.5)*.08;
   float wet=1.0-smoothstep(wet_edge-.12,wet_edge+.18,world.y);
   ALBEDO=mix(ALBEDO,ALBEDO*vec3(.57,.67,.62),wet*.7);
-  ROUGHNESS=mix(dry_roughness,.38,wet);
+  float normal_variance=dot(dFdx(NORMAL),dFdx(NORMAL))+dot(dFdy(NORMAL),dFdy(NORMAL));
+  ROUGHNESS=clamp(mix(dry_roughness,.38,wet)+normal_variance*.5,.38,1.0);
   SPECULAR=mix(.18,.42,wet);
 }
 """;
@@ -111,6 +123,7 @@ uniform sampler2D depth_texture : hint_depth_texture, repeat_disable, filter_nea
 uniform float flood_amount=0.0;
 uniform float wind_strength=1.0;
 uniform float surface_roughness=.31;
+uniform float quality_detail=1.0;
 uniform vec4 deep_color : source_color = vec4(.055,.25,.32,1);
 uniform vec4 surface_color : source_color = vec4(.12,.49,.52,1);
 uniform vec4 foam_color : source_color = vec4(.60,.79,.72,1);
@@ -146,9 +159,11 @@ void fragment(){
   vec3 w=waves(world.xz);
   // Fine capillary ripples add glints without more vertices; fade them in the
   // distance to avoid crawling highlights at the normal battle camera.
-  float detail=1.0-smoothstep(.35,1.2,length(fwidth(world.xz*12.0)));
-  w.yz+=detail*(wave(world.xz,normalize(vec2(.9,-.6)),12.0,.0025,2.0).yz
-                +wave(world.xz,normalize(vec2(.2,1)),17.0,.0015,1.7).yz);
+  float detail=quality_detail*(1.0-smoothstep(.35,1.2,length(fwidth(world.xz*12.0))));
+  if(detail>.01){
+    w.yz+=detail*(wave(world.xz,normalize(vec2(.9,-.6)),12.0,.0025,2.0).yz
+                  +wave(world.xz,normalize(vec2(.2,1)),17.0,.0015,1.7).yz);
+  }
   w.yz*=wind_strength*mix(1.0,.2,smoothstep(0.0,.2,flood_amount));
   // Write a view-space geometric normal, as required by the spatial shader API.
   vec3 normal_world=normalize(vec3(-w.y,1.0,-w.z));

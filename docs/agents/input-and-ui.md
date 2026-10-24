@@ -183,6 +183,16 @@ uses the existing arrow/A-D/controller navigation. See the
 [rendering guide](visuals-and-animation.md#four-stage-lighting-variants-2026-10-23)
 for the palettes, older-server fallback and `stage-lighting` graphical witness.
 
+**Graphics** selects Low, Medium (default) or High and saves `video/graphicsPreset`.
+Changes apply in place without restarting the session. A brief “Applying graphics…”
+screen prepares effect pipelines and restores the previous focus; changing only
+audio, vibration or lighting does not trigger that preparation. Missing, malformed
+or unknown values fall back to Medium. The choice is
+device-local in online games too; it never overrides server lighting or room rules.
+Use the existing arrow/A-D/controller dial navigation. `graphics-settings` checks
+native selection, persistence and paused local continuity; `network` checks online
+continuity. [Rendering budgets and rationale](../graphics-research.md).
+
 ## Reticle rendering and lifecycle
 
 The user explicitly requested shape-only endpoints with no extra labels.

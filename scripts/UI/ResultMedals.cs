@@ -2,15 +2,15 @@ using Godot;
 namespace BlastCircuit.UI;
 
 /// <summary>Little struck metal medals, lit as objects instead of flat score icons.</summary>
-public partial class ResultMedals : SubViewportContainer
+public partial class ResultMedals : RenderSurface
 {
     public int Wins {get;set;}
     private SubViewport _viewport=null!;
     private bool _drawn;
     public override void _Ready()
     {
-        MouseFilter=MouseFilterEnum.Ignore;Stretch=true;
-        _viewport=new SubViewport {OwnWorld3D=true,TransparentBg=true,Size=new(340,94),Msaa3D=Viewport.Msaa.Msaa2X,RenderTargetUpdateMode=SubViewport.UpdateMode.Disabled};AddChild(_viewport);
+        MouseFilter=MouseFilterEnum.Ignore;
+        _viewport=new SubViewport {OwnWorld3D=true,TransparentBg=true,Size=new(340,94),RenderTargetUpdateMode=SubViewport.UpdateMode.Disabled};SetViewport(_viewport);
         var world=new Node3D();_viewport.AddChild(world);
         world.AddChild(new WorldEnvironment {Environment=new Godot.Environment {AmbientLightSource=Godot.Environment.AmbientSource.Color,AmbientLightColor=new Color("d6c9aa"),AmbientLightEnergy=.55f,TonemapMode=Godot.Environment.ToneMapper.Filmic}});
         world.AddChild(new DirectionalLight3D {RotationDegrees=new(-35,-25,0),LightColor=new Color("fff2ca"),LightEnergy=1.9f});
@@ -35,6 +35,7 @@ public partial class ResultMedals : SubViewportContainer
     }
     public override void _Process(double delta)
     {
+        base._Process(delta);
         if(_drawn||!IsVisibleInTree())return;
         _viewport.RenderTargetUpdateMode=SubViewport.UpdateMode.Once;_drawn=true;
     }

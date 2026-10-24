@@ -91,6 +91,83 @@ Each run gets a unique artifact directory under `artifacts/playtest/` with `runt
 
 ## Scenario catalog and extension
 
+### Native GPU performance
+
+Use the development Mac's physical Apple Silicon GPU for GPU measurements when
+needed; the isolated VM remains the default for ordinary correctness tests.
+`graphics-benchmark` explicitly uses the shared desktop, so announce the short
+windowed run first and keep the game foreground. Run one benchmark at a time,
+with the QA VM and other owned GPU jobs stopped.
+
+```sh
+python3 tools/playtest/run.py --scenario graphics-benchmark --desktop shared --build
+python3 tools/playtest/run.py --scenario graphics-benchmark --desktop shared --app /path/to/BlastCircuit.app
+```
+
+This path removes the ordinary `--fixed-fps 30` and 30 FPS cap, disables VSync,
+and measures real elapsed time in a 1920×1200 window. It warms each scene for
+three seconds, samples each menu for three seconds and an actual eight-player
+Pyramid battle for ten seconds, for Low/Medium/High. Normal input selects presets;
+real bots place bombs and produce explosions. It rejects focus interruptions,
+missing combat evidence, virtual/software GPUs, `--headless` and `--record`.
+It is deliberately excluded from `all` and never silently replaces a VM test.
+
+`graphics-benchmark.json` records CPU/GPU/API/OS, actual window size,
+sample counts, frame median/p95, FPS, root render CPU/GPU time and draw calls.
+`runner-summary.json` adds read-only macOS power/thermal-state observations before
+and after the run (`pmset -g batt/custom/therm`); it never changes power settings.
+The harness validates complete scene/preset coverage and finite timing evidence.
+Unsupported GPU counters are `null`, not zero-cost frames. Root GPU time covers
+the arena/UI; it excludes independent menu render surfaces, so menu frame time
+is the useful whole-frame measurement. Timed intervals exclude screenshots.
+Diagnostics still add overhead. Use the same Release export, resolution, power
+state and workload for comparisons; a short run is not a sustained thermal test.
+With `--app`, `tested-app-files.json` identifies the exact tested bundle. The
+engine frame cap is removed and VSync requested off, but platform presentation
+may still pace frames near the display refresh rate (also recorded). GPU timing
+availability is checked on native Metal too; it is not guaranteed by using a GPU.
+
+On macOS, add `--metal-hud` to obtain Apple frame GPU timings even when Godot's
+viewport timer is unavailable:
+
+```sh
+python3 tools/playtest/run.py --scenario graphics-benchmark --desktop shared --metal-hud --build
+```
+
+The game alone receives `MTL_HUD_ENABLED=1`, `MTL_HUD_LOG_ENABLED=1` and zero HUD
+opacity. An owned `/usr/bin/log` reader filters by that game's PID. No global
+defaults or privacy settings change. `metal-gpu-summary.json` contains positive
+GPU median/p95/mean durations in milliseconds. These are command-buffer durations,
+including possible gaps; they are not per-viewport or encoder-active timings.
+See [Apple's metric definition](https://developer.apple.com/documentation/xcode/understanding-metal-performance-hud-metrics)
+and [logging format](https://developer.apple.com/documentation/xcode/monitoring-your-metal-apps-graphics-performance).
+
+Some macOS versions redact the dynamic timing array in unified logs while the
+game's console contains it in full. The parser joins by owned PID, first-present
+frame ID and matching public header, then deduplicates repeated system records.
+It rejects conflicting/incomplete/nonfinite batches. It uses complete batches
+inside UTC sample windows, inferring batch start from present intervals and
+excluding 250 ms boundary guards. HUD IDs count drawable presents; they are not
+Godot process frames. Raw console/unified logs remain available for inspection.
+
+### First-use pipeline regression
+
+```sh
+python3 tools/playtest/run.py --scenario first-use-rendering
+python3 tools/playtest/run.py --scenario first-use-rendering --cold-effects
+```
+
+The second command is an expected failure: it disables startup/live preparation
+only in this QA scenario. The normal case verifies first/repeated real explosions
+at all presets after garbage collection, with zero new synchronous Mesh/Surface/Draw
+pipelines. It records background specialization separately and confirms scratch
+viewports were removed. It belongs first in `all` so earlier effect tests cannot
+accidentally warm the resources. Captures are outside timed sampling; these
+fixed-step intervals diagnose hitches, not native GPU speed. Rebuild exported
+apps after changing this test or its preparation behavior.
+
+### Registering scenarios
+
 `assets/testing/scenarios.json` is the shared source of truth for Python tooling and native C# dispatch. `python3 tools/playtest/run.py --list` prints the full catalog. `all` is the windowed graphical regression (600-second limit); `core-headless` deliberately omits native UI/window journeys; `package-smoke` checks bundled assets, movement and charge/throw behavior. Manual controller observations remain separate.
 
 For a new scenario:

@@ -40,11 +40,11 @@ per-node operator configuration and must come from measured workloads.
 
 Native, supervised game tunnels expose only the game origin and the authenticated
 backplane. The Pi has its own game-tunnel credential, with no SSH private key or
-general access credential. Existing SSH tunnels, Pi-hole/VPN routing, ChopperBot,
-T3, storage services and unrelated Docker stacks are independent.
+general access credential. Existing SSH tunnels, network routing, native services
+and unrelated Docker stacks are independent.
 
 Private deployment state lives in each operator's `Developer/blast-circuit-cluster`
-directory: `.env`, `relay.env`, the Compose file and two plugin directories. The Pi
+directory: `.env`, `relay.env`, the Compose file, verified `runtime` and two plugin directories. The Pi
 uses a user systemd `blast-relay` service; the Mac uses launchd
 `dev.burbuja.blast-relay`. The game container is `blast-cluster-server-1`.
 The gateway owns dedicated `blast-relay` and `blast-backplane` systemd services.
@@ -53,6 +53,11 @@ Never print secret environment files or full container inspection output.
 ## Build and update
 
 Keep both nodes on the same verified portable server runtime and kernel revision.
+The image supplies ASP.NET, curl and the nonroot account; the exact verified CI
+runtime is mounted read-only at `/app`. Verify the runtime inventory, not merely
+the base image tag. Pre-create `runtime/plugins/Realtime.Redis` and
+`runtime/plugins/Blast.Cluster` for the child mounts. The worker writes its
+ephemeral framework keys under its home directory, outside the runtime mount.
 Build optional plugins from that exact source, separately from the portable server:
 
 ```sh
@@ -108,6 +113,10 @@ guard pass. Run generators off the game host. The guard records service identiti
 HTTP/DNS response times, memory, swap, thermal and container health, and stops only
 its child generator when a threshold or observation fails. A separate monitor SSH
 connection avoids competing with diagnostic game traffic in a shared SSH stream.
+Each host must first have a private `Developer/blast-circuit-cluster/monitor.json`
+listing the existing endpoints and systemd units to protect; start from the
+[generic example](../deploy/cluster/monitor.example.json). Keep personal service
+inventories out of Git. An absent/invalid monitor configuration fails the run.
 
 Receipts distinguish decoded snapshot bytes from actual network traffic, generation
 gaps from delivery gaps, and a rejected load from a passing capacity stage. Warmup

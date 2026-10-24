@@ -2,6 +2,40 @@
   "schemaVersion": 1,
   "scenarios": [
     {
+      "id": "first-use-rendering",
+      "method": "FirstUseRendering",
+      "domains": [
+        "rendering",
+        "performance"
+      ],
+      "headless": false,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "graphics-settings",
+      "method": "GraphicsSettings",
+      "domains": [
+        "rendering",
+        "settings",
+        "ui"
+      ],
+      "headless": false,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "graphics-benchmark",
+      "method": "GraphicsBenchmark",
+      "domains": [
+        "rendering",
+        "performance"
+      ],
+      "headless": false,
+      "timeout": 180,
+      "manual": false
+    },
+    {
       "id": "advanced-settings",
       "method": "AdvancedSettingsTour",
       "domains": [
@@ -446,6 +480,8 @@
     {
       "id": "all",
       "steps": [
+        "first-use-rendering",
+        "graphics-settings",
         "advanced-settings",
         "cover-layout",
         "sandbox",

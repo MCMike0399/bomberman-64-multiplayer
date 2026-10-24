@@ -86,6 +86,8 @@ internal static class CapacityProbe
             _node = lobby.TryGetProperty("nodeId", out var node) ? node.GetString() : null;
             _server = lobby.TryGetProperty("serverId", out var server) ? server.GetString() : null;
             _placedRegion = lobby.TryGetProperty("region", out var placed) ? placed.GetString() : null;
+            if (region != null && !string.Equals(region, _placedRegion, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException($"Requested region {region} had no capacity; refusing to load {_placedRegion} instead.");
             string code = lobby.GetProperty("joinCode").GetString()!;
             await _clients[0].Connect(origin, created.GetProperty("reservation"), directNode, cancel);
             for (int i = 1; i < humans; i++)

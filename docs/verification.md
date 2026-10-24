@@ -1,3 +1,71 @@
+# Graphics presets, native profiling and first-use preparation — source preview
+
+2026-10-24: Low/Medium/High graphics preferences, output-resolution menu worlds,
+consistent MSAA, filtered stone/water detail, preset shadow/SSAO budgets and
+cached idle plaques are implemented. The compact models, movement, simulation
+rules and server-owned lighting remain unchanged. Effects render once during
+startup preparation and after preset changes, before control returns.
+[Research and budgets](graphics-research.md), [engine evaluation](engine-upgrade-research.md).
+
+The final staged client is **v0.26.0/build 29**, including the concurrently authored
+public-host default/compression negotiation. It remains on Godot **4.7.2**. This
+preview was subsequently installed on the user's Mac at their explicit request.
+All 217 installed files match the verified archive, strict signature checks pass,
+and LaunchServices smoke passed on the M5 Pro with 59 gameplay snapshots and an
+inspected viewport capture. The previous installed bundle and extraction copy
+were removed after verification. Receipt: `artifacts/graphics/install-20261024/`.
+This graphics work has not published that client. Shared-server delivery,
+the new kernel pin and compressed-server load validation belong to the separate
+hosting work; a local graphical pass does not certify those operations.
+
+Receipts under `artifacts/graphics/`:
+
+- `public-final`: public boundaries, CI/playtest/QA/cluster tooling contracts and
+  audio passed.
+- `combined-final/playtest/20261024T185954.677983Z-all`: the combined exported
+  client passed **40 scenarios, 2,739 assertions and 251 captures**, with zero
+  runtime errors. This includes first-use checks, native settings/navigation,
+  live preset changes, all stages/lighting, effects, controllers and real local
+  WebSocket sessions against the owned guest server.
+- Visual review then found diagonal self-shadow marks at grazing sun angles.
+  Only the Morning/Afternoon bias multiplier changed afterward. The rebuilt
+  final export passed `final-lighting-export/20261024T191607.639726Z-stage-lighting`:
+  **146 assertions, 24 captures, zero runtime errors**. The afternoon marks were
+  visibly reduced; all twelve stage/time views and flooded shoreline views were
+  retained. This focused check covers the final lighting-only adjustment.
+- `final-app-files.json` matches all **217 files** of that tested final export;
+  strict deep codesign verification passed. The preview ZIP also matches that
+  inventory: `Blast-Circuit-graphics-preview-20261024.zip`, SHA-256
+  `0a7fb6f89851ee074ee6ee32a964ec9be7a80682c3234c301eab0d23c1497ad9`.
+  The two temporary app bundles were archived and identity-checked cleanup removed
+  them, preserving the installed v0.25.0 app. Build ownership is released in
+  `artifacts/graphics/coordination.md`.
+
+The first-use regression is red-capable. With `--cold-effects`, the latest
+negative control created **five Surface and one Draw pipeline** and recorded a
+**293.1 ms** frame interval. Normal preparation produced zero new synchronous
+pipelines in all six first/repeated trials across Low/Medium/High, including
+garbage collection. The focused warm run's worst intervals were 6.9–14.1 ms;
+the full combined suite also recorded zero synchronous pipelines, with one
+unrelated 25.8 ms interval. These fixed-step VM intervals identify initialization
+stalls; they are not native GPU benchmarks. Preparation itself took 3.32–4.20
+seconds in the guest runs and is shown as a loading/settings step.
+
+Native M5 Pro checks separately passed. The stable-engine eight-player benchmark
+at 1920×1200 recorded approximately 120 process FPS for all presets. First-use
+explosions on the M5 also created zero synchronous pipelines. The evaluated 4.8
+beta produced valid internal GPU times and a successful independently collected
+Apple HUD report; it is not adopted because a sufficient gameplay benefit has
+not been established. Instrumentation/preparation differed between engine runs,
+so their frame rates are not a matched engine speedup comparison.
+
+The harness now supports explicit native hardware benchmarks and process-local
+`--metal-hud` capture without global privacy/HUD changes. Interrupted foreground
+trials remain failed receipts. The isolated guest retains its known optional
+Switch USB `_pipe2` warning; this work makes no new physical-controller,
+Windows/Linux, HDR, sustained-thermal or macOS Game Mode claim. Image review is
+agent evidence, not user artistic approval.
+
 # Advanced match rules and temporary items — v0.25.0
 
 The 2026-10-24 change adds a dedicated Advanced settings page for local/practice

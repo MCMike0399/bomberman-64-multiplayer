@@ -2,8 +2,8 @@
 
 The user resumed gameplay work on 2026-10-23 for controller ergonomics, aiming
 and knockdown/blast separation (iteration19). The first eighteen iterations
-remain historical evidence. Iteration20 then rebuilt the walk. Current installed
-runtime: **v0.23.0**; latest published client/server: **v0.25.0**
+remain historical evidence. Iteration20 then rebuilt the walk. Recorded
+release baseline: **v0.25.0**; graphics/preset/preparation source work is unreleased
 (see [verification](../verification.md)). Previous runtime baseline: **v0.18.0**, commit
 `316a330d7d895a92f98c1a60be7d571ec445a8a3`. Later documentation commits may follow.
 Verify the live branch, source, tools and installed version before relying on
@@ -35,6 +35,15 @@ update the current guide rather than silently reviving old behavior.
 | [Latest verification](../verification.md) | Exact observed results and limitations, with earlier iterations below |
 
 ## Current decisions that supersede earlier experiments
+
+- Graphics settings now provide Low/Medium/High, with Medium as default. Menus
+  render at output pixel density and use the same AA policy as the arena;
+  presets remain local even online. [Research and budgets](../graphics-research.md)
+  and the [rendering guide](visuals-and-animation.md) own the details and limits.
+  Source work also prepares first-use effects at startup/preset changes. The
+  engine remains 4.7.2 after an isolated [4.8 evaluation](../engine-upgrade-research.md).
+  This source work is separate from the published v0.25.0 release; see verification
+  for the subsequently requested local preview installation.
 
 - v0.25 delivered: Advanced match settings, independent 55% crate drops without
   guaranteed openings, expiring practice/map items, default five-stack blast/bomb
@@ -93,8 +102,8 @@ update the current guide rather than silently reviving old behavior.
   grounded foundations and animated water. Art geometry and collision are separate.
 - AI difficulty changes decisions, not physics/resources. Measure pressure and
   reengagement, not only bombs placed; mixed benchmark outcomes must remain visible.
-- The Mac has one installed v0.23.0 app. The previous bundle and export were
-  removed after installation verification; a missing `artifacts/exports/*.app` is expected.
+- Keep one installed app and verify its live version before relying on a dated
+  receipt. A missing `artifacts/exports/*.app` is expected after verified cleanup.
   Rebuild only when needed, then clean duplicates after the next verified install.
 
 ## A reliable small-agent work packet

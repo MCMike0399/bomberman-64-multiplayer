@@ -15,9 +15,35 @@ import urllib.request
 import hashlib
 import signal
 import tempfile
-from contracts import catalog, expanded, validate_summary, junit
+import contextlib
+from contracts import catalog, expanded, validate_summary, validate_benchmark, junit
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def engine_timing_args(scenario):
+    if scenario == 'graphics-benchmark':
+        return ['--max-fps', '0', '--disable-vsync']
+    return ['--max-fps', '30', '--fixed-fps', '30', '--disable-vsync']
+
+
+def native_benchmark_error(scenario, desktop, headless, record):
+    if scenario == 'graphics-benchmark' and (desktop != 'shared' or headless or record):
+        return 'graphics-benchmark requires --desktop shared, real graphics and no --record; VM/fixed-step footage cannot measure native GPU throughput'
+    return None
+
+
+def native_power_evidence():
+    if platform.system() != 'Darwin':
+        return {'available': False, 'reason': 'No platform power-state collector'}
+    evidence = {}
+    for query in ('batt', 'custom', 'therm'):
+        try:
+            result = subprocess.run(['pmset', '-g', query], text=True, capture_output=True, timeout=5)
+            evidence[query] = {'exitCode': result.returncode, 'output': re.sub(r'\(id=\d+\)', '', result.stdout.strip())}
+        except (OSError, subprocess.TimeoutExpired) as error:
+            evidence[query] = {'unavailable': str(error)}
+    return evidence
 
 
 def stop(process):
@@ -70,6 +96,8 @@ def main():
     parser.add_argument('--ffmpeg', default=os.environ.get('FFMPEG', 'ffmpeg'), help='FFmpeg executable for --record export and decode validation')
     parser.add_argument('--script', type=Path, help='JSON scenario, see temple-walk.json')
     parser.add_argument('--record', action='store_true', help='Record actual gameplay at 30 FPS and export a validated MP4; requires ffmpeg')
+    parser.add_argument('--metal-hud', action='store_true', help='Collect Apple GPU timing logs for the native macOS graphics-benchmark')
+    parser.add_argument('--cold-effects', action='store_true', help='Disable startup warmup in first-use-rendering to retain a negative regression witness')
     parser.add_argument('--desktop', choices=('isolated', 'shared'), default='isolated' if platform.system() == 'Darwin' else 'shared', help='Graphical macOS QA uses a private VM by default; shared explicitly uses your desktop')
     parser.add_argument('--vm', default=os.environ.get('BLAST_QA_VM', 'blast-circuit-qa'), help='Stopped dedicated Tart VM for isolated graphical QA')
     parser.add_argument('--headless', action='store_true', help='Explicitly disable screenshot capture')
@@ -89,6 +117,8 @@ def main():
         return 0
     if args.script and args.scenario != 'script':
         parser.error('--script must use --scenario script; it cannot stand in for a full suite')
+    if args.cold_effects and args.scenario != 'first-use-rendering':
+        parser.error('--cold-effects is only a negative first-use-rendering diagnostic')
     if args.headless and not scenarios[args.scenario]['headless']:
         parser.error('Scenario requires graphics; use core-headless for headless gameplay coverage')
     args.timeout = args.timeout if args.timeout is not None else scenarios[args.scenario]['timeout']
@@ -100,6 +130,11 @@ def main():
         parser.error('--scenario fullscreen requires a graphical fullscreen launch')
     if args.record and args.headless:
         parser.error('--record requires graphical rendering')
+    benchmark_error = native_benchmark_error(args.scenario, args.desktop, args.headless, args.record)
+    if benchmark_error:
+        parser.error(benchmark_error)
+    if args.metal_hud and (args.scenario != 'graphics-benchmark' or platform.system() != 'Darwin'):
+        parser.error('--metal-hud requires graphics-benchmark on native macOS')
     if (scenarios[args.scenario].get('manual') or args.scenario == 'controller-inventory') and args.desktop == 'isolated' and not args.headless:
         parser.error('Physical controller inventory/observation requires --desktop shared on the device test machine; VM devices do not prove host controller support')
     if args.record and not shutil.which(args.ffmpeg):
@@ -155,9 +190,14 @@ def main():
                 with (app / 'Contents/Info.plist').open('rb') as plist:
                     executable = plistlib.load(plist)['CFBundleExecutable']
                 command = [str(app / 'Contents/MacOS' / executable)]
+                if args.scenario == 'graphics-benchmark':
+                    from isolated import inventory
+                    (folder / 'tested-app-files.json').write_text(json.dumps(inventory(app), indent=2) + '\n')
             else:
                 command = [args.godot, '--path', str(ROOT)]
-            command += ['--max-fps', '30', '--fixed-fps', '30', '--disable-vsync']
+            result['runtimeSource'] = 'app-bundle' if args.app else 'source-project'
+            command += engine_timing_args(args.scenario)
+            result['timingMode'] = 'realtime-uncapped' if args.scenario == 'graphics-benchmark' else 'fixed-step-30'
             if args.record:
                 command += ['--write-movie', str(folder / 'gameplay.avi')]
             if windowed:
@@ -169,11 +209,22 @@ def main():
                 command.append('--display-windowed')
             if args.script:
                 command.append('--playtest-file=' + str(args.script.resolve()))
+            if args.cold_effects:
+                command.append('--playtest-cold-effects')
             result['command'] = command
+            if args.scenario == 'graphics-benchmark':
+                result['powerBefore'] = native_power_evidence()
             with (folder / 'runtime.log').open('w') as log:
-                runtime = subprocess.Popen(command, cwd=folder if args.app else ROOT, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
-                runtime.wait(timeout=args.timeout)
+                runtime_env = os.environ.copy()
+                if args.metal_hud:
+                    runtime_env.update(MTL_HUD_ENABLED='1', MTL_HUD_LOG_ENABLED='1', MTL_HUD_OPACITY='0')
+                runtime = subprocess.Popen(command, cwd=folder if args.app else ROOT, stdout=log, stderr=subprocess.STDOUT, start_new_session=True, env=runtime_env)
+                from metal_metrics import MetalHudCapture
+                with MetalHudCapture(folder, runtime.pid) if args.metal_hud else contextlib.nullcontext():
+                    runtime.wait(timeout=args.timeout)
             result['exitCode'] = runtime.returncode
+            if args.scenario == 'graphics-benchmark':
+                result['powerAfter'] = native_power_evidence()
         summary_path = folder / 'summary.json'
         if not summary_path.exists():
             raise RuntimeError('Godot did not write summary.json; inspect runtime.log for compile/launch errors')
@@ -188,8 +239,18 @@ def main():
                                       if 'Optional Switch 2 USB backend:' in line]
         result['renderer'] = next((line for line in runtime_text.splitlines()
                                    if 'Using Device #' in line), None)
+        if args.scenario == 'graphics-benchmark':
+            benchmark_path = folder / 'graphics-benchmark.json'
+            result['benchmark'] = json.loads(benchmark_path.read_text()) if benchmark_path.is_file() else {}
         summary = json.loads(summary_path.read_text())
         receipt_errors = validate_summary(summary, folder, args.scenario, args.headless)
+        if args.scenario == 'graphics-benchmark':
+            receipt_errors.extend(validate_benchmark(result['benchmark']) if result['benchmark'] else ['Missing native benchmark timing receipt'])
+            result['desktop']['nativeHostGpuCoverage'] = not receipt_errors
+            if args.metal_hud and result['benchmark']:
+                from metal_metrics import summarize
+                result['metalHud'] = summarize(folder / 'metal-hud.ndjson', runtime.pid, result['benchmark'], folder / 'runtime.log')
+                (folder / 'metal-gpu-summary.json').write_text(json.dumps(result['metalHud'], indent=2) + '\n')
         if not args.headless and args.desktop == 'isolated' and not re.match(r'^Metal .*Forward\+', result['renderer'] or ''):
             receipt_errors.append('Isolated guest did not use the project\'s Metal Forward+ renderer; inspect runtime.log')
         result['errors'].extend(receipt_errors)

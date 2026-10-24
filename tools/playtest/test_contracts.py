@@ -10,9 +10,37 @@ import sys
 import tempfile
 import unittest
 import xml.etree.ElementTree as ET
-from contracts import catalog, expanded, validate_summary, junit, ROOT, CATALOG
+from contracts import catalog, expanded, validate_summary, validate_benchmark, junit, ROOT, CATALOG
 
 class PlaytestContracts(unittest.TestCase):
+    def test_native_benchmark_cannot_use_fixed_step_vm_or_recording(self):
+        from run import engine_timing_args, native_benchmark_error
+        self.assertNotIn('--fixed-fps', engine_timing_args('graphics-benchmark'))
+        self.assertEqual(['--max-fps', '0', '--disable-vsync'], engine_timing_args('graphics-benchmark'))
+        self.assertIn('--fixed-fps', engine_timing_args('all'))
+        self.assertIsNone(native_benchmark_error('graphics-benchmark', 'shared', False, False))
+        for desktop, headless, record in [('isolated', False, False), ('shared', True, False), ('shared', False, True)]:
+            self.assertIsNotNone(native_benchmark_error('graphics-benchmark', desktop, headless, record))
+        self.assertIsNone(native_benchmark_error('all', 'isolated', False, False))
+
+    def test_cold_effect_diagnostic_cannot_silently_disable_other_coverage(self):
+        r=subprocess.run([sys.executable,str(ROOT/'tools/playtest/run.py'),'--scenario','all','--cold-effects'],capture_output=True,text=True)
+        self.assertNotEqual(0,r.returncode)
+        self.assertIn('negative first-use-rendering diagnostic',r.stderr)
+
+    def test_native_benchmark_rejects_false_timing_evidence(self):
+        sample = dict(samples=100, seconds=3, fps=33.3, frameMedianMs=30, frameP95Ms=31,
+                      rootGpuMedianMs=None, rootGpuP95Ms=None, peakBombs=2, peakHazards=3, rootDrawCallsPeak=100)
+        receipt = dict(schemaVersion=1, timingMode='realtime-uncapped', gpu='Apple M5 Pro',
+                       measurements=[sample | dict(scene=scene, preset=preset)
+                                     for preset in ('Low', 'Medium', 'High') for scene in ('menu', 'eight-player-temple')])
+        self.assertEqual([], validate_benchmark(receipt))
+        for change in [dict(gpu='Apple Paravirtual device'), dict(timingMode='fixed-step-30'), dict(measurements=[])]:
+            self.assertTrue(validate_benchmark(receipt | change))
+        for change in [dict(samples=0), dict(fps=float('nan')), dict(rootGpuMedianMs=0), dict(peakHazards=0), dict(rootDrawCallsPeak=0)]:
+            modified=json.loads(json.dumps(receipt));modified['measurements'][1].update(change)
+            self.assertTrue(validate_benchmark(modified))
+
     def receipt(self, **changes):
         return dict(schemaVersion=1, catalogSha256=hashlib.sha256(CATALOG.read_bytes()).hexdigest(), completedScenarios=['movement'], scenario='movement', passed=True, assertions=1,
                     checks=[{'description':'real check','passed':True}], seconds=1,
