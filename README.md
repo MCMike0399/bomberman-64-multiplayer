@@ -62,7 +62,7 @@ The script creates a project-local ARM64 template from the official Universal 2 
 
 ## Play online
 
-Godot connects to a separate authoritative server intended for all users. Players enter the maintained service address in **Online Battle** and use Quick Play or private rooms. The server runs independently of any player's Mac. `Bomber.Server` registers the `blast` game on top of `Burbuja.Hosting`. See [shared-server hosting and releases](docs/online-server.md).
+Open **Online Battle** and use `https://blast.burbuja-lab.dev` for Quick Play or private rooms. The shared cluster runs independently of any player's Mac, with the Pi as primary and an idle DiveMac worker for overflow. `Bomber.Server` registers the `blast` game on top of `Burbuja.Hosting`. See [shared-server hosting and releases](docs/online-server.md) and [cluster operations](docs/cluster-hosting.md).
 
 For local development, start that independent server in another terminal:
 
@@ -80,7 +80,7 @@ For a LAN server, bind to a reachable interface and enter the server machine's a
 ./scripts/server.sh --urls http://0.0.0.0:18496
 ```
 
-The development default is loopback. General access requires a maintained public HTTPS endpoint that forwards HTTP and WebSocket traffic to the server; a player's LAN relay is not the public hosting path. Native desktop C# is the target; this project does not provide a browser build.
+The development server binds to loopback; the shared public service is available at `https://blast.burbuja-lab.dev`. Native desktop C# is the target; this project does not provide a browser build.
 
 Normal battle defaults to **one minute of normal play + one minute of sudden death**, with **first to two round wins** taking the match. Room settings remain configurable. Temple water starts rising as soon as sudden death begins. Before sudden death, falling into water returns you to dry ground as a ghost when ghost comeback is enabled.
 
@@ -252,7 +252,7 @@ It starts a local match and exits after eight seconds with `GODOT_SMOKE_OK`. `--
 
 ## Code and dependencies
 
-[Architecture](docs/architecture.md) describes the boundaries, protocol and scaling path. The repository consumes a separately supplied burbuja-kernel checkout at `burbuja-kernel/`, revision `e3c46ab795a8095d55b75790d76ea2786559be7f`. Build and runtime use source project references for the kernel. The product now owns its adapted simulation in `src/Bomber.Game/Simulation`, retaining MIT provenance, so map and collision changes do not mutate the generic kernel. Preserve the kernel checkout and its license.
+[Architecture](docs/architecture.md) describes the boundaries, protocol and scaling path. The repository consumes a separately supplied burbuja-kernel checkout at `burbuja-kernel/`, revision `64ec8db830bb058de8ba2aa92b6f195165cd06d4`. Build and runtime use source project references for the kernel. The product now owns its adapted simulation in `src/Bomber.Game/Simulation`, retaining MIT provenance, so map and collision changes do not mutate the generic kernel. Preserve the kernel checkout and its license.
 
 
 ## macOS Game Mode

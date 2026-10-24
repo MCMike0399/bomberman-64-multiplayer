@@ -144,18 +144,16 @@ this game on Burbuja.Hosting; another kernel host needs equivalent registration.
 Local play needs no server. The canonical QA profiles create an owned ephemeral
 loopback server rather than treating a stale developer listener as fresh evidence.
 
-The host currently uses configured in-process lobby capacity and least-loaded
-placement. Capacity settings are not throughput benchmarks. Each lobby has its
-own authority state and bounded buffers. The kernel's optional Redis/Valkey
-backplane and routing can support fleet configuration, but multi-node operation,
-failover, shared signing/public addresses and production load were not established
-by this session. Kernel guides are available inside the restored private checkout.
-No external deployment follows merely from building a server ZIP.
+Standalone hosts retain configured in-process capacity and least-loaded placement.
+The public cluster adds the optional `Blast.Cluster` placement plugin and the kernel's
+Redis/Valkey backplane: primary first, then an eligible fallback, with each match's
+authority and sockets staying on one node. Capacity settings are not throughput
+benchmarks. See [cluster operations](cluster-hosting.md) for shared signing, routing,
+resource ceilings and verification. No deployment follows merely from building a ZIP.
 
 The [shared online service](online-server.md) serves all users from a maintained
-server address. The existing single-host Compose runtime uses the verified
-portable server archive. Public reachability requires a configured endpoint;
-an operator tunnel establishes service behavior only. The former same-Wi-Fi
+server address. Each cluster node uses the verified portable runtime plus explicit
+deployment plugins. An operator tunnel establishes service behavior only. The former same-Wi-Fi
 relay setup is a conditional historical path in the
 [party guide](online-party.md).
 

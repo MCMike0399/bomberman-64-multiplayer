@@ -3,6 +3,8 @@ using System.Net.Http.Json;
 using System.Net.WebSockets;
 using System.Text.Json;
 
+if (args.FirstOrDefault() == "--capacity") { await CapacityProbe.Run(args[1..]); return; }
+
 if(args.Length<2)throw new ArgumentException("Usage: <server URL> <output.json> [seconds=90] [humans=3] [bots=3]");
 var origin=new Uri(args[0]);string output=args[1];int seconds=args.Length>2?int.Parse(args[2]):90,humans=args.Length>3?int.Parse(args[3]):3,bots=args.Length>4?int.Parse(args[4]):3;
 if(seconds<10||seconds>600||humans<1||humans+bots>8||bots<0)throw new ArgumentException("Invalid probe size/duration.");

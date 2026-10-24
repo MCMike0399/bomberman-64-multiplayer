@@ -23,6 +23,7 @@ FOOTERS = {
     'Bomber.Client.Tests': r'^PASS: (?P<count>\d+) client contract and session checks$',
     'Bomber.Ai.Tests': r'^PASS: (?P<count>\d+) AI behavior, timing, determinism and allocation checks$',
     'Bomber.Audio.Tests': r'^PASS (?P<count>\d+) original PCM cues: [^\r\n]+$',
+    'Bomber.Cluster.Tests': r'^ALL CLUSTER PLACEMENT CHECKS PASSED \((?P<count>\d+)\)$',
     'network-smoke': r'^ALL NETWORK SMOKE CHECKS PASSED(?: \([^\r\n]+\))?$',
     'ai-soak': r'^PASS (?P<count>\d+) gameplay soak scenarios; [^\r\n]+$',
 }
@@ -289,13 +290,13 @@ def ensure_controller_backend(suite):
 def execute(suite, app=None):
     if suite.profile == 'public':
         suite.step('public-boundaries', [sys.executable, 'tools/ci/public_checks.py'])
-        for folder in ('ci', 'playtest', 'qa'):
+        for folder in ('ci', 'playtest', 'qa', 'cluster'):
             suite.step(folder + '-contracts', [sys.executable, '-m', 'unittest', 'discover', '-s', 'tools/' + folder, '-p', 'test_*.py'])
         suite.build('tests/Bomber.Audio.Tests')
         suite.step('audio', ['dotnet', 'run', '--no-build', '--project', 'tests/Bomber.Audio.Tests'], footer=FOOTERS['Bomber.Audio.Tests'])
         return
     if suite.profile == 'managed':
-        projects = ['Bomber.Game.Tests', 'Bomber.Client.Tests', 'Bomber.Ai.Tests', 'Bomber.Audio.Tests', 'Bomber.Smoke']
+        projects = ['Bomber.Game.Tests', 'Bomber.Client.Tests', 'Bomber.Ai.Tests', 'Bomber.Audio.Tests', 'Bomber.Cluster.Tests', 'Bomber.Smoke']
         for project in projects:
             suite.build('tests/' + project)
         published = ROOT / 'artifacts/server-release'

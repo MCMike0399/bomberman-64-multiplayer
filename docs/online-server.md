@@ -6,9 +6,10 @@ that can reach it. A private room is a game feature, independent of the server's
 audience. The server runs independently of any player's Mac and owns matches,
 rules and CPU players.
 
-Current scope (2026-10-23): continue publishing updates and maintaining the
-existing server. Public hosting is deferred to a separately requested task.
-Preserve current reachability during ordinary releases.
+The public address is `https://blast.burbuja-lab.dev`. Raspberrypi is the primary
+game node; DiveMac keeps a resource-capped idle worker ready for overflow. Both
+share matchmaking and room codes. Follow [cluster operations](cluster-hosting.md)
+for routing, capacity limits, node updates and the limits of failure recovery.
 
 ## Release and deploy
 
@@ -54,13 +55,11 @@ Docker is optional. For the existing single-host Compose deployment,
 artifact; its historical filename does not limit the service to friends.
 See [server delivery](ci.md#portable-server-delivery) for the artifact boundary.
 
-General Internet access requires a maintained public address with HTTPS and
-WebSocket forwarding to this service. Loopback bindings and a player's LAN SSH
-relay do not provide that address. Keep host-specific addresses and credentials
-in operator configuration; this guide does not assert a public endpoint is
-already configured. Verify public reachability through that endpoint when it
-is provisioned or its routing changes. An operator SSH tunnel can verify service
-behavior but cannot establish public reachability.
+The public gateway terminates HTTPS and forwards WebSockets to the owning node
+through dedicated game tunnels. Keep host-specific addresses and credentials in
+operator configuration. Verify public reachability through that endpoint when
+routing changes. An operator SSH tunnel can verify service behavior but cannot
+establish public reachability.
 
 The server currently holds rooms in memory. Restarting loses those rooms;
 guest reconnect grace does not preserve a process restart. Fleet capacity and
