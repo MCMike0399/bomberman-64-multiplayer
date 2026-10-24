@@ -1,5 +1,6 @@
 namespace Bomber.Game.Simulation;
 
+/// <summary>Internal inspection and fixture hooks for the deterministic AI suite (Bomber.Ai.Tests).</summary>
 public sealed partial class BlastSession
 {
     internal int AiTestThinkCount {get;private set;}
