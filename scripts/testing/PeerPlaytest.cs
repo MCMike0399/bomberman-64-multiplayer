@@ -69,10 +69,14 @@ public partial class PlaytestDriver
         await _root.StartOnlineAsync(new Uri(_server),"Eight-peer host",new SessionSettings(Bots:0),NetworkMode.CreatePeer);
         var host=(NetworkSession)_root.ActiveSession!;
         var guests=new List<NetworkSession>();var states=new Dictionary<string,JsonElement>();
+        var rosters=new Dictionary<string,int>();
         try
         {
             for(int i=1;i<8;i++)guests.Add(await NetworkSession.ConnectAsync(new Uri(_server),$"Peer {i+1}",new SessionSettings(Bots:0),NetworkMode.JoinCode,host.JoinCode,peerFactory:()=>new GodotPeerLink(useStun:!new Uri(_server).IsLoopback)));
-            await Until(()=>host.Party?.CanStart==true&&guests.All(p=>p.Party?.CanStart==true),"eight compatible peers can start");
+            // CanStart means the two-human minimum, not that every pending
+            // socket has joined. Wait for all eight in each accepted roster.
+            await Until(()=>host.Party?.CanStart==true&&guests.All(p=>p.Party?.CanStart==true&&
+                rosters.GetValueOrDefault(p.PlayerId!)==8&&p.Party.Epoch==host.Party.Epoch),"eight compatible peers converge on the complete roster before start");
             var authorityClock=Stopwatch.StartNew();host.RequestStart();
             await Until(()=>host.PeerTransport=="Direct P2P"&&guests.All(p=>p.PeerTransport=="Direct P2P"&&states.TryGetValue(p.PlayerId!,out var state)&&state.GetProperty("players").GetArrayLength()==8&&state.GetProperty("phase").GetInt32()==1),"eight direct peers receive complete authoritative fight snapshots");
             Check(_root.LatestState!.Value.GetProperty("serverTime").GetInt64()<=authorityClock.ElapsedMilliseconds+300,"peer authority cannot accelerate with headless/render frame speed");
@@ -89,7 +93,12 @@ public partial class PlaytestDriver
                 foreach(var peer in guests)
                 {
                     peer.Advance(1d/30);
-                    foreach(var m in peer.DrainMessages())if(m.GetProperty("t").GetString()=="state")states[peer.PlayerId!]=m.GetProperty("d").Clone();
+                    foreach(var m in peer.DrainMessages())
+                    {
+                        string? type=m.GetProperty("t").GetString();
+                        if(type=="state")states[peer.PlayerId!]=m.GetProperty("d").Clone();
+                        if(type=="party.status")rosters[peer.PlayerId!]=m.GetProperty("d").GetProperty("players").EnumerateArray().Count(p=>p.GetProperty("connected").GetBoolean());
+                    }
                 }
                 await Frames(1);await Task.Delay(16);
             }
