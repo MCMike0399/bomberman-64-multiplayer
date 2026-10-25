@@ -53,7 +53,7 @@ def targets_from_json(value):
 
 def placements_from_json(value, targets):
     placements = json.loads(value)
-    if not isinstance(placements, dict) or set(placements) != set(targets):
+    if not isinstance(placements, dict) or not placements or set(placements) != set(targets):
         raise RuntimeError('deployment needs explicit expected serverId/region placement for every target')
     for item in placements.values():
         if (not isinstance(item, dict) or set(item) != {'serverId', 'region'} or
