@@ -6,15 +6,21 @@ Run the behavioral checks without Godot or a network server:
 dotnet run -c Release --project tests/Bomber.Ai.Tests
 ```
 
-The 52 checks cover cached legal terrain edges, timed chain reactions, expired hazards, deliberate power-up pursuit, fuse escape, climbing before flooding, fair difficulty response rates, eight-bot deterministic replay on all three maps, repeated bomb pressure against opponents, and reuse of search memory. Existing game integration checks separately exercise safe own-bomb placement, trapped-bot refusal and actual stair movement.
+The current 76 checks cover cached legal terrain edges, timed chain reactions, expired hazards, deliberate power-up pursuit, fuse escape, climbing before flooding, fair difficulty response rates, eight-bot deterministic replay on all three maps, repeated bomb pressure against opponents, and reuse of search memory. Existing game integration checks separately exercise safe own-bomb placement, trapped-bot refusal and actual stair movement.
 
 The planner sees current entities, visible bomb fuses and the known flood schedule. It never consumes future item randomness or changes movement speed, damage, blast radius or inventory. The menu offers **Easy, Medium, Hard**; `medium` and legacy `normal` select the same profile, with `normal` retained as the default wire value for saved clients.
 
-| Level | Reaction interval | Tactical search depth | Typical behavior |
-|---|---|---|---|
-| Easy | .24 seconds | 6 steps | Gives space, values pickups, slower bomb cadence; approaches to attack after six seconds without a bomb attempt |
-| Medium | .12 seconds | 12 steps | Balances pickups and pressure, avoids poorly connected contested positions |
-| Hard | .08 seconds | 24 steps | More persistent goals, faster bomb cadence, stronger escape-route and bottleneck evaluation |
+| Level | Reaction interval | Tactical depth | Engagement interval | Typical behavior |
+|---|---|---|---|---|
+| Easy | .24 seconds | 6 steps | 6 seconds | Gives space and values pickups, with slower attacks and time to breathe |
+| Medium | .12 seconds | 12 steps | 4 seconds | Balances pickups and pressure, avoids poorly connected contested positions |
+| Hard | .08 seconds | 24 steps | 2.5 seconds | Reengages sooner with persistent goals and stronger escape-route evaluation |
+
+Engagement means a bomb that actually threatens a visible rival; farming cannot
+reset that clock. Once engagement is due, a reusable reverse path field rewards
+progress around walls and along directed stairs. Sealed cover routes allow
+demolition before pursuit. These strategic fields never override timed escape
+or authorize movement through cover.
 
 Intervals are quantized by the shared 30 Hz authority. All levels use the same collision and speed rules, plan an escape before bombing, and receive progress recovery. Tests distinguish positioning and risk choices independently of reaction time and require actual attacks/explosions against a stationary opponent on every level. Remote evaluation matches the authority's oldest eligible bomb, including rolling/flying remotes, so it cannot evaluate a safe second bomb but detonate a dangerous first one. Advanced lift/throw/pump combos are not part of this policy.
 
@@ -133,3 +139,22 @@ witness. Its seven-CPU stock case requires repeated real combat, allowing the
 CPU to retain the exposed upper ring instead of forcing a farming detour.
 Soak safe-exit observations now use the actor's elevation and both navigation
 layers. Earlier pressure/cover measurements above belong to older layouts.
+
+## Proactive pursuit regression (2026-10-25)
+
+```sh
+dotnet run -c Release --project tests/Bomber.Ai.Tests -- --tactics
+```
+
+Four graph contracts verify exact reversed directed edges on every arena.
+Seven declared authority fixtures cover all-difficulty long wall detours,
+all-difficulty demolition through a complete cover barrier, and refusal of a
+remote opportunity whose visible chain reaches its owner outside the direct
+blast, followed by approval once the owner reaches safety. The wall and
+remote-opportunity assertions fail on the prior policy;
+cover scenarios preserve a positive behavior. Fixtures position a stationary
+human explicitly and renew only its invulnerability to sustain observation.
+CPU movement, bomb creation, escape and destruction run through authority ticks.
+These fixtures are separate from unedited native `ai-play` matches.
+
+[Research, adaptation and matched measurements](../../docs/cpu-ai-research.md).
