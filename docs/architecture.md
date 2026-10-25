@@ -30,7 +30,7 @@ flowchart TD
 |---|---|---|
 | `src/Bomber.Game` | Match options/rosters, local/peer authority adapters, realtime registration and game rules | Kernel realtime contracts; no Godot rendering |
 | `src/Bomber.Client` | `ISession`, local accumulator, HTTP/WebSocket lobby/reconnect/input handling, bounded message handoff, input policies | Game and .NET APIs; no Godot dependency |
-| `src/Bomber.Server` | Independent ASP.NET executable and registration of the `blast` game | Game and Burbuja.Hosting |
+| `src/Bomber.Server` | Independent ASP.NET executable registering classic, random-lobby and peer-room modes | Game and Burbuja.Hosting |
 | `src/Bomber.Cluster` | Optional pressure-aware placement plugin for the public cluster | Kernel core/realtime abstractions |
 | `scripts/input_devices` | Device/focus/menu handling and physical-to-semantic intent (`ControllerHub`, `PlayerControls`) | Godot plus client input policies |
 | `scripts/app` (`GameRoot`) | Screen/session lifecycle, input dispatch, accepted messages and HUD composition | Session interface and presentation |

@@ -105,8 +105,10 @@ The leader may send `party.settings` only while waiting in the lobby; edits are
 validated atomically, broadcast in `party.status.settings`, and used for the next
 match. The existing HostSetup editor stays in the same room when opened from its
 Room settings button. Guests and mid-match edits cannot change rules.
-Only new private rooms opt in via `party=on`; quick play and legacy API rooms
-retain their previous lifecycle. Keep the external kernel pin unchanged.
+Legacy `blast` private rooms opt in via `party=on`; the `blast` queue and old
+API rooms retain their previous lifecycle. Current Random lobby uses
+`blast-lobby` and always owns a persistent party with a two-human minimum.
+Keep the external kernel pin unchanged.
 
 `PartySessionChecks` and `PartyNetworkChecks` cover waiting, leader authorization,
 results, repeated matches, identity retention and leadership transfer. The
