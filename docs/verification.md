@@ -1,3 +1,95 @@
+# Integrated v0.28 release candidate
+
+2026-10-24: the combined stages, tutorial, original-reference explosion changes
+and review fixes pass the local public, managed/network, headless, graphical and
+package gates. [Exact evidence, captures and delivery status](stages-release-028.md).
+The independent PR receipts below are historical inputs to that combined review.
+
+# Top Rules castle — source verification
+
+2026-10-24: original procedural reconstruction of the castle arena identified
+in the [Nintendo manual and original gameplay footage](top-rules-research.md).
+The [gameplay guide](agents/gameplay-and-ai.md#top-rules-castle-2026-10-24)
+records the two-story support model and explicit project tuning. This is source
+work for PR #3, separate from release publication and installation.
+
+| Gate | Observed result |
+| --- | --- |
+| Managed, after integrating peer-hosting main | 2,736 game, 313 client, 62 AI, 19 audio and 19 cluster checks pass |
+| Deterministic AI soak | All 48 combinations pass; longest stationary window with a safe exit 1.93s, below the 12s limit |
+| HTTP/WebSocket | Full smoke passes, including cluster and peer-hosted Top Rules stair descent/lower traversal, guest observation, host takeover and stale-host recovery |
+| Rebuilt headless source | 942 core assertions plus 19 peer-room assertions pass; the three-player direct WebRTC journey uses Top Rules, and the eight-peer burst retains the temple |
+| Exported-app graphical regression | Eight affected journeys, 775 assertions, 87 captures, zero runtime errors/warnings in an isolated macOS Metal Forward+ desktop |
+
+The graphical journeys are `first-use-rendering`, `graphics-settings`,
+`stage-lighting`, `setup`, `top-rules`, `framing`, `precision-aim` and `network`.
+They retain the fresh-process shader check first. Capture review includes all
+three quality presets, all four lighting variants, 16:9/16:10 framing, the menu
+miniature and ordinary four/eight-player castle views. The castle journey uses
+real inputs through every staircase and both stories, ceiling-aware throwing,
+actual crate destruction/collection and an equipment death-drop beneath a
+bridge, followed by inward sudden-death walls.
+
+![Four-player castle opening](media/top-rules-castle.png)
+
+[Night capture](media/top-rules-night.png). These are actual viewport images of
+this project's original meshes/materials, not original-game assets.
+
+Regression witnesses retained before correction include a falling Temple CPU
+entering a crate (Hard/seven CPUs/seed 64, maximum open idle 13.23s → .53s),
+a lower equipment mesh using the bridge's height despite a correct snapshot,
+fast descending shots crossing a slab, short-pillar collision beneath tall
+castle masonry, and coplanar court/foundation surfaces causing gray patches on
+Low. The native journey checks actual pickup-node height, wall crowns and
+separate court/foundation planes; reviewed Low/High captures confirm the depth
+fix. Numeric geometry checks do not substitute for that visual review.
+
+The native run preceded the peer-hosting base merge; arena rendering and the
+castle journey are unchanged by that merge. The merged source then passed the
+managed and headless gates above. Peer payload checks now accept fractional
+stairs and bound underpass indices and wall crowns before rendering; real
+peer-hosted castle frames reach the composition root. Graphical peer-hosting UI
+coverage from main is recorded separately below. Virtual-GPU correctness and
+synthetic inputs do not establish native GPU throughput or physical gamepad coverage.
+
+Ignored receipts: `artifacts/top-rules-validation/castle-native-pass/`,
+`headless-delivery/`, `managed-delivery/`, `public-delivery/`, and the subsequent
+`artifacts/top-rules-peer-integration/` managed/headless/peer-castle-final gates.
+Earlier failing receipts remain alongside the passing runs. The temporary owned
+QA VM was stopped and its slot handed to the waiting Rock Garden task.
+
+# Rock Garden reconstruction verification — PR #4
+
+2026-10-24. [Rock Garden](rock-garden.md) is rebuilt from the supplied screenshots
+and [cited original references](rock-garden-research.md). Actual rendered captures
+are included in the stage contract. Tested runtime: `83601e6`; subsequent evidence
+edits do not change game code.
+
+- Public profile passes, including documentation, boundaries and QA contracts.
+- Managed profile passes: 2,731 game, 309 client, 53 AI, 19 audio and 19 cluster
+  checks; all 36 AI soaks; real HTTP/WebSocket checks for 2–8 humans and seven bots.
+- Focused Rock Garden exported graphical journey passes 61 assertions with ten
+  captures and zero runtime errors/warnings. It includes four/eight-seat starts,
+  traversal, walls, actual boulder destruction and pickup, fireballs, local pause
+  and CPU combat. Low/Medium/High, all four lighting variants and framing also
+  pass in the broad graphical run.
+- The broad graphical run completes **42 of 43 journeys**, with 2,832 passing
+  assertions and 272 captures. Its final eight-peer capacity assertion fails:
+  the host lease expires and the room returns to the lobby before direct fight
+  snapshots arrive. This case uses the existing Sunken Temple stage. The full
+  graphical gate is therefore **not green**.
+- Fresh standalone eight-peer capacity checks pass both headlessly (four
+  assertions) and graphically (five assertions, one capture). The combined
+  sequence still reproduces the host-lease failure. Production lease/takeover
+  rules are unchanged; this remains a documented integration limitation.
+
+The fixture now waits for complete connected rosters and polls live sessions
+through pending joins. QA also respects the catalog's 900-second full-suite
+budget and compares online lighting with the latest accepted server round.
+Earlier failures and final receipts remain under ignored `artifacts/rock-garden/`.
+Graphical evidence comes from an isolated macOS Metal guest; it does not certify
+physical controllers or native Mac GPU throughput.
+
 # Peer hosting verification — v0.27.0 delivered
 
 2026-10-24: **0.27.0/build 32** adds persistent random lobbies and player-hosted

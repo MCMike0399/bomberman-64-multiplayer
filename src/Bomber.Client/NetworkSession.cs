@@ -126,6 +126,8 @@ public sealed partial class NetworkSession : ISession
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
         timeout.CancelAfter(TimeSpan.FromSeconds(10));
         var socket = new ClientWebSocket();
+        socket.Options.SetRequestHeader(OnlineProtocol.HeaderName,OnlineProtocol.WireRevision);
+        socket.Options.CollectHttpResponseDetails=true;
         socket.Options.KeepAliveInterval = TimeSpan.FromSeconds(10);
         // Realtime frames contain game state/intent; HTTP credentials stay outside this channel.
         // No shared compression history between messages, and old servers may decline negotiation.
@@ -135,6 +137,8 @@ public sealed partial class NetworkSession : ISession
         {
             var connectUri = ResolveConnectUri(_origin, reservation.GetProperty("connectUrl").GetString()!);
             await socket.ConnectAsync(connectUri, timeout.Token);
+            if(socket.HttpResponseHeaders is null || !OnlineProtocol.Accepts(socket.HttpResponseHeaders.Where(h=>h.Key.Equals(OnlineProtocol.HeaderName,StringComparison.OrdinalIgnoreCase)).SelectMany(h=>h.Value)))
+                throw new InvalidOperationException("This game server uses incompatible stage rules. Update the server before joining.");
             ConnectionRoute = connectUri.AbsolutePath;
             _socket = socket;
             Interlocked.Exchange(ref _peerHelloSent, 0);
@@ -235,7 +239,7 @@ public sealed partial class NetworkSession : ISession
             {
                 var party = PartyStatus.Parse(message.GetProperty("d"));
                 if (party.Hosting == "peer" && Interlocked.Exchange(ref _peerHelloSent, 1) == 0)
-                    QueuePeer("peer.hello", new { version = 1 });
+                    QueuePeer("peer.hello", new { version = OnlineProtocol.Revision });
                 if (Party?.Phase != party.Phase || Party?.Match != party.Match) ReleaseInputs();
                 Volatile.Write(ref _party, party);_partyReady.TrySetResult();
             }
@@ -294,6 +298,7 @@ public sealed partial class NetworkSession : ISession
         timeout.CancelAfter(TimeSpan.FromSeconds(40));
         ct = timeout.Token;
         using var request = new HttpRequestMessage(method, new Uri(_origin, "/realtime/v1/" + path));
+        request.Headers.Add(OnlineProtocol.HeaderName,OnlineProtocol.WireRevision);
         if (_token is not null) request.Headers.Add("x-player-token", _token);
         if (body is not null) request.Content = JsonContent.Create(body);
         using var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
@@ -314,6 +319,8 @@ public sealed partial class NetworkSession : ISession
             var detail = json.RootElement.TryGetProperty("error", out var error) ? error.GetProperty("message").GetString() : response.ReasonPhrase;
             throw new HttpRequestException(detail ?? "Server refused the request.", null, response.StatusCode);
         }
+        if(path=="guests" && (!response.Headers.TryGetValues(OnlineProtocol.HeaderName,out var protocol)||!OnlineProtocol.Accepts(protocol)))
+            throw new InvalidOperationException("This game server uses incompatible stage rules. Update the server before joining.");
         return json.RootElement.Clone();
     }
 

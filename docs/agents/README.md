@@ -37,9 +37,36 @@ update the current guide rather than silently reviving old behavior.
 
 ## Current decisions that supersede earlier experiments
 
+- v0.28 integrates all stage PRs, the tutorial and reference-informed explosion effects. [Combined verification and release status](../stages-release-028.md) supersedes independent draft limitations only where its evidence explicitly covers them.
+
+- Tutorial work adds an original local-only Circuit Garden and replayable lessons. The user withdrew map removal: preserve all battle arenas and the concurrent map PRs. Read [tutorial ownership and integration](../tutorial.md) before changing lessons, progress or training terrain.
+
+- Top Rules (2026-10-24 source work) adds the original castle composition with
+  three raised lanes, a central crosswalk, four stairs and real lower passages.
+  Terrain, CPU routing, bombs and aim previews distinguish both stories.
+  [Research and explicit adaptations](../top-rules-research.md); the gameplay,
+  visual and testing guides own maintenance. This does not change the installed
+  or published release by itself.
+
+
+- Rock Garden reconstruction (2026-10-24): an enclosed square lawn, five round
+  columns, central cross-shaped paving and sixteen destructible boulders replace
+  the wide open stone platform and thirteen pillars. Eight seats use separate
+  quadrant/corner spawns; falling fireballs replace closing-column Hurry. [Stage contract](../rock-garden.md) and
+  [original references](../rock-garden-research.md) distinguish evidence from tuning.
+
 - v0.27 connection work adds persistent random lobbies and player-hosted peer
   rooms. [Peer hosting](../peer-hosting.md) owns the two-human minimum, direct/relay
   routes and return-to-lobby host takeover. See verification for delivery status.
+
+
+- Up & Down rebuild (2026-10-24): a suspended upper ring and green crown,
+  two middle piers, a low reward deck, six purple flights, staggered links and
+  real underpasses replace the filled terraces. Twelve cover blocks sit below
+  the ring; sudden death floods upward. [Stage contract](../up-and-down.md),
+  [source research](../up-and-down-research.md). Dimensions, extra spawns and
+  physics remain project tuning.
+
 
 - Repository layout (2026-10-24): Godot code lives in snake_case feature folders
   under `scripts/` with folder-mirroring `BlastCircuit.*` namespaces; the scene is

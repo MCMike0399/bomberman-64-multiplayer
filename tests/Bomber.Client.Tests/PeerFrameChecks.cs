@@ -18,6 +18,32 @@ internal static class PeerFrameChecks
         match.Message+=json=>{using var d=JsonDocument.Parse(json);if(d.RootElement.GetProperty("t").GetString()=="state"){Check(PeerFrameRules.Valid(d.RootElement),"actual bomb/bot snapshots satisfy peer boundary");valid++;}};
         for(int i=0;i<300;i++){match.SetInput(0,new PlayerInput(1,0,A:i%30==0));match.Tick();}
         Check(valid>100,"validator exercised live gameplay and presentation events");
+        var castle=new LocalMatch(new MatchOptions{Stage="top-rules",HumanPlayers=2,BotPlayers=0});
+        using var castleStage=JsonDocument.Parse(castle.StageJson!);
+        Check(PeerFrameRules.Valid(castleStage.RootElement),"Top Rules peer stage accepts fractional stairs, underpasses and authored wall heights");
+        void InvalidCastle(Action<JsonNode> change,string label)
+        {
+            var frame=JsonNode.Parse(castle.StageJson!)!;change(frame["d"]!);
+            Check(!PeerFrameRules.Valid(JsonSerializer.SerializeToElement(frame)),label);
+        }
+        InvalidCastle(d=>d.AsObject().Remove("underpasses"),"reject castle without its lower-passage metadata");
+        InvalidCastle(d=>d["underpasses"]![0]=19*17,"reject out-of-bounds underpass index");
+        InvalidCastle(d=>d["underpasses"]![0]=0,"reject underpass on a solid wall");
+        InvalidCastle(d=>d["cells"]![5]!["oh"]=-1,"reject negative castle wall height");
+        InvalidCastle(d=>d["cells"]![5]!["oh"]=1e200,"reject non-finite castle wall height");
+        InvalidCastle(d=>d["cells"]![5]!.AsObject().Remove("oh"),"reject castle wall with no authored crown");
+        InvalidCastle(d=>d["cells"]![2*19+2]!["rf"]=1e200,"reject invalid fractional ramp height");
+        InvalidCastle(d=>d["cells"]![2*19+2]!["rz"]=99,"reject unbounded stair direction");
+        var layered=new LocalMatch(new MatchOptions{Stage="up-and-down",HumanPlayers=2,BotPlayers=0});
+        using var layeredStage=JsonDocument.Parse(layered.StageJson!);
+        Check(PeerFrameRules.Valid(layeredStage.RootElement),"Up & Down fractional stairs and both floors accepted together");
+        var badLayer=JsonNode.Parse(layered.StageJson!)!;badLayer["d"]!["cells"]![21*24+18]!["below"]=new JsonObject();
+        Check(!PeerFrameRules.Valid(JsonSerializer.SerializeToElement(badLayer)),"reject incomplete lower cell before renderer parsing");
+        badLayer=JsonNode.Parse(layered.StageJson!)!;var lower=badLayer["d"]!["cells"]![21*24+18]!["below"]!;
+        lower["below"]=lower.DeepClone();
+        Check(!PeerFrameRules.Valid(JsonSerializer.SerializeToElement(badLayer)),"reject unsupported third terrain layer");
+        badLayer=JsonNode.Parse(layered.StageJson!)!;badLayer["d"]!["cells"]![21*24+18]!["below"]!["rf"]=1e200;
+        Check(!PeerFrameRules.Valid(JsonSerializer.SerializeToElement(badLayer)),"reject non-finite lower ramp");
         var invalid=JsonNode.Parse(match.StateJson!)!;
         invalid["d"]!["players"]![0]!["x"]=1e200;
         Check(!PeerFrameRules.Valid(JsonSerializer.SerializeToElement(invalid)),"reject non-finite render coordinates");
@@ -27,6 +53,19 @@ internal static class PeerFrameChecks
         Check(!PeerFrameRules.Valid(JsonSerializer.SerializeToElement(invalid)),"reject stage allocation abuse");
         invalid=JsonNode.Parse(match.StateJson!)!;invalid["d"]!["players"]![0]!.AsObject().Remove("alive");
         Check(!PeerFrameRules.Valid(JsonSerializer.SerializeToElement(invalid)),"reject missing required player fields");
+        var garden=new LocalMatch(new MatchOptions{Stage="rock-garden",HumanPlayers=3,BotPlayers=0,RoundSeconds=60});
+        for(int tick=0;tick<64;tick++)garden.Tick();
+        using var meteorState=JsonDocument.Parse(garden.StateJson!);
+        Check(meteorState.RootElement.GetProperty("d").GetProperty("meteors").GetArrayLength()>0&&PeerFrameRules.Valid(meteorState.RootElement),"real Rock Garden fireball warnings pass peer presentation boundary");
+        invalid=JsonNode.Parse(garden.StateJson!)!;
+        var meteor=invalid["d"]!["meteors"]![0]!.DeepClone();
+        invalid["d"]!["meteors"]=new JsonArray(Enumerable.Range(0,9).Select(_=>meteor.DeepClone()).ToArray());
+        Check(!PeerFrameRules.Valid(JsonSerializer.SerializeToElement(invalid)),"reject oversized fireball render allocation");
+        foreach(var (field,value) in new[]{("remaining",-1d),("remaining",10d),("x",1e200)})
+        {
+            invalid=JsonNode.Parse(garden.StateJson!)!;invalid["d"]!["meteors"]![0]![field]=value;
+            Check(!PeerFrameRules.Valid(JsonSerializer.SerializeToElement(invalid)),"reject malformed fireball warning "+field);
+        }
         var duel=new LocalMatch(new MatchOptions{HumanPlayers=2,BotPlayers=0,Wins=1});
         for(int i=0;i<65;i++)duel.Tick();
         duel.SetInput(0,new PlayerInput(0,0,A:true));

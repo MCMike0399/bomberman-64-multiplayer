@@ -7,8 +7,13 @@ internal static class PeerNetworkChecks
 {
     public static async Task Run(Uri origin)
     {
+        await RunStage(origin,"rock-garden");
+        await RunStage(origin,"top-rules");
+    }
+    private static async Task RunStage(Uri origin,string stage)
+    {
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(50));
-        var settings = new SessionSettings(Stage:"rock-garden",Bots:0,Wins:1);
+        var settings = new SessionSettings(Stage:stage,Bots:0,Wins:1);
         await using var host = await NetworkSession.ConnectAsync(origin,"Peer host",settings,NetworkMode.CreatePeer,cancellationToken:deadline.Token);
         Check(host.IsLeader && host.Party?.CanStart == false,"peer host waits for a second human");
         await using var second = await NetworkSession.ConnectAsync(origin,"Peer second",settings,NetworkMode.JoinCode,host.JoinCode,cancellationToken:deadline.Token);
@@ -27,6 +32,25 @@ internal static class PeerNetworkChecks
         await Until(()=>Position(states[host.PlayerId!],second.PlayerId!)!=before && states[third.PlayerId!].GetProperty("bombs").GetArrayLength()>0);
         second.ReleaseInputs();
         Check(states[third.PlayerId!].GetProperty("players").GetArrayLength()==3,"host simulation and guest intent reach all peers");
+        if(stage=="top-rules")
+        {
+            async Task Walk(float x,float z)
+            {
+                var clock=Stopwatch.StartNew();
+                while(clock.Elapsed<TimeSpan.FromSeconds(8))
+                {
+                    var player=states[host.PlayerId!].GetProperty("players").EnumerateArray().Single(p=>p.GetProperty("id").GetString()==host.PlayerId);
+                    float dx=x-player.GetProperty("x").GetSingle(),dz=z-player.GetProperty("z").GetSingle();
+                    if(Math.Abs(dx)<.18f&&Math.Abs(dz)<.18f){host.ReleaseInputs();return;}
+                    host.SendInput(0,new PlayerInput(Math.Clamp(dx*3,-1,1),Math.Clamp(dz*3,-1,1)));
+                    await Pump(20);
+                }
+                throw new Exception("Peer castle route did not reach "+x+","+z);
+            }
+            await Walk(5.5f,1.5f);await Walk(2.5f,1.5f);await Walk(2.5f,6.5f);await Walk(16.5f,6.5f);
+            await Until(()=>states[third.PlayerId!].GetProperty("players").EnumerateArray().Any(p=>p.GetProperty("id").GetString()==host.PlayerId&&p.GetProperty("x").GetSingle()>16&&p.GetProperty("y").GetSingle()==0));
+            Check(true,"peer-hosted Top Rules descends fractional stairs and crosses below three bridges as observed by a guest");
+        }
         int epoch=second.Party!.Epoch;
         sessions.Remove(host); await host.DisposeAsync();
         await Until(()=>second.IsLeader && second.Party?.Phase=="lobby" && third.Party?.Epoch>epoch);
@@ -44,7 +68,7 @@ internal static class PeerNetworkChecks
         sessions.Remove(second);
         await Until(()=>third.IsLeader && third.Party?.Phase=="lobby");
         Check(third.Party!.Epoch>epoch,"stalled host lease transfers leadership without needing socket closure");
-        Console.WriteLine("PASS peer relay gameplay, authenticated start, departure migration and stalled-host recovery");
+        Console.WriteLine("PASS "+stage+" peer relay gameplay, authenticated start, departure migration and stalled-host recovery");
 
         async Task Pump(int milliseconds)
         {

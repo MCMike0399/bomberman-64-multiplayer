@@ -29,6 +29,27 @@ class HarnessTests(unittest.TestCase):
             outputs = [command[command.index('--output') + 1] for command in commands]
             self.assertEqual(len(set(outputs)), 2)
 
+    def test_playtest_uses_catalog_deadline_and_keeps_outer_cleanup_headroom(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            catalog = root / 'assets/testing/scenarios.json'
+            catalog.parent.mkdir(parents=True)
+            catalog.write_text(json.dumps({'scenarios': [
+                {'id': 'all', 'timeout': 900}, {'id': 'core-headless', 'timeout': 600}]}))
+            for desktop, scenario, headless, seconds, outer in (
+                    ('shared', 'all', False, 900, 960),
+                    ('isolated', 'all', False, 900, 1800),
+                    ('shared', 'core-headless', True, 600, 660)):
+                with self.subTest(desktop=desktop, scenario=scenario):
+                    suite = qa.Suite.__new__(qa.Suite)
+                    suite.output, suite.godot, suite.desktop, suite.vm = root / 'qa', 'fixture-godot', desktop, 'fixture-vm'
+                    suite.require = Mock()
+                    with patch.object(qa, 'ROOT', root):
+                        suite.playtest(scenario, headless=headless)
+                    command = suite.require.call_args.args[1]
+                    self.assertEqual(str(seconds), command[command.index('--timeout') + 1])
+                    self.assertEqual(outer, suite.require.call_args.kwargs['timeout'])
+
     def test_isolated_graphical_profile_uses_guest_server_without_touching_host_listeners(self):
         suite = Mock(profile='graphical', desktop='isolated', godot='fixture-godot')
         qa.execute(suite)
@@ -51,11 +72,11 @@ class HarnessTests(unittest.TestCase):
                   'Ticks': 10, 'ActiveTicks': 5, 'EligibleBotTicks': 6, 'MovingBotTicks': 3,
                   'Bombs': 1, 'LongestOpenIdleTicks': 1}
         report = {'fairnessChecks': 1, 'idleLimitTicks': 3, 'tickRate': 1,
-                  'results': [dict(result, Seed=seed) for seed in range(36)]}
+                  'results': [dict(result, Seed=seed) for seed in range(48)]}
         with tempfile.TemporaryDirectory() as temporary:
             receipt = Path(temporary) / 'soak.json'
             receipt.write_text(json.dumps(report))
-            self.assertEqual(36, qa.validate_soak(receipt)['scenarios'])
+            self.assertEqual(48, qa.validate_soak(receipt)['scenarios'])
             changes = [('passed', False), ('EligibleBotTicks', 0), ('MovingBotTicks', 0),
                        ('Bombs', 0), ('ActiveTicks', 0), ('LongestOpenIdleTicks', 4), ('Seed', 1)]
             for key, value in changes:

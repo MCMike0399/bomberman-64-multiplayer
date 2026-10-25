@@ -6,6 +6,13 @@ A playable Godot C# arena battle game inspired by Bomberman 64, with original pr
 
 The original game supports four simultaneous players. Eight-player support and the numerical simulation tuning are decisions for this project. See [research and sources](docs/history/research.md).
 
+## Tutorial
+
+Choose **Tutorial** for Circuit Garden: short guided lessons covering bomb handling, equipment, terrain, rivals and hazards, with saved progress and quick retries. All battle maps remain available. [Tutorial guide](docs/tutorial.md) · [Original-game research](docs/tutorial-research.md).
+
+
+**Top Rules** recreates the original game's two-story castle layout with original procedural art: three raised lanes, a central crosswalk, four green staircases and a red lower court you can walk beneath the bridges. It supports local/practice and online matches with up to eight participants. Sudden death closes the side walls inward. [Reference research and implementation choices](docs/top-rules-research.md).
+
 ## Run the game
 
 Install **Godot 4.7.2 .NET** and the **.NET 10 SDK** (10.0.401 was used for verification). The root project pins `Godot.NET.Sdk/4.7.2` and targets `net10.0`. Use matching Godot .NET export templates when building the standalone desktop app.
@@ -155,7 +162,9 @@ head-hit rebound; the reticle uses the same flight rules.
 Sunken Temple now spans 25×27 cells, with wider platforms, a fifth raised tier,
 a larger courtyard, more breakable cover and open water pitfalls behind the
 summit. Most of its cover is concentrated in lower farming pockets, with clear
-stair and crossing lanes. Rock Garden is 23×15 with pillar-area clusters; Up &
+stair and crossing lanes. [Rock Garden](docs/rock-garden.md) is a 19×19 enclosed
+grass court with five columns, central paving, sixteen boulders and falling
+fireballs during sudden death; Up &
 Down is 23×19 with cover on broad platforms and outer pockets. Layouts vary by
 seed while preserving those areas and safe openings. Fire and Bomb upgrades each
 make up 30% of the default drop pool; equipment and temporary effects share the remaining 40%.

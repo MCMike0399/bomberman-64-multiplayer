@@ -149,6 +149,8 @@ specific composition, not a universal camera constant.
 
 ## Materials, stage depth and effects
 
+Circuit Garden has its own grass, range marks, banners and low-terrace composition; its camera leaves room for tutorial instructions. [Tutorial visuals and ownership](../tutorial.md) keep this local training arena separate from the battle-map rebuilds.
+
 The user's direction combines the original pyramid's terrace/courtyard composition
 with restrained modern stylization inspired by Tunic and Pokémon BDSP. Preserve
 the recessed cobbled court, warm readable sandstone, grounded bedrock/foundation
@@ -171,6 +173,42 @@ Read [the rendering investigation](../history/iteration8-rendering.md) before re
 this shader; its fixed daytime Fresnel tint was superseded by the four lighting
 profiles below. Verify normal and hurry/flood states from more than one camera.
 
+### Top Rules castle presentation
+
+[TempleStageView.TopRules](../../scripts/arena/TempleStageView.TopRules.cs)
+builds original gray masonry, brass-framed slate bridges, pale junctions,
+green stair treads and a patterned crimson court from the authority layout.
+Bridge undersides are thin, with visible space below. Keep the red court above
+the foundation and deck paving above its structural slab; coplanar tops caused
+large gray patches on Low even when the High capture looked correct. Keep decorative banners,
+columns and warm edging outside the actual passage volume. No original textures
+or models ship. The castle has its own steeper battle-camera fit and a low near
+wall so the lower court stays visible; retain HUD-safe framing at 16:9 and 16:10.
+Local lighting and graphics presets continue to apply. The `top-rules` journey
+captures the real menu miniature, four-player opening, lower traversal/aiming,
+upper crosswalk, four stairs, night, eight-player combat, real dropped loot below
+a bridge and inward wall closure. Pickup meshes must use the snapshot's accepted
+`y`; querying the topmost terrain surface moves lower drops onto a bridge.
+
+### Up & Down suspended arena (2026-10-24)
+
+[Stage contract](../up-and-down.md), [original references](../up-and-down-research.md).
+`TempleStageView.UpAndDown.cs` builds pale stone piers, recessed square friezes,
+purple perimeter panels and six sloping flights with yellow landing arrows,
+a green summit mosaic, thin suspended links and the low four-panel deck.
+All geometry/materials are original procedural work. Bridge tiles render their
+`below` surfaces separately; no foundation may fill an underpass. Both camera
+fitting and framing checks include lower surfaces and standing headroom.
+The authority's fractional ramp endpoints drive the render slope; visual treads
+sit just above it. The ordinary battle camera remains distinct from oblique
+inspection captures. All four existing lighting profiles and graphics presets
+apply to the new arena. Older packets without bridge surfaces retain generic
+terrain rendering. The shared menu plate builder uses clockwise faces with
+outward normals; `asset-audit` retains the winding regression. `menu-preview`
+exercises preparation, preset changes, asset inspection and real setup navigation;
+setup checks the rendered green summit as well as settings state. Agent image
+inspection is still required.
+
 ### Four stage lighting variants (2026-10-23)
 
 The user requested **Morning, Midday, Afternoon and Night**, selected personally
@@ -183,7 +221,7 @@ Online preference edits save the local choice but never override server lighting
 key/fill/ambient, sky, fog and water profiles. Morning uses soft warm lateral light;
 Midday has a higher sun and turquoise water; Afternoon uses amber light, longer
 shadows and mauve reflections; Night uses blue moonlight, indigo water and enough
-fill to retain silhouettes, stairs and aiming markers. All three stages reuse
+fill to retain silhouettes, stairs and aiming markers. All four stages reuse
 these profiles. Menu theatre lighting remains separately authored.
 
 `ArenaView` supplies a procedural sky radiance map for specular reflections.
@@ -313,3 +351,20 @@ shells and billows. Purple bouncing and mint fast bombs match their pickup color
 Focus uses a cyan target symbol. Charge progress drives tension before the accepted
 pump animation. The fifth-tier Pyramid summit is a low mosaic, keeping playable
 space and rear water falls visible. Recheck camera fit on all enlarged arenas.
+
+## Rock Garden reconstruction (2026-10-24)
+
+Rock Garden has its own procedural turf, weathered gray limestone, five round
+columns, pale central paving and faceted destructible boulders. It renders dry
+land beyond the authority-owned enclosure instead of the temple sea. Scenery
+outside the walls is visual only. The column and cover crowns use shared throw
+support heights; the paving is a shallow cosmetic layer. The stage selector
+uses the real square layout. See the [stage contract](../rock-garden.md).
+
+## v0.28 reference fidelity
+
+[Stage comparison](../stage-fidelity-research.md) and [explosion sequences](../explosion-fidelity-research.md) record inspected original imagery and limits. The integrated castle has taller authored walls and side banners; Up & Down uses rounded/fluted supports inside its solid footprint; Rock Garden's center crown is 1.35 units versus .9 for its outer columns. Original reference assets remain outside Git and exports.
+
+Explosions use one round world-space fireball, brief sharp charged flares, an expanding cyan power wave and transparent fade. This supersedes the earlier offset billow spheres, ordinary ground torus and brown cloud. Only the cosmetic group compensates the 1.35 tier-height scale; the faint danger shell retains mapped authority extent. Damage radius and fuse stay in the simulation. Castle thin-deck blast permeability is an explicitly researched rules change, separate from the effect geometry.
+
+Castle stone and garden surfaces use bounded terrain-owned materials. Repeated rounds and new closing walls must retain the selected quality preset. Inspect actual captures; shape/aspect/lifetime tests are supporting evidence, not aesthetic approval.

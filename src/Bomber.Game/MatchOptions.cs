@@ -15,6 +15,7 @@ public sealed record MatchOptions
     public string BotDifficulty { get; init; } = "normal";
     public IReadOnlyList<int> PlayerAppearances { get; init; } = [];
     public bool Practice { get; init; }
+    public string? TutorialLesson { get; init; }
     public int Seed { get; init; } = 64;
 
     public IReadOnlyDictionary<string, string> ToSettings()
@@ -39,7 +40,9 @@ public sealed record MatchOptions
             throw new ArgumentOutOfRangeException(nameof(HumanPlayers), "A match needs 2–8 total participants and at least one human.");
         if (PlayerAppearances.Count != 0 && (PlayerAppearances.Count != HumanPlayers + BotPlayers || PlayerAppearances.Any(index=>index is < 0 or > 7)))
             throw new ArgumentException("Appearances must contain one index (0–7) per active participant.",nameof(PlayerAppearances));
-        if (Stage is not ("sunken-temple" or "rock-garden" or "up-and-down")) throw new ArgumentException("Unknown stage.", nameof(Stage));
+        if (Stage is not ("sunken-temple" or "rock-garden" or "up-and-down" or "top-rules") && !(Practice && Stage == "circuit-garden")) throw new ArgumentException("Unknown stage.", nameof(Stage));
+        if (TutorialLesson is not null && (!Practice || Stage != "circuit-garden" || HumanPlayers != 1 || BotPlayers != 0 || !TutorialCourse.Contains(TutorialLesson)))
+            throw new ArgumentException("Tutorials require one local trainee in Circuit Garden.");
         if (BotDifficulty is not ("easy" or "medium" or "normal" or "hard")) throw new ArgumentException("Unknown bot difficulty.",nameof(BotDifficulty));
         if (Wins is < 1 or > 5) throw new ArgumentOutOfRangeException(nameof(Wins));
         if (RoundSeconds is < 60 or > 300) throw new ArgumentOutOfRangeException(nameof(RoundSeconds));

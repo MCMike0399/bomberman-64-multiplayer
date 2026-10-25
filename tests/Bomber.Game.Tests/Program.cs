@@ -1,3 +1,20 @@
+if(args.Contains("--stage-integration")){StageIntegrationChecks.Run();return;}
+if(args.Contains("--tutorial-review")){TutorialChecks.ReviewRegressions();return;}
+if(args.Contains("--tutorial")){TutorialChecks.Run();return;}
+if(args.Contains("--top-rules")){TopRulesChecks.Run();return;}
+if(args.Contains("--up-and-down"))
+{
+    int count=0;
+    UpAndDownChecks.Run((name,check)=>{check();count++;Console.WriteLine("PASS "+name);});
+    Console.WriteLine($"Passed {count} Up & Down integration checks.");return;
+}
+if(args.Contains("--rock-garden"))
+{
+    int count=0;
+    RockGardenChecks.Run((name,check)=>{check();count++;Console.WriteLine("PASS "+name);});
+    Console.WriteLine($"Passed {count} Rock Garden integration checks.");return;
+}
+
 if(args.Contains("--snapshot-performance")){SnapshotPerformance.Run(args);return;}
 if(args.Contains("--online-rooms")){OnlineRoomChecks.Run();return;}
 
@@ -13,11 +30,13 @@ if(args.Contains("--sandbox")){SandboxEquipmentChecks.Run();return;}
 
 if(args.Contains("--cover-layout")){RegionalCoverChecks.Run();return;}
 
-var passed = AdvancedRulesChecks.Run() + ItemExpirationChecks.Run() + RegionalCoverChecks.Run() + SandboxEquipmentChecks.Run() + PyramidLedgeChecks.Run() + PartyPolishChecks.Run() + PartySessionChecks.Run() + LootAvailabilityChecks.Run() + AimedThrowChecks.Run() + CarryChargeChecks.Run() + BombPlacementChecks.Run() + PowerUpModeChecks.Run() + BombTravelChecks.Run() + KickTimingChecks.Run() + BodyContactChecks.Run() + BombImpactChecks.Run() + TraversalAndGhostChecks.Run() + BombActionsChecks.Run() + GrappleChecks.Run();
+var passed = StageIntegrationChecks.Run() + TutorialChecks.Run() + TutorialChecks.ReviewRegressions() + TopRulesChecks.Run() + AdvancedRulesChecks.Run() + ItemExpirationChecks.Run() + RegionalCoverChecks.Run() + SandboxEquipmentChecks.Run() + PyramidLedgeChecks.Run() + PartyPolishChecks.Run() + PartySessionChecks.Run() + LootAvailabilityChecks.Run() + AimedThrowChecks.Run() + CarryChargeChecks.Run() + BombPlacementChecks.Run() + PowerUpModeChecks.Run() + BombTravelChecks.Run() + KickTimingChecks.Run() + BodyContactChecks.Run() + BombImpactChecks.Run() + TraversalAndGhostChecks.Run() + BombActionsChecks.Run() + GrappleChecks.Run();
 SnapshotChecks.Run(Run);
 passed += OnlineRoomChecks.Run();
 MatchRulesChecks.Run(Run);
 TerrainChecks.Run(Run);
+UpAndDownChecks.Run(Run);
+RockGardenChecks.Run(Run);
 BotChecks.Run(Run);
 PracticeAndOutcomeChecks.Run(Run);
 ItemsAndHazardsChecks.Run(Run);

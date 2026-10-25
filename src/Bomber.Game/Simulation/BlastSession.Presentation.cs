@@ -29,6 +29,7 @@ public sealed partial class BlastSession
         float x = 0, float y = 0, float z = 0, float magnitude = 0, float radius = 0,
         string? reason = null, string? causedBy = null)
     {
+        TutorialEvent(kind,entityId,playerId,causedBy,reason);
         _presentationEvents.Enqueue(new PresentationEvent(++_presentationSeq, _tickCount, _roundNum,
             kind, entityId, playerId, x, y, z, magnitude, radius, reason, causedBy));
         if (_presentationEvents.Count > PresentationHistoryLimit) _presentationEvents.Dequeue();

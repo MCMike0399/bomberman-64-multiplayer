@@ -55,7 +55,7 @@ The movement sample is a proxy for blocked/slow movement; it can include legitim
 dotnet run -c Release --project tests/Bomber.Ai.Tests -- --soak --output=artifacts/iteration13/soak.json
 ```
 
-The deterministic matrix runs 36 scenarios: three arenas, Easy/Medium/Hard, three/seven bots, and seeds 64/9876. Each scenario runs up to 2,700 authority ticks (90 seconds), stopping if the five-win match finishes; `--ticks=N` overrides its duration. The JSON records movement, stationary windows, blocked movement commands, safe waits, no-safe-exit waits, new bombs reaching current opponents/cover, destroyed cover, pickups, falling transitions, deaths and round wins. Pressure describes visible blast opportunities, not actual hits. Terrain drops count transitions into the physics falling state, not every descending tick. Deaths include the final elimination that ends a round. These homogeneous difficulty matches describe activity and pacing; their outcomes do not establish pairwise difficulty win rates.
+The deterministic matrix runs 48 scenarios: four arenas, Easy/Medium/Hard, three/seven bots, and seeds 64/9876. Each scenario runs up to 2,700 authority ticks (90 seconds), stopping if the five-win match finishes; `--ticks=N` overrides its duration. The JSON records movement, stationary windows, blocked movement commands, safe waits, no-safe-exit waits, new bombs reaching current opponents/cover, destroyed cover, pickups, falling transitions, deaths and round wins. Pressure describes visible blast opportunities, not actual hits. Terrain drops count transitions into the physics falling state, not every descending tick. Deaths include the final elimination that ends a round. These homogeneous difficulty matches describe activity and pacing; their outcomes do not establish pairwise difficulty win rates.
 
 Liveness examines every Fight/Hurry tick for living, non-ghost bots outside carried, stunned, airborne, falling and kick recovery states. A stationary window ends on at least 0.12 cell displacement from its anchor. It includes zero movement commands, so a planner that permanently chooses its current position is detectable. A continuous stationary window exceeding 12 seconds fails only while an adjacent authoritative terrain edge remains uncovered, bomb-free, unoccupied and safe in the visible danger forecast for 0.9 seconds. Windows without a safe exit are reported separately, preserving legitimate trapped-bot waits. This is a bounded local movement check, not proof that every strategic goal is reachable. JSON includes the worst bot's position, goal, command and living opponent count for diagnosis. The harness reads current cover/hazards via reflection to keep measurement out of production policy.
 
@@ -111,3 +111,25 @@ The matched soak records eligible bot exposure, allowing pooled rates rather tha
 Overall exposure-normalized bomb frequency rises 3.37% and pressure rises 1.83%; Medium pressure rises 1.20%, Hard rises 26.47%, and Easy falls 14.51%. Numerators count new bombs on active ticks and are not separately filtered by eligibility, so these are exposure-normalized summaries rather than conditional placement probabilities. Pooled rates weight longer/larger bot exposures; deaths, resources, routes, round restarts and eligibility still diverge. These seeded observations do not prove higher difficulty win rates, improved survival, or fun; human playtesting remains necessary.
 
 Nine local Release timing samples with eight bots had per-run p95 active-tick times of 0.078–0.312 ms and a largest tick of 5.045 ms. The matched prior-policy sample was 0.066–0.414 ms, largest 5.570 ms. These are single local simulation-only samples and do not establish a speedup or production capacity. Artifacts are under `artifacts/iteration17/ai/`: `pressure-before.json`, `pressure-after.json`, `stock-human-before.json`, `stock-human-after.json`, `soak-matched-before.json`, `soak-after.json`, `soak-normalized.json`, `benchmark-matched-before.json`, `benchmark-after.json` and `summary.json`.
+
+Top Rules adds separate bridge/underpass graph nodes. `--top-rules` checks both
+levels, per-level danger/occupancy and real CPU stair ascent for all difficulties.
+The main soak includes the castle; historical 36-case receipts above retain
+their original scope.
+
+`--soak --terrain-regression` retains the temple Hard/seven-CPU/seed-64
+crate-overlap witness found while adding layered terrain. Crates must still
+block ledge departures; height-only filtering can trap an actor after falling.
+
+
+## Suspended Up & Down (2026-10-24)
+
+The former filled terrace/farming layout is superseded by the
+[stage contract](../../docs/up-and-down.md). `UpAndDownAiChecks` checks separate
+bridge/underpass bomb occupancy and danger intervals, then ordinary CPU
+planting/escape against fixed visible lower cover in a declared lower-start
+fixture. `FrontPlacementChecks` retains the stock three-CPU destruction/drop
+witness. Its seven-CPU stock case requires repeated real combat, allowing the
+CPU to retain the exposed upper ring instead of forcing a farming detour.
+Soak safe-exit observations now use the actor's elevation and both navigation
+layers. Earlier pressure/cover measurements above belong to older layouts.

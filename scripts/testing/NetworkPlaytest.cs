@@ -97,12 +97,12 @@ public partial class PlaytestDriver
         await Capture("network-two-humans");
         var savedGraphics=_root.Preferences.Graphics;
         await SelectGraphics(BlastCircuit.Rendering.GraphicsPreset.Low);
-        Check(ReferenceEquals(_root.ActiveSession,host)&&LightingArena.TimeOfDay==BlastCircuit.Arena.StageLighting.FromWire(serverLighting),"graphics preset preserves online connection and server lighting");
+        Check(ReferenceEquals(_root.ActiveSession,host)&&LightingArena.TimeOfDay==BlastCircuit.Arena.StageLighting.FromWire(State.GetProperty("stageLighting").GetString()),"graphics preset preserves online connection and server lighting");
         await SelectGraphics(savedGraphics);
         var savedLighting=_root.Preferences.StageLighting;
         var otherLighting=(BlastCircuit.Arena.StageTime)(((int)LightingArena.TimeOfDay+1)%4);
         await SelectLocalLighting(otherLighting);
-        Check(ReferenceEquals(_root.ActiveSession,host)&&LightingArena.TimeOfDay==BlastCircuit.Arena.StageLighting.FromWire(serverLighting),"personal preference cannot override online server lighting");
+        Check(ReferenceEquals(_root.ActiveSession,host)&&LightingArena.TimeOfDay==BlastCircuit.Arena.StageLighting.FromWire(State.GetProperty("stageLighting").GetString()),"personal preference cannot override online server lighting");
         await SelectLocalLighting(savedLighting);
         await KeyPress(Key.Escape);Check(_root.ScreenName=="Pause"&&ReferenceEquals(_root.ActiveSession,host),"online Esc opens menu without disconnecting");
         int pausedSnapshots=_root.SnapshotCount;await Task.Delay(300);await Frames(3);

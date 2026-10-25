@@ -8,16 +8,27 @@ internal static class OnlineRoomChecks
     {
         int passed = 0;
         void Check(bool condition, string name) { if (!condition) throw new Exception("FAIL " + name); passed++; }
+        var legacy=new Context();var legacyRoom=new PeerRoomSession(new("legacy","blast-peer",legacy.Settings,64));
+        var legacyHost=legacy.Add("old-host",0);var legacyGuest=legacy.Add("old-guest",1);
+        foreach(var p in new[]{legacyHost,legacyGuest})
+        {legacyRoom.OnPlayerJoined(legacy,p);legacyRoom.OnMessage(legacy,p,new("peer.hello",JsonSerializer.SerializeToElement(new{version=1}),null,legacy.Now));}
+        legacyRoom.OnMessage(legacy,legacyHost,new("party.start",JsonSerializer.SerializeToElement(new{}),null,legacy.Now));
+        Check(legacy.Frames.Last(f=>f.Type=="party.status").Data.GetProperty("phase").GetString()=="lobby","v0.27 peers cannot start the changed stage protocol");
+        legacyRoom.OnMessage(legacy,legacyHost,new("peer.hello",JsonSerializer.SerializeToElement(new{version=OnlineProtocol.Revision}),null,legacy.Now));
+        Check(!legacy.Frames.Last(f=>f.Type=="party.status").Data.GetProperty("canStart").GetBoolean(),"mixed old/new peers cannot start");
+        Check(legacy.Frames.Last(f=>f.Type=="party.status").Data.GetProperty("notice").GetString()!.Contains("Update"),"incompatible peers receive an update instruction");
+        legacyRoom.OnMessage(legacy,legacyGuest,new("peer.hello",JsonSerializer.SerializeToElement(new{version=OnlineProtocol.Revision}),null,legacy.Now));
+        Check(legacy.Frames.Last(f=>f.Type=="party.status").Data.GetProperty("canStart").GetBoolean(),"matching updated peers can start");
         var c = new Context(); var room = new PeerRoomSession(new("peer", "blast-peer", c.Settings, 64));
         var host = c.Add("host", 0); room.OnPlayerJoined(c, host);
-        Send(host,"peer.hello",new{version=1});
+        Send(host,"peer.hello",new{version=OnlineProtocol.Revision});
         Send(host, "party.start", new { });
         Check(Status().GetProperty("phase").GetString() == "lobby", "seven CPUs never satisfy two-human peer minimum");
         var second = c.Add("second", 3); room.OnPlayerJoined(c, second);
         var third = c.Add("third", 1); room.OnPlayerJoined(c, third);
         Send(host,"party.start",new{});
         Check(Status().GetProperty("phase").GetString()=="lobby","clients must negotiate peer protocol before starting");
-        foreach(var p in new[]{host,second,third})Send(p,"peer.hello",new{version=1});
+        foreach(var p in new[]{host,second,third})Send(p,"peer.hello",new{version=OnlineProtocol.Revision});
         Check(Status().GetProperty("leaderId").GetString() == "host", "first peer owns room");
         Send(second, "party.start", new { }); Check(Status().GetProperty("phase").GetString() == "lobby", "guest cannot start");
         Send(host, "party.start", new { }); Check(Status().GetProperty("phase").GetString() == "playing", "host starts with two humans");
@@ -35,7 +46,7 @@ internal static class OnlineRoomChecks
         Send(second,"party.start",new{});
         c.Connected.Add("host"); room.OnPlayerConnectionChanged(c, host, true);
         Check(Status().GetProperty("phase").GetString()=="lobby","reconnecting into a new peer match resets its roster safely");
-        Send(host,"peer.hello",new{version=1});
+        Send(host,"peer.hello",new{version=OnlineProtocol.Revision});
         Check(Status().GetProperty("leaderId").GetString() == "second", "former host reconnect cannot reclaim authority");
         Send(second, "party.start", new { }); epoch = Status().GetProperty("epoch").GetInt32();
         c.Tick = 210; room.OnTick(c);
@@ -65,7 +76,7 @@ internal static class OnlineRoomChecks
         var idle=new Context();var idleRoom=new PeerRoomSession(new("idle","blast-peer",idle.Settings,64));
         var idleHost=idle.Add("idle-host",0);var idlePeer=idle.Add("idle-peer",1);
         foreach(var p in new[]{idleHost,idlePeer})
-        {idleRoom.OnPlayerJoined(idle,p);idleRoom.OnMessage(idle,p,new("peer.hello",JsonSerializer.SerializeToElement(new{version=1}),null,idle.Now));}
+        {idleRoom.OnPlayerJoined(idle,p);idleRoom.OnMessage(idle,p,new("peer.hello",JsonSerializer.SerializeToElement(new{version=OnlineProtocol.Revision}),null,idle.Now));}
         idle.Tick=210;idleRoom.OnTick(idle);
         var idleStatus=idle.Frames.Last(f=>f.Type=="party.status").Data;
         Check(idleStatus.GetProperty("leaderId").GetString()=="idle-peer","stalled lobby host cannot block start indefinitely");

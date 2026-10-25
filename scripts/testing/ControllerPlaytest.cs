@@ -174,7 +174,7 @@ public partial class PlaytestDriver
             Event("menu-navigation-focus",new {pad=pad.Name,windowFocus=GetWindow().HasFocus(),applicationFocus=ControllerHub.Current.HasApplicationFocus,enabled=ControllerHub.Current.MenuNavigationEnabled,tester=ControllerHub.Current.TesterActive,focus=(GetViewport().GuiGetFocusOwner() as Button)?.Text});
             Check(FindButton("ONLINE BATTLE").HasFocus(),pad.Name+": gradual analog threshold crossing moves menu exactly once");
             await ControllerFrames(14);
-            Check(FindButton("PRACTICE").HasFocus(),pad.Name+": held analog direction repeats without more motion events");
+            Check(FindButton("TUTORIAL").HasFocus(),pad.Name+": held analog direction repeats without more motion events");
             CtlAxis(id,JoyAxis.LeftY,-.65f);await ControllerFrames(2);
             Check(FindButton("ONLINE BATTLE").HasFocus(),pad.Name+": analog reversal navigates immediately");
             foreach(float value in new[]{-.44f,-.35f,-.43f}){CtlAxis(id,JoyAxis.LeftY,value);await ControllerFrames(1);}

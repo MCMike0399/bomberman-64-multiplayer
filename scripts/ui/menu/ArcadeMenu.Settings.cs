@@ -49,8 +49,9 @@ public partial class ArcadeMenu
         ArcadeTheme.Heading(box,"Game menu",42);
         _pauseHint=Copy(box,"",18);
         ArcadeTheme.Button(box,"Resume game",()=>ResumeRequested?.Invoke(),true).Name="ResumeGame";
+        _retryLesson=ArcadeTheme.Button(box,"Retry lesson",()=>{if(_pausedTutorial is {} id)TutorialRequested?.Invoke(id);});_retryLesson.Name="PauseRetryLesson";_retryLesson.Visible=false;
         ArcadeTheme.Button(box,"Settings",()=>Navigation?.Invoke("Settings")).Name="PauseSettings";
-        ArcadeTheme.Button(box,"Leave game",()=>Navigation?.Invoke("Modes")).Name="LeaveGame";
+        _pauseLeave=ArcadeTheme.Button(box,"Leave game",()=>Navigation?.Invoke(_pausedTutorial is null?"Modes":"Tutorial"));_pauseLeave.Name="LeaveGame";
     }
 
     public void ConfigurePreferences(PlayerPreferences preferences)
@@ -73,6 +74,10 @@ public partial class ArcadeMenu
 
     public void SettingsNotice(string text)=>_settingsNotice.Text=text;
 
-    public void ShowPause(bool online)
-    { _pauseHint.Text=online?"The online match continues while this menu is open.":"The local game is paused.";ShowScreen("Pause"); }
+    public void ShowPause(bool online,bool training=false,string? lesson=null)
+    {
+        _pausedTutorial=training?lesson??"free":null;_retryLesson.Visible=training;
+        _pauseLeave.Text=training?"Back to lessons":"Leave game";
+        _pauseHint.Text=online?"The online match continues while this menu is open.":training?"Your lesson is paused. Retry at any time.":"The local game is paused.";ShowScreen("Pause");
+    }
 }

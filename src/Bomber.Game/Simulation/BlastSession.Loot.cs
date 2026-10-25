@@ -15,13 +15,13 @@ public sealed partial class BlastSession
         var distances = _stage.Spawns.Select(SpawnDistances).ToArray();
         int Distance(int zone,(int X,int Z) cell) => distances[zone][cell.Z*_stage.Width+cell.X];
         int Nearest((int X,int Z) cell) => Enumerable.Range(0,distances.Length).MinBy(zone=>Distance(zone,cell));
-        int target = Math.Min(_stage.MaxSoftBlocks,Math.Max(_stage.Spawns.Length*2,(int)Math.Round(candidates.Count*_stage.SoftBlockDensity)));
+        int target = Math.Min(_stage.MaxSoftBlocks,Math.Max(_stage.Spawns.Length*_stage.OpeningCoverPerSpawn,(int)Math.Round(candidates.Count*_stage.SoftBlockDensity)));
         target=(int)Math.Round(target*_advanced.BlockPercent/100d);
         void Place((int X,int Z) cell,int zone)
         {
             candidates.Remove(cell);_softBlocks.Set(cell.X,cell.Z,true);_coverLootZones.Add(cell,zone);
         }
-        for(int pass=0;pass<2;pass++)
+        for(int pass=0;pass<_stage.OpeningCoverPerSpawn;pass++)
             for(int zone=0;zone<distances.Length&&_coverLootZones.Count<target;zone++)
             {
                 if(candidates.Count==0)break;

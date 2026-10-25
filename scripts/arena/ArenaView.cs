@@ -18,10 +18,13 @@ public partial class ArenaView : Node3D
     private readonly Dictionary<string,PlayerInput> _localInputs=[];
     private readonly Dictionary<string,BombThrowPreview> _throwPreviews=[];
     private bool _battleActive;
+    private MeshInstance3D? _tutorialTarget;
     public void SetBattleActive(bool active)
     {
         _battleActive=active;
+        if(!active && _tutorialTarget!=null)_tutorialTarget.Visible=false;
         if(!active)ClearThrowPreviews();
+        foreach(var meteor in _entities.Values.OfType<MeteorView>())meteor.SetProcess(active);
     }
     public IReadOnlyList<ThrowPreviewState> ThrowPreviews {get;private set;}=[];
     public void SetLocalInput(string playerId,PlayerInput input)=>_localInputs[playerId]=input;
@@ -67,7 +70,7 @@ public partial class ArenaView : Node3D
     public string StageId=>_stage;
     public int VisiblePlayerCount=>_entities.Values.Count(n=>n is BomberModel);
     public BattleAudio Audio=>_audio;
-    public object PresentationState=>new {sequence=_presentation.Sequence,audio=_audio.Counts,voicePlays=_audio.VoicePlayCount,droppedCues=_audio.DroppedCueCount,effects=_effectCounts,explosions=_explosions.Values.Where(GodotObject.IsInstanceValid).Select(v=>new {tier=v.Tier,radius=v.Radius,age=v.Age,phase=v.Phase,lobes=v.LobeCount,hazard=v.HazardActive,extent=v.VisualExtent}).ToArray()};
+    public object PresentationState=>new {sequence=_presentation.Sequence,audio=_audio.Counts,voicePlays=_audio.VoicePlayCount,droppedCues=_audio.DroppedCueCount,effects=_effectCounts,explosions=_explosions.Values.Where(GodotObject.IsInstanceValid).Select(v=>new {tier=v.Tier,radius=v.Radius,age=v.Age,phase=v.Phase,bodyAspect=v.BodyAspect,geometry=v.GeometryCount,flares=v.FlareCount,powerWave=v.PowerWaveVisible,hazard=v.HazardActive,extent=v.VisualExtent}).ToArray()};
     public void ResetPresentationBaseline()=>_presentation.Reset();
     public Task PrepareEffects()=>EffectWarmup.Run(GetParent(),_art,_environment,_keyLight,_fillLight);
     public void ApplyGraphicsQuality()
@@ -128,6 +131,7 @@ public partial class ArenaView : Node3D
     }
     public void ResetMatch()
     {
+        if(_tutorialTarget!=null)_tutorialTarget.Visible=false;
         _localInputs.Clear();ClearThrowPreviews();
         _playerMotion.Clear();_facings.Clear();_ghostHosts.Clear();_snapshotTick=0;
         _audio.StopAll();
@@ -140,6 +144,9 @@ public partial class ArenaView : Node3D
         string id=data.GetProperty("id").GetString()!;
         if(_stage==id)return;
         _stage=id;ClearThrowPreviews();
+        _environment.BackgroundMode=id==BlastStages.TopRules?Godot.Environment.BGMode.Color:Godot.Environment.BGMode.Sky;
+        _environment.BackgroundColor=new Color("171a22");
+        _environment.FogSkyAffect=id==BlastStages.TopRules?0:1;
         _playerMotion.Clear();_facings.Clear();_ghostHosts.Clear();
         _terrain?.QueueFree();_terrain=new TempleStageView(_art);AddChild(_terrain);_terrain.Build(data);
         _terrain.SetLighting(StageLighting.For(TimeOfDay));
@@ -229,13 +236,25 @@ public partial class ArenaView : Node3D
             CountEffect("blast-"+blast.Tier);_shake=Mathf.Max(_shake,Mathf.Clamp(radius*.024f,.04f,.15f));
             if(!eventsAvailable)_audio.Blast(radius);
         }
+        if(data.TryGetProperty("meteors",out var meteors))foreach(var meteor in meteors.EnumerateArray())
+        {
+            string id="m:"+meteor.GetProperty("id").GetString();seen.Add(id);
+            if(!_entities.TryGetValue(id,out var node))
+            {
+                node=new MeteorView(_art);_dynamic.AddChild(node);_entities[id]=node;
+            }
+            node.Position=new(F(meteor,"x"),0,F(meteor,"z"));
+            ((MeteorView)node).SetRemaining(F(meteor,"remaining"));
+            node.SetProcess(_battleActive);
+        }
         foreach(var item in data.GetProperty("items").EnumerateArray())
         {
             string id="i:"+item.GetProperty("id").GetString();seen.Add(id);
             if(!_entities.TryGetValue(id,out var node))
             {
                 float x=F(item,"cx")+.5f,z=F(item,"cz")+.5f;node=new PowerupModel(_art,item.GetProperty("type").GetString()??"");
-                node.Position=new(x,_terrain.Surface(x,z)+.48f,z);_dynamic.AddChild(node);_entities[id]=node;
+                float y=item.TryGetProperty("y",out var height)?height.GetSingle()*TempleStageView.HeightScale:_terrain.Surface(x,z);
+                node.Position=new(x,y+.48f,z);_dynamic.AddChild(node);_entities[id]=node;
             }
             if(item.TryGetProperty("life",out var remaining)){float seconds=remaining.GetSingle();node.Visible=seconds<0||seconds>3||((int)(seconds*6)%2==0);}
         }
@@ -251,7 +270,16 @@ public partial class ArenaView : Node3D
             bool closed=x<left||x>=_terrain.Width-right;
             if(closed&&!_walls.ContainsKey(x))
             {
-                var n=new Node3D();Box(n,new(x+.5f,2.1f,_terrain.Depth/2f),new(.92f,5.8f,_terrain.Depth),_art.Color(new Color(.92f,.18f,.17f,.4f),.7f,true),.03f);_effects.AddChild(n);_walls[x]=n;
+                var n=new Node3D();
+                if(_stage==BlastStages.TopRules)
+                {
+                    var stone=_terrain.CastleWallMaterial;
+                    float wallHeight=(_terrain.Layout.At(0,_terrain.Depth/2).ObstacleHeight??3.9f)*TempleStageView.HeightScale;
+                    Box(n,new(x+.5f,wallHeight/2,_terrain.Depth/2f),new(1,wallHeight,_terrain.Depth-2),stone);
+                    Box(n,new(x+.5f,wallHeight+.05f,_terrain.Depth/2f),new(1.03f,.16f,_terrain.Depth-2),_art.Color(new Color("bdc4c5")),.025f);
+                }
+                else Box(n,new(x+.5f,2.1f,_terrain.Depth/2f),new(.92f,5.8f,_terrain.Depth),_art.Color(new Color(.92f,.18f,.17f,.4f),.7f,true),.03f);
+                _effects.AddChild(n);_walls[x]=n;
             }
             if(!closed&&_walls.Remove(x,out var wall))wall.QueueFree();
         }
@@ -286,7 +314,8 @@ public partial class ArenaView : Node3D
             var projection=BombThrowRules.Project(origin,velocity,_terrain.AimSurface,_=>false,
                 bomb.GetProperty("remote").GetBoolean()?5:F(bomb,"fuse"),_terrain.AimCellKind,
                 (x,z)=>_terrain.AimCellKind(x+.5f,z+.5f),(x,z)=>_terrain.AimHasCover(x,z,cover),
-                waterLevel:_stage==BlastStages.SunkenTemple&&data.GetProperty("phase").GetInt32()==2?F(data,"waterLevel"):null,motionRate:motionRate,bounce:bounce,gravityScale:BombThrowRules.Weight(pumps),pumps:pumps);
+                waterLevel:data.GetProperty("hurryMode").GetString()=="water"&&data.GetProperty("phase").GetInt32()==2?F(data,"waterLevel"):null,
+                motionRate:motionRate,bounce:bounce,gravityScale:BombThrowRules.Weight(pumps),pumps:pumps,stage:_terrain.Layout);
             if(!_throwPreviews.TryGetValue(id,out var view))
             {view=new BombThrowPreview();_effects.AddChild(view);_throwPreviews[id]=view;}
             view.Update(projection,pumps,player.GetProperty("slot").GetInt32(),aimSet,aiming,range);seen.Add(id);

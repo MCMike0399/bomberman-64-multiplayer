@@ -6,7 +6,7 @@ const owned = [];
 let queued, failure;
 async function api(player, method, path, body) {
   const response = await fetch(new URL('/realtime/v1/' + path, origin), {
-    method, headers: { 'Content-Type': 'application/json', ...(player ? { 'x-player-token': player.token } : {}) },
+    method, headers: { 'X-Blast-Protocol': '2', 'Content-Type': 'application/json', ...(player ? { 'x-player-token': player.token } : {}) },
     body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(10000)
   });
   const value = response.status === 204 ? null : await response.json();

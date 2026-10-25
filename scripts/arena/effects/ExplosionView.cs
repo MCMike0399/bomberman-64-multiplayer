@@ -3,34 +3,40 @@ using static BlastCircuit.Rendering.ArtGeometry;
 using BlastCircuit.Rendering;
 namespace BlastCircuit.Arena.Effects;
 
-/// <summary>A radius-faithful danger shell, then a purely cosmetic flash/billow/vapor sequence.</summary>
+/// <summary>One expanding fireball, brief charged flares and a distinct power wave.
+/// The faint mapped danger shell retains authority extent; the central fireball stays round in world space.</summary>
 public partial class ExplosionView : Node3D
 {
-    private static readonly Shader CloudShader=new() {Code="""
+    private static readonly Shader FireShader=new() {Code="""
 shader_type spatial;
 render_mode unshaded, cull_back, depth_draw_never;
-uniform vec4 hot : source_color = vec4(1.0,.78,.22,1.0);
 uniform float age=0.0;
 uniform float duration=.7;
 uniform bool shell=false;
 uniform bool blue=false;
+varying vec3 fire_normal;
+void vertex(){fire_normal=NORMAL;}
 void fragment(){
- float p=clamp(age/duration,0.0,1.0);
- float rim=pow(1.0-max(dot(normalize(NORMAL),normalize(VIEW)),0.0),2.0);
- float swirl=sin(UV.x*26.0+age*12.0)*sin(UV.y*19.0-age*9.0)*.5+.5;
- vec3 flame=mix(hot.rgb*.65,(blue?vec3(.02,.42,1.0):vec3(1.0,.37,.015)),swirl*.6+.2);
- flame+=vec3(.13,.035,0.0)*max(NORMAL.y,0.0);
- float smoke=smoothstep(.34,.55,age);
- ALBEDO=mix(flame,vec3(.42,.34,.27),smoke);
- if(shell){ ALBEDO=blue?vec3(.12,.72,1.0):vec3(1.0,.63,.12); ALPHA=rim*.22*(1.0-smoothstep(.31,.4,age)); }
- else { ALPHA=(.48+swirl*.16)*(1.0-smoothstep(.22,1.0,p)); }
+ float rim=pow(1.0-max(dot(normalize(NORMAL),normalize(VIEW)),0.0),1.6);
+ vec3 n=normalize(fire_normal);
+ float cells=sin(n.x*9.0+n.y*4.0+age*17.0)*sin(n.z*8.0-n.y*7.0-age*13.0);
+ float heat=smoothstep(-.25,.65,cells)*(1.0-smoothstep(.20,.46,age));
+ vec3 edge=blue?vec3(.02,.74,.76):vec3(1.0,.23,.015);
+ vec3 center=blue?vec3(.78,1.0,.96):vec3(1.0,.96,.53);
+ float center_heat=pow(1.0-rim,2.0)*(1.0-smoothstep(.14,.36,age));
+ ALBEDO=mix(edge,center,clamp(center_heat*.78+heat*.22,0.0,1.0));
+ if(shell){ALBEDO=edge;ALPHA=rim*.10*(1.0-smoothstep(.32,.4,age));}
+ else {ALPHA=(.83+heat*.12)*(1.0-smoothstep(.28,duration,age));}
 }
 """};
-    private static readonly TorusMesh RingMesh=new() {InnerRadius=.96f,OuterRadius=1,Rings=48,RingSegments=8};
-    private readonly ShaderMaterial _cloud,_boundary;
-    private readonly MeshInstance3D _core,_ring,_shell;
-    private readonly List<(MeshInstance3D Mesh,Vector3 Direction,float Offset)> _lobes=[];
+    private static readonly SphereMesh BodyMesh=new() {Radius=.5f,Height=1,RadialSegments=24,Rings=12};
+    private static readonly TorusMesh WaveMesh=new() {InnerRadius=.88f,OuterRadius=1,Rings=48,RingSegments=8};
+    private static readonly CylinderMesh FlareMesh=new() {TopRadius=0,BottomRadius=.19f,Height=1,RadialSegments=3,Rings=1};
+    private readonly ShaderMaterial _fire,_boundary;
+    private readonly MeshInstance3D _body,_core,_wave,_shell;
+    private readonly List<(MeshInstance3D Mesh,Vector3 Direction)> _flares=[];
     private readonly float _radius,_duration;
+    private readonly bool _power;
     private float _age;
     public string Tier {get;}
     public float Radius=>_radius;
@@ -38,27 +44,37 @@ void fragment(){
     public bool HazardActive=>_age<.4f;
     public string Phase=>_age<.12f?"flash":_age<.4f?"bloom":"vapor";
     public float VisualExtent {get;private set;}
-    public int LobeCount=>_lobes.Count;
+    public float BodyAspect
+    {
+        get {var basis=_body.GlobalBasis;var s=new Vector3(basis.X.Length(),basis.Y.Length(),basis.Z.Length());return Math.Max(s.X,Math.Max(s.Y,s.Z))/Math.Max(.00001f,Math.Min(s.X,Math.Min(s.Y,s.Z)));}
+    }
+    public int GeometryCount=>1+_body.GetParent().GetChildren().OfType<MeshInstance3D>().Count();
+    public int FlareCount=>_flares.Count;
+    public bool PowerWaveVisible=>_wave.Visible;
     public ExplosionView(ArtMaterials art,float radius,bool red,float initialAge=0,bool reducedDetail=false)
     {
-        _radius=radius;_age=initialAge;
+        _radius=radius;_age=initialAge;_power=red;
         Tier=radius<=1.6f?"small":radius<=2.7f?"medium":"large";
-        _duration=Tier=="small"?.52f:Tier=="medium"?.74f:1.05f;
-        _cloud=new() {Shader=CloudShader};_cloud.SetShaderParameter("hot",red?new Color("32afff"):new Color("ff6508"));_cloud.SetShaderParameter("duration",_duration);_cloud.SetShaderParameter("blue",red);
-        _boundary=new() {Shader=CloudShader};_boundary.SetShaderParameter("shell",true);_boundary.SetShaderParameter("blue",red);_boundary.SetShaderParameter("hot",new Color("ffc44d"));
-        // Full authoritative extent is readable from the first frame, before the center finishes blooming.
+        _duration=Tier=="small"?.52f:Tier=="medium"?.68f:.82f;
+        _fire=new() {Shader=FireShader};_fire.SetShaderParameter("duration",_duration);_fire.SetShaderParameter("blue",red);
+        _boundary=new() {Shader=FireShader};_boundary.SetShaderParameter("shell",true);_boundary.SetShaderParameter("blue",red);
         _shell=Sphere(this,Vector3.Zero,Vector3.One*radius*2,_boundary);
-        _core=Sphere(this,Vector3.Zero,Vector3.One,art.Color(red?new Color("d2f5ff"):new Color("fff6b0"),.8f,true));
-        _ring=new MeshInstance3D {Mesh=RingMesh,MaterialOverride=art.Color(red?new Color(.2f,.8f,1,.75f):new Color(1,.86f,.47f,.75f),.9f,true)};AddChild(_ring);
-        int count=reducedDetail?4:Tier=="small"?6:Tier=="medium"?10:14;
+        // Terrain maps authority Y to render Y. Compensate only the cosmetic body,
+        // retaining that mapping on the full-radius danger shell and effect origin.
+        var fireball=new Node3D {Scale=new(1,1/TempleStageView.HeightScale,1)};AddChild(fireball);
+        _body=new MeshInstance3D {Mesh=BodyMesh,MaterialOverride=_fire};fireball.AddChild(_body);
+        _core=Sphere(fireball,Vector3.Zero,Vector3.One,art.Color(red?new Color("eafffa"):new Color("fff9d8"),.8f,true));
+        _wave=new MeshInstance3D {Mesh=WaveMesh,MaterialOverride=art.Color(new Color(.62f,1,.94f,.8f),.9f,true)};fireball.AddChild(_wave);
+        int count=Tier=="small"?0:reducedDetail?4:Tier=="medium"?6:10;
         for(int i=0;i<count;i++)
         {
-            float angle=i*2.39996f,y=.15f+(i%4)*.19f;
-            var direction=new Vector3(Mathf.Cos(angle),y,Mathf.Sin(angle)).Normalized();
-            var lobe=Sphere(this,Vector3.Zero,Vector3.One,_cloud);
-            _lobes.Add((lobe,direction,i*.63f));
+            float angle=i*Mathf.Tau/count;
+            var direction=new Vector3(Mathf.Cos(angle),.15f+(i%3)*.26f,Mathf.Sin(angle)).Normalized();
+            var flare=new MeshInstance3D {Mesh=FlareMesh,MaterialOverride=_fire,Quaternion=new Quaternion(Vector3.Up,direction)};
+            fireball.AddChild(flare);_flares.Add((flare,direction));
         }
-        foreach(var mesh in GetChildren().OfType<GeometryInstance3D>())mesh.CastShadow=GeometryInstance3D.ShadowCastingSetting.Off;
+        _shell.CastShadow=GeometryInstance3D.ShadowCastingSetting.Off;
+        foreach(var mesh in fireball.GetChildren().OfType<GeometryInstance3D>())mesh.CastShadow=GeometryInstance3D.ShadowCastingSetting.Off;
         Scale=new(1,TempleStageView.HeightScale,1);
         Render();
     }
@@ -71,17 +87,20 @@ void fragment(){
     private void Render()
     {
         float growth=1-Mathf.Exp(-_age*30),tail=Mathf.Clamp((_age-.4f)/(_duration-.4f),0,1);
-        _cloud.SetShaderParameter("age",_age);_boundary.SetShaderParameter("age",_age);
+        _fire.SetShaderParameter("age",_age);_boundary.SetShaderParameter("age",_age);
         _shell.Visible=HazardActive;
-        _core.Visible=_age<.2f;_core.Scale=Vector3.One*_radius*(.15f+growth*.9f)*(1-Mathf.Clamp((_age-.08f)/.14f,0,1));
-        _ring.Visible=HazardActive;_ring.Position=new(0,-.12f,0);_ring.Scale=new(_radius*(.6f+.4f*growth),.22f,_radius*(.6f+.4f*growth));
-        _ring.Transparency=Mathf.Clamp((_age-.12f)/.28f,0,1);
-        VisualExtent=_radius*(.55f+.45f*growth);
-        foreach(var (mesh,dir,offset) in _lobes)
+        VisualExtent=_radius*(.5f+.5f*growth);
+        _body.Scale=Vector3.One*2*VisualExtent*(1+tail*.08f);
+        _core.Visible=_age<.18f;_core.Scale=Vector3.One*_radius*(.15f+growth*1.15f)*(1-Mathf.Clamp((_age-.07f)/.12f,0,1));
+        _wave.Visible=_power&&_age<.30f;
+        _wave.Position=new(0,.025f,0);_wave.Scale=new(_radius*(.35f+growth),.08f,_radius*(.35f+growth));
+        _wave.Transparency=Mathf.Clamp((_age-.07f)/.23f,0,1);
+        float flareGrowth=Mathf.Sin(Mathf.Clamp(_age/.28f,0,1)*Mathf.Pi);
+        foreach(var (mesh,direction) in _flares)
         {
-            float wobble=1+Mathf.Sin(_age*18+offset)*.055f;
-            mesh.Position=dir*_radius*(.32f+.18f*growth)+Vector3.Up*tail*_radius*.22f;
-            mesh.Scale=Vector3.One*_radius*(.45f+.47f*growth+tail*.15f)*wobble;
+            mesh.Visible=_age<.28f;
+            mesh.Position=direction*_radius*(.68f+.18f*growth);
+            mesh.Scale=new Vector3(_radius*.8f,_radius*.75f,_radius*.8f)*Math.Max(.001f,flareGrowth);
         }
     }
 }

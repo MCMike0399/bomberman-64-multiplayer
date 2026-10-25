@@ -15,7 +15,7 @@ references are [playtests](../../tools/playtest/README.md), [CI](../ci.md),
 | File moves/renames | `git grep` old paths; build; editor import for `.uid` files | `public` plus the moved area's gate; see [codebase map](codebase-map.md#moving-files-safely) |
 | Simulation/rules | Corresponding executable managed suite with a red regression | `managed`, relevant native journey, `headless` |
 | Client/session/protocol | Client checks and real HTTP/WebSocket repro | `managed` plus `network`; restart only an owned stale server |
-| AI | Focused deterministic regression and matched-seed metrics | Managed AI checks/36-scenario soak plus `ai-play` where visible behavior matters |
+| AI | Focused deterministic regression and matched-seed metrics | Managed AI checks/48-scenario soak plus `ai-play` where visible behavior matters |
 | Input/menu/focus | `controllers`, `aim-inputs`, `wasd-navigation`, or relevant journey | Real windowed graphical checks; physical observation if claiming device support |
 | Rendering/rig/audio | Relevant native scenario and actual images/audio/video | Graphical regression; shipped-app checks for delivery |
 | Packaging/runtime/native backend | Bundle and staged-runtime inspection | `package`, exported-app journey, exact installed-copy verification |
@@ -160,6 +160,8 @@ The [historical party guide](../online-party.md) applies only to an explicit
 same-Wi-Fi party or relay task.
 
 ## Extend the harness with meaningful gameplay
+
+The `tutorial` journey covers the lesson browser, accepted-action completion/failure, saved progress, retry/next, pause and free practice. [Tutorial verification](../tutorial.md#verification) pairs it with managed ordinary-input completion of every lesson.
 
 `assets/testing/scenarios.json` is the common Python/C# catalog. Add a private
 parameterless `async Task` on the `PlaytestDriver` partial class in a new
@@ -306,6 +308,24 @@ A local updater fixture does not prove hosted CI or a public release; verify tho
 separately when publication is authorized. Preserve the user's update preference
 and avoid replacement while a match/session is active.
 
+## Up & Down verification
+
+`dotnet run --project tests/Bomber.Game.Tests -- --up-and-down` checks six-flight
+round trips, underpass navigation nodes, bridge slab/blast collision, layered
+stage messages, underside throw projection and low-to-middle flood elimination.
+The initial topology failure is retained in ignored task artifacts.
+`up-and-down` is a real native journey in both `all` and `core-headless`: ordinary
+inputs cross all flights/underpasses, plant beneath the ring, fall into the sea,
+and observe normal three-human play flooding the low and middle levels in order.
+Graphical mode adds battle, oblique and underside inspection captures. The
+combined graphical suite has a bounded 1200-second budget for the longer journey;
+the QA profile reads that deadline from the catalog, retaining outer cleanup
+headroom. The former hardcoded deadline could interrupt the expanded suite after
+positive assertions; the catalog owns the bounded runtime.
+`framing`, `stage-lighting` and `graphics-settings` retain all-stage coverage.
+These fixtures do not establish original-game numerical physics or physical-pad
+input. See the [stage contract](../up-and-down.md) for the accepted adaptation.
+
 ## Advanced rules verification (v0.25)
 
 `AdvancedRulesChecks` covers validation, empty/filtered pools, custom caps and real
@@ -321,3 +341,47 @@ to keep their pickup/rendering evidence deterministic. They do not certify the
 default drop probability; managed actual-destruction samples do. `sandbox`
 selects a 60-second lifetime for its long equipment tour. Default and short
 lifetimes have separate authority and graphical expiration witnesses.
+
+## Top Rules verification
+
+`top-rules` is a standard leaf in `all` and `core-headless`. The graphical
+`all` suite keeps `first-use-rendering` first; a Python contract guards its
+fresh-process precondition. It drives normal
+menu keys and gameplay inputs through every staircase, the raised crosswalk,
+lower underpasses/throws, real crate → equipment → lower death-drop presentation,
+night lighting, eight-player CPU battle and inward
+sudden-death walls. Headless results establish state assertions only; inspect
+the graphical captures separately. Managed `--top-rules` checks preserve the
+layered support, falling, kick/throw/slab and CPU path witnesses. The standard
+48-case AI soak includes the new arena. `PartyNetworkChecks` edits a real room
+to Top Rules and observes a host's lower-story traversal from its peer.
+
+For focused castle changes, `--scenario top-rules-regression` runs the eight
+affected graphical journeys: first-use rendering, graphics settings, lighting,
+setup, the castle journey, framing, precision aiming and real online play. It
+uses a rebuilt export and keeps the startup check first. The complete `all`
+suite remains available for broader regressions.
+
+## Rock Garden reconstruction
+
+`--rock-garden` in the managed game suite covers enclosed topology, center
+traversal, four wall contacts, shielding, block percentages and fireball
+warning/escape/damage. The `rock-garden` native journey belongs to `all` and
+`core-headless`: four/eight-seat starts, real boulder destruction and pickup,
+fireball warning/pause/escape/impact, CPU combat and graphical detail captures. The
+shared walking helper reads the active stage rather than assuming Temple.
+See the [stage contract](../rock-garden.md) and [research](../rock-garden-research.md).
+
+The combined graphical suite uses a 1200-second catalog budget for all journeys;
+QA forwards that deadline and retains outer cleanup/VM startup headroom. Online
+settings checks compare rendering with the latest accepted server lighting,
+since a real round can advance while graphics pipelines prepare.
+
+The eight-peer native capacity fixture must poll live sessions while later
+guests connect, wait for eight connected members in each accepted roster, and
+yield engine frames between guest polls. All eight clients share one engine
+thread in QA; batching their setup can otherwise starve the real host's
+heartbeat and trigger the production six-second takeover policy. Keep that
+policy intact rather than weakening it to accommodate the fixture.
+
+For the combined v0.28 release, `stage-fidelity` is the focused fresh-process suite for all reconstructed arenas, explosion presentation and tutorial. The complete `all` suite and package gate remain the release regression. [Combined receipts](../stages-release-028.md).

@@ -14,10 +14,11 @@ public partial class ArcadeMenu
         var title=ArcadeTheme.Heading(wordmark,"Blast\nCircuit",100);title.AddThemeConstantOverride("line_spacing",-30);
         float blastWidth=ArcadeTheme.Display.GetStringSize("Blast",HorizontalAlignment.Left,-1,100).X;
         wordmark.AddChild(new LitBomb {Position=new(blastWidth+4,-14),Size=new(116,116)});
-        var menu=new VBoxContainer {Position=new(748,229),Size=new(560,500)};menu.AddThemeConstantOverride("separation",9);screen.AddChild(menu);
+        var menu=new VBoxContainer {Position=new(748,174),Size=new(560,620)};menu.AddThemeConstantOverride("separation",9);screen.AddChild(menu);
         Mode(menu,"Local Battle",()=>Navigation?.Invoke("Roster"),Coral,ArcadeTheme.Gold);
         Mode(menu,"Online Battle",()=>Navigation?.Invoke("Online"),Lagoon,ArcadeTheme.Cream);
-        Mode(menu,"Practice",()=>Navigation?.Invoke("Practice"),ArcadeTheme.Indigo,ArcadeTheme.Pink);
+        Mode(menu,"Tutorial",()=>Navigation?.Invoke("Tutorial"),ArcadeTheme.Indigo,ArcadeTheme.Pink);
+        var practice=ArcadeTheme.Quiet(ArcadeTheme.Button(menu,"Practice",()=>Navigation?.Invoke("Practice")));practice.CustomMinimumSize=new(0,48);practice.SizeFlagsHorizontal=SizeFlags.ShrinkCenter;
         var controls=ArcadeTheme.Quiet(ArcadeTheme.Button(menu,"Controls",()=>Navigation?.Invoke("Controls")));controls.Name="OpenControls";controls.CustomMinimumSize=new(0,48);
         controls.SizeFlagsHorizontal=SizeFlags.ShrinkCenter;
         var settings=ArcadeTheme.Quiet(ArcadeTheme.Button(menu,"Settings",()=>Navigation?.Invoke("Settings")));settings.Name="OpenSettings";settings.CustomMinimumSize=new(0,48);settings.SizeFlagsHorizontal=SizeFlags.ShrinkCenter;_settingsButton=settings;
@@ -50,14 +51,14 @@ public partial class ArcadeMenu
         var back=ArcadeTheme.Quiet(ArcadeTheme.Button(screen,"Back",()=>BackRequested?.Invoke()));back.Name="SetupBack";back.Position=new(1195,73);back.Size=new(140,48);
         // These native settings nodes remain the single source of truth for configure/API/harness callers.
         var state=new VBoxContainer {Name="SetupSettings",Visible=false};screen.AddChild(state);
-        _stage=new OptionButton {Name="Stage"};foreach(var title in new[]{"Sunken Temple","Rock Garden","Up & Down"})_stage.AddItem(title);state.AddChild(_stage);
+        _stage=new OptionButton {Name="Stage"};foreach(var title in new[]{"Sunken Temple","Rock Garden","Up & Down","Top Rules"})_stage.AddItem(title);state.AddChild(_stage);
         _wins=new SpinBox {Name="Wins",MinValue=1,MaxValue=5,Value=2};state.AddChild(_wins);
         _bots=new SpinBox {Name="Bots",MinValue=0,MaxValue=7,Value=3};state.AddChild(_bots);
         _rounds=new SpinBox {Name="RoundSeconds",MinValue=60,MaxValue=300,Step=30,Value=120};state.AddChild(_rounds);
         _difficulty=new OptionButton {Name="Difficulty"};foreach(var title in new[]{"Easy","Medium","Hard"})_difficulty.AddItem(title);_difficulty.Select(1);state.AddChild(_difficulty);
         _sudden=new CheckButton {Name="SuddenDeath",ButtonPressed=true};state.AddChild(_sudden);
         _ghosts=new CheckButton {Name="Ghosts",ButtonPressed=true};state.AddChild(_ghosts);
-        _stageDial=new ArcadeRuleDial {Name="StageSelector",Position=new(80,602),Size=new(640,76),Caption="Arena",ValueWidth=300,ReadValue=()=>_stage.GetItemText(_stage.Selected),ChangeValue=direction=>{_stage.Select((_stage.Selected+direction+3)%3);UpdateStageDescription();}};
+        _stageDial=new ArcadeRuleDial {Name="StageSelector",Position=new(80,602),Size=new(640,76),Caption="Arena",ValueWidth=300,ReadValue=()=>_stage.GetItemText(_stage.Selected),ChangeValue=direction=>{_stage.Select((_stage.Selected+direction+StageIds.Length)%StageIds.Length);UpdateStageDescription();}};
         screen.AddChild(_stageDial);
         _stageDescription=ArcadeTheme.Text(screen,"",18);_stageDescription.Position=new(104,694);_stageDescription.Size=new(620,70);
         _stage.ItemSelected+=_=>UpdateStageDescription();
@@ -139,6 +140,6 @@ public partial class ArcadeMenu
     {
         _background.SelectArena(StageIds[_stage.Selected]);
         if(_onlineStage!=null){_onlineStage.StageIndex=_stage.Selected;_onlineStage.QueueRedraw();}
-        _stageDescription.Text=_stage.Selected switch {0=>"Climb the outer walkways. Send a pumped bomb\nover the ledge. Watch the water below.",1=>"An open arena with pillars and breakable blocks.\nFind an escape before lighting the fuse.",_=>"Fight across three connected terraces.\nUse ramps to move between elevations."};
+        _stageDescription.Text=_stage.Selected switch {0=>"Climb the outer walkways. Send a pumped bomb\nover the ledge. Watch the water below.",1=>"An open arena with pillars and breakable blocks.\nFind an escape before lighting the fuse.",2=>"Battle over the sea on three suspended levels.\nUse purple stairs to reach the lower item decks.",_=>"Rule the castle bridges or fight beneath them.\nFour corner staircases connect both floors."};
     }
 }

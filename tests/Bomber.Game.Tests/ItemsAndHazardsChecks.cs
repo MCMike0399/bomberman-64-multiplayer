@@ -17,7 +17,7 @@ internal static class ItemsAndHazardsChecks
             Assert(!FloodRules.Submerged(1,FloodRules.Level(80.99f,120))&&FloodRules.Submerged(1,FloodRules.Level(81,120)),"Floor1 threshold incorrect.");
             var cells=new CellDef[9,9];for(var x=0;x<9;x++)for(var z=0;z<9;z++)cells[x,z]=CellDef.Floor0;
             cells[4,3]=CellDef.Floor1;cells[7,3]=new CellDef {Kind=CellKind.Floor,Tier=4};
-            var arena=new StageLayout {Id="sunken-temple",Width=9,Height=9,Cells=cells,Spawns=[(1,3),(4,3),(7,3)],SoftBlockDensity=0};
+            var arena=new StageLayout {Id="sunken-temple",RisingWater=true,Width=9,Height=9,Cells=cells,Spawns=[(1,3),(4,3),(7,3)],SoftBlockDensity=0};
             var match=new LocalMatch(new MatchOptions {HumanPlayers=3,BotPlayers=0,RoundSeconds=60,Wins=5},arena);
             var waterfallEvents=new HashSet<long>();
             match.Message+=json=>{var data=Data(json);if(data.TryGetProperty("events",out var events))foreach(var e in events.EnumerateArray())if(Kind(e)=="waterfall")waterfallEvents.Add(e.GetProperty("seq").GetInt64());};
@@ -134,10 +134,10 @@ internal static class ItemsAndHazardsChecks
             Step(match,70);match.SetInput(1,new PlayerInput(0,0,true));Step(match,2);match.SetInput(1,default);Step(match,90);
             Assert(Player(match,1).GetProperty("ghost").GetBoolean(),"A second heart stacked or a second blast failed to eliminate player.");
         });
-        run("legacy arenas retain closing columns while practice disables every hurry hazard", () =>
+        run("castle retains closing walls while practice disables every hurry hazard", () =>
         {
-            var legacy=new LocalMatch(new MatchOptions {Stage="rock-garden",HumanPlayers=2,BotPlayers=0,RoundSeconds=60});Step(legacy,110);
-            Assert(State(legacy).GetProperty("hurryMode").GetString()=="columns"&&State(legacy).GetProperty("closedLeft").GetInt32()>0,"Legacy sudden death lost closing columns.");
+            var legacy=new LocalMatch(new MatchOptions {Stage="top-rules",HumanPlayers=2,BotPlayers=0,RoundSeconds=60});Step(legacy,110);
+            Assert(State(legacy).GetProperty("hurryMode").GetString()=="columns"&&State(legacy).GetProperty("closedLeft").GetInt32()>0,"Castle sudden death lost closing walls.");
             var practice=new LocalMatch(new MatchOptions {HumanPlayers=1,BotPlayers=0,RoundSeconds=60,Practice=true});Step(practice,4000);
             Assert(State(practice).GetProperty("hurryMode").GetString()=="none"&&State(practice).GetProperty("waterLevel").GetSingle()==-1,"Practice flooded during indefinite training.");
         });

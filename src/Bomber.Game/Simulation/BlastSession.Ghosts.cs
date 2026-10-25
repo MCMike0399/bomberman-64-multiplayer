@@ -68,12 +68,13 @@ public sealed partial class BlastSession
 
     private void DetachGhost(BlastPlayer ghost)
     {
+        string reason=ghost.LatchReverseCount>=6?"shaken-off":"expired";
         var victim=ghost.LatchedToId;
         ghost.LatchedToId = null;
         ghost.LatchTimer = 0;
         ghost.LatchReverseCount = 0;
         ghost.StunTimer = 0.5f; // give the victim time to move away before another latch
-        Present("ghost-detach",ghost.Id,victim,ghost.X,ghost.Y,ghost.Z);
+        Present("ghost-detach",ghost.Id,victim,ghost.X,ghost.Y,ghost.Z,reason:reason);
     }
 
     private void DetachIfLatched(BlastPlayer p)

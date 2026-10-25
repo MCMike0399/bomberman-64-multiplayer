@@ -15,20 +15,14 @@ public sealed partial class BlastSession
         var w = _stage.Width;
         var h = _stage.Height;
         var flat = new object[w * h];
-        for (var z = 0; z < h; z++)
-            for (var x = 0; x < w; x++)
-            {
-                var c = _stage.At(x, z);
-                flat[z * w + x] = new
-                {
-                    k = (int)c.Kind,
-                    t = c.Tier,
-                    rx = c.RampDX,
-                    rz = c.RampDZ,
-                    rf = c.RampFromTier,
-                    rt = c.RampToTier,
-                };
-            }
+        object Cell(CellDef c) => new
+        {
+            k = (int)c.Kind, t = c.Tier, oh = c.ObstacleHeight, rx = c.RampDX, rz = c.RampDZ,
+            rf = c.RampFromTier, rt = c.RampToTier,
+            below = c.Below is { } lower ? Cell(lower) : null,
+        };
+        for (int z = 0; z < h; z++) for (int x = 0; x < w; x++)
+            flat[z*w+x] = Cell(_stage.At(x,z));
 
         context.Send(playerId, "stage", new
         {
@@ -37,6 +31,7 @@ public sealed partial class BlastSession
             width = w,
             height = h,
             cells = flat,
+            underpasses = _stage.Underpasses.Select(c => c.Z * w + c.X).Order().ToArray(),
             spawns = _stage.Spawns.Select(s => new[] { s.X, s.Z }),
             round = _roundNum,
             winsTarget = _winsTarget,
@@ -126,13 +121,14 @@ public sealed partial class BlastSession
             cx = it.CellX,
             cz = it.CellZ,
             type = it.Type, life = it.LifeRemaining, dropped = it.DroppedBy!=null,
-            y = _stage.SurfaceAt(it.X, it.Z),
+            y = _stage.SurfaceAt(it.X, it.Z,it.Tier),
         });
 
         var timeLeft = Math.Max(0, _roundSeconds - _roundTimer);
 
         context.Broadcast("state", new
         {
+            tutorial = TutorialSnapshot(),
             round = _roundNum,
             serverTime = context.Now.ToUnixTimeMilliseconds(),
             stageLighting = StageLightings[(_lightingOffset+Math.Max(0,_roundNum-1))%4],
@@ -142,14 +138,15 @@ public sealed partial class BlastSession
             timeLeft = MathF.Round(timeLeft, 1),
             closedLeft = _closedLeft,
             closedRight = _closedRight,
-            hurryMode = !_suddenDeath || _practice ? "none" : _stage.Id == BlastStages.SunkenTemple ? "water" : "columns",
+            hurryMode = _tutorialLesson?.Id=="flood"?"water": !_suddenDeath || _practice ? "none" : _stage.RisingWater ? "water" : _stage.Id==BlastStages.RockGarden?"meteors":"columns",
             waterLevel = _waterLevel,
-            waterStartsIn = !_practice && _suddenDeath && _stage.Id == BlastStages.SunkenTemple ? Math.Max(0,_roundSeconds-60+FloodRules.RiseDelay-_roundTimer) : -1,
-            waterRiseRate = !_practice && _suddenDeath && _stage.Id == BlastStages.SunkenTemple && _roundTimer >= _roundSeconds-60+FloodRules.RiseDelay ? FloodRules.RisePerSecond : 0,
-            hurryStartsIn = _practice || !_suddenDeath ? -1 : Math.Max(0,_roundSeconds - 60 - _roundTimer),
+            waterStartsIn = _tutorialLesson?.Id=="flood" ? (_tutorialStarted?0:Math.Max(0,_phaseTimer)) : !_practice && _suddenDeath && _stage.RisingWater ? Math.Max(0,_roundSeconds-60+FloodRules.RiseDelay-_roundTimer) : -1,
+            waterRiseRate = _tutorialLesson?.Id=="flood" ? (_tutorialStarted?FloodRules.RisePerSecond:0) : !_practice && _suddenDeath && _stage.RisingWater && _roundTimer >= _roundSeconds-60+FloodRules.RiseDelay ? FloodRules.RisePerSecond : 0,
+            hurryStartsIn = _tutorialLesson?.Id=="flood" ? (_tutorialStarted?0:Math.Max(0,_phaseTimer)) : _practice || !_suddenDeath ? -1 : Math.Max(0,_roundSeconds - 60 - _roundTimer),
             players = playerList,
             bombs = bombList,
             hazards = hazardList,
+            meteors = _meteors.Where(_=>_phase==RoundPhase.Hurry).Select(m=>new {id=m.Id,x=m.X,z=m.Z,remaining=MathF.Round(m.Remaining,3)}),
             items = itemList,
             softBlocks = _softBlocks.ToBase64(),
         });

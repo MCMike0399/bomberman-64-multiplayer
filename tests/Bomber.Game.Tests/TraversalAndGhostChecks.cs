@@ -77,7 +77,7 @@ internal static class TraversalAndGhostChecks
         Check("rising water stays below feet until contact and still drowns grounded players",()=>{
             var cells=new CellDef[11,11];for(int x=0;x<11;x++)for(int z=0;z<11;z++)cells[x,z]=x>=4?CellDef.Floor2:CellDef.Floor0;
             var m=new LocalMatch(new MatchOptions {HumanPlayers=3,BotPlayers=0,RoundSeconds=60},
-                new StageLayout {Id=BlastStages.SunkenTemple,Width=11,Height=11,Cells=cells,Spawns=[(2,3),(8,7),(9,9)],SoftBlockDensity=0});
+                new StageLayout {Id=BlastStages.SunkenTemple,RisingWater=true,Width=11,Height=11,Cells=cells,Spawns=[(2,3),(8,7),(9,9)],SoftBlockDensity=0});
             Step(m,214);
             Assert(State(m).GetProperty("waterLevel").GetSingle()<0&&!P(m).GetProperty("ghost").GetBoolean()&&P(m).GetProperty("alive").GetBoolean(),"Flood drowned dry feet.");
             Step(m,180);

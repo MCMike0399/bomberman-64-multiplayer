@@ -20,14 +20,20 @@ public sealed class CellDef
 {
     public CellKind Kind { get; init; }
     public int Tier { get; init; }
+    /// <summary>Authored hard-wall height; null preserves existing pillar rules.</summary>
+    public float? ObstacleHeight { get; init; }
     /// <summary>For ramps: the lower tier this ramp connects from.</summary>
-    public int RampFromTier { get; init; }
+    public float RampFromTier { get; init; }
     /// <summary>For ramps: the higher tier this ramp leads to.</summary>
-    public int RampToTier { get; init; }
+    public float RampToTier { get; init; }
     /// <summary>For ramps: the column direction from low-tier to high-tier (−1, 0, or 1).</summary>
     public int RampDX { get; init; }
     /// <summary>For ramps: the row direction from low-tier to high-tier.</summary>
     public int RampDZ { get; init; }
+    /// <summary>A suspended deck has a second surface (or open water) beneath it.
+    /// Only the thin deck is solid; it must not become a wall down to the sea.</summary>
+    public CellDef? Below { get; init; }
+    public const float DeckThickness = .16f;
 
     public static readonly CellDef Floor0 = new() { Kind = CellKind.Floor, Tier = 0 };
     public static readonly CellDef Floor1 = new() { Kind = CellKind.Floor, Tier = 1 };
@@ -39,8 +45,8 @@ public sealed class CellDef
     public bool IsElimination => Kind is CellKind.Void or CellKind.Water;
     public bool IsPassable => Kind is CellKind.Floor or CellKind.Ramp;
 
-    public static CellDef Ramp(int from, int to, int dx, int dz) =>
-        new() { Kind = CellKind.Ramp, Tier = from, RampFromTier = from, RampToTier = to, RampDX = dx, RampDZ = dz };
+    public static CellDef Ramp(float from, float to, int dx, int dz) =>
+        new() { Kind = CellKind.Ramp, Tier = (int)MathF.Floor(from), RampFromTier = from, RampToTier = to, RampDX = dx, RampDZ = dz };
 
     public static CellDef Ramp0To1(int dx, int dz) =>
         new() { Kind = CellKind.Ramp, Tier = 0, RampFromTier = 0, RampToTier = 1, RampDX = dx, RampDZ = dz };
@@ -72,6 +78,8 @@ public sealed class StageLayout
     public int Width { get; init; }   // columns (X)
     public int Height { get; init; }  // rows (Z)
     public CellDef[,] Cells { get; init; } = new CellDef[0, 0];
+    public IEnumerable<(int X,int Z)> Underpasses => Enumerable.Range(0,Width).SelectMany(x=>Enumerable.Range(0,Height).Where(z=>Cells[x,z].Below is not null).Select(z=>(X:x,Z:z)));
+    public const float DeckThickness=CellDef.DeckThickness;
     public (int X, int Z)[] Spawns { get; init; } = [];
     // Fixed layouts are a local, assembly-internal fixture seam; no network message can set them.
     public IReadOnlyList<(int X,int Z,string Type)> TrainingItems { get; init; } = [];
@@ -80,6 +88,9 @@ public sealed class StageLayout
     public IReadOnlyList<CoverArea> CoverAreas {get;init;}=[];
     public double SoftBlockDensity { get; init; } = .45;
     public int MaxSoftBlocks { get; init; } = int.MaxValue;
+    public int OpeningCoverPerSpawn { get; init; } = 2;
+    public bool RisingWater { get; init; }
+    public bool DecksBlockBlasts {get;init;}=true;
     public IReadOnlySet<(int X, int Z)> ClearCells { get; init; } = new HashSet<(int, int)>();
 
     public CellDef At(int x, int z)
@@ -89,11 +100,43 @@ public sealed class StageLayout
         return Cells[x, z];
     }
 
-    /// <summary>Continuous ground elevation. Heights are gameplay units; rendering may scale them uniformly.</summary>
-    public float SurfaceAt(float x, float z)
+    /// <summary>Select support from the entity's elevation, allowing a small step tolerance at deck edges.</summary>
+    public CellDef AtHeight(int x, int z, float y)
+    {
+        var cell = At(x, z);
+        return cell.Below is { } below && y < cell.Tier - .25f ? below : cell;
+    }
+
+    /// <summary>Continuous ground elevation in gameplay units; rendering scales it uniformly.</summary>
+    public float SurfaceAt(float x, float z) => Surface(At((int)MathF.Floor(x), (int)MathF.Floor(z)), x, z);
+    public float SurfaceAt(float x, float z, float y) => Surface(AtHeight((int)MathF.Floor(x), (int)MathF.Floor(z), y), x, z);
+
+    /// <summary>A rising body meets the underside of a suspended slab, not its upper floor.</summary>
+    public float Ceiling(float x,float z,float radius,float previousY,float nextY,float bodyHeight)
+    {
+        float result=nextY;
+        for(int cx=(int)MathF.Floor(x-radius);cx<=(int)MathF.Floor(x+radius);cx++)
+        for(int cz=(int)MathF.Floor(z-radius);cz<=(int)MathF.Floor(z+radius);cz++)
+        {
+            var cell=At(cx,cz);if(cell.Below is null)continue;
+            float dx=x-Math.Clamp(x,cx,cx+1f),dz=z-Math.Clamp(z,cz,cz+1f);
+            if(dx*dx+dz*dz>=radius*radius)continue;
+            float bottom=cell.Tier-CellDef.DeckThickness;
+            if(previousY+bodyHeight<=bottom+.001f && nextY+bodyHeight>bottom)
+                result=Math.Min(result,bottom-bodyHeight);
+        }
+        return result;
+    }
+
+    public bool DeckOverlaps(int x,int z,float bottom,float height)
+    {
+        var cell=At(x,z);
+        return cell.Below is not null && bottom<cell.Tier-.001f && bottom+height>cell.Tier-CellDef.DeckThickness;
+    }
+
+    private static float Surface(CellDef cell, float x, float z)
     {
         var cx = (int)MathF.Floor(x); var cz = (int)MathF.Floor(z);
-        var cell = At(cx, cz);
         if (cell.Kind != CellKind.Ramp) return cell.Tier;
         var progress = cell.RampDX != 0 ? (cell.RampDX > 0 ? x - cx : 1 - (x - cx))
             : (cell.RampDZ > 0 ? z - cz : 1 - (z - cz));
@@ -102,10 +145,10 @@ public sealed class StageLayout
 
     /// <summary>A shared edge is traversable only when its entire surface is continuous.
     /// This prevents side-entry into stairs and climbing vertical terrace walls.</summary>
-    public bool CanCross(int ax, int az, int bx, int bz)
+    public bool CanCross(int ax, int az, int bx, int bz, float y = float.PositiveInfinity)
     {
         if (Math.Abs(ax - bx) + Math.Abs(az - bz) != 1) return ax == bx && az == bz;
-        var a = At(ax, az); var b = At(bx, bz);
+        var a = AtHeight(ax, az, y); var b = AtHeight(bx, bz, y);
         if (!a.IsPassable || !b.IsPassable) return false;
         for (var i = 1; i <= 3; i++)
         {
@@ -113,21 +156,22 @@ public sealed class StageLayout
             var x = ax != bx ? Math.Max(ax, bx) : ax + u;
             var z = az != bz ? Math.Max(az, bz) : az + u;
             var dx = (bx - ax) * .001f; var dz = (bz - az) * .001f;
-            if (Math.Abs(SurfaceAt(x - dx, z - dz) - SurfaceAt(x + dx, z + dz)) > .01f) return false;
+            if (Math.Abs(Surface(a, x - dx, z - dz) - Surface(b, x + dx, z + dz)) > .01f) return false;
         }
         return true;
     }
 
     /// <summary>Movement can leave a higher edge; returning upward still needs a ramp.</summary>
-    public bool CanWalk(int ax,int az,int bx,int bz)
+    public bool CanWalk(int ax,int az,int bx,int bz,float y = float.PositiveInfinity)
     {
-        if(CanCross(ax,az,bx,bz))return true;
-        if(Math.Abs(ax-bx)+Math.Abs(az-bz)!=1||!At(ax,az).IsPassable||!At(bx,bz).IsPassable)return false;
+        if(CanCross(ax,az,bx,bz,y))return true;
+        var a=AtHeight(ax,az,y);var b=AtHeight(bx,bz,y);
+        if(Math.Abs(ax-bx)+Math.Abs(az-bz)!=1||!a.IsPassable||!b.IsPassable)return false;
         for(int i=1;i<=3;i++)
         {
             float u=i*.25f,x=ax!=bx?Math.Max(ax,bx):ax+u,z=az!=bz?Math.Max(az,bz):az+u;
             float dx=(bx-ax)*.001f,dz=(bz-az)*.001f;
-            if(SurfaceAt(x+dx,z+dz)>SurfaceAt(x-dx,z-dz)+.01f)return false;
+            if(Surface(b,x+dx,z+dz)>Surface(a,x-dx,z-dz)+.01f)return false;
         }
         return true;
     }
@@ -264,8 +308,7 @@ public sealed class BlastPlayer
 
     // Bot AI state.
     public float BotThinkTimer { get; set; }
-    public int BotGoalX { get; set; }
-    public int BotGoalZ { get; set; }
+    internal int BotEscapeNode { get; set; } = -1;
     public bool BotPlacingBomb { get; set; }
     public bool BotBombTapPending { get; set; }
 
@@ -404,4 +447,13 @@ public sealed class SoftBlockGrid
 public readonly record struct InputState(float X, float Z, bool A, bool B, bool R, bool Aim = false, bool Stop = false)
 {
     public float Length => MathF.Sqrt(X * X + Z * Z);
+}
+
+// A published warning and falling fireball. Only authority advances its impact.
+internal sealed class BlastMeteor
+{
+    public required string Id {get;init;}
+    public float X {get;init;}
+    public float Z {get;init;}
+    public float Remaining {get;set;}=BlastStages.MeteorWarningSeconds;
 }

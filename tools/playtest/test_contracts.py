@@ -56,6 +56,9 @@ class PlaytestContracts(unittest.TestCase):
         self.assertTrue({'assets','models','animation','ui','physics','mechanics','ai','network','input'}<=set(scenarios['all']['domains']))
         self.assertNotIn('controller-observe',expanded('all',scenarios))
 
+    def test_first_use_rendering_runs_before_other_visual_journeys(self):
+        self.assertEqual('first-use-rendering', expanded('all', catalog())[0])
+
     def test_cycle_and_missing_suite_child_fail(self):
         with tempfile.TemporaryDirectory() as d:
             path=Path(d)/'catalog.json'

@@ -20,6 +20,8 @@ For keys, prompts and device input, read [input and UI](input-and-ui.md).
 
 ## Authority, transport and presentation
 
+Tutorial setup and progress belong to the local authority, with ordinary bomb, collision and recovery rules. [The tutorial contract](../tutorial.md) explains lesson fixtures, online exclusion, failure/retry and concurrent map integration.
+
 - [BlastSession](../../src/Bomber.Game/Simulation/BlastSession.cs) owns game state;
   its partial files share that authority. [BlastSim](../../src/Bomber.Game/Simulation/BlastSim.cs)
   defines entities and terrain semantics; [BlastStages](../../src/Bomber.Game/Simulation/BlastStages.cs)
@@ -226,6 +228,11 @@ and the input guide; older iteration tables are historical.
   Recovery consumes its action edges even on the get-up tick.
 - Ghost latching is finite, follows its victim and supports shake-off reversals.
   Keep ghost nuisance/expiry authoritative; ghost contact can destroy a pickup.
+- `StageLayout.AtHeight`/`SurfaceAt(x,z,y)` select bridge versus underpass from
+  the entity's actual elevation. Navigation uses separate nodes for overlapping
+  floors. `CellDef.Below` is stage-owned geometry, serialized in complete stage
+  messages. Suspended slabs have ceiling, side and blast collision; treating them
+  as solid walls down to the sea removes the confirmed underpasses.
 - `StageLayout.SurfaceAt` and `CanCross`/`CanWalk` in BlastSim are distinct: ramps
   support connected walking; directed downward exits may initiate falling.
 - Water/void tier metadata is not the landing plane. Use actual water/void heights;
@@ -238,32 +245,74 @@ and the input guide; older iteration tables are historical.
 - The user's latest correction supersedes the v0.22 rear barrier: the temple's
   rear edge is an open water pitfall, with no hidden walkway or invisible wall.
   The 25x27 arena has five raised tiers, broader upper platforms, and a larger
-  courtyard. Rock Garden is 23x15; Up & Down is 23x19. More cover supplies the
-  expanded equipment pool. The summit uses a flat mosaic rather than a blocking prop.
+  courtyard. Rock Garden is a 19x19 enclosed grassy court with five columns. Up & Down is a 24x26 suspended arena with
+  three elevations, six long flights and real underpasses; see the
+  [stage contract](../up-and-down.md). Its twelve cover blocks intentionally
+  replace the former filled terrace layout and 88-block budget. The summit uses a flat mosaic rather than a blocking prop.
 - Ghosts pass through bombs and cannot place, carry, kick, stop, pump, throw or
   detonate them. Movement, finite latching and water/void comeback remain.
 - Default battle rules are first to two wins, 120 total seconds including 60 seconds of
   sudden death. Water begins rising immediately at Hurry; the former 15-second delay is
   superseded. Custom round lengths and sudden-death/ghost toggles remain available.
-- [FloodRules](../../src/Bomber.Game/Simulation/FloodRules.cs) owns flood timing.
+- Rock Garden uses telegraphed falling fireballs during Hurry, with shared
+  blast damage and AI warning avoidance. See the [stage contract](../rock-garden.md).
+- [FloodRules](../../src/Bomber.Game/Simulation/FloodRules.cs) owns flood timing. Layout `RisingWater` selects flooding for Temple and Up & Down; Top Rules uses closing walls.
   [TempleStageView](../../scripts/arena/TempleStageView.cs) applies render height scale
   (currently 1.35) to authority Y. Decorative bedrock, foam, icons and camera fitting
   cannot add walkable floor, ramps or collision height.
   [Travel/water diagnosis](../history/iteration11-kick-research.md).
 
+## Top Rules castle (2026-10-24)
+
+`top-rules` adds the two-story castle researched in [the original manual and footage](../top-rules-research.md).
+Three one-cell raised lanes intersect a central crosswalk; four corner stairs
+join the red court and raised perimeter. Their four-cell flights use fractional
+ramps (half a tier per cell), with continuous authority and rendered treads. `StageLayout.Underpasses` marks thin
+upper slabs with a second tier-zero floor beneath. `SurfaceAt`/`CanCross`/`CanWalk`
+accept a support ceiling; use the actor's preceding accepted height for movement
+and flight. The default remains the topmost support for map authoring/spawns.
+Do not replace bridge cells with full-height cliffs or snap lower actors upward.
+Keep crate collision during ledge departure: filtering crates only by the
+player's rounded height let a falling temple CPU enter a crate. The focused
+`Bomber.Ai.Tests -- --soak --terrain-regression` retains Hard/seven CPUs/seed 64.
+
+Castle wall cells publish an optional `ObstacleHeight`; their visible crowns,
+throw collision and blast blocking agree. Null preserves existing pillar rules.
+Bombs, dropped items, body contacts, blast occlusion, throw authority and advisory
+projection retain the occupied story. Slabs block blasts and upward throws;
+lower horizontal travel remains open. The CPU graph has separate lower nodes
+only on maps with underpasses. Use its `X`/`Z` helpers and height-aware `Cell`
+lookup; dividing a layered node by arena width invents an out-of-bounds Z.
+
+The 19×17 footprint, tier-two decks, extra four starts and twelve seeded lower
+court blocks are Blast Circuit tuning, not recovered original constants. The
+first four starts follow the reference's outer lane ends; upper lanes, stairs
+and lower crossing routes stay clear. Optional sudden death uses shared column
+closure with visible castle walls on both sides. The original glowing edge
+strip's damage behavior remains unknown; our amber edging is decorative.
+
+Peer-frame validation accepts the fractional ramps and bounds the underpass
+indices and optional wall crowns before allocating presentation geometry. The
+three-peer direct/relay journey uses this castle; the eight-peer burst retains
+the temple. Relay smoke also observes a host traversing the lower passages.
+
+Focused checks: `Bomber.Game.Tests -- --top-rules`,
+`Bomber.Ai.Tests -- --top-rules`, the `top-rules` native journey and the real
+network castle room/traversal in `PartyNetworkChecks`. The standard AI soak
+now covers four stages (48 combinations).
+
 ## Inventory, cover and pickup rendering
 
 - [Loot placement](../../src/Bomber.Game/Simulation/BlastSession.Loot.cs) uses map-owned
   `CoverAreas`: regional budget shares and cluster centers, with seeded weighted
-  sampling. Each stock map first gets two nearby reachable crates per spawn, then
-  fills its regional quotas without blocking spawn clearance, ramps or reserved lanes.
+  sampling. Temple seeds two nearby crates per spawn; Rock Garden seeds one plus a central paving cluster. Top Rules keeps a sparse twelve-block lower court. Up & Down keeps its upper ring clear, placing eight crates on the low deck and two on each middle pier. All policies preserve spawn clearance, ramps and reserved lanes.
   Every destroyed crate uses the same independent configured drop chance; there are
   no guaranteed opening rewards.
 - Pyramid targets 60% of 90 blocks in the lower court, 15% along the lower wings,
   and a lighter remainder on upper side terraces/base approaches. Its top two tiers
   and ascent stay clear; thin court lanes replace the old broad empty strips.
-  Rock Garden has 110 blocks in balanced pillar regions; Up & Down has 88 in
-  outer-ring/wide-platform pockets, keeping the summit and connectors clear.
+  Rock Garden has sixteen boulders with clear center routes. Up & Down has twelve
+  lower/middle blocks, keeping its ring, summit, bridges and flights clear.
 - Advanced match settings (v0.25) default to a uniform independent 55% chance per
   destroyed block. Item weights are Fire/Bomb 30% each, remote/red 7% each, bounce
   6%, fast 4%, heart/Focus/Tiny/Big 3% each, Haste/Slow 2% each. Disabled types are
@@ -376,3 +425,11 @@ utility from their own swapped equipment. If orienting invalidates a planned
 bomb placement, they navigate before retrying, avoiding endless tiny turns. The enlarged stock Pyramid pressure
 check allows eight seconds to first pressure (previous smaller map: six), retains
 five threatening bombs in 30 seconds, an eight-second maximum gap and zero deaths.
+
+## Integrated stage contract (v0.28)
+
+`CellDef.Below` is the single lower-surface representation for Top Rules and Up & Down; `Underpasses` is derived metadata, not independent terrain. Preserve height-aware support, fractional stairs, authored wall crowns, full held-body clearance and swept projectile ceilings. Meteor warning times seed bomb-chain prediction before propagation. See [review findings and regressions](../stage-integration-review.md).
+
+Top Rules thin decks pass blasts as demonstrated by the original official guide; solid masonry still shields and physical bodies/throws still collide with decks. Up & Down's corresponding blast penetration remains unverified, so it retains its authored shielding. [Evidence](../stage-fidelity-research.md#newly-recovered-top-rules-mechanics-evidence).
+
+All online modes negotiate protocol 2 at HTTP admission and the actual WebSocket worker, with a separate matching peer hello. Keep readiness/operator/leave/cancel paths available and test old-client update feedback. Lower cells must pass bounded schema validation before rendering. [Online protocol](../peer-hosting.md#online-stage-protocol-2-v028).

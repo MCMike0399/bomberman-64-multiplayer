@@ -36,17 +36,18 @@ internal static class RegionalCoverChecks
                 }
                 else if(id==BlastStages.RockGarden)
                 {
-                    int west=cover.Count(c=>c.X<=6),east=cover.Count(c=>c.X>=16),center=cover.Count-west-east;
-                    Assert(Math.Abs(west-east)<=3&&center>=cover.Count*.4,"Rock Garden clusters are unbalanced or miss the pillar center.");
-                    foreach(int z in new[]{6,8})for(int x=0;x<stage.Width;x++)Assert(!Covered(x,z),"Rock Garden crossing lane is blocked.");
-                    Assert(cover.Count is >=100 and <=110,"Rock Garden lost its expanded cover budget.");
+                    Assert(cover.Count==16,"Garden must have sparse boulder cover.");
+                    Assert(cover.Count(c=>Math.Abs(c.X-9)+Math.Abs(c.Z-9)<=3)>=3,"Garden lost its central boulder cluster.");
+                    foreach(int lane in new[]{8,10})for(int n=1;n<18;n++)
+                        Assert(!Covered(n,lane)&&!Covered(lane,n),"Garden center routes are blocked.");
                 }
                 else
                 {
-                    Assert(cover.Count(c=>stage.At(c.X,c.Z).Tier==0)>=cover.Count*.7,"Up & Down is overfilled on narrow upper terrain.");
-                    Assert(cover.All(c=>stage.At(c.X,c.Z).Tier<2),"Up & Down summit is cluttered.");
-                    foreach(bool east in new[]{false,true})foreach(bool south in new[]{false,true})Assert(cover.Count(c=>stage.At(c.X,c.Z).Tier==0&&(east?c.X>11:c.X<11)&&(south?c.Z>9:c.Z<9))>=12,"An outer platform lacks its reward pocket.");
-                    Assert(cover.Count is >=75 and <=96,"Up & Down lost its expanded cover budget.");
+                    Assert(cover.Count==12,"Up & Down lost its sparse reference-inspired cover budget.");
+                    Assert(cover.Count(c=>stage.At(c.X,c.Z).Tier==0)==8,"Low reward deck must receive eight cover blocks.");
+                    Assert(cover.Count(c=>c.X<10&&stage.At(c.X,c.Z).Tier==2)==2&&cover.Count(c=>c.X>13&&stage.At(c.X,c.Z).Tier==2)==2,"Middle piers must each receive two blocks.");
+                    Assert(cover.All(c=>stage.At(c.X,c.Z).Below is null&&stage.At(c.X,c.Z).Tier<4),"Cover obstructs a bridge or upper route.");
+
                 }
                 checks++;
             }

@@ -2,6 +2,18 @@
   "schemaVersion": 1,
   "scenarios": [
     {
+      "id": "tutorial",
+      "method": "TutorialTour",
+      "domains": [
+        "gameplay",
+        "ui",
+        "rendering"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
       "id": "first-use-rendering",
       "method": "FirstUseRendering",
       "domains": [
@@ -532,7 +544,11 @@
         "combat",
         "results",
         "network",
-        "peer-rooms"
+        "peer-rooms",
+        "tutorial",
+        "top-rules",
+        "up-and-down",
+        "rock-garden"
       ],
       "domains": [
         "ai",
@@ -550,7 +566,7 @@
         "ui"
       ],
       "headless": false,
-      "timeout": 600,
+      "timeout": 1200,
       "manual": false
     },
     {
@@ -576,7 +592,11 @@
         "presentation",
         "hurry-water",
         "ai-play",
-        "combat"
+        "combat",
+        "tutorial",
+        "top-rules",
+        "up-and-down",
+        "rock-garden"
       ],
       "domains": [
         "ai",
@@ -682,6 +702,108 @@
       ],
       "headless": true,
       "timeout": 90,
+      "manual": false
+    },
+    {
+      "id": "top-rules",
+      "method": "TopRulesTour",
+      "domains": [
+        "gameplay",
+        "physics",
+        "rendering",
+        "ui",
+        "ai"
+      ],
+      "headless": true,
+      "timeout": 240,
+      "manual": false
+    },
+    {
+      "id": "top-rules-regression",
+      "steps": [
+        "first-use-rendering",
+        "graphics-settings",
+        "stage-lighting",
+        "setup",
+        "top-rules",
+        "framing",
+        "precision-aim",
+        "network"
+      ],
+      "domains": [
+        "ai",
+        "gameplay",
+        "input",
+        "mechanics",
+        "network",
+        "performance",
+        "physics",
+        "rendering",
+        "settings",
+        "ui"
+      ],
+      "headless": false,
+      "timeout": 1200,
+      "manual": false
+    },
+    {
+      "id": "menu-preview",
+      "method": "MiniaturePreviewRegression",
+      "domains": [
+        "rendering",
+        "ui",
+        "settings",
+        "performance"
+      ],
+      "headless": false,
+      "timeout": 420,
+      "manual": false
+    },
+    {
+      "id": "up-and-down",
+      "method": "UpAndDownTour",
+      "domains": [
+        "gameplay",
+        "physics",
+        "rendering",
+        "ai"
+      ],
+      "headless": true,
+      "timeout": 240,
+      "manual": false
+    },
+    {
+      "id": "rock-garden",
+      "method": "RockGardenTour",
+      "domains": [
+        "gameplay",
+        "rendering",
+        "physics",
+        "ai"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "stage-fidelity",
+      "steps": [
+        "first-use-rendering",
+        "top-rules",
+        "up-and-down",
+        "rock-garden",
+        "presentation",
+        "tutorial"
+      ],
+      "domains": [
+        "gameplay",
+        "physics",
+        "rendering",
+        "ui",
+        "ai"
+      ],
+      "headless": false,
+      "timeout": 900,
       "manual": false
     }
   ]

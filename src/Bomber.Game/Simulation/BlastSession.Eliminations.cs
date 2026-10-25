@@ -16,6 +16,7 @@ public sealed partial class BlastSession
         if (p.HasHeart)
         {
             p.HasHeart = false;
+            if(_tutorialLesson is not null && p.Slot==0)_tutorialSignals.Add("heart-hit");
             p.InvincibleTimer = 2.0f;
             return;
         }
@@ -27,7 +28,7 @@ public sealed partial class BlastSession
     {
         if (!p.Alive) return;
         Present("death", p.Id, p.Id, p.X, p.Y, p.Z, reason: reason, causedBy: causedBy);
-        if (_practice) { RespawnPracticePlayer(p); Present("respawn", p.Id, p.Id, p.X, p.Y, p.Z, reason: reason); return; }
+        if (_practice && _tutorialLesson?.Id!="ghost") { RespawnPracticePlayer(p); Present("respawn", p.Id, p.Id, p.X, p.Y, p.Z, reason: reason); return; }
         p.Alive = false;
         p.StatusEffect="none";p.StatusRemaining=0;
         DropCarriedBombs(p);

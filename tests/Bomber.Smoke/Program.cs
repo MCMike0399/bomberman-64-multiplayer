@@ -13,10 +13,13 @@ var clock = Stopwatch.StartNew();
 var games = await Api(HttpMethod.Get, "/realtime/v1/games");
 Check(games.GetProperty("value").EnumerateArray().Any(g => g.GetProperty("id").GetString() == "blast"), "blast game registered");
 
+if(args.Contains("--up-and-down-only")){await UpAndDownNetworkChecks.Run(new Uri(origin));return;}
 if(args.Contains("--aim-only")){await NetworkAimChecks.Run(new Uri(origin));return;}
 if(args.Contains("--appearance-only")){await LobbyAppearanceCatchup();return;}
 if(args.Contains("--peer-only")){await PeerNetworkChecks.Run(new Uri(origin));return;}
 if(args.Contains("--peer-reconnect")){await PeerReconnect();return;}
+await VersionCompatibilityChecks.Run(new Uri(origin));
+if(args.Contains("--version-only"))return;
 await QuickPlay();
 if (args.Contains("--quick-only")) return;
 await PartyNetworkChecks.Run(new Uri(origin));
@@ -24,6 +27,7 @@ await PeerNetworkChecks.Run(new Uri(origin));
 await PeerReconnect();
 await ProductSessions();
 await NetworkAimChecks.Run(new Uri(origin));
+await UpAndDownNetworkChecks.Run(new Uri(origin));
 await LobbyAppearanceCatchup();
 if (args.Contains("--client-only")) return;
 
@@ -78,7 +82,7 @@ async Task PeerReconnect()
     string code=created.GetProperty("lobby").GetProperty("joinCode").GetString()!;
     await host.Connect(created.GetProperty("reservation"),http.BaseAddress!);
     foreach(var peer in new[]{second,third})await peer.Connect(await Api(HttpMethod.Post,"/realtime/v1/lobbies/join",new{code},peer.Token),http.BaseAddress!);
-    foreach(var peer in new[]{host,second,third})await peer.Send(new{t="peer.hello",d=new{version=1}});
+    foreach(var peer in new[]{host,second,third})await peer.Send(new{t="peer.hello",d=new{version=Bomber.Game.OnlineProtocol.Revision}});
     await host.Wait("party.status",d=>d.GetProperty("canStart").GetBoolean());
     await host.Send(new{t="party.start",d=new{}});var playing=await second.Wait("party.status",d=>d.GetProperty("phase").GetString()=="playing");
     var runningDeadline=Stopwatch.StartNew();
@@ -92,7 +96,7 @@ async Task PeerReconnect()
     await second.Wait("party.status",d=>d.GetProperty("leaderId").GetString()==second.PlayerId&&d.GetProperty("phase").GetString()=="lobby");
     await second.Send(new{t="party.start",d=new{}});await second.Wait("party.status",d=>d.GetProperty("phase").GetString()=="playing");
     await host.Connect(await Api(HttpMethod.Post,$"/realtime/v1/lobbies/{id}/join",new{},host.Token),http.BaseAddress!);
-    await host.Send(new{t="peer.hello",d=new{version=1}});
+    await host.Send(new{t="peer.hello",d=new{version=Bomber.Game.OnlineProtocol.Revision}});
     var restored=await second.Wait("party.status",d=>d.GetProperty("phase").GetString()=="lobby"&&d.GetProperty("canStart").GetBoolean());
     Check(restored.GetProperty("d").GetProperty("leaderId").GetString()==second.PlayerId,"former host reconnect keeps elected host and resets peer roster safely");
     foreach(var peer in new[]{host,second,third})await Api(HttpMethod.Post,$"/realtime/v1/lobbies/{id}/leave",new{},peer.Token);
@@ -197,6 +201,7 @@ async Task<Peer> Guest(string name)
 async Task<JsonElement> Api(HttpMethod method, string path, object? body = null, string? token = null)
 {
     using var request = new HttpRequestMessage(method,path);
+    request.Headers.Add(OnlineProtocol.HeaderName,OnlineProtocol.WireRevision);
     if (token != null) request.Headers.Add("x-player-token",token);
     if (body != null) request.Content = JsonContent.Create(body);
     using var response = await http.SendAsync(request);
@@ -233,10 +238,14 @@ async Task MovementAndReconnect(Peer mover, Peer observer, string lobbyId)
     await mover.Wait("stage");
     var restored=await mover.Wait("state", d => d.GetProperty("players").EnumerateArray().Count(p => p.GetProperty("id").GetString() == mover.PlayerId) == 1);
     Check(restored.GetProperty("d").GetProperty("players").EnumerateArray().Single(p=>p.GetProperty("id").GetString()==mover.PlayerId).GetProperty("appearance").GetInt32()==6,"reconnect preserves authoritative appearance without resending it");
-    await mover.Send(new {t="input",s=3,d=new {x=-1,z=0,a=false,b=false,r=false}});
+    // Garden is enclosed: complete the round with a real self-bomb rather
+    // than assuming outward movement can walk through its perimeter.
+    await mover.Send(new {t="input",s=3,d=new {x=0,z=0,a=true,b=false,r=false}});
+    await observer.Wait("state",d=>d.GetProperty("bombs").GetArrayLength()>0);
+    await mover.Send(new {t="input",s=4,d=new {x=0,z=0,a=false,b=false,r=false}});
     var nextRound=await observer.Wait("state",d=>d.GetProperty("round").GetInt32()>=2);
     Check(nextRound.GetProperty("d").GetProperty("players").EnumerateArray().Single(p=>p.GetProperty("id").GetString()==mover.PlayerId).GetProperty("appearance").GetInt32()==6,"appearance persists through a real online round reset");
-    await mover.Send(new {t="input",s=4,d=new {x=0,z=0,a=false,b=false,r=false}});
+    await mover.Send(new {t="input",s=5,d=new {x=0,z=0,a=false,b=false,r=false}});
     Console.WriteLine("PASS sequenced movement, validated own-player cosmetics, reconnect persistence and online round reset");
 }
 void Check(bool condition,string description) { if (!condition) throw new Exception("FAIL " + description); }
@@ -254,6 +263,7 @@ sealed class Peer(string playerId,string token) : IAsyncDisposable
     {
         while (inbox.TryDequeue(out _)) { }
         readError=null; socket=new(); stop=new();
+        socket.Options.SetRequestHeader(OnlineProtocol.HeaderName,OnlineProtocol.WireRevision);
         var url=new Uri(origin,reservation.GetProperty("connectUrl").GetString()!);
         var builder=new UriBuilder(url) { Scheme=url.Scheme=="https" ? "wss" : "ws" };
         await socket.ConnectAsync(builder.Uri,stop.Token);

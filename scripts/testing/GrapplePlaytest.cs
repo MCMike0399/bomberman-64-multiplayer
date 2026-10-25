@@ -115,7 +115,7 @@ public partial class PlaytestDriver
     }
     private async Task GrappleWalk(int seat,int targetX,int targetZ)
     {
-        var layout=BlastStages.Get("sunken-temple");var soft=Convert.FromBase64String(State.GetProperty("softBlocks").GetString()!);
+        var layout=BlastStages.Get(_root.LatestStage!.Value.GetProperty("id").GetString()!);var soft=Convert.FromBase64String(State.GetProperty("softBlocks").GetString()!);
         int start=(int)GrappleValue(GrapplePlayer(seat),"z")*layout.Width+(int)GrappleValue(GrapplePlayer(seat),"x"),goal=targetZ*layout.Width+targetX;
         var queue=new Queue<int>();queue.Enqueue(start);var previous=new Dictionary<int,int>{{start,-1}};
         while(queue.Count>0&&!previous.ContainsKey(goal))

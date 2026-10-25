@@ -34,7 +34,7 @@ public sealed partial class BlastSession
         if(bot.Input.Length<.001f){motion.X=bot.X;motion.Z=bot.Z;motion.Elapsed=0;return;}
         motion.Elapsed+=dt;
         if(motion.Elapsed<.6f)return;
-        if(Dist2(bot.X,bot.Z,motion.X,motion.Z)<.12f*.12f&&motion.Waypoint>=0&&motion.Waypoint!=_aiGraph.Cell(bot.X,bot.Z))
+        if(Dist2(bot.X,bot.Z,motion.X,motion.Z)<.12f*.12f&&motion.Waypoint>=0&&motion.Waypoint!=_aiGraph.Cell(bot.X,bot.Z,bot.Y))
         {
             // Forget only the failed next waypoint, for a finite interval. The usual
             // timed-danger search chooses an alternate legal edge or waits safely.
@@ -79,7 +79,7 @@ public sealed partial class BlastSession
             float before=Dist2(bot.X,bot.Z,other.X,other.Z),after=Dist2(x,z,other.X,other.Z);
             if(after<(PlayerRadius*2+.01f)*(PlayerRadius*2+.01f)&&after<before-.00001f)return false;
         }
-        int next=_aiGraph.Cell(x,z);
+        int next=_aiGraph.Cell(x,z,bot.Y);
         if(next<0)return false;
         // An escape crosses threatened cells before the fuse; requiring a safe
         // destination for the entire horizon here contradicts the timed route.

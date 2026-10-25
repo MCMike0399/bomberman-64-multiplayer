@@ -20,6 +20,7 @@ public sealed class PeerRoomSession(GameSessionOptions options) : GameSession
     private readonly Dictionary<string, int> _appearances = [];
     private readonly HashSet<string> _expiredHosts = [];
     private readonly HashSet<string> _ready = [];
+    private readonly HashSet<string> _incompatible = [];
     private readonly Dictionary<string, DateTimeOffset> _handshakes = [];
     private readonly Dictionary<string, (long Window, int Bytes)> _budgets = [];
     private IReadOnlyDictionary<string, string> _settings = options.Settings;
@@ -42,7 +43,7 @@ public sealed class PeerRoomSession(GameSessionOptions options) : GameSession
     {
         _members.Remove(p.PlayerId); _order.Remove(p.PlayerId); _appearances.Remove(p.PlayerId);
         _expiredHosts.Remove(p.PlayerId); _budgets.Remove(p.PlayerId);
-        _ready.Remove(p.PlayerId); _handshakes.Remove(p.PlayerId);
+        _ready.Remove(p.PlayerId); _handshakes.Remove(p.PlayerId); _incompatible.Remove(p.PlayerId);
         Changed(c, p.PlayerId, false);
     }
     public override void OnPlayerConnectionChanged(ISessionContext c, RealtimePlayer p, bool connected)
@@ -82,8 +83,14 @@ public sealed class PeerRoomSession(GameSessionOptions options) : GameSession
         if (total > (p.PlayerId == _host ? 2 * 1024 * 1024 : 64 * 1024)) return;
         if (message.Type == "peer.hello")
         {
-            if (d.TryGetProperty("version",out var version) && version.ValueKind==JsonValueKind.Number && version.TryGetInt32(out int v) && v==1 && _ready.Add(p.PlayerId))
-            { _handshakes.Remove(p.PlayerId); if(p.PlayerId==_host)_lease=c.Now; Publish(c); }
+            if (d.TryGetProperty("version",out var version) && version.ValueKind==JsonValueKind.Number && version.TryGetInt32(out int v) && v==OnlineProtocol.Revision)
+            { _ready.Add(p.PlayerId); _incompatible.Remove(p.PlayerId); _handshakes.Remove(p.PlayerId); if(p.PlayerId==_host)_lease=c.Now; Publish(c); }
+            else
+            {
+                _ready.Remove(p.PlayerId); _incompatible.Add(p.PlayerId); _handshakes.TryAdd(p.PlayerId,c.Now);
+                if(_phase=="playing")Reset(OnlineProtocol.UpdateMessage);
+                c.Send(p.PlayerId,"party.error",new{message=OnlineProtocol.UpdateMessage});Publish(c);
+            }
             return;
         }
         if (message.Type == "appearance" && d.TryGetProperty("index", out var index) && index.ValueKind == JsonValueKind.Number && index.TryGetInt32(out int suit) && suit is >= 0 and <= 7)
@@ -124,7 +131,7 @@ public sealed class PeerRoomSession(GameSessionOptions options) : GameSession
     public override void OnTick(ISessionContext c)
     {
         foreach (var pending in _handshakes.Where(p=>c.IsConnected(p.Key)&&!_ready.Contains(p.Key)&&c.Now-p.Value>TimeSpan.FromSeconds(10)).Select(p=>p.Key).ToArray())
-        { _handshakes.Remove(pending); c.Kick(pending,"Peer rooms require Blast Circuit v0.27 or later. Update the game and rejoin."); }
+        { _handshakes.Remove(pending); c.Kick(pending,OnlineProtocol.UpdateMessage); }
         if (_host is not null && _ready.Contains(_host) && c.Now - _lease > TimeSpan.FromSeconds(6))
         {
             if (_host is not null) _expiredHosts.Add(_host);
@@ -138,7 +145,8 @@ public sealed class PeerRoomSession(GameSessionOptions options) : GameSession
         leaderId = _host, phase = _phase, match = _match, canStart = _phase == "lobby" && Enough(c),
         bots = int.TryParse(_settings.GetValueOrDefault("bots"), out int bots) ? bots : 0,
         settings = _settings, hosting = "peer", minimumHumans = 2, epoch = _epoch, seed = options.Seed,
-        notice = _phase == "lobby" && _members.Keys.Where(c.IsConnected).Any(id=>!_ready.Contains(id)) ? "Checking peer compatibility..." : _notice,
+        requiredOnlineProtocol=OnlineProtocol.Revision,
+        notice = _incompatible.Any(c.IsConnected) ? OnlineProtocol.UpdateMessage : _phase == "lobby" && _members.Keys.Where(c.IsConnected).Any(id=>!_ready.Contains(id)) ? "Checking peer compatibility..." : _notice,
         players = _members.Values.OrderBy(p => _order[p.PlayerId]).Select(p => new
         { playerId = p.PlayerId, displayName = PlayerNames.Display(p.DisplayName, p.Slot), slot = p.Slot, connected = c.IsConnected(p.PlayerId), appearance = _appearances.GetValueOrDefault(p.PlayerId, p.Slot) }).ToArray()
     });

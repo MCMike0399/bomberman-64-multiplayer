@@ -153,9 +153,9 @@ public partial class ArcadeBackdrop : RenderSurface
         var cells=new List<object>();
         for(int z=0;z<layout.Height;z++)for(int x=0;x<layout.Width;x++)
         {
-            var c=layout.Cells[x,z];cells.Add(new {k=(int)c.Kind,t=c.Tier,rf=c.RampFromTier,rt=c.RampToTier,rx=c.RampDX,rz=c.RampDZ});
+            var c=layout.Cells[x,z];cells.Add(new {k=(int)c.Kind,t=c.Tier,oh=c.ObstacleHeight,rf=c.RampFromTier,rt=c.RampToTier,rx=c.RampDX,rz=c.RampDZ,below=c.Below is {} lower?new {k=(int)lower.Kind,t=lower.Tier,rf=lower.RampFromTier,rt=lower.RampToTier,rx=lower.RampDX,rz=lower.RampDZ}:null});
         }
-        var data=JsonSerializer.SerializeToElement(new {id=layout.Id,width=layout.Width,height=layout.Height,cells});
+        var data=JsonSerializer.SerializeToElement(new {id=layout.Id,width=layout.Width,height=layout.Height,cells,underpasses=layout.Underpasses.Select(c=>c.Z*layout.Width+c.X).Order().ToArray()});
         float scale=8.1f/Math.Max(layout.Width,layout.Height);
         _miniature=new TempleStageView(new ArtMaterials()) {Scale=Vector3.One*scale,Position=new(-layout.Width*scale/2,0,-layout.Height*scale/2)};
         _arenaMount.AddChild(_miniature);_miniature.Build(data);
@@ -197,7 +197,8 @@ public partial class ArcadeBackdrop : RenderSurface
         void Triangle(Vector3 a,Vector3 b,Vector3 c)
         {
             var normal=(b-a).Cross(c-a).Normalized();
-            foreach(var v in new[]{a,b,c}){builder.SetNormal(normal);builder.AddVertex(v);}
+            // Godot's front faces are clockwise; keep the outward shading normal.
+            foreach(var v in new[]{a,c,b}){builder.SetNormal(normal);builder.AddVertex(v);}
         }
         for(int i=0;i<8;i++)
         {

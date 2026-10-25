@@ -48,6 +48,8 @@ public static class EffectWarmup
             }
             Add(new ExplosionView(art,1.4f,false,.08f),new(-4,0,0));
             Add(new ExplosionView(art,1.4f,true,.08f),new(4,0,0));
+            Add(new ExplosionView(art,4f,false,.08f),new(0,0,-4));
+            Add(new ExplosionView(art,4f,true,.08f),new(0,0,4));
             Add(new KickBurst(art,Vector3.Forward),new(-6,0,4));
             Add(new ExitEffect(art,true),new(-2,0,4));Add(new ExitEffect(art,false),new(2,0,4));
             var actor=new BomberModel(art,ArtMaterials.PlayerColors[0],"");actor.ShowName(false);actor.Pose(false,true,false);

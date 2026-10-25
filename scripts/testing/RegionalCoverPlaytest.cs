@@ -8,7 +8,7 @@ public partial class PlaytestDriver
 {
     private async Task RegionalCoverTour()
     {
-        foreach(var (id,budget) in new[]{(BlastStages.SunkenTemple,90),(BlastStages.RockGarden,110),(BlastStages.UpAndDown,88)})
+        foreach(var (id,budget) in new[]{(BlastStages.SunkenTemple,90),(BlastStages.RockGarden,16),(BlastStages.UpAndDown,12)})
         {
             Input(0,default);Input(1,default);
             _root.StartLocal(new SessionSettings(Stage:id,Bots:0,SuddenDeath:false,Ghosts:false){Advanced=new AdvancedRules{DropPercent=100,DisabledItems="remote,red,bounce,fast,heart,focus,tiny,big,haste,slow"}},2);

@@ -7,6 +7,8 @@ lookup for exact values; older iteration documents retain historical evidence.
 
 ## Current controls and compatibility
 
+The main menu now includes Tutorial. [Tutorial navigation](../tutorial.md) owns device-aware lesson copy, saved stars, explicit retry/next, pause actions and returning to lessons. Keep Practice available for battle arenas.
+
 The current right shoulder stops kicked bombs; it no longer aliases remote detonation.
 Keyboard R remains a remote alias. The iteration19 controller mapping supersedes printed-B carry and promotes the
 left shoulder; keyboard remains v0.18. The v0.18 keyboard mapping supersedes the Space-carry/K-aim/L-remote mapping in v0.17
@@ -194,6 +196,14 @@ device-local in online games too; it never overrides server lighting or room rul
 Use the existing arrow/A-D/controller dial navigation. `graphics-settings` checks
 native selection, persistence and paused local continuity; `network` checks online
 continuity. [Rendering budgets and rationale](../graphics-research.md).
+
+## Arena selection
+
+The native arena dial cycles Sunken Temple, Rock Garden, Up & Down and Top Rules.
+Use `StageIds.Length` for wraparound. Local battle, Practice and waiting-room
+settings use the same validated ids; the menu miniature includes thin castle
+bridges and their lower passages. `setup` checks both wrap directions;
+`top-rules` launches the castle through the normal Practice menu.
 
 ## Reticle rendering and lifecycle
 

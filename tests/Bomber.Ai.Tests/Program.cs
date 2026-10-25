@@ -3,6 +3,9 @@ using System.Text.Json;
 using Bomber.Game.Simulation;
 using Bomber.Game.Simulation.Ai;
 
+if(args.Contains("--top-rules")){TopRulesNavigationChecks.Run();return;}
+if(args.Contains("--up-and-down")){UpAndDownAiChecks.Run();return;}
+
 if(args.Contains("--stock-human-pressure")){StockHumanPressureChecks.Run(args);return;}
 if(args.Contains("--pressure")){PressureChecks.Run(args);return;}
 if(args.Contains("--liveness")){NavigationLivenessChecks.Run();return;}
@@ -50,7 +53,7 @@ if(args.Contains("--benchmark"))
     var output=args.FirstOrDefault(a=>a.StartsWith("--output="));if(output!=null)File.WriteAllText(output[9..],json+"\n");
     return;
 }
-var checks=FrontPlacementChecks.Run()+NavigationLivenessChecks.Run()+PressureChecks.Run(Array.Empty<string>())+StockHumanPressureChecks.Run(Array.Empty<string>());
+var checks=TopRulesNavigationChecks.Run()+UpAndDownAiChecks.Run()+FrontPlacementChecks.Run()+NavigationLivenessChecks.Run()+PressureChecks.Run(Array.Empty<string>())+StockHumanPressureChecks.Run(Array.Empty<string>());
 void Check(bool passed,string name){if(!passed)throw new Exception(name);checks++;Console.WriteLine("PASS "+name);}
 void Fight(Fixture f){f.Step(62);}
 
