@@ -1,7 +1,7 @@
 {
   "id": "Blast.Cluster",
   "name": "Blast Cluster Placement",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "contracts_version": "1.0.0",
   "assembly": "Bomber.Cluster.dll",
   "entry_type": "Bomber.Cluster.ClusterPlugin",

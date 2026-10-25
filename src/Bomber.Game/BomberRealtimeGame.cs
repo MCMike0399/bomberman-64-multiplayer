@@ -8,6 +8,8 @@ public sealed class BomberRealtimeGame : IRealtimeGame
 {
     public string Id => "blast";
     public string DisplayName => "Burbuja Blast";
+    public bool ReliableControlFrames => true;
+    public IReadOnlyList<string> ReplaceableMessageTypes { get; } = ["state"];
     public GameRules Rules { get; } = new()
     {
         MinPlayers = 2, MaxPlayers = 8, TickRate = LocalMatch.TickRate,

@@ -56,6 +56,7 @@ public partial class ArcadeMenu : Control
     private Control _hostBotBox=null!;
     private Button _editPlayers=null!;
     private ArcadeRuleDial _onlineAppearanceButton=null!;
+    private int _hostingPreference;
     private StagePreview? _onlineStage;
     private VBoxContainer _standingsBoard=null!;
     private float _standingsRowHeight;
@@ -84,7 +85,7 @@ public partial class ArcadeMenu : Control
     public bool Practice=>_practice;
     public SessionSettings Settings => BuildSettings(_practice?0:_localPlayers.Roster.CpuPlayers);
     public SessionSettings OnlineSettings=>BuildSettings((int)_bots.Value);
-    private SessionSettings BuildSettings(int bots)=>new(StageIds[_stage.Selected],bots,(int)_wins.Value,(int)_rounds.Value,_sudden.ButtonPressed,_ghosts.ButtonPressed,new[]{"easy","normal","hard"}[_difficulty.Selected]){Advanced=_advanced};
+    private SessionSettings BuildSettings(int bots)=>new(StageIds[_stage.Selected],bots,(int)_wins.Value,(int)_rounds.Value,_sudden.ButtonPressed,_ghosts.ButtonPressed,new[]{"easy","normal","hard"}[_difficulty.Selected]){Advanced=_advanced,Hosting=new[]{"auto","server","peer"}[_hostingPreference]};
     private static readonly string[] StageIds=["sunken-temple","rock-garden","up-and-down","top-rules"];
     private static readonly Color Coral=new("f06a55"),Lagoon=new("2a8c92");
     public override void _Ready()

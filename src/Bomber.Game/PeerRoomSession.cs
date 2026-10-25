@@ -7,13 +7,15 @@ public sealed class PeerRoomGame : IRealtimeGame
 {
     public string Id => "blast-peer";
     public string DisplayName => "Blast peer room";
+    public bool ReliableControlFrames => true;
+    public IReadOnlyList<string> ReplaceableMessageTypes { get; } = ["peer.state"];
     public GameRules Rules { get; } = new BomberRealtimeGame().Rules with
     { MaxMessageBytes = 131072, MaxInboundMessagesPerSecond = 240 };
     public IGameSession CreateSession(GameSessionOptions options) => new PeerRoomSession(options);
 }
 
 /// <summary>Authenticated membership, host leases and bounded signalling/relay. Never simulates the game.</summary>
-public sealed class PeerRoomSession(GameSessionOptions options) : GameSession
+public sealed class PeerRoomSession(GameSessionOptions options, bool stableRoster = false) : GameSession
 {
     private readonly Dictionary<string, RealtimePlayer> _members = [];
     private readonly Dictionary<string, long> _order = [];
@@ -30,9 +32,19 @@ public sealed class PeerRoomSession(GameSessionOptions options) : GameSession
     private string _phase = "lobby", _notice = "";
     private DateTimeOffset _lease, _returnAt;
     public override int? MinPlayersToStart => 1;
+    public override bool AcceptsNewPlayers => !stableRoster || _phase != "playing";
+    internal bool EligibleHost(ISessionContext c, string id) => _members.ContainsKey(id) && c.IsConnected(id) && _ready.Contains(id) && !_expiredHosts.Contains(id);
+    internal bool SelectHost(ISessionContext c, string id)
+    {
+        if (_phase != "lobby" || !EligibleHost(c, id)) return false;
+        if (_host != id) { _host = id; _epoch++; }
+        _lease = c.Now; Publish(c); return true;
+    }
 
     public override void OnPlayerJoined(ISessionContext c, RealtimePlayer p)
     {
+        if (stableRoster && _phase == "playing")
+        { c.Kick(p.PlayerId, "This match has started. Join again when the room returns to its lobby."); return; }
         _members[p.PlayerId] = p; _order.TryAdd(p.PlayerId, ++_serial);
         _handshakes[p.PlayerId] = c.Now;
         // A changed roster starts a new epoch; existing rounds cannot admit uninitialised peers.
@@ -54,7 +66,7 @@ public sealed class PeerRoomSession(GameSessionOptions options) : GameSession
     }
     private void Changed(ISessionContext c, string id, bool connected)
     {
-        if (_phase == "playing") Reset(connected
+        if (_phase == "playing" && (!stableRoster || id == _host)) Reset(connected
             ? "A player reconnected. The interrupted match was discarded; start again with the restored roster."
             : id == _host ? "Host left. A new host is taking over; the interrupted match was discarded."
             : "A player disconnected. The interrupted match was discarded.");
@@ -112,9 +124,10 @@ public sealed class PeerRoomSession(GameSessionOptions options) : GameSession
         }
         if (message.Type == "peer.finished" && p.PlayerId == _host && _phase == "playing" && d.TryGetProperty("result", out var result) && result.ValueKind == JsonValueKind.Object && bytes < 8192)
         { _phase = "results"; _returnAt = c.Now.AddSeconds(5); Publish(c); c.Broadcast("party.result", result); return; }
-        if (message.Type is not ("peer.signal" or "peer.frame") || !d.TryGetProperty("to", out var to) || to.ValueKind != JsonValueKind.String) return;
+        if (message.Type is not ("peer.signal" or "peer.frame" or "peer.state") || !d.TryGetProperty("to", out var to) || to.ValueKind != JsonValueKind.String) return;
         var target = to.GetString()!;
-        if (target == p.PlayerId || !_members.ContainsKey(target) || !c.IsConnected(target) || (p.PlayerId != _host && target != _host)) return;
+        if (target == p.PlayerId || !_members.ContainsKey(target) || !c.IsConnected(target) ||
+            (p.PlayerId != _host && target != _host && !(stableRoster && _phase == "lobby" && message.Type == "peer.signal"))) return;
         if (!d.TryGetProperty("payload", out var payload) || payload.ValueKind != JsonValueKind.Object) return;
         if (message.Type == "peer.signal")
         {
@@ -124,9 +137,11 @@ public sealed class PeerRoomSession(GameSessionOptions options) : GameSession
         {
             if (_phase != "playing" || !payload.TryGetProperty("t", out var type) || type.ValueKind != JsonValueKind.String) return;
             if (p.PlayerId == _host ? type.GetString() is not ("stage" or "state" or "appearance") : type.GetString() != "input" || bytes > 2048) return;
+            if (message.Type == "peer.state" && (p.PlayerId != _host || type.GetString() != "state")) return;
         }
         // Sender identity is assigned here, never accepted from the supplied payload.
-        c.Send(target, message.Type, new { from = p.PlayerId, epoch = _epoch, payload });
+        string delivery = message.Type != "peer.signal" && payload.TryGetProperty("t", out var frameType) && frameType.GetString() == "state" ? "peer.state" : message.Type;
+        c.Send(target, delivery, new { from = p.PlayerId, epoch = _epoch, payload });
     }
     public override void OnTick(ISessionContext c)
     {

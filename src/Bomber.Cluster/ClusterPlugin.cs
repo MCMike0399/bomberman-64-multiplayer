@@ -9,15 +9,20 @@ namespace Bomber.Cluster;
 public sealed class ClusterPlugin : IBurbujaPlugin
 {
     public PluginManifest Manifest { get; } = new(
-        "Blast.Cluster", "Blast Cluster Placement", "1.1.0", PluginContracts.Version,
+        "Blast.Cluster", "Blast Cluster Placement", "1.2.0", PluginContracts.Version,
         "Bomber.Cluster.dll", typeof(ClusterPlugin).FullName!, PluginLoadKind.Dynamic,
         ["blast.cluster.placement"], [], [], ["all", "worker"], "BlastCluster", false, [], 210);
 
-    public void ConfigureServices(IServiceCollection services) =>
+    public void ConfigureServices(IServiceCollection services)
+    {
         services.AddSingleton<ILobbyPlacementStrategy>(sp => new PreferredServerPlacement(
             sp.GetRequiredService<IConfiguration>().GetSection("BlastCluster:ServerOrder")
                 .GetChildren().Select(c => c.Value ?? "").ToArray(),
             new PressureSnapshot(sp.GetRequiredService<IConfiguration>()["BlastCluster:AdmissionFile"])));
+        services.AddSingleton<PressureAdmission>();
+        services.AddSingleton<ISessionResourceAdmission>(sp => sp.GetRequiredService<PressureAdmission>());
+        services.AddHostedService(sp => sp.GetRequiredService<PressureAdmission>());
+    }
 }
 
 /// <summary>Always use the first eligible configured server, including after a primary recovers.</summary>
@@ -40,6 +45,10 @@ public sealed class PreferredServerPlacement : ILobbyPlacementStrategy
     {
         var excluded = _pressure.ExcludedServers();
         return candidates.Where(c => c.HasCapacity && _rank.ContainsKey(c.ServerId) && !excluded.Contains(c.ServerId))
-            .OrderBy(c => _rank[c.ServerId]).Select(c => c.ServerId).FirstOrDefault();
+            .OrderBy(c => request.GameId is "blast-room" or "blast-online" ? ResourceRank(c) : 0)
+            .ThenBy(c => _rank[c.ServerId]).Select(c => c.ServerId).FirstOrDefault();
     }
+
+    private static int ResourceRank(LobbyServerStatus server) => server.AvailableResources is not { } available ? 0 :
+        available.GetValueOrDefault("simulation") > 0 ? 0 : available.GetValueOrDefault("peer-relay") > 0 ? 1 : 2;
 }

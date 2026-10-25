@@ -545,6 +545,7 @@
         "results",
         "network",
         "peer-rooms",
+        "adaptive-rooms",
         "tutorial",
         "top-rules",
         "up-and-down",
@@ -804,6 +805,17 @@
       ],
       "headless": false,
       "timeout": 900,
+      "manual": false
+    },
+    {
+      "id": "adaptive-rooms",
+      "method": "AdaptiveRooms",
+      "domains": [
+        "network",
+        "ui"
+      ],
+      "headless": true,
+      "timeout": 180,
       "manual": false
     }
   ]

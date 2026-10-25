@@ -17,6 +17,11 @@ Check(balancer.Choose([Node("fallback", 1), Node("primary")], request) == "prima
 Check(balancer.Choose([Node("primary", 2), Node("fallback", 2)], request) == null, "capacity is never exceeded");
 Check(balancer.Choose([Node("unknown")], request) == null, "unconfigured nodes cannot receive rooms");
 Check(balancer.Choose([Node("primary"), Node("fallback")], request with { Region = "fallback" }) == "fallback", "explicit capacity-test region is respected");
+var adaptive = new PlacementRequest("blast-room", null, 8);
+Check(balancer.Choose([
+    Node("primary") with { AvailableResources = new Dictionary<string,int> { ["simulation"] = 0, ["peer-relay"] = 1 } },
+    Node("fallback") with { AvailableResources = new Dictionary<string,int> { ["simulation"] = 1, ["peer-relay"] = 1 } }
+], adaptive) == "fallback", "free fallback simulation beats an empty primary waiting-room slot");
 foreach (string[] invalid in new[] { Array.Empty<string>(), new[] { "" }, new[] { "primary", "primary" } })
 {
     try { _ = new PreferredServerPlacement(invalid); throw new Exception("Invalid order accepted"); }

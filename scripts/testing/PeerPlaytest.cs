@@ -11,7 +11,7 @@ public partial class PlaytestDriver
     private async Task PeerRooms()
     {
         _root.Navigate("Online"); await Frames(3); await Capture("peer-online-options");
-        Check(_root.FindChildren("*","",true,false).OfType<Godot.Button>().Any(b=>b.IsVisibleInTree()&&b.Text=="Host peer room") && _root.FindChildren("*","",true,false).OfType<Godot.Button>().Any(b=>b.IsVisibleInTree()&&b.Text=="Random lobby"),"online screen offers peer hosting and random lobbies");
+        Check(_root.FindChildren("*","",true,false).OfType<Godot.Button>().Any(b=>b.IsVisibleInTree()&&b.Text=="Create private room") && _root.FindChildren("*","",true,false).OfType<Godot.Button>().Any(b=>b.IsVisibleInTree()&&b.Text=="Play online"),"online screen offers automatic private rooms and public matchmaking");
         await _root.StartOnlineAsync(new Uri(_server),"Peer host",new SessionSettings(Stage:"top-rules",Bots:0,Wins:1),NetworkMode.CreatePeer);
         var host=(NetworkSession)_root.ActiveSession!;
         Check(host.Party?.Hosting=="peer"&&!host.Party.CanStart,"peer room requires two connected people");
@@ -119,6 +119,7 @@ public partial class PlaytestDriver
         public void AcceptSignal(JsonElement signal)=>_inner.AcceptSignal(signal);
         public void Poll()=>_inner.Poll();
         public bool Send(byte[] packet)=>drop()||_inner.Send(packet);
+        public bool SendState(byte[] packet)=>drop()||_inner.SendState(packet);
         public void Dispose()=>_inner.Dispose();
     }
 }

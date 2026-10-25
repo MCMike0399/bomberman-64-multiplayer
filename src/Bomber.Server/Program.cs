@@ -14,6 +14,8 @@ await using var app = BurbujaApplication.CreateApp(new WebApplicationOptions
         builder.Services.AddSingleton<IRealtimeGame, BomberRealtimeGame>();
         builder.Services.AddSingleton<IRealtimeGame, PublicLobbyGame>();
         builder.Services.AddSingleton<IRealtimeGame, PeerRoomGame>();
+        builder.Services.AddSingleton<IRealtimeGame, AdaptiveRoomGame>();
+        builder.Services.AddSingleton<IRealtimeGame, PublicAdaptiveRoomGame>();
         builder.Services.AddHostedService<Bomber.Server.PerformanceReporter>();
     },
 });

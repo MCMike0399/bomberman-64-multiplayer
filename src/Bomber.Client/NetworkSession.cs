@@ -13,13 +13,17 @@ public sealed partial class NetworkSession : ISession
     private readonly CancellationTokenSource _lifetime = new();
     private readonly MessageBuffer _messages = new();
     private readonly MessageBuffer _wireMessages = new();
-    private readonly System.Collections.Concurrent.ConcurrentQueue<byte[]> _outbound = new();
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte[]> _latestPeerStates = new();
     private readonly System.Collections.Concurrent.ConcurrentQueue<byte[]> _controlOutbound = new();
     private PeerRoomClient? _peer;
     private Func<IPeerLink>? _peerFactory;
     public string PeerTransport => _peer?.Transport ?? "Relay";
     public long DirectPacketsSent => _peer?.DirectSent ?? 0;
     public long DirectPacketsReceived => _peer?.DirectReceived ?? 0;
+    public int ConnectionQualitySamples => Math.Min(Volatile.Read(ref _pingCount), _peer?.QualitySamples ?? int.MaxValue);
+    private long _lastPing;
+    private int _pingCount;
+    private double _serverRtt = 5000;
     private readonly object _inputGate = new();
     private readonly Uri _origin;
     private ClientWebSocket? _socket;
@@ -92,7 +96,7 @@ public sealed partial class NetworkSession : ISession
         JsonElement reservation;
         if (mode is NetworkMode.CreatePrivate or NetworkMode.CreatePeer)
         {
-            var created = await RequestAsync(HttpMethod.Post, "lobbies", new { game = mode == NetworkMode.CreatePeer ? "blast-peer" : "blast", visibility = "private", settings = wireSettings }, ct);
+            var created = await RequestAsync(HttpMethod.Post, "lobbies", new { game = mode == NetworkMode.CreatePeer ? "blast-peer" : "blast-room", visibility = "private", settings = wireSettings }, ct);
             var lobby = created.GetProperty("lobby");
             JoinCode = lobby.GetProperty("joinCode").GetString();
             _messages.Add(JsonSerializer.SerializeToElement(new { t = "sys.lobby", d = lobby }));
@@ -108,7 +112,7 @@ public sealed partial class NetworkSession : ISession
         else
         {
             Volatile.Write(ref _status, "Searching for players");
-            var ticket = await RequestAsync(HttpMethod.Post, "queue", new { game = "blast-lobby" }, ct);
+            var ticket = await RequestAsync(HttpMethod.Post, "queue", new { game = "blast-online" }, ct);
             _ticketId = ticket.GetProperty("ticketId").GetString();
             while (ticket.GetProperty("state").GetString() == "queued")
                 ticket = await RequestAsync(HttpMethod.Get, $"queue/{Uri.EscapeDataString(_ticketId!)}?waitSeconds=10", null, ct);
@@ -235,15 +239,25 @@ public sealed partial class NetworkSession : ISession
                 throw new IOException("Server sent an invalid message.");
             if (type.GetString() == "sys.ended") Volatile.Write(ref _status, "Ended: Match complete");
             if (type.GetString() == "sys.welcome") Interlocked.Exchange(ref _appearancePending, 1);
+            if (type.GetString() == "sys.pong" && message.TryGetProperty("d", out var pong) &&
+                pong.TryGetProperty("echo", out var echo) && echo.ValueKind == JsonValueKind.Object &&
+                echo.TryGetProperty("nonce", out var nonce) && nonce.TryGetInt64(out long sent) && sent == Volatile.Read(ref _lastPing))
+            {
+                double elapsed = System.Diagnostics.Stopwatch.GetElapsedTime(sent).TotalMilliseconds;
+                if (elapsed is >= 0 and <= 5000) { Volatile.Write(ref _serverRtt, elapsed); Interlocked.Increment(ref _pingCount); }
+                continue;
+            }
             if (type.GetString() == "party.status")
             {
                 var party = PartyStatus.Parse(message.GetProperty("d"));
-                if (party.Hosting == "peer" && Interlocked.Exchange(ref _peerHelloSent, 1) == 0)
+                if ((party.Hosting == "peer" || party.Adaptive) && Interlocked.Exchange(ref _peerHelloSent, 1) == 0)
                     QueuePeer("peer.hello", new { version = OnlineProtocol.Revision });
                 if (Party?.Phase != party.Phase || Party?.Match != party.Match) ReleaseInputs();
                 Volatile.Write(ref _party, party);_partyReady.TrySetResult();
             }
             _wireMessages.Add(message);
+            if (_wireMessages.Overflowed)
+            { Fail("The connection cannot keep up with room control messages."); _lifetime.Cancel(); return; }
         }
     }
 
@@ -262,18 +276,24 @@ public sealed partial class NetworkSession : ISession
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1d / 30));
         while (await timer.WaitForNextTickAsync(ct))
         {
+            if (System.Diagnostics.Stopwatch.GetElapsedTime(Volatile.Read(ref _lastPing)).TotalSeconds >= .5)
+            {
+                long nonce = System.Diagnostics.Stopwatch.GetTimestamp(); Volatile.Write(ref _lastPing, nonce);
+                await socket.SendAsync(JsonSerializer.SerializeToUtf8Bytes(new { t = "sys.ping", d = new { nonce } }).AsMemory(), WebSocketMessageType.Text, true, ct);
+            }
             // The initial eight-player stage/appearance burst must never evict ICE offers or answers.
             for (int count = 0; count < 16 && _controlOutbound.TryDequeue(out var control); count++)
                 await socket.SendAsync(control.AsMemory(), WebSocketMessageType.Text, true, ct);
-            for (int count = 0; count < 16 && _outbound.TryDequeue(out var packet); count++)
-                await socket.SendAsync(packet.AsMemory(), WebSocketMessageType.Text, true, ct);
+            foreach (string target in _latestPeerStates.Keys.Take(8))
+                if (_latestPeerStates.TryRemove(target, out var packet))
+                    await socket.SendAsync(packet.AsMemory(), WebSocketMessageType.Text, true, ct);
             if (Interlocked.Exchange(ref _appearancePending,0)!=0)
                 await socket.SendAsync(EncodeAppearance(Volatile.Read(ref _appearance)).AsMemory(),WebSocketMessageType.Text,true,ct);
             if(Interlocked.Exchange(ref _pendingRules,null) is {} rules)
                 await socket.SendAsync(rules.AsMemory(),WebSocketMessageType.Text,true,ct);
             if (Interlocked.Exchange(ref _startPending, 0) != 0)
                 await socket.SendAsync(JsonSerializer.SerializeToUtf8Bytes(new { t = "party.start", d = new {} }).AsMemory(), WebSocketMessageType.Text, true, ct);
-            if (Party?.Hosting == "peer") continue;
+            if (Party?.Hosting is "peer" or "auto") continue;
             PlayerInput input;
             lock (_inputGate)
             {
@@ -352,18 +372,27 @@ public sealed partial class NetworkSession : ISession
 
     private void PumpMessages()
     {
+        if (_messages.Overflowed)
+        { if (!IsEnded) { Fail("The game cannot keep up with room control messages."); _lifetime.Cancel(); } return; }
         foreach (var message in _wireMessages.Drain())
         {
-            if (message.GetProperty("t").GetString() == "party.status" && message.GetProperty("d").TryGetProperty("hosting", out var hosting) && hosting.GetString() == "peer")
-                _peer ??= new PeerRoomClient(PlayerId!, _lobbyId!, _peerFactory, QueuePeer, _messages.Add, TakePeerInput);
+            if (message.GetProperty("t").GetString() == "party.status" && message.GetProperty("d").TryGetProperty("hosting", out var hosting) && hosting.GetString() is "peer" or "auto")
+                _peer ??= new PeerRoomClient(PlayerId!, _lobbyId!, _peerFactory, QueuePeer, _messages.Add, TakePeerInput, () => Volatile.Read(ref _serverRtt));
             if (_peer?.Handle(message) != true) _messages.Add(message);
         }
     }
     private void QueuePeer(string type, object data)
     {
-        var queue = type == "peer.frame" ? _outbound : _controlOutbound;
-        if (queue.Count >= (type == "peer.frame" ? 128 : 512)) return;
-        queue.Enqueue(JsonSerializer.SerializeToUtf8Bytes(new { t = type, d = data }));
+        var packet = JsonSerializer.SerializeToUtf8Bytes(new { t = type, d = data });
+        if (type == "peer.state" && data is PeerFrameEnvelope state)
+        {
+            if (_latestPeerStates.Count < 8 || _latestPeerStates.ContainsKey(state.To)) _latestPeerStates[state.To] = packet;
+            else { Fail("Too many pending peer routes."); _lifetime.Cancel(); }
+            return;
+        }
+        if (_controlOutbound.Count >= 512)
+        { Fail("The connection cannot keep up with reliable game messages."); _lifetime.Cancel(); return; }
+        _controlOutbound.Enqueue(packet);
     }
     private byte[] TakePeerInput()
     {

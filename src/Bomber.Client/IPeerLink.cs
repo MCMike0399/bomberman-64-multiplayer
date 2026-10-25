@@ -11,4 +11,5 @@ public interface IPeerLink : IDisposable
     void AcceptSignal(JsonElement signal);
     void Poll();
     bool Send(byte[] packet);
+    bool SendState(byte[] packet) => Send(packet);
 }

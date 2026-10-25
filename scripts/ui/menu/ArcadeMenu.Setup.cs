@@ -133,6 +133,7 @@ public partial class ArcadeMenu
     public void Configure(SessionSettings settings,int humans=1)
     {
         _advanced=settings.Advanced;
+        _hostingPreference=Math.Max(0,Array.IndexOf(new[]{"auto","server","peer"},settings.Hosting));
         _difficulty.Select(Array.IndexOf(new[]{"easy","normal","hard"},settings.BotDifficulty=="medium"?"normal":settings.BotDifficulty));_stage.Select(Math.Max(0,Array.IndexOf(StageIds,settings.Stage)));_bots.Value=settings.Bots;_wins.Value=settings.Wins;_rounds.Value=settings.RoundSeconds;_sudden.ButtonPressed=settings.SuddenDeath;_ghosts.ButtonPressed=settings.Ghosts;_localPlayers.ConfigureCounts(humans,settings.Bots);UpdateStageDescription();
     }
 

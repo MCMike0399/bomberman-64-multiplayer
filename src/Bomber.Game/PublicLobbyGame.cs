@@ -7,6 +7,8 @@ public sealed class PublicLobbyGame : IRealtimeGame
 {
     public string Id => "blast-lobby";
     public string DisplayName => "Blast random lobby";
+    public bool ReliableControlFrames => true;
+    public IReadOnlyList<string> ReplaceableMessageTypes { get; } = ["state"];
     public GameRules Rules { get; } = new BomberRealtimeGame().Rules;
     public IMatchmakingStrategy Matchmaking { get; } = new WaitingRoomMatchmaker();
     public IGameSession CreateSession(GameSessionOptions options) => new PartySession(options with

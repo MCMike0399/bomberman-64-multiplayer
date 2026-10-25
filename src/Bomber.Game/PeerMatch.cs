@@ -36,6 +36,16 @@ public sealed class PeerMatch : ISessionContext
         var player = Players.FirstOrDefault(p => p.PlayerId == sender);
         if (player is not null) _game.OnPlayerConnectionChanged(this, player, false);
     }
+    public void Reconnect(string sender)
+    {
+        var player = Players.FirstOrDefault(p => p.PlayerId == sender);
+        if (player is not null) _game.OnPlayerConnectionChanged(this, player, true);
+    }
+    public void RemovePlayer(string sender)
+    {
+        var player = Players.FirstOrDefault(p => p.PlayerId == sender);
+        if (player is not null) _game.OnPlayerLeft(this, player, LeaveReason.Left);
+    }
     public string LobbyId { get; }
     public string GameId => "blast-peer";
     public LobbyState State { get; private set; } = LobbyState.Open;
