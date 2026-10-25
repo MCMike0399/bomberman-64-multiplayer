@@ -272,7 +272,7 @@ and the input guide; older iteration tables are historical.
 
 ## Blizzard Battle (2026-10-25)
 
-[Stage contract](../blizzard-battle.md) owns the flat enclosed snowfield, sixteen authored ice cones, eight seats, shared seeded weather and bilateral avalanche closure. Wind affects free bombs and living players through collision, with weaker player response, and the advisory arc uses the same future schedule. Preserve fuse clocks and carried attachment. CPU closure avoidance uses the three-second avalanche interval. Protocol revision 4 gates the expanded stage/weather contract.
+[Stage contract](../blizzard-battle.md) owns the flat enclosed snowfield, sixteen authored ice cones (1.3-unit stage-owned cover height), eight seats, shared seeded weather and bilateral avalanche closure. Wind affects free bombs and living players through collision, with weaker player response, and the advisory arc uses the same future schedule. Preserve fuse clocks and carried attachment. CPU closure avoidance uses the three-second avalanche interval. Protocol revision 4 gates the expanded stage/weather contract.
 
 ## Top Rules castle (2026-10-24)
 

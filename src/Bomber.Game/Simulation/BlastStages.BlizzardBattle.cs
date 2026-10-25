@@ -23,7 +23,7 @@ public static partial class BlastStages
         {
             Id=BlizzardBattle,Name="Blizzard Battle",Width=size,Height=size,Cells=cells,
             Spawns=[(2,2),(16,2),(2,16),(16,16),(9,1),(9,17),(1,8),(17,10)],
-            SoftBlockDensity=1,MaxSoftBlocks=16,OpeningCoverPerSpawn=0,
+            SoftBlockDensity=1,MaxSoftBlocks=16,OpeningCoverPerSpawn=0,SoftBlockHeight=1.3f,
             CoverAreas=[new("ice-cones",1,1,17,1,17)],
             ClearCells=Enumerable.Range(1,17).SelectMany(x=>Enumerable.Range(1,17).Select(z=>(X:x,Z:z)))
                 .Where(c=>!cones.Contains(c)).ToHashSet(),

@@ -11,6 +11,12 @@ internal static class BlizzardBattleChecks
         int checks=0;
         void Check(string name,Action test){test();checks++;Console.WriteLine("PASS Blizzard Battle "+name);}
         var stage=BlastStages.Get("blizzard-battle");
+        Check("large spires publish their projectile collision height",()=>
+        {
+            var match=new LocalMatch(new MatchOptions{Stage=stage.Id,HumanPlayers=2,BotPlayers=0});
+            var packet=Data(match.StageJson!);
+            Assert(packet.TryGetProperty("coverHeight",out var height)&&height.GetSingle()>=1.25f,"Violet spires must be tall cover, with the same authored height sent to every client.");
+        });
         Check("topology and eight supported starts",()=>
         {
             Assert(stage.Id=="blizzard-battle"&&stage.Width==19&&stage.Height==19,"Blizzard Battle must be its own enclosed square snowfield.");
@@ -31,6 +37,19 @@ internal static class BlizzardBattleChecks
                     Assert(stage.Spawns.All(s=>Math.Abs(s.X-x)+Math.Abs(s.Z-z)>1),"Cone blocks spawn escape.");
                 }
             }
+        });
+        Check("large spires block and support projectiles at their visible top",()=>
+        {
+            var cover=new SoftBlockGrid(19,19);cover.Set(6,2,true);
+            var flight=BombThrowRules.AdvanceStatic(new(5.5f,1.1f,2.5f),new(10,0,0),.1f,
+                stage.SurfaceAt,(x,z)=>stage.At(x,z).Kind,cover.IsAlive,stage:stage);
+            Assert(flight.Position.X<6&&flight.Velocity.X==0,"A throw below a tall spire's tip passed through it.");
+            float top=BombThrowRules.LandingHeight(6.5f,2.5f,stage.SurfaceAt,(x,z)=>stage.At(x,z).Kind,cover.IsAlive,coverHeight:stage.SoftBlockHeight);
+            Assert(Math.Abs(top-1.3f)<.001f,"Descending bombs do not land on the visible spire top.");
+            Assert(BlastGeometry.Occluded(stage,cover,5.5f,1.1f,2.5f,7.5f,1.1f,2.5f)&&
+                !BlastGeometry.Occluded(stage,cover,5.5f,1.4f,2.5f,7.5f,1.4f,2.5f),"Blast shielding differs from the taller spire.");
+            foreach(string id in new[]{"sunken-temple","rock-garden","up-and-down","top-rules"})
+                Assert(BlastStages.Get(id).SoftBlockHeight==BombThrowRules.CoverHeight,"A larger ice spire changed another arena's cover height.");
         });
         Check("seeded four-diagonal gusts, calm and bounded ramps",()=>
         {

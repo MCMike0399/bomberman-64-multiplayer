@@ -14,6 +14,10 @@ internal static class PeerFrameChecks
         for(int tick=0;tick<110;tick++)snow.Tick();
         Check(PeerFrameRules.Valid(JsonSerializer.SerializeToElement(JsonNode.Parse(snow.StageJson!)!)),"Blizzard Battle stage crosses peer validation");
         Check(PeerFrameRules.Valid(JsonSerializer.SerializeToElement(JsonNode.Parse(snow.StateJson!)!)),"authoritative wind crosses peer validation");
+        var badHeight=JsonNode.Parse(snow.StageJson!)!;badHeight["d"]!["coverHeight"]=1e200;
+        Check(!PeerFrameRules.Valid(JsonSerializer.SerializeToElement(badHeight)),"reject nonfinite ice cover height");
+        badHeight=JsonNode.Parse(snow.StageJson!)!;badHeight["d"]!.AsObject().Remove("coverHeight");
+        Check(!PeerFrameRules.Valid(JsonSerializer.SerializeToElement(badHeight)),"Blizzard geometry requires its authored cover height");
         var invalidSnow=JsonNode.Parse(snow.StateJson!)!;invalidSnow["d"]!["blizzard"]!["x"]=100;
         Check(!PeerFrameRules.Valid(JsonSerializer.SerializeToElement(invalidSnow)),"reject unbounded peer wind");
         invalidSnow=JsonNode.Parse(snow.StateJson!)!;invalidSnow["d"]!["blizzard"]!["time"]=1e200;

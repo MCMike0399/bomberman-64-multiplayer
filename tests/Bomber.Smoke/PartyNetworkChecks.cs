@@ -104,6 +104,15 @@ internal static class PartyNetworkChecks
         await using var peer=await NetworkSession.ConnectAsync(origin,"Snow guest",settings,NetworkMode.JoinCode,host.JoinCode);
         await Until(()=>host.Party?.CanStart==true&&peer.Party!=null,"snowfield room ready");
         await Start(host);
+        JsonElement? geometry=null;
+        await Until(()=>
+        {
+            foreach(var message in host.DrainMessages())
+                if(message.GetProperty("t").GetString()=="stage")geometry=message.GetProperty("d").Clone();
+            return geometry!=null;
+        },"snowfield geometry arrives over WebSocket");
+        if(Math.Abs(geometry!.Value.GetProperty("coverHeight").GetSingle()-1.3f)>.001f)
+            throw new Exception("Online ice spires lost their authored collision height.");
         var start=await State(peer,s=>s.GetProperty("phase").GetInt32()==1);
         var later=await State(peer,s=>s.GetProperty("blizzard").GetProperty("time").GetSingle()>2);
         var weather=later.GetProperty("blizzard");

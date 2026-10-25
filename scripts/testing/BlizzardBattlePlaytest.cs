@@ -33,6 +33,8 @@ public partial class PlaytestDriver
             Check(foundation.Position.Y+foundation.Mesh.GetAabb().End.Y<court.Position.Y+court.Mesh.GetAabb().End.Y-.02f,"ice and foundation have separate depth planes on every preset");
             var problems=AuditModelProblems(cones[0],out int meshes,out int vertices);
             Check(problems.Count==0&&meshes>0&&vertices>0,"actual crystal geometry has finite normals, UVs and triangles");
+            var crystal=cones[0].GetChildren().OfType<MeshInstance3D>().Single();
+            Check(crystal.Mesh.GetAabb().End.Y>=1.7f&&Math.Abs(crystal.Mesh.GetAabb().End.Y-terrain.Layout.SoftBlockHeight*TempleStageView.HeightScale)<.001f,"large violet spires reach character height and match accepted cover collision");
             await Capture("blizzard-four-player-opening");
             var weather=terrain.Weather!;float clock=weather.Clock;await Frames(12);
             Check(weather.Clock>clock&&weather.VisibleFlakes>0,"production snow flurries animate above the court");

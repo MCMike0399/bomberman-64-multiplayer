@@ -30,6 +30,7 @@ public sealed partial class BlastSession
             name = _stage.Name,
             width = w,
             height = h,
+            coverHeight = _stage.SoftBlockHeight,
             cells = flat,
             underpasses = _stage.Underpasses.Select(c => c.Z * w + c.X).Order().ToArray(),
             spawns = _stage.Spawns.Select(s => new[] { s.X, s.Z }),

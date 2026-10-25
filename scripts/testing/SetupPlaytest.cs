@@ -11,6 +11,8 @@ public partial class PlaytestDriver
         _root.Navigate("Setup");await Frames(8);
         var state=_root.FindChild("SetupSettings",true,false)??throw new InvalidOperationException("Setup state missing.");
         var menu=(ArcadeMenu)state.GetParent().GetParent().GetParent();
+        // Earlier journeys intentionally leave another arena selected. Own this fixture's starting state.
+        menu.Configure(new SessionSettings(),1);
         Check(!((Control)state).IsVisibleInTree(),"settings state is retained behind native arcade controls");
         Check(NamedButton("StageSelector").HasFocus(),"setup begins on the arena selector");
         async Task Adjust(string name,Key key)

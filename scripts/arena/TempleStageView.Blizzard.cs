@@ -62,7 +62,7 @@ public partial class TempleStageView
             if(z==0||z==Depth-1)
                 Box(this,new(x+.5f,.075f,z==0?.96f:Depth-.96f),new(.98f,.15f,.075f),ice,.02f);
         }
-        _iceCones=Enumerable.Range(0,4).Select(IceConeMesh).ToArray();
+        _iceCones=Enumerable.Range(0,4).Select(variant=>IceConeMesh(variant,Layout.SoftBlockHeight*HeightScale)).ToArray();
         _blizzardWeather=new BlizzardWeather{Width=Width,Depth=Depth};AddChild(_blizzardWeather);
     }
     private Node3D CreateIceCone(Node3D root,int cell)
@@ -72,10 +72,9 @@ public partial class TempleStageView
         root.Rotation=new(0,cell*2.39996f,0);
         return root;
     }
-    private static ArrayMesh IceConeMesh(int variant)
+    private static ArrayMesh IceConeMesh(int variant,float h)
     {
         const int sides=5;
-        float h=BombThrowRules.CoverHeight*HeightScale;
         var surface=new SurfaceTool();surface.Begin(Mesh.PrimitiveType.Triangles);
         Vector3 Ring(int i,float y,float radius){float a=i*Mathf.Tau/sides;return new(Mathf.Cos(a)*radius,y,Mathf.Sin(a)*radius);}
         void Triangle(Vector3 a,Vector3 b,Vector3 c)
@@ -87,8 +86,8 @@ public partial class TempleStageView
         var tip=new Vector3(.08f*Mathf.Sin(variant+1),h,.08f*Mathf.Cos(variant+1));
         for(int i=0;i<sides;i++)
         {
-            var a=Ring(i,.015f,.43f);var b=Ring(i+1,.015f,.43f);
-            var c=Ring(i+1,h*.11f,.22f);var d=Ring(i,h*.11f,.22f);
+            var a=Ring(i,.015f,.47f);var b=Ring(i+1,.015f,.47f);
+            var c=Ring(i+1,h*.16f,.34f);var d=Ring(i,h*.16f,.34f);
             Triangle(a,b,c);Triangle(a,c,d);Triangle(d,c,tip);
         }
         return surface.Commit();

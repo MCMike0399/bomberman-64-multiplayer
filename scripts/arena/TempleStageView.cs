@@ -138,7 +138,8 @@ public partial class TempleStageView : Node3D
         Width=data.GetProperty("width").GetInt32();Depth=data.GetProperty("height").GetInt32();_cells=data.GetProperty("cells").Clone();
         var cells=new CellDef[Width,Depth];
         for(int z=0;z<Depth;z++)for(int x=0;x<Width;x++)cells[x,z]=ReadCell(_cells[z*Width+x]);
-        Layout=new StageLayout {Id=data.GetProperty("id").GetString()!,Width=Width,Height=Depth,Cells=cells};
+        Layout=new StageLayout {Id=data.GetProperty("id").GetString()!,Width=Width,Height=Depth,Cells=cells,
+            SoftBlockHeight=data.TryGetProperty("coverHeight",out var coverHeight)?coverHeight.GetSingle():BombThrowRules.CoverHeight};
         _underpasses.Clear();foreach(var cell in Layout.Underpasses)_underpasses.Add(cell.Z*Width+cell.X);
         _blizzard=Layout.Id==BlastStages.BlizzardBattle;
         if(_blizzard){BuildBlizzard();return;}

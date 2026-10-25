@@ -25,7 +25,7 @@ public static class PeerFrameRules
                     return width is >=3 and <=32 && height is >=3 and <=32 &&
                         d.GetProperty("id").GetString() is "sunken-temple" or "rock-garden" or "up-and-down" or "top-rules" or "blizzard-battle" &&
                         Array(d,"cells",1024,c=>Cell(c,d.GetProperty("id").GetString()=="top-rules")) &&
-                        d.GetProperty("cells").GetArrayLength()==width*height && Underpasses(d,width*height) && Array(d,"spawns",8,p=>p.ValueKind==JsonValueKind.Array&&p.GetArrayLength()==2&&p.EnumerateArray().All(v=>v.TryGetInt32(out int n)&&n>=0&&n<32));
+                        d.GetProperty("cells").GetArrayLength()==width*height && CoverHeight(d) && Underpasses(d,width*height) && Array(d,"spawns",8,p=>p.ValueKind==JsonValueKind.Array&&p.GetArrayLength()==2&&p.EnumerateArray().All(v=>v.TryGetInt32(out int n)&&n>=0&&n<32));
                 case "state":
                     if (!Fields(d,"i:round l:serverTime s:stageLighting l:presentationSeq i:phase n:timeLeft i:closedLeft i:closedRight s:hurryMode n:waterLevel n:waterStartsIn n:waterRiseRate n:hurryStartsIn s:softBlocks")) return false;
                     if (d.GetProperty("phase").GetInt32() is <0 or >3 || Convert.FromBase64String(d.GetProperty("softBlocks").GetString()!).Length>128) return false;
@@ -47,6 +47,11 @@ public static class PeerFrameRules
             }
         }
         catch(Exception ex) when(ex is InvalidOperationException or KeyNotFoundException or FormatException or OverflowException){return false;}
+    }
+    private static bool CoverHeight(JsonElement stage)
+    {
+        if(!stage.TryGetProperty("coverHeight",out var value))return stage.GetProperty("id").GetString()!="blizzard-battle";
+        return value.ValueKind==JsonValueKind.Number&&value.TryGetSingle(out float height)&&float.IsFinite(height)&&height is >=.15f and <=3;
     }
     private static bool Cell(JsonElement cell,bool castle,bool allowBelow=true)
     {
