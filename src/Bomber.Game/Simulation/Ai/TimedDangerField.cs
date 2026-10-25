@@ -14,13 +14,14 @@ internal sealed class TimedDangerField
     { _graph=graph;_stage=stage;Begins=new float[graph.Count];Ends=new float[graph.Count];BombOwners=new string?[graph.Count];Clear(); }
     private void Clear(){Array.Fill(Begins,float.PositiveInfinity);Array.Fill(Ends,float.NegativeInfinity);Array.Clear(BombOwners);}
     public bool Safe(int cell,float enter,float leave) => leave<Begins[cell] || enter>Ends[cell];
-    public void Build(SoftBlockGrid soft,IReadOnlyList<BlastBomb> bombs,IReadOnlyList<BlastHazard> hazards,IReadOnlyList<BlastMeteor>? meteors=null)
+    public void Build(SoftBlockGrid soft,IReadOnlyList<BlastBomb> bombs,IReadOnlyList<BlastHazard> hazards,IReadOnlyList<BlastMeteor>? meteors=null,BlastBomb? detonate=null)
     {
         Clear();
         if(_times.Length<bombs.Count)Array.Resize(ref _times,Math.Max(bombs.Count,_times.Length*2));
         for(int i=0;i<bombs.Count;i++)
         {
             var b=bombs[i];_times[i]=b.Exploded||b.State==BombState.Carried?float.PositiveInfinity:b.IsRemote?.65f:Math.Max(0,b.FuseTimer);
+            if(ReferenceEquals(b,detonate)&&!b.Exploded&&b.State!=BombState.Carried)_times[i]=0;
             int cell=_graph.Cell(b.X,b.Z,Height(b));
             if(!b.Exploded&&b.State==BombState.Resting&&cell>=0)BombOwners[cell]=b.OwnerId??"unknown";
         }

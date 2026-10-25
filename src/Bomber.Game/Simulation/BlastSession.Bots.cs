@@ -8,6 +8,9 @@ public sealed partial class BlastSession
     private NavigationGraph _aiGraph=null!;
     private TimedDangerField _aiDanger=null!,_aiPlacementDanger=null!;
     private int[] _aiQueue=null!,_aiSeen=null!,_aiFirst=null!,_aiDepth=null!;
+    private int[] _aiPursuit=null!;
+    private int _aiPursuitStart;
+    private bool _aiNeedsBreach;
     private byte[] _aiItemKind=null!;
     private bool[] _aiCover=null!;
     private float[] _aiNearest=null!,_aiSecondNearest=null!;
@@ -26,6 +29,7 @@ public sealed partial class BlastSession
         _aiSteeringInterval=MathF.Ceiling(_aiReaction*30)/30;
         _aiGraph=NavigationGraph.For(_stage);_aiDanger=new(_aiGraph,_stage);_aiPlacementDanger=new(_aiGraph,_stage);
         int count=_aiGraph.Count;_aiQueue=new int[count];_aiSeen=new int[count];_aiFirst=new int[count];_aiDepth=new int[count];_aiItemKind=new byte[count];_aiCover=new bool[count];_aiNearest=new float[count];_aiSecondNearest=new float[count];_aiNearestOwner=new string?[count];_aiItemDropper=new string?[count];
+        _aiPursuit=new int[count];
     }
     private void BotReset(){BotResetNavigation();_aiFieldTick=-1;_aiLastBomb.Clear();_aiLastThreat.Clear();_aiCommittedGoals.Clear();foreach(var p in _players.Values){p.BotThinkTimer=0;p.BotPlacingBomb=false;p.BotBombTapPending=false;}}
     private void BotRefreshField()
@@ -93,6 +97,7 @@ public sealed partial class BlastSession
         }
         if(bot.HasRemote&&!bot.PrevR&&BotRemoteOpportunity(bot))
         {bot.Input=new InputState(0,0,false,false,true);return;}
+        BotBuildPursuit(bot,start);
         int waypoint=BotSearch(bot,start,_aiDanger,false,_aiProfile.TacticalDepth);
         bool useful=BotAdjacentCover(start)||BotEnemyInRange(bot.X,bot.Y,bot.Z,(bot.FireLevel*.9f+.4f)*(bot.HasRed?1.25f:1),bot.Id,bot.HasRed);
         bool centered=Math.Abs(bot.X-(_aiGraph.X(start)+.5f))+Math.Abs(bot.Z-(_aiGraph.Z(start)+.5f))<.2f;
@@ -108,7 +113,7 @@ public sealed partial class BlastSession
                 if(!TryBombPlacement(bot,nx,nz,.12f*(PlayerSpeed*bot.StatusSpeed)*_aiSteeringInterval,out float x,out float z))continue;
                 // Once engagement is due, follow an open route toward the rival
                 // instead of stopping at every incidental crate along that route.
-                if(_roundTimer-_aiLastThreat.GetValueOrDefault(bot.Id)>4&&waypoint>=0&&waypoint!=start&&
+                if(BotAttackDue(bot)&&!_aiNeedsBreach&&waypoint>=0&&waypoint!=start&&
                     !BotEnemyInRange(x,_stage.SurfaceAt(x,z,bot.Y),z,(bot.FireLevel*.9f+.4f)*(bot.HasRed?1.25f:1),bot.Id,bot.HasRed))continue;
                 float score=BotBombUtility(bot,x,z);
                 if(score>best){best=score;aimX=nx;aimZ=nz;}
@@ -230,7 +235,7 @@ public sealed partial class BlastSession
     private float BotGoalScore(BlastPlayer bot,int cell,int depth)
     {
         float score=-depth*.45f;
-        bool attackDue=_roundTimer-_aiLastThreat.GetValueOrDefault(bot.Id)>4;
+        bool attackDue=BotAttackDue(bot);
         // Evaluate marginal value, not just pickup presence. Extra capacity and
         // interchangeable equipment must not send a well-equipped CPU farming forever.
         float itemUtility=_aiItemKind[cell] switch {
@@ -247,6 +252,10 @@ public sealed partial class BlastSession
         // the engagement clock indefinitely. A missing heart retains survival value.
         if(attackDue&&_aiItemKind[cell]!=1)itemUtility*=.25f;
         score+=(_aiItemDropper[cell]==bot.Id?0:_aiProfile.ItemUtilityScale)*itemUtility;
+        // Progress along real directed paths can require moving away from the rival.
+        // Use a relative reward so a distant rival cannot swamp nearby survival items.
+        if(attackDue&&_aiPursuitStart>=0&&_aiPursuit[cell]>=0)
+            score+=(_aiPursuitStart-_aiPursuit[cell])*2.5f*_aiProfile.PressureWeight;
         if(BotAdjacentCover(cell))score+=3;
         float x=_aiGraph.X(cell)+.5f,z=_aiGraph.Z(cell)+.5f,y=_aiGraph.Height[cell];
         float nearest=_aiNearestOwner[cell]==bot.Id?_aiSecondNearest[cell]:_aiNearest[cell];
@@ -284,7 +293,11 @@ public sealed partial class BlastSession
         {
             // Match authority selection: the oldest eligible remote may be rolling or flying.
             if(InBlast(b.X,b.Z,BombY(b),b.BlastRadius+.45f,bot.X,bot.Z,bot.Y,b.IsRed))return false;
-            return BotEnemyInRange(b.X,BombY(b),b.Z,b.BlastRadius,bot.Id,b.IsRed)||BotAdjacentCover(_aiGraph.Cell(b.X,b.Z,BombY(b)));
+            if(!BotEnemyInRange(b.X,BombY(b),b.Z,b.BlastRadius,bot.Id,b.IsRed)&&!BotAdjacentCover(_aiGraph.Cell(b.X,b.Z,BombY(b))))return false;
+            int cell=_aiGraph.Cell(bot.X,bot.Z,bot.Y);if(cell<0)return false;
+            // Triggering the oldest remote can ignite a second bomb beside its owner.
+            _aiPlacementDanger.Build(_softBlocks,_bombs,_hazards,_meteors,b);
+            return BotSafe(_aiPlacementDanger,cell,0,.3f);
         }
         return false;
     }

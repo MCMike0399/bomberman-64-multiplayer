@@ -342,8 +342,10 @@ now covers four stages (48 combinations).
   its code, practice mode and unsaved basic settings when navigating back.
 - Richer farming areas intentionally permit collection detours. CPU goals use
   marginal upgrade value and an engagement clock that crate farming cannot reset.
-  After four seconds without threatening a rival, CPUs favor a reachable attack
-  and do not stop to bomb incidental cover while an open route toward that rival exists.
+  After their difficulty-specific engagement interval without threatening a rival,
+  CPUs favor a reachable attack and do not stop to bomb incidental cover while an
+  open terrain route toward that rival exists. Easy allows six seconds between
+  engagements, Medium four and Hard 2.5; real pressure resets this clock.
   The stock pressure contract now requires five threatening bombs in 30 seconds
   (previous layout: six), while retaining eight-second first/gap bounds and zero
   self-deaths. Preserve the measured tradeoff instead of claiming unchanged pressure.
@@ -376,6 +378,16 @@ now covers four stages (48 combinations).
   keep equal speed, collisions, resources, damage and visible information.
   `medium` and legacy wire `normal` select the same Medium profile.
   Exact policy values live in [BotDifficultyProfile](../../src/Bomber.Game/Simulation/Ai/BotDifficultyProfile.cs).
+- [BotObjectives](../../src/Bomber.Game/Simulation/BlastSession.BotObjectives.cs)
+  computes reverse distances along actual directed walk edges once engagement is
+  due. This rewards a necessary detour away from a rival. If cover seals every
+  route, a second field ignoring cover guides demolition; it grants no movement
+  permission. Tactical search still enforces bodies, bombs, cover and timed safety.
+  Reverse edges must preserve drops and separate bridge/underpass nodes.
+- Remote opportunity checks force the oldest eligible remote to time zero in a
+  separate danger field before approving its trigger, including visible chains
+  back to the owner. This strengthens the opportunity boundary independently of
+  the main planner's urgent escape branch.
 - Preserve escape validation and timed route safety when increasing pressure.
   Easy has occasional attack intent so cautious spacing cannot suppress every attack.
 - A body backed against stone needs body-aware route checks. Off-center diagonal
@@ -402,7 +414,7 @@ now covers four stages (48 combinations).
 | Aim misses or guide disappears | BombThrowRules, ThrowAim, ArenaView | AimedThrowChecks; `precision-aim`, `reticle` |
 | Missing upgrade/icon | Loot, PowerUpRules, PowerupModel | LootAvailabilityChecks; `loot-opening`, `asset-audit` |
 | Bot freeze | BotNavigation, body collision, timed search | NavigationLivenessChecks; `--liveness`, `--soak` |
-| Bot retreats forever or never threatens | BotGoalScore, commitment, blast geometry | `--pressure`, `--stock-human-pressure`; `ai-play` |
+| Bot retreats forever or never threatens | BotGoalScore, commitment, blast geometry | `--pressure`, `--stock-human-pressure`, `--tactics`; `ai-play` |
 
 Managed entrypoints: `dotnet run --project tests/Bomber.Game.Tests` and
 `dotnet run --project tests/Bomber.Ai.Tests -- --stock-human-pressure`.
