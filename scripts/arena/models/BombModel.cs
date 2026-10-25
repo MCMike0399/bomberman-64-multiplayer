@@ -27,13 +27,13 @@ public partial class BombModel : Node3D
     public BombModel(ArtMaterials art)
     {
         _art=art;AddChild(_shape);
-        _shell=Sphere(_shape,new(0,.35f,0),Vector3.One*.7f,art.Color(new("222536"),.2f));
+        _shell=Sphere(_shape,new(0,.35f,0),Vector3.One*.7f,art.Toy(new("222536"),.2f));
         _shape.AddChild(_fuseAssembly);
-        Cylinder(_fuseAssembly,new(0,.69f,0),.09f,.12f,art.Color(new("ac8b3a"),.35f));
-        var fuse=Cylinder(_fuseAssembly,new(.035f,.81f,0),.027f,.2f,art.Color(new("e7c989")));fuse.RotationDegrees=new(0,0,-24);
-        _spark=Sphere(_fuseAssembly,new(.076f,.91f,0),Vector3.One*.1f,art.Color(new("ffcf51"),.3f,true));
+        Cylinder(_fuseAssembly,new(0,.69f,0),.09f,.12f,art.Toy(new("ac8b3a"),.35f));
+        var fuse=Cylinder(_fuseAssembly,new(.035f,.81f,0),.027f,.2f,art.Toy(new("e7c989")));fuse.RotationDegrees=new(0,0,-24);
+        _spark=Sphere(_fuseAssembly,new(.076f,.91f,0),Vector3.One*.1f,art.Toy(new("ffcf51"),.3f,true));
         _shape.AddChild(_remoteIndicators);_remoteIndicators.Visible=false;
-        var indicator=art.Color(new("a9ed69"),.35f,true);
+        var indicator=art.Toy(new("a9ed69"),.35f,true);
         for(int i=0;i<4;i++)
         {
             float angle=i*Mathf.Pi*.5f;
@@ -54,7 +54,7 @@ public partial class BombModel : Node3D
         _charge=charge;_fuseAssembly.Visible=!remote;
         _shot=motion==1&&carrier is null;_remoteIndicators.Visible=remote;
         _targetSize=Math.Min(2.3f,BaseVisualScale+Math.Max(0,level-1)*.04f+pumps*.32f);
-        _shell.MaterialOverride=_art.Color(remote?new("2478e8"):red?new("d82e43"):mode=="bounce"?new("a365ea"):mode=="fast"?new("43d9a1"):new("222536"),.2f);
+        _shell.MaterialOverride=_art.Toy(remote?new("2478e8"):red?new("d82e43"):mode=="bounce"?new("a365ea"):mode=="fast"?new("43d9a1"):new("222536"),.2f);
         return pumped;
     }
     public override void _Process(double delta)

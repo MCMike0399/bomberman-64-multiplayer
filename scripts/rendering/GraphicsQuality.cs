@@ -36,6 +36,10 @@ public static class GraphicsQuality
         RenderingServer.EnvironmentSetSsaoQuality(Current==GraphicsPreset.High?RenderingServer.EnvironmentSsaoQuality.High:RenderingServer.EnvironmentSsaoQuality.Medium,
             Current!=GraphicsPreset.High,.5f,2,50,300);
         RenderingServer.ScreenSpaceRoughnessLimiterSetActive(true,.25f,.18f);
+        // Indirect bounce exists only on High; it is half-resolution and fades with distance.
+        RenderingServer.EnvironmentSetSsilQuality(RenderingServer.EnvironmentSsilQuality.Medium,true,.5f,2,50,300);
+        RenderingServer.CameraAttributesSetDofBlurQuality(Current==GraphicsPreset.High?RenderingServer.DofBlurQuality.Medium:RenderingServer.DofBlurQuality.Low,true);
+        RenderingServer.CameraAttributesSetDofBlurBokehShape(RenderingServer.DofBokehShape.Circle);
     }
 
     public static void ApplyViewport(Viewport viewport)
@@ -45,9 +49,14 @@ public static class GraphicsQuality
         viewport.UseTaa=false;
         viewport.UseDebanding=true;
     }
-    public static void ApplyArena(Godot.Environment environment)
+    public static void ApplyArena(Godot.Environment environment,CameraAttributesPractical? camera=null)
     {
         environment.SsaoEnabled=Current!=GraphicsPreset.Low;
         environment.GlowEnabled=Current!=GraphicsPreset.Low;
+        environment.SsilEnabled=Current==GraphicsPreset.High;
+        if(camera==null)return;
+        // Diorama depth of field only touches scenery outside the fitted arena.
+        camera.DofBlurFarEnabled=Current!=GraphicsPreset.Low;
+        camera.DofBlurNearEnabled=Current!=GraphicsPreset.Low;
     }
 }

@@ -100,12 +100,19 @@ inputs, model proportions and camera framing remain identical across presets.
 | Shadow filtering | Soft very low; no sun PCSS | Soft low | Soft medium |
 | Arena SSAO | Off | Half-resolution, medium quality | Full-resolution, high quality |
 | Menu theatre SSAO | Off | Off | Restrained contact shading |
-| Glow | Off | Existing restrained intensity | Existing restrained intensity |
+| Glow | Off | Restrained intensity, small soft bloom | Restrained intensity, small soft bloom |
 | Temporal AA / FXAA | Off | Off | Off |
 | Stone/water microdetail | Reduced | Filtered | Filtered |
+| Water | Opaque; no screen copy | Clear refraction, caustics, glints (one screen copy) | Same as Medium |
+| Diorama depth of field | Off | Far/near blur outside the arena, low quality | Same, medium quality |
+| Indirect bounce (SSIL) | Off | Off | Half-resolution, medium quality |
 
-Medium is the default. High improves contact shading and shadow detail without
-globally increasing saturation, bloom or contrast. All four stage lighting
+Medium is the default. High improves contact shading, bounce light and shadow
+detail without globally increasing saturation or contrast. The 2026-10-25
+diorama polish ([rendering guide](agents/visuals-and-animation.md#diorama-polish-2026-10-25))
+added the water, depth-of-field and SSIL rows. Its VM receipts show render-thread
+CPU near 1 ms and one extra draw call (the seabed); GPU timings were unavailable
+there, so native GPU cost still requires `graphics-benchmark`. All four stage lighting
 palettes and the compact character silhouette are preserved. Low uses spatial
 FSR for its gameplay buffer; 2D UI and menu textures remain at output resolution.
 The choice persists in `video/graphicsPreset`, applies without restarting a match,

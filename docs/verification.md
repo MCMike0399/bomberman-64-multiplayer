@@ -6,6 +6,67 @@ verified official runtime and matching plugins. The Pi passed guarded 24-player
 public load and eight-room admission checks; DiveMac's busy-host guard remained
 in force. [Exact evidence, capacities and limitations](smart-multiplayer-release-029.md).
 
+# Diorama polish — independent review
+
+2026-10-25: reviewed PR #10 against `b0f7b8e`, preserving its authored shaders,
+palette, toy materials, geometry and animation. The review found a camera-bound
+error: Godot depth fog uses radial view distance, while depth of field uses axial
+depth. An oblique inspection of actual Temple terrain reproduced haze starting
+at 20.245619 units with playable bounds extending to 23.009295 units. The retained
+red graphical run failed that assertion before the correction.
+
+`BattleCameraRig` now measures both quantities with the effective camera transform,
+including projection offsets. The green `graphics-settings` journey covers all
+five stages, every preset and oblique views: **389 assertions, 21 captures, zero
+runtime errors or warnings**. Representative captures were inspected. Public,
+complete managed/network (including the 48-case AI soak and 36-check fleet drill),
+and package gates pass; the package gate includes exported-app peer/adaptive checks.
+Local receipts are under ignored `artifacts/review/diorama-*`.
+
+The complete graphical gate on that corrected export passed **all 47 journeys,
+3,396 assertions and 334 captures**, including peer takeover, eight-peer rooms,
+adaptive hosting, all arenas and tutorial. There were **zero runtime errors**.
+The native WebRTC backend emitted its existing SCTP stream-reset warnings during
+teardown; those remain visible in the receipt. No assertion or error filter was
+relaxed. This fresh pass supersedes the original PR's incomplete full-suite evidence
+below; it does not claim those previously observed intermittent failures are fixed.
+
+Matched native Release exports use .NET 10.0.12 and Godot 4.7.2 on an M5 Pro,
+1920×1200, with the QA VM stopped. Both `graphics-benchmark --metal-hud` runs passed
+47 assertions with no runtime errors/warnings. The ordinary eight-player Temple
+battle retained approximately 120 FPS (the display's pacing limit):
+
+| Preset | Before/after frame p95, ms | Before/after Metal GPU median, ms | Before/after Metal GPU p95, ms |
+| --- | --- | --- | --- |
+| Low | 8.83 / 8.84 | 4.36 / 4.52 | 5.40 / 5.51 |
+| Medium | 8.99 / 8.98 | 4.70 / 5.78 | 5.61 / 6.34 |
+| High | 8.98 / 8.86 | 5.37 / 7.94 | 5.98 / 8.45 |
+
+The extra effects have measurable cost, especially High's SSIL. These are short
+same-machine observations, not sustained thermal or other-device guarantees.
+Metal HUD reports command-buffer duration including possible gaps; Godot's own
+Metal GPU counters remain unavailable. Native before/after battle captures were
+inspected alongside the VM captures. Physical controllers were not exercised.
+
+# Diorama polish — original source verification
+
+2026-10-25: water, depth-cue, material, terrain and lighting polish described in
+the [rendering guide](agents/visuals-and-animation.md#diorama-polish-2026-10-25).
+Source work for review; no release, installation or server change. All graphical
+evidence comes from the isolated macOS Metal guest (paravirtual GPU).
+
+| Gate | Observed result |
+| --- | --- |
+| `public` profile | Passes |
+| Focused graphical | `stage-lighting`, `graphics-settings` (new SSIL, depth-of-field, depth-cue and clear/opaque water assertions), `first-use-rendering`, `presentation`, `model-profile`, `menu` pass |
+| Full graphical, final source | Engine passes all 47 journeys, 3,311 assertions, 330 captures; the runner rejected one shutdown-time `Handle is not initialized` C# error after WebRTC peer teardown, which did not recur |
+| Full graphical, repeat | Rendering journeys pass; fails at the eight-peer `peer-rooms` step |
+| `peer-rooms` standalone | Fails at eight-peer snapshots on this branch; unchanged `main` at `d11b001` also fails it in the same guest (lobby stall, timeout), so this is the existing eight-peer limitation |
+| Render timing (VM) | Render-thread CPU ~0.3–1.2 ms per preset, one extra draw call (seabed); guest GPU timing unavailable, so native GPU cost still needs `graphics-benchmark` |
+
+The full graphical gate is therefore **not green**, for a reason that predates
+this work. Before/after captures are in `docs/media/diorama-polish/`.
+
 # Integrated v0.28 delivered
 
 2026-10-24: the combined stages, tutorial, reference-informed explosions and review

@@ -6,12 +6,22 @@ public sealed partial class ArtMaterials
 {
     public static readonly Color[] PlayerColors = [new("f6f0df"),new("30314a"),new("ec3d50"),new("356be0"),new("56b76b"),new("ffba37"),new("9d56ce"),new("31c9c5")];
     private readonly Dictionary<string, StandardMaterial3D> _cache = [];
-    private static Shader? _stoneShader,_waterShader,_gardenShader;
-    public StandardMaterial3D Color(Color color, float roughness=.72f, bool glow=false)
+    private static Shader? _stoneShader,_waterShader,_clearWaterShader,_gardenShader;
+    /// <summary>
+    /// Characters, bombs and pickups read as lacquered miniature figures: a thin glossy
+    /// clear coat over the painted color, plus a soft light-driven rim at the silhouette.
+    /// </summary>
+    public StandardMaterial3D Toy(Color color, float roughness=.72f, bool glow=false)=>Color(color,roughness,glow,toy:true);
+    public StandardMaterial3D Color(Color color, float roughness=.72f, bool glow=false, bool toy=false)
     {
-        string key=$"{color.ToHtml()}:{roughness}:{glow}";
+        string key=$"{color.ToHtml()}:{roughness}:{glow}:{toy}";
         if(_cache.TryGetValue(key,out var material))return material;
         material=new StandardMaterial3D {AlbedoColor=color,Roughness=roughness};
+        if(toy)
+        {
+            material.ClearcoatEnabled=true;material.Clearcoat=.55f;material.ClearcoatRoughness=.16f;
+            material.RimEnabled=true;material.Rim=.3f;material.RimTint=.45f;
+        }
         if(glow){material.EmissionEnabled=true;material.Emission=color;material.EmissionEnergyMultiplier=.35f;}
         if(color.A<1) {material.Transparency=BaseMaterial3D.TransparencyEnum.Alpha; material.DepthDrawMode=BaseMaterial3D.DepthDrawModeEnum.Disabled;}
         _cache[key]=material;return material;
@@ -27,7 +37,11 @@ public sealed partial class ArtMaterials
         material.SetShaderParameter("mortar_color",style==1?new Color("302b21"):style==3?new Color("454b3d"):new Color("75613f"));
         return material;
     }
-    public ShaderMaterial Water()=>new() { Shader=_waterShader??=new Shader {Code=WaterShader} };
+    public ShaderMaterial Water()=>new() { Shader=WaterShaderFor(GraphicsQuality.Current) };
+    /// <summary>Low keeps opaque water; other presets add refraction, caustics and glints (one screen copy).</summary>
+    public static Shader WaterShaderFor(GraphicsPreset preset)=>preset==GraphicsPreset.Low
+        ? _waterShader??=new Shader {Code=WaterShader}
+        : _clearWaterShader??=new Shader {Code=WaterShader.Replace("shader_type spatial;","shader_type spatial;\n#define CLEAR_WATER",StringComparison.Ordinal)};
     private const string StoneShader="""
 shader_type spatial;
 render_mode diffuse_burley;
@@ -96,6 +110,8 @@ void fragment(){
     float pits=smoothstep(.72,.85,filtered_noise(p*31.0));
     float tone=.84+hash(cell)*.19+(mineral-.5)*.15;
     vec3 stone=base_color.rgb*tone*(.85+bevel*.15);
+    // Painterly per-block warmth keeps large courses from reading as one printed tile.
+    stone*=mix(vec3(1.0),vec3(1.05,.99,.9),hash(cell+5.1)*.7);
     stone=mix(stone,stone*vec3(.83,.85,.79),pits*.3);
     // A restrained ochre vein and mineral clouding break uniform plastic-looking slabs.
     float vein=1.0-smoothstep(.025,.075,abs(noise(p*2.1)-.47));
@@ -103,6 +119,12 @@ void fragment(){
     ALBEDO=mix(mortar_color.rgb,stone,seam);
     relief=seam*(bevel*.12+mineral*.035-pits*.012);
   }
+  // Broad warm/cool drift across the stage, like sun-bleached and shaded weathering.
+  float macro=noise(p*.17)*.7+noise(p*.43)*.3;
+  ALBEDO*=mix(vec3(.95,.97,1.02),vec3(1.04,1.0,.93),macro);
+  // Risers deepen toward their submerged roots so tiers read as a grounded diorama.
+  float vertical=1.0-abs(world_normal.y);
+  ALBEDO*=mix(1.0,mix(.8,1.0,smoothstep(water_height,water_height+2.6,world.y)),vertical);
   vec3 dpdx=dFdx(VERTEX),dpdy=dFdy(VERTEX);
   vec3 r1=cross(dpdy,NORMAL),r2=cross(NORMAL,dpdx);
   float determinant=dot(dpdx,r1);
@@ -111,6 +133,10 @@ void fragment(){
   float wet_edge=water_height+(noise(world.xz*3.5)-.5)*.08;
   float wet=1.0-smoothstep(wet_edge-.12,wet_edge+.18,world.y);
   ALBEDO=mix(ALBEDO,ALBEDO*vec3(.57,.67,.62),wet*.7);
+  // A soft algae fringe hugs the waterline on vertical stone.
+  float fringe=smoothstep(wet_edge-.35,wet_edge-.05,world.y)*(1.0-smoothstep(wet_edge+.02,wet_edge+.2,world.y));
+  fringe*=vertical*smoothstep(.3,.65,noise(vec2(world.x+world.z,world.y)*vec2(3.1,7.0)));
+  ALBEDO=mix(ALBEDO,vec3(.2,.32,.2),fringe*.55);
   float normal_variance=dot(dFdx(NORMAL),dFdx(NORMAL))+dot(dFdy(NORMAL),dFdy(NORMAL));
   ROUGHNESS=clamp(mix(dry_roughness,.38,wet)+normal_variance*.5,.38,1.0);
   SPECULAR=mix(.18,.42,wet);
@@ -120,6 +146,9 @@ void fragment(){
 shader_type spatial;
 render_mode diffuse_burley, specular_schlick_ggx;
 uniform sampler2D depth_texture : hint_depth_texture, repeat_disable, filter_nearest;
+#ifdef CLEAR_WATER
+uniform sampler2D screen_texture : hint_screen_texture, repeat_disable, filter_linear_mipmap;
+#endif
 uniform float flood_amount=0.0;
 uniform float wind_strength=1.0;
 uniform float surface_roughness=.31;
@@ -127,6 +156,13 @@ uniform float quality_detail=1.0;
 uniform vec4 deep_color : source_color = vec4(.055,.25,.32,1);
 uniform vec4 surface_color : source_color = vec4(.12,.49,.52,1);
 uniform vec4 foam_color : source_color = vec4(.60,.79,.72,1);
+// World-space direction toward the key light and its color times energy, from StageLighting.
+uniform vec3 sun_direction=vec3(.3,.85,.42);
+uniform vec4 light_tint : source_color = vec4(1.0);
+uniform float clarity=.82;
+// TempleStageView places an unseen opaque seabed here so depth-based post effects see
+// a real surface under the open sea. Anything at that depth is treated as open sea.
+uniform float seabed_height=-3.0;
 varying vec3 world;
 float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
 float noise(vec2 p){
@@ -155,6 +191,34 @@ void vertex(){
   VERTEX.y+=waves(world.xz).x*calm+flood_amount*.12;
   world.y=(MODEL_MATRIX*vec4(VERTEX,1.0)).y;
 }
+// View-space scene position behind the water. w is 1 for real geometry and 0 where
+// only sky lies behind the surface (the open sea), whose far-plane depth is degenerate.
+vec4 view_position(vec2 uv,mat4 inv_projection){
+  vec3 ndc=vec3(uv*2.0-1.0,textureLod(depth_texture,uv,0.0).r);
+  #if CURRENT_RENDERER == RENDERER_COMPATIBILITY
+    ndc.z=ndc.z*2.0-1.0;
+  #endif
+  vec4 position=inv_projection*vec4(ndc,1.0);
+  if(position.w<=.0001)return vec4(0.0,0.0,-1e4,0.0);
+  vec3 scene=position.xyz/position.w;
+  return vec4(scene,-scene.z<150.0?1.0:0.0);
+}
+#ifdef CLEAR_WATER
+// Drifting Voronoi borders read as sunlit caustic webs on the submerged stone.
+float caustic_web(vec2 p,float speed){
+  vec2 cell=floor(p),f=fract(p);
+  float nearest=9.0,second=9.0;
+  for(int y=-1;y<=1;y++)for(int x=-1;x<=1;x++){
+    vec2 offset=vec2(float(x),float(y));
+    float h=hash(cell+offset);
+    vec2 seed=offset+.5+.36*vec2(sin(TIME*speed+h*6.283),cos(TIME*speed*.83+h*11.0));
+    float distance=length(seed-f);
+    if(distance<nearest){second=nearest;nearest=distance;}else second=min(second,distance);
+  }
+  float edge=second-nearest;
+  return 1.0-smoothstep(0.0,.11+fwidth(edge),edge);
+}
+#endif
 void fragment(){
   vec3 w=waves(world.xz);
   // Fine capillary ripples add glints without more vertices; fade them in the
@@ -168,30 +232,71 @@ void fragment(){
   // Write a view-space geometric normal, as required by the spatial shader API.
   vec3 normal_world=normalize(vec3(-w.y,1.0,-w.z));
   NORMAL=normalize((VIEW_MATRIX*vec4(normal_world,0.0)).xyz);
-  float raw_depth=textureLod(depth_texture,SCREEN_UV,0.0).r;
-  vec3 ndc=vec3(SCREEN_UV*2.0-1.0,raw_depth);
-  #if CURRENT_RENDERER == RENDERER_COMPATIBILITY
-    ndc.z=raw_depth*2.0-1.0;
-  #endif
-  vec4 scene_view=INV_PROJECTION_MATRIX*vec4(ndc,1.0);
-  scene_view.xyz/=max(scene_view.w,.00001);
-  float thickness=max(0.0,-scene_view.z+VERTEX.z);
+  vec4 scene=view_position(SCREEN_UV,INV_PROJECTION_MATRIX);
+  vec3 scene_view=scene.xyz;
+  bool open_sea=scene.w<.5||(INV_VIEW_MATRIX*vec4(scene_view,1.0)).y<seabed_height+.4;
+  float thickness=open_sea?0.0:max(0.0,-scene_view.z+VERTEX.z);
   float shallow=exp(-thickness*.72);
+  // The open sea keeps its bright lagoon tone near the island and deepens gently
+  // toward the horizon, giving the diorama a readable edge.
   float cloud=noise(world.xz*.65+vec2(TIME*.014,-TIME*.01));
-  ALBEDO=mix(deep_color.rgb,surface_color.rgb,shallow*.65+cloud*.18);
+  // Wave-correlated mottling: troughs read deeper and swells catch the lagoon tone.
+  if(open_sea)shallow=clamp(.8+w.x*2.2+(cloud-.5)*.2,0.0,1.0)*mix(1.0,.6,smoothstep(16.0,48.0,distance(world.xz,NODE_POSITION_WORLD.xz)));
+  vec3 body=mix(deep_color.rgb,surface_color.rgb,shallow*.65+cloud*.18);
   // Fresnel and sun/moon glints now come from the real sky radiance and lights,
   // not a fixed daytime tint painted into ALBEDO.
-  // Depth-adaptive broken contact foam follows the actual submerged terrain, also
-  // during flooding. It cannot invent a safe floor or change authority geometry.
-  float contact=smoothstep(.12,.2,thickness)*(1.0-smoothstep(.3,.65,thickness));
-  float foam=contact*smoothstep(.40,.66,noise(world.xz*7.0+vec2(TIME*.12,-TIME*.1)));
-  vec3 scene_normal=normalize(cross(dFdx(scene_view.xyz),dFdy(scene_view.xyz)));
+  // A crisp contact line plus soft bands that travel away from the shore follow
+  // the actual submerged terrain, also during flooding. Foam cannot invent a
+  // safe floor or change authority geometry.
+  float contact=smoothstep(.03,.07,thickness)*(1.0-smoothstep(.13,.2,thickness));
+  float band=smoothstep(.7,.92,sin(thickness*9.0-TIME*1.6)*.5+.5);
+  band*=smoothstep(.16,.24,thickness)*(1.0-smoothstep(.3,.5,thickness));
+  band*=smoothstep(.34,.6,noise(world.xz*5.0+vec2(TIME*.12,-TIME*.1)));
+  float foam=max(contact,band*.55);
+  vec3 scene_cross=cross(dFdx(scene_view),dFdy(scene_view));
+  float cross_length=length(scene_cross);
+  vec3 scene_normal=cross_length>1e-8?scene_cross/cross_length:NORMAL;
   float shoreline_slope=smoothstep(.05,.4,1.0-abs(dot(scene_normal,NORMAL)));
-  float vertical_depth=max(0.0,world.y-(INV_VIEW_MATRIX*vec4(scene_view.xyz,1.0)).y);
+  float vertical_depth=max(0.0,world.y-(INV_VIEW_MATRIX*vec4(scene_view,1.0)).y);
   // Beveled paving below floodwater is not a shoreline. Reject deeper contact
   // even where a tile edge has a steep normal, avoiding an underwater foam grid.
   foam*=shoreline_slope*(1.0-smoothstep(.08,.22,vertical_depth));
-  ALBEDO=mix(ALBEDO,foam_color.rgb,foam*.60);
+  ALBEDO=mix(body,foam_color.rgb,foam*.72);
+#ifdef CLEAR_WATER
+  // Clear shallows: refract the opaque scene copied before this transparent pass.
+  // Reject offsets that land on geometry above the surface so shore edges stay clean.
+  vec2 refract_uv=SCREEN_UV+normal_world.xz*.028*smoothstep(0.0,.5,vertical_depth);
+  vec4 refracted=view_position(refract_uv,INV_PROJECTION_MATRIX);
+  if(refracted.w<.5||refracted.z>VERTEX.z){refract_uv=SCREEN_UV;refracted=scene;}
+  vec3 bed=(INV_VIEW_MATRIX*vec4(refracted.xyz,1.0)).xyz;
+  float bed_depth=max(0.0,world.y-bed.y);
+  // Only real submerged geometry is revealed; open sea keeps its authored color.
+  float transmit=refracted.w*step(seabed_height+.4,bed.y)*clarity*exp(-bed_depth*1.25)*(1.0-foam);
+  vec3 seen=textureLod(screen_texture,refract_uv,0.0).rgb;
+  float caustic_detail=quality_detail*(1.0-smoothstep(.25,.9,length(fwidth(bed.xz*1.5))));
+  if(caustic_detail>.01&&transmit>.02){
+    float web=max(caustic_web(bed.xz*1.5,.9),caustic_web(bed.xz*2.3+3.7,1.2)*.7);
+    float reach=smoothstep(.02,.12,bed_depth)*exp(-bed_depth*.9);
+    seen+=seen*web*reach*caustic_detail*1.4+light_tint.rgb*web*reach*caustic_detail*.05;
+  }
+  // The floor takes on the water's hue before deeper absorption hides it.
+  seen*=mix(vec3(1.0),surface_color.rgb*2.1,.5);
+  ALBEDO*=1.0-transmit;
+  EMISSION=seen*transmit;
+  // Sun-path glints: sparse twinkling points only where the ripples mirror the light.
+  if(detail>.01){
+    vec3 view_world=normalize((INV_VIEW_MATRIX*vec4(VIEW,0.0)).xyz);
+    float path=pow(max(dot(reflect(-view_world,normal_world),normalize(sun_direction)),0.0),14.0);
+    vec2 g=world.xz*1.7+vec2(TIME*.05,0.0);
+    vec2 cell=floor(g);
+    float h=hash(cell+3.1);
+    vec2 centre=vec2(hash(cell+11.0),hash(cell+23.0))*.6+.2;
+    float twinkle=pow(max(sin(TIME*(1.3+h*2.2)+h*40.0),0.0),10.0);
+    float aa=fwidth(g.x)*1.2;
+    float point=1.0-smoothstep(.07-aa,.07+aa,length(fract(g)-centre));
+    EMISSION+=light_tint.rgb*point*twinkle*path*step(.45,h)*detail*(1.0-flood_amount)*3.0;
+  }
+#endif
   ALBEDO*=1.0-flood_amount*.08;
   float normal_variance=dot(dFdx(NORMAL),dFdx(NORMAL))+dot(dFdy(NORMAL),dFdy(NORMAL));
   ROUGHNESS=clamp(mix(surface_roughness,.58,foam)+normal_variance*2.0,.18,.65);

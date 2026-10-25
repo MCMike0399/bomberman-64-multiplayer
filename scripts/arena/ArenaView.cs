@@ -46,6 +46,8 @@ public partial class ArenaView : Node3D
     private DirectionalLight3D _keyLight=null!,_fillLight=null!;
     public StageTime TimeOfDay {get;private set;}=StageTime.Midday;
     private Camera3D _camera=null!;
+    private readonly CameraAttributesPractical _cameraAttributes=new() {DofBlurAmount=.075f};
+    private Transform3D _depthCueTransform;
     private BattleCameraRig _cameraRig=null!;
     private BattleAudio _audio=null!;
     private string _stage="";
@@ -75,7 +77,7 @@ public partial class ArenaView : Node3D
     public Task PrepareEffects()=>EffectWarmup.Run(GetParent(),_art,_environment,_keyLight,_fillLight);
     public void ApplyGraphicsQuality()
     {
-        GraphicsQuality.ApplyArena(_environment);
+        GraphicsQuality.ApplyArena(_environment,_cameraAttributes);
         // Smaller shadow texels need more depth bias to avoid speckled self-shadowing.
         float grazingSun=TimeOfDay is StageTime.Morning or StageTime.Afternoon?2:1;
         _keyLight.ShadowBias=grazingSun*(GraphicsQuality.Current switch {GraphicsPreset.Low=>.12f,GraphicsPreset.Medium=>.06f,_=>.025f});
@@ -92,18 +94,23 @@ public partial class ArenaView : Node3D
             AmbientLightSource=Godot.Environment.AmbientSource.Color,AmbientLightSkyContribution=0,
             TonemapMode=Godot.Environment.ToneMapper.Filmic,ReflectedLightSource=Godot.Environment.ReflectionSource.Sky,
             SsaoEnabled=true,SsaoRadius=.7f,SsaoIntensity=1.65f,SsaoPower=1.25f,
-            GlowEnabled=true,GlowIntensity=.17f,GlowBloom=0,
+            GlowEnabled=true,GlowIntensity=.17f,GlowBloom=.025f,GlowHdrThreshold=.9f,
             AdjustmentEnabled=true,AdjustmentContrast=1.08f,AdjustmentSaturation=1.02f,
-            FogEnabled=true,FogDensity=.0007f
+            // Haze starts beyond the playable arena (see ApplyDepthCues) in the horizon
+            // color, so the diorama melts into its horizon without fogging play. Aerial
+            // perspective stays off: a downward camera would sample the dark lower sky.
+            FogEnabled=true,FogMode=Godot.Environment.FogModeEnum.Depth,FogDensity=.32f,FogDepthCurve=1.6f,
+            FogSunScatter=.15f,
+            SsilRadius=2.6f,SsilIntensity=.75f,SsilNormalRejection=.8f
         };
         AddChild(new WorldEnvironment {Environment=_environment});
         _keyLight=new DirectionalLight3D {ShadowEnabled=true,
             DirectionalShadowMaxDistance=65,ShadowBias=.025f,ShadowNormalBias=.45f,LightAngularDistance=1.8f};AddChild(_keyLight);
         _fillLight=new DirectionalLight3D {RotationDegrees=new(-25,135,0),SkyMode=DirectionalLight3D.SkyModeEnum.LightOnly};AddChild(_fillLight);
         SetTimeOfDay(TimeOfDay);
-        _camera=new Camera3D {Projection=Camera3D.ProjectionType.Perspective,Fov=36,Near=.1f,Far=180,Current=true};AddChild(_camera);
+        _camera=new Camera3D {Projection=Camera3D.ProjectionType.Perspective,Fov=36,Near=.1f,Far=180,Current=true,Attributes=_cameraAttributes};AddChild(_camera);
         _cameraRig=new BattleCameraRig(_camera);
-        GetViewport().SizeChanged+=_cameraRig.Fit;
+        GetViewport().SizeChanged+=FitCamera;
         VisibilityChanged+=UpdateProcessing;
         UpdateProcessing();
     }
@@ -154,6 +161,21 @@ public partial class ArenaView : Node3D
         foreach(Node child in _effects.GetChildren())child.QueueFree();
         _entities.Clear();_targets.Clear();_blocks.Clear();_explosions.Clear();_presentation.Reset();_walls.Clear();_pickups.Clear();_lastRound=-1;_wasHurry=false;
         _cameraRig.SetStage(data);
+        ApplyDepthCues();
+    }
+    private void FitCamera(){_cameraRig.Fit();ApplyDepthCues();}
+    /// <summary>Nearest/farthest playable view depth used to keep blur and haze off the arena.</summary>
+    public Vector2 PlayableDepth=>_cameraRig.PlayableDepth;
+    /// <summary>Tilt-shift style blur and horizon haze begin just outside the fitted playable depth.</summary>
+    private void ApplyDepthCues()
+    {
+        var depth=_cameraRig.PlayableDepth;
+        _cameraAttributes.DofBlurFarDistance=depth.Y+2;
+        _cameraAttributes.DofBlurFarTransition=Mathf.Max(10,depth.Y*.45f);
+        _cameraAttributes.DofBlurNearDistance=Mathf.Max(.5f,depth.X-2.5f);
+        _cameraAttributes.DofBlurNearTransition=Mathf.Max(1,depth.X*.2f);
+        _environment.FogDepthBegin=_cameraRig.PlayableDistance+3;
+        _environment.FogDepthEnd=_cameraRig.PlayableDistance+70;
     }
     public void State(JsonElement data,long tick=-1)
     {
@@ -329,6 +351,9 @@ public partial class ArenaView : Node3D
     public override void _Process(double delta)
     {
         _clock+=delta;float dt=(float)delta;
+        // Include projection offsets in the effective view used by radial fog.
+        var viewTransform=_camera.GetCameraTransform();
+        if(viewTransform!=_depthCueTransform){_depthCueTransform=viewTransform;_cameraRig.MeasureDepth();ApplyDepthCues();}
         foreach(var (id,target) in _targets)
         {
             if(!_entities.TryGetValue(id,out var node))continue;
@@ -348,7 +373,7 @@ public partial class ArenaView : Node3D
         _shake=Mathf.MoveToward(_shake,0,dt*.6f);_cameraRig.Shake((float)_clock,_shake);
         foreach(var preview in _throwPreviews.Values)preview.UpdateScreen(_camera);
     }
-    public override void _ExitTree(){if(_cameraRig!=null)GetViewport().SizeChanged-=_cameraRig.Fit;VisibilityChanged-=UpdateProcessing;}
+    public override void _ExitTree(){if(_cameraRig!=null)GetViewport().SizeChanged-=FitCamera;VisibilityChanged-=UpdateProcessing;}
     private void CountEffect(string key)=>_effectCounts[key]=_effectCounts.GetValueOrDefault(key)+1;
     public event Action<string,string?>? PlayerFeedback;
     private void Present(IReadOnlyList<JsonElement> events)
