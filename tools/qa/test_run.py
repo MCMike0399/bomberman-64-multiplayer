@@ -128,12 +128,18 @@ class HarnessTests(unittest.TestCase):
             suite.server.return_value = contextlib.nullcontext('http://127.0.0.1:12345')
             with patch.object(qa, 'ROOT', root):
                 qa.execute(suite)
-            suite.server.assert_called_once_with(dll=root / 'artifacts/server-staged/Bomber.Server.dll')
+            self.assertEqual(2, suite.server.call_count)
+            self.assertEqual({'dll':root / 'artifacts/server-staged/Bomber.Server.dll'},suite.server.call_args_list[0].kwargs)
+            self.assertEqual({'dll':root / 'artifacts/server-staged/Bomber.Server.dll','simulation_capacity':0},suite.server.call_args_list[1].kwargs)
             calls = {call.args[0]: call.args[1] for call in suite.require.call_args_list}
             self.assertIn('Release', calls['publish-server'])
             self.assertIn('-p:UseAppHost=false', calls['publish-server'])
             self.assertIn('--stage-only', calls['stage-server-delivery'])
             self.assertIn('package-tested-server', calls)
+            self.assertIn('--adaptive-peer-only', calls['network-adaptive-relay'])
+            self.assertIn('--fleet', calls['network-fleet'])
+            self.assertIn(str(root / 'artifacts/server-staged/Bomber.Server.dll'), calls['network-fleet'])
+            self.assertIn('publish-Realtime.Redis', calls)
 
     def test_package_builds_missing_controller_backend_before_export(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -161,7 +167,7 @@ class HarnessTests(unittest.TestCase):
                 qa.execute(suite)
             self.assertLess(order.index('controller-backend-build'), order.index('macos-export'))
             self.assertTrue(suite.steps[0]['evidence']['switch2UsbBackend'])
-            self.assertEqual([c.args[0] for c in suite.playtest.call_args_list], ['package-smoke', 'peer-rooms'])
+            self.assertEqual([c.args[0] for c in suite.playtest.call_args_list], ['package-smoke', 'peer-rooms', 'adaptive-rooms'])
             self.assertEqual(suite.playtest.call_args_list[1].kwargs['origin'], 'http://127.0.0.1:12345')
 
     def test_package_refuses_incomplete_backend_after_bootstrap(self):

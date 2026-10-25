@@ -128,7 +128,7 @@ public partial class ArcadeMenu
         _startRoom.Visible=_party!=null;_roomRules.Visible=_party!=null;
         if(_party is not {} data)return;
         var status=PartyStatus.Parse(data);bool leader=status.LeaderId==_localPlayer;
-        _startRoom.Disabled=!leader||!status.CanStart;_roomRules.Disabled=!leader||status.Phase!="lobby";
+        _startRoom.Disabled=!leader||!status.CanStart;_roomRules.Disabled=!leader||status.Phase!="lobby"||status.PublicRoom&&status.StartAt is not null;
         string leaderName=data.GetProperty("players").EnumerateArray().FirstOrDefault(p=>p.GetProperty("playerId").GetString()==status.LeaderId) is var player&&player.ValueKind==JsonValueKind.Object?player.GetProperty("displayName").GetString()??"Leader":"Leader";
         _lobbyStatus.Text=status.Phase switch {"starting"=>"Starting the battle...","results"=>"Battle complete — returning to the room...","playing"=>"Battle in progress",_=>leader?status.CanStart?"You are the host. Start when everyone is here.":status.MinimumHumans>=2?"Waiting for a second connected player.":"Waiting for another player or CPU rival.":$"Waiting for {leaderName} to start."};
         if(status.PublicRoom&&status.Phase=="lobby")_lobbyStatus.Text=status.CanStart?status.StartAt is not null?"The battle starts shortly...":"Finding a suitable host...":"Waiting for a second player.";

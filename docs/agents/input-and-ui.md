@@ -146,7 +146,15 @@ For popup tests, reach a known endpoint with real keys before testing the next
 movement: prior mouse hover can leave the last item selected. See the
 [native focus guidance](../../tools/playtest/README.md#native-focus-interruptions).
 
-## Party menus and player settings (v0.21)
+## Current online flow (v0.29)
+
+Online offers Play online, Create private room and Join with code. Private hosting
+can be Automatic, Server only or Player hosted. Public rooms count down with two
+humans; private owners still start manually. Changing simulation host does not
+transfer the room-owner controls. Reconnects rearm physical input. See
+[adaptive rooms](../smart-multiplayer.md) for privacy and recovery boundaries.
+
+## Historical party menus and player settings (v0.21)
 
 Private rooms created by the current client opt into product-owned `PartySession`.
 Only the authenticated leader can start. A completed match produces results,

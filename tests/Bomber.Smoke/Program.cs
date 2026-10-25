@@ -24,6 +24,7 @@ if(args.Contains("--version-only"))return;
 await QuickPlay();
 if (args.Contains("--quick-only")) return;
 await PartyNetworkChecks.Run(new Uri(origin));
+await AdaptiveNetworkChecks.Run(new Uri(origin));
 await PeerNetworkChecks.Run(new Uri(origin));
 await PeerReconnect();
 await ProductSessions();

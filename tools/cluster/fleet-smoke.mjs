@@ -11,7 +11,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 function check(value, label) { if (!value) throw Error(label); checks.push(label); console.log('PASS', label); }
 async function api(path, body, token, method = 'POST') {
   const response = await fetch(new URL('/realtime/v1/' + path, origin), {
-    method, headers: { 'X-Blast-Protocol': '2', 'Content-Type': 'application/json', ...(token ? { 'x-player-token': token } : {}) },
+    method, headers: { 'X-Blast-Protocol': '3', 'Content-Type': 'application/json', ...(token ? { 'x-player-token': token } : {}) },
     body: method === 'GET' ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(10000)
   });
   const data = response.status === 204 ? null : await response.json();
@@ -22,7 +22,8 @@ async function connect(reservation) {
   const url = new URL(reservation.connectUrl, origin);
   url.protocol = ['https:', 'wss:'].includes(url.protocol) ? 'wss:' : 'ws:';
   if (origin.startsWith('https:') && url.protocol !== 'wss:') throw Error('Insecure reservation');
-  const socket = new WebSocket(url, {headers: {'X-Blast-Protocol': '2'}});
+  const socket = new WebSocket(url, {headers: {'X-Blast-Protocol': '3'}});
+  socket.addEventListener('open', () => socket.send(JSON.stringify({t:'peer.hello',d:{version:3}})));
   await new Promise((resolve, reject) => {
     const timer = setTimeout(() => { socket.close(); reject(Error('Socket welcome timeout')); }, 10000);
     socket.addEventListener('message', event => {
@@ -35,7 +36,7 @@ async function connect(reservation) {
 }
 async function create() {
   const guest = await api('guests', { displayName: 'Fleet check' });
-  const created = await api('lobbies', { game: 'blast', visibility: 'private', settings: { party: 'on', bots: '0' } }, guest.token);
+  const created = await api('lobbies', { game: 'blast-room', visibility: 'private', settings: { hosting: 'server', bots: '0' } }, guest.token);
   const room = { id: created.lobby.lobbyId, node: created.lobby.serverId, code: created.lobby.joinCode, peers: [{ token: guest.token }] };
   rooms.push(room); // Own the reservation even if the socket fails.
   room.peers[0].socket = await connect(created.reservation);
@@ -47,6 +48,17 @@ async function leave(room) {
     await api(`lobbies/${room.id}/leave`, {}, peer.token);
   }
   room.left = true;
+}
+async function waitRetired(room) {
+  const deadline = Date.now() + 75000;
+  while (Date.now() < deadline) {
+    try {
+      const lobby = await api(`lobbies/${room.id}`, undefined, room.peers[0].token, 'GET');
+      if (['closed', 'ended'].includes(lobby.state)) { room.retired = true; return; }
+    } catch (error) { if (error.status === 404) { room.retired = true; return; } throw error; }
+    await delay(250);
+  }
+  throw Error('Owned room did not retire');
 }
 try {
   for (let i = 0; i < primaryCount; i++) check((await create()).node === 'blast-pi', `primary room ${i + 1} placed on Pi`);
@@ -64,7 +76,7 @@ try {
   await leave(released);
   // Wait for the explicit leave to close the running kernel room, not merely a public list to empty.
   let closed = false;
-  for (let attempt = 0; attempt < 20; attempt++) {
+  for (let attempt = 0; attempt < 300; attempt++) {
     try {
       const lobby = await api(`lobbies/${released.id}`, undefined, released.peers[0].token, 'GET');
       if (['closed', 'ended'].includes(lobby.state)) { closed = true; break; }
@@ -78,7 +90,10 @@ finally {
   for (const room of rooms.filter(r => !r.left)) {
     try { await leave(room); } catch (error) { failure ??= `Cleanup: ${error.message}`; }
   }
+  await Promise.all(rooms.map(async room => {
+    try { await waitRetired(room); } catch (error) { failure ??= `Retirement: ${error.message}`; }
+  }));
   await fs.mkdir(path.dirname(path.resolve(output)), { recursive: true });
-  await fs.writeFile(output, JSON.stringify({ passed: !failure, checks, failure, rooms: rooms.map(({ id, node, left }) => ({ id, node, left })) }, null, 2));
+  await fs.writeFile(output, JSON.stringify({ passed: !failure, checks, failure, rooms: rooms.map(({ id, node, left, retired }) => ({ id, node, left, retired })) }, null, 2));
 }
 if (failure) { console.error(failure); process.exitCode = 1; }

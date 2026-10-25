@@ -1,12 +1,14 @@
 // Bounded public-cluster admission/cancellation probe. Owns only the rooms it creates.
 import fs from 'node:fs/promises';
-const [origin, output] = process.argv.slice(2);
+const [origin, output, primaryText = '8', fallbackText = '4'] = process.argv.slice(2);
+const primaryCount = Number(primaryText), fallbackCount = Number(fallbackText);
+if (![primaryCount, fallbackCount].every(n => Number.isInteger(n) && n > 0 && n <= 32)) throw Error('Invalid room capacity');
 if (!origin || !output) throw Error('Usage: cluster-smoke.mjs ORIGIN OUTPUT');
 const owned = [];
 let queued, failure;
 async function api(player, method, path, body) {
   const response = await fetch(new URL('/realtime/v1/' + path, origin), {
-    method, headers: { 'X-Blast-Protocol': '2', 'Content-Type': 'application/json', ...(player ? { 'x-player-token': player.token } : {}) },
+    method, headers: { 'X-Blast-Protocol': '3', 'Content-Type': 'application/json', ...(player ? { 'x-player-token': player.token } : {}) },
     body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(10000)
   });
   const value = response.status === 204 ? null : await response.json();
@@ -14,15 +16,15 @@ async function api(player, method, path, body) {
   return value;
 }
 try {
-  for (let index = 0; index < 3; index++) {
+  for (let index = 0; index < primaryCount + fallbackCount; index++) {
     const player = await api(null, 'POST', 'guests', { displayName: 'Peer admission probe' });
-    const created = await api(player, 'POST', 'lobbies', { game: 'blast-peer', visibility: 'private', settings: { bots: '0' } });
+    const created = await api(player, 'POST', 'lobbies', { game: 'blast-room', visibility: 'private', settings: { hosting: 'server', bots: '0' } });
     owned.push({ player, lobby: created.lobby });
   }
   const servers = owned.map(room => room.lobby.serverId).sort();
-  if (servers.join(',') !== 'blast-divemac,blast-pi,blast-pi') throw Error('Unexpected primary/fallback placement');
+  if (servers.filter(n=>n==='blast-pi').length !== primaryCount || servers.filter(n=>n==='blast-divemac').length !== fallbackCount) throw Error('Unexpected primary/fallback placement');
   const player = await api(null, 'POST', 'guests', { displayName: 'Cancelled queue probe' });
-  const ticket = await api(player, 'POST', 'queue', { game: 'blast-lobby' });
+  const ticket = await api(player, 'POST', 'queue', { game: 'blast-online' });
   queued = { player, id: ticket.ticketId };
   const waiting = await api(player, 'GET', `queue/${ticket.ticketId}?waitSeconds=3`);
   if (waiting.state !== 'queued') throw Error('Full cluster did not retain a waiting ticket');

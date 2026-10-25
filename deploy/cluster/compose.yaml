@@ -25,7 +25,11 @@ services:
       Kernel__PluginsDirectory: /app/plugins
       Realtime__Servers__0__Id: ${BLAST_NODE}
       Realtime__Servers__0__Region: ${BLAST_REGION:?Node capacity region}
-      Realtime__Servers__0__MaxLobbies: ${BLAST_MAX_LOBBIES:-2}
+      Realtime__Servers__0__MaxLobbies: ${BLAST_MAX_LOBBIES:?Measured room coordination limit}
+      Realtime__Servers__0__AllowedGames__0: blast-room
+      Realtime__Servers__0__AllowedGames__1: blast-online
+      Realtime__Resources__simulation: ${BLAST_SIMULATIONS:?Measured active simulation limit}
+      Realtime__Resources__peer-relay: ${BLAST_PEER_MATCHES:-0}
       Realtime__Servers__0__PublicUrl: https://blast.burbuja-lab.dev/nodes/${BLAST_ROUTE:?Public node route}
       Realtime__Guests__SigningKey: ${BLAST_SIGNING_KEY:?Shared private guest signing key}
       Realtime__Redis__Configuration: ${BLAST_REDIS:?Private authenticated backplane connection}

@@ -1,5 +1,12 @@
 # Random lobbies and peer hosting
 
+The current v0.29 flow and resource/recovery contract is
+[Adaptive multiplayer rooms](smart-multiplayer.md). The v0.27 mode descriptions
+below document the legacy standalone regression interfaces. Production pools
+accept the adaptive modes; do not deploy these legacy IDs into unbudgeted pools.
+
+## Legacy standalone modes
+
 Online Battle offers **Random lobby**, **Host peer room**, the existing
 cluster-hosted **Create private room**, and **Join room** for either room code.
 
@@ -95,7 +102,9 @@ Consult [verification](verification.md) for the actual tested release receipts.
 
 ## Online stage protocol 2 (v0.28)
 
-All online admission and WebSocket upgrades require `X-Blast-Protocol: 2`; both
+Protocol 2 introduced layered-stage admission in v0.28. Current v0.29 clients
+and workers require `X-Blast-Protocol: 3` for adaptive authority and packet
+semantics. Both
 the gateway-facing API and actual worker echo the supported version. Older
 clients receive an actionable update error before receiving unsupported terrain
 or fireball snapshots. Health/readiness, operator authentication and leaving or

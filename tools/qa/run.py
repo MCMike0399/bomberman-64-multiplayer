@@ -25,6 +25,8 @@ FOOTERS = {
     'Bomber.Audio.Tests': r'^PASS (?P<count>\d+) original PCM cues: [^\r\n]+$',
     'Bomber.Cluster.Tests': r'^ALL CLUSTER PLACEMENT CHECKS PASSED \((?P<count>\d+)\)$',
     'network-smoke': r'^ALL NETWORK SMOKE CHECKS PASSED(?: \([^\r\n]+\))?$',
+    'adaptive-network': r'^PASS (?P<count>\d+) adaptive network checks$',
+    'fleet-network': r'^PASS (?P<count>\d+) real fleet infrastructure checks$',
     'ai-soak': r'^PASS (?P<count>\d+) gameplay soak scenarios; [^\r\n]+$',
 }
 
@@ -86,6 +88,7 @@ class Suite:
         self.desktop = desktop or ('isolated' if platform.system() == 'Darwin' else 'shared')
         self.vm = vm or os.environ.get('BLAST_QA_VM', 'blast-circuit-qa')
         self.steps = []
+        self._server_count = 0
         self.started = time.monotonic()
         self.provenance = {
             'revision': version(['git', 'rev-parse', 'HEAD']),
@@ -139,8 +142,11 @@ class Suite:
         self.require('build-' + name, ['dotnet', 'build', project, '-c', configuration, '--nologo', '-m:1'])
 
     @contextlib.contextmanager
-    def server(self, dll=None):
-        log_path = self.output / 'server.log'
+    def server(self, dll=None, simulation_capacity=None):
+        if simulation_capacity is not None and (type(simulation_capacity) is not int or not 0 <= simulation_capacity <= 32):
+            raise ValueError('simulation capacity must be an integer from 0 to 32')
+        self._server_count += 1
+        log_path = self.output / ('server.log' if self._server_count == 1 else f'server-{self._server_count}.log')
         process = None
         started = time.monotonic()
         record = {'name': 'owned-server', 'passed': False, 'log': str(log_path)}
@@ -150,7 +156,9 @@ class Suite:
                 # Kestrel chooses a fresh port itself; never probe or reuse a user's server.
                 executable = dll or ROOT / 'src/Bomber.Server/bin/Debug/net10.0/Bomber.Server.dll'
                 record['assembly'] = str(executable)
-                process = subprocess.Popen(['dotnet', str(executable),
+                overrides = [] if simulation_capacity is None else [f'--Realtime:Resources:simulation={simulation_capacity}']
+                record['simulationCapacityOverride'] = simulation_capacity
+                process = subprocess.Popen(['dotnet', str(executable), *overrides,
                                             '--urls', 'http://127.0.0.1:0'], cwd=ROOT, stdout=log,
                                            stderr=subprocess.STDOUT, start_new_session=os.name == 'posix')
                 deadline = time.monotonic() + 30
@@ -316,6 +324,16 @@ def execute(suite, app=None):
         with suite.server(dll=ROOT / 'artifacts/server-staged/Bomber.Server.dll') as origin:
             suite.require('network-smoke', ['dotnet', 'run', '--no-build', '--project', 'tests/Bomber.Smoke', '--', origin],
                           footer=FOOTERS['network-smoke'])
+        with suite.server(dll=ROOT / 'artifacts/server-staged/Bomber.Server.dll', simulation_capacity=0) as origin:
+            suite.require('network-adaptive-relay', ['dotnet', 'run', '--no-build', '--project', 'tests/Bomber.Smoke', '--', origin, '--adaptive-peer-only'],
+                          footer=FOOTERS['adaptive-network'])
+        for project, folder in (('src/Bomber.Cluster', 'Blast.Cluster'),
+                                ('burbuja-kernel/plugins/Burbuja.Plugins.Realtime.Redis', 'Realtime.Redis')):
+            suite.require('publish-' + folder, ['dotnet', 'publish', project, '-c', 'Release', '-m:1',
+                          '-o', str(ROOT / 'artifacts/cluster-plugins' / folder)])
+        suite.require('network-fleet', ['dotnet', 'run', '--no-build', '--project', 'tests/Bomber.Cluster.Tests', '--',
+                      '--fleet', str(ROOT / 'artifacts/server-staged/Bomber.Server.dll'), str(ROOT / 'artifacts/cluster-plugins'), str(suite.output / 'fleet')],
+                      timeout=360, footer=FOOTERS['fleet-network'])
         if all(step['passed'] for step in suite.steps):
             suite.require('package-tested-server', [sys.executable, 'tools/ci/package_server.py'])
         return
@@ -334,10 +352,12 @@ def execute(suite, app=None):
         suite.playtest('package-smoke', app=app, headless=True)
         with suite.server() as origin:
             suite.playtest('peer-rooms', origin=origin, app=app, headless=True)
+            suite.playtest('adaptive-rooms', origin=origin, app=app, headless=True)
     elif suite.profile == 'headless':
         suite.playtest('core-headless', headless=True, app=app)
         with suite.server() as origin:
             suite.playtest('peer-rooms', origin=origin, headless=True, app=app)
+            suite.playtest('adaptive-rooms', origin=origin, headless=True, app=app)
     elif suite.desktop == 'isolated':
         suite.playtest('all', app=app)
     else:

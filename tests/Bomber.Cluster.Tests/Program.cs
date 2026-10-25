@@ -2,6 +2,8 @@ using Bomber.Cluster;
 using Burbuja.Realtime.Abstractions;
 using Burbuja.Realtime.Fleet;
 
+if(args.FirstOrDefault()=="--fleet"){await AdaptiveFleetChecks.Run(args.Skip(1).ToArray());return;}
+
 var strategy = new PreferredServerPlacement(["primary", "fallback"]);
 var balancer = new LobbyBalancer([], strategy, allowCrossRegion: true);
 var request = new PlacementRequest("blast", null, 8);

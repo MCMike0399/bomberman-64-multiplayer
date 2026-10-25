@@ -41,6 +41,7 @@ public partial class GameRoot : Node3D
     private JsonElement? _result;
     private string _screenName="Modes", _settingsReturn="Modes", _pauseReturn="Match";
     private int _partyMatch=-1;
+    private int _networkGeneration;
     private PlayerPreferences _preferences=new();
     private GraphicsPreset? _appliedGraphics;
     private bool _preparingGraphics,_skipGraphicsPreparation;
@@ -245,6 +246,8 @@ public partial class GameRoot : Node3D
             }
         }
         var session=_session;if(session==null)return;
+        if(session is NetworkSession reconnecting&&reconnecting.ConnectionGeneration!=_networkGeneration)
+        {_networkGeneration=reconnecting.ConnectionGeneration;session.ReleaseInputs();ControllerHub.Current.RearmControls();}
         if(ScreenName=="Match" && !(_tutorialLessonId is not null && _tutorialHud.Finished))for(int i=0;i<session.LocalPlayerCount;i++)
         {
             var input=_injected.TryGetValue(i,out var injected)?injected:PlayerControls.Read(i,session.LocalPlayerCount);

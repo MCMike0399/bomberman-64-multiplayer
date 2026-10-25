@@ -385,3 +385,18 @@ heartbeat and trigger the production six-second takeover policy. Keep that
 policy intact rather than weakening it to accommodate the fixture.
 
 For the combined v0.28 release, `stage-fidelity` is the focused fresh-process suite for all reconstructed arenas, explosion presentation and tutorial. The complete `all` suite and package gate remain the release regression. [Combined receipts](../stages-release-028.md).
+
+## Adaptive multiplayer verification (v0.29)
+
+The managed gate includes real adaptive sessions, a separately configured owned
+server with zero simulation permits to force relay, and a two-process Valkey
+fleet drill. The native `adaptive-rooms` journey joins eight clients, measures
+host candidates, validates the actual disposable snapshot channel, injects
+snapshot loss and retains a match after guest departure. It is included in
+headless/package gates and graphical `all`. Retain the distinction between
+loopback/process proofs and public/physical cluster measurements.
+
+Keep the macOS test host awake during bounded timing tests (`caffeinate -i` around the
+owned command). A clamshell sleep invalidated a realtime lease test while its
+monotonic test timer barely advanced; do not lengthen production leases to hide
+that environmental interruption.

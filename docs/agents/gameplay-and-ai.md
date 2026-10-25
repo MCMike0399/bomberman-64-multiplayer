@@ -81,7 +81,15 @@ GC/CPU counters cover the separately labeled sampling interval. Delivery gaps ca
 remain even with fast simulation, so do not infer server CPU trouble from a client
 freeze alone or promise that a bandwidth reduction eliminates all network jitter.
 
-## Random lobbies and player-hosted rooms
+## Adaptive rooms (v0.29)
+
+[Adaptive multiplayer](../smart-multiplayer.md) owns the current online flow.
+Keep social ownership distinct from simulation hosting; reserve simulation or
+relay capacity before starting, and retain ordinary guest departure/reconnect
+without resetting a healthy peer match. The cluster pool excludes legacy IDs
+so they cannot bypass active-execution budgets.
+
+## Legacy random lobbies and player-hosted rooms
 
 [Peer hosting](../peer-hosting.md) owns the v0.27 connection and failure contract.
 `PublicLobbyGame` uses FIFO waiting-room admission and `PartySession` with a
@@ -110,7 +118,7 @@ Room settings button. Guests and mid-match edits cannot change rules.
 Legacy `blast` private rooms opt in via `party=on`; the `blast` queue and old
 API rooms retain their previous lifecycle. Current Random lobby uses
 `blast-lobby` and always owns a persistent party with a two-human minimum.
-Keep the external kernel pin unchanged.
+Kernel pin changes require the generic and consumer gates plus product validation.
 
 `PartySessionChecks` and `PartyNetworkChecks` cover waiting, leader authorization,
 results, repeated matches, identity retention and leadership transfer. The
@@ -432,4 +440,4 @@ five threatening bombs in 30 seconds, an eight-second maximum gap and zero death
 
 Top Rules thin decks pass blasts as demonstrated by the original official guide; solid masonry still shields and physical bodies/throws still collide with decks. Up & Down's corresponding blast penetration remains unverified, so it retains its authored shielding. [Evidence](../stage-fidelity-research.md#newly-recovered-top-rules-mechanics-evidence).
 
-All online modes negotiate protocol 2 at HTTP admission and the actual WebSocket worker, with a separate matching peer hello. Keep readiness/operator/leave/cancel paths available and test old-client update feedback. Lower cells must pass bounded schema validation before rendering. [Online protocol](../peer-hosting.md#online-stage-protocol-2-v028).
+Protocol 2 introduced the stage contract; current adaptive rooms negotiate protocol 3 at HTTP admission and the actual WebSocket worker, with a separate matching peer hello. Keep readiness/operator/leave/cancel paths available and test old-client update feedback. Lower cells must pass bounded schema validation before rendering. [Online protocol](../peer-hosting.md#online-stage-protocol-2-v028).

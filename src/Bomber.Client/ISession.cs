@@ -82,4 +82,5 @@ internal sealed class MessageBuffer
     {
         lock (_gate) { var result = _messages.ToArray(); _messages.Clear(); return result; }
     }
+    public void Clear() { lock (_gate) { _messages.Clear(); _overflowed = false; } }
 }

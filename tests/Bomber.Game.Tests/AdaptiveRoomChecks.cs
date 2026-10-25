@@ -47,6 +47,25 @@ internal static class AdaptiveRoomChecks
                 links = privateServer.Players.Where(p => p != player).Select(p => new { id = p.PlayerId, rtt = 10d, loss = 0d, direct = true, samples = 5 }) });
         Secure(privateServer.Players[0], "party.start", new { });
         Check(privateServer.Status.GetProperty("phase").GetString() == "lobby" && privateServer.Claims.Count == 0, "server-only rooms never silently fall back to a player authority");
+        var reconnectMatch = new PeerMatch("reconnect", context.Settings, 64, context.Players, new Dictionary<string,int>(), (_,_,_)=>{});
+        JsonElement Input(long sequence) => JsonSerializer.SerializeToElement(new { t="input", s=sequence, d=new { x=0,z=0,a=false,b=false,r=false } });
+        reconnectMatch.Receive(guest.PlayerId, Input(100));
+        reconnectMatch.ReleaseInput(guest.PlayerId);
+        reconnectMatch.Reconnect(guest.PlayerId);
+        reconnectMatch.Receive(guest.PlayerId, Input(1));
+        Check(reconnectMatch.LastSequence(guest.PlayerId)==1,"a retained-seat reconnect accepts the new connection's reset input sequence");
+        var publicContext = new RoomContext();
+        var publicGame = new PublicAdaptiveRoomGame().CreateSession(new("public", "blast-online", publicContext.Settings, 64));
+        foreach (var player in new[] { publicContext.Add("one", 0), publicContext.Add("two", 1) }) publicGame.OnPlayerJoined(publicContext, player);
+        publicGame.OnTick(publicContext);
+        publicContext.Tick = 120;
+        publicGame.OnPlayerJoined(publicContext, publicContext.Add("three", 2)); publicGame.OnTick(publicContext);
+        publicContext.Tick = 240; publicGame.OnTick(publicContext);
+        Check(publicContext.Status.GetProperty("phase").GetString()=="playing", "later public arrivals do not indefinitely restart the automatic countdown");
+        bool rejected = false;
+        try { new AdaptiveRoomGame().CreateSession(new("invalid", "blast-room", new Dictionary<string,string>{{"stage","unsupported"}},64)); }
+        catch(ArgumentException) { rejected = true; }
+        Check(rejected, "invalid initial room rules are rejected before a player authority receives them");
         Console.WriteLine($"PASS {passed} adaptive room checks");
         return passed;
         void Send(RealtimePlayer player, string type, object data) => room.OnMessage(context, player,

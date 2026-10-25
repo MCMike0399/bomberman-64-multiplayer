@@ -10,7 +10,7 @@ import json
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[2]
-REVISION = '64ec8db830bb058de8ba2aa92b6f195165cd06d4'
+REVISION = '3ccf797031241334f60bef5814032fc1c0debc80'
 
 
 def failure_category(stderr):

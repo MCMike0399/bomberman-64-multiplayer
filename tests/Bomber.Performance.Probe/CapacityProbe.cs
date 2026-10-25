@@ -1,3 +1,4 @@
+using Bomber.Game;
 using System.Diagnostics;
 using System.Net.Http.Json;
 using System.Net.WebSockets;
@@ -12,14 +13,16 @@ internal static class CapacityProbe
         var origin = new Uri(args[0]);
         string output = Path.GetFullPath(args[1]);
         int seconds = int.Parse(args[2]), count = int.Parse(args[3]), humans = int.Parse(args[4]), bots = int.Parse(args[5]);
-        string? region = args.ElementAtOrDefault(6);
+        string? region = args.ElementAtOrDefault(6) is {} requested && !requested.StartsWith("--") ? requested : null;
+        string? stage = args.FirstOrDefault(a => a.StartsWith("--stage="))?[8..];
+        if(stage is not null && stage is not ("sunken-temple" or "rock-garden" or "up-and-down" or "top-rules")) throw new ArgumentException("Unknown stage.");
         bool directNode = args.Contains("--direct-node");
         if (seconds is < 20 or > 600 || count is < 1 or > 32 || humans < 1 || bots < 0 || humans + bots != 8)
             throw new ArgumentException("Capacity runs require 8 participants, 1–32 rooms, and 20–600 seconds.");
         using var cancel = new CancellationTokenSource();
         ConsoleCancelEventHandler handler = (_, e) => { e.Cancel = true; cancel.Cancel(); };
         Console.CancelKeyPress += handler;
-        var rooms = Enumerable.Range(0, count).Select(i => new Room(origin, i, humans, bots, region, directNode)).ToArray();
+        var rooms = Enumerable.Range(0, count).Select(i => new Room(origin, i, humans, bots, region, directNode, stage)).ToArray();
         Exception? failure = null;
         DateTime started = DateTime.UtcNow;
         try
@@ -55,7 +58,7 @@ internal static class CapacityProbe
         }
     }
 
-    private sealed class Room(Uri origin, int index, int humans, int bots, string? region, bool directNode)
+    private sealed class Room(Uri origin, int index, int humans, int bots, string? region, bool directNode, string? stageOverride)
     {
         private readonly HttpClient _http = new() { BaseAddress = origin, Timeout = TimeSpan.FromSeconds(15) };
         private readonly List<Client> _clients = [];
@@ -72,15 +75,15 @@ internal static class CapacityProbe
                 var guest = await Api("guests", new { displayName = $"Capacity {index}-{i}" }, null, cancel);
                 _clients.Add(new Client(guest.GetProperty("token").GetString()!, i));
             }
-            _stage = new[] { "sunken-temple", "rock-garden", "up-and-down" }[index % 3];
+            _stage = stageOverride ?? new[] { "sunken-temple", "rock-garden", "up-and-down", "top-rules" }[index % 4];
             var settings = new Dictionary<string, string>
             {
-                ["party"] = "on", ["stage"] = _stage, ["bots"] = bots.ToString(), ["wins"] = "5",
+                ["party"] = "on", ["hosting"] = "server", ["stage"] = _stage, ["bots"] = bots.ToString(), ["wins"] = "5",
                 ["round-seconds"] = "120", ["bot-difficulty"] = "hard", ["ghosts"] = "on", ["sudden-death"] = "on",
                 ["drop-percent"] = "100", ["block-percent"] = "100", ["item-seconds"] = "60",
                 ["max-fire"] = "5", ["max-bombs"] = "8", ["effect-seconds"] = "30"
             };
-            var created = await Api("lobbies", new { game = "blast", visibility = "private", region, settings }, _clients[0].Token, cancel);
+            var created = await Api("lobbies", new { game = "blast-room", visibility = "private", region, settings }, _clients[0].Token, cancel);
             var lobby = created.GetProperty("lobby");
             _id = lobby.GetProperty("lobbyId").GetString();
             _node = lobby.TryGetProperty("nodeId", out var node) ? node.GetString() : null;
@@ -99,7 +102,7 @@ internal static class CapacityProbe
         private async Task<JsonElement> Api(string path, object body, string? token = null, CancellationToken cancel = default)
         {
             using var request = new HttpRequestMessage(HttpMethod.Post, "/realtime/v1/" + path) { Content = JsonContent.Create(body) };
-            request.Headers.Add("X-Blast-Protocol","2");
+            request.Headers.Add(OnlineProtocol.HeaderName,OnlineProtocol.WireRevision);
             if (token != null) request.Headers.Add("x-player-token", token);
             using var response = await _http.SendAsync(request, cancel);
             if (!response.IsSuccessStatusCode)
@@ -149,7 +152,7 @@ internal static class CapacityProbe
         public string? Error;
         public volatile bool Leader;
         private volatile bool _canStart;
-        private int _match;
+        private int _match, _epoch;
         private long _lastEvent;
         private readonly List<double> _pings = [];
         private readonly CancellationTokenSource _stop = new();
@@ -170,9 +173,10 @@ internal static class CapacityProbe
             _connectPath = url.Path; // Never retain the reservation token/query.
             _socket.Options.CollectHttpResponseDetails = true;
             _socket.Options.DangerousDeflateOptions = new WebSocketDeflateOptions { ClientContextTakeover = false, ServerContextTakeover = false };
-            _socket.Options.SetRequestHeader("X-Blast-Protocol","2");
+            _socket.Options.SetRequestHeader(OnlineProtocol.HeaderName,OnlineProtocol.WireRevision);
             await _socket.ConnectAsync(url.Uri, cancel);
             _compressed = _socket.HttpResponseHeaders!.TryGetValue("Sec-WebSocket-Extensions", out var extensions) && string.Join(",", extensions).Contains("permessage-deflate", StringComparison.Ordinal);
+            await Send(new { t = "peer.hello", d = new { version = OnlineProtocol.Revision } });
             _reader = Read();
         }
         public void Start() => _writer = Write();
@@ -192,6 +196,7 @@ internal static class CapacityProbe
                     int z = direction == 1 ? 1 : direction == 3 ? -1 : 0;
                     // Match NetworkSession's 30 Hz sender, with a new action edge every tick.
                     await Send(new { t = "input", s = seq, d = new { x, z, a = seq % 2 == 0, b = seq % 180 is >= 120 and < 150, r = seq % 15 == 0, stop = seq % 45 == 0, aim = seq % 180 is >= 125 and < 145 } });
+                    if (seq % 30 == 0) await Send(new { t = "peer.heartbeat", d = new { epoch = _epoch } });
                     if (seq % 15 == 0) await Send(new { t = "sys.ping", d = new { sent = Stopwatch.GetTimestamp() } });
                 }
             }
@@ -220,6 +225,7 @@ internal static class CapacityProbe
                     switch (frame.GetProperty("t").GetString())
                     {
                         case "party.status":
+                            _epoch = data.TryGetProperty("epoch", out var epoch) ? epoch.GetInt32() : 0;
                             _canStart = data.GetProperty("phase").GetString() == "lobby" && data.GetProperty("canStart").GetBoolean();
                             int match = data.GetProperty("match").GetInt32();
                             if (match != _match) { _lastEvent = 0; _match = match; }

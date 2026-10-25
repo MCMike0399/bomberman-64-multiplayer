@@ -71,12 +71,12 @@ multi-node recovery require their own evidence, as described in the
 
 ## Player flow
 
-Open **Online Battle**, enter the service's published address and a player name,
-then choose **Random lobby**, **Host peer room**, **Create private room** or
-**Join room**. Random lobbies wait for two connected humans and their host's
-explicit start. Peer rooms use the same minimum. Private rooms wait for their leader;
-CPU seats do not start them automatically. The leader can edit Room settings
-while waiting, and results return everyone to the same room.
+Open **Online Battle**, then choose **Play online**, **Create private room**, or
+**Join with code**. Public rooms count down automatically with two humans;
+private owners choose when to start. Automatic hosting compares available
+server capacity with qualified player hosts. Private rooms can require Server
+only or Player hosted. Results return to the same room.
+[Adaptive rooms](smart-multiplayer.md) owns selection, budgets and recovery.
 
 The former same-Wi-Fi deployment is preserved in the
 [historical party guide](online-party.md). Consult it only for an explicit LAN

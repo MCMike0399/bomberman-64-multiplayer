@@ -64,7 +64,7 @@ public partial class GameRoot
     private void Begin(ISession session,bool online)
     {
         _uiAudio.MenuConfirm();
-        ReleaseSession();_arena.ResetMatch();_session=session;LatestStage=null;LatestState=null;_result=null;_lobby=null;SnapshotCount=0;_injected.Clear();_hud.Reset();_hud.Practice=_practice;_menu.ResetLobby();_partyMatch=-1;
+        ReleaseSession();_arena.ResetMatch();_session=session;LatestStage=null;LatestState=null;_result=null;_lobby=null;SnapshotCount=0;_injected.Clear();_hud.Reset();_hud.Practice=_practice;_menu.ResetLobby();_partyMatch=-1;_networkGeneration=0;
         ControllerHub.Current.BeginMatch(session.LocalPlayerCount);
         ApplyStageLighting();
         if(online)

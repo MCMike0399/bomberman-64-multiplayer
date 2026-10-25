@@ -58,7 +58,12 @@ internal sealed class PeerRoomClient(string playerId, string lobbyId, Func<IPeer
                     if (party.Hosting == "auto" && party.HostingPolicy != "server") PrepareLinks(connected.Where(id => id != playerId), preflight: true);
                     else if (_authority is not null)
                         foreach (string id in connected.Except(previousConnected).Where(id => id != playerId))
-                        { CreateLink(id, offer: true); _authority.Reconnect(id); }
+                        {
+                            var p = roster.First(p => p.GetProperty("playerId").GetString() == id);
+                            CreateLink(id, offer: true);
+                            _authority.RestorePlayer(new RealtimePlayer(id, p.GetProperty("displayName").GetString()!, p.GetProperty("slot").GetInt32(), new Dictionary<string,string>()), p.GetProperty("appearance").GetInt32());
+                            _players = _authority.Players.Select(p => p.PlayerId).ToArray();
+                        }
                 }
                 return true;
             }

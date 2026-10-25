@@ -2,6 +2,7 @@
   <PropertyGroup><OutputType>Exe</OutputType></PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/Bomber.Cluster/Bomber.Cluster.csproj" />
+    <ProjectReference Include="../../src/Bomber.Client/Bomber.Client.csproj" />
     <ProjectReference Include="../../burbuja-kernel/src/Burbuja.Realtime/Burbuja.Realtime.csproj" />
   </ItemGroup>
 </Project>

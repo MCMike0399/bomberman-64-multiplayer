@@ -26,6 +26,9 @@ public sealed class AdaptiveRoomSession : GameSession
 
     public AdaptiveRoomSession(GameSessionOptions options, bool publicRoom = false)
     {
+        if (!RoomRules.TryUpdate(new MatchOptions().ToSettings(), JsonSerializer.SerializeToElement(options.Settings), out var validated))
+            throw new ArgumentException("Invalid room settings.", nameof(options));
+        options = options with { Settings = validated };
         _public = publicRoom;
         _policy = publicRoom ? "auto" : options.Settings.GetValueOrDefault("hosting", "auto");
         if (_policy is not ("auto" or "server" or "peer")) throw new ArgumentException("Unknown hosting preference.");
@@ -37,7 +40,7 @@ public sealed class AdaptiveRoomSession : GameSession
 
     public override void OnPlayerJoined(ISessionContext c, RealtimePlayer p)
     {
-        _members[p.PlayerId] = p; ElectLeader(c); _countdown = null;
+        _members[p.PlayerId] = p; ElectLeader(c);
         _server.OnPlayerJoined(Wrap(c, false), p); _peer.OnPlayerJoined(Wrap(c, true), p);
         Publish(c);
     }
@@ -49,7 +52,8 @@ public sealed class AdaptiveRoomSession : GameSession
     }
     public override void OnPlayerConnectionChanged(ISessionContext c, RealtimePlayer p, bool connected)
     {
-        _quality.Remove(p.PlayerId); ElectLeader(c); _countdown = null;
+        _quality.Remove(p.PlayerId); ElectLeader(c);
+        if (Connected(c).Count < 2) _countdown = null;
         _server.OnPlayerConnectionChanged(Wrap(c, false), p, connected);
         _peer.OnPlayerConnectionChanged(Wrap(c, true), p, connected);
         Publish(c);
@@ -93,6 +97,8 @@ public sealed class AdaptiveRoomSession : GameSession
         if (message.Type == "party.settings")
         {
             if (p.PlayerId != _leader || _active is not null) return;
+            if (_public && _countdown is not null)
+            { c.Send(p.PlayerId, "party.error", new { message = "The public match is starting. Change rules before the next countdown." }); return; }
             _countdown = null; _startRequested = false;
             _server.OnMessage(Wrap(c, false), p, message);
             _policy = _public ? "auto" : _serverStatus?["settings"]?["hosting"]?.GetValue<string>() ?? "auto";

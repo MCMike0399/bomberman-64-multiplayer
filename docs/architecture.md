@@ -17,7 +17,7 @@ flowchart TD
     Network -->|HTTP + WebSocket JSON| Kernel[Independent Burbuja.Hosting + Realtime server]
     Network --> Peer[PeerMatch on elected player]
     Peer --> Rules
-    Kernel --> Broker[PeerRoomSession membership and election]
+    Kernel --> Broker[AdaptiveRoomSession membership and authority choice]
     Network <-->|WebRTC or authenticated relay| OtherPeers[Other peer clients]
     Kernel --> Registration[BomberRealtimeGame]
     Registration --> Rules
@@ -41,7 +41,10 @@ flowchart TD
 
 Folder layout, naming rules and partial-class seams are in the [codebase map](agents/codebase-map.md).
 
-Player-hosted rooms use `PeerMatch` to run the same simulation. The cluster
+Adaptive rooms keep one Kernel lobby and choose local dedicated execution or
+`PeerMatch` on a qualified player, with separate simulation and relay claims.
+See [the current contract](smart-multiplayer.md). Player-hosted rooms use
+`PeerMatch` to run the same simulation. The cluster
 coordinates membership and host generations; the Godot adapter supplies native
 WebRTC through the pure `IPeerLink` boundary. [Peer hosting](peer-hosting.md) owns
 transport fallback, two-human starts and fresh-match takeover.

@@ -37,6 +37,8 @@ public sealed partial class NetworkSession : ISession
     private int _appearance;
     private int _appearancePending, _startPending;
     private int _peerHelloSent;
+    private int _connectionGeneration, _peerResetPending;
+    public int ConnectionGeneration => Volatile.Read(ref _connectionGeneration);
     private PartyStatus? _party;
     private byte[]? _pendingRules;
     public void SetRoomSettings(SessionSettings settings)
@@ -145,6 +147,11 @@ public sealed partial class NetworkSession : ISession
                 throw new InvalidOperationException("This game server uses incompatible stage rules. Update the server before joining.");
             ConnectionRoute = connectUri.AbsolutePath;
             _socket = socket;
+            int generation = Interlocked.Increment(ref _connectionGeneration);
+            while (_controlOutbound.TryDequeue(out _)) { }
+            _latestPeerStates.Clear(); _wireMessages.Clear();
+            Interlocked.Exchange(ref _pingCount, 0); Volatile.Write(ref _lastPing, 0); Volatile.Write(ref _serverRtt, 5000);
+            if (generation > 1) Interlocked.Exchange(ref _peerResetPending, 1);
             Interlocked.Exchange(ref _peerHelloSent, 0);
             Interlocked.Exchange(ref _sequence, 0);
             Volatile.Write(ref _status, "Connected");
@@ -372,12 +379,17 @@ public sealed partial class NetworkSession : ISession
 
     private void PumpMessages()
     {
+        if (Interlocked.Exchange(ref _peerResetPending, 0) != 0) { _peer?.Dispose(); _peer = null; }
+        int generation = ConnectionGeneration;
         if (_messages.Overflowed)
         { if (!IsEnded) { Fail("The game cannot keep up with room control messages."); _lifetime.Cancel(); } return; }
         foreach (var message in _wireMessages.Drain())
         {
+            if (ConnectionGeneration != generation) return;
             if (message.GetProperty("t").GetString() == "party.status" && message.GetProperty("d").TryGetProperty("hosting", out var hosting) && hosting.GetString() is "peer" or "auto")
-                _peer ??= new PeerRoomClient(PlayerId!, _lobbyId!, _peerFactory, QueuePeer, _messages.Add, TakePeerInput, () => Volatile.Read(ref _serverRtt));
+                _peer ??= new PeerRoomClient(PlayerId!, _lobbyId!, _peerFactory,
+                    (type, data) => { if (ConnectionGeneration == generation) QueuePeer(type, data); },
+                    frame => { if (ConnectionGeneration == generation) _messages.Add(frame); }, TakePeerInput, () => Volatile.Read(ref _serverRtt));
             if (_peer?.Handle(message) != true) _messages.Add(message);
         }
     }
