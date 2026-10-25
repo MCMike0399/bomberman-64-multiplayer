@@ -96,7 +96,7 @@ public sealed partial class BlastSession
         int waypoint=BotSearch(bot,start,_aiDanger,false,_aiProfile.TacticalDepth);
         bool useful=BotAdjacentCover(start)||BotEnemyInRange(bot.X,bot.Y,bot.Z,(bot.FireLevel*.9f+.4f)*(bot.HasRed?1.25f:1),bot.Id,bot.HasRed);
         bool centered=Math.Abs(bot.X-(_aiGraph.X(start)+.5f))+Math.Abs(bot.Z-(_aiGraph.Z(start)+.5f))<.2f;
-        if(!rejectedPlacement&&!_practice&&useful&&centered&&!bot.PrevA&&bot.ActiveBombs<bot.BombCapacity&&_aiDanger.BombOwners[start] is null&&
+        if(!rejectedPlacement&&(!_practice||_tutorialLesson?.Id=="duel")&&useful&&centered&&!bot.PrevA&&bot.ActiveBombs<bot.BombCapacity&&_aiDanger.BombOwners[start] is null&&
             (!_aiLastBomb.TryGetValue(bot.Id,out var last)||_roundTimer-last>_aiProfile.BombCooldown))
         {
             float best=0,aimX=0,aimZ=0;

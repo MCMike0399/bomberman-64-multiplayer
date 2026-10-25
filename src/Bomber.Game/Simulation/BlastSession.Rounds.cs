@@ -88,7 +88,7 @@ public sealed partial class BlastSession
 
     private void SimulateRound(ISessionContext context, float dt)
     {
-        if (!_practice) _roundTimer = ++_fightTicks * dt;
+        if (!_practice || _tutorialLesson?.Id=="duel") _roundTimer = ++_fightTicks * dt;
         var timeLeft = _roundSeconds - _roundTimer;
 
         // Trigger hurry.

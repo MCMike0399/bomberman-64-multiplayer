@@ -1,3 +1,4 @@
+if(args.Contains("--tutorial-review")){TutorialChecks.ReviewRegressions();return;}
 if(args.Contains("--tutorial")){TutorialChecks.Run();return;}
 if(args.Contains("--top-rules")){TopRulesChecks.Run();return;}
 
@@ -16,7 +17,7 @@ if(args.Contains("--sandbox")){SandboxEquipmentChecks.Run();return;}
 
 if(args.Contains("--cover-layout")){RegionalCoverChecks.Run();return;}
 
-var passed = TutorialChecks.Run() + TopRulesChecks.Run() + AdvancedRulesChecks.Run() + ItemExpirationChecks.Run() + RegionalCoverChecks.Run() + SandboxEquipmentChecks.Run() + PyramidLedgeChecks.Run() + PartyPolishChecks.Run() + PartySessionChecks.Run() + LootAvailabilityChecks.Run() + AimedThrowChecks.Run() + CarryChargeChecks.Run() + BombPlacementChecks.Run() + PowerUpModeChecks.Run() + BombTravelChecks.Run() + KickTimingChecks.Run() + BodyContactChecks.Run() + BombImpactChecks.Run() + TraversalAndGhostChecks.Run() + BombActionsChecks.Run() + GrappleChecks.Run();
+var passed = TutorialChecks.Run() + TutorialChecks.ReviewRegressions() + TopRulesChecks.Run() + AdvancedRulesChecks.Run() + ItemExpirationChecks.Run() + RegionalCoverChecks.Run() + SandboxEquipmentChecks.Run() + PyramidLedgeChecks.Run() + PartyPolishChecks.Run() + PartySessionChecks.Run() + LootAvailabilityChecks.Run() + AimedThrowChecks.Run() + CarryChargeChecks.Run() + BombPlacementChecks.Run() + PowerUpModeChecks.Run() + BombTravelChecks.Run() + KickTimingChecks.Run() + BodyContactChecks.Run() + BombImpactChecks.Run() + TraversalAndGhostChecks.Run() + BombActionsChecks.Run() + GrappleChecks.Run();
 SnapshotChecks.Run(Run);
 passed += OnlineRoomChecks.Run();
 MatchRulesChecks.Run(Run);

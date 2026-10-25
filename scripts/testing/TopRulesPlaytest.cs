@@ -4,6 +4,7 @@ using Bomber.Game;
 using Bomber.Game.Simulation;
 using BlastCircuit.Arena;
 using BlastCircuit.Arena.Models;
+using BlastCircuit.Rendering;
 using BlastCircuit.UI.Menu;
 
 namespace BlastCircuit.Testing;
@@ -28,6 +29,15 @@ public partial class PlaytestDriver
         await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"four-player castle opening reaches fight",150);
         await Frames(20);
         await Capture("top-rules-four-player-opening");
+        var originalQuality=_root.Preferences.Graphics;
+        await SelectGraphics(GraphicsPreset.Low);
+        _root.StartLocal(new SessionSettings(Stage:BlastStages.TopRules,Bots:0,RoundSeconds:60),4);
+        await Frames(110);
+        var lowStone=AuditDescendants(LightingArena).OfType<MeshInstance3D>().Select(n=>n.MaterialOverride)
+            .OfType<ShaderMaterial>().Where(m=>m.Shader.Code.Contains("uniform float quality_detail")).Distinct().ToArray();
+        Check(lowStone.Length>0&&lowStone.All(m=>m.GetShaderParameter("quality_detail").AsSingle()==0),"restarted castle cover and closing walls retain Low shader detail");
+        Check(lowStone.Length<=3,"castle rounds reuse bounded terrain-owned stone materials");
+        await SelectGraphics(originalQuality);
         _root.Back(); await Frames(3);
         _root.Navigate("Practice"); await Frames(3);
         await ActivateNamed("LaunchMatch");

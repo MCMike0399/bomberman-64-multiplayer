@@ -10,6 +10,7 @@ public sealed partial class BlastSession
     private void PrepareTutorial()
     {
         if (_tutorialLesson is null || Trainee is not { } player) return;
+        _tutorialPlantedBomb=null;
         _tutorialSignals.Clear(); _tutorialStep=0; _tutorialEfforts=0; _tutorialTime=0;
         _tutorialAimTime=0; _tutorialFailed=false; _tutorialComplete=false; _tutorialStarted=false;
         _tutorialFeedback=""; _tutorialPickupSerial=player.PickupSerial;
@@ -62,7 +63,6 @@ public sealed partial class BlastSession
             if(p.CarryFromPrimary)_tutorialSignals.Add("primary-hold");
             var bomb=_bombs.FirstOrDefault(b=>b.Id==carried);
             if(bomb?.Pumps>=3)_tutorialSignals.Add("pump3");
-            if(bomb?.Pumps>=1 && p.Ability=="focus")_tutorialSignals.Add("focus-charge");
         }
         bool Has(string signal)=>_tutorialSignals.Contains(signal);
         bool cleared=!_softBlocks.IsAlive(12,12)||!_softBlocks.IsAlive(13,12)||!_softBlocks.IsAlive(12,13);
@@ -70,7 +70,7 @@ public sealed partial class BlastSession
         bool Satisfied(int step)=>_tutorialLesson.Id switch
         {
             "move"=>Dist2(p.X,p.Z,11.5f,12.5f)<.65f*.65f,
-            "bomb"=>step==0?Has("bomb-drop"):Has("blast")&&safe,
+            "bomb"=>step==0?Has("bomb-drop"):Has("planted-blast")&&safe,
             "carry"=>step==0?Has("carry"):Has("throw"),
             "primary-hold"=>step==0?Has("primary-hold"):Has("throw"),
             "pump"=>step==0?Has("pump3"):Has("charged-throw"),
@@ -119,6 +119,9 @@ public sealed partial class BlastSession
     {
         if(_tutorialLesson is null || !_tutorialStarted || _tutorialFailed || _tutorialComplete || Trainee is not { } p)return;
         if(playerId==p.Id)_tutorialSignals.Add(kind);
+        if(playerId==p.Id && kind=="bomb-drop")_tutorialPlantedBomb??=entityId;
+        if(playerId==p.Id && kind=="blast" && entityId==_tutorialPlantedBomb)_tutorialSignals.Add("planted-blast");
+        if(playerId==p.Id && kind=="pump" && p.Ability=="focus")_tutorialSignals.Add("focus-charge");
         if(playerId==p.Id && kind=="blast")
         {
             _tutorialBlastsAtTick=_tutorialBlastTick==_tickCount?_tutorialBlastsAtTick+1:1;

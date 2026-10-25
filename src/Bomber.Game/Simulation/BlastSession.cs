@@ -25,6 +25,7 @@ public sealed partial class BlastSession : GameSession
     private int _tutorialStep, _tutorialEfforts, _tutorialBlastTick=-1, _tutorialBlastsAtTick;
     private long _tutorialPickupSerial;
     private string[] _tutorialItems=[];
+    private string? _tutorialPlantedBomb;
     private float _tutorialTime, _tutorialAimTime;
     private bool _tutorialFailed, _tutorialComplete, _tutorialStarted;
     private string _tutorialFeedback = "";

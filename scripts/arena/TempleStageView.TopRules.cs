@@ -16,6 +16,8 @@ public partial class TempleStageView
         var cap = _art.Stone();
         cap.SetShaderParameter("base_color", new Color("bdc4c5"));
         cap.SetShaderParameter("mortar_color", new Color("616b78"));
+        _castleWallMaterial=stone;
+        foreach(var material in new[]{stone,cap})material.SetShaderParameter("quality_detail",GraphicsQuality.Current==GraphicsPreset.Low?0:1);
         _castleStone.Add(stone); _castleStone.Add(cap);
         var slate = _art.Color(new("414651"));
         var inset = _art.Color(new("646775"));
@@ -98,10 +100,15 @@ public partial class TempleStageView
     private Node3D CreateCastleCover(int x, int z)
     {
         var root = new Node3D { Position = new(x + .5f, Surface(x + .5f, z + .5f), z + .5f) };
-        var stone = _art.Masonry();
-        stone.SetShaderParameter("base_color", new Color("a5abb3"));
-        stone.SetShaderParameter("mortar_color", new Color("505966"));
-        _castleStone.Add(stone);
+        if(_castleCoverMaterial is null)
+        {
+            _castleCoverMaterial=_art.Masonry();
+            _castleCoverMaterial.SetShaderParameter("base_color",new Color("a5abb3"));
+            _castleCoverMaterial.SetShaderParameter("mortar_color",new Color("505966"));
+            _castleCoverMaterial.SetShaderParameter("quality_detail",GraphicsQuality.Current==GraphicsPreset.Low?0:1);
+            _castleStone.Add(_castleCoverMaterial);
+        }
+        var stone=_castleCoverMaterial;
         Box(root, new(0, .4f, 0), new(.81f, .8f, .81f), stone, .035f);
         Box(root, new(0, .79f, 0), new(.84f, .06f, .84f), _art.Color(new("c9ccca")), .018f);
         return root;

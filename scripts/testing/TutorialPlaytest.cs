@@ -67,6 +67,10 @@ public partial class PlaytestDriver
         await WaitState(s=>s.GetProperty("hazards").GetArrayLength()>0,"power bomb creates a real blast",150);
         await Capture("tutorial-power-blast");
         await WaitState(_=>Cleared(),"power lesson clears only after its blast destroys cover",60);
+        await Lesson("expiry");await MoveTo(9.5f,12.5f,100);
+        Check(VisibleText(_root).Contains("Tiny 10s"),"tutorial shows the promised live Tiny countdown");
+        await Frames(45);Check(!VisibleText(_root).Contains("Tiny 10s")&&VisibleText(_root).Contains("Tiny "),"tutorial status countdown decreases while effect is active");
+        await Capture("tutorial-live-countdown");
         // Every lesson can be selected without prerequisites; initial setups are product-authored.
         foreach(string id in new[]{"pump","aim","items","effects","grapple","ghost","flood","duel"})
         {

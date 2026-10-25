@@ -14,6 +14,9 @@ public partial class TempleStageView : Node3D
     private bool _castle;
     private readonly List<ShaderMaterial> _castleStone = [];
     private static Shader? _castleFloorShader;
+    private ShaderMaterial _castleWallMaterial=null!;
+    private ShaderMaterial? _castleCoverMaterial;
+    public ShaderMaterial CastleWallMaterial=>_castleWallMaterial;
     public int Width {get;private set;}
     public int Depth {get;private set;}
     private ShaderMaterial _stone=null!,_cobble=null!,_masonry=null!,_bedrock=null!;

@@ -235,7 +235,7 @@ public sealed partial class NetworkSession : ISession
             {
                 var party = PartyStatus.Parse(message.GetProperty("d"));
                 if (party.Hosting == "peer" && Interlocked.Exchange(ref _peerHelloSent, 1) == 0)
-                    QueuePeer("peer.hello", new { version = 1 });
+                    QueuePeer("peer.hello", new { version = PeerProtocol.Revision });
                 if (Party?.Phase != party.Phase || Party?.Match != party.Match) ReleaseInputs();
                 Volatile.Write(ref _party, party);_partyReady.TrySetResult();
             }

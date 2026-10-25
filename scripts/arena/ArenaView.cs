@@ -258,7 +258,7 @@ public partial class ArenaView : Node3D
                 var n=new Node3D();
                 if(_stage==BlastStages.TopRules)
                 {
-                    var stone=_art.Masonry();stone.SetShaderParameter("base_color",new Color("828b96"));stone.SetShaderParameter("mortar_color",new Color("343b48"));
+                    var stone=_terrain.CastleWallMaterial;
                     Box(n,new(x+.5f,1.95f,_terrain.Depth/2f),new(1,3.9f,_terrain.Depth-2),stone);
                     Box(n,new(x+.5f,3.95f,_terrain.Depth/2f),new(1.03f,.16f,_terrain.Depth-2),_art.Color(new Color("bdc4c5")),.025f);
                 }
