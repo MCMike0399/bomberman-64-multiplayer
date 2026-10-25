@@ -39,7 +39,8 @@ public partial class GameRoot : Node3D
     private string _lastName="Player",_lastCode="";
     private JsonElement? _lobby;
     private JsonElement? _result;
-    private string _screenName="Modes", _settingsReturn="Modes", _pauseReturn="Match";
+    private string _screenName="Modes", _settingsReturn="Modes", _pauseReturn="Match", _menuRoute="Modes";
+    private readonly Stack<string> _menuHistory=[];
     private int _partyMatch=-1;
     private int _networkGeneration;
     private PlayerPreferences _preferences=new();
@@ -136,7 +137,9 @@ public partial class GameRoot : Node3D
         BlastCircuit.Testing.PlaytestDriver.TryAttach(this);
     }
 
-    public void Navigate(string screen)
+    public void Navigate(string screen)=>Navigate(screen,restoreFocus:false);
+
+    private void Navigate(string screen,bool restoreFocus)
     {
         if(screen=="Advanced" && ScreenName=="Setup"){ScreenName="Advanced";_menu.ShowAdvanced();return;}
         if(screen=="HostSetup"&&_session is NetworkSession room)
@@ -148,7 +151,7 @@ public partial class GameRoot : Node3D
         }
         if(screen=="Settings")
         {
-            _settingsReturn=ScreenName;ScreenName="Settings";_menu.SetOverlay(_session!=null&&LatestState!=null);_menu.Visible=true;_hud.Visible=false;_menu.ShowScreen("Settings");return;
+            _settingsReturn=ScreenName=="Setup"?_menuRoute:ScreenName;ScreenName="Settings";_menu.SetOverlay(_session!=null&&LatestState!=null);_menu.Visible=true;_hud.Visible=false;_menu.ShowScreen("Settings");return;
         }
         _editingRoom=false;
         _menu.SetOverlay(false);
@@ -159,40 +162,63 @@ public partial class GameRoot : Node3D
             if(_session!=null)ReleaseSession();
         }
         if(screen!=ScreenName){if(screen=="Modes"||(screen=="Roster"&&ScreenName=="Setup"))_uiAudio.MenuBack();else _uiAudio.MenuConfirm();}
+        if(screen=="Modes")_menuHistory.Clear();
+        else if(!restoreFocus&&screen!=_menuRoute&&screen is "Tutorial" or "Controls" or "Roster" or "Setup" or "Practice" or "HostSetup" or "Online")
+        {
+            // Returning through Continue/Save should not build a loop between the same two pages.
+            if(_menuHistory.Contains(screen)){while(_menuHistory.Pop()!=screen){}}
+            else _menuHistory.Push(_menuRoute);
+        }
+        if(screen is "Modes" or "Tutorial" or "Controls" or "Roster" or "Setup" or "Practice" or "HostSetup" or "Online")_menuRoute=screen;
         _setupForHost=screen=="HostSetup";
         ControllerHub.Current.TesterActive=screen=="Controls";
         ScreenName=screen=="Practice"||screen=="HostSetup"?"Setup":screen;
         _arena.Visible=ScreenName is "Match" or "Results";
         _hud.Visible=ScreenName=="Match";
         _menu.Visible=ScreenName!="Match";
-        if(_menu.Visible)_menu.ShowScreen(screen);
+        if(_menu.Visible)_menu.ShowScreen(screen,restoreFocus);
     }
     public void Back()
     {
         if(ScreenName=="Advanced"){ScreenName="Setup";_menu.CloseAdvanced();return;}
-        if(_editingRoom&&ScreenName=="Setup"){_editingRoom=false;ShowPartyLobby();return;}
+        if(_editingRoom&&ScreenName=="Setup"){_editingRoom=false;ShowPartyLobby(restoreFocus:true);return;}
         if(ScreenName=="Settings"){RestoreScreen(_settingsReturn);return;}
         if(ScreenName=="Pause"){ResumeGame();return;}
-        if(_connecting){CancelConnection();_menu.SetBusy(false,"Connection cancelled.");ScreenName="Online";_menu.ShowScreen("Online");return;}
-        if(_session!=null){bool training=_trainingSession;ReleaseSession();Navigate(training?"Tutorial":"Modes");return;}
-        if(ScreenName=="Setup"&&_setupForHost)Navigate("Online");else if(ScreenName=="Setup"&&!_menu.Practice)Navigate("Roster");else Navigate("Modes");
+        if(_connecting){CancelConnection();_menu.SetBusy(false,"Connection cancelled.");ScreenName="Online";_menu.ShowScreen("Online",restoreFocus:true);return;}
+        if(_session!=null)
+        {
+            string target=_trainingSession?"Tutorial":_session is NetworkSession&&ScreenName is "Lobby" or "Results"?"Online":"Modes";
+            ReleaseSession();Navigate(target,restoreFocus:true);return;
+        }
+        Navigate(_menuHistory.TryPop(out var previous)?previous:"Modes",restoreFocus:true);
+    }
+    public override void _Input(InputEvent @event)
+    {
+        // LineEdit consumes Escape itself. Back still leaves one menu in a single press.
+        if(!_preparingGraphics&&!_menu.HasOpenPopup&&GetViewport().GuiGetFocusOwner() is LineEdit
+            &&@event.IsActionPressed("ui_cancel"))
+        {Back();GetViewport().SetInputAsHandled();}
     }
     public override void _UnhandledInput(InputEvent @event)
     {
-        if(_preparingGraphics)return;
+        if(_preparingGraphics||_menu.HasOpenPopup)return;
         bool start=@event is InputEventJoypadButton {Pressed:true,ButtonIndex:JoyButton.Start};
         bool cancel=@event is InputEventKey {Pressed:true,Echo:false,Keycode:Key.Escape}
-            || (ScreenName is not ("Match" or "Controls") && @event.IsActionPressed("ui_cancel"));
+            || (ScreenName!="Controls"&&(ScreenName!="Match"||_tutorialLessonId is not null&&_tutorialHud.Finished)&&@event.IsActionPressed("ui_cancel"));
+        if(@event is InputEventJoypadButton {Pressed:true,ButtonIndex:JoyButton.LeftShoulder or JoyButton.RightShoulder} shoulder
+            &&ScreenName is not ("Match" or "Controls")&&_menu.SwitchColumn(shoulder.ButtonIndex==JoyButton.LeftShoulder?-1:1))
+        {GetViewport().SetInputAsHandled();return;}
         if(start)
         {
-            if(ScreenName=="Match")OpenGameMenu();
-            else if(ScreenName=="Controls")Back();
-            else _menu.FocusStart();
+            if(ScreenName=="Match"&&_tutorialHud.Finished&&_tutorialLessonId is not null)_tutorialHud.FocusAction();
+            else if(ScreenName=="Match")OpenGameMenu();
+            else {if(ScreenName=="Controls")ControllerHub.Current.TesterActive=false;_menu.FocusStart();}
             GetViewport().SetInputAsHandled();return;
         }
         if(cancel)
         {
-            if(ScreenName is "Match" or "Lobby")OpenGameMenu();else Back();
+            if(ScreenName=="Match"&&_tutorialHud.Finished&&_tutorialLessonId is not null)Navigate("Tutorial",restoreFocus:true);
+            else if(ScreenName=="Match")OpenGameMenu();else Back();
             GetViewport().SetInputAsHandled();
         }
     }
@@ -205,15 +231,15 @@ public partial class GameRoot : Node3D
     private void ResumeGame(){_session?.ReleaseInputs();ControllerHub.Current.RearmControls();RestoreScreen(_pauseReturn);}
     private void RestoreScreen(string screen)
     {
-        if(screen=="Pause"){ScreenName="Pause";_menu.Visible=true;_menu.SetOverlay(LatestState!=null);_menu.ShowPause(_session is NetworkSession,_trainingSession,_tutorialLessonId);return;}
+        if(screen=="Pause"){ScreenName="Pause";_menu.Visible=true;_menu.SetOverlay(LatestState!=null);_menu.ShowPause(_session is NetworkSession,_trainingSession,_tutorialLessonId,restoreFocus:true);return;}
         if(screen=="Match"&&_session!=null){EnterMatch();return;}
-        if(screen=="Lobby"&&_session!=null){ShowPartyLobby();return;}
-        Navigate(screen);
+        if(screen=="Lobby"&&_session!=null){ShowPartyLobby(restoreFocus:true);return;}
+        Navigate(screen,restoreFocus:true);
     }
-    private void ShowPartyLobby()
+    private void ShowPartyLobby(bool restoreFocus=false)
     {
         _session?.ReleaseInputs();ControllerHub.Current.StopVibration();ControllerHub.Current.RearmControls();
-        ScreenName="Lobby";_arena.Visible=false;_hud.Visible=false;_menu.SetOverlay(false);_menu.Visible=true;_menu.ShowScreen("Lobby");
+        ScreenName="Lobby";_arena.Visible=false;_hud.Visible=false;_menu.SetOverlay(false);_menu.Visible=true;_menu.ShowScreen("Lobby",restoreFocus);
     }
     private void PlayerFeedback(string kind,string? player)
     {

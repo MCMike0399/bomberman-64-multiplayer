@@ -41,7 +41,7 @@ public static class EffectWarmup
             var effects=new List<Node3D>();
             void Add(Node3D model,Vector3 position)
             {model.Position=position;model.ProcessMode=Node.ProcessModeEnum.Disabled;world.AddChild(model);effects.Add(model);}
-            foreach(var (mode,index) in new[]{("normal",0),("red",1),("remote",2),("bounce",3),("fast",4)})
+            foreach(var (mode,index) in new[]{("normal",0),("red",1),("remote",2),("bounce",3)})
             {
                 var bomb=new BombModel(art);bomb.UpdateState(0,1,mode=="red",mode=="remote",2,null,1,mode);
                 bomb._Process(.01);Add(bomb,new(-6+index*3,0,-4));

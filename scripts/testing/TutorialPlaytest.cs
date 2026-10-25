@@ -28,15 +28,21 @@ public partial class PlaytestDriver
         Check(_root.Preferences.CompletedTutorials.Contains("move"),"clear mark saved in device preferences");
         Check(PlayerPreferences.Load(_root.PreferencesPath).CompletedTutorials.Contains("move"),"clear mark survives preferences reload");
         await Capture("tutorial-lesson-clear");
+        Check(VisibleText(_root).Contains("Esc: lessons"),"completed lesson copy describes its Back action");
+        CtlButton(0,JoyButton.Start,true);await Frames(1);CtlButton(0,JoyButton.Start,false);await Frames(2);
+        Check(NamedButton("TutorialNext").HasFocus()&&_root.ScreenName=="Match","Start on lesson clear focuses Next without opening pause");
         await ActivateNamed("TutorialNext");
         await WaitState(s=>s.GetProperty("tutorial").GetProperty("id").GetString()=="bomb"&&s.GetProperty("phase").GetInt32()==1,"next enters bomb lesson",150);
         Input(0,new(0,0,A:true));await Frames(2);Input(0,default);await Frames(90);
         Check(State.GetProperty("tutorial").GetProperty("failed").GetBoolean(),"being caught fails the safety objective");
+        CtlButton(0,JoyButton.Start,true);await Frames(1);CtlButton(0,JoyButton.Start,false);await Frames(2);
+        Check(NamedButton("TutorialRetry").HasFocus()&&_root.ScreenName=="Match","Start on failed lesson focuses Retry");
         await Capture("tutorial-retry");
         await ActivateNamed("TutorialRetry");
         await WaitState(s=>!s.GetProperty("tutorial").GetProperty("failed").GetBoolean()&&s.GetProperty("phase").GetInt32()==1,"retry rebuilds a clean lesson",150);
         Input(0,new(0,0,A:true));await Frames(2);Input(0,new(-1,0));await Frames(25);Input(0,default);await Frames(90);
         Check(Cleared(),"plant and retreat clears after the real blast expires");
+        await KeyPress(Key.Escape);Check(_root.ScreenName=="Tutorial"&&NamedButton("Lesson_bomb").HasFocus(),"Esc on lesson clear returns to the current lesson in the browser");
         if(!_headless)
         {
             var hub=ControllerHub.Current;
@@ -102,6 +108,9 @@ public partial class PlaytestDriver
         await ActivateNamed("TutorialFreePractice");await Frames(75);
         Check(_root.LatestStage?.GetProperty("id").GetString()=="circuit-garden"&&State.GetProperty("tutorial").ValueKind==System.Text.Json.JsonValueKind.Null,"free practice opens garden without lesson rules");
         Check(State.GetProperty("items").GetArrayLength()>0,"free practice exposes the equipment collection");
+        CtlButton(0,JoyButton.Start,true);await Frames(1);CtlButton(0,JoyButton.Start,false);await Frames(2);
+        Check(_root.ScreenName=="Pause","Start in free practice still opens pause after completed lessons");
+        await KeyPress(Key.Escape);
         await Capture("tutorial-free-practice");
         _root.Back();_root.Navigate("Modes");await Frames(3);
         _root.StartLocal(new Bomber.Client.SessionSettings());

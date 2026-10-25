@@ -163,8 +163,8 @@ public sealed partial class BlastSession
                         TickFlyingBomb(context,b,dt);
                     }
                     break;
-                case BombState.Rolling: TickRollingBomb(context, b, dt*b.MotionRate); break;
-                case BombState.Flying: TickFlyingBomb(context, b, dt*b.MotionRate); break;
+                case BombState.Rolling: TickRollingBomb(context, b, dt); break;
+                case BombState.Flying: TickFlyingBomb(context, b, dt); break;
                 case BombState.Carried:
                     UpdateCarriedBombPosition(b);
                     if(b.RequestedPumps>0)

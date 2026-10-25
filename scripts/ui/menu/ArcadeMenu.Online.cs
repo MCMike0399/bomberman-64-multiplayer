@@ -37,29 +37,33 @@ public partial class ArcadeMenu
         Section(host,"Play with friends");
         Copy(host,"Pick your rules and share a room code. Hosting is chosen automatically.");
         _onlineStage=new StagePreview {CustomMinimumSize=new(400,150),StageIndex=_stage.Selected};host.AddChild(_onlineStage);
-        ArcadeTheme.Button(host,"Room settings",()=>Navigation?.Invoke("HostSetup"));
+        ArcadeTheme.Button(host,"Room settings",()=>Navigation?.Invoke("HostSetup")).Name="RoomSettings";
         host.AddChild(new ArcadeRuleDial {Name="PrivateHosting",Caption="Private hosting",ValueWidth=180,
             ReadValue=()=>new[]{"Automatic","Server only","Player hosted"}[_hostingPreference],
             ChangeValue=direction=>_hostingPreference=(_hostingPreference+direction+3)%3});
         _onlineButtons.Add(ArcadeTheme.Button(host,"Create private room",()=>OnlineRequested?.Invoke(NetworkMode.CreatePrivate),true));
+        _onlineButtons[0].Name="CreatePrivateRoom";
         Hint(host,"Your room stays together between matches. You choose when to start.",15);
         var join=ArcadeTheme.Column(columns,14);join.SizeFlagsHorizontal=SizeFlags.ExpandFill;
         Section(join,"Join a friend");
-        _code=ArcadeTheme.Field(join,"Room code","","Enter code");_code.MaxLength=16;
+        _code=ArcadeTheme.Field(join,"Room code","","Enter code");_code.Name="RoomCode";_code.MaxLength=16;
         _onlineButtons.Add(ArcadeTheme.Button(join,"Join with code",()=>OnlineRequested?.Invoke(NetworkMode.JoinCode),true));
+        _onlineButtons[1].Name="JoinWithCode";
         join.AddChild(new Control {CustomMinimumSize=new(0,10)});
         Section(join,"Find players");
         Copy(join,"Meet other players. The battle starts automatically with at least two people and a suitable host.");
         _onlineButtons.Add(ArcadeTheme.Button(join,"Play online",()=>OnlineRequested?.Invoke(NetworkMode.QuickPlay)));
+        _onlineButtons[2].Name="PlayOnline";
         Hint(join,"Casual matches may use a player host. Direct peers share connection addresses. Private Server only rooms keep authority on the cluster.",15);
         var status=Copy(box,"Choose a room or find other players.",15);status.Name="OnlineNotice";status.AddThemeColorOverride("font_color",ArcadeTheme.Gold);
         var cancel=ArcadeTheme.Button(box,"Cancel connection",()=>BackRequested?.Invoke());cancel.Name="CancelConnect";cancel.Visible=false;cancel.SizeFlagsHorizontal=SizeFlags.ShrinkBegin;
+        RegisterNavigation("Online",[back],[cancel],Choices(identity),Choices(host),Choices(join));
     }
 
     private void BuildLobby()
     {
         var screen=Screen("Lobby");var box=Card(screen,new(220,48),new(1000,744));
-        var header=ArcadeTheme.Row(box);ArcadeTheme.Heading(header,"Battle Room",40).SizeFlagsHorizontal=SizeFlags.ExpandFill;ArcadeTheme.Button(header,"Leave room",()=>BackRequested?.Invoke());
+        var header=ArcadeTheme.Row(box);ArcadeTheme.Heading(header,"Battle Room",40).SizeFlagsHorizontal=SizeFlags.ExpandFill;var leave=ArcadeTheme.Button(header,"Leave room",()=>BackRequested?.Invoke());
         var code=ArcadeTheme.Row(box,16);
         var codeCaption=ArcadeTheme.Text(code,"Room code",18,ArcadeTheme.Muted);codeCaption.VerticalAlignment=VerticalAlignment.Center;
         var codePlate=new PanelContainer();var codeStyle=ArcadeTheme.Key(ArcadeTheme.Sand,false,false,12,18);codePlate.AddThemeStyleboxOverride("panel",codeStyle);code.AddChild(codePlate);
@@ -72,6 +76,7 @@ public partial class ArcadeMenu
         _startRoom=ArcadeTheme.Button(actions,"Start game",()=>StartRoomRequested?.Invoke(),true);_startRoom.Name="StartRoom";_startRoom.Disabled=true;
         _roomRules=ArcadeTheme.Button(actions,"Room settings",()=>Navigation?.Invoke("HostSetup"));_roomRules.Name="EditRoomSettings";_roomRules.Visible=false;
         ArcadeTheme.Button(actions,"Settings",()=>Navigation?.Invoke("Settings")).Name="LobbySettings";
+        RegisterNavigation("Lobby",[leave],Choices(actions),[_copyCode]);
     }
 
     public void ShowLobby(JsonElement? lobby,string? code,string connection)
@@ -95,6 +100,11 @@ public partial class ArcadeMenu
         _countdown=_party is null?status.CountdownEndsAt:null;
         _lobbyStatus.Text=status.State switch {"countdown"=>"The battle is about to begin!","running"=>"Entering the arena...",_=>"Waiting for players..."};
         ApplyParty();
+        if(_screen=="Lobby")
+        {
+            RefreshNavigation();
+            if(!CanFocus(GetViewport().GuiGetFocusOwner()))FocusScreen(restore:true);
+        }
     }
 
     public void ResetLobby()

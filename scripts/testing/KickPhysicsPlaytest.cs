@@ -12,7 +12,7 @@ public partial class PlaytestDriver
     {
         if(_root.ActiveSession!=null){_root.Back();await Frames(3);}
         foreach(int seat in new[]{0,1,2})Input(seat,default);
-        _root.StartLocal(new SessionSettings(Stage:"sunken-temple",Bots:0),3,practice:true);
+        _root.StartLocal(new SessionSettings(Stage:"sunken-temple",Bots:0){Advanced=new AdvancedRules{DisabledItems="red,bounce,heart,focus,tiny,big,haste,slow"}},3,practice:true);
         await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"kick physics reaches three-human stock temple training",150);
     }
     private async Task KickPhysics()

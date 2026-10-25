@@ -9,11 +9,11 @@ public partial class PromptBar : HBoxContainer
     public int KeySize {get;set;}=14;
     private static readonly Dictionary<string,string> Verbs=new()
     {
-        ["SELECT"]="Move",["CONFIRM"]="Confirm",["BACK"]="Back",["SCREEN"]="Fullscreen",["BOMB / KICK"]="Bomb / kick",["CARRY"]="Carry",["REMOTE"]="Detonate"
+        ["PRIMARY"]="Main action",["PANEL"]="Column",["NEXT"]="Next control",["SELECT"]="Move",["CONFIRM"]="Confirm",["BACK"]="Back",["SCREEN"]="Fullscreen",["BOMB / KICK"]="Bomb / kick",["CARRY"]="Carry",["REMOTE"]="Detonate"
     };
     private static readonly Dictionary<string,string> Keys=new()
     {
-        ["SPACE"]="Space",["SHIFT"]="Shift",["ENTER"]="Enter",["ESC"]="Esc",["CTRL"]="Ctrl",["BACKSPACE"]="Backspace",["ARROWS"]="Arrows",["STICK"]="Stick",["D-PAD"]="D-pad"
+        ["TAB"]="Tab",["SPACE"]="Space",["SHIFT"]="Shift",["ENTER"]="Enter",["ESC"]="Esc",["CTRL"]="Ctrl",["BACKSPACE"]="Backspace",["ARROWS"]="Arrows",["STICK"]="Stick",["D-PAD"]="D-pad"
     };
     public override void _Ready(){MouseFilter=MouseFilterEnum.Ignore;AddThemeConstantOverride("separation",6);}
     public void SetPrompt(string source)

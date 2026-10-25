@@ -62,8 +62,8 @@ public partial class PlayerToken : Control
         float x=88;
         if(Red){ArcadeIcons.Bomb(this,new(x,y),6,ArcadeTheme.Red,.5f);x+=17;}
         if(Remote){ArcadeIcons.Bomb(this,new(x,y+1),6,new Color("3b62b8"),0,0,true);x+=17;}
-        if(BombType is "bounce" or "fast")
-        {ArcadeIcons.Bomb(this,new(x,y),6,new Color(BombType=="bounce"?"a365ea":"43d9a1"),.5f);x+=17;}
+        if(BombType=="bounce")
+        {ArcadeIcons.Bomb(this,new(x,y),6,new Color("a365ea"),.5f);x+=17;}
         if(Focus){DrawArc(new(x,y),5,0,Mathf.Tau,20,ArcadeTheme.Aqua,2);DrawCircle(new(x,y),1.5f,ArcadeTheme.Cream);}
         if(Heart&&x<Size.X-6)ArcadeIcons.Heart(this,new(x,y),6.5f);
         if(Status is TokenStatus.Dizzy or TokenStatus.Held)Badge(Status==TokenStatus.Held?"Held":"Dizzy",ArcadeTheme.Gold);

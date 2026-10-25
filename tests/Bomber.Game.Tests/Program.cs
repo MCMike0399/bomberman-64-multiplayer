@@ -1,3 +1,7 @@
+if(args.Contains("--loot-density-sweep")){ItemDensityChecks.Sweep();return;}
+if(args.Contains("--loot-density")){ItemDensityChecks.Run();return;}
+if(args.Contains("--falling")){FallingChecks.Run();return;}
+if(args.Contains("--measure-falls")){FallingChecks.Measure();return;}
 if(args.Contains("--adaptive-rooms")){AdaptiveRoomChecks.Run();return;}
 if(args.Contains("--stage-integration")){StageIntegrationChecks.Run();return;}
 if(args.Contains("--tutorial-review")){TutorialChecks.ReviewRegressions();return;}
@@ -32,7 +36,9 @@ if(args.Contains("--sandbox")){SandboxEquipmentChecks.Run();return;}
 if(args.Contains("--cover-layout")){RegionalCoverChecks.Run();return;}
 
 var passed = StageIntegrationChecks.Run() + TutorialChecks.Run() + TutorialChecks.ReviewRegressions() + TopRulesChecks.Run() + AdvancedRulesChecks.Run() + ItemExpirationChecks.Run() + RegionalCoverChecks.Run() + SandboxEquipmentChecks.Run() + PyramidLedgeChecks.Run() + PartyPolishChecks.Run() + PartySessionChecks.Run() + LootAvailabilityChecks.Run() + AimedThrowChecks.Run() + CarryChargeChecks.Run() + BombPlacementChecks.Run() + PowerUpModeChecks.Run() + BombTravelChecks.Run() + KickTimingChecks.Run() + BodyContactChecks.Run() + BombImpactChecks.Run() + TraversalAndGhostChecks.Run() + BombActionsChecks.Run() + GrappleChecks.Run();
+passed+=ItemDensityChecks.Run();
 SnapshotChecks.Run(Run);
+passed += FallingChecks.Run();
 passed += OnlineRoomChecks.Run();
 passed += AdaptiveRoomChecks.Run();
 MatchRulesChecks.Run(Run);

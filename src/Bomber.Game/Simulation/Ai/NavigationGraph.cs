@@ -12,6 +12,8 @@ internal sealed class NavigationGraph
     public int Width { get; }
     public int Count { get; }
     public int[] Edges { get; }
+    public int[] IncomingStarts { get; }
+    public int[] IncomingEdges { get; }
     public bool[] Walkable { get; }
     public float[] Height { get; }
     public static NavigationGraph For(StageLayout stage) => Cache.GetValue(stage, s => new(s));
@@ -38,6 +40,18 @@ internal sealed class NavigationGraph
                 if (stage.CanWalk(x,z,x+dx[d],z+dz[d],y))
                     Edges[node*4+d] = Cell(x+dx[d]+.5f,z+dz[d]+.5f,y);
         }
+        // Reverse the actual directed edges: a downward drop must not invent a climb.
+        IncomingStarts = new int[Count + 1];
+        foreach (int next in Edges) if (next >= 0) IncomingStarts[next + 1]++;
+        for (int i = 1; i <= Count; i++) IncomingStarts[i] += IncomingStarts[i - 1];
+        IncomingEdges = new int[IncomingStarts[Count]];
+        var write = (int[])IncomingStarts.Clone();
+        for (int node = 0; node < Count; node++)
+            for (int d = 0; d < 4; d++)
+            {
+                int next = Edges[node * 4 + d];
+                if (next >= 0) IncomingEdges[write[next]++] = node;
+            }
     }
     public int X(int node) => node % Width;
     public int Z(int node) => node % _plane / Width;

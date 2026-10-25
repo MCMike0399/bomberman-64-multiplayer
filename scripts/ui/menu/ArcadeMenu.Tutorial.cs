@@ -36,6 +36,7 @@ public partial class ArcadeMenu
         _lessonStart.Name="StartLesson";_lessonStart.CustomMinimumSize=new(0,64);
         var practice=ArcadeTheme.Quiet(ArcadeTheme.Button(detail,"Free practice in Circuit Garden",()=>TutorialRequested?.Invoke("free")));
         practice.Name="TutorialFreePractice";practice.CustomMinimumSize=new(0,48);practice.AddThemeFontSizeOverride("font_size",17);
+        RegisterNavigation("Tutorial",[back],[],_lessonButtons.Values.Cast<Control>().ToArray(),new Control[]{_lessonStart,practice});
         SelectLesson(_selectedLesson);
     }
 
@@ -46,6 +47,12 @@ public partial class ArcadeMenu
         _lessonObjectives.Text=string.Join('\n',lesson.Objectives.Select((text,index)=>$"{index+1}. {text}"));
         _lessonTip.Text=lesson.Tip;
         _lessonStart.Text=_completedLessons.Contains(lesson.Id)?"Play again":"Try it!";
+    }
+    public void RememberLesson(string id)
+    {
+        SelectLesson(TutorialCourse.Get(id));
+        _savedFocus["Tutorial"]=_lessonButtons[id];
+        _columnFocus[("Tutorial",0)]=_lessonButtons[id];
     }
     public void TutorialProgress(IEnumerable<string> completed)
     {
