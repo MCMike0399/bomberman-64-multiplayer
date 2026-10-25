@@ -1,3 +1,33 @@
+# Release pipeline source verified locally
+
+2026-10-25: the release/protocol worktree prepares **v0.30.0/build 36/schema 4**.
+It has not been published, deployed or installed. The current delivered baseline
+below remains v0.29.1. [Release procedure and operator setup](releases.md).
+
+Fresh canonical `managed` and `public` gates pass. Managed evidence includes
+2,910 game checks, 341 client checks, 65 AI checks, 19 audio cues, 23 cluster
+contracts, the 48-scenario AI soak, 72 real admission/worker checks, full network
+smoke, nine forced-relay checks, the new 13-check real release connection/cleanup
+probe, and all 36 two-process Valkey fleet checks. The final server archive has
+55 inventoried files, including 13 plugin files. An independent promotion-time
+inspection verified its SHA-256, release identity and every runtime file hash.
+All three workflows pass actionlint 1.7.12; documentation links and whitespace
+checks pass. Receipts are in ignored `artifacts/qa/release-gate-managed` and
+`artifacts/qa/release-public-final`; raw diagnostics remain local.
+
+Failures were retained: the initial new-release token/publication tests failed
+before implementation; an old peer-error wording assertion was updated to the
+release-specific contract. A later fleet run exited 137, and its retry failed
+at Valkey startup. The harness now requires a bounded host-side RESP PING before
+starting workers; an isolated fleet rerun and the complete final gate pass.
+The SIGKILL's cause was not established. Only the label/identity-checked orphan
+test container was stopped; production services were untouched.
+
+These are local source/tooling results. They do not establish hosted Actions,
+Mac export/installation, public gameplay, or a deployed host adapter. The
+protected runner, operator adapter and complete target-origin configuration
+remain activation prerequisites. No signing key or production setting changed.
+
 # Adaptive multiplayer v0.29.1 delivered
 
 2026-10-25: adaptive public/private rooms and the merged Rock Garden preview fix

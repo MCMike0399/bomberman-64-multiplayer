@@ -37,6 +37,11 @@ update the current guide rather than silently reviving old behavior.
 
 ## Current decisions that supersede earlier experiments
 
+- Release pipeline source (2026-10-25): `Release.props` owns version/build/schema;
+  every release has an exact admission token. Publication requires deployment
+  verification across all configured workers. [Release procedure and adapter
+  setup](../releases.md) distinguish implemented gates from activation/host evidence.
+
 - v0.29.1 delivers adaptive public/private rooms, independent coordination and execution limits, measured player-host selection and the Rock Garden miniature bounds fix. [Behavior](../smart-multiplayer.md) and [delivery evidence](../smart-multiplayer-release-029.md) define measured capacity and remaining limits.
 
 - v0.28 integrates all stage PRs, the tutorial and reference-informed explosion effects. [Combined verification and release status](../stages-release-028.md) supersedes independent draft limitations only where its evidence explicitly covers them.

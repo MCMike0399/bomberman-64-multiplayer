@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- The deploy runner needs no private dependency to exercise the real wire contract. -->
+    <Compile Include="../../src/Bomber.Game/OnlineProtocol.cs" Link="OnlineProtocol.cs" />
+  </ItemGroup>
+</Project>

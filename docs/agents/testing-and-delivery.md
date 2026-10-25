@@ -277,6 +277,12 @@ diagnostic and fails on other unregister errors. Never broadly delete artifacts.
 
 ## CI and publication boundaries
 
+Read [release identity and deployment gates](../releases.md) before changing
+release configuration. `Release.props` is canonical; export drift fails public
+QA. Run actionlint over all three workflow files. Server delivery now includes
+the exact plugins used by the fleet drill. Both manual and automatic publication
+require the protected deployment gate and matching live release identities.
+
 Read [CI](../ci.md) for trusted-job configuration and artifact validation. Public
 PR checks use no private dependency credentials; private builds run only on
 trusted main. Keep both bootstrap tools aligned with the checked-in dependency
@@ -290,8 +296,10 @@ Before claiming CI delivery, verify required jobs for the exact source SHA and
 version, checksums, app/controller manifest and server per-file inventory. A
 skipped optional Metal job is not rendering evidence. A downloadable artifact
 is not an installed app, notarization, physical-device validation or a deployed
-server. Draft promotion verifies app/server artifacts from the same successful
-run and creates a draft only; publication/host operations need their own scope.
+server. Promotion verifies app/server artifacts from the same successful run
+and creates a signed draft by default. Explicit publication requires the
+protected matching-fleet deployment gate; host operations still require their
+own authorization and configured operator adapter.
 
 For v0.27 connection changes, include the `peer-rooms` journey and the
 [peer transport checks](../peer-hosting.md#verification-entrypoints). The official

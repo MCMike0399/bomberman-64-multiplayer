@@ -16,7 +16,7 @@ internal static class OnlineRoomChecks
         Check(legacy.Frames.Last(f=>f.Type=="party.status").Data.GetProperty("phase").GetString()=="lobby","v0.27 peers cannot start the changed stage protocol");
         legacyRoom.OnMessage(legacy,legacyHost,new("peer.hello",JsonSerializer.SerializeToElement(new{version=OnlineProtocol.Revision}),null,legacy.Now));
         Check(!legacy.Frames.Last(f=>f.Type=="party.status").Data.GetProperty("canStart").GetBoolean(),"mixed old/new peers cannot start");
-        Check(legacy.Frames.Last(f=>f.Type=="party.status").Data.GetProperty("notice").GetString()!.Contains("Update"),"incompatible peers receive an update instruction");
+        Check(legacy.Frames.Last(f=>f.Type=="party.status").Data.GetProperty("notice").GetString()==OnlineProtocol.UpdateMessage,"incompatible peers receive the release-specific update instruction");
         legacyRoom.OnMessage(legacy,legacyGuest,new("peer.hello",JsonSerializer.SerializeToElement(new{version=OnlineProtocol.Revision}),null,legacy.Now));
         Check(legacy.Frames.Last(f=>f.Type=="party.status").Data.GetProperty("canStart").GetBoolean(),"matching updated peers can start");
         var c = new Context(); var room = new PeerRoomSession(new("peer", "blast-peer", c.Settings, 64));
