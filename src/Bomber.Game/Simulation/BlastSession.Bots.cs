@@ -81,6 +81,7 @@ public sealed partial class BlastSession
             if(escape<0)escape=BotLeastRiskStep(bot,start);
             bot.BotPlacingBomb=false;BotSteer(bot,start,escape);return;
         }
+        BotBuildPursuit(bot,start);
         bool rejectedPlacement=false;
         if(bot.BotPlacingBomb)
         {
@@ -97,7 +98,6 @@ public sealed partial class BlastSession
         }
         if(bot.HasRemote&&!bot.PrevR&&BotRemoteOpportunity(bot))
         {bot.Input=new InputState(0,0,false,false,true);return;}
-        BotBuildPursuit(bot,start);
         int waypoint=BotSearch(bot,start,_aiDanger,false,_aiProfile.TacticalDepth);
         bool useful=BotAdjacentCover(start)||BotEnemyInRange(bot.X,bot.Y,bot.Z,(bot.FireLevel*.9f+.4f)*(bot.HasRed?1.25f:1),bot.Id,bot.HasRed);
         bool centered=Math.Abs(bot.X-(_aiGraph.X(start)+.5f))+Math.Abs(bot.Z-(_aiGraph.Z(start)+.5f))<.2f;
@@ -146,6 +146,11 @@ public sealed partial class BlastSession
     {
         escape=-1;
         if(!TryBombPlacement(bot,aimX,aimZ,advance,out float x,out float z)||BotBombUtility(bot,x,z)<=0)return false;
+        // Revalidate engagement after the orienting reaction: a farming plan
+        // may become overdue before its actual press. Sealed routes still
+        // permit demolition; an open pursuit route keeps priority.
+        if(BotAttackDue(bot)&&!_aiNeedsBreach&&_aiPursuitStart>=0&&
+            !BotEnemyInRange(x,_stage.SurfaceAt(x,z,bot.Y),z,(bot.FireLevel*.9f+.4f)*(bot.HasRed?1.25f:1),bot.Id,bot.HasRed))return false;
         _aiCandidate.OwnerId=bot.Id;_aiCandidate.X=x;_aiCandidate.Z=z;
         _aiCandidate.CellX=(int)x;_aiCandidate.CellZ=(int)z;_aiCandidate.Tier=(int)MathF.Round(_stage.SurfaceAt(x,z,bot.Y));
         _aiCandidate.LandingY=_stage.SurfaceAt(x,z,bot.Y);
