@@ -22,9 +22,9 @@ public static class PeerFrameRules
                     if (!Fields(d,"s:id s:name i:width i:height i:round i:winsTarget i:roundSeconds")) return false;
                     int width=d.GetProperty("width").GetInt32(),height=d.GetProperty("height").GetInt32();
                     return width is >=3 and <=32 && height is >=3 and <=32 &&
-                        d.GetProperty("id").GetString() is "sunken-temple" or "rock-garden" or "up-and-down" &&
-                        Array(d,"cells",1024,c=>Fields(c,"i:k i:t i:rx i:rz i:rf i:rt")&&c.GetProperty("k").GetInt32() is >=0 and <=4) &&
-                        d.GetProperty("cells").GetArrayLength()==width*height && Array(d,"spawns",8,p=>p.ValueKind==JsonValueKind.Array&&p.GetArrayLength()==2&&p.EnumerateArray().All(v=>v.TryGetInt32(out int n)&&n>=0&&n<32));
+                        d.GetProperty("id").GetString() is "sunken-temple" or "rock-garden" or "up-and-down" or "top-rules" &&
+                        Array(d,"cells",1024,c=>Cell(c,d.GetProperty("id").GetString()=="top-rules")) &&
+                        d.GetProperty("cells").GetArrayLength()==width*height && Underpasses(d,width*height) && Array(d,"spawns",8,p=>p.ValueKind==JsonValueKind.Array&&p.GetArrayLength()==2&&p.EnumerateArray().All(v=>v.TryGetInt32(out int n)&&n>=0&&n<32));
                 case "state":
                     if (!Fields(d,"i:round l:serverTime s:stageLighting l:presentationSeq i:phase n:timeLeft i:closedLeft i:closedRight s:hurryMode n:waterLevel n:waterStartsIn n:waterRiseRate n:hurryStartsIn s:softBlocks")) return false;
                     if (d.GetProperty("phase").GetInt32() is <0 or >3 || Convert.FromBase64String(d.GetProperty("softBlocks").GetString()!).Length>128) return false;
@@ -38,6 +38,26 @@ public static class PeerFrameRules
             }
         }
         catch(Exception ex) when(ex is InvalidOperationException or KeyNotFoundException or FormatException or OverflowException){return false;}
+    }
+    private static bool Cell(JsonElement cell,bool castle)
+    {
+        if(!Fields(cell,"i:k i:t i:rx i:rz n:rf n:rt"))return false;
+        int kind=cell.GetProperty("k").GetInt32();
+        if(kind is <0 or >4 || cell.GetProperty("t").GetInt32() is <0 or >8 ||
+            cell.GetProperty("rx").GetInt32() is <-1 or >1 || cell.GetProperty("rz").GetInt32() is <-1 or >1 ||
+            cell.GetProperty("rf").GetSingle() is <0 or >8 || cell.GetProperty("rt").GetSingle() is <0 or >8)return false;
+        if(!cell.TryGetProperty("oh",out var height)||height.ValueKind==JsonValueKind.Null)return !castle||kind!=1;
+        return height.ValueKind==JsonValueKind.Number&&height.TryGetSingle(out float value)&&float.IsFinite(value)&&value is >=.15f and <=8;
+    }
+    private static bool Underpasses(JsonElement stage,int count)
+    {
+        if(!stage.TryGetProperty("underpasses",out _))return stage.GetProperty("id").GetString()!="top-rules";
+        return Array(stage,"underpasses",count,index=>
+        {
+            if(index.ValueKind!=JsonValueKind.Number||!index.TryGetInt32(out int value)||value<0||value>=count)return false;
+            var cell=stage.GetProperty("cells")[value];
+            return cell.GetProperty("k").GetInt32()==0&&cell.GetProperty("t").GetInt32()>0;
+        });
     }
     private static bool Array(JsonElement d,string name,int maximum,Func<JsonElement,bool> valid) =>
         d.TryGetProperty(name,out var array)&&array.ValueKind==JsonValueKind.Array&&array.GetArrayLength()<=maximum&&array.EnumerateArray().All(valid);

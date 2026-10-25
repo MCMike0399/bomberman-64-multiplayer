@@ -39,6 +39,14 @@ update the current guide rather than silently reviving old behavior.
 
 - Tutorial work adds an original local-only Circuit Garden and replayable lessons. The user withdrew map removal: preserve all battle arenas and the concurrent map PRs. Read [tutorial ownership and integration](../tutorial.md) before changing lessons, progress or training terrain.
 
+- Top Rules (2026-10-24 source work) adds the original castle composition with
+  three raised lanes, a central crosswalk, four stairs and real lower passages.
+  Terrain, CPU routing, bombs and aim previews distinguish both stories.
+  [Research and explicit adaptations](../top-rules-research.md); the gameplay,
+  visual and testing guides own maintenance. This does not change the installed
+  or published release by itself.
+
+
 - v0.27 connection work adds persistent random lobbies and player-hosted peer
   rooms. [Peer hosting](../peer-hosting.md) owns the two-human minimum, direct/relay
   routes and return-to-lobby host takeover. See verification for delivery status.

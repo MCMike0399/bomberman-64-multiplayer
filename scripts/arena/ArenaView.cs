@@ -238,7 +238,8 @@ public partial class ArenaView : Node3D
             if(!_entities.TryGetValue(id,out var node))
             {
                 float x=F(item,"cx")+.5f,z=F(item,"cz")+.5f;node=new PowerupModel(_art,item.GetProperty("type").GetString()??"");
-                node.Position=new(x,_terrain.Surface(x,z)+.48f,z);_dynamic.AddChild(node);_entities[id]=node;
+                float y=item.TryGetProperty("y",out var height)?height.GetSingle()*TempleStageView.HeightScale:_terrain.Surface(x,z);
+                node.Position=new(x,y+.48f,z);_dynamic.AddChild(node);_entities[id]=node;
             }
             if(item.TryGetProperty("life",out var remaining)){float seconds=remaining.GetSingle();node.Visible=seconds<0||seconds>3||((int)(seconds*6)%2==0);}
         }
@@ -254,7 +255,15 @@ public partial class ArenaView : Node3D
             bool closed=x<left||x>=_terrain.Width-right;
             if(closed&&!_walls.ContainsKey(x))
             {
-                var n=new Node3D();Box(n,new(x+.5f,2.1f,_terrain.Depth/2f),new(.92f,5.8f,_terrain.Depth),_art.Color(new Color(.92f,.18f,.17f,.4f),.7f,true),.03f);_effects.AddChild(n);_walls[x]=n;
+                var n=new Node3D();
+                if(_stage==BlastStages.TopRules)
+                {
+                    var stone=_art.Masonry();stone.SetShaderParameter("base_color",new Color("828b96"));stone.SetShaderParameter("mortar_color",new Color("343b48"));
+                    Box(n,new(x+.5f,1.95f,_terrain.Depth/2f),new(1,3.9f,_terrain.Depth-2),stone);
+                    Box(n,new(x+.5f,3.95f,_terrain.Depth/2f),new(1.03f,.16f,_terrain.Depth-2),_art.Color(new Color("bdc4c5")),.025f);
+                }
+                else Box(n,new(x+.5f,2.1f,_terrain.Depth/2f),new(.92f,5.8f,_terrain.Depth),_art.Color(new Color(.92f,.18f,.17f,.4f),.7f,true),.03f);
+                _effects.AddChild(n);_walls[x]=n;
             }
             if(!closed&&_walls.Remove(x,out var wall))wall.QueueFree();
         }
@@ -289,7 +298,7 @@ public partial class ArenaView : Node3D
             var projection=BombThrowRules.Project(origin,velocity,_terrain.AimSurface,_=>false,
                 bomb.GetProperty("remote").GetBoolean()?5:F(bomb,"fuse"),_terrain.AimCellKind,
                 (x,z)=>_terrain.AimCellKind(x+.5f,z+.5f),(x,z)=>_terrain.AimHasCover(x,z,cover),
-                waterLevel:_stage==BlastStages.SunkenTemple&&data.GetProperty("phase").GetInt32()==2?F(data,"waterLevel"):null,motionRate:motionRate,bounce:bounce,gravityScale:BombThrowRules.Weight(pumps),pumps:pumps);
+                waterLevel:_stage==BlastStages.SunkenTemple&&data.GetProperty("phase").GetInt32()==2?F(data,"waterLevel"):null,motionRate:motionRate,bounce:bounce,gravityScale:BombThrowRules.Weight(pumps),pumps:pumps,layeredSurface:_terrain.AimLayerSurface,deckIntersects:_terrain.AimDeckIntersects,obstacleHeight:_terrain.AimObstacleHeight);
             if(!_throwPreviews.TryGetValue(id,out var view))
             {view=new BombThrowPreview();_effects.AddChild(view);_throwPreviews[id]=view;}
             view.Update(projection,pumps,player.GetProperty("slot").GetInt32(),aimSet,aiming,range);seen.Add(id);

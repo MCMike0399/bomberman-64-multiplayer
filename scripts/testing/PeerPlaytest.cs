@@ -12,7 +12,7 @@ public partial class PlaytestDriver
     {
         _root.Navigate("Online"); await Frames(3); await Capture("peer-online-options");
         Check(_root.FindChildren("*","",true,false).OfType<Godot.Button>().Any(b=>b.IsVisibleInTree()&&b.Text=="Host peer room") && _root.FindChildren("*","",true,false).OfType<Godot.Button>().Any(b=>b.IsVisibleInTree()&&b.Text=="Random lobby"),"online screen offers peer hosting and random lobbies");
-        await _root.StartOnlineAsync(new Uri(_server),"Peer host",new SessionSettings(Bots:0,Wins:1),NetworkMode.CreatePeer);
+        await _root.StartOnlineAsync(new Uri(_server),"Peer host",new SessionSettings(Stage:"top-rules",Bots:0,Wins:1),NetworkMode.CreatePeer);
         var host=(NetworkSession)_root.ActiveSession!;
         Check(host.Party?.Hosting=="peer"&&!host.Party.CanStart,"peer room requires two connected people");
         await Capture("peer-waiting-for-player");
@@ -25,6 +25,7 @@ public partial class PlaytestDriver
         await ActivateNamed("StartRoom");
         await Until(()=>host.PeerTransport=="Direct P2P"&&peers.All(p=>p.PeerTransport=="Direct P2P")&&_root.LatestState is {} s&&s.GetProperty("phase").GetInt32()==1,"actual encrypted WebRTC channels connect");
         Check(_root.ScreenName=="Match","peer authority enters rendered gameplay");
+        Check(_root.LatestStage is {} castleStage&&castleStage.GetProperty("id").GetString()=="top-rules"&&castleStage.GetProperty("underpasses").GetArrayLength()>40,"peer-hosted castle geometry reaches the real composition root");
         second.SendInput(0,new PlayerInput(0,1,A:true));
         await Until(()=>_root.LatestState is {} s&&s.GetProperty("bombs").GetArrayLength()>0&&states.TryGetValue(third.PlayerId!,out var remote)&&remote.GetProperty("bombs").GetArrayLength()>0,"remote direct input creates a bomb visible to other peers");
         second.ReleaseInputs(); await Capture("peer-direct-three-players");

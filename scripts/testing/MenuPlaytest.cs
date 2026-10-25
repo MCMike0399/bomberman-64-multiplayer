@@ -69,7 +69,7 @@ public partial class PlaytestDriver
     {
         async Task VerifyStages(string view)
         {
-            foreach(var stage in new[] {"sunken-temple","rock-garden","up-and-down"})
+            foreach(var stage in new[] {"sunken-temple","rock-garden","up-and-down","top-rules"})
             {
                 _root.StartLocal(new SessionSettings(Stage:stage,Bots:0),1,practice:true);await Frames(10);
                 Check(_root.LatestStage is not null,"camera check receives stage "+stage);
@@ -104,7 +104,7 @@ public partial class PlaytestDriver
         {
             var cell=cells[i];int kind=cell.GetProperty("k").GetInt32();if(kind is 2 or 3)continue;
             float y=kind==4?cell.GetProperty("rt").GetSingle():cell.GetProperty("t").GetSingle();
-            foreach(float dx in new[]{0f,1f})foreach(float dz in new[]{0f,1f})foreach(float head in new[]{0f,kind==1?1.21f:2.1f})
+            foreach(float dx in new[]{0f,1f})foreach(float dz in new[]{0f,1f})foreach(float head in new[]{0f,kind==1?(stage=="top-rules"?4.25f:1.21f):2.1f})
             {
                 var world=new Vector3(i%width+dx,y*1.35f+head,i/width+dz);
                 behind|=camera.IsPositionBehind(world);var p=camera.UnprojectPosition(world)/viewport;

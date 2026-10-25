@@ -23,6 +23,7 @@ public sealed partial class BlastSession
                 {
                     k = (int)c.Kind,
                     t = c.Tier,
+                    oh = c.ObstacleHeight,
                     rx = c.RampDX,
                     rz = c.RampDZ,
                     rf = c.RampFromTier,
@@ -37,6 +38,7 @@ public sealed partial class BlastSession
             width = w,
             height = h,
             cells = flat,
+            underpasses = _stage.Underpasses.Select(c => c.Z * w + c.X).Order().ToArray(),
             spawns = _stage.Spawns.Select(s => new[] { s.X, s.Z }),
             round = _roundNum,
             winsTarget = _winsTarget,
@@ -126,7 +128,7 @@ public sealed partial class BlastSession
             cx = it.CellX,
             cz = it.CellZ,
             type = it.Type, life = it.LifeRemaining, dropped = it.DroppedBy!=null,
-            y = _stage.SurfaceAt(it.X, it.Z),
+            y = _stage.SurfaceAt(it.X, it.Z, it.Tier + .25f),
         });
 
         var timeLeft = Math.Max(0, _roundSeconds - _roundTimer);

@@ -197,6 +197,14 @@ Use the existing arrow/A-D/controller dial navigation. `graphics-settings` check
 native selection, persistence and paused local continuity; `network` checks online
 continuity. [Rendering budgets and rationale](../graphics-research.md).
 
+## Arena selection
+
+The native arena dial cycles Sunken Temple, Rock Garden, Up & Down and Top Rules.
+Use `StageIds.Length` for wraparound. Local battle, Practice and waiting-room
+settings use the same validated ids; the menu miniature includes thin castle
+bridges and their lower passages. `setup` checks both wrap directions;
+`top-rules` launches the castle through the normal Practice menu.
+
 ## Reticle rendering and lifecycle
 
 The user explicitly requested shape-only endpoints with no extra labels.

@@ -10,6 +10,10 @@ public partial class TempleStageView : Node3D
     public const float HeightScale=1.35f;
     private readonly ArtMaterials _art;
     private JsonElement _cells;
+    private readonly HashSet<int> _underpasses = [];
+    private bool _castle;
+    private readonly List<ShaderMaterial> _castleStone = [];
+    private static Shader? _castleFloorShader;
     public int Width {get;private set;}
     public int Depth {get;private set;}
     private ShaderMaterial _stone=null!,_cobble=null!,_masonry=null!,_bedrock=null!;
@@ -30,7 +34,17 @@ public partial class TempleStageView : Node3D
     }
     public override void _Process(double delta)
     {
-        if(_water==null||!IsVisibleInTree())return;
+        if(!IsVisibleInTree())return;
+        if(_castle)
+        {
+            if(_graphicsRevision!=GraphicsQuality.Revision)
+            {
+                foreach(var material in _castleStone)material.SetShaderParameter("quality_detail",GraphicsQuality.Current==GraphicsPreset.Low?0:1);
+                _graphicsRevision=GraphicsQuality.Revision;
+            }
+            return;
+        }
+        if(_water==null)return;
         var water=(ShaderMaterial)_water.MaterialOverride;
         if(_graphicsRevision!=GraphicsQuality.Revision)
         {
@@ -51,10 +65,11 @@ public partial class TempleStageView : Node3D
         }
     }
     public TempleStageView(ArtMaterials art){_art=art;}
-    public float Surface(float x,float z)
+    public float Surface(float x,float z,float ceiling=float.PositiveInfinity)
     {
         int cx=Math.Clamp((int)x,0,Width-1),cz=Math.Clamp((int)z,0,Depth-1);
         var c=_cells[cz*Width+cx];float tier=c.GetProperty("t").GetSingle();
+        if(_underpasses.Contains(cz*Width+cx)&&ceiling<tier-.001f)return 0;
         if(c.GetProperty("k").GetInt32()==4)
         {
             float dx=c.GetProperty("rx").GetSingle(),dz=c.GetProperty("rz").GetSingle();
@@ -75,6 +90,25 @@ public partial class TempleStageView : Node3D
         Bomber.Game.Simulation.CellKind.Void=>-1,
         _=>Surface(x,z)/HeightScale
     };
+    public float AimLayerSurface(float x,float z,float ceiling) => AimCellKind(x,z) switch
+    {
+        Bomber.Game.Simulation.CellKind.Water => _targetWater/HeightScale,
+        Bomber.Game.Simulation.CellKind.Void => -1,
+        _ => Surface(x,z,ceiling)/HeightScale,
+    };
+    public bool AimDeckIntersects(float x,float z,float bottom,float top)
+    {
+        int cx=(int)MathF.Floor(x),cz=(int)MathF.Floor(z);
+        if(cx<0||cz<0||cx>=Width||cz>=Depth||!_underpasses.Contains(cz*Width+cx))return false;
+        float deck=_cells[cz*Width+cx].GetProperty("t").GetSingle();
+        return top>=deck-Bomber.Game.Simulation.StageLayout.DeckThickness&&bottom<deck;
+    }
+    public float AimObstacleHeight(int x,int z)
+    {
+        if(x<0||z<0||x>=Width||z>=Depth)return Bomber.Game.Simulation.BombThrowRules.PillarHeight;
+        var cell=_cells[z*Width+x];
+        return cell.TryGetProperty("oh",out var height)&&height.ValueKind==JsonValueKind.Number?height.GetSingle():Bomber.Game.Simulation.BombThrowRules.PillarHeight;
+    }
     public bool AimHasCover(int x,int z,byte[] cover)
     {
         if(x<0||z<0||x>=Width||z>=Depth)return false;
@@ -84,6 +118,11 @@ public partial class TempleStageView : Node3D
     public void Build(JsonElement data)
     {
         Width=data.GetProperty("width").GetInt32();Depth=data.GetProperty("height").GetInt32();_cells=data.GetProperty("cells").Clone();
+        _underpasses.Clear();
+        if(data.TryGetProperty("underpasses",out var passages))
+            foreach(var passage in passages.EnumerateArray())_underpasses.Add(passage.GetInt32());
+        _castle=data.GetProperty("id").GetString()=="top-rules";
+        if(_castle){BuildTopRules();return;}
         _stone=_art.Stone();_cobble=_art.Stone(true);
         _masonry=_art.Masonry();_bedrock=_art.Bedrock();var wall=_masonry;var cap=_art.Color(new("e8cc82"));
         _water=new MeshInstance3D {Mesh=new PlaneMesh {Size=new Vector2(160,160),SubdivideWidth=180,SubdivideDepth=180},MaterialOverride=_art.Water(),Position=new Vector3(Width/2f,-.53f,Depth/2f),CastShadow=GeometryInstance3D.ShadowCastingSetting.Off};AddChild(_water);
@@ -205,7 +244,9 @@ public partial class TempleStageView : Node3D
 
     public Node3D CreateCover(int cell)
     {
-        int x=cell%Width,z=cell/Width;var root=new Node3D {Position=new(x+.5f,Surface(x+.5f,z+.5f),z+.5f)};
+        int x=cell%Width,z=cell/Width;
+        if(_castle)return CreateCastleCover(x,z);
+        var root=new Node3D {Position=new(x+.5f,Surface(x+.5f,z+.5f),z+.5f)};
         var sandstone=_art.Color(new("caaa73"));var dark=_art.Color(new("8d6740"));var edge=_art.Color(new("e3c48c"));
         Box(root,new(0,.39f,0),new(.76f,.78f,.76f),sandstone,.06f);
         Box(root,new(0,.045f,0),new(.82f,.09f,.82f),edge,.025f);

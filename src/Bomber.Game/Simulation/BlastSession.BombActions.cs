@@ -86,8 +86,8 @@ public sealed partial class BlastSession
     private bool CanPlaceBombAt(BlastPlayer player,float x,float z)
     {
         var cell=_stage.At((int)MathF.Floor(x),(int)MathF.Floor(z));
-        if (!cell.IsPassable || !BombTerrainClear(x,z,(int)MathF.Floor(player.X),(int)MathF.Floor(player.Z),allowDescent:true)) return false;
-        var y=_stage.SurfaceAt(x,z);
+        if (!cell.IsPassable || !BombTerrainClear(x,z,(int)MathF.Floor(player.X),(int)MathF.Floor(player.Z),allowDescent:true,ceiling:player.Y+.25f)) return false;
+        var y=_stage.SurfaceAt(x,z,player.Y+.25f);
         if (Math.Abs(y-player.Y)>.6f) return false;
         foreach(var other in _players.Values)
             if(other.Id!=player.Id&&other.Alive&&!other.Ghost&&other.CarriedById is null&&!other.Airborne&&Math.Abs(other.Y-y)<.6f&&
@@ -98,7 +98,7 @@ public sealed partial class BlastSession
         return true;
     }
 
-    private bool BombTerrainClear(float x,float z,int originX,int originZ,bool allowDescent=false,BlastBomb? movingBomb=null)
+    private bool BombTerrainClear(float x,float z,int originX,int originZ,bool allowDescent=false,BlastBomb? movingBomb=null,float ceiling=float.PositiveInfinity)
     {
         if(x<BlastBomb.Radius||z<BlastBomb.Radius||x>_stage.Width-BlastBomb.Radius||z>_stage.Height-BlastBomb.Radius) return false;
         for(var cx=(int)MathF.Floor(x-BlastBomb.Radius);cx<=(int)MathF.Floor(x+BlastBomb.Radius);cx++)
@@ -107,9 +107,10 @@ public sealed partial class BlastSession
                 var dx=x-Math.Clamp(x,cx,cx+1f);var dz=z-Math.Clamp(z,cz,cz+1f);
                 if(dx*dx+dz*dz>=BlastBomb.Radius*BlastBomb.Radius) continue;
                 var cell=_stage.At(cx,cz);
+                float support=ceiling==float.PositiveInfinity&&movingBomb is not null?movingBomb.Tier+.25f:ceiling;
                 if(cell.Kind==CellKind.Pillar||_softBlocks.IsAlive(cx,cz)||
-                    (cell.IsPassable&&!CellsConnected(originX,originZ,cx,cz)&&
-                     !(allowDescent&&BombCellsDescend(originX,originZ,cx,cz))&&
+                    (cell.IsPassable&&!CellsConnected(originX,originZ,cx,cz,support)&&
+                     !(allowDescent&&BombCellsDescend(originX,originZ,cx,cz,support))&&
                      !(movingBomb is not null&&BombEscapesCell(movingBomb,x,z,cx,cz)))) return false;
             }
         return true;
@@ -134,7 +135,7 @@ public sealed partial class BlastSession
             OwnerId = p.Id,
             OwnerMayLeave = !hold,
             X = x, Z = z,
-            CellX = cx, CellZ = cz, Tier = (int)MathF.Round(_stage.SurfaceAt(x, z)),
+            CellX = cx, CellZ = cz, Tier = (int)MathF.Round(_stage.SurfaceAt(x, z,p.Y+.25f)),
             FireLevel = p.FireLevel,
             Mode = p.BombType,
             FuseTimer = p.BombType=="bounce"?3.5f:BlastBomb.FuseSeconds,

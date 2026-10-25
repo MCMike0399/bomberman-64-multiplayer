@@ -64,8 +64,8 @@ public sealed partial class BlastSession
         p.Z = Math.Clamp(p.Z, -0.5f, _stage.Height + 0.5f);
 
         var cell = _stage.At((int)MathF.Floor(p.X), (int)MathF.Floor(p.Z));
-        var ground=PlayerLandingHeight(p.X,p.Z);
-        if(!p.Ghost&&ground<previousY-.05f&&!CellsConnected(originX,originZ,(int)MathF.Floor(p.X),(int)MathF.Floor(p.Z)))
+        var ground=PlayerLandingHeight(p.X,p.Z,previousY + .25f);
+        if(!p.Ghost&&ground<previousY-.05f&&!CellsConnected(originX,originZ,(int)MathF.Floor(p.X),(int)MathF.Floor(p.Z),previousY + .25f))
         {
             p.Airborne=true;p.Falling=true;p.AirVY=0;
             p.AirVX=dx/Math.Max(dt,.0001f);p.AirVZ=dz/Math.Max(dt,.0001f);
@@ -84,12 +84,12 @@ public sealed partial class BlastSession
     // Use the same water plane published to the renderer; void falls below the
     // lowest floor before elimination as well. The player center still defines
     // the ledge, so this does not extend the island by the collision radius.
-    private float PlayerLandingHeight(float x,float z) =>
+    private float PlayerLandingHeight(float x,float z,float ceiling = float.PositiveInfinity) =>
         _stage.At((int)MathF.Floor(x),(int)MathF.Floor(z)).Kind switch
         {
             CellKind.Water => _waterLevel,
             CellKind.Void => -1,
-            _ => _stage.SurfaceAt(x,z),
+            _ => _stage.SurfaceAt(x,z,ceiling),
         };
 
     private bool CollidesWithSolid(float x, float z, int tier, BlastPlayer mover)
@@ -102,8 +102,8 @@ public sealed partial class BlastSession
             {
                 var cell = _stage.At(cx, cz);
                 if (cell.IsPassable && CircleOverlapsCell(x, z, cx, cz) &&
-                    !CellsConnected((int)MathF.Floor(mover.X), (int)MathF.Floor(mover.Z), cx, cz)&&
-                    _stage.SurfaceAt(Math.Clamp(x,cx+.001f,cx+.999f),Math.Clamp(z,cz+.001f,cz+.999f))>mover.Y+.05f&&
+                    !CellsConnected((int)MathF.Floor(mover.X), (int)MathF.Floor(mover.Z), cx, cz,mover.Y+.25f)&&
+                    _stage.SurfaceAt(Math.Clamp(x,cx+.001f,cx+.999f),Math.Clamp(z,cz+.001f,cz+.999f),mover.Y+.25f)>mover.Y+.05f&&
                     !EscapingCell(x,z,mover,cx,cz)) return true;
                 if (cell.Kind == CellKind.Pillar) // hard wall
                 {
@@ -122,7 +122,7 @@ public sealed partial class BlastSession
         foreach (var b in _bombs)
         {
             if (b.State != BombState.Resting) continue;
-            if (Math.Abs(BombY(b) - _stage.SurfaceAt(x, z)) > .6f) continue;
+            if (Math.Abs(BombY(b) - _stage.SurfaceAt(x, z, mover.Y+.25f)) > .6f) continue;
             if (b.OwnerId == mover.Id && b.OwnerMayLeave) continue; // first departure is geometric, not a time-limited escape
             var distance = Dist2(b.X,b.Z,x,z);
             var previousDistance = Dist2(b.X,b.Z,mover.X,mover.Z);
@@ -133,12 +133,12 @@ public sealed partial class BlastSession
         return false;
     }
 
-    private bool CellsConnected(int ax, int az, int bx, int bz)
+    private bool CellsConnected(int ax, int az, int bx, int bz, float ceiling = float.PositiveInfinity)
     {
         if (ax == bx && az == bz) return true;
-        if (ax == bx || az == bz) return _stage.CanCross(ax, az, bx, bz);
-        return (_stage.CanCross(ax, az, bx, az) && _stage.CanCross(bx, az, bx, bz)) ||
-            (_stage.CanCross(ax, az, ax, bz) && _stage.CanCross(ax, bz, bx, bz));
+        if (ax == bx || az == bz) return _stage.CanCross(ax, az, bx, bz,ceiling);
+        return (_stage.CanCross(ax, az, bx, az,ceiling) && _stage.CanCross(bx, az, bx, bz,ceiling)) ||
+            (_stage.CanCross(ax, az, ax, bz,ceiling) && _stage.CanCross(ax, bz, bx, bz,ceiling));
     }
 
     private static bool CircleOverlapsCell(float x, float z, int cx, int cz)

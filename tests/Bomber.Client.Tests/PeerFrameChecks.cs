@@ -18,6 +18,22 @@ internal static class PeerFrameChecks
         match.Message+=json=>{using var d=JsonDocument.Parse(json);if(d.RootElement.GetProperty("t").GetString()=="state"){Check(PeerFrameRules.Valid(d.RootElement),"actual bomb/bot snapshots satisfy peer boundary");valid++;}};
         for(int i=0;i<300;i++){match.SetInput(0,new PlayerInput(1,0,A:i%30==0));match.Tick();}
         Check(valid>100,"validator exercised live gameplay and presentation events");
+        var castle=new LocalMatch(new MatchOptions{Stage="top-rules",HumanPlayers=2,BotPlayers=0});
+        using var castleStage=JsonDocument.Parse(castle.StageJson!);
+        Check(PeerFrameRules.Valid(castleStage.RootElement),"Top Rules peer stage accepts fractional stairs, underpasses and authored wall heights");
+        void InvalidCastle(Action<JsonNode> change,string label)
+        {
+            var frame=JsonNode.Parse(castle.StageJson!)!;change(frame["d"]!);
+            Check(!PeerFrameRules.Valid(JsonSerializer.SerializeToElement(frame)),label);
+        }
+        InvalidCastle(d=>d.AsObject().Remove("underpasses"),"reject castle without its lower-passage metadata");
+        InvalidCastle(d=>d["underpasses"]![0]=19*17,"reject out-of-bounds underpass index");
+        InvalidCastle(d=>d["underpasses"]![0]=0,"reject underpass on a solid wall");
+        InvalidCastle(d=>d["cells"]![5]!["oh"]=-1,"reject negative castle wall height");
+        InvalidCastle(d=>d["cells"]![5]!["oh"]=1e200,"reject non-finite castle wall height");
+        InvalidCastle(d=>d["cells"]![5]!.AsObject().Remove("oh"),"reject castle wall with no authored crown");
+        InvalidCastle(d=>d["cells"]![2*19+2]!["rf"]=1e200,"reject invalid fractional ramp height");
+        InvalidCastle(d=>d["cells"]![2*19+2]!["rz"]=99,"reject unbounded stair direction");
         var invalid=JsonNode.Parse(match.StateJson!)!;
         invalid["d"]!["players"]![0]!["x"]=1e200;
         Check(!PeerFrameRules.Valid(JsonSerializer.SerializeToElement(invalid)),"reject non-finite render coordinates");

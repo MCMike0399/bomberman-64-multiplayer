@@ -70,7 +70,7 @@ public sealed partial class BlastSession
             victim.X=carrier.X;victim.Z=carrier.Z;
         }
         victim.CarriedById=null;victim.HoldRemaining=0;victim.StunTimer=0;victim.KnockdownReason=null;
-        victim.SurfaceY=_stage.SurfaceAt(victim.X,victim.Z);victim.Tier=(int)MathF.Round(victim.Y);
+        victim.SurfaceY=_stage.SurfaceAt(victim.X,victim.Z,victim.Tier+.25f);victim.Tier=(int)MathF.Round(victim.Y);
         victim.ImpactProtectionTimer=Math.Max(victim.ImpactProtectionTimer,.6f);
         Present("player-release",victim.Id,victim.Id,victim.X,victim.Y,victim.Z,reason:reason,causedBy:carrierId);
     }
@@ -82,8 +82,9 @@ public sealed partial class BlastSession
                 if(!CircleOverlapsCell(x,z,cx,cz))continue;
                 if(EscapingCell(x,z,p,cx,cz))continue;
                 var cell=_stage.At(cx,cz);
+                if(_stage.DeckIntersects(Math.Clamp(x,cx+.001f,cx+.999f),Math.Clamp(z,cz+.001f,cz+.999f),p.Y,p.Y+HeadHeight))return true;
                 if(cell.Kind==CellKind.Pillar||_softBlocks.IsAlive(cx,cz))return true;
-                if(cell.IsPassable&&_stage.SurfaceAt(Math.Clamp(x,cx+.001f,cx+.999f),Math.Clamp(z,cz+.001f,cz+.999f))>p.Y+.02f)return true;
+                if(cell.IsPassable&&_stage.SurfaceAt(Math.Clamp(x,cx+.001f,cx+.999f),Math.Clamp(z,cz+.001f,cz+.999f),p.Y+.25f)>p.Y+.02f)return true;
             }
         return false;
     }
@@ -107,9 +108,16 @@ public sealed partial class BlastSession
                     float nx=p.X+p.AirVX*stepDt,nz=p.Z+p.AirVZ*stepDt;
                     if(!AirborneTerrainBlocks(nx,p.Z,p))p.X=nx;
                     if(!AirborneTerrainBlocks(p.X,nz,p))p.Z=nz;
+                    float previousHeight=p.Y;
                     p.AirVY-=9.8f*stepDt;p.SurfaceY+=p.AirVY*stepDt;
+                    if(p.AirVY>0&&_stage.HasLowerSupport(p.X,p.Z,previousHeight)&&
+                        _stage.DeckIntersects(p.X,p.Z,p.Y,p.Y+HeadHeight))
+                    {
+                        p.SurfaceY=Math.Min(p.Y,_stage.At((int)p.X,(int)p.Z).Tier-StageLayout.DeckThickness-HeadHeight);
+                        p.AirVY=0;
+                    }
                     var cell=_stage.At((int)MathF.Floor(p.X),(int)MathF.Floor(p.Z));
-                    float ground=PlayerLandingHeight(p.X,p.Z);
+                    float ground=PlayerLandingHeight(p.X,p.Z,p.Y-p.AirVY*stepDt+.25f);
                     if(p.Y<=ground)
                     {
                         bool falling=p.Falling;p.Airborne=false;p.Falling=false;p.SurfaceY=ground;p.Tier=(int)MathF.Round(ground);
