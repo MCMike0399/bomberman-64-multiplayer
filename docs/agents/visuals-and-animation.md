@@ -173,6 +173,56 @@ Read [the rendering investigation](../history/iteration8-rendering.md) before re
 this shader; its fixed daytime Fresnel tint was superseded by the four lighting
 profiles below. Verify normal and hurry/flood states from more than one camera.
 
+### Diorama polish (2026-10-25)
+
+The user asked to raise the established chibi look without changing its identity,
+citing Pokémon BDSP's water, Tunic's lighting, and Link's Awakening (Switch) /
+Echoes of Wisdom. Nintendo describes the latter as a diorama "you're peeking
+into" with Link as a ~10 cm figurine, while keeping detail restrained to that
+scale ([Haruhana interview](https://nintendoeverything.com/graphic-refining-director-yoshiki-haruhana-on-reimagining-the-visuals-of-zelda-links-awakening/));
+reviews describe its tilt-shift edge blur and lacquered, board-game-piece gloss.
+Echoes of Wisdom reuses that engine and look ([Digital Foundry summary](https://gonintendo.com/contents/40826-digital-foundry-offers-a-tech-analysis-of-zelda-echoes-of-wisdom)).
+The implementation is original shader/material work; nothing is copied.
+
+- **Clear shallows (Medium/High).** `ArtMaterials.WaterShaderFor` compiles the same
+  source with `CLEAR_WATER`: refraction of the opaque scene copy, depth absorption
+  toward the profile's deep color, drifting caustic webs projected on the actual
+  submerged floor, and sparse twinkling glints along the key light's reflection path
+  (`StageLighting.ApplyWater` uploads its direction and color). Low keeps the opaque
+  variant and pays no screen copy; `TempleStageView` swaps shaders live and re-applies
+  uniforms. Flooded courts now show their cobbles; authority water is unchanged.
+- **Open sea and seabed.** Nothing lies under the open sea, so its reconstructed
+  depth is the degenerate sky/far plane. The shader now detects that explicitly and
+  keeps the authored lagoon tone, mottled by real wave height and deepening gently
+  away from the island. An unseen opaque `Seabed` box at `TempleStageView.SeabedHeight`
+  (matching `seabed_height`) gives depth of field a real surface: Godot's DOF reads
+  opaque depth, so without it the whole transparent sea blurred as distant sky.
+  Anything at seabed depth counts as open sea and is never revealed. The menu
+  miniature hides its seabed.
+- **Shoreline foam.** A crisp contact line plus one soft band travelling outward,
+  still masked by shore slope and vertical depth so flooded paving shows no foam grid.
+- **Diorama depth cues.** `BattleCameraRig.PlayableDepth` records the nearest/farthest
+  playable view depth after fitting. `ArenaView.ApplyDepthCues` starts far/near
+  depth-of-field blur and depth-mode horizon haze strictly outside that range
+  (`graphics-settings` asserts it per stage). Depth is re-measured whenever the arena
+  camera is re-posed (shake uses offsets), so inspection cameras stay sharp too.
+  Aerial perspective stays off: a camera
+  looking down would sample the dark lower sky and grey the sea. Blur is off on Low.
+- **Lacquered toys.** `ArtMaterials.Toy` adds a thin clear coat and a soft light rim to
+  characters, bombs and pickups. Geometry, proportions and animation are untouched.
+- **Painterly terrain.** Stone gains per-block warmth, broad warm/cool weathering,
+  risers that deepen toward their submerged roots and an algae fringe at the waterline
+  (the castle sets `water_height` far below so it stays dry). Garden turf gains tufts,
+  sun-warmed patches, sparse tiny flowers on Medium/High, and grounded wall gradients.
+- **Light and bloom.** Cooler, slightly more saturated ambient in Morning/Midday/
+  Afternoon gives Tunic-like colored shadows against the warm key (Midday key 1.07).
+  A small glow bloom softens highlights; High adds half-resolution SSIL bounce.
+
+Lessons: compare against the baseline capture at full resolution before tuning.
+A dropped `vertex()` once zeroed the world-position varying and looked like a fog,
+DOF or palette problem; one diagnostic frame writing the suspect values as
+emission found it. Close-up concentric banding on the helmet predates this work.
+
 ### Top Rules castle presentation
 
 [TempleStageView.TopRules](../../scripts/arena/TempleStageView.TopRules.cs)
@@ -229,8 +279,8 @@ The fill is `LightOnly` so it cannot invent a second sun. Explicit ambient color
 keeps shadow readability independent of the reflected sky. This follows Godot's
 [sky radiance contract](https://docs.godotengine.org/en/4.7/tutorials/shaders/shader_reference/sky_shader.html)
 and [spatial normal/material outputs](https://docs.godotengine.org/en/4.7/tutorials/shaders/shader_reference/spatial_shader.html).
-These are sky reflections, not reflections of characters or terrain; SSR and
-refraction remain off. Fine water ripples fade with pixel footprint, and normal
+These are sky reflections, not reflections of characters or terrain; SSR remains
+off. Medium/High refract the opaque scene beneath clear shallows (see diorama polish). Fine water ripples fade with pixel footprint, and normal
 variance softens distant specular highlights. Stone grain is similarly filtered;
 cobble now receives relief and the same irregular, shinier wet band as masonry.
 Authority water height, flood damping and the opaque-depth sampling pass remain.
@@ -276,7 +326,9 @@ High keeps native/4×, raises shadows to 4096, uses full-resolution higher-quali
 SSAO, and adds restrained menu contact shading. Medium/High retain the authored
 glow intensity. All menu textures remain at output resolution; no TAA/FXAA.
 Low skips fine shader noise/ripples and contact-hardening sun shadows while
-retaining the same geometry, lighting palettes, shoreline and gameplay.
+retaining the same geometry, lighting palettes, shoreline and gameplay. Low also
+keeps opaque water and no depth of field; Medium/High add clear refracting
+shallows and diorama blur, and High adds half-resolution SSIL bounce.
 Shadow depth bias scales with preset and doubles for Morning/Afternoon; the
 smaller atlas otherwise exposes diagonal self-shadow marks under grazing light.
 

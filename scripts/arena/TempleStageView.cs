@@ -9,6 +9,8 @@ namespace BlastCircuit.Arena;
 public partial class TempleStageView : Node3D
 {
     public const float HeightScale=1.35f;
+    /// <summary>Must match the water shader's seabed_height default.</summary>
+    public const float SeabedHeight=-3f;
     private readonly ArtMaterials _art;
     private JsonElement _cells;
     private readonly HashSet<int> _underpasses = [];
@@ -32,8 +34,10 @@ public partial class TempleStageView : Node3D
     private float _uploadedWater=float.NaN,_uploadedFlood=float.NaN;
     private int _graphicsRevision=-1;
     public float WaterHeight=>_water?.Position.Y??-.53f;
+    private StageLighting? _lighting;
     public void SetLighting(StageLighting lighting)
     {
+        _lighting=lighting;
         if(_water?.MaterialOverride is ShaderMaterial material)lighting.ApplyWater(material);
     }
     public void SetWaterLevel(float tierLevel)
@@ -67,6 +71,13 @@ public partial class TempleStageView : Node3D
         if(_graphicsRevision!=GraphicsQuality.Revision)
         {
             float detail=GraphicsQuality.Current==GraphicsPreset.Low?0:1;
+            var shader=ArtMaterials.WaterShaderFor(GraphicsQuality.Current);
+            if(water.Shader!=shader)
+            {
+                // Swapping between opaque and clear water keeps every authored uniform.
+                water.Shader=shader;_uploadedFlood=float.NaN;
+                if(_lighting!=null)_lighting.ApplyWater(water);
+            }
             foreach(var material in new[]{water,_stone,_cobble,_masonry,_bedrock})material.SetShaderParameter("quality_detail",detail);
             foreach(var material in _gardenMaterials)material.SetShaderParameter("quality_detail",detail);
             _graphicsRevision=GraphicsQuality.Revision;
@@ -126,6 +137,10 @@ public partial class TempleStageView : Node3D
         _garden=data.GetProperty("id").GetString()=="rock-garden";
         if(_garden){BuildRockGarden();return;}
         _water=new MeshInstance3D {Mesh=new PlaneMesh {Size=new Vector2(160,160),SubdivideWidth=180,SubdivideDepth=180},MaterialOverride=_art.Water(),Position=new Vector3(Width/2f,-.53f,Depth/2f),CastShadow=GeometryInstance3D.ShadowCastingSetting.Off};AddChild(_water);
+        // Never visible (the water shader keeps open sea opaque above it). It gives depth of
+        // field and the shoreline depth reconstruction a real surface instead of the sky.
+        AddChild(new MeshInstance3D {Name="Seabed",Mesh=new BoxMesh {Size=new Vector3(160,.05f,160)},MaterialOverride=_art.Color(new("0f3a46"),.95f),
+            Position=new Vector3(Width/2f,SeabedHeight,Depth/2f),CastShadow=GeometryInstance3D.ShadowCastingSetting.Off});
         if(Layout.Id==BlastStages.UpAndDown&&cells.Cast<CellDef>().Any(c=>c.Below!=null)){BuildUpAndDown();return;}
         bool temple=Layout.Id==BlastStages.SunkenTemple;
         bool garden=Layout.Id==BlastStages.CircuitGarden;

@@ -17,7 +17,12 @@ public partial class TempleStageView
         cap.SetShaderParameter("base_color", new Color("bdc4c5"));
         cap.SetShaderParameter("mortar_color", new Color("616b78"));
         _castleWallMaterial=stone;
-        foreach(var material in new[]{stone,cap})material.SetShaderParameter("quality_detail",GraphicsQuality.Current==GraphicsPreset.Low?0:1);
+        foreach(var material in new[]{stone,cap})
+        {
+            material.SetShaderParameter("quality_detail",GraphicsQuality.Current==GraphicsPreset.Low?0:1);
+            // The castle has no sea: keep its stone dry instead of inheriting the shore band.
+            material.SetShaderParameter("water_height",-100f);
+        }
         _castleStone.Add(stone); _castleStone.Add(cap);
         var slate = _art.Color(new("414651"));
         var inset = _art.Color(new("39382f"));
@@ -111,6 +116,7 @@ public partial class TempleStageView
             _castleCoverMaterial.SetShaderParameter("base_color",new Color("a5abb3"));
             _castleCoverMaterial.SetShaderParameter("mortar_color",new Color("505966"));
             _castleCoverMaterial.SetShaderParameter("quality_detail",GraphicsQuality.Current==GraphicsPreset.Low?0:1);
+            _castleCoverMaterial.SetShaderParameter("water_height",-100f);
             _castleStone.Add(_castleCoverMaterial);
         }
         var stone=_castleCoverMaterial;

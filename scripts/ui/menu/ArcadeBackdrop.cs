@@ -162,6 +162,8 @@ public partial class ArcadeBackdrop : RenderSurface
         // Keep the authority terrain/materials, while trimming its ocean to the display plinth.
         foreach(var child in _miniature.GetChildren())
         {
+            // The trimmed display plinth has no open sea, so it needs no seabed.
+            if(child is MeshInstance3D seabed&&seabed.Name=="Seabed")seabed.Visible=false;
             if(child is MeshInstance3D {Mesh:PlaneMesh plane} water){plane.Size=new(layout.Width+.8f,layout.Height+.8f);water.Position=new(layout.Width/2f,-.53f,layout.Height/2f);}
             // Gameplay's deep sea foundation would project through the display plinth.
             else if(child is MeshInstance3D {Mesh:not null} terrain&&terrain.Mesh.GetAabb().Position.Y< -3.5f)terrain.Visible=false;

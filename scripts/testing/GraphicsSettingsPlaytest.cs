@@ -62,6 +62,12 @@ public partial class PlaytestDriver
                     Check(Mathf.IsEqualApprox(view.Scaling3DScale,preset==GraphicsPreset.Low?.85f:1),"arena resolution follows "+preset);
                     Check(environment.SsaoEnabled==(preset!=GraphicsPreset.Low)&&environment.GlowEnabled==(preset!=GraphicsPreset.Low),"arena effects follow "+preset);
                     Check(!view.UseTaa&&view.ScreenSpaceAA==Viewport.ScreenSpaceAAEnum.Disabled,"sharp non-temporal AA policy");
+                    Check(environment.SsilEnabled==(preset==GraphicsPreset.High),"indirect bounce is High-only at "+preset);
+                    var depthCues=(CameraAttributesPractical)view.GetCamera3D()!.Attributes;
+                    Check(depthCues.DofBlurFarEnabled==(preset!=GraphicsPreset.Low)&&depthCues.DofBlurNearEnabled==(preset!=GraphicsPreset.Low),"diorama depth of field follows "+preset);
+                    var playable=LightingArena.PlayableDepth;
+                    Check(depthCues.DofBlurFarDistance>playable.Y&&depthCues.DofBlurNearDistance<playable.X&&environment.FogDepthBegin>playable.Y,
+                        $"blur and haze stay outside the playable depth {playable} on {stage}");
                     var terrain=AuditDescendants(LightingArena).OfType<TempleStageView>().Single();
                     var materials=AuditDescendants(terrain).OfType<MeshInstance3D>().Select(n=>n.MaterialOverride)
                         .OfType<ShaderMaterial>().Where(m=>m.Shader.Code.Contains("uniform float quality_detail")).Distinct().ToArray();
@@ -72,6 +78,9 @@ public partial class PlaytestDriver
                     {
                         Check(water.Length==1,"sea arena retains one water surface: "+stage);
                         Check(((ShaderMaterial)water[0].MaterialOverride).GetShaderParameter("quality_detail").AsSingle()==(preset==GraphicsPreset.Low?0:1),"live water detail follows preset");
+                        var waterShader=((ShaderMaterial)water[0].MaterialOverride).Shader;
+                        Check(waterShader==ArtMaterials.WaterShaderFor(preset)&&waterShader.Code.Contains("#define CLEAR_WATER")==(preset!=GraphicsPreset.Low),
+                            "clear refracting water is used only above Low: "+preset);
                     }
                     await Capture("graphics-"+stage+"-"+GraphicsQuality.ToWire(preset));
                     await MeasureGraphics(stage,preset);

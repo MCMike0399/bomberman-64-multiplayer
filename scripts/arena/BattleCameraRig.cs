@@ -9,6 +9,8 @@ public sealed class BattleCameraRig(Camera3D camera)
     private Vector3 _center=new(10.5f,2,11.5f);
     private Vector2 _offset;
     private bool _training, _castle;
+    /// <summary>View depth of the closest/farthest playable point; depth cues stay outside this range.</summary>
+    public Vector2 PlayableDepth {get;private set;}=new(20,40);
     public void SetStage(JsonElement stage)
     {
         _bounds.Clear();
@@ -68,6 +70,15 @@ public sealed class BattleCameraRig(Camera3D camera)
         for(int i=0;i<22;i++){float mid=(near+far)*.5f;if(Place(mid))far=mid;else near=mid;}
         Place(far);
         _offset=new(camera.HOffset,camera.VOffset);
+        MeasureDepth();
+    }
+    /// <summary>Re-measure playable view depth for the camera's current transform.</summary>
+    public void MeasureDepth()
+    {
+        if(_bounds.Count==0)return;
+        float nearest=float.MaxValue,farthest=0;
+        foreach(var point in _bounds){float depth=-camera.ToLocal(point).Z;nearest=Mathf.Min(nearest,depth);farthest=Mathf.Max(farthest,depth);}
+        PlayableDepth=new(Mathf.Max(nearest,.1f),farthest);
     }
     public void Shake(float time,float intensity)
     {

@@ -74,6 +74,11 @@ update the current guide rather than silently reviving old behavior.
   are in `docs/history/`. Large classes are split into `Class.Concern.cs`
   partials. The [codebase map](codebase-map.md) owns layout and naming rules.
 
+- Diorama polish (2026-10-25): clear refracting shallows with caustics, tilt-shift
+  depth of field and haze outside the arena, lacquered toy materials and painterly
+  terrain, inspired by BDSP, Tunic and Link's Awakening. Low keeps opaque water and
+  no blur. See the [rendering guide](visuals-and-animation.md#diorama-polish-2026-10-25).
+
 - Graphics settings now provide Low/Medium/High, with Medium as default. Menus
   render at output pixel density and use the same AA policy as the arena;
   presets remain local even online. [Research and budgets](../graphics-research.md)
