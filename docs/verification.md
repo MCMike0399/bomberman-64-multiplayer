@@ -1,3 +1,22 @@
+# Diorama polish — source verification
+
+2026-10-25: water, depth-cue, material, terrain and lighting polish described in
+the [rendering guide](agents/visuals-and-animation.md#diorama-polish-2026-10-25).
+Source work for review; no release, installation or server change. All graphical
+evidence comes from the isolated macOS Metal guest (paravirtual GPU).
+
+| Gate | Observed result |
+| --- | --- |
+| `public` profile | Passes |
+| Focused graphical | `stage-lighting`, `graphics-settings` (new SSIL, depth-of-field, depth-cue and clear/opaque water assertions), `first-use-rendering`, `presentation`, `model-profile`, `menu` pass |
+| Full graphical, final source | Engine passes all 47 journeys, 3,311 assertions, 330 captures; the runner rejected one shutdown-time `Handle is not initialized` C# error after WebRTC peer teardown, which did not recur |
+| Full graphical, repeat | Rendering journeys pass; fails at the eight-peer `peer-rooms` step |
+| `peer-rooms` standalone | Fails at eight-peer snapshots on this branch; unchanged `main` also fails it in the same guest (lobby stall, timeout), so this is the existing eight-peer limitation |
+| Render timing (VM) | Render-thread CPU ~0.3–1.2 ms per preset, one extra draw call (seabed); guest GPU timing unavailable, so native GPU cost still needs `graphics-benchmark` |
+
+The full graphical gate is therefore **not green**, for a reason that predates
+this work. Before/after captures are in `docs/media/diorama-polish/`.
+
 # Integrated v0.28 delivered
 
 2026-10-24: the combined stages, tutorial, reference-informed explosions and review
