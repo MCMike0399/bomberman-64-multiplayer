@@ -90,3 +90,13 @@ ice, weather or animations. Graphical receipts and manually inspected images
 are recorded separately when available. Neither synthetic inputs nor VM graphics
 certify new physical-controller support, native GPU throughput or original-game
 numerical physics.
+
+## Pending-PR review corrections (2026-10-25)
+
+A deterministic wall-ricochet regression reproduced gusts being added twice to
+stored momentum. Collision now reflects the original momentum on precisely the
+axes reflected by the shared flight sweep. Wind remains a displacement term.
+Another regression reproduced resting bombs trapped atop surviving spires; drift
+now uses the shared height-aware static footprint, preserving spire-side blocking
+and allowing supported bombs to drift off and fall. Both corrected paths pass
+the focused managed Blizzard suite. Final combined graphical evidence is separate.

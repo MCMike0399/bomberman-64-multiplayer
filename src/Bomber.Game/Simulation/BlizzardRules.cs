@@ -1,3 +1,5 @@
+// Adapted from burbuja-kernel Example.Blast, MIT (copyright 2026 MCMike0399).
+// Product-owned simulation; original baseline b0758339984bbeead1b3d1236f31e980aaa5f20e.
 using System.Numerics;
 
 namespace Bomber.Game.Simulation;
@@ -28,7 +30,11 @@ public static class BlizzardRules
     {
         var drift=new Vector3(wind.X,0,wind.Y);
         var flight=BombThrowRules.AdvanceStatic(position,velocity+drift,dt,surface,kind,cover,bounce,gravityScale,stage);
-        return new(flight.Position,new(flight.Velocity.X==0?0:flight.Velocity.X-drift.X,
-            flight.Velocity.Y,flight.Velocity.Z==0?0:flight.Velocity.Z-drift.Z));
+        // Reflect the stored momentum on exactly the axes reflected by collision.
+        // Subtracting unreflected wind after a bounce would add twice the gust.
+        static float Momentum(float original,float advected,float result) =>
+            result==advected?original:result==-advected?-original:0;
+        return new(flight.Position,new(Momentum(velocity.X,velocity.X+drift.X,flight.Velocity.X),
+            flight.Velocity.Y,Momentum(velocity.Z,velocity.Z+drift.Z,flight.Velocity.Z)));
     }
 }

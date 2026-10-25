@@ -51,6 +51,35 @@ internal static class BlizzardBattleChecks
             foreach(string id in new[]{"sunken-temple","rock-garden","up-and-down","top-rules"})
                 Assert(BlastStages.Get(id).SoftBlockHeight==BombThrowRules.CoverHeight,"A larger ice spire changed another arena's cover height.");
         });
+        Check("windy wall ricochets preserve stored momentum",()=>
+        {
+            foreach(float gust in new[]{-.8f,0,.8f})
+            {
+                var flight=BlizzardRules.AdvanceFlight(new(17.4f,.4f,9.5f),new(2,0,0),.4f,new(gust,0),
+                    stage.SurfaceAt,(x,z)=>stage.At(x,z).Kind,(_,_)=>false,bounce:true,stage:stage);
+                Assert(Math.Abs(flight.Velocity.X+2)<.001f&&Math.Abs(flight.Velocity.Z)<.001f,
+                    $"Wind changed stored ricochet momentum: gust {gust}, velocity {flight.Velocity}.");
+            }
+        });
+        Check("wind drifts resting bombs off supporting spires without side penetration",()=>
+        {
+            var match=Match();Fight(match);
+            var session=(BlastSession)typeof(LocalMatch).GetField("_session",BindingFlags.Instance|BindingFlags.NonPublic)!.GetValue(match)!;
+            session.AiTestSetSoft(9,9,true);
+            var bomb=new BlastBomb{Id="wind-spire",X=9.5f,Z=9.5f,CellX=9,CellZ=9,State=BombState.Resting,
+                LandingY=stage.SoftBlockHeight,FuseTimer=10};
+            session.AiTestAddBomb(bomb);Step(match,30);
+            Assert(Vector2.Distance(new(bomb.X,bomb.Z),new(9.5f,9.5f))>.5f,
+                "A free resting bomb is trapped on its supporting spire during a gust.");
+            Assert(bomb.State==BombState.Flying&&bomb.FlyY<stage.SoftBlockHeight,
+                "A bomb drifting beyond its spire did not begin falling.");
+            var side=Match();Fight(side);
+            var sideSession=(BlastSession)typeof(LocalMatch).GetField("_session",BindingFlags.Instance|BindingFlags.NonPublic)!.GetValue(side)!;
+            sideSession.AiTestSetSoft(9,9,true);
+            var low=new BlastBomb{Id="wind-side",X=8.5f,Z=9.5f,CellX=8,CellZ=9,State=BombState.Resting,LandingY=0,FuseTimer=10};
+            sideSession.AiTestAddBomb(low);Step(side,10);
+            Assert(low.X<9-BlastBomb.Radius,"Grounded wind drift penetrated a spire side.");
+        });
         Check("seeded four-diagonal gusts, calm and bounded ramps",()=>
         {
             var directions=new HashSet<(int,int)>();bool calm=false;

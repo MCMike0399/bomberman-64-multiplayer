@@ -9,6 +9,7 @@ namespace BlastCircuit.Arena;
 /// <summary>Builds terrain directly from the authority's cells, including visible solid risers and stairways.</summary>
 public partial class TempleStageView : Node3D
 {
+    public bool WeatherActive {get;set;}=true;
     public const float HeightScale=1.35f;
     /// <summary>Must match the water shader's seabed_height default.</summary>
     public const float SeabedHeight=-3f;

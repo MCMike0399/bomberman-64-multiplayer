@@ -8,7 +8,6 @@ namespace BlastCircuit.Arena;
 
 public partial class TempleStageView
 {
-    public bool WeatherActive {get;set;}=true;
     public BlizzardWeather? Weather=>_blizzardWeather;
     public void SetBlizzard(JsonElement weather)
     {

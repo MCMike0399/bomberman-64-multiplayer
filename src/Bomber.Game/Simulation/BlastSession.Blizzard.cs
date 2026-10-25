@@ -22,7 +22,9 @@ public sealed partial class BlastSession
     {
         var wind=BlizzardWind;
         if(wind==Vector2.Zero||bomb.State is BombState.Carried or BombState.Flying)return;
-        bool Clear(float x,float z)=>BombTerrainClear(x,z,(int)bomb.X,(int)bomb.Z,movingBomb:bomb)&&
+        float y=BombY(bomb);
+        bool Clear(float x,float z)=>!BombThrowRules.StaticObstructed(new(x,y,z),new(x-bomb.X,0,z-bomb.Z),
+            (sx,sz)=>_stage.SurfaceAt(sx,sz,y),(cx,cz)=>_stage.AtHeight(cx,cz,y).Kind,_softBlocks.IsAlive,_stage)&&
             !_players.Values.Any(p=>p.Alive&&!p.Ghost&&p.CarriedById==null&&Math.Abs(p.Y-BombY(bomb))<.6f&&
                 !(bomb.OwnerMayLeave&&p.Id==bomb.OwnerId)&&Dist2(x,z,p.X,p.Z)<MathF.Pow(PlayerRadius+BlastBomb.Radius,2))&&
             !_bombs.Any(b=>b!=bomb&&!b.Exploded&&b.State!=BombState.Carried&&Math.Abs(BombY(b)-BombY(bomb))<.6f&&

@@ -99,7 +99,7 @@ public static class BombThrowRules
         }
         return flight;
     }
-    private static bool StaticObstructed(Vector3 position,Vector3 velocity,Func<float,float,float> surface,
+    internal static bool StaticObstructed(Vector3 position,Vector3 velocity,Func<float,float,float> surface,
         Func<int,int,CellKind> cellKind,Func<int,int,bool> hasCover,StageLayout? stage)
     {
         const float radius=BlastBomb.Radius;
