@@ -331,3 +331,9 @@ the graphical captures separately. Managed `--top-rules` checks preserve the
 layered support, falling, kick/throw/slab and CPU path witnesses. The standard
 48-case AI soak includes the new arena. `PartyNetworkChecks` edits a real room
 to Top Rules and observes a host's lower-story traversal from its peer.
+
+For focused castle changes, `--scenario top-rules-regression` runs the eight
+affected graphical journeys: first-use rendering, graphics settings, lighting,
+setup, the castle journey, framing, precision aiming and real online play. It
+uses a rebuilt export and keeps the startup check first. The complete `all`
+suite remains available for broader regressions.

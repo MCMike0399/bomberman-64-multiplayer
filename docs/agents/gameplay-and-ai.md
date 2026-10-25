@@ -275,8 +275,10 @@ now covers four stages (48 combinations).
 
 - [Loot placement](../../src/Bomber.Game/Simulation/BlastSession.Loot.cs) uses map-owned
   `CoverAreas`: regional budget shares and cluster centers, with seeded weighted
-  sampling. Each stock map first gets two nearby reachable crates per spawn, then
-  fills its regional quotas without blocking spawn clearance, ramps or reserved lanes.
+  sampling. The three larger arenas first get two nearby reachable crates per spawn, then
+  fill regional quotas without blocking spawn clearance, ramps or reserved lanes.
+  Top Rules keeps a sparse twelve-block lower court rather than guaranteed upper
+  opening cover.
   Every destroyed crate uses the same independent configured drop chance; there are
   no guaranteed opening rewards.
 - Pyramid targets 60% of 90 blocks in the lower court, 15% along the lower wings,

@@ -176,7 +176,9 @@ profiles below. Verify normal and hurry/flood states from more than one camera.
 [TempleStageView.TopRules](../../scripts/arena/TempleStageView.TopRules.cs)
 builds original gray masonry, brass-framed slate bridges, pale junctions,
 green stair treads and a patterned crimson court from the authority layout.
-Bridge undersides are thin, with visible space below. Keep decorative banners,
+Bridge undersides are thin, with visible space below. Keep the red court above
+the foundation and deck paving above its structural slab; coplanar tops caused
+large gray patches on Low even when the High capture looked correct. Keep decorative banners,
 columns and warm edging outside the actual passage volume. No original textures
 or models ship. The castle has its own steeper battle-camera fit and a low near
 wall so the lower court stays visible; retain HUD-safe framing at 16:9 and 16:10.

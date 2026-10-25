@@ -26,10 +26,10 @@ public partial class TempleStageView
         var crimson = _art.Color(new("7c1d2a"));
         var ember = _art.Color(new("e69731"), .65f, true);
         float deck = 2 * HeightScale;
-        Box(this, new(Width / 2f, -.45f, Depth / 2f), new(Width, .9f, Depth), stone);
+        Box(this, new(Width / 2f, -.49f, Depth / 2f), new(Width, .9f, Depth), stone).Name = "CastleFoundation";
         // The red court is solid flooring. Its restrained checker pattern is drawn in world space.
         Box(this, new(Width / 2f, -.055f, Depth / 2f), new(Width - 2, .11f, Depth - 2),
-            new ShaderMaterial { Shader = _castleFloorShader ??= new Shader { Code = CastleFloorShader } });
+            new ShaderMaterial { Shader = _castleFloorShader ??= new Shader { Code = CastleFloorShader } }).Name = "CastleCourt";
         for (int z = 0; z < Depth; z++) for (int x = 0; x < Width; x++)
         {
             var cell = _cells[z * Width + x];
@@ -39,7 +39,7 @@ public partial class TempleStageView
             {
                 // Rear and side battlements frame the castle; the near wall stays low for visibility.
                 float top = cell.GetProperty("oh").GetSingle() * HeightScale - .11f;
-                Box(this, new(x + .5f, top / 2, z + .5f), new(1, top, 1), stone);
+                Box(this, new(x + .5f, (top - .08f) / 2, z + .5f), new(1, top + .08f, 1), stone);
                 Box(this, new(x + .5f, top + .04f, z + .5f), new(1.06f, .14f, 1.06f), cap, .035f);
                 continue;
             }
@@ -63,15 +63,15 @@ public partial class TempleStageView
             if (tier != 2) continue;
             bool bridge = _underpasses.Contains(z * Width + x);
             float thickness = bridge ? StageLayout.DeckThickness * HeightScale : deck;
-            Box(this, new(x + .5f, deck - thickness / 2, z + .5f), new(.999f, thickness, .999f), bridge ? slate : stone);
+            Box(this, new(x + .5f, deck - (thickness + .08f) / 2, z + .5f), new(.999f, thickness - .08f, .999f), bridge ? slate : stone);
             bool junction = z == 8 && x is 5 or 9 or 13;
-            Box(this, new(x + .5f, deck - .035f, z + .5f), new(.97f, .07f, .97f), bridge ? gold : cap, .018f);
-            Box(this, new(x + .5f, deck + .006f, z + .5f), new(.87f, .045f, .87f), junction ? ivory : bridge ? inset : cap, .02f);
+            Box(this, new(x + .5f, deck - .045f, z + .5f), new(.97f, .07f, .97f), bridge ? gold : cap, .018f);
+            Box(this, new(x + .5f, deck - .015f, z + .5f), new(.87f, .03f, .87f), junction ? ivory : bridge ? inset : cap, .02f);
             if (bridge && !junction)
             {
                 // Subtle paving joints, brass perimeter and visible underside preserve the narrow lanes.
-                Box(this, new(x + .5f, deck + .032f, z + .5f), new(.012f, .008f, .82f), slate);
-                Box(this, new(x + .5f, deck + .032f, z + .5f), new(.82f, .008f, .012f), slate);
+                Box(this, new(x + .5f, deck + .004f, z + .5f), new(.012f, .008f, .82f), slate);
+                Box(this, new(x + .5f, deck + .004f, z + .5f), new(.82f, .008f, .012f), slate);
             }
         }
         // Amber edging echoes the reference's warm strips without turning the red court into lava.

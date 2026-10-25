@@ -34,6 +34,9 @@ public partial class PlaytestDriver
         await WaitState(s => s.GetProperty("phase").GetInt32() == 1, "ordinary menu launch starts Top Rules practice", 150);
         Check(_root.LatestStage!.Value.GetProperty("id").GetString() == BlastStages.TopRules, "practice retains the selected castle");
         var terrain=AuditDescendants(LightingArena).OfType<TempleStageView>().Single();
+        var foundation=terrain.GetNode<MeshInstance3D>("CastleFoundation");
+        var court=terrain.GetNode<MeshInstance3D>("CastleCourt");
+        Check(foundation.Position.Y+foundation.Mesh.GetAabb().End.Y < court.Position.Y+court.Mesh.GetAabb().End.Y-.02f,"red court and foundation have separate depth planes");
         float crown=terrain.GetChildren().OfType<MeshInstance3D>()
             .Where(n=>Math.Abs(n.Position.X-5.5f)<.01f&&Math.Abs(n.Position.Z-.5f)<.01f)
             .Max(n=>n.Position.Y+n.Mesh.GetAabb().End.Y);

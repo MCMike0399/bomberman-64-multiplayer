@@ -667,6 +667,34 @@
       "headless": true,
       "timeout": 180,
       "manual": false
+    },
+    {
+      "id": "top-rules-regression",
+      "steps": [
+        "first-use-rendering",
+        "graphics-settings",
+        "stage-lighting",
+        "setup",
+        "top-rules",
+        "framing",
+        "precision-aim",
+        "network"
+      ],
+      "domains": [
+        "ai",
+        "gameplay",
+        "input",
+        "mechanics",
+        "network",
+        "performance",
+        "physics",
+        "rendering",
+        "settings",
+        "ui"
+      ],
+      "headless": false,
+      "timeout": 1200,
+      "manual": false
     }
   ]
 }
