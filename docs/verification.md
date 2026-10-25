@@ -1,8 +1,8 @@
-# Integrated v0.28 release candidate
+# Integrated v0.28 delivered
 
-2026-10-24: the combined stages, tutorial, original-reference explosion changes
-and review fixes pass the local public, managed/network, headless, graphical and
-package gates. [Exact evidence, captures and delivery status](stages-release-028.md).
+2026-10-24: the combined stages, tutorial, reference-informed explosions and review
+fixes passed all local gates and exact-main CI. v0.28.0/build 33 is published with
+a verified update signature; both shared workers match the official runtime. [Exact evidence, captures and delivery status](stages-release-028.md).
 The independent PR receipts below are historical inputs to that combined review.
 
 # Top Rules castle — source verification
