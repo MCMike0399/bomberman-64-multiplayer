@@ -66,8 +66,10 @@ public static partial class BlastStages
             for (int x = x0; x <= x1; x++) for (int z = z0; z <= z1; z++)
                 cells[x, z] = new CellDef { Kind = CellKind.Floor, Tier = tier };
         }
-        Floor(4, 6, 7, 23, 2);
-        Floor(17, 19, 7, 23, 2);
+        // The middle landing edges meet the inward lips of the side rails.
+        // A sea cell here makes ordinary weighty drops miss the pier entirely.
+        Floor(3, 6, 7, 23, 2);
+        Floor(17, 20, 7, 23, 2);
         Floor(10, 13, 12, 23, 0);
         Floor(10, 13, 7, 10, 4);
         // Each three-cell flight rises two tiers continuously, rather than
@@ -89,9 +91,13 @@ public static partial class BlastStages
         for (int z = 3; z < 21; z++) { Bridge(2, z); Bridge(21, z); }
         for (int z = 3; z <= 6; z++) Bridge(11, z);
         for (int z = 11; z <= 20; z++) Bridge(13, z);
+        // Original-inspired paired item blocks: eight on the low deck, two on
+        // each middle pier. Coordinates are calibrated to our larger grid.
+        var cover=new HashSet<(int X,int Z)> {(4,11),(4,18),(19,11),(19,18)};
+        foreach(int x in new[]{10,12})foreach(int z in new[]{13,16,18,23})cover.Add((x,z));
         var clear = new HashSet<(int X, int Z)>();
         for (int x = 0; x < width; x++) for (int z = 0; z < height; z++)
-            if (cells[x, z].Tier == 4 || cells[x, z].Below != null || x is 5 or 11 or 18)
+            if (!cover.Contains((x,z)))
                 clear.Add((x, z));
         return new StageLayout
         {

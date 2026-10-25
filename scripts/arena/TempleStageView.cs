@@ -67,7 +67,18 @@ public partial class TempleStageView : Node3D
             return;
         }
         if(_water==null)return;
-        var water=(ShaderMaterial)_water.MaterialOverride;
+        if(_water.MaterialOverride is not ShaderMaterial water)
+        {
+            // A menu display may use a static opaque sea instead of refraction
+            // of the surrounding theatre. Stone still follows quality changes.
+            if(_graphicsRevision!=GraphicsQuality.Revision)
+            {
+                foreach(var material in new[]{_stone,_cobble,_masonry,_bedrock})
+                    material.SetShaderParameter("quality_detail",GraphicsQuality.Current==GraphicsPreset.Low?0:1);
+                _graphicsRevision=GraphicsQuality.Revision;
+            }
+            return;
+        }
         if(_graphicsRevision!=GraphicsQuality.Revision)
         {
             float detail=GraphicsQuality.Current==GraphicsPreset.Low?0:1;
@@ -264,6 +275,7 @@ public partial class TempleStageView : Node3D
         if(_castle)return CreateCastleCover(x,z);
         var root=new Node3D {Position=new(x+.5f,Surface(x+.5f,z+.5f),z+.5f)};
         if(_garden)return CreateGardenBoulder(root,cell);
+        if(Layout.Id==BlastStages.UpAndDown)return CreateUpAndDownCover(root,cell);
         var sandstone=_art.Color(new("caaa73"));var dark=_art.Color(new("8d6740"));var edge=_art.Color(new("e3c48c"));
         Box(root,new(0,.39f,0),new(.76f,.78f,.76f),sandstone,.06f);
         Box(root,new(0,.045f,0),new(.82f,.09f,.82f),edge,.025f);

@@ -26,8 +26,8 @@ public partial class TempleStageView
         var stonework=new Node3D {Name="UpAndDownStonework"};AddChild(stonework);
         // Three long piers, each rooted below the water. The crown is a separate
         // thick cap above the central pier; bridges never receive these shafts.
-        Pier(4,6,7,23,2); Pier(17,19,7,23,2); Pier(10,13,12,23,0); Pier(10,13,7,10,4);
-        var crown=Box(stonework,new(12,4*HeightScale-.42f,9),new(4,.84f,4),_masonry,.045f);
+        Pier(3,6,7,23,2); Pier(17,20,7,23,2); Pier(10,13,12,23,0); Pier(10,13,7,10,4);
+        var crown=Box(stonework,new(12,4*HeightScale-.51f,9),new(4,.66f,4),_masonry,.045f);
         crown.Name="Crown";
         for(int x=0;x<Width;x++)for(int z=0;z<Depth;z++)
         {
@@ -53,7 +53,7 @@ public partial class TempleStageView
             Box(stonework,new(x,.021f,z),new(.65f,.012f,.55f),purple,.012f);
         }
         // Recessed square friezes, kept entirely below the playable surfaces.
-        foreach(var (x0,x1,z0,z1,tier) in new[]{(4,6,7,23,2),(17,19,7,23,2),(10,13,12,23,0),(10,13,7,10,4)})
+        foreach(var (x0,x1,z0,z1,tier) in new[]{(3,6,7,23,2),(17,20,7,23,2),(10,13,12,23,0),(10,13,7,10,4)})
         {
             float y=tier*HeightScale-.43f;
             for(int x=x0;x<=x1;x++)
@@ -105,7 +105,9 @@ public partial class TempleStageView
                 return;
             }
             float thickness=bridge?CellDef.DeckThickness*HeightScale:.18f;
-            Box(stonework,new(x+.5f,y-thickness/2,z+.5f),new(1,thickness,1),_masonry,.012f);
+            // The paving owns the visible top. Coplanar slab/cap faces used to
+            // fight in both the battle camera and the scaled menu miniature.
+            Box(stonework,new(x+.5f,y-(thickness+.06f)/2,z+.5f),new(1,thickness-.06f,1),_masonry,.012f);
             Box(stonework,new(x+.5f,y-.025f,z+.5f),new(.98f,.05f,.98f),_stone,.012f);
             if(bridge && (x is 2 or 21 || z is 2 or 21))
             {
@@ -136,5 +138,55 @@ public partial class TempleStageView
             }
             Box(root,new(0,0,.032f),new(.3f,.22f,.034f),_masonry,.018f);
         }
+    }
+
+    /// <summary>Trim this display instance without modifying shared gameplay meshes.</summary>
+    internal void FitUpAndDownMiniature(float radius,float bottom)
+    {
+        if(Layout.Id!=BlastStages.UpAndDown)return;
+        // An opaque circular sea belongs to the round stand. Screen refraction
+        // here would sample the unrelated menu theatre outside the miniature.
+        _water.Mesh=new CylinderMesh {TopRadius=radius,BottomRadius=radius,Height=.02f,RadialSegments=96};
+        _water.MaterialOverride=_art.Color(new("246c80"),.55f);
+        Trim(this);
+        void Trim(Node parent)
+        {
+            foreach(var child in parent.GetChildren())
+            {
+                if(child is MeshInstance3D {Mesh:not null} mesh && mesh!=_water && mesh.Visible)
+                {
+                    var bounds=mesh.Transform*mesh.Mesh.GetAabb();
+                    if(bounds.End.Y<=bottom)mesh.Visible=false;
+                    else if(bounds.Position.Y<bottom)
+                    {
+                        float ratio=(bounds.End.Y-bottom)/bounds.Size.Y;
+                        var scale=mesh.Scale;scale.Y*=ratio;mesh.Scale=scale;
+                        var position=mesh.Position;position.Y+=(bounds.End.Y-position.Y)*(1-ratio);mesh.Position=position;
+                    }
+                }
+                Trim(child);
+            }
+        }
+    }
+
+    private Node3D CreateUpAndDownCover(Node3D root,int cell)
+    {
+        root.Name="UpAndDownBlock"+cell;
+        // Reference-inspired gray stone cubes with a worn rim and recessed
+        // square faces, rather than the temple's gold caps/diamond ornament.
+        float height=BombThrowRules.CoverHeight*HeightScale;
+        var stone=_art.Color(new("a5aaa3"),.9f);
+        var edge=_art.Color(new("d1d4bf"),.88f);
+        var recess=_art.Color(new("707d77"),.95f);
+        Box(root,new(0,(height-.07f)/2,0),new(.8f,height-.07f,.8f),stone,.045f);
+        Box(root,new(0,height-.035f,0),new(.84f,.07f,.84f),edge,.025f);
+        foreach(int direction in new[]{-1,1})
+        {
+            Box(root,new(0,height*.49f,direction*.404f),new(.54f,height*.56f,.018f),recess,.018f);
+            Box(root,new(direction*.404f,height*.49f,0),new(.018f,height*.56f,.54f),recess,.018f);
+            Box(root,new(0,height*.49f,direction*.416f),new(.36f,height*.38f,.012f),stone,.012f);
+            Box(root,new(direction*.416f,height*.49f,0),new(.012f,height*.38f,.36f),stone,.012f);
+        }
+        return root;
     }
 }

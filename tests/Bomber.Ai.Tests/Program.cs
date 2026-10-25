@@ -6,6 +6,7 @@ using Bomber.Game.Simulation.Ai;
 if(args.Contains("--tactics")){ProactiveTacticsChecks.Run();return;}
 if(args.Contains("--top-rules")){TopRulesNavigationChecks.Run();return;}
 if(args.Contains("--up-and-down")){UpAndDownAiChecks.Run();return;}
+if(args.Contains("--front-placement")){FrontPlacementChecks.Run();return;}
 
 if(args.Contains("--stock-human-pressure")){StockHumanPressureChecks.Run(args);return;}
 if(args.Contains("--pressure")){PressureChecks.Run(args);return;}

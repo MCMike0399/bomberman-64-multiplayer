@@ -266,7 +266,11 @@ and the input guide; older iteration tables are historical.
   courtyard. Rock Garden is a 19x19 enclosed grassy court with five columns. Up & Down is a 24x26 suspended arena with
   three elevations, six long flights and real underpasses; see the
   [stage contract](../up-and-down.md). Its twelve cover blocks intentionally
-  replace the former filled terrace layout and 88-block budget. The summit uses a flat mosaic rather than a blocking prop.
+  replace the former filled terrace layout and 88-block budget. The 2026-10-25
+  correction widens each pier to the inward side-rail lip for ordinary drops
+  without changing fall physics. Cover uses eight paired low sites and two per
+  pier; Advanced density selects subsets. The summit uses a flat mosaic rather
+  than a blocking prop.
 - Ghosts pass through bombs and cannot place, carry, kick, stop, pump, throw or
   detonate them. Movement, finite latching and water/void comeback remain.
 - Default battle rules are first to two wins, 120 total seconds including 60 seconds of
@@ -528,3 +532,12 @@ five threatening bombs in 30 seconds, an eight-second maximum gap and zero death
 Top Rules thin decks pass blasts as demonstrated by the original official guide; solid masonry still shields and physical bodies/throws still collide with decks. Up & Down's corresponding blast penetration remains unverified, so it retains its authored shielding. [Evidence](../stage-fidelity-research.md#newly-recovered-top-rules-mechanics-evidence).
 
 Protocol 2 introduced the stage contract and protocol 3 added adaptive rooms. The v0.30 removal of Fast bomb semantics requires protocol 4 at HTTP admission, the actual WebSocket worker and peer hello. Keep readiness/operator/leave/cancel paths available and test protocol-3 update feedback before accepting game state. Lower cells must pass bounded schema validation before rendering. [Online protocol](../peer-hosting.md#online-stage-protocol-2-v028).
+
+### CPU recovery on narrow stairs (2026-10-25)
+
+Recovery-direction collision and dry-support probes cover the full steering
+reaction interval. A one-tick probe allowed a held sidestep to leave Up & Down's
+narrow flights before the next decision, ending a stock match with water deaths.
+`UpAndDownAiChecks` retains the dry-now/unsafe-before-next-reaction witness, and
+`Bomber.Ai.Tests -- --front-placement` retains ordinary seeded combat on all
+three covered arenas. This changes CPU decision safety, not movement physics.

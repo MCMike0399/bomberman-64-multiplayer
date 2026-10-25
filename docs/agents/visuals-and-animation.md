@@ -251,6 +251,11 @@ a green summit mosaic, thin suspended links and the low four-panel deck.
 All geometry/materials are original procedural work. Bridge tiles render their
 `below` surfaces separately; no foundation may fill an underpass. Both camera
 fitting and framing checks include lower surfaces and standing headroom.
+The 2026-10-25 correction separates paving from structural tops (including the
+crown) to prevent depth fighting. Up & Down has its own gray stone destructible
+cubes with square insets and pale rims. The menu instance uses an opaque circular
+sea inside its round stand and trims deep supports at the stand; gameplay keeps
+its full foundations and quality-dependent water.
 The authority's fractional ramp endpoints drive the render slope; visual treads
 sit just above it. The ordinary battle camera remains distinct from oblique
 inspection captures. All four existing lighting profiles and graphics presets

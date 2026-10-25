@@ -323,6 +323,14 @@ comparisons and known validation limits](../falling-physics.md).
 `dotnet run --project tests/Bomber.Game.Tests -- --up-and-down` checks six-flight
 round trips, underpass navigation nodes, bridge slab/blast collision, layered
 stage messages, underside throw projection and low-to-middle flood elimination.
+The 2026-10-25 regression adds eight ordinary side-rail drops (both piers), authored
+cover/density checks, native falling/landing and real stone-block destruction.
+Native geometry checks reject coplanar paving/slab tops; setup checks the circular
+miniature sea and trimmed supports. Actual original and corrected renderer
+captures remain necessary. Server-hosted and peer-hosted network smoke also
+observes the side drop from another client. The CPU checks reject stair recovery
+that is safe for one tick but reaches water before the next steering reaction;
+`Bomber.Ai.Tests -- --front-placement` reruns the ordinary stock combat witness.
 The initial topology failure is retained in ignored task artifacts.
 `up-and-down` is a real native journey in both `all` and `core-headless`: ordinary
 inputs cross all flights/underpasses, plant beneath the ring, fall into the sea,
