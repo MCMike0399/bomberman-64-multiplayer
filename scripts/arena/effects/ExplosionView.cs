@@ -23,7 +23,8 @@ void fragment(){
  float heat=smoothstep(-.25,.65,cells)*(1.0-smoothstep(.20,.46,age));
  vec3 edge=blue?vec3(.02,.74,.76):vec3(1.0,.23,.015);
  vec3 center=blue?vec3(.78,1.0,.96):vec3(1.0,.96,.53);
- ALBEDO=mix(edge,center,clamp(heat*.8+(1.0-rim)*.3,0.0,1.0));
+ float center_heat=pow(1.0-rim,2.0)*(1.0-smoothstep(.14,.36,age));
+ ALBEDO=mix(edge,center,clamp(center_heat*.78+heat*.22,0.0,1.0));
  if(shell){ALBEDO=edge;ALPHA=rim*.10*(1.0-smoothstep(.32,.4,age));}
  else {ALPHA=(.83+heat*.12)*(1.0-smoothstep(.28,duration,age));}
 }
@@ -43,7 +44,11 @@ void fragment(){
     public bool HazardActive=>_age<.4f;
     public string Phase=>_age<.12f?"flash":_age<.4f?"bloom":"vapor";
     public float VisualExtent {get;private set;}
-    public int BodyCount=>1;
+    public float BodyAspect
+    {
+        get {var basis=_body.GlobalBasis;var s=new Vector3(basis.X.Length(),basis.Y.Length(),basis.Z.Length());return Math.Max(s.X,Math.Max(s.Y,s.Z))/Math.Max(.00001f,Math.Min(s.X,Math.Min(s.Y,s.Z)));}
+    }
+    public int GeometryCount=>1+_body.GetParent().GetChildren().OfType<MeshInstance3D>().Count();
     public int FlareCount=>_flares.Count;
     public bool PowerWaveVisible=>_wave.Visible;
     public ExplosionView(ArtMaterials art,float radius,bool red,float initialAge=0,bool reducedDetail=false)

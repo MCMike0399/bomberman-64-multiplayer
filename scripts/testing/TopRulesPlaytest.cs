@@ -67,7 +67,8 @@ public partial class PlaytestDriver
         Check(_root.ThrowPreviews.Any(p => p.EndpointMarkerVisible && p.Y == 0), "lower-story aim preview includes the bridge ceiling");
         await Capture("top-rules-under-bridge-aim");
         Input(0, default); await Frames(2);
-        await MoveTo(2.5f, 6.5f, 80);
+        // A genuine low-ceiling self-hit can include two seconds of knockdown before retreat.
+        await MoveTo(2.5f, 6.5f, 160);
         await WaitState(s => s.GetProperty("bombs").GetArrayLength() == 0, "lower-story throw completes its ordinary fuse", 150);
         Check(Player.GetProperty("y").GetSingle() == 0, "lower throw preserves the player's story");
         await MoveTo(16.5f, 6.5f, 180);

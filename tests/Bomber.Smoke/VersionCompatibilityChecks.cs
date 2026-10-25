@@ -46,13 +46,29 @@ internal static class VersionCompatibilityChecks
             using var socket=new ClientWebSocket();socket.Options.SetRequestHeader(OnlineProtocol.HeaderName,OnlineProtocol.WireRevision);socket.Options.CollectHttpResponseDetails=true;
             await socket.ConnectAsync(socketUri,CancellationToken.None);
             Check(socket.State==WebSocketState.Open&&socket.HttpResponseHeaders is not null&&OnlineProtocol.Accepts(socket.HttpResponseHeaders.Where(h=>h.Key.Equals(OnlineProtocol.HeaderName,StringComparison.OrdinalIgnoreCase)).SelectMany(h=>h.Value)),"same reservation succeeds with current protocol and worker response echo");
+            using var welcomeDeadline=new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            bool welcomed=false;var buffer=new byte[8192];
+            for(int frame=0;frame<32&&!welcomed;frame++)
+            {
+                using var packet=new MemoryStream();WebSocketReceiveResult part;
+                do {part=await socket.ReceiveAsync(new ArraySegment<byte>(buffer),welcomeDeadline.Token);if(part.MessageType==WebSocketMessageType.Close)throw new Exception("Worker rejected reservation after upgrade");packet.Write(buffer,0,part.Count);if(packet.Length>1024*1024)throw new Exception("Oversized welcome stream");}while(!part.EndOfMessage);
+                using var message=JsonDocument.Parse(packet.ToArray());welcomed=message.RootElement.GetProperty("t").GetString()=="sys.welcome";
+            }
+            Check(welcomed,"same reservation receives authenticated sys.welcome after legacy rejection");
             await socket.CloseAsync(WebSocketCloseStatus.NormalClosure,"verification complete",new CancellationTokenSource(TimeSpan.FromSeconds(5)).Token);
         }
         finally
         {
             if(roomId is not null){using var leave=await Request(HttpMethod.Post,$"/realtime/v1/lobbies/{roomId}/leave",null,new{},token);Check(leave.IsSuccessStatusCode,"authenticated leave remains ungated");}
         }
-        using(var cancel=await Request(HttpMethod.Delete,"/realtime/v1/queue/missing",null,token:token))Check(cancel.StatusCode!=HttpStatusCode.Conflict,"cancellation is not intercepted by the version gate");
+        using var cancelGuestResponse=await Request(HttpMethod.Post,"/realtime/v1/guests",[OnlineProtocol.WireRevision],new{displayName="Cancellation verification"});
+        using var cancelGuest=JsonDocument.Parse(await cancelGuestResponse.Content.ReadAsStringAsync());
+        string cancelToken=cancelGuest.RootElement.GetProperty("token").GetString()!;
+        using var queued=await Request(HttpMethod.Post,"/realtime/v1/queue",[OnlineProtocol.WireRevision],new{game="blast"},cancelToken);
+        Check(queued.IsSuccessStatusCode,"current legacy-classic queue accepts a ticket");
+        using var ticket=JsonDocument.Parse(await queued.Content.ReadAsStringAsync());
+        string ticketId=ticket.RootElement.GetProperty("ticketId").GetString()!;
+        using(var cancel=await Request(HttpMethod.Delete,"/realtime/v1/queue/"+Uri.EscapeDataString(ticketId),null,token:cancelToken))Check(cancel.IsSuccessStatusCode,"an actual authenticated ticket cancels without the protocol header");
         Console.WriteLine($"PASS {checks} online version admission and worker handshake checks");
     }
 }

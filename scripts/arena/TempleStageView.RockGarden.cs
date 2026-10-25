@@ -41,7 +41,7 @@ public partial class TempleStageView
     {
         var root=new Node3D{Name=$"GardenColumn{x}_{z}",Position=new(x+.5f,0,z+.5f)};AddChild(root);
         float height=(Layout.At(x,z).Tier+(Layout.At(x,z).ObstacleHeight??BombThrowRules.PillarHeight))*HeightScale;
-        Cylinder(root,new(0,height/2,0),.49f,height,stone);
+        Cylinder(root,new(0,(height-.05f)/2,0),.49f,height-.05f,stone);
         Cylinder(root,new(0,height-.025f,0),.495f,.05f,_art.Color(new("c3b78d"),.9f));
         // A restrained dark weather line under the worn top, without temple caps.
         Cylinder(root,new(0,height-.065f,0),.492f,.018f,_art.Color(new("777d68")));

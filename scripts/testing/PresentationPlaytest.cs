@@ -33,7 +33,8 @@ public partial class PlaytestDriver
                 Check(Cue("blast")==before+1,"blast cue starts once: "+tier);
                 var fx=Presentation.GetProperty("explosions").EnumerateArray().Single(x=>x.GetProperty("tier").GetString()==tier);
                 Check(Math.Abs(fx.GetProperty("radius").GetSingle()-State.GetProperty("hazards")[0].GetProperty("r").GetSingle())<.001f,"visual uses authority radius: "+tier);
-                Check(fx.GetProperty("bodies").GetInt32()==1&&!fx.GetProperty("powerWave").GetBoolean(),"normal blast has one coherent body without a ground hoop: "+tier);
+                Check(Math.Abs(fx.GetProperty("bodyAspect").GetSingle()-1)<.001f&&fx.GetProperty("geometry").GetInt32()<=14,"main fireball stays round in world space with bounded geometry: "+tier);
+                Check(!fx.GetProperty("powerWave").GetBoolean(),"normal blast has no power-type ground wave: "+tier);
                 Check((fx.GetProperty("flares").GetInt32()>0)==(pumps>0),"charged blasts add brief pointed flares: "+tier);
                 Event("blast-visual",new {tier,fx});await Capture("blast-"+tier+"-ignition",0);
                 await Frames(3);await Capture("blast-"+tier+"-bloom",0);

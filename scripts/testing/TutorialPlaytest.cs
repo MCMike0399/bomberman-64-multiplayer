@@ -84,6 +84,12 @@ public partial class PlaytestDriver
                 Check(rect.Position.Y>=0&&rect.End.Y<=GetViewport().GetVisibleRect().Size.Y+1,"tutorial panel fits viewport: "+id+" "+name);
             }
         }
+        await Lesson("flood");await MoveTo(11.5f,12.5f,100);await MoveTo(11.5f,6.5f,130);await Frames(300);
+        Check(State.GetProperty("hurryMode").GetString()=="water"&&State.GetProperty("waterRiseRate").GetSingle()>0,"flood lesson publishes its real water policy");
+        Input(0,new(0,0,A:true,B:true));await Frames(2);Input(0,new(0,1,B:true,Aim:true));await Frames(60);Input(0,new(0,0,B:true,Aim:true));await Frames(3);
+        Check(_root.ThrowPreviews.Any(p=>p.EndpointMarkerVisible&&Math.Abs(p.Y-State.GetProperty("waterLevel").GetSingle())<.1f),"tutorial aim terminates at the rising water plane");
+        await Capture("tutorial-flood-aim");
+        await Lesson("duel");
         await KeyPress(Key.Escape);Check(_root.ScreenName=="Pause","Escape pauses the local lesson");
         long snapshots=_root.SnapshotCount;await Frames(12);Check(_root.SnapshotCount==snapshots,"pause stops local tutorial authority");
         await KeyPress(Key.Escape);Check(_root.ScreenName=="Match","Escape resumes the same lesson");

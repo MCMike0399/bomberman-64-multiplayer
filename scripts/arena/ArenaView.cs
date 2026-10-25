@@ -70,7 +70,7 @@ public partial class ArenaView : Node3D
     public string StageId=>_stage;
     public int VisiblePlayerCount=>_entities.Values.Count(n=>n is BomberModel);
     public BattleAudio Audio=>_audio;
-    public object PresentationState=>new {sequence=_presentation.Sequence,audio=_audio.Counts,voicePlays=_audio.VoicePlayCount,droppedCues=_audio.DroppedCueCount,effects=_effectCounts,explosions=_explosions.Values.Where(GodotObject.IsInstanceValid).Select(v=>new {tier=v.Tier,radius=v.Radius,age=v.Age,phase=v.Phase,bodies=v.BodyCount,flares=v.FlareCount,powerWave=v.PowerWaveVisible,hazard=v.HazardActive,extent=v.VisualExtent}).ToArray()};
+    public object PresentationState=>new {sequence=_presentation.Sequence,audio=_audio.Counts,voicePlays=_audio.VoicePlayCount,droppedCues=_audio.DroppedCueCount,effects=_effectCounts,explosions=_explosions.Values.Where(GodotObject.IsInstanceValid).Select(v=>new {tier=v.Tier,radius=v.Radius,age=v.Age,phase=v.Phase,bodyAspect=v.BodyAspect,geometry=v.GeometryCount,flares=v.FlareCount,powerWave=v.PowerWaveVisible,hazard=v.HazardActive,extent=v.VisualExtent}).ToArray()};
     public void ResetPresentationBaseline()=>_presentation.Reset();
     public Task PrepareEffects()=>EffectWarmup.Run(GetParent(),_art,_environment,_keyLight,_fillLight);
     public void ApplyGraphicsQuality()
@@ -146,6 +146,7 @@ public partial class ArenaView : Node3D
         _stage=id;ClearThrowPreviews();
         _environment.BackgroundMode=id==BlastStages.TopRules?Godot.Environment.BGMode.Color:Godot.Environment.BGMode.Sky;
         _environment.BackgroundColor=new Color("171a22");
+        _environment.FogSkyAffect=id==BlastStages.TopRules?0:1;
         _playerMotion.Clear();_facings.Clear();_ghostHosts.Clear();
         _terrain?.QueueFree();_terrain=new TempleStageView(_art);AddChild(_terrain);_terrain.Build(data);
         _terrain.SetLighting(StageLighting.For(TimeOfDay));
