@@ -39,6 +39,7 @@ class ReleaseOperationsTests(unittest.TestCase):
         self.assertFalse(checks['production environment exists'])
         self.assertFalse(checks['online dedicated deployment runner'])
         self.assertTrue(checks['explicit deployment targets configured'])
+        self.assertFalse(checks['expected worker placements configured'])
         self.assertNotIn('secret.example', json.dumps(checks))
 
     def test_interrupted_apply_recovers_from_disk_with_a_real_adapter(self):

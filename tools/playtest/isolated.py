@@ -1,6 +1,5 @@
 """A real macOS graphical desktop owned by QA, with no host input sharing."""
 import hashlib
-import importlib.util
 import json
 import os
 from pathlib import Path
@@ -78,10 +77,9 @@ def prepare(args, payload, folder, network, windowed):
                             '-c', 'Release', '-r', 'osx-arm64', '--self-contained', 'true',
                             '-p:UseAppHost=true', '--nologo', '-m:1', '-o', str(published)],
                            cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, check=True, timeout=300)
-            spec = importlib.util.spec_from_file_location('server_packaging', ROOT / 'tools/ci/package_server.py')
-            packaging = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(packaging)
-            packaging.stage(published, payload / 'server')
+            subprocess.run([os.sys.executable, str(ROOT / 'tools/ci/package_server.py'),
+                            '--stage-source', str(published), '--stage-destination', str(payload / 'server')],
+                           cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, check=True, timeout=60)
             shutil.copy2(published / 'Bomber.Server', payload / 'server/Bomber.Server')
             # Never expose transitive private configuration from the publish directory.
             shutil.rmtree(published)
