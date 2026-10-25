@@ -1,7 +1,8 @@
 # Blizzard Battle verification
 
-2026-10-25. Tested implementation: `94b5f6c86af4c8707ddc3e5aceaf0aef3c168aff`,
-an unreleased source build using Godot 4.7.2 .NET / .NET 10. The
+2026-10-25. Tested implementation: `5d07394b72b029115fcdd201d74c049b767e7a99`,
+an unreleased Blizzard build using Godot 4.7.2 .NET / .NET 10, integrated with
+main `158cd3c` and its v0.30 gameplay/menu changes. The
 [stage contract](blizzard-battle.md) separates original references from project
 physics, dimensions and eight-player tuning. [Research](blizzard-battle-research.md)
 includes the supplied screenshot, official guidebook and normal/sudden-death footage.
@@ -10,17 +11,17 @@ includes the supplied screenshot, official guidebook and normal/sudden-death foo
 
 - Canonical **public** gate passed all ten steps, including public boundaries,
   documentation links, tooling contracts and audio.
-- Canonical **managed** gate passed: **2,920** game integration checks,
-  **342** client/session checks, **65** focused AI checks, **19** original audio
+- Canonical **managed** gate passed: **2,844** game integration checks,
+  **344** client/session checks, **78** focused AI checks, **19** original audio
   cues and **23** cluster checks. The expanded AI soak passed **60** cases across
   five battle arenas, three difficulties, three/seven CPUs and two seeds.
-  Blizzard accounts for twelve cases, with 14–96 bombs observed per case and
-  a maximum safe-exit idle window of 6.1 seconds against the existing 12-second limit.
+  Blizzard accounts for twelve cases, with 17–97 bombs observed per case and
+  a maximum safe-exit idle window of 6.87 seconds against the existing 12-second limit.
 - The managed gate also passed real server WebSocket smoke, including a Blizzard
   room receiving advancing authoritative weather, protocol rejection, advanced
   settings, peer hosting and migration; forced adaptive relay and **36** real
   local fleet checks passed. These were task-owned loopback servers.
-- Final **core-headless** completed **1,260** assertions with zero runtime errors.
+- Final **core-headless** completed **1,278** assertions with zero runtime errors.
   The focused managed map checks now include ten cases, with tall-spire
   projectile obstruction/landing, blast shielding and cover-height transport.
   Native geometry checks require spire tops at 1.755 render units, matching
@@ -45,13 +46,15 @@ updated spires are over twice as tall, with broader bodies and .94-unit bases.
 The screenshots below are replaced with captures of that updated build.
 
 The final **eight-journey Metal regression** on the larger-spire build passed
-**1,074 assertions / 96 captures**, with **zero runtime errors or warnings**.
+**1,084 assertions / 96 captures**, with **zero runtime errors or warnings**.
 Its exact completed order was `first-use-rendering`, `blizzard-battle`,
 `graphics-settings`, `stage-lighting`, `setup`, `framing`, `asset-audit`, `network`.
 This includes Low/Medium/High across all six stages, all four lighting profiles,
 real setup navigation, both framing aspect ratios, actual asset geometry and
 online play. The 1920×1200 isolated desktop passed the 1600×1000 window check;
-no window/focus assertion was weakened.
+no window/focus assertion was weakened. The integrated menu-navigation
+headless regression also passed **198** assertions with no runtime errors
+or warnings.
 
 ## Screenshots from the verified export
 
@@ -89,6 +92,10 @@ runs. One guest startup exceeded the unchanged 180-second RPC readiness budget;
 the next focused recording reached the real Metal renderer and passed. These
 failed receipts remain available locally and are not counted as passing runs.
 
+The final integrated headless core passed with no runtime errors and a nonfatal
+engine-exit warning about fourteen ObjectDB instances; this warning is retained
+in its raw receipt. The final graphical run had no warnings.
+
 An earlier complete headless profile passed core, peer and adaptive journeys.
 A later repeat passed the final core but timed out while a replacement peer host
 rebuilt direct channels. The exact-export transport retry passed both journeys;
@@ -100,6 +107,13 @@ Metal Forward+, without taking host focus. This establishes rendering and
 synthetic native input, not physical-controller coverage, bare-metal GPU timing
 or undocumented original-game numerical physics. Visual inspection is not user
 approval of the art.
+
+During final QA, main advanced with heavier falls, proactive AI, item-density
+tuning, three collectible bomb types and new menu navigation. The merge retains
+both that intent and Blizzard wind/cover height. The deterministic wind journey
+uses an ordinary zero-cover battle so it does not override the new randomized
+practice seed policy. Removed Fast-bomb motion scaling stays removed. Online
+revision 5 rejects v0.30/revision-4 clients before they see an unsupported arena.
 
 Raw references, traces, screenshots and recordings remain in ignored
 `artifacts/blizzard/`. The shared service was not deployed. Online protocol
