@@ -125,6 +125,11 @@ attachment. Losing a worker loses its rooms. Healthy-worker matches continue,
 new rooms use eligible survivors, and primary recovery does not move existing
 matches. The edge/backplane remains a shared failure domain.
 
+Orderly departure first stops local sends, submits the authenticated leave and
+waits within the bounded cleanup timeout for the seat to disappear, then closes
+native channels. This gives remaining clients the membership update before their
+peer disappears. Abrupt network failure still uses normal reconnect/relay recovery.
+
 ## Verification
 
 - `--adaptive-rooms` in `Bomber.Game.Tests` checks selection, leadership,
