@@ -24,7 +24,7 @@ public sealed partial class BlastSession
         string[] items=id switch
         {
             "swap"=>["remote","heart","red","focus"], "expiry"=>["tiny"], "duel"=>["heart","remote"], "items"=>["fire","bomb"], "effects"=>["tiny","big","haste","slow"],
-            "remote" or "red" or "bounce" or "fast" or "heart" or "focus"=>[id], _=>[]
+            "remote" or "red" or "bounce" or "heart" or "focus"=>[id], _=>[]
         };
         _tutorialItems=items;
         for(int i=0;i<items.Length;i++)
@@ -84,7 +84,6 @@ public sealed partial class BlastSession
             "remote"=>step==0?Has("item:remote"):Has("remote-command")&&safe,
             "red"=>step==0?Has("item:red"):Has("red-cover")&&safe,
             "bounce"=>step==0?Has("item:bounce"):Has("charged-bounce"),
-            "fast"=>step==0?Has("item:fast"):Has("fast-kick"),
             "heart"=>step==0?Has("item:heart"):Has("heart-hit"),
             "focus"=>step==0?Has("item:focus"):Has("focus-charge"),
             "effects"=>Has("item:"+new[]{"tiny","big","haste","slow"}[step]),
@@ -133,7 +132,6 @@ public sealed partial class BlastSession
         {
             if(kind=="throw" && bomb.Pumps>=3)_tutorialSignals.Add("charged-throw");
             if(kind=="throw" && _tutorialAimTime>=.3f)_tutorialSignals.Add("aimed-throw");
-            if(kind=="kick" && bomb.Mode=="fast")_tutorialSignals.Add("fast-kick");
             if(kind=="bounce" && bomb.Pumps>0)_tutorialSignals.Add("charged-bounce");
         }
         if(kind=="knockdown" && playerId=="tutorial-partner" && causedBy==p.Id)_tutorialSignals.Add("partner-down");

@@ -1,3 +1,42 @@
+# Menu navigation — source verification
+
+2026-10-25: controller/keyboard menu navigation source work on
+`t3/menu-navigation-ux`, based on `b0f7b8e`. The
+[input guide](agents/input-and-ui.md#menus-focus-and-hotplug) records the routes,
+column shortcuts, Start targets and Back behavior. This is a verified source
+change using a rebuilt temporary export; it does not change the installed or
+published v0.29.1 by itself.
+
+- `dotnet build Bomberman64Multiplayer.csproj --nologo -m:1`: zero warnings/errors.
+- `menu-navigation --headless`: 188 assertions pass. Retained negative receipts
+  reproduce Start selecting Roster Back, item-grid row jumps and absent held-D-pad
+  repeat before their corrections.
+- `menu-ux` in the isolated macOS desktop: **1,373 assertions, 72 captures**, all
+  ten journeys complete, zero runtime errors/warnings, Metal Forward+ on the
+  guest's Apple paravirtual GPU. The rebuilt app includes the final tutorial
+  return/hint and real pending-connection cancellation checks.
+- `public` QA, documentation links/anchors and diff whitespace checks pass.
+
+The graphical suite visits every menu, tests complete Tab cycles and native
+popups, checks three controller families, resizes menus, reviews dense layouts,
+keeps pause/settings session continuity, completes/retries tutorials and starts a
+real two-human HTTP/WebSocket match. Capture review includes visible focus,
+column prompts, settings/advanced/online layout, the eight-seat roster, lessons,
+results, pause and the real waiting room. The suite also checks Save/Continue
+Back-loop prevention and returning to the active tutorial lesson.
+
+Final ignored receipts: `artifacts/menu-ux-verified/20261025T175658.961370Z-menu-ux/`
+(`runner-summary.json`, `summary.json`, captures and tested app/server inventories)
+and `artifacts/menu-ux-public-final/summary.json`. Earlier exploratory failures
+remain under `artifacts/menu-navigation-*` and `artifacts/menu-ux-final/`; the
+final successful receipt supersedes them. The runner stopped its owned VM and
+removed its temporary app payload.
+
+Controller evidence uses synthetic canonical events and the production Switch
+USB publication bridge, with real guest window/application focus. This is not a
+new physical-pad or native Mac GPU performance observation, nor user approval of
+how navigation feels. No server deployment or release is implied.
+
 # Adaptive multiplayer v0.29.1 delivered
 
 2026-10-25: adaptive public/private rooms and the merged Rock Garden preview fix

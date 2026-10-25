@@ -20,7 +20,7 @@ internal static class VersionCompatibilityChecks
             if(body is not null)request.Content=JsonContent.Create(body);
             return await http.SendAsync(request);
         }
-        foreach(var protocol in new string[]?[]{null,["1"],["2"],["99"],["bad"],[OnlineProtocol.WireRevision,OnlineProtocol.WireRevision]})
+        foreach(var protocol in new string[]?[]{null,["1"],["2"],["3"],["4"],["99"],["bad"],[OnlineProtocol.WireRevision,OnlineProtocol.WireRevision]})
         foreach(var (method,path) in new[]{(HttpMethod.Post,"/realtime/v1/guests"),(HttpMethod.Post,"/REALTIME/v1/GUESTS/"),
             (HttpMethod.Post,"/realtime/v1/lobbies"),(HttpMethod.Post,"/realtime/v1/lobbies/join"),(HttpMethod.Post,"/realtime/v1/lobbies/example/join"),
             (HttpMethod.Post,"/realtime/v1/queue"),(HttpMethod.Get,"/realtime/v1/queue/example")})
@@ -45,9 +45,13 @@ internal static class VersionCompatibilityChecks
             Check(create.IsSuccessStatusCode,"current classic room creation succeeds");
             using var room=JsonDocument.Parse(await create.Content.ReadAsStringAsync());roomId=room.RootElement.GetProperty("lobby").GetProperty("lobbyId").GetString();
             var socketUri=NetworkSession.ResolveConnectUri(origin,room.RootElement.GetProperty("reservation").GetProperty("connectUrl").GetString()!);
-            using var legacySocket=new ClientWebSocket();legacySocket.Options.CollectHttpResponseDetails=true;
-            bool rejected=false;try{await legacySocket.ConnectAsync(socketUri,CancellationToken.None);}catch(WebSocketException){rejected=true;}
-            Check(rejected&&legacySocket.HttpStatusCode==HttpStatusCode.Conflict,"worker rejects headerless socket before consuming reservation");
+            foreach(string? legacyProtocol in new string?[]{null,"3","4"})
+            {
+                using var legacySocket=new ClientWebSocket();legacySocket.Options.CollectHttpResponseDetails=true;
+                if(legacyProtocol is not null)legacySocket.Options.SetRequestHeader(OnlineProtocol.HeaderName,legacyProtocol);
+                bool rejected=false;try{await legacySocket.ConnectAsync(socketUri,CancellationToken.None);}catch(WebSocketException){rejected=true;}
+                Check(rejected&&legacySocket.HttpStatusCode==HttpStatusCode.Conflict,"worker rejects legacy socket before consuming reservation: "+(legacyProtocol??"headerless"));
+            }
             using var socket=new ClientWebSocket();socket.Options.SetRequestHeader(OnlineProtocol.HeaderName,OnlineProtocol.WireRevision);socket.Options.CollectHttpResponseDetails=true;
             await socket.ConnectAsync(socketUri,CancellationToken.None);
             Check(socket.State==WebSocketState.Open&&socket.HttpResponseHeaders is not null&&OnlineProtocol.Accepts(socket.HttpResponseHeaders.Where(h=>h.Key.Equals(OnlineProtocol.HeaderName,StringComparison.OrdinalIgnoreCase)).SelectMany(h=>h.Value)),"same reservation succeeds with current protocol and worker response echo");

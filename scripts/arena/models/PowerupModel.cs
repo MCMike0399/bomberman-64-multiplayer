@@ -53,14 +53,6 @@ public partial class PowerupModel : Node3D
                 Sphere(_icon,new(0,.14f,0),Vector3.One*.3f,purple);
                 for(int i=0;i<3;i++)Cylinder(_icon,new(0,-.22f+i*.09f,0),.16f-i*.025f,.035f,white);
                 break;
-            case "fast":
-                var mint=art.Toy(new("43d9a1"),.35f,true);
-                for(int i=0;i<2;i++)
-                {
-                    var upper=Box(_icon,new(-.12f+i*.22f,.09f,0),new(.26f,.075f,.1f),mint,.02f);upper.RotationDegrees=new(0,0,-40);
-                    var lower=Box(_icon,new(-.12f+i*.22f,-.09f,0),new(.26f,.075f,.1f),mint,.02f);lower.RotationDegrees=new(0,0,40);
-                }
-                break;
             case "focus":
                 var cyan=art.Toy(new("70e6ff"),.35f,true);
                 foreach(float side in new[]{-1f,1f})

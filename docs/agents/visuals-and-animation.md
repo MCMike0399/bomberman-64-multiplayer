@@ -410,7 +410,9 @@ what remains subjective instead of claiming that all tests prove artistic succes
 
 Remote blue bombs hide the complete combustion fuse assembly, retaining their
 command indicators. Red bombs keep a red shell but use blue blast cores, rings,
-shells and billows. Purple bouncing and mint fast bombs match their pickup colors;
+shells and billows. Purple bouncing bombs match their pickup color. Fast bomb
+equipment and its mint shell/icon were removed on 2026-10-25; the existing gold
+boot pickup represents the temporary Haste player buff;
 Focus uses a cyan target symbol. Charge progress drives tension before the accepted
 pump animation. The fifth-tier Pyramid summit is a low mosaic, keeping playable
 space and rear water falls visible. Recheck camera fit on all enlarged arenas.

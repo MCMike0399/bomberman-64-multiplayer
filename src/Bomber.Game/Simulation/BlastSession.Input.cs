@@ -46,7 +46,7 @@ public sealed partial class BlastSession
             if(p.KickRecoveryRemaining>0)p.KickRecoveryRemaining=Math.Max(0,p.KickRecoveryRemaining-dt);
             if(p.Falling)
             {
-                p.AirVX=input.X*PlayerSpeed*p.StatusSpeed;p.AirVZ=input.Z*PlayerSpeed*p.StatusSpeed;
+                SteerFallingPlayer(p,input,dt);
                 if(input.Length>.1f){p.FacingX=input.X/input.Length;p.FacingZ=input.Z/input.Length;}
                 p.PrevA=input.A;p.PrevB=input.B;p.PrevR=input.R;p.PrevStop=input.Stop;
                 continue;

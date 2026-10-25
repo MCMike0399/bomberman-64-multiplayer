@@ -27,6 +27,7 @@ public partial class ArcadeMenu
         var row=ArcadeTheme.Row(_results,25);
         var replay=new ArcadeModeButton {Text="Play Again",CustomMinimumSize=new(590,88),FaceColor=Coral,Accent=ArcadeTheme.Gold,SizeFlagsHorizontal=SizeFlags.ExpandFill};replay.Pressed+=()=>ReplayRequested?.Invoke();row.AddChild(replay);_replay=replay;
         var modes=new ArcadeModeButton {Text="Mode Select",CustomMinimumSize=new(590,88),FaceColor=ArcadeTheme.Indigo,Accent=ArcadeTheme.Pink,SizeFlagsHorizontal=SizeFlags.ExpandFill};modes.Pressed+=()=>Navigation?.Invoke("Modes");row.AddChild(modes);
+        RegisterNavigation("Results",[],Choices(row));
     }
 
     /// <summary>Places the standings inside the board's velvet face as the parallax camera moves, and sizes rows to the player count.</summary>

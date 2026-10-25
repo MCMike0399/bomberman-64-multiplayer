@@ -14,13 +14,14 @@ internal sealed class TimedDangerField
     { _graph=graph;_stage=stage;Begins=new float[graph.Count];Ends=new float[graph.Count];BombOwners=new string?[graph.Count];Clear(); }
     private void Clear(){Array.Fill(Begins,float.PositiveInfinity);Array.Fill(Ends,float.NegativeInfinity);Array.Clear(BombOwners);}
     public bool Safe(int cell,float enter,float leave) => leave<Begins[cell] || enter>Ends[cell];
-    public void Build(SoftBlockGrid soft,IReadOnlyList<BlastBomb> bombs,IReadOnlyList<BlastHazard> hazards,IReadOnlyList<BlastMeteor>? meteors=null)
+    public void Build(SoftBlockGrid soft,IReadOnlyList<BlastBomb> bombs,IReadOnlyList<BlastHazard> hazards,IReadOnlyList<BlastMeteor>? meteors=null,BlastBomb? detonate=null)
     {
         Clear();
         if(_times.Length<bombs.Count)Array.Resize(ref _times,Math.Max(bombs.Count,_times.Length*2));
         for(int i=0;i<bombs.Count;i++)
         {
             var b=bombs[i];_times[i]=b.Exploded||b.State==BombState.Carried?float.PositiveInfinity:b.IsRemote?.65f:Math.Max(0,b.FuseTimer);
+            if(ReferenceEquals(b,detonate)&&!b.Exploded&&b.State!=BombState.Carried)_times[i]=0;
             int cell=_graph.Cell(b.X,b.Z,Height(b));
             if(!b.Exploded&&b.State==BombState.Resting&&cell>=0)BombOwners[cell]=b.OwnerId??"unknown";
         }
@@ -49,14 +50,18 @@ internal sealed class TimedDangerField
         for(int i=0;i<bombs.Count;i++)if(float.IsFinite(_times[i]))
         {
             var b=bombs[i];float time=_times[i];
-            AddSphere(soft,b.X,Height(b),b.Z,b.BlastRadius+.45f,b.IsRed,time,b.IsRemote?4:time+.55f);
+            // A proposed remote command destroys cover before recursive chains
+            // and lingering hazards. Its time-zero forecast cannot rely on that
+            // cover as a shield; permanent terrain still blocks every sphere.
+            bool ignoreSoftCover=b.IsRed||detonate is not null;
+            AddSphere(soft,b.X,Height(b),b.Z,b.BlastRadius+.45f,ignoreSoftCover,time,b.IsRemote?4:time+.55f);
             // Moving bombs are uncertain. Cover both their visible position and short velocity projection.
             if(b.State is BombState.Rolling or BombState.Flying)
             {
                 float horizon=Math.Min(time,.6f);float vx=b.State==BombState.Flying?b.FlyVX:b.VX,vz=b.State==BombState.Flying?b.FlyVZ:b.VZ;
                 for(float t=.2f;t<=horizon+.01f;t+=.2f)
                 {
-                    float x=b.X+vx*t*b.MotionRate,z=b.Z+vz*t*b.MotionRate;
+                    float x=b.X+vx*t,z=b.Z+vz*t;
                     if(_graph.Cell(x,z)<0)break;
                     // Ricochets can reverse direction at stone; cover the reflected side as well.
                     if(b.IsBouncy)AddSphere(soft,b.X-vx*t,b.State==BombState.Flying?b.FlyY:_stage.SurfaceAt(b.X-vx*t,b.Z-vz*t,Height(b)),b.Z-vz*t,b.BlastRadius+.45f,b.IsRed,Math.Max(0,time-.15f),time+.65f);

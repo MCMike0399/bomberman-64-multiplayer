@@ -95,6 +95,11 @@ update the current guide rather than silently reviving old behavior.
   This source work is separate from the published v0.25.0 release; see verification
   for the subsequently requested local preview installation.
 
+- Item-density tuning (2026-10-25 source work): 40% independent crate drops,
+  60/30/10 upgrade/effect/bomb-type weights, and six-item default practice caches.
+  The [gameplay guide](gameplay-and-ai.md#item-density-tuning-2026-10-25) records
+  measured alternatives and scope. This supersedes the v0.25 density defaults.
+
 - v0.25 delivered: Advanced match settings, independent 55% crate drops without
   guaranteed openings, expiring practice/map items, default five-stack blast/bomb
   caps and temporary Tiny/Big/Haste/Slow effects. The gameplay and input guides
@@ -114,6 +119,10 @@ update the current guide rather than silently reviving old behavior.
   releases follow [shared-server delivery](../online-server.md); former friends-party
   relay, Wi-Fi and ZIP-sharing checks are conditional historical procedures.
   Public hosting is deferred to a separate task; maintain the existing server.
+
+- Bomb loadout (2026-10-25): black starting bombs plus three collectible types:
+  Remote, Red and Bouncing. Fast bomb equipment is removed; player speed uses the
+  existing temporary Haste effect. This supersedes iteration23’s Fast bomb mode.
 
 - Iteration23: wider five-tier Pyramid with rear pitfalls; enlarged other arenas;
   replaceable bomb/ability slots, bouncing/fast bombs, Focus charging/assist, heavier

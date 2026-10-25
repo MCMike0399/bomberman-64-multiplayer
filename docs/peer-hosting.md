@@ -103,13 +103,15 @@ Consult [verification](verification.md) for the actual tested release receipts.
 ## Online stage protocol 2 (v0.28)
 
 Protocol 2 introduced layered-stage admission in v0.28; protocol 3 added adaptive
-authority and packet semantics in v0.29. Greedy Trap source work advances the
-required header to `X-Blast-Protocol: 4` so older clients cannot receive the new
-unsupported arena. This requires a coordinated client/server release; the map PR
-does not deploy either component. Both
+authority and packet semantics in v0.29. Protocol 4 removed Fast equipment,
+accelerated bomb motion and retired item exclusions; preserving `motionRate` at
+1 alone does not preserve those semantics. Greedy Trap adds the required
+`X-Blast-Protocol: 5` gate so protocol-4 loadout-compatible clients cannot
+receive an unsupported arena. This requires a coordinated client/server release;
+the map PR does not deploy either component. Both
 the gateway-facing API and actual worker echo the supported version. Older
-clients receive an actionable update error before receiving unsupported terrain
-or fireball snapshots. Health/readiness, operator authentication and leaving or
+clients receive an actionable update error before receiving incompatible game
+state. Health/readiness, operator authentication and leaving or
 cancelling retain their existing paths. The client also rejects older API/worker
 responses before consuming gameplay, which covers a mixed-version fleet.
 

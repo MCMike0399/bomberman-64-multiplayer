@@ -13,7 +13,7 @@ public partial class ControllerPanel : VBoxContainer
         AddThemeConstantOverride("separation",12);
         var header=ArcadeTheme.Row(this,20);ArcadeTheme.Heading(header,"Controls",40).SizeFlagsHorizontal=SizeFlags.ExpandFill;
         ArcadeTheme.Quiet(ArcadeTheme.Button(header,"Back",()=>BackRequested?.Invoke())).Name="ControlsBack";
-        ArcadeTheme.Text(this,"Move a stick or press a face button to test it here. Press Menu, +, Options or Esc to leave.",17,ArcadeTheme.Muted);
+        ArcadeTheme.Text(this,"Move a stick or press a face button to test it here. Esc returns. Menu, + or Options focuses Back; confirm to leave.",17,ArcadeTheme.Muted);
         _status=ArcadeTheme.Text(this,"",17,ArcadeTheme.Gold);_status.AutowrapMode=TextServer.AutowrapMode.WordSmart;
         var scroll=new ScrollContainer {CustomMinimumSize=new(0,150),SizeFlagsVertical=SizeFlags.ExpandFill};AddChild(scroll);
         _live=ArcadeTheme.Text(scroll,"",16);_live.SizeFlagsHorizontal=SizeFlags.ExpandFill;_live.AutowrapMode=TextServer.AutowrapMode.WordSmart;

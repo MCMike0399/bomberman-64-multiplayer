@@ -196,10 +196,23 @@ public partial class PlaytestDriver : Node
     private async Task MoveTo(float x,float z,int maxFrames)
     {
         Event("move-to",new { x,z,maxFrames });
+        bool network=_root.ActiveSession is NetworkSession;
+        float tolerance=network?.35f:.15f;
         for(var i=0;i<maxFrames;i++)
         {
             var dx=x-Player.GetProperty("x").GetSingle();var dz=z-Player.GetProperty("z").GetSingle();
-            if(MathF.Sqrt(dx*dx+dz*dz)<.15) { Input(0,default);await Frames(3);Check(true,$"walk to {x},{z}");return; }
+            if(MathF.Sqrt(dx*dx+dz*dz)<tolerance)
+            {
+                Input(0,default);
+                if(network)
+                {
+                    int stoppedAt=_root.SnapshotCount;
+                    await WaitState(_=>_root.SnapshotCount>=stoppedAt+3,"network movement settles after release",120);
+                    float sx=x-Player.GetProperty("x").GetSingle(),sz=z-Player.GetProperty("z").GetSingle();
+                    Check(MathF.Sqrt(sx*sx+sz*sz)<.5f,$"network walk settles inside destination cell {x},{z}");
+                }
+                await Frames(3);Check(true,$"walk to {x},{z}");return;
+            }
             Input(0,new PlayerInput(Math.Clamp(dx*4,-1,1),Math.Clamp(dz*4,-1,1)));
             await Frames(1);
             if(_root.ActiveSession is NetworkSession)await Task.Delay(16);

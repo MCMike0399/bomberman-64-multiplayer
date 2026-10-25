@@ -11,14 +11,15 @@ internal static class SandboxEquipmentChecks
         void Check(string label,Action action){action();count++;Console.WriteLine("PASS "+label);}
         Check("two equipment slots replace independently while capacity and flame stack",()=>{
             var p=new BlastPlayer();
-            foreach(var type in new[]{"red","remote","bounce","fast"}){
+            foreach(var type in new[]{"red","remote","bounce"}){
                 string old=p.BombType;Assert(PowerUpRules.Exchange(p,type)==(old=="normal"?null:old),"Wrong displaced bomb type.");
                 PowerUpRules.Apply(p,"fire");PowerUpRules.Apply(p,"bomb");
                 Assert(p.BombType==type,"Stacking upgrade replaced equipment.");
             }
+            for(int i=0;i<5;i++){PowerUpRules.Apply(p,"fire");PowerUpRules.Apply(p,"bomb");}
             PowerUpRules.Exchange(p,"heart");Assert(PowerUpRules.Exchange(p,"focus")=="heart","Ability replacement did not drop heart.");
-            Assert(p.HasFocus&&p.BombType=="fast"&&p.FireLevel==5&&p.BombCapacity==5,"Equipment slots interfered.");
-            Assert(!PowerUpRules.CanCollect(p,"fast")&&!PowerUpRules.CanCollect(p,"focus")&&!PowerUpRules.CanCollect(p,"fire"),"Duplicate equipment or capped stack consumed.");
+            Assert(p.HasFocus&&p.BombType=="bounce"&&p.FireLevel==5&&p.BombCapacity==5,"Equipment slots interfered.");
+            Assert(!PowerUpRules.CanCollect(p,"bounce")&&!PowerUpRules.CanCollect(p,"focus")&&!PowerUpRules.CanCollect(p,"fire"),"Duplicate equipment or capped stack consumed.");
         });
         Check("replacement drops old equipment with a pickup lock and finite arena lifetime",()=>{
             var m=Match([(5,5,"remote"),(7,5,"red")]);
@@ -46,25 +47,34 @@ internal static class SandboxEquipmentChecks
             m.SetInput(0,new PlayerInput(0,0,B:true));Step(m,2);
             Assert(B(m).GetProperty("pumps").GetInt32()==0&&!B(m).GetProperty("charging").GetBoolean(),"Throw granted an unfinished charge.");
         });
-        Check("fast throws reach the same selected ground target sooner",()=>{
-            foreach(int pumps in new[]{0,3}){
-                var origin=new Vector3(5.5f,BombThrowRules.LaunchHeight,5.5f);
-                var normal=BombThrowRules.Project(origin,BombThrowRules.AimedVelocity(0,1,6,1,pumps),(x,z)=>0,_=>false,gravityScale:BombThrowRules.Weight(pumps));
-                var fast=BombThrowRules.Project(origin,BombThrowRules.AimedVelocity(0,1,6,1.5f,pumps),(x,z)=>0,_=>false,motionRate:1.5f,gravityScale:BombThrowRules.Weight(pumps));
-                Assert(Vector3.Distance(normal.Last,fast.Last)<.01f&&fast.Points.Count<normal.Points.Count*.8f,"Fast bomb lost its target or speed advantage.");
-            }
-        });
-        Check("equipped fast bombs use the faster authority clock on real aimed throws",()=>{
-            (int Ticks,float Z) Throw(string type){
-                var m=Match(type=="fast"?[(5,5,"fast")]:[]);Lift(m);
+        Check("Haste preserves every bomb type, aimed flight clock, landing and fuse",()=>{
+            (int Ticks,float Z,float Fuse) Throw(string type,bool haste){
+                var items=new List<(int,int,string)>{(5,5,"focus")};
+                if(type!="normal")items.Add((5,5,type));
+                if(haste)items.Add((5,5,"haste"));
+                var m=Match(items.ToArray());Lift(m);
+                Assert(P(m).GetProperty("bombType").GetString()==type&&P(m).GetProperty("ability").GetString()=="focus","Haste displaced equipment.");
+                Assert(P(m).GetProperty("statusEffect").GetString()==(haste?"haste":"none"),"Haste pickup was not applied.");
+                Assert(B(m).GetProperty("mode").GetString()==type&&F(B(m),"motionRate")==1,"A movement buff changed bomb mode or speed.");
                 m.SetInput(0,new PlayerInput(0,0,Aim:true));Step(m,2);
                 m.SetInput(0,new PlayerInput(0,0,B:true));Step(m,2);m.SetInput(0,default);
                 int ticks=2;while(B(m).GetProperty("state").GetInt32()!=0&&ticks<70){Step(m,2);ticks+=2;}
                 Assert(B(m).GetProperty("state").GetInt32()==0,"Throw failed to land before its fuse.");
-                return(ticks,F(B(m),"z"));
+                return(ticks,F(B(m),"z"),F(B(m),"fuse"));
             }
-            var normal=Throw("normal");var fast=Throw("fast");
-            Assert(fast.Ticks<normal.Ticks*.8f&&Math.Abs(fast.Z-normal.Z)<.02f,"Fast authority throw lost speed or aimed destination.");
+            foreach(string type in new[]{"normal","remote","red","bounce"}){
+                var normal=Throw(type,false);var haste=Throw(type,true);
+                Assert(normal.Ticks==haste.Ticks&&Math.Abs(normal.Z-haste.Z)<.01f&&Math.Abs(normal.Fuse-haste.Fuse)<.01f,"Haste changed bomb flight or fuse: "+type);
+            }
+        });
+        Check("collecting Haste retains command of an already planted remote",()=>{
+            var m=Match([(5,5,"remote"),(7,5,"haste")]);
+            m.SetInput(0,new PlayerInput(0,0,A:true));Step(m,2);
+            m.SetInput(0,new PlayerInput(1,0));Step(m,20);m.SetInput(0,default);Step(m,2);
+            Assert(P(m).GetProperty("statusEffect").GetString()=="haste"&&P(m).GetProperty("remote").GetBoolean(),"Speed pickup removed Remote.");
+            Step(m,90);Assert(S(m).GetProperty("bombs").GetArrayLength()==1,"Haste orphaned a waiting remote bomb.");
+            m.SetInput(0,new PlayerInput(0,0,R:true));Step(m,2);
+            Assert(S(m).GetProperty("bombs").GetArrayLength()==0&&S(m).GetProperty("hazards").GetArrayLength()>0,"Remote command failed after collecting Haste.");
         });
         Check("another player can collect swapped equipment before the former holder's lock expires",()=>{
             var cells=new CellDef[30,25];for(int x=0;x<30;x++)for(int z=0;z<25;z++)cells[x,z]=CellDef.Floor0;

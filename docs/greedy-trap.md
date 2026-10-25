@@ -50,7 +50,7 @@ These mechanical accents are original art, not recovered original models.
 - Local battle, Practice, room settings, the real 3D menu miniature and the
   compact online preview all expose the stage. Existing four lighting profiles,
   graphics presets, toy characters and effects remain shared.
-- Online protocol revision **4** prevents older clients from accepting an arena
+- Online protocol revision **5** prevents older clients from accepting an arena
   their renderer/settings validator cannot support. Both clients and the
   independent server need this revision; this PR does not deploy a server.
 
