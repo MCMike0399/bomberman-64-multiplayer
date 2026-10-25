@@ -12,12 +12,14 @@ public sealed class AdaptiveRoomSession : GameSession
     private readonly RoomHostQuality _quality = new();
     private readonly Dictionary<string, RealtimePlayer> _members = [];
     private readonly Dictionary<string, long> _joined = [];
+    private readonly Dictionary<string, int> _connections = [];
     private long _joinSerial;
     private readonly Dictionary<string, (long Window, int Bytes)> _budgets = [];
     private readonly bool _public;
     private JsonObject? _serverStatus, _peerStatus;
     private string? _active, _leader;
     private string _phase = "lobby", _notice = "";
+    private string? _publishedStatus;
     private string _policy;
     private bool _selecting;
     private bool _startRequested;
@@ -44,6 +46,7 @@ public sealed class AdaptiveRoomSession : GameSession
     {
         CancelPendingStart();
         _members[p.PlayerId] = p; _joined.TryAdd(p.PlayerId, ++_joinSerial); ElectLeader(c);
+        _connections[p.PlayerId] = _connections.GetValueOrDefault(p.PlayerId) + 1;
         _server.OnPlayerJoined(Wrap(c, false), p); _peer.OnPlayerJoined(Wrap(c, true), p);
         Publish(c);
     }
@@ -51,12 +54,14 @@ public sealed class AdaptiveRoomSession : GameSession
     {
         CancelPendingStart();
         _members.Remove(p.PlayerId); _joined.Remove(p.PlayerId); _quality.Remove(p.PlayerId); _budgets.Remove(p.PlayerId); ElectLeader(c);
+        _connections.Remove(p.PlayerId);
         _server.OnPlayerLeft(Wrap(c, false), p, reason); _peer.OnPlayerLeft(Wrap(c, true), p, reason);
         Publish(c);
     }
     public override void OnPlayerConnectionChanged(ISessionContext c, RealtimePlayer p, bool connected)
     {
         CancelPendingStart();
+        if (connected) _connections[p.PlayerId] = _connections.GetValueOrDefault(p.PlayerId) + 1;
         _quality.Remove(p.PlayerId); ElectLeader(c);
         if (Connected(c).Count < 2) _countdown = null;
         _server.OnPlayerConnectionChanged(Wrap(c, false), p, connected);
@@ -199,7 +204,11 @@ public sealed class AdaptiveRoomSession : GameSession
         {
             playerId = p.PlayerId, displayName = PlayerNames.Display(p.DisplayName, p.Slot), slot = p.Slot,
             connected = c.IsConnected(p.PlayerId), appearance = appearances.GetValueOrDefault(p.PlayerId, p.Slot),
+            connection = _connections.GetValueOrDefault(p.PlayerId),
         }));
+        string serialized = data.ToJsonString();
+        if (serialized == _publishedStatus) return;
+        _publishedStatus = serialized;
         c.Broadcast("party.status", data);
     }
     private void Observe<T>(ISessionContext c, bool peer, string type, T payload)

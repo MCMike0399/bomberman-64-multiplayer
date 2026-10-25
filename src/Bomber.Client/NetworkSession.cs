@@ -21,6 +21,7 @@ public sealed partial class NetworkSession : ISession
     public long DirectPacketsSent => _peer?.DirectSent ?? 0;
     public long DirectPacketsReceived => _peer?.DirectReceived ?? 0;
     public int ConnectionQualitySamples => Math.Min(Volatile.Read(ref _pingCount), _peer?.QualitySamples ?? int.MaxValue);
+    public JsonElement? ConnectionQuality => _peer?.LastQuality;
     private long _lastPing;
     private int _pingCount;
     private double _serverRtt = 5000;

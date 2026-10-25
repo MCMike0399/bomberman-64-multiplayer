@@ -14,6 +14,7 @@ internal sealed class PeerRoomClient(string playerId, string lobbyId, Func<IPeer
     private readonly Dictionary<string, long> _directSeen = [];
     private readonly Dictionary<string, ProbeWindow> _directQuality = [], _relayQuality = [];
     private HashSet<string> _connected = [], _members = [];
+    private Dictionary<string, int> _connections = [];
     private PartyStatus? _party;
     private PeerMatch? _authority;
     private string[] _players = [];
@@ -27,6 +28,7 @@ internal sealed class PeerRoomClient(string playerId, string lobbyId, Func<IPeer
     public long DirectSent { get; private set; }
     public long DirectReceived { get; private set; }
     public int QualitySamples => _qualitySamples;
+    public JsonElement? LastQuality { get; private set; }
     private bool Direct(string id) => _links.TryGetValue(id, out var link) && link.Connected &&
         _directSeen.TryGetValue(id, out var seen) && Stopwatch.GetElapsedTime(seen).TotalSeconds < 2 &&
         (_party?.Adaptive != true || !_relayQuality.TryGetValue(id, out var relay) || relay.Count < 3 ||
@@ -45,19 +47,26 @@ internal sealed class PeerRoomClient(string playerId, string lobbyId, Func<IPeer
             var roster = data.GetProperty("players").EnumerateArray().ToArray();
             var connected = roster.Where(p => p.GetProperty("connected").GetBoolean()).Select(p => p.GetProperty("playerId").GetString()!).ToHashSet();
             var members = roster.Select(p => p.GetProperty("playerId").GetString()!).ToHashSet();
+            var connections = roster.ToDictionary(p => p.GetProperty("playerId").GetString()!, p =>
+                p.TryGetProperty("connection", out var value) && value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out int version) ? version : 0);
             string mode = $"{party.Hosting}:{party.HostingPolicy}:{party.Phase}:{party.Match}:{party.AuthorityId}";
             bool unchanged = party.Epoch == _epoch && mode == _mode;
-            var previousConnected = _connected; var previousMembers = _members;
-            _party = party; _connected = connected; _members = members;
+            var previousConnected = _connected; var previousMembers = _members; var previousConnections = _connections;
+            _party = party; _connected = connected; _members = members; _connections = connections;
             if (unchanged)
             {
                 if (party.Adaptive)
                 {
                     foreach (string id in previousConnected.Except(connected)) { _authority?.ReleaseInput(id); RemoveLink(id); }
                     foreach (string id in previousMembers.Except(members)) _authority?.RemovePlayer(id);
-                    if (party.Hosting == "auto" && party.HostingPolicy != "server") PrepareLinks(connected.Where(id => id != playerId), preflight: true);
+                    if (party.Hosting == "auto" && party.HostingPolicy != "server")
+                    {
+                        foreach (string id in connected.Where(id => id != playerId && previousConnections.GetValueOrDefault(id) != connections.GetValueOrDefault(id))) RemoveLink(id);
+                        PrepareLinks(connected.Where(id => id != playerId), preflight: true);
+                    }
                     else if (_authority is not null)
-                        foreach (string id in connected.Except(previousConnected).Where(id => id != playerId))
+                        foreach (string id in connected.Where(id => id != playerId &&
+                            (!previousConnected.Contains(id) || previousConnections.GetValueOrDefault(id) != connections.GetValueOrDefault(id))))
                         {
                             var p = roster.First(p => p.GetProperty("playerId").GetString() == id);
                             CreateLink(id, offer: true);
@@ -151,7 +160,9 @@ internal sealed class PeerRoomClient(string playerId, string lobbyId, Func<IPeer
                 return new { id, rtt = measured.P95, loss = measured.Loss, direct = ReferenceEquals(measured, direct), samples = measured.Count };
             }).ToArray();
             _qualitySamples = observations.Length == 0 ? 0 : observations.Min(p => p.samples);
-            sendControl("peer.quality", new { epoch = _epoch, serverRtt = serverRtt?.Invoke() ?? 5000, frameGap = _frameGap, links = observations });
+            var report = JsonSerializer.SerializeToElement(new { epoch = _epoch, serverRtt = serverRtt?.Invoke() ?? 5000, frameGap = _frameGap, links = observations });
+            LastQuality = report;
+            sendControl("peer.quality", report);
             _frameGap = 0;
         }
         if (_party.Hosting != "peer" || _party.Phase != "playing") return;

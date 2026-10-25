@@ -71,8 +71,8 @@ public partial class PlaytestDriver
                 }
                 await Frames(1); await Task.Delay(10);
             }
-            if (!ready()) Event("adaptive-timeout", new { description, owner = owner.Party, quality = owner.ConnectionQualitySamples,
-                guests = guests.Select(p => new { p.PlayerId, p.Party, quality = p.ConnectionQualitySamples }) });
+            if (!ready()) Event("adaptive-timeout", new { description, owner = owner.Party, quality = owner.ConnectionQualitySamples, measurement = owner.ConnectionQuality,
+                guests = guests.Select(p => new { p.PlayerId, p.Party, quality = p.ConnectionQualitySamples, measurement = p.ConnectionQuality }) });
             Check(ready(), description);
         }
     }

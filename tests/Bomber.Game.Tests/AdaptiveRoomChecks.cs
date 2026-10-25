@@ -86,6 +86,20 @@ internal static class AdaptiveRoomChecks
         cancelled.Connected.Remove(qb.PlayerId);cancelledRoom.OnPlayerLeft(cancelled,qb,LeaveReason.Left);
         cancelled.Limits["simulation"]=1;cancelled.Tick=30;cancelledRoom.OnTick(cancelled);
         Check(cancelled.Status.GetProperty("phase").GetString()=="lobby"&&cancelled.Claims.Count==0,"departure cancels a pending start before later capacity becomes free");
+        var quiet = new RoomContext(); quiet.Limits["simulation"] = 0;
+        var quietRoom = new AdaptiveRoomGame().CreateSession(new("quiet", "blast-room", quiet.Settings,64));
+        var qo=quiet.Add("owner",0);quiet.Add("guest",1);
+        foreach(var p in quiet.Players)quietRoom.OnPlayerJoined(quiet,p);
+        quietRoom.OnMessage(quiet,qo,new("party.start",JsonSerializer.SerializeToElement(new{}),null,quiet.Now));
+        int statuses=quiet.Frames.Count(f=>f.Type=="party.status");
+        for(int i=1;i<=10;i++){quiet.Tick=i*15;quietRoom.OnTick(quiet);}
+        Check(quiet.Frames.Count(f=>f.Type=="party.status")==statuses,"unchanged capacity retries do not repeatedly rebuild lobby presentation");
+        quietRoom.OnPlayerConnectionChanged(quiet,qo,true);
+        int connection = quiet.Status.GetProperty("players").EnumerateArray().First(p=>p.GetProperty("playerId").GetString()==qo.PlayerId).GetProperty("connection").GetInt32();
+        statuses=quiet.Frames.Count(f=>f.Type=="party.status");
+        quietRoom.OnPlayerConnectionChanged(quiet,qo,true);
+        Check(quiet.Frames.Count(f=>f.Type=="party.status")>statuses&&quiet.Status.GetProperty("players").EnumerateArray().First(p=>p.GetProperty("playerId").GetString()==qo.PlayerId).GetProperty("connection").GetInt32()>connection,
+            "replacement sockets force fresh status even without an observed disconnected state");
         Console.WriteLine($"PASS {passed} adaptive room checks");
         return passed;
         void Send(RealtimePlayer player, string type, object data) => room.OnMessage(context, player,
