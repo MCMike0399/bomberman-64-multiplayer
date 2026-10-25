@@ -121,9 +121,9 @@ Other canonical receipts are `artifacts/falling/{public,managed,headless}/summar
 The dedicated VM was stopped after testing and the temporary exported app was
 removed by the harness. The installed app and external servers were untouched.
 
-### Known CPU pressure regression
+### Initial CPU pressure regression (resolved in integration review)
 
-The **managed profile is not fully green**: its default AI suite stops at the
+The initial **managed profile was not fully green**: its default AI suite stopped at the
 stock Pyramid pressure check. An isolated checkout of exact base `b0f7b8e`
 passes all four stock pressure cases. With the selected falling behavior,
 medium/seed 9876 has five pressure bombs and a 244-tick longest gap; hard/seed
@@ -138,3 +138,25 @@ policy or test threshold is changed in this PR. This is a behavioral regression
 to review alongside the movement improvement, not an unrelated baseline failure.
 The early AI exception also means that default suite's later checks did not run;
 the separate 48-case soak did complete. No deployment or release is claimed.
+
+### Integration review correction — 2026-10-25
+
+Combining directed CPU pursuit with the selected fall physics resolves the Hard
+case, but retained Medium/9876's 244-tick failure. The trace showed a crate-farming
+plan chosen just before its engagement deadline, then executed after the deadline
+without reevaluating priority. Its non-threatening bomb forced another escape
+and delayed pursuit.
+
+Pursuit state is now refreshed before a pending placement, and the actual bomb
+plan rechecks engagement priority. A real enemy threat remains eligible, and a
+sealed route still permits demolition. Physics, resources, reaction intervals,
+escape safety and the 240-tick pressure limit are unchanged. The four stock cases
+now produce longest gaps of **176/160 ticks (Medium seeds 64/9876)** and
+**201/204 ticks (Hard)**, with **7/6/7/6 threatening bombs and zero self-deaths**.
+
+The combined source passes the complete **78-check AI suite**, **2,926 game
+checks**, and **48-scenario soak**, whose longest open stationary window is 1.27s.
+The AI total includes the independent remote-chain cover-safety regression from
+the CPU PR review. Red/green receipts and the diagnostic trace are retained under
+ignored `artifacts/review/cpu-falling-*`. This is integration evidence, separate
+from the original graphical recording and the eventual combined release gates.

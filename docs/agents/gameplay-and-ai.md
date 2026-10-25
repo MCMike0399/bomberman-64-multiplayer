@@ -357,6 +357,10 @@ now covers four stages (48 combinations).
   CPUs favor a reachable attack and do not stop to bomb incidental cover while an
   open terrain route toward that rival exists. Easy allows six seconds between
   engagements, Medium four and Hard 2.5; real pressure resets this clock.
+  Recheck this priority after orienting, immediately before the actual bomb
+  press. A plan selected just before the deadline must not execute overdue
+  incidental farming and force another escape. Refresh pursuit state for the
+  current bot before this recheck; sealed routes still permit demolition.
   The stock pressure contract now requires five threatening bombs in 30 seconds
   (previous layout: six), while retaining eight-second first/gap bounds and zero
   self-deaths. Preserve the measured tradeoff instead of claiming unchanged pressure.
