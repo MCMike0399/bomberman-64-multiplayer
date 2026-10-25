@@ -185,7 +185,7 @@ class Suite:
             record['seconds'] = round(time.monotonic() - started, 3)
 
     def playtest(self, scenario, origin=None, app=None, headless=False):
-        destination = self.output / 'playtest'
+        destination = self.output / 'playtest' / scenario
         command = [sys.executable, 'tools/playtest/run.py', '--scenario', scenario,
                    '--godot', self.godot, '--timeout', '600', '--output', str(destination),
                    '--desktop', self.desktop, '--vm', self.vm]
@@ -290,7 +290,7 @@ def ensure_controller_backend(suite):
 def execute(suite, app=None):
     if suite.profile == 'public':
         suite.step('public-boundaries', [sys.executable, 'tools/ci/public_checks.py'])
-        for folder in ('ci', 'cluster', 'packaging', 'party', 'playtest', 'qa'):
+        for folder in ('ci', 'cluster', 'networking', 'packaging', 'party', 'playtest', 'qa'):
             suite.step(folder + '-contracts', [sys.executable, '-m', 'unittest', 'discover', '-s', 'tools/' + folder, '-p', 'test_*.py'])
         suite.build('tests/Bomber.Audio.Tests')
         suite.step('audio', ['dotnet', 'run', '--no-build', '--project', 'tests/Bomber.Audio.Tests'], footer=FOOTERS['Bomber.Audio.Tests'])
@@ -315,6 +315,7 @@ def execute(suite, app=None):
         if all(step['passed'] for step in suite.steps):
             suite.require('package-tested-server', [sys.executable, 'tools/ci/package_server.py'])
         return
+    suite.require('webrtc-backend', [sys.executable, 'tools/networking/bootstrap_webrtc.py'], timeout=180)
     suite.build('Bomberman64Multiplayer.csproj')
     suite.build('src/Bomber.Server/Bomber.Server.csproj')
     suite.require('godot-resource-import', [suite.godot, '--headless', '--path', str(ROOT), '--editor', '--import', '--quit'],
@@ -327,8 +328,12 @@ def execute(suite, app=None):
         suite.steps.append({'name': 'controller-bundle-audit', 'passed': True, 'seconds': 0,
                             'evidence': controller_files(app / 'Contents/Frameworks/Controllers')})
         suite.playtest('package-smoke', app=app, headless=True)
+        with suite.server() as origin:
+            suite.playtest('peer-rooms', origin=origin, app=app, headless=True)
     elif suite.profile == 'headless':
         suite.playtest('core-headless', headless=True, app=app)
+        with suite.server() as origin:
+            suite.playtest('peer-rooms', origin=origin, headless=True, app=app)
     elif suite.desktop == 'isolated':
         suite.playtest('all', app=app)
     else:

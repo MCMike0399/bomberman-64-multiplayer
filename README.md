@@ -22,6 +22,7 @@ KERNEL_REPOSITORY="<your-authorized-kernel-git-url>" ./tools/dev/bootstrap-kerne
 From the repository root:
 
 ```bash
+python3 tools/networking/bootstrap_webrtc.py
 dotnet build Bomberman64Multiplayer.csproj
 ```
 
@@ -65,7 +66,7 @@ The script creates a project-local ARM64 template from the official Universal 2 
 
 ## Play online
 
-Open **Online Battle** and use `https://blast.burbuja-lab.dev` for Quick Play or private rooms. The shared cluster runs independently of any player's Mac, with the Pi as primary and an idle DiveMac worker for overflow. `Bomber.Server` registers the `blast` game on top of `Burbuja.Hosting`. See [shared-server hosting and releases](docs/online-server.md) and [cluster operations](docs/cluster-hosting.md).
+Open **Online Battle** and use `https://blast.burbuja-lab.dev` for random lobbies, cluster-hosted private rooms, or player-hosted peer rooms. Random and peer rooms require two connected people and an explicit host start. [Peer hosting](docs/peer-hosting.md) explains direct connections, relay fallback and host takeover. The shared cluster runs independently of any player's Mac, with the Pi as primary and an idle DiveMac worker for overflow. `Bomber.Server` registers the `blast` game on top of `Burbuja.Hosting`. See [shared-server hosting and releases](docs/online-server.md) and [cluster operations](docs/cluster-hosting.md).
 
 For local development, start that independent server in another terminal:
 

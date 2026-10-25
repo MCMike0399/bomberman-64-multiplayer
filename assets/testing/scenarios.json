@@ -546,7 +546,8 @@
         "ai-play",
         "combat",
         "results",
-        "network"
+        "network",
+        "peer-rooms"
       ],
       "domains": [
         "ai",
@@ -694,6 +695,37 @@
       ],
       "headless": false,
       "timeout": 1200,
+      "manual": false
+    },
+    {
+      "id": "peer-rooms",
+      "method": "PeerRooms",
+      "domains": [
+        "network",
+        "ui"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "peer-external",
+      "method": "PeerExternal",
+      "domains": [
+        "network"
+      ],
+      "headless": true,
+      "timeout": 120,
+      "manual": false
+    },
+    {
+      "id": "peer-capacity",
+      "method": "PeerFullRoom",
+      "domains": [
+        "network"
+      ],
+      "headless": true,
+      "timeout": 90,
       "manual": false
     }
   ]

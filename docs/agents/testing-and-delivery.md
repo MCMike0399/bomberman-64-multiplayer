@@ -291,6 +291,10 @@ is not an installed app, notarization, physical-device validation or a deployed
 server. Draft promotion verifies app/server artifacts from the same successful
 run and creates a draft only; publication/host operations need their own scope.
 
+For v0.27 connection changes, include the `peer-rooms` journey and the
+[peer transport checks](../peer-hosting.md#verification-entrypoints). The official
+WebRTC extension is a hash-pinned build dependency, installed before import/export.
+
 ## Automatic updater checks
 
 Read [automatic updates](../automatic-updates.md) before changing release signing,

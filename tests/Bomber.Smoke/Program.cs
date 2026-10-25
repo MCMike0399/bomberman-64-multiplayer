@@ -15,9 +15,13 @@ Check(games.GetProperty("value").EnumerateArray().Any(g => g.GetProperty("id").G
 
 if(args.Contains("--aim-only")){await NetworkAimChecks.Run(new Uri(origin));return;}
 if(args.Contains("--appearance-only")){await LobbyAppearanceCatchup();return;}
+if(args.Contains("--peer-only")){await PeerNetworkChecks.Run(new Uri(origin));return;}
+if(args.Contains("--peer-reconnect")){await PeerReconnect();return;}
 await QuickPlay();
 if (args.Contains("--quick-only")) return;
 await PartyNetworkChecks.Run(new Uri(origin));
+await PeerNetworkChecks.Run(new Uri(origin));
+await PeerReconnect();
 await ProductSessions();
 await NetworkAimChecks.Run(new Uri(origin));
 await LobbyAppearanceCatchup();
@@ -64,29 +68,57 @@ await using (var solo = await Guest("Smoke solo"))
 }
 Console.WriteLine($"ALL NETWORK SMOKE CHECKS PASSED ({clock.Elapsed.TotalSeconds:F1}s)");
 
+async Task PeerReconnect()
+{
+    await using var host=await Guest("Reconnect peer host");
+    await using var second=await Guest("Replacement peer host");
+    await using var third=await Guest("Remaining peer");
+    var created=await Api(HttpMethod.Post,"/realtime/v1/lobbies",new{game="blast-peer",visibility="private",settings=new{bots="0"}},host.Token);
+    string id=created.GetProperty("lobby").GetProperty("lobbyId").GetString()!;
+    string code=created.GetProperty("lobby").GetProperty("joinCode").GetString()!;
+    await host.Connect(created.GetProperty("reservation"),http.BaseAddress!);
+    foreach(var peer in new[]{second,third})await peer.Connect(await Api(HttpMethod.Post,"/realtime/v1/lobbies/join",new{code},peer.Token),http.BaseAddress!);
+    foreach(var peer in new[]{host,second,third})await peer.Send(new{t="peer.hello",d=new{version=1}});
+    await host.Wait("party.status",d=>d.GetProperty("canStart").GetBoolean());
+    await host.Send(new{t="party.start",d=new{}});var playing=await second.Wait("party.status",d=>d.GetProperty("phase").GetString()=="playing");
+    var runningDeadline=Stopwatch.StartNew();
+    while((await Api(HttpMethod.Get,$"/realtime/v1/lobbies/{id}",token:host.Token)).GetProperty("state").GetString()!="running")
+    {
+        if(runningDeadline.Elapsed.TotalSeconds>10)throw new TimeoutException("Peer room did not enable reconnect grace");
+        await host.Send(new{t="peer.heartbeat",d=new{epoch=playing.GetProperty("d").GetProperty("epoch").GetInt32()}});
+        await Task.Delay(100);
+    }
+    await host.Disconnect();
+    await second.Wait("party.status",d=>d.GetProperty("leaderId").GetString()==second.PlayerId&&d.GetProperty("phase").GetString()=="lobby");
+    await second.Send(new{t="party.start",d=new{}});await second.Wait("party.status",d=>d.GetProperty("phase").GetString()=="playing");
+    await host.Connect(await Api(HttpMethod.Post,$"/realtime/v1/lobbies/{id}/join",new{},host.Token),http.BaseAddress!);
+    await host.Send(new{t="peer.hello",d=new{version=1}});
+    var restored=await second.Wait("party.status",d=>d.GetProperty("phase").GetString()=="lobby"&&d.GetProperty("canStart").GetBoolean());
+    Check(restored.GetProperty("d").GetProperty("leaderId").GetString()==second.PlayerId,"former host reconnect keeps elected host and resets peer roster safely");
+    foreach(var peer in new[]{host,second,third})await Api(HttpMethod.Post,$"/realtime/v1/lobbies/{id}/leave",new{},peer.Token);
+    Console.WriteLine("PASS real socket interruption, host replacement and former-host reconnect");
+}
+
 async Task QuickPlay()
 {
-    using (var cancel = new CancellationTokenSource(TimeSpan.FromSeconds(1)))
-    {
-        try
-        {
-            await using var unexpected = await NetworkSession.ConnectAsync(new Uri(origin),"Smoke cancel queue",new SessionSettings(Bots:0),NetworkMode.QuickPlay,cancellationToken:cancel.Token);
-            throw new Exception("A lone quick-play client unexpectedly matched before cancellation.");
-        }
-        catch(OperationCanceledException) when(cancel.IsCancellationRequested) { }
-    }
-    // ConnectAsync waits for matching, so both product clients must initialize concurrently.
     using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(20));
-    var firstTask=NetworkSession.ConnectAsync(new Uri(origin),"Smoke quick first",new SessionSettings(Bots:0),NetworkMode.QuickPlay,cancellationToken:timeout.Token);
-    var secondTask=NetworkSession.ConnectAsync(new Uri(origin),"Smoke quick second",new SessionSettings(Bots:0),NetworkMode.QuickPlay,cancellationToken:timeout.Token);
-    var connected=await Task.WhenAll(firstTask,secondTask);
-    await using var first=connected[0];
-    await using var second=connected[1];
+    await using var first = await NetworkSession.ConnectAsync(new Uri(origin), "Smoke quick first", new SessionSettings(Bots:0), NetworkMode.QuickPlay, cancellationToken:timeout.Token);
+    Check(first.IsLeader && first.Party?.CanStart == false, "first queued player owns a waiting lobby, cannot start alone");
+    first.RequestStart();
+    await Task.Delay(200);
+    Check(!first.DrainMessages().Any(m => m.GetProperty("t").GetString() == "state"), "lone queued player has no simulation");
+    await using var second = await NetworkSession.ConnectAsync(new Uri(origin), "Smoke quick second", new SessionSettings(Bots:0), NetworkMode.QuickPlay, cancellationToken:timeout.Token);
+    var connected = new[] { first, second };
     Check(first.LobbyId==second.LobbyId,"quick-play clients share matched lobby");
+    while (first.Party?.CanStart != true) await Task.Delay(20,timeout.Token);
+    Check(first.IsLeader && !second.IsLeader,"FIFO lobby leadership is stable");
+    second.RequestStart(); await Task.Delay(100);
+    Check(first.Party?.Phase == "lobby", "guest cannot start random lobby");
+    first.RequestStart();
     var ids=new[] { first.PlayerId, second.PlayerId }.Order().ToArray();
     foreach(var session in connected)
         await ProductState(session,d => d.GetProperty("players").GetArrayLength()==2 && d.GetProperty("players").EnumerateArray().Select(p => p.GetProperty("id").GetString()).Order().SequenceEqual(ids));
-    Console.WriteLine("PASS product quick-play cancellation, two-client matchmaking and shared authoritative roster");
+    Console.WriteLine("PASS product random lobby admission, two-human minimum, leader start and shared authoritative roster");
 }
 
 async Task LobbyAppearanceCatchup()
@@ -170,6 +202,7 @@ async Task<JsonElement> Api(HttpMethod method, string path, object? body = null,
     using var response = await http.SendAsync(request);
     var text = await response.Content.ReadAsStringAsync();
     if (!response.IsSuccessStatusCode) throw new Exception($"{method} {path}: {(int)response.StatusCode} {text}");
+    if(response.StatusCode==System.Net.HttpStatusCode.NoContent)return default;
     using var doc = JsonDocument.Parse(text); return doc.RootElement.Clone();
 }
 async Task MovementAndReconnect(Peer mover, Peer observer, string lobbyId)

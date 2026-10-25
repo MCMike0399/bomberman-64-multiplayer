@@ -5,10 +5,12 @@ using Burbuja.Realtime.Abstractions;
 namespace Bomber.Game;
 
 /// <summary>A persistent room owns leadership and successive matches; the kernel owns connections.</summary>
-public sealed class PartySession(GameSessionOptions options) : GameSession
+public sealed class PartySession(GameSessionOptions options, int minimumHumans = 1) : GameSession
 {
     private readonly Dictionary<string, RealtimePlayer> _members = [];
     private readonly Dictionary<string, int> _appearances = [];
+    private readonly Dictionary<string, long> _joined = [];
+    private long _joinSequence;
     private BlastSession? _match;
     private IReadOnlyDictionary<string,string> _settings=options.Settings;
     private string? _leader;
@@ -23,6 +25,7 @@ public sealed class PartySession(GameSessionOptions options) : GameSession
     public override void OnPlayerJoined(ISessionContext context, RealtimePlayer player)
     {
         _members[player.PlayerId] = player;
+        _joined.TryAdd(player.PlayerId, ++_joinSequence);
         Elect(context);
         Publish(context);
         if (_phase == "playing") _match!.OnPlayerJoined(new MatchContext(this, context), player);
@@ -33,6 +36,7 @@ public sealed class PartySession(GameSessionOptions options) : GameSession
     public override void OnPlayerLeft(ISessionContext context, RealtimePlayer player, LeaveReason reason)
     {
         _members.Remove(player.PlayerId); _appearances.Remove(player.PlayerId);
+        _joined.Remove(player.PlayerId);
         if (_phase == "playing") _match!.OnPlayerLeft(new MatchContext(this, context), player, reason);
         Elect(context); CancelInvalidStart(context); Publish(context);
     }
@@ -45,9 +49,9 @@ public sealed class PartySession(GameSessionOptions options) : GameSession
     private void Elect(ISessionContext context)
     {
         if (_leader is not null && _members.ContainsKey(_leader) && context.IsConnected(_leader)) return;
-        _leader = _members.Values.OrderBy(p => p.Slot).FirstOrDefault(p => context.IsConnected(p.PlayerId))?.PlayerId;
+        _leader = _members.Values.OrderBy(p => _joined[p.PlayerId]).FirstOrDefault(p => context.IsConnected(p.PlayerId))?.PlayerId;
     }
-    private bool EnoughPlayers(ISessionContext context) => _members.Keys.Count(context.IsConnected) + Bots >= 2;
+    private bool EnoughPlayers(ISessionContext context) => _members.Keys.Count(context.IsConnected) >= minimumHumans && _members.Keys.Count(context.IsConnected) + Bots >= 2;
     private void CancelInvalidStart(ISessionContext context)
     {
         if (_requested && (_leader is null || !EnoughPlayers(context))) { _requested = false; _phase = "lobby"; }
@@ -114,6 +118,7 @@ public sealed class PartySession(GameSessionOptions options) : GameSession
     private void Publish(ISessionContext context) => context.Broadcast("party.status", new
     {
         leaderId = _leader, phase = _phase, match = _matchNumber,
+        minimumHumans, hosting = "cluster",
         canStart = _phase == "lobby" && EnoughPlayers(context), bots = Bots, settings = _settings,
         players = _members.Values.OrderBy(p => p.Slot).Select(p => new { playerId = p.PlayerId, displayName = PlayerNames.Display(p.DisplayName,p.Slot), slot = p.Slot, connected = context.IsConnected(p.PlayerId) }).ToArray()
     });

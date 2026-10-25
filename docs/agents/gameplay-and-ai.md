@@ -79,6 +79,16 @@ GC/CPU counters cover the separately labeled sampling interval. Delivery gaps ca
 remain even with fast simulation, so do not infer server CPU trouble from a client
 freeze alone or promise that a bandwidth reduction eliminates all network jitter.
 
+## Random lobbies and player-hosted rooms
+
+[Peer hosting](../peer-hosting.md) owns the v0.27 connection and failure contract.
+`PublicLobbyGame` uses FIFO waiting-room admission and `PartySession` with a
+two-human start minimum. `PeerRoomSession` owns membership, election and epochs;
+`PeerMatch` runs the unchanged `BlastSession` on the elected client. Do not
+confuse the cluster lobby host with the peer simulation host. When adding an
+arena, update `PeerFrameRules` stage IDs/dimension bounds alongside
+`SessionSettings` and `MatchOptions`; otherwise peer clients reject its stage.
+
 ## Persistent private parties
 
 `PartySession` wraps fresh `BlastSession` matches inside one kernel lobby. It
@@ -265,6 +275,11 @@ first four starts follow the reference's outer lane ends; upper lanes, stairs
 and lower crossing routes stay clear. Optional sudden death uses shared column
 closure with visible castle walls on both sides. The original glowing edge
 strip's damage behavior remains unknown; our amber edging is decorative.
+
+Peer-frame validation accepts the fractional ramps and bounds the underpass
+indices and optional wall crowns before allocating presentation geometry. The
+three-peer direct/relay journey uses this castle; the eight-peer burst retains
+the temple. Relay smoke also observes a host traversing the lower passages.
 
 Focused checks: `Bomber.Game.Tests -- --top-rules`,
 `Bomber.Ai.Tests -- --top-rules`, the `top-rules` native journey and the real

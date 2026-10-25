@@ -20,6 +20,15 @@ SPEC.loader.exec_module(qa)
 
 
 class HarnessTests(unittest.TestCase):
+    def test_each_playtest_has_its_own_receipt_directory(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            suite = Mock(output=Path(temporary), godot='fixture', desktop='isolated', vm='fixture')
+            qa.Suite.playtest(suite, 'package-smoke', headless=True)
+            qa.Suite.playtest(suite, 'peer-rooms', headless=True)
+            commands = [call.args[1] for call in suite.require.call_args_list]
+            outputs = [command[command.index('--output') + 1] for command in commands]
+            self.assertEqual(len(set(outputs)), 2)
+
     def test_isolated_graphical_profile_uses_guest_server_without_touching_host_listeners(self):
         suite = Mock(profile='graphical', desktop='isolated', godot='fixture-godot')
         qa.execute(suite)
@@ -109,6 +118,7 @@ class HarnessTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             suite = Mock(profile='package', godot='fixture-godot', output=root / 'qa', steps=[])
+            suite.server.return_value = contextlib.nullcontext('http://127.0.0.1:12345')
             order = []
             def fake_require(name, command, **kwargs):
                 order.append(name)
@@ -130,7 +140,8 @@ class HarnessTests(unittest.TestCase):
                 qa.execute(suite)
             self.assertLess(order.index('controller-backend-build'), order.index('macos-export'))
             self.assertTrue(suite.steps[0]['evidence']['switch2UsbBackend'])
-            suite.playtest.assert_called_once()
+            self.assertEqual([c.args[0] for c in suite.playtest.call_args_list], ['package-smoke', 'peer-rooms'])
+            self.assertEqual(suite.playtest.call_args_list[1].kwargs['origin'], 'http://127.0.0.1:12345')
 
     def test_package_refuses_incomplete_backend_after_bootstrap(self):
         with tempfile.TemporaryDirectory() as temporary:

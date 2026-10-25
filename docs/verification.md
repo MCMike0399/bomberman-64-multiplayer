@@ -2,26 +2,102 @@
 
 2026-10-24: original procedural reconstruction of the castle arena identified
 in the [Nintendo manual and original gameplay footage](top-rules-research.md).
-This is PR/source work; the published v0.26.2 baseline below remains separate.
 The [gameplay guide](agents/gameplay-and-ai.md#top-rules-castle-2026-10-24)
-records the two-story support model and explicit project tuning.
+records the two-story support model and explicit project tuning. This is source
+work for PR #3, separate from release publication and installation.
 
-The new journey uses real menu/input paths: four-player starts, every staircase,
-upper crosswalk, lower travel and ceiling-aware aiming, eight-player CPU combat,
-night, ordinary crate destruction/collection and a real equipped-item death-drop
-beneath a bridge, followed by inward sudden-death walls. Managed fixtures cover
-slab shielding, kick/throw support, fast descending slab contacts, layered CPU
-routes, occupancy and danger. Real HTTP/WebSocket clients edit a room to Top
-Rules and observe the host descending and crossing beneath all three bridges.
+| Gate | Observed result |
+| --- | --- |
+| Managed, after integrating peer-hosting main | 2,736 game, 313 client, 62 AI, 19 audio and 19 cluster checks pass |
+| Deterministic AI soak | All 48 combinations pass; longest stationary window with a safe exit 1.93s, below the 12s limit |
+| HTTP/WebSocket | Full smoke passes, including cluster and peer-hosted Top Rules stair descent/lower traversal, guest observation, host takeover and stale-host recovery |
+| Rebuilt headless source | 942 core assertions plus 19 peer-room assertions pass; the three-player direct WebRTC journey uses Top Rules, and the eight-peer burst retains the temple |
+| Exported-app graphical regression | Eight affected journeys, 775 assertions, 87 captures, zero runtime errors/warnings in an isolated macOS Metal Forward+ desktop |
 
-Two regressions were retained before correction: a height-filtered crate contact
-let a falling stock Temple CPU enter a crate (Hard/seven CPUs/seed 64), and a lower
-equipment drop's mesh used the bridge's height despite a correct snapshot. The
-crate repro's maximum open stationary window fell from 13.23s to .53s. The loot
-journey checks the actual production pickup node after real collection and death.
+The graphical journeys are `first-use-rendering`, `graphics-settings`,
+`stage-lighting`, `setup`, `top-rules`, `framing`, `precision-aim` and `network`.
+They retain the fresh-process shader check first. Capture review includes all
+three quality presets, all four lighting variants, 16:9/16:10 framing, the menu
+miniature and ordinary four/eight-player castle views. The castle journey uses
+real inputs through every staircase and both stories, ceiling-aware throwing,
+actual crate destruction/collection and an equipment death-drop beneath a
+bridge, followed by inward sudden-death walls.
 
-Final receipts and captures are being reviewed; do not treat this paragraph as a
-completed graphical verification claim.
+![Four-player castle opening](media/top-rules-castle.png)
+
+[Night capture](media/top-rules-night.png). These are actual viewport images of
+this project's original meshes/materials, not original-game assets.
+
+Regression witnesses retained before correction include a falling Temple CPU
+entering a crate (Hard/seven CPUs/seed 64, maximum open idle 13.23s → .53s),
+a lower equipment mesh using the bridge's height despite a correct snapshot,
+fast descending shots crossing a slab, short-pillar collision beneath tall
+castle masonry, and coplanar court/foundation surfaces causing gray patches on
+Low. The native journey checks actual pickup-node height, wall crowns and
+separate court/foundation planes; reviewed Low/High captures confirm the depth
+fix. Numeric geometry checks do not substitute for that visual review.
+
+The native run preceded the peer-hosting base merge; arena rendering and the
+castle journey are unchanged by that merge. The merged source then passed the
+managed and headless gates above. Peer payload checks now accept fractional
+stairs and bound underpass indices and wall crowns before rendering; real
+peer-hosted castle frames reach the composition root. Graphical peer-hosting UI
+coverage from main is recorded separately below. Virtual-GPU correctness and
+synthetic inputs do not establish native GPU throughput or physical gamepad coverage.
+
+Ignored receipts: `artifacts/top-rules-validation/castle-native-pass/`,
+`headless-delivery/`, `managed-delivery/`, `public-delivery/`, and the subsequent
+`artifacts/top-rules-peer-integration/` managed/headless/peer-castle-final gates.
+Earlier failing receipts remain alongside the passing runs. The temporary owned
+QA VM was stopped and its slot handed to the waiting Rock Garden task.
+
+# Peer hosting verification — v0.27.0 candidate
+
+2026-10-24: **0.27.0/build 32** adds persistent random lobbies and player-hosted
+rooms. The [connection contract](peer-hosting.md) distinguishes cluster authority,
+direct peer traffic, relay fallback and fresh-match host takeover. Publication
+and the final signed-artifact installation are pending at this receipt.
+
+| Gate | Observed result |
+| --- | --- |
+| Public contracts | Pass, including pinned WebRTC archive integrity/path checks and independent QA receipt directories |
+| Managed | 2,727 game, 304 client, 53 AI, 19 audio and 19 cluster checks; all 36 AI soaks pass |
+| Real HTTP/WebSocket | Random waiting-room admission, two-human start gate, manual leader start, peer relay gameplay/results, stalled-host election, socket interruption and former-host reconnect pass; legacy 2–8-player coverage remains passing |
+| Headless | 868 core assertions and 18 real peer assertions pass |
+| Exported package | 252 package assertions plus 18 direct/relay/election/eight-player assertions pass; native controller compatibility and signature checks pass |
+| Full graphical regression | 42 journeys, 2,768 assertions, 262 captures and zero runtime errors in the isolated Metal desktop |
+| Final focused peer UI | 19 assertions, 5 captures, zero errors/warnings on the frozen export, including eight direct players |
+| Cross-machine peer play | Three independent processes on Macintosh and DiveMac use the public primary route, exchange direct gameplay, retain the room after host departure and exchange new direct packets in replacement match 2 |
+
+The graphical review included the updated online choices, the disabled one-player
+start state, room labels and actual peer battles. Physical controller behavior,
+new native GPU throughput and arbitrary Internet NAT/firewall combinations are
+not established by these checks. Intermittent SCTP stream-reset warnings during
+intentional connection teardown remain visible in receipts; no runtime error was
+accepted as a pass. Later host-recovery refinements retain focused exported-peer
+verification, rather than claiming the earlier full render run covered new code.
+
+Two failures were retained and fixed: an eight-player initial roster/snapshot
+burst evicted 12 ICE messages from a shared outbound queue, leaving two peers on
+relay; and a fixed render clock could accelerate player-hosted authority in a
+headless run. Separate bounded signalling traffic and a monotonic 30 Hz authority
+clock pass the retained eight-peer regression. Reconnect and lobby-stall checks
+also guard a restored roster and replacement-host eligibility.
+
+The public random-lobby probe, forced-relay gameplay/results and real retained-seat
+reconnect probe passed. Both cluster nodes received the tested
+candidate serially, after authenticated drain/empty checks, and each mounted
+runtime matched all 42 staged file hashes. Private configuration, kernel/plugin
+pins, limits and other services were preserved; rollback directories remain.
+**Limit:** the full-capacity cluster load probe was refused by the existing guard
+because the fallback had less than 10% idle CPU (and its monitor still referenced
+an intentionally stopped service). Its pressure admission also rejected a bounded
+new-room probe with `no_capacity`. No fallback-load success, higher capacity or
+live cluster-node migration is claimed. Functional direct play through the public
+primary and eight-peer transport tests are separate passing evidence.
+
+Local evidence is retained under ignored `artifacts/p2p/`, including the failed
+reproductions, final frozen gate receipts, captures and cross-machine receipts.
 
 # PR #1 regression verification — v0.26.2 delivered
 

@@ -287,7 +287,8 @@ public partial class GameRoot : Node3D
                     if(data.TryGetProperty("message",out var message))_menu.Notice(message.GetString()??"Connection error.");break;
             }
         }
-        _hud.Connection(session.Status,session.JoinCode,_practice);_menu.UpdateConnection(session.Status);
+        string connection=session is NetworkSession {Party.Hosting:"peer"} peerSession && session.Status=="Connected" ? peerSession.PeerTransport : session.Status;
+        _hud.Connection(connection,session.JoinCode,_practice);_menu.UpdateConnection(session.Status);
         if(session.IsEnded&&session.Status.StartsWith("Error",StringComparison.Ordinal)&&ScreenName!="Results")
         {ScreenName="Results";_hud.Visible=false;_menu.Visible=true;_menu.ShowResults(LatestState,JsonSerializer.SerializeToElement(new {reason=session.Status}));}
     }

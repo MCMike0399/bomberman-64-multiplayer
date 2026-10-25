@@ -3,6 +3,7 @@ using Bomber.Client;
 using Bomber.Game;
 
 var checks = await UpdateChecks.Run();
+checks += PeerFrameChecks.Run();
 void Check(bool condition, string name) { if (!condition) throw new Exception(name); checks++; }
 void Throws(Action action, string name) { try { action(); } catch (ArgumentException) { checks++; return; } throw new Exception(name); }
 Check(new SessionSettings().Wins==2&&new MatchOptions().Wins==2&&new SessionSettings().RoundSeconds==120,"Defaults give first to two and one minute normal plus one minute sudden death");

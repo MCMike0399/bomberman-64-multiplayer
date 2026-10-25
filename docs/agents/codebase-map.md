@@ -40,7 +40,7 @@ flowchart LR
 | Project | Owns | Never contains |
 | --- | --- | --- |
 | `src/Bomber.Game` | Rules and authority: `Simulation/` (`BlastSession` partials, stages, throw/flood/power-up rules, `Ai/`), `LocalMatch`, options, rooms, realtime registration | Godot, transport, rendering |
-| `src/Bomber.Client` | `ISession`, local/network sessions, lobby/party status, input policies, signed updates | Godot types |
+| `src/Bomber.Client` | `ISession`, local/network/peer sessions, lobby/party status, input policies, signed updates | Godot types |
 | `src/Bomber.Server` | Independent ASP.NET host registering the `blast` game | Game rules |
 | `src/Bomber.Cluster` | Optional pressure-aware placement plugin with `plugin.json` | Game rules |
 | `scripts/` | Screens, rendering, audio, devices, harness | Authority decisions |
