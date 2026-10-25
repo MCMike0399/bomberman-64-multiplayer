@@ -102,12 +102,14 @@ Consult [verification](verification.md) for the actual tested release receipts.
 
 ## Online stage protocol 2 (v0.28)
 
-Protocol 2 introduced layered-stage admission in v0.28. Current v0.29 clients
-and workers require `X-Blast-Protocol: 3` for adaptive authority and packet
-semantics. Both
+Protocol 2 introduced layered-stage admission in v0.28; protocol 3 added adaptive
+authority in v0.29. The v0.30 bomb-loadout change requires `X-Blast-Protocol: 4`
+because older peers can still send Fast equipment, accelerated bomb motion and
+retired item exclusions. Preserving the `motionRate` field at 1 alone does not
+preserve those semantics. Both
 the gateway-facing API and actual worker echo the supported version. Older
-clients receive an actionable update error before receiving unsupported terrain
-or fireball snapshots. Health/readiness, operator authentication and leaving or
+clients receive an actionable update error before receiving incompatible game
+state. Health/readiness, operator authentication and leaving or
 cancelling retain their existing paths. The client also rejects older API/worker
 responses before consuming gameplay, which covers a mixed-version fleet.
 

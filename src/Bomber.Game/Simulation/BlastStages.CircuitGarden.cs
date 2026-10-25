@@ -23,7 +23,7 @@ public static partial class BlastStages
             Spawns=[(1,1),(17,1),(1,15),(17,15),(6,12),(14,12),(6,3),(16,3)],
             SoftBlockDensity=0,MaxSoftBlocks=0,
             TrainingItems=[(5,12,"fire"),(6,12,"bomb"),(7,12,"remote"),(8,12,"red"),
-                (9,12,"bounce"),(10,12,"fast"),(11,12,"heart"),(12,12,"focus"),
+                (9,12,"bounce"),(11,12,"heart"),(12,12,"focus"),
                 (5,14,"tiny"),(7,14,"big"),(9,14,"haste"),(11,14,"slow")],
         };
     }

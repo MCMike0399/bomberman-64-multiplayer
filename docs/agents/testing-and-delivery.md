@@ -342,6 +342,14 @@ default drop probability; managed actual-destruction samples do. `sandbox`
 selects a 60-second lifetime for its long equipment tour. Default and short
 lifetimes have separate authority and graphical expiration witnesses.
 
+The 2026-10-25 bomb loadout keeps black starting bombs and only Remote, Red and
+Bounce equipment. `AdvancedRulesChecks` rejects the removed Fast pickup/catalog
+entry; `SandboxEquipmentChecks` compares actual aimed throws with/without Haste
+for all four bomb modes and commands a remote planted before collecting Haste.
+The native `sandbox` journey checks Red/Bounce swaps and Haste movement/expiry
+without replacing Red. Pair it with `advanced-settings` and `tutorial` for the
+eleven-item menu, timed status rendering and the updated lesson browser.
+
 ## Top Rules verification
 
 `top-rules` is a standard leaf in `all` and `core-headless`. The graphical
