@@ -251,7 +251,7 @@ def validate_playtest(destination, headless):
 
 def validate_soak(path):
     report = json.loads(path.read_text())
-    if len(report.get('results', [])) != 60 or report.get('fairnessChecks', 0) <= 0:
+    if len(report.get('results', [])) != 72 or report.get('fairnessChecks', 0) <= 0:
         raise RuntimeError('AI soak receipt is incomplete')
     for item in [report, *report['results']]:
         for key in ('passed', 'Passed'):

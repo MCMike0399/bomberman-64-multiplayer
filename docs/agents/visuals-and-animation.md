@@ -205,8 +205,8 @@ The implementation is original shader/material work; nothing is copied.
   axial view depth for depth of field; `PlayableDistance` separately measures the
   farthest radial distance for Godot's depth-mode fog. Both use the effective camera
   transform, including projection offsets. `ArenaView.ApplyDepthCues` keeps blur and
-  haze outside their respective bounds. `graphics-settings` checks all six stages,
-  including Circuit Garden and oblique inspection views, against actual terrain and
+  haze outside their respective bounds. `graphics-settings` checks every battle arena
+  and Circuit Garden and oblique inspection views, against actual terrain and
   standing-character extents. Camera changes remeasure the bounds.
   Aerial perspective stays off: a camera
   looking down would sample the dark lower sky and grey the sea. Blur is off on Low.
@@ -228,6 +228,21 @@ emission found it. Close-up concentric banding on the helmet predates this work.
 ### Blizzard Battle frozen snowfield
 
 [Stage contract](../blizzard-battle.md), [reference research](../blizzard-battle-research.md). `TempleStageView.Blizzard` builds opaque cyan ice, original violet faceted cones and snow-capped glacier walls. `ArtMaterials.Blizzard` owns world-space frost/fracture/strata textures; `BlizzardWeather` animates a bounded MultiMesh from accepted wind. Preserve shared graphics/lighting, depth-writing ice, local pause and camera-safe near walls. The user rejected the initial small spires: their tops now reach 1.755 render units and their bases span .94. Stage `coverHeight` drives both meshes and projectile collision/landing, including the miniature and aim preview. The miniature crops its exterior independently. New artwork is procedural; reference archives never ship. Keep the foundation below the ice slab to prevent coplanar flicker. Godot 4.7 shaders use `CLEARCOAT_ROUGHNESS`; the former `CLEARCOAT_GLOSS` name is rejected by the live compiler.
+### Greedy Trap presentation
+
+The exterior now uses a Blue Resort-informed fortified reservoir: animated teal
+water, quays, blue roofs, sparse rounded trees and a slow waterwheel. It shares
+other outdoor arenas' sky, lighting, water presets and depth cues. The landscape
+is an original extension, not an exterior recovered from Greedy Trap footage.
+All scenery stays outside/below play, remains separate from compression and is
+hidden in the menu miniature. [Background sources](../greedy-trap-background-research.md).
+
+Greedy Trap has independently authored cobbles, burgundy brick, teal floor tiles,
+pale ring paving and gray-green destructible masonry, plus compression flywheels
+and pulsing amber inlays. It uses the enclosed-arena camera, ordinary lighting
+profiles and all graphics presets. The basin is safe opaque paving, with no
+lethal-water plane. [Stage and visual contract](../greedy-trap.md),
+[inspected original references](../greedy-trap-research.md).
 
 ### Top Rules castle presentation
 
@@ -277,7 +292,7 @@ Online preference edits save the local choice but never override server lighting
 key/fill/ambient, sky, fog and water profiles. Morning uses soft warm lateral light;
 Midday has a higher sun and turquoise water; Afternoon uses amber light, longer
 shadows and mauve reflections; Night uses blue moonlight, indigo water and enough
-fill to retain silhouettes, stairs and aiming markers. All battle stages reuse
+fill to retain silhouettes, stairs and aiming markers. All arenas reuse
 these profiles. Menu theatre lighting remains separately authored.
 
 `ArenaView` supplies a procedural sky radiance map for specular reflections.

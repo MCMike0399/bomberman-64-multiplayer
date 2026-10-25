@@ -14,6 +14,7 @@ Choose **Tutorial** for Circuit Garden: short guided lessons covering bomb handl
 **Top Rules** recreates the original game's two-story castle layout with original procedural art: three raised lanes, a central crosswalk, four green staircases and a red lower court you can walk beneath the bridges. It supports local/practice and online matches with up to eight participants. Sudden death closes the side walls inward. [Reference research and implementation choices](docs/top-rules-research.md).
 
 **Blizzard Battle** adds a frozen snowfield with sixteen breakable violet ice cones, changing winds, animated snow and closing avalanches. Original procedural ice/frost textures follow the same diorama graphics presets and four lighting profiles as the other arenas. [Stage contract](docs/blizzard-battle.md) · [Footage and guidebook research](docs/blizzard-battle-research.md).
+**Greedy Trap** surrounds a recessed turquoise reward chamber with a narrow middle ring and a broad upper court. Four inner stairways and just two upper exits make collecting its eight masonry blocks risky. Original cobble, brick and tile textures, sliding compression walls, turning flywheels and warning inlays follow the shared diorama graphics presets. [Stage and verification](docs/greedy-trap.md) · [Manual, guidebook and gameplay research](docs/greedy-trap-research.md).
 
 ## Run the game
 

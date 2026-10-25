@@ -389,6 +389,19 @@ its owned runs; this is renderer/synthetic-input evidence, not a fresh physical
 controller or native-host GPU performance certification. This source work does
 not establish installation, release publication or external server delivery.
 
+## Greedy Trap verification
+
+Native resize QA allows up to twenty seconds for a slow first Metal frame, while
+still requiring the actual requested size and an unchanged input transform for
+200 ms. Resize receipts record sample count, actual size and elapsed time; this
+does not bypass native focus or stability checks.
+
+Greedy Trap's managed `--greedy-trap` checks, focused 12-scenario AI soak and
+native `greedy-trap` journey cover its three stories, six flights, actual bottom
+loot, quality/lighting variants and crushing animation. The
+`greedy-trap-regression` suite adds startup preparation, setup, graphics,
+lighting, framing and real network regression. See [stage verification](../greedy-trap.md).
+
 ## Top Rules verification
 
 `top-rules` is a standard leaf in `all` and `core-headless`. The graphical

@@ -25,6 +25,20 @@ public partial class TempleStageView : Node3D
     private ShaderMaterial _crystalMaterial=null!,_snowMaterial=null!;
     private ArrayMesh[] _iceCones=[];
     private readonly List<(Node3D Node,float Age)> _avalancheSwells=[];
+    private bool _greedy;
+    public const float GreedyMoatHeight=-1.28f;
+    private Node3D? _greedyExterior,_greedyWaterwheel;
+    private MeshInstance3D? _greedyMoat;
+    private readonly List<ShaderMaterial> _greedyExteriorMaterials=[];
+    private readonly List<ShaderMaterial> _greedyMaterials=[];
+    private readonly List<Node3D> _greedyCrushers=[],_greedyGears=[];
+    private readonly List<MeshInstance3D> _greedyOuterLeft=[],_greedyOuterRight=[];
+    private int _greedyClosed;
+    private int _greedyClosedRight;
+    private bool _greedyWallsInitialized;
+    private Vector3 _greedyLeftFrom,_greedyRightFrom,_greedyLeftTarget,_greedyRightTarget;
+    private float _greedyWallAge=.12f;
+    private float _greedyGearImpulse;
     private readonly List<ShaderMaterial> _castleStone = [];
     private static Shader? _castleFloorShader;
     private ShaderMaterial _castleWallMaterial=null!;
@@ -49,6 +63,7 @@ public partial class TempleStageView : Node3D
     {
         _lighting=lighting;
         if(_water?.MaterialOverride is ShaderMaterial material)lighting.ApplyWater(material);
+        if(_greedyMoat?.MaterialOverride is ShaderMaterial moat)lighting.ApplyWater(moat);
     }
     public void SetWaterLevel(float tierLevel)
     {
@@ -59,6 +74,7 @@ public partial class TempleStageView : Node3D
     {
         if(!IsVisibleInTree())return;
         if(_blizzard){ProcessBlizzard((float)delta);return;}
+        if(_greedy){ProcessGreedyTrap((float)delta);return;}
         if(_castle)
         {
             if(_graphicsRevision!=GraphicsQuality.Revision)
@@ -146,6 +162,8 @@ public partial class TempleStageView : Node3D
         if(_blizzard){BuildBlizzard();return;}
         _castle=Layout.Id==BlastStages.TopRules;
         if(_castle){BuildTopRules();return;}
+        _greedy=Layout.Id==BlastStages.GreedyTrap;
+        if(_greedy){BuildGreedyTrap();return;}
         _stone=_art.Stone();_cobble=_art.Stone(true);
         _masonry=_art.Masonry();_bedrock=_art.Bedrock();var wall=_masonry;var cap=_art.Color(new("e8cc82"));
         _garden=data.GetProperty("id").GetString()=="rock-garden";
@@ -275,6 +293,7 @@ public partial class TempleStageView : Node3D
     public Node3D CreateCover(int cell)
     {
         int x=cell%Width,z=cell/Width;
+        if(_greedy)return CreateGreedyCover(x,z);
         if(_castle)return CreateCastleCover(x,z);
         var root=new Node3D {Position=new(x+.5f,Surface(x+.5f,z+.5f),z+.5f)};
         if(_garden)return CreateGardenBoulder(root,cell);

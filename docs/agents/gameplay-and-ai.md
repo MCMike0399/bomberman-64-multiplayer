@@ -325,6 +325,12 @@ now covers five stages (60 combinations), including Blizzard Battle.
 
 ## Inventory, cover and pickup rendering
 
+Greedy Trap uses three solid stories, six flights, eight bottom masonry blocks
+and ordinary closing-column Hurry. Its turquoise basin is safe floor; it must
+not inherit ordinary water elimination or an unverified sliding rule. The
+[stage contract](../greedy-trap.md) owns topology, eight-seat adaptations and
+focused authority/AI checks. Online revision 5 gates the newly supported arena.
+
 - [Loot placement](../../src/Bomber.Game/Simulation/BlastSession.Loot.cs) uses map-owned
   `CoverAreas`: regional budget shares and cluster centers, with seeded weighted
   sampling. Temple seeds two nearby crates per spawn; Rock Garden seeds one plus a central paving cluster. Top Rules keeps a sparse twelve-block lower court. Up & Down keeps its upper ring clear, placing eight crates on the low deck and two on each middle pier. All policies preserve spawn clearance, ramps and reserved lanes.
@@ -531,4 +537,4 @@ five threatening bombs in 30 seconds, an eight-second maximum gap and zero death
 
 Top Rules thin decks pass blasts as demonstrated by the original official guide; solid masonry still shields and physical bodies/throws still collide with decks. Up & Down's corresponding blast penetration remains unverified, so it retains its authored shielding. [Evidence](../stage-fidelity-research.md#newly-recovered-top-rules-mechanics-evidence).
 
-Protocol 2 introduced the stage contract and protocol 3 added adaptive rooms. The v0.30 removal of Fast bomb semantics requires protocol 4 at HTTP admission, the actual WebSocket worker and peer hello. Keep readiness/operator/leave/cancel paths available and test protocol-3 update feedback before accepting game state. Lower cells must pass bounded schema validation before rendering. [Online protocol](../peer-hosting.md#online-stage-protocol-2-v028).
+Protocol 2 introduced the stage contract; protocol 3 added adaptive rooms and protocol 4 removed Fast bomb semantics. Greedy Trap advances admission to protocol 5 at HTTP, the actual WebSocket worker and matching peer hello so loadout-compatible older clients cannot receive an unsupported arena. A coordinated client/server release is required; this map PR does not deploy it. Preserve readiness/operator/leave/cancel paths and test protocol-3/4 update feedback before accepting game state. Lower cells and authored wall crowns must pass bounded schema validation before rendering. [Online protocol](../peer-hosting.md#online-stage-protocol-2-v028).

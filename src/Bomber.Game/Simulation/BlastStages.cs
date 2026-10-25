@@ -20,6 +20,7 @@ public static partial class BlastStages
         UpAndDown => BuildUpAndDown(),
         TopRules => BuildTopRules(),
         BlizzardBattle => BuildBlizzardBattle(),
+        GreedyTrap => BuildGreedyTrap(),
         _ => BuildSunkenTemple(),
     };
 

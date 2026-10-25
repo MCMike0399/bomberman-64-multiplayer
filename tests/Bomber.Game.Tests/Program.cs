@@ -1,4 +1,5 @@
 if(args.Contains("--blizzard-battle")){BlizzardBattleChecks.Run();return;}
+if(args.Contains("--greedy-trap")){int count=0;GreedyTrapChecks.Run((name,check)=>{check();count++;Console.WriteLine("PASS "+name);});Console.WriteLine($"Passed {count} Greedy Trap integration checks.");return;}
 if(args.Contains("--loot-density-sweep")){ItemDensityChecks.Sweep();return;}
 if(args.Contains("--loot-density")){ItemDensityChecks.Run();return;}
 if(args.Contains("--falling")){FallingChecks.Run();return;}
@@ -44,6 +45,7 @@ passed += OnlineRoomChecks.Run();
 passed += AdaptiveRoomChecks.Run();
 MatchRulesChecks.Run(Run);
 TerrainChecks.Run(Run);
+GreedyTrapChecks.Run(Run);
 UpAndDownChecks.Run(Run);
 RockGardenChecks.Run(Run);
 BotChecks.Run(Run);

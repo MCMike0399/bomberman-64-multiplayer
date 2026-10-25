@@ -290,7 +290,8 @@ public partial class ArenaView : Node3D
         Present(_presentation.Read(data));
         if(data.TryGetProperty("blizzard",out var weather))_terrain.SetBlizzard(weather);
         int left=(int)F(data,"closedLeft"),right=(int)F(data,"closedRight");
-        for(int x=0;x<_terrain.Width;x++)
+        _terrain.SetGreedyCompression(left,right);
+        for(int x=0;_stage!=BlastStages.GreedyTrap&&x<_terrain.Width;x++)
         {
             bool closed=x<left||x>=_terrain.Width-right;
             if(closed&&!_walls.ContainsKey(x))

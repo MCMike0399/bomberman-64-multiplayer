@@ -244,7 +244,7 @@ continuity. [Rendering budgets and rationale](../graphics-research.md).
 
 ## Arena selection
 
-The native arena dial cycles Sunken Temple, Rock Garden, Up & Down and Top Rules.
+The native arena dial cycles Sunken Temple, Rock Garden, Up & Down, Top Rules and Greedy Trap.
 Use `StageIds.Length` for wraparound. Local battle, Practice and waiting-room
 settings use the same validated ids; the menu miniature includes thin castle
 bridges and their lower passages. `setup` checks both wrap directions;
