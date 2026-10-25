@@ -6,6 +6,17 @@ round columns, a small cross/diamond of paving around the center and scattered
 destructible boulders. All meshes and materials are original procedural work.
 See the [source research](rock-garden-research.md) for evidence and uncertainty.
 
+## Rendered reference
+
+Actual rebuilt macOS export, Medium graphics / Midday lighting, captured in the
+isolated Metal QA desktop on 2026-10-24. The first image is the ordinary battle
+camera with four local seats. The second shows an authoritative fireball impact
+and a pending target warning.
+
+![Rebuilt Rock Garden opening](media/rock-garden-opening.png)
+
+![Rock Garden fireball impact and warning](media/rock-garden-fireballs.png)
+
 ## Playable contract
 
 - A 19×19 authority grid contains a one-cell solid boundary and a 17×17 flat

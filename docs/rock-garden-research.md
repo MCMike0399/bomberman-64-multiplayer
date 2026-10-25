@@ -22,11 +22,10 @@ unresolved behavior and eight-player adaptations are separated below.
   [ShadowIori, All Stages Sudden Death][sudden], Rock Garden **0:00–0:31**;
   sampled throughout, including **0:10 / HUD 0:57**. Recording/emulation conditions
   and hidden engine constants were not independently verified.
-- **[U1/U2] Both user screenshots inspected directly:** attachment
-  `6dc9c9d3-1981-4515-8710-73d52265df8b.png` (**U1**, 640×360, HUD 1:51) and
-  `7276bbfe-a49a-42fc-b854-46fcb5a6543c.png` (**U2**, 608×456, HUD 2:00).
-  Their original upload URLs and recording conditions are unknown. They remain
-  outside the repository.
+- **[U1/U2] Both user-provided screenshots inspected directly:** **U1** is
+  640×360 with HUD 1:51; **U2** is 608×456 with HUD 2:00. Their original upload
+  URLs and recording conditions are unknown. The reference images remain outside
+  the repository.
 
 ## Verified original facts
 
