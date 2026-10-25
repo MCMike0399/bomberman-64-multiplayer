@@ -128,7 +128,11 @@ public partial class PlaytestDriver
             dial.GrabFocus();
         }
         Check(_root.Preferences.Graphics==preset&&PlayerPreferences.Load(_root.PreferencesPath).Graphics==preset,"native graphics dial applies and persists "+preset);
-        if(session!=null)Check(ReferenceEquals(session,_root.ActiveSession)&&LightingArena.TimeOfDay==lighting,"graphics changes preserve session and lighting");
+        // Online rounds keep advancing while the graphics pipelines prepare.
+        // Their accepted lighting can change legitimately during this interval.
+        var expectedLighting=session is NetworkSession&&_root.LatestState is {} state
+            ? StageLighting.FromWire(state.GetProperty("stageLighting").GetString()):lighting;
+        if(session!=null)Check(ReferenceEquals(session,_root.ActiveSession)&&LightingArena.TimeOfDay==expectedLighting,"graphics changes preserve session and authoritative lighting");
         if(session is LocalSession)Check(_root.SnapshotCount==snapshots,"graphics changes preserve paused local authority");
         await KeyPress(Key.Escape);
         if(match)await ActivateNamed("ResumeGame");

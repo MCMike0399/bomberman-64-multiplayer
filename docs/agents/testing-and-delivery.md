@@ -331,3 +331,8 @@ warning/escape/damage. The `rock-garden` native journey belongs to `all` and
 fireball warning/pause/escape/impact, CPU combat and graphical detail captures. The
 shared walking helper reads the active stage rather than assuming Temple.
 See the [stage contract](../rock-garden.md) and [research](../rock-garden-research.md).
+
+The combined graphical suite uses a 900-second catalog budget for all journeys;
+QA forwards that deadline and retains outer cleanup/VM startup headroom. Online
+settings checks compare rendering with the latest accepted server lighting,
+since a real round can advance while graphics pipelines prepare.
