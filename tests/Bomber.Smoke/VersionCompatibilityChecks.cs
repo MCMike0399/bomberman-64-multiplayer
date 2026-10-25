@@ -33,6 +33,11 @@ internal static class VersionCompatibilityChecks
         using var guestResponse=await Request(HttpMethod.Post,"/realtime/v1/guests",[OnlineProtocol.WireRevision],new{displayName="Protocol verification"});
         Check(guestResponse.IsSuccessStatusCode&&guestResponse.Headers.TryGetValues(OnlineProtocol.HeaderName,out var protocolReply)&&OnlineProtocol.Accepts(protocolReply),"current guest admission echoes supported protocol");
         using var guest=JsonDocument.Parse(await guestResponse.Content.ReadAsStringAsync());string token=guest.RootElement.GetProperty("token").GetString()!;
+        using var queued=await Request(HttpMethod.Post,"/realtime/v1/queue",[OnlineProtocol.WireRevision],new{game="blast"},token);
+        Check(queued.IsSuccessStatusCode,"current legacy-classic queue accepts a ticket");
+        using var ticket=JsonDocument.Parse(await queued.Content.ReadAsStringAsync());
+        string ticketId=ticket.RootElement.GetProperty("ticketId").GetString()!;
+        using(var cancel=await Request(HttpMethod.Delete,"/realtime/v1/queue/"+Uri.EscapeDataString(ticketId),null,token:token))Check(cancel.IsSuccessStatusCode,"an actual authenticated ticket cancels without the protocol header");
         string? roomId=null;
         try
         {
@@ -61,14 +66,6 @@ internal static class VersionCompatibilityChecks
         {
             if(roomId is not null){using var leave=await Request(HttpMethod.Post,$"/realtime/v1/lobbies/{roomId}/leave",null,new{},token);Check(leave.IsSuccessStatusCode,"authenticated leave remains ungated");}
         }
-        using var cancelGuestResponse=await Request(HttpMethod.Post,"/realtime/v1/guests",[OnlineProtocol.WireRevision],new{displayName="Cancellation verification"});
-        using var cancelGuest=JsonDocument.Parse(await cancelGuestResponse.Content.ReadAsStringAsync());
-        string cancelToken=cancelGuest.RootElement.GetProperty("token").GetString()!;
-        using var queued=await Request(HttpMethod.Post,"/realtime/v1/queue",[OnlineProtocol.WireRevision],new{game="blast"},cancelToken);
-        Check(queued.IsSuccessStatusCode,"current legacy-classic queue accepts a ticket");
-        using var ticket=JsonDocument.Parse(await queued.Content.ReadAsStringAsync());
-        string ticketId=ticket.RootElement.GetProperty("ticketId").GetString()!;
-        using(var cancel=await Request(HttpMethod.Delete,"/realtime/v1/queue/"+Uri.EscapeDataString(ticketId),null,token:cancelToken))Check(cancel.IsSuccessStatusCode,"an actual authenticated ticket cancels without the protocol header");
         Console.WriteLine($"PASS {checks} online version admission and worker handshake checks");
     }
 }
