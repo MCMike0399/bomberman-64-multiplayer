@@ -1,3 +1,34 @@
+# v0.30.0 delivered
+
+2026-10-25: **v0.30.0/build 36** is published and deployed on both maintained game
+workers. [Release and signed update](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.30.0).
+The immutable release source is `158cd3c64606781e70650919dd04c27286a11a24`.
+[Trusted verification](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40227505286)
+passed public, managed/network, Linux headless and Apple Silicon packaging jobs;
+[publication](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40228380467)
+passed. The optional CI Metal job remains disabled; the local Metal evidence is
+recorded below, separately.
+
+Independent verification checked the update signature, archive checksums, bundle
+version/build, **228 Mac bundle files**, and **42 portable server runtime files**.
+The Mac ZIP was inspected in place. The downloaded official server, paired with
+the exact 15 plugin files planned for deployment, passed another 36-check local
+fleet drill before rollout.
+
+Both raspberrypi and DiveMac now match all 42 official runtime and 15 plugin
+hashes. Both containers are healthy, active and advertise protocol 4. Each update
+drained its node and waited for empty rooms, retained rollback, and preserved the
+existing environment/Compose files and physical limits. Pi retains 8 rooms / 2
+simulations / 1 peer allowance at one CPU; DiveMac retains 1 / 1 / 0 at half a CPU.
+Both retain 384 MiB memory/swap ceilings, 128 CPU shares and 256 PIDs. Pressure
+exclusions were not overridden; these checks do not establish new fleet capacity.
+
+A bounded three-client private match through the public endpoint passed admission,
+manual start, authority agreement and shared simulation checks. Final authenticated
+fleet observations showed both nodes with zero rooms and players. Legacy/headerless
+admission is rejected with update guidance on both workers. The personal installed
+app was not replaced; users receive the published signed update through Settings.
+
 # v0.30.0 combined verification
 
 Six PRs (#7–#12) were independently reviewed against their declared bases.
