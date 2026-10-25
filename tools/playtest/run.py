@@ -159,7 +159,7 @@ def main():
         result['dirtyWorktree'] = subprocess.run(['git', 'diff', '--quiet'], cwd=ROOT).returncode != 0
         if not args.headless and args.desktop == 'isolated':
             from isolated import run as run_isolated
-            run_isolated(args, folder, result, 'network' in expanded(args.scenario, scenarios), windowed)
+            run_isolated(args, folder, result, 'network' in scenarios[args.scenario]['domains'], windowed)
         else:
             result['desktop'] = {'mode': 'headless' if args.headless else 'shared'}
             if not args.headless and os.name == 'posix':
@@ -173,7 +173,7 @@ def main():
                 with (folder / 'build.log').open('w') as build_log:
                     for project in ['Bomberman64Multiplayer.csproj', 'src/Bomber.Server/Bomber.Server.csproj']:
                         subprocess.run(['dotnet', 'build', project, '--nologo', '-m:1'], cwd=ROOT, stdout=build_log, stderr=subprocess.STDOUT, check=True, timeout=90)
-            needs_network = 'network' in expanded(args.scenario, scenarios)
+            needs_network = 'network' in scenarios[args.scenario]['domains']
             if needs_network and not healthy(args.server):
                 if not args.start_server:
                     raise RuntimeError('Authoritative server is unavailable; start tools/dev/server.sh or use --start-server')

@@ -43,6 +43,9 @@ update the current guide rather than silently reviving old behavior.
   quadrant/corner spawns. [Stage contract](../rock-garden.md) and
   [original references](../rock-garden-research.md) distinguish evidence from tuning.
 
+- v0.27 connection work adds persistent random lobbies and player-hosted peer
+  rooms. [Peer hosting](../peer-hosting.md) owns the two-human minimum, direct/relay
+  routes and return-to-lobby host takeover. See verification for delivery status.
 
 - Repository layout (2026-10-24): Godot code lives in snake_case feature folders
   under `scripts/` with folder-mirroring `BlastCircuit.*` namespaces; the scene is

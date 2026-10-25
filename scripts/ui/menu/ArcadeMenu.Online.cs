@@ -35,20 +35,21 @@ public partial class ArcadeMenu
         _server.TextChanged+=text=>{_server.TooltipText=text;IdentityChanged?.Invoke();};
         var host=ArcadeTheme.Column(columns,14);host.CustomMinimumSize=new(400,0);
         Section(host,"Host a room");
-        Copy(host,"Invite friends with a private room code. Pick the arena, CPU rivals and win target first.");
-        _onlineStage=new StagePreview {CustomMinimumSize=new(400,206),StageIndex=_stage.Selected};host.AddChild(_onlineStage);
+        Copy(host,"Pick your rules, then choose who runs the match.");
+        _onlineStage=new StagePreview {CustomMinimumSize=new(400,150),StageIndex=_stage.Selected};host.AddChild(_onlineStage);
         ArcadeTheme.Button(host,"Room settings",()=>Navigation?.Invoke("HostSetup"));
         _onlineButtons.Add(ArcadeTheme.Button(host,"Create private room",()=>OnlineRequested?.Invoke(NetworkMode.CreatePrivate),true));
-        Hint(host,"Share the code while friends connect. The room leader chooses when to start.",15);
+        _onlineButtons.Add(ArcadeTheme.Button(host,"Host peer room",()=>OnlineRequested?.Invoke(NetworkMode.CreatePeer)));
+        Hint(host,"Private: the cluster runs the match. Peer: your device hosts; two people are required. Share either room code.",15);
         var join=ArcadeTheme.Column(columns,14);join.SizeFlagsHorizontal=SizeFlags.ExpandFill;
         Section(join,"Join a friend");
         _code=ArcadeTheme.Field(join,"Room code","","Enter code");_code.MaxLength=16;
         _onlineButtons.Add(ArcadeTheme.Button(join,"Join room",()=>OnlineRequested?.Invoke(NetworkMode.JoinCode),true));
         join.AddChild(new Control {CustomMinimumSize=new(0,10)});
-        Section(join,"Quick play");
-        Copy(join,"Get matched with other players waiting in the queue. It needs at least two people.");
-        _onlineButtons.Add(ArcadeTheme.Button(join,"Quick play",()=>OnlineRequested?.Invoke(NetworkMode.QuickPlay)));
-        var status=Copy(box,"Pick a suit, then host or join a room on a reachable Burbuja server.",15);status.Name="OnlineNotice";status.AddThemeColorOverride("font_color",ArcadeTheme.Gold);
+        Section(join,"Find players");
+        Copy(join,"Join a random cluster lobby. The first player leads; at least two people must connect before starting.");
+        _onlineButtons.Add(ArcadeTheme.Button(join,"Random lobby",()=>OnlineRequested?.Invoke(NetworkMode.QuickPlay)));
+        var status=Copy(box,"Peer rooms try a direct connection and use the cluster relay when needed.",15);status.Name="OnlineNotice";status.AddThemeColorOverride("font_color",ArcadeTheme.Gold);
         var cancel=ArcadeTheme.Button(box,"Cancel connection",()=>BackRequested?.Invoke());cancel.Name="CancelConnect";cancel.Visible=false;cancel.SizeFlagsHorizontal=SizeFlags.ShrinkBegin;
     }
 
@@ -127,7 +128,8 @@ public partial class ArcadeMenu
         var status=PartyStatus.Parse(data);bool leader=status.LeaderId==_localPlayer;
         _startRoom.Disabled=!leader||!status.CanStart;_roomRules.Disabled=!leader||status.Phase!="lobby";
         string leaderName=data.GetProperty("players").EnumerateArray().FirstOrDefault(p=>p.GetProperty("playerId").GetString()==status.LeaderId) is var player&&player.ValueKind==JsonValueKind.Object?player.GetProperty("displayName").GetString()??"Leader":"Leader";
-        _lobbyStatus.Text=status.Phase switch {"starting"=>"Starting the battle...","results"=>"Battle complete — returning to the room...","playing"=>"Battle in progress",_=>leader?status.CanStart?"You are the leader. Start when everyone is here.":"Waiting for another player or CPU rival.":$"Waiting for {leaderName} to start."};
-        _partyHint.Text=$"Leader: {leaderName}  •  CPU rivals: {status.Bots}\nShare the room code. Start / + focuses Start game; confirm to begin.";
+        _lobbyStatus.Text=status.Phase switch {"starting"=>"Starting the battle...","results"=>"Battle complete — returning to the room...","playing"=>"Battle in progress",_=>leader?status.CanStart?"You are the host. Start when everyone is here.":status.MinimumHumans>=2?"Waiting for a second connected player.":"Waiting for another player or CPU rival.":$"Waiting for {leaderName} to start."};
+        _partyHint.Text=$"{(status.Hosting=="peer"?"Peer host":"Lobby host")}: {leaderName}  •  CPU rivals: {status.Bots}\n"+
+            (status.Notice.Length>0?status.Notice:status.Hosting=="peer"?"If the host leaves, the next player hosts and everyone returns here.":"The host starts each match. Leadership transfers if they leave.");
     }
 }

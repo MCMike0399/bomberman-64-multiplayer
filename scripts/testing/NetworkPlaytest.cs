@@ -41,7 +41,7 @@ public partial class PlaytestDriver
         Event("lobby-ui",new {text=lobbyText});
         Check(lobbyText.Contains("Harness host",StringComparison.Ordinal),"lobby renders host name in visible UI");
         Check(lobbyText.Contains("Harness peer",StringComparison.Ordinal),"lobby renders peer name in visible UI");
-        Check(lobbyText.Contains("You are the leader",StringComparison.Ordinal),"lobby identifies the leader and manual start");
+        Check(lobbyText.Contains("You are the host",StringComparison.Ordinal),"lobby identifies the leader and manual start");
         await Task.Delay(4200);await Frames(2);Check(_root.ScreenName=="Lobby"&&_root.LatestState==null,"full private lobby does not automatically start");
         await ActivateNamed("CopyRoomCode");
         Check(DisplayServer.ClipboardGet()==host.JoinCode,"copy button writes the actual room code to clipboard");

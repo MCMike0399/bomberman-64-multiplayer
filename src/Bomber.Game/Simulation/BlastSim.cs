@@ -80,7 +80,7 @@ public sealed class StageLayout
     public IReadOnlyList<CoverArea> CoverAreas {get;init;}=[];
     public double SoftBlockDensity { get; init; } = .45;
     public int MaxSoftBlocks { get; init; } = int.MaxValue;
-    public int OpeningCoverPerSpawn {get;init;}=2;
+    public int OpeningCoverPerSpawn { get; init; } = 2;
     public IReadOnlySet<(int X, int Z)> ClearCells { get; init; } = new HashSet<(int, int)>();
 
     public CellDef At(int x, int z)

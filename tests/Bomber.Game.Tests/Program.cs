@@ -6,6 +6,7 @@ if(args.Contains("--rock-garden"))
 }
 
 if(args.Contains("--snapshot-performance")){SnapshotPerformance.Run(args);return;}
+if(args.Contains("--online-rooms")){OnlineRoomChecks.Run();return;}
 
 if(args.Contains("--pyramid-ledges")){PyramidLedgeChecks.Run();return;}
 
@@ -21,6 +22,7 @@ if(args.Contains("--cover-layout")){RegionalCoverChecks.Run();return;}
 
 var passed = AdvancedRulesChecks.Run() + ItemExpirationChecks.Run() + RegionalCoverChecks.Run() + SandboxEquipmentChecks.Run() + PyramidLedgeChecks.Run() + PartyPolishChecks.Run() + PartySessionChecks.Run() + LootAvailabilityChecks.Run() + AimedThrowChecks.Run() + CarryChargeChecks.Run() + BombPlacementChecks.Run() + PowerUpModeChecks.Run() + BombTravelChecks.Run() + KickTimingChecks.Run() + BodyContactChecks.Run() + BombImpactChecks.Run() + TraversalAndGhostChecks.Run() + BombActionsChecks.Run() + GrappleChecks.Run();
 SnapshotChecks.Run(Run);
+passed += OnlineRoomChecks.Run();
 MatchRulesChecks.Run(Run);
 TerrainChecks.Run(Run);
 RockGardenChecks.Run(Run);

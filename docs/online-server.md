@@ -3,8 +3,9 @@
 Blast Circuit's online service is intended for all users. Players connect to the
 same maintained server address for Quick Play or private rooms from any network
 that can reach it. A private room is a game feature, independent of the server's
-audience. The server runs independently of any player's Mac and owns matches,
-rules and CPU players.
+audience. The server runs independently of any player's Mac. It owns cluster-hosted matches
+and coordinates player-hosted peer rooms. [Peer hosting](peer-hosting.md) describes
+which device runs each mode and how host transfer works.
 
 The public address is `https://blast.burbuja-lab.dev`. Raspberrypi is the primary
 game node; DiveMac keeps a resource-capped idle worker ready for overflow. Both
@@ -71,8 +72,9 @@ multi-node recovery require their own evidence, as described in the
 ## Player flow
 
 Open **Online Battle**, enter the service's published address and a player name,
-then choose **Quick Play**, **Create private room** or **Join room**. Quick Play
-needs another compatible queued player. Private rooms wait for their leader;
+then choose **Random lobby**, **Host peer room**, **Create private room** or
+**Join room**. Random lobbies wait for two connected humans and their host's
+explicit start. Peer rooms use the same minimum. Private rooms wait for their leader;
 CPU seats do not start them automatically. The leader can edit Room settings
 while waiting, and results return everyone to the same room.
 
