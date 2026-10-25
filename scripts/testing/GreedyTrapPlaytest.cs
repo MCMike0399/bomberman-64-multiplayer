@@ -29,6 +29,12 @@ public partial class PlaytestDriver
         await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"ordinary four-player Greedy Trap battle starts",150);
         Check(State.GetProperty("players").GetArrayLength()==4&&CoverCount()==8,"four upper starts surround eight real bottom blocks");
         var openingTerrain=AuditDescendants(LightingArena).OfType<TempleStageView>().Single();
+        foreach(var tread in openingTerrain.GetChildren().OfType<MeshInstance3D>().Where(n=>n.Name.ToString().StartsWith("GreedyTread_")))
+        {
+            var support=openingTerrain.GetNode<MeshInstance3D>(tread.Name.ToString().Replace("GreedyTread_","GreedyStep_"));
+            Check(tread.Position.Y+tread.Mesh.GetAabb().End.Y>support.Position.Y+support.Mesh.GetAabb().End.Y+.005f,
+                "stair paving stays visibly above its structural top: "+tread.Name);
+        }
         var scenery=openingTerrain.GetNodeOrNull<Node3D>("GreedyExterior");
         Check(scenery is not null&&scenery.IsVisibleInTree(),"Greedy Trap has a visible exterior beyond its enclosed battle floor");
         Check(AuditDescendants(LightingArena).OfType<WorldEnvironment>().Single().Environment.BackgroundMode==Godot.Environment.BGMode.Sky,

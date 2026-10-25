@@ -8,6 +8,8 @@ internal static class GreedyTrapChecks
     public static void Run(Action<string,Action> check)
     {
         const string id="greedy-trap";
+        check("Greedy Trap rejects the Blizzard-only numeric protocol",()=>
+            Assert(!OnlineProtocol.Accepts(["5"]),"Incompatible Blizzard-only build passed Greedy Trap admission."));
         check("Greedy Trap is an enclosed three-story reward pit with six flights",()=>
         {
             var stage=BlastStages.Get(id);

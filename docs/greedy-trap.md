@@ -106,7 +106,7 @@ desktop by default.
 
 Verified after integrating main through `158cd3c` (v0.30 release metadata),
 preserving the reviewed bomb loadout, item density, CPU pursuit, falling physics
-and menu navigation. Greedy Trap requires online protocol 5, following the
+and menu navigation. Greedy Trap requires online protocol 6, following the
 protocol-4 bomb-loadout change.
 
 - Public profile: all repository/tooling/audio gates pass.
@@ -189,3 +189,15 @@ Timed side-wall compression, with pulsing inlays and moving flywheels:
 Actual arena selection and shared 3D menu miniature:
 
 ![Greedy Trap menu miniature](media/greedy-trap/menu-miniature.png)
+
+## Pending-PR review corrections (2026-10-25)
+
+The independent Blizzard-only branch also used protocol 5. Greedy Trap now
+rejects that incompatible token with schema 6, including HTTP and peer hello
+operator probes. Combined delivery must preserve both stage validators and use
+the canonical release identity from the release pipeline.
+
+The review retained a failing native stair-surface assertion, then raised tread
+paving, court coping and brass sills 0.02 render units above their supports.
+This removes coplanar faces without changing collision, steps or drop physics.
+Shader cache fields follow the main partial's ownership convention.

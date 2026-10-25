@@ -5,7 +5,7 @@ if (!origin || !expected || !output) throw Error('Usage: placement-probe.mjs ORI
 let token, room, socket, failure, cleaned = false;
 async function api(route, body) {
   const response = await fetch(new URL('/realtime/v1/' + route, origin), {
-    method: 'POST', headers: { 'X-Blast-Protocol': '5', 'Content-Type': 'application/json', ...(token ? { 'x-player-token': token } : {}) },
+    method: 'POST', headers: { 'X-Blast-Protocol': '6', 'Content-Type': 'application/json', ...(token ? { 'x-player-token': token } : {}) },
     body: JSON.stringify(body), signal: AbortSignal.timeout(10000)
   });
   const value = response.status === 204 ? null : await response.json();
@@ -20,11 +20,11 @@ try {
   const url = new URL(created.reservation.connectUrl, origin);
   url.protocol = ['https:', 'wss:'].includes(url.protocol) ? 'wss:' : 'ws:';
   if (origin.startsWith('https:') && url.protocol !== 'wss:') throw Error('Insecure socket route');
-  socket = new WebSocket(url, {headers: {'X-Blast-Protocol': '5'}});
-  socket.addEventListener('open', () => socket.send(JSON.stringify({ t: 'peer.hello', d: { version: 4 } })));
+  socket = new WebSocket(url, {headers: {'X-Blast-Protocol': '6'}});
+  socket.addEventListener('open', () => socket.send(JSON.stringify({ t: 'peer.hello', d: { version: 6 } })));
   await new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(Error('No owning-node welcome')), 10000);
-    socket.addEventListener('message', e => { if (JSON.parse(e.data).t === (game === 'blast-peer' ? 'party.status' : 'sys.welcome')) { clearTimeout(timer); resolve(); } });
+    socket.addEventListener('message', e => { if ((frame => frame.t === (game === 'blast-peer' ? 'party.status' : 'sys.welcome') && (game !== 'blast-peer' || frame.d.requiredOnlineProtocol === 6 && frame.d.notice === ''))(JSON.parse(e.data))) { clearTimeout(timer); resolve(); } });
     socket.addEventListener('error', () => { clearTimeout(timer); reject(Error('Socket failed')); });
   });
 } catch (error) { failure = error.message; }

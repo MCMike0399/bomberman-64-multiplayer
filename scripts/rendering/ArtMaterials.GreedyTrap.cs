@@ -4,7 +4,6 @@ namespace BlastCircuit.Rendering;
 
 public sealed partial class ArtMaterials
 {
-    private static Shader? _greedyTrapShader;
     /// <summary>Original world-space textures; no extracted game images or external assets.</summary>
     public ShaderMaterial GreedyTrap(int style)
     {

@@ -45,7 +45,7 @@ internal static class VersionCompatibilityChecks
             Check(create.IsSuccessStatusCode,"current classic room creation succeeds");
             using var room=JsonDocument.Parse(await create.Content.ReadAsStringAsync());roomId=room.RootElement.GetProperty("lobby").GetProperty("lobbyId").GetString();
             var socketUri=NetworkSession.ResolveConnectUri(origin,room.RootElement.GetProperty("reservation").GetProperty("connectUrl").GetString()!);
-            foreach(string? legacyProtocol in new string?[]{null,"3","4"})
+            foreach(string? legacyProtocol in new string?[]{null,"3","4","5"})
             {
                 using var legacySocket=new ClientWebSocket();legacySocket.Options.CollectHttpResponseDetails=true;
                 if(legacyProtocol is not null)legacySocket.Options.SetRequestHeader(OnlineProtocol.HeaderName,legacyProtocol);

@@ -106,7 +106,7 @@ Protocol 2 introduced layered-stage admission in v0.28; protocol 3 added adaptiv
 authority and packet semantics in v0.29. Protocol 4 removed Fast equipment,
 accelerated bomb motion and retired item exclusions; preserving `motionRate` at
 1 alone does not preserve those semantics. Greedy Trap adds the required
-`X-Blast-Protocol: 5` gate so protocol-4 loadout-compatible clients cannot
+`X-Blast-Protocol: 6` gate so protocol-4 loadout-compatible clients cannot
 receive an unsupported arena. This requires a coordinated client/server release;
 the map PR does not deploy either component. Both
 the gateway-facing API and actual worker echo the supported version. Older

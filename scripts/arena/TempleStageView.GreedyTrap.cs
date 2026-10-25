@@ -36,25 +36,25 @@ public partial class TempleStageView
                 {
                     float t=(step+.5f)/8-.5f,top=Mathf.Lerp(from,to,(step+1)/8f);
                     var center=new Vector3(x+.5f+cell.RampDX*t,top/2,z+.5f+cell.RampDZ*t);
-                    Box(this,center,new(cell.RampDX==0?.998f:1f/8,top,cell.RampDZ==0?.998f:1f/8),ashlar);
-                    Box(this,new(center.X,top-.012f,center.Z),new(cell.RampDX==0?.83f:1f/8,.024f,cell.RampDZ==0?.83f:1f/8),paving);
+                    Box(this,center,new(cell.RampDX==0?.998f:1f/8,top,cell.RampDZ==0?.998f:1f/8),ashlar).Name=$"GreedyStep_{x}_{z}_{step}";
+                    Box(this,new(center.X,top+.008f,center.Z),new(cell.RampDX==0?.83f:1f/8,.024f,cell.RampDZ==0?.83f:1f/8),paving).Name=$"GreedyTread_{x}_{z}_{step}";
                 }
                 continue;
             }
             if(y>0)Box(this,new(x+.5f,y/2-.045f,z+.5f),new(.999f,y-.09f,.999f),ashlar);
             Box(this,new(x+.5f,y-.035f,z+.5f),new(.998f,.07f,.998f),cell.Tier==2?court:cell.Tier==1?paving:teal).Name=$"GreedyFloor_{x}_{z}";
-            // Warm coping traces the cross-shaped cutout. It never protrudes
-            // above a walkable surface or adds railings along a legal drop.
+            // Warm coping sits just above the court surface. Its small visual offset
+            // leaves authoritative drop geometry unchanged.
             if(cell.Tier==2)foreach(var (dx,dz) in new[]{(1,0),(-1,0),(0,1),(0,-1)})
             {
                 var neighbor=Layout.At(x+dx,z+dz);
                 if(neighbor.IsPassable&&neighbor.Tier<2&&neighbor.Kind!=CellKind.Ramp)
-                    Box(this,new(x+.5f+dx*.445f,y-.025f,z+.5f+dz*.445f),new(dx==0?1:.11f,.05f,dz==0?1:.11f),coping,.012f);
+                    Box(this,new(x+.5f+dx*.445f,y-.005f,z+.5f+dz*.445f),new(dx==0?1:.11f,.05f,dz==0?1:.11f),coping,.012f);
             }
-            // A thin brass sill frames the middle ring, flush with the paving.
+            // A thin brass sill sits just above the middle ring to avoid coplanar faces.
             if(cell.Tier==1)foreach(var (dx,dz) in new[]{(1,0),(-1,0),(0,1),(0,-1)})
                 if(Layout.At(x+dx,z+dz) is {Kind:CellKind.Floor,Tier:0})
-                    Box(this,new(x+.5f+dx*.475f,y-.018f,z+.5f+dz*.475f),new(dx==0?.99f:.045f,.036f,dz==0?.99f:.045f),brass);
+                    Box(this,new(x+.5f+dx*.475f,y+.002f,z+.5f+dz*.475f),new(dx==0?.99f:.045f,.036f,dz==0?.99f:.045f),brass);
         }
         // Original mechanical details on the solid rear wall, above the court.
         foreach(float x in new[]{3.5f,15.5f})

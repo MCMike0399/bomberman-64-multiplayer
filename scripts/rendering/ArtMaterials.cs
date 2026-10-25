@@ -6,6 +6,7 @@ public sealed partial class ArtMaterials
 {
     public static readonly Color[] PlayerColors = [new("f6f0df"),new("30314a"),new("ec3d50"),new("356be0"),new("56b76b"),new("ffba37"),new("9d56ce"),new("31c9c5")];
     private readonly Dictionary<string, StandardMaterial3D> _cache = [];
+    private static Shader? _greedyTrapShader;
     private static Shader? _stoneShader,_waterShader,_clearWaterShader,_gardenShader;
     /// <summary>
     /// Characters, bombs and pickups read as lacquered miniature figures: a thin glossy
