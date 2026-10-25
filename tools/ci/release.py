@@ -9,7 +9,6 @@ import subprocess
 
 from promote_release import gh, inspect_run, require_current_main
 from release_identity import ROOT, check_exports
-from verify_deployment import targets_from_json, placements_from_json
 
 
 def prepare(version, protocol=None, root=ROOT):
@@ -59,17 +58,8 @@ def doctor(repository, publishing=False):
         checks['online dedicated deployment runner'] = any(item['status'] == 'online' and 'blast-deploy' in {label['name'] for label in item['labels']} for item in runners)
         checks['absolute operator adapter configured'] = Path(variables.get('BLAST_DEPLOY_ADAPTER', '')).is_absolute()
         checks['persistent deployment state configured'] = Path(variables.get('BLAST_DEPLOY_STATE_DIR', '')).is_absolute()
-        targets = {}
-        try:
-            targets = targets_from_json(variables.get('BLAST_RELEASE_SERVER_URLS', '{}'))
-            checks['explicit deployment targets configured'] = True
-        except (ValueError, RuntimeError):
-            checks['explicit deployment targets configured'] = False
-        try:
-            placements_from_json(variables.get('BLAST_RELEASE_PLACEMENTS', '{}'), targets)
-            checks['expected worker placements configured'] = True
-        except (ValueError, RuntimeError):
-            checks['expected worker placements configured'] = False
+        checks['deployment target secret configured'] = 'BLAST_RELEASE_SERVER_URLS' in secrets
+        checks['worker placement secret configured'] = 'BLAST_RELEASE_PLACEMENTS' in secrets
     return checks
 
 

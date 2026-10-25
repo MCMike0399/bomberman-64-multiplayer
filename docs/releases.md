@@ -86,13 +86,21 @@ Configure these settings before enabling automatic releases:
 | `production` environment | GitHub Actions | Restrict deployment to trusted main; apply the organization's deployment protection rules. |
 | `blast-deploy` runner label | Dedicated trusted runner | Python 3.11+, `gh`, network access to the public route and every worker, and the installed adapter. The workflow installs .NET SDK 10 for the dependency-free connection probe. Publishing uses this runner too, so private node origins remain private. |
 | `BLAST_DEPLOY_ADAPTER` | Production environment variable | Absolute executable path outside the checkout, e.g. `/opt/blast/bin/deploy-adapter`. |
-| `BLAST_RELEASE_SERVER_URLS` | Repository variable | JSON object mapping **every admission route/worker** to its origin, including the public gateway, primary and fallback. Deployment and publication must see the same value. |
+| `BLAST_RELEASE_SERVER_URLS` | Repository or production environment secret | JSON object mapping **every admission route/worker** to its origin, including the public gateway, primary and fallback. Deployment and publication must see the same value. |
 | `BLAST_DEPLOY_STATE_DIR` | Production environment variable | Absolute persistent directory outside checkout, owned by the runner user with mode 0700; journals, inspected artifacts and operator backups survive cleanup/reboots. |
-| `BLAST_RELEASE_PLACEMENTS` | Repository or production environment variable | JSON mapping every target name to its expected `serverId` and placement `region`; probes fail if the selected worker differs. |
+| `BLAST_RELEASE_PLACEMENTS` | Repository or production environment secret | JSON mapping every target name to its expected `serverId` and placement `region`; probes fail if the selected worker differs. |
 | `BLAST_UPDATE_SIGNING_KEY` | Existing release secret | Existing P-256 update signing key; do not rotate it. |
 | `AUTO_RELEASE_ENABLED` | Repository variable | Enable only after a complete manual deployment/publish drill succeeds. |
 
-Example target shape (replace all example origins with the configured routes):
+Keep target origins and placement configuration in Actions secrets, not ordinary
+variables: Actions prints step environments. The workflow additionally masks each
+origin and hostname before use, because structured-secret redaction alone is not
+sufficient ([GitHub guidance](https://docs.github.com/en/actions/reference/security/secure-use)).
+Transport and subprocess exceptions retain diagnostics in private files and suppress
+underlying exceptions in public tracebacks. Doctor can inspect secret names only;
+shape/URL/placement validation occurs inside the protected job before host changes.
+
+Example target secret shape (replace all example origins with configured routes):
 
 ```json
 {"public":"https://game.example","primary":"https://primary.game.example","fallback":"http://127.0.0.1:18497"}
@@ -254,9 +262,11 @@ The expanded source passed the complete managed profile: 2,834 game checks,
 343 client checks, 78 AI checks, 48 AI soak cases, real multiplayer/forced relay,
 36 fleet checks and tested server/plugin packaging. The updated live-probe code
 passed 78 checks against the staged server, including real match progress and
-room retirement. Public contracts pass; 58 CI-tool tests include real temporary
+room retirement. Public contracts pass; 60 CI-tool tests include real temporary
 P-256 signatures/tampering and fixture adapter recovery, plus malformed evidence,
-version/build regression, upload interruption and private-timeout regressions.
+version/build regression, upload interruption, private subprocess/TLS failures and
+Actions masking regressions. The isolated server-staging CLI also has a fresh-process
+contract that excludes host configuration.
 All three workflows pass actionlint. Receipts remain in ignored
 `artifacts/qa/review-expanded-managed` and `artifacts/qa/review-final-public`.
 
