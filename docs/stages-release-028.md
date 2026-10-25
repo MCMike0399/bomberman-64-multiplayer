@@ -1,9 +1,8 @@
 # v0.28 stages, tutorial and explosions
 
-Release candidate **v0.28.0 / build 33**, integrating PRs #2 (Up & Down), #3
-(Top Rules), #4 (Rock Garden) and #5 (Circuit Garden/tutorial). Local verification
-is complete; publication and shared-server delivery are recorded below when
-verified.
+Published **[v0.28.0 / build 33](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.28.0)**, integrating PRs #2 (Up & Down), #3
+(Top Rules), #4 (Rock Garden) and #5 (Circuit Garden/tutorial). All four PRs are merged into main, and both shared servers run the exact verified
+release runtime. The personal Mac app was not replaced.
 
 ## Player changes
 
@@ -86,7 +85,39 @@ networking research in the original checkout was preserved.
 
 ## Publication and shared service
 
-Pending exact-main CI, signed public artifacts and sequential idle-node updates.
-The preflight found both nodes at the verified v0.27 runtime, zero rooms/players,
-and unchanged limits. DiveMac's existing pressure exclusion remains respected.
-No personal Mac app replacement is part of this release task.
+All four PRs were merged through integration PR #5. Runtime source:
+`9566a6745bc21a0eb099a2df46af824a5d25bc73`.
+[Trusted CI 40153012524](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40153012524)
+and [signed publication 40153538831](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40153538831)
+passed. All required main jobs succeeded; the optional hosted Metal job was
+skipped, with local exported-app Metal evidence recorded above.
+
+The published update signature was independently verified against the embedded
+P-256 public key. The app archive was inspected in place: correct bundle identity,
+version/build, complete controller backend and an inventory of 228 files. The
+server archive and all 42 runtime file hashes matched their manifest.
+
+| Published artifact | SHA-256 |
+| --- | --- |
+| macOS archive | `c31e3c1526c697b3a59be1875f21d486c99f5d8dde08949af84ea1d6121a25be` |
+| Portable server archive | `579affe94727292c2eaae530b690c56a057572bbf6a1e0e58c26024aabe9103f` |
+
+DiveMac and then raspberrypi were drained and observed empty before their owned
+worker restarted. Both running `/app` inventories matched all 42 official hashes,
+reported online protocol 2 and retained host configuration, plugin mounts and
+resource limits. Rollback runtimes remain on both nodes. Primary remains one CPU /
+two rooms; fallback remains half a CPU / one room; both retain 384 MiB and 256 PIDs.
+
+Actual public journeys verified cluster-hosted and peer-hosted Up & Down stairs,
+lower-floor traversal and below-ring bomb placement. The initially excluded
+fallback recovered through its existing monitor without changing the guard;
+a region-selected public Rock Garden match then verified two-player admission,
+fireball warning, accepted movement, actual impact and escape on DiveMac.
+Final authenticated fleet observations showed both nodes active, zero rooms and
+zero players. The public API echoes protocol 2 and returns the actionable update
+message to legacy admission requests.
+
+Delivery receipts are under `artifacts/stage-release/release-assets/` and the
+`*-install.json`, `*-final.json`, `public-*-gameplay.*` and `public-health.json`
+files in the isolated release checkout. No personal app installation, unrelated
+service restart, capacity increase or private configuration change was performed.

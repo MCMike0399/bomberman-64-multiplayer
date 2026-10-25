@@ -3,7 +3,7 @@
 The user resumed gameplay work on 2026-10-23 for controller ergonomics, aiming
 and knockdown/blast separation (iteration19). The first eighteen iterations
 remain historical evidence. Iteration20 then rebuilt the walk. Recorded
-release baseline: **v0.27.0/build 32**, published with independently verified Mac
+release baseline: **v0.28.0/build 33**, published with independently verified Mac
 and server archives (see [verification](../verification.md)). Previous runtime baseline: **v0.18.0**, commit
 `316a330d7d895a92f98c1a60be7d571ec445a8a3`. Later documentation commits may follow.
 Verify the live branch, source, tools and installed version before relying on

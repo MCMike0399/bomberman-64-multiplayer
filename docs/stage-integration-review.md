@@ -7,8 +7,8 @@ Rock Garden's later `56662ec` adds a correct eight-member roster convergence
 wait; it is also retained. PR descriptions, stage contracts and the user's
 request supplied the specs; no separate issue-tracker configuration exists.
 
-The source heads are combined on the tutorial integration branch. Public merge
-and release status belong to the final verification receipt, not this review.
+All source heads were merged through integration PR #5. [Final verification and
+public delivery](stages-release-028.md) records the combined release.
 
 ## Standards
 

@@ -1,5 +1,7 @@
 # Circuit Garden tutorial
 
+Delivered with [v0.28](stages-release-028.md). The standalone source receipts below predate the combined stage review and release.
+
 The main menu's **Tutorial** opens a replayable how-to section. Every lesson is
 available immediately; clearing one saves a device-local star and offers the next
 lesson. **Practice** remains available for existing battle arenas. **Free practice
