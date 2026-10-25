@@ -43,6 +43,9 @@ unsupported/unvalidated peer stage admission. One suspected issue was withdrawn.
 | Tutorial | “Watch its timer” promised a countdown hidden with the battle HUD | A compact live status/charge/inventory line shows remaining effect time and is checked while it decreases. |
 | Tutorial | Graduation promises an Easy opponent, but practice suppressed bomb placement | Normal Easy attack planning and its cooldown clock are enabled only for graduation; a real opponent-owned bomb is witnessed. |
 
+The final review also corrected tutorial flood metadata so live aiming uses the
+accepted rising-water plane; its failing and passing journey is retained.
+
 The integrated trajectory review also found a swept roof-contact regression:
 a fast charged throw could clear the roof horizontally at the endpoint while
 penetrating it at an intermediate sample. Shared flight/projection now resolves
@@ -82,7 +85,7 @@ is required in addition to numeric aspect/lifetime/rendering-budget checks.
 
 Minimal failing and passing witnesses are retained under ignored
 `artifacts/stage-release/review-regressions/`. The initial old-server admission
-check failed; the updated owned server passed 42 HTTP/worker handshake checks.
+check failed; the updated owned server passed 44 HTTP/worker handshake checks, including an authenticated welcome and actual cancellation.
 The incoming PR images and original references remain available under
 `artifacts/stage-release/references/` for comparison. Final full-suite, exported-app,
 CI, signed-release and deployed-runtime evidence is recorded separately.

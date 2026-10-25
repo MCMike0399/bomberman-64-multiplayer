@@ -425,3 +425,11 @@ utility from their own swapped equipment. If orienting invalidates a planned
 bomb placement, they navigate before retrying, avoiding endless tiny turns. The enlarged stock Pyramid pressure
 check allows eight seconds to first pressure (previous smaller map: six), retains
 five threatening bombs in 30 seconds, an eight-second maximum gap and zero deaths.
+
+## Integrated stage contract (v0.28)
+
+`CellDef.Below` is the single lower-surface representation for Top Rules and Up & Down; `Underpasses` is derived metadata, not independent terrain. Preserve height-aware support, fractional stairs, authored wall crowns, full held-body clearance and swept projectile ceilings. Meteor warning times seed bomb-chain prediction before propagation. See [review findings and regressions](../stage-integration-review.md).
+
+Top Rules thin decks pass blasts as demonstrated by the original official guide; solid masonry still shields and physical bodies/throws still collide with decks. Up & Down's corresponding blast penetration remains unverified, so it retains its authored shielding. [Evidence](../stage-fidelity-research.md#newly-recovered-top-rules-mechanics-evidence).
+
+All online modes negotiate protocol 2 at HTTP admission and the actual WebSocket worker, with a separate matching peer hello. Keep readiness/operator/leave/cancel paths available and test old-client update feedback. Lower cells must pass bounded schema validation before rendering. [Online protocol](../peer-hosting.md#online-stage-protocol-2-v028).

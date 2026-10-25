@@ -360,3 +360,11 @@ land beyond the authority-owned enclosure instead of the temple sea. Scenery
 outside the walls is visual only. The column and cover crowns use shared throw
 support heights; the paving is a shallow cosmetic layer. The stage selector
 uses the real square layout. See the [stage contract](../rock-garden.md).
+
+## v0.28 reference fidelity
+
+[Stage comparison](../stage-fidelity-research.md) and [explosion sequences](../explosion-fidelity-research.md) record inspected original imagery and limits. The integrated castle has taller authored walls and side banners; Up & Down uses rounded/fluted supports inside its solid footprint; Rock Garden's center crown is 1.35 units versus .9 for its outer columns. Original reference assets remain outside Git and exports.
+
+Explosions use one round world-space fireball, brief sharp charged flares, an expanding cyan power wave and transparent fade. This supersedes the earlier offset billow spheres, ordinary ground torus and brown cloud. Only the cosmetic group compensates the 1.35 tier-height scale; the faint danger shell retains mapped authority extent. Damage radius and fuse stay in the simulation. Castle thin-deck blast permeability is an explicitly researched rules change, separate from the effect geometry.
+
+Castle stone and garden surfaces use bounded terrain-owned materials. Repeated rounds and new closing walls must retain the selected quality preset. Inspect actual captures; shape/aspect/lifetime tests are supporting evidence, not aesthetic approval.
