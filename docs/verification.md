@@ -1,3 +1,10 @@
+# Integrated v0.28 release candidate
+
+2026-10-24: the combined stages, tutorial, original-reference explosion changes
+and review fixes pass the local public, managed/network, headless, graphical and
+package gates. [Exact evidence, captures and delivery status](stages-release-028.md).
+The independent PR receipts below are historical inputs to that combined review.
+
 # Top Rules castle — source verification
 
 2026-10-24: original procedural reconstruction of the castle arena identified

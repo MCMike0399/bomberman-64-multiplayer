@@ -383,3 +383,5 @@ yield engine frames between guest polls. All eight clients share one engine
 thread in QA; batching their setup can otherwise starve the real host's
 heartbeat and trigger the production six-second takeover policy. Keep that
 policy intact rather than weakening it to accommodate the fixture.
+
+For the combined v0.28 release, `stage-fidelity` is the focused fresh-process suite for all reconstructed arenas, explosion presentation and tutorial. The complete `all` suite and package gate remain the release regression. [Combined receipts](../stages-release-028.md).

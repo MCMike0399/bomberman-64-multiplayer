@@ -37,6 +37,8 @@ update the current guide rather than silently reviving old behavior.
 
 ## Current decisions that supersede earlier experiments
 
+- v0.28 integrates all stage PRs, the tutorial and reference-informed explosion effects. [Combined verification and release status](../stages-release-028.md) supersedes independent draft limitations only where its evidence explicitly covers them.
+
 - Tutorial work adds an original local-only Circuit Garden and replayable lessons. The user withdrew map removal: preserve all battle arenas and the concurrent map PRs. Read [tutorial ownership and integration](../tutorial.md) before changing lessons, progress or training terrain.
 
 - Top Rules (2026-10-24 source work) adds the original castle composition with
