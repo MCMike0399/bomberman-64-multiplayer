@@ -69,9 +69,13 @@ class SigningTests(unittest.TestCase):
 
     def test_published_version_and_build_cannot_regress(self):
         published = {'tag_name': 'v1.2.3', 'draft': False, 'prerelease': False}
-        with patch.object(promote_release, 'gh', side_effect=['[]', json.dumps([[published]])]):
-            with self.assertRaisesRegex(RuntimeError, 'refuse downgrades'):
-                promote_release.inspect_existing_release('example/game', '1.2.2', 'a' * 40, True)
+        for prerelease in (False, True):
+            # A bad stable release may be marked prerelease to stop new installs;
+            # users who already installed it still cannot accept a downgrade.
+            prior = dict(published, prerelease=prerelease)
+            with self.subTest(prerelease=prerelease), patch.object(promote_release, 'gh', side_effect=['[]', json.dumps([[prior]])]):
+                with self.assertRaisesRegex(RuntimeError, 'refuse downgrades'):
+                    promote_release.inspect_existing_release('example/game', '1.2.2', 'a' * 40, True)
         with patch.object(promote_release, 'gh', side_effect=['[]', json.dumps([[published]]), '{"release":{"build":"42"}}']), patch.object(promote_release, 'check_exports', return_value={'build': '42'}):
             with self.assertRaisesRegex(RuntimeError, 'build must increase'):
                 promote_release.inspect_existing_release('example/game', '1.2.4', 'a' * 40, True)

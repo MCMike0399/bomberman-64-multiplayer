@@ -1,3 +1,12 @@
+# v0.31 reviewed candidate
+
+PR #15 now combines the reviewed #13, #14, #16 and #17 changes with the expanded
+release workflow. The exact candidate passed public, managed, headless, package
+and all 50 exported graphical journeys, plus Greedy Trap network traversal:
+4,217 assertions and 408 captures across both runs.
+[Review findings, negative witnesses, complete evidence and activation limits](review-release-031.md).
+This is source verification; v0.30.0 remains the recorded delivered release.
+
 # Release pipeline source verified locally
 
 2026-10-25: the release/protocol worktree prepares **v0.30.0/build 36/schema 4**.

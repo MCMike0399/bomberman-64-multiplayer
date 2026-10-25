@@ -25,7 +25,7 @@ and waits for rooms before replacing a process.
    (use the intended next version). It increases the build and synchronizes
    exports. Add `--protocol N` for an incompatible schema. The preparation
    command rejects local downgrades; promotion independently compares published
-   stable versions and builds, including legacy ZIP plists. Run:
+   versions and builds (including releases later marked prerelease), including legacy ZIP plists. Run:
 
    ```sh
    python3 tools/ci/release_identity.py --sync
@@ -230,7 +230,7 @@ from the original clean verified checkout. The deployment job recognizes only a
 matching durable success context and rechecks the live fleet without applying
 again. Publication may finish after main advances because its authority is the
 exact verified deployed candidate, subject to monotonic published version/build
-checks. A newer deployed fleet fails the old candidate's live checks. Never
+checks, including releases marked prerelease after distribution. A newer deployed fleet fails the old candidate's live checks. Never
 silently downgrade servers while retrying publication. Existing users may temporarily need to wait during this strict
 release cutover. Zero-downtime old/new client coexistence is outside this policy.
 

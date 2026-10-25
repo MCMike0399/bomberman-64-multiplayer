@@ -63,13 +63,13 @@ def inspect_existing_release(repository, version, revision, publish=False):
     # GitHub drafts may not have created their tag yet. Inspect drafts independently
     # of refs, and paginate so an older draft cannot become a duplicate release.
     pages = json.loads(gh('api', f'repos/{repository}/releases?per_page=100', '--paginate', '--slurp'))
-    published = [item for page in pages for item in page if not item.get('draft') and not item.get('prerelease')]
+    published = [item for page in pages for item in page if not item.get('draft')]
     for item in published:
         tag = item.get('tag_name', '')
         if not re.fullmatch(r'v[0-9]+\.[0-9]+\.[0-9]+', tag):
             raise RuntimeError('Unrecognized published version; inspect the release history before delivery')
         if tuple(map(int, tag[1:].split('.'))) >= tuple(map(int, version.split('.'))):
-            raise RuntimeError('Candidate must upgrade every published stable version; clients refuse downgrades')
+            raise RuntimeError('Candidate must upgrade every published version, including demoted releases; clients refuse downgrades')
     if published:
         latest = max(published, key=lambda item: tuple(map(int, item['tag_name'][1:].split('.'))))
         metadata = json.loads(gh('release', 'download', latest['tag_name'], '--repo', repository,

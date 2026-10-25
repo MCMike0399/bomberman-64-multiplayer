@@ -42,6 +42,11 @@ update the current guide rather than silently reviving old behavior.
 
 ## Current decisions that supersede earlier experiments
 
+- v0.31 review candidate: PR #15 integrates all five pending PRs, both new arenas,
+  exact schema-6 release admission and repeatable signed delivery. [Final review
+  and verification](../review-release-031.md) distinguish the tested source/export
+  from unconfigured production activation.
+
 - Release pipeline source (2026-10-25): `Release.props` owns version/build/schema;
   every release has an exact admission token. Publication requires deployment
   verification across all configured workers. [Release procedure and adapter
