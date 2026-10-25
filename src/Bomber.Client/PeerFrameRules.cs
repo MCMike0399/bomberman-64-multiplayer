@@ -39,15 +39,20 @@ public static class PeerFrameRules
         }
         catch(Exception ex) when(ex is InvalidOperationException or KeyNotFoundException or FormatException or OverflowException){return false;}
     }
-    private static bool Cell(JsonElement cell,bool castle)
+    private static bool Cell(JsonElement cell,bool castle,bool allowBelow=true)
     {
         if(!Fields(cell,"i:k i:t i:rx i:rz n:rf n:rt"))return false;
-        int kind=cell.GetProperty("k").GetInt32();
-        if(kind is <0 or >4 || cell.GetProperty("t").GetInt32() is <0 or >8 ||
+        int kind=cell.GetProperty("k").GetInt32(),tier=cell.GetProperty("t").GetInt32();
+        if(kind is <0 or >4 || tier is <0 or >8 ||
             cell.GetProperty("rx").GetInt32() is <-1 or >1 || cell.GetProperty("rz").GetInt32() is <-1 or >1 ||
             cell.GetProperty("rf").GetSingle() is <0 or >8 || cell.GetProperty("rt").GetSingle() is <0 or >8)return false;
-        if(!cell.TryGetProperty("oh",out var height)||height.ValueKind==JsonValueKind.Null)return !castle||kind!=1;
-        return height.ValueKind==JsonValueKind.Number&&height.TryGetSingle(out float value)&&float.IsFinite(value)&&value is >=.15f and <=8;
+        if(!cell.TryGetProperty("oh",out var height)||height.ValueKind==JsonValueKind.Null)
+        {if(castle&&kind==1)return false;}
+        else if(height.ValueKind!=JsonValueKind.Number||!height.TryGetSingle(out float value)||!float.IsFinite(value)||value is <.15f or >8)return false;
+        if(!cell.TryGetProperty("below",out var below)||below.ValueKind==JsonValueKind.Null)return true;
+        if(!allowBelow||kind!=0||!Cell(below,false,false)||below.GetProperty("k").GetInt32()==1)return false;
+        float lowerTop=below.GetProperty("k").GetInt32()==4?Math.Max(below.GetProperty("rf").GetSingle(),below.GetProperty("rt").GetSingle()):below.GetProperty("t").GetSingle();
+        return lowerTop<tier;
     }
     private static bool Underpasses(JsonElement stage,int count)
     {

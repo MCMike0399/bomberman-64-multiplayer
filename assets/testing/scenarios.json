@@ -546,7 +546,8 @@
         "network",
         "peer-rooms",
         "tutorial",
-        "top-rules"
+        "top-rules",
+        "up-and-down"
       ],
       "domains": [
         "ai",
@@ -564,7 +565,7 @@
         "ui"
       ],
       "headless": false,
-      "timeout": 600,
+      "timeout": 1200,
       "manual": false
     },
     {
@@ -592,7 +593,8 @@
         "ai-play",
         "combat",
         "tutorial",
-        "top-rules"
+        "top-rules",
+        "up-and-down"
       ],
       "domains": [
         "ai",
@@ -740,6 +742,32 @@
       ],
       "headless": false,
       "timeout": 1200,
+      "manual": false
+    },
+    {
+      "id": "menu-preview",
+      "method": "MiniaturePreviewRegression",
+      "domains": [
+        "rendering",
+        "ui",
+        "settings",
+        "performance"
+      ],
+      "headless": false,
+      "timeout": 420,
+      "manual": false
+    },
+    {
+      "id": "up-and-down",
+      "method": "UpAndDownTour",
+      "domains": [
+        "gameplay",
+        "physics",
+        "rendering",
+        "ai"
+      ],
+      "headless": true,
+      "timeout": 240,
       "manual": false
     }
   ]

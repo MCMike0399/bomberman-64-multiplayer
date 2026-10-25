@@ -109,7 +109,7 @@ public sealed partial class BlastSession
                 // Once engagement is due, follow an open route toward the rival
                 // instead of stopping at every incidental crate along that route.
                 if(_roundTimer-_aiLastThreat.GetValueOrDefault(bot.Id)>4&&waypoint>=0&&waypoint!=start&&
-                    !BotEnemyInRange(x,_stage.SurfaceAt(x,z,bot.Y+.25f),z,(bot.FireLevel*.9f+.4f)*(bot.HasRed?1.25f:1),bot.Id,bot.HasRed))continue;
+                    !BotEnemyInRange(x,_stage.SurfaceAt(x,z,bot.Y),z,(bot.FireLevel*.9f+.4f)*(bot.HasRed?1.25f:1),bot.Id,bot.HasRed))continue;
                 float score=BotBombUtility(bot,x,z);
                 if(score>best){best=score;aimX=nx;aimZ=nz;}
             }
@@ -123,7 +123,7 @@ public sealed partial class BlastSession
     }
     private float BotBombUtility(BlastPlayer bot,float x,float z)
     {
-        float score=0,y=_stage.SurfaceAt(x,z,bot.Y+.25f),radius=(bot.FireLevel*.9f+.4f)*(bot.HasRed?1.25f:1);
+        float score=0,y=_stage.SurfaceAt(x,z,bot.Y),radius=(bot.FireLevel*.9f+.4f)*(bot.HasRed?1.25f:1);
         int reach=(int)MathF.Ceiling(radius);
         for(int cx=(int)x-reach;cx<=(int)x+reach;cx++)for(int cz=(int)z-reach;cz<=(int)z+reach;cz++)
             if(_softBlocks.IsAlive(cx,cz)&&InBlast(x,z,y,radius,cx+.5f,cz+.5f,_stage.At(cx,cz).Tier,bot.HasRed))score++;
@@ -142,8 +142,8 @@ public sealed partial class BlastSession
         escape=-1;
         if(!TryBombPlacement(bot,aimX,aimZ,advance,out float x,out float z)||BotBombUtility(bot,x,z)<=0)return false;
         _aiCandidate.OwnerId=bot.Id;_aiCandidate.X=x;_aiCandidate.Z=z;
-        _aiCandidate.LandingY=_stage.SurfaceAt(x,z,bot.Y+.25f);
-        _aiCandidate.CellX=(int)x;_aiCandidate.CellZ=(int)z;_aiCandidate.Tier=(int)MathF.Round(_stage.SurfaceAt(x,z,bot.Y+.25f));
+        _aiCandidate.CellX=(int)x;_aiCandidate.CellZ=(int)z;_aiCandidate.Tier=(int)MathF.Round(_stage.SurfaceAt(x,z,bot.Y));
+        _aiCandidate.LandingY=_stage.SurfaceAt(x,z,bot.Y);
         _aiCandidate.FireLevel=bot.FireLevel;_aiCandidate.Pumps=0;_aiCandidate.Mode=bot.HasRemote?"normal":bot.BombType;
         _aiCandidate.FuseTimer=(_aiCandidate.IsBouncy?3.5f:BlastBomb.FuseSeconds)-.25f;_aiCandidate.State=BombState.Resting;
         _aiCandidateBombs.Clear();_aiCandidateBombs.AddRange(_bombs);_aiCandidateBombs.Add(_aiCandidate);
@@ -155,8 +155,8 @@ public sealed partial class BlastSession
     {
         if(!field.Safe(cell,enter,leave))return false;
         int x=_aiGraph.X(cell),z=_aiGraph.Z(cell);
-        if(WaterUnsafe(x+.5f,z+.5f,leave))return false;
-        if(_phase==RoundPhase.Hurry&&_stage.Id!=BlastStages.SunkenTemple)
+        if(WaterUnsafe(x+.5f,z+.5f,leave,_aiGraph.Height[cell]))return false;
+        if(_phase==RoundPhase.Hurry&&!_stage.RisingWater)
         {
             int columns=(int)MathF.Floor(_hurryColTimer+leave);
             if(x<_closedLeft+columns||x>=_stage.Width-_closedRight-columns)return false;
@@ -294,7 +294,7 @@ public sealed partial class BlastSession
         for(int d=0;d<4;d++)
         {
             int next=_aiGraph.Edges[start*4+d];if(next<0||!BotOpen(next,start,bot,_aiDanger))continue;
-            int x=_aiGraph.X(next),z=_aiGraph.Z(next);if(WaterUnsafe(x+.5f,z+.5f,.5f))continue;
+            int x=_aiGraph.X(next),z=_aiGraph.Z(next);if(WaterUnsafe(x+.5f,z+.5f,.5f,_aiGraph.Height[next]))continue;
             float score=float.IsPositiveInfinity(_aiDanger.Begins[next])?100:_aiDanger.Begins[next];
             score+=_aiGraph.Height[next]*.05f;
             if(score>value){value=score;best=next;}

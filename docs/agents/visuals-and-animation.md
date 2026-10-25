@@ -190,6 +190,25 @@ upper crosswalk, four stairs, night, eight-player combat, real dropped loot belo
 a bridge and inward wall closure. Pickup meshes must use the snapshot's accepted
 `y`; querying the topmost terrain surface moves lower drops onto a bridge.
 
+### Up & Down suspended arena (2026-10-24)
+
+[Stage contract](../up-and-down.md), [original references](../up-and-down-research.md).
+`TempleStageView.UpAndDown.cs` builds pale stone piers, recessed square friezes,
+purple perimeter panels and six sloping flights with yellow landing arrows,
+a green summit mosaic, thin suspended links and the low four-panel deck.
+All geometry/materials are original procedural work. Bridge tiles render their
+`below` surfaces separately; no foundation may fill an underpass. Both camera
+fitting and framing checks include lower surfaces and standing headroom.
+The authority's fractional ramp endpoints drive the render slope; visual treads
+sit just above it. The ordinary battle camera remains distinct from oblique
+inspection captures. All four existing lighting profiles and graphics presets
+apply to the new arena. Older packets without bridge surfaces retain generic
+terrain rendering. The shared menu plate builder uses clockwise faces with
+outward normals; `asset-audit` retains the winding regression. `menu-preview`
+exercises preparation, preset changes, asset inspection and real setup navigation;
+setup checks the rendered green summit as well as settings state. Agent image
+inspection is still required.
+
 ### Four stage lighting variants (2026-10-23)
 
 The user requested **Morning, Midday, Afternoon and Night**, selected personally

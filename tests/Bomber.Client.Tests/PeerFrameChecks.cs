@@ -34,6 +34,16 @@ internal static class PeerFrameChecks
         InvalidCastle(d=>d["cells"]![5]!.AsObject().Remove("oh"),"reject castle wall with no authored crown");
         InvalidCastle(d=>d["cells"]![2*19+2]!["rf"]=1e200,"reject invalid fractional ramp height");
         InvalidCastle(d=>d["cells"]![2*19+2]!["rz"]=99,"reject unbounded stair direction");
+        var layered=new LocalMatch(new MatchOptions{Stage="up-and-down",HumanPlayers=2,BotPlayers=0});
+        using var layeredStage=JsonDocument.Parse(layered.StageJson!);
+        Check(PeerFrameRules.Valid(layeredStage.RootElement),"Up & Down fractional stairs and both floors accepted together");
+        var badLayer=JsonNode.Parse(layered.StageJson!)!;badLayer["d"]!["cells"]![21*24+18]!["below"]=new JsonObject();
+        Check(!PeerFrameRules.Valid(JsonSerializer.SerializeToElement(badLayer)),"reject incomplete lower cell before renderer parsing");
+        badLayer=JsonNode.Parse(layered.StageJson!)!;var lower=badLayer["d"]!["cells"]![21*24+18]!["below"]!;
+        lower["below"]=lower.DeepClone();
+        Check(!PeerFrameRules.Valid(JsonSerializer.SerializeToElement(badLayer)),"reject unsupported third terrain layer");
+        badLayer=JsonNode.Parse(layered.StageJson!)!;badLayer["d"]!["cells"]![21*24+18]!["below"]!["rf"]=1e200;
+        Check(!PeerFrameRules.Valid(JsonSerializer.SerializeToElement(badLayer)),"reject non-finite lower ramp");
         var invalid=JsonNode.Parse(match.StateJson!)!;
         invalid["d"]!["players"]![0]!["x"]=1e200;
         Check(!PeerFrameRules.Valid(JsonSerializer.SerializeToElement(invalid)),"reject non-finite render coordinates");

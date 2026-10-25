@@ -68,7 +68,7 @@ internal static class TopRulesChecks
         Check("Top Rules kicked lower bomb passes under bridge without hitting upper player", () =>
         {
             var original=BlastStages.Get(BlastStages.TopRules);
-            var fixture=new StageLayout{Id=original.Id,Width=original.Width,Height=original.Height,Cells=original.Cells,Underpasses=original.Underpasses,Spawns=[(4,4),(5,4)]};
+            var fixture=new StageLayout{Id=original.Id,Width=original.Width,Height=original.Height,Cells=original.Cells,Spawns=[(4,4),(5,4)]};
             var match=new LocalMatch(new MatchOptions{Stage=BlastStages.TopRules,HumanPlayers=2,BotPlayers=0,Practice=true},fixture);Fight(match);
             match.SetInput(0,new PlayerInput(1,0));Step(match,1);
             match.SetInput(0,new PlayerInput(0,0,A:true));Step(match,2);match.SetInput(0,default);Step(match,2);
@@ -86,12 +86,12 @@ internal static class TopRulesChecks
         Check("Top Rules lower throw hits ceiling and shared projection agrees with authority landing", () =>
         {
             var original=BlastStages.Get(BlastStages.TopRules);
-            var fixture=new StageLayout{Id=original.Id,Width=original.Width,Height=original.Height,Cells=original.Cells,Underpasses=original.Underpasses,Spawns=[(4,4)]};
+            var fixture=new StageLayout{Id=original.Id,Width=original.Width,Height=original.Height,Cells=original.Cells,Spawns=[(4,4)]};
             var match=Match(fixture);Fight(match);Walk(match,5.5f,4.5f);
             var stage=original;var soft=new SoftBlockGrid(stage.Width,stage.Height);
             var projection=BombThrowRules.Project(new(5.5f,BombThrowRules.LaunchHeight,4.5f),BombThrowRules.AimedVelocity(1,0,4.5f),
                 (x,z)=>stage.SurfaceAt(x,z),_=>false,cellKind:(x,z)=>stage.At(x,z).Kind,hasCover:(_,_)=>false,
-                layeredSurface:stage.SurfaceAt,deckIntersects:stage.DeckIntersects);
+                stage:stage);
             Assert(projection.Last.Y==0&&projection.Points.Max(p=>p.Y)<2,"Lower advisory throw passed through deck ceiling.");
             match.SetInput(0,new PlayerInput(0,0,A:true,B:true));Step(match,2);
             match.SetInput(0,new PlayerInput(0,0,B:true,Aim:true));Step(match,2);
@@ -122,7 +122,7 @@ internal static class TopRulesChecks
             var stage=BlastStages.Get(BlastStages.TopRules);
             var flight=BombThrowRules.AdvanceStatic(new(5.5f,2.45f,1.5f),new(0,0,-6),.25f,
                 (x,z)=>stage.SurfaceAt(x,z),(x,z)=>stage.At(x,z).Kind,(_,_)=>false,
-                obstacleHeight:(x,z)=>stage.At(x,z).ObstacleHeight??BombThrowRules.PillarHeight);
+                stage:stage);
             Assert(flight.Position.Z>=1.3f&&flight.Velocity.Z==0,"Low lob passed through tall rear masonry.");
             var soft=new SoftBlockGrid(stage.Width,stage.Height);
             Assert(!BlastGeometry.Contains(stage,soft,5.5f,2.2f,1.5f,3,5.5f,2.2f,-.5f,true),"Elevated blast passed through rear wall.");

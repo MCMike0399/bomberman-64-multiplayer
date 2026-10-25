@@ -1,4 +1,5 @@
 using Godot;
+using Bomber.Game.Simulation;
 using System.Text.Json;
 using static BlastCircuit.Rendering.ArtGeometry;
 using BlastCircuit.Rendering;
@@ -17,6 +18,7 @@ public partial class TempleStageView : Node3D
     private ShaderMaterial _castleWallMaterial=null!;
     private ShaderMaterial? _castleCoverMaterial;
     public ShaderMaterial CastleWallMaterial=>_castleWallMaterial;
+    public StageLayout Layout {get;private set;} = null!;
     public int Width {get;private set;}
     public int Depth {get;private set;}
     private ShaderMaterial _stone=null!,_cobble=null!,_masonry=null!,_bedrock=null!;
@@ -68,44 +70,22 @@ public partial class TempleStageView : Node3D
         }
     }
     public TempleStageView(ArtMaterials art){_art=art;}
-    public float Surface(float x,float z,float ceiling=float.PositiveInfinity)
+    public float Surface(float x,float z,float y=float.PositiveInfinity) => Layout.SurfaceAt(x,z,y)*HeightScale;
+    public CellKind AimCellKind(float x,float z) => Layout.At((int)MathF.Floor(x),(int)MathF.Floor(z)).Kind;
+    public float AimSurface(float x,float z) => AimCellKind(x,z) switch
     {
-        int cx=Math.Clamp((int)x,0,Width-1),cz=Math.Clamp((int)z,0,Depth-1);
-        var c=_cells[cz*Width+cx];float tier=c.GetProperty("t").GetSingle();
-        if(_underpasses.Contains(cz*Width+cx)&&ceiling<tier-.001f)return 0;
-        if(c.GetProperty("k").GetInt32()==4)
-        {
-            float dx=c.GetProperty("rx").GetSingle(),dz=c.GetProperty("rz").GetSingle();
-            float progress=dx!=0?(dx>0?x-cx:1-(x-cx)):(dz>0?z-cz:1-(z-cz));
-            tier=c.GetProperty("rf").GetSingle()+progress*(c.GetProperty("rt").GetSingle()-c.GetProperty("rf").GetSingle());
-        }
-        return tier*HeightScale;
-    }
-    public Bomber.Game.Simulation.CellKind AimCellKind(float x,float z)
-    {
-        int cx=(int)MathF.Floor(x),cz=(int)MathF.Floor(z);
-        return cx<0||cz<0||cx>=Width||cz>=Depth?Bomber.Game.Simulation.CellKind.Void:
-            (Bomber.Game.Simulation.CellKind)_cells[cz*Width+cx].GetProperty("k").GetInt32();
-    }
-    public float AimSurface(float x,float z)=>AimCellKind(x,z) switch
-    {
-        Bomber.Game.Simulation.CellKind.Water=>_targetWater/HeightScale,
-        Bomber.Game.Simulation.CellKind.Void=>-1,
-        _=>Surface(x,z)/HeightScale
+        CellKind.Water => _targetWater/HeightScale,
+        CellKind.Void => -1,
+        _ => Layout.SurfaceAt(x,z)
     };
-    public float AimLayerSurface(float x,float z,float ceiling) => AimCellKind(x,z) switch
+    private static CellDef ReadCell(JsonElement cell) => new()
     {
-        Bomber.Game.Simulation.CellKind.Water => _targetWater/HeightScale,
-        Bomber.Game.Simulation.CellKind.Void => -1,
-        _ => Surface(x,z,ceiling)/HeightScale,
+        Kind=(CellKind)cell.GetProperty("k").GetInt32(), Tier=cell.GetProperty("t").GetInt32(),
+        ObstacleHeight=cell.TryGetProperty("oh",out var obstacle)&&obstacle.ValueKind==JsonValueKind.Number?obstacle.GetSingle():null,
+        RampDX=cell.GetProperty("rx").GetInt32(), RampDZ=cell.GetProperty("rz").GetInt32(),
+        RampFromTier=cell.GetProperty("rf").GetSingle(), RampToTier=cell.GetProperty("rt").GetSingle(),
+        Below=cell.TryGetProperty("below",out var lower)&&lower.ValueKind==JsonValueKind.Object ? ReadCell(lower) : null
     };
-    public bool AimDeckIntersects(float x,float z,float bottom,float top)
-    {
-        int cx=(int)MathF.Floor(x),cz=(int)MathF.Floor(z);
-        if(cx<0||cz<0||cx>=Width||cz>=Depth||!_underpasses.Contains(cz*Width+cx))return false;
-        float deck=_cells[cz*Width+cx].GetProperty("t").GetSingle();
-        return top>=deck-Bomber.Game.Simulation.StageLayout.DeckThickness&&bottom<deck;
-    }
     public float AimObstacleHeight(int x,int z)
     {
         if(x<0||z<0||x>=Width||z>=Depth)return Bomber.Game.Simulation.BombThrowRules.PillarHeight;
@@ -121,16 +101,18 @@ public partial class TempleStageView : Node3D
     public void Build(JsonElement data)
     {
         Width=data.GetProperty("width").GetInt32();Depth=data.GetProperty("height").GetInt32();_cells=data.GetProperty("cells").Clone();
-        _underpasses.Clear();
-        if(data.TryGetProperty("underpasses",out var passages))
-            foreach(var passage in passages.EnumerateArray())_underpasses.Add(passage.GetInt32());
-        _castle=data.GetProperty("id").GetString()=="top-rules";
+        var cells=new CellDef[Width,Depth];
+        for(int z=0;z<Depth;z++)for(int x=0;x<Width;x++)cells[x,z]=ReadCell(_cells[z*Width+x]);
+        Layout=new StageLayout {Id=data.GetProperty("id").GetString()!,Width=Width,Height=Depth,Cells=cells};
+        _underpasses.Clear();foreach(var cell in Layout.Underpasses)_underpasses.Add(cell.Z*Width+cell.X);
+        _castle=Layout.Id==BlastStages.TopRules;
         if(_castle){BuildTopRules();return;}
         _stone=_art.Stone();_cobble=_art.Stone(true);
         _masonry=_art.Masonry();_bedrock=_art.Bedrock();var wall=_masonry;var cap=_art.Color(new("e8cc82"));
         _water=new MeshInstance3D {Mesh=new PlaneMesh {Size=new Vector2(160,160),SubdivideWidth=180,SubdivideDepth=180},MaterialOverride=_art.Water(),Position=new Vector3(Width/2f,-.53f,Depth/2f),CastShadow=GeometryInstance3D.ShadowCastingSetting.Off};AddChild(_water);
-        bool temple=data.GetProperty("id").GetString()=="sunken-temple";
-        bool garden=data.GetProperty("id").GetString()=="circuit-garden";
+        if(Layout.Id==BlastStages.UpAndDown&&cells.Cast<CellDef>().Any(c=>c.Below!=null)){BuildUpAndDown();return;}
+        bool temple=Layout.Id==BlastStages.SunkenTemple;
+        bool garden=Layout.Id==BlastStages.CircuitGarden;
         if(garden){_masonry.SetShaderParameter("base_color",new Color("9da18a"));_masonry.SetShaderParameter("mortar_color",new Color("596750"));}
         for(int z=0;z<Depth;z++)for(int x=0;x<Width;x++)
         {

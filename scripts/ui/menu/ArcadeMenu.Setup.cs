@@ -140,6 +140,6 @@ public partial class ArcadeMenu
     {
         _background.SelectArena(StageIds[_stage.Selected]);
         if(_onlineStage!=null){_onlineStage.StageIndex=_stage.Selected;_onlineStage.QueueRedraw();}
-        _stageDescription.Text=_stage.Selected switch {0=>"Climb the outer walkways. Send a pumped bomb\nover the ledge. Watch the water below.",1=>"An open arena with pillars and breakable blocks.\nFind an escape before lighting the fuse.",2=>"Fight across three connected terraces.\nUse ramps to move between elevations.",_=>"Rule the castle bridges or fight beneath them.\nFour corner staircases connect both floors."};
+        _stageDescription.Text=_stage.Selected switch {0=>"Climb the outer walkways. Send a pumped bomb\nover the ledge. Watch the water below.",1=>"An open arena with pillars and breakable blocks.\nFind an escape before lighting the fuse.",2=>"Battle over the sea on three suspended levels.\nUse purple stairs to reach the lower item decks.",_=>"Rule the castle bridges or fight beneath them.\nFour corner staircases connect both floors."};
     }
 }

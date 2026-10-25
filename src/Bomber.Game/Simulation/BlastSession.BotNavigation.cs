@@ -79,7 +79,7 @@ public sealed partial class BlastSession
             float before=Dist2(bot.X,bot.Z,other.X,other.Z),after=Dist2(x,z,other.X,other.Z);
             if(after<(PlayerRadius*2+.01f)*(PlayerRadius*2+.01f)&&after<before-.00001f)return false;
         }
-        int next=_aiGraph.Cell(x,z,_stage.SurfaceAt(x,z,bot.Y+.25f));
+        int next=_aiGraph.Cell(x,z,bot.Y);
         if(next<0)return false;
         // An escape crosses threatened cells before the fuse; requiring a safe
         // destination for the entire horizon here contradicts the timed route.

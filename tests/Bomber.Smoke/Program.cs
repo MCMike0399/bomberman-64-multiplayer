@@ -24,6 +24,7 @@ await PeerNetworkChecks.Run(new Uri(origin));
 await PeerReconnect();
 await ProductSessions();
 await NetworkAimChecks.Run(new Uri(origin));
+await UpAndDownNetworkChecks.Run(new Uri(origin));
 await LobbyAppearanceCatchup();
 if (args.Contains("--client-only")) return;
 

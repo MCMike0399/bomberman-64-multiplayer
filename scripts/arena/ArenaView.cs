@@ -298,7 +298,8 @@ public partial class ArenaView : Node3D
             var projection=BombThrowRules.Project(origin,velocity,_terrain.AimSurface,_=>false,
                 bomb.GetProperty("remote").GetBoolean()?5:F(bomb,"fuse"),_terrain.AimCellKind,
                 (x,z)=>_terrain.AimCellKind(x+.5f,z+.5f),(x,z)=>_terrain.AimHasCover(x,z,cover),
-                waterLevel:_stage==BlastStages.SunkenTemple&&data.GetProperty("phase").GetInt32()==2?F(data,"waterLevel"):null,motionRate:motionRate,bounce:bounce,gravityScale:BombThrowRules.Weight(pumps),pumps:pumps,layeredSurface:_terrain.AimLayerSurface,deckIntersects:_terrain.AimDeckIntersects,obstacleHeight:_terrain.AimObstacleHeight);
+                waterLevel:data.GetProperty("hurryMode").GetString()=="water"&&data.GetProperty("phase").GetInt32()==2?F(data,"waterLevel"):null,
+                motionRate:motionRate,bounce:bounce,gravityScale:BombThrowRules.Weight(pumps),pumps:pumps,stage:_terrain.Layout);
             if(!_throwPreviews.TryGetValue(id,out var view))
             {view=new BombThrowPreview();_effects.AddChild(view);_throwPreviews[id]=view;}
             view.Update(projection,pumps,player.GetProperty("slot").GetInt32(),aimSet,aiming,range);seen.Add(id);

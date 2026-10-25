@@ -120,3 +120,16 @@ their original scope.
 `--soak --terrain-regression` retains the temple Hard/seven-CPU/seed-64
 crate-overlap witness found while adding layered terrain. Crates must still
 block ledge departures; height-only filtering can trap an actor after falling.
+
+
+## Suspended Up & Down (2026-10-24)
+
+The former filled terrace/farming layout is superseded by the
+[stage contract](../../docs/up-and-down.md). `UpAndDownAiChecks` checks separate
+bridge/underpass bomb occupancy and danger intervals, then ordinary CPU
+planting/escape against fixed visible lower cover in a declared lower-start
+fixture. `FrontPlacementChecks` retains the stock three-CPU destruction/drop
+witness. Its seven-CPU stock case requires repeated real combat, allowing the
+CPU to retain the exposed upper ring instead of forcing a farming detour.
+Soak safe-exit observations now use the actor's elevation and both navigation
+layers. Earlier pressure/cover measurements above belong to older layouts.

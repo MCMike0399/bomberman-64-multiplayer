@@ -58,39 +58,58 @@ public static partial class BlastStages
         };
     }
 
-    // ─── Up & Down (23×19, three tiers connected by ramps, water surround) ─
-    // Outer two rows/cols are water. Tier 0 ring, tier 1 inner rectangle,
-    // tier 2 small center platform. Four ramps at each tier boundary.
-    // ─────────────────────────────────────────────────────────────────────────
-
+    // A suspended square ring and crown, two middle piers, and the low reward
+    // deck. North/south pairs of purple flights connect each adjacent elevation.
+    // Below preserves the real routes underneath the front ring and south bridge.
     private static StageLayout BuildUpAndDown()
     {
-        const int W=23,H=19;
-        var cells=Fill(W,H,CellDef.Water);
-        for(int x=2;x<=20;x++)for(int z=2;z<=16;z++)cells[x,z]=CellDef.Floor0;
-        for(int x=7;x<=15;x++)for(int z=6;z<=12;z++)cells[x,z]=CellDef.Floor1;
-        for(int x=10;x<=12;x++)for(int z=8;z<=10;z++)cells[x,z]=CellDef.Floor2;
-        cells[11,5]=CellDef.Ramp0To1(0,1);cells[11,13]=CellDef.Ramp0To1(0,-1);
-        cells[6,9]=CellDef.Ramp0To1(1,0);cells[16,9]=CellDef.Ramp0To1(-1,0);
-        cells[11,7]=CellDef.Ramp1To2(0,1);cells[11,11]=CellDef.Ramp1To2(0,-1);
-        cells[9,9]=CellDef.Ramp1To2(1,0);cells[13,9]=CellDef.Ramp1To2(-1,0);
-        foreach(int x in new[]{3,19,6,16})foreach(int z in new[]{3,15})cells[x,z]=CellDef.Pillar;
-        (int X,int Z)[] spawns=[(3,2),(19,2),(3,16),(19,16),(7,7),(15,11),(10,9),(12,9)];
-
+        const int width = 24, height = 26;
+        var cells = Fill(width, height, CellDef.Water);
+        void Floor(int x0, int x1, int z0, int z1, int tier)
+        {
+            for (int x = x0; x <= x1; x++) for (int z = z0; z <= z1; z++)
+                cells[x, z] = new CellDef { Kind = CellKind.Floor, Tier = tier };
+        }
+        Floor(4, 6, 7, 23, 2);
+        Floor(17, 19, 7, 23, 2);
+        Floor(10, 13, 12, 23, 0);
+        Floor(10, 13, 7, 10, 4);
+        // Each three-cell flight rises two tiers continuously, rather than
+        // replacing the long original slopes with single-cell stair cliffs.
+        foreach (int z in new[] { 7, 14, 21 })
+            for (int step = 0; step < 3; step++)
+            {
+                bool upper = z <= 10;
+                float from = upper ? 2 + step * 2f / 3 : step * 2f / 3;
+                float to = upper ? 2 + (step + 1) * 2f / 3 : (step + 1) * 2f / 3;
+                cells[upper ? 7 + step : 9 - step, z] = CellDef.Ramp(from, to, upper ? 1 : -1, 0);
+                cells[upper ? 16 - step : 14 + step, z] = CellDef.Ramp(from, to, upper ? -1 : 1, 0);
+            }
+        void Bridge(int x, int z) => cells[x, z] = new CellDef
+        {
+            Kind = CellKind.Floor, Tier = 4, Below = cells[x, z]
+        };
+        for (int x = 2; x <= 21; x++) { Bridge(x, 2); Bridge(x, 21); }
+        for (int z = 3; z < 21; z++) { Bridge(2, z); Bridge(21, z); }
+        for (int z = 3; z <= 6; z++) Bridge(11, z);
+        for (int z = 11; z <= 20; z++) Bridge(13, z);
+        var clear = new HashSet<(int X, int Z)>();
+        for (int x = 0; x < width; x++) for (int z = 0; z < height; z++)
+            if (cells[x, z].Tier == 4 || cells[x, z].Below != null || x is 5 or 11 or 18)
+                clear.Add((x, z));
         return new StageLayout
         {
-            Id = UpAndDown, Name = "Up & Down",
-            Width = W, Height = H,
-            Cells = cells, Spawns = spawns,SoftBlockDensity=.6,MaxSoftBlocks=96,
-            CoverAreas=[
-                new("northwest-ring",.2,2,10,2,8,0,0){Centers=[(4,4),(8,3)]},
-                new("northeast-ring",.2,12,20,2,8,0,0){Centers=[(18,4),(14,3)]},
-                new("southwest-ring",.2,2,10,10,16,0,0){Centers=[(4,14),(8,15)]},
-                new("southeast-ring",.2,12,20,10,16,0,0){Centers=[(18,14),(14,15)]},
-                new("wide-platforms",.2,7,15,6,12,1,1){Centers=[(8,7),(14,11)]}],
-            ClearCells=Enumerable.Range(0,W).SelectMany(x=>Enumerable.Range(0,H).Select(z=>(X:x,Z:z)))
-                .Where(c=>c.X==11||c.Z==9||cells[c.X,c.Z].Tier>=2||
-                    cells[c.X,c.Z].Tier==0&&(c.X is 5 or 17||c.Z is 5 or 13)).ToHashSet(),
+            Id = UpAndDown, Name = "Up & Down", Width = width, Height = height,
+            Cells = cells, RisingWater = true,
+            Spawns = [(2,2),(21,21),(21,2),(2,21),(7,2),(16,2),(7,21),(16,21)],
+            // Twelve reference-inspired crates belong below the exposed upper ring.
+            // Reward detours replace this project's former 88-block terrace farm.
+            OpeningCoverPerSpawn = 0, SoftBlockDensity = 1, MaxSoftBlocks = 12,
+            CoverAreas = [
+                new("lower-deck", 2d/3, 10, 13, 12, 23, 0, 0) { Centers = [(10,16),(12,18),(10,23)] },
+                new("west-pier", 1d/6, 4, 6, 7, 23, 2, 2) { Centers = [(4,17),(6,23)] },
+                new("east-pier", 1d/6, 17, 19, 7, 23, 2, 2) { Centers = [(17,17),(19,23)] }],
+            ClearCells = clear,
         };
     }
 
@@ -128,10 +147,11 @@ public static partial class BlastStages
                 cells[x, 11 + step] = CellDef.Ramp(step * .5f, .5f + step * .5f, 0, 1);
             }
         }
+        foreach(var (x,z) in underpasses)cells[x,z]=new CellDef {Kind=CellKind.Floor,Tier=cells[x,z].Tier,Below=CellDef.Floor0};
         return new StageLayout
         {
             Id = TopRules, Name = "Top Rules", Width = width, Height = height,
-            Cells = cells, Underpasses = underpasses,
+            Cells = cells,
             Spawns = [(5, 2), (13, 2), (5, 14), (13, 14), (9, 2), (9, 14), (1, 8), (17, 8)],
             SoftBlockDensity = .32, MaxSoftBlocks = 12,
             CoverAreas = [new("lower-west", .5, 3, 8, 3, 13, 0, 0),
@@ -168,7 +188,7 @@ public static partial class BlastStages
         foreach (var x in new[] {5,6,7,8,9,15,16,17,18,19}) cells[x, 14] = CellDef.Ramp(0, 1, 0, -1);
         return new StageLayout
         {
-            Id = SunkenTemple, Name = "Sunken Temple", Width = width, Height = height, Cells = cells,
+            Id = SunkenTemple, Name = "Sunken Temple", Width = width, Height = height, Cells = cells, RisingWater = true,
             SoftBlockDensity = .4, MaxSoftBlocks = 90,
             CoverAreas=[
                 new("west-court",.3,5,11,15,25,0,0){Centers=[(6,17),(6,23),(10,23)]},

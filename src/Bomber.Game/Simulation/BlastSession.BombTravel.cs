@@ -8,11 +8,11 @@ public sealed partial class BlastSession
 {
     // Placement keeps strict connected surfaces. Only an already moving kick may
     // leave a higher edge, including diagonal routes whose two edges both descend.
-    private bool BombCellsDescend(int ax,int az,int bx,int bz,float ceiling=float.PositiveInfinity)
+    private bool BombCellsDescend(int ax,int az,int bx,int bz,float y=float.PositiveInfinity)
     {
-        if(ax==bx||az==bz)return _stage.CanWalk(ax,az,bx,bz,ceiling);
-        return (_stage.CanWalk(ax,az,bx,az,ceiling)&&_stage.CanWalk(bx,az,bx,bz,ceiling))||
-            (_stage.CanWalk(ax,az,ax,bz,ceiling)&&_stage.CanWalk(ax,bz,bx,bz,ceiling));
+        if(ax==bx||az==bz)return _stage.CanWalk(ax,az,bx,bz,y);
+        return (_stage.CanWalk(ax,az,bx,az,y)&&_stage.CanWalk(bx,az,bx,bz,y))||
+            (_stage.CanWalk(ax,az,ax,bz,y)&&_stage.CanWalk(ax,bz,bx,bz,y));
     }
 
     // A shallow diagonal ramp entry may already lower the center before its
@@ -26,12 +26,12 @@ public sealed partial class BlastSession
         return previous<BlastBomb.Radius*BlastBomb.Radius&&Distance(x,z,cx,cz)>previous+.000001f;
     }
 
-    private float BombLandingHeight(float x,float z,float ceiling=float.PositiveInfinity) =>
-        _stage.At((int)MathF.Floor(x),(int)MathF.Floor(z)).Kind switch
+    private float BombLandingHeight(float x,float z,float y=float.PositiveInfinity) =>
+        _stage.AtHeight((int)MathF.Floor(x),(int)MathF.Floor(z),y).Kind switch
         {
             CellKind.Water => _waterLevel,
             CellKind.Void => -1,
-            _ => _stage.SurfaceAt(x,z,ceiling),
+            _ => _stage.SurfaceAt(x,z,y),
         };
 
     private void TickFallingKickedBomb(ISessionContext context,BlastBomb b,float dt)
@@ -80,12 +80,12 @@ public sealed partial class BlastSession
                 nx=b.X;nz=b.Z;b.FlyVX=b.FlyVZ=0;break;
             }
             b.X=nx;b.Z=nz;b.CellX=(int)MathF.Floor(nx);b.CellZ=(int)MathF.Floor(nz);
-            float supportCeiling=b.FlyY+.25f;
+            float previousY=b.FlyY;
             b.FlyVY-=BlastBomb.Gravity*b.GravityScale*stepTime;b.FlyY+=b.FlyVY*stepTime;
-            var landingY=BombLandingHeight(nx,nz,supportCeiling);
+            var landingY=BombLandingHeight(nx,nz,previousY);
             if(b.FlyY>landingY)continue;
             b.FlyY=landingY;
-            if(_stage.At(b.CellX,b.CellZ).IsElimination)
+            if(_stage.AtHeight(b.CellX,b.CellZ,previousY).IsElimination)
             {
                 b.Exploded=true;DecrementOwnerBombs(b.OwnerId);return;
             }
@@ -106,9 +106,10 @@ public sealed partial class BlastSession
             {
                 float distance=Distance(x,z,cx,cz);
                 if(distance>=BlastBomb.Radius*BlastBomb.Radius)continue;
-                var cell=_stage.At(cx,cz);
+                if(_stage.DeckOverlaps(cx,cz,b.FlyY,BombThrowRules.CoverHeight))return false;
+                var cell=_stage.AtHeight(cx,cz,b.FlyY);
                 if(cell.Kind==CellKind.Pillar||_softBlocks.IsAlive(cx,cz))return false;
-                if(!cell.IsPassable||_stage.SurfaceAt(Math.Clamp(x,cx+.001f,cx+.999f),Math.Clamp(z,cz+.001f,cz+.999f),b.FlyY+.25f)<=b.FlyY+.01f)continue;
+                if(!cell.IsPassable||_stage.SurfaceAt(Math.Clamp(x,cx+.001f,cx+.999f),Math.Clamp(z,cz+.001f,cz+.999f),b.FlyY)<=b.FlyY+.01f)continue;
                 // The trailing circle can still overlap the ledge it just left.
                 // Permit that existing overlap only while moving out of it.
                 float previous=Distance(b.X,b.Z,cx,cz);
@@ -156,7 +157,7 @@ public sealed partial class BlastSession
             switch (b.State)
             {
                 case BombState.Resting:
-                    if(b.LandingY is { } support&&support>StaticBombLandingHeight(b.X,b.Z)+.001f)
+                    if(b.LandingY is { } support&&support>StaticBombLandingHeight(b.X,b.Z,support)+.001f)
                     {
                         b.State=BombState.Flying;b.FlyY=support;b.FlyVX=0;b.FlyVZ=0;b.FlyVY=0;b.LandingY=null;
                         TickFlyingBomb(context,b,dt);
@@ -184,7 +185,7 @@ public sealed partial class BlastSession
 
     private float BombY(BlastBomb bomb) => bomb.State == BombState.Flying ? bomb.FlyY :
         bomb.State == BombState.Carried ? (_players.Values.FirstOrDefault(p => p.CarryingBombId == bomb.Id)?.Y ?? bomb.Tier) + BombThrowRules.LaunchHeight :
-        (bomb.State==BombState.Resting?bomb.LandingY??_stage.SurfaceAt(bomb.X,bomb.Z,bomb.Tier+.25f):_stage.SurfaceAt(bomb.X,bomb.Z,bomb.Tier+.25f)) + (bomb.State==BombState.Rolling && bomb.KickHopRemaining>0
+        (bomb.State==BombState.Resting?bomb.LandingY??_stage.SurfaceAt(bomb.X,bomb.Z,bomb.Tier):_stage.SurfaceAt(bomb.X,bomb.Z,bomb.Tier)) + (bomb.State==BombState.Rolling && bomb.KickHopRemaining>0
             ? BlastBomb.KickHopHeight*MathF.Sin(MathF.PI*bomb.KickHopRemaining/BlastBomb.KickHopSeconds) : 0);
 
     private void TickRollingBomb(ISessionContext context, BlastBomb b, float dt)
@@ -208,7 +209,7 @@ public sealed partial class BlastSession
         var cx = (int)nx;
         var cz = (int)nz;
 
-        var cell = _stage.At(cx, cz);
+        var cell = _stage.AtHeight(cx, cz,BombY(b));
         if (!BombTerrainClear(nx, nz, (int)MathF.Floor(b.X), (int)MathF.Floor(b.Z),allowDescent:true,movingBomb:b))
         {
             if(b.IsBouncy)
@@ -224,9 +225,9 @@ public sealed partial class BlastSession
             return;
         }
 
-        var previousY=_stage.SurfaceAt(b.X,b.Z,b.Tier+.25f);
-        if(BombLandingHeight(nx,nz,previousY+.25f)<previousY-.05f &&
-            !CellsConnected((int)MathF.Floor(b.X),(int)MathF.Floor(b.Z),cx,cz,previousY+.25f))
+        var previousY=_stage.SurfaceAt(b.X,b.Z,b.Tier);
+        if(BombLandingHeight(nx,nz,previousY)<previousY-.05f &&
+            !CellsConnected((int)MathF.Floor(b.X),(int)MathF.Floor(b.Z),cx,cz,previousY))
         {
             b.State=BombState.Flying;b.ResumeRollingAfterFall=true;
             b.FlyVX=b.VX;b.FlyVZ=b.VZ;b.FlyVY=0;b.FlyY=previousY;
@@ -238,7 +239,7 @@ public sealed partial class BlastSession
         // Check collision with a player (stun) or another resting bomb (billiard).
         foreach (var p in _players.Values)
         {
-            if (!CanReceiveBombImpact(p) || p.Airborne || Math.Abs(p.Y - _stage.SurfaceAt(nx, nz,b.Tier+.25f)) > .6f) continue;
+            if (!CanReceiveBombImpact(p) || p.Airborne || Math.Abs(p.Y - _stage.SurfaceAt(nx, nz,previousY)) > .6f) continue;
             // A player following an outgoing kick must not collide with its trailing edge.
             if((p.X-b.X)*b.VX+(p.Z-b.Z)*b.VZ<=0)continue;
             if (Dist2(nx, nz, p.X, p.Z) < (PlayerRadius + BlastBomb.Radius) * (PlayerRadius + BlastBomb.Radius))
@@ -256,7 +257,7 @@ public sealed partial class BlastSession
 
         foreach (var other in _bombs)
         {
-            if (other == b || other.State != BombState.Resting || Math.Abs(BombY(other) - _stage.SurfaceAt(nx, nz,b.Tier+.25f)) > .6f) continue;
+            if (other == b || other.State != BombState.Resting || Math.Abs(BombY(other) - _stage.SurfaceAt(nx, nz,previousY)) > .6f) continue;
             if (Dist2(nx, nz, other.X, other.Z) < (BlastBomb.Radius * 2 + 0.05f) * (BlastBomb.Radius * 2 + 0.05f))
             {
                 // Transfer the shot, including its brief launch hop, without resetting either fuse.
@@ -271,7 +272,7 @@ public sealed partial class BlastSession
         b.Z = nz;
         b.CellX = cx;
         b.CellZ = cz;
-        b.Tier = (int)MathF.Round(_stage.SurfaceAt(b.X, b.Z,b.Tier+.25f));
+        b.Tier = (int)MathF.Round(_stage.SurfaceAt(b.X, b.Z,previousY));
 
         // Elimination: rolled off the stage.
         if (cell.IsElimination)
@@ -284,12 +285,12 @@ public sealed partial class BlastSession
     private void TickFlyingBomb(ISessionContext context, BlastBomb b, float dt)
     {
         if(b.ResumeRollingAfterFall){TickFallingKickedBomb(context,b,dt);return;}
-        float supportCeiling=b.FlyY+.25f;
+        float previousY=b.FlyY;
         var flight=BombThrowRules.AdvanceStatic(new(b.X,b.FlyY,b.Z),new(b.FlyVX,b.FlyVY,b.FlyVZ),dt,
-            (x,z)=>BombLandingHeight(x,z,supportCeiling),(x,z)=>_stage.At(x,z).Kind,(x,z)=>_softBlocks.IsAlive(x,z),b.IsBouncy,b.GravityScale,_stage.DeckIntersects,(x,z)=>_stage.At(x,z).ObstacleHeight??BombThrowRules.PillarHeight);
+            (x,z)=>BombLandingHeight(x,z,previousY),(x,z)=>_stage.AtHeight(x,z,previousY).Kind,(x,z)=>_softBlocks.IsAlive(x,z),b.IsBouncy,b.GravityScale,_stage);
         b.X=flight.Position.X;b.Z=flight.Position.Z;b.FlyY=flight.Position.Y;b.FlyVY=flight.Velocity.Y;b.FlyVX=flight.Velocity.X;b.FlyVZ=flight.Velocity.Z;
 
-        var landingY = StaticBombLandingHeight(b.X, b.Z,supportCeiling);
+        var landingY = StaticBombLandingHeight(b.X, b.Z,previousY);
 
         // A head hit is a bomb coming down onto a player's head; on the way up it clears the thrower.
         foreach (var p in _players.Values)
@@ -311,7 +312,7 @@ public sealed partial class BlastSession
         if (b.FlyY <= landingY)
         {
             b.FlyY = landingY;
-            var cell = _stage.At((int)b.X, (int)b.Z);
+            var cell = _stage.AtHeight((int)b.X, (int)b.Z,previousY);
             if (cell.IsElimination || b.X < 0 || b.X >= _stage.Width || b.Z < 0 || b.Z >= _stage.Height)
             {
                 b.Exploded = true;

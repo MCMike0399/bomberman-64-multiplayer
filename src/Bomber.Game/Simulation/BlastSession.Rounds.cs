@@ -109,7 +109,7 @@ public sealed partial class BlastSession
         }
 
         // Temple flooding replaces the legacy maps' closing-column hazard.
-        if (_phase == RoundPhase.Hurry && _stage.Id == BlastStages.SunkenTemple)
+        if (_phase == RoundPhase.Hurry && _stage.RisingWater)
         {
             _waterLevel = WaterLevelAfter(0);
             if (!_waterfallStarted && _roundTimer >= _roundSeconds - 60 + FloodRules.RiseDelay)
@@ -118,7 +118,7 @@ public sealed partial class BlastSession
                 Present("waterfall", magnitude: FloodRules.RisePerSecond, y: _waterLevel);
             }
         }
-        if (_phase == RoundPhase.Hurry && _stage.Id != BlastStages.SunkenTemple && _tutorialLesson is null)
+        if (_phase == RoundPhase.Hurry && !_stage.RisingWater && _tutorialLesson is null)
         {
             _hurryColTimer += dt;
             if (_hurryColTimer >= 1f)
@@ -175,15 +175,15 @@ public sealed partial class BlastSession
         }
     }
 
-    private float WaterLevelAfter(float seconds) => _tutorialLesson?.Id=="flood" ? _waterLevel+Math.Max(0,seconds)*FloodRules.RisePerSecond : !_practice && _suddenDeath && _stage.Id == BlastStages.SunkenTemple
+    private float WaterLevelAfter(float seconds) => _tutorialLesson?.Id=="flood" ? _waterLevel+Math.Max(0,seconds)*FloodRules.RisePerSecond : !_practice && _suddenDeath && _stage.RisingWater
         ? FloodRules.Level(_roundTimer + Math.Max(0, seconds),_roundSeconds) : -1;
-    private bool WaterUnsafe(float x,float z,float seconds=0) =>
-        _stage.At((int)MathF.Floor(x),(int)MathF.Floor(z)).IsElimination ||
-        FloodRules.Submerged(_stage.SurfaceAt(x,z),WaterLevelAfter(seconds));
+    private bool WaterUnsafe(float x,float z,float seconds=0,float y=float.PositiveInfinity) =>
+        _stage.AtHeight((int)MathF.Floor(x),(int)MathF.Floor(z),y).IsElimination ||
+        FloodRules.Submerged(_stage.SurfaceAt(x,z,y),WaterLevelAfter(seconds));
 
     private void DrownSubmergedEntities()
     {
-        if (_phase != RoundPhase.Hurry || (_stage.Id != BlastStages.SunkenTemple && _tutorialLesson?.Id!="flood")) return;
+        if (_phase != RoundPhase.Hurry || (!_stage.RisingWater && _tutorialLesson?.Id!="flood")) return;
         foreach (var player in _players.Values)
             if (player.Alive && !player.PendingRoundStart && FloodRules.Submerged(player.Y,_waterLevel))
             { DropCarriedBombs(player); Eliminate(null,player,"water"); }
@@ -191,7 +191,7 @@ public sealed partial class BlastSession
         foreach (var bomb in _bombs)
             if (!bomb.Exploded && bomb.State != BombState.Carried && FloodRules.Submerged(BombY(bomb),_waterLevel))
             { bomb.Exploded=true; DecrementOwnerBombs(bomb.OwnerId); }
-        _items.RemoveAll(item=>FloodRules.Submerged(_stage.SurfaceAt(item.X,item.Z),_waterLevel));
+        _items.RemoveAll(item=>FloodRules.Submerged(_stage.SurfaceAt(item.X,item.Z,item.Tier),_waterLevel));
     }
 
     private void EndRound(ISessionContext context, string? winnerId, string reason)

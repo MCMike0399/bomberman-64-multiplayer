@@ -2,8 +2,8 @@ namespace Bomber.Game.Simulation;
 
 public sealed partial class BlastSession
 {
-    private float StaticBombLandingHeight(float x,float z,float ceiling=float.PositiveInfinity) => BombThrowRules.LandingHeight(x,z,
-        (px,pz)=>BombLandingHeight(px,pz,ceiling),(cx,cz)=>_stage.At(cx,cz).Kind,(cx,cz)=>_softBlocks.IsAlive(cx,cz),(cx,cz)=>_stage.At(cx,cz).ObstacleHeight??BombThrowRules.PillarHeight);
+    private float StaticBombLandingHeight(float x,float z,float y=float.PositiveInfinity) => BombThrowRules.LandingHeight(x,z,
+        (x,z)=>BombLandingHeight(x,z,y),(cx,cz)=>_stage.AtHeight(cx,cz,y).Kind,(cx,cz)=>_softBlocks.IsAlive(cx,cz),(cx,cz)=>_stage.AtHeight(cx,cz,y).ObstacleHeight??BombThrowRules.PillarHeight);
 
     private static void ClearThrowAim(BlastPlayer player)
     {
