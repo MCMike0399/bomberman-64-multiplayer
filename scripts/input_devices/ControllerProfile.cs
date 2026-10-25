@@ -36,10 +36,11 @@ public static class ControllerProfile
     }
     public static string AimName(ControllerFamily family)=>family switch
     {ControllerFamily.Nintendo=>"ZR",ControllerFamily.PlayStation=>"R2",ControllerFamily.Xbox=>"RT",ControllerFamily.Keyboard=>"L",_=>"R trigger"};
-    public static string Menu(ControllerFamily family)
+    public static string Menu(ControllerFamily family,bool columns=false)
     {
-        if(family==ControllerFamily.Keyboard)return "WASD / ARROWS  SELECT   ENTER  CONFIRM   ESC  BACK   F11  SCREEN";
-        return $"STICK / D-PAD  SELECT   {ButtonName(family,ConfirmButton(family))}  CONFIRM   {ButtonName(family,CancelButton(family))}  BACK   F11  SCREEN";
+        if(family==ControllerFamily.Keyboard)return "WASD / ARROWS  SELECT   TAB  NEXT   ENTER  CONFIRM   ESC  BACK";
+        string panels=columns?$"   {ButtonName(family,JoyButton.LeftShoulder)} / {ButtonName(family,JoyButton.RightShoulder)}  PANEL":"";
+        return $"STICK / D-PAD  SELECT   {ButtonName(family,ConfirmButton(family))}  CONFIRM   {ButtonName(family,CancelButton(family))}  BACK{panels}   {ButtonName(family,JoyButton.Start)}  PRIMARY";
     }
     public static string ButtonName(ControllerFamily family,JoyButton button)
     {

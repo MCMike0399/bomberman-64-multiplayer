@@ -72,6 +72,14 @@ public partial class ArcadeMenu : Control
     private AdvancedRules _advanced=new();
     private string _advancedReturn="Setup";
     private string _screen="Modes";
+    private readonly Dictionary<string,FocusLayout> _focusLayouts=[];
+    private readonly Dictionary<string,Control> _savedFocus=[];
+    private readonly Dictionary<string,int> _activeColumn=[];
+    private readonly Dictionary<(string,int),Control> _columnFocus=[];
+    private string _page="Modes";
+    private Control? _connectionFocus;
+    private int _focusRevision;
+
     private DateTimeOffset? _countdown;
     private readonly List<Button> _onlineButtons=[];
     private PromptBar _inputFooter=null!;
@@ -100,7 +108,7 @@ public partial class ArcadeMenu : Control
         ArcadeTheme.Text(footer,"Burbuja",15,ArcadeTheme.Muted).VerticalAlignment=VerticalAlignment.Center;
         ShowScreen("Modes");
     }
-    private void UpdateInputFooter(){_inputFooter.SetPrompt(ControllerProfile.Menu(ControllerHub.Current.ActiveFamily));RefreshTutorialPrompts();}
+    private void UpdateInputFooter(){_inputFooter.SetPrompt(ControllerProfile.Menu(ControllerHub.Current.ActiveFamily, _focusLayouts.TryGetValue(_screen,out var layout)&&layout.Columns.Length>1));RefreshTutorialPrompts();}
     public override void _ExitTree(){ControllerHub.Current.PromptChanged-=UpdateInputFooter;}
     private Control Screen(string name)
     {var control=new Control();_content.AddChild(control);control.AnchorLeft=control.AnchorRight=.5f;control.AnchorTop=control.AnchorBottom=.5f;control.OffsetLeft=-720;control.OffsetRight=720;control.OffsetTop=-450;control.OffsetBottom=450;_screens[name]=control;return control;}
@@ -124,10 +132,11 @@ public partial class ArcadeMenu : Control
     {
         if(_screen=="Results"&&_standingsBoard.IsVisibleInTree())FitStandings();
     }
-    public void ShowScreen(string screen)
+    public void ShowScreen(string screen,bool restoreFocus=false)
     {
         _background.Visible=screen is not ("Pause" or "Settings") || !_overlayBackground;
         _background.Page=screen;_background.Quiet=screen=="Roster";_background.Results=screen=="Results";_background.QueueRedraw();
+        _page=screen;
         _screen=screen=="Practice"||screen=="HostSetup"?"Setup":screen;
         if(screen!="Advanced")_practice=screen=="Practice";
         _setupTitle.Text=_practice?"Practice Setup":screen=="HostSetup"?"Private Room Settings":"Match Setup";
@@ -142,20 +151,21 @@ public partial class ArcadeMenu : Control
         else if(screen=="HostSetup")_notice.Text="These settings apply to the server. Each online player controls one bomber.";
         if(screen=="Roster"){_localPlayers.BotDifficulty=_difficulty.Selected+1;_localPlayers.Refresh();}
         foreach(var pair in _screens)pair.Value.Visible=pair.Key==_screen;
-        if(screen=="Roster")_localPlayers.CallDeferred(nameof(RosterSelection.FocusFirst));
-        else if(_screen=="Setup")_stageDial.CallDeferred(Control.MethodName.GrabFocus);
-        else {var first=DefaultFocus(_screen)??FirstFocusable(_screens[_screen]);first?.CallDeferred(Control.MethodName.GrabFocus);}
+        int focusRevision=++_focusRevision;
+        Callable.From(()=>{if(IsVisibleInTree()&&_focusRevision==focusRevision)FocusScreen(restoreFocus);}).CallDeferred();
+        UpdateInputFooter();
     }
     /// <summary>Screens whose first button in tree order is Back/Leave start on their first real choice instead.</summary>
     private Control? DefaultFocus(string screen)=>screen switch
     {
         "Tutorial"=>_lessonButtons[_selectedLesson.Id],
-        "Online"=>_onlineAppearanceButton,
+        "Roster"=>_screens["Roster"].FindChild("Slot0Role",true,false) as Control,
+        "Setup"=>_stageDial,
+        "Settings"=>_volume,
+        "Online"=>_screens["Online"].FindChild("CancelConnect",true,false) is Control cancel&&CanFocus(cancel)?cancel:_onlineAppearanceButton,
         "Lobby"=>_startRoom.Visible&&!_startRoom.Disabled?_startRoom:!_copyCode.Disabled?_copyCode:_screens["Lobby"].FindChild("LobbySettings",true,false) as Control,
         _=>null
     };
-    private static Control? FirstFocusable(Node node)
-    {foreach(var child in node.GetChildren()){if(child is Button button&&button.Visible&&!button.Disabled)return button;var found=FirstFocusable(child);if(found!=null)return found;}return null;}
     public void Notice(string message)
     {
         _notice.Text=message;
@@ -163,8 +173,12 @@ public partial class ArcadeMenu : Control
     }
     public void SetBusy(bool busy,string? status=null)
     {
+        if(busy&&_screen=="Online")_connectionFocus=GetViewport().GuiGetFocusOwner();
         foreach(var button in _onlineButtons)button.Disabled=busy;
         var cancel=_screens["Online"].FindChild("CancelConnect",true,false) as Button;if(cancel!=null)cancel.Visible=busy;
+        RefreshNavigation();
+        if(busy&&_screen=="Online")FocusStart();
+        else if(_screen=="Online"&&CanFocus(_connectionFocus))_connectionFocus!.GrabFocus();
         if(status is not null)Notice(status);
         else if(!busy&&_screens["Online"].FindChild("OnlineNotice",true,false) is Label notice&&
             (notice.Text.StartsWith("Connecting",StringComparison.Ordinal)||notice.Text.StartsWith("Searching for players",StringComparison.Ordinal)))
@@ -174,9 +188,4 @@ public partial class ArcadeMenu : Control
     public GraphicsPreset Graphics {get;private set;}=GraphicsPreset.Medium;
     private Label _graphicsDescription=null!;
     public void SetOverlay(bool overlay)=>_overlayBackground=overlay;
-    public void FocusStart()
-    {
-        Control? target=_screen switch {"Lobby"=>_startRoom.Visible&&!_startRoom.Disabled?_startRoom:null,"Setup"=>_launch,"Pause"=>_screens["Pause"].FindChild("ResumeGame",true,false) as Control,_=>FirstFocusable(_screens[_screen])};
-        target?.GrabFocus();
-    }
 }

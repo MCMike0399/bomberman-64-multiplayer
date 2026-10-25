@@ -48,6 +48,8 @@ public partial class ControllerHub : Node
     }
     private double _refreshClock;
     private readonly Dictionary<int,MenuStickNavigation> _menuSticks=[];
+    private readonly Dictionary<int,MenuStickNavigation> _menuDpads=[];
+    private readonly Dictionary<int,JoyButton> _menuDpadLast=[];
     private SdlGamepadBackend? _native;
     private readonly Dictionary<(int Device,int Button),bool> _nativeButtons=[];
     private readonly Dictionary<(int Device,int Axis),float> _nativeAxes=[];
@@ -180,18 +182,40 @@ public partial class ControllerHub : Node
     }
     private void PollMenuSticks(double delta)
     {
-        if(!_focused||!MenuNavigationEnabled||TesterActive){_menuSticks.Clear();return;}
+        if(!_focused||!MenuNavigationEnabled||TesterActive){_menuSticks.Clear();_menuDpads.Clear();_menuDpadLast.Clear();return;}
         foreach(var device in _devices.Where(d=>d.Mapped))
         {
             int id=device.Device.RuntimeId;
             if(!_menuSticks.TryGetValue(id,out var navigation))_menuSticks[id]=navigation=new();
-            int direction=navigation.Step(Input.GetJoyAxis(id,JoyAxis.LeftX),Input.GetJoyAxis(id,JoyAxis.LeftY),delta);
+            var dpad=ReadMenuDpad(id);
+            int direction;
+            if(dpad!=Vector2.Zero)
+            {
+                navigation.Reset();
+                if(!_menuDpads.TryGetValue(id,out var repeat))_menuDpads[id]=repeat=new();
+                direction=repeat.Step(dpad.X,dpad.Y,delta);
+            }
+            else
+            {
+                if(_menuDpads.TryGetValue(id,out var repeat))repeat.Reset();
+                direction=navigation.Step(Input.GetJoyAxis(id,JoyAxis.LeftX),Input.GetJoyAxis(id,JoyAxis.LeftY),delta);
+            }
             if(direction==0)continue;
             string action=direction switch {1=>"ui_left",2=>"ui_right",3=>"ui_up",_=>"ui_down"};
             Input.ParseInputEvent(new InputEventAction {Action=action,Pressed=true,Strength=1});
             Input.ParseInputEvent(new InputEventAction {Action=action,Pressed=false});
         }
-        foreach(int removed in _menuSticks.Keys.Except(_devices.Select(d=>d.Device.RuntimeId)).ToArray())_menuSticks.Remove(removed);
+        foreach(int removed in _menuSticks.Keys.Except(_devices.Select(d=>d.Device.RuntimeId)).ToArray())
+        {_menuSticks.Remove(removed);_menuDpads.Remove(removed);_menuDpadLast.Remove(removed);}
+    }
+    private static Vector2 DpadVector(JoyButton button)=>button switch
+    {JoyButton.DpadLeft=>Vector2.Left,JoyButton.DpadRight=>Vector2.Right,JoyButton.DpadUp=>Vector2.Up,JoyButton.DpadDown=>Vector2.Down,_=>Vector2.Zero};
+    private Vector2 ReadMenuDpad(int id)
+    {
+        if(_menuDpadLast.TryGetValue(id,out var last)&&Button(id,last))return DpadVector(last);
+        foreach(var button in new[]{JoyButton.DpadLeft,JoyButton.DpadRight,JoyButton.DpadUp,JoyButton.DpadDown})
+            if(Button(id,button))return DpadVector(button);
+        return Vector2.Zero;
     }
     private static int NativeId(int id)=>1000+id;
     private void PollNative()
@@ -283,6 +307,14 @@ public partial class ControllerHub : Node
         {
             SetActiveDevice(button.Device);
             ObservedInput?.Invoke(button.Device,"button:"+button.ButtonIndex,1);
+            if(_focused&&MenuNavigationEnabled&&!TesterActive&&DpadVector(button.ButtonIndex) is var dpad&&dpad!=Vector2.Zero)
+            {
+                _menuDpadLast[button.Device]=button.ButtonIndex;
+                if(!_menuDpads.TryGetValue(button.Device,out var repeat))_menuDpads[button.Device]=repeat=new();
+                // Native GUI receives this press immediately, including sub-frame taps and popups.
+                // Prime only the repeat timer so polling cannot count the initial press twice.
+                repeat.Reset();repeat.Step(dpad.X,dpad.Y,0);
+            }
             if(_inMatch&&_focused)
             {
                 _taps.TryGetValue(button.Device,out var old);
@@ -317,7 +349,7 @@ public partial class ControllerHub : Node
         if(what==NotificationApplicationFocusOut){_focused=false;StopVibration();ClearEdges();}
         if(what==NotificationApplicationFocusIn){_focused=true;Array.Fill(_armed,false);}
     }
-    private void ClearEdges(){Array.Clear(_keyboardBomb);Array.Clear(_keyboardRemote);Array.Clear(_keyboardStop);_taps.Clear();_menuSticks.Clear();}
+    private void ClearEdges(){Array.Clear(_keyboardBomb);Array.Clear(_keyboardRemote);Array.Clear(_keyboardStop);_taps.Clear();_menuSticks.Clear();_menuDpads.Clear();_menuDpadLast.Clear();}
     internal void OverrideDevicesForPlaytest(IReadOnlyList<GamepadDevice> devices)
     {
         if(!OS.GetCmdlineUserArgs().Any(a=>a.StartsWith("--playtest=")))throw new InvalidOperationException("Device substitution is restricted to the playtest harness.");

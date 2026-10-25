@@ -93,7 +93,7 @@ playtest arguments are present.
 | Class | Main file | Partials |
 | --- | --- | --- |
 | `BlastSession` | settings, state, IGameSession callbacks, helpers | `Rounds`, `Input`, `Movement`, `Kicks`, `BombActions`, `BombTravel`, `ThrowAim`, `Explosions`, `Loot`, `Eliminations`, `Ghosts`, `Grapple`, `BodyContacts`, `Bots`, `BotNavigation`, `Presentation`, `Snapshots`, `AiTestHooks`, `Tutorial` |
-| `ArcadeMenu` | fields, layout helpers, screen switching | `Setup`, `Online`, `Results`, `Settings`, `Tutorial` |
+| `ArcadeMenu` | fields, layout helpers, screen switching | `Setup`, `Online`, `Results`, `Settings`, `Tutorial`, `Navigation` |
 | `GameRoot` | lifecycle, navigation, input dispatch, `_Process` | `Sessions`, `Preferences`, `Tutorial` |
 | `PlaytestDriver` | harness, capture, trace and input helpers | one `*Playtest.cs` per journey family |
 | `Bomber.Game.Tests` | `Program.cs` dispatch and tally | `GameFixtures` plus themed `*Checks.cs` |

@@ -400,3 +400,19 @@ Keep the macOS test host awake during bounded timing tests (`caffeinate -i` arou
 owned command). A clamshell sleep invalidated a realtime lease test while its
 monotonic test timer barely advanced; do not lengthen production leases to hide
 that environmental interruption.
+
+## Menu navigation regression (2026-10-25 source)
+
+`menu-navigation` drives native keyboard, Xbox/DualSense events and the Switch
+USB publication bridge through every menu. It checks Start focus without
+activation, row-preserving grid movement, remembered shoulder column switches,
+text editing, popup Back, focus restoration, nested Practice/room setup returns,
+Continue/Save Back-loop prevention, pause session continuity and full Tab cycles
+through enabled controls. `--headless` is the fast logic loop; it cannot prove
+native focus or appearance.
+
+`python3 tools/playtest/run.py --scenario menu-ux` runs the windowed graphical
+completion gate in the isolated desktop: that regression plus WASD, popups,
+controllers, menus/resizes, setup, dense layouts, player settings, tutorial and
+the real two-client network journey. Inspect the captures and keep physical-pad
+claims separate. `all` includes the new regression; no install is implied.
