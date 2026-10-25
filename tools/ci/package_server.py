@@ -117,8 +117,15 @@ def package(destination, artifacts, revision, version, inventory):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--stage-only', action='store_true')
+    parser.add_argument('--stage-source', type=Path, help='Stage an explicit published runtime for isolated QA')
+    parser.add_argument('--stage-destination', type=Path)
     parser.add_argument('--stage-plugins', action='store_true')
     args = parser.parse_args(argv)
+    if args.stage_source is not None or args.stage_destination is not None:
+        if args.stage_source is None or args.stage_destination is None or args.stage_only or args.stage_plugins:
+            parser.error('Use --stage-source and --stage-destination together without other staging modes')
+        stage(args.stage_source, args.stage_destination)
+        return
     artifacts = ROOT / 'artifacts'
     destination = artifacts / 'server-staged'
     inventory_path = artifacts / 'server-stage-manifest.json'

@@ -15,6 +15,22 @@ import isolated_guest
 
 
 class IsolatedTests(unittest.TestCase):
+    def test_isolated_server_staging_works_in_a_fresh_process_without_ci_import_paths(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            published = root / 'published'
+            published.mkdir()
+            for name in ('Bomber.Server.dll', 'Bomber.Server.deps.json', 'Bomber.Server.runtimeconfig.json'):
+                (published / name).write_bytes(b'fixture runtime')
+            (published / 'appsettings.Production.json').write_text('{"private":"must-not-copy"}')
+            destination = root / 'server'
+            result = subprocess.run([sys.executable, str(isolated.ROOT / 'tools/ci/package_server.py'),
+                                     '--stage-source', str(published), '--stage-destination', str(destination)],
+                                    cwd=root, capture_output=True, text=True)
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertTrue((destination / 'Bomber.Server.dll').is_file())
+            self.assertFalse((destination / 'appsettings.Production.json').exists())
+
     def test_guest_launcher_refuses_accidental_execution_on_the_physical_host(self):
         with patch.object(isolated_guest.subprocess, 'check_output', return_value='Mac17,3\n'):
             with self.assertRaisesRegex(RuntimeError, 'physical Mac'):
