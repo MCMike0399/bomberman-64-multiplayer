@@ -94,3 +94,44 @@ coordinates, inter-level blast propagation, and flood onset curve, lethal contac
 plane and final safe area. No inspected source establishes numerical collision
 or water constants. No ripped models/textures were used or distributed; external
 scans stay in `/tmp` and attachments outside the repository.
+
+## Side drops and stone blocks — 2026-10-25 correction
+
+Directly inspected the freshly downloaded original Shogakukan guidebook's
+printed pp. 98–99 (`guide-49.JPG`); the [source ZIP](https://www.randomhoohaas.net/bomb/book/baku1/bakuguide.zip)
+also responded successfully during this check. On p. 99, the 2:00 starting view
+and smaller views show pale middle piers close to the upper side perimeter.
+Visible item blocks have gray, box-like silhouettes, pale edge bands and dark
+square face details. Paired blocks are visible on the low deck; others stand
+on the piers. This supports independently authored gray cubes with framed square
+details, rather than gold pyramid-shaped cover. The scan cannot establish the
+original mesh, texture construction, exact hue or a complete hidden-block census.
+
+**Side-rail drop plausibility is an inference.** The close projected placement
+of ring and piers is compatible with a drop onto a pier, but a still image does
+not prove their horizontal overlap or the reach of a falling player. The guide's
+lower tactical text discusses knocking opponents down and making them retreat
+downward; it does not specify a side-rail-to-middle-pier input sequence. The
+[manual](https://www.gamesdatabase.org/Media/SYSTEM/Nintendo_N64/Manual/formated/Bomberman_64_-_1997_-_Nintendo.pdf)
+description recorded above establishes multiple levels and stair routes, not a
+numerical drop range. Its PDF was reachable through web retrieval in this check,
+but fresh page images/text were not available; the earlier manual reading was
+not independently reverified. Both linked YouTube pages again returned
+`Online fetch throttled`, so no fresh frame-by-frame drop observation is claimed.
+
+A contemporary [player-written battle guide](https://gamefaqs.gamespot.com/n64/196799-bomberman-64/faqs/3164)
+explicitly advises “Drop down to the lower platform” under **LEVEL TWO: UP AND
+DOWN** (confirmed in the search-indexed text; direct page retrieval was blocked).
+This corroborates downward traversal generally, but is secondary evidence and
+does not identify the departure edge, destination tier or collision constants.
+It therefore does not independently verify the specific side-rail-to-middle-pier
+drop. The user requested practical side-rail drops; the project's existing
+weighty falling model is preserved.
+
+The correction extends each middle pier outward by one grid cell, immediately
+beside its side rail, so held inward movement lands at the middle elevation.
+The opposite, exposed edge still falls into water. Eight low paired block sites
+and two sites per pier are authored rather than randomly scattered. Coordinates,
+block dimensions, gray procedural stone/inset details and the wider landing
+edges remain this project's independent adaptation. No original game assets or
+reference scans are included in the repository or exports.

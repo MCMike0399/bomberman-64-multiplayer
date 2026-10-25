@@ -10,6 +10,18 @@ internal static class PeerFrameChecks
         int checks=0;
         void Check(bool ok,string name){if(!ok)throw new Exception(name);checks++;}
         var match=new LocalMatch(new MatchOptions{HumanPlayers=2,BotPlayers=6});
+        var snow=new LocalMatch(new MatchOptions{Stage="blizzard-battle",HumanPlayers=2,BotPlayers=0});
+        for(int tick=0;tick<110;tick++)snow.Tick();
+        Check(PeerFrameRules.Valid(JsonSerializer.SerializeToElement(JsonNode.Parse(snow.StageJson!)!)),"Blizzard Battle stage crosses peer validation");
+        Check(PeerFrameRules.Valid(JsonSerializer.SerializeToElement(JsonNode.Parse(snow.StateJson!)!)),"authoritative wind crosses peer validation");
+        var badHeight=JsonNode.Parse(snow.StageJson!)!;badHeight["d"]!["coverHeight"]=1e200;
+        Check(!PeerFrameRules.Valid(JsonSerializer.SerializeToElement(badHeight)),"reject nonfinite ice cover height");
+        badHeight=JsonNode.Parse(snow.StageJson!)!;badHeight["d"]!.AsObject().Remove("coverHeight");
+        Check(!PeerFrameRules.Valid(JsonSerializer.SerializeToElement(badHeight)),"Blizzard geometry requires its authored cover height");
+        var invalidSnow=JsonNode.Parse(snow.StateJson!)!;invalidSnow["d"]!["blizzard"]!["x"]=100;
+        Check(!PeerFrameRules.Valid(JsonSerializer.SerializeToElement(invalidSnow)),"reject unbounded peer wind");
+        invalidSnow=JsonNode.Parse(snow.StateJson!)!;invalidSnow["d"]!["blizzard"]!["time"]=1e200;
+        Check(!PeerFrameRules.Valid(JsonSerializer.SerializeToElement(invalidSnow)),"reject nonfinite peer weather clock");
         using var stage=JsonDocument.Parse(match.StageJson!);
         using var state=JsonDocument.Parse(match.StateJson!);
         Check(PeerFrameRules.Valid(stage.RootElement),"real authored peer stage accepted");
@@ -21,6 +33,13 @@ internal static class PeerFrameChecks
         var castle=new LocalMatch(new MatchOptions{Stage="top-rules",HumanPlayers=2,BotPlayers=0});
         using var castleStage=JsonDocument.Parse(castle.StageJson!);
         Check(PeerFrameRules.Valid(castleStage.RootElement),"Top Rules peer stage accepts fractional stairs, underpasses and authored wall heights");
+        var greedy=new LocalMatch(new MatchOptions{Stage="greedy-trap",HumanPlayers=4,BotPlayers=0});
+        using var greedyStage=JsonDocument.Parse(greedy.StageJson!);
+        Check(PeerFrameRules.Valid(greedyStage.RootElement),"Greedy Trap real stage survives peer validation");
+        var brokenGreedy=JsonNode.Parse(greedy.StageJson!)!;
+        brokenGreedy["d"]!["cells"]![0]!.AsObject().Remove("oh");
+        Check(!PeerFrameRules.Valid(JsonSerializer.SerializeToElement(brokenGreedy)),"reject missing Greedy Trap wall crown before renderer access");
+        Check(new SessionSettings(Stage:"greedy-trap").ToWireSettings()["stage"]=="greedy-trap","room settings retain Greedy Trap on the wire");
         void InvalidCastle(Action<JsonNode> change,string label)
         {
             var frame=JsonNode.Parse(castle.StageJson!)!;change(frame["d"]!);

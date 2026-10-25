@@ -20,6 +20,8 @@ if(args.Contains("--adaptive-only") || args.Contains("--adaptive-peer-only") || 
 if(args.Contains("--appearance-only")){await LobbyAppearanceCatchup();return;}
 if(args.Contains("--peer-only")){await PeerNetworkChecks.Run(new Uri(origin));return;}
 if(args.Contains("--peer-reconnect")){await PeerReconnect();return;}
+await UiContextNetworkChecks.Run(new Uri(origin));
+if(args.Contains("--ui-context-only"))return;
 await VersionCompatibilityChecks.Run(new Uri(origin));
 if(args.Contains("--version-only"))return;
 await QuickPlay();

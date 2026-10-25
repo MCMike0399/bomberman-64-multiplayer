@@ -54,7 +54,7 @@ public partial class ArcadeMenu
         var back=ArcadeTheme.Quiet(ArcadeTheme.Button(screen,"Back",()=>BackRequested?.Invoke()));back.Name="SetupBack";back.Position=new(1195,73);back.Size=new(140,48);
         // These native settings nodes remain the single source of truth for configure/API/harness callers.
         var state=new VBoxContainer {Name="SetupSettings",Visible=false};screen.AddChild(state);
-        _stage=new OptionButton {Name="Stage"};foreach(var title in new[]{"Sunken Temple","Rock Garden","Up & Down","Top Rules"})_stage.AddItem(title);state.AddChild(_stage);
+        _stage=new OptionButton {Name="Stage"};foreach(var title in new[]{"Sunken Temple","Rock Garden","Up & Down","Top Rules","Blizzard Battle","Greedy Trap"})_stage.AddItem(title);state.AddChild(_stage);
         _wins=new SpinBox {Name="Wins",MinValue=1,MaxValue=5,Value=2};state.AddChild(_wins);
         _bots=new SpinBox {Name="Bots",MinValue=0,MaxValue=7,Value=3};state.AddChild(_bots);
         _rounds=new SpinBox {Name="RoundSeconds",MinValue=60,MaxValue=300,Step=30,Value=120};state.AddChild(_rounds);
@@ -147,6 +147,6 @@ public partial class ArcadeMenu
     {
         _background.SelectArena(StageIds[_stage.Selected]);
         if(_onlineStage!=null){_onlineStage.StageIndex=_stage.Selected;_onlineStage.QueueRedraw();}
-        _stageDescription.Text=_stage.Selected switch {0=>"Climb the outer walkways. Send a pumped bomb\nover the ledge. Watch the water below.",1=>"An open arena with pillars and breakable blocks.\nFind an escape before lighting the fuse.",2=>"Battle over the sea on three suspended levels.\nUse purple stairs to reach the lower item decks.",_=>"Rule the castle bridges or fight beneath them.\nFour corner staircases connect both floors."};
+        _stageDescription.Text=_stage.Selected switch {0=>"Climb the outer walkways. Send a pumped bomb\nover the ledge. Watch the water below.",1=>"An open arena with pillars and breakable blocks.\nFind an escape before lighting the fuse.",2=>"Battle over the sea on three suspended levels.\nUse purple stairs to reach the lower item decks.",4=>"Brave changing winds on a frozen snowfield.\nBreak ice cones. Escape the closing avalanches.",3=>"Rule the castle bridges or fight beneath them.\nFour corner staircases connect both floors.",_=>"Risk the recessed chamber for its eight blocks.\nOnly two stairways lead back to the upper court."};
     }
 }

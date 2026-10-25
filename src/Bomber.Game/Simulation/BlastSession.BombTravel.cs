@@ -45,7 +45,8 @@ public sealed partial class BlastSession
             // substeps rolling rather than losing a tick of horizontal momentum.
             if(b.State==BombState.Rolling){StepRollingBomb(context,b,stepTime);continue;}
             if(b.State!=BombState.Flying)return;
-            float nx=b.X+b.FlyVX*stepTime,nz=b.Z+b.FlyVZ*stepTime;
+            var wind=BlizzardWind;
+            float nx=b.X+(b.FlyVX+wind.X)*stepTime,nz=b.Z+(b.FlyVZ+wind.Y)*stepTime;
             if(!FallingKickTerrainClear(b,nx,nz))
             {
                 // A wall stops horizontal travel, but an unsupported bomb still
@@ -154,6 +155,7 @@ public sealed partial class BlastSession
                 }
             }
 
+            DriftBlizzardBomb(b,dt);
             switch (b.State)
             {
                 case BombState.Resting:
@@ -286,7 +288,7 @@ public sealed partial class BlastSession
     {
         if(b.ResumeRollingAfterFall){TickFallingKickedBomb(context,b,dt);return;}
         float previousY=b.FlyY;
-        var flight=BombThrowRules.AdvanceStatic(new(b.X,b.FlyY,b.Z),new(b.FlyVX,b.FlyVY,b.FlyVZ),dt,
+        var flight=BlizzardRules.AdvanceFlight(new(b.X,b.FlyY,b.Z),new(b.FlyVX,b.FlyVY,b.FlyVZ),dt,BlizzardWind,
             (x,z)=>BombLandingHeight(x,z,previousY),(x,z)=>_stage.AtHeight(x,z,previousY).Kind,(x,z)=>_softBlocks.IsAlive(x,z),b.IsBouncy,b.GravityScale,_stage);
         b.X=flight.Position.X;b.Z=flight.Position.Z;b.FlyY=flight.Position.Y;b.FlyVY=flight.Velocity.Y;b.FlyVX=flight.Velocity.X;b.FlyVZ=flight.Velocity.Z;
 

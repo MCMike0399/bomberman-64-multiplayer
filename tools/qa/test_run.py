@@ -72,11 +72,11 @@ class HarnessTests(unittest.TestCase):
                   'Ticks': 10, 'ActiveTicks': 5, 'EligibleBotTicks': 6, 'MovingBotTicks': 3,
                   'Bombs': 1, 'LongestOpenIdleTicks': 1}
         report = {'fairnessChecks': 1, 'idleLimitTicks': 3, 'tickRate': 1,
-                  'results': [dict(result, Seed=seed) for seed in range(48)]}
+                  'results': [dict(result, Seed=seed) for seed in range(72)]}
         with tempfile.TemporaryDirectory() as temporary:
             receipt = Path(temporary) / 'soak.json'
             receipt.write_text(json.dumps(report))
-            self.assertEqual(48, qa.validate_soak(receipt)['scenarios'])
+            self.assertEqual(72, qa.validate_soak(receipt)['scenarios'])
             changes = [('passed', False), ('EligibleBotTicks', 0), ('MovingBotTicks', 0),
                        ('Bombs', 0), ('ActiveTicks', 0), ('LongestOpenIdleTicks', 4), ('Seed', 1)]
             for key, value in changes:
@@ -124,7 +124,7 @@ class HarnessTests(unittest.TestCase):
     def test_managed_smoke_selects_release_delivery_instead_of_debug_server(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            suite = Mock(profile='managed', output=root / 'qa', steps=[])
+            suite = Mock(profile='managed', output=root / 'qa', steps=[], provenance={'revision': 'a' * 40})
             suite.server.return_value = contextlib.nullcontext('http://127.0.0.1:12345')
             with patch.object(qa, 'ROOT', root):
                 qa.execute(suite)
@@ -135,6 +135,9 @@ class HarnessTests(unittest.TestCase):
             self.assertIn('Release', calls['publish-server'])
             self.assertIn('-p:UseAppHost=false', calls['publish-server'])
             self.assertIn('--stage-only', calls['stage-server-delivery'])
+            self.assertIn('--stage-plugins', calls['stage-cluster-plugins'])
+            self.assertIn(str(root / 'artifacts/server-staged/plugins'), calls['network-fleet'])
+            self.assertIn('tools/ci/verify_deployment.py', calls['release-admission'])
             self.assertIn('package-tested-server', calls)
             self.assertIn('--adaptive-peer-only', calls['network-adaptive-relay'])
             self.assertIn('--fleet', calls['network-fleet'])
@@ -167,7 +170,7 @@ class HarnessTests(unittest.TestCase):
                 qa.execute(suite)
             self.assertLess(order.index('controller-backend-build'), order.index('macos-export'))
             self.assertTrue(suite.steps[0]['evidence']['switch2UsbBackend'])
-            self.assertEqual([c.args[0] for c in suite.playtest.call_args_list], ['package-smoke', 'peer-rooms', 'adaptive-rooms'])
+            self.assertEqual([c.args[0] for c in suite.playtest.call_args_list], ['package-smoke', 'peer-rooms', 'adaptive-rooms', 'adaptive-slow-poll'])
             self.assertEqual(suite.playtest.call_args_list[1].kwargs['origin'], 'http://127.0.0.1:12345')
 
     def test_package_refuses_incomplete_backend_after_bootstrap(self):

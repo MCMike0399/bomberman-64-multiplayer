@@ -51,8 +51,9 @@ internal static class RegionalCoverChecks
                 }
                 checks++;
             }
-            Assert(fingerprints.Count>=24,"Regional budgets produce repetitive layouts instead of seeded variation.");
-            Console.WriteLine($"PASS {id}: 32 varied regional layouts, {minimum}–{maximum} blocks, clear spawns and routes");
+            Assert(id==BlastStages.UpAndDown?fingerprints.Count==1:fingerprints.Count>=24,
+                "Cover must retain the authored Up & Down pattern or other stages' seeded variation.");
+            Console.WriteLine($"PASS {id}: 32 seeded layouts, {fingerprints.Count} patterns, {minimum}–{maximum} blocks, clear spawns and routes");
         }
         var random=new Random(287);var counts=new Dictionary<string,int>();
         for(int i=0;i<10000;i++){string type=PowerUpRules.ChooseDrop(random);counts[type]=counts.GetValueOrDefault(type)+1;}

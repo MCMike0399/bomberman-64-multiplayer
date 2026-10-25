@@ -3,11 +3,13 @@ using Bomber.Game.Simulation;
 using System.Text.Json;
 using static BlastCircuit.Rendering.ArtGeometry;
 using BlastCircuit.Rendering;
+using BlastCircuit.Arena.Effects;
 namespace BlastCircuit.Arena;
 
 /// <summary>Builds terrain directly from the authority's cells, including visible solid risers and stairways.</summary>
 public partial class TempleStageView : Node3D
 {
+    public bool WeatherActive {get;set;}=true;
     public const float HeightScale=1.35f;
     /// <summary>Must match the water shader's seabed_height default.</summary>
     public const float SeabedHeight=-3f;
@@ -15,6 +17,28 @@ public partial class TempleStageView : Node3D
     private JsonElement _cells;
     private readonly HashSet<int> _underpasses = [];
     private bool _castle;
+    private bool _blizzard;
+    private BlizzardWeather? _blizzardWeather;
+    private float _blizzardClock;
+    private Vector2 _blizzardWind;
+    private readonly List<ShaderMaterial> _frozenMaterials=[];
+    private ShaderMaterial _crystalMaterial=null!,_snowMaterial=null!;
+    private ArrayMesh[] _iceCones=[];
+    private readonly List<(Node3D Node,float Age)> _avalancheSwells=[];
+    private bool _greedy;
+    public const float GreedyMoatHeight=-1.28f;
+    private Node3D? _greedyExterior,_greedyWaterwheel;
+    private MeshInstance3D? _greedyMoat;
+    private readonly List<ShaderMaterial> _greedyExteriorMaterials=[];
+    private readonly List<ShaderMaterial> _greedyMaterials=[];
+    private readonly List<Node3D> _greedyCrushers=[],_greedyGears=[];
+    private readonly List<MeshInstance3D> _greedyOuterLeft=[],_greedyOuterRight=[];
+    private int _greedyClosed;
+    private int _greedyClosedRight;
+    private bool _greedyWallsInitialized;
+    private Vector3 _greedyLeftFrom,_greedyRightFrom,_greedyLeftTarget,_greedyRightTarget;
+    private float _greedyWallAge=.12f;
+    private float _greedyGearImpulse;
     private readonly List<ShaderMaterial> _castleStone = [];
     private static Shader? _castleFloorShader;
     private ShaderMaterial _castleWallMaterial=null!;
@@ -39,6 +63,7 @@ public partial class TempleStageView : Node3D
     {
         _lighting=lighting;
         if(_water?.MaterialOverride is ShaderMaterial material)lighting.ApplyWater(material);
+        if(_greedyMoat?.MaterialOverride is ShaderMaterial moat)lighting.ApplyWater(moat);
     }
     public void SetWaterLevel(float tierLevel)
     {
@@ -48,6 +73,8 @@ public partial class TempleStageView : Node3D
     public override void _Process(double delta)
     {
         if(!IsVisibleInTree())return;
+        if(_blizzard){ProcessBlizzard((float)delta);return;}
+        if(_greedy){ProcessGreedyTrap((float)delta);return;}
         if(_castle)
         {
             if(_graphicsRevision!=GraphicsQuality.Revision)
@@ -67,7 +94,18 @@ public partial class TempleStageView : Node3D
             return;
         }
         if(_water==null)return;
-        var water=(ShaderMaterial)_water.MaterialOverride;
+        if(_water.MaterialOverride is not ShaderMaterial water)
+        {
+            // A menu display may use a static opaque sea instead of refraction
+            // of the surrounding theatre. Stone still follows quality changes.
+            if(_graphicsRevision!=GraphicsQuality.Revision)
+            {
+                foreach(var material in new[]{_stone,_cobble,_masonry,_bedrock})
+                    material.SetShaderParameter("quality_detail",GraphicsQuality.Current==GraphicsPreset.Low?0:1);
+                _graphicsRevision=GraphicsQuality.Revision;
+            }
+            return;
+        }
         if(_graphicsRevision!=GraphicsQuality.Revision)
         {
             float detail=GraphicsQuality.Current==GraphicsPreset.Low?0:1;
@@ -128,10 +166,15 @@ public partial class TempleStageView : Node3D
         Width=data.GetProperty("width").GetInt32();Depth=data.GetProperty("height").GetInt32();_cells=data.GetProperty("cells").Clone();
         var cells=new CellDef[Width,Depth];
         for(int z=0;z<Depth;z++)for(int x=0;x<Width;x++)cells[x,z]=ReadCell(_cells[z*Width+x]);
-        Layout=new StageLayout {Id=data.GetProperty("id").GetString()!,Width=Width,Height=Depth,Cells=cells};
+        Layout=new StageLayout {Id=data.GetProperty("id").GetString()!,Width=Width,Height=Depth,Cells=cells,
+            SoftBlockHeight=data.TryGetProperty("coverHeight",out var coverHeight)?coverHeight.GetSingle():BombThrowRules.CoverHeight};
         _underpasses.Clear();foreach(var cell in Layout.Underpasses)_underpasses.Add(cell.Z*Width+cell.X);
+        _blizzard=Layout.Id==BlastStages.BlizzardBattle;
+        if(_blizzard){BuildBlizzard();return;}
         _castle=Layout.Id==BlastStages.TopRules;
         if(_castle){BuildTopRules();return;}
+        _greedy=Layout.Id==BlastStages.GreedyTrap;
+        if(_greedy){BuildGreedyTrap();return;}
         _stone=_art.Stone();_cobble=_art.Stone(true);
         _masonry=_art.Masonry();_bedrock=_art.Bedrock();var wall=_masonry;var cap=_art.Color(new("e8cc82"));
         _garden=data.GetProperty("id").GetString()=="rock-garden";
@@ -261,9 +304,12 @@ public partial class TempleStageView : Node3D
     public Node3D CreateCover(int cell)
     {
         int x=cell%Width,z=cell/Width;
+        if(_greedy)return CreateGreedyCover(x,z);
         if(_castle)return CreateCastleCover(x,z);
         var root=new Node3D {Position=new(x+.5f,Surface(x+.5f,z+.5f),z+.5f)};
         if(_garden)return CreateGardenBoulder(root,cell);
+        if(_blizzard)return CreateIceCone(root,cell);
+        if(Layout.Id==BlastStages.UpAndDown)return CreateUpAndDownCover(root,cell);
         var sandstone=_art.Color(new("caaa73"));var dark=_art.Color(new("8d6740"));var edge=_art.Color(new("e3c48c"));
         Box(root,new(0,.39f,0),new(.76f,.78f,.76f),sandstone,.06f);
         Box(root,new(0,.045f,0),new(.82f,.09f,.82f),edge,.025f);

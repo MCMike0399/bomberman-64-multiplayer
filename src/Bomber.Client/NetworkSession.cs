@@ -125,7 +125,9 @@ public sealed partial class NetworkSession : ISession
         }
         _lobbyId = reservation.GetProperty("lobbyId").GetString();
         await OpenSocketAsync(reservation, ct);
-        _worker = RunAsync();
+        // Transport I/O must not capture a UI/engine synchronization context.
+        // Peer simulation and native links remain on the caller's polling thread.
+        _worker = Task.Run(RunAsync);
     }
 
     private async Task OpenSocketAsync(JsonElement reservation, CancellationToken ct)
@@ -145,7 +147,7 @@ public sealed partial class NetworkSession : ISession
             var connectUri = ResolveConnectUri(_origin, reservation.GetProperty("connectUrl").GetString()!);
             await socket.ConnectAsync(connectUri, timeout.Token);
             if(socket.HttpResponseHeaders is null || !OnlineProtocol.Accepts(socket.HttpResponseHeaders.Where(h=>h.Key.Equals(OnlineProtocol.HeaderName,StringComparison.OrdinalIgnoreCase)).SelectMany(h=>h.Value)))
-                throw new InvalidOperationException("This game server uses incompatible stage rules. Update the server before joining.");
+                throw new InvalidOperationException(OnlineProtocol.ServerUpdateMessage);
             ConnectionRoute = connectUri.AbsolutePath;
             _socket = socket;
             int generation = Interlocked.Increment(ref _connectionGeneration);
@@ -157,6 +159,8 @@ public sealed partial class NetworkSession : ISession
             Interlocked.Exchange(ref _sequence, 0);
             Volatile.Write(ref _status, "Connected");
         }
+        catch (WebSocketException) when (socket.HttpStatusCode == System.Net.HttpStatusCode.Conflict)
+        { socket.Dispose(); throw new InvalidOperationException(OnlineProtocol.ServerUpdateMessage); }
         catch { socket.Dispose(); throw; }
     }
 
@@ -344,11 +348,22 @@ public sealed partial class NetworkSession : ISession
         using var json = JsonDocument.Parse(bounded.ToArray());
         if (!response.IsSuccessStatusCode)
         {
+            // A server from another release cannot tell whether this client is older or newer.
+            // Explain our required server release instead of instructing an updated player to downgrade.
+            if (response.StatusCode == System.Net.HttpStatusCode.Conflict &&
+                json.RootElement.TryGetProperty("error", out var compatibilityError) &&
+                compatibilityError.TryGetProperty("code", out var code) && code.GetString() == "client_update_required")
+            {
+                if (compatibilityError.TryGetProperty("requiredVersion", out var required) && required.ValueKind == JsonValueKind.String &&
+                    Version.TryParse(required.GetString(), out var serverVersion) && serverVersion > Version.Parse(OnlineProtocol.ReleaseVersion))
+                    throw new InvalidOperationException(compatibilityError.GetProperty("message").GetString() ?? OnlineProtocol.ServerUpdateMessage);
+                throw new InvalidOperationException(OnlineProtocol.ServerUpdateMessage);
+            }
             var detail = json.RootElement.TryGetProperty("error", out var error) ? error.GetProperty("message").GetString() : response.ReasonPhrase;
             throw new HttpRequestException(detail ?? "Server refused the request.", null, response.StatusCode);
         }
         if(path=="guests" && (!response.Headers.TryGetValues(OnlineProtocol.HeaderName,out var protocol)||!OnlineProtocol.Accepts(protocol)))
-            throw new InvalidOperationException("This game server uses incompatible stage rules. Update the server before joining.");
+            throw new InvalidOperationException(OnlineProtocol.ServerUpdateMessage);
         return json.RootElement.Clone();
     }
 

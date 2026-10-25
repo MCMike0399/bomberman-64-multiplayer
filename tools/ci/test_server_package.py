@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 import zipfile
 
 
@@ -21,6 +22,38 @@ SHA = 'a' * 40
 
 
 class ServerPackageTests(unittest.TestCase):
+    def setUp(self):
+        release = {'version': '0.15.0', 'build': '10', 'protocolRevision': 4, 'admissionToken': '4/0.15.0/10'}
+        for module in (packager, promotion):
+            fixture = patch.object(module, 'check_exports', return_value=release)
+            fixture.start()
+            self.addCleanup(fixture.stop)
+
+    def test_cluster_plugins_are_runtime_only_and_frozen_before_fleet_testing(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / 'plugins'
+            destination = root / 'staged'
+            destination.mkdir()
+            inventory = {}
+            for name in packager.REQUIRED:
+                (destination / name).write_bytes(b'fixture')
+                inventory[name] = hashlib.sha256(b'fixture').hexdigest()
+            for plugin in packager.PLUGINS:
+                origin = source / plugin
+                origin.mkdir(parents=True)
+                (origin / 'plugin.json').write_text(json.dumps({'id': plugin, 'assembly': plugin + '.dll'}))
+                (origin / (plugin + '.dll')).write_bytes(b'plugin-runtime')
+                (origin / 'host-secret.json').write_text('must not ship')
+                (origin / 'private.cs').write_text('must not ship')
+            inventory.update(packager.stage_plugins(source, destination))
+            self.assertFalse(any(name.endswith(('host-secret.json', '.cs')) for name in inventory))
+            packager.package(destination, root, SHA, '0.15.0', inventory)
+            promotion.inspect_server(root, SHA, '0.15.0')
+            (destination / 'plugins/Blast.Cluster/Blast.Cluster.dll').write_bytes(b'mutated after fleet test')
+            with self.assertRaisesRegex(RuntimeError, 'changed during smoke'):
+                packager.package(destination, root, SHA, '0.15.0', inventory)
+
     def test_archive_rejects_config_even_if_added_to_inventory(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

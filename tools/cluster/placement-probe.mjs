@@ -1,11 +1,12 @@
+import {releaseIdentity} from '../networking/release-identity.mjs';
 // Real public admission + owning-node socket. Creates and removes one private room.
 import fs from 'node:fs/promises';
 const [origin, expected, output, region, game = 'blast-room'] = process.argv.slice(2);
 if (!origin || !expected || !output) throw Error('Usage: placement-probe.mjs ORIGIN EXPECTED_SERVER OUTPUT [REGION] [GAME]');
-let token, room, socket, failure, cleaned = false;
+let token, playerId, room, socket, failure, cleaned = false;
 async function api(route, body) {
   const response = await fetch(new URL('/realtime/v1/' + route, origin), {
-    method: 'POST', headers: { 'X-Blast-Protocol': '4', 'Content-Type': 'application/json', ...(token ? { 'x-player-token': token } : {}) },
+    method: 'POST', headers: { 'X-Blast-Protocol': releaseIdentity.admissionToken, 'Content-Type': 'application/json', ...(token ? { 'x-player-token': token } : {}) },
     body: JSON.stringify(body), signal: AbortSignal.timeout(10000)
   });
   const value = response.status === 204 ? null : await response.json();
@@ -13,18 +14,19 @@ async function api(route, body) {
   return value;
 }
 try {
-  token = (await api('guests', { displayName: 'Placement verification' })).token;
+  const guest = await api('guests', { displayName: 'Placement verification' });
+  token = guest.token; playerId = guest.playerId;
   const created = await api('lobbies', { game, visibility: 'private', ...(region ? { region } : {}), settings: { hosting: 'server', bots: '0' } });
   room = created.lobby;
   if (room.serverId !== expected) throw Error(`Expected ${expected}, got ${room.serverId}`);
   const url = new URL(created.reservation.connectUrl, origin);
   url.protocol = ['https:', 'wss:'].includes(url.protocol) ? 'wss:' : 'ws:';
   if (origin.startsWith('https:') && url.protocol !== 'wss:') throw Error('Insecure socket route');
-  socket = new WebSocket(url, {headers: {'X-Blast-Protocol': '4'}});
-  socket.addEventListener('open', () => socket.send(JSON.stringify({ t: 'peer.hello', d: { version: 4 } })));
+  socket = new WebSocket(url, {headers: {'X-Blast-Protocol': releaseIdentity.admissionToken}});
+  socket.addEventListener('open', () => socket.send(JSON.stringify({ t: 'peer.hello', d: { version: releaseIdentity.protocolRevision } })));
   await new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(Error('No owning-node welcome')), 10000);
-    socket.addEventListener('message', e => { if (JSON.parse(e.data).t === (game === 'blast-peer' ? 'party.status' : 'sys.welcome')) { clearTimeout(timer); resolve(); } });
+    socket.addEventListener('message', e => { if ((frame => frame.t === (game === 'blast-peer' ? 'party.status' : 'sys.welcome') && (game !== 'blast-peer' || frame.d.requiredOnlineProtocol === releaseIdentity.protocolRevision && frame.d.notice === '' && frame.d.players.some(player => player.connected && player.playerId === playerId)))(JSON.parse(e.data))) { clearTimeout(timer); resolve(); } });
     socket.addEventListener('error', () => { clearTimeout(timer); reject(Error('Socket failed')); });
   });
 } catch (error) { failure = error.message; }

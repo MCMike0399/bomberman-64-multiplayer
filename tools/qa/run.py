@@ -27,6 +27,7 @@ FOOTERS = {
     'network-smoke': r'^ALL NETWORK SMOKE CHECKS PASSED(?: \([^\r\n]+\))?$',
     'adaptive-network': r'^PASS (?P<count>\d+) adaptive network checks$',
     'fleet-network': r'^PASS (?P<count>\d+) real fleet infrastructure checks$',
+    'release-probe': r'^PASS (?P<count>\d+) release connection and cleanup checks$',
     'ai-soak': r'^PASS (?P<count>\d+) gameplay soak scenarios; [^\r\n]+$',
 }
 
@@ -251,7 +252,7 @@ def validate_playtest(destination, headless):
 
 def validate_soak(path):
     report = json.loads(path.read_text())
-    if len(report.get('results', [])) != 48 or report.get('fairnessChecks', 0) <= 0:
+    if len(report.get('results', [])) != 72 or report.get('fairnessChecks', 0) <= 0:
         raise RuntimeError('AI soak receipt is incomplete')
     for item in [report, *report['results']]:
         for key in ('passed', 'Passed'):
@@ -304,6 +305,7 @@ def execute(suite, app=None):
         suite.step('public-boundaries', [sys.executable, 'tools/ci/public_checks.py'])
         for folder in ('ci', 'cluster', 'networking', 'packaging', 'party', 'playtest', 'qa'):
             suite.step(folder + '-contracts', [sys.executable, '-m', 'unittest', 'discover', '-s', 'tools/' + folder, '-p', 'test_*.py'])
+        suite.build('tests/Bomber.Release.Probe')
         suite.build('tests/Bomber.Audio.Tests')
         suite.step('audio', ['dotnet', 'run', '--no-build', '--project', 'tests/Bomber.Audio.Tests'], footer=FOOTERS['Bomber.Audio.Tests'])
         return
@@ -311,6 +313,7 @@ def execute(suite, app=None):
         projects = ['Bomber.Game.Tests', 'Bomber.Client.Tests', 'Bomber.Ai.Tests', 'Bomber.Audio.Tests', 'Bomber.Cluster.Tests', 'Bomber.Smoke']
         for project in projects:
             suite.build('tests/' + project)
+        suite.build('tests/Bomber.Release.Probe')
         published = ROOT / 'artifacts/server-release'
         suite.require('publish-server', ['dotnet', 'publish', 'src/Bomber.Server/Bomber.Server.csproj',
                                        '-c', 'Release', '--self-contained', 'false', '-p:UseAppHost=false',
@@ -322,6 +325,11 @@ def execute(suite, app=None):
                    timeout=600, validate=lambda: validate_soak(soak), footer=FOOTERS['ai-soak'])
         suite.require('stage-server-delivery', [sys.executable, 'tools/ci/package_server.py', '--stage-only'])
         with suite.server(dll=ROOT / 'artifacts/server-staged/Bomber.Server.dll') as origin:
+            suite.require('release-admission', [sys.executable, 'tools/ci/verify_deployment.py',
+                          '--targets', json.dumps({'staged': origin}), '--expected-sha', suite.provenance['revision'],
+                          '--output', str(suite.output / 'release-admission.json')])
+            suite.require('release-connection', ['dotnet', 'run', '--no-build', '--project', 'tests/Bomber.Release.Probe', '--', origin],
+                          footer=FOOTERS['release-probe'])
             suite.require('network-smoke', ['dotnet', 'run', '--no-build', '--project', 'tests/Bomber.Smoke', '--', origin],
                           footer=FOOTERS['network-smoke'])
         with suite.server(dll=ROOT / 'artifacts/server-staged/Bomber.Server.dll', simulation_capacity=0) as origin:
@@ -331,8 +339,9 @@ def execute(suite, app=None):
                                 ('burbuja-kernel/plugins/Burbuja.Plugins.Realtime.Redis', 'Realtime.Redis')):
             suite.require('publish-' + folder, ['dotnet', 'publish', project, '-c', 'Release', '-m:1',
                           '-o', str(ROOT / 'artifacts/cluster-plugins' / folder)])
+        suite.require('stage-cluster-plugins', [sys.executable, 'tools/ci/package_server.py', '--stage-plugins'])
         suite.require('network-fleet', ['dotnet', 'run', '--no-build', '--project', 'tests/Bomber.Cluster.Tests', '--',
-                      '--fleet', str(ROOT / 'artifacts/server-staged/Bomber.Server.dll'), str(ROOT / 'artifacts/cluster-plugins'), str(suite.output / 'fleet')],
+                      '--fleet', str(ROOT / 'artifacts/server-staged/Bomber.Server.dll'), str(ROOT / 'artifacts/server-staged/plugins'), str(suite.output / 'fleet')],
                       timeout=360, footer=FOOTERS['fleet-network'])
         if all(step['passed'] for step in suite.steps):
             suite.require('package-tested-server', [sys.executable, 'tools/ci/package_server.py'])
@@ -353,11 +362,13 @@ def execute(suite, app=None):
         with suite.server() as origin:
             suite.playtest('peer-rooms', origin=origin, app=app, headless=True)
             suite.playtest('adaptive-rooms', origin=origin, app=app, headless=True)
+            suite.playtest('adaptive-slow-poll', origin=origin, app=app, headless=True)
     elif suite.profile == 'headless':
         suite.playtest('core-headless', headless=True, app=app)
         with suite.server() as origin:
             suite.playtest('peer-rooms', origin=origin, headless=True, app=app)
             suite.playtest('adaptive-rooms', origin=origin, headless=True, app=app)
+            suite.playtest('adaptive-slow-poll', origin=origin, headless=True, app=app)
     elif suite.desktop == 'isolated':
         suite.playtest('all', app=app)
     else:

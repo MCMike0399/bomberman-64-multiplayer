@@ -46,6 +46,8 @@ public sealed partial class BlastSession : GameSession
 
     private RoundPhase _phase;
     private int _roundNum;
+    private float _weatherTime;
+    private readonly int _weatherSeed;
     private float _phaseTimer;     // seconds until phase transition
     private long _fightTicks;
     private float _waterLevel = -1;
@@ -88,6 +90,7 @@ public sealed partial class BlastSession : GameSession
         _advanced=AdvancedRules.FromSettings(options.Settings);
         // Cosmetic selection must not consume gameplay RNG (cover, loot or bots).
         _lightingOffset=(int)((uint)options.Seed%4);
+        _weatherSeed=options.Seed;
         string stageId=options.Settings.GetValueOrDefault("stage",BlastStages.SunkenTemple);
         _stage = arena ?? BlastStages.Get(!practice && stageId==BlastStages.CircuitGarden ? BlastStages.SunkenTemple : stageId);
 

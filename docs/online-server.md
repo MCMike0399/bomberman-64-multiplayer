@@ -20,12 +20,10 @@ retains measured operating caps and remaining load/fallback coverage limits.
 1. Run the checks for the changed area in the
    [delivery guide](agents/testing-and-delivery.md). Use a new app version for a
    runtime release; push main and verify CI for that exact source commit.
-2. Publish the matching Mac/server artifacts through the
-   [signed update pipeline](automatic-updates.md). Existing users get the update
-   through Settings; the public release download is the distribution source.
-3. Verify the published server ZIP checksum, source/version metadata and runtime
-   inventory. Deploy that exact runtime to the established service, preserving
-   the current host configuration and a rollback copy.
+2. Use the [release pipeline](releases.md) to validate matching Mac/server
+   artifacts from that run. A signed draft can be prepared before touching hosts.
+3. Deploy the exact verified CI runtime and packaged cluster plugins before
+   publishing the client. Preserve current host configuration and rollback copies.
 4. Check for active or waiting rooms immediately before restarting. Restart only
    the owned game service when rooms are empty; retain the previous deployment
    until health and client compatibility checks pass.
@@ -34,6 +32,10 @@ retains measured operating caps and remaining load/fallback coverage limits.
    multi-client/network suite against the staged artifact. Repeat that suite on
    the live host only for a transport, routing or capacity change, or a failure
    that calls for it.
+6. Publish the signed client only after every configured admission route/worker
+   reports the intended commit and exact release token. The release workflow
+   enforces this order; [operator setup and the adapter contract](releases.md#adapter-contract)
+   are required before enabling it. Existing users receive the update in Settings.
 
 Routine releases finish with the published update and verified shared service.
 Local app replacement, Downloads copies, party ZIPs, Wi-Fi peer checks and relay

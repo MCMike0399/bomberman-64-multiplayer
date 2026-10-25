@@ -15,8 +15,10 @@ public partial class StagePreview : Control
         var area=new Rect2(16,12,Size.X-32,Size.Y-12-caption);
         float s=Math.Min(area.Size.X/24.5f,area.Size.Y/11.4f),h=s*.41f;
         var center=area.GetCenter()+new Vector2(-s,.62f*s);
-        if(StageIndex==1)DrawGarden(area);
+        if(StageIndex==4)DrawBlizzard(area);
+        else if(StageIndex==1)DrawGarden(area);
         else if(StageIndex==2)DrawUpAndDown(area);
+        else if(StageIndex==5)DrawGreedyTrap(area);
         else for(int z=0;z<11;z++)for(int x=0;x<13;x++)
         {
             int tier=StageIndex==3?(x is 0 or 3 or 6 or 9 or 12||z is 0 or 5 or 10?2:0):StageIndex==0?1+(Math.Abs(x-6)>3?2:z<3?3:0):StageIndex==2?x<4?0:x>8?2:1:0;
@@ -29,11 +31,24 @@ public partial class StagePreview : Control
             if(StageIndex!=3&&x%3==0&&z%3==0&&x>0&&z>0)
             {DrawRect(new Rect2(p-new Vector2(.41f*s,1.35f*s),new Vector2(.82f*s,1.35f*s)),new Color("d1b879"));DrawRect(new Rect2(p-new Vector2(.53f*s,1.53f*s),new Vector2(1.06f*s,.3f*s)),new Color("fff0b6"));}
         }
-        string name=StageIndex==0?"Sunken Temple":StageIndex==1?"Rock Garden":StageIndex==2?"Up & Down":"Top Rules",detail=StageIndex==0?"4 levels":StageIndex==1?"Walled garden":StageIndex==2?"3 levels":"Castle bridges";
+        string name=StageIndex==0?"Sunken Temple":StageIndex==1?"Rock Garden":StageIndex==2?"Up & Down":StageIndex==4?"Blizzard Battle":StageIndex==3?"Top Rules":"Greedy Trap",detail=StageIndex==0?"4 levels":StageIndex==1?"Walled garden":StageIndex==2?"3 levels":StageIndex==4?"Wind & avalanches":StageIndex==3?"Castle bridges":"Reward pit";
         var at=new Vector2(20,Size.Y-14);
         DrawStringOutline(ArcadeTheme.Display,at,name,HorizontalAlignment.Left,-1,18,6,ArcadeTheme.Cream);DrawString(ArcadeTheme.Display,at,name,HorizontalAlignment.Left,-1,18,ink);
         float width=ArcadeTheme.Display.GetStringSize(name,HorizontalAlignment.Left,-1,18).X;
         DrawString(ArcadeTheme.Body,at+new Vector2(width+12,0),detail,HorizontalAlignment.Left,-1,15,new Color(ink,.75f));
+    }
+    private void DrawGreedyTrap(Rect2 area)
+    {
+        var layout=BlastStages.Get(BlastStages.GreedyTrap);
+        float scale=Math.Min(area.Size.X/20,area.Size.Y/15);
+        var origin=area.GetCenter()-new Vector2(layout.Width*scale/2,layout.Height*scale*.3f);
+        for(int z=0;z<layout.Height;z++)for(int x=0;x<layout.Width;x++)
+        {
+            var cell=layout.At(x,z);float tier=cell.Tier;
+            var point=origin+new Vector2(x*scale,z*scale*.6f-tier*scale*.5f);
+            var color=cell.Kind==CellKind.Pillar?new Color("712c39"):cell.Kind==CellKind.Ramp?new Color("687772"):tier==2?new Color("b5a082"):tier==1?new Color("d4cdb3"):new Color("38868a");
+            DrawRect(new Rect2(point,new(scale-.5f,scale*.6f-.5f)),color);
+        }
     }
     private void DrawUpAndDown(Rect2 area)
     {
@@ -60,6 +75,19 @@ public partial class StagePreview : Control
                 cell.Tier==4&&cell.Below==null?new Color("a7b74f"):new Color("d3ded7");
             DrawColoredPolygon(diamond,color);
             DrawPolyline([diamond[0],diamond[1],diamond[2],diamond[3],diamond[0]],new Color("637a85"),.6f,true);
+        }
+    }
+
+    private void DrawBlizzard(Rect2 area)
+    {
+        float scale=Math.Min(area.Size.X/20,area.Size.Y/14);
+        Vector2 Point(float x,float z)=>area.GetCenter()+new Vector2((x-9.5f)*scale,(z-9.5f)*scale*.6f);
+        DrawRect(new Rect2(Point(0,0),new(19*scale,19*scale*.6f)),new Color("b9e6ed"));
+        DrawRect(new Rect2(Point(1,1),new(17*scale,17*scale*.6f)),new Color("68b7cd"));
+        var stage=BlastStages.Get(BlastStages.BlizzardBattle);
+        foreach(var (x,z) in Enumerable.Range(1,17).SelectMany(x=>Enumerable.Range(1,17).Select(z=>(x,z))).Where(c=>!stage.ClearCells.Contains(c)))
+        {
+            var p=Point(x+.5f,z+.5f);DrawColoredPolygon([p+new Vector2(-scale*.4f,0),p+new Vector2(scale*.4f,0),p+new Vector2(0,-scale)],new Color("777bce"));
         }
     }
 

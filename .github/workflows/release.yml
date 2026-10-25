@@ -10,12 +10,8 @@ permissions:
   contents: read
   actions: read
 
-concurrency:
-  group: publish-verified-update
-  cancel-in-progress: false
-
 jobs:
-  release:
+  candidate:
     if: >-
       vars.AUTO_RELEASE_ENABLED == 'true' &&
       github.event.workflow_run.conclusion == 'success' &&
@@ -23,32 +19,43 @@ jobs:
       github.event.workflow_run.head_branch == 'main' &&
       (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch')
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    permissions:
-      contents: write
-      actions: read
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+      exists: ${{ steps.release.outputs.exists }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
           persist-credentials: false
-      - name: Publish only the successful run's signed artifacts
+      - id: release
         env:
           GH_TOKEN: ${{ github.token }}
           RUN_ID: ${{ github.event.workflow_run.id }}
           EXPECTED_SHA: ${{ github.event.workflow_run.head_sha }}
-          BLAST_UPDATE_SIGNING_KEY: ${{ secrets.BLAST_UPDATE_SIGNING_KEY }}
         run: |
           set -euo pipefail
-          version=$(python3 -c 'import pathlib,re; print(re.search(r"application/short_version=\"([0-9.]+)\"", pathlib.Path("export_presets.cfg").read_text())[1])')
+          version=$(python3 -c 'import sys; sys.path.insert(0,"tools/ci"); from release_identity import check_exports; print(check_exports()["version"])')
           python3 tools/ci/promote_release.py --check-only --run-id "$RUN_ID" --version "$version" --expected-sha "$EXPECTED_SHA"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
           if gh release view "v$version" >/dev/null 2>&1; then
-            echo "Version already has a release; preserving it."
-            exit 0
+            echo 'exists=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'exists=false' >> "$GITHUB_OUTPUT"
           fi
-          umask 077
-          key="$RUNNER_TEMP/blast-update-signing.pem"
-          trap 'rm -f "$key"' EXIT
-          test -n "$BLAST_UPDATE_SIGNING_KEY"
-          printf '%s\n' "$BLAST_UPDATE_SIGNING_KEY" > "$key"
-          python3 tools/ci/promote_release.py --run-id "$RUN_ID" --version "$version" --expected-sha "$EXPECTED_SHA" --signing-key "$key" --publish
+
+  release:
+    needs: candidate
+    if: needs.candidate.outputs.exists == 'false'
+    permissions:
+      contents: write
+      actions: read
+    uses: ./.github/workflows/promote.yml
+    with:
+      run_id: ${{ format('{0}', github.event.workflow_run.id) }}
+      version: ${{ needs.candidate.outputs.version }}
+      publish: true
+    secrets:
+      BLAST_UPDATE_SIGNING_KEY: ${{ secrets.BLAST_UPDATE_SIGNING_KEY }}
+      BLAST_RELEASE_SERVER_URLS: ${{ secrets.BLAST_RELEASE_SERVER_URLS }}
+      BLAST_RELEASE_PLACEMENTS: ${{ secrets.BLAST_RELEASE_PLACEMENTS }}

@@ -205,8 +205,8 @@ The implementation is original shader/material work; nothing is copied.
   axial view depth for depth of field; `PlayableDistance` separately measures the
   farthest radial distance for Godot's depth-mode fog. Both use the effective camera
   transform, including projection offsets. `ArenaView.ApplyDepthCues` keeps blur and
-  haze outside their respective bounds. `graphics-settings` checks all five stages,
-  including Circuit Garden and oblique inspection views, against actual terrain and
+  haze outside their respective bounds. `graphics-settings` checks every battle arena
+  and Circuit Garden and oblique inspection views, against actual terrain and
   standing-character extents. Camera changes remeasure the bounds.
   Aerial perspective stays off: a camera
   looking down would sample the dark lower sky and grey the sea. Blur is off on Low.
@@ -224,6 +224,25 @@ Lessons: compare against the baseline capture at full resolution before tuning.
 A dropped `vertex()` once zeroed the world-position varying and looked like a fog,
 DOF or palette problem; one diagnostic frame writing the suspect values as
 emission found it. Close-up concentric banding on the helmet predates this work.
+
+### Blizzard Battle frozen snowfield
+
+[Stage contract](../blizzard-battle.md), [reference research](../blizzard-battle-research.md). `TempleStageView.Blizzard` builds opaque cyan ice, original violet faceted cones and snow-capped glacier walls. `ArtMaterials.Blizzard` owns world-space frost/fracture/strata textures; `BlizzardWeather` animates a bounded MultiMesh from accepted wind. Preserve shared graphics/lighting, depth-writing ice, local pause and camera-safe near walls. The user rejected the initial small spires: their tops now reach 1.755 render units and their bases span .94. Stage `coverHeight` drives both meshes and projectile collision/landing, including the miniature and aim preview. The miniature crops its exterior independently. New artwork is procedural; reference archives never ship. Keep the foundation below the ice slab to prevent coplanar flicker. Godot 4.7 shaders use `CLEARCOAT_ROUGHNESS`; the former `CLEARCOAT_GLOSS` name is rejected by the live compiler.
+### Greedy Trap presentation
+
+The exterior now uses a Blue Resort-informed fortified reservoir: animated teal
+water, quays, blue roofs, sparse rounded trees and a slow waterwheel. It shares
+other outdoor arenas' sky, lighting, water presets and depth cues. The landscape
+is an original extension, not an exterior recovered from Greedy Trap footage.
+All scenery stays outside/below play, remains separate from compression and is
+hidden in the menu miniature. [Background sources](../greedy-trap-background-research.md).
+
+Greedy Trap has independently authored cobbles, burgundy brick, teal floor tiles,
+pale ring paving and gray-green destructible masonry, plus compression flywheels
+and pulsing amber inlays. It uses the enclosed-arena camera, ordinary lighting
+profiles and all graphics presets. The basin is safe opaque paving, with no
+lethal-water plane. [Stage and visual contract](../greedy-trap.md),
+[inspected original references](../greedy-trap-research.md).
 
 ### Top Rules castle presentation
 
@@ -251,6 +270,11 @@ a green summit mosaic, thin suspended links and the low four-panel deck.
 All geometry/materials are original procedural work. Bridge tiles render their
 `below` surfaces separately; no foundation may fill an underpass. Both camera
 fitting and framing checks include lower surfaces and standing headroom.
+The 2026-10-25 correction separates paving from structural tops (including the
+crown) to prevent depth fighting. Up & Down has its own gray stone destructible
+cubes with square insets and pale rims. The menu instance uses an opaque circular
+sea inside its round stand and trims deep supports at the stand; gameplay keeps
+its full foundations and quality-dependent water.
 The authority's fractional ramp endpoints drive the render slope; visual treads
 sit just above it. The ordinary battle camera remains distinct from oblique
 inspection captures. All four existing lighting profiles and graphics presets
@@ -273,7 +297,7 @@ Online preference edits save the local choice but never override server lighting
 key/fill/ambient, sky, fog and water profiles. Morning uses soft warm lateral light;
 Midday has a higher sun and turquoise water; Afternoon uses amber light, longer
 shadows and mauve reflections; Night uses blue moonlight, indigo water and enough
-fill to retain silhouettes, stairs and aiming markers. All four stages reuse
+fill to retain silhouettes, stairs and aiming markers. All arenas reuse
 these profiles. Menu theatre lighting remains separately authored.
 
 `ArenaView` supplies a procedural sky radiance map for specular reflections.
@@ -427,5 +451,32 @@ bounds and launches Rock Garden afterward to verify gameplay scenery is intact.
 [Stage comparison](../stage-fidelity-research.md) and [explosion sequences](../explosion-fidelity-research.md) record inspected original imagery and limits. The integrated castle has taller authored walls and side banners; Up & Down uses rounded/fluted supports inside its solid footprint; Rock Garden's center crown is 1.35 units versus .9 for its outer columns. Original reference assets remain outside Git and exports.
 
 Explosions use one round world-space fireball, brief sharp charged flares, an expanding cyan power wave and transparent fade. This supersedes the earlier offset billow spheres, ordinary ground torus and brown cloud. Only the cosmetic group compensates the 1.35 tier-height scale; the faint danger shell retains mapped authority extent. Damage radius and fuse stay in the simulation. Castle thin-deck blast permeability is an explicitly researched rules change, separate from the effect geometry.
+
+**Explosion v2 (2026-10-25).** The user asked for more style, identity and a
+more modern look. Re-inspection found the original's signature: a white/yellow
+**star** inside the fireball (and inside the teal power body), plus white rim
+puffs and a thin double ring for power bombs. See the
+[research](../explosion-fidelity-research.md#2026-10-25-star-core-and-v2-layers).
+The one body is now a lumpy, noise-boiled toon sphere with crisp bands. Its bands
+run from an ember rim through orange and yellow to a white-hot center. The layer
+order follows:
+
+1. a damped-spring pop, about 4% past full size;
+2. a short white flash;
+3. a spinning camera-facing star, pulled toward the camera so terrain cannot clip it;
+4. a fresnel shock rim;
+5. directional spark jets with drag;
+6. a brief Medium/High light pulse;
+7. a burning-edge dissolve after the hazard window, revealing small dark smoke
+   puffs (white rim puffs for power).
+
+Flares remain charged-only and the cyan ground ring remains power-only. Keep
+every fade in shader uniforms. `GeometryInstance3D.Transparency` would add a
+second pipeline that warmup's two ages do not cover. Flares, sparks and puffs
+are each one MultiMesh draw. Low quality and the 16-active-blast reduced-detail
+path drop the light and thin the particles. `presentation` now also detonates
+a real red-pickup bomb and captures its sequence. Remaining choices are
+subjective tuning: how much smoke to show, how long the flash lasts, and the
+light's strength.
 
 Castle stone and garden surfaces use bounded terrain-owned materials. Repeated rounds and new closing walls must retain the selected quality preset. Inspect actual captures; shape/aspect/lifetime tests are supporting evidence, not aesthetic approval.

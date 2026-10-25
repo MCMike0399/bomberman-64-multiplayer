@@ -9,16 +9,49 @@ import re
 import shutil
 import subprocess
 import zipfile
+from release_identity import check_exports
 
 ROOT = Path(__file__).resolve().parents[2]
 ARCHIVE = 'Blast-Circuit-server-dotnet10.zip'
 REQUIRED = ('Bomber.Server.dll', 'Bomber.Server.deps.json', 'Bomber.Server.runtimeconfig.json')
 NOTICES = ('Notices/Blast-Circuit-MIT.txt', 'Notices/Simulation-MIT.txt', 'README.txt', 'appsettings.json')
+PLUGINS = ('Blast.Cluster', 'Realtime.Redis')
 
 
 def runtime_file(path):
     return (path.suffix.lower() in ('.dll', '.dylib') or re.search(r'\.so(?:\.\d+)*$', path.name)
             or (len(path.parts) == 1 and path.name in REQUIRED))
+
+
+def delivery_file(path):
+    return (runtime_file(path) or path.as_posix() in NOTICES or
+            len(path.parts) == 3 and path.parts[0] == 'plugins' and path.parts[1] in PLUGINS and
+            (path.name == 'plugin.json' or path.name.endswith('.deps.json')))
+
+
+def stage_plugins(source, destination):
+    """Freeze only plugin runtime files before the real fleet drill."""
+    if (destination / 'plugins').exists():
+        shutil.rmtree(destination / 'plugins')
+    inventory = {}
+    for plugin in PLUGINS:
+        origin = source / plugin
+        manifest = json.loads((origin / 'plugin.json').read_text())
+        entrypoint = manifest.get('assembly', '')
+        if manifest.get('id') != plugin or not entrypoint or Path(entrypoint).name != entrypoint or not (origin / entrypoint).is_file():
+            raise RuntimeError('Missing plugin manifest: ' + plugin)
+        for path in sorted(origin.rglob('*')):
+            relative = Path('plugins') / plugin / path.relative_to(origin)
+            if (not path.is_file() or path.is_symlink() or any(part.startswith('.') for part in relative.parts)
+                    or not delivery_file(relative)):
+                continue
+            target = destination / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(path, target)
+            inventory[relative.as_posix()] = hashlib.sha256(target.read_bytes()).hexdigest()
+        if not any(name.endswith('.dll') for name in inventory if name.startswith('plugins/' + plugin + '/')):
+            raise RuntimeError('Plugin runtime is incomplete: ' + plugin)
+    return inventory
 
 
 def stage(source, destination):
@@ -61,7 +94,7 @@ def package(destination, artifacts, revision, version, inventory):
     files = []
     for name, digest in sorted(inventory.items()):
         path = destination / name
-        if not runtime_file(Path(name)) and name not in NOTICES:
+        if not delivery_file(Path(name)):
             raise RuntimeError('Server archive file is outside the delivery allowlist: ' + name)
         if (Path(name).is_absolute() or any(part.startswith('.') for part in Path(name).parts)
                 or path.is_symlink() or not path.is_file() or not path.resolve().is_relative_to(destination.resolve())
@@ -74,7 +107,7 @@ def package(destination, artifacts, revision, version, inventory):
     with archive.open('rb') as stream:
         digest = hashlib.file_digest(stream, 'sha256').hexdigest()
     (artifacts / (ARCHIVE + '.sha256')).write_text(digest + '  ' + ARCHIVE + '\n')
-    metadata = {'schemaVersion': 1, 'revision': revision, 'version': version, 'kind': 'framework-dependent-server',
+    metadata = {'schemaVersion': 2, 'revision': revision, 'release': check_exports(), 'version': version, 'kind': 'framework-dependent-server',
                 'targetFramework': 'net10.0', 'entrypoint': 'Bomber.Server.dll', 'configuration': 'Release',
                 'runtimeRequirement': 'ASP.NET Core Runtime 10', 'fileCount': len(files),
                 'files': inventory}
@@ -84,10 +117,23 @@ def package(destination, artifacts, revision, version, inventory):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--stage-only', action='store_true')
+    parser.add_argument('--stage-source', type=Path, help='Stage an explicit published runtime for isolated QA')
+    parser.add_argument('--stage-destination', type=Path)
+    parser.add_argument('--stage-plugins', action='store_true')
     args = parser.parse_args(argv)
+    if args.stage_source is not None or args.stage_destination is not None:
+        if args.stage_source is None or args.stage_destination is None or args.stage_only or args.stage_plugins:
+            parser.error('Use --stage-source and --stage-destination together without other staging modes')
+        stage(args.stage_source, args.stage_destination)
+        return
     artifacts = ROOT / 'artifacts'
     destination = artifacts / 'server-staged'
     inventory_path = artifacts / 'server-stage-manifest.json'
+    if args.stage_plugins:
+        inventory = {name: digest for name, digest in json.loads(inventory_path.read_text()).items() if not name.startswith('plugins/')}
+        inventory.update(stage_plugins(artifacts / 'cluster-plugins', destination))
+        inventory_path.write_text(json.dumps(inventory, indent=2) + '\n')
+        return
     if args.stage_only:
         inventory = stage(artifacts / 'server-release', destination)
         inventory_path.write_text(json.dumps(inventory, indent=2) + '\n')

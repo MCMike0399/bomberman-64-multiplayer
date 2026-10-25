@@ -32,6 +32,9 @@ Tutorial setup and progress belong to the local authority, with ordinary bomb, c
 - [NetworkSession](../../src/Bomber.Client/NetworkSession.cs) uses HTTP and WebSocket
   messages. The independent [Bomber.Server](../../src/Bomber.Server/Program.cs) registers
   `BomberRealtimeGame` on Burbuja.Hosting. Online play uses the same product rules.
+- Online admission requires the exact release token from `Release.props`, not
+  just the peer schema number. [Release identity and delivery](../releases.md)
+  owns invalidation, matching-server checks and rollout boundaries.
 - Local play needs neither an HTTP server nor Docker. Network verification requires
   an actual available server; local success cannot certify server delivery.
 - The generic kernel owns transport/lobby infrastructure, not bomb or bot policy.
@@ -266,7 +269,11 @@ and the input guide; older iteration tables are historical.
   courtyard. Rock Garden is a 19x19 enclosed grassy court with five columns. Up & Down is a 24x26 suspended arena with
   three elevations, six long flights and real underpasses; see the
   [stage contract](../up-and-down.md). Its twelve cover blocks intentionally
-  replace the former filled terrace layout and 88-block budget. The summit uses a flat mosaic rather than a blocking prop.
+  replace the former filled terrace layout and 88-block budget. The 2026-10-25
+  correction widens each pier to the inward side-rail lip for ordinary drops
+  without changing fall physics. Cover uses eight paired low sites and two per
+  pier; Advanced density selects subsets. The summit uses a flat mosaic rather
+  than a blocking prop.
 - Ghosts pass through bombs and cannot place, carry, kick, stop, pump, throw or
   detonate them. Movement, finite latching and water/void comeback remain.
 - Default battle rules are first to two wins, 120 total seconds including 60 seconds of
@@ -279,6 +286,10 @@ and the input guide; older iteration tables are historical.
   (currently 1.35) to authority Y. Decorative bedrock, foam, icons and camera fitting
   cannot add walkable floor, ramps or collision height.
   [Travel/water diagnosis](../history/iteration11-kick-research.md).
+
+## Blizzard Battle (2026-10-25)
+
+[Stage contract](../blizzard-battle.md) owns the flat enclosed snowfield, sixteen authored ice cones (1.3-unit stage-owned cover height), eight seats, shared seeded weather and bilateral avalanche closure. Wind affects free bombs and living players through collision, with weaker player response, and the advisory arc uses the same future schedule. Preserve fuse clocks and carried attachment. CPU closure avoidance uses the three-second avalanche interval. Protocol revision 5 gates the expanded stage/weather contract.
 
 ## Top Rules castle (2026-10-24)
 
@@ -317,9 +328,15 @@ the temple. Relay smoke also observes a host traversing the lower passages.
 Focused checks: `Bomber.Game.Tests -- --top-rules`,
 `Bomber.Ai.Tests -- --top-rules`, the `top-rules` native journey and the real
 network castle room/traversal in `PartyNetworkChecks`. The standard AI soak
-now covers four stages (48 combinations).
+now covers five stages (60 combinations), including Blizzard Battle.
 
 ## Inventory, cover and pickup rendering
+
+Greedy Trap uses three solid stories, six flights, eight bottom masonry blocks
+and ordinary closing-column Hurry. Its turquoise basin is safe floor; it must
+not inherit ordinary water elimination or an unverified sliding rule. The
+[stage contract](../greedy-trap.md) owns topology, eight-seat adaptations and
+focused authority/AI checks. Online revision 5 gates the newly supported arena.
 
 - [Loot placement](../../src/Bomber.Game/Simulation/BlastSession.Loot.cs) uses map-owned
   `CoverAreas`: regional budget shares and cluster centers, with seeded weighted
@@ -527,4 +544,13 @@ five threatening bombs in 30 seconds, an eight-second maximum gap and zero death
 
 Top Rules thin decks pass blasts as demonstrated by the original official guide; solid masonry still shields and physical bodies/throws still collide with decks. Up & Down's corresponding blast penetration remains unverified, so it retains its authored shielding. [Evidence](../stage-fidelity-research.md#newly-recovered-top-rules-mechanics-evidence).
 
-Protocol 2 introduced the stage contract and protocol 3 added adaptive rooms. The v0.30 removal of Fast bomb semantics requires protocol 4 at HTTP admission, the actual WebSocket worker and peer hello. Keep readiness/operator/leave/cancel paths available and test protocol-3 update feedback before accepting game state. Lower cells must pass bounded schema validation before rendering. [Online protocol](../peer-hosting.md#online-stage-protocol-2-v028).
+Protocol 2 introduced the stage contract; protocol 3 added adaptive rooms and protocol 4 removed Fast bomb semantics. Greedy Trap advances admission to protocol 6 at HTTP, the actual WebSocket worker and matching peer hello so loadout-compatible older clients cannot receive an unsupported arena. A coordinated client/server release is required; this map PR does not deploy it. Preserve readiness/operator/leave/cancel paths and test protocol-3/4/5 update feedback before accepting game state. Lower cells and authored wall crowns must pass bounded schema validation before rendering. [Online protocol](../peer-hosting.md#online-stage-protocol-2-v028).
+
+### CPU recovery on narrow stairs (2026-10-25)
+
+Recovery-direction collision and dry-support probes cover the full steering
+reaction interval. A one-tick probe allowed a held sidestep to leave Up & Down's
+narrow flights before the next decision, ending a stock match with water deaths.
+`UpAndDownAiChecks` retains the dry-now/unsafe-before-next-reaction witness, and
+`Bomber.Ai.Tests -- --front-placement` retains ordinary seeded combat on all
+three covered arenas. This changes CPU decision safety, not movement physics.

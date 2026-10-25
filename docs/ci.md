@@ -49,6 +49,10 @@ The editor and .NET export templates come from the official Godot 4.7.2 release.
 
 Actions are pinned to immutable commits. Public PRs receive read-only repository permissions; checkout never persists GitHub credentials. Build caches are intentionally absent: private dependency outputs never enter a cache readable from untrusted PRs. Package jobs depend on passing managed and headless gates. The separate optional Metal lane must also pass when rendering approval is required; a package artifact alone does not establish that.
 
+The public job also installs version-pinned actionlint v1.7.12 and validates all
+three workflows, including the reusable deployment/publication path. Release
+identity/export drift and deployment failure fixtures run in the public contracts.
+
 `tools/ci/stage_reports.py` stages only JSON/JSONL receipts, `junit.xml`, and PNG/MP4/WAV evidence beneath the canonical QA output. It excludes source trees, compiled build directories, hidden paths, symlinks and raw logs. Workflows upload only that staging directory (seven-day retention) and the explicitly named app/server ZIPs and identity receipts (14-day retention), never `.` or the whole `artifacts/` tree. Raw logs remain available locally for diagnosis. Do not put credentials into scenario scripts, trace state or report text.
 
 The macOS ZIP preserves bundle permissions and symlinks via `ditto` and ships with a SHA-256 checksum receipt plus source/bundle identity metadata. It contains the exported game, managed runtime dependencies and required notices; it does not contain the kernel source checkout. The package profile includes the SDL/USB backend required for Switch 2 USB support. On Darwin ARM64 it builds `tools/controllers/bootstrap-sdl.sh` from checksum-pinned archives when any required library/license is missing, then audits all four files in the exported bundle. Existing complete local binaries can be reused. The artifact feature manifest records this backend, and draft promotion rejects missing manifests or missing archived libraries/licenses. Inclusion does not establish fresh physical-controller validation.
@@ -67,9 +71,31 @@ Service supervision, external binding, reverse proxy/TLS, authentication policy,
 
 ## Deployment boundary
 
-Verification delivers a downloadable CI artifact. The separate **Prepare draft release** workflow accepts a successful Verification run ID and bundle version on main. Its read-only job validates repository, branch, workflow, required successful jobs and artifact availability; its write-permission job repeats validation, checks source metadata, SHA-256 and the archived bundle version, then creates a draft release targeting exactly that run commit. Existing release tags are rejected. It uses only the workflow token and downloads only the named macOS and server artifacts from the same run. Both must match the requested version and exact source commit; server runtime files are also checked against their manifest. A draft attaches both delivery ZIPs and their checksum/identity receipts. From v0.21 it also attaches the signed update manifest and requires `BLAST_UPDATE_SIGNING_KEY`. The workflow remains draft-only by default; its explicit publish input publishes the verified release. The separate opt-in `Publish verified update` workflow can publish new versions after successful trusted main verification when `AUTO_RELEASE_ENABLED=true`. See [automatic updates](automatic-updates.md) for signing and rollback. See the [GitHub CLI draft/target options](https://cli.github.com/manual/gh_release_create).
+Verification delivers downloadable, tested client/server artifacts. **Release
+verified game** validates a successful trusted main run, required jobs, source,
+archive inventories, bundle identity and the canonical `Release.props` contract.
+It creates a signed draft by default. Explicit publication first runs a protected
+`production` deployment on a dedicated `blast-deploy` runner through an
+operator-installed adapter. It requires authenticated drained/empty-fleet
+evidence, applies the exact server/plugins, verifies every configured worker and
+public admission route, and invokes rollback on failure. Publication repeats live
+identity/admission checks before exposing the signed client update. The opt-in
+**Publish verified update** workflow calls this same workflow; it has no separate
+publication bypass. Existing exact-source drafts can be promoted, but published
+tags are immutable. Superseded main runs cannot deploy or publish.
 
-This pipeline does not install an app on another machine, sign with an Apple Developer identity, notarize, or deploy/restart an authoritative server. The current ad-hoc signature is appropriate for development and is not a Gatekeeper/notarization claim. Production release work needs an explicit destination, signing identity and protected approval environment. Server delivery likewise needs an authorized host, service lifecycle and rollback plan; no Docker Compose or production credentials are assumed.
+The server ZIP includes the runtime-only `Blast.Cluster` and `Realtime.Redis`
+plugins from the same managed run. Their inventories are frozen before the real
+fleet drill, which runs against those staged copies; packaging rejects mutation
+after testing. An ordinary standalone server does not enable cluster plugins
+without operator configuration. Keep private settings outside the artifact.
+
+See [release procedure, required settings, adapter contract and recovery](releases.md)
+for activation. A configured adapter and protected runner are prerequisites;
+this source does not provision them or alter existing hosts. Deployment tests
+use fixtures until an operator performs a real rollout drill. Client artifacts
+remain ad-hoc signed; Apple Developer signing/notarization and installation on
+players' Macs are separate from the authenticated update signature.
 
 ## Extending verification
 

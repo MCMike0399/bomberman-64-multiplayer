@@ -15,7 +15,7 @@ references are [playtests](../../tools/playtest/README.md), [CI](../ci.md),
 | File moves/renames | `git grep` old paths; build; editor import for `.uid` files | `public` plus the moved area's gate; see [codebase map](codebase-map.md#moving-files-safely) |
 | Simulation/rules | Corresponding executable managed suite with a red regression | `managed`, relevant native journey, `headless` |
 | Client/session/protocol | Client checks and real HTTP/WebSocket repro | `managed` plus `network`; restart only an owned stale server |
-| AI | Focused deterministic regression and matched-seed metrics | Managed AI checks/48-scenario soak plus `ai-play` where visible behavior matters |
+| AI | Focused deterministic regression and matched-seed metrics | Managed AI checks/60-scenario soak plus `ai-play` where visible behavior matters |
 | Input/menu/focus | `controllers`, `aim-inputs`, `wasd-navigation`, or relevant journey | Real windowed graphical checks; physical observation if claiming device support |
 | Rendering/rig/audio | Relevant native scenario and actual images/audio/video | Graphical regression; shipped-app checks for delivery |
 | Packaging/runtime/native backend | Bundle and staged-runtime inspection | `package`, exported-app journey, exact installed-copy verification |
@@ -277,6 +277,17 @@ diagnostic and fails on other unregister errors. Never broadly delete artifacts.
 
 ## CI and publication boundaries
 
+Read [release identity and deployment gates](../releases.md) before changing
+release configuration or preparing, retrying or recovering a release. Start with
+`python3 tools/ci/release.py doctor --publish`; the release guide owns the
+prepare/dispatch/recovery sequence and completion receipt. Keep the exact tested
+run/artifacts across retries instead of rebuilding unchanged content. Signed
+updates and ad-hoc app signing remain the chosen delivery policy.
+`Release.props` is canonical; export drift fails public
+QA. Run actionlint over all three workflow files. Server delivery now includes
+the exact plugins used by the fleet drill. Both manual and automatic publication
+require the protected deployment gate and matching live release identities.
+
 Read [CI](../ci.md) for trusted-job configuration and artifact validation. Public
 PR checks use no private dependency credentials; private builds run only on
 trusted main. Keep both bootstrap tools aligned with the checked-in dependency
@@ -290,8 +301,10 @@ Before claiming CI delivery, verify required jobs for the exact source SHA and
 version, checksums, app/controller manifest and server per-file inventory. A
 skipped optional Metal job is not rendering evidence. A downloadable artifact
 is not an installed app, notarization, physical-device validation or a deployed
-server. Draft promotion verifies app/server artifacts from the same successful
-run and creates a draft only; publication/host operations need their own scope.
+server. Promotion verifies app/server artifacts from the same successful run
+and creates a signed draft by default. Explicit publication requires the
+protected matching-fleet deployment gate; host operations still require their
+own authorization and configured operator adapter.
 
 For v0.27 connection changes, include the `peer-rooms` journey and the
 [peer transport checks](../peer-hosting.md#verification-entrypoints). The official
@@ -323,6 +336,14 @@ comparisons and known validation limits](../falling-physics.md).
 `dotnet run --project tests/Bomber.Game.Tests -- --up-and-down` checks six-flight
 round trips, underpass navigation nodes, bridge slab/blast collision, layered
 stage messages, underside throw projection and low-to-middle flood elimination.
+The 2026-10-25 regression adds eight ordinary side-rail drops (both piers), authored
+cover/density checks, native falling/landing and real stone-block destruction.
+Native geometry checks reject coplanar paving/slab tops; setup checks the circular
+miniature sea and trimmed supports. Actual original and corrected renderer
+captures remain necessary. Server-hosted and peer-hosted network smoke also
+observes the side drop from another client. The CPU checks reject stair recovery
+that is safe for one tick but reaches water before the next steering reaction;
+`Bomber.Ai.Tests -- --front-placement` reruns the ordinary stock combat witness.
 The initial topology failure is retained in ignored task artifacts.
 `up-and-down` is a real native journey in both `all` and `core-headless`: ordinary
 inputs cross all flights/underpasses, plant beneath the ring, fall into the sea,
@@ -389,6 +410,19 @@ its owned runs; this is renderer/synthetic-input evidence, not a fresh physical
 controller or native-host GPU performance certification. This source work does
 not establish installation, release publication or external server delivery.
 
+## Greedy Trap verification
+
+Native resize QA allows up to twenty seconds for a slow first Metal frame, while
+still requiring the actual requested size and an unchanged input transform for
+200 ms. Resize receipts record sample count, actual size and elapsed time; this
+does not bypass native focus or stability checks.
+
+Greedy Trap's managed `--greedy-trap` checks, focused 12-scenario AI soak and
+native `greedy-trap` journey cover its three stories, six flights, actual bottom
+loot, quality/lighting variants and crushing animation. The
+`greedy-trap-regression` suite adds startup preparation, setup, graphics,
+lighting, framing and real network regression. See [stage verification](../greedy-trap.md).
+
 ## Top Rules verification
 
 `top-rules` is a standard leaf in `all` and `core-headless`. The graphical
@@ -400,7 +434,7 @@ night lighting, eight-player CPU battle and inward
 sudden-death walls. Headless results establish state assertions only; inspect
 the graphical captures separately. Managed `--top-rules` checks preserve the
 layered support, falling, kick/throw/slab and CPU path witnesses. The standard
-48-case AI soak includes the new arena. `PartyNetworkChecks` edits a real room
+60-case AI soak includes the new arena. `PartyNetworkChecks` edits a real room
 to Top Rules and observes a host's lower-story traversal from its peer.
 
 For focused castle changes, `--scenario top-rules-regression` runs the eight
@@ -448,6 +482,10 @@ owned command). A clamshell sleep invalidated a realtime lease test while its
 monotonic test timer barely advanced; do not lengthen production leases to hide
 that environmental interruption.
 
+## Blizzard Battle verification
+
+[Stage contract and commands](../blizzard-battle.md#verification-entrypoints). The `blizzard-battle` native leaf belongs to `all`, `core-headless` and `stage-fidelity`; `blizzard-regression` adds all-stage graphics, lighting, setup, framing, assets and network checks. Managed fixtures cover actual drift/fuses, future-wind flight prediction, cone budgets and avalanche reset; peer validation rejects malformed weather, and a real server room verifies advancing weather over WebSocket. The AI soak expands to sixty cases for five battle arenas. Keep actual image inspection separate from headless assertions. Full `graphics-settings` needs a guest display larger than its 1600×1000 test window; the Blizzard regression passed on a 1920×1200 guest. `SetupMenus` configures its own initial default settings so earlier arena tours cannot change its fixture precondition.
+
 ## Menu navigation regression (2026-10-25 source)
 
 `menu-navigation` drives native keyboard, Xbox/DualSense events and the Switch
@@ -463,3 +501,18 @@ completion gate in the isolated desktop: that regression plus WASD, popups,
 controllers, menus/resizes, setup, dense layouts, player settings, tutorial and
 the real two-client network journey. Inspect the captures and keep physical-pad
 claims separate. `all` includes the new regression; no install is implied.
+
+### Socket worker and slow native polling regression
+
+The full native suite exposed socket I/O inheriting Godot's synchronization
+context: cumulative native polling stalls prevented queued heartbeats from being
+sent, while console-only tests passed. The worker now starts on the thread pool;
+peer simulation and Godot link objects stay on their owning polling thread.
+`UiContextNetworkChecks` in the real managed network smoke blocks a UI context
+and requires transport pings to keep advancing.
+
+`adaptive-slow-poll` adds controlled 950 ms guest-poll stalls to the eight-client
+fixture; the elected authority is polled between guests. This is deliberate test
+load, not observed Internet latency. Headless and package gates retain it, while
+`peer-adaptive-regression` reproduces the ordinary journey sequence. Production
+host leases and qualification budgets remain unchanged.

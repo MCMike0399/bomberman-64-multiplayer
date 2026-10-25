@@ -8,7 +8,7 @@ public sealed class BattleCameraRig(Camera3D camera)
     private readonly List<Vector3> _bounds=[];
     private Vector3 _center=new(10.5f,2,11.5f);
     private Vector2 _offset;
-    private bool _training, _castle;
+    private bool _training, _castle, _blizzard;
     /// <summary>View depth of the closest/farthest playable point; depth cues stay outside this range.</summary>
     public Vector2 PlayableDepth {get;private set;}=new(20,40);
     /// <summary>Radial camera distance for depth fog, which uses length(view position), not axial depth.</summary>
@@ -16,7 +16,8 @@ public sealed class BattleCameraRig(Camera3D camera)
     public void SetStage(JsonElement stage)
     {
         _bounds.Clear();
-        _castle=stage.GetProperty("id").GetString()=="top-rules";
+        _blizzard=stage.GetProperty("id").GetString()=="blizzard-battle";
+        _castle=stage.GetProperty("id").GetString() is "top-rules" or "greedy-trap";
         _training=stage.GetProperty("id").GetString()=="circuit-garden";
         int width=stage.GetProperty("width").GetInt32(),depth=stage.GetProperty("height").GetInt32();
         _center=new(width*.5f,2,depth*.5f);
@@ -46,7 +47,7 @@ public sealed class BattleCameraRig(Camera3D camera)
         if(_bounds.Count==0)return;
         var viewport=camera.GetViewport().GetVisibleRect().Size;
         if(viewport.X<=0||viewport.Y<=0)return;
-        var direction=_castle?new Vector3(0,.72f,.694f):new Vector3(0,.60f,.80f);
+        var direction=_castle||_blizzard?new Vector3(0,.72f,.694f):new Vector3(0,.60f,.80f);
         // Centered frontal view keeps the broad stepped silhouette and visible vertical risers.
         bool Place(float distance)
         {

@@ -39,6 +39,27 @@ internal static class AdaptiveFleetChecks
                 "valkey-server", "--maxmemory", "32mb", "--maxmemory-policy", "noeviction"], ct);
             containerStarted = true;
             string port = (await Command("docker", ["port", container, "6379/tcp"], ct)).Trim().Split(':').Last();
+            // A published Docker port does not prove the backplane is accepting RESP.
+            // Exercise the host-side route before either worker starts its single startup attempt.
+            using (var readiness = CancellationTokenSource.CreateLinkedTokenSource(ct))
+            {
+                readiness.CancelAfter(TimeSpan.FromSeconds(15));
+                while (true)
+                {
+                    try
+                    {
+                        using var ping = new TcpClient();
+                        await ping.ConnectAsync("127.0.0.1", int.Parse(port), readiness.Token);
+                        await ping.GetStream().WriteAsync("*1\r\n$4\r\nPING\r\n"u8.ToArray(), readiness.Token);
+                        byte[] reply = new byte[7];
+                        await ping.GetStream().ReadExactlyAsync(reply, readiness.Token);
+                        if (!reply.AsSpan().SequenceEqual("+PONG\r\n"u8)) throw new IOException("Owned backplane returned an unexpected readiness response");
+                        break;
+                    }
+                    catch (Exception error) when (error is SocketException or IOException)
+                    { await Task.Delay(100, readiness.Token); }
+                }
+            }
             Advice([]);
             primary = new Node("primary", 2, dll, plugins, output, advice, "127.0.0.1:" + port, nonce);
             fallback = new Node("fallback", 1, dll, plugins, output, advice, "127.0.0.1:" + port, nonce);

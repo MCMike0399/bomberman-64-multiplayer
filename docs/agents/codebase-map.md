@@ -12,7 +12,8 @@ The repository root is the Godot project root (`res://`). Folders that contain a
 
 | Path | Contents | Godot |
 | --- | --- | --- |
-| `project.godot`, `export_presets.cfg`, `icon.svg` | Engine settings, autoloads, the `macOS Metal` export preset (version/build live here) | Root |
+| `Release.props` | Canonical version/build/protocol identity; shared assembly metadata | Root |
+| `project.godot`, `export_presets.cfg`, `icon.svg` | Engine settings, autoloads, the `macOS Metal` export preset (version/build synchronized from `Release.props`) | Root |
 | `Bomberman64Multiplayer.csproj`, `.sln` | Godot C# project; compiles `scripts/**/*.cs` and references `Bomber.Client` | Root |
 | `Directory.Build.props` | Shared `net10.0`, nullable and implicit-using defaults for every project here | — |
 | `scenes/` | `main.tscn`, the only scene; menus, arenas and models are built in code | Imported |

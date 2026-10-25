@@ -42,6 +42,24 @@ update the current guide rather than silently reviving old behavior.
 
 ## Current decisions that supersede earlier experiments
 
+- v0.31 review candidate: PR #15 integrates all five pending PRs, both new arenas,
+  exact schema-6 release admission and repeatable signed delivery. [Final review
+  and verification](../review-release-031.md) distinguish the tested source/export
+  from unconfigured production activation.
+
+- Release pipeline source (2026-10-25): `Release.props` owns version/build/schema;
+  every release has an exact admission token. Publication requires deployment
+  verification across all configured workers. [Release procedure and adapter
+  setup](../releases.md) distinguish implemented gates from activation/host evidence.
+
+- Blizzard Battle source work (2026-10-25) adds the enclosed snowfield, sixteen ice cones, changing diagonal wind and bilateral avalanches. [Stage contract](../blizzard-battle.md) and [inspected references](../blizzard-battle-research.md) separate original evidence from eight-seat/timing tuning. Online protocol revision 5 requires matching clients and server; this does not update the deployed service.
+- Greedy Trap adds the enclosed upper court, narrow middle ring and lower reward
+  chamber, with four inner flights, two upper exits and closing side walls.
+  [Stage contract](../greedy-trap.md) and [inspected references](../greedy-trap-research.md)
+  distinguish original observations from eight-player/physics tuning. Its
+  reservoir/town exterior is a [Blue Resort-informed extension](../greedy-trap-background-research.md)
+  with shared outdoor lighting and animated water.
+
 - v0.29.1 delivers adaptive public/private rooms, independent coordination and execution limits, measured player-host selection and the Rock Garden miniature bounds fix. [Behavior](../smart-multiplayer.md) and [delivery evidence](../smart-multiplayer-release-029.md) define measured capacity and remaining limits.
 
 - v0.28 integrates all stage PRs, the tutorial and reference-informed explosion effects. [Combined verification and release status](../stages-release-028.md) supersedes independent draft limitations only where its evidence explicitly covers them.

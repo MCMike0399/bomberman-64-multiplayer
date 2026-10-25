@@ -99,7 +99,7 @@ public static class BombThrowRules
         }
         return flight;
     }
-    private static bool StaticObstructed(Vector3 position,Vector3 velocity,Func<float,float,float> surface,
+    internal static bool StaticObstructed(Vector3 position,Vector3 velocity,Func<float,float,float> surface,
         Func<int,int,CellKind> cellKind,Func<int,int,bool> hasCover,StageLayout? stage)
     {
         const float radius=BlastBomb.Radius;
@@ -117,7 +117,7 @@ public static class BombThrowRules
             // Terrain behind the moving center is the ledge being left, not an
             // uphill face. Its trailing footprint must not catch a downward exit.
             if(kind!=CellKind.Pillar&&!cover&&dx*velocity.X+dz*velocity.Z>0)continue;
-            var top=surface(nearX,nearZ)+(kind==CellKind.Pillar?(stage?.At(x,z).ObstacleHeight??PillarHeight):cover?CoverHeight:0);
+            var top=surface(nearX,nearZ)+(kind==CellKind.Pillar?(stage?.At(x,z).ObstacleHeight??PillarHeight):cover?(stage?.SoftBlockHeight??CoverHeight):0);
             // Descending onto the current floor is a landing, not a side impact.
             if(top>centerFloor+.001f&&position.Y<top-.001f)return true;
         }
@@ -125,16 +125,16 @@ public static class BombThrowRules
     }
     /// <summary>Bombs descending onto solid cover rest on its top; side impacts fall beside it.</summary>
     public static float LandingHeight(float x,float z,Func<float,float,float> surface,
-        Func<int,int,CellKind> cellKind,Func<int,int,bool> hasCover,Func<int,int,float>? obstacleHeight=null)
+        Func<int,int,CellKind> cellKind,Func<int,int,bool> hasCover,Func<int,int,float>? obstacleHeight=null,float coverHeight=CoverHeight)
     {
         var cx=(int)MathF.Floor(x);var cz=(int)MathF.Floor(z);var kind=cellKind(cx,cz);
         return surface(x,z)+(kind==CellKind.Pillar?(obstacleHeight?.Invoke(cx,cz)??PillarHeight):
-            kind is not (CellKind.Water or CellKind.Void)&&hasCover(cx,cz)?CoverHeight:0);
+            kind is not (CellKind.Water or CellKind.Void)&&hasCover(cx,cz)?coverHeight:0);
     }
     /// <summary>Static scenery only. Players, moving bombs and future changes may interrupt the arc.</summary>
     public static ThrowProjection Project(Vector3 origin,Vector3 velocity,Func<float,float,float> surface,
         Func<Vector3,bool> obstructed,float fuseSeconds=BlastBomb.FuseSeconds,Func<float,float,CellKind>? landingKind=null,
-        Func<int,int,CellKind>? cellKind=null,Func<int,int,bool>? hasCover=null,float? waterLevel=null,bool bounce=false,float gravityScale=1,int pumps=0,StageLayout? stage=null)
+        Func<int,int,CellKind>? cellKind=null,Func<int,int,bool>? hasCover=null,float? waterLevel=null,bool bounce=false,float gravityScale=1,int pumps=0,StageLayout? stage=null,Func<float,Vector2>? windAt=null)
     {
         var points=new List<Vector3>{origin};
         var position=origin;
@@ -152,7 +152,7 @@ public static class BombThrowRules
             fuseSeconds-=SimulationStep;
             if(fuseSeconds<=0)return new(points,ThrowProjectionEnd.Fuse);
             var flight=cellKind is null&&stage is null?Advance(position,velocity,SimulationStep,gravityScale):
-                AdvanceStatic(position,velocity,SimulationStep,floorAt,kindAt,hasCover??((x,z)=>false),bounce,gravityScale,stage);
+                BlizzardRules.AdvanceFlight(position,velocity,SimulationStep,windAt?.Invoke(tick*SimulationStep)??Vector2.Zero,floorAt,kindAt,hasCover??((x,z)=>false),bounce,gravityScale,stage);
             stopped|=(velocity.X!=0||velocity.Z!=0)&&flight.Velocity.X==0&&flight.Velocity.Z==0;
             position=flight.Position;velocity=flight.Velocity;
             if(obstructed(position))return new(points,ThrowProjectionEnd.Obstructed);
@@ -162,7 +162,7 @@ public static class BombThrowRules
                 return new(points,ThrowProjectionEnd.Water);
             }
             var floor=cellKind is null&&stage is null?surface(position.X,position.Z):
-                LandingHeight(position.X,position.Z,floorAt,kindAt,hasCover??((x,z)=>false),(x,z)=>stage?.At(x,z).ObstacleHeight??PillarHeight);
+                LandingHeight(position.X,position.Z,floorAt,kindAt,hasCover??((x,z)=>false),(x,z)=>stage?.At(x,z).ObstacleHeight??PillarHeight,stage?.SoftBlockHeight??CoverHeight);
             if(position.Y<=floor)
             {
                 position.Y=floor;points.Add(position);
