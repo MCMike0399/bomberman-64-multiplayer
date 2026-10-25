@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Fail closed unless every configured node serves the exact release and rejects obsolete admission."""
 import json
+import os
 import argparse
 from pathlib import Path
 import subprocess
@@ -17,6 +18,14 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 
 
 def request(origin, path, token=None, body=None):
+    try:
+        return _request(origin, path, token, body)
+    except (urllib.error.URLError, OSError, ValueError) as error:
+        log = private_failure_log(str(error))
+        raise RuntimeError('Deployment HTTP readiness request failed. Private log: ' + log) from None
+
+
+def _request(origin, path, token=None, body=None):
     headers = {'Cache-Control': 'no-cache'}
     if token is not None:
         headers['X-Blast-Protocol'] = token
@@ -42,7 +51,10 @@ def targets_from_json(value):
     for origin in targets.values():
         if not isinstance(origin, str):
             raise RuntimeError('deployment origins must be URLs')
-        url = urllib.parse.urlsplit(origin)
+        try:
+            url = urllib.parse.urlsplit(origin)
+        except ValueError:
+            raise RuntimeError('Invalid deployment origin URL') from None
         if (url.scheme not in ('http', 'https') or not url.hostname or url.username or url.password or url.query or url.fragment
                 or (url.scheme == 'http' and url.hostname not in ('localhost', '127.0.0.1', '::1'))):
             raise RuntimeError('deployment origins require HTTPS, or HTTP on loopback, without credentials')
@@ -121,13 +133,38 @@ def verify_connections(targets, placements=None):
             raise RuntimeError('Deployment real lobby/WebSocket connection failed: ' + name + '. Private log: ' + log)
 
 
+def mask_configuration():
+    # GitHub masks the full secret value, not necessarily its parsed components.
+    # Register origins and hostnames before any network operation or diagnostics.
+    targets = json.loads(os.environ.get('BLAST_RELEASE_SERVER_URLS') or '{}')
+    if not isinstance(targets, dict):
+        raise RuntimeError('Release target configuration must be an object')
+    for origin in targets.values():
+        if not isinstance(origin, str):
+            raise RuntimeError('Release target origins must be strings')
+        try:
+            hostname = urllib.parse.urlsplit(origin).hostname
+        except ValueError:
+            raise RuntimeError('Invalid release target URL configuration') from None
+        for value in (origin, hostname):
+            if value:
+                escaped = value.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+                print('::add-mask::' + escaped)
+
+
 def main():
     from release_identity import check_exports
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--targets', required=True, help='JSON object of node names to origins')
-    parser.add_argument('--expected-sha', required=True)
-    parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--mask-configuration', action='store_true', help='Register secret target components with the Actions log masker')
+    parser.add_argument('--targets', help='JSON object of node names to origins')
+    parser.add_argument('--expected-sha')
+    parser.add_argument('--output', type=Path)
     args = parser.parse_args()
+    if args.mask_configuration:
+        mask_configuration()
+        return
+    if not args.targets or not args.expected_sha or not args.output:
+        parser.error('--targets, --expected-sha and --output are required for verification')
     release = check_exports()
     receipts = verify(targets_from_json(args.targets), release, args.expected_sha)
     args.output.parent.mkdir(parents=True, exist_ok=True)

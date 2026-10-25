@@ -57,3 +57,5 @@ jobs:
       publish: true
     secrets:
       BLAST_UPDATE_SIGNING_KEY: ${{ secrets.BLAST_UPDATE_SIGNING_KEY }}
+      BLAST_RELEASE_SERVER_URLS: ${{ secrets.BLAST_RELEASE_SERVER_URLS }}
+      BLAST_RELEASE_PLACEMENTS: ${{ secrets.BLAST_RELEASE_PLACEMENTS }}

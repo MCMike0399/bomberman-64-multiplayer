@@ -15,6 +15,10 @@ on:
     secrets:
       BLAST_UPDATE_SIGNING_KEY:
         required: true
+      BLAST_RELEASE_SERVER_URLS:
+        required: false
+      BLAST_RELEASE_PLACEMENTS:
+        required: false
   workflow_dispatch:
     inputs:
       run_id:
@@ -78,12 +82,13 @@ jobs:
           EXPECTED_SHA: ${{ needs.validate.outputs.revision }}
           BLAST_DEPLOY_ADAPTER: ${{ vars.BLAST_DEPLOY_ADAPTER }}
           BLAST_DEPLOY_STATE_DIR: ${{ vars.BLAST_DEPLOY_STATE_DIR }}
-          BLAST_RELEASE_SERVER_URLS: ${{ vars.BLAST_RELEASE_SERVER_URLS }}
-          BLAST_RELEASE_PLACEMENTS: ${{ vars.BLAST_RELEASE_PLACEMENTS }}
+          BLAST_RELEASE_SERVER_URLS: ${{ secrets.BLAST_RELEASE_SERVER_URLS }}
+          BLAST_RELEASE_PLACEMENTS: ${{ secrets.BLAST_RELEASE_PLACEMENTS }}
           BLAST_UPDATE_SIGNING_KEY: ${{ secrets.BLAST_UPDATE_SIGNING_KEY }}
         run: |
           set -euo pipefail
           umask 077
+          python3 tools/ci/verify_deployment.py --mask-configuration
           key=$(mktemp "$RUNNER_TEMP/blast-update-signing.XXXXXX")
           trap 'rm -f "$key"' EXIT
           test -n "$BLAST_UPDATE_SIGNING_KEY"
@@ -126,11 +131,12 @@ jobs:
           EXPECTED_SHA: ${{ needs.validate.outputs.revision }}
           BLAST_UPDATE_SIGNING_KEY: ${{ secrets.BLAST_UPDATE_SIGNING_KEY }}
           PUBLISH_RELEASE: ${{ inputs.publish }}
-          BLAST_RELEASE_SERVER_URLS: ${{ vars.BLAST_RELEASE_SERVER_URLS }}
-          BLAST_RELEASE_PLACEMENTS: ${{ vars.BLAST_RELEASE_PLACEMENTS }}
+          BLAST_RELEASE_SERVER_URLS: ${{ secrets.BLAST_RELEASE_SERVER_URLS }}
+          BLAST_RELEASE_PLACEMENTS: ${{ secrets.BLAST_RELEASE_PLACEMENTS }}
         run: |
           set -euo pipefail
           umask 077
+          python3 tools/ci/verify_deployment.py --mask-configuration
           key="$RUNNER_TEMP/blast-update-signing.pem"
           trap 'rm -f "$key"' EXIT
           test -n "$BLAST_UPDATE_SIGNING_KEY"

@@ -1,11 +1,14 @@
 """Release preparation and crash recovery exercise actual files and adapter processes."""
 import json
+import io
+import contextlib
 import os
 from pathlib import Path
 import tempfile
 import unittest
 import subprocess
 import traceback
+import urllib.error
 import verify_deployment
 from unittest.mock import patch
 
@@ -33,13 +36,13 @@ class ReleaseOperationsTests(unittest.TestCase):
 
     def test_doctor_reports_missing_infrastructure_without_disclosing_values(self):
         replies = [json.dumps([{'variables': [{'name': 'BLAST_RELEASE_SERVER_URLS', 'value': '{"private":"https://secret.example"}'}]}]),
-                   '[{"secrets":[]}]', '{"environments":[]}', '[{"runners":[]}]']
+                   '[{"secrets":[{"name":"BLAST_RELEASE_SERVER_URLS"}]}]', '{"environments":[]}', '[{"runners":[]}]']
         with patch.object(release, 'gh', side_effect=replies), patch.object(release, 'check_exports', return_value={'version': '1.0.0'}):
             checks = release.doctor('example/game', True)
         self.assertFalse(checks['production environment exists'])
         self.assertFalse(checks['online dedicated deployment runner'])
-        self.assertTrue(checks['explicit deployment targets configured'])
-        self.assertFalse(checks['expected worker placements configured'])
+        self.assertTrue(checks['deployment target secret configured'])
+        self.assertFalse(checks['worker placement secret configured'])
         self.assertNotIn('secret.example', json.dumps(checks))
 
     def test_interrupted_apply_recovers_from_disk_with_a_real_adapter(self):
@@ -86,6 +89,30 @@ class ReleaseOperationsTests(unittest.TestCase):
                 output = traceback.format_exc()
             else:
                 self.fail('A timed-out probe must fail')
+        self.assertNotIn(private, output)
+        log.assert_called_once()
+
+    def test_actions_masks_individual_origins_and_hostnames_with_command_escaping(self):
+        output = io.StringIO()
+        origin = 'https://private.example/path%25\n::warning::fixture'
+        with patch.dict(os.environ, {'BLAST_RELEASE_SERVER_URLS': json.dumps({'fallback': origin})}), contextlib.redirect_stdout(output):
+            verify_deployment.mask_configuration()
+        commands = output.getvalue().splitlines()
+        self.assertEqual(2, len(commands))
+        self.assertEqual('::add-mask::https://private.example/path%2525%0A::warning::fixture', commands[0])
+        self.assertEqual('::add-mask::private.example', commands[1])
+
+    def test_https_failure_never_exposes_private_origins_in_tracebacks(self):
+        private = 'private-worker.example'
+        failure = urllib.error.URLError('certificate hostname mismatch: ' + private)
+        with patch.object(verify_deployment.urllib.request, 'build_opener') as opener, patch.object(verify_deployment, 'private_failure_log', return_value='/private/failure.log') as log:
+            opener.return_value.open.side_effect = failure
+            try:
+                verify_deployment.request('https://' + private, '/game')
+            except Exception:
+                output = traceback.format_exc()
+            else:
+                self.fail('TLS validation failure must fail readiness')
         self.assertNotIn(private, output)
         log.assert_called_once()
 
