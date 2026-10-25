@@ -71,6 +71,15 @@ public partial class PlaytestDriver
         Check(State.GetProperty("hurryMode").GetString()=="meteors"&&State.GetProperty("closedLeft").GetInt32()==0,"garden fireballs replace column closure");
         var target=State.GetProperty("meteors")[0];
         await Capture("rock-garden-fireball-warning");
+        await KeyPress(Key.Escape);
+        Check(_root.ScreenName=="Pause","garden local fireballs can be paused through ordinary game menu");
+        var pausedMeteor=_root.FindChildren("*","",true,false).OfType<BlastCircuit.Arena.Effects.MeteorView>().First();
+        float PausedHeight()=>pausedMeteor.GetChildren().OfType<Node3D>().Last().Position.Y;
+        float pausedHeight=PausedHeight();int pausedSnapshots=_root.SnapshotCount;
+        await Frames(12);
+        Check(_root.SnapshotCount==pausedSnapshots&&Math.Abs(PausedHeight()-pausedHeight)<.001f,"local pause freezes both authoritative and rendered fireball descent");
+        await ActivateNamed("ResumeGame");
+
         Input(0,new PlayerInput(1,0));await Frames(25);Input(0,default);
         await Capture("rock-garden-falling-fireball");
         await WaitState(s=>s.GetProperty("hazards").GetArrayLength()>0,"garden fireball reaches real impact",60);

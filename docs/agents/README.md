@@ -40,7 +40,7 @@ update the current guide rather than silently reviving old behavior.
 - Rock Garden reconstruction (2026-10-24): an enclosed square lawn, five round
   columns, central cross-shaped paving and sixteen destructible boulders replace
   the wide open stone platform and thirteen pillars. Eight seats use separate
-  quadrant/corner spawns. [Stage contract](../rock-garden.md) and
+  quadrant/corner spawns; falling fireballs replace closing-column Hurry. [Stage contract](../rock-garden.md) and
   [original references](../rock-garden-research.md) distinguish evidence from tuning.
 
 - v0.27 connection work adds persistent random lobbies and player-hosted peer

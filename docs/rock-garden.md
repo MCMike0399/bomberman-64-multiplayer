@@ -31,7 +31,10 @@ See the [source research](rock-garden-research.md) for evidence and uncertainty.
   use seeded floor positions. Moving after warning escapes the target. Impacts
   use the existing level-one spherical blast, shielding, hearts, chains and
   loot rules. Bots plan around those same published warnings. Practice and
-  disabled sudden death spawn none; new rounds clear all warnings.
+  disabled sudden death spawn none; new rounds clear all warnings. Local pause
+  also freezes rendered descent; online snapshots keep updating under the menu.
+  Peer-hosted snapshots validate the warning list, coordinates and countdown
+  before creating presentation nodes.
 
 The exact dimensions, additional four seats, seeded boulder positions, continuous
 movement, item probabilities, fireball cadence, targeting and damage are Blast Circuit

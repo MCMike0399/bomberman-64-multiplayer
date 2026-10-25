@@ -7,6 +7,9 @@ public sealed partial class ArtMaterials
     {
         var material=new ShaderMaterial{Shader=_gardenShader??=new Shader{Code=GardenShader}};
         material.SetShaderParameter("surface_kind",grass?0:boulder?2:1);
+        material.SetShaderParameter("grass_dark",new Color("245a22"));
+        material.SetShaderParameter("grass_light",new Color("4c8b32"));
+        material.SetShaderParameter("stone_color",new Color(boulder?"939487":"b1b2a2"));
         return material;
     }
 
@@ -16,6 +19,9 @@ public sealed partial class ArtMaterials
 shader_type spatial;
 render_mode diffuse_burley;
 uniform int surface_kind=0;
+uniform vec4 grass_dark : source_color;
+uniform vec4 grass_light : source_color;
+uniform vec4 stone_color : source_color;
 varying vec3 world;
 varying vec3 normal_world;
 float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
@@ -29,17 +35,19 @@ void fragment(){
  float cloud=noise(p*.72)*.65+noise(p*2.3)*.35;
  float detail=mix(.5,noise(p*26.0),1.0-smoothstep(.25,1.1,length(fwidth(p*26.0))));
  if(surface_kind==0){
-   ALBEDO=mix(vec3(.12,.28,.055),vec3(.35,.54,.14),cloud);
+   ALBEDO=mix(grass_dark.rgb,grass_light.rgb,cloud);
    ALBEDO*=.96+detail*.08;
    ROUGHNESS=.96;
  }else{
-   vec3 base=surface_kind==2?vec3(.48,.49,.40):vec3(.64,.65,.55);
+   vec3 base=stone_color.rgb;
    ALBEDO=base*(.82+cloud*.29+(detail-.5)*.09);
    // Fine discontinuous vertical fissures, plus moss close to the ground.
-   float crack=1.0-smoothstep(.018,.055,abs(sin(p.x*19.0+noise(p*2.0)*4.0)));
-   crack*=smoothstep(.45,.7,noise(p*4.2));
+   float vein=abs(sin(p.x*8.0+noise(p*1.1)*3.0));
+   float aa=max(fwidth(vein),.01);
+   float crack=1.0-smoothstep(.025-aa,.025+aa,vein);
+   crack*=smoothstep(.5,.72,noise(p*1.5));
    ALBEDO*=1.0-crack*.3;
-   float moss=(1.0-smoothstep(.03,.25,world.y))*smoothstep(.35,.72,noise(world.xz*6.0));
+   float moss=(1.0-abs(normal_world.y))*(1.0-smoothstep(.03,.25,world.y))*smoothstep(.35,.72,noise(world.xz*6.0));
    ALBEDO=mix(ALBEDO,vec3(.19,.28,.10),moss*.5);
    ROUGHNESS=.9;
  }

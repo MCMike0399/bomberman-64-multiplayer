@@ -328,6 +328,6 @@ lifetimes have separate authority and graphical expiration witnesses.
 traversal, four wall contacts, shielding, block percentages and fireball
 warning/escape/damage. The `rock-garden` native journey belongs to `all` and
 `core-headless`: four/eight-seat starts, real boulder destruction and pickup,
-fireball warning/escape/impact, CPU combat and graphical detail captures. The
+fireball warning/pause/escape/impact, CPU combat and graphical detail captures. The
 shared walking helper reads the active stage rather than assuming Temple.
 See the [stage contract](../rock-garden.md) and [research](../rock-garden-research.md).

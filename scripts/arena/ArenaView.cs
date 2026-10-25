@@ -22,6 +22,7 @@ public partial class ArenaView : Node3D
     {
         _battleActive=active;
         if(!active)ClearThrowPreviews();
+        foreach(var meteor in _entities.Values.OfType<MeteorView>())meteor.SetProcess(active);
     }
     public IReadOnlyList<ThrowPreviewState> ThrowPreviews {get;private set;}=[];
     public void SetLocalInput(string playerId,PlayerInput input)=>_localInputs[playerId]=input;
@@ -238,6 +239,7 @@ public partial class ArenaView : Node3D
             }
             node.Position=new(F(meteor,"x"),0,F(meteor,"z"));
             ((MeteorView)node).SetRemaining(F(meteor,"remaining"));
+            node.SetProcess(_battleActive);
         }
         foreach(var item in data.GetProperty("items").EnumerateArray())
         {
