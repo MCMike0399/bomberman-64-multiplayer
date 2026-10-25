@@ -63,7 +63,7 @@ public partial class TutorialHud : Control
             _instructions.Text=data.GetProperty("feedback").GetString();
             _next.Visible=complete;_next.Text=_lesson==TutorialCourse.Lessons[^1]?"Back to lessons":"Next lesson";
             foreach(var button in _actions.GetChildren().OfType<Button>())button.FocusMode=FocusModeEnum.All;
-            if(!_finished){_finished=true;(complete?_next:_retry).CallDeferred(Control.MethodName.GrabFocus);}
+            if(!_finished){_finished=true;Refresh();(complete?_next:_retry).CallDeferred(Control.MethodName.GrabFocus);}
         }
     }
     public void FocusAction(){if(_finished)(_next.Visible?_next:_retry).GrabFocus();}
@@ -71,7 +71,9 @@ public partial class TutorialHud : Control
     {
         if(_lesson is null)return;
         if(!_finished)_instructions.Text=Instructions(_lesson.Description);
-        _tip.Text=_lesson.Tip+"  ·  "+(ControllerHub.Current.ActiveFamily==ControllerFamily.Keyboard?"Esc":ControllerProfile.ButtonName(ControllerHub.Current.ActiveFamily,JoyButton.Start))+": pause";
+        var family=ControllerHub.Current.ActiveFamily;
+        string key=family==ControllerFamily.Keyboard?"Esc":ControllerProfile.ButtonName(family,_finished?ControllerProfile.CancelButton(family):JoyButton.Start);
+        _tip.Text=_lesson.Tip+"  ·  "+key+(_finished?": lessons":": pause");
     }
     public static string Instructions(string text)
     {

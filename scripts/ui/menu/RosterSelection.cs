@@ -127,7 +127,8 @@ public partial class RosterSelection : VBoxContainer
         "EMPTY SEAT"=>"Empty seat","CPU CONTROLLED"=>"Computer","CONNECT GAMEPAD"=>"Connect a gamepad",
         _=>binding.Replace(" • CONNECT PAD",", connect a pad").Replace("GAMEPAD","Gamepad").Replace("  •  ",", ").Replace(" • ",", ")
     };
-    public void FocusFirst()=>_cards[0].Role.GrabFocus();
+    public bool HasOpenPopup=>_cards.Any(c=>c.Role.GetPopup().Visible);
+    public Control[][] FocusColumns=>_cards.Select(c=>new Control[]{c.Role,c.Appearance}).ToArray();
 }
 
 

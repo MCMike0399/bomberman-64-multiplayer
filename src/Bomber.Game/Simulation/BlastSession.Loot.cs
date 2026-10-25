@@ -81,6 +81,22 @@ public sealed partial class BlastSession
 
     // ─── items ────────────────────────────────────────────────────────────────
 
+    private IEnumerable<(int X,int Z,string Type)> PracticeItems(Random random)
+    {
+        var candidates=_stage.TrainingItems.Where(item=>_advanced.Allows(item.Type)).ToArray();
+        // Small, explicitly restricted pools remain useful for targeted practice.
+        if(candidates.Length<=6)return candidates;
+        var result=new List<(int X,int Z,string Type)>();
+        foreach(var (types,budget) in new[]{
+            (candidates.Where(i=>i.Type is "fire" or "bomb").ToArray(),3),
+            (candidates.Where(i=>PowerUpRules.IsAbility(i.Type)||PowerUpRules.IsStatus(i.Type)).ToArray(),2),
+            (candidates.Where(i=>PowerUpRules.IsBombType(i.Type)).ToArray(),1)})
+        {
+            random.Shuffle(types);result.AddRange(types.Take(budget));
+        }
+        return result;
+    }
+
     private void DropItem(ISessionContext context, int cx, int cz, int tier, string? guaranteedType = null)
     {
         var type = guaranteedType ?? PowerUpRules.ChooseDrop(context.Random,_advanced);

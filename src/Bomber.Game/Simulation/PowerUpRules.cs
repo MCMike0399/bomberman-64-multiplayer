@@ -5,15 +5,16 @@ public static class PowerUpRules
 {
     public const int StartingBombs=3,MaximumBombs=5,MaximumNormalFire=5,MaximumMegaFire=8;
     public const float ItemLifetime=20,SwapPickupDelay=1.5f,NormalPumpSeconds=.45f,FocusPumpSeconds=.15f;
-    public const double DropChance=.55;
-    public static bool IsBombType(string type)=>type is "red" or "remote" or "bounce" or "fast";
+    public const double DropChance=AdvancedRules.DefaultDropPercent/100d;
+    public static bool IsBombType(string type)=>type is "red" or "remote" or "bounce";
     public static bool IsAbility(string type)=>type is "heart" or "focus";
     public static bool IsStatus(string type)=>type is "tiny" or "big" or "haste" or "slow";
     public static string ChooseDrop(Random random)=>ChooseDrop(random,new AdvancedRules())!;
     public static string? ChooseDrop(Random random,AdvancedRules? rules)
     {
         rules??=new();
-        var pool=new (string Type,int Weight)[]{("fire",30),("bomb",30),("remote",7),("red",7),("bounce",6),("fast",4),("heart",3),("focus",3),("tiny",3),("big",3),("haste",2),("slow",2)}.Where(item=>rules.Allows(item.Type)).ToArray();
+        // 60% stacking upgrades, 30% buffs/debuffs, 10% bomb equipment.
+        var pool=new (string Type,int Weight)[]{("fire",90),("bomb",90),("heart",15),("focus",15),("tiny",15),("big",15),("haste",15),("slow",15),("remote",10),("red",10),("bounce",10)}.Where(item=>rules.Allows(item.Type)).ToArray();
         int total=pool.Sum(item=>item.Weight);if(total==0)return null;
         int roll=random.Next(total);
         foreach(var item in pool){roll-=item.Weight;if(roll<0)return item.Type;}
@@ -39,7 +40,7 @@ public static class PowerUpRules
         {
             case "fire":p.FireLevel=Math.Min(p.FireLevel+1,p.MaxFire);break;
             case "bomb":p.BombCapacity=Math.Min(p.BombCapacity+1,p.MaxBombs);break;
-            case "red":case "remote":case "bounce":case "fast":p.BombType=type;break;
+            case "red":case "remote":case "bounce":p.BombType=type;break;
             case "heart":case "focus":p.Ability=type;break;
             case "tiny":case "big":case "haste":case "slow":p.StatusEffect=type;p.StatusRemaining=p.EffectDuration;break;
             default:return;

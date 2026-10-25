@@ -5,7 +5,7 @@ if (!origin || !expected || !output) throw Error('Usage: placement-probe.mjs ORI
 let token, room, socket, failure, cleaned = false;
 async function api(route, body) {
   const response = await fetch(new URL('/realtime/v1/' + route, origin), {
-    method: 'POST', headers: { 'X-Blast-Protocol': '3', 'Content-Type': 'application/json', ...(token ? { 'x-player-token': token } : {}) },
+    method: 'POST', headers: { 'X-Blast-Protocol': '4', 'Content-Type': 'application/json', ...(token ? { 'x-player-token': token } : {}) },
     body: JSON.stringify(body), signal: AbortSignal.timeout(10000)
   });
   const value = response.status === 204 ? null : await response.json();
@@ -20,8 +20,8 @@ try {
   const url = new URL(created.reservation.connectUrl, origin);
   url.protocol = ['https:', 'wss:'].includes(url.protocol) ? 'wss:' : 'ws:';
   if (origin.startsWith('https:') && url.protocol !== 'wss:') throw Error('Insecure socket route');
-  socket = new WebSocket(url, {headers: {'X-Blast-Protocol': '3'}});
-  socket.addEventListener('open', () => socket.send(JSON.stringify({ t: 'peer.hello', d: { version: 3 } })));
+  socket = new WebSocket(url, {headers: {'X-Blast-Protocol': '4'}});
+  socket.addEventListener('open', () => socket.send(JSON.stringify({ t: 'peer.hello', d: { version: 4 } })));
   await new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(Error('No owning-node welcome')), 10000);
     socket.addEventListener('message', e => { if (JSON.parse(e.data).t === (game === 'blast-peer' ? 'party.status' : 'sys.welcome')) { clearTimeout(timer); resolve(); } });

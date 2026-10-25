@@ -14,7 +14,13 @@ public partial class GameRoot
             if(_session is NetworkSession {IsLeader:true,Party.Phase:"lobby"} room)room.SetRoomSettings(_menu.OnlineSettings);
             _editingRoom=false;ShowPartyLobby();return;
         }
-        if(_setupForHost){Navigate("Online");return;}
+        if(_setupForHost)
+        {
+            // Save advances to Online even when the editor was opened directly.
+            // Drop its history entry so the next Back cannot reopen the editor.
+            while(_menuHistory.TryPop(out var previous)&&previous!="Online"){}
+            Navigate("Online",restoreFocus:true);return;
+        }
         int humans=_menu.HumanCount;
         if(humans>LocalControllerLayout.Capacity(ControllerHub.Current.PlayableCount))
         {_menu.Notice($"Connect more gamepads for {humans} human players. Two keyboard seats are available.");return;}
@@ -26,7 +32,8 @@ public partial class GameRoot
         if(_connecting)return;
         try
         {
-            var session=new LocalSession(settings,humans,practice:practice,playerAppearances:playerAppearances);
+            // A fresh practice cache should offer different effects/equipment on replay.
+            var session=new LocalSession(settings,humans,seed:practice?System.Random.Shared.Next():64,practice:practice,playerAppearances:playerAppearances);
             _lastSettings=settings;_lastHumans=humans;_lastAppearances=playerAppearances?.ToArray();_practice=practice;_lastServer=null;
             Begin(session,false);
         }
@@ -102,7 +109,9 @@ public partial class GameRoot
 
     private void CancelConnection()
     {
-        var cancellation=_connectCancel;_connectCancel=null;_connecting=false;cancellation?.Cancel();
+        var cancellation=_connectCancel;_connectCancel=null;
+        if(_connecting)_menu.SetBusy(false);
+        _connecting=false;cancellation?.Cancel();
     }
 
     private void ReleaseSession()

@@ -11,9 +11,9 @@ internal static class OnlineRoomChecks
         var legacy=new Context();var legacyRoom=new PeerRoomSession(new("legacy","blast-peer",legacy.Settings,64));
         var legacyHost=legacy.Add("old-host",0);var legacyGuest=legacy.Add("old-guest",1);
         foreach(var p in new[]{legacyHost,legacyGuest})
-        {legacyRoom.OnPlayerJoined(legacy,p);legacyRoom.OnMessage(legacy,p,new("peer.hello",JsonSerializer.SerializeToElement(new{version=1}),null,legacy.Now));}
+        {legacyRoom.OnPlayerJoined(legacy,p);legacyRoom.OnMessage(legacy,p,new("peer.hello",JsonSerializer.SerializeToElement(new{version=3}),null,legacy.Now));}
         legacyRoom.OnMessage(legacy,legacyHost,new("party.start",JsonSerializer.SerializeToElement(new{}),null,legacy.Now));
-        Check(legacy.Frames.Last(f=>f.Type=="party.status").Data.GetProperty("phase").GetString()=="lobby","v0.27 peers cannot start the changed stage protocol");
+        Check(legacy.Frames.Last(f=>f.Type=="party.status").Data.GetProperty("phase").GetString()=="lobby","v0.29 peers cannot start the changed bomb-loadout protocol");
         legacyRoom.OnMessage(legacy,legacyHost,new("peer.hello",JsonSerializer.SerializeToElement(new{version=OnlineProtocol.Revision}),null,legacy.Now));
         Check(!legacy.Frames.Last(f=>f.Type=="party.status").Data.GetProperty("canStart").GetBoolean(),"mixed old/new peers cannot start");
         Check(legacy.Frames.Last(f=>f.Type=="party.status").Data.GetProperty("notice").GetString()==OnlineProtocol.UpdateMessage,"incompatible peers receive the release-specific update instruction");

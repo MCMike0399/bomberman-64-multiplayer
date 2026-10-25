@@ -54,7 +54,7 @@ public partial class BombModel : Node3D
         _charge=charge;_fuseAssembly.Visible=!remote;
         _shot=motion==1&&carrier is null;_remoteIndicators.Visible=remote;
         _targetSize=Math.Min(2.3f,BaseVisualScale+Math.Max(0,level-1)*.04f+pumps*.32f);
-        _shell.MaterialOverride=_art.Toy(remote?new("2478e8"):red?new("d82e43"):mode=="bounce"?new("a365ea"):mode=="fast"?new("43d9a1"):new("222536"),.2f);
+        _shell.MaterialOverride=_art.Toy(remote?new("2478e8"):red?new("d82e43"):mode=="bounce"?new("a365ea"):new("222536"),.2f);
         return pumped;
     }
     public override void _Process(double delta)

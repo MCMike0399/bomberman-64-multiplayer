@@ -12,7 +12,7 @@ internal static class ServerCompatibilityChecks
         int checks=0;
         if (OnlineProtocol.Accepts(["3"])) throw new Exception("A new release must invalidate the previous release's online admission token");
         checks++;
-        foreach(string[]? advertised in new string[]?[]{null,["1"],["2"],[$"{OnlineProtocol.Revision}/0.0.0/1"],[$"{OnlineProtocol.Revision}/999.0.0/999"],[OnlineProtocol.WireRevision,OnlineProtocol.WireRevision],[OnlineProtocol.WireRevision]})
+        foreach(string[]? advertised in new string[]?[]{null,["1"],["2"],["3"],["4"],[$"{OnlineProtocol.Revision}/0.0.0/1"],[$"{OnlineProtocol.Revision}/999.0.0/999"],[OnlineProtocol.WireRevision,OnlineProtocol.WireRevision],[OnlineProtocol.WireRevision]})
         {
             using var handler=new Reply(advertised);
             var constructor=typeof(NetworkSession).GetConstructor(BindingFlags.Instance|BindingFlags.NonPublic,null,[typeof(Uri),typeof(HttpMessageHandler)],null)!;

@@ -1,6 +1,6 @@
 namespace Bomber.Game;
 
-/// <summary>Every release has an exact admission token; the schema revision also guards peer messages.</summary>
+/// <summary>Every release has an exact admission token; schema 4 also preserves the removal of Fast bomb settings/motion.</summary>
 public static class OnlineProtocol
 {
     private static string Metadata(string key) => typeof(OnlineProtocol).Assembly
