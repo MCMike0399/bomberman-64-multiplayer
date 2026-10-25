@@ -18,6 +18,12 @@ public partial class PlaytestDriver
         _root.Navigate("Online");_root.SetOnlineAppearance(3);await Frames(3);
         await ActivateNamed("OnlineAppearance");
         Check(_root.SelectedAppearance==4,"online suit button selects the host appearance");
+        NamedButton("CreatePrivateRoom").GrabFocus();
+        var cancelled=_root.StartOnlineAsync(new Uri(_server),"Cancelled navigation trial",new SessionSettings(),NetworkMode.CreatePrivate,appearance:_root.SelectedAppearance);
+        Check(NamedButton("CancelConnect").HasFocus(),"connecting immediately focuses its Cancel action");
+        CtlKey(Key.Escape,true);CtlKey(Key.Escape,false);await cancelled;await Frames(4);
+        Check(_root.ScreenName=="Online"&&NamedButton("CreatePrivateRoom").HasFocus()&&!NamedButton("CreatePrivateRoom").Disabled&&!NamedButton("CancelConnect").Visible,
+            "Esc cancels a real pending connection and restores its enabled opener without stale deferred focus");
         await _root.StartOnlineAsync(new Uri(_server),"Harness host",new SessionSettings(Stage:"sunken-temple",Bots:0),NetworkMode.CreatePrivate,appearance:_root.SelectedAppearance);
         Check(_root.ActiveSession is NetworkSession,"engine uses product network adapter");
         var host=(NetworkSession)_root.ActiveSession!;
@@ -43,10 +49,19 @@ public partial class PlaytestDriver
         Check(lobbyText.Contains("Harness peer",StringComparison.Ordinal),"lobby renders peer name in visible UI");
         Check(lobbyText.Contains("You own this room",StringComparison.Ordinal),"lobby identifies room ownership and manual start");
         await Task.Delay(4200);await Frames(2);Check(_root.ScreenName=="Lobby"&&_root.LatestState==null,"full private lobby does not automatically start");
+        NamedButton("StartRoom").GrabFocus();await KeyPress(Key.Right);
+        Check(NamedButton("EditRoomSettings").HasFocus(),"Right moves across the real lobby action row to room settings");
+        await KeyPress(Key.Right);Check(NamedButton("LobbySettings").HasFocus(),"Right reaches personal settings in the lobby row");
+        await KeyPress(Key.Left);Check(NamedButton("EditRoomSettings").HasFocus(),"Left returns along the lobby action row");
+        await KeyPress(Key.Up);Check(NamedButton("CopyRoomCode").HasFocus(),"Up leaves the lobby action row for Copy code");
         await ActivateNamed("CopyRoomCode");
         Check(DisplayServer.ClipboardGet()==host.JoinCode,"copy button writes the actual room code to clipboard");
         Check(NamedButton("CopyRoomCode").Text=="Copied!","copy button confirms success");
         await Capture("network-lobby");
+        await ActivateNamed("LobbySettings");await KeyPress(Key.Escape);
+        Check(_root.ScreenName=="Lobby"&&NamedButton("LobbySettings").HasFocus()&&ReferenceEquals(host,_root.ActiveSession),"lobby Settings Back restores focus without leaving the room");
+        await ActivateNamed("EditRoomSettings");await KeyPress(Key.Escape);
+        Check(_root.ScreenName=="Lobby"&&NamedButton("EditRoomSettings").HasFocus()&&ReferenceEquals(host,_root.ActiveSession),"Esc from room rules returns to its lobby opener");
         string roomIdentity=host.LobbyId!;
         await ActivateNamed("EditRoomSettings");
         Check(_root.ScreenName=="Setup"&&host.LobbyId==roomIdentity,"leader opens existing rules editor without leaving room");

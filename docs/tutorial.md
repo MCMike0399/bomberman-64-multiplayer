@@ -28,8 +28,10 @@ ghosts/shake-off, rising water and a final Easy CPU challenge.
 Instructions use the current keyboard or controller family's labels. The header
 shows the active objective, while a gold ground ring marks spatial goals. Clear
 and failure states stop authority simulation until the player explicitly chooses
-Next, Retry or Lessons. Esc/Start pauses; its menu supports retry, settings and
-returning to lessons. Selecting/replaying a lesson rebuilds its initial state.
+Next, Retry or Lessons. While a lesson is running, Esc/Start pauses; its menu
+supports retry, settings and returning to lessons. On clear/failure, Start focuses
+Next/Retry without activating it, and Esc/controller Back returns to the current
+lesson in the browser. Selecting/replaying a lesson rebuilds its initial state.
 Completed stars survive replay and restart; merely opening a lesson awards none.
 
 Lessons deliberately author their starting conditions: required pickups and
