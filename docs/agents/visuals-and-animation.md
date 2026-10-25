@@ -361,6 +361,11 @@ outside the walls is visual only. The column and cover crowns use shared throw
 support heights; the paving is a shallow cosmetic layer. The stage selector
 uses the real square layout. See the [stage contract](../rock-garden.md).
 
+The menu miniature trims `GardenExterior` to the display footprint, matching the
+bounded ocean on other arenas. Duplicate its cached box mesh before resizing so
+the gameplay exterior stays full-size. `setup` checks the visible miniature's
+bounds and launches Rock Garden afterward to verify gameplay scenery is intact.
+
 ## v0.28 reference fidelity
 
 [Stage comparison](../stage-fidelity-research.md) and [explosion sequences](../explosion-fidelity-research.md) record inspected original imagery and limits. The integrated castle has taller authored walls and side banners; Up & Down uses rounded/fluted supports inside its solid footprint; Rock Garden's center crown is 1.35 units versus .9 for its outer columns. Original reference assets remain outside Git and exports.

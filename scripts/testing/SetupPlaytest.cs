@@ -1,6 +1,7 @@
 using Godot;
 using Bomber.Client;
 using BlastCircuit.UI.Menu;
+using BlastCircuit.Arena;
 namespace BlastCircuit.Testing;
 
 public partial class PlaytestDriver
@@ -19,6 +20,16 @@ public partial class PlaytestDriver
         }
         Check(menu.Settings.Stage=="sunken-temple","setup starts with the configured temple");
         await Adjust("StageSelector",Key.Right);Check(menu.Settings.Stage=="rock-garden","right selects authority Rock Garden");await Capture("setup-rock-garden");
+        var garden=AuditDescendants(_root).OfType<TempleStageView>().Single(t=>t.GetParent().Name=="ArenaDiorama");
+        var footprint=new Rect2(-.4f,-.4f,garden.Width+.8f,garden.Depth+.8f).Grow(.01f);
+        var scenery=AuditDescendants(garden).OfType<MeshInstance3D>().Where(m=>m.IsVisibleInTree()&&m.Mesh!=null).ToArray();
+        var spills=scenery.Where(m=>
+        {
+            var bounds=(garden.GlobalTransform.AffineInverse()*m.GlobalTransform)*m.Mesh.GetAabb();
+            return !footprint.Encloses(new Rect2(bounds.Position.X,bounds.Position.Z,bounds.Size.X,bounds.Size.Z));
+        }).Select(m=>m.Name.ToString()).ToArray();
+        Event("garden-miniature-bounds",new {meshes=scenery.Length,spills});
+        Check(scenery.Length>0&&spills.Length==0,"Rock Garden miniature scenery stays within its display footprint");
         await Adjust("StageSelector",Key.Right);Check(menu.Settings.Stage=="up-and-down","right selects authority Up & Down");await Capture("setup-up-and-down");
         if(!_headless)
         {
@@ -63,6 +74,13 @@ public partial class PlaytestDriver
         _root.Back();await Frames(3);
         menu.Configure(new SessionSettings(),1);_root.Navigate("Setup");await Frames(3);
         Check(NamedButton("LaunchMatch").Text=="Start Battle"&&!NamedButton("Winstovictory").Disabled,"local setup restores launch and editable rules after practice");
+        // Rebuilding gameplay after the menu also catches accidental edits to cached shared meshes.
+        await Adjust("StageSelector",Key.Right);_root.Navigate("Practice");await Frames(3);await ActivateNamed("LaunchMatch");
+        await WaitState(_=>_root.LatestStage?.GetProperty("id").GetString()=="rock-garden","practice opens Rock Garden after miniature selection",120);
+        var exterior=_root.FindChildren("GardenExterior","",true,false).OfType<MeshInstance3D>().Single(m=>m.GetViewport()==_root.GetViewport());
+        Check(exterior.Mesh.GetAabb().Size==new Vector3(160,.28f,160),"gameplay keeps its full exterior grass after menu preview resizing");
+        await Capture("setup-rock-garden-gameplay");_root.Back();await Frames(3);
+        menu.Configure(new SessionSettings(),1);
         _root.Navigate("Modes");await Frames(3);
     }
 }
