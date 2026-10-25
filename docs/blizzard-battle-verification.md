@@ -25,8 +25,10 @@ includes the supplied screenshot, official guidebook and normal/sudden-death foo
   projectile obstruction/landing, blast shielding and cover-height transport.
   Native geometry checks require spire tops at 1.755 render units, matching
   accepted collision. Other arenas retain their prior cover heights.
-- The exact signed export passed a fresh **peer-rooms** retry (**19** assertions)
-  and **adaptive-rooms** (**9**) against a task-owned server.
+- Before the size correction, a signed export passed a fresh **peer-rooms**
+  retry (**19** assertions) and **adaptive-rooms** (**9**). The updated build
+  separately passed the matching managed network/fleet gate, including the real
+  Blizzard room carrying its 1.3-unit cover height, and the native online journey.
 - The initial **recorded Metal map journey**, before the spire enlargement, passed **84** assertions with **12**
   captures, **zero runtime errors and zero runtime warnings**. It covers native
   arena selection, four-player opening, actual snow motion and local pause,
@@ -42,8 +44,14 @@ The user requested larger violet spires after the first screenshots. The
 updated spires are over twice as tall, with broader bodies and .94-unit bases.
 The screenshots below are replaced with captures of that updated build.
 
-The broader eight-journey `blizzard-regression` graphical run on the larger-spire build is in progress.
-Its final receipt will be recorded here before this PR leaves draft.
+The final **eight-journey Metal regression** on the larger-spire build passed
+**1,074 assertions / 96 captures**, with **zero runtime errors or warnings**.
+Its exact completed order was `first-use-rendering`, `blizzard-battle`,
+`graphics-settings`, `stage-lighting`, `setup`, `framing`, `asset-audit`, `network`.
+This includes Low/Medium/High across all six stages, all four lighting profiles,
+real setup navigation, both framing aspect ratios, actual asset geometry and
+online play. The 1920×1200 isolated desktop passed the 1600×1000 window check;
+no window/focus assertion was weakened.
 
 ## Screenshots from the verified export
 
