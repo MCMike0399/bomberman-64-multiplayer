@@ -89,3 +89,40 @@ camera, including airborne bombs, slopes and overlapping chains. Replace tests
 that require a lobe count with meaningful checks of active extent, lifetime,
 type distinction and bounded rendering cost. Actual visual inspection is the
 acceptance evidence; headless sphere counts cannot establish resemblance.
+
+## 2026-10-25 star core and v2 layers
+
+Re-inspected the [XFactor1111 recording](https://www.youtube.com/watch?v=SPjnYY_Gomo&t=11s).
+The pumped orange blast was viewed at about 0:11.6–0:13.6, sampled at 8–10 fps
+and cropped. The red-bomb blast was viewed at about 0:30.2–0:31.4, sampled at
+10 fps. Frames stayed in an ignored temporary directory and none were committed.
+Earlier inspection missed three details:
+
+- **Star core.** A white center with a yellow, five-point star outline sits
+  inside the orange body during expansion. Its points read as triangular flares
+  past the silhouette. The teal power body keeps a pale **star** visible
+  through most of its life.
+- **Power rim.** A thin white/cyan ring, with a fainter inner line, leads the
+  teal body. Small white puffs then pop at the rim before the body dissolves.
+- **Fade.** The orange body turns translucent amber and then a darker smoky tint
+  before vanishing. No persistent ground mark was seen.
+
+Modern stylized-VFX practice (community breakdowns such as the
+[Overwatch-inspired frag explosion](https://realtimevfx.com/t/stylized-frag-launcher-explosion-overwatch-inspiration-breakdown-posted/1894?page=2)
+and [its critique thread](https://realtimevfx.com/t/stylized-cartoon-explosion-overwatch-inspired/1767))
+contributes the following rules of thumb. These are artist conventions, not
+measurements:
+
+- keep the flash to a few frames;
+- offset layer starts by a few frames;
+- slow particles with heavy drag;
+- group sparks into directional jets;
+- keep rings soft and subordinate;
+- keep late smoke from drawing attention.
+
+Blast Circuit v2 combines both sources: the star as the identity mark, crisp
+toon heat bands, and a burning-edge noise dissolve after the hazard window.
+Ownership and invariants are in the
+[visuals guide](agents/visuals-and-animation.md#v028-reference-fidelity).
+Captured before/after sequences are evidence of appearance only. They do not
+recover original timing, geometry or damage volume.

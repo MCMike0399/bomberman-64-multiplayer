@@ -49,6 +49,19 @@ public partial class PlaytestDriver
                 await Frames(35);Check(Presentation.GetProperty("explosions").GetArrayLength()==0,"finished effects release nodes: "+tier);
                 _root.Back();await Frames(3);
             }
+            _root.StartLocal(new SessionSettings(Stage:"sunken-temple",Bots:0),1,practice:true);
+            await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"power practice reaches fight",150);
+            await MoveTo(14.5f,12.5f,120);await MoveTo(14.5f,13.5f,60);
+            Check(Player.GetProperty("red").GetBoolean(),"walking onto red power arms power bombs for the blast check");
+            Input(0,new PlayerInput(0,0,A:true));await Frames(2);Input(0,default);
+            await WaitState(s=>s.GetProperty("hazards").GetArrayLength()>0,"real power bomb detonates",130);
+            var power=Presentation.GetProperty("explosions").EnumerateArray().Single();
+            Check(power.GetProperty("powerWave").GetBoolean(),"power blast shows its own expanding ground rim");
+            Event("blast-visual",new {tier="power",fx=power});await Capture("blast-power-ignition",0);
+            await Frames(3);await Capture("blast-power-bloom",0);
+            await Frames(8);await Capture("blast-power-vapor",0);
+            await Frames(35);Check(Presentation.GetProperty("explosions").GetArrayLength()==0,"finished power effect releases nodes");
+            _root.Back();await Frames(3);
             Check(Cue("death")>0,"accepted self-explosion produces death cue even with immediate practice respawn");
             _root.StartLocal(new SessionSettings(Stage:"rock-garden",Bots:0),1,practice:true);
             await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"kick/lift practice reaches fight",150);

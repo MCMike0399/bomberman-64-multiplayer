@@ -426,4 +426,31 @@ bounds and launches Rock Garden afterward to verify gameplay scenery is intact.
 
 Explosions use one round world-space fireball, brief sharp charged flares, an expanding cyan power wave and transparent fade. This supersedes the earlier offset billow spheres, ordinary ground torus and brown cloud. Only the cosmetic group compensates the 1.35 tier-height scale; the faint danger shell retains mapped authority extent. Damage radius and fuse stay in the simulation. Castle thin-deck blast permeability is an explicitly researched rules change, separate from the effect geometry.
 
+**Explosion v2 (2026-10-25).** The user asked for more style, identity and a
+more modern look. Re-inspection found the original's signature: a white/yellow
+**star** inside the fireball (and inside the teal power body), plus white rim
+puffs and a thin double ring for power bombs. See the
+[research](../explosion-fidelity-research.md#2026-10-25-star-core-and-v2-layers).
+The one body is now a lumpy, noise-boiled toon sphere with crisp bands. Its bands
+run from an ember rim through orange and yellow to a white-hot center. The layer
+order follows:
+
+1. a damped-spring pop, about 4% past full size;
+2. a short white flash;
+3. a spinning camera-facing star, pulled toward the camera so terrain cannot clip it;
+4. a fresnel shock rim;
+5. directional spark jets with drag;
+6. a brief Medium/High light pulse;
+7. a burning-edge dissolve after the hazard window, revealing small dark smoke
+   puffs (white rim puffs for power).
+
+Flares remain charged-only and the cyan ground ring remains power-only. Keep
+every fade in shader uniforms. `GeometryInstance3D.Transparency` would add a
+second pipeline that warmup's two ages do not cover. Flares, sparks and puffs
+are each one MultiMesh draw. Low quality and the 16-active-blast reduced-detail
+path drop the light and thin the particles. `presentation` now also detonates
+a real red-pickup bomb and captures its sequence. Remaining choices are
+subjective tuning: how much smoke to show, how long the flash lasts, and the
+light's strength.
+
 Castle stone and garden surfaces use bounded terrain-owned materials. Repeated rounds and new closing walls must retain the selected quality preset. Inspect actual captures; shape/aspect/lifetime tests are supporting evidence, not aesthetic approval.
