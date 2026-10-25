@@ -1,4 +1,5 @@
 using Godot;
+using System.Text.Json;
 using Bomber.Client;
 using BlastCircuit.App;
 using BlastCircuit.Arena;
@@ -48,7 +49,7 @@ public partial class PlaytestDriver
                 AuditVisibleMenu("Settings",size);await Capture("graphics-settings-"+size.X);
                 await KeyPress(Key.Escape);
             }
-            foreach(string stage in new[]{"sunken-temple","rock-garden","up-and-down","top-rules"})
+            foreach(string stage in new[]{"sunken-temple","rock-garden","up-and-down","top-rules","circuit-garden"})
             {
                 _root.StartLocal(new SessionSettings(Stage:stage,Bots:0),1,practice:true);
                 await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"graphics enters "+stage,180);
@@ -68,6 +69,7 @@ public partial class PlaytestDriver
                     var playable=LightingArena.PlayableDepth;
                     Check(depthCues.DofBlurFarDistance>playable.Y&&depthCues.DofBlurNearDistance<playable.X&&environment.FogDepthBegin>playable.Y,
                         $"blur and haze stay outside the playable depth {playable} on {stage}");
+                    CheckPlayableHaze(stage);
                     var terrain=AuditDescendants(LightingArena).OfType<TempleStageView>().Single();
                     var materials=AuditDescendants(terrain).OfType<MeshInstance3D>().Select(n=>n.MaterialOverride)
                         .OfType<ShaderMaterial>().Where(m=>m.Shader.Code.Contains("uniform float quality_detail")).Distinct().ToArray();
@@ -85,6 +87,17 @@ public partial class PlaytestDriver
                     await Capture("graphics-"+stage+"-"+GraphicsQuality.ToWire(preset));
                     await MeasureGraphics(stage,preset);
                 }
+                var camera=_root.GetViewport().GetCamera3D()!;
+                var pose=camera.Transform;
+                try
+                {
+                    // An oblique inspection view separates radial fog distance from
+                    // axial DOF depth. Use actual terrain, including lower passages.
+                    camera.Position=new(12.5f,15,18);camera.LookAt(new Vector3(12.5f,1,14));
+                    await Frames(3);
+                    CheckPlayableHaze(stage);
+                }
+                finally {camera.Transform=pose;}
                 _root.Back();await Frames(3);
             }
             var path=_root.PreferencesPath+".invalid";
@@ -103,6 +116,27 @@ public partial class PlaytestDriver
         }
         finally {_root.Navigate("Modes");await SelectGraphics(original);}
         await ResizeWindow(new Vector2I(1280,800));
+    }
+
+    private void CheckPlayableHaze(string stage)
+    {
+        var camera=_root.GetViewport().GetCamera3D()!;
+        var environment=AuditDescendants(LightingArena).OfType<WorldEnvironment>().Single().Environment;
+        var data=_root.LatestStage!.Value;var cells=data.GetProperty("cells");
+        int width=data.GetProperty("width").GetInt32();float farthest=0;
+        var view=camera.GetCameraTransform().AffineInverse();
+        for(int i=0;i<cells.GetArrayLength();i++)Sample(cells[i],i%width,i/width);
+        void Sample(JsonElement cell,int x,int z)
+        {
+            if(cell.TryGetProperty("below",out var lower)&&lower.ValueKind==JsonValueKind.Object)Sample(lower,x,z);
+            int kind=cell.GetProperty("k").GetInt32();if(kind is 2 or 3)return;
+            float y=(kind==4?cell.GetProperty("rt"):cell.GetProperty("t")).GetSingle()*TempleStageView.HeightScale;
+            float head=kind==1?(cell.TryGetProperty("oh",out var crown)&&crown.ValueKind==JsonValueKind.Number?crown.GetSingle()*TempleStageView.HeightScale:1.21f):2.1f;
+            foreach(float dx in new[]{0f,1f})foreach(float dz in new[]{0f,1f})foreach(float h in new[]{0f,head})
+                farthest=Mathf.Max(farthest,(view*new Vector3(x+dx,y+h,z+dz)).Length());
+        }
+        Event("playable-haze-distance",new {stage,farthest,begin=environment.FogDepthBegin});
+        Check(environment.FogDepthBegin>farthest,$"radial haze stays beyond playable terrain and characters on {stage}: {environment.FogDepthBegin} > {farthest}");
     }
 
     private void CheckMenuSampling()

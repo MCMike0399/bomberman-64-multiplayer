@@ -202,10 +202,12 @@ The implementation is original shader/material work; nothing is copied.
 - **Shoreline foam.** A crisp contact line plus one soft band travelling outward,
   still masked by shore slope and vertical depth so flooded paving shows no foam grid.
 - **Diorama depth cues.** `BattleCameraRig.PlayableDepth` records the nearest/farthest
-  playable view depth after fitting. `ArenaView.ApplyDepthCues` starts far/near
-  depth-of-field blur and depth-mode horizon haze strictly outside that range
-  (`graphics-settings` asserts it per stage). Depth is re-measured whenever the arena
-  camera is re-posed (shake uses offsets), so inspection cameras stay sharp too.
+  axial view depth for depth of field; `PlayableDistance` separately measures the
+  farthest radial distance for Godot's depth-mode fog. Both use the effective camera
+  transform, including projection offsets. `ArenaView.ApplyDepthCues` keeps blur and
+  haze outside their respective bounds. `graphics-settings` checks all five stages,
+  including Circuit Garden and oblique inspection views, against actual terrain and
+  standing-character extents. Camera changes remeasure the bounds.
   Aerial perspective stays off: a camera
   looking down would sample the dark lower sky and grey the sea. Blur is off on Low.
 - **Lacquered toys.** `ArtMaterials.Toy` adds a thin clear coat and a soft light rim to

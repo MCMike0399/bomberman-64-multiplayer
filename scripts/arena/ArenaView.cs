@@ -174,8 +174,8 @@ public partial class ArenaView : Node3D
         _cameraAttributes.DofBlurFarTransition=Mathf.Max(10,depth.Y*.45f);
         _cameraAttributes.DofBlurNearDistance=Mathf.Max(.5f,depth.X-2.5f);
         _cameraAttributes.DofBlurNearTransition=Mathf.Max(1,depth.X*.2f);
-        _environment.FogDepthBegin=depth.Y+3;
-        _environment.FogDepthEnd=depth.Y+70;
+        _environment.FogDepthBegin=_cameraRig.PlayableDistance+3;
+        _environment.FogDepthEnd=_cameraRig.PlayableDistance+70;
     }
     public void State(JsonElement data,long tick=-1)
     {
@@ -351,9 +351,9 @@ public partial class ArenaView : Node3D
     public override void _Process(double delta)
     {
         _clock+=delta;float dt=(float)delta;
-        // Shake uses offsets, so this only fires when something re-poses the camera
-        // (fitting or an inspection view); depth cues must follow the actual view.
-        if(_camera.Transform!=_depthCueTransform){_depthCueTransform=_camera.Transform;_cameraRig.MeasureDepth();ApplyDepthCues();}
+        // Include projection offsets in the effective view used by radial fog.
+        var viewTransform=_camera.GetCameraTransform();
+        if(viewTransform!=_depthCueTransform){_depthCueTransform=viewTransform;_cameraRig.MeasureDepth();ApplyDepthCues();}
         foreach(var (id,target) in _targets)
         {
             if(!_entities.TryGetValue(id,out var node))continue;
