@@ -16,9 +16,12 @@ assets or Smash branding ship.
 
 ## Lesson flow
 
+Fast bomb equipment and its lesson were removed on 2026-10-25. Haste remains
+in Temporary changes as a player movement buff; it leaves bomb equipment intact.
+
 The [course](../src/Bomber.Game/TutorialCourse.cs) owns the lesson order, copy and
 objectives. It covers movement, blast safety, both pickup/throw flows, three-level
-charging, precision aim, kick/stop, chain reactions, cover, all twelve pickups,
+charging, precision aim, kick/stop, chain reactions, cover, all eleven pickup types,
 equipment swaps, expiration, terrain, impact/recovery, player holds/escape,
 ghosts/shake-off, rising water and a final Easy CPU challenge.
 

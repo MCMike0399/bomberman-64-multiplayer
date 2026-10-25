@@ -11,7 +11,7 @@ public sealed record AdvancedRules
     public int MaxBombs { get; init; } = 5;
     public int EffectSeconds { get; init; } = 10;
     public string DisabledItems { get; init; } = "";
-    public static readonly string[] ItemTypes=["fire","bomb","remote","red","bounce","fast","heart","focus","tiny","big","haste","slow"];
+    public static readonly string[] ItemTypes=["fire","bomb","remote","red","bounce","heart","focus","tiny","big","haste","slow"];
     public static readonly string[] SettingKeys=["drop-percent","block-percent","item-seconds","max-fire","max-bombs","effect-seconds","disabled-items"];
     public bool Allows(string type)=>!DisabledItems.Split(',',StringSplitOptions.RemoveEmptyEntries).Contains(type,StringComparer.Ordinal);
     public void Validate()

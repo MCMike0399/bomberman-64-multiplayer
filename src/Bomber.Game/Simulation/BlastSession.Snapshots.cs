@@ -95,7 +95,8 @@ public sealed partial class BlastSession
             z = MathF.Round(b.Z, 2),
             level = b.FireLevel,
             pumps = b.Pumps,
-            mode = b.Mode, bounces = b.Bounces, motionRate = b.MotionRate, gravityScale=b.GravityScale,
+            // Keep the existing peer-frame field; bomb travel always uses ordinary time.
+            mode = b.Mode, bounces = b.Bounces, motionRate = 1f, gravityScale=b.GravityScale,
             charge = b.ChargeDuration>0?Math.Clamp(1-b.ChargeRemaining/b.ChargeDuration,0,1):0, charging = b.RequestedPumps>0,
             red = b.IsRed,
             remote = b.IsRemote,

@@ -101,7 +101,7 @@ public partial class ArcadeMenu
         var grid=new GridContainer{Columns=2};grid.AddThemeConstantOverride("h_separation",14);grid.AddThemeConstantOverride("v_separation",10);items.AddChild(grid);
         foreach(var type in AdvancedRules.ItemTypes)
         {
-            string label=type switch{"fire"=>"Blast up","bomb"=>"Bomb up","remote"=>"Remote","red"=>"Power bomb","bounce"=>"Bounce","fast"=>"Fast bomb","heart"=>"Heart","focus"=>"Focus","tiny"=>"Tiny","big"=>"Big","haste"=>"Haste",_=>"Slow"};
+            string label=type switch{"fire"=>"Blast up","bomb"=>"Bomb up","remote"=>"Remote","red"=>"Power bomb","bounce"=>"Bounce","heart"=>"Heart","focus"=>"Focus","tiny"=>"Tiny","big"=>"Big","haste"=>"Haste",_=>"Slow"};
             var toggle=new ArcadeToggle{Name="Allow_"+type,Text=label,CustomMinimumSize=new(0,52),SizeFlagsHorizontal=SizeFlags.ExpandFill,ButtonPressed=true};grid.AddChild(toggle);
             toggle.Toggled+=enabled=>{var disabled=AdvancedRules.ItemTypes.Where(t=>t==type?!enabled:!_advanced.Allows(t));_advanced=_advanced with{DisabledItems=string.Join(',',disabled)};};
         }

@@ -13,6 +13,7 @@ public partial class PlaytestDriver
         Check(_root.ScreenName=="Advanced","match configuration opens the dedicated advanced page");
         var menu=_root.FindChildren("*","",true,false).OfType<ArcadeMenu>().Single();
         Check(menu.Settings.Advanced.DropPercent==55,"advanced default drop chance is 55 percent");
+        Check(_root.FindChild("Allow_fast",true,false)==null&&_root.FindChild("Allow_haste",true,false)!=null,"advanced menu exposes Haste without Fast bomb equipment");
         await ActivateNamed("Itemdropchance");Check(menu.Settings.Advanced.DropPercent==60,"native dial changes independent drop chance");
         await ActivateNamed("Allow_big");Check(!menu.Settings.Advanced.Allows("big"),"native toggle disables a debuff item");
         await Capture("advanced-match-settings");

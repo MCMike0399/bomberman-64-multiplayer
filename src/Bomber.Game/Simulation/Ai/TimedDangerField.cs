@@ -56,7 +56,7 @@ internal sealed class TimedDangerField
                 float horizon=Math.Min(time,.6f);float vx=b.State==BombState.Flying?b.FlyVX:b.VX,vz=b.State==BombState.Flying?b.FlyVZ:b.VZ;
                 for(float t=.2f;t<=horizon+.01f;t+=.2f)
                 {
-                    float x=b.X+vx*t*b.MotionRate,z=b.Z+vz*t*b.MotionRate;
+                    float x=b.X+vx*t,z=b.Z+vz*t;
                     if(_graph.Cell(x,z)<0)break;
                     // Ricochets can reverse direction at stone; cover the reflected side as well.
                     if(b.IsBouncy)AddSphere(soft,b.X-vx*t,b.State==BombState.Flying?b.FlyY:_stage.SurfaceAt(b.X-vx*t,b.Z-vz*t,Height(b)),b.Z-vz*t,b.BlastRadius+.45f,b.IsRed,Math.Max(0,time-.15f),time+.65f);

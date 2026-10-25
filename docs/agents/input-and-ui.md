@@ -284,7 +284,7 @@ have separate HUD symbols. Ghosts have no bomb controls or bomb collision.
 
 Match/Practice/Room settings → Advanced settings provides independent item drop
 chance, authored block budget percentage, item lifetime, blast/bomb stack caps,
-temporary effect duration and twelve per-item toggles. Escape/Back restores the
+temporary effect duration and eleven per-item toggles. Escape/Back restores the
 originating setup without disconnecting the room or losing edits. Restore defaults
 updates both values and toggles. Status text and remaining seconds appear in the
 player HUD; pickups blink for their final three seconds. `advanced-settings`
