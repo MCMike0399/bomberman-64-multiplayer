@@ -126,3 +126,19 @@ Ownership and invariants are in the
 [visuals guide](agents/visuals-and-animation.md#v028-reference-fidelity).
 Captured before/after sequences are evidence of appearance only. They do not
 recover original timing, geometry or damage volume.
+
+## Pending-PR integration review (2026-10-25)
+
+The updated default practice pool reproduced a missing-Red assertion in the
+presentation journey. The fixture now requests a Red-only pool and walks to the
+actual spawned pickup; it keeps ordinary collection, placement and detonation.
+The repaired headless journey passed 49 assertions. Exported captures reviewed
+the warm star-core bloom, cyan power ring and later dissolve at the battle camera.
+
+The first full exported graphical run reached 3,242 assertions before the
+eight-client adaptive fixture lost a host lease. Seven synthetic sessions had
+been polled only inside selected waits. They now poll on every engine frame,
+including capture/setup waits, with production lease/qualification policies
+unchanged. Its focused rebuilt Metal run passes; the complete combined suite
+remains the integration completion gate. Failed receipts are retained under
+ignored `artifacts/review/graphical`, alongside the focused replay.

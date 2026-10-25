@@ -18,6 +18,18 @@ public partial class PlaytestDriver
         var states = new Dictionary<string, JsonElement>();
         int dropGuest = -1, dropped = 0;
         var links = new List<SnapshotLossLink>();
+        // These seven clients share the engine thread. Keep them polling during
+        // captures and connection setup too, just as the visible owner does.
+        void PumpGuests()
+        {
+            foreach (var guest in guests)
+            {
+                guest.Advance(1d / 30);
+                foreach (var frame in guest.DrainMessages())
+                    if (frame.GetProperty("t").GetString() == "state") states[guest.PlayerId!] = frame.GetProperty("d").Clone();
+            }
+        }
+        GetTree().ProcessFrame += PumpGuests;
         try
         {
             for (int index = 0; index < 7; index++)
@@ -55,6 +67,7 @@ public partial class PlaytestDriver
         }
         finally
         {
+            GetTree().ProcessFrame -= PumpGuests;
             foreach (var guest in guests) await guest.DisposeAsync();
             _root.Back(); await owner.DisposeAsync();
         }
@@ -63,12 +76,6 @@ public partial class PlaytestDriver
             var clock = Stopwatch.StartNew();
             while (!ready() && clock.Elapsed.TotalSeconds < 30)
             {
-                foreach (var guest in guests)
-                {
-                    guest.Advance(1d / 30);
-                    foreach (var frame in guest.DrainMessages())
-                        if (frame.GetProperty("t").GetString() == "state") states[guest.PlayerId!] = frame.GetProperty("d").Clone();
-                }
                 await Frames(1); await Task.Delay(10);
             }
             if (!ready()) Event("adaptive-timeout", new { description, owner = owner.Party, quality = owner.ConnectionQualitySamples, measurement = owner.ConnectionQuality,
