@@ -166,6 +166,9 @@ public partial class ArcadeMenu : Control
         foreach(var button in _onlineButtons)button.Disabled=busy;
         var cancel=_screens["Online"].FindChild("CancelConnect",true,false) as Button;if(cancel!=null)cancel.Visible=busy;
         if(status is not null)Notice(status);
+        else if(!busy&&_screens["Online"].FindChild("OnlineNotice",true,false) is Label notice&&
+            (notice.Text.StartsWith("Connecting",StringComparison.Ordinal)||notice.Text.StartsWith("Searching for players",StringComparison.Ordinal)))
+            Notice("Choose a room or find other players.");
     }
     private bool _overlayBackground;
     public GraphicsPreset Graphics {get;private set;}=GraphicsPreset.Medium;
