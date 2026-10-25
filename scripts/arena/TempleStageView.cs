@@ -10,6 +10,9 @@ public partial class TempleStageView : Node3D
     public const float HeightScale=1.35f;
     private readonly ArtMaterials _art;
     private JsonElement _cells;
+    private bool _garden;
+    private Mesh[] _gardenRocks=[];
+    private Material _gardenRockMaterial=null!;
     public int Width {get;private set;}
     public int Depth {get;private set;}
     private ShaderMaterial _stone=null!,_cobble=null!,_masonry=null!,_bedrock=null!;
@@ -86,6 +89,8 @@ public partial class TempleStageView : Node3D
         Width=data.GetProperty("width").GetInt32();Depth=data.GetProperty("height").GetInt32();_cells=data.GetProperty("cells").Clone();
         _stone=_art.Stone();_cobble=_art.Stone(true);
         _masonry=_art.Masonry();_bedrock=_art.Bedrock();var wall=_masonry;var cap=_art.Color(new("e8cc82"));
+        _garden=data.GetProperty("id").GetString()=="rock-garden";
+        if(_garden){BuildRockGarden();return;}
         _water=new MeshInstance3D {Mesh=new PlaneMesh {Size=new Vector2(160,160),SubdivideWidth=180,SubdivideDepth=180},MaterialOverride=_art.Water(),Position=new Vector3(Width/2f,-.53f,Depth/2f),CastShadow=GeometryInstance3D.ShadowCastingSetting.Off};AddChild(_water);
         bool temple=data.GetProperty("id").GetString()=="sunken-temple";
         for(int z=0;z<Depth;z++)for(int x=0;x<Width;x++)
@@ -203,6 +208,7 @@ public partial class TempleStageView : Node3D
     public Node3D CreateCover(int cell)
     {
         int x=cell%Width,z=cell/Width;var root=new Node3D {Position=new(x+.5f,Surface(x+.5f,z+.5f),z+.5f)};
+        if(_garden)return CreateGardenBoulder(root,cell);
         var sandstone=_art.Color(new("caaa73"));var dark=_art.Color(new("8d6740"));var edge=_art.Color(new("e3c48c"));
         Box(root,new(0,.39f,0),new(.76f,.78f,.76f),sandstone,.06f);
         Box(root,new(0,.045f,0),new(.82f,.09f,.82f),edge,.025f);

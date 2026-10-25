@@ -229,6 +229,16 @@ public partial class ArenaView : Node3D
             CountEffect("blast-"+blast.Tier);_shake=Mathf.Max(_shake,Mathf.Clamp(radius*.024f,.04f,.15f));
             if(!eventsAvailable)_audio.Blast(radius);
         }
+        if(data.TryGetProperty("meteors",out var meteors))foreach(var meteor in meteors.EnumerateArray())
+        {
+            string id="m:"+meteor.GetProperty("id").GetString();seen.Add(id);
+            if(!_entities.TryGetValue(id,out var node))
+            {
+                node=new MeteorView(_art);_dynamic.AddChild(node);_entities[id]=node;
+            }
+            node.Position=new(F(meteor,"x"),0,F(meteor,"z"));
+            ((MeteorView)node).SetRemaining(F(meteor,"remaining"));
+        }
         foreach(var item in data.GetProperty("items").EnumerateArray())
         {
             string id="i:"+item.GetProperty("id").GetString();seen.Add(id);

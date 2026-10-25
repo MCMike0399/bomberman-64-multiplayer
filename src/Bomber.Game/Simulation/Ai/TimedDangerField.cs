@@ -58,6 +58,8 @@ internal sealed class TimedDangerField
         }
         foreach(var h in hazards)AddSphere(soft,h.X,h.Y,h.Z,h.Radius+.45f,h.IsRed,0,h.LifeTimer+.1f);
     }
+    public void AddMeteor(SoftBlockGrid soft,float x,float z,float remaining)
+    {AddSphere(soft,x,0,z,1.75f,false,Math.Max(0,remaining-.15f),remaining+.55f);}
     public void AddHypothetical(SoftBlockGrid soft,BlastBomb bomb,float reactionMargin)
     {AddSphere(soft,bomb.X,Height(bomb),bomb.Z,bomb.BlastRadius+.45f,bomb.IsRed,Math.Max(0,bomb.FuseTimer-reactionMargin),bomb.FuseTimer+.55f);}
     private float Height(BlastBomb b)=>b.State==BombState.Flying?b.FlyY:_stage.SurfaceAt(b.X,b.Z);

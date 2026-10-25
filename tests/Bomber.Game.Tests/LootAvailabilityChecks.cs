@@ -22,8 +22,8 @@ internal static class LootAvailabilityChecks
             for(int zone=0;zone<stage.Spawns.Length;zone++)
             {
                 var assigned=zones.Where(kv=>kv.Value==zone).Select(kv=>kv.Key).ToArray();
-                Assert(assigned.Length>=2,"A spawn area has fewer than two opportunities to open cover.");
-                Assert(assigned.Count(cell=>TerrainDistance(stage,stage.Spawns[zone],cell)<=6)>=2,"A spawn's opening crates require a distant terrace detour.");
+                Assert(assigned.Length>=stage.OpeningCoverPerSpawn,"A spawn area has fewer than its authored opening opportunities to open cover.");
+                Assert(assigned.Count(cell=>TerrainDistance(stage,stage.Spawns[zone],cell)<=6)>=stage.OpeningCoverPerSpawn,"A spawn's opening crates require a distant terrace detour.");
                 var approachMatch=Match(seed,id);
                 var approach=OpeningApproach(stage,Grid(approachMatch),stage.Spawns[zone],assigned.ToHashSet());
                 Assert(approach is not null,"A spawn cannot approach its opening cover along clear floor.");
@@ -48,7 +48,7 @@ internal static class LootAvailabilityChecks
         double ordinaryDropRate=(double)(drops-openingDrops)/(covers-openingDrops);
         Assert(ordinaryDropRate is >.50 and <.60,$"Ordinary cover drop rate {ordinaryDropRate:P1} should stay near 55% to limit item clutter.");
         Assert(kinds.Count==12&&kinds["bomb"]>kinds["remote"]&&kinds["fire"]>kinds["heart"],"Arena drops lost their diverse, useful weighting.");
-        Console.WriteLine($"PASS {stage.Name} loot: {covers/32d:F2} covers, {drops/32d:F2} actual drops per round across 32 seeds; {ordinaryDropRate:P1} ordinary drop rate; all eight spawn areas have two nearby crates");
+        Console.WriteLine($"PASS {stage.Name} loot: {covers/32d:F2} covers, {drops/32d:F2} actual drops per round across 32 seeds; {ordinaryDropRate:P1} ordinary drop rate; all eight spawn areas have their authored nearby cover");
         foreach(bool reverse in new[]{false,true})
         {
             var match=Match(832,id);var zones=Zones(match);

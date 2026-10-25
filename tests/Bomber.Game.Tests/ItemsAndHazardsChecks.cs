@@ -136,7 +136,7 @@ internal static class ItemsAndHazardsChecks
         });
         run("legacy arenas retain closing columns while practice disables every hurry hazard", () =>
         {
-            var legacy=new LocalMatch(new MatchOptions {Stage="rock-garden",HumanPlayers=2,BotPlayers=0,RoundSeconds=60});Step(legacy,110);
+            var legacy=new LocalMatch(new MatchOptions {Stage="up-and-down",HumanPlayers=2,BotPlayers=0,RoundSeconds=60});Step(legacy,110);
             Assert(State(legacy).GetProperty("hurryMode").GetString()=="columns"&&State(legacy).GetProperty("closedLeft").GetInt32()>0,"Legacy sudden death lost closing columns.");
             var practice=new LocalMatch(new MatchOptions {HumanPlayers=1,BotPlayers=0,RoundSeconds=60,Practice=true});Step(practice,4000);
             Assert(State(practice).GetProperty("hurryMode").GetString()=="none"&&State(practice).GetProperty("waterLevel").GetSingle()==-1,"Practice flooded during indefinite training.");

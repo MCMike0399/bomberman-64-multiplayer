@@ -2,11 +2,12 @@
 // Product-owned simulation; original baseline b0758339984bbeead1b3d1236f31e980aaa5f20e.
 namespace Bomber.Game.Simulation;
 
-/// <summary>Static definitions for the temple and two legacy arena stages.</summary>
+/// <summary>Static definitions for the three battle stages.</summary>
 public static class BlastStages
 {
     public const string SunkenTemple = "sunken-temple";
     public const string RockGarden = "rock-garden";
+    public const float MeteorWarningSeconds=1.2f;
     public const string UpAndDown = "up-and-down";
 
     /// <summary>Returns the stage layout for a given id. Falls back to Sunken Temple for unknown ids.</summary>
@@ -18,40 +19,35 @@ public static class BlastStages
         _ => BuildSunkenTemple(),
     };
 
-    // ─── Rock Garden (23×15, all flat tier 0) ──────────────────────────────
-    // Open edges: no boundary wall, walking off the grid eliminates.
-    // Hard pillars provide cover. Eight spawns at corners, edges and center edges.
-    // ─────────────────────────────────────────────────────────────────────────
-
+    // Reference composition: an enclosed lawn, five isolated round columns,
+    // a central paved cross and sparse boulders. Units/extra seats are our tuning.
     private static StageLayout BuildRockGarden()
     {
-        const int W = 23, H = 15;
-        var cells = Fill(W, H, CellDef.Floor0);
-
-        // Hard pillars — arranged symmetrically for fair play.
-        int[] px = [3, 19, 3, 19,  7, 15, 7, 15,  10, 12, 5, 11, 17];
-        int[] pz = [2,  2, 12, 12,  2, 2, 12, 12,  5,  5,  7,  7,  7];
-        for (var i = 0; i < px.Length; i++)
-            cells[px[i], pz[i]] = CellDef.Pillar;
-
-        // Spawns: corners + midpoints of each edge, integer grid-cell coords.
-        (int X, int Z)[] spawns =
-        [
-            (1, 1), (21, 1), (1, 13), (21, 13),
-            (11, 1), (11, 13), (1, 7),  (21, 7),
-        ];
-
+        const int size=19;
+        var cells=Fill(size,size,CellDef.Floor0);
+        for(int n=0;n<size;n++)
+        {
+            cells[n,0]=cells[n,size-1]=CellDef.Pillar;
+            cells[0,n]=cells[size-1,n]=CellDef.Pillar;
+        }
+        foreach(var (x,z) in new[]{(9,3),(3,9),(9,9),(15,9),(9,15)})
+            cells[x,z]=x==9&&z==9?new CellDef{Kind=CellKind.Pillar,Tier=1}:CellDef.Pillar;
         return new StageLayout
         {
-            Id = RockGarden, Name = "Rock Garden",
-            Width = W, Height = H,
-            Cells = cells, Spawns = spawns,SoftBlockDensity=.6,MaxSoftBlocks=110,
+            Id=RockGarden,Name="Rock Garden",Width=size,Height=size,Cells=cells,
+            // First four seats retain the screenshot's quadrant arrangement.
+            Spawns=[(5,5),(13,5),(5,13),(13,13),(2,2),(16,2),(2,16),(16,16)],
+            SoftBlockDensity=1,MaxSoftBlocks=16,OpeningCoverPerSpawn=1,
             CoverAreas=[
-                new("pillar-center",.5,7,15,0,14){Centers=[(8,4),(14,4),(8,10),(14,10)]},
-                new("west-pockets",.25,0,6,0,14){Centers=[(4,3),(4,11)]},
-                new("east-pockets",.25,16,22,0,14){Centers=[(18,3),(18,11)]}],
-            ClearCells=Enumerable.Range(0,W).SelectMany(x=>Enumerable.Range(0,H).Select(z=>(X:x,Z:z)))
-                .Where(c=>c.Z is 6 or 8||c.X is 2 or 11 or 20).ToHashSet(),
+                new("central-paving",.25,6,12,6,12){Centers=[(7,9),(9,7),(11,9),(9,11)]},
+                new("northwest",.1875,1,8,1,8){Centers=[(4,3),(4,6)]},
+                new("northeast",.1875,10,17,1,8){Centers=[(14,3),(14,6)]},
+                new("southwest",.1875,1,8,10,17){Centers=[(4,12),(6,15)]},
+                new("southeast",.1875,10,17,10,17){Centers=[(14,12),(12,15)]}],
+            // Continuous routes around each side of the center column.
+            ClearCells=Enumerable.Range(1,17).SelectMany(x=>Enumerable.Range(1,17).Select(z=>(X:x,Z:z)))
+                .Where(c=>c.X is 8 or 10||c.Z is 8 or 10||
+                    c.X is >=6 and <=12&&c.Z is >=6 and <=12&&Math.Abs(c.X-9)+Math.Abs(c.Z-9)>3).ToHashSet(),
         };
     }
 

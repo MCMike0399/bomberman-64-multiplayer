@@ -224,13 +224,16 @@ and the input guide; older iteration tables are historical.
 - The user's latest correction supersedes the v0.22 rear barrier: the temple's
   rear edge is an open water pitfall, with no hidden walkway or invisible wall.
   The 25x27 arena has five raised tiers, broader upper platforms, and a larger
-  courtyard. Rock Garden is 23x15; Up & Down is 23x19. More cover supplies the
+  courtyard. Rock Garden is a 19x19 enclosed grassy court with five columns;
+  Up & Down is 23x19. More cover supplies the
   expanded equipment pool. The summit uses a flat mosaic rather than a blocking prop.
 - Ghosts pass through bombs and cannot place, carry, kick, stop, pump, throw or
   detonate them. Movement, finite latching and water/void comeback remain.
 - Default battle rules are first to two wins, 120 total seconds including 60 seconds of
   sudden death. Water begins rising immediately at Hurry; the former 15-second delay is
   superseded. Custom round lengths and sudden-death/ghost toggles remain available.
+- Rock Garden uses telegraphed falling fireballs during Hurry, with shared
+  blast damage and AI warning avoidance. See the [stage contract](../rock-garden.md).
 - [FloodRules](../../src/Bomber.Game/Simulation/FloodRules.cs) owns flood timing.
   [TempleStageView](../../scripts/arena/TempleStageView.cs) applies render height scale
   (currently 1.35) to authority Y. Decorative bedrock, foam, icons and camera fitting
@@ -241,14 +244,15 @@ and the input guide; older iteration tables are historical.
 
 - [Loot placement](../../src/Bomber.Game/Simulation/BlastSession.Loot.cs) uses map-owned
   `CoverAreas`: regional budget shares and cluster centers, with seeded weighted
-  sampling. Each stock map first gets two nearby reachable crates per spawn, then
+  sampling. Temple and Up & Down first get two nearby reachable crates per spawn;
+  Rock Garden gets one per spawn plus a central paving cluster. Each then
   fills its regional quotas without blocking spawn clearance, ramps or reserved lanes.
   Every destroyed crate uses the same independent configured drop chance; there are
   no guaranteed opening rewards.
 - Pyramid targets 60% of 90 blocks in the lower court, 15% along the lower wings,
   and a lighter remainder on upper side terraces/base approaches. Its top two tiers
   and ascent stay clear; thin court lanes replace the old broad empty strips.
-  Rock Garden has 110 blocks in balanced pillar regions; Up & Down has 88 in
+  Rock Garden has sixteen boulders with clear center routes; Up & Down has 88 in
   outer-ring/wide-platform pockets, keeping the summit and connectors clear.
 - Advanced match settings (v0.25) default to a uniform independent 55% chance per
   destroyed block. Item weights are Fire/Bomb 30% each, remote/red 7% each, bounce

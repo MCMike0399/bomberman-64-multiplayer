@@ -69,13 +69,15 @@ internal static class NetworkAimChecks
         await using var local=new LocalSession(settings,humanCount:2);
         void Step(int ticks){for(int i=0;i<ticks;i++)local.Advance(1d/30);}
         Step(64);
+        var initial=local.DrainMessages().Last(m=>m.GetProperty("t").GetString()=="state");
+        var start=Player(initial,"local-0");float startX=F(start,"x"),startZ=F(start,"z");
         local.SendInput(0,new PlayerInput(0,0,A:true,B:true));Step(2);
         local.SendInput(0,new PlayerInput(0,1,B:true,Aim:true));Step(48);
         local.SendInput(0,new PlayerInput(0,0,B:true));Step(2);
         var state=local.DrainMessages().Last(m=>m.GetProperty("t").GetString()=="state");
         var p=Player(state,"local-0");
         Check(!p.GetProperty("aiming").GetBoolean()&&p.GetProperty("aimSet").GetBoolean(),"local input accepts and retains precision aim");
-        Check(F(p,"x")==1.5f&&F(p,"z")==1.5f,"local precision stance stays planted");
+        Check(F(p,"x")==startX&&F(p,"z")==startZ,"local precision stance stays planted");
         return p.Clone();
     }
     private static bool SameAim(JsonElement a,JsonElement b)=>new[]{"aimX","aimZ","aimRange"}.All(key=>Math.Abs(F(a,key)-F(b,key))<.0001f);

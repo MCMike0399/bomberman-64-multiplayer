@@ -1,4 +1,5 @@
 using Godot;
+using Bomber.Game.Simulation;
 namespace BlastCircuit.UI.Menu;
 
 public partial class StagePreview : Control
@@ -14,7 +15,8 @@ public partial class StagePreview : Control
         var area=new Rect2(16,12,Size.X-32,Size.Y-12-caption);
         float s=Math.Min(area.Size.X/24.5f,area.Size.Y/11.4f),h=s*.41f;
         var center=area.GetCenter()+new Vector2(-s,.62f*s);
-        for(int z=0;z<11;z++)for(int x=0;x<13;x++)
+        if(StageIndex==1)DrawGarden(area);
+        else for(int z=0;z<11;z++)for(int x=0;x<13;x++)
         {
             int tier=StageIndex==0?1+(Math.Abs(x-6)>3?2:z<3?3:0):StageIndex==2?x<4?0:x>8?2:1:0;
             var p=center+new Vector2((x-z)*s,(x+z-11)*h-tier*h);
@@ -25,10 +27,31 @@ public partial class StagePreview : Control
             if(x%3==0&&z%3==0&&x>0&&z>0)
             {DrawRect(new Rect2(p-new Vector2(.41f*s,1.35f*s),new Vector2(.82f*s,1.35f*s)),new Color("d1b879"));DrawRect(new Rect2(p-new Vector2(.53f*s,1.53f*s),new Vector2(1.06f*s,.3f*s)),new Color("fff0b6"));}
         }
-        string name=StageIndex==0?"Sunken Temple":StageIndex==1?"Rock Garden":"Up & Down",detail=StageIndex==0?"4 levels":StageIndex==1?"Open arena":"3 levels";
+        string name=StageIndex==0?"Sunken Temple":StageIndex==1?"Rock Garden":"Up & Down",detail=StageIndex==0?"4 levels":StageIndex==1?"Walled garden":"3 levels";
         var at=new Vector2(20,Size.Y-14);
         DrawStringOutline(ArcadeTheme.Display,at,name,HorizontalAlignment.Left,-1,18,6,ArcadeTheme.Cream);DrawString(ArcadeTheme.Display,at,name,HorizontalAlignment.Left,-1,18,ink);
         float width=ArcadeTheme.Display.GetStringSize(name,HorizontalAlignment.Left,-1,18).X;
         DrawString(ArcadeTheme.Body,at+new Vector2(width+12,0),detail,HorizontalAlignment.Left,-1,15,new Color(ink,.75f));
+    }
+    private void DrawGarden(Rect2 area)
+    {
+        var stage=BlastStages.Get(BlastStages.RockGarden);
+        float scale=Math.Min(area.Size.X/(stage.Width+1),area.Size.Y/(stage.Height*.6f+3));
+        Vector2 Project(float x,float z,float y=0)=>area.GetCenter()+new Vector2((x-stage.Width*.5f)*scale,(z-stage.Height*.5f)*scale*.6f-y*scale);
+        for(int z=0;z<stage.Height;z++)for(int x=0;x<stage.Width;x++)
+        {
+            bool wall=x==0||z==0||x==stage.Width-1||z==stage.Height-1;
+            bool paved=Math.Abs(x-stage.Width/2)+Math.Abs(z-stage.Height/2)<=3;
+            var p=Project(x,z,wall?.7f:0);
+            DrawRect(new Rect2(p,new(scale,scale*.6f)),wall?new Color("b8bca4"):paved?new Color("d0d0bb"):new Color("6a993c"));
+            if(wall)DrawLine(p,p+new Vector2(scale,0),new Color("e4e3ce"),1);
+            else if(stage.At(x,z).Kind==CellKind.Pillar)
+            {
+                var foot=Project(x+.5f,z+.5f);
+                float height=(stage.At(x,z).Tier+1.1f)*scale;
+                DrawLine(foot,foot-new Vector2(0,height),new Color("8a927e"),scale*.8f);
+                DrawCircle(foot-new Vector2(0,height),scale*.42f,new Color("dbdcc4"));
+            }
+        }
     }
 }

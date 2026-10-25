@@ -43,6 +43,9 @@ public sealed partial class BlastSession : GameSession
     private float _roundTimer;     // time elapsed in current fight/hurry phase
     private int _closedLeft;       // hurry: columns closed from the left (x < _closedLeft = dead zone)
     private int _closedRight;      // hurry: columns closed from the right (x >= Width-_closedRight = dead zone)
+    private float _meteorTimer;
+    private int _meteorSequence;
+    private readonly List<BlastMeteor> _meteors=[];
     private float _hurryColTimer;  // seconds until next column closure
 
     // ─── entities ────────────────────────────────────────────────────────────

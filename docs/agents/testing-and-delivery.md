@@ -317,3 +317,13 @@ to keep their pickup/rendering evidence deterministic. They do not certify the
 default drop probability; managed actual-destruction samples do. `sandbox`
 selects a 60-second lifetime for its long equipment tour. Default and short
 lifetimes have separate authority and graphical expiration witnesses.
+
+## Rock Garden reconstruction
+
+`--rock-garden` in the managed game suite covers enclosed topology, center
+traversal, four wall contacts, shielding, block percentages and fireball
+warning/escape/damage. The `rock-garden` native journey belongs to `all` and
+`core-headless`: four/eight-seat starts, real boulder destruction and pickup,
+fireball warning/escape/impact, CPU combat and graphical detail captures. The
+shared walking helper reads the active stage rather than assuming Temple.
+See the [stage contract](../rock-garden.md) and [research](../rock-garden-research.md).

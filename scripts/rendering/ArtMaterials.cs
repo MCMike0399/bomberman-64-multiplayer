@@ -2,11 +2,11 @@ using Godot;
 namespace BlastCircuit.Rendering;
 
 /// <summary>One palette and material library for the original arcade-style art.</summary>
-public sealed class ArtMaterials
+public sealed partial class ArtMaterials
 {
     public static readonly Color[] PlayerColors = [new("f6f0df"),new("30314a"),new("ec3d50"),new("356be0"),new("56b76b"),new("ffba37"),new("9d56ce"),new("31c9c5")];
     private readonly Dictionary<string, StandardMaterial3D> _cache = [];
-    private static Shader? _stoneShader,_waterShader;
+    private static Shader? _stoneShader,_waterShader,_gardenShader;
     public StandardMaterial3D Color(Color color, float roughness=.72f, bool glow=false)
     {
         string key=$"{color.ToHtml()}:{roughness}:{glow}";

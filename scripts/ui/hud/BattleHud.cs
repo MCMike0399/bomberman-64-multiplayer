@@ -92,7 +92,8 @@ public partial class BattleHud : Control
         _clock.Infinite=Practice;_clock.Hurry=phase==2;
         _clock.Time=Practice?"∞":$"{seconds/60}:{seconds%60:00}";
         _clock.Fuse=Practice||_roundSeconds<=0?1:Math.Clamp(timeLeft/_roundSeconds,0,1);
-        _clock.Caption=Practice?"Practice":phase==2&&flood?(waterDelay>0?$"Flood in {waterDelay}":"Water rising"):"Round "+round;
+        bool meteors=state.TryGetProperty("hurryMode",out var hazardMode)&&hazardMode.GetString()=="meteors";
+        _clock.Caption=Practice?"Practice":phase==2&&flood?(waterDelay>0?$"Flood in {waterDelay}":"Water rising"):phase==2&&meteors?"Fireballs falling":"Round "+round;
         _clock.QueueRedraw();
         string banner=phase switch{0=>"Get Ready!",2 when _hurryAge<3=>"Hurry Up!",3=>"Round Over",_=>""};
         _phase.Text=banner;_phase.AddThemeColorOverride("font_color",phase==2?ArcadeTheme.Red:ArcadeTheme.Gold);

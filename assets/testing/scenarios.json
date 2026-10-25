@@ -2,6 +2,19 @@
   "schemaVersion": 1,
   "scenarios": [
     {
+      "id": "rock-garden",
+      "method": "RockGardenTour",
+      "domains": [
+        "gameplay",
+        "rendering",
+        "physics",
+        "ai"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
       "id": "first-use-rendering",
       "method": "FirstUseRendering",
       "domains": [
@@ -492,6 +505,7 @@
       "id": "all",
       "steps": [
         "first-use-rendering",
+        "rock-garden",
         "graphics-settings",
         "advanced-settings",
         "ui-layout",
@@ -555,6 +569,7 @@
     {
       "id": "core-headless",
       "steps": [
+        "rock-garden",
         "cover-layout",
         "sandbox",
         "asset-audit",

@@ -37,6 +37,13 @@ update the current guide rather than silently reviving old behavior.
 
 ## Current decisions that supersede earlier experiments
 
+- Rock Garden reconstruction (2026-10-24): an enclosed square lawn, five round
+  columns, central cross-shaped paving and sixteen destructible boulders replace
+  the wide open stone platform and thirteen pillars. Eight seats use separate
+  quadrant/corner spawns. [Stage contract](../rock-garden.md) and
+  [original references](../rock-garden-research.md) distinguish evidence from tuning.
+
+
 - Repository layout (2026-10-24): Godot code lives in snake_case feature folders
   under `scripts/` with folder-mirroring `BlastCircuit.*` namespaces; the scene is
   `scenes/main.tscn`; shell launchers are in `tools/dev/`; dated iteration notes

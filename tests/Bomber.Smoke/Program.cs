@@ -200,10 +200,14 @@ async Task MovementAndReconnect(Peer mover, Peer observer, string lobbyId)
     await mover.Wait("stage");
     var restored=await mover.Wait("state", d => d.GetProperty("players").EnumerateArray().Count(p => p.GetProperty("id").GetString() == mover.PlayerId) == 1);
     Check(restored.GetProperty("d").GetProperty("players").EnumerateArray().Single(p=>p.GetProperty("id").GetString()==mover.PlayerId).GetProperty("appearance").GetInt32()==6,"reconnect preserves authoritative appearance without resending it");
-    await mover.Send(new {t="input",s=3,d=new {x=-1,z=0,a=false,b=false,r=false}});
+    // Garden is enclosed: complete the round with a real self-bomb rather
+    // than assuming outward movement can walk through its perimeter.
+    await mover.Send(new {t="input",s=3,d=new {x=0,z=0,a=true,b=false,r=false}});
+    await observer.Wait("state",d=>d.GetProperty("bombs").GetArrayLength()>0);
+    await mover.Send(new {t="input",s=4,d=new {x=0,z=0,a=false,b=false,r=false}});
     var nextRound=await observer.Wait("state",d=>d.GetProperty("round").GetInt32()>=2);
     Check(nextRound.GetProperty("d").GetProperty("players").EnumerateArray().Single(p=>p.GetProperty("id").GetString()==mover.PlayerId).GetProperty("appearance").GetInt32()==6,"appearance persists through a real online round reset");
-    await mover.Send(new {t="input",s=4,d=new {x=0,z=0,a=false,b=false,r=false}});
+    await mover.Send(new {t="input",s=5,d=new {x=0,z=0,a=false,b=false,r=false}});
     Console.WriteLine("PASS sequenced movement, validated own-player cosmetics, reconnect persistence and online round reset");
 }
 void Check(bool condition,string description) { if (!condition) throw new Exception("FAIL " + description); }
