@@ -128,6 +128,43 @@ per-device face-button confirm/cancel actions for embedded popup menus as well.
 Use [MenuStickNavigation](../../src/Bomber.Client/MenuStickNavigation.cs) for
 sampled held-stick navigation, hysteresis and repeat: an axis that gradually
 crosses the engage threshold or stops sending changed reports must still work.
+D-pad holds use the same repeat timing; their native initial events remain intact
+for short taps and popups. D-pad intent takes priority over a held stick.
+
+Menu navigation (2026-10-25 source): each page declares focus columns in
+`ArcadeMenu.Navigation`. Up/down stays in a column and reaches its Back/primary
+row at the ends; left/right between grid columns preserves the row. Dials and
+text fields retain horizontal value/caret editing. L/R, LB/RB or L1/R1 switches
+columns and restores the last focused control there. Tab/Shift+Tab traverses all
+visible enabled controls in reading order, including sliders and text fields.
+Never route through the hidden setup state controls. Native role popups own
+navigation/Back until dismissed.
+
+The lobby's Start game / Room settings / Settings controls form a horizontal
+action row. Up reaches Copy code, then Leave room; if Copy code is unavailable,
+Up reaches Leave directly. The real `network` journey verifies left/right/up
+navigation, and `menu-navigation` covers the empty-column fallback.
+
+Navigation QA must account for focus history left by earlier journeys. The
+scenario seeds known column selections through real controls and verifies that
+shoulders restore a non-first rule. Assuming a fresh page after other setup or
+settings journeys incorrectly rejects the intended remembered selection.
+
+Esc/controller Back returns one menu and restores its opener, even while a text
+field is editing. Setup keeps its actual origin (roster, Practice or Online),
+and Continue/Save must not create a Back loop. Esc from a waiting lobby leaves
+for Online; room rules and personal settings return to the same connected room.
+During play Esc still opens Pause, and Esc from Pause resumes the same session.
+
+Start/Menu/+/Options **focuses**, without activating: Continue on player select,
+Start/Save on setup, Back on Advanced/Settings, Try it on lessons, Resume on Pause,
+and replay/return-to-lobby on Results. Online uses Create in the hosting column,
+Join from the room-code controls, Play online otherwise, or Cancel while busy.
+A room leader gets Start game when enabled; guests get Copy code or Settings.
+Controls keeps diagnostic face buttons until Start focuses Back and arms confirm.
+A completed/failed tutorial uses Next/Retry; Esc returns to the current lesson
+in the browser, with matching on-screen hints. Free practice
+continues to use the ordinary pause menu.
 
 `ScreenName` controls menu-navigation enablement independently of match binding
 lifetime; Lobby and Results can retain bindings while requiring menu behavior.
@@ -264,7 +301,9 @@ Find scenario membership/headless support in the single
 for mappings, seats, focus/hotplug and menus; `aim-inputs` for native K/J/L and
 canonical pad parity; `precision-aim` for authority range/turn/landing;
 `reticle` for actual marker pixels and Results cleanup; `wasd-menu` for native
-menu/text-field behavior. Native scenarios are synthetic production-path tests,
+menu/text-field behavior. `menu-navigation` covers focus routes, Start, nested
+Back, grid rows and complete Tab cycles; `menu-ux` combines it with existing
+graphical menu, popup, controller, settings, tutorial and real-network journeys. Native scenarios are synthetic production-path tests,
 not physical certification. Read [runner usage](../../tools/playtest/README.md)
 for commands, recording and timeout behavior before running them.
 

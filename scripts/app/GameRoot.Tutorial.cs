@@ -21,7 +21,7 @@ public partial class GameRoot
     {
         if(_connecting)return;
         bool free=id=="free";
-        if(!free)TutorialCourse.Get(id);
+        if(!free)_menu.RememberLesson(id);
         var settings=new SessionSettings(Stage:BlastStages.CircuitGarden,Bots:0,SuddenDeath:false,BotDifficulty:"easy");
         var session=new LocalSession(settings,seed:free?System.Random.Shared.Next():64,practice:true,tutorialLesson:free?null:id);
         _lastSettings=settings;_lastHumans=1;_lastAppearances=null;_practice=true;_lastServer=null;
