@@ -321,14 +321,15 @@ now covers four stages (48 combinations).
   and ascent stay clear; thin court lanes replace the old broad empty strips.
   Rock Garden has sixteen boulders with clear center routes. Up & Down has twelve
   lower/middle blocks, keeping its ring, summit, bridges and flights clear.
-- Advanced match settings (v0.25) default to a uniform independent 55% chance per
-  destroyed block. Item weights are Fire/Bomb 30% each, remote/red 7% each, bounce
-  6%, fast 4%, heart/Focus/Tiny/Big 3% each, Haste/Slow 2% each. Disabled types are
+- Advanced match settings default to a uniform independent 40% chance per
+  destroyed block. Item weights are Fire/Bomb 30% each,
+  Heart/Focus/Tiny/Big/Haste/Slow 5% each, Remote/Red/Bounce 3% each and Fast 1%.
+  Thus upgrades lead (60%), buffs/debuffs follow (30%) and bomb types are rare (10%). Disabled types are
   removed before drawing and remaining weights are renormalized. An empty pool
   yields nothing. Death/swap/training items also respect the enabled pool.
 - `AdvancedRules` owns drop chance (0–100%), block amount (0–100% of the authored
   regional budget), item lifetime (5–60s), blast cap (1–5), bomb cap (1–8), effect
-  duration (5–30s) and per-item exclusions. Defaults: 55%, 100%, 20s, 5, 5, 10s.
+  duration (5–30s) and per-item exclusions. Defaults: 40%, 100%, 20s, 5, 5, 10s.
   Starting capacity is min(3, configured cap); blast starts at one, and three
   pumps can raise a maximum five-stack blast to effective level eight.
 - Tiny uniformly scales the model to .65 and movement to 1.5; Big uses 1.4/.65.
@@ -361,6 +362,61 @@ now covers four stages (48 combinations).
   matching real inventory/counters and item-model removal. Its focused inspection camera
   is identified separately from normal battle-camera evidence.
   [Loot checks](../../tests/Bomber.Game.Tests/LootAvailabilityChecks.cs).
+
+### Item density tuning (2026-10-25)
+
+The requested priority means relative appearance frequency: capacity/blast upgrades,
+then buffs/debuffs (including Heart and Focus), then bomb equipment. Every crate
+still rolls independently, including opening crates. There is no guaranteed first
+reward or forced chronological unlock. Local, peer-hosted and server matches share
+these rules; explicitly configured drop percentages still override the new default.
+
+A deterministic sweep compared 30%, 35%, 40%, 45% and the former 55% across all four
+battle maps and seeds 0–127 (2,560 matches per sweep). It shuffles the actual cover,
+then destroys every block through `DestroyBlocksInBlast`. Collection and expiry are
+excluded: these are upper bounds on simultaneous clutter, not observed average
+on-screen counts or a human fun rating. The same sweep was run before and after
+the weight change; probability totals match because the pool still totals 100.
+
+With the new weights, Temple's average total drops / probability of any upgrade
+within the first eight opened crates were:
+
+- 30%: 26.64 / 79.7%; sparse-map early-upgrade rates fell as low as 75.0%.
+- 35%: 31.02 / 85.2%; all three smaller maps reached only 83.6%.
+- 40%: 35.10 / 89.8%; smaller maps reached 85.9–86.7%.
+- 45%: 39.57 / 94.5%; more clutter for roughly four extra early-upgrade points.
+- 55%: 49.16 / 96.1%; the former density leaves substantially more items.
+
+40% is the selected compromise: roughly 27% fewer expected drops than 55%, with
+24 upgrade, 12 effect and four bomb-type drops expected per 100 destroyed blocks.
+Measured all-block totals at 40% versus the former 55% were Temple 35.10/49.16,
+Rock Garden 6.49/8.82, Up & Down 4.66/6.58 and Top Rules 4.80/6.48. Their 40%
+95th-percentile totals were 42, 10, 8 and 7. This preserves the honest possibility
+of dry openings: 10.9–18.0% of sampled matches had no item in their first four
+opened crates. Raising the rate to hide that would restore clutter.
+
+Default Temple and Circuit Garden practice caches now sample six authored
+pickups: three upgrades (two Fire, one Bomb), two effects and one bomb type.
+Six is the smallest cache with all three categories present in strictly
+decreasing counts; smaller caches force a tie or omit a category.
+The seed chooses which effects/mode appear. The Godot session entrypoints choose
+a fresh seed for each normal/free practice start or reset, so the same fixed
+cache is not repeated forever; explicitly seeded managed sessions remain fully
+repeatable. Normal battle and authored lessons retain their existing seed policy.
+Circuit Garden has a second authored Fire candidate to support that mix.
+Candidates are filtered before sampling. Explicitly restricted pools of six or
+fewer are kept intact for targeted practice; larger pools use category budgets
+and may yield fewer than six if a category is disabled. Authored lesson fixtures
+and initial map items remain independent of the cache selection. All ordinary
+items retain the configured lifetime (20 seconds by default), without automatic
+refill; equipment exchanged or dropped during play may temporarily add pickups.
+
+Raw local receipts are ignored under `artifacts/item-density/`: baseline/tuned
+sweeps and the retained failing priority witness. Reproduce with
+`dotnet run --project tests/Bomber.Game.Tests -- --loot-density-sweep`; use
+`--loot-density` for seeded category/cache/filtering/expiry regressions.
+The separate Fast-bomb-removal work owns the equipment roster; recheck the weights
+and full-type assertions when integrating that change.
 
 ## AI policy and known failure mechanisms
 

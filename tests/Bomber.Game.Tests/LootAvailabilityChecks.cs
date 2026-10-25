@@ -46,8 +46,13 @@ internal static class LootAvailabilityChecks
         }
         int openingDrops=0;
         double ordinaryDropRate=(double)(drops-openingDrops)/(covers-openingDrops);
-        Assert(ordinaryDropRate is >.50 and <.60,$"Ordinary cover drop rate {ordinaryDropRate:P1} should stay near 55% to limit item clutter.");
-        Assert(kinds.Count==12&&kinds["bomb"]>kinds["remote"]&&kinds["fire"]>kinds["heart"],"Arena drops lost their diverse, useful weighting.");
+        Assert(ordinaryDropRate is >.35 and <.45,$"Ordinary cover drop rate {ordinaryDropRate:P1} should stay near 40% to limit item clutter.");
+        // Exhaustive rare-type coverage belongs to the large ItemDensityChecks sample.
+        // A sparse arena can legitimately omit a 1%-weight type across 32 seeds.
+        int upgrades=kinds.Where(p=>p.Key is "fire" or "bomb").Sum(p=>p.Value);
+        int effects=kinds.Where(p=>PowerUpRules.IsAbility(p.Key)||PowerUpRules.IsStatus(p.Key)).Sum(p=>p.Value);
+        int modes=kinds.Where(p=>PowerUpRules.IsBombType(p.Key)).Sum(p=>p.Value);
+        Assert(kinds.Keys.All(AdvancedRules.ItemTypes.Contains)&&upgrades>effects&&effects>modes,"Arena drops lost the upgrade/effect/bomb-type priority.");
         Console.WriteLine($"PASS {stage.Name} loot: {covers/32d:F2} covers, {drops/32d:F2} actual drops per round across 32 seeds; {ordinaryDropRate:P1} ordinary drop rate; opening cover follows the stage policy");
         foreach(bool reverse in new[]{false,true})
         {

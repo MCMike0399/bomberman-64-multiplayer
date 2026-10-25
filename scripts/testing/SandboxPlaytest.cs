@@ -7,7 +7,7 @@ public partial class PlaytestDriver
 {
     private async Task SandboxEquipment()
     {
-        _root.StartLocal(new SessionSettings(Bots:0){Advanced=new AdvancedRules{ItemSeconds=60,DisabledItems="tiny,big,haste,slow"}},1,practice:true);
+        _root.StartLocal(new SessionSettings(Bots:0){Advanced=new AdvancedRules{ItemSeconds=60,DisabledItems="bomb,heart,remote,tiny,big,haste,slow"}},1,practice:true);
         await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"sandbox practice reaches fight",150);
         await Capture("expanded-pyramid-and-equipment");
         await MoveTo(8.5f,12.5f,100);await MoveTo(8.5f,13.5f,40);

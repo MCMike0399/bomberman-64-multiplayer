@@ -7,7 +7,7 @@ internal static class AdvancedRulesChecks
     {
         int checks=0;
         void Check(bool value,string message){if(!value)throw new Exception(message);checks++;}
-        var defaults=new AdvancedRules();Check(defaults.DropPercent==55&&defaults.MaxFire==5&&defaults.MaxBombs==5,"Unexpected defaults.");
+        var defaults=new AdvancedRules();Check(defaults.DropPercent==40&&defaults.MaxFire==5&&defaults.MaxBombs==5,"Unexpected defaults.");
         foreach(string type in AdvancedRules.ItemTypes)
         {
             var only=defaults with{DisabledItems=string.Join(',',AdvancedRules.ItemTypes.Where(t=>t!=type))};

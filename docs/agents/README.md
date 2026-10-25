@@ -85,6 +85,11 @@ update the current guide rather than silently reviving old behavior.
   This source work is separate from the published v0.25.0 release; see verification
   for the subsequently requested local preview installation.
 
+- Item-density tuning (2026-10-25 source work): 40% independent crate drops,
+  60/30/10 upgrade/effect/bomb-type weights, and six-item default practice caches.
+  The [gameplay guide](gameplay-and-ai.md#item-density-tuning-2026-10-25) records
+  measured alternatives and scope. This supersedes the v0.25 density defaults.
+
 - v0.25 delivered: Advanced match settings, independent 55% crate drops without
   guaranteed openings, expiring practice/map items, default five-stack blast/bomb
   caps and temporary Tiny/Big/Haste/Slow effects. The gameplay and input guides

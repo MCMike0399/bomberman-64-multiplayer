@@ -27,7 +27,7 @@ public sealed partial class BlastSession
         _presentedKickContacts.Clear();
         _hazards.Clear();
         _items.Clear();
-        foreach(var item in _stage.InitialItems.Concat(_practice ? _stage.TrainingItems : []).Where(item=>_advanced.Allows(item.Type)))
+        foreach(var item in _stage.InitialItems.Concat(_practice&&_tutorialLesson is null ? PracticeItems(context.Random) : []).Where(item=>_advanced.Allows(item.Type)))
             _items.Add(new BlastItem { Id=NextItemId(),CellX=item.X,CellZ=item.Z,Tier=_stage.At(item.X,item.Z).Tier,Type=item.Type,LifeRemaining=_advanced.ItemSeconds });
 
         // Restore pending joiners and reset living players.

@@ -331,7 +331,7 @@ input. See the [stage contract](../up-and-down.md) for the accepted adaptation.
 `AdvancedRulesChecks` covers validation, empty/filtered pools, custom caps and real
 status pickup/movement/expiry; `ItemExpirationChecks` retains the formerly
 unlimited map/training item regression. Actual crate-destruction sampling in
-`LootAvailabilityChecks` checks the independent 55% default across 32 seeds per
+`LootAvailabilityChecks` checks the independent 40% default and category priority across 32 seeds per
 map. `advanced-settings` is the graphical menu/status/expiration journey;
 `network` also edits the advanced page in a live room and checks peer settings.
 
@@ -339,8 +339,37 @@ The existing `loot-opening` and `cover-layout` collection journeys explicitly
 select 100% drops and a basic-upgrade-only pool through ordinary match settings
 to keep their pickup/rendering evidence deterministic. They do not certify the
 default drop probability; managed actual-destruction samples do. `sandbox`
-selects a 60-second lifetime for its long equipment tour. Default and short
+selects a six-item restricted pool and a 60-second lifetime for its long equipment
+tour. Bomb-handling, kick and grapple journeys request a restricted upgrade/Remote
+pool so seeded sandbox selection cannot remove the equipment under test.
+`powerup-collect` first checks and captures the default six-item 3/2/1 cache, then
+uses a separate six-item explicit pool for its equipment-swap walkthrough.
+`ItemDensityChecks` samples 100,000 weighted draws and 64 practice seeds per
+training map, including replay, every type, filtered/empty pools and expiration.
+Its `--loot-density-sweep` compares five rates over four maps and 128 seeds via
+actual authority block destruction. See the [tuning evidence](gameplay-and-ai.md#item-density-tuning-2026-10-25).
+Default and short
 lifetimes have separate authority and graphical expiration witnesses.
+
+### Item-density source verification — 2026-10-25
+
+Receipts under ignored `artifacts/item-density/` retain baseline/tuned sweeps,
+the red priority witness, and successful `managed-final`, `headless`, `public`
+and focused `graphical` runs. The first managed run exposed an old per-map
+all-types assertion: a 1%-weight type can be absent from a small sample. Full
+pool coverage now belongs to the 100,000-draw regression; actual map samples
+retain probability and category-order checks. The final managed profile passed
+2,914 game checks, 336 client checks, 65 AI checks, the 48-case soak and real
+network/relay/fleet gates. Headless core passed 1,233 assertions, peer rooms 19
+and adaptive rooms nine.
+
+Rebuilt exports passed isolated macOS/Metal `powerup-collect`, `advanced-settings`
+and `sandbox`: 100 assertions, 22 captures, zero runtime errors/warnings. Actual
+captures reviewed the six-item default cache, collected inventory/equipment,
+settings, before/after expiration and bomb swaps/blasts. The VM stopped after
+its owned runs; this is renderer/synthetic-input evidence, not a fresh physical
+controller or native-host GPU performance certification. This source work does
+not establish installation, release publication or external server delivery.
 
 ## Top Rules verification
 

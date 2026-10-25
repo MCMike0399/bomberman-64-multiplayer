@@ -4,7 +4,8 @@ namespace Bomber.Game;
 /// <summary>Shared, validated match tuning for local games and authoritative rooms.</summary>
 public sealed record AdvancedRules
 {
-    public int DropPercent { get; init; } = 55;
+    public const int DefaultDropPercent=40;
+    public int DropPercent { get; init; } = DefaultDropPercent;
     public int BlockPercent { get; init; } = 100;
     public int ItemSeconds { get; init; } = 20;
     public int MaxFire { get; init; } = 5;
@@ -32,7 +33,7 @@ public sealed record AdvancedRules
     public static AdvancedRules FromSettings(IReadOnlyDictionary<string,string> settings)
     {
         int Read(string key,int fallback)=>settings.TryGetValue(key,out var value)?int.Parse(value,CultureInfo.InvariantCulture):fallback;
-        var rules=new AdvancedRules {DropPercent=Read("drop-percent",55),BlockPercent=Read("block-percent",100),ItemSeconds=Read("item-seconds",20),MaxFire=Read("max-fire",5),MaxBombs=Read("max-bombs",5),EffectSeconds=Read("effect-seconds",10),DisabledItems=settings.GetValueOrDefault("disabled-items","")};
+        var rules=new AdvancedRules {DropPercent=Read("drop-percent",DefaultDropPercent),BlockPercent=Read("block-percent",100),ItemSeconds=Read("item-seconds",20),MaxFire=Read("max-fire",5),MaxBombs=Read("max-bombs",5),EffectSeconds=Read("effect-seconds",10),DisabledItems=settings.GetValueOrDefault("disabled-items","")};
         rules.Validate();return rules;
     }
 }
