@@ -40,7 +40,9 @@ update the current guide rather than silently reviving old behavior.
 - Greedy Trap adds the enclosed upper court, narrow middle ring and lower reward
   chamber, with four inner flights, two upper exits and closing side walls.
   [Stage contract](../greedy-trap.md) and [inspected references](../greedy-trap-research.md)
-  distinguish original observations from eight-player/physics tuning.
+  distinguish original observations from eight-player/physics tuning. Its
+  reservoir/town exterior is a [Blue Resort-informed extension](../greedy-trap-background-research.md)
+  with shared outdoor lighting and animated water.
 
 - v0.29.1 delivers adaptive public/private rooms, independent coordination and execution limits, measured player-host selection and the Rock Garden miniature bounds fix. [Behavior](../smart-multiplayer.md) and [delivery evidence](../smart-multiplayer-release-029.md) define measured capacity and remaining limits.
 

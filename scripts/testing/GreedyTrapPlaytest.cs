@@ -22,11 +22,27 @@ public partial class PlaytestDriver
         menu.Configure(new SessionSettings(),1);NamedButton("StageSelector").GrabFocus();
         for(int i=0;i<4;i++)await KeyPress(Key.Right);
         Check(menu.Settings.Stage==BlastStages.GreedyTrap,"native arena selector reaches Greedy Trap");
+        var miniature=AuditDescendants(_root).OfType<TempleStageView>().Single(t=>t.GetParent().Name=="ArenaDiorama");
+        Check(!miniature.GetNode<Node3D>("GreedyExterior").IsVisibleInTree(),"menu miniature trims the exterior to keep the display plinth readable");
         await Capture("greedy-trap-menu-miniature");
         _root.StartLocal(new SessionSettings(Stage:BlastStages.GreedyTrap,Bots:0),4);
         await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"ordinary four-player Greedy Trap battle starts",150);
         Check(State.GetProperty("players").GetArrayLength()==4&&CoverCount()==8,"four upper starts surround eight real bottom blocks");
         var openingTerrain=AuditDescendants(LightingArena).OfType<TempleStageView>().Single();
+        var scenery=openingTerrain.GetNodeOrNull<Node3D>("GreedyExterior");
+        Check(scenery is not null&&scenery.IsVisibleInTree(),"Greedy Trap has a visible exterior beyond its enclosed battle floor");
+        Check(AuditDescendants(LightingArena).OfType<WorldEnvironment>().Single().Environment.BackgroundMode==Godot.Environment.BGMode.Sky,
+            "Greedy Trap shares the other outdoor arenas' lit sky instead of a black background");
+        Check(!AuditDescendants(scenery!).OfType<CollisionObject3D>().Any(),"reservoir scenery adds no gameplay collision bodies");
+        var playable=new Rect2(-.35f,-.35f,openingTerrain.Width+.7f,openingTerrain.Depth+.7f);
+        var intrusive=AuditDescendants(scenery!).OfType<MeshInstance3D>().Where(n=>n.Mesh!=null).Where(n=>
+        {
+            var bounds=(openingTerrain.GlobalTransform.AffineInverse()*n.GlobalTransform)*n.Mesh.GetAabb();
+            return bounds.End.Y>=0&&playable.Intersects(new Rect2(bounds.Position.X,bounds.Position.Z,bounds.Size.X,bounds.Size.Z));
+        }).Select(n=>n.Name.ToString()).ToArray();
+        Check(intrusive.Length==0,"exterior architecture stays below or outside the playable volume: "+string.Join(',',intrusive));
+        var wheel=scenery!.GetNode<Node3D>("GreedyWaterwheel");float wheelAngle=wheel.Rotation.Z;
+        await Frames(8);Check(Math.Abs(wheel.Rotation.Z-wheelAngle)>.01f,"decorative waterwheel rotates independently of match hazards");
         var brick=openingTerrain.GetNode<MeshInstance3D>("GreedyWallBrick_9_0");
         var cap=openingTerrain.GetNode<MeshInstance3D>("GreedyWallCap_9_0");
         Check(brick.Position.Y+brick.Mesh.GetAabb().End.Y<=cap.Position.Y+cap.Mesh.GetAabb().Position.Y+.001f,
@@ -34,6 +50,18 @@ public partial class PlaytestDriver
         Check(Math.Abs(cap.Position.Y+cap.Mesh.GetAabb().End.Y-(2+openingTerrain.AimObstacleHeight(9,0))*TempleStageView.HeightScale)<.001f,
             "visible perimeter crown matches authored throw collision height");
         await Capture("greedy-trap-four-player-opening");
+        if(!_headless)
+        {
+            using var image=Image.LoadFromFile(_screenshots[^1]);int visible=0,samples=0;
+            foreach(int side in new[]{0,1})for(int y=image.GetHeight()/4;y<image.GetHeight()*3/4;y+=8)
+                for(int x=8;x<image.GetWidth()/8;x+=8)
+                {
+                    var color=image.GetPixel(side==0?x:image.GetWidth()-1-x,y);samples++;
+                    if(color.R*.2126f+color.G*.7152f+color.B*.0722f>.025f)visible++;
+                }
+            Event("greedy-background-coverage",new{visible,samples});
+            Check(visible>samples*.9f,"normal battle view fills both former black side margins with scenery");
+        }
         if(!_headless)
         {
             foreach(var size in new[]{new Vector2I(1280,720),new Vector2I(1280,800)})
@@ -53,8 +81,11 @@ public partial class PlaytestDriver
             await SelectGraphics(preset);await Frames(3);
             var terrain=AuditDescendants(LightingArena).OfType<TempleStageView>().Single();
             var materials=AuditDescendants(terrain).OfType<MeshInstance3D>().Select(n=>n.MaterialOverride).OfType<ShaderMaterial>().Distinct().ToArray();
-            Check(materials.Length==6&&materials.All(m=>m.GetShaderParameter("quality_detail").AsSingle()==(preset==GraphicsPreset.Low?0:1)),"all original stage textures follow "+preset);
+            Check(materials.Count(m=>m.Shader.Code.Contains("uniform int surface_style"))==6&&materials.All(m=>m.GetShaderParameter("quality_detail").AsSingle()==(preset==GraphicsPreset.Low?0:1)),"arena and exterior textures follow "+preset);
             Check(!terrain.GetChildren().OfType<MeshInstance3D>().Any(n=>n.Mesh is PlaneMesh),"turquoise pit has no water plane at "+preset);
+            var moat=terrain.GetNode<MeshInstance3D>("GreedyExterior/GreedyReservoirWater");
+            Check(((ShaderMaterial)moat.MaterialOverride).Shader==ArtMaterials.WaterShaderFor(preset),"decorative reservoir follows the shared water quality policy at "+preset);
+            Check(Math.Abs(moat.Position.Y-TempleStageView.GreedyMoatHeight)<.001f,"exterior reservoir stays below the safe chamber floor");
             await Capture("greedy-trap-"+GraphicsQuality.ToWire(preset));
         }
         await SelectGraphics(quality);
@@ -87,6 +118,9 @@ public partial class PlaytestDriver
         await Frames(5);
         var arena=AuditDescendants(LightingArena).OfType<TempleStageView>().Single();
         var left=arena.GetNode<Node3D>("GreedyCrusherLeft");var right=arena.GetNode<Node3D>("GreedyCrusherRight");
+        Check(arena.GetNode<Node3D>("GreedyExterior").Transform==Transform3D.Identity&&
+            Math.Abs(arena.GetNode<MeshInstance3D>("GreedyExterior/GreedyReservoirWater").Position.Y-TempleStageView.GreedyMoatHeight)<.001f,
+            "closing walls leave the decorative reservoir and town stationary");
         Check(left.Visible&&right.Visible&&Math.Abs(left.Position.X+left.Scale.X*.5f-State.GetProperty("closedLeft").GetInt32())<.01f,"left crushing face matches authority collision boundary");
         Check(Math.Abs(right.Position.X-right.Scale.X*.5f-(19-State.GetProperty("closedRight").GetInt32()))<.01f,"right crushing face matches authority collision boundary");
         Check(Math.Abs(left.Position.X-left.Scale.X*.5f)<.01f&&Math.Abs(right.Position.X+right.Scale.X*.5f-19)<.01f,

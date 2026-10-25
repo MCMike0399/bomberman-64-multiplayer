@@ -69,6 +69,7 @@ public partial class TempleStageView
             }
             Box(hub,Vector3.Zero,new(.18f,.18f,.13f),coping,.035f);
         }
+        BuildGreedyExterior();
     }
 
     private Node3D CreateGreedyCover(int x,int z)
@@ -132,10 +133,12 @@ public partial class TempleStageView
         if(_graphicsRevision!=GraphicsQuality.Revision)
         {
             foreach(var material in _greedyMaterials)material.SetShaderParameter("quality_detail",GraphicsQuality.Current==GraphicsPreset.Low?0:1);
+            UpdateGreedyExteriorQuality();
             _graphicsRevision=GraphicsQuality.Revision;
         }
         foreach(var gear in _greedyGears)gear.RotateZ(delta*_greedyGearImpulse*2.4f);
         _greedyGearImpulse=Mathf.MoveToward(_greedyGearImpulse,0,delta*2.5f);
+        if(_greedyWaterwheel is {} wheel&&wheel.IsVisibleInTree())wheel.RotateZ(delta*.24f);
     }
 
     private void SizeGreedyCrushers()

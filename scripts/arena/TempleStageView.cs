@@ -16,6 +16,10 @@ public partial class TempleStageView : Node3D
     private readonly HashSet<int> _underpasses = [];
     private bool _castle;
     private bool _greedy;
+    public const float GreedyMoatHeight=-1.28f;
+    private Node3D? _greedyExterior,_greedyWaterwheel;
+    private MeshInstance3D? _greedyMoat;
+    private readonly List<ShaderMaterial> _greedyExteriorMaterials=[];
     private readonly List<ShaderMaterial> _greedyMaterials=[];
     private readonly List<Node3D> _greedyCrushers=[],_greedyGears=[];
     private readonly List<MeshInstance3D> _greedyOuterLeft=[],_greedyOuterRight=[];
@@ -49,6 +53,7 @@ public partial class TempleStageView : Node3D
     {
         _lighting=lighting;
         if(_water?.MaterialOverride is ShaderMaterial material)lighting.ApplyWater(material);
+        if(_greedyMoat?.MaterialOverride is ShaderMaterial moat)lighting.ApplyWater(moat);
     }
     public void SetWaterLevel(float tierLevel)
     {

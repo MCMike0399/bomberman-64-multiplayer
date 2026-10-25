@@ -227,6 +227,13 @@ emission found it. Close-up concentric banding on the helmet predates this work.
 
 ### Greedy Trap presentation
 
+The exterior now uses a Blue Resort-informed fortified reservoir: animated teal
+water, quays, blue roofs, sparse rounded trees and a slow waterwheel. It shares
+other outdoor arenas' sky, lighting, water presets and depth cues. The landscape
+is an original extension, not an exterior recovered from Greedy Trap footage.
+All scenery stays outside/below play, remains separate from compression and is
+hidden in the menu miniature. [Background sources](../greedy-trap-background-research.md).
+
 Greedy Trap has independently authored cobbles, burgundy brick, teal floor tiles,
 pale ring paving and gray-green destructible masonry, plus compression flywheels
 and pulsing amber inlays. It uses the enclosed-arena camera, ordinary lighting

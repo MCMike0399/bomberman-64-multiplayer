@@ -54,6 +54,27 @@ These mechanical accents are original art, not recovered original models.
   their renderer/settings validator cannot support. Both clients and the
   independent server need this revision; this PR does not deploy a server.
 
+## Reservoir setting (2026-10-25)
+
+The user's follow-up replaces the black void with an original fortified reservoir
+informed by Blue Resort's quays, waterways, blue roofs and rounded trees. Original
+Greedy Trap footage supplies no exterior landscape; [background research](greedy-trap-background-research.md)
+records the inspected gameplay/manual images and labels this extension explicitly.
+
+`TempleStageView.GreedyExterior.cs` adds a broad foundation meeting the water,
+pale quays, two lower causeways, four small slate-roofed towers, sparse round trees,
+and a slowly turning waterwheel. Sage banks and the shared sky/haze keep the
+surroundings quieter than the cream/red/teal arena. The outer reservoir reuses the
+other maps' animated water: opaque on Low, refracting/caustic on Medium and High,
+with the same morning/midday/afternoon/night profiles. The basin inside stays
+opaque safe paving.
+
+Everything is cosmetic and separate from the moving walls. Above-floor scenery
+stays outside a margin around the playable grid; no collision bodies or new exits
+are added. The exterior's root/water level stay fixed during compression. The
+menu miniature hides the entire exterior node to preserve its display footprint.
+The battle camera keeps its original playable-area fit and depth cues.
+
 ## Verification entrypoints
 
 ```sh
@@ -104,7 +125,7 @@ protocol-4 bomb-loadout change.
 - Focused exported online journey: **43 assertions / two captures**, both
   server-owned and player-hosted rooms, zero runtime errors/warnings.
 - Final rebuilt standalone app: **all eight `greedy-trap-regression` journeys
-  pass, 1,079 assertions / 105 captures**, Metal Forward+ in an isolated windowed
+  pass, 1,094 assertions / 105 captures**, Metal Forward+ in an isolated windowed
   macOS desktop. Coverage includes first-use preparation, the arena tour, setup,
   all-arena graphics presets, lighting, framing, ordinary online play and Greedy
   Trap in both hosting modes. The runner reports zero runtime errors/warnings;
@@ -113,7 +134,14 @@ protocol-4 bomb-loadout change.
 Raw receipts remain in ignored `artifacts/greedy-trap/`: `integration-public/`,
 `integration-managed/`, `integration-ai-soak.json`, `integration-ai-soak.log`,
 `integration-headless/`, `integration-menu-navigation/`, `network-rendered-final/`
-and `merged-verified/`. Earlier source/graphical failures and the missing-wall-
+and `merged-verified/`. The reservoir follow-up is verified separately by
+`background-public/`, `background-headless/`, `background-visual/` and
+`background-regression/`. Its final complete eight-journey export passes
+**1,094 assertions / 105 captures**, with zero runtime errors/warnings and no host
+foreground/pointer changes. New checks cover filled side margins, sky mode,
+collision-free scenery bounds, the waterwheel, shared water quality/lighting,
+stationary scenery during compression and the trimmed menu miniature.
+Earlier source/graphical failures and the missing-wall-
 crown red test remain there as diagnostic evidence; the final receipts supersede
 those attempts.
 
