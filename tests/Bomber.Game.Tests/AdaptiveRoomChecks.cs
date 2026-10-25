@@ -100,6 +100,20 @@ internal static class AdaptiveRoomChecks
         quietRoom.OnPlayerConnectionChanged(quiet,qo,true);
         Check(quiet.Frames.Count(f=>f.Type=="party.status")>statuses&&quiet.Status.GetProperty("players").EnumerateArray().First(p=>p.GetProperty("playerId").GetString()==qo.PlayerId).GetProperty("connection").GetInt32()>connection,
             "replacement sockets force fresh status even without an observed disconnected state");
+        var relay = new RoomContext(); relay.Limits["simulation"] = 0;
+        var relayRoom = new AdaptiveRoomGame().CreateSession(new("relay", "blast-room", relay.Settings, 64));
+        foreach (var p in Enumerable.Range(0,8).Select(i=>relay.Add("r"+i,i)).ToArray())
+        { relayRoom.OnPlayerJoined(relay,p); Relay(p,"peer.hello",new{version=OnlineProtocol.Revision}); }
+        int relayEpoch=relay.Status.GetProperty("epoch").GetInt32();
+        foreach(var p in relay.Players) Relay(p,"peer.quality",new {epoch=relayEpoch,serverRtt=120d,frameGap=16d,
+            links=relay.Players.Where(other=>other!=p).Select(other=>new{id=other.PlayerId,rtt=20d,loss=0d,direct=false,samples=5})});
+        Relay(relay.Players[0],"party.start",new{});
+        var authority=relay.Players.Single(p=>p.PlayerId==relay.Status.GetProperty("hostId").GetString());
+        relayEpoch=relay.Status.GetProperty("epoch").GetInt32(); relay.Frames.Clear();
+        for(int tick=0;tick<15;tick++) foreach(var p in relay.Players.Where(p=>p!=authority))
+            Relay(authority,"peer.state",new{epoch=relayEpoch,to=p.PlayerId,payload=new{t="state",d=new{terrain=new string('x',40000)}}});
+        Check(relay.Frames.Count(f=>f.Type=="peer.state")==105,"adaptive authority relays all seven recipients at the normal large-stage cadence");
+        void Relay(RealtimePlayer p,string type,object data)=>relayRoom.OnMessage(relay,p,new(type,JsonSerializer.SerializeToElement(data),null,relay.Now));
         Console.WriteLine($"PASS {passed} adaptive room checks");
         return passed;
         void Send(RealtimePlayer player, string type, object data) => room.OnMessage(context, player,

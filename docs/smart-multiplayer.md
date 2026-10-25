@@ -50,6 +50,11 @@ when decoded. A frame that cannot fit uses WSS. A stage-readiness barrier holds
 at most one pending snapshot until its stage arrives. Input/action transitions
 remain reliable and sequenced; there is no movement prediction or rollback.
 
+The authority relay allowance scales with connected recipients (2 MiB of decoded
+messages per recipient per second, at most seven), because the host sends a copy
+to each. Guest uploads remain capped at 64 KiB/s. Physical relay concurrency is
+separately reserved and must pass guarded load tests.
+
 `peer.state` separates disposable relay snapshots from control. Client and Kernel
 queues coalesce those snapshots while retaining control ordering. Exhausted
 reliable queues explicitly fail the connection instead of silently evicting a

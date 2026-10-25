@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/../.."
-revision=3ccf797031241334f60bef5814032fc1c0debc80
+revision=8c861a941c6619b8719ad5658ba6bd921cf47ff5
 repository="${KERNEL_REPOSITORY:-}"
 if [ -e burbuja-kernel ]; then
   actual="$(git -C burbuja-kernel rev-parse HEAD 2>/dev/null || true)"

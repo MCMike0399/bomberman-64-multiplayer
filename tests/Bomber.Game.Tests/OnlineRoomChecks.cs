@@ -84,6 +84,28 @@ internal static class OnlineRoomChecks
         idleRoom.OnMessage(idle,idlePeer,new("party.start",JsonSerializer.SerializeToElement(new{}),null,idle.Now));
         idle.Tick=420;idleRoom.OnTick(idle);
         Check(idle.Frames.Last(f=>f.Type=="party.status").Data.GetProperty("leaderId").GetString()=="idle-host","a responsive former host becomes eligible without stealing current leadership");
+        // One authority sends each snapshot separately to seven authenticated relay recipients.
+        var full = new Context(); var fullRoom = new PeerRoomSession(new("full", "blast-peer", full.Settings, 64));
+        var roster = Enumerable.Range(0, 8).Select(i => full.Add("relay-" + i, i)).ToArray();
+        foreach (var p in roster)
+        { fullRoom.OnPlayerJoined(full, p); FullSend(p, "peer.hello", new { version = OnlineProtocol.Revision }); }
+        FullSend(roster[0], "party.start", new { });
+        int fullEpoch = full.Frames.Last(f => f.Type == "party.status").Data.GetProperty("epoch").GetInt32();
+        full.Frames.Clear();
+        var state = new { t = "state", d = new { terrain = new string('x', 40000) } };
+        for (int tick = 0; tick < 15; tick++)
+            foreach (var peer in roster.Skip(1))
+                FullSend(roster[0], "peer.state", new { epoch = fullEpoch, to = peer.PlayerId, payload = state });
+        Check(full.Frames.Count(f => f.Type == "peer.state") == 105,
+            "eight-player relay sustains a full second of ordinary large-stage snapshots without periodic starvation");
+        for (int i = 0; i < 400; i++)
+            FullSend(roster[0], "peer.state", new { epoch = fullEpoch, to = roster[1].PlayerId, payload = state });
+        Check(full.Frames.Count < 505, "authority relay flood remains bounded");
+        full.Tick = 30; int delivered = full.Frames.Count;
+        FullSend(roster[0], "peer.state", new { epoch = fullEpoch, to = roster[1].PlayerId, payload = state });
+        Check(full.Frames.Count == delivered + 1, "relay allowance recovers in the next window");
+        void FullSend(RealtimePlayer p, string type, object data) => fullRoom.OnMessage(full, p,
+            new(type, JsonSerializer.SerializeToElement(data), null, full.Now));
         Console.WriteLine($"PASS {passed} online room authority checks"); return passed;
         void Send(RealtimePlayer player,string type,object data)=>room.OnMessage(c,player,new(type,JsonSerializer.SerializeToElement(data),null,c.Now));
         JsonElement Status()=>c.Frames.Last(f=>f.Type=="party.status").Data;

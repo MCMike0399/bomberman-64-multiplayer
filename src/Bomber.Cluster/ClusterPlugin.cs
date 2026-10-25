@@ -44,11 +44,22 @@ public sealed class PreferredServerPlacement : ILobbyPlacementStrategy
     public string? Choose(IReadOnlyList<LobbyServerStatus> candidates, PlacementRequest request)
     {
         var excluded = _pressure.ExcludedServers();
-        return candidates.Where(c => c.HasCapacity && _rank.ContainsKey(c.ServerId) && !excluded.Contains(c.ServerId))
-            .OrderBy(c => request.GameId is "blast-room" or "blast-online" ? ResourceRank(c) : 0)
+        string preference = request.GameId == "blast-room" ? request.Settings.GetValueOrDefault("hosting", "auto") : "auto";
+        bool adaptive = request.GameId is "blast-room" or "blast-online";
+        return candidates.Where(c => c.HasCapacity && _rank.ContainsKey(c.ServerId) && !excluded.Contains(c.ServerId) &&
+                (!adaptive || SupportsPreference(c, preference)))
+            .OrderBy(c => adaptive ? ResourceRank(c, preference) : 0)
             .ThenBy(c => _rank[c.ServerId]).Select(c => c.ServerId).FirstOrDefault();
     }
 
-    private static int ResourceRank(LobbyServerStatus server) => server.AvailableResources is not { } available ? 0 :
-        available.GetValueOrDefault("simulation") > 0 ? 0 : available.GetValueOrDefault("peer-relay") > 0 ? 1 : 2;
+    private static bool SupportsPreference(LobbyServerStatus server, string preference) => server.ResourceLimits is not { } limits ||
+        (preference switch { "peer" => limits.GetValueOrDefault("peer-relay") > 0, "server" => limits.GetValueOrDefault("simulation") > 0,
+            _ => limits.GetValueOrDefault("simulation") > 0 || limits.GetValueOrDefault("peer-relay") > 0 });
+    private static int ResourceRank(LobbyServerStatus server, string preference)
+    {
+        if (server.AvailableResources is not { } available) return 0;
+        if (preference == "peer") return available.GetValueOrDefault("peer-relay") > 0 ? 0 : 2;
+        if (available.GetValueOrDefault("simulation") > 0) return 0;
+        return preference != "server" && available.GetValueOrDefault("peer-relay") > 0 ? 1 : 2;
+    }
 }

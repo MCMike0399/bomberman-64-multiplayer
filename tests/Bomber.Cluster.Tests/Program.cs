@@ -24,6 +24,15 @@ Check(balancer.Choose([
     Node("primary") with { AvailableResources = new Dictionary<string,int> { ["simulation"] = 0, ["peer-relay"] = 1 } },
     Node("fallback") with { AvailableResources = new Dictionary<string,int> { ["simulation"] = 1, ["peer-relay"] = 1 } }
 ], adaptive) == "fallback", "free fallback simulation beats an empty primary waiting-room slot");
+Check(balancer.Choose([
+    Node("primary") with { ResourceLimits = new Dictionary<string,int>{{"simulation",2},{"peer-relay",1}}, AvailableResources = new Dictionary<string,int>{{"simulation",0},{"peer-relay",1}} },
+    Node("fallback") with { ResourceLimits = new Dictionary<string,int>{{"simulation",1},{"peer-relay",0}}, AvailableResources = new Dictionary<string,int>{{"simulation",1},{"peer-relay",0}} }
+], adaptive with { Settings = new Dictionary<string,string>{{"hosting","peer"}} }) == "primary", "player-hosted preference cannot be stranded on a worker with no relay budget");
+var peerRequest = adaptive with { Settings = new Dictionary<string,string>{{"hosting","peer"}} };
+Check(balancer.Choose([Node("primary") with { ResourceLimits = new Dictionary<string,int>{{"peer-relay",0}} }],peerRequest)==null,
+    "disabled player hosting does not create an unplayable room");
+Check(balancer.Choose([Node("primary") with { ResourceLimits = new Dictionary<string,int>{{"peer-relay",1}}, AvailableResources = new Dictionary<string,int>{{"peer-relay",0}} }],peerRequest)=="primary",
+    "occupied peer capacity can still accept a bounded waiting room");
 foreach (string[] invalid in new[] { Array.Empty<string>(), new[] { "" }, new[] { "primary", "primary" } })
 {
     try { _ = new PreferredServerPlacement(invalid); throw new Exception("Invalid order accepted"); }

@@ -6,8 +6,9 @@ device-local choice.
 
 The primary node is **raspberrypi**; **DiveMac** keeps a small idle worker ready for
 overflow. `Blast.Cluster` registers the `blast-primary-fallback` placement policy.
-It always chooses the first eligible configured server, including when the primary
-returns while the fallback still has matches. The kernel filters full/draining
+For adaptive rooms it first ranks available execution capacity compatible with
+the requested hosting preference, then uses the configured node order. Empty
+coordination slots alone do not imply capacity to run another match. The kernel filters full/draining
 servers and owns atomic capacity claims; HTTP gateway ordering alone does not
 implement lobby placement.
 
@@ -20,7 +21,8 @@ flowchart LR
     Fallback <--> Coordinator
 ```
 
-Each match runs entirely on its owning node. The common API shares guest identity,
+A dedicated match runs on its room’s owning node; a peer match runs on a qualified
+player with that same node providing signalling and reserved relay fallback. The common API shares guest identity,
 join codes and matchmaking through a dedicated authenticated Valkey backplane.
 Reservations route sockets to `/nodes/pi/realtime/v1/connect` or
 `/nodes/divemac/realtime/v1/connect`. The gateway strips only that node prefix.
@@ -91,17 +93,28 @@ uncompressed input-size limit remains enforced. Credentials travel in HTTP/upgra
 requests, outside game frames. See the kernel's opt-in compression contract and
 [Microsoft's transport guidance](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/websockets?view=aspnetcore-10.0#compression).
 
+## Adaptive execution limits
+
+From v0.29, `BLAST_MAX_LOBBIES` limits coordination rooms independently of
+`BLAST_SIMULATIONS` (active dedicated matches) and `BLAST_PEER_MATCHES` (active
+player-hosted matches with relay fallback reserved). Only `blast-room` and
+`blast-online` accept production reservations, so legacy modes cannot bypass
+these limits. Peer capacity defaults to zero until guarded hardware measurements
+pass. Keep the established physical CPU/memory ceilings during rollout.
+[Adaptive rooms](smart-multiplayer.md) defines selection and recovery.
+
 ## Capacity and failure checks
 
 ### Pressure-aware placement extension
 
-`Blast.Cluster` 1.1.0 optionally reads `BlastCluster:AdmissionFile`, configured as
+`Blast.Cluster` 1.2.0 optionally reads `BlastCluster:AdmissionFile`, configured as
 `/run/blast-admission/placement.json`. The host mounts the **directory**
 `./admission` read-only, so atomic file replacements become visible inside Docker
 (a single-file bind would retain the old inode). The document contains Unix
 `at` and `excludedServers`. Fresh exclusions filter placement before the kernel
-makes its atomic capacity claim. They do not alter operator drains, move active
-matches, or change configured room/CPU/memory limits. Empty exclusions restore
+makes its atomic capacity claim. They also defer new simulation/relay claims inside existing rooms, while
+preserving active claims and permitting releases. They do not alter operator
+drains, move active matches, or change configured CPU/memory limits. Empty exclusions restore
 the normal primary-first policy, even while the fallback still hosts rooms.
 
 The private Burbuja host monitor observes CPU, thermal/power state, memory reserve

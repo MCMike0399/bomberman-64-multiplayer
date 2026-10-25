@@ -17,6 +17,7 @@ public sealed class PeerRoomGame : IRealtimeGame
 /// <summary>Authenticated membership, host leases and bounded signalling/relay. Never simulates the game.</summary>
 public sealed class PeerRoomSession(GameSessionOptions options, bool stableRoster = false) : GameSession
 {
+    internal static int RelayByteLimit(int recipients) => Math.Clamp(recipients, 1, 7) * 2 * 1024 * 1024;
     private readonly Dictionary<string, RealtimePlayer> _members = [];
     private readonly Dictionary<string, long> _order = [];
     private readonly Dictionary<string, int> _appearances = [];
@@ -91,8 +92,11 @@ public sealed class PeerRoomSession(GameSessionOptions options, bool stableRoste
         var budget = _budgets.GetValueOrDefault(p.PlayerId);
         int bytes = System.Text.Encoding.UTF8.GetByteCount(d.GetRawText());
         int total = (budget.Window == window ? budget.Bytes : 0) + bytes;
-        _budgets[p.PlayerId] = (window, total);
-        if (total > (p.PlayerId == _host ? 2 * 1024 * 1024 : 64 * 1024)) return;
+        // The host uploads one copy per relay recipient. A room-wide two-MiB ceiling
+        // starved seven receivers for half of every second on large stages.
+        int limit = p.PlayerId == _host ? RelayByteLimit(_members.Keys.Count(id => id != p.PlayerId && c.IsConnected(id))) : 64 * 1024;
+        _budgets[p.PlayerId] = (window, Math.Min(total, limit + 1));
+        if (total > limit) return;
         if (message.Type == "peer.hello")
         {
             if (d.TryGetProperty("version",out var version) && version.ValueKind==JsonValueKind.Number && version.TryGetInt32(out int v) && v==OnlineProtocol.Revision)

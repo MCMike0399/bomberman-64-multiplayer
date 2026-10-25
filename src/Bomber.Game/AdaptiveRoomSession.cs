@@ -93,8 +93,10 @@ public sealed class AdaptiveRoomSession : GameSession
         var previous = _budgets.GetValueOrDefault(p.PlayerId);
         int bytes = System.Text.Encoding.UTF8.GetByteCount(message.Data.GetRawText());
         int used = (previous.Window == window ? previous.Bytes : 0) + bytes;
-        _budgets[p.PlayerId] = (window, Math.Min(used, 4 * 1024 * 1024));
-        if (used > (_active == "peer" && PeerHost(c)?.PlayerId == p.PlayerId ? 2 * 1024 * 1024 : 64 * 1024)) return;
+        int limit = _active == "peer" && PeerHost(c)?.PlayerId == p.PlayerId
+            ? PeerRoomSession.RelayByteLimit(_members.Keys.Count(id => id != p.PlayerId && c.IsConnected(id))) : 64 * 1024;
+        _budgets[p.PlayerId] = (window, Math.Min(used, limit + 1));
+        if (used > limit) return;
         if (message.Type == "peer.quality")
         {
             if (message.Data.ValueKind == JsonValueKind.Object && message.Data.TryGetProperty("epoch", out var epoch) &&
