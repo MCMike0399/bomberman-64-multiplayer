@@ -27,7 +27,15 @@ internal static class UpAndDownAiChecks
             minimum=Math.Min(minimum,farming.FixedSoftBlocks!.Count(c=>cover.IsAlive(c.X,c.Z)));
         }
         Check(lowerBomb&&minimum<initial,"CPU ordinary planting and escape opens actual lower-level cover");
-        Console.WriteLine("PASS Up & Down layered CPU occupancy, danger, and real lower-cover planting/escape");return 3;
+        var steering=new Fixture(stage,bots:1);steering.Step(62);
+        steering.Session.AiTestPosition("cpu-0",16.5f,14.2f);
+        var actor=steering.Session.AiTestPlayers.Single();int start=graph.Cell(actor.X,actor.Z,actor.Y);
+        var probe=typeof(BlastSession).GetMethod("BotDirectionMoves",BindingFlags.Instance|BindingFlags.NonPublic)!;
+        Check(!(bool)probe.Invoke(steering.Session,[actor,start,0f,-1f])!,
+            "CPU recovery rejects a stair sidestep that reaches water before the next reaction");
+        Check((bool)probe.Invoke(steering.Session,[actor,start,-1f,0f])!,
+            "CPU recovery retains a supported direction along the same stair");
+        Console.WriteLine("PASS Up & Down layered CPU occupancy, danger, lower-cover combat and full-reaction stair recovery");return 5;
     }
     private static void Check(bool condition,string message){if(!condition)throw new Exception(message);}
 }

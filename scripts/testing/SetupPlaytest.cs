@@ -33,6 +33,12 @@ public partial class PlaytestDriver
         Event("garden-miniature-bounds",new {meshes=scenery.Length,spills});
         Check(scenery.Length>0&&spills.Length==0,"Rock Garden miniature scenery stays within its display footprint");
         await Adjust("StageSelector",Key.Right);Check(menu.Settings.Stage=="up-and-down","right selects authority Up & Down");await Capture("setup-up-and-down");
+        var upAndDown=AuditDescendants(_root).OfType<TempleStageView>().Single(t=>t.GetParent().Name=="ArenaDiorama");
+        var displayMeshes=AuditDescendants(upAndDown).OfType<MeshInstance3D>().Where(m=>m.IsVisibleInTree()&&m.Mesh!=null).ToArray();
+        var belowStand=displayMeshes.Where(m=>((upAndDown.GetParent<Node3D>().GlobalTransform.AffineInverse()*m.GlobalTransform)*m.Mesh.GetAabb()).Position.Y<-.312f).ToArray();
+        Check(belowStand.Length==0,"Up & Down miniature foundations stop above the display stand");
+        Check(displayMeshes.Any(m=>m.Mesh is CylinderMesh {RadialSegments:96} sea&&Mathf.IsEqualApprox(sea.TopRadius*upAndDown.Scale.X,4.45f)),
+            "Up & Down miniature sea fits the circular stand without square water corners");
         if(!_headless)
         {
             using var image=Image.LoadFromFile(_screenshots[^1]);int green=0;

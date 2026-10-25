@@ -36,6 +36,52 @@ internal static class UpAndDownChecks
             Go(18.5f,7.5f,2);Go(11.5f,7.5f,4);Go(13.5f,9.5f,4);
             Go(13.5f,21.5f,4);Go(2.5f,21.5f,4);Go(2.5f,2.5f,4);
         });
+        run("Up & Down ordinary inward side drops land on both middle piers", () =>
+        {
+            foreach (int side in new[] {-1, 1}) foreach (float z in new[] {8.5f,12.5f,18.5f,20.5f})
+            {
+                var match=new LocalMatch(new MatchOptions {Stage=BlastStages.UpAndDown,HumanPlayers=1,BotPlayers=0,Practice=true});
+                Fight(match);
+                float rail=side<0?2.5f:21.5f;
+                if(side>0)Walk(match,rail,2.5f);
+                Walk(match,rail,z);
+                match.SetInput(0,new PlayerInput(-side,0));
+                bool fell=false,landed=false;
+                string? death=null;
+                for(int tick=0;tick<60;tick++)
+                {
+                    match.Tick();var p=Player(match);
+                    fell|=p.GetProperty("falling").GetBoolean();
+                    if(fell&&!p.GetProperty("airborne").GetBoolean())
+                    {
+                        landed=p.GetProperty("alive").GetBoolean()&&Math.Abs(p.GetProperty("y").GetSingle()-2)<.01f;
+                        break;
+                    }
+                    if(Events(match).FirstOrDefault(e=>Kind(e)=="death") is {ValueKind:System.Text.Json.JsonValueKind.Object} casualty)
+                    {death=casualty.GetRawText();break;}
+                }
+                Assert(fell&&landed,$"Inward side drop missed the middle pier: side={side}, z={z}, death={death}, player={Player(match)}");
+            }
+        });
+        run("Up & Down authored paired stone blocks retain advanced density and empty practice", () =>
+        {
+            var expected=new HashSet<(int X,int Z)> {(4,11),(4,18),(19,11),(19,18)};
+            foreach(int x in new[]{10,12})foreach(int z in new[]{13,16,18,23})expected.Add((x,z));
+            foreach(int seed in new[]{0,17,64})foreach(int percent in new[]{0,50,100})
+            {
+                var match=new LocalMatch(new MatchOptions {Stage=BlastStages.UpAndDown,Seed=seed,
+                    Advanced=new AdvancedRules {BlockPercent=percent}});
+                var stage=BlastStages.Get(BlastStages.UpAndDown);
+                byte[] bits=Convert.FromBase64String(State(match).GetProperty("softBlocks").GetString()!);
+                var actual=new HashSet<(int X,int Z)>();
+                for(int x=0;x<stage.Width;x++)for(int z=0;z<stage.Height;z++)
+                    if((bits[(z*stage.Width+x)/8]&(1<<((z*stage.Width+x)%8)))!=0)actual.Add((x,z));
+                Assert(actual.Count==12*percent/100&&actual.IsSubsetOf(expected),"Density moved authored stone blocks into travel routes.");
+                if(percent==100)Assert(actual.SetEquals(expected),"Default blocks lost their reference-inspired paired arrangement.");
+            }
+            var practice=new LocalMatch(new MatchOptions {Stage=BlastStages.UpAndDown,Practice=true});
+            Assert(Convert.FromBase64String(State(practice).GetProperty("softBlocks").GetString()!).All(b=>b==0),"Authored cover leaked into practice.");
+        });
         run("Up & Down CPU graph keeps bridge and underpass routes separate", () =>
         {
             var stage=BlastStages.Get(BlastStages.UpAndDown);var graph=NavigationGraph.For(stage);

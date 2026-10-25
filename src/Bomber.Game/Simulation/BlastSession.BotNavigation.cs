@@ -68,7 +68,9 @@ public sealed partial class BlastSession
     {
         // Probe the same axis-separated collision checks as ordinary authority
         // movement. A graph edge can be open while an off-center body cannot turn.
-        float step=(PlayerSpeed*bot.StatusSpeed)/30,x=bot.X,z=bot.Z;
+        // This input persists until the next steering reaction. A one-tick
+        // probe let recovery sidesteps walk off narrow stairs before replanning.
+        float step=(PlayerSpeed*bot.StatusSpeed)*_aiSteeringInterval,x=bot.X,z=bot.Z;
         if(!CollidesWithSolid(x+dx*step,z,bot.Tier,bot))x+=dx*step;
         if(!CollidesWithSolid(x,z+dz*step,bot.Tier,bot))z+=dz*step;
         float minimumProgress=step*MathF.Sqrt(dx*dx+dz*dz)*.1f;

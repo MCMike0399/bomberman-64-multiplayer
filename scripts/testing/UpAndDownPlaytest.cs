@@ -13,6 +13,17 @@ public partial class PlaytestDriver
         Input(0,default);Input(1,default);Input(2,default);
         _root.StartLocal(new SessionSettings(Stage:BlastStages.UpAndDown,Bots:0),1,practice:true);
         await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"Up & Down practice starts",150);
+        var terrain=_root.GetChildren().OfType<ArenaView>().Single().FindChildren("*","",true,false).OfType<TempleStageView>().Single();
+        foreach(var (x,z,tier) in new[]{(5.5f,10.5f,2),(11.5f,2.5f,4),(10.5f,16.5f,0)})
+        {
+            float top=tier*TempleStageView.HeightScale;
+            var faces=AuditDescendants(terrain).OfType<MeshInstance3D>().Where(m=>m.Mesh!=null).Count(m=>
+            {
+                var bounds=(terrain.GlobalTransform.AffineInverse()*m.GlobalTransform)*m.Mesh.GetAabb();
+                return Math.Abs(bounds.End.Y-top)<.0001f&&x>bounds.Position.X&&x<bounds.End.X&&z>bounds.Position.Z&&z<bounds.End.Z;
+            });
+            Check(faces==1,$"Up & Down {x},{z} has one visible paving top instead of coplanar slab faces");
+        }
         await Capture("up-and-down-battle-camera");
         if(!_headless)
         {
@@ -38,6 +49,23 @@ public partial class PlaytestDriver
             Check(Math.Abs(GrappleValue(GrapplePlayer(seat),"y")-y)<.04f,$"Up & Down P{seat+1} reaches {x},{z} at elevation {y}");
             Check(!GrapplePlayer(seat).GetProperty("airborne").GetBoolean(),"connected stage route keeps ordinary foot support");
         }
+        foreach(int side in new[]{-1,1})
+        {
+            int rail=side<0?2:21;
+            if(side>0)await Go(0,rail,2,4);
+            await Go(0,rail,12,4);
+            Input(0,new PlayerInput(-side,0));
+            await WaitState(_=>GrapplePlayer(0).GetProperty("falling").GetBoolean(),"inward side-rail movement starts an ordinary drop",30);
+            await Capture($"up-and-down-side-drop-{side}-falling",0);
+            await WaitState(_=>!GrapplePlayer(0).GetProperty("airborne").GetBoolean(),"side drop reaches the middle landing edge",45);
+            Input(0,default);
+            Check(GrapplePlayer(0).GetProperty("alive").GetBoolean()&&Math.Abs(GrappleValue(GrapplePlayer(0),"y")-2)<.01f,
+                "inward side drop lands alive on the middle pier");
+            await Capture($"up-and-down-side-drop-{side}-landed");
+            await Go(0,side<0?5:18,12,2);await Go(0,side<0?5:18,7,2);
+            await Go(0,11,7,4);await Go(0,11,2,4);
+        }
+        await Go(0,2,2,4);
         await Go(0,11,2,4);await Go(0,11,7,4);await Capture("up-and-down-green-crown");
         await Go(0,5,7,2);await Go(0,5,14,2);await Go(0,11,14,0);
         await Capture("up-and-down-low-deck");
@@ -60,8 +88,29 @@ public partial class PlaytestDriver
         await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"normal three-human Up & Down battle starts",150);
         Check(Convert.FromBase64String(State.GetProperty("softBlocks").GetString()!).Sum(b=>System.Numerics.BitOperations.PopCount((uint)b))==12,"normal stage has twelve lower/middle cover blocks");
         await Capture("up-and-down-normal-cover");
+        Check(AuditDescendants(_root).OfType<Node3D>().Count(n=>n.Name.ToString().StartsWith("UpAndDownBlock",StringComparison.Ordinal))==12,
+            "all normal Up & Down destructible blocks use their own gray stone model");
+        var block=AuditDescendants(_root).OfType<Node3D>().First(n=>n.Name.ToString().StartsWith("UpAndDownBlock",StringComparison.Ordinal));
+        float blockTop=BombThrowRules.CoverHeight*TempleStageView.HeightScale;
+        Check(block.GetChildren().OfType<MeshInstance3D>().Count(m=>Math.Abs((m.Transform*m.Mesh.GetAabb()).End.Y-blockTop)<.0001f)==1,
+            "stone block rim owns its top without a coplanar body face");
+        if(!_headless)
+        {
+            var camera=_root.GetViewport().GetCamera3D()!;var pose=camera.Transform;
+            // Look from inside the ring; an exterior near-side camera lets the
+            // high rail occlude precisely the lower block we need to inspect.
+            camera.Position=new(7.5f,6.5f,20.5f);camera.LookAt(new Vector3(4.5f,3.1f,18.5f));
+            await Capture("up-and-down-stone-blocks-inspection");camera.Transform=pose;
+        }
         // Clear center lanes and flights stay available in ordinary cover-filled play.
-        await Go(0,11,2,4);await Go(0,11,7,4);await Go(0,5,7,2);await Go(0,5,14,2);await Go(0,11,14,0);
+        await Go(0,11,2,4);await Go(0,11,7,4);await Go(0,5,7,2);await Go(0,5,14,2);
+        await Go(0,5,18,2);
+        Input(0,new PlayerInput(0,0,A:true));await Frames(2);Input(0,default);await Frames(2);
+        await Go(0,5,15,2);
+        await WaitState(s=>(Convert.FromBase64String(s.GetProperty("softBlocks").GetString()!)[(18*24+4)/8]&(1<<((18*24+4)%8)))==0,
+            "ordinary bomb destroys the stage-specific pier stone block",120);
+        await Capture("up-and-down-stone-block-destroyed");
+        await Go(0,5,14,2);await Go(0,11,14,0);
         await Go(2,11,2,4);await Go(2,11,7,4);await Go(2,18,7,2);await Go(2,18,17,2);
         await WaitState(s=>s.GetProperty("phase").GetInt32()==2,"Up & Down reaches real timed sudden death",1300);
         Check(State.GetProperty("hurryMode").GetString()=="water"&&State.GetProperty("closedLeft").GetInt32()==0,"Up & Down floods instead of closing columns");

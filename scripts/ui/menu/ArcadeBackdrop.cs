@@ -179,6 +179,7 @@ public partial class ArcadeBackdrop : RenderSurface
             // Gameplay's deep sea foundation would project through the display plinth.
             else if(child is MeshInstance3D {Mesh:not null} terrain&&terrain.Mesh.GetAabb().Position.Y< -3.5f)terrain.Visible=false;
         }
+        if(id==BlastStages.UpAndDown)_miniature.FitUpAndDownMiniature(4.45f/scale,-.31f/scale);
     }
     public LineupPose Pose(int slot)=>slot<_rosterModels.Count?new(_clock,_rosterModels[slot].WalkPose,_rosterModels[slot].Position.Y,_renderedAppearances[slot],_rosterModels[slot].IsVisibleInTree()):default;
     public void ConfigureRoster(LocalRoster roster,int selected)
