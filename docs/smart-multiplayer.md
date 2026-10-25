@@ -1,6 +1,6 @@
 # Adaptive multiplayer rooms
 
-Source contract for v0.29. Delivery evidence belongs in [verification](verification.md).
+Behavior delivered in v0.29.1. [Delivery evidence and operating limits](smart-multiplayer-release-029.md) records the verified release.
 This implements the first persistent-room/local-or-peer milestone of the
 [placement research](multiplayer-placement-research.md) and
 [Kernel implementation assessment](burbuja-multiplayer-research.md).
@@ -124,6 +124,11 @@ a player, but cannot borrow another worker's simulation while keeping its curren
 attachment. Losing a worker loses its rooms. Healthy-worker matches continue,
 new rooms use eligible survivors, and primary recovery does not move existing
 matches. The edge/backplane remains a shared failure domain.
+
+Orderly departure first stops local sends, submits the authenticated leave and
+waits within the bounded cleanup timeout for the seat to disappear, then closes
+native channels. This gives remaining clients the membership update before their
+peer disappears. Abrupt network failure still uses normal reconnect/relay recovery.
 
 ## Verification
 

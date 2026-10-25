@@ -359,6 +359,7 @@ public sealed partial class NetworkSession : ISession
     }
     public void Advance(double deltaSeconds)
     {
+        if (Volatile.Read(ref _disposed) != 0) return;
         PumpMessages();
         if (Status == "Connected") _peer?.Advance();
     }
@@ -420,7 +421,6 @@ public sealed partial class NetworkSession : ISession
     public async ValueTask DisposeAsync()
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
-        _peer?.Dispose();
         await _lifetime.CancelAsync();
         _socket?.Abort();
         if (_worker is not null) try { await _worker; } catch (OperationCanceledException) { }
@@ -439,9 +439,21 @@ public sealed partial class NetworkSession : ISession
                 var me = await RequestAsync(HttpMethod.Get, "me", null, cleanup.Token);
                 if (me.TryGetProperty("lobbyId", out var seat) && seat.ValueKind == JsonValueKind.String) _lobbyId = seat.GetString();
             }
-            if (_lobbyId is not null) await RequestAsync(HttpMethod.Post, $"lobbies/{Uri.EscapeDataString(_lobbyId)}/leave", new { }, cleanup.Token);
+            if (_lobbyId is not null)
+            {
+                await RequestAsync(HttpMethod.Post, $"lobbies/{Uri.EscapeDataString(_lobbyId)}/leave", new { }, cleanup.Token);
+                // Leave is queued by the owner. Preserve native channels until its
+                // membership update can stop peers sending to this departed seat.
+                while (_peer is not null)
+                {
+                    var me = await RequestAsync(HttpMethod.Get, "me", null, cleanup.Token);
+                    if (!me.TryGetProperty("lobbyId", out var seat) || seat.ValueKind != JsonValueKind.String || seat.GetString() != _lobbyId) break;
+                    await Task.Delay(20, cleanup.Token);
+                }
+            }
         }
         catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or JsonException) { }
+        _peer?.Dispose();
         _socket?.Dispose();
         _http.Dispose();
         _lifetime.Dispose();

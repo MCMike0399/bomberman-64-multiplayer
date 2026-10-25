@@ -159,12 +159,19 @@ public partial class ArcadeBackdrop : RenderSurface
         float scale=8.1f/Math.Max(layout.Width,layout.Height);
         _miniature=new TempleStageView(new ArtMaterials()) {Scale=Vector3.One*scale,Position=new(-layout.Width*scale/2,0,-layout.Height*scale/2)};
         _arenaMount.AddChild(_miniature);_miniature.Build(data);
-        // Keep the authority terrain/materials, while trimming its ocean to the display plinth.
+        // Keep the authority terrain/materials, while trimming exterior scenery to the display plinth.
         foreach(var child in _miniature.GetChildren())
         {
             // The trimmed display plinth has no open sea, so it needs no seabed.
             if(child is MeshInstance3D seabed&&seabed.Name=="Seabed")seabed.Visible=false;
             if(child is MeshInstance3D {Mesh:PlaneMesh plane} water){plane.Size=new(layout.Width+.8f,layout.Height+.8f);water.Position=new(layout.Width/2f,-.53f,layout.Height/2f);}
+            else if(child is MeshInstance3D {Mesh:BoxMesh grass} exterior&&child.Name=="GardenExterior")
+            {
+                // ArtGeometry caches meshes used by gameplay too; resize a private menu copy.
+                var displayGrass=(BoxMesh)grass.Duplicate();
+                displayGrass.Size=new(layout.Width+.8f,grass.Size.Y,layout.Height+.8f);
+                exterior.Mesh=displayGrass;
+            }
             // Gameplay's deep sea foundation would project through the display plinth.
             else if(child is MeshInstance3D {Mesh:not null} terrain&&terrain.Mesh.GetAabb().Position.Y< -3.5f)terrain.Visible=false;
         }

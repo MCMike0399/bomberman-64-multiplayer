@@ -14,7 +14,7 @@ public partial class TempleStageView
         _gardenMaterials.AddRange([grass,stone,(ShaderMaterial)_gardenRockMaterial]);
         // The exterior is scenery below the playable floor. Only authority cells
         // inside the stone enclosure support players; there is no invented route.
-        Box(this,new(Width/2f,-.38f,Depth/2f),new(160,.28f,160),grass);
+        Box(this,new(Width/2f,-.38f,Depth/2f),new(160,.28f,160),grass).Name="GardenExterior";
         Box(this,new(Width/2f,-.15f,Depth/2f),new(Width,.3f,Depth),grass);
         var paving=new Node3D{Name="CentralPaving"};AddChild(paving);
         for(int z=0;z<Depth;z++)for(int x=0;x<Width;x++)

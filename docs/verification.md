@@ -1,3 +1,11 @@
+# Adaptive multiplayer v0.29.1 delivered
+
+2026-10-25: adaptive public/private rooms and the merged Rock Garden preview fix
+are published as **v0.29.1/build 35**. Both healthy shared workers match the
+verified official runtime and matching plugins. The Pi passed guarded 24-player
+public load and eight-room admission checks; DiveMac's busy-host guard remained
+in force. [Exact evidence, capacities and limitations](smart-multiplayer-release-029.md).
+
 # Diorama polish — source verification
 
 2026-10-25: water, depth-cue, material, terrain and lighting polish described in
@@ -11,7 +19,7 @@ evidence comes from the isolated macOS Metal guest (paravirtual GPU).
 | Focused graphical | `stage-lighting`, `graphics-settings` (new SSIL, depth-of-field, depth-cue and clear/opaque water assertions), `first-use-rendering`, `presentation`, `model-profile`, `menu` pass |
 | Full graphical, final source | Engine passes all 47 journeys, 3,311 assertions, 330 captures; the runner rejected one shutdown-time `Handle is not initialized` C# error after WebRTC peer teardown, which did not recur |
 | Full graphical, repeat | Rendering journeys pass; fails at the eight-peer `peer-rooms` step |
-| `peer-rooms` standalone | Fails at eight-peer snapshots on this branch; unchanged `main` also fails it in the same guest (lobby stall, timeout), so this is the existing eight-peer limitation |
+| `peer-rooms` standalone | Fails at eight-peer snapshots on this branch; unchanged `main` at `d11b001` also fails it in the same guest (lobby stall, timeout), so this is the existing eight-peer limitation |
 | Render timing (VM) | Render-thread CPU ~0.3–1.2 ms per preset, one extra draw call (seabed); guest GPU timing unavailable, so native GPU cost still needs `graphics-benchmark` |
 
 The full graphical gate is therefore **not green**, for a reason that predates

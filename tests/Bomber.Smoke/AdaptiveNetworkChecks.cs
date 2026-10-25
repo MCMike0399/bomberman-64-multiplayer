@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text.Json;
+using System.Reflection;
 using Bomber.Client;
 
 internal static class AdaptiveNetworkChecks
@@ -10,7 +11,7 @@ internal static class AdaptiveNetworkChecks
         var states = new Dictionary<string, JsonElement>();
         var proxies = new Dictionary<NetworkSession, ConnectionDropProxy>();
         int checks = 0;
-        int malformedSent = 0;
+        int malformedSent = 0, confirmedDepartures = 0;
         void Check(bool value, string name) { if (!value) throw new Exception("FAIL " + name); checks++; Console.WriteLine("PASS " + name); }
         try
         {
@@ -46,6 +47,7 @@ internal static class AdaptiveNetworkChecks
                         "actual socket reconnect accepts reset input sequences without restarting the peer match");
                 }
                 await departed.DisposeAsync(); clients.Remove(departed);
+                Check(confirmedDepartures > 0, "authoritative departure is observed before closing native channels");
                 await PumpUntil(() => clients.All(c => states[c.PlayerId!].GetProperty("players").GetArrayLength() == 2), 10);
                 Check(clients.All(c => c.Party?.Phase == "playing" && c.Party.Match == match && c.Party.Epoch == epoch), "ordinary guest departure preserves the peer match and its generation");
                 await authority!.DisposeAsync(); clients.Remove(authority);
@@ -67,8 +69,20 @@ internal static class AdaptiveNetworkChecks
             ConnectionDropProxy? proxy = expectPeer && server.IsLoopback && server.Scheme == "http" ? new(server) : null;
             try
             {
-                var client = await NetworkSession.ConnectAsync(proxy?.Origin ?? server, name, new SessionSettings(Bots: 0, Wins: 1), code is null ? NetworkMode.CreatePrivate : NetworkMode.JoinCode, code,
-                    peerFactory: malformedSignals ? () => new MalformedSignalLink(() => malformedSent += 2) : null);
+                NetworkSession? client = null;
+                client = await NetworkSession.ConnectAsync(proxy?.Origin ?? server, name, new SessionSettings(Bots: 0, Wins: 1), code is null ? NetworkMode.CreatePrivate : NetworkMode.JoinCode, code,
+                    peerFactory: malformedSignals ? () => new MalformedSignalLink(() => malformedSent += 2) : expectPeer ? () => new DepartureLink(() =>
+                    {
+                        if (client is null || (int)typeof(NetworkSession).GetField("_disposed", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(client)! == 0) return;
+                        string token = (string)typeof(NetworkSession).GetField("_token", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(client)!;
+                        using var http = new HttpClient { BaseAddress = server, Timeout = TimeSpan.FromSeconds(3) };
+                        using var request = new HttpRequestMessage(HttpMethod.Get, "/realtime/v1/me"); request.Headers.Add("x-player-token", token);
+                        using var response = http.SendAsync(request).GetAwaiter().GetResult(); response.EnsureSuccessStatusCode();
+                        using var me = JsonDocument.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+                        if (me.RootElement.GetProperty("lobbyId").ValueKind != JsonValueKind.Null)
+                            throw new Exception("FAIL native channels closed before authoritative departure was observed");
+                        confirmedDepartures++;
+                    }) : null);
                 clients.Add(client); if (proxy is not null) proxies[client] = proxy; return client;
             }
             catch { if (proxy is not null) await proxy.DisposeAsync(); throw; }
@@ -91,6 +105,17 @@ internal static class AdaptiveNetworkChecks
             } while (elapsed.Elapsed.TotalSeconds < seconds);
             throw new TimeoutException("Adaptive room condition timed out: " + string.Join("; ", clients.Select(c => $"{c.PlayerId} {c.Party} probes={c.ConnectionQualitySamples}")));
         }
+    }
+    private sealed class DepartureLink(Action closing) : IPeerLink
+    {
+        public bool Connected => false;
+        public event Action<JsonElement>? Signal { add { } remove { } }
+        public event Action<byte[]>? Received { add { } remove { } }
+        public void Start(bool offer) { }
+        public void AcceptSignal(JsonElement signal) { }
+        public void Poll() { }
+        public bool Send(byte[] packet) => false;
+        public void Dispose() => closing();
     }
     private sealed class MalformedSignalLink(Action sent) : IPeerLink
     {

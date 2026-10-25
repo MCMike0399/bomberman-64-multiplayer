@@ -103,6 +103,12 @@ these limits. Peer capacity defaults to zero until guarded hardware measurements
 pass. Keep the established physical CPU/memory ceilings during rollout.
 [Adaptive rooms](smart-multiplayer.md) defines selection and recovery.
 
+The verified v0.29.1 configuration is Pi **8 rooms / 2 simulations / 1 peer** and
+DiveMac **1 room / 1 simulation / 0 peers**. The existing 1-CPU/0.5-CPU and
+384-MiB ceilings remain unchanged. [Measured loads and qualification limits](smart-multiplayer-release-029.md#measured-operating-limits) distinguish room
+capacity from simultaneous gameplay and retain the busy fallback limitation.
+
+
 ## Capacity and failure checks
 
 ### Pressure-aware placement extension
@@ -130,10 +136,9 @@ Thus the monitor is not a new availability dependency for the game. Heavy file
 compute uses a separate fail-closed admission policy because its input can wait.
 Manual drains remain authoritative throughout monitoring failure or recovery.
 
-Updates replace only the optional placement plugin and add its read-only mount,
-one drained/empty node at a time. Keep the existing verified server runtime,
-kernel revision, credentials and measured capacities. Back up the old plugin and
-Compose file. Before promotion, run `dotnet run --project tests/Bomber.Cluster.Tests`
+Update the matching server and plugins together when Kernel contracts change,
+one drained/empty node at a time. Preserve credentials and measured physical
+ceilings, and back up the old runtime, plugins and Compose file. Before promotion, run `dotnet run --project tests/Bomber.Cluster.Tests`
 and the public/managed QA profiles; verify both public sockets after installation.
 `tools/cluster/placement-probe.mjs` verifies one owned private room and waits for
 its **60-second empty-room retirement**, not merely seat removal. A zero-player
