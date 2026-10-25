@@ -93,11 +93,12 @@ public partial class BattleHud : Control
         _clock.Time=Practice?"∞":$"{seconds/60}:{seconds%60:00}";
         _clock.Fuse=Practice||_roundSeconds<=0?1:Math.Clamp(timeLeft/_roundSeconds,0,1);
         bool meteors=state.TryGetProperty("hurryMode",out var hazardMode)&&hazardMode.GetString()=="meteors";
-        _clock.Caption=Practice?"Practice":phase==2&&flood?(waterDelay>0?$"Flood in {waterDelay}":"Water rising"):phase==2&&meteors?"Fireballs falling":"Round "+round;
+        bool avalanche=state.TryGetProperty("hurryMode",out var snowMode)&&snowMode.GetString()=="avalanche";
+        _clock.Caption=Practice?"Practice":phase==2&&flood?(waterDelay>0?$"Flood in {waterDelay}":"Water rising"):phase==2&&meteors?"Fireballs falling":phase==2&&avalanche?"Avalanche closing":"Round "+round;
         _clock.QueueRedraw();
         string banner=phase switch{0=>"Get Ready!",2 when _hurryAge<3=>"Hurry Up!",3=>"Round Over",_=>""};
         _phase.Text=banner;_phase.AddThemeColorOverride("font_color",phase==2?ArcadeTheme.Red:ArcadeTheme.Gold);
-        _phaseDetail.Text=phase==2&&_hurryAge<3&&flood?"Get to high ground":"";
+        _phaseDetail.Text=phase==2&&_hurryAge<3&&flood?"Get to high ground":phase==2&&_hurryAge<3&&avalanche?"Move away from the side walls":"";
         _recovery.Text=Hint(state,players);_hint.Visible=_recovery.Text.Length>0;
     }
     private static string Hint(JsonElement state,JsonElement[] players)

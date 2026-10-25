@@ -20,7 +20,7 @@ internal static class VersionCompatibilityChecks
             if(body is not null)request.Content=JsonContent.Create(body);
             return await http.SendAsync(request);
         }
-        foreach(var protocol in new string[]?[]{null,["1"],["2"],["99"],["bad"],[OnlineProtocol.WireRevision,OnlineProtocol.WireRevision]})
+        foreach(var protocol in new string[]?[]{null,["1"],["2"],["3"],["99"],["bad"],[OnlineProtocol.WireRevision,OnlineProtocol.WireRevision]})
         foreach(var (method,path) in new[]{(HttpMethod.Post,"/realtime/v1/guests"),(HttpMethod.Post,"/REALTIME/v1/GUESTS/"),
             (HttpMethod.Post,"/realtime/v1/lobbies"),(HttpMethod.Post,"/realtime/v1/lobbies/join"),(HttpMethod.Post,"/realtime/v1/lobbies/example/join"),
             (HttpMethod.Post,"/realtime/v1/queue"),(HttpMethod.Get,"/realtime/v1/queue/example")})

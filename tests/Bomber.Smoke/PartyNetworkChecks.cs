@@ -40,6 +40,7 @@ internal static class PartyNetworkChecks
         await host.DisposeAsync();await Until(()=>peer.IsLeader,"leader leave transfers room leadership");
         await AdvancedRoom(origin);
         await TopRulesRoom(origin);
+        await BlizzardRoom(origin);
         await EightPlayerRoom(origin);
         await KickStopAndNames(origin);
         Console.WriteLine("PASS persistent private party: manual leader start, real match end, same-code lobby return, rematch and leader transfer");
@@ -94,6 +95,23 @@ internal static class PartyNetworkChecks
         var observed=await State(peer,s=>s.GetProperty("players").EnumerateArray().Any(p=>p.GetProperty("id").GetString()==host.PlayerId&&p.GetProperty("x").GetSingle()>16&&p.GetProperty("y").GetSingle()==0));
         if(observed.GetProperty("players").GetArrayLength()!=2)throw new Exception("Castle lost peer during lower traversal.");
         Console.WriteLine("PASS real network Top Rules room edit, serialized underpasses, staircase descent and peer-observed crossing below three bridges");
+    }
+
+    private static async Task BlizzardRoom(Uri origin)
+    {
+        var settings=new SessionSettings(Stage:"blizzard-battle",Bots:0,SuddenDeath:false){Advanced=new AdvancedRules{BlockPercent=0}};
+        await using var host=await NetworkSession.ConnectAsync(origin,"Snow leader",settings);
+        await using var peer=await NetworkSession.ConnectAsync(origin,"Snow guest",settings,NetworkMode.JoinCode,host.JoinCode);
+        await Until(()=>host.Party?.CanStart==true&&peer.Party!=null,"snowfield room ready");
+        await Start(host);
+        var start=await State(peer,s=>s.GetProperty("phase").GetInt32()==1);
+        var later=await State(peer,s=>s.GetProperty("blizzard").GetProperty("time").GetSingle()>2);
+        var weather=later.GetProperty("blizzard");
+        var wind=Bomber.Game.Simulation.BlizzardRules.Wind(weather.GetProperty("time").GetSingle(),weather.GetProperty("seed").GetInt32(),weather.GetProperty("round").GetInt32());
+        if(Math.Abs(wind.X-weather.GetProperty("x").GetSingle())>.001f||Math.Abs(wind.Y-weather.GetProperty("z").GetSingle())>.001f)
+            throw new Exception("Network weather differs from shared authoritative rules.");
+        if(later.GetProperty("players").GetArrayLength()!=2||later.GetProperty("hurryMode").GetString()!="none")throw new Exception("Online snowfield lost room rules/seats.");
+        Console.WriteLine("PASS real network Blizzard Battle room, advancing authoritative weather, matching wind formula and peer snapshots");
     }
 
     private static async Task EightPlayerRoom(Uri origin)

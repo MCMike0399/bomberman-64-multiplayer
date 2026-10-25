@@ -3,6 +3,7 @@ using Bomber.Game.Simulation;
 using System.Text.Json;
 using static BlastCircuit.Rendering.ArtGeometry;
 using BlastCircuit.Rendering;
+using BlastCircuit.Arena.Effects;
 namespace BlastCircuit.Arena;
 
 /// <summary>Builds terrain directly from the authority's cells, including visible solid risers and stairways.</summary>
@@ -15,6 +16,14 @@ public partial class TempleStageView : Node3D
     private JsonElement _cells;
     private readonly HashSet<int> _underpasses = [];
     private bool _castle;
+    private bool _blizzard;
+    private BlizzardWeather? _blizzardWeather;
+    private float _blizzardClock;
+    private Vector2 _blizzardWind;
+    private readonly List<ShaderMaterial> _frozenMaterials=[];
+    private ShaderMaterial _crystalMaterial=null!,_snowMaterial=null!;
+    private ArrayMesh[] _iceCones=[];
+    private readonly List<(Node3D Node,float Age)> _avalancheSwells=[];
     private readonly List<ShaderMaterial> _castleStone = [];
     private static Shader? _castleFloorShader;
     private ShaderMaterial _castleWallMaterial=null!;
@@ -48,6 +57,7 @@ public partial class TempleStageView : Node3D
     public override void _Process(double delta)
     {
         if(!IsVisibleInTree())return;
+        if(_blizzard){ProcessBlizzard((float)delta);return;}
         if(_castle)
         {
             if(_graphicsRevision!=GraphicsQuality.Revision)
@@ -130,6 +140,8 @@ public partial class TempleStageView : Node3D
         for(int z=0;z<Depth;z++)for(int x=0;x<Width;x++)cells[x,z]=ReadCell(_cells[z*Width+x]);
         Layout=new StageLayout {Id=data.GetProperty("id").GetString()!,Width=Width,Height=Depth,Cells=cells};
         _underpasses.Clear();foreach(var cell in Layout.Underpasses)_underpasses.Add(cell.Z*Width+cell.X);
+        _blizzard=Layout.Id==BlastStages.BlizzardBattle;
+        if(_blizzard){BuildBlizzard();return;}
         _castle=Layout.Id==BlastStages.TopRules;
         if(_castle){BuildTopRules();return;}
         _stone=_art.Stone();_cobble=_art.Stone(true);
@@ -264,6 +276,7 @@ public partial class TempleStageView : Node3D
         if(_castle)return CreateCastleCover(x,z);
         var root=new Node3D {Position=new(x+.5f,Surface(x+.5f,z+.5f),z+.5f)};
         if(_garden)return CreateGardenBoulder(root,cell);
+        if(_blizzard)return CreateIceCone(root,cell);
         var sandstone=_art.Color(new("caaa73"));var dark=_art.Color(new("8d6740"));var edge=_art.Color(new("e3c48c"));
         Box(root,new(0,.39f,0),new(.76f,.78f,.76f),sandstone,.06f);
         Box(root,new(0,.045f,0),new(.82f,.09f,.82f),edge,.025f);

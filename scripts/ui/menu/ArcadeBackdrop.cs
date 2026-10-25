@@ -159,13 +159,16 @@ public partial class ArcadeBackdrop : RenderSurface
         float scale=8.1f/Math.Max(layout.Width,layout.Height);
         _miniature=new TempleStageView(new ArtMaterials()) {Scale=Vector3.One*scale,Position=new(-layout.Width*scale/2,0,-layout.Height*scale/2)};
         _arenaMount.AddChild(_miniature);_miniature.Build(data);
+        if(id==BlastStages.BlizzardBattle)
+            for(int z=1;z<layout.Height-1;z++)for(int x=1;x<layout.Width-1;x++)
+                if(!layout.ClearCells.Contains((x,z)))_miniature.AddChild(_miniature.CreateCover(z*layout.Width+x));
         // Keep the authority terrain/materials, while trimming exterior scenery to the display plinth.
         foreach(var child in _miniature.GetChildren())
         {
             // The trimmed display plinth has no open sea, so it needs no seabed.
             if(child is MeshInstance3D seabed&&seabed.Name=="Seabed")seabed.Visible=false;
             if(child is MeshInstance3D {Mesh:PlaneMesh plane} water){plane.Size=new(layout.Width+.8f,layout.Height+.8f);water.Position=new(layout.Width/2f,-.53f,layout.Height/2f);}
-            else if(child is MeshInstance3D {Mesh:BoxMesh grass} exterior&&child.Name=="GardenExterior")
+            else if(child is MeshInstance3D {Mesh:BoxMesh grass} exterior&&(child.Name=="GardenExterior"||child.Name=="FrozenExterior"))
             {
                 // ArtGeometry caches meshes used by gameplay too; resize a private menu copy.
                 var displayGrass=(BoxMesh)grass.Duplicate();

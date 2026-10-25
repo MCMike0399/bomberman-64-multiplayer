@@ -16,6 +16,7 @@ public sealed partial class BlastSession
         _phaseTimer = 2f;
         _roundTimer = 0;
         _fightTicks = 0;
+        _weatherTime=0;
         _waterLevel = -1;
         _waterfallStarted = false;
         _closedLeft = 0;
@@ -90,6 +91,7 @@ public sealed partial class BlastSession
     private void SimulateRound(ISessionContext context, float dt)
     {
         if (!_practice || _tutorialLesson?.Id=="duel") _roundTimer = ++_fightTicks * dt;
+        if(_stage.Id==BlastStages.BlizzardBattle)_weatherTime+=dt;
         var timeLeft = _roundSeconds - _roundTimer;
 
         // Trigger hurry.
@@ -122,9 +124,10 @@ public sealed partial class BlastSession
         if (_phase == RoundPhase.Hurry && !_stage.RisingWater && _stage.Id!=BlastStages.RockGarden && _tutorialLesson is null)
         {
             _hurryColTimer += dt;
-            if (_hurryColTimer >= 1f)
+            float interval=_stage.Id==BlastStages.BlizzardBattle?BlizzardRules.AvalancheStepSeconds:1f;
+            if (_hurryColTimer >= interval)
             {
-                _hurryColTimer -= 1f;
+                _hurryColTimer -= interval;
                 var leftBound = _closedLeft;
                 var rightBound = _stage.Width - 1 - _closedRight;
                 if (leftBound < rightBound)
@@ -159,10 +162,12 @@ public sealed partial class BlastSession
         // Process inputs and apply physics.
         BeginBodyContacts();
         ProcessInputs(context, dt);
+        DriftBlizzardPlayers(dt);
         TickPlayerCarrying(dt);
         ResolveBodyContacts(dt);
         SynchronizeLatchedGhosts();
         DrownSubmergedEntities();
+        if(_phase==RoundPhase.Hurry&&_stage.Id==BlastStages.BlizzardBattle)KillInClosedColumns(context);
         TickBombs(context, dt);
         TickHazards(context, dt);
         TickItems(context);
@@ -234,7 +239,7 @@ public sealed partial class BlastSession
         {
             if (!p.Alive || p.Ghost) continue;
             if ((int)p.X < _closedLeft || (int)p.X >= _stage.Width - _closedRight)
-                HitPlayer(context, p, "columns");
+                {if(_stage.Id==BlastStages.BlizzardBattle)Eliminate(null,p,"avalanche");else HitPlayer(context, p, "columns");}
         }
         // Also explode resting bombs in closed columns.
         foreach (var b in _bombs.ToList())
