@@ -17,7 +17,7 @@ public partial class PlaytestDriver
         async Task Pad(JoyButton button,int device=12)
         {CtlButton(device,button,true);await ControllerFrames(1);CtlButton(device,button,false);await ControllerFrames(3);}
         async Task Focused(string name,string reason)
-        {await ControllerFrames(1);Check(GetViewport().GuiGetFocusOwner()?.Name==name,reason+" ("+name+")");}
+        {await ControllerFrames(1);Check(GetViewport().GuiGetFocusOwner()?.Name==name,reason+" (expected "+name+", actual "+GetViewport().GuiGetFocusOwner()?.Name+")");}
         async Task Start(string name,string reason)
         {
             string screen=_root.ScreenName;
@@ -44,6 +44,21 @@ public partial class PlaytestDriver
         }
         try
         {
+            // Focus memory intentionally survives other journeys. Establish
+            // known history through real controls, including a non-first rule,
+            // instead of assuming these columns have never been visited.
+            async Task Remember(string page,params string[] controls)
+            {
+                _root.Navigate(page);await ControllerFrames(4);
+                foreach(string name in controls)
+                {NamedButton(name).GrabFocus();await ControllerFrames(1);Check(NamedButton(name).HasFocus(),"focus history records "+name);}
+            }
+            _root.Navigate("Setup");await ControllerFrames(4);
+            await ActivateNamed("AdvancedSettings");NamedButton("Allow_fire").GrabFocus();await ControllerFrames(2);
+            await Remember("Setup","Roundtime");
+            await Remember("Settings","GraphicsPreset");
+            await Remember("Online","RoomSettings");
+            await Remember("Roster","Slot2Role","Slot0Appearance");
             _root.Navigate("Modes");await ControllerFrames(4);
             foreach(var pad in QaPads)
             {
@@ -81,7 +96,8 @@ public partial class PlaytestDriver
             await Pad(JoyButton.B);Check(!popup.Visible&&_root.ScreenName=="Roster","controller Back closes only the role popup");
             await Start("RosterContinue","Continue after closing a popup");await KeyPress(Key.Enter);
             Check(_root.ScreenName=="Setup","explicit confirm advances to rules");
-            await Pad(JoyButton.RightShoulder);await Focused("Winstovictory","shoulder leaves the arena dial for rules");
+            await Pad(JoyButton.RightShoulder);await Focused("Roundtime","shoulder restores a rule selected before this journey");
+            await KeyPress(Key.Up);await Focused("Winstovictory","up stays in the rules rail");
             await KeyPress(Key.Down);await Focused("Roundtime","down stays in the rules rail");
             await Pad(JoyButton.LeftShoulder);await Focused("StageSelector","shoulder returns to arena column");
             await Pad(JoyButton.RightShoulder);await Focused("Roundtime","column switch restores the last rule");
