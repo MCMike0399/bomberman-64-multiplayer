@@ -387,7 +387,12 @@ now covers four stages (48 combinations).
 - Remote opportunity checks force the oldest eligible remote to time zero in a
   separate danger field before approving its trigger, including visible chains
   back to the owner. This strengthens the opportunity boundary independently of
-  the main planner's urgent escape branch.
+  the main planner's urgent escape branch. Candidate detonation forecasts cannot
+  rely on current soft cover: authority destroys cover before recursively
+  detonating chained bombs, and lingering hazards see the resulting terrain.
+  Permanent walls still shield. `ProactiveTacticsChecks` executes the actual
+  candidate command in paired soft-cover/permanent-wall fixtures, proving both
+  the rejected lethal chain and the retained safe attack.
 - Preserve escape validation and timed route safety when increasing pressure.
   Easy has occasional attack intent so cautious spacing cannot suppress every attack.
 - A body backed against stone needs body-aware route checks. Off-center diagonal

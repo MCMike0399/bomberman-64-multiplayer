@@ -50,7 +50,11 @@ internal sealed class TimedDangerField
         for(int i=0;i<bombs.Count;i++)if(float.IsFinite(_times[i]))
         {
             var b=bombs[i];float time=_times[i];
-            AddSphere(soft,b.X,Height(b),b.Z,b.BlastRadius+.45f,b.IsRed,time,b.IsRemote?4:time+.55f);
+            // A proposed remote command destroys cover before recursive chains
+            // and lingering hazards. Its time-zero forecast cannot rely on that
+            // cover as a shield; permanent terrain still blocks every sphere.
+            bool ignoreSoftCover=b.IsRed||detonate is not null;
+            AddSphere(soft,b.X,Height(b),b.Z,b.BlastRadius+.45f,ignoreSoftCover,time,b.IsRemote?4:time+.55f);
             // Moving bombs are uncertain. Cover both their visible position and short velocity projection.
             if(b.State is BombState.Rolling or BombState.Flying)
             {

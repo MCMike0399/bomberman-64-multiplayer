@@ -74,6 +74,33 @@ internal static class ProactiveTacticsChecks
         if(!chain.Session.AiTestRemoteOpportunity("cpu-0"))failures.Add("CPU must retain a useful remote chain attack after its owner reaches safety");
         if(failures.Count>0)throw new Exception(string.Join("; ",failures));
         Console.WriteLine("PASS remote trigger rejects a lethal visible chain outside its direct blast");checks++;
+        checks+=RemoteCoverChain();
         Console.WriteLine($"PASS {checks} proactive tactics checks");return checks;
+    }
+
+    private static int RemoteCoverChain()
+    {
+        foreach(bool hardCover in new[]{false,true})
+        {
+            var stage=Fixture.Flat();if(hardCover)stage.Cells[6,6]=CellDef.Pillar;
+            var f=new Fixture(stage,2);
+            f.Session.AiTestAddHuman("cpu-0",0);f.Session.AiTestAddHuman("cpu-1",1);f.Step(61);
+            f.Session.AiTestPosition("cpu-0",6.5f,7.5f);f.Session.AiTestPosition("cpu-1",4,5.5f);
+            var owner=f.Session.AiTestPlayers.Single(p=>p.Id=="cpu-0");
+            owner.HasRemote=true;owner.InvincibleTimer=0;
+            if(!hardCover)f.Session.AiTestSetSoft(6,6,true);
+            var remote=new BlastBomb{Id="cover-remote",OwnerId=owner.Id,IsRemote=true,X=5,Z=5.5f,CellX=5,CellZ=5,FireLevel=2};
+            var chained=new BlastBomb{Id="cover-chain",OwnerId="cpu-1",X=6.5f,Z=5.5f,CellX=6,CellZ=5,FireLevel=2,FuseTimer=2.5f};
+            f.Session.AiTestAddBomb(remote);f.Session.AiTestAddBomb(chained);
+            bool approved=f.Session.AiTestRemoteOpportunity(owner.Id);
+            // Declared authority fixture: execute the candidate remote command even
+            // when rejected, to prove that the cover really disappears before the chain.
+            owner.Input=new InputState(0,0,false,false,true);f.Step();
+            Console.WriteLine($"remote cover chain: hard={hardCover}, approved={approved}, remote={remote.Exploded}, chain={chained.Exploded}, ownerAlive={owner.Alive}");
+            if(!remote.Exploded||!chained.Exploded||owner.Alive!=hardCover)
+                throw new Exception("Remote cover fixture must kill through destroyed cover and retain protection behind permanent terrain");
+            if(approved!=hardCover)throw new Exception("CPU must reject a remote chain through destroyed soft cover while retaining safe attacks behind permanent terrain");
+        }
+        Console.WriteLine("PASS remote forecast handles destroyed cover and permanent terrain in actual chains");return 2;
     }
 }
