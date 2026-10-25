@@ -1,3 +1,4 @@
+import {releaseIdentity} from './release-identity.mjs';
 // Bounded public-cluster admission/cancellation probe. Owns only the rooms it creates.
 import fs from 'node:fs/promises';
 const [origin, output, primaryText = '8', fallbackText = '4'] = process.argv.slice(2);
@@ -8,7 +9,7 @@ const owned = [];
 let queued, failure;
 async function api(player, method, path, body) {
   const response = await fetch(new URL('/realtime/v1/' + path, origin), {
-    method, headers: { 'X-Blast-Protocol': '6', 'Content-Type': 'application/json', ...(player ? { 'x-player-token': player.token } : {}) },
+    method, headers: { 'X-Blast-Protocol': releaseIdentity.admissionToken, 'Content-Type': 'application/json', ...(player ? { 'x-player-token': player.token } : {}) },
     body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(10000)
   });
   const value = response.status === 204 ? null : await response.json();

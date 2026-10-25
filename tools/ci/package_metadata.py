@@ -5,9 +5,11 @@ import os
 from pathlib import Path
 import plistlib
 import re
+from release_identity import check_exports
 
 
 def main():
+    release = check_exports()
     revision = os.environ.get('GITHUB_SHA', '')
     if not re.fullmatch(r'[0-9a-f]{40}', revision):
         raise SystemExit('GITHUB_SHA must identify the source commit')
@@ -18,7 +20,9 @@ def main():
         raise SystemExit('Refusing package metadata: full controller backend/libraries/licenses are required')
     with (app / 'Contents/Info.plist').open('rb') as stream:
         plist = plistlib.load(stream)
-    metadata = {'schemaVersion': 1, 'revision': revision,
+    if plist['CFBundleShortVersionString'] != release['version'] or plist['CFBundleVersion'] != release['build']:
+        raise SystemExit('Built app differs from canonical release identity')
+    metadata = {'schemaVersion': 2, 'revision': revision, 'release': release,
                 'version': plist['CFBundleShortVersionString'],
                 'bundleIdentifier': plist['CFBundleIdentifier'], 'architecture': 'arm64',
                 'signature': 'ad-hoc', 'graphicalValidation': 'separate-optional-job',

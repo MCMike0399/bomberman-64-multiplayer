@@ -32,6 +32,9 @@ Tutorial setup and progress belong to the local authority, with ordinary bomb, c
 - [NetworkSession](../../src/Bomber.Client/NetworkSession.cs) uses HTTP and WebSocket
   messages. The independent [Bomber.Server](../../src/Bomber.Server/Program.cs) registers
   `BomberRealtimeGame` on Burbuja.Hosting. Online play uses the same product rules.
+- Online admission requires the exact release token from `Release.props`, not
+  just the peer schema number. [Release identity and delivery](../releases.md)
+  owns invalidation, matching-server checks and rollout boundaries.
 - Local play needs neither an HTTP server nor Docker. Network verification requires
   an actual available server; local success cannot certify server delivery.
 - The generic kernel owns transport/lobby infrastructure, not bomb or bot policy.

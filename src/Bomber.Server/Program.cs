@@ -20,5 +20,7 @@ await using var app = BurbujaApplication.CreateApp(new WebApplicationOptions
     },
 });
 app.UseMiddleware<Bomber.Server.ClientProtocolMiddleware>();
-app.MapGet("/game", () => Results.Ok(new { game = "blast", client = "Godot C#", protocol = "/realtime/v1", tickRate = LocalMatch.TickRate })).AllowAnonymous();
+app.MapGet("/game", () => Results.Ok(new { game = "blast", client = "Godot C#", protocol = "/realtime/v1", tickRate = LocalMatch.TickRate,
+    release = new { version = OnlineProtocol.ReleaseVersion, build = OnlineProtocol.ReleaseBuild,
+        protocolRevision = OnlineProtocol.Revision, admissionToken = OnlineProtocol.WireRevision, revision = OnlineProtocol.SourceRevision } })).AllowAnonymous();
 await app.RunAsync();

@@ -5,11 +5,13 @@ from pathlib import Path
 import subprocess
 
 import doc_links
+from release_identity import check_exports
 
 ROOT = Path(__file__).resolve().parents[2]
 
 
 def main():
+    check_exports()
     tracked = subprocess.check_output(['git', 'ls-files', '-z'], cwd=ROOT).decode().split('\0')
     failures = []
     for name in filter(None, tracked):

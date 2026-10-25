@@ -42,6 +42,11 @@ update the current guide rather than silently reviving old behavior.
 
 ## Current decisions that supersede earlier experiments
 
+- Release pipeline source (2026-10-25): `Release.props` owns version/build/schema;
+  every release has an exact admission token. Publication requires deployment
+  verification across all configured workers. [Release procedure and adapter
+  setup](../releases.md) distinguish implemented gates from activation/host evidence.
+
 - Blizzard Battle source work (2026-10-25) adds the enclosed snowfield, sixteen ice cones, changing diagonal wind and bilateral avalanches. [Stage contract](../blizzard-battle.md) and [inspected references](../blizzard-battle-research.md) separate original evidence from eight-seat/timing tuning. Online protocol revision 5 requires matching clients and server; this does not update the deployed service.
 - Greedy Trap adds the enclosed upper court, narrow middle ring and lower reward
   chamber, with four inner flights, two upper exits and closing side walls.

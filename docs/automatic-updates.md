@@ -20,11 +20,15 @@ Blast Circuit signing key. The client contains only the P-256 public key in
 repository and is supplied as the `BLAST_UPDATE_SIGNING_KEY` release secret.
 Never substitute IslandBar's key or check a private key into this repository.
 
-Each release attaches these three update assets:
+Each release attaches these three updater-compatible assets:
 
 - `Blast-Circuit-macos-arm64.zip`
 - `Blast-Circuit-update.json` — version, archive size and SHA-256
 - `Blast-Circuit-update.json.sig` — base64 ECDSA/SHA-256 signature over the exact manifest bytes
+
+A separate signed `Blast-Circuit-release.json` inventory also binds both client
+and server delivery archives and their metadata. Existing clients continue using
+the unchanged updater manifest format and public key.
 
 Only official HTTPS release/CDN URLs are accepted. The manifest signature,
 archive length/hash, safe extraction paths, app identity/version and recursive
@@ -49,14 +53,17 @@ source revision, bundle identity and archive inventories before release creation
 For v0.21 onward it also requires the update signing key. The signing helper
 checks that the private key matches the public key in the verified source tree.
 
-The **Prepare draft release** workflow accepts a successful run ID and version.
-It creates a signed draft by default; its explicit `publish` input publishes it.
+The **Release verified game** workflow accepts a successful run ID and version.
+It creates a signed draft by default; its explicit `publish` input deploys and
+verifies the matching server fleet before publishing it.
 The **Publish verified update** workflow can publish a new version automatically
 when a trusted main Verification run succeeds. It is opt-in through repository
 variable `AUTO_RELEASE_ENABLED=true`, requires `BLAST_UPDATE_SIGNING_KEY`, and
 preserves existing version tags/releases. Fork/PR runs cannot publish. Changes
-to version numbers belong in `export_presets.cfg`; an unchanged version does not
-produce another release. Release publication does not redeploy the game server.
+to version/build numbers belong in `Release.props`; synchronize exports with
+`python3 tools/ci/release_identity.py --sync`. An unchanged version does not
+produce another release. Both publication paths use the same protected deploy
+gate. See [release identity, setup and failure recovery](releases.md).
 
 Do not rotate the signing key without a migration that existing clients can
 verify. A failed release can be removed from the latest channel by marking it

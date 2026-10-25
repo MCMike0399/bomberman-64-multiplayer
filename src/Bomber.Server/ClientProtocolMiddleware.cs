@@ -17,7 +17,8 @@ public sealed class ClientProtocolMiddleware(RequestDelegate next)
         if(admission && !OnlineProtocol.Accepts(context.Request.Headers[OnlineProtocol.HeaderName].Select(value=>value??"")))
         {
             context.Response.StatusCode=StatusCodes.Status409Conflict;
-            await context.Response.WriteAsJsonAsync(new{error=new{code="client_update_required",message=OnlineProtocol.UpdateMessage}});
+            await context.Response.WriteAsJsonAsync(new{error=new{code="client_update_required",message=OnlineProtocol.UpdateMessage,
+                requiredVersion=OnlineProtocol.ReleaseVersion, requiredBuild=OnlineProtocol.ReleaseBuild, requiredProtocol=OnlineProtocol.WireRevision}});
             return;
         }
         await next(context);

@@ -124,7 +124,7 @@ class HarnessTests(unittest.TestCase):
     def test_managed_smoke_selects_release_delivery_instead_of_debug_server(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            suite = Mock(profile='managed', output=root / 'qa', steps=[])
+            suite = Mock(profile='managed', output=root / 'qa', steps=[], provenance={'revision': 'a' * 40})
             suite.server.return_value = contextlib.nullcontext('http://127.0.0.1:12345')
             with patch.object(qa, 'ROOT', root):
                 qa.execute(suite)
@@ -135,6 +135,9 @@ class HarnessTests(unittest.TestCase):
             self.assertIn('Release', calls['publish-server'])
             self.assertIn('-p:UseAppHost=false', calls['publish-server'])
             self.assertIn('--stage-only', calls['stage-server-delivery'])
+            self.assertIn('--stage-plugins', calls['stage-cluster-plugins'])
+            self.assertIn(str(root / 'artifacts/server-staged/plugins'), calls['network-fleet'])
+            self.assertIn('tools/ci/verify_deployment.py', calls['release-admission'])
             self.assertIn('package-tested-server', calls)
             self.assertIn('--adaptive-peer-only', calls['network-adaptive-relay'])
             self.assertIn('--fleet', calls['network-fleet'])
