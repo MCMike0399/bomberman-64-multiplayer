@@ -28,6 +28,126 @@ Mac export/installation, public gameplay, or a deployed host adapter. The
 protected runner, operator adapter and complete target-origin configuration
 remain activation prerequisites. No signing key or production setting changed.
 
+# v0.30.0 delivered
+
+2026-10-25: **v0.30.0/build 36** is published and deployed on both maintained game
+workers. [Release and signed update](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.30.0).
+The immutable release source is `158cd3c64606781e70650919dd04c27286a11a24`.
+[Trusted verification](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40227505286)
+passed public, managed/network, Linux headless and Apple Silicon packaging jobs;
+[publication](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40228380467)
+passed. The optional CI Metal job remains disabled; the local Metal evidence is
+recorded below, separately.
+
+Independent verification checked the update signature, archive checksums, bundle
+version/build, **228 Mac bundle files**, and **42 portable server runtime files**.
+The Mac ZIP was inspected in place. The downloaded official server, paired with
+the exact 15 plugin files planned for deployment, passed another 36-check local
+fleet drill before rollout.
+
+Both raspberrypi and DiveMac now match all 42 official runtime and 15 plugin
+hashes. Both containers are healthy, active and advertise protocol 4. Each update
+drained its node and waited for empty rooms, retained rollback, and preserved the
+existing environment/Compose files and physical limits. Pi retains 8 rooms / 2
+simulations / 1 peer allowance at one CPU; DiveMac retains 1 / 1 / 0 at half a CPU.
+Both retain 384 MiB memory/swap ceilings, 128 CPU shares and 256 PIDs. Pressure
+exclusions were not overridden; these checks do not establish new fleet capacity.
+
+A bounded three-client private match through the public endpoint passed admission,
+manual start, authority agreement and shared simulation checks. Final authenticated
+fleet observations showed both nodes with zero rooms and players. Legacy/headerless
+admission is rejected with update guidance on both workers. The personal installed
+app was not replaced; users receive the published signed update through Settings.
+
+# v0.30.0 combined verification
+
+Six PRs (#7–#12) were independently reviewed against their declared bases.
+The user explicitly deferred the later-arriving #13 and #14 to a future release. The diorama
+PR #10 was the first GitHub merge, after its full graphical suite, package,
+managed/network gates and matched native GPU comparison. Its authored water,
+terrain, lighting, toy materials and proportions are preserved.
+
+## Standards
+
+The applicable standards are the [gameplay safety and protocol rules](agents/gameplay-and-ai.md),
+[completion gates](agents/testing-and-delivery.md), and [directional focus contract](agents/input-and-ui.md).
+
+- #7: the remote forecast could approve a lethal chain by retaining a crate that
+  the first blast destroys. This violated the conservative-danger invariant.
+  A real command reproduced owner death; paired soft-cover/permanent-wall checks
+  now reject the lethal attack while preserving safe attacks behind solid terrain.
+- #8: the shorter falls failed the unchanged stock-pressure completion gate.
+  Directed pursuit resolved Hard; Medium still had a 244-tick gap. Rechecking
+  engagement after orientation fixed the overdue farming press. Physics and the
+  240-tick limit remain unchanged.
+- #9: removing Fast settings and motion while advertising protocol 3 violated
+  the shared online contract. Protocol 4 now gates HTTP, the actual worker socket
+  and peer hello, with v0.30 update guidance. Old protocol-3 admission was retained
+  as a real failing witness before correction.
+- #12: horizontal lobby actions were registered as a vertical column. A real
+  two-client journey reproduced Right staying on Start. Horizontal footer routes
+  now preserve Copy-code access and reach Leave when that column is empty.
+- #12 follow-up: the navigation test assumed unvisited focus columns. The full
+  suite exposed that assumption; a small red reproduction restored Round time
+  correctly. QA now seeds known history through real controls and explicitly
+  verifies remembered selection, passing 198 focused assertions.
+
+Standards: five findings resolved; the initial compatibility finding required
+coordinated client/server delivery. No confirmed blocking standards findings remain.
+
+## Spec
+
+- #10's promise that haze stays outside gameplay used axial depth for radial
+  fog. An inspection view measured haze starting at 20.245619 units against
+  23.009295 units of playable radial extent. Separate radial fog/axial DOF bounds
+  and all-five-stage inspection coverage fix it without changing the look.
+- #7's promise to include owner-threatening chains missed cover destroyed earlier
+  in that same chain; the authority witness and forecast correction above close it.
+- #8 met its falling-mechanics specification but initially missed the requested
+  regression-free release condition. The retained stock-pressure test now passes.
+- #9's complete Fast removal needed mixed-version rejection; keeping a constant
+  motionRate field was insufficient. The new handshake coverage closes that gap.
+
+Spec: four findings resolved, including compatibility and visual-boundary errors.
+These overlap the standards findings; they are separate review axes, not nine
+distinct bugs. No confirmed blocking spec findings remain.
+
+The item-density and menu-grid integration also preserves both PRs' intent:
+40% independent default drops, 60/30/10 category shares, equally weighted remaining
+bomb types, six-item default practice caches, explicit small training pools,
+Haste retaining Red equipment, and navigation through the eleven-item grid.
+
+The final candidate is v0.30.0/build 36. Local receipts live under ignored
+artifacts/review/final-*; the baseline/negative witnesses remain beside them.
+Public, managed/network, headless and package gates pass. Managed totals are
+2,834 game, 337 client, 78 AI, 19 audio and 23 cluster checks; the 48-case soak's
+longest open stationary window is 1.70s. Real network smoke, nine relay checks
+and the 36-check fleet recovery drill pass. Headless core has 1,246 assertions;
+peer/adaptive checks have 19/nine. The export smoke has 255 assertions plus the
+same peer/adaptive checks. Existing shutdown-only SCTP/ObjectDB warnings remain
+visible; no runtime error filters or functional thresholds were relaxed.
+
+The focused menu suite passed all ten journeys, 1,379 assertions and 72 captures
+with zero errors/warnings; all captures were inspected. The complete candidate
+export passed all **48 graphical journeys, 3,624 assertions and 343 captures**,
+with zero runtime errors. All captures were reviewed in contact sheets, with
+full-size inspection of important material, shoreline, cache, Haste and fall views.
+The first combined run retained a failing navigation-history test; after the
+198-check focused correction, the rebuilt package and full graphical gate passed.
+
+The exact v0.30.0/build 36 export also passed 47 native M5 Pro benchmark assertions
+with zero errors/warnings at 1920×1200. Menus and eight-player Temple battles held
+approximately 120 FPS. Battle frame p95 was 9.10/8.82/8.79 ms for Low/Medium/High;
+Metal GPU median was 5.43/5.68/7.55 ms. These are short same-machine observations,
+not thermal/endurance or other-device guarantees. The earlier matched diorama
+before/after comparison below isolates its rendering cost. Physical controller
+input and Apple notarization are not claimed.
+
+The runtime source tested here is `040bae0`; the release integration retains that
+runtime tree while adding merge history and documentation. Final publication and
+shared-worker receipts are recorded separately after the trusted CI run.
+
+
 # Menu navigation — source verification
 
 2026-10-25: controller/keyboard menu navigation source work on
