@@ -145,6 +145,11 @@ action row. Up reaches Copy code, then Leave room; if Copy code is unavailable,
 Up reaches Leave directly. The real `network` journey verifies left/right/up
 navigation, and `menu-navigation` covers the empty-column fallback.
 
+Navigation QA must account for focus history left by earlier journeys. The
+scenario seeds known column selections through real controls and verifies that
+shoulders restore a non-first rule. Assuming a fresh page after other setup or
+settings journeys incorrectly rejects the intended remembered selection.
+
 Esc/controller Back returns one menu and restores its opener, even while a text
 field is editing. Setup keeps its actual origin (roster, Practice or Online),
 and Continue/Save must not create a Back loop. Esc from a waiting lobby leaves
