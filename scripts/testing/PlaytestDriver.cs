@@ -169,7 +169,14 @@ public partial class PlaytestDriver : Node
     }
     private JsonElement State => _root.LatestState ?? throw new InvalidOperationException("No authoritative state yet.");
     private JsonElement Player => State.GetProperty("players").EnumerateArray().OrderBy(p=>p.GetProperty("slot").GetInt32()).First();
-    private void Input(int seat,PlayerInput input) { _inputs[seat]=input;_root.InjectInput(seat,input);Event("input",new { seat,input.X,input.Z,input.A,input.B,input.R,input.Aim }); }
+    private void Input(int seat,PlayerInput input)
+    {
+        _inputs[seat]=input;_root.InjectInput(seat,input);
+        // Publish transport intent immediately: a slow rendered frame must not
+        // delay the test controller's neutral command at a narrow stair landing.
+        if(seat==0&&_root.ActiveSession is NetworkSession network)network.SendInput(0,input);
+        Event("input",new { seat,input.X,input.Z,input.A,input.B,input.R,input.Aim });
+    }
     private async Task Frames(int count)
     {
         for(var i=0;i<count;i++)
@@ -209,7 +216,7 @@ public partial class PlaytestDriver : Node
                     int stoppedAt=_root.SnapshotCount;
                     await WaitState(_=>_root.SnapshotCount>=stoppedAt+3,"network movement settles after release",120);
                     float sx=x-Player.GetProperty("x").GetSingle(),sz=z-Player.GetProperty("z").GetSingle();
-                    Check(MathF.Sqrt(sx*sx+sz*sz)<.5f,$"network walk settles inside destination cell {x},{z}");
+                    Check(MathF.Sqrt(sx*sx+sz*sz)<.5f,$"network walk settles inside destination cell {x},{z}: {Player}");
                 }
                 await Frames(3);Check(true,$"walk to {x},{z}");return;
             }

@@ -83,45 +83,53 @@ desktop by default.
 
 ## Validation receipts (2026-10-25)
 
-- Public profile: all ten repository/tooling/audio gates pass.
-- Managed profile: 2,915 game integration checks, 338 client checks, 65 AI checks,
-  the existing 48-scenario AI soak, cluster/audio suites, actual network smoke,
-  adaptive relay, 36 fleet infrastructure checks and tested server packaging pass.
-- Greedy Trap AI soak: all 12 cases pass; maximum observed stationary window
-  with a safe exit is 1.60 seconds against the existing 12-second limit. Every
-  case produces movement, bombs and pickups. This is bounded liveness evidence,
-  not a rating of eight-player balance or fun.
-- Latest client boundary/session suite: 339 checks pass, including a retained red
-  regression for missing Greedy Trap wall crowns. Malformed peer terrain is rejected
-  before rendering. The focused real-network headless journey passes 22 assertions
-  across server-owned and player-hosted rooms using the final client.
-- Canonical headless profile passes core gameplay (including Greedy Trap),
-  peer-room and adaptive-room journeys with the rebuilt source.
+Verified after integrating main through `158cd3c` (v0.30 release metadata),
+preserving the reviewed bomb loadout, item density, CPU pursuit, falling physics
+and menu navigation. Greedy Trap requires online protocol 5, following the
+protocol-4 bomb-loadout change.
 
-Raw receipts remain under ignored `artifacts/greedy-trap/`: `public-final/`,
-`managed-01/`, `headless-profile-01/`, `client-final.log`, `network-final/`,
-`headless-focused-final/`, `ai-soak.json` and `ai-soak.log`.
-The rebuilt standalone app passes the complete eight-journey
-`greedy-trap-regression`: **1,050 assertions / 105 captures**, Metal Forward+ in
-an isolated windowed macOS desktop. It covers first-use preparation, the map tour,
-setup, all-arena graphics presets, lighting, framing, ordinary online play and
-Greedy Trap in both server-owned and player-hosted rooms. The final runner reports
-zero runtime errors/warnings; host observation reports no host foreground or
-pointer changes and no missing observations. Receipt: `graphical-complete/`.
+- Public profile: all repository/tooling/audio gates pass.
+- Complete merged managed profile: **2,839 game checks, 341 client checks,
+  78 AI checks**, the existing 48-case soak, audio/cluster suites, actual network
+  smoke, protocol-3/4 rejection, adaptive relay, fleet checks and tested server
+  packaging pass.
+- Greedy Trap AI soak: **12 cases pass** across three difficulties, two seeds
+  and three/seven CPUs. Maximum observed stationary window with a safe exit is
+  **1.77 seconds**, below the existing 12-second limit. Every case produces
+  movement and bombs; some have no pickups under the inherited independent
+  40% drop rule. This is bounded liveness evidence, not a balance/fun rating.
+- Merged headless core: **1,356 assertions**, no runtime errors/warnings.
+  Menu navigation additionally passes **198 assertions**; that short headless
+  run retains an ObjectDB teardown warning in its receipt.
+- Focused exported online journey: **43 assertions / two captures**, both
+  server-owned and player-hosted rooms, zero runtime errors/warnings.
+- Final rebuilt standalone app: **all eight `greedy-trap-regression` journeys
+  pass, 1,079 assertions / 105 captures**, Metal Forward+ in an isolated windowed
+  macOS desktop. Coverage includes first-use preparation, the arena tour, setup,
+  all-arena graphics presets, lighting, framing, ordinary online play and Greedy
+  Trap in both hosting modes. The runner reports zero runtime errors/warnings;
+  host observation reports no foreground/pointer changes or missing observations.
+
+Raw receipts remain in ignored `artifacts/greedy-trap/`: `integration-public/`,
+`integration-managed/`, `integration-ai-soak.json`, `integration-ai-soak.log`,
+`integration-headless/`, `integration-menu-navigation/`, `network-rendered-final/`
+and `merged-verified/`. Earlier source/graphical failures and the missing-wall-
+crown red test remain there as diagnostic evidence; the final receipts supersede
+those attempts.
 
 Visual inspection covered normal/oblique/overhead views, Low/Medium/High, night,
 actual bottom loot and later compression. Separate brick/cap depth planes prevent
 coplanar flicker; solid compression volumes eliminate false outside lanes. The
 native resize harness retains its actual size/transform stability requirement
-with a longer bounded first-frame wait. Network movement waits for real server
-time rather than spending its frame budget before authority can advance.
+with a longer bounded first-frame wait. The test controller publishes ordinary
+network intent through the product adapter immediately, brakes at waypoints and
+waits for three accepted snapshots after release before checking that the player
+settled inside the target cell. It never edits authority positions or physics.
 
-Earlier failing receipts remain under the same ignored evidence root, including
-the missing-wall-crown red test and pre-correction captures. A short standalone
-headless run reported two ObjectDB teardown warnings; the full core run and final
-exported graphical suite did not. These results do not establish user artistic
-approval, native host GPU throughput or physical controller coverage.
-
+The loot screenshot uses configurable 100% drops and a Red-only pool to verify
+actual destruction and collection. Default drop chances/weights remain inherited
+from main. These results do not establish user artistic approval, native host GPU
+throughput or physical controller coverage.
 
 ## Rendered gallery
 
