@@ -31,7 +31,7 @@ public sealed record SessionSettings(string Stage = "sunken-temple", int Bots = 
     {
         if (BotDifficulty is not ("easy" or "medium" or "normal" or "hard")) throw new ArgumentException("Unknown CPU difficulty.");
         if (Hosting is not ("auto" or "server" or "peer")) throw new ArgumentException("Unknown hosting preference.");
-        if (Stage is not ("sunken-temple" or "rock-garden" or "up-and-down" or "top-rules")) throw new ArgumentException("Unknown stage.");
+        if (Stage is not ("sunken-temple" or "rock-garden" or "up-and-down" or "top-rules" or "greedy-trap")) throw new ArgumentException("Unknown stage.");
         if (Bots is < 0 or > 7 || Wins is < 1 or > 5 || RoundSeconds is < 60 or > 300)
             throw new ArgumentOutOfRangeException(nameof(Bots), "Bots 0–7, wins 1–5, round seconds 60–300.");
         var settings = new Dictionary<string,string>() { ["stage"] = Stage, ["bots"] = Bots.ToString(System.Globalization.CultureInfo.InvariantCulture),

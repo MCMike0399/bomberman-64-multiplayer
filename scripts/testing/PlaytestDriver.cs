@@ -88,10 +88,14 @@ public partial class PlaytestDriver : Node
         GetWindow().Size=size;
         if(_headless){await Frames(6);return;}
         var wall=Stopwatch.StartNew();double? stableSince=null;
-        var previous=GetViewport().GetScreenTransform();bool stable=false;
-        while(wall.Elapsed.TotalSeconds<4)
+        var previous=GetViewport().GetScreenTransform();bool stable=false;int samples=0;
+        // A real first frame after resizing can compile Metal render targets
+        // for several seconds in the QA guest. Still require the actual size
+        // and unchanged input transform for 200 ms, with a bounded wait.
+        while(wall.Elapsed.TotalSeconds<20)
         {
             await Frames(1);await Task.Delay(20);
+            samples++;
             var transform=GetViewport().GetScreenTransform();
             if(GetWindow().Size==size&&transform.IsEqualApprox(previous))
             {
@@ -101,6 +105,7 @@ public partial class PlaytestDriver : Node
             else stableSince=null;
             previous=transform;
         }
+        Event("window-resize-settle",new{requested=size.ToString(),actual=GetWindow().Size.ToString(),samples,seconds=wall.Elapsed.TotalSeconds,stable});
         Check(stable,"native window size and input transform settle: "+size);
     }
     private Button NamedButton(string name) => _root.FindChild(name,true,false) as Button ?? throw new InvalidOperationException("Button not found: "+name);
@@ -197,6 +202,7 @@ public partial class PlaytestDriver : Node
             if(MathF.Sqrt(dx*dx+dz*dz)<.15) { Input(0,default);await Frames(3);Check(true,$"walk to {x},{z}");return; }
             Input(0,new PlayerInput(Math.Clamp(dx*4,-1,1),Math.Clamp(dz*4,-1,1)));
             await Frames(1);
+            if(_root.ActiveSession is NetworkSession)await Task.Delay(16);
         }
         Input(0,default); Check(false,$"walk to {x},{z}: timed out at {Player}");
     }

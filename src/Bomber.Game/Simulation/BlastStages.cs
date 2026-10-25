@@ -19,6 +19,7 @@ public static partial class BlastStages
         RockGarden => BuildRockGarden(),
         UpAndDown => BuildUpAndDown(),
         TopRules => BuildTopRules(),
+        GreedyTrap => BuildGreedyTrap(),
         _ => BuildSunkenTemple(),
     };
 

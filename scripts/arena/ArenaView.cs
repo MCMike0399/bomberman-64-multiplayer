@@ -151,9 +151,9 @@ public partial class ArenaView : Node3D
         string id=data.GetProperty("id").GetString()!;
         if(_stage==id)return;
         _stage=id;ClearThrowPreviews();
-        _environment.BackgroundMode=id==BlastStages.TopRules?Godot.Environment.BGMode.Color:Godot.Environment.BGMode.Sky;
+        _environment.BackgroundMode=id is BlastStages.TopRules or BlastStages.GreedyTrap?Godot.Environment.BGMode.Color:Godot.Environment.BGMode.Sky;
         _environment.BackgroundColor=new Color("171a22");
-        _environment.FogSkyAffect=id==BlastStages.TopRules?0:1;
+        _environment.FogSkyAffect=id is BlastStages.TopRules or BlastStages.GreedyTrap?0:1;
         _playerMotion.Clear();_facings.Clear();_ghostHosts.Clear();
         _terrain?.QueueFree();_terrain=new TempleStageView(_art);AddChild(_terrain);_terrain.Build(data);
         _terrain.SetLighting(StageLighting.For(TimeOfDay));
@@ -287,7 +287,8 @@ public partial class ArenaView : Node3D
         UpdateThrowPreviews(data,bits);
         Present(_presentation.Read(data));
         int left=(int)F(data,"closedLeft"),right=(int)F(data,"closedRight");
-        for(int x=0;x<_terrain.Width;x++)
+        _terrain.SetGreedyCompression(left,right);
+        for(int x=0;_stage!=BlastStages.GreedyTrap&&x<_terrain.Width;x++)
         {
             bool closed=x<left||x>=_terrain.Width-right;
             if(closed&&!_walls.ContainsKey(x))

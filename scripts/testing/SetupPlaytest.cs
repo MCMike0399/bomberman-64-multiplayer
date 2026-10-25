@@ -44,8 +44,9 @@ public partial class PlaytestDriver
             Check(green>=40,"Up & Down green summit remains visible in the rendered setup miniature");
         }
         await Adjust("StageSelector",Key.Right);Check(menu.Settings.Stage=="top-rules","right selects authority Top Rules");await Capture("setup-top-rules");
+        await Adjust("StageSelector",Key.Right);Check(menu.Settings.Stage=="greedy-trap","right selects Greedy Trap");await Capture("setup-greedy-trap");
         await Adjust("StageSelector",Key.Right);Check(menu.Settings.Stage=="sunken-temple","arena selection wraps to temple");
-        await Adjust("StageSelector",Key.Left);Check(menu.Settings.Stage=="top-rules","left wraps to previous arena");await Adjust("StageSelector",Key.Right);
+        await Adjust("StageSelector",Key.Left);Check(menu.Settings.Stage=="greedy-trap","left wraps to previous arena");await Adjust("StageSelector",Key.Right);
         await Adjust("Winstovictory",Key.Right);Check(menu.Settings.Wins==3,"wins dial changes settings");await Adjust("Winstovictory",Key.Left);Check(menu.Settings.Wins==2,"wins dial reverses");
         await Adjust("Roundtime",Key.Right);Check(menu.Settings.RoundSeconds==150,"time dial advances thirty seconds");await Adjust("Roundtime",Key.Left);Check(menu.Settings.RoundSeconds==120,"time dial reverses");
         await Adjust("CPUlevel",Key.Right);Check(menu.Settings.BotDifficulty=="hard","CPU dial changes difficulty");await Adjust("CPUlevel",Key.Left);Check(menu.Settings.BotDifficulty=="normal","CPU dial reverses");

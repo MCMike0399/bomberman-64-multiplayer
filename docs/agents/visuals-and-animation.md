@@ -205,8 +205,8 @@ The implementation is original shader/material work; nothing is copied.
   axial view depth for depth of field; `PlayableDistance` separately measures the
   farthest radial distance for Godot's depth-mode fog. Both use the effective camera
   transform, including projection offsets. `ArenaView.ApplyDepthCues` keeps blur and
-  haze outside their respective bounds. `graphics-settings` checks all five stages,
-  including Circuit Garden and oblique inspection views, against actual terrain and
+  haze outside their respective bounds. `graphics-settings` checks every battle arena
+  and Circuit Garden and oblique inspection views, against actual terrain and
   standing-character extents. Camera changes remeasure the bounds.
   Aerial perspective stays off: a camera
   looking down would sample the dark lower sky and grey the sea. Blur is off on Low.
@@ -224,6 +224,15 @@ Lessons: compare against the baseline capture at full resolution before tuning.
 A dropped `vertex()` once zeroed the world-position varying and looked like a fog,
 DOF or palette problem; one diagnostic frame writing the suspect values as
 emission found it. Close-up concentric banding on the helmet predates this work.
+
+### Greedy Trap presentation
+
+Greedy Trap has independently authored cobbles, burgundy brick, teal floor tiles,
+pale ring paving and gray-green destructible masonry, plus compression flywheels
+and pulsing amber inlays. It uses the enclosed-arena camera, ordinary lighting
+profiles and all graphics presets. The basin is safe opaque paving, with no
+lethal-water plane. [Stage and visual contract](../greedy-trap.md),
+[inspected original references](../greedy-trap-research.md).
 
 ### Top Rules castle presentation
 
@@ -273,7 +282,7 @@ Online preference edits save the local choice but never override server lighting
 key/fill/ambient, sky, fog and water profiles. Morning uses soft warm lateral light;
 Midday has a higher sun and turquoise water; Afternoon uses amber light, longer
 shadows and mauve reflections; Night uses blue moonlight, indigo water and enough
-fill to retain silhouettes, stairs and aiming markers. All four stages reuse
+fill to retain silhouettes, stairs and aiming markers. All arenas reuse
 these profiles. Menu theatre lighting remains separately authored.
 
 `ArenaView` supplies a procedural sky radiance map for specular reflections.

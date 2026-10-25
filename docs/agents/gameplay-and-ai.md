@@ -311,6 +311,12 @@ now covers four stages (48 combinations).
 
 ## Inventory, cover and pickup rendering
 
+Greedy Trap uses three solid stories, six flights, eight bottom masonry blocks
+and ordinary closing-column Hurry. Its turquoise basin is safe floor; it must
+not inherit ordinary water elimination or an unverified sliding rule. The
+[stage contract](../greedy-trap.md) owns topology, eight-seat adaptations and
+focused authority/AI checks. Online revision 4 gates the newly supported arena.
+
 - [Loot placement](../../src/Bomber.Game/Simulation/BlastSession.Loot.cs) uses map-owned
   `CoverAreas`: regional budget shares and cluster centers, with seeded weighted
   sampling. Temple seeds two nearby crates per spawn; Rock Garden seeds one plus a central paving cluster. Top Rules keeps a sparse twelve-block lower court. Up & Down keeps its upper ring clear, placing eight crates on the low deck and two on each middle pier. All policies preserve spawn clearance, ramps and reserved lanes.
@@ -440,4 +446,4 @@ five threatening bombs in 30 seconds, an eight-second maximum gap and zero death
 
 Top Rules thin decks pass blasts as demonstrated by the original official guide; solid masonry still shields and physical bodies/throws still collide with decks. Up & Down's corresponding blast penetration remains unverified, so it retains its authored shielding. [Evidence](../stage-fidelity-research.md#newly-recovered-top-rules-mechanics-evidence).
 
-Protocol 2 introduced the stage contract; current adaptive rooms negotiate protocol 3 at HTTP admission and the actual WebSocket worker, with a separate matching peer hello. Keep readiness/operator/leave/cancel paths available and test old-client update feedback. Lower cells must pass bounded schema validation before rendering. [Online protocol](../peer-hosting.md#online-stage-protocol-2-v028).
+Protocol 2 introduced the stage contract; protocol 3 added adaptive rooms. Greedy Trap source work advances admission to protocol 4 at HTTP and the actual WebSocket worker, with a matching peer hello, because older clients do not support the new stage. This needs a coordinated release and does not deploy the server. Keep readiness/operator/leave/cancel paths available and test old-client update feedback. Lower cells must pass bounded schema validation before rendering. [Online protocol](../peer-hosting.md#online-stage-protocol-2-v028).

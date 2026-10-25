@@ -1,3 +1,4 @@
+if(args.Contains("--greedy-trap")){int count=0;GreedyTrapChecks.Run((name,check)=>{check();count++;Console.WriteLine("PASS "+name);});Console.WriteLine($"Passed {count} Greedy Trap integration checks.");return;}
 if(args.Contains("--adaptive-rooms")){AdaptiveRoomChecks.Run();return;}
 if(args.Contains("--stage-integration")){StageIntegrationChecks.Run();return;}
 if(args.Contains("--tutorial-review")){TutorialChecks.ReviewRegressions();return;}
@@ -37,6 +38,7 @@ passed += OnlineRoomChecks.Run();
 passed += AdaptiveRoomChecks.Run();
 MatchRulesChecks.Run(Run);
 TerrainChecks.Run(Run);
+GreedyTrapChecks.Run(Run);
 UpAndDownChecks.Run(Run);
 RockGardenChecks.Run(Run);
 BotChecks.Run(Run);

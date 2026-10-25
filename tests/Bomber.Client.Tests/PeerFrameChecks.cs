@@ -21,6 +21,13 @@ internal static class PeerFrameChecks
         var castle=new LocalMatch(new MatchOptions{Stage="top-rules",HumanPlayers=2,BotPlayers=0});
         using var castleStage=JsonDocument.Parse(castle.StageJson!);
         Check(PeerFrameRules.Valid(castleStage.RootElement),"Top Rules peer stage accepts fractional stairs, underpasses and authored wall heights");
+        var greedy=new LocalMatch(new MatchOptions{Stage="greedy-trap",HumanPlayers=4,BotPlayers=0});
+        using var greedyStage=JsonDocument.Parse(greedy.StageJson!);
+        Check(PeerFrameRules.Valid(greedyStage.RootElement),"Greedy Trap real stage survives peer validation");
+        var brokenGreedy=JsonNode.Parse(greedy.StageJson!)!;
+        brokenGreedy["d"]!["cells"]![0]!.AsObject().Remove("oh");
+        Check(!PeerFrameRules.Valid(JsonSerializer.SerializeToElement(brokenGreedy)),"reject missing Greedy Trap wall crown before renderer access");
+        Check(new SessionSettings(Stage:"greedy-trap").ToWireSettings()["stage"]=="greedy-trap","room settings retain Greedy Trap on the wire");
         void InvalidCastle(Action<JsonNode> change,string label)
         {
             var frame=JsonNode.Parse(castle.StageJson!)!;change(frame["d"]!);

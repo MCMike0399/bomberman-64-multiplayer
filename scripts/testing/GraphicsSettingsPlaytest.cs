@@ -49,7 +49,7 @@ public partial class PlaytestDriver
                 AuditVisibleMenu("Settings",size);await Capture("graphics-settings-"+size.X);
                 await KeyPress(Key.Escape);
             }
-            foreach(string stage in new[]{"sunken-temple","rock-garden","up-and-down","top-rules","circuit-garden"})
+            foreach(string stage in new[]{"sunken-temple","rock-garden","up-and-down","top-rules","greedy-trap","circuit-garden"})
             {
                 _root.StartLocal(new SessionSettings(Stage:stage,Bots:0),1,practice:true);
                 await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"graphics enters "+stage,180);
@@ -76,7 +76,7 @@ public partial class PlaytestDriver
                     Check(materials.Length>0&&materials.All(m=>m.GetShaderParameter("quality_detail").AsSingle()==(preset==GraphicsPreset.Low?0:1)),"live terrain shader detail follows preset on "+stage);
                     var water=terrain.GetChildren().OfType<MeshInstance3D>().Where(n=>n.Mesh is PlaneMesh).ToArray();
                     if(stage=="rock-garden")Check(water.Length==0,"garden preserves its dry grass setting at "+preset);
-                    else if(stage!="top-rules")
+                    else if(stage is not ("top-rules" or "greedy-trap"))
                     {
                         Check(water.Length==1,"sea arena retains one water surface: "+stage);
                         Check(((ShaderMaterial)water[0].MaterialOverride).GetShaderParameter("quality_detail").AsSingle()==(preset==GraphicsPreset.Low?0:1),"live water detail follows preset");

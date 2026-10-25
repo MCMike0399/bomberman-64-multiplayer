@@ -16,7 +16,7 @@ public sealed class BattleCameraRig(Camera3D camera)
     public void SetStage(JsonElement stage)
     {
         _bounds.Clear();
-        _castle=stage.GetProperty("id").GetString()=="top-rules";
+        _castle=stage.GetProperty("id").GetString() is "top-rules" or "greedy-trap";
         _training=stage.GetProperty("id").GetString()=="circuit-garden";
         int width=stage.GetProperty("width").GetInt32(),depth=stage.GetProperty("height").GetInt32();
         _center=new(width*.5f,2,depth*.5f);
