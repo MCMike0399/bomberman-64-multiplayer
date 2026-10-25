@@ -376,3 +376,10 @@ The combined graphical suite uses a 1200-second catalog budget for all journeys;
 QA forwards that deadline and retains outer cleanup/VM startup headroom. Online
 settings checks compare rendering with the latest accepted server lighting,
 since a real round can advance while graphics pipelines prepare.
+
+The eight-peer native capacity fixture must poll live sessions while later
+guests connect, wait for eight connected members in each accepted roster, and
+yield engine frames between guest polls. All eight clients share one engine
+thread in QA; batching their setup can otherwise starve the real host's
+heartbeat and trigger the production six-second takeover policy. Keep that
+policy intact rather than weakening it to accommodate the fixture.

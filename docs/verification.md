@@ -51,6 +51,38 @@ Ignored receipts: `artifacts/top-rules-validation/castle-native-pass/`,
 Earlier failing receipts remain alongside the passing runs. The temporary owned
 QA VM was stopped and its slot handed to the waiting Rock Garden task.
 
+# Rock Garden reconstruction verification — PR #4
+
+2026-10-24. [Rock Garden](rock-garden.md) is rebuilt from the supplied screenshots
+and [cited original references](rock-garden-research.md). Actual rendered captures
+are included in the stage contract. Tested runtime: `83601e6`; subsequent evidence
+edits do not change game code.
+
+- Public profile passes, including documentation, boundaries and QA contracts.
+- Managed profile passes: 2,731 game, 309 client, 53 AI, 19 audio and 19 cluster
+  checks; all 36 AI soaks; real HTTP/WebSocket checks for 2–8 humans and seven bots.
+- Focused Rock Garden exported graphical journey passes 61 assertions with ten
+  captures and zero runtime errors/warnings. It includes four/eight-seat starts,
+  traversal, walls, actual boulder destruction and pickup, fireballs, local pause
+  and CPU combat. Low/Medium/High, all four lighting variants and framing also
+  pass in the broad graphical run.
+- The broad graphical run completes **42 of 43 journeys**, with 2,832 passing
+  assertions and 272 captures. Its final eight-peer capacity assertion fails:
+  the host lease expires and the room returns to the lobby before direct fight
+  snapshots arrive. This case uses the existing Sunken Temple stage. The full
+  graphical gate is therefore **not green**.
+- Fresh standalone eight-peer capacity checks pass both headlessly (four
+  assertions) and graphically (five assertions, one capture). The combined
+  sequence still reproduces the host-lease failure. Production lease/takeover
+  rules are unchanged; this remains a documented integration limitation.
+
+The fixture now waits for complete connected rosters and polls live sessions
+through pending joins. QA also respects the catalog's 900-second full-suite
+budget and compares online lighting with the latest accepted server round.
+Earlier failures and final receipts remain under ignored `artifacts/rock-garden/`.
+Graphical evidence comes from an isolated macOS Metal guest; it does not certify
+physical controllers or native Mac GPU throughput.
+
 # Peer hosting verification — v0.27.0 delivered
 
 2026-10-24: **0.27.0/build 32** adds persistent random lobbies and player-hosted
