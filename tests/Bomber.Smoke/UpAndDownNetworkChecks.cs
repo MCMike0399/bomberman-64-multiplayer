@@ -8,9 +8,14 @@ internal static class UpAndDownNetworkChecks
 {
     public static async Task Run(Uri origin)
     {
+        await RunMode(origin,NetworkMode.CreatePrivate);
+        await RunMode(origin,NetworkMode.CreatePeer);
+    }
+    private static async Task RunMode(Uri origin,NetworkMode mode)
+    {
         var settings=new SessionSettings(Stage:BlastStages.UpAndDown,Bots:0,SuddenDeath:false)
             {Advanced=new AdvancedRules {BlockPercent=0}};
-        await using var host=await NetworkSession.ConnectAsync(origin,"Up & Down host",settings);
+        await using var host=await NetworkSession.ConnectAsync(origin,"Up & Down host",settings,mode);
         await using var peer=await NetworkSession.ConnectAsync(origin,"Up & Down observer",settings,NetworkMode.JoinCode,host.JoinCode);
         await PartyNetworkChecks.Start(host);
         JsonElement? stage=null,state=null;
@@ -19,6 +24,7 @@ internal static class UpAndDownNetworkChecks
             var clock=Stopwatch.StartNew();
             while(clock.Elapsed.TotalSeconds<20)
             {
+                host.Advance(.015);host.DrainMessages();peer.Advance(.015);
                 foreach(var message in peer.DrainMessages())
                 {
                     string? kind=message.GetProperty("t").GetString();
@@ -51,7 +57,7 @@ internal static class UpAndDownNetworkChecks
         await Pump(()=>state!.Value.GetProperty("bombs").GetArrayLength()>0);
         host.SendInput(0,default);
         Check(state!.Value.GetProperty("bombs")[0].GetProperty("y").GetSingle()==2,"network placement under the ring stays on the pier");
-        Console.WriteLine("PASS live Up & Down layered stage transport, real route traversal and below-ring bomb placement");
+        Console.WriteLine($"PASS {mode} Up & Down layered stage transport, real route traversal and below-ring bomb placement");
     }
     private static void Check(bool condition,string message){if(!condition)throw new Exception(message);}
 }

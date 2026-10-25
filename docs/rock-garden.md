@@ -76,3 +76,5 @@ graphical run captures normal battle and a labeled closer inspection view.
 `graphics-settings` retain all-stage coverage.
 
 The old wide stone platform, thirteen columns and 110-block budget are superseded.
+
+[Verification results and remaining integration limitation](verification.md#rock-garden-reconstruction-verification--pr-4).

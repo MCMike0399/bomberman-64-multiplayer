@@ -73,10 +73,20 @@ public partial class PlaytestDriver
         var rosters=new Dictionary<string,int>();
         try
         {
-            for(int i=1;i<8;i++)guests.Add(await NetworkSession.ConnectAsync(new Uri(_server),$"Peer {i+1}",new SessionSettings(Bots:0),NetworkMode.JoinCode,host.JoinCode,peerFactory:()=>new GodotPeerLink(useStun:!new Uri(_server).IsLoopback)));
+            for(int i=1;i<8;i++)
+            {
+                var joining=NetworkSession.ConnectAsync(new Uri(_server),$"Peer {i+1}",new SessionSettings(Bots:0),NetworkMode.JoinCode,host.JoinCode,peerFactory:()=>new GodotPeerLink(useStun:!new Uri(_server).IsLoopback));
+                while(!joining.IsCompleted)
+                {
+                    host.Advance(1d/30);
+                    foreach(var peer in guests)peer.Advance(1d/30);
+                    await Frames(1);await Task.Delay(16);
+                }
+                guests.Add(await joining);await Frames(1);
+            }
             // CanStart means the two-human minimum, not that every pending
             // socket has joined. Wait for all eight in each accepted roster.
-            await Until(()=>host.Party?.CanStart==true&&guests.All(p=>p.Party?.CanStart==true&&
+            await Until(()=>host.IsLeader&&host.Party?.CanStart==true&&guests.All(p=>p.Party?.CanStart==true&&
                 rosters.GetValueOrDefault(p.PlayerId!)==8&&p.Party.Epoch==host.Party.Epoch),"eight compatible peers converge on the complete roster before start");
             var authorityClock=Stopwatch.StartNew();host.RequestStart();
             await Until(()=>host.PeerTransport=="Direct P2P"&&guests.All(p=>p.PeerTransport=="Direct P2P"&&states.TryGetValue(p.PlayerId!,out var state)&&state.GetProperty("players").GetArrayLength()==8&&state.GetProperty("phase").GetInt32()==1),"eight direct peers receive complete authoritative fight snapshots");
@@ -91,6 +101,7 @@ public partial class PlaytestDriver
             var clock=Stopwatch.StartNew();
             while(!predicate()&&clock.Elapsed.TotalSeconds<20)
             {
+                host.Advance(1d/30);
                 foreach(var peer in guests)
                 {
                     peer.Advance(1d/30);
@@ -100,10 +111,13 @@ public partial class PlaytestDriver
                         if(type=="state")states[peer.PlayerId!]=m.GetProperty("d").Clone();
                         if(type=="party.status")rosters[peer.PlayerId!]=m.GetProperty("d").GetProperty("players").EnumerateArray().Count(p=>p.GetProperty("connected").GetBoolean());
                     }
+                    // These seven clients share the engine thread in QA. Give
+                    // the real host a frame between native connection polls.
+                    await Frames(1);
                 }
-                await Frames(1);await Task.Delay(16);
+                await Task.Delay(16);
             }
-            if(!predicate())Event("peer-capacity-failure",new{description,host=host.PeerTransport,guests=guests.Select(p=>new{p.PlayerId,p.PeerTransport,p.DirectPacketsSent,p.DirectPacketsReceived,phase=p.Party?.Phase,epoch=p.Party?.Epoch,state=states.TryGetValue(p.PlayerId!,out var state)?state.GetProperty("players").GetArrayLength():0})});
+            if(!predicate())Event("peer-capacity-failure",new{description,host=host.PeerTransport,hostStatus=host.Status,hostParty=host.Party,guests=guests.Select(p=>new{p.PlayerId,p.PeerTransport,p.DirectPacketsSent,p.DirectPacketsReceived,p.Status,notice=p.Party?.Notice,members=rosters.GetValueOrDefault(p.PlayerId!),phase=p.Party?.Phase,epoch=p.Party?.Epoch,state=states.TryGetValue(p.PlayerId!,out var state)?state.GetProperty("players").GetArrayLength():0})});
             Check(predicate(),description);
         }
     }
