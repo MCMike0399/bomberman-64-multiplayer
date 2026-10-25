@@ -170,8 +170,8 @@ internal sealed class PeerRoomClient(string playerId, string lobbyId, Func<IPeer
         _party?.Hosting == "peer" ? playerId == _party.AuthorityId ? _connected.Where(id => id != playerId) : [_party.AuthorityId!] : [];
     private bool RelayProbe(string from, JsonElement signal)
     {
-        if (!signal.TryGetProperty("kind", out var kind) || kind.GetString() is not ("probe" or "probe-reply")) return false;
-        if (!signal.TryGetProperty("nonce", out var value) || !value.TryGetInt64(out long nonce)) return true;
+        if (!signal.TryGetProperty("kind", out var kind) || kind.ValueKind != JsonValueKind.String || kind.GetString() is not ("probe" or "probe-reply")) return false;
+        if (!signal.TryGetProperty("nonce", out var value) || value.ValueKind != JsonValueKind.Number || !value.TryGetInt64(out long nonce)) return true;
         if (kind.GetString() == "probe") sendControl("peer.signal", new { epoch = _epoch, to = from, payload = new { kind = "probe-reply", nonce } });
         else Window(_relayQuality, from).Complete(nonce);
         return true;

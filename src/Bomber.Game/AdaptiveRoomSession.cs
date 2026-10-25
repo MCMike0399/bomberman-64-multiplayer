@@ -11,6 +11,8 @@ public sealed class AdaptiveRoomSession : GameSession
     private readonly PeerRoomSession _peer;
     private readonly RoomHostQuality _quality = new();
     private readonly Dictionary<string, RealtimePlayer> _members = [];
+    private readonly Dictionary<string, long> _joined = [];
+    private long _joinSerial;
     private readonly Dictionary<string, (long Window, int Bytes)> _budgets = [];
     private readonly bool _public;
     private JsonObject? _serverStatus, _peerStatus;
@@ -40,18 +42,21 @@ public sealed class AdaptiveRoomSession : GameSession
 
     public override void OnPlayerJoined(ISessionContext c, RealtimePlayer p)
     {
-        _members[p.PlayerId] = p; ElectLeader(c);
+        CancelPendingStart();
+        _members[p.PlayerId] = p; _joined.TryAdd(p.PlayerId, ++_joinSerial); ElectLeader(c);
         _server.OnPlayerJoined(Wrap(c, false), p); _peer.OnPlayerJoined(Wrap(c, true), p);
         Publish(c);
     }
     public override void OnPlayerLeft(ISessionContext c, RealtimePlayer p, LeaveReason reason)
     {
-        _members.Remove(p.PlayerId); _quality.Remove(p.PlayerId); _budgets.Remove(p.PlayerId); ElectLeader(c);
+        CancelPendingStart();
+        _members.Remove(p.PlayerId); _joined.Remove(p.PlayerId); _quality.Remove(p.PlayerId); _budgets.Remove(p.PlayerId); ElectLeader(c);
         _server.OnPlayerLeft(Wrap(c, false), p, reason); _peer.OnPlayerLeft(Wrap(c, true), p, reason);
         Publish(c);
     }
     public override void OnPlayerConnectionChanged(ISessionContext c, RealtimePlayer p, bool connected)
     {
+        CancelPendingStart();
         _quality.Remove(p.PlayerId); ElectLeader(c);
         if (Connected(c).Count < 2) _countdown = null;
         _server.OnPlayerConnectionChanged(Wrap(c, false), p, connected);
@@ -153,15 +158,20 @@ public sealed class AdaptiveRoomSession : GameSession
         int bots = _serverStatus?["bots"]?.GetValue<int>() ?? 0;
         return humans >= (_public || _policy == "peer" ? 2 : 1) && humans + bots >= 2;
     }
-    private List<string> Connected(ISessionContext c) => _members.Keys.Where(c.IsConnected).ToList();
+    private List<string> Connected(ISessionContext c) => _members.Keys.Where(c.IsConnected).OrderBy(id => _joined[id]).ToList();
     private void ElectLeader(ISessionContext c)
     {
         if (_leader is null || !_members.ContainsKey(_leader) || !c.IsConnected(_leader))
-        { _leader = _members.Keys.FirstOrDefault(c.IsConnected); _startRequested = false; }
+        { _leader = Connected(c).FirstOrDefault(); _startRequested = false; }
     }
     private RealtimePlayer? PeerHost(ISessionContext c) => _peerStatus?["leaderId"]?.GetValue<string>() is { } id && c.IsConnected(id) ? _members.GetValueOrDefault(id) : null;
     private void Release(ISessionContext c)
     { c.TryReserveResource("simulation", 0); c.TryReserveResource("peer-relay", 0); }
+    private void CancelPendingStart()
+    {
+        if (_startRequested) _notice = "The roster changed. Start when everyone is ready.";
+        _startRequested = false;
+    }
     private Context Wrap(ISessionContext c, bool peer) => new(this, c, peer);
 
     private void Publish(ISessionContext c)

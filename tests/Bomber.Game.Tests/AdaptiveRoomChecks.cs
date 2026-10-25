@@ -66,6 +66,26 @@ internal static class AdaptiveRoomChecks
         try { new AdaptiveRoomGame().CreateSession(new("invalid", "blast-room", new Dictionary<string,string>{{"stage","unsupported"}},64)); }
         catch(ArgumentException) { rejected = true; }
         Check(rejected, "invalid initial room rules are rejected before a player authority receives them");
+        var churn = new RoomContext();
+        var churnRoom = new AdaptiveRoomGame().CreateSession(new("churn", "blast-room", churn.Settings, 64));
+        var ca=churn.Add("a",0);var cb=churn.Add("b",1);var cc=churn.Add("c",2);
+        foreach(var p in churn.Players)churnRoom.OnPlayerJoined(churn,p);
+        churn.Connected.Remove(cb.PlayerId);churnRoom.OnPlayerLeft(churn,cb,LeaveReason.Left);
+        var cd=churn.Add("d",1);churnRoom.OnPlayerJoined(churn,cd);
+        churn.Connected.Remove(ca.PlayerId);churnRoom.OnPlayerLeft(churn,ca,LeaveReason.Left);
+        Check(churn.Status.GetProperty("leaderId").GetString()=="c","owner turnover preserves join order after dictionary slot reuse");
+        churnRoom.OnMessage(churn,cc,new("party.settings",JsonSerializer.SerializeToElement(new{wins="3"}),null,churn.Now));
+        Check(churn.Status.GetProperty("settings").GetProperty("wins").GetString()=="3","replacement owner can edit dedicated room rules");
+        churnRoom.OnMessage(churn,cc,new("party.start",JsonSerializer.SerializeToElement(new{}),null,churn.Now));
+        Check(churn.Status.GetProperty("phase").GetString()=="playing","replacement owner can start dedicated authority");
+        var cancelled = new RoomContext();cancelled.Limits["simulation"]=0;
+        var cancelledRoom = new AdaptiveRoomGame().CreateSession(new("cancelled", "blast-room", cancelled.Settings,64));
+        var qa=cancelled.Add("a",0);var qb=cancelled.Add("b",1);cancelled.Add("c",2);
+        foreach(var p in cancelled.Players)cancelledRoom.OnPlayerJoined(cancelled,p);
+        cancelledRoom.OnMessage(cancelled,qa,new("party.start",JsonSerializer.SerializeToElement(new{}),null,cancelled.Now));
+        cancelled.Connected.Remove(qb.PlayerId);cancelledRoom.OnPlayerLeft(cancelled,qb,LeaveReason.Left);
+        cancelled.Limits["simulation"]=1;cancelled.Tick=30;cancelledRoom.OnTick(cancelled);
+        Check(cancelled.Status.GetProperty("phase").GetString()=="lobby"&&cancelled.Claims.Count==0,"departure cancels a pending start before later capacity becomes free");
         Console.WriteLine($"PASS {passed} adaptive room checks");
         return passed;
         void Send(RealtimePlayer player, string type, object data) => room.OnMessage(context, player,

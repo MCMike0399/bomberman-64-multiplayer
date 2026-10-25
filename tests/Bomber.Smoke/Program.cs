@@ -15,7 +15,8 @@ Check(games.GetProperty("value").EnumerateArray().Any(g => g.GetProperty("id").G
 
 if(args.Contains("--up-and-down-only")){await UpAndDownNetworkChecks.Run(new Uri(origin));return;}
 if(args.Contains("--aim-only")){await NetworkAimChecks.Run(new Uri(origin));return;}
-if(args.Contains("--adaptive-only") || args.Contains("--adaptive-peer-only")){await AdaptiveNetworkChecks.Run(new Uri(origin),args.Contains("--adaptive-peer-only"));return;}
+if(args.Contains("--adaptive-only") || args.Contains("--adaptive-peer-only") || args.Contains("--adaptive-malformed-only"))
+{await AdaptiveNetworkChecks.Run(new Uri(origin),args.Contains("--adaptive-peer-only"),args.Contains("--adaptive-malformed-only"));return;}
 if(args.Contains("--appearance-only")){await LobbyAppearanceCatchup();return;}
 if(args.Contains("--peer-only")){await PeerNetworkChecks.Run(new Uri(origin));return;}
 if(args.Contains("--peer-reconnect")){await PeerReconnect();return;}
@@ -25,6 +26,7 @@ await QuickPlay();
 if (args.Contains("--quick-only")) return;
 await PartyNetworkChecks.Run(new Uri(origin));
 await AdaptiveNetworkChecks.Run(new Uri(origin));
+await AdaptiveNetworkChecks.Run(new Uri(origin),malformedSignals:true);
 await PeerNetworkChecks.Run(new Uri(origin));
 await PeerReconnect();
 await ProductSessions();

@@ -4,12 +4,13 @@ using Bomber.Client;
 
 internal static class AdaptiveNetworkChecks
 {
-    public static async Task Run(Uri server, bool expectPeer = false)
+    public static async Task Run(Uri server, bool expectPeer = false, bool malformedSignals = false)
     {
         var clients = new List<NetworkSession>();
         var states = new Dictionary<string, JsonElement>();
         var proxies = new Dictionary<NetworkSession, ConnectionDropProxy>();
         int checks = 0;
+        int malformedSent = 0;
         void Check(bool value, string name) { if (!value) throw new Exception("FAIL " + name); checks++; Console.WriteLine("PASS " + name); }
         try
         {
@@ -25,6 +26,7 @@ internal static class AdaptiveNetworkChecks
             Check(clients.All(c => c.Party?.Hosting == (expectPeer ? "peer" : "cluster")), "every participant agrees on the selected authority kind");
             Check(clients.All(c => c.Party?.LeaderId == host.PlayerId), "host selection preserves the social room owner");
             Check(clients.All(c => states[c.PlayerId!].GetProperty("players").GetArrayLength() == 3), "selected authority runs the real shared three-player simulation");
+            if (malformedSignals) Check(malformedSent >= 2, "malformed authenticated probe scalars do not unwind client message processing");
             var authority = clients.FirstOrDefault(c => c.PlayerId == host.Party!.HostId);
             if (expectPeer)
             {
@@ -65,7 +67,8 @@ internal static class AdaptiveNetworkChecks
             ConnectionDropProxy? proxy = expectPeer && server.IsLoopback && server.Scheme == "http" ? new(server) : null;
             try
             {
-                var client = await NetworkSession.ConnectAsync(proxy?.Origin ?? server, name, new SessionSettings(Bots: 0, Wins: 1), code is null ? NetworkMode.CreatePrivate : NetworkMode.JoinCode, code);
+                var client = await NetworkSession.ConnectAsync(proxy?.Origin ?? server, name, new SessionSettings(Bots: 0, Wins: 1), code is null ? NetworkMode.CreatePrivate : NetworkMode.JoinCode, code,
+                    peerFactory: malformedSignals ? () => new MalformedSignalLink(() => malformedSent += 2) : null);
                 clients.Add(client); if (proxy is not null) proxies[client] = proxy; return client;
             }
             catch { if (proxy is not null) await proxy.DisposeAsync(); throw; }
@@ -88,5 +91,17 @@ internal static class AdaptiveNetworkChecks
             } while (elapsed.Elapsed.TotalSeconds < seconds);
             throw new TimeoutException("Adaptive room condition timed out: " + string.Join("; ", clients.Select(c => $"{c.PlayerId} {c.Party} probes={c.ConnectionQualitySamples}")));
         }
+    }
+    private sealed class MalformedSignalLink(Action sent) : IPeerLink
+    {
+        public bool Connected => false;
+        public event Action<JsonElement>? Signal;
+        public event Action<byte[]>? Received { add { } remove { } }
+        public void Start(bool offer)
+        { Signal?.Invoke(JsonSerializer.SerializeToElement(new { kind = 42 })); Signal?.Invoke(JsonSerializer.SerializeToElement(new { kind = "probe", nonce = "bad" })); sent(); }
+        public void AcceptSignal(JsonElement signal) { }
+        public void Poll() { }
+        public bool Send(byte[] packet) => false;
+        public void Dispose() { }
     }
 }
