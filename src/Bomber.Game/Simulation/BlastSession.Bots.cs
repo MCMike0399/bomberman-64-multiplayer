@@ -168,7 +168,7 @@ public sealed partial class BlastSession
         if(WaterUnsafe(x+.5f,z+.5f,leave,_aiGraph.Height[cell]))return false;
         if(_phase==RoundPhase.Hurry&&!_stage.RisingWater&&_stage.Id!=BlastStages.RockGarden)
         {
-            int columns=(int)MathF.Floor(_hurryColTimer+leave);
+            int columns=(int)MathF.Floor((_hurryColTimer+leave)/(_stage.Id==BlastStages.BlizzardBattle?BlizzardRules.AvalancheStepSeconds:1));
             if(x<_closedLeft+columns||x>=_stage.Width-_closedRight-columns)return false;
         }
         return true;

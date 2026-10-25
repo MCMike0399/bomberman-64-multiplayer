@@ -22,6 +22,7 @@ public partial class ArenaView : Node3D
     public void SetBattleActive(bool active)
     {
         _battleActive=active;
+        if(_terrain!=null){_terrain.WeatherActive=active;if(_terrain.Weather!=null)_terrain.Weather.Active=active;}
         if(!active && _tutorialTarget!=null)_tutorialTarget.Visible=false;
         if(!active)ClearThrowPreviews();
         foreach(var meteor in _entities.Values.OfType<MeteorView>())meteor.SetProcess(active);
@@ -157,6 +158,7 @@ public partial class ArenaView : Node3D
         _playerMotion.Clear();_facings.Clear();_ghostHosts.Clear();
         _terrain?.QueueFree();_terrain=new TempleStageView(_art);AddChild(_terrain);_terrain.Build(data);
         _terrain.SetLighting(StageLighting.For(TimeOfDay));
+        _terrain.WeatherActive=_battleActive;
         foreach(Node child in _dynamic.GetChildren())child.QueueFree();
         foreach(Node child in _effects.GetChildren())child.QueueFree();
         _entities.Clear();_targets.Clear();_blocks.Clear();_explosions.Clear();_presentation.Reset();_walls.Clear();_pickups.Clear();_lastRound=-1;_wasHurry=false;
@@ -286,13 +288,14 @@ public partial class ArenaView : Node3D
         }
         UpdateThrowPreviews(data,bits);
         Present(_presentation.Read(data));
+        if(data.TryGetProperty("blizzard",out var weather))_terrain.SetBlizzard(weather);
         int left=(int)F(data,"closedLeft"),right=(int)F(data,"closedRight");
         for(int x=0;x<_terrain.Width;x++)
         {
             bool closed=x<left||x>=_terrain.Width-right;
             if(closed&&!_walls.ContainsKey(x))
             {
-                var n=new Node3D();
+                var n=_stage==BlastStages.BlizzardBattle?_terrain.CreateAvalanche(x):new Node3D();
                 if(_stage==BlastStages.TopRules)
                 {
                     var stone=_terrain.CastleWallMaterial;
@@ -300,7 +303,7 @@ public partial class ArenaView : Node3D
                     Box(n,new(x+.5f,wallHeight/2,_terrain.Depth/2f),new(1,wallHeight,_terrain.Depth-2),stone);
                     Box(n,new(x+.5f,wallHeight+.05f,_terrain.Depth/2f),new(1.03f,.16f,_terrain.Depth-2),_art.Color(new Color("bdc4c5")),.025f);
                 }
-                else Box(n,new(x+.5f,2.1f,_terrain.Depth/2f),new(.92f,5.8f,_terrain.Depth),_art.Color(new Color(.92f,.18f,.17f,.4f),.7f,true),.03f);
+                else if(_stage!=BlastStages.BlizzardBattle)Box(n,new(x+.5f,2.1f,_terrain.Depth/2f),new(.92f,5.8f,_terrain.Depth),_art.Color(new Color(.92f,.18f,.17f,.4f),.7f,true),.03f);
                 _effects.AddChild(n);_walls[x]=n;
             }
             if(!closed&&_walls.Remove(x,out var wall))wall.QueueFree();
@@ -336,7 +339,8 @@ public partial class ArenaView : Node3D
                 bomb.GetProperty("remote").GetBoolean()?5:F(bomb,"fuse"),_terrain.AimCellKind,
                 (x,z)=>_terrain.AimCellKind(x+.5f,z+.5f),(x,z)=>_terrain.AimHasCover(x,z,cover),
                 waterLevel:data.GetProperty("hurryMode").GetString()=="water"&&data.GetProperty("phase").GetInt32()==2?F(data,"waterLevel"):null,
-                bounce:bounce,gravityScale:BombThrowRules.Weight(pumps),pumps:pumps,stage:_terrain.Layout);
+                bounce:bounce,gravityScale:BombThrowRules.Weight(pumps),pumps:pumps,stage:_terrain.Layout,windAt:data.TryGetProperty("blizzard",out var weather)&&weather.ValueKind==JsonValueKind.Object?
+                    seconds=>BlizzardRules.Wind(weather.GetProperty("time").GetSingle()+seconds+BombThrowRules.SimulationStep,weather.GetProperty("seed").GetInt32(),weather.GetProperty("round").GetInt32()):null);
             if(!_throwPreviews.TryGetValue(id,out var view))
             {view=new BombThrowPreview();_effects.AddChild(view);_throwPreviews[id]=view;}
             view.Update(projection,pumps,player.GetProperty("slot").GetInt32(),aimSet,aiming,range);seen.Add(id);
@@ -443,7 +447,8 @@ public partial class ArenaView : Node3D
         for(int i=0;i<6;i++)
         {
             float angle=i*Mathf.Tau/6;
-            var piece=Box(root,new(0,.4f,0),Vector3.One*(.12f+i*.008f),material,.02f);
+            var piece=_stage==BlastStages.BlizzardBattle?_terrain!.CreateIceShard(root,new(0,.4f,0),i):
+                Box(root,new(0,.4f,0),Vector3.One*(.12f+i*.008f),material,.02f);
             var tween=piece.CreateTween().SetParallel();tween.TweenProperty(piece,"position",new Vector3(Mathf.Cos(angle)*.65f,.06f,Mathf.Sin(angle)*.65f),.35);tween.TweenProperty(piece,"rotation",new Vector3(i,2,i*.4f),.35);
         }
         var cleanup=root.CreateTween();cleanup.TweenInterval(.4);cleanup.TweenProperty(root,"scale",Vector3.Zero,.2);cleanup.TweenCallback(Callable.From(root.QueueFree));

@@ -106,7 +106,8 @@ public sealed partial class BlastSession
                 var stepDt=dt/steps;
                 for(var step=0;step<steps&&p.Airborne;step++)
                 {
-                    float nx=p.X+p.AirVX*stepDt,nz=p.Z+p.AirVZ*stepDt;
+                    var wind=BlizzardWind*BlizzardRules.PlayerWindScale;
+                    float nx=p.X+(p.AirVX+wind.X)*stepDt,nz=p.Z+(p.AirVZ+wind.Y)*stepDt;
                     if(!AirborneTerrainBlocks(nx,p.Z,p))p.X=nx;
                     if(!AirborneTerrainBlocks(p.X,nz,p))p.Z=nz;
                     float previousY=p.Y;

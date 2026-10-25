@@ -68,7 +68,7 @@ static class GameplaySoakChecks
         int ticks=IntArgument(args,"--ticks=",2700);
         int fairnessChecks=CheckFairness();
         var results=new List<Result>();
-        foreach(string stage in new[]{"rock-garden","up-and-down","sunken-temple","top-rules"})
+        foreach(string stage in new[]{"rock-garden","up-and-down","sunken-temple","top-rules","blizzard-battle"})
         foreach(string difficulty in new[]{"easy","medium","hard"})
         foreach(int bots in new[]{3,7})
         foreach(int seed in new[]{64,9876})
@@ -91,7 +91,7 @@ static class GameplaySoakChecks
     static int CheckFairness()
     {
         int checks=0;
-        foreach(string stage in new[]{"rock-garden","up-and-down","sunken-temple","top-rules"})
+        foreach(string stage in new[]{"rock-garden","up-and-down","sunken-temple","top-rules","blizzard-battle"})
         {
             string? reference=null;
             foreach(string difficulty in new[]{"easy","medium","hard"})

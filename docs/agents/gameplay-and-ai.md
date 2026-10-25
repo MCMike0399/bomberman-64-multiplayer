@@ -280,6 +280,10 @@ and the input guide; older iteration tables are historical.
   cannot add walkable floor, ramps or collision height.
   [Travel/water diagnosis](../history/iteration11-kick-research.md).
 
+## Blizzard Battle (2026-10-25)
+
+[Stage contract](../blizzard-battle.md) owns the flat enclosed snowfield, sixteen authored ice cones (1.3-unit stage-owned cover height), eight seats, shared seeded weather and bilateral avalanche closure. Wind affects free bombs and living players through collision, with weaker player response, and the advisory arc uses the same future schedule. Preserve fuse clocks and carried attachment. CPU closure avoidance uses the three-second avalanche interval. Protocol revision 5 gates the expanded stage/weather contract.
+
 ## Top Rules castle (2026-10-24)
 
 `top-rules` adds the two-story castle researched in [the original manual and footage](../top-rules-research.md).
@@ -317,7 +321,7 @@ the temple. Relay smoke also observes a host traversing the lower passages.
 Focused checks: `Bomber.Game.Tests -- --top-rules`,
 `Bomber.Ai.Tests -- --top-rules`, the `top-rules` native journey and the real
 network castle room/traversal in `PartyNetworkChecks`. The standard AI soak
-now covers four stages (48 combinations).
+now covers five stages (60 combinations), including Blizzard Battle.
 
 ## Inventory, cover and pickup rendering
 

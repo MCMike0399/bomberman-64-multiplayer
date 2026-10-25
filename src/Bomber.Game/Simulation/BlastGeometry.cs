@@ -32,7 +32,8 @@ public static class BlastGeometry
             if (!cell.IsElimination && surface > y + .02f) return true;
             if (cell.Kind == CellKind.Pillar && surface + (cell.ObstacleHeight ?? 1.75f) > y) return true;
             if ((cx == acx && cz == acz) || (cx == bcx && cz == bcz)) continue;
-            if (!piercing && soft.IsAlive(cx, cz) && stage.SurfaceAt(x,z) <= y && stage.SurfaceAt(x,z) + 1 > y) return true;
+            // Retain the original one-cell blast shielding minimum; taller authored cover extends it.
+            if (!piercing && soft.IsAlive(cx, cz) && stage.SurfaceAt(x,z) <= y && stage.SurfaceAt(x,z) + Math.Max(1,stage.SoftBlockHeight) > y) return true;
         }
         return false;
     }

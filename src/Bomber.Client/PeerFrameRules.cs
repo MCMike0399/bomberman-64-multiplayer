@@ -23,9 +23,9 @@ public static class PeerFrameRules
                     if (!Fields(d,"s:id s:name i:width i:height i:round i:winsTarget i:roundSeconds")) return false;
                     int width=d.GetProperty("width").GetInt32(),height=d.GetProperty("height").GetInt32();
                     return width is >=3 and <=32 && height is >=3 and <=32 &&
-                        d.GetProperty("id").GetString() is "sunken-temple" or "rock-garden" or "up-and-down" or "top-rules" &&
+                        d.GetProperty("id").GetString() is "sunken-temple" or "rock-garden" or "up-and-down" or "top-rules" or "blizzard-battle" &&
                         Array(d,"cells",1024,c=>Cell(c,d.GetProperty("id").GetString()=="top-rules")) &&
-                        d.GetProperty("cells").GetArrayLength()==width*height && Underpasses(d,width*height) && Array(d,"spawns",8,p=>p.ValueKind==JsonValueKind.Array&&p.GetArrayLength()==2&&p.EnumerateArray().All(v=>v.TryGetInt32(out int n)&&n>=0&&n<32));
+                        d.GetProperty("cells").GetArrayLength()==width*height && CoverHeight(d) && Underpasses(d,width*height) && Array(d,"spawns",8,p=>p.ValueKind==JsonValueKind.Array&&p.GetArrayLength()==2&&p.EnumerateArray().All(v=>v.TryGetInt32(out int n)&&n>=0&&n<32));
                 case "state":
                     if (!Fields(d,"i:round l:serverTime s:stageLighting l:presentationSeq i:phase n:timeLeft i:closedLeft i:closedRight s:hurryMode n:waterLevel n:waterStartsIn n:waterRiseRate n:hurryStartsIn s:softBlocks")) return false;
                     if (d.GetProperty("phase").GetInt32() is <0 or >3 || Convert.FromBase64String(d.GetProperty("softBlocks").GetString()!).Length>128) return false;
@@ -35,6 +35,11 @@ public static class PeerFrameRules
                         (!d.TryGetProperty("meteors",out _)||Array(d,"meteors",8,m=>Fields(m,"s:id n:x n:z n:remaining")&&
                             m.GetProperty("x").GetSingle() is >=0 and <32&&m.GetProperty("z").GetSingle() is >=0 and <32&&
                             m.GetProperty("remaining").GetSingle() is >=0 and <=BlastStages.MeteorWarningSeconds)) &&
+                        (!d.TryGetProperty("blizzard",out var weather)||weather.ValueKind==JsonValueKind.Null||
+                            Fields(weather,"n:time i:round n:x n:z")&&weather.GetProperty("time").GetSingle()>=0&&
+                            weather.TryGetProperty("seed",out var seed)&&seed.TryGetInt32(out _)&&
+                            Math.Abs(weather.GetProperty("x").GetSingle())<=BlizzardRules.WindSpeed&&
+                            Math.Abs(weather.GetProperty("z").GetSingle())<=BlizzardRules.WindSpeed) &&
                         Array(d,"hazards",1024,h=>Fields(h,"s:id n:x n:z n:y n:r n:age n:life b:red")) &&
                         Array(d,"items",512,i=>Fields(i,"s:id i:cx i:cz s:type n:life b:dropped n:y")) &&
                         Array(d,"events",128,e=>Fields(e,"l:seq i:tick i:round s:kind ?s:entityId ?s:playerId n:x n:y n:z n:magnitude n:radius ?s:reason ?s:causedBy"));
@@ -42,6 +47,11 @@ public static class PeerFrameRules
             }
         }
         catch(Exception ex) when(ex is InvalidOperationException or KeyNotFoundException or FormatException or OverflowException){return false;}
+    }
+    private static bool CoverHeight(JsonElement stage)
+    {
+        if(!stage.TryGetProperty("coverHeight",out var value))return stage.GetProperty("id").GetString()!="blizzard-battle";
+        return value.ValueKind==JsonValueKind.Number&&value.TryGetSingle(out float height)&&float.IsFinite(height)&&height is >=.15f and <=3;
     }
     private static bool Cell(JsonElement cell,bool castle,bool allowBelow=true)
     {

@@ -11,7 +11,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 function check(value, label) { if (!value) throw Error(label); checks.push(label); console.log('PASS', label); }
 async function api(path, body, token, method = 'POST') {
   const response = await fetch(new URL('/realtime/v1/' + path, origin), {
-    method, headers: { 'X-Blast-Protocol': '4', 'Content-Type': 'application/json', ...(token ? { 'x-player-token': token } : {}) },
+    method, headers: { 'X-Blast-Protocol': '5', 'Content-Type': 'application/json', ...(token ? { 'x-player-token': token } : {}) },
     body: method === 'GET' ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(10000)
   });
   const data = response.status === 204 ? null : await response.json();
@@ -22,8 +22,8 @@ async function connect(reservation) {
   const url = new URL(reservation.connectUrl, origin);
   url.protocol = ['https:', 'wss:'].includes(url.protocol) ? 'wss:' : 'ws:';
   if (origin.startsWith('https:') && url.protocol !== 'wss:') throw Error('Insecure reservation');
-  const socket = new WebSocket(url, {headers: {'X-Blast-Protocol': '4'}});
-  socket.addEventListener('open', () => socket.send(JSON.stringify({t:'peer.hello',d:{version:4}})));
+  const socket = new WebSocket(url, {headers: {'X-Blast-Protocol': '5'}});
+  socket.addEventListener('open', () => socket.send(JSON.stringify({t:'peer.hello',d:{version:5}})));
   await new Promise((resolve, reject) => {
     const timer = setTimeout(() => { socket.close(); reject(Error('Socket welcome timeout')); }, 10000);
     socket.addEventListener('message', event => {

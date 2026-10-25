@@ -15,7 +15,7 @@ references are [playtests](../../tools/playtest/README.md), [CI](../ci.md),
 | File moves/renames | `git grep` old paths; build; editor import for `.uid` files | `public` plus the moved area's gate; see [codebase map](codebase-map.md#moving-files-safely) |
 | Simulation/rules | Corresponding executable managed suite with a red regression | `managed`, relevant native journey, `headless` |
 | Client/session/protocol | Client checks and real HTTP/WebSocket repro | `managed` plus `network`; restart only an owned stale server |
-| AI | Focused deterministic regression and matched-seed metrics | Managed AI checks/48-scenario soak plus `ai-play` where visible behavior matters |
+| AI | Focused deterministic regression and matched-seed metrics | Managed AI checks/60-scenario soak plus `ai-play` where visible behavior matters |
 | Input/menu/focus | `controllers`, `aim-inputs`, `wasd-navigation`, or relevant journey | Real windowed graphical checks; physical observation if claiming device support |
 | Rendering/rig/audio | Relevant native scenario and actual images/audio/video | Graphical regression; shipped-app checks for delivery |
 | Packaging/runtime/native backend | Bundle and staged-runtime inspection | `package`, exported-app journey, exact installed-copy verification |
@@ -400,7 +400,7 @@ night lighting, eight-player CPU battle and inward
 sudden-death walls. Headless results establish state assertions only; inspect
 the graphical captures separately. Managed `--top-rules` checks preserve the
 layered support, falling, kick/throw/slab and CPU path witnesses. The standard
-48-case AI soak includes the new arena. `PartyNetworkChecks` edits a real room
+60-case AI soak includes the new arena. `PartyNetworkChecks` edits a real room
 to Top Rules and observes a host's lower-story traversal from its peer.
 
 For focused castle changes, `--scenario top-rules-regression` runs the eight
@@ -447,6 +447,10 @@ Keep the macOS test host awake during bounded timing tests (`caffeinate -i` arou
 owned command). A clamshell sleep invalidated a realtime lease test while its
 monotonic test timer barely advanced; do not lengthen production leases to hide
 that environmental interruption.
+
+## Blizzard Battle verification
+
+[Stage contract and commands](../blizzard-battle.md#verification-entrypoints). The `blizzard-battle` native leaf belongs to `all`, `core-headless` and `stage-fidelity`; `blizzard-regression` adds all-stage graphics, lighting, setup, framing, assets and network checks. Managed fixtures cover actual drift/fuses, future-wind flight prediction, cone budgets and avalanche reset; peer validation rejects malformed weather, and a real server room verifies advancing weather over WebSocket. The AI soak expands to sixty cases for five battle arenas. Keep actual image inspection separate from headless assertions. Full `graphics-settings` needs a guest display larger than its 1600×1000 test window; the Blizzard regression passed on a 1920×1200 guest. `SetupMenus` configures its own initial default settings so earlier arena tours cannot change its fixture precondition.
 
 ## Menu navigation regression (2026-10-25 source)
 

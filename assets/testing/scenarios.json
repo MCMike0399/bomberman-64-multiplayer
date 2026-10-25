@@ -550,7 +550,8 @@
         "tutorial",
         "top-rules",
         "up-and-down",
-        "rock-garden"
+        "rock-garden",
+        "blizzard-battle"
       ],
       "domains": [
         "ai",
@@ -598,7 +599,8 @@
         "tutorial",
         "top-rules",
         "up-and-down",
-        "rock-garden"
+        "rock-garden",
+        "blizzard-battle"
       ],
       "domains": [
         "ai",
@@ -794,6 +796,7 @@
         "top-rules",
         "up-and-down",
         "rock-garden",
+        "blizzard-battle",
         "presentation",
         "tutorial"
       ],
@@ -855,6 +858,46 @@
       ],
       "headless": false,
       "timeout": 900,
+      "manual": false
+    },
+    {
+      "id": "blizzard-battle",
+      "method": "BlizzardBattleTour",
+      "domains": [
+        "gameplay",
+        "rendering",
+        "physics",
+        "ai",
+        "ui"
+      ],
+      "headless": true,
+      "timeout": 240,
+      "manual": false
+    },
+    {
+      "id": "blizzard-regression",
+      "steps": [
+        "first-use-rendering",
+        "blizzard-battle",
+        "graphics-settings",
+        "stage-lighting",
+        "setup",
+        "framing",
+        "asset-audit",
+        "network"
+      ],
+      "domains": [
+        "gameplay",
+        "rendering",
+        "physics",
+        "ai",
+        "ui",
+        "network",
+        "settings",
+        "performance"
+      ],
+      "headless": false,
+      "timeout": 1200,
       "manual": false
     }
   ]

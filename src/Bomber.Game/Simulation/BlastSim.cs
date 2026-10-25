@@ -88,6 +88,8 @@ public sealed class StageLayout
     public IReadOnlyList<CoverArea> CoverAreas {get;init;}=[];
     public double SoftBlockDensity { get; init; } = .45;
     public int MaxSoftBlocks { get; init; } = int.MaxValue;
+    /// <summary>Physical top of breakable cover above its support; shared by flight and presentation.</summary>
+    public float SoftBlockHeight {get;init;}=BombThrowRules.CoverHeight;
     public int OpeningCoverPerSpawn { get; init; } = 2;
     public bool RisingWater { get; init; }
     public bool DecksBlockBlasts {get;init;}=true;
