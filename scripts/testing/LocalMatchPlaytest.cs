@@ -64,7 +64,7 @@ public partial class PlaytestDriver
         await MoveTo(10.5f,13.5f,80);
         Check(Player.GetProperty("remote").GetBoolean()&&!Player.GetProperty("red").GetBoolean(),"walking onto remote replaces red with command detonation");
         Check(Player.GetProperty("pickupSerial").GetInt64()>=6,"six real pickups accepted by authority");
-        Check(State.GetProperty("items").EnumerateArray().All(i=>i.GetProperty("dropped").GetBoolean() || i.GetProperty("type").GetString() is "bounce" or "fast" or "focus" or "tiny" or "big" or "haste" or "slow"),"collected pickups disappear while new equipment and swap drops remain");
+        Check(State.GetProperty("items").EnumerateArray().All(i=>i.GetProperty("dropped").GetBoolean() || i.GetProperty("type").GetString() is "bounce" or "focus" or "tiny" or "big" or "haste" or "slow"),"collected pickups disappear while new equipment and swap drops remain");
         await Capture("powerups-collected-hud");
         Input(0,new PlayerInput(0,0,A:true));await Frames(4);Input(0,default);await Frames(4);
         Check(State.GetProperty("bombs").EnumerateArray().Any(b=>!b.GetProperty("red").GetBoolean()&&b.GetProperty("remote").GetBoolean()),"latest remote pickup determines newly placed bomb mode");

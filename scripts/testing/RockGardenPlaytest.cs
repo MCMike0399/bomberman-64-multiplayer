@@ -43,7 +43,7 @@ public partial class PlaytestDriver
         // A normal battle: ordinary placement, retreat, real fuse, destruction,
         // visible loot, then collection. Guaranteed drops are explicit QA settings.
         _root.StartLocal(new SessionSettings(Stage:stage.Id,Bots:0,SuddenDeath:false,Ghosts:false)
-            {Advanced=new AdvancedRules{DropPercent=100,DisabledItems="remote,red,bounce,fast,heart,focus,tiny,big,haste,slow"}},2);
+            {Advanced=new AdvancedRules{DropPercent=100,DisabledItems="remote,red,bounce,heart,focus,tiny,big,haste,slow"}},2);
         await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"garden loot battle starts",150);
         byte[] Bits()=>Convert.FromBase64String(State.GetProperty("softBlocks").GetString()!);
         bool Covered((int X,int Z) cell){var bits=Bits();int i=cell.Z*stage.Width+cell.X;return (bits[i/8]&(1<<(i%8)))!=0;}

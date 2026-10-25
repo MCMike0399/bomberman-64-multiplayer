@@ -37,7 +37,7 @@ internal static class ItemsAndHazardsChecks
             Assert(p.FireLevel==5&&p.BombCapacity==5&&p.HasHeart,"Power-up caps broken.");
             var seedA=new Random(7);var seedB=new Random(7);var types=new Dictionary<string,int>();
             for(var i=0;i<10000;i++){var a=PowerUpRules.ChooseDrop(seedA);Assert(a==PowerUpRules.ChooseDrop(seedB),"Drop draw not deterministic.");types[a]=types.GetValueOrDefault(a)+1;}
-            Assert(types.Count==12&&types["fire"]>types["remote"]&&types["bomb"]>types["heart"],"Weighted distribution missing/common items not common.");
+            Assert(types.Count==AdvancedRules.ItemTypes.Length&&types["fire"]>types["remote"]&&types["bomb"]>types["heart"],"Weighted distribution missing/common items not common.");
             var arena=FlatArena([(1,3),(7,3)]);
             arena=new StageLayout {Id=arena.Id,Width=9,Height=9,Cells=arena.Cells,Spawns=arena.Spawns,SoftBlockDensity=0,
                 InitialItems=[(1,3,"fire"),(1,3,"bomb"),(1,3,"remote"),(1,3,"red"),(1,3,"heart")]};

@@ -181,14 +181,18 @@ and the input guide; older iteration tables are historical.
   living status or remote capability resumes the remaining ordinary fuse.
 - Remote command selects the oldest eligible owned remote, including moving bombs.
   AI opportunity evaluation must inspect the exact bomb authority would detonate.
-- One bomb slot holds red, remote, bouncing or fast equipment; one independent
+- Black bombs are the starting type. One bomb slot holds red, remote or bouncing equipment; one independent
   ability slot holds heart protection or Focus. Capacity/fire still stack. A
   replacement drops the old equipment for anyone else to collect immediately;
   the former holder has a 1.5-second pickup lock. All items expire after the configured lifetime (20 seconds by default), including
   practice caches. Duplicate equipment and capped stacks remain for others until expiry.
 - Existing bombs keep their mode, subject to orphaned-remote fallback. Red blasts
   pierce soft cover and have 25% more physical radius; their flame is blue.
-  Fast bombs move at 1.5x their normal kick/flight clock without speeding the fuse.
+  Fast bomb equipment was removed on 2026-10-25. Haste speeds the player by 50%
+  in the existing temporary-effect slot; it preserves bomb/ability equipment,
+  existing remote ownership, bomb travel and fuse timing. Its former drop weight
+  now belongs to Haste. The `motionRate` snapshot field remains a constant 1 for
+  peer-frame compatibility.
   Bouncing bombs reflect from walls, roll normally when kicked, and rebound up to three times from charged thrown landings and
   retain a finite 3.5-second fuse. Stop cancels kicked-bomb travel; gravity still settles a bomb over a drop.
   Uncharged throws settle on first landing. The user explicitly rejected automatic
@@ -323,7 +327,7 @@ now covers four stages (48 combinations).
   lower/middle blocks, keeping its ring, summit, bridges and flights clear.
 - Advanced match settings (v0.25) default to a uniform independent 55% chance per
   destroyed block. Item weights are Fire/Bomb 30% each, remote/red 7% each, bounce
-  6%, fast 4%, heart/Focus/Tiny/Big 3% each, Haste/Slow 2% each. Disabled types are
+  6%, heart/Focus/Tiny/Big 3% each, Haste 6%, Slow 2%. Disabled types are
   removed before drawing and remaining weights are renormalized. An empty pool
   yields nothing. Death/swap/training items also respect the enabled pool.
 - `AdvancedRules` owns drop chance (0–100%), block amount (0–100% of the authored

@@ -11,7 +11,7 @@ public partial class PlaytestDriver
     {
         Event("loot-opening-input-policy",new {stage="stock Sunken Temple",seed=64,humans=2,bots=0,practice=false,stateMutation=false,input="ordinary authoritative movement and two-frame primary tap"});
         Input(0,default);Input(1,default);
-        _root.StartLocal(new SessionSettings(Stage:BlastStages.SunkenTemple,Bots:0){Advanced=new AdvancedRules{DropPercent=100,DisabledItems="remote,red,bounce,fast,heart,focus,tiny,big,haste,slow"}},2);
+        _root.StartLocal(new SessionSettings(Stage:BlastStages.SunkenTemple,Bots:0){Advanced=new AdvancedRules{DropPercent=100,DisabledItems="remote,red,bounce,heart,focus,tiny,big,haste,slow"}},2);
         await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"normal two-human temple reaches fight for opening loot",150);
         Check(State.GetProperty("items").GetArrayLength()==0,"normal battle starts without a training pickup cache");
         var stage=BlastStages.Get(BlastStages.SunkenTemple);

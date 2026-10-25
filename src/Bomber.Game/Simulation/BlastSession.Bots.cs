@@ -34,7 +34,7 @@ public sealed partial class BlastSession
         _aiFieldTick=_tickCount;_aiDanger.Build(_softBlocks,_bombs,_hazards,_meteors);Array.Clear(_aiItemKind);Array.Clear(_aiItemDropper);
         foreach(var item in _items)
         {
-            int cell=_aiGraph.Cell(item.X,item.Z,item.Tier);if(cell>=0){_aiItemDropper[cell]=item.DroppedBy;_aiItemKind[cell]=item.Type switch{"heart"=>1,"remote"=>2,"red"=>3,"fire"=>4,"bounce"=>6,"fast"=>7,"focus"=>8,"tiny" or "haste"=>9,"big" or "slow"=>10,_=>5};}
+            int cell=_aiGraph.Cell(item.X,item.Z,item.Tier);if(cell>=0){_aiItemDropper[cell]=item.DroppedBy;_aiItemKind[cell]=item.Type switch{"heart"=>1,"remote"=>2,"red"=>3,"fire"=>4,"bounce"=>6,"focus"=>8,"tiny" or "haste"=>9,"big" or "slow"=>10,_=>5};}
         }
         // Shared observation grids avoid scanning every opponent/cover cell separately for every bot search.
         for(int cell=0;cell<_aiGraph.Count;cell++)
@@ -241,7 +241,6 @@ public sealed partial class BlastSession
             4=>bot.FireLevel>=bot.MaxFire?0:bot.FireLevel==1?20:14,
             5=>bot.BombCapacity>=bot.MaxBombs?0:bot.BombCapacity<=3?18:bot.BombCapacity==4?8:3,
             6=>bot.BombType=="bounce"?0:bot.BombType=="normal"?21:5,
-            7=>bot.BombType=="fast"?0:bot.BombType=="normal"?21:5,
             8=>bot.Ability=="none"?6:0,_=>0};
         // Rich farming pockets are useful between attacks; they should not reset
         // the engagement clock indefinitely. A missing heart retains survival value.

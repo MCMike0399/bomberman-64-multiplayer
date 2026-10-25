@@ -47,7 +47,7 @@ internal static class LootAvailabilityChecks
         int openingDrops=0;
         double ordinaryDropRate=(double)(drops-openingDrops)/(covers-openingDrops);
         Assert(ordinaryDropRate is >.50 and <.60,$"Ordinary cover drop rate {ordinaryDropRate:P1} should stay near 55% to limit item clutter.");
-        Assert(kinds.Count==12&&kinds["bomb"]>kinds["remote"]&&kinds["fire"]>kinds["heart"],"Arena drops lost their diverse, useful weighting.");
+        Assert(kinds.Count==AdvancedRules.ItemTypes.Length&&kinds["bomb"]>kinds["remote"]&&kinds["fire"]>kinds["heart"],"Arena drops lost their diverse, useful weighting.");
         Console.WriteLine($"PASS {stage.Name} loot: {covers/32d:F2} covers, {drops/32d:F2} actual drops per round across 32 seeds; {ordinaryDropRate:P1} ordinary drop rate; opening cover follows the stage policy");
         foreach(bool reverse in new[]{false,true})
         {

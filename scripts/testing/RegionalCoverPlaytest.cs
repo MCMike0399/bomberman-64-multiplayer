@@ -11,7 +11,7 @@ public partial class PlaytestDriver
         foreach(var (id,budget) in new[]{(BlastStages.SunkenTemple,90),(BlastStages.RockGarden,16),(BlastStages.UpAndDown,12)})
         {
             Input(0,default);Input(1,default);
-            _root.StartLocal(new SessionSettings(Stage:id,Bots:0,SuddenDeath:false,Ghosts:false){Advanced=new AdvancedRules{DropPercent=100,DisabledItems="remote,red,bounce,fast,heart,focus,tiny,big,haste,slow"}},2);
+            _root.StartLocal(new SessionSettings(Stage:id,Bots:0,SuddenDeath:false,Ghosts:false){Advanced=new AdvancedRules{DropPercent=100,DisabledItems="remote,red,bounce,heart,focus,tiny,big,haste,slow"}},2);
             await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"regional cover battle starts: "+id,150);
             var stage=BlastStages.Get(id);byte[] bits=Convert.FromBase64String(State.GetProperty("softBlocks").GetString()!);
             bool Covered((int X,int Z) c){int index=c.Z*stage.Width+c.X;return (bits[index/8]&(1<<(index%8)))!=0;}

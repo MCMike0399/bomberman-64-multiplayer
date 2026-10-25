@@ -42,7 +42,7 @@ On macOS, the installed editor can also launch it directly:
 
 The game opens fullscreen. **F11** or **Alt+Enter** switches between fullscreen and a window; run `./tools/dev/client.sh --windowed -- --display-windowed` for a windowed launch.
 
-Choose **LOCAL BATTLE**, then set each of the eight roster slots to **Human**, **CPU**, or **Off** and choose a suit color. The selected character walks on a shared lit 3D stage using the same articulated model seen in battle. Continue to the miniature arena stage and arrow-controlled rules, choose Easy/Medium/Hard CPU difficulty, then start with **2–8 total participants**. **PRACTICE** lets one player explore the map and rehearse bomb handling without CPU opponents. Thirteen expiring training pickups teach bomb capacity, fire, red power, remote detonation, hearts, bouncing bombs, fast bombs Focus and temporary size/speed effects; **RESET PRACTICE** restores the cache. One human can play with up to seven bots. Local play works without a server. Two keyboard seats are available; additional local seats require connected gamepads. With three or more local humans, the first two seats use keyboards and up to six gamepads fill seats 3–8 in connection order. With one or two humans, the corresponding gamepads also work as optional controls.
+Choose **LOCAL BATTLE**, then set each of the eight roster slots to **Human**, **CPU**, or **Off** and choose a suit color. The selected character walks on a shared lit 3D stage using the same articulated model seen in battle. Continue to the miniature arena stage and arrow-controlled rules, choose Easy/Medium/Hard CPU difficulty, then start with **2–8 total participants**. **PRACTICE** lets one player explore the map and rehearse bomb handling without CPU opponents. Twelve expiring training pickups teach bomb capacity, fire, red power, remote detonation, hearts, bouncing bombs, Focus and temporary size/speed effects; **RESET PRACTICE** restores the cache. One human can play with up to seven bots. Local play works without a server. Two keyboard seats are available; additional local seats require connected gamepads. With three or more local humans, the first two seats use keyboards and up to six gamepads fill seats 3–8 in connection order. With one or two humans, the corresponding gamepads also work as optional controls.
 
 **Advanced settings** in match configuration controls item drop chance (55% by default), block amount, item lifetime (20 seconds), blast and bomb stack caps (five each), temporary effect duration (10 seconds), and which items may spawn. Every destroyed block rolls independently. Uncollected items expire in battle and practice. Tiny makes you smaller/faster; Big makes you larger/slower; Haste and Slow change only movement speed. A new temporary effect replaces the previous one. Room leaders can set the same rules before starting an online match.
 
@@ -144,7 +144,7 @@ Explosions use spherical distance and cover occlusion rather than a classic grid
 ## Equipment and charging
 
 Bomb capacity and normal blast strength stack to five by default; both caps are configurable.
-One bomb-type slot holds red, remote, bouncing or fast bombs; a separate ability
+Black bombs are the starting type. One bomb-type slot holds red, remote or bouncing bombs; a separate ability
 slot holds a protective heart or Focus. Picking a replacement drops the previous
 equipment for other players. The old holder cannot immediately reclaim it, and
 the dropped item disappears after the configured lifetime (20 seconds by default).
@@ -153,8 +153,10 @@ Duplicate equipment and capped upgrades remain available for others until expiry
 Red bombs produce blue explosions with 25% more radius and penetrate breakable
 cover. Blue remote bombs use command indicators with no burning fuse. Purple
 bouncing bombs roll normally, ricochet off walls, and rebound on the ground after
-a charged throw. Stop still halts kicked bombs. Mint fast bombs travel 50% faster. Their
-travel never resets the fuse. Normal charging takes 0.45 seconds per level;
+a charged throw. Stop still halts kicked bombs. Haste is a temporary player buff:
+it increases Bomberman’s movement speed by 50% without changing the bomb slot,
+bomb travel or fuse. It lasts 10 seconds by default and shares the timed effect
+slot with Tiny, Big and Slow. Normal charging takes 0.45 seconds per level;
 Focus takes 0.15. Each tap queues one level, up to three. Throwing early uses only
 completed levels. Larger charged bombs have stronger gravity and a much smaller
 head-hit rebound; the reticle uses the same flight rules.
