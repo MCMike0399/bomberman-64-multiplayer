@@ -88,6 +88,8 @@ two-human start minimum. `PeerRoomSession` owns membership, election and epochs;
 confuse the cluster lobby host with the peer simulation host. When adding an
 arena, update `PeerFrameRules` stage IDs/dimension bounds alongside
 `SessionSettings` and `MatchOptions`; otherwise peer clients reject its stage.
+Review protocol-version/capability compatibility when changing the supported
+state or stage set, so older peer clients cannot start an unsupported room.
 
 ## Persistent private parties
 

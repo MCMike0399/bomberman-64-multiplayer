@@ -1,6 +1,6 @@
 # Architecture
 
-Current architectural overview at the v0.18 runtime baseline. For maintenance
+Current architectural overview. For maintenance
 procedures and the reasons behind decisions, start at the [agent handoff](agents/README.md).
 Exact constants, protocols and dependency pins remain in source/configuration.
 
@@ -15,6 +15,10 @@ flowchart TD
     Local --> Facade[LocalMatch]
     Facade --> Rules[Product BlastSession / BlastSim / BlastStages]
     Network -->|HTTP + WebSocket JSON| Kernel[Independent Burbuja.Hosting + Realtime server]
+    Network --> Peer[PeerMatch on elected player]
+    Peer --> Rules
+    Kernel --> Broker[PeerRoomSession membership and election]
+    Network <-->|WebRTC or authenticated relay| OtherPeers[Other peer clients]
     Kernel --> Registration[BomberRealtimeGame]
     Registration --> Rules
     Session -->|stage and state snapshots| Root
@@ -24,7 +28,7 @@ flowchart TD
 
 | Module | Owns | Dependency boundary |
 |---|---|---|
-| `src/Bomber.Game` | Match options/rosters, local authority adapter, realtime registration and game rules | Kernel realtime contracts; no Godot rendering |
+| `src/Bomber.Game` | Match options/rosters, local/peer authority adapters, realtime registration and game rules | Kernel realtime contracts; no Godot rendering |
 | `src/Bomber.Client` | `ISession`, local accumulator, HTTP/WebSocket lobby/reconnect/input handling, bounded message handoff, input policies | Game and .NET APIs; no Godot dependency |
 | `src/Bomber.Server` | Independent ASP.NET executable and registration of the `blast` game | Game and Burbuja.Hosting |
 | `src/Bomber.Cluster` | Optional pressure-aware placement plugin for the public cluster | Kernel core/realtime abstractions |
@@ -36,6 +40,11 @@ flowchart TD
 | `scripts/testing` | Catalog-driven playtest harness shipped in the game assembly | Drives ordinary input and sessions |
 
 Folder layout, naming rules and partial-class seams are in the [codebase map](agents/codebase-map.md).
+
+Player-hosted rooms use `PeerMatch` to run the same simulation. The cluster
+coordinates membership and host generations; the Godot adapter supplies native
+WebRTC through the pure `IPeerLink` boundary. [Peer hosting](peer-hosting.md) owns
+transport fallback, two-human starts and fresh-match takeover.
 
 `ISession` exposes advancement, input submission, message draining, status/join
 code and disposal. `LocalSession` and `NetworkSession` implement that seam.

@@ -51,12 +51,14 @@ Ignored receipts: `artifacts/top-rules-validation/castle-native-pass/`,
 Earlier failing receipts remain alongside the passing runs. The temporary owned
 QA VM was stopped and its slot handed to the waiting Rock Garden task.
 
-# Peer hosting verification — v0.27.0 candidate
+# Peer hosting verification — v0.27.0 delivered
 
 2026-10-24: **0.27.0/build 32** adds persistent random lobbies and player-hosted
 rooms. The [connection contract](peer-hosting.md) distinguishes cluster authority,
-direct peer traffic, relay fallback and fresh-match host takeover. Publication
-and the final signed-artifact installation are pending at this receipt.
+direct peer traffic, relay fallback and fresh-match host takeover. [Trusted CI](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40145403090)
+and [signed publication](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40145957975)
+passed for `0fa367a334c70b73cdf28e2c597ed7b5178f9a13`.
+[v0.27.0 is published stable](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.27.0).
 
 | Gate | Observed result |
 | --- | --- |
@@ -85,9 +87,10 @@ clock pass the retained eight-peer regression. Reconnect and lobby-stall checks
 also guard a restored roster and replacement-host eligibility.
 
 The public random-lobby probe, forced-relay gameplay/results and real retained-seat
-reconnect probe passed. Both cluster nodes received the tested
-candidate serially, after authenticated drain/empty checks, and each mounted
-runtime matched all 42 staged file hashes. Private configuration, kernel/plugin
+reconnect probe passed. Both cluster nodes received the exact published
+runtime serially after authenticated drain/empty checks. Each mounted runtime
+matched all 42 published file hashes; public random-lobby, relay gameplay/results
+and retained-seat reconnect checks were repeated against that installation. Private configuration, kernel/plugin
 pins, limits and other services were preserved; rollback directories remain.
 **Limit:** the full-capacity cluster load probe was refused by the existing guard
 because the fallback had less than 10% idle CPU (and its monitor still referenced
@@ -96,8 +99,24 @@ new-room probe with `no_capacity`. No fallback-load success, higher capacity or
 live cluster-node migration is claimed. Functional direct play through the public
 primary and eight-peer transport tests are separate passing evidence.
 
-Local evidence is retained under ignored `artifacts/p2p/`, including the failed
-reproductions, final frozen gate receipts, captures and cross-machine receipts.
+The public Mac download independently passed the P-256 update signature,
+size/SHA-256, source/version/build, native WebRTC/notices and safe archive checks.
+All **228 app files** were inventoried in place; no public app bundle was extracted
+or installed over the user's app. Archive SHA-256:
+`2618601594f03dd0738cb2d9396a296a4bee2b0178d61d7cc315648fe2e1e4b1`.
+Task-created remote test bundles were identity-checked and removed. The shared
+checkout moved to another active task, so its work and export were preserved.
+
+The initial Linux CI import failed twice. A fresh minimal extension project
+reproduced the crash; pre-registering the verified extension in Godot's ignored
+registry passed the same import. The bootstrap preserves other entries and keeps
+strict failures. The full isolated Linux reproduction then passed 868 core and 18
+peer assertions, followed by passing official Linux CI. Engine/dependency pins
+were unchanged; no failed import was accepted as a successful retry.
+
+Local evidence is retained under ignored `artifacts/p2p/`, including failed
+reproductions, frozen gates, captures and cross-machine receipts. Published-asset,
+installation and final live receipts are in `artifacts/p2p/release-027/`.
 
 # PR #1 regression verification — v0.26.2 delivered
 
