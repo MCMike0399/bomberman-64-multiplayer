@@ -353,11 +353,13 @@ def execute(suite, app=None):
         with suite.server() as origin:
             suite.playtest('peer-rooms', origin=origin, app=app, headless=True)
             suite.playtest('adaptive-rooms', origin=origin, app=app, headless=True)
+            suite.playtest('adaptive-slow-poll', origin=origin, app=app, headless=True)
     elif suite.profile == 'headless':
         suite.playtest('core-headless', headless=True, app=app)
         with suite.server() as origin:
             suite.playtest('peer-rooms', origin=origin, headless=True, app=app)
             suite.playtest('adaptive-rooms', origin=origin, headless=True, app=app)
+            suite.playtest('adaptive-slow-poll', origin=origin, headless=True, app=app)
     elif suite.desktop == 'isolated':
         suite.playtest('all', app=app)
     else:

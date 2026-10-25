@@ -142,3 +142,11 @@ including capture/setup waits, with production lease/qualification policies
 unchanged. Its focused rebuilt Metal run passes; the complete combined suite
 remains the integration completion gate. Failed receipts are retained under
 ignored `artifacts/review/graphical`, alongside the focused replay.
+
+The frame-poll correction alone passed a focused replay but the full suite still
+failed. A controlled slow-poll witness and a real HTTP/WebSocket test with a
+blocked UI synchronization context isolated the remaining cause: the socket
+worker inherited Godot's context. Background transport I/O plus interleaved
+authority polling fixes that boundary; peer simulation remains on its polling
+thread and the production six-second lease is unchanged. Both red witnesses
+are retained beside the corrected receipts.

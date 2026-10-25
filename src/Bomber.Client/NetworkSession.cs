@@ -125,7 +125,9 @@ public sealed partial class NetworkSession : ISession
         }
         _lobbyId = reservation.GetProperty("lobbyId").GetString();
         await OpenSocketAsync(reservation, ct);
-        _worker = RunAsync();
+        // Transport I/O must not capture a UI/engine synchronization context.
+        // Peer simulation and native links remain on the caller's polling thread.
+        _worker = Task.Run(RunAsync);
     }
 
     private async Task OpenSocketAsync(JsonElement reservation, CancellationToken ct)

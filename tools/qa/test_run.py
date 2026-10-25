@@ -167,7 +167,7 @@ class HarnessTests(unittest.TestCase):
                 qa.execute(suite)
             self.assertLess(order.index('controller-backend-build'), order.index('macos-export'))
             self.assertTrue(suite.steps[0]['evidence']['switch2UsbBackend'])
-            self.assertEqual([c.args[0] for c in suite.playtest.call_args_list], ['package-smoke', 'peer-rooms', 'adaptive-rooms'])
+            self.assertEqual([c.args[0] for c in suite.playtest.call_args_list], ['package-smoke', 'peer-rooms', 'adaptive-rooms', 'adaptive-slow-poll'])
             self.assertEqual(suite.playtest.call_args_list[1].kwargs['origin'], 'http://127.0.0.1:12345')
 
     def test_package_refuses_incomplete_backend_after_bootstrap(self):
