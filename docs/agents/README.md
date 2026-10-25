@@ -3,7 +3,7 @@
 The user resumed gameplay work on 2026-10-23 for controller ergonomics, aiming
 and knockdown/blast separation (iteration19). The first eighteen iterations
 remain historical evidence. Iteration20 then rebuilt the walk. Recorded
-release baseline: **v0.28.0/build 33**, published with independently verified Mac
+release baseline: **v0.29.1/build 35**, published with independently verified Mac
 and server archives (see [verification](../verification.md)). Previous runtime baseline: **v0.18.0**, commit
 `316a330d7d895a92f98c1a60be7d571ec445a8a3`. Later documentation commits may follow.
 Verify the live branch, source, tools and installed version before relying on
@@ -36,6 +36,8 @@ update the current guide rather than silently reviving old behavior.
 | [Latest verification](../verification.md) | Exact observed results and limitations, with earlier iterations below |
 
 ## Current decisions that supersede earlier experiments
+
+- v0.29.1 delivers adaptive public/private rooms, independent coordination and execution limits, measured player-host selection and the Rock Garden miniature bounds fix. [Behavior](../smart-multiplayer.md) and [delivery evidence](../smart-multiplayer-release-029.md) define measured capacity and remaining limits.
 
 - v0.28 integrates all stage PRs, the tutorial and reference-informed explosion effects. [Combined verification and release status](../stages-release-028.md) supersedes independent draft limitations only where its evidence explicitly covers them.
 

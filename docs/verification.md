@@ -1,3 +1,11 @@
+# Adaptive multiplayer v0.29.1 delivered
+
+2026-10-25: adaptive public/private rooms and the merged Rock Garden preview fix
+are published as **v0.29.1/build 35**. Both healthy shared workers match the
+verified official runtime and matching plugins. The Pi passed guarded 24-player
+public load and eight-room admission checks; DiveMac's busy-host guard remained
+in force. [Exact evidence, capacities and limitations](smart-multiplayer-release-029.md).
+
 # Integrated v0.28 delivered
 
 2026-10-24: the combined stages, tutorial, reference-informed explosions and review

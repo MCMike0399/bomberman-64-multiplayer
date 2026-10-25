@@ -1,6 +1,6 @@
 # Adaptive multiplayer rooms
 
-Source contract for v0.29. Delivery evidence belongs in [verification](verification.md).
+Behavior delivered in v0.29.1. [Delivery evidence and operating limits](smart-multiplayer-release-029.md) records the verified release.
 This implements the first persistent-room/local-or-peer milestone of the
 [placement research](multiplayer-placement-research.md) and
 [Kernel implementation assessment](burbuja-multiplayer-research.md).
