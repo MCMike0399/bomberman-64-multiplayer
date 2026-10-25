@@ -24,8 +24,9 @@ public partial class TempleStageView
                 bool boundary=x==0||z==0||x==Width-1||z==Depth-1;
                 if(boundary)
                 {
-                    Box(this,new(x+.5f,.45f,z+.5f),new(.995f,.9f,.995f),stone,.035f).Name="EnclosingWall";
-                    Box(this,new(x+.5f,.94f,z+.5f),new(.998f,.08f,.998f),stone,.02f);
+                    float height=BombThrowRules.PillarHeight*HeightScale;
+                    Box(this,new(x+.5f,(height-.08f)/2,z+.5f),new(.995f,height-.08f,.995f),stone,.035f).Name="EnclosingWall";
+                    Box(this,new(x+.5f,height-.04f,z+.5f),new(.998f,.08f,.998f),stone,.02f);
                 }
                 else GardenColumn(x,z,stone);
             }
