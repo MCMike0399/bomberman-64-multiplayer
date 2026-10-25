@@ -1,6 +1,7 @@
 using Godot;
 using Bomber.Client;
 using Bomber.Game;
+using Bomber.Game.Simulation;
 using System.Text.Json;
 using BlastCircuit.UI.Menu;
 namespace BlastCircuit.Testing;
@@ -47,9 +48,19 @@ public partial class PlaytestDriver
     private async Task Powerups()
     {
         _root.StartLocal(new SessionSettings(Stage:"sunken-temple",Bots:0),1,practice:true);
+        await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"sparse sandbox reaches fight",150);
+        var cache=State.GetProperty("items").EnumerateArray().ToArray();
+        Check(cache.Length==6&&Visual.GetProperty("powerups").GetInt32()==6,"default sandbox renders exactly six pickups");
+        Check(cache.Count(i=>i.GetProperty("type").GetString() is "fire" or "bomb")==3,"sandbox starts with three stacking upgrades");
+        Check(cache.Count(i=>PowerUpRules.IsStatus(i.GetProperty("type").GetString()!)||PowerUpRules.IsAbility(i.GetProperty("type").GetString()!))==2,"sandbox starts with two buffs/debuffs");
+        Check(cache.Count(i=>PowerUpRules.IsBombType(i.GetProperty("type").GetString()!))==1,"sandbox starts with one bomb type");
+        await Capture("sparse-default-sandbox");
+        _root.Back();await Frames(3);
+        // A six-item explicit pool keeps this equipment-swap journey independent of the seeded cache choice.
+        _root.StartLocal(new SessionSettings(Stage:"sunken-temple",Bots:0){Advanced=new AdvancedRules{DisabledItems="bounce,focus,tiny,big,haste,slow"}},1,practice:true);
         await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"training pickups reach fight",150);
         var initialCapacity=Player.GetProperty("bombs").GetInt32();
-        Check(Visual.GetProperty("powerups").GetInt32()>=6,"six training pickup models visible");
+        Check(Visual.GetProperty("powerups").GetInt32()==6,"six training pickup models visible");
         await Capture("powerups-visible-cache");
         await MoveTo(10.5f,12.5f,80);
         Check(Player.GetProperty("fire").GetInt32()==2,"walking onto first flame increases fire level");

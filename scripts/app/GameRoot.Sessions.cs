@@ -26,7 +26,8 @@ public partial class GameRoot
         if(_connecting)return;
         try
         {
-            var session=new LocalSession(settings,humans,practice:practice,playerAppearances:playerAppearances);
+            // A fresh practice cache should offer different effects/equipment on replay.
+            var session=new LocalSession(settings,humans,seed:practice?System.Random.Shared.Next():64,practice:practice,playerAppearances:playerAppearances);
             _lastSettings=settings;_lastHumans=humans;_lastAppearances=playerAppearances?.ToArray();_practice=practice;_lastServer=null;
             Begin(session,false);
         }

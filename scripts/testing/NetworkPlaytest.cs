@@ -63,7 +63,7 @@ public partial class PlaytestDriver
         Check(host.Party?.Settings?.GetValueOrDefault("wins")=="3"&&_root.ScreenName=="Lobby"&&host.LobbyId==roomIdentity,"saved match rules are accepted by server in the same room");
         for(int i=0;i<180&&peer.Party?.Settings?.GetValueOrDefault("wins")!="3";i++){await Frames(1);await Task.Delay(16);}
         Check(peer.Party?.Settings?.GetValueOrDefault("wins")=="3","room guest receives the leader's saved rules");
-        Check(peer.Party?.Settings?.GetValueOrDefault("drop-percent")=="60"&&peer.Party.Settings.GetValueOrDefault("disabled-items")=="slow","advanced room settings reach the peer");
+        Check(peer.Party?.Settings?.GetValueOrDefault("drop-percent")=="45"&&peer.Party.Settings.GetValueOrDefault("disabled-items")=="slow","advanced room settings reach the peer");
         CtlButton(0,JoyButton.Start,true);await Frames(1);CtlButton(0,JoyButton.Start,false);await Frames(2);
         Check(NamedButton("StartRoom").HasFocus()&&_root.ScreenName=="Lobby","Start focuses Start game without starting it");
         await ActivateNamed("StartRoom");

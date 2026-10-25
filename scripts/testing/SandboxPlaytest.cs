@@ -7,7 +7,7 @@ public partial class PlaytestDriver
 {
     private async Task SandboxEquipment()
     {
-        _root.StartLocal(new SessionSettings(Bots:0){Advanced=new AdvancedRules{ItemSeconds=60,DisabledItems="tiny,big,slow"}},1,practice:true);
+        _root.StartLocal(new SessionSettings(Bots:0){Advanced=new AdvancedRules{ItemSeconds=60,DisabledItems="bomb,heart,remote,tiny,big,slow"}},1,practice:true);
         await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"sandbox practice reaches fight",150);
         Check(State.GetProperty("items").EnumerateArray().All(i=>i.GetProperty("type").GetString()!="fast"),"practice cache contains no Fast bombs");
         await Capture("expanded-pyramid-and-equipment");
