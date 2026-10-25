@@ -207,6 +207,12 @@ and the input guide; older iteration tables are historical.
 
 ## Contact, terrain and recovery
 
+- Ordinary ledge falls use heavier gravity, 45% of status-adjusted ground speed
+  and bounded air acceleration. Departure uses collision-resolved velocity;
+  release/reversal preserve a short coast. Full ground-speed air steering is
+  superseded. Thrown/knocked players and bombs retain their own trajectories;
+  ordinary landing restores controls without stun. [References, tuning comparisons
+  and regression entrypoints](../falling-physics.md).
 - [Kicks](../../src/Bomber.Game/Simulation/BlastSession.Kicks.cs) commits direction
   during a planted wind-up and revalidates the bomb at strike time. Fuses continue;
   stun/fall/death/disconnect/reset cancel pending strikes; consumed edges stay consumed.

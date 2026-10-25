@@ -308,6 +308,16 @@ A local updater fixture does not prove hosted CI or a public release; verify tho
 separately when publication is authorized. Preserve the user's update preference
 and avoid replacement while a match/session is active.
 
+## Ledge fall verification
+
+For ledge movement, `dotnet run --project tests/Bomber.Game.Tests -- --falling`
+checks short drops, limited steering, momentum, four directions, real status
+pickups, carrying and immediate landing controls. `--measure-falls` reports
+accepted event-to-event duration/travel for forward, released, reversed and
+sideways input at three heights. The native `traversal` journey asserts those
+budgets on the stock temple and retains shore/ghost checks. [Reference research,
+comparisons and known validation limits](../falling-physics.md).
+
 ## Up & Down verification
 
 `dotnet run --project tests/Bomber.Game.Tests -- --up-and-down` checks six-flight
