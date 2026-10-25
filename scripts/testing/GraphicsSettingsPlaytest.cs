@@ -63,8 +63,13 @@ public partial class PlaytestDriver
                     Check(environment.SsaoEnabled==(preset!=GraphicsPreset.Low)&&environment.GlowEnabled==(preset!=GraphicsPreset.Low),"arena effects follow "+preset);
                     Check(!view.UseTaa&&view.ScreenSpaceAA==Viewport.ScreenSpaceAAEnum.Disabled,"sharp non-temporal AA policy");
                     var terrain=AuditDescendants(LightingArena).OfType<TempleStageView>().Single();
-                    var water=terrain.GetChildren().OfType<MeshInstance3D>().Single(n=>n.Mesh is PlaneMesh);
-                    Check(((ShaderMaterial)water.MaterialOverride).GetShaderParameter("quality_detail").AsSingle()==(preset==GraphicsPreset.Low?0:1),"live water detail follows preset");
+                    var water=terrain.GetChildren().OfType<MeshInstance3D>().Where(n=>n.Mesh is PlaneMesh).ToArray();
+                    if(stage=="rock-garden")Check(water.Length==0,"garden preserves its dry grass setting at "+preset);
+                    else
+                    {
+                        Check(water.Length==1,"sea arena retains one water surface: "+stage);
+                        Check(((ShaderMaterial)water[0].MaterialOverride).GetShaderParameter("quality_detail").AsSingle()==(preset==GraphicsPreset.Low?0:1),"live water detail follows preset");
+                    }
                     await Capture("graphics-"+stage+"-"+GraphicsQuality.ToWire(preset));
                     await MeasureGraphics(stage,preset);
                 }
