@@ -100,7 +100,7 @@ public sealed class AdaptiveRoomSession : GameSession
         if (message.Type == "peer.quality")
         {
             if (message.Data.ValueKind == JsonValueKind.Object && message.Data.TryGetProperty("epoch", out var epoch) &&
-                epoch.TryGetInt32(out int version) && version == PeerEpoch)
+                epoch.ValueKind == JsonValueKind.Number && epoch.TryGetInt32(out int version) && version == PeerEpoch)
                 _quality.Record(p.PlayerId, message.Data, _members.Keys.ToHashSet(StringComparer.Ordinal), c.Now);
             return;
         }

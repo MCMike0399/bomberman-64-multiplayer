@@ -114,6 +114,8 @@ internal static class AdaptiveRoomChecks
             Relay(authority,"peer.state",new{epoch=relayEpoch,to=p.PlayerId,payload=new{t="state",d=new{terrain=new string('x',40000)}}});
         Check(relay.Frames.Count(f=>f.Type=="peer.state")==105,"adaptive authority relays all seven recipients at the normal large-stage cadence");
         void Relay(RealtimePlayer p,string type,object data)=>relayRoom.OnMessage(relay,p,new(type,JsonSerializer.SerializeToElement(data),null,relay.Now));
+        Send(host, "peer.quality", new { epoch = "invalid", links = new object[0] });
+        Check(context.Status.GetProperty("hosting").GetString() == "cluster", "malformed quality generation cannot fault an active room");
         Console.WriteLine($"PASS {passed} adaptive room checks");
         return passed;
         void Send(RealtimePlayer player, string type, object data) => room.OnMessage(context, player,
