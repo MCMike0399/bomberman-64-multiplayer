@@ -501,3 +501,18 @@ completion gate in the isolated desktop: that regression plus WASD, popups,
 controllers, menus/resizes, setup, dense layouts, player settings, tutorial and
 the real two-client network journey. Inspect the captures and keep physical-pad
 claims separate. `all` includes the new regression; no install is implied.
+
+### Socket worker and slow native polling regression
+
+The full native suite exposed socket I/O inheriting Godot's synchronization
+context: cumulative native polling stalls prevented queued heartbeats from being
+sent, while console-only tests passed. The worker now starts on the thread pool;
+peer simulation and Godot link objects stay on their owning polling thread.
+`UiContextNetworkChecks` in the real managed network smoke blocks a UI context
+and requires transport pings to keep advancing.
+
+`adaptive-slow-poll` adds controlled 950 ms guest-poll stalls to the eight-client
+fixture; the elected authority is polled between guests. This is deliberate test
+load, not observed Internet latency. Headless and package gates retain it, while
+`peer-adaptive-regression` reproduces the ordinary journey sequence. Production
+host leases and qualification budgets remain unchanged.

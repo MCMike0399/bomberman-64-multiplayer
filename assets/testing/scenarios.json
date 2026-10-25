@@ -954,6 +954,29 @@
       "headless": true,
       "timeout": 180,
       "manual": false
+    },
+    {
+      "id": "peer-adaptive-regression",
+      "steps": [
+        "peer-rooms",
+        "adaptive-rooms"
+      ],
+      "domains": [
+        "network"
+      ],
+      "headless": true,
+      "timeout": 240,
+      "manual": false
+    },
+    {
+      "id": "adaptive-slow-poll",
+      "method": "AdaptiveSlowPolling",
+      "domains": [
+        "network"
+      ],
+      "headless": true,
+      "timeout": 120,
+      "manual": false
     }
   ]
 }

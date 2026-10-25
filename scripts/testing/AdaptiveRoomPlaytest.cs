@@ -8,6 +8,12 @@ namespace BlastCircuit.Testing;
 
 public partial class PlaytestDriver
 {
+    private async Task AdaptiveSlowPolling()
+    {
+        _adaptiveSlowPolling=true;
+        try{await AdaptiveRooms();}finally{_adaptiveSlowPolling=false;}
+    }
+
     private async Task AdaptiveRooms()
     {
         _root.Navigate("Online"); await Frames(3); await Capture("adaptive-online-options");
@@ -20,13 +26,27 @@ public partial class PlaytestDriver
         var links = new List<SnapshotLossLink>();
         // These seven clients share the engine thread. Keep them polling during
         // captures and connection setup too, just as the visible owner does.
+        var delayed=new Dictionary<NetworkSession,int>();
+        bool initialMatchObserved=false;
+        void PumpAuthority()
+        {
+            string? host=owner.Party?.HostId;
+            var authority=host is null||host==owner.PlayerId?owner:guests.FirstOrDefault(p=>p.PlayerId==host);
+            authority?.Advance(1d/30);
+        }
         void PumpGuests()
         {
+            PumpAuthority();
             foreach (var guest in guests)
             {
+                if(_adaptiveSlowPolling&&!initialMatchObserved&&owner.Party?.Hosting=="peer"&&delayed.GetValueOrDefault(guest)<2)
+                {delayed[guest]=delayed.GetValueOrDefault(guest)+1;Thread.Sleep(950);}
                 guest.Advance(1d / 30);
                 foreach (var frame in guest.DrainMessages())
                     if (frame.GetProperty("t").GetString() == "state") states[guest.PlayerId!] = frame.GetProperty("d").Clone();
+                // Native polling can block. The elected authority must not wait for
+                // seven synthetic clients before it can renew its real host lease.
+                PumpAuthority();
             }
         }
         GetTree().ProcessFrame += PumpGuests;
@@ -45,6 +65,12 @@ public partial class PlaytestDriver
             await Until(() => owner.Party?.Hosting == "peer" && guests.All(p => p.Party?.HostId == owner.Party.HostId && p.Party?.Phase == "playing") &&
                 _root.LatestState is { } state && state.GetProperty("players").GetArrayLength() == 8 && state.GetProperty("phase").GetInt32() == 1,
                 "measured player authority starts an eight-player shared match");
+            initialMatchObserved=true;
+            if(_adaptiveSlowPolling)
+            {
+                Check(delayed.Count==7,"all seven fixture clients exercise bounded slow polling");
+                Event("adaptive-slow-poll",new{millisecondsPerPoll=950,polls=delayed.Values.Sum(),productionLeaseUnchanged=true});
+            }
             Check(owner.IsLeader && guests.All(p => !p.IsLeader), "simulation host selection does not transfer room ownership");
             Check(links.Where(l => l.Connected).All(l => l.DisposableSnapshots), "native snapshot channels are actually unordered with zero retransmissions");
             await Until(() => owner.DirectPacketsSent + owner.DirectPacketsReceived > 0 && guests.All(p => p.DirectPacketsSent + p.DirectPacketsReceived > 0),

@@ -17,6 +17,7 @@ namespace BlastCircuit.Testing;
 /// <summary>Runs real game input through GameRoot; profile inspection uses a temporary camera without editing simulation.</summary>
 public partial class PlaytestDriver : Node
 {
+    private bool _adaptiveSlowPolling;
     private GameRoot _root = null!;
     private string _scenario = "all", _output = "", _server = "http://127.0.0.1:18496";
     private StreamWriter _trace = null!;
