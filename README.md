@@ -6,6 +6,10 @@ A playable Godot C# arena battle game inspired by Bomberman 64, with original pr
 
 The original game supports four simultaneous players. Eight-player support and the numerical simulation tuning are decisions for this project. See [research and sources](docs/history/research.md).
 
+## Tutorial
+
+Choose **Tutorial** for Circuit Garden: short guided lessons covering bomb handling, equipment, terrain, rivals and hazards, with saved progress and quick retries. All battle maps remain available. [Tutorial guide](docs/tutorial.md) · [Original-game research](docs/tutorial-research.md).
+
 ## Run the game
 
 Install **Godot 4.7.2 .NET** and the **.NET 10 SDK** (10.0.401 was used for verification). The root project pins `Godot.NET.Sdk/4.7.2` and targets `net10.0`. Use matching Godot .NET export templates when building the standalone desktop app.

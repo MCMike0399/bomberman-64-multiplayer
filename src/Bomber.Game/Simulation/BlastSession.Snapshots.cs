@@ -133,6 +133,7 @@ public sealed partial class BlastSession
 
         context.Broadcast("state", new
         {
+            tutorial = TutorialSnapshot(),
             round = _roundNum,
             serverTime = context.Now.ToUnixTimeMilliseconds(),
             stageLighting = StageLightings[(_lightingOffset+Math.Max(0,_roundNum-1))%4],

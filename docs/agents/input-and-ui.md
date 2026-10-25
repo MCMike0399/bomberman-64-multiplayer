@@ -7,6 +7,8 @@ lookup for exact values; older iteration documents retain historical evidence.
 
 ## Current controls and compatibility
 
+The main menu now includes Tutorial. [Tutorial navigation](../tutorial.md) owns device-aware lesson copy, saved stars, explicit retry/next, pause actions and returning to lessons. Keep Practice available for battle arenas.
+
 The current right shoulder stops kicked bombs; it no longer aliases remote detonation.
 Keyboard R remains a remote alias. The iteration19 controller mapping supersedes printed-B carry and promotes the
 left shoulder; keyboard remains v0.18. The v0.18 keyboard mapping supersedes the Space-carry/K-aim/L-remote mapping in v0.17

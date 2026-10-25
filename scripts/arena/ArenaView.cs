@@ -18,9 +18,11 @@ public partial class ArenaView : Node3D
     private readonly Dictionary<string,PlayerInput> _localInputs=[];
     private readonly Dictionary<string,BombThrowPreview> _throwPreviews=[];
     private bool _battleActive;
+    private MeshInstance3D? _tutorialTarget;
     public void SetBattleActive(bool active)
     {
         _battleActive=active;
+        if(!active && _tutorialTarget!=null)_tutorialTarget.Visible=false;
         if(!active)ClearThrowPreviews();
     }
     public IReadOnlyList<ThrowPreviewState> ThrowPreviews {get;private set;}=[];
@@ -128,6 +130,7 @@ public partial class ArenaView : Node3D
     }
     public void ResetMatch()
     {
+        if(_tutorialTarget!=null)_tutorialTarget.Visible=false;
         _localInputs.Clear();ClearThrowPreviews();
         _playerMotion.Clear();_facings.Clear();_ghostHosts.Clear();_snapshotTick=0;
         _audio.StopAll();

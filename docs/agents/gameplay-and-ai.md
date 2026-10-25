@@ -20,6 +20,8 @@ For keys, prompts and device input, read [input and UI](input-and-ui.md).
 
 ## Authority, transport and presentation
 
+Tutorial setup and progress belong to the local authority, with ordinary bomb, collision and recovery rules. [The tutorial contract](../tutorial.md) explains lesson fixtures, online exclusion, failure/retry and concurrent map integration.
+
 - [BlastSession](../../src/Bomber.Game/Simulation/BlastSession.cs) owns game state;
   its partial files share that authority. [BlastSim](../../src/Bomber.Game/Simulation/BlastSim.cs)
   defines entities and terrain semantics; [BlastStages](../../src/Bomber.Game/Simulation/BlastStages.cs)

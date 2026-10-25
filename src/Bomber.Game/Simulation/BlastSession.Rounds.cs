@@ -69,6 +69,7 @@ public sealed partial class BlastSession
 
         // Generate soft blocks (deterministic from match seed + round number).
         PlaceSoftBlocks(context.Random);
+        PrepareTutorial();
         BotReset();
         Present("round-ready");
 
@@ -82,6 +83,7 @@ public sealed partial class BlastSession
         _phase = RoundPhase.Fight;
         _roundTimer = 0;
         Present("fight");
+        BeginTutorialFight();
     }
 
     private void SimulateRound(ISessionContext context, float dt)
@@ -116,7 +118,7 @@ public sealed partial class BlastSession
                 Present("waterfall", magnitude: FloodRules.RisePerSecond, y: _waterLevel);
             }
         }
-        if (_phase == RoundPhase.Hurry && _stage.Id != BlastStages.SunkenTemple)
+        if (_phase == RoundPhase.Hurry && _stage.Id != BlastStages.SunkenTemple && _tutorialLesson is null)
         {
             _hurryColTimer += dt;
             if (_hurryColTimer >= 1f)
@@ -162,6 +164,8 @@ public sealed partial class BlastSession
         TickHazards(context, dt);
         TickItems(context);
 
+        TickTutorial(dt);
+
         // Check win condition.
         var living = _players.Values.Count(p => p.Alive && !p.Ghost);
         if (!_practice && living <= 1)
@@ -171,7 +175,7 @@ public sealed partial class BlastSession
         }
     }
 
-    private float WaterLevelAfter(float seconds) => !_practice && _suddenDeath && _stage.Id == BlastStages.SunkenTemple
+    private float WaterLevelAfter(float seconds) => _tutorialLesson?.Id=="flood" ? _waterLevel+Math.Max(0,seconds)*FloodRules.RisePerSecond : !_practice && _suddenDeath && _stage.Id == BlastStages.SunkenTemple
         ? FloodRules.Level(_roundTimer + Math.Max(0, seconds),_roundSeconds) : -1;
     private bool WaterUnsafe(float x,float z,float seconds=0) =>
         _stage.At((int)MathF.Floor(x),(int)MathF.Floor(z)).IsElimination ||
@@ -179,7 +183,7 @@ public sealed partial class BlastSession
 
     private void DrownSubmergedEntities()
     {
-        if (_phase != RoundPhase.Hurry || _stage.Id != BlastStages.SunkenTemple) return;
+        if (_phase != RoundPhase.Hurry || (_stage.Id != BlastStages.SunkenTemple && _tutorialLesson?.Id!="flood")) return;
         foreach (var player in _players.Values)
             if (player.Alive && !player.PendingRoundStart && FloodRules.Submerged(player.Y,_waterLevel))
             { DropCarriedBombs(player); Eliminate(null,player,"water"); }

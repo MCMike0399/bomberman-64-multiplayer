@@ -6,6 +6,7 @@ namespace BlastCircuit.App;
 /// <summary>Device-local choices, including the name used when joining a server.</summary>
 public sealed class PlayerPreferences
 {
+    public HashSet<string> CompletedTutorials {get;}=[];
     public string PlayerName { get; set; } = "";
     public string ServerUrl { get; set; } = Bomber.Client.NetworkSession.DefaultServerUrl;
     public bool Vibration { get; set; }
@@ -18,6 +19,8 @@ public sealed class PlayerPreferences
         var value = new PlayerPreferences();
         var file = new ConfigFile();
         if (file.Load(path) != Error.Ok) return value;
+        var completed=file.GetValue("tutorial","completed","");
+        if(completed.VariantType==Variant.Type.String)value.CompletedTutorials.UnionWith(completed.AsString().Split(',').Where(Bomber.Game.TutorialCourse.Contains));
         var name=file.GetValue("online","name","");
         var server=file.GetValue("online","server",value.ServerUrl);
         if(name.VariantType==Variant.Type.String)value.PlayerName=name.AsString();
@@ -38,6 +41,7 @@ public sealed class PlayerPreferences
     public Error Save(string path)
     {
         var file = new ConfigFile();
+        file.SetValue("tutorial","completed",string.Join(',',CompletedTutorials.Order()));
         file.SetValue("online","name",PlayerName);
         file.SetValue("online","server",ServerUrl);
         file.SetValue("player", "vibration", Vibration);

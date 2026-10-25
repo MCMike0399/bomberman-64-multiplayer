@@ -3,7 +3,7 @@
 namespace Bomber.Game.Simulation;
 
 /// <summary>Static definitions for the temple and two legacy arena stages.</summary>
-public static class BlastStages
+public static partial class BlastStages
 {
     public const string SunkenTemple = "sunken-temple";
     public const string RockGarden = "rock-garden";
@@ -12,6 +12,7 @@ public static class BlastStages
     /// <summary>Returns the stage layout for a given id. Falls back to Sunken Temple for unknown ids.</summary>
     public static StageLayout Get(string id) => id switch
     {
+        CircuitGarden => BuildCircuitGarden(),
         SunkenTemple => BuildSunkenTemple(),
         RockGarden => BuildRockGarden(),
         UpAndDown => BuildUpAndDown(),

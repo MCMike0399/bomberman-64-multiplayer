@@ -75,7 +75,7 @@ public partial class GameRoot
 
     private void EnterMatch()
     {
-        _editingRoom=false;ScreenName="Match";_menu.Visible=false;_arena.Visible=true;_hud.Visible=true;GetViewport().GuiReleaseFocus();
+        _editingRoom=false;ScreenName="Match";_menu.Visible=false;_arena.Visible=true;_hud.Visible=true;GetViewport().GuiReleaseFocus();ShowTutorialHud();
     }
 
     public void InjectInput(int seat,PlayerInput? input)
@@ -85,6 +85,7 @@ public partial class GameRoot
 
     private void Replay()
     {
+        if(_trainingSession){StartTutorial(_tutorialLessonId??"free");return;}
         if(_session is NetworkSession {Party:not null}){ShowPartyLobby();return;}
         ReleaseSession();
         if(_lastServer is { } server)
@@ -107,6 +108,7 @@ public partial class GameRoot
     private void ReleaseSession()
     {
         var old=_session;_session=null;_injected.Clear();
+        _tutorialLessonId=null;_trainingSession=false;if(_tutorialHud!=null)_tutorialHud.Visible=false;
         ControllerHub.Current.EndMatch();
         if(old!=null)_=DisposeSessionAsync(old);
     }

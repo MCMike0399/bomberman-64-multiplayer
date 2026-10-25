@@ -37,6 +37,8 @@ update the current guide rather than silently reviving old behavior.
 
 ## Current decisions that supersede earlier experiments
 
+- Tutorial work adds an original local-only Circuit Garden and replayable lessons. The user withdrew map removal: preserve all battle arenas and the concurrent map PRs. Read [tutorial ownership and integration](../tutorial.md) before changing lessons, progress or training terrain.
+
 - v0.27 connection work adds persistent random lobbies and player-hosted peer
   rooms. [Peer hosting](../peer-hosting.md) owns the two-human minimum, direct/relay
   routes and return-to-lobby host takeover. See verification for delivery status.

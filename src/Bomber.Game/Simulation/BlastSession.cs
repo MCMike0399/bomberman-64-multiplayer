@@ -20,6 +20,14 @@ public sealed partial class BlastSession : GameSession
 
     private readonly int[] _localAppearances;
     private readonly bool _practice;
+    private readonly TutorialLesson? _tutorialLesson;
+    private readonly HashSet<string> _tutorialSignals = [];
+    private int _tutorialStep, _tutorialEfforts, _tutorialBlastTick=-1, _tutorialBlastsAtTick;
+    private long _tutorialPickupSerial;
+    private string[] _tutorialItems=[];
+    private float _tutorialTime, _tutorialAimTime;
+    private bool _tutorialFailed, _tutorialComplete, _tutorialStarted;
+    private string _tutorialFeedback = "";
     private readonly AdvancedRules _advanced;
     private readonly int _winsTarget;
     private readonly int _roundSeconds;
@@ -68,14 +76,16 @@ public sealed partial class BlastSession : GameSession
     private string NextHazardId() => $"h{++_nextHazardId}";
     private string NextItemId()   => $"i{++_nextItemId}";
 
-    public BlastSession(GameSessionOptions options, StageLayout? arena = null, bool practice = false, IReadOnlyList<int>? appearances = null)
+    public BlastSession(GameSessionOptions options, StageLayout? arena = null, bool practice = false, IReadOnlyList<int>? appearances = null, string? tutorialLesson = null)
     {
         _localAppearances = appearances?.ToArray() ?? [];
         _practice = practice;
+        _tutorialLesson = practice && tutorialLesson is not null ? TutorialCourse.Get(tutorialLesson) : null;
         _advanced=AdvancedRules.FromSettings(options.Settings);
         // Cosmetic selection must not consume gameplay RNG (cover, loot or bots).
         _lightingOffset=(int)((uint)options.Seed%4);
-        _stage = arena ?? BlastStages.Get(options.Settings.TryGetValue("stage", out var s) ? s : "sunken-temple");
+        string stageId=options.Settings.GetValueOrDefault("stage",BlastStages.SunkenTemple);
+        _stage = arena ?? BlastStages.Get(!practice && stageId==BlastStages.CircuitGarden ? BlastStages.SunkenTemple : stageId);
 
         _winsTarget = TryInt(options, "wins", 2, 1, 5);
         _roundSeconds = TryInt(options, "round-seconds", 120, 60, 300);
@@ -220,7 +230,7 @@ public sealed partial class BlastSession : GameSession
 
             case RoundPhase.Fight:
             case RoundPhase.Hurry:
-                SimulateRound(context, dt);
+                if(!_tutorialComplete && !_tutorialFailed) SimulateRound(context, dt);
                 break;
 
             case RoundPhase.Over:

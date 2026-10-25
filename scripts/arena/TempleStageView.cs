@@ -88,6 +88,8 @@ public partial class TempleStageView : Node3D
         _masonry=_art.Masonry();_bedrock=_art.Bedrock();var wall=_masonry;var cap=_art.Color(new("e8cc82"));
         _water=new MeshInstance3D {Mesh=new PlaneMesh {Size=new Vector2(160,160),SubdivideWidth=180,SubdivideDepth=180},MaterialOverride=_art.Water(),Position=new Vector3(Width/2f,-.53f,Depth/2f),CastShadow=GeometryInstance3D.ShadowCastingSetting.Off};AddChild(_water);
         bool temple=data.GetProperty("id").GetString()=="sunken-temple";
+        bool garden=data.GetProperty("id").GetString()=="circuit-garden";
+        if(garden){_masonry.SetShaderParameter("base_color",new Color("9da18a"));_masonry.SetShaderParameter("mortar_color",new Color("596750"));}
         for(int z=0;z<Depth;z++)for(int x=0;x<Width;x++)
         {
             var c=_cells[z*Width+x];int kind=c.GetProperty("k").GetInt32();if(kind is 2 or 3)continue;
@@ -114,7 +116,7 @@ public partial class TempleStageView : Node3D
                 if(temple && z<=2)continue;
                 Pillar(new(x+.5f,y,z+.5f));
             }
-            if(!courtyard && kind!=4)
+            if(!courtyard && kind!=4 && !garden)
             {
                 // Decorate only exposed risers: no invented walls across walkable connections.
                 foreach(var (dx,dz) in new[]{(0,1),(0,-1),(1,0),(-1,0)})
@@ -132,6 +134,7 @@ public partial class TempleStageView : Node3D
             }
         }
         if(temple){Bedrock();Shrine();}
+        if(data.GetProperty("id").GetString()=="circuit-garden")GardenDetails();
     }
     private void Bedrock()
     {

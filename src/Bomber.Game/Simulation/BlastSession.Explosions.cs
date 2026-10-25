@@ -44,6 +44,7 @@ public sealed partial class BlastSession
             for (var z = Math.Max(0, (int)MathF.Floor(bz - r)); z <= Math.Min(_stage.Height - 1, (int)MathF.Floor(bz + r)); z++)
                 if (_softBlocks.IsAlive(x, z) && InBlast(bx, bz, y, r, x + .5f, z + .5f, _stage.SurfaceAt(x + .5f, z + .5f), red))
                     hits.Add((x, z));
+        if(red && hits.Count>0 && _tutorialLesson?.Id=="red")_tutorialSignals.Add("red-cover");
         foreach (var (x, z) in hits)
         {
             _softBlocks.Set(x, z, false);

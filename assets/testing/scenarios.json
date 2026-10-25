@@ -2,6 +2,18 @@
   "schemaVersion": 1,
   "scenarios": [
     {
+      "id": "tutorial",
+      "method": "TutorialTour",
+      "domains": [
+        "gameplay",
+        "ui",
+        "rendering"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
       "id": "first-use-rendering",
       "method": "FirstUseRendering",
       "domains": [
@@ -532,7 +544,8 @@
         "combat",
         "results",
         "network",
-        "peer-rooms"
+        "peer-rooms",
+        "tutorial"
       ],
       "domains": [
         "ai",
@@ -576,7 +589,8 @@
         "presentation",
         "hurry-water",
         "ai-play",
-        "combat"
+        "combat",
+        "tutorial"
       ],
       "domains": [
         "ai",

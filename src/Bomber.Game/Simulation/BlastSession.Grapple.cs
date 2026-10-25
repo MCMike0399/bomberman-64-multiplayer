@@ -26,7 +26,7 @@ public sealed partial class BlastSession
         p.StruggleCooldown=Math.Max(0,p.StruggleCooldown-dt);
         float effort=0;
         if(!p.Airborne&&(direction||press)&&p.StruggleCooldown<=0)
-        {effort=EffortSeconds;p.StruggleCooldown=EffortCooldown;}
+        {effort=EffortSeconds;p.StruggleCooldown=EffortCooldown;if(_tutorialStarted&&p.Slot==0)_tutorialEfforts++;}
         if(p.CarriedById is not null)
         {
             p.HoldRemaining=Math.Max(0,p.HoldRemaining-dt-effort);

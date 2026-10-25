@@ -15,9 +15,9 @@ public sealed class LocalSession : ISession
     public string Status => _disposed ? "Ended" : _match.IsEnded ? "Ended: Match complete" : "Local battle";
     public bool IsEnded => _disposed || _match.IsEnded;
     public string? JoinCode => null;
-    public LocalSession(SessionSettings settings, int humanCount = 1, int seed = 64, bool practice = false, IReadOnlyList<int>? playerAppearances = null)
+    public LocalSession(SessionSettings settings, int humanCount = 1, int seed = 64, bool practice = false, IReadOnlyList<int>? playerAppearances = null, string? tutorialLesson = null)
     {
-        settings.ToWireSettings();
+        (practice && settings.Stage == "circuit-garden" ? settings with {Stage="sunken-temple"} : settings).ToWireSettings();
         if (humanCount is < 1 or > 8 || humanCount + settings.Bots > 8 || humanCount + settings.Bots < (practice ? 1 : 2))
             throw new ArgumentOutOfRangeException(nameof(humanCount), "Choose 1–8 humans and 2–8 total players.");
         LocalPlayerCount = humanCount;
@@ -25,7 +25,7 @@ public sealed class LocalSession : ISession
         _buttons = Enumerable.Range(0, humanCount).Select(_ => new Queue<(bool A, bool B, bool R, bool Aim, bool Stop)>()).ToArray();
         _match = new LocalMatch(new MatchOptions { HumanPlayers = humanCount, BotPlayers = settings.Bots, Advanced=settings.Advanced,
             Stage = settings.Stage, BotDifficulty = settings.BotDifficulty, Wins = settings.Wins, RoundSeconds = settings.RoundSeconds,
-            SuddenDeath = settings.SuddenDeath, Ghosts = settings.Ghosts, Seed = seed, Practice = practice, PlayerAppearances = playerAppearances ?? Array.Empty<int>() });
+            SuddenDeath = settings.SuddenDeath, Ghosts = settings.Ghosts, Seed = seed, Practice = practice, TutorialLesson=tutorialLesson, PlayerAppearances = playerAppearances ?? Array.Empty<int>() });
         _match.Message += OnMessage;
         if (_match.StageJson is { } stage) OnMessage(stage);
         if (_match.StateJson is { } state) OnMessage(state);

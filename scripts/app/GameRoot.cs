@@ -20,6 +20,9 @@ public partial class GameRoot : Node3D
     private ArenaView _arena=null!;
     private ArcadeMenu _menu=null!;
     private BattleHud _hud=null!;
+    private TutorialHud _tutorialHud=null!;
+    private string? _tutorialLessonId;
+    private bool _trainingSession;
     private BlastCircuit.Audio.BattleAudio _uiAudio=null!;
     private ISession? _session;
     private CancellationTokenSource? _connectCancel;
@@ -52,6 +55,7 @@ public partial class GameRoot : Node3D
         private set
         {
             _screenName=value;
+            if(_tutorialHud!=null)_tutorialHud.Visible=_tutorialLessonId is not null && value=="Match";
             _arena?.SetBattleActive(value=="Match");
             // Input role follows the visible screen; lobby/results retain match bindings.
             if(ControllerHub.Current is {} hub)hub.MenuNavigationEnabled=!_preparingGraphics&&value is not ("Match" or "Controls");
@@ -80,6 +84,7 @@ public partial class GameRoot : Node3D
         var layer=new CanvasLayer();AddChild(layer);
         _menu=new ArcadeMenu();layer.AddChild(_menu);
         _hud=new BattleHud {Visible=false};layer.AddChild(_hud);
+        BuildTutorialHud(layer);
         _menu.AppearanceChanged+=index=>{if(_session is NetworkSession network)network.SetAppearance(index);};
         _menu.Navigation+=Navigate;_menu.BackRequested+=Back;_menu.ReplayRequested+=Replay;
         _menu.LocalRequested+=StartConfigured;_menu.OnlineRequested+=StartConfiguredOnline;
@@ -89,7 +94,7 @@ public partial class GameRoot : Node3D
         _menu.SettingsChanged+=SavePreferences;
         _menu.TestVibrationRequested+=()=>_menu.SettingsNotice(ControllerHub.Current.TestVibration()?"Vibration sent to your controller.":_preferences.Vibration?"Connect a controller that supports vibration.":"Enable controller vibration first.");
         if(OS.GetCmdlineUserArgs().Any(a=>a.StartsWith("--playtest=")))PreferencesPath=$"user://qa-preferences-{OS.GetProcessId()}.cfg";
-        _preferences=PlayerPreferences.Load(PreferencesPath);_menu.ConfigurePreferences(_preferences);ApplyPreferences();
+        _preferences=PlayerPreferences.Load(PreferencesPath);_menu.ConfigurePreferences(_preferences);_menu.TutorialProgress(_preferences.CompletedTutorials);ApplyPreferences();
         _menu.IdentityChanged+=SavePreferences;
         _arena.PlayerFeedback+=PlayerFeedback;
         _updater=new BlastCircuit.Updates.GameUpdater();AddChild(_updater);
@@ -146,8 +151,8 @@ public partial class GameRoot : Node3D
         }
         _editingRoom=false;
         _menu.SetOverlay(false);
-        if(screen is not ("Modes" or "Controls" or "Roster" or "Setup" or "Practice" or "HostSetup" or "Online" or "Lobby" or "Match" or "Results"))throw new ArgumentException("Unknown screen.",nameof(screen));
-        if(screen is "Modes" or "Controls" or "Roster" or "Online" or "Setup" or "Practice" or "HostSetup")
+        if(screen is not ("Modes" or "Tutorial" or "Controls" or "Roster" or "Setup" or "Practice" or "HostSetup" or "Online" or "Lobby" or "Match" or "Results"))throw new ArgumentException("Unknown screen.",nameof(screen));
+        if(screen is "Modes" or "Tutorial" or "Controls" or "Roster" or "Online" or "Setup" or "Practice" or "HostSetup")
         {
             CancelConnection();
             if(_session!=null)ReleaseSession();
@@ -168,7 +173,7 @@ public partial class GameRoot : Node3D
         if(ScreenName=="Settings"){RestoreScreen(_settingsReturn);return;}
         if(ScreenName=="Pause"){ResumeGame();return;}
         if(_connecting){CancelConnection();_menu.SetBusy(false,"Connection cancelled.");ScreenName="Online";_menu.ShowScreen("Online");return;}
-        if(_session!=null){ReleaseSession();Navigate("Modes");return;}
+        if(_session!=null){bool training=_trainingSession;ReleaseSession();Navigate(training?"Tutorial":"Modes");return;}
         if(ScreenName=="Setup"&&_setupForHost)Navigate("Online");else if(ScreenName=="Setup"&&!_menu.Practice)Navigate("Roster");else Navigate("Modes");
     }
     public override void _UnhandledInput(InputEvent @event)
@@ -194,12 +199,12 @@ public partial class GameRoot : Node3D
     {
         if(_session==null)return;
         _pauseReturn=ScreenName;_session.ReleaseInputs();_injected.Clear();ControllerHub.Current.RearmControls();ControllerHub.Current.StopVibration();
-        ScreenName="Pause";_hud.Visible=false;_menu.SetOverlay(LatestState!=null);_menu.Visible=true;_menu.ShowPause(_session is NetworkSession);
+        ScreenName="Pause";_hud.Visible=false;_menu.SetOverlay(LatestState!=null);_menu.Visible=true;_menu.ShowPause(_session is NetworkSession,_trainingSession,_tutorialLessonId);
     }
     private void ResumeGame(){_session?.ReleaseInputs();ControllerHub.Current.RearmControls();RestoreScreen(_pauseReturn);}
     private void RestoreScreen(string screen)
     {
-        if(screen=="Pause"){ScreenName="Pause";_menu.Visible=true;_menu.SetOverlay(LatestState!=null);_menu.ShowPause(_session is NetworkSession);return;}
+        if(screen=="Pause"){ScreenName="Pause";_menu.Visible=true;_menu.SetOverlay(LatestState!=null);_menu.ShowPause(_session is NetworkSession,_trainingSession,_tutorialLessonId);return;}
         if(screen=="Match"&&_session!=null){EnterMatch();return;}
         if(screen=="Lobby"&&_session!=null){ShowPartyLobby();return;}
         Navigate(screen);
@@ -240,7 +245,7 @@ public partial class GameRoot : Node3D
             }
         }
         var session=_session;if(session==null)return;
-        if(ScreenName=="Match")for(int i=0;i<session.LocalPlayerCount;i++)
+        if(ScreenName=="Match" && !(_tutorialLessonId is not null && _tutorialHud.Finished))for(int i=0;i<session.LocalPlayerCount;i++)
         {
             var input=_injected.TryGetValue(i,out var injected)?injected:PlayerControls.Read(i,session.LocalPlayerCount);
             session.SendInput(i,input);
@@ -255,7 +260,7 @@ public partial class GameRoot : Node3D
             {
                 case "stage":LatestStage=data.Clone();_arena.Stage(data);_hud.Stage(data);break;
                 case "state":
-                    LatestState=data.Clone();SnapshotCount++;ApplyStageLighting();_arena.State(data,envelope.TryGetProperty("k",out var stateTick)&&stateTick.ValueKind==JsonValueKind.Number?stateTick.GetInt64():-1);_hud.State(data);
+                    LatestState=data.Clone();SnapshotCount++;ApplyStageLighting();_arena.State(data,envelope.TryGetProperty("k",out var stateTick)&&stateTick.ValueKind==JsonValueKind.Number?stateTick.GetInt64():-1);_hud.State(data);TutorialState(data);
                     if(ScreenName=="Lobby")EnterMatch();
                     break;
                 case "party.status":

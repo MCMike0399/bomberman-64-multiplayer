@@ -26,7 +26,7 @@ public sealed class LocalMatch
     {
         options.Validate();
         _context = new LocalContext(options, Receive);
-        _session = new BlastSession(new GameSessionOptions("local", "blast", _context.Settings, options.Seed), arena, options.Practice, options.PlayerAppearances);
+        _session = new BlastSession(new GameSessionOptions("local", "blast", _context.Settings, options.Seed), arena, options.Practice, options.PlayerAppearances, options.TutorialLesson);
         foreach (var player in _context.Players) _session.OnPlayerJoined(_context, player);
         _context.State = LobbyState.Running;
         _session.OnMatchStarted(_context);

@@ -14,10 +14,11 @@ public partial class ArcadeMenu
         var title=ArcadeTheme.Heading(wordmark,"Blast\nCircuit",100);title.AddThemeConstantOverride("line_spacing",-30);
         float blastWidth=ArcadeTheme.Display.GetStringSize("Blast",HorizontalAlignment.Left,-1,100).X;
         wordmark.AddChild(new LitBomb {Position=new(blastWidth+4,-14),Size=new(116,116)});
-        var menu=new VBoxContainer {Position=new(748,229),Size=new(560,500)};menu.AddThemeConstantOverride("separation",9);screen.AddChild(menu);
+        var menu=new VBoxContainer {Position=new(748,174),Size=new(560,620)};menu.AddThemeConstantOverride("separation",9);screen.AddChild(menu);
         Mode(menu,"Local Battle",()=>Navigation?.Invoke("Roster"),Coral,ArcadeTheme.Gold);
         Mode(menu,"Online Battle",()=>Navigation?.Invoke("Online"),Lagoon,ArcadeTheme.Cream);
-        Mode(menu,"Practice",()=>Navigation?.Invoke("Practice"),ArcadeTheme.Indigo,ArcadeTheme.Pink);
+        Mode(menu,"Tutorial",()=>Navigation?.Invoke("Tutorial"),ArcadeTheme.Indigo,ArcadeTheme.Pink);
+        var practice=ArcadeTheme.Quiet(ArcadeTheme.Button(menu,"Practice",()=>Navigation?.Invoke("Practice")));practice.CustomMinimumSize=new(0,48);practice.SizeFlagsHorizontal=SizeFlags.ShrinkCenter;
         var controls=ArcadeTheme.Quiet(ArcadeTheme.Button(menu,"Controls",()=>Navigation?.Invoke("Controls")));controls.Name="OpenControls";controls.CustomMinimumSize=new(0,48);
         controls.SizeFlagsHorizontal=SizeFlags.ShrinkCenter;
         var settings=ArcadeTheme.Quiet(ArcadeTheme.Button(menu,"Settings",()=>Navigation?.Invoke("Settings")));settings.Name="OpenSettings";settings.CustomMinimumSize=new(0,48);settings.SizeFlagsHorizontal=SizeFlags.ShrinkCenter;_settingsButton=settings;

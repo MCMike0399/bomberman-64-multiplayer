@@ -12,10 +12,18 @@ namespace BlastCircuit.UI.Menu;
 public partial class ArcadeMenu : Control
 {
     public event Action<string>? Navigation;
+    public event Action<string>? TutorialRequested;
+    private readonly Dictionary<string,Button> _lessonButtons=[];
+    private readonly HashSet<string> _completedLessons=[];
+    private TutorialLesson _selectedLesson=TutorialCourse.Lessons[0];
+    private Label _lessonTitle=null!,_lessonCopy=null!,_lessonTip=null!,_lessonObjectives=null!,_lessonProgress=null!;
+    private Button _lessonStart=null!;
     public event Action<int>? AppearanceChanged;
     private readonly Dictionary<string,int> _lobbyAppearances=[];
     private readonly Dictionary<string,CharacterPreview> _lobbyPreviews=[];
     public event Action? LocalRequested, ReplayRequested, BackRequested, StartRoomRequested, ResumeRequested, SettingsChanged, TestVibrationRequested, CheckUpdatesRequested, InstallUpdateRequested;
+    private Button _retryLesson=null!,_pauseLeave=null!;
+    private string? _pausedTutorial;
     private Button _startRoom=null!,_copyCode=null!,_roomRules=null!;
     private string? _roomCode;
     public event Action? IdentityChanged;
@@ -84,14 +92,14 @@ public partial class ArcadeMenu : Control
         Theme=ArcadeTheme.Create();SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         _background=new ArcadeBackdrop();AddChild(_background);_background.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         _content=new Control();AddChild(_content);_content.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-        BuildModes();BuildControls();BuildRoster();BuildSetup();BuildAdvanced();BuildOnline();BuildLobby();BuildResults();BuildSettings();BuildPause();
+        BuildModes();BuildTutorial();BuildControls();BuildRoster();BuildSetup();BuildAdvanced();BuildOnline();BuildLobby();BuildResults();BuildSettings();BuildPause();
         var footer=new HBoxContainer {AnchorTop=1,AnchorBottom=1,AnchorRight=1,OffsetTop=-60,OffsetBottom=-12,OffsetLeft=58,OffsetRight=-58,Alignment=BoxContainer.AlignmentMode.Center};AddChild(footer);
         _inputFooter=new PromptBar();footer.AddChild(_inputFooter);UpdateInputFooter();ControllerHub.Current.PromptChanged+=UpdateInputFooter;
         var spacer=new Control {SizeFlagsHorizontal=SizeFlags.ExpandFill};footer.AddChild(spacer);
         ArcadeTheme.Text(footer,"Burbuja",15,ArcadeTheme.Muted).VerticalAlignment=VerticalAlignment.Center;
         ShowScreen("Modes");
     }
-    private void UpdateInputFooter()=>_inputFooter.SetPrompt(ControllerProfile.Menu(ControllerHub.Current.ActiveFamily));
+    private void UpdateInputFooter(){_inputFooter.SetPrompt(ControllerProfile.Menu(ControllerHub.Current.ActiveFamily));RefreshTutorialPrompts();}
     public override void _ExitTree(){ControllerHub.Current.PromptChanged-=UpdateInputFooter;}
     private Control Screen(string name)
     {var control=new Control();_content.AddChild(control);control.AnchorLeft=control.AnchorRight=.5f;control.AnchorTop=control.AnchorBottom=.5f;control.OffsetLeft=-720;control.OffsetRight=720;control.OffsetTop=-450;control.OffsetBottom=450;_screens[name]=control;return control;}
@@ -140,6 +148,7 @@ public partial class ArcadeMenu : Control
     /// <summary>Screens whose first button in tree order is Back/Leave start on their first real choice instead.</summary>
     private Control? DefaultFocus(string screen)=>screen switch
     {
+        "Tutorial"=>_lessonButtons[_selectedLesson.Id],
         "Online"=>_onlineAppearanceButton,
         "Lobby"=>_startRoom.Visible&&!_startRoom.Disabled?_startRoom:!_copyCode.Disabled?_copyCode:_screens["Lobby"].FindChild("LobbySettings",true,false) as Control,
         _=>null

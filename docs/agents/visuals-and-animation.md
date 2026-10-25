@@ -149,6 +149,8 @@ specific composition, not a universal camera constant.
 
 ## Materials, stage depth and effects
 
+Circuit Garden has its own grass, range marks, banners and low-terrace composition; its camera leaves room for tutorial instructions. [Tutorial visuals and ownership](../tutorial.md) keep this local training arena separate from the battle-map rebuilds.
+
 The user's direction combines the original pyramid's terrace/courtyard composition
 with restrained modern stylization inspired by Tunic and Pokémon BDSP. Preserve
 the recessed cobbled court, warm readable sandstone, grounded bedrock/foundation

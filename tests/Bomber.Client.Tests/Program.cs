@@ -16,6 +16,13 @@ var wire = settings.ToWireSettings();
 Check(wire["round-seconds"] == "90" && wire["bots"] == "2" && wire["sudden-death"] == "off" && wire["ghosts"] == "on", "Kernel uses string-valued, hyphenated lobby settings");
 Throws(() => new SessionSettings(Bots: 8).ToWireSettings(), "Reject excessive bots");
 Throws(() => new SessionSettings(Stage: "invalid").ToWireSettings(), "Reject unknown stage");
+Throws(() => new SessionSettings(Stage: "circuit-garden").ToWireSettings(), "Tutorial arena cannot be offered to online or peer rooms");
+Throws(() => new LocalSession(new SessionSettings(Stage:"circuit-garden")), "Training arena requires local practice");
+await using(var tutorial=new LocalSession(new SessionSettings(Stage:"circuit-garden",Bots:0),practice:true,tutorialLesson:"move"))
+{
+    var state=tutorial.DrainMessages().Last(m=>m.GetProperty("t").GetString()=="state").GetProperty("d");
+    Check(state.GetProperty("tutorial").GetProperty("id").GetString()=="move", "Local adapter carries validated tutorial identity into authority");
+}
 Throws(() => new SessionSettings(BotDifficulty: "impossible").ToWireSettings(), "Reject unknown CPU difficulty");
 Check(new SessionSettings(BotDifficulty: "medium").ToWireSettings()["bot-difficulty"]=="medium", "Medium difficulty is accepted by client contracts");
 Check(new SessionSettings(BotDifficulty: "normal").ToWireSettings()["bot-difficulty"]=="normal", "Legacy normal difficulty remains wire compatible");

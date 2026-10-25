@@ -161,6 +161,8 @@ same-Wi-Fi party or relay task.
 
 ## Extend the harness with meaningful gameplay
 
+The `tutorial` journey covers the lesson browser, accepted-action completion/failure, saved progress, retry/next, pause and free practice. [Tutorial verification](../tutorial.md#verification) pairs it with managed ordinary-input completion of every lesson.
+
 `assets/testing/scenarios.json` is the common Python/C# catalog. Add a private
 parameterless `async Task` on the `PlaytestDriver` partial class in a new
 `scripts/testing/*Playtest.cs` file,

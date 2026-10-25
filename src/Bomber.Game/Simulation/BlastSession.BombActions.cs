@@ -264,6 +264,7 @@ public sealed partial class BlastSession
     {
         var mine = _bombs.Where(b => b.OwnerId == p.Id && b.IsRemote && !b.Exploded && b.State != BombState.Carried).ToList();
         if (mine.Count == 0) return;
+        if(_tutorialStarted && p.Slot==0 && mine.Count>0)_tutorialSignals.Add("remote-command");
         // Detonate the oldest remote bomb.
         ExplodeBomb(context, mine[0]);
     }
