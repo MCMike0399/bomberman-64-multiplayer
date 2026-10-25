@@ -8,12 +8,26 @@ from pathlib import Path
 import plistlib
 import re
 import subprocess
+import tempfile
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def sign(archive, key, output):
+def sign_bytes(path, key, trusted):
+    signature = subprocess.check_output(['openssl', 'dgst', '-sha256', '-sign', str(key), str(path)])
+    # Verify every generated signature before anything can be deployed or published.
+    with tempfile.TemporaryDirectory(prefix='blast-sign-check-') as temporary:
+        public = Path(temporary) / 'public.der'
+        public.write_bytes(base64.b64decode(trusted, validate=True))
+        signed = Path(temporary) / 'signature.der'
+        signed.write_bytes(signature)
+        subprocess.run(['openssl', 'dgst', '-sha256', '-verify', str(public), '-keyform', 'DER',
+                        '-signature', str(signed), str(path)], check=True, capture_output=True)
+    path.with_suffix('.json.sig').write_text(base64.b64encode(signature).decode() + '\n')
+
+
+def sign(archive, key, output, server=None):
     trusted = (ROOT / 'src/Bomber.Client/Updates/UpdatePublicKey.txt').read_text().strip()
     public = subprocess.check_output(['openssl', 'pkey', '-in', str(key), '-pubout', '-outform', 'DER'])
     if base64.b64encode(public).decode() != trusted:
@@ -27,8 +41,20 @@ def sign(archive, key, output):
     output.mkdir(parents=True, exist_ok=True)
     path = output / 'Blast-Circuit-update.json'
     path.write_text(json.dumps(manifest, separators=(',', ':')) + '\n')
-    signature = subprocess.check_output(['openssl', 'dgst', '-sha256', '-sign', str(key), str(path)])
-    path.with_suffix('.json.sig').write_text(base64.b64encode(signature).decode() + '\n')
+    sign_bytes(path, key, trusted)
+    if server is not None:
+        metadata = json.loads((output / 'build-metadata.json').read_text())
+        server_metadata = json.loads((output / 'server-build-metadata.json').read_text())
+        if (metadata.get('release') != server_metadata.get('release') or
+                metadata.get('revision') != server_metadata.get('revision') or
+                metadata.get('version') != version or server_metadata.get('version') != version):
+            raise RuntimeError('Client/server signing identities differ')
+        assets = [archive, server, output / 'build-metadata.json', output / 'server-build-metadata.json', path]
+        inventory = {asset.name: {'sha256': hashlib.sha256(asset.read_bytes()).hexdigest(), 'size': asset.stat().st_size} for asset in assets}
+        delivery = output / 'Blast-Circuit-release.json'
+        delivery.write_text(json.dumps({'schemaVersion': 1, 'revision': metadata['revision'],
+                                       'release': metadata['release'], 'assets': inventory}, sort_keys=True, separators=(',', ':')) + '\n')
+        sign_bytes(delivery, key, trusted)
     print('Signed update manifest for v' + version)
 
 
@@ -37,5 +63,6 @@ if __name__ == '__main__':
     parser.add_argument('--archive', type=Path, required=True)
     parser.add_argument('--key', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--server', type=Path, help='Also sign client/server archives and matching metadata as one release')
     args = parser.parse_args()
-    sign(args.archive, args.key, args.output)
+    sign(args.archive, args.key, args.output, args.server)

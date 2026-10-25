@@ -61,7 +61,7 @@ jobs:
     if: inputs.publish
     environment: production
     runs-on: [self-hosted, blast-deploy]
-    timeout-minutes: 45
+    timeout-minutes: 65
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -77,7 +77,9 @@ jobs:
           VERSION: ${{ inputs.version }}
           EXPECTED_SHA: ${{ needs.validate.outputs.revision }}
           BLAST_DEPLOY_ADAPTER: ${{ vars.BLAST_DEPLOY_ADAPTER }}
+          BLAST_DEPLOY_STATE_DIR: ${{ vars.BLAST_DEPLOY_STATE_DIR }}
           BLAST_RELEASE_SERVER_URLS: ${{ vars.BLAST_RELEASE_SERVER_URLS }}
+          BLAST_RELEASE_PLACEMENTS: ${{ vars.BLAST_RELEASE_PLACEMENTS }}
           BLAST_UPDATE_SIGNING_KEY: ${{ secrets.BLAST_UPDATE_SIGNING_KEY }}
         run: |
           set -euo pipefail
@@ -88,7 +90,7 @@ jobs:
           printf '%s\n' "$BLAST_UPDATE_SIGNING_KEY" > "$key"
           python3 tools/ci/deploy_release.py --run-id "$RUN_ID" --version "$VERSION" \
             --expected-sha "$EXPECTED_SHA" --adapter "$BLAST_DEPLOY_ADAPTER" \
-            --signing-key "$key" --output artifacts/deployment-receipt.json
+            --signing-key "$key" --state-dir "$BLAST_DEPLOY_STATE_DIR" --output artifacts/deployment-receipt.json
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: deployment-receipt
@@ -104,7 +106,7 @@ jobs:
        (inputs.publish && needs.deploy.result == 'success'))
     environment: production
     runs-on: ${{ inputs.publish && fromJSON('["self-hosted","blast-deploy"]') || fromJSON('["ubuntu-24.04"]') }}
-    timeout-minutes: 10
+    timeout-minutes: 25
     permissions:
       contents: write
       actions: read
@@ -125,6 +127,7 @@ jobs:
           BLAST_UPDATE_SIGNING_KEY: ${{ secrets.BLAST_UPDATE_SIGNING_KEY }}
           PUBLISH_RELEASE: ${{ inputs.publish }}
           BLAST_RELEASE_SERVER_URLS: ${{ vars.BLAST_RELEASE_SERVER_URLS }}
+          BLAST_RELEASE_PLACEMENTS: ${{ vars.BLAST_RELEASE_PLACEMENTS }}
         run: |
           set -euo pipefail
           umask 077

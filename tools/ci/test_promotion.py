@@ -56,9 +56,30 @@ class PromotionTests(unittest.TestCase):
         main = patch.object(promotion, 'require_current_main')
         main.start()
         self.addCleanup(main.stop)
+        upload = patch.object(promotion, 'verify_uploaded')
+        upload.start()
+        self.addCleanup(upload.stop)
         probe = patch.object(promotion, 'verify_connections')
         probe.start()
         self.addCleanup(probe.stop)
+
+    def test_new_release_upload_failure_never_exposes_incomplete_public_release(self):
+        calls = []
+        def github(*arguments):
+            calls.append(arguments)
+            if arguments[0] == 'api': return '[]'
+            if arguments[:2] == ('run', 'download'):
+                destination = Path(arguments[arguments.index('--dir') + 1])
+                write_package(destination) if arguments[arguments.index('--name') + 1] == promotion.ARTIFACT else write_server(destination)
+            if arguments[:2] == ('release', 'create'):
+                raise RuntimeError('upload interrupted')
+            return ''
+        with patch.object(promotion, 'inspect_run', return_value=SHA), patch.object(promotion, 'gh', side_effect=github), patch.object(promotion.subprocess, 'run'), patch.object(promotion, 'verify'), patch.dict(os.environ, {'BLAST_RELEASE_SERVER_URLS': '{"public":"https://game.example"}', 'BLAST_RELEASE_PLACEMENTS': '{"public":{"serverId":"primary","region":"primary"}}'}):
+            with self.assertRaisesRegex(RuntimeError, 'upload interrupted'):
+                promotion.main(['--run-id', '12', '--version', '0.15.0', '--repository', REPO, '--publish', '--signing-key', '/fixture/private-key'])
+        created = next(call for call in calls if call[:2] == ('release', 'create'))
+        self.assertIn('--draft', created, 'Interrupted upload must remain invisible to players')
+        self.assertFalse(any(call[:2] == ('release', 'edit') for call in calls))
 
     def test_publication_requires_matching_deployed_servers(self):
         def github(*arguments):
@@ -159,7 +180,7 @@ class PromotionTests(unittest.TestCase):
                 destination = Path(arguments[arguments.index('--dir') + 1])
                 write_package(destination) if arguments[arguments.index('--name') + 1] == promotion.ARTIFACT else write_server(destination)
             return ''
-        with patch.object(promotion, 'inspect_run', return_value=SHA), patch.object(promotion, 'gh', side_effect=github), patch.dict(os.environ, {'BLAST_RELEASE_SERVER_URLS': '{"public":"https://game.example"}'}):
+        with patch.object(promotion, 'inspect_run', return_value=SHA), patch.object(promotion, 'gh', side_effect=github), patch.dict(os.environ, {'BLAST_RELEASE_SERVER_URLS': '{"public":"https://game.example"}', 'BLAST_RELEASE_PLACEMENTS': '{"public":{"serverId":"primary","region":"primary"}}'}):
             with self.assertRaisesRegex(RuntimeError, 'signing-key'):
                 promotion.main(['--run-id', '12', '--version', '0.15.0', '--repository', REPO, '--publish'])
         self.assertFalse(any(call[:2] == ('release', 'create') for call in calls))
@@ -173,13 +194,15 @@ class PromotionTests(unittest.TestCase):
                 destination = Path(arguments[arguments.index('--dir') + 1])
                 write_package(destination) if arguments[arguments.index('--name') + 1] == promotion.ARTIFACT else write_server(destination)
             return ''
-        with patch.object(promotion, 'inspect_run', return_value=SHA), patch.object(promotion, 'gh', side_effect=github), patch.object(promotion.subprocess, 'run') as signer, patch.dict(os.environ, {'BLAST_RELEASE_SERVER_URLS': '{"public":"https://game.example"}'}), patch.object(promotion, 'verify') as deployed, contextlib.redirect_stdout(io.StringIO()):
+        with patch.object(promotion, 'inspect_run', return_value=SHA), patch.object(promotion, 'gh', side_effect=github), patch.object(promotion.subprocess, 'run') as signer, patch.dict(os.environ, {'BLAST_RELEASE_SERVER_URLS': '{"public":"https://game.example"}', 'BLAST_RELEASE_PLACEMENTS': '{"public":{"serverId":"primary","region":"primary"}}'}), patch.object(promotion, 'verify') as deployed, patch.object(promotion, 'require_current_main', side_effect=RuntimeError('main advanced')), contextlib.redirect_stdout(io.StringIO()):
             promotion.main(['--run-id', '12', '--version', '0.15.0', '--repository', REPO, '--publish', '--signing-key', '/fixture/private-key'])
-        deployed.assert_called_once_with({'public': 'https://game.example'}, RELEASE, SHA)
+        self.assertEqual(2, deployed.call_count)
+        deployed.assert_called_with({'public': 'https://game.example'}, RELEASE, SHA)
         signer.assert_called_once()
-        created = calls[-1]
-        self.assertIn('--latest', created)
-        self.assertNotIn('--draft', created)
+        self.assertEqual(('release', 'edit', 'v0.15.0'), calls[-1][:3])
+        self.assertIn('--latest', calls[-1])
+        created = next(call for call in calls if call[:2] == ('release', 'create'))
+        self.assertIn('--draft', created)
         self.assertTrue(any(value.endswith('/Blast-Circuit-update.json') for value in created))
         self.assertTrue(any(value.endswith('/Blast-Circuit-update.json.sig') for value in created))
 

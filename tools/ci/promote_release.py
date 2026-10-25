@@ -12,7 +12,7 @@ import tempfile
 import zipfile
 import sys
 from release_identity import check_exports
-from verify_deployment import targets_from_json, verify, verify_connections
+from verify_deployment import targets_from_json, verify, verify_connections, placements_from_json
 
 ARTIFACT = 'Blast-Circuit-macos-arm64-ad-hoc'
 ARCHIVE = 'Blast-Circuit-macos-arm64.zip'
@@ -63,6 +63,28 @@ def inspect_existing_release(repository, version, revision, publish=False):
     # GitHub drafts may not have created their tag yet. Inspect drafts independently
     # of refs, and paginate so an older draft cannot become a duplicate release.
     pages = json.loads(gh('api', f'repos/{repository}/releases?per_page=100', '--paginate', '--slurp'))
+    published = [item for page in pages for item in page if not item.get('draft') and not item.get('prerelease')]
+    for item in published:
+        tag = item.get('tag_name', '')
+        if not re.fullmatch(r'v[0-9]+\.[0-9]+\.[0-9]+', tag):
+            raise RuntimeError('Unrecognized published version; inspect the release history before delivery')
+        if tuple(map(int, tag[1:].split('.'))) >= tuple(map(int, version.split('.'))):
+            raise RuntimeError('Candidate must upgrade every published stable version; clients refuse downgrades')
+    if published:
+        latest = max(published, key=lambda item: tuple(map(int, item['tag_name'][1:].split('.'))))
+        metadata = json.loads(gh('release', 'download', latest['tag_name'], '--repo', repository,
+                                 '--pattern', 'build-metadata.json', '--output', '-'))
+        prior_build = metadata.get('release', {}).get('build', metadata.get('build'))
+        if prior_build is None:
+            # Older releases predate Release.props and omitted the build in metadata.
+            # Inspect their published ZIP in place, without creating a launchable app.
+            with tempfile.TemporaryDirectory(prefix='blast-prior-release-') as temporary:
+                gh('release', 'download', latest['tag_name'], '--repo', repository,
+                   '--pattern', ARCHIVE, '--dir', temporary)
+                with zipfile.ZipFile(Path(temporary) / ARCHIVE) as bundle:
+                    prior_build = plistlib.loads(bundle.read('Blast Circuit.app/Contents/Info.plist')).get('CFBundleVersion')
+        if not str(prior_build).isdigit() or int(check_exports()['build']) <= int(prior_build):
+            raise RuntimeError('Candidate build must increase beyond the published build')
     matches = [item for page in pages for item in page if item.get('tag_name') == 'v' + version]
     if matches or existing:
         if (publish and len(matches) == 1 and matches[0].get('draft') is True
@@ -70,6 +92,20 @@ def inspect_existing_release(repository, version, revision, publish=False):
             return True
         raise RuntimeError('Release already exists; only an exact-source draft can be published')
     return False
+
+
+def verify_uploaded(repository, version, assets):
+    """Download the staged draft once and compare the bytes players will receive."""
+    with tempfile.TemporaryDirectory(prefix='blast-release-upload-check-') as temporary:
+        arguments = ['release', 'download', 'v' + version, '--repo', repository, '--dir', temporary]
+        for asset in assets:
+            arguments.extend(['--pattern', Path(asset).name])
+        gh(*arguments)
+        for asset in assets:
+            source = Path(asset)
+            downloaded = Path(temporary) / source.name
+            if not downloaded.is_file() or hashlib.sha256(downloaded.read_bytes()).digest() != hashlib.sha256(source.read_bytes()).digest():
+                raise RuntimeError('Uploaded release bytes differ: ' + source.name)
 
 
 def inspect_package(directory, revision, version):
@@ -162,14 +198,13 @@ def main(argv=None):
         raise RuntimeError('Run source revision differs from the validated revision')
     # No publication escape hatch: direct CLI calls must satisfy the same live fleet gate as CI.
     targets = targets_from_json(os.environ.get('BLAST_RELEASE_SERVER_URLS', '{}')) if args.publish else None
+    placements = placements_from_json(os.environ.get('BLAST_RELEASE_PLACEMENTS', '{}'), targets) if args.publish else None
     if args.check_only:
         if os.environ.get('GITHUB_OUTPUT'):
             with open(os.environ['GITHUB_OUTPUT'], 'a') as stream:
                 stream.write('revision=' + revision + '\n')
         print('Validated successful main Verification run at ' + revision)
         return
-    if args.publish:
-        require_current_main(args.repository, revision)
     existing_draft = inspect_existing_release(args.repository, version, revision, args.publish)
     with tempfile.TemporaryDirectory(prefix='blast-release-') as temporary:
         directory = Path(temporary)
@@ -180,14 +215,14 @@ def main(argv=None):
         signed = []
         if args.signing_key:
             signer = Path(__file__).resolve().parents[1] / 'updates/sign_release.py'
-            subprocess.run([sys.executable, str(signer), '--archive', str(archive), '--key', str(args.signing_key), '--output', str(directory)], check=True)
-            signed = [str(directory / 'Blast-Circuit-update.json'), str(directory / 'Blast-Circuit-update.json.sig')]
+            subprocess.run([sys.executable, str(signer), '--archive', str(archive), '--key', str(args.signing_key), '--output', str(directory), '--server', str(server)], check=True)
+            signed = [str(directory / name) for name in ('Blast-Circuit-update.json', 'Blast-Circuit-update.json.sig',
+                                                      'Blast-Circuit-release.json', 'Blast-Circuit-release.json.sig')]
         elif args.publish or tuple(map(int, version.split('.'))) >= (0, 21, 0):
             raise RuntimeError('This release requires --signing-key for authenticated in-app updates')
         if args.publish:
-            require_current_main(args.repository, revision)
             verify(targets, check_exports(), revision)
-            verify_connections(targets)
+            verify_connections(targets, placements)
         notes = directory / 'release-notes.txt'
         notes.write_text(f'Apple Silicon client and portable .NET 10 server from {revision}.\n\n'
                          f'Verification: https://github.com/{args.repository}/actions/runs/{args.run_id}\n\n'
@@ -197,11 +232,17 @@ def main(argv=None):
                   str(directory / 'server-build-metadata.json'), str(directory / 'build-metadata.json'), *signed]
         if existing_draft:
             gh('release', 'upload', 'v' + version, *assets, '--repo', args.repository, '--clobber')
-            gh('release', 'edit', 'v' + version, '--repo', args.repository, '--draft=false', '--latest', '--notes-file', str(notes))
         else:
             gh('release', 'create', 'v' + version, *assets, '--repo', args.repository,
-               *(['--latest'] if args.publish else ['--draft']), '--target', revision,
+               '--draft', '--target', revision,
                '--title', 'Blast Circuit v' + version, '--notes-file', str(notes))
+        verify_uploaded(args.repository, version, assets)
+        if args.publish:
+            # Main may advance after deployment. The exact live fleet is the publication
+            # authority; rechecking it allows safe publication retry without another rollout.
+            verify(targets, check_exports(), revision)
+            verify_connections(targets, placements)
+            gh('release', 'edit', 'v' + version, '--repo', args.repository, '--draft=false', '--latest', '--notes-file', str(notes))
         print(('Published signed release v' if args.publish else 'Created draft release v') + version + ' at ' + revision)
 
 

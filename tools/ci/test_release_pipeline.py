@@ -89,6 +89,14 @@ class DeploymentVerificationTests(unittest.TestCase):
             with self.subTest(fault=fault), patch.object(verify_deployment, 'request', side_effect=reply):
                 with self.assertRaises(RuntimeError): verify_deployment.verify(TARGETS, RELEASE, SHA)
 
+    def test_live_connections_request_and_bind_each_expected_worker(self):
+        placements = {name: {'serverId': name, 'region': name + '-region'} for name in TARGETS}
+        with patch.object(verify_deployment, 'build_probe', return_value=(Path('/fixture'), Path('/fixture/probe'))), patch.object(verify_deployment.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0, stdout='PASS 78 release connection and cleanup checks\n', stderr='')) as command:
+            verify_deployment.verify_connections(TARGETS, placements)
+        self.assertEqual([[TARGETS[name], name, name + '-region'] for name in TARGETS], [call.args[0][-3:] for call in command.call_args_list])
+        with self.assertRaisesRegex(RuntimeError, 'every target'):
+            verify_deployment.placements_from_json('{"primary":{"serverId":"primary","region":"primary"}}', TARGETS)
+
     def test_target_configuration_is_explicit_and_safe(self):
         for value in ('{}', '[]', '{"node":"http://internet.example"}', '{"node":"https://user:password@host"}', '{"node":"https://host?secret=x"}', '{"a":"https://host","b":"https://host"}'):
             with self.subTest(value=value), self.assertRaises(RuntimeError): verify_deployment.targets_from_json(value)
@@ -97,7 +105,7 @@ class DeploymentVerificationTests(unittest.TestCase):
 
 class DeploymentTransactionTests(unittest.TestCase):
     def test_invalid_signing_key_prevents_any_host_change(self):
-        with tempfile.TemporaryDirectory() as temporary, patch.dict(os.environ, {'BLAST_RELEASE_SERVER_URLS': json.dumps(TARGETS)}), \
+        with tempfile.TemporaryDirectory() as temporary, patch.dict(os.environ, {'BLAST_RELEASE_SERVER_URLS': json.dumps(TARGETS), 'BLAST_RELEASE_PLACEMENTS': json.dumps({name: {'serverId': name, 'region': name} for name in TARGETS})}), \
                 patch.object(deploy_release, 'inspect_run', return_value=SHA), \
                 patch.object(deploy_release, 'check_exports', return_value=RELEASE), \
                 patch.object(deploy_release, 'require_current_main'), patch.object(deploy_release, 'inspect_existing_release'), \
@@ -105,11 +113,11 @@ class DeploymentTransactionTests(unittest.TestCase):
                 patch.object(deploy_release, 'inspect_package', return_value=Path('/fixture/archive.zip')), \
                 patch.object(deploy_release, 'inspect_server'), \
                 patch.object(deploy_release.subprocess, 'run', return_value=subprocess.CompletedProcess([], 1, b'', b'wrong key')), \
-                patch.object(deploy_release, 'deploy') as host:
+                patch.object(deploy_release, 'deploy') as host, patch.object(deploy_release, 'validate_adapter'):
             with self.assertRaisesRegex(RuntimeError, 'signing preflight failed'):
                 deploy_release.main(['--run-id', '12', '--version', RELEASE['version'], '--expected-sha', SHA,
                                      '--repository', 'example/game', '--adapter', '/operator/adapter',
-                                     '--signing-key', '/fixture/key', '--output', str(Path(temporary) / 'result.json')])
+                                     '--state-dir', str(Path(temporary) / 'state'), '--signing-key', '/fixture/key', '--output', str(Path(temporary) / 'result.json')])
             host.assert_not_called()
 
     def test_host_adapter_never_inherits_release_credentials(self):

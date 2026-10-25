@@ -20,11 +20,15 @@ Blast Circuit signing key. The client contains only the P-256 public key in
 repository and is supplied as the `BLAST_UPDATE_SIGNING_KEY` release secret.
 Never substitute IslandBar's key or check a private key into this repository.
 
-Each release attaches these three update assets:
+Each release attaches these three updater-compatible assets:
 
 - `Blast-Circuit-macos-arm64.zip`
 - `Blast-Circuit-update.json` — version, archive size and SHA-256
 - `Blast-Circuit-update.json.sig` — base64 ECDSA/SHA-256 signature over the exact manifest bytes
+
+A separate signed `Blast-Circuit-release.json` inventory also binds both client
+and server delivery archives and their metadata. Existing clients continue using
+the unchanged updater manifest format and public key.
 
 Only official HTTPS release/CDN URLs are accepted. The manifest signature,
 archive length/hash, safe extraction paths, app identity/version and recursive

@@ -51,6 +51,17 @@ def targets_from_json(value):
     return targets
 
 
+def placements_from_json(value, targets):
+    placements = json.loads(value)
+    if not isinstance(placements, dict) or set(placements) != set(targets):
+        raise RuntimeError('deployment needs explicit expected serverId/region placement for every target')
+    for item in placements.values():
+        if (not isinstance(item, dict) or set(item) != {'serverId', 'region'} or
+                any(not isinstance(item[key], str) or not re.fullmatch(r'[A-Za-z0-9_.-]+', item[key]) for key in item)):
+            raise RuntimeError('deployment placements need nonempty serverId and region identifiers')
+    return placements
+
+
 def verify(targets, release, revision):
     expected = dict(release, revision=revision)
     receipts = []
@@ -93,11 +104,18 @@ def build_probe():
     return root, project
 
 
-def verify_connections(targets):
+def verify_connections(targets, placements=None):
     root, project = build_probe()
     for name, origin in targets.items():
-        probe = subprocess.run(['dotnet', 'run', '--no-build', '--project', str(project), '--', origin],
-                               cwd=root, capture_output=True, text=True, timeout=45)
+        placement = placements.get(name) if placements else None
+        arguments = ['dotnet', 'run', '--no-build', '--project', str(project), '--', origin]
+        if placement:
+            arguments.extend([placement['serverId'], placement['region']])
+        try:
+            probe = subprocess.run(arguments, cwd=root, capture_output=True, text=True, timeout=125)
+        except (subprocess.TimeoutExpired, OSError) as error:
+            log = private_failure_log(str(error))
+            raise RuntimeError('Deployment connection probe timed out or could not start: ' + name + '. Private log: ' + log) from None
         if probe.returncode or not any(re.fullmatch(r'PASS [1-9][0-9]* release connection and cleanup checks', line) for line in probe.stdout.splitlines()):
             log = private_failure_log(probe.stdout + probe.stderr)
             raise RuntimeError('Deployment real lobby/WebSocket connection failed: ' + name + '. Private log: ' + log)

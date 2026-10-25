@@ -278,7 +278,12 @@ diagnostic and fails on other unregister errors. Never broadly delete artifacts.
 ## CI and publication boundaries
 
 Read [release identity and deployment gates](../releases.md) before changing
-release configuration. `Release.props` is canonical; export drift fails public
+release configuration or preparing, retrying or recovering a release. Start with
+`python3 tools/ci/release.py doctor --publish`; the release guide owns the
+prepare/dispatch/recovery sequence and completion receipt. Keep the exact tested
+run/artifacts across retries instead of rebuilding unchanged content. Signed
+updates and ad-hoc app signing remain the chosen delivery policy.
+`Release.props` is canonical; export drift fails public
 QA. Run actionlint over all three workflow files. Server delivery now includes
 the exact plugins used by the fleet drill. Both manual and automatic publication
 require the protected deployment gate and matching live release identities.

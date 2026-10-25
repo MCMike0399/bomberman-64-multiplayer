@@ -40,8 +40,13 @@ def check_exports(root=ROOT, write=False):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--sync', action='store_true')
+    parser.add_argument('--json', action='store_true', help='Machine-readable identity for operator probes')
     args = parser.parse_args()
     release = check_exports(write=args.sync)
+    if args.json:
+        import json
+        print(json.dumps(release))
+        return
     print(f"Release v{release['version']} build {release['build']}; online token {release['admissionToken']}")
 
 
