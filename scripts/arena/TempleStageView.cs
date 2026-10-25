@@ -83,7 +83,7 @@ public partial class TempleStageView : Node3D
         _stone=_art.Stone();_cobble=_art.Stone(true);
         _masonry=_art.Masonry();_bedrock=_art.Bedrock();var wall=_masonry;var cap=_art.Color(new("e8cc82"));
         _water=new MeshInstance3D {Mesh=new PlaneMesh {Size=new Vector2(160,160),SubdivideWidth=180,SubdivideDepth=180},MaterialOverride=_art.Water(),Position=new Vector3(Width/2f,-.53f,Depth/2f),CastShadow=GeometryInstance3D.ShadowCastingSetting.Off};AddChild(_water);
-        if(Layout.Id==BlastStages.UpAndDown){BuildUpAndDown();return;}
+        if(Layout.Id==BlastStages.UpAndDown&&cells.Cast<CellDef>().Any(c=>c.Below!=null)){BuildUpAndDown();return;}
         bool temple=Layout.Id==BlastStages.SunkenTemple;
         for(int z=0;z<Depth;z++)for(int x=0;x<Width;x++)
         {

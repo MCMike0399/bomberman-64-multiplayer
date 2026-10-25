@@ -183,7 +183,12 @@ fitting and framing checks include lower surfaces and standing headroom.
 The authority's fractional ramp endpoints drive the render slope; visual treads
 sit just above it. The ordinary battle camera remains distinct from oblique
 inspection captures. All four existing lighting profiles and graphics presets
-apply to the new arena.
+apply to the new arena. Older packets without bridge surfaces retain generic
+terrain rendering. The shared menu plate builder uses clockwise faces with
+outward normals; `asset-audit` retains the winding regression. `menu-preview`
+exercises preparation, preset changes, asset inspection and real setup navigation;
+setup checks the rendered green summit as well as settings state. Agent image
+inspection is still required.
 
 ### Four stage lighting variants (2026-10-23)
 

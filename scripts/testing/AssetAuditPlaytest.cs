@@ -1,8 +1,11 @@
 using Godot;
 using System.Text;
 using BlastCircuit.Arena.Models;
+using BlastCircuit.Arena;
+using System.Text.Json;
 using BlastCircuit.Rendering;
 using BlastCircuit.UI;
+using BlastCircuit.UI.Menu;
 namespace BlastCircuit.Testing;
 
 public partial class PlaytestDriver
@@ -13,6 +16,30 @@ public partial class PlaytestDriver
         using var empty=new ArrayMesh();
         Check(AuditMeshProblems(empty).Count>0,"asset audit rejects an empty mesh");
         Check(AuditVertexProblems([Vector3.Zero,Vector3.Right,new Vector3(float.NaN,1,0)]).Contains("nonfinite vertex"),"asset audit rejects nonfinite geometry before renderer submission");
+        var plaques=new Node3D();
+        try
+        {
+            foreach(var size in new[]{new Vector3(7.25f,1.19f,.3f),new Vector3(23,.24f,10)})
+            {
+                var plaque=ArcadeBackdrop.ChamferBox(plaques,Vector3.Zero,size,ArcadeBackdrop.Surface("deb85e"));
+                var arrays=plaque.Mesh.SurfaceGetArrays(0);
+                var vertices=arrays[(int)Mesh.ArrayType.Vertex].AsVector3Array();
+                var normals=arrays[(int)Mesh.ArrayType.Normal].AsVector3Array();
+                bool outward=true;
+                for(int i=0;i<vertices.Length;i+=3)
+                    outward&=(vertices[i+2]-vertices[i]).Cross(vertices[i+1]-vertices[i]).Normalized().Dot(normals[i])>.99f;
+                Check(outward,"menu plaque triangles face their declared normals using Godot clockwise winding: "+size);
+            }
+        }
+        finally{plaques.Free();}
+        var legacyStage=new TempleStageView(new ArtMaterials());
+        try
+        {
+            legacyStage.Build(JsonSerializer.SerializeToElement(new {id="up-and-down",width=3,height=3,
+                cells=Enumerable.Repeat(new {k=0,t=0,rf=0,rt=0,rx=0,rz=0},9).ToArray()}));
+            Check(legacyStage.FindChild("CrownMosaic",true,false)==null,"older stage packets retain their received terrain instead of receiving new suspended props");
+        }
+        finally{legacyStage.Free();}
         foreach(var (path,font) in new[]{("res://assets/fonts/DelaGothicOne-Regular.ttf",ArcadeTheme.Display),("res://assets/fonts/MPLUSRounded1c-ExtraBold.ttf",ArcadeTheme.Body)})
         {
             Check(AuditResourcePresent(path)&&font is FontFile {Data.Length:>0}&&font.ResourcePath==path,"bundled font loads directly rather than silently falling back: "+path);

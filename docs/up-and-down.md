@@ -52,6 +52,7 @@ and visible targets remain height-aware.
 `TempleStageView.UpAndDown.cs` builds independent procedural pale stonework,
 fluted foundations, square friezes, purple panels/flights, yellow landing arrows
 and a green crown mosaic. Thin bridge slabs receive no solid foundation.
+Older stage packets without bridge metadata keep the generic terrain renderer.
 The menu miniature/preview follows the real layout. Camera fitting includes
 both floors with player headroom; all existing lighting/graphics choices apply.
 
@@ -71,6 +72,10 @@ journey uses ordinary inputs in practice, then an ordinary cover-filled
 three-human match; it observes sea contact and timed low/middle flooding.
 Inspection cameras are labeled separately from ordinary battle-camera captures.
 The scenario belongs to both graphical `all` and `core-headless`.
+`asset-audit` also checks menu-plate face winding and legacy packet presentation;
+`menu-preview` combines effect preparation, graphics switching, asset inspection
+and setup to exercise the rendered miniature. The whole graphical suite has a
+bounded 1200-second budget; the QA profile honors the catalog deadline.
 
 ```sh
 dotnet run --project tests/Bomber.Game.Tests -- --up-and-down

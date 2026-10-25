@@ -197,7 +197,8 @@ public partial class ArcadeBackdrop : RenderSurface
         void Triangle(Vector3 a,Vector3 b,Vector3 c)
         {
             var normal=(b-a).Cross(c-a).Normalized();
-            foreach(var v in new[]{a,b,c}){builder.SetNormal(normal);builder.AddVertex(v);}
+            // Godot's front faces are clockwise; keep the outward shading normal.
+            foreach(var v in new[]{a,c,b}){builder.SetNormal(normal);builder.AddVertex(v);}
         }
         for(int i=0;i<8;i++)
         {

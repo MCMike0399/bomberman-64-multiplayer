@@ -2,6 +2,19 @@
   "schemaVersion": 1,
   "scenarios": [
     {
+      "id": "menu-preview",
+      "method": "MiniaturePreviewRegression",
+      "domains": [
+        "rendering",
+        "ui",
+        "settings",
+        "performance"
+      ],
+      "headless": false,
+      "timeout": 420,
+      "manual": false
+    },
+    {
       "id": "up-and-down",
       "method": "UpAndDownTour",
       "domains": [
@@ -563,7 +576,7 @@
         "ui"
       ],
       "headless": false,
-      "timeout": 900,
+      "timeout": 1200,
       "manual": false
     },
     {
