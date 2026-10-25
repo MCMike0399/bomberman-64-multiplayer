@@ -222,7 +222,6 @@ def main(argv=None):
             raise RuntimeError('This release requires --signing-key for authenticated in-app updates')
         if args.publish:
             verify(targets, check_exports(), revision)
-            verify_connections(targets, placements)
         notes = directory / 'release-notes.txt'
         notes.write_text(f'Apple Silicon client and portable .NET 10 server from {revision}.\n\n'
                          f'Verification: https://github.com/{args.repository}/actions/runs/{args.run_id}\n\n'

@@ -210,7 +210,8 @@ receipts; inspect them on the runner and remove them under operator retention.
 Successful deployments upload `deployment-receipt.json` (30 days), containing
 only source/release identity and per-target verdicts. Publication stages all assets as a draft, downloads them and compares exact
 bytes, then rechecks live identities and matches immediately before publishing.
-An interrupted upload stays a draft. In addition to the existing updater manifest,
+An interrupted upload stays a draft. Promotion runs the expensive match/retirement
+probe once after upload, avoiding a redundant pre-upload match cycle. In addition to the existing updater manifest,
 `Blast-Circuit-release.json` and its P-256 signature bind client/server ZIPs,
 source/release metadata and the updater manifest as one delivery. The existing
 updater format and public key stay unchanged. Ad-hoc app signing remains the

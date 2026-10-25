@@ -60,7 +60,7 @@ class PromotionTests(unittest.TestCase):
         upload.start()
         self.addCleanup(upload.stop)
         probe = patch.object(promotion, 'verify_connections')
-        probe.start()
+        self.connection_probe = probe.start()
         self.addCleanup(probe.stop)
 
     def test_new_release_upload_failure_never_exposes_incomplete_public_release(self):
@@ -196,6 +196,7 @@ class PromotionTests(unittest.TestCase):
             return ''
         with patch.object(promotion, 'inspect_run', return_value=SHA), patch.object(promotion, 'gh', side_effect=github), patch.object(promotion.subprocess, 'run') as signer, patch.dict(os.environ, {'BLAST_RELEASE_SERVER_URLS': '{"public":"https://game.example"}', 'BLAST_RELEASE_PLACEMENTS': '{"public":{"serverId":"primary","region":"primary"}}'}), patch.object(promotion, 'verify') as deployed, patch.object(promotion, 'require_current_main', side_effect=RuntimeError('main advanced')), contextlib.redirect_stdout(io.StringIO()):
             promotion.main(['--run-id', '12', '--version', '0.15.0', '--repository', REPO, '--publish', '--signing-key', '/fixture/private-key'])
+        self.connection_probe.assert_called_once()
         self.assertEqual(2, deployed.call_count)
         deployed.assert_called_with({'public': 'https://game.example'}, RELEASE, SHA)
         signer.assert_called_once()
