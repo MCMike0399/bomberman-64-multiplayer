@@ -513,6 +513,7 @@
         "player-settings",
         "stage-lighting",
         "asset-audit",
+        "menu-navigation",
         "menu",
         "wasd-navigation",
         "setup",
@@ -819,6 +820,44 @@
       ],
       "headless": true,
       "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "menu-navigation",
+      "method": "MenuNavigation",
+      "domains": [
+        "input",
+        "ui"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "menu-ux",
+      "steps": [
+        "menu-navigation",
+        "wasd-navigation",
+        "controller-popups",
+        "controllers",
+        "menu",
+        "setup",
+        "ui-layout",
+        "player-settings",
+        "tutorial",
+        "network"
+      ],
+      "domains": [
+        "gameplay",
+        "input",
+        "mechanics",
+        "network",
+        "rendering",
+        "settings",
+        "ui"
+      ],
+      "headless": false,
+      "timeout": 900,
       "manual": false
     },
     {

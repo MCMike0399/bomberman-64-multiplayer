@@ -44,9 +44,9 @@ On macOS, the installed editor can also launch it directly:
 
 The game opens fullscreen. **F11** or **Alt+Enter** switches between fullscreen and a window; run `./tools/dev/client.sh --windowed -- --display-windowed` for a windowed launch.
 
-Choose **LOCAL BATTLE**, then set each of the eight roster slots to **Human**, **CPU**, or **Off** and choose a suit color. The selected character walks on a shared lit 3D stage using the same articulated model seen in battle. Continue to the miniature arena stage and arrow-controlled rules, choose Easy/Medium/Hard CPU difficulty, then start with **2–8 total participants**. **PRACTICE** lets one player explore the map and rehearse bomb handling without CPU opponents. Thirteen expiring training pickups teach bomb capacity, fire, red power, remote detonation, hearts, bouncing bombs, fast bombs Focus and temporary size/speed effects; **RESET PRACTICE** restores the cache. One human can play with up to seven bots. Local play works without a server. Two keyboard seats are available; additional local seats require connected gamepads. With three or more local humans, the first two seats use keyboards and up to six gamepads fill seats 3–8 in connection order. With one or two humans, the corresponding gamepads also work as optional controls.
+Choose **LOCAL BATTLE**, then set each of the eight roster slots to **Human**, **CPU**, or **Off** and choose a suit color. The selected character walks on a shared lit 3D stage using the same articulated model seen in battle. Continue to the miniature arena stage and arrow-controlled rules, choose Easy/Medium/Hard CPU difficulty, then start with **2–8 total participants**. **PRACTICE** lets one player explore the map and rehearse bomb handling without CPU opponents. Sunken Temple and Circuit Garden start with six expiring training pickups: three capacity/fire upgrades, two buffs/debuffs and one bomb type. **RESET PRACTICE** rolls a fresh cache; advanced item toggles support targeted practice. One human can play with up to seven bots. Local play works without a server. Two keyboard seats are available; additional local seats require connected gamepads. With three or more local humans, the first two seats use keyboards and up to six gamepads fill seats 3–8 in connection order. With one or two humans, the corresponding gamepads also work as optional controls.
 
-**Advanced settings** in match configuration controls item drop chance (55% by default), block amount, item lifetime (20 seconds), blast and bomb stack caps (five each), temporary effect duration (10 seconds), and which items may spawn. Every destroyed block rolls independently. Uncollected items expire in battle and practice. Tiny makes you smaller/faster; Big makes you larger/slower; Haste and Slow change only movement speed. A new temporary effect replaces the previous one. Room leaders can set the same rules before starting an online match.
+**Advanced settings** in match configuration controls item drop chance (40% by default), block amount, item lifetime (20 seconds), blast and bomb stack caps (five each), temporary effect duration (10 seconds), and which items may spawn. Every destroyed block rolls independently. Drops favor capacity/fire upgrades (60%), followed by buffs/debuffs (30%) and bomb types (10%); disabled items are removed before drawing. Uncollected items expire in battle and practice. Tiny makes you smaller/faster; Big makes you larger/slower; Haste and Slow change only movement speed. A new temporary effect replaces the previous one. Room leaders can set the same rules before starting an online match.
 
 
 ## macOS app
@@ -112,7 +112,7 @@ Normal battle defaults to **one minute of normal play + one minute of sudden dea
 
 Deliberate aim covers 0–9 cells on level ground, with a high lob that can reach upper terraces. The target can cross through your position to aim behind you; a close self-lob can hit you. The outlined reticle stays visible over scenery: a ring marks a landing, an X marks a blocked or unsafe endpoint, and an edge arrow points toward an endpoint outside the frame. It has no added text labels. The prediction accounts for terrain height, cover, walls and fuse expiry; moving opponents can still interrupt the flight. Pumping increases blast power without shifting an aimed landing. The Focus ability charges faster and gently nudges a neutral aiming cursor toward a nearby visible opponent. Any deliberate stick/key adjustment takes priority; it never hard-locks a target. [Reticle diagnosis](docs/history/iteration17-reticle.md); [original manual controls and project choices](docs/history/iteration16-controls-research.md).
 
-Menus accept **WASD or arrow keys**, with Enter to confirm and Esc to go back; text fields still accept letters normally. **Start / Menu / + / Options** focuses the primary action in menus, including **Start game** for the lobby leader. During play, Esc or Start opens **Resume game / Settings / Leave game**. Local play pauses; online play continues with your inputs released.
+Menus accept **WASD or arrow keys**, with Enter to confirm, Tab/Shift+Tab to move between controls, and Esc to return to the previous menu and restore your selection. Text fields still accept letters normally. **L/R, LB/RB or L1/R1** switches columns while remembering your place; left/right still edits rules and moves between grid seats/items on the same row. **Start / Menu / + / Options** focuses the primary action without activating it: Continue, Start/Save, Try it, Resume or Back, including **Start game** for the lobby leader. During play, Esc or Start opens **Resume game / Settings / Leave game**. Local play pauses; online play continues with your inputs released.
 
 **Settings** is available from the main menu, room and game menu. Sound volume and controller vibration are saved on this Mac. Vibration is **off by default**; enable it and use **Test vibration** to check your controller. Supported controllers receive brief feedback for accepted bomb placement, pumping, kicks, impacts and deaths.
 
@@ -120,7 +120,7 @@ From v0.21, **Settings → Game updates** checks for signed GitHub releases auto
 
 Keyboard 2 also supports numpad 0 / 1 / 2 / 3 for bomb / carry / remote / stop. Switch uses its **printed A to confirm and B to go back**. Xbox/PlayStation retain bottom-button confirm and right-button back, with matching prompts. F11 or Alt+Enter toggles fullscreen.
 
-Choose **CONTROLS & CONTROLLER TEST** on the main menu to inspect connected pads and live inputs. Face buttons stay in the tester; Menu / + / Options or Esc leaves it. The roster shows which pad accompanies each human seat. Two-human matches allow one pad per player alongside the two keyboard layouts; larger matches reserve the first two humans for keyboards and assign pads to the remaining humans.
+Choose **CONTROLS & CONTROLLER TEST** on the main menu to inspect connected pads and live inputs. Face buttons stay in the tester until Menu / + / Options focuses Back; then confirm to leave. Esc returns immediately. The roster shows which pad accompanies each human seat. Two-human matches allow one pad per player alongside the two keyboard layouts; larger matches reserve the first two humans for keyboards and assign pads to the remaining humans.
 
 All devices run at the same maximum running speed, including diagonal keyboard movement. Stick direction is continuous through 360 degrees. Character rendering now interpolates between authoritative snapshots rather than repeatedly catching up to each one, and the stride/turn animation follows that smooth motion. Sticks retain their analog direction but use full running speed beyond the **20% radial deadzone**. Precision aim preserves stick magnitude for fine adjustment; keyboard taps use the same slow-start ramp and all devices share a six-cell/second cursor limit. While aiming, an active right stick takes priority; otherwise D-pad input takes priority over the left stick, then keyboard. Directions are never added together. Short bomb, remote and stop taps are buffered, holding bomb does not auto-repeat, and actions must be released after entering a match or returning focus. Disconnecting a pad reserves its seat without moving another player's controls. Identical controllers that both reconnect under ambiguous identities require restarting the match to assign them safely.
 
@@ -146,7 +146,7 @@ Explosions use spherical distance and cover occlusion rather than a classic grid
 ## Equipment and charging
 
 Bomb capacity and normal blast strength stack to five by default; both caps are configurable.
-One bomb-type slot holds red, remote, bouncing or fast bombs; a separate ability
+Black bombs are the starting type. One bomb-type slot holds red, remote or bouncing bombs; a separate ability
 slot holds a protective heart or Focus. Picking a replacement drops the previous
 equipment for other players. The old holder cannot immediately reclaim it, and
 the dropped item disappears after the configured lifetime (20 seconds by default).
@@ -155,8 +155,10 @@ Duplicate equipment and capped upgrades remain available for others until expiry
 Red bombs produce blue explosions with 25% more radius and penetrate breakable
 cover. Blue remote bombs use command indicators with no burning fuse. Purple
 bouncing bombs roll normally, ricochet off walls, and rebound on the ground after
-a charged throw. Stop still halts kicked bombs. Mint fast bombs travel 50% faster. Their
-travel never resets the fuse. Normal charging takes 0.45 seconds per level;
+a charged throw. Stop still halts kicked bombs. Haste is a temporary player buff:
+it increases Bomberman’s movement speed by 50% without changing the bomb slot,
+bomb travel or fuse. It lasts 10 seconds by default and shares the timed effect
+slot with Tiny, Big and Slow. Normal charging takes 0.45 seconds per level;
 Focus takes 0.15. Each tap queues one level, up to three. Throwing early uses only
 completed levels. Larger charged bombs have stronger gravity and a much smaller
 head-hit rebound; the reticle uses the same flight rules.

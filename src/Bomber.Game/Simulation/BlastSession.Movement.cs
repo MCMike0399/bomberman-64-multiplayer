@@ -10,6 +10,11 @@ public sealed partial class BlastSession
 
     private const float PlayerSpeed = 4.5f;  // cells/sec
     private const float PlayerRadius = 0.4f;
+    // Ledge falls have a short, weighty descent and limited correction. These
+    // are project tuning; original Bomberman 64 constants are undocumented.
+    private const float LedgeFallGravity = 24f;
+    private const float LedgeAirSpeedScale = .45f;
+    private const float LedgeAirAcceleration = 8f;
 
     /// <summary>How high above its tier a player stands: a bomb coming down below this lands on their head.</summary>
     private const float HeadHeight = 1.2f;
@@ -49,6 +54,7 @@ public sealed partial class BlastSession
 
     private void ApplyMoveDelta(BlastPlayer p, float dx, float dz,float dt)
     {
+        float startX=p.X,startZ=p.Z;
         var originX=(int)MathF.Floor(p.X);var originZ=(int)MathF.Floor(p.Z);
         var previousY=p.Y;
         // Axis-separated to allow sliding along walls.
@@ -68,7 +74,8 @@ public sealed partial class BlastSession
         if(!p.Ghost&&ground<previousY-.05f&&!CellsConnected(originX,originZ,(int)MathF.Floor(p.X),(int)MathF.Floor(p.Z),previousY))
         {
             p.Airborne=true;p.Falling=true;p.AirVY=0;
-            p.AirVX=dx/Math.Max(dt,.0001f);p.AirVZ=dz/Math.Max(dt,.0001f);
+            p.AirVX=(p.X-startX)/Math.Max(dt,.0001f)*LedgeAirSpeedScale;
+            p.AirVZ=(p.Z-startZ)/Math.Max(dt,.0001f)*LedgeAirSpeedScale;
             Present("player-fall",p.Id,p.Id,p.X,p.Y,p.Z);
             return;
         }
@@ -77,6 +84,15 @@ public sealed partial class BlastSession
         // Elimination: out-of-bounds or void/water cell.
         if (cell.IsElimination || p.X < 0 || p.X >= _stage.Width || p.Z < 0 || p.Z >= _stage.Height)
             Eliminate(null, p, cell.Kind == CellKind.Water ? "water" : "fall");
+    }
+
+    private static void SteerFallingPlayer(BlastPlayer p,InputState input,float dt)
+    {
+        float speed=PlayerSpeed*p.StatusSpeed*LedgeAirSpeedScale;
+        float dx=input.X*speed-p.AirVX,dz=input.Z*speed-p.AirVZ;
+        float change=MathF.Sqrt(dx*dx+dz*dz);
+        float scale=change>0?Math.Min(1,LedgeAirAcceleration*dt/change):0;
+        p.AirVX+=dx*scale;p.AirVZ+=dz*scale;
     }
 
     // Water/void cells have no floor. Their default Tier=0 is serialization

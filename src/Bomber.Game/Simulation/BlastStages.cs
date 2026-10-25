@@ -194,7 +194,7 @@ public static partial class BlastStages
                 new("east-walkway",.075,20,23,15,25,1,1){Centers=[(23,21),(20,24)]},
                 new("side-terraces",.15,3,21,3,10,2,3){Centers=[(5,8),(19,8),(7,4),(17,4)]},
                 new("base-approaches",.1,1,23,3,14,1,1){Centers=[(3,11),(21,11)]}],
-            TrainingItems = [(10,12,"fire"),(9,12,"fire"),(14,12,"bomb"),(10,13,"remote"),(14,13,"red"),(12,13,"heart"),(16,12,"bounce"),(17,13,"fast"),(8,13,"focus"),(9,15,"tiny"),(15,15,"big"),(10,16,"haste"),(14,16,"slow")],
+            TrainingItems = [(10,12,"fire"),(9,12,"fire"),(14,12,"bomb"),(10,13,"remote"),(14,13,"red"),(12,13,"heart"),(16,12,"bounce"),(8,13,"focus"),(9,15,"tiny"),(15,15,"big"),(10,16,"haste"),(14,16,"slow")],
             ClearCells = Enumerable.Range(0, width).SelectMany(x => Enumerable.Range(0, height).Select(z => (X:x,Z:z)))
                 .Where(c => cells[c.X,c.Z].Tier>=4 || (c.X>=11&&c.X<=13&&c.Z<=13) || c.Z is 12 or 13 ||
                     c.Z>=15&&(c.X is 3 or 8 or 12 or 16 or 21 || c.Z==20)).ToHashSet(),

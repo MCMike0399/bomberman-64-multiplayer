@@ -111,7 +111,7 @@ public sealed partial class BlastSession
                     if(!AirborneTerrainBlocks(nx,p.Z,p))p.X=nx;
                     if(!AirborneTerrainBlocks(p.X,nz,p))p.Z=nz;
                     float previousY=p.Y;
-                    p.AirVY-=9.8f*stepDt;p.SurfaceY+=p.AirVY*stepDt;
+                    p.AirVY-=(p.Falling?LedgeFallGravity:9.8f)*stepDt;p.SurfaceY+=p.AirVY*stepDt;
                     float ceiling=_stage.Ceiling(p.X,p.Z,PlayerRadius,previousY,p.Y,HeadHeight);
                     if(ceiling<p.Y){p.SurfaceY=ceiling;p.AirVY=Math.Min(0,p.AirVY);}
                     var cell=_stage.AtHeight((int)MathF.Floor(p.X),(int)MathF.Floor(p.Z),previousY);

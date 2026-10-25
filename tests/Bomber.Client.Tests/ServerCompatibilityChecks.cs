@@ -10,7 +10,7 @@ internal static class ServerCompatibilityChecks
     public static async Task<int> Run()
     {
         int checks=0;
-        foreach(string[]? advertised in new string[]?[]{null,["1"],["2"],[OnlineProtocol.WireRevision,OnlineProtocol.WireRevision],[OnlineProtocol.WireRevision]})
+        foreach(string[]? advertised in new string[]?[]{null,["1"],["2"],["3"],["4"],[OnlineProtocol.WireRevision,OnlineProtocol.WireRevision],[OnlineProtocol.WireRevision]})
         {
             using var handler=new Reply(advertised);
             var constructor=typeof(NetworkSession).GetConstructor(BindingFlags.Instance|BindingFlags.NonPublic,null,[typeof(Uri),typeof(HttpMessageHandler)],null)!;

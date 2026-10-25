@@ -181,14 +181,18 @@ and the input guide; older iteration tables are historical.
   living status or remote capability resumes the remaining ordinary fuse.
 - Remote command selects the oldest eligible owned remote, including moving bombs.
   AI opportunity evaluation must inspect the exact bomb authority would detonate.
-- One bomb slot holds red, remote, bouncing or fast equipment; one independent
+- Black bombs are the starting type. One bomb slot holds red, remote or bouncing equipment; one independent
   ability slot holds heart protection or Focus. Capacity/fire still stack. A
   replacement drops the old equipment for anyone else to collect immediately;
   the former holder has a 1.5-second pickup lock. All items expire after the configured lifetime (20 seconds by default), including
   practice caches. Duplicate equipment and capped stacks remain for others until expiry.
 - Existing bombs keep their mode, subject to orphaned-remote fallback. Red blasts
   pierce soft cover and have 25% more physical radius; their flame is blue.
-  Fast bombs move at 1.5x their normal kick/flight clock without speeding the fuse.
+  Fast bomb equipment was removed on 2026-10-25. Haste speeds the player by 50%
+  in the existing temporary-effect slot; it preserves bomb/ability equipment,
+  existing remote ownership, bomb travel and fuse timing. Its former drop weight
+  now belongs to Haste. The `motionRate` snapshot field remains a constant 1 for
+  peer-frame compatibility.
   Bouncing bombs reflect from walls, roll normally when kicked, and rebound up to three times from charged thrown landings and
   retain a finite 3.5-second fuse. Stop cancels kicked-bomb travel; gravity still settles a bomb over a drop.
   Uncharged throws settle on first landing. The user explicitly rejected automatic
@@ -203,6 +207,12 @@ and the input guide; older iteration tables are historical.
 
 ## Contact, terrain and recovery
 
+- Ordinary ledge falls use heavier gravity, 45% of status-adjusted ground speed
+  and bounded air acceleration. Departure uses collision-resolved velocity;
+  release/reversal preserve a short coast. Full ground-speed air steering is
+  superseded. Thrown/knocked players and bombs retain their own trajectories;
+  ordinary landing restores controls without stun. [References, tuning comparisons
+  and regression entrypoints](../falling-physics.md).
 - [Kicks](../../src/Bomber.Game/Simulation/BlastSession.Kicks.cs) commits direction
   during a planted wind-up and revalidates the bomb at strike time. Fuses continue;
   stun/fall/death/disconnect/reset cancel pending strikes; consumed edges stay consumed.
@@ -272,7 +282,7 @@ and the input guide; older iteration tables are historical.
 
 ## Blizzard Battle (2026-10-25)
 
-[Stage contract](../blizzard-battle.md) owns the flat enclosed snowfield, sixteen authored ice cones (1.3-unit stage-owned cover height), eight seats, shared seeded weather and bilateral avalanche closure. Wind affects free bombs and living players through collision, with weaker player response, and the advisory arc uses the same future schedule. Preserve fuse clocks and carried attachment. CPU closure avoidance uses the three-second avalanche interval. Protocol revision 4 gates the expanded stage/weather contract.
+[Stage contract](../blizzard-battle.md) owns the flat enclosed snowfield, sixteen authored ice cones (1.3-unit stage-owned cover height), eight seats, shared seeded weather and bilateral avalanche closure. Wind affects free bombs and living players through collision, with weaker player response, and the advisory arc uses the same future schedule. Preserve fuse clocks and carried attachment. CPU closure avoidance uses the three-second avalanche interval. Protocol revision 5 gates the expanded stage/weather contract.
 
 ## Top Rules castle (2026-10-24)
 
@@ -325,14 +335,15 @@ now covers five stages (60 combinations), including Blizzard Battle.
   and ascent stay clear; thin court lanes replace the old broad empty strips.
   Rock Garden has sixteen boulders with clear center routes. Up & Down has twelve
   lower/middle blocks, keeping its ring, summit, bridges and flights clear.
-- Advanced match settings (v0.25) default to a uniform independent 55% chance per
-  destroyed block. Item weights are Fire/Bomb 30% each, remote/red 7% each, bounce
-  6%, fast 4%, heart/Focus/Tiny/Big 3% each, Haste/Slow 2% each. Disabled types are
+- Advanced match settings default to a uniform independent 40% chance per
+  destroyed block. Item weights are Fire/Bomb 30% each,
+  Heart/Focus/Tiny/Big/Haste/Slow 5% each; Remote/Red/Bounce divide the remaining 10% equally.
+  Thus upgrades lead (60%), buffs/debuffs follow (30%) and bomb types are rare (10%). Disabled types are
   removed before drawing and remaining weights are renormalized. An empty pool
   yields nothing. Death/swap/training items also respect the enabled pool.
 - `AdvancedRules` owns drop chance (0–100%), block amount (0–100% of the authored
   regional budget), item lifetime (5–60s), blast cap (1–5), bomb cap (1–8), effect
-  duration (5–30s) and per-item exclusions. Defaults: 55%, 100%, 20s, 5, 5, 10s.
+  duration (5–30s) and per-item exclusions. Defaults: 40%, 100%, 20s, 5, 5, 10s.
   Starting capacity is min(3, configured cap); blast starts at one, and three
   pumps can raise a maximum five-stack blast to effective level eight.
 - Tiny uniformly scales the model to .65 and movement to 1.5; Big uses 1.4/.65.
@@ -346,8 +357,14 @@ now covers five stages (60 combinations), including Blizzard Battle.
   its code, practice mode and unsaved basic settings when navigating back.
 - Richer farming areas intentionally permit collection detours. CPU goals use
   marginal upgrade value and an engagement clock that crate farming cannot reset.
-  After four seconds without threatening a rival, CPUs favor a reachable attack
-  and do not stop to bomb incidental cover while an open route toward that rival exists.
+  After their difficulty-specific engagement interval without threatening a rival,
+  CPUs favor a reachable attack and do not stop to bomb incidental cover while an
+  open terrain route toward that rival exists. Easy allows six seconds between
+  engagements, Medium four and Hard 2.5; real pressure resets this clock.
+  Recheck this priority after orienting, immediately before the actual bomb
+  press. A plan selected just before the deadline must not execute overdue
+  incidental farming and force another escape. Refresh pursuit state for the
+  current bot before this recheck; sealed routes still permit demolition.
   The stock pressure contract now requires five threatening bombs in 30 seconds
   (previous layout: six), while retaining eight-second first/gap bounds and zero
   self-deaths. Preserve the measured tradeoff instead of claiming unchanged pressure.
@@ -366,6 +383,61 @@ now covers five stages (60 combinations), including Blizzard Battle.
   is identified separately from normal battle-camera evidence.
   [Loot checks](../../tests/Bomber.Game.Tests/LootAvailabilityChecks.cs).
 
+### Item density tuning (2026-10-25)
+
+The requested priority means relative appearance frequency: capacity/blast upgrades,
+then buffs/debuffs (including Heart and Focus), then bomb equipment. Every crate
+still rolls independently, including opening crates. There is no guaranteed first
+reward or forced chronological unlock. Local, peer-hosted and server matches share
+these rules; explicitly configured drop percentages still override the new default.
+
+A deterministic sweep compared 30%, 35%, 40%, 45% and the former 55% across all four
+battle maps and seeds 0–127 (2,560 matches per sweep). It shuffles the actual cover,
+then destroys every block through `DestroyBlocksInBlast`. Collection and expiry are
+excluded: these are upper bounds on simultaneous clutter, not observed average
+on-screen counts or a human fun rating. The same sweep was run before and after
+the weight change; probability totals match because the pool still totals 100.
+
+With the new weights, Temple's average total drops / probability of any upgrade
+within the first eight opened crates were:
+
+- 30%: 26.64 / 79.7%; sparse-map early-upgrade rates fell as low as 75.0%.
+- 35%: 31.02 / 85.2%; all three smaller maps reached only 83.6%.
+- 40%: 35.10 / 89.8%; smaller maps reached 85.9–86.7%.
+- 45%: 39.57 / 94.5%; more clutter for roughly four extra early-upgrade points.
+- 55%: 49.16 / 96.1%; the former density leaves substantially more items.
+
+40% is the selected compromise: roughly 27% fewer expected drops than 55%, with
+24 upgrade, 12 effect and four bomb-type drops expected per 100 destroyed blocks.
+Measured all-block totals at 40% versus the former 55% were Temple 35.10/49.16,
+Rock Garden 6.49/8.82, Up & Down 4.66/6.58 and Top Rules 4.80/6.48. Their 40%
+95th-percentile totals were 42, 10, 8 and 7. This preserves the honest possibility
+of dry openings: 10.9–18.0% of sampled matches had no item in their first four
+opened crates. Raising the rate to hide that would restore clutter.
+
+Default Temple and Circuit Garden practice caches now sample six authored
+pickups: three upgrades (two Fire, one Bomb), two effects and one bomb type.
+Six is the smallest cache with all three categories present in strictly
+decreasing counts; smaller caches force a tie or omit a category.
+The seed chooses which effects/mode appear. The Godot session entrypoints choose
+a fresh seed for each normal/free practice start or reset, so the same fixed
+cache is not repeated forever; explicitly seeded managed sessions remain fully
+repeatable. Normal battle and authored lessons retain their existing seed policy.
+Circuit Garden has a second authored Fire candidate to support that mix.
+Candidates are filtered before sampling. Explicitly restricted pools of six or
+fewer are kept intact for targeted practice; larger pools use category budgets
+and may yield fewer than six if a category is disabled. Authored lesson fixtures
+and initial map items remain independent of the cache selection. All ordinary
+items retain the configured lifetime (20 seconds by default), without automatic
+refill; equipment exchanged or dropped during play may temporarily add pickups.
+
+Raw local receipts are ignored under `artifacts/item-density/`: baseline/tuned
+sweeps and the retained failing priority witness. Reproduce with
+`dotnet run --project tests/Bomber.Game.Tests -- --loot-density-sweep`; use
+`--loot-density` for seeded category/cache/filtering/expiry regressions.
+The separate Fast-bomb-removal work owns the equipment roster; recheck the weights
+and full-type assertions when integrating that change.
+
 ## AI policy and known failure mechanisms
 
 - [Bots](../../src/Bomber.Game/Simulation/BlastSession.Bots.cs) selects ordinary intent;
@@ -380,6 +452,21 @@ now covers five stages (60 combinations), including Blizzard Battle.
   keep equal speed, collisions, resources, damage and visible information.
   `medium` and legacy wire `normal` select the same Medium profile.
   Exact policy values live in [BotDifficultyProfile](../../src/Bomber.Game/Simulation/Ai/BotDifficultyProfile.cs).
+- [BotObjectives](../../src/Bomber.Game/Simulation/BlastSession.BotObjectives.cs)
+  computes reverse distances along actual directed walk edges once engagement is
+  due. This rewards a necessary detour away from a rival. If cover seals every
+  route, a second field ignoring cover guides demolition; it grants no movement
+  permission. Tactical search still enforces bodies, bombs, cover and timed safety.
+  Reverse edges must preserve drops and separate bridge/underpass nodes.
+- Remote opportunity checks force the oldest eligible remote to time zero in a
+  separate danger field before approving its trigger, including visible chains
+  back to the owner. This strengthens the opportunity boundary independently of
+  the main planner's urgent escape branch. Candidate detonation forecasts cannot
+  rely on current soft cover: authority destroys cover before recursively
+  detonating chained bombs, and lingering hazards see the resulting terrain.
+  Permanent walls still shield. `ProactiveTacticsChecks` executes the actual
+  candidate command in paired soft-cover/permanent-wall fixtures, proving both
+  the rejected lethal chain and the retained safe attack.
 - Preserve escape validation and timed route safety when increasing pressure.
   Easy has occasional attack intent so cautious spacing cannot suppress every attack.
 - A body backed against stone needs body-aware route checks. Off-center diagonal
@@ -406,7 +493,7 @@ now covers five stages (60 combinations), including Blizzard Battle.
 | Aim misses or guide disappears | BombThrowRules, ThrowAim, ArenaView | AimedThrowChecks; `precision-aim`, `reticle` |
 | Missing upgrade/icon | Loot, PowerUpRules, PowerupModel | LootAvailabilityChecks; `loot-opening`, `asset-audit` |
 | Bot freeze | BotNavigation, body collision, timed search | NavigationLivenessChecks; `--liveness`, `--soak` |
-| Bot retreats forever or never threatens | BotGoalScore, commitment, blast geometry | `--pressure`, `--stock-human-pressure`; `ai-play` |
+| Bot retreats forever or never threatens | BotGoalScore, commitment, blast geometry | `--pressure`, `--stock-human-pressure`, `--tactics`; `ai-play` |
 
 Managed entrypoints: `dotnet run --project tests/Bomber.Game.Tests` and
 `dotnet run --project tests/Bomber.Ai.Tests -- --stock-human-pressure`.
@@ -444,4 +531,4 @@ five threatening bombs in 30 seconds, an eight-second maximum gap and zero death
 
 Top Rules thin decks pass blasts as demonstrated by the original official guide; solid masonry still shields and physical bodies/throws still collide with decks. Up & Down's corresponding blast penetration remains unverified, so it retains its authored shielding. [Evidence](../stage-fidelity-research.md#newly-recovered-top-rules-mechanics-evidence).
 
-Protocol 2 introduced the stage contract; current adaptive rooms negotiate protocol 3 at HTTP admission and the actual WebSocket worker, with a separate matching peer hello. Keep readiness/operator/leave/cancel paths available and test old-client update feedback. Lower cells must pass bounded schema validation before rendering. [Online protocol](../peer-hosting.md#online-stage-protocol-2-v028).
+Protocol 2 introduced the stage contract and protocol 3 added adaptive rooms. The v0.30 removal of Fast bomb semantics requires protocol 4 at HTTP admission, the actual WebSocket worker and peer hello. Keep readiness/operator/leave/cancel paths available and test protocol-3 update feedback before accepting game state. Lower cells must pass bounded schema validation before rendering. [Online protocol](../peer-hosting.md#online-stage-protocol-2-v028).

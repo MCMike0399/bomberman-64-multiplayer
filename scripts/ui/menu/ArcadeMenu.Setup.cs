@@ -22,12 +22,14 @@ public partial class ArcadeMenu
         var controls=ArcadeTheme.Quiet(ArcadeTheme.Button(menu,"Controls",()=>Navigation?.Invoke("Controls")));controls.Name="OpenControls";controls.CustomMinimumSize=new(0,48);
         controls.SizeFlagsHorizontal=SizeFlags.ShrinkCenter;
         var settings=ArcadeTheme.Quiet(ArcadeTheme.Button(menu,"Settings",()=>Navigation?.Invoke("Settings")));settings.Name="OpenSettings";settings.CustomMinimumSize=new(0,48);settings.SizeFlagsHorizontal=SizeFlags.ShrinkCenter;_settingsButton=settings;
+        RegisterNavigation("Modes",[],[],Choices(menu));
     }
 
     private void BuildControls()
     {
         var screen=Screen("Controls");var box=Card(screen,new(64,54),new(1312,746));
         var panel=new ControllerPanel();box.AddChild(panel);panel.BackRequested+=()=>BackRequested?.Invoke();
+        RegisterNavigation("Controls",[],[],Choices(panel));
     }
 
     private static ArcadeModeButton Mode(Node parent,string title,Action action,Color face,Color accent)
@@ -40,6 +42,7 @@ public partial class ArcadeMenu
     {
         var screen=Screen("Roster");var panel=new PanelContainer {Position=new(64,54),Size=new(1312,746)};panel.AddThemeStyleboxOverride("panel",ArcadeTheme.Panel(new Color(0,0,0,0),ArcadeTheme.Ink,0,0,12));screen.AddChild(panel);
         _localPlayers=new RosterSelection();panel.AddChild(_localPlayers);_localPlayers.LivePose=_background.Pose;_localPlayers.LineupChanged+=(slot)=>_background.ConfigureRoster(_localPlayers.Roster,slot);_localPlayers.ContinueRequested+=()=>Navigation?.Invoke("Setup");_localPlayers.BackRequested+=()=>BackRequested?.Invoke();
+        RegisterNavigation("Roster",[(Control)screen.FindChild("RosterBack",true,false)],[(Control)screen.FindChild("RosterContinue",true,false)],_localPlayers.FocusColumns);
     }
 
     public void ConfigureRosterSlot(int slot,RosterRole role,int appearance)=>_localPlayers.Configure(slot,role,appearance);
@@ -76,6 +79,7 @@ public partial class ArcadeMenu
         var advanced=ArcadeTheme.Quiet(ArcadeTheme.Button(rail,"Advanced settings",()=>Navigation?.Invoke("Advanced")));advanced.Name="AdvancedSettings";advanced.CustomMinimumSize=new(0,43);advanced.AddThemeFontSizeOverride("font_size",16);
         _notice=ArcadeTheme.Text(screen,"",16);_notice.Position=new(824,625);_notice.Size=new(490,58);_notice.AutowrapMode=TextServer.AutowrapMode.WordSmart;
         _launch=new ArcadeModeButton {Name="LaunchMatch",Text="Start Battle",Position=new(797,699),Size=new(550,86),FaceColor=Coral,Accent=ArcadeTheme.Gold};screen.AddChild(_launch);_launch.Pressed+=()=>LocalRequested?.Invoke();
+        RegisterNavigation("Setup",[back],[_launch],[_stageDial],Choices(rail));
         UpdateStageDescription();
     }
 
@@ -101,7 +105,7 @@ public partial class ArcadeMenu
         var grid=new GridContainer{Columns=2};grid.AddThemeConstantOverride("h_separation",14);grid.AddThemeConstantOverride("v_separation",10);items.AddChild(grid);
         foreach(var type in AdvancedRules.ItemTypes)
         {
-            string label=type switch{"fire"=>"Blast up","bomb"=>"Bomb up","remote"=>"Remote","red"=>"Power bomb","bounce"=>"Bounce","fast"=>"Fast bomb","heart"=>"Heart","focus"=>"Focus","tiny"=>"Tiny","big"=>"Big","haste"=>"Haste",_=>"Slow"};
+            string label=type switch{"fire"=>"Blast up","bomb"=>"Bomb up","remote"=>"Remote","red"=>"Power bomb","bounce"=>"Bounce","heart"=>"Heart","focus"=>"Focus","tiny"=>"Tiny","big"=>"Big","haste"=>"Haste",_=>"Slow"};
             var toggle=new ArcadeToggle{Name="Allow_"+type,Text=label,CustomMinimumSize=new(0,52),SizeFlagsHorizontal=SizeFlags.ExpandFill,ButtonPressed=true};grid.AddChild(toggle);
             toggle.Toggled+=enabled=>{var disabled=AdvancedRules.ItemTypes.Where(t=>t==type?!enabled:!_advanced.Allows(t));_advanced=_advanced with{DisabledItems=string.Join(',',disabled)};};
         }
@@ -111,6 +115,8 @@ public partial class ArcadeMenu
         reset.Name="ResetAdvanced";reset.CustomMinimumSize=new(240,52);
         actions.AddChild(new Control {SizeFlagsHorizontal=SizeFlags.ExpandFill});
         var back=ArcadeTheme.Button(actions,"Back to match settings",()=>BackRequested?.Invoke());back.Name="AdvancedBack";back.CustomMinimumSize=new(420,52);
+        var itemChoices=Choices(grid);
+        RegisterNavigation("Advanced",[],Choices(actions),Choices(rules),itemChoices.Where((_,i)=>i%2==0).ToArray(),itemChoices.Where((_,i)=>i%2==1).ToArray());
     }
 
     public void ShowAdvanced()
@@ -121,7 +127,7 @@ public partial class ArcadeMenu
             ((CheckButton)_screens["Advanced"].FindChild("Allow_"+type,true,false)).SetPressedNoSignal(_advanced.Allows(type));
     }
 
-    public void CloseAdvanced()=>ShowScreen(_advancedReturn);
+    public void CloseAdvanced()=>ShowScreen(_advancedReturn,restoreFocus:true);
 
     private ArcadeRuleDial Dial(Node parent,string caption,Func<string> value,Action<int> change)
     {

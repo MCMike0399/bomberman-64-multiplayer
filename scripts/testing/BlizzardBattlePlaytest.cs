@@ -58,7 +58,8 @@ public partial class PlaytestDriver
             }
             _root.Back();await Frames(3);
 
-            _root.StartLocal(new SessionSettings(Stage:BlastStages.BlizzardBattle,Bots:0),1,practice:true);
+            _root.StartLocal(new SessionSettings(Stage:BlastStages.BlizzardBattle,Bots:0,SuddenDeath:false)
+                {Advanced=new AdvancedRules{BlockPercent=0}},2);
             await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"snowfield exploration starts",150);
             float start=Player.GetProperty("x").GetSingle();await Frames(45);
             Check(Player.GetProperty("x").GetSingle()>start+.3f,"accepted wind moves an idle living player");
@@ -74,7 +75,7 @@ public partial class PlaytestDriver
 
             // Real cover destruction, never inventory/position mutation.
             _root.StartLocal(new SessionSettings(Stage:BlastStages.BlizzardBattle,Bots:0,SuddenDeath:false,Ghosts:false)
-                {Advanced=new AdvancedRules{DropPercent=100,DisabledItems="remote,red,bounce,fast,heart,focus,tiny,big,haste,slow"}},2);
+                {Advanced=new AdvancedRules{DropPercent=100,DisabledItems="remote,red,bounce,heart,focus,tiny,big,haste,slow"}},2);
             await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"ice cone loot battle starts",150);
             await MoveTo(5.5f,2.5f,120);
             Input(0,new PlayerInput(1,0));await Frames(1);Input(0,new PlayerInput(0,0,A:true));await Frames(2);Input(0,default);

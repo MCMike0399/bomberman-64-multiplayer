@@ -212,7 +212,7 @@ public sealed partial class BlastSession
 
         // A released stick still throws decisively clear of the carrier. Pumps
         // project the larger blast farther away, rewarding the setup with space.
-        var velocity = p.AimSet ? BombThrowRules.AimedVelocity(p.AimX,p.AimZ,p.AimRange,bomb.MotionRate,bomb.Pumps) :
+        var velocity = p.AimSet ? BombThrowRules.AimedVelocity(p.AimX,p.AimZ,p.AimRange,bomb.Pumps) :
             BombThrowRules.Velocity(p.FacingX,p.FacingZ,input.Length,bomb.Pumps);
         var speed = MathF.Sqrt(velocity.X*velocity.X+velocity.Z*velocity.Z);
 

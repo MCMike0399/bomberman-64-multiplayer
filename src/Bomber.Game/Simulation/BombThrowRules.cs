@@ -36,16 +36,16 @@ public static class BombThrowRules
 
     /// <summary>Range is the landing distance on level ground; elevation and combat can change it.
     /// Pumps affect the blast, never this deliberate range. Uses the authority's discrete flight clock.</summary>
-    public static Vector3 AimedVelocity(float directionX,float directionZ,float range,float motionRate=1,int pumps=0)
+    public static Vector3 AimedVelocity(float directionX,float directionZ,float range,int pumps=0)
     {
         var position=new Vector3(0,LaunchHeight,0);
         var velocity=new Vector3(0,AimLiftSpeed,0);
         var ticks=0;
-        do {var flight=Advance(position,velocity,SimulationStep*motionRate,Weight(pumps));position=flight.Position;velocity=flight.Velocity;ticks++;}while(position.Y>0&&ticks<150);
+        do {var flight=Advance(position,velocity,SimulationStep,Weight(pumps));position=flight.Position;velocity=flight.Velocity;ticks++;}while(position.Y>0&&ticks<150);
         var length=MathF.Sqrt(directionX*directionX+directionZ*directionZ);
         if(!float.IsFinite(length)||length<.001f){directionX=0;directionZ=1;length=1;}
         range=float.IsFinite(range)?Math.Clamp(range,MinAimRange,MaxAimRange):DefaultAimRange;
-        var speed=range/(ticks*SimulationStep*motionRate);
+        var speed=range/(ticks*SimulationStep);
         return new(directionX/length*speed,AimLiftSpeed,directionZ/length*speed);
     }
     public static float Weight(int pumps) => 1 + .2f*Math.Clamp(pumps,0,3);
@@ -134,7 +134,7 @@ public static class BombThrowRules
     /// <summary>Static scenery only. Players, moving bombs and future changes may interrupt the arc.</summary>
     public static ThrowProjection Project(Vector3 origin,Vector3 velocity,Func<float,float,float> surface,
         Func<Vector3,bool> obstructed,float fuseSeconds=BlastBomb.FuseSeconds,Func<float,float,CellKind>? landingKind=null,
-        Func<int,int,CellKind>? cellKind=null,Func<int,int,bool>? hasCover=null,float? waterLevel=null,float motionRate=1,bool bounce=false,float gravityScale=1,int pumps=0,StageLayout? stage=null,Func<float,Vector2>? windAt=null)
+        Func<int,int,CellKind>? cellKind=null,Func<int,int,bool>? hasCover=null,float? waterLevel=null,bool bounce=false,float gravityScale=1,int pumps=0,StageLayout? stage=null,Func<float,Vector2>? windAt=null)
     {
         var points=new List<Vector3>{origin};
         var position=origin;
@@ -151,8 +151,8 @@ public static class BombThrowRules
             referenceY=position.Y;
             fuseSeconds-=SimulationStep;
             if(fuseSeconds<=0)return new(points,ThrowProjectionEnd.Fuse);
-            var flight=cellKind is null&&stage is null?Advance(position,velocity,SimulationStep*motionRate,gravityScale):
-                BlizzardRules.AdvanceFlight(position,velocity,SimulationStep*motionRate,(windAt?.Invoke(tick*SimulationStep)??Vector2.Zero)/motionRate,floorAt,kindAt,hasCover??((x,z)=>false),bounce,gravityScale,stage);
+            var flight=cellKind is null&&stage is null?Advance(position,velocity,SimulationStep,gravityScale):
+                BlizzardRules.AdvanceFlight(position,velocity,SimulationStep,windAt?.Invoke(tick*SimulationStep)??Vector2.Zero,floorAt,kindAt,hasCover??((x,z)=>false),bounce,gravityScale,stage);
             stopped|=(velocity.X!=0||velocity.Z!=0)&&flight.Velocity.X==0&&flight.Velocity.Z==0;
             position=flight.Position;velocity=flight.Velocity;
             if(obstructed(position))return new(points,ThrowProjectionEnd.Obstructed);

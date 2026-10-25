@@ -16,10 +16,11 @@ internal static class TraversalAndGhostChecks
             float x=F(p,"x");m.SetInput(0,new PlayerInput(-1,0));Step(m,6);
             Assert(F(P(m),"x")<x-.5f,"Landing beside the cliff trapped the player inside its side.");
         });
-        Check("falling keeps full air steering and upper faces remain solid",()=>{
+        Check("falling permits limited air correction and upper faces remain solid",()=>{
             var m=Match(ledge:true);m.SetInput(0,new PlayerInput(-1,0));Step(m,5);
             float z=F(P(m),"z");m.SetInput(0,new PlayerInput(0,1));Step(m,5);
-            Assert(F(P(m),"z")>z+.5f,"Falling player lost horizontal steering beside the ledge. "+P(m));
+            float correction=F(P(m),"z")-z;
+            Assert(correction>.04f&&correction<.4f,"Falling correction must stay useful without full ground-speed steering. "+P(m));
             m.SetInput(0,new PlayerInput(1,0));Step(m,6);
             Assert(F(P(m),"x")<4,"Falling player climbed back through the upper cliff face.");
         });

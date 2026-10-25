@@ -45,7 +45,7 @@ explode through the existing sudden-death path. CPU safe-exit planning uses the
 same interval. New rounds clear both closure counts. Disabled sudden death and
 practice retain weather without avalanches.
 
-Online protocol revision **4** prevents older clients from accepting an arena
+Online protocol revision **5** prevents older clients from accepting an arena
 or wind state they cannot render/simulate. Server, peer host and guests must
 use this revision together. This PR does not deploy the shared server.
 

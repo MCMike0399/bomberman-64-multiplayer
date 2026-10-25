@@ -354,8 +354,6 @@ public sealed class BlastBomb
     public bool IsRed { get=>Mode=="red";set{if(value)Mode="red";else if(IsRed)Mode="normal";} }
     public bool IsRemote { get=>Mode=="remote";set{if(value)Mode="remote";else if(IsRemote)Mode="normal";} }
     public bool IsBouncy => Mode=="bounce";
-    public bool IsFast => Mode=="fast";
-    public float MotionRate => IsFast?1.5f:1f;
     public float GravityScale => BombThrowRules.Weight(Pumps);
     public int Bounces { get; set; }
     public int RequestedPumps { get; set; }

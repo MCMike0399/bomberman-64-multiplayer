@@ -7,7 +7,12 @@ internal static class AdvancedRulesChecks
     {
         int checks=0;
         void Check(bool value,string message){if(!value)throw new Exception(message);checks++;}
-        var defaults=new AdvancedRules();Check(defaults.DropPercent==55&&defaults.MaxFire==5&&defaults.MaxBombs==5,"Unexpected defaults.");
+        var defaults=new AdvancedRules();Check(defaults.DropPercent==40&&defaults.MaxFire==5&&defaults.MaxBombs==5,"Unexpected defaults.");
+        Check(AdvancedRules.ItemTypes.Where(PowerUpRules.IsBombType).Order().SequenceEqual(new[]{"bounce","red","remote"}),"Only Bounce, Red and Remote should occupy the bomb slot.");
+        Check(!AdvancedRules.ItemTypes.Contains("fast")&&!PowerUpRules.CanCollect(new BlastPlayer(),"fast"),"Removed Fast bomb still exists as a pickup.");
+        foreach(string stage in new[]{BlastStages.SunkenTemple,BlastStages.RockGarden,BlastStages.UpAndDown,BlastStages.TopRules,BlastStages.CircuitGarden})
+            Check(BlastStages.Get(stage).InitialItems.Concat(BlastStages.Get(stage).TrainingItems).All(item=>AdvancedRules.ItemTypes.Contains(item.Type)),"Stage contains a removed pickup: "+stage);
+        Check(!TutorialCourse.Contains("fast"),"Tutorial still teaches removed Fast bombs.");
         foreach(string type in AdvancedRules.ItemTypes)
         {
             var only=defaults with{DisabledItems=string.Join(',',AdvancedRules.ItemTypes.Where(t=>t!=type))};

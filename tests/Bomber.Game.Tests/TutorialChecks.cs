@@ -41,7 +41,6 @@ internal static class TutorialChecks
                 case "remote":Go(m,9.5f,12.5f);Plant(m);Go(m,5.5f,12.5f);Input(m,new(0,0,R:true),2);Advance(m,18);break;
                 case "red":Go(m,9.5f,12.5f);Go(m,11.2f,12.5f);Plant(m);Go(m,7.5f,12.5f);Advance(m,100);break;
                 case "bounce":Go(m,9.5f,12.5f);Carry(m);Pump(m,1);Input(m,default,2);Advance(m,80);break;
-                case "fast":Go(m,9.5f,12.5f);Kick(m);break;
                 case "heart":Go(m,9.5f,12.5f);Plant(m);Advance(m,100);break;
                 case "focus":Go(m,9.5f,12.5f);Carry(m);Pump(m,1);break;
                 case "effects":foreach(float x in new[]{9.5f,11.5f,13.5f,15.5f})Go(m,x,12.5f);break;

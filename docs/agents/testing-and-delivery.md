@@ -308,6 +308,16 @@ A local updater fixture does not prove hosted CI or a public release; verify tho
 separately when publication is authorized. Preserve the user's update preference
 and avoid replacement while a match/session is active.
 
+## Ledge fall verification
+
+For ledge movement, `dotnet run --project tests/Bomber.Game.Tests -- --falling`
+checks short drops, limited steering, momentum, four directions, real status
+pickups, carrying and immediate landing controls. `--measure-falls` reports
+accepted event-to-event duration/travel for forward, released, reversed and
+sideways input at three heights. The native `traversal` journey asserts those
+budgets on the stock temple and retains shore/ghost checks. [Reference research,
+comparisons and known validation limits](../falling-physics.md).
+
 ## Up & Down verification
 
 `dotnet run --project tests/Bomber.Game.Tests -- --up-and-down` checks six-flight
@@ -331,7 +341,7 @@ input. See the [stage contract](../up-and-down.md) for the accepted adaptation.
 `AdvancedRulesChecks` covers validation, empty/filtered pools, custom caps and real
 status pickup/movement/expiry; `ItemExpirationChecks` retains the formerly
 unlimited map/training item regression. Actual crate-destruction sampling in
-`LootAvailabilityChecks` checks the independent 55% default across 32 seeds per
+`LootAvailabilityChecks` checks the independent 40% default and category priority across 32 seeds per
 map. `advanced-settings` is the graphical menu/status/expiration journey;
 `network` also edits the advanced page in a live room and checks peer settings.
 
@@ -339,8 +349,45 @@ The existing `loot-opening` and `cover-layout` collection journeys explicitly
 select 100% drops and a basic-upgrade-only pool through ordinary match settings
 to keep their pickup/rendering evidence deterministic. They do not certify the
 default drop probability; managed actual-destruction samples do. `sandbox`
-selects a 60-second lifetime for its long equipment tour. Default and short
+selects a six-item restricted pool and a 60-second lifetime for its long equipment
+tour. Bomb-handling, kick and grapple journeys request a restricted upgrade/Remote
+pool so seeded sandbox selection cannot remove the equipment under test.
+`powerup-collect` first checks and captures the default six-item 3/2/1 cache, then
+uses a separate six-item explicit pool for its equipment-swap walkthrough.
+`ItemDensityChecks` samples 100,000 weighted draws and 64 practice seeds per
+training map, including replay, every type, filtered/empty pools and expiration.
+Its `--loot-density-sweep` compares five rates over four maps and 128 seeds via
+actual authority block destruction. See the [tuning evidence](gameplay-and-ai.md#item-density-tuning-2026-10-25).
+Default and short
 lifetimes have separate authority and graphical expiration witnesses.
+
+The 2026-10-25 bomb loadout keeps black starting bombs and only Remote, Red and
+Bounce equipment. `AdvancedRulesChecks` rejects the removed Fast pickup/catalog
+entry; `SandboxEquipmentChecks` compares actual aimed throws with/without Haste
+for all four bomb modes and commands a remote planted before collecting Haste.
+The native `sandbox` journey checks Red/Bounce swaps and Haste movement/expiry
+without replacing Red. Pair it with `advanced-settings` and `tutorial` for the
+eleven-item menu, timed status rendering and the updated lesson browser.
+
+### Item-density source verification — 2026-10-25
+
+Receipts under ignored `artifacts/item-density/` retain baseline/tuned sweeps,
+the red priority witness, and successful `managed-final`, `headless`, `public`
+and focused `graphical` runs. The first managed run exposed an old per-map
+all-types assertion: a 1%-weight type can be absent from a small sample. Full
+pool coverage now belongs to the 100,000-draw regression; actual map samples
+retain probability and category-order checks. The final managed profile passed
+2,914 game checks, 336 client checks, 65 AI checks, the 48-case soak and real
+network/relay/fleet gates. Headless core passed 1,233 assertions, peer rooms 19
+and adaptive rooms nine.
+
+Rebuilt exports passed isolated macOS/Metal `powerup-collect`, `advanced-settings`
+and `sandbox`: 100 assertions, 22 captures, zero runtime errors/warnings. Actual
+captures reviewed the six-item default cache, collected inventory/equipment,
+settings, before/after expiration and bomb swaps/blasts. The VM stopped after
+its owned runs; this is renderer/synthetic-input evidence, not a fresh physical
+controller or native-host GPU performance certification. This source work does
+not establish installation, release publication or external server delivery.
 
 ## Top Rules verification
 
@@ -404,3 +451,19 @@ that environmental interruption.
 ## Blizzard Battle verification
 
 [Stage contract and commands](../blizzard-battle.md#verification-entrypoints). The `blizzard-battle` native leaf belongs to `all`, `core-headless` and `stage-fidelity`; `blizzard-regression` adds all-stage graphics, lighting, setup, framing, assets and network checks. Managed fixtures cover actual drift/fuses, future-wind flight prediction, cone budgets and avalanche reset; peer validation rejects malformed weather, and a real server room verifies advancing weather over WebSocket. The AI soak expands to sixty cases for five battle arenas. Keep actual image inspection separate from headless assertions. Full `graphics-settings` needs a guest display larger than its 1600×1000 test window; the Blizzard regression passed on a 1920×1200 guest. `SetupMenus` configures its own initial default settings so earlier arena tours cannot change its fixture precondition.
+
+## Menu navigation regression (2026-10-25 source)
+
+`menu-navigation` drives native keyboard, Xbox/DualSense events and the Switch
+USB publication bridge through every menu. It checks Start focus without
+activation, row-preserving grid movement, remembered shoulder column switches,
+text editing, popup Back, focus restoration, nested Practice/room setup returns,
+Continue/Save Back-loop prevention, pause session continuity and full Tab cycles
+through enabled controls. `--headless` is the fast logic loop; it cannot prove
+native focus or appearance.
+
+`python3 tools/playtest/run.py --scenario menu-ux` runs the windowed graphical
+completion gate in the isolated desktop: that regression plus WASD, popups,
+controllers, menus/resizes, setup, dense layouts, player settings, tutorial and
+the real two-client network journey. Inspect the captures and keep physical-pad
+claims separate. `all` includes the new regression; no install is implied.

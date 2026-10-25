@@ -40,7 +40,8 @@ public partial class ArcadeMenu
         Copy(updates,"New versions download in the background. Finish your game, then restart to install.",18);
         _checkUpdates=ArcadeTheme.Button(updates,"Check for updates",()=>CheckUpdatesRequested?.Invoke());_checkUpdates.Name="CheckUpdates";
         _installUpdate=ArcadeTheme.Button(updates,"Update and restart",()=>InstallUpdateRequested?.Invoke(),true);_installUpdate.Name="InstallUpdate";_installUpdate.Visible=false;
-        ArcadeTheme.Button(box,"Back",()=>BackRequested?.Invoke()).Name="SettingsBack";
+        var back=ArcadeTheme.Button(box,"Back",()=>BackRequested?.Invoke());back.Name="SettingsBack";
+        RegisterNavigation("Settings",[],[back],Choices(player),Choices(updates));
     }
 
     private void BuildPause()
@@ -52,6 +53,7 @@ public partial class ArcadeMenu
         _retryLesson=ArcadeTheme.Button(box,"Retry lesson",()=>{if(_pausedTutorial is {} id)TutorialRequested?.Invoke(id);});_retryLesson.Name="PauseRetryLesson";_retryLesson.Visible=false;
         ArcadeTheme.Button(box,"Settings",()=>Navigation?.Invoke("Settings")).Name="PauseSettings";
         _pauseLeave=ArcadeTheme.Button(box,"Leave game",()=>Navigation?.Invoke(_pausedTutorial is null?"Modes":"Tutorial"));_pauseLeave.Name="LeaveGame";
+        RegisterNavigation("Pause",[],[],Choices(box));
     }
 
     public void ConfigurePreferences(PlayerPreferences preferences)
@@ -68,16 +70,22 @@ public partial class ArcadeMenu
     {
         _updateStatus.Text=$"{version} · {status}";
         _settingsButton.Text=ready?"Settings · Update ready":"Settings";
+        bool changed=_checkUpdates.Disabled!=(busy||ready)||_installUpdate.Visible!=ready||_installUpdate.Disabled!=(busy||!canInstall);
         _checkUpdates.Disabled=busy||ready;_installUpdate.Visible=ready;_installUpdate.Disabled=busy||!canInstall;
+        if(changed&&_screen=="Settings")
+        {
+            RefreshNavigation();
+            if(!CanFocus(GetViewport().GuiGetFocusOwner()))FocusScreen(restore:true);
+        }
         _installUpdate.TooltipText=canInstall?"Restart to install the verified update.":"Leave your current room before updating.";
     }
 
     public void SettingsNotice(string text)=>_settingsNotice.Text=text;
 
-    public void ShowPause(bool online,bool training=false,string? lesson=null)
+    public void ShowPause(bool online,bool training=false,string? lesson=null,bool restoreFocus=false)
     {
         _pausedTutorial=training?lesson??"free":null;_retryLesson.Visible=training;
         _pauseLeave.Text=training?"Back to lessons":"Leave game";
-        _pauseHint.Text=online?"The online match continues while this menu is open.":training?"Your lesson is paused. Retry at any time.":"The local game is paused.";ShowScreen("Pause");
+        _pauseHint.Text=online?"The online match continues while this menu is open.":training?"Your lesson is paused. Retry at any time.":"The local game is paused.";ShowScreen("Pause",restoreFocus);
     }
 }
