@@ -79,6 +79,8 @@ also runs first-use effects, all-stage graphics/lighting, setup, framing, asset
 audit and online play. The AI soak now includes all five battle arenas: sixty
 stage/difficulty/player-count/seed cases. Public QA validates the expanded receipt.
 
+[Verification and screenshots](blizzard-battle-verification.md) record the inspected export and retained failures.
+
 Headless tests establish rules and resource geometry, not the appearance of
 ice, weather or animations. Graphical receipts and manually inspected images
 are recorded separately when available. Neither synthetic inputs nor VM graphics
