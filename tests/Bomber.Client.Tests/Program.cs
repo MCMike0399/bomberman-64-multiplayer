@@ -3,6 +3,7 @@ using Bomber.Client;
 using Bomber.Game;
 
 var checks = await UpdateChecks.Run();
+checks += await ServerCompatibilityChecks.Run();
 checks += PeerFrameChecks.Run();
 void Check(bool condition, string name) { if (!condition) throw new Exception(name); checks++; }
 void Throws(Action action, string name) { try { action(); } catch (ArgumentException) { checks++; return; } throw new Exception(name); }

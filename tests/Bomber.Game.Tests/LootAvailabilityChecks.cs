@@ -22,8 +22,8 @@ internal static class LootAvailabilityChecks
             for(int zone=0;zone<stage.Spawns.Length&&stage.OpeningCoverPerSpawn>0;zone++)
             {
                 var assigned=zones.Where(kv=>kv.Value==zone).Select(kv=>kv.Key).ToArray();
-                Assert(assigned.Length>=2,"A spawn area has fewer than two opportunities to open cover.");
-                Assert(assigned.Count(cell=>TerrainDistance(stage,stage.Spawns[zone],cell)<=6)>=2,"A spawn's opening crates require a distant terrace detour.");
+                Assert(assigned.Length>=stage.OpeningCoverPerSpawn,"A spawn area has fewer than its authored opening opportunities to open cover.");
+                Assert(assigned.Count(cell=>TerrainDistance(stage,stage.Spawns[zone],cell)<=6)>=stage.OpeningCoverPerSpawn,"A spawn's opening crates require a distant terrace detour.");
                 var approachMatch=Match(seed,id);
                 var approach=OpeningApproach(stage,Grid(approachMatch),stage.Spawns[zone],assigned.ToHashSet());
                 Assert(approach is not null,"A spawn cannot approach its opening cover along clear floor.");

@@ -33,7 +33,8 @@ public partial class PlaytestDriver
                 Check(Cue("blast")==before+1,"blast cue starts once: "+tier);
                 var fx=Presentation.GetProperty("explosions").EnumerateArray().Single(x=>x.GetProperty("tier").GetString()==tier);
                 Check(Math.Abs(fx.GetProperty("radius").GetSingle()-State.GetProperty("hazards")[0].GetProperty("r").GetSingle())<.001f,"visual uses authority radius: "+tier);
-                int lobes=fx.GetProperty("lobes").GetInt32();Check(lobes==(tier=="small"?6:tier=="medium"?10:14),"blast tier has distinct billow construction: "+tier);
+                Check(fx.GetProperty("bodies").GetInt32()==1&&!fx.GetProperty("powerWave").GetBoolean(),"normal blast has one coherent body without a ground hoop: "+tier);
+                Check((fx.GetProperty("flares").GetInt32()>0)==(pumps>0),"charged blasts add brief pointed flares: "+tier);
                 Event("blast-visual",new {tier,fx});await Capture("blast-"+tier+"-ignition",0);
                 await Frames(3);await Capture("blast-"+tier+"-bloom",0);
                 await Frames(8);

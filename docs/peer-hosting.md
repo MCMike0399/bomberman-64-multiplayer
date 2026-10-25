@@ -92,3 +92,17 @@ TURN service.
 Local loopback checks, cross-machine checks, public cluster routing, rendered
 screenshots and arbitrary Internet/NAT compatibility are distinct evidence.
 Consult [verification](verification.md) for the actual tested release receipts.
+
+## Online stage protocol 2 (v0.28)
+
+All online admission and WebSocket upgrades require `X-Blast-Protocol: 2`; both
+the gateway-facing API and actual worker echo the supported version. Older
+clients receive an actionable update error before receiving unsupported terrain
+or fireball snapshots. Health/readiness, operator authentication and leaving or
+cancelling retain their existing paths. The client also rejects older API/worker
+responses before consuming gameplay, which covers a mixed-version fleet.
+
+Peer hello uses the same revision. A mixed peer roster cannot start, and
+incompatible clients receive an update notice. Lower terrain cells are validated
+as one bounded optional layer, including fractional ramps and authored wall
+heights; a third layer or malformed lower cell is rejected before rendering.

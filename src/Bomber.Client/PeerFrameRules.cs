@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Bomber.Game.Simulation;
 
 namespace Bomber.Client;
 
@@ -31,6 +32,9 @@ public static class PeerFrameRules
                     return Array(d,"players",8,p=>Fields(p,
                         "i:slot i:appearance s:id s:name b:bot n:x n:y n:z n:fx n:fz b:alive b:ghost ?s:latchedTo b:carryFromPrimary b:aiming b:aimSet n:aimX n:aimZ n:aimRange n:primaryHoldProgress n:kickWindup n:kickRecovery b:stunned ?s:knockdownReason n:recoveryRemaining n:recoveryTotal ?s:carriedBy ?s:carryingPlayerId b:airborne b:falling ?s:carrying b:heart i:fire i:bombs i:activeBombs i:pickupSerial ?s:lastPickup i:pumpSerial s:bombType s:ability s:statusEffect n:statusRemaining n:statusScale i:maxFire i:maxBombs b:red b:remote i:wins ?l:ack")&&p.GetProperty("slot").GetInt32() is >=0 and <=7&&p.GetProperty("statusScale").GetSingle() is >0 and <=2) &&
                         Array(d,"bombs",64,b=>Fields(b,"s:id s:ownerId b:ownerCanExit ?s:carrierId i:effectiveLevel n:x n:y n:z i:level i:pumps s:mode i:bounces n:motionRate n:gravityScale n:charge b:charging b:red b:remote n:fuse i:state")) &&
+                        (!d.TryGetProperty("meteors",out _)||Array(d,"meteors",8,m=>Fields(m,"s:id n:x n:z n:remaining")&&
+                            m.GetProperty("x").GetSingle() is >=0 and <32&&m.GetProperty("z").GetSingle() is >=0 and <32&&
+                            m.GetProperty("remaining").GetSingle() is >=0 and <=BlastStages.MeteorWarningSeconds)) &&
                         Array(d,"hazards",1024,h=>Fields(h,"s:id n:x n:z n:y n:r n:age n:life b:red")) &&
                         Array(d,"items",512,i=>Fields(i,"s:id i:cx i:cz s:type n:life b:dropped n:y")) &&
                         Array(d,"events",128,e=>Fields(e,"l:seq i:tick i:round s:kind ?s:entityId ?s:playerId n:x n:y n:z n:magnitude n:radius ?s:reason ?s:causedBy"));

@@ -8,17 +8,20 @@ public partial class TempleStageView
     {
         var grass=new ShaderMaterial {Shader=new Shader {Code="""
             shader_type spatial;
+            uniform float quality_detail=1.0;
             varying vec3 ground_position;
             void vertex(){ground_position=(MODEL_MATRIX*vec4(VERTEX,1.0)).xyz;}
             void fragment(){
                 vec2 p=ground_position.xz;
                 float broad=sin(p.x*.83+sin(p.y*.61))*sin(p.y*.94);
                 float grain=sin(p.x*31.0+p.y*17.0)*sin(p.y*37.0-p.x*13.0);
-                float visible_grain=1.0-smoothstep(.025,.10,length(fwidth(p)));
+                float visible_grain=quality_detail*(1.0-smoothstep(.025,.10,length(fwidth(p))));
                 ALBEDO=mix(vec3(.24,.39,.19),vec3(.38,.51,.27),broad*.5+.5)+grain*.018*visible_grain;
                 ROUGHNESS=.94;
             }
             """}};
+        grass.SetShaderParameter("quality_detail",BlastCircuit.Rendering.GraphicsQuality.Current==BlastCircuit.Rendering.GraphicsPreset.Low?0:1);
+        _gardenMaterials.Add(grass);
         var chalk=_art.Color(new("f4e8b5"));var teal=_art.Color(new("258d8f"));var gold=_art.Color(new("efc65b"));
         // The garden is an academy built into old stonework: open grass, a pale range,
         // a small terrace and a canal. All markings are flush, without hidden collision.

@@ -19,6 +19,10 @@ public partial class TempleStageView : Node3D
     private ShaderMaterial? _castleCoverMaterial;
     public ShaderMaterial CastleWallMaterial=>_castleWallMaterial;
     public StageLayout Layout {get;private set;} = null!;
+    private bool _garden;
+    private readonly List<ShaderMaterial> _gardenMaterials=[];
+    private Mesh[] _gardenRocks=[];
+    private Material _gardenRockMaterial=null!;
     public int Width {get;private set;}
     public int Depth {get;private set;}
     private ShaderMaterial _stone=null!,_cobble=null!,_masonry=null!,_bedrock=null!;
@@ -49,12 +53,22 @@ public partial class TempleStageView : Node3D
             }
             return;
         }
+        if(_garden)
+        {
+            if(_graphicsRevision!=GraphicsQuality.Revision)
+            {
+                foreach(var material in _gardenMaterials)material.SetShaderParameter("quality_detail",GraphicsQuality.Current==GraphicsPreset.Low?0:1);
+                _graphicsRevision=GraphicsQuality.Revision;
+            }
+            return;
+        }
         if(_water==null)return;
         var water=(ShaderMaterial)_water.MaterialOverride;
         if(_graphicsRevision!=GraphicsQuality.Revision)
         {
             float detail=GraphicsQuality.Current==GraphicsPreset.Low?0:1;
             foreach(var material in new[]{water,_stone,_cobble,_masonry,_bedrock})material.SetShaderParameter("quality_detail",detail);
+            foreach(var material in _gardenMaterials)material.SetShaderParameter("quality_detail",detail);
             _graphicsRevision=GraphicsQuality.Revision;
         }
         var p=_water.Position;p.Y=Mathf.Lerp(p.Y,_targetWater,1-Mathf.Exp(-7*(float)delta));
@@ -109,6 +123,8 @@ public partial class TempleStageView : Node3D
         if(_castle){BuildTopRules();return;}
         _stone=_art.Stone();_cobble=_art.Stone(true);
         _masonry=_art.Masonry();_bedrock=_art.Bedrock();var wall=_masonry;var cap=_art.Color(new("e8cc82"));
+        _garden=data.GetProperty("id").GetString()=="rock-garden";
+        if(_garden){BuildRockGarden();return;}
         _water=new MeshInstance3D {Mesh=new PlaneMesh {Size=new Vector2(160,160),SubdivideWidth=180,SubdivideDepth=180},MaterialOverride=_art.Water(),Position=new Vector3(Width/2f,-.53f,Depth/2f),CastShadow=GeometryInstance3D.ShadowCastingSetting.Off};AddChild(_water);
         if(Layout.Id==BlastStages.UpAndDown&&cells.Cast<CellDef>().Any(c=>c.Below!=null)){BuildUpAndDown();return;}
         bool temple=Layout.Id==BlastStages.SunkenTemple;
@@ -232,6 +248,7 @@ public partial class TempleStageView : Node3D
         int x=cell%Width,z=cell/Width;
         if(_castle)return CreateCastleCover(x,z);
         var root=new Node3D {Position=new(x+.5f,Surface(x+.5f,z+.5f),z+.5f)};
+        if(_garden)return CreateGardenBoulder(root,cell);
         var sandstone=_art.Color(new("caaa73"));var dark=_art.Color(new("8d6740"));var edge=_art.Color(new("e3c48c"));
         Box(root,new(0,.39f,0),new(.76f,.78f,.76f),sandstone,.06f);
         Box(root,new(0,.045f,0),new(.82f,.09f,.82f),edge,.025f);

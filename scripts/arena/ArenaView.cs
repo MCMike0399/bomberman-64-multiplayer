@@ -24,6 +24,7 @@ public partial class ArenaView : Node3D
         _battleActive=active;
         if(!active && _tutorialTarget!=null)_tutorialTarget.Visible=false;
         if(!active)ClearThrowPreviews();
+        foreach(var meteor in _entities.Values.OfType<MeteorView>())meteor.SetProcess(active);
     }
     public IReadOnlyList<ThrowPreviewState> ThrowPreviews {get;private set;}=[];
     public void SetLocalInput(string playerId,PlayerInput input)=>_localInputs[playerId]=input;
@@ -69,7 +70,7 @@ public partial class ArenaView : Node3D
     public string StageId=>_stage;
     public int VisiblePlayerCount=>_entities.Values.Count(n=>n is BomberModel);
     public BattleAudio Audio=>_audio;
-    public object PresentationState=>new {sequence=_presentation.Sequence,audio=_audio.Counts,voicePlays=_audio.VoicePlayCount,droppedCues=_audio.DroppedCueCount,effects=_effectCounts,explosions=_explosions.Values.Where(GodotObject.IsInstanceValid).Select(v=>new {tier=v.Tier,radius=v.Radius,age=v.Age,phase=v.Phase,lobes=v.LobeCount,hazard=v.HazardActive,extent=v.VisualExtent}).ToArray()};
+    public object PresentationState=>new {sequence=_presentation.Sequence,audio=_audio.Counts,voicePlays=_audio.VoicePlayCount,droppedCues=_audio.DroppedCueCount,effects=_effectCounts,explosions=_explosions.Values.Where(GodotObject.IsInstanceValid).Select(v=>new {tier=v.Tier,radius=v.Radius,age=v.Age,phase=v.Phase,bodies=v.BodyCount,flares=v.FlareCount,powerWave=v.PowerWaveVisible,hazard=v.HazardActive,extent=v.VisualExtent}).ToArray()};
     public void ResetPresentationBaseline()=>_presentation.Reset();
     public Task PrepareEffects()=>EffectWarmup.Run(GetParent(),_art,_environment,_keyLight,_fillLight);
     public void ApplyGraphicsQuality()
@@ -143,6 +144,8 @@ public partial class ArenaView : Node3D
         string id=data.GetProperty("id").GetString()!;
         if(_stage==id)return;
         _stage=id;ClearThrowPreviews();
+        _environment.BackgroundMode=id==BlastStages.TopRules?Godot.Environment.BGMode.Color:Godot.Environment.BGMode.Sky;
+        _environment.BackgroundColor=new Color("171a22");
         _playerMotion.Clear();_facings.Clear();_ghostHosts.Clear();
         _terrain?.QueueFree();_terrain=new TempleStageView(_art);AddChild(_terrain);_terrain.Build(data);
         _terrain.SetLighting(StageLighting.For(TimeOfDay));
@@ -232,6 +235,17 @@ public partial class ArenaView : Node3D
             CountEffect("blast-"+blast.Tier);_shake=Mathf.Max(_shake,Mathf.Clamp(radius*.024f,.04f,.15f));
             if(!eventsAvailable)_audio.Blast(radius);
         }
+        if(data.TryGetProperty("meteors",out var meteors))foreach(var meteor in meteors.EnumerateArray())
+        {
+            string id="m:"+meteor.GetProperty("id").GetString();seen.Add(id);
+            if(!_entities.TryGetValue(id,out var node))
+            {
+                node=new MeteorView(_art);_dynamic.AddChild(node);_entities[id]=node;
+            }
+            node.Position=new(F(meteor,"x"),0,F(meteor,"z"));
+            ((MeteorView)node).SetRemaining(F(meteor,"remaining"));
+            node.SetProcess(_battleActive);
+        }
         foreach(var item in data.GetProperty("items").EnumerateArray())
         {
             string id="i:"+item.GetProperty("id").GetString();seen.Add(id);
@@ -259,8 +273,9 @@ public partial class ArenaView : Node3D
                 if(_stage==BlastStages.TopRules)
                 {
                     var stone=_terrain.CastleWallMaterial;
-                    Box(n,new(x+.5f,1.95f,_terrain.Depth/2f),new(1,3.9f,_terrain.Depth-2),stone);
-                    Box(n,new(x+.5f,3.95f,_terrain.Depth/2f),new(1.03f,.16f,_terrain.Depth-2),_art.Color(new Color("bdc4c5")),.025f);
+                    float wallHeight=(_terrain.Layout.At(0,_terrain.Depth/2).ObstacleHeight??3.9f)*TempleStageView.HeightScale;
+                    Box(n,new(x+.5f,wallHeight/2,_terrain.Depth/2f),new(1,wallHeight,_terrain.Depth-2),stone);
+                    Box(n,new(x+.5f,wallHeight+.05f,_terrain.Depth/2f),new(1.03f,.16f,_terrain.Depth-2),_art.Color(new Color("bdc4c5")),.025f);
                 }
                 else Box(n,new(x+.5f,2.1f,_terrain.Depth/2f),new(.92f,5.8f,_terrain.Depth),_art.Color(new Color(.92f,.18f,.17f,.4f),.7f,true),.03f);
                 _effects.AddChild(n);_walls[x]=n;

@@ -16,7 +16,7 @@ public static class TutorialCourse
         new("primary-hold","Bomb handling","One-button pickup","Hold {bomb} without moving to plant and lift the same bomb. Release it, then press {carry} to throw.",
             ["Lift with a held bomb press","Throw with carry"],"Walking away cancels this pickup. A bomb lifted this way stays held until you press carry."),
         new("pump","Bomb handling","Power it up","Hold {carry} and tap {bomb} to ready. Tap {bomb} three more times, letting each charge finish. Release {carry}.",
-            ["Charge to level 3","Throw the charged bomb"],"Each tap requests one charge. Charging takes 0.45 seconds per level. A larger blast needs more escape space."),
+            ["Charge to level 3","Throw the charged bomb"],"Each tap requests one charge. Charging takes 0.45 seconds per level. On Top Rules, a large blast beneath a bridge can hit players above. Leave more escape space."),
         new("aim","Bomb handling","Place your shot","Ready a bomb with {carry} + {bomb}. Keep {carry} held, hold {aim}, and use {move} to steer the landing ring. Release {carry} to throw.",
             ["Steer the aiming cursor","Throw your aimed bomb"],"Aim plants your feet. Release aim to walk while keeping your target. The warning X marks an unsafe or blocked landing."),
         new("kick","Bomb handling","Kick and stop","Tap {bomb}, walk away, then walk back into the bomb to kick it. Press {stop} while it rolls.",
@@ -46,7 +46,7 @@ public static class TutorialCourse
         new("expiry","Equipment","Watch the timer","Collect Tiny and watch its timer. Wait until your size and movement return to normal.",
             ["Collect Tiny","Let the effect expire"],"Temporary effects normally last 10 seconds. Ground items also disappear, blinking for their last three seconds. Room settings can change durations and allowed items."),
         new("terrain","The arena","Take the high ground","Climb the broad central staircase to the gold summit circle, then return to the lawn.",
-            ["Reach the upper terrace","Return to the lawn"],"Ramps connect floors. Bombs and players can fall off ledges. Water and exposed edges are dangerous even with a Heart."),
+            ["Reach the upper terrace","Return to the lawn"],"Ramps connect floors; bridges also have separate lower passages. Bombs and players can fall off ledges. Water is dangerous even with a Heart."),
         new("recovery","Rivals and recovery","Get back up","You start knocked down. Make fresh direction changes or tap {bomb} repeatedly to recover sooner.",
             ["Make three recovery efforts","Get back up"],"Holding one direction or button does not repeat recovery effort. Knockdown protects briefly against impacts, never against explosions."),
         new("impact","Rivals and recovery","Knock a rival down","Kick a bomb into the training partner ahead of you.",
@@ -60,7 +60,7 @@ public static class TutorialCourse
         new("shake","Rivals and recovery","Shake off a ghost","A ghost is riding you. Reverse direction six times quickly to shake it off.",
             ["Shake off the ghost"],"A latch also expires after four seconds. Practice the faster escape: alternate left and right, allowing a moment between turns."),
         new("flood","Ready to battle","Beat the rising water","Hurry! Climb the central stairs to the upper terrace and stay above the flood.",
-            ["Reach high ground","Stay dry as water rises"],"In Sunken Temple, water rises immediately during sudden death. Ghosts are removed. Other arenas may use closing walls; watch the arena's warning."),
+            ["Reach high ground","Stay dry as water rises"],"In Sunken Temple, water rises immediately during sudden death. Ghosts are removed. Up & Down also floods. Top Rules closes its walls; Rock Garden marks falling fireballs on the ground. Escape the warnings."),
         new("duel","Ready to battle","Graduation match","Collect the Heart and Remote supplies, then defeat the Easy training rival with an explosion. Keep an escape route.",
             ["Defeat the training rival"],"Normal battles are first to two round wins by default. Last living bomber wins; time running out is a draw. Room leaders choose the rules.")
     });

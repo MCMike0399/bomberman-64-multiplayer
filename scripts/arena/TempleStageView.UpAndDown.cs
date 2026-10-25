@@ -19,8 +19,8 @@ public partial class TempleStageView
         _cobble.SetShaderParameter("base_color",new Color("9eae4a"));
         _cobble.SetShaderParameter("mortar_color",new Color("6b7c39"));
         var pale=_art.Color(new("e0e8db"));
-        var purple=_art.Color(new("68518e"),.58f);
-        var purpleLight=_art.Color(new("9f7fba"),.6f);
+        var purple=_art.Color(new("652b7e"),.58f);
+        var purpleLight=_art.Color(new("cda6dd"),.6f);
         var violetDark=_art.Color(new("3b3556"));
         var brass=_art.Color(new("e6cf67"),.5f);
         var stonework=new Node3D {Name="UpAndDownStonework"};AddChild(stonework);
@@ -72,13 +72,21 @@ public partial class TempleStageView
         {
             float top=tier*HeightScale-.18f,bottom=-4.4f;
             float x=(x0+x1+1)/2f,z=(z0+z1+1)/2f,w=x1-x0+1,d=z1-z0+1;
-            Box(stonework,new(x,(top+bottom)/2,z),new(w-.24f,top-bottom,d-.2f),_bedrock,.08f);
+            // A recessed core keeps the existing solid footprint; paired rounded
+            // shafts recover the original silhouette without adding false routes.
+            Box(stonework,new(x,(top+bottom)/2,z),new(w-1.15f,top-bottom,d-1.4f),_bedrock,.08f);
             Box(stonework,new(x,top-.28f,z),new(w,.4f,d),_masonry,.035f);
-            for(float course=-3.6f;course<top-.6f;course+=1.6f)
-                Box(stonework,new(x,course,z),new(w-.12f,.15f,d-.1f),_masonry,.018f);
-            // Vertical ribs catch the light without painting the columns with noise.
-            for(int row=z0;row<=z1;row++)foreach(int sign in new[]{-1,1})
-                Box(stonework,new(x+sign*(w/2-.09f),(top+bottom)/2,row+.5f),new(.12f,top-bottom-.35f,.23f),_masonry,.025f);
+            foreach(float sx in new[]{x0+.7f,x1+.3f})foreach(float sz in new[]{z0+.7f,z1+.3f})
+            {
+                float radius=.63f;
+                Cylinder(stonework,new(sx,(top+bottom)/2,sz),radius,top-bottom,_masonry);
+                for(int flute=0;flute<12;flute++)
+                {
+                    float angle=flute*Mathf.Tau/12;
+                    Cylinder(stonework,new(sx+Mathf.Cos(angle)*radius*.9f,(top+bottom)/2,sz+Mathf.Sin(angle)*radius*.9f),.055f,top-bottom-.25f,_stone);
+                }
+                foreach(float band in new[]{top-.48f,top-1.65f})Cylinder(stonework,new(sx,band,sz),radius+.035f,.16f,_stone);
+            }
         }
         void Tile(int x,int z,CellDef cell,bool bridge)
         {

@@ -31,7 +31,7 @@ public sealed partial class BlastSession
     private void BotRefreshField()
     {
         if(_aiFieldTick==_tickCount)return;
-        _aiFieldTick=_tickCount;_aiDanger.Build(_softBlocks,_bombs,_hazards);Array.Clear(_aiItemKind);Array.Clear(_aiItemDropper);
+        _aiFieldTick=_tickCount;_aiDanger.Build(_softBlocks,_bombs,_hazards,_meteors);Array.Clear(_aiItemKind);Array.Clear(_aiItemDropper);
         foreach(var item in _items)
         {
             int cell=_aiGraph.Cell(item.X,item.Z,item.Tier);if(cell>=0){_aiItemDropper[cell]=item.DroppedBy;_aiItemKind[cell]=item.Type switch{"heart"=>1,"remote"=>2,"red"=>3,"fire"=>4,"bounce"=>6,"fast"=>7,"focus"=>8,"tiny" or "haste"=>9,"big" or "slow"=>10,_=>5};}
@@ -147,7 +147,7 @@ public sealed partial class BlastSession
         _aiCandidate.FireLevel=bot.FireLevel;_aiCandidate.Pumps=0;_aiCandidate.Mode=bot.HasRemote?"normal":bot.BombType;
         _aiCandidate.FuseTimer=(_aiCandidate.IsBouncy?3.5f:BlastBomb.FuseSeconds)-.25f;_aiCandidate.State=BombState.Resting;
         _aiCandidateBombs.Clear();_aiCandidateBombs.AddRange(_bombs);_aiCandidateBombs.Add(_aiCandidate);
-        _aiPlacementDanger.Build(_softBlocks,_aiCandidateBombs,_hazards);
+        _aiPlacementDanger.Build(_softBlocks,_aiCandidateBombs,_hazards,_meteors);
         escape=BotSearch(bot,start,_aiPlacementDanger,true,_aiProfile.EscapeDepth);
         return escape>=0&&escape!=start;
     }
@@ -156,7 +156,7 @@ public sealed partial class BlastSession
         if(!field.Safe(cell,enter,leave))return false;
         int x=_aiGraph.X(cell),z=_aiGraph.Z(cell);
         if(WaterUnsafe(x+.5f,z+.5f,leave,_aiGraph.Height[cell]))return false;
-        if(_phase==RoundPhase.Hurry&&!_stage.RisingWater)
+        if(_phase==RoundPhase.Hurry&&!_stage.RisingWater&&_stage.Id!=BlastStages.RockGarden)
         {
             int columns=(int)MathF.Floor(_hurryColTimer+leave);
             if(x<_closedLeft+columns||x>=_stage.Width-_closedRight-columns)return false;

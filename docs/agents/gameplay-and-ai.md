@@ -245,7 +245,7 @@ and the input guide; older iteration tables are historical.
 - The user's latest correction supersedes the v0.22 rear barrier: the temple's
   rear edge is an open water pitfall, with no hidden walkway or invisible wall.
   The 25x27 arena has five raised tiers, broader upper platforms, and a larger
-  courtyard. Rock Garden is 23x15. Up & Down is a 24x26 suspended arena with
+  courtyard. Rock Garden is a 19x19 enclosed grassy court with five columns. Up & Down is a 24x26 suspended arena with
   three elevations, six long flights and real underpasses; see the
   [stage contract](../up-and-down.md). Its twelve cover blocks intentionally
   replace the former filled terrace layout and 88-block budget. The summit uses a flat mosaic rather than a blocking prop.
@@ -254,8 +254,9 @@ and the input guide; older iteration tables are historical.
 - Default battle rules are first to two wins, 120 total seconds including 60 seconds of
   sudden death. Water begins rising immediately at Hurry; the former 15-second delay is
   superseded. Custom round lengths and sudden-death/ghost toggles remain available.
-- [FloodRules](../../src/Bomber.Game/Simulation/FloodRules.cs) owns flood timing. Layout `RisingWater` selects this hazard for both Temple and
-  Up & Down; Rock Garden retains closing columns.
+- Rock Garden uses telegraphed falling fireballs during Hurry, with shared
+  blast damage and AI warning avoidance. See the [stage contract](../rock-garden.md).
+- [FloodRules](../../src/Bomber.Game/Simulation/FloodRules.cs) owns flood timing. Layout `RisingWater` selects flooding for Temple and Up & Down; Top Rules uses closing walls.
   [TempleStageView](../../scripts/arena/TempleStageView.cs) applies render height scale
   (currently 1.35) to authority Y. Decorative bedrock, foam, icons and camera fitting
   cannot add walkable floor, ramps or collision height.
@@ -304,21 +305,13 @@ now covers four stages (48 combinations).
 
 - [Loot placement](../../src/Bomber.Game/Simulation/BlastSession.Loot.cs) uses map-owned
   `CoverAreas`: regional budget shares and cluster centers, with seeded weighted
-  sampling. The three larger arenas first get two nearby reachable crates per spawn, then
-  fill regional quotas without blocking spawn clearance, ramps or reserved lanes.
-  Top Rules keeps a sparse twelve-block lower court rather than guaranteed upper
-  opening cover.
-
-  sampling. Temple and Rock Garden first get two nearby reachable crates per spawn, then
-  fill their regional quotas. Up & Down keeps its upper ring clear and puts
-  eight crates on the low deck and two on each middle pier; reaching them requires
-  a deliberate descent. Neither policy blocks spawn clearance, ramps or reserved lanes.
+  sampling. Temple seeds two nearby crates per spawn; Rock Garden seeds one plus a central paving cluster. Top Rules keeps a sparse twelve-block lower court. Up & Down keeps its upper ring clear, placing eight crates on the low deck and two on each middle pier. All policies preserve spawn clearance, ramps and reserved lanes.
   Every destroyed crate uses the same independent configured drop chance; there are
   no guaranteed opening rewards.
 - Pyramid targets 60% of 90 blocks in the lower court, 15% along the lower wings,
   and a lighter remainder on upper side terraces/base approaches. Its top two tiers
   and ascent stay clear; thin court lanes replace the old broad empty strips.
-  Rock Garden has 110 blocks in balanced pillar regions. Up & Down has twelve
+  Rock Garden has sixteen boulders with clear center routes. Up & Down has twelve
   lower/middle blocks, keeping its ring, summit, bridges and flights clear.
 - Advanced match settings (v0.25) default to a uniform independent 55% chance per
   destroyed block. Item weights are Fire/Bomb 30% each, remote/red 7% each, bounce

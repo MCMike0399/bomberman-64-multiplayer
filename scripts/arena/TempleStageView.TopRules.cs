@@ -20,8 +20,8 @@ public partial class TempleStageView
         foreach(var material in new[]{stone,cap})material.SetShaderParameter("quality_detail",GraphicsQuality.Current==GraphicsPreset.Low?0:1);
         _castleStone.Add(stone); _castleStone.Add(cap);
         var slate = _art.Color(new("414651"));
-        var inset = _art.Color(new("646775"));
-        var gold = _art.Color(new("b68c43"), .45f);
+        var inset = _art.Color(new("39382f"));
+        var gold = _art.Color(new("a47e33"), .45f);
         var ivory = _art.Color(new("e6e4cd"));
         var carpet = _art.Color(new("186642"));
         var carpetLight = _art.Color(new("3c9a62"));
@@ -88,12 +88,17 @@ public partial class TempleStageView
             Box(this, new(x + .5f, .24f, 1.94f), new(.38f, .16f, .25f), cap);
             Box(this, new(x + .5f, 2.02f, 1.94f), new(.38f, .16f, .25f), cap);
         }
-        foreach (float x in new[] { 3.5f, Width - 3.5f })
+        foreach(int side in new[]{-1,1})
         {
-            Box(this, new(x, deck + .7f, .99f), new(1.15f, 1.35f, .07f), gold, .015f);
-            Box(this, new(x, deck + .72f, 1.035f), new(.98f, 1.16f, .025f), crimson);
-            var crest = Box(this, new(x, deck + .76f, 1.06f), new(.32f, .32f, .018f), gold, .02f);
-            crest.Rotation = new(0, 0, Mathf.Pi / 4);
+            float x=side<0?1.015f:Width-1.015f;
+            Box(this,new(x,4.15f,6.4f),new(.055f,2.65f,2.25f),gold,.015f);
+            Box(this,new(x-side*.04f,4.15f,6.4f),new(.025f,2.42f,2.02f),crimson);
+            // Original heraldic strokes, on the solid wall rather than in a playable lane.
+            for(int mark=0;mark<3;mark++)
+            {
+                var stripe=Box(this,new(x-side*.06f,4.15f+(mark-1)*.42f,6.4f),new(.018f,.16f,1.1f),gold,.008f);
+                stripe.RotationDegrees=new(mark%2==0?35:-35,0,0);
+            }
         }
     }
 
@@ -123,7 +128,7 @@ void fragment(){
     float pattern=mod(floor(p.x)+floor(p.y),2.0);
     vec2 edge=min(fract(p),1.0-fract(p));
     float seam=smoothstep(.015,.045,min(edge.x,edge.y));
-    vec3 red=mix(vec3(.31,.035,.055),vec3(.43,.055,.075),pattern);
+    vec3 red=mix(vec3(.24,.006,.010),vec3(.36,.012,.018),pattern);
     ALBEDO=mix(vec3(.13,.022,.035),red,seam);
     ROUGHNESS=.86; SPECULAR=.18;
 }

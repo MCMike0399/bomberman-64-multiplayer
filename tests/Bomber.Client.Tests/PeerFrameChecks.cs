@@ -53,6 +53,19 @@ internal static class PeerFrameChecks
         Check(!PeerFrameRules.Valid(JsonSerializer.SerializeToElement(invalid)),"reject stage allocation abuse");
         invalid=JsonNode.Parse(match.StateJson!)!;invalid["d"]!["players"]![0]!.AsObject().Remove("alive");
         Check(!PeerFrameRules.Valid(JsonSerializer.SerializeToElement(invalid)),"reject missing required player fields");
+        var garden=new LocalMatch(new MatchOptions{Stage="rock-garden",HumanPlayers=3,BotPlayers=0,RoundSeconds=60});
+        for(int tick=0;tick<64;tick++)garden.Tick();
+        using var meteorState=JsonDocument.Parse(garden.StateJson!);
+        Check(meteorState.RootElement.GetProperty("d").GetProperty("meteors").GetArrayLength()>0&&PeerFrameRules.Valid(meteorState.RootElement),"real Rock Garden fireball warnings pass peer presentation boundary");
+        invalid=JsonNode.Parse(garden.StateJson!)!;
+        var meteor=invalid["d"]!["meteors"]![0]!.DeepClone();
+        invalid["d"]!["meteors"]=new JsonArray(Enumerable.Range(0,9).Select(_=>meteor.DeepClone()).ToArray());
+        Check(!PeerFrameRules.Valid(JsonSerializer.SerializeToElement(invalid)),"reject oversized fireball render allocation");
+        foreach(var (field,value) in new[]{("remaining",-1d),("remaining",10d),("x",1e200)})
+        {
+            invalid=JsonNode.Parse(garden.StateJson!)!;invalid["d"]!["meteors"]![0]![field]=value;
+            Check(!PeerFrameRules.Valid(JsonSerializer.SerializeToElement(invalid)),"reject malformed fireball warning "+field);
+        }
         var duel=new LocalMatch(new MatchOptions{HumanPlayers=2,BotPlayers=0,Wins=1});
         for(int i=0;i<65;i++)duel.Tick();
         duel.SetInput(0,new PlayerInput(0,0,A:true));

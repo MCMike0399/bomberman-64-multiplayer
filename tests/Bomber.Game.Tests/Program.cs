@@ -8,6 +8,12 @@ if(args.Contains("--up-and-down"))
     UpAndDownChecks.Run((name,check)=>{check();count++;Console.WriteLine("PASS "+name);});
     Console.WriteLine($"Passed {count} Up & Down integration checks.");return;
 }
+if(args.Contains("--rock-garden"))
+{
+    int count=0;
+    RockGardenChecks.Run((name,check)=>{check();count++;Console.WriteLine("PASS "+name);});
+    Console.WriteLine($"Passed {count} Rock Garden integration checks.");return;
+}
 
 if(args.Contains("--snapshot-performance")){SnapshotPerformance.Run(args);return;}
 if(args.Contains("--online-rooms")){OnlineRoomChecks.Run();return;}
@@ -30,6 +36,7 @@ passed += OnlineRoomChecks.Run();
 MatchRulesChecks.Run(Run);
 TerrainChecks.Run(Run);
 UpAndDownChecks.Run(Run);
+RockGardenChecks.Run(Run);
 BotChecks.Run(Run);
 PracticeAndOutcomeChecks.Run(Run);
 ItemsAndHazardsChecks.Run(Run);

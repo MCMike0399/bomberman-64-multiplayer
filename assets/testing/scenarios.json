@@ -547,7 +547,8 @@
         "peer-rooms",
         "tutorial",
         "top-rules",
-        "up-and-down"
+        "up-and-down",
+        "rock-garden"
       ],
       "domains": [
         "ai",
@@ -594,7 +595,8 @@
         "combat",
         "tutorial",
         "top-rules",
-        "up-and-down"
+        "up-and-down",
+        "rock-garden"
       ],
       "domains": [
         "ai",
@@ -768,6 +770,19 @@
       ],
       "headless": true,
       "timeout": 240,
+      "manual": false
+    },
+    {
+      "id": "rock-garden",
+      "method": "RockGardenTour",
+      "domains": [
+        "gameplay",
+        "rendering",
+        "physics",
+        "ai"
+      ],
+      "headless": true,
+      "timeout": 180,
       "manual": false
     }
   ]

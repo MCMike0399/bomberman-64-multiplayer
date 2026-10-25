@@ -361,3 +361,18 @@ affected graphical journeys: first-use rendering, graphics settings, lighting,
 setup, the castle journey, framing, precision aiming and real online play. It
 uses a rebuilt export and keeps the startup check first. The complete `all`
 suite remains available for broader regressions.
+
+## Rock Garden reconstruction
+
+`--rock-garden` in the managed game suite covers enclosed topology, center
+traversal, four wall contacts, shielding, block percentages and fireball
+warning/escape/damage. The `rock-garden` native journey belongs to `all` and
+`core-headless`: four/eight-seat starts, real boulder destruction and pickup,
+fireball warning/pause/escape/impact, CPU combat and graphical detail captures. The
+shared walking helper reads the active stage rather than assuming Temple.
+See the [stage contract](../rock-garden.md) and [research](../rock-garden-research.md).
+
+The combined graphical suite uses a 1200-second catalog budget for all journeys;
+QA forwards that deadline and retains outer cleanup/VM startup headroom. Online
+settings checks compare rendering with the latest accepted server lighting,
+since a real round can advance while graphics pipelines prepare.

@@ -49,11 +49,13 @@ internal static class TopRulesChecks
             Assert(State(match).GetProperty("bombs").GetArrayLength() == 0, "Bomb fuse stopped under deck.");
             Assert(Events(match).Any(e => Kind(e) == "blast"), "No real detonation under deck.");
         });
-        Check("Top Rules bridge slab shields stories but leaves lower horizontal blasts open", () =>
+        Check("Top Rules pumped blasts reach above thin decks as shown in the original guide", () =>
         {
             var stage = BlastStages.Get(BlastStages.TopRules); var soft = new SoftBlockGrid(stage.Width, stage.Height);
             Assert(BlastGeometry.Contains(stage, soft, 4.5f, 0, 4.5f, 4, 6.5f, 0, 4.5f, true), "Bridge became a solid wall below.");
-            Assert(!BlastGeometry.Contains(stage, soft, 5.5f, 0, 4.5f, 4, 5.5f, 2, 4.5f, true), "Blast passed through deck slab.");
+            Assert(BlastGeometry.Contains(stage, soft, 5.5f, 0, 4.5f, 4, 5.5f, 2, 4.5f, true), "Pumped blast did not reach through the walkway.");
+            Assert(BlastGeometry.Contains(stage,soft,4.5f,0,4.5f,4,5.5f,2,5.5f),"Diagonal pumped blast was blocked by the thin deck.");
+            Assert(!BlastGeometry.Contains(stage,soft,5.5f,0,4.5f,1.3f,5.5f,2,4.5f),"A normal bomb gained unearned vertical range.");
         });
         Check("Top Rules walking off a bridge falls to court and cannot climb back through its slab", () =>
         {
@@ -64,6 +66,17 @@ internal static class TopRulesChecks
             Assert(falling&&Player(match).GetProperty("y").GetSingle()==0,"Bridge exit skipped real gravity or did not reach court.");
             Walk(match,5.5f,4.5f);
             Assert(Player(match).GetProperty("y").GetSingle()==0,"Lower player climbed through upper slab.");
+        });
+        Check("Top Rules accepted lower blast eliminates an upper player",()=>
+        {
+            var stage=BlastStages.Get(BlastStages.TopRules);
+            var fixture=new StageLayout{Id=stage.Id,Width=stage.Width,Height=stage.Height,Cells=stage.Cells,
+                DecksBlockBlasts=stage.DecksBlockBlasts,Spawns=[(4,4),(5,4)],InitialItems=[(4,4,"fire"),(4,4,"fire")],SoftBlockDensity=0};
+            var match=new LocalMatch(new MatchOptions{Stage=stage.Id,HumanPlayers=2,BotPlayers=0,Practice=true},fixture);Fight(match);Step(match,2);
+            Assert(Player(match).GetProperty("fire").GetInt32()==3,"authored lower-floor pickups were not collected");
+            match.SetInput(0,new(1,0));Step(match,1);match.SetInput(0,new(0,0,A:true));Step(match,2);match.SetInput(0,default);
+            Walk(match,4.5f,9.5f);Step(match,90);
+            Assert(Events(match).Any(e=>Kind(e)=="death"&&e.GetProperty("playerId").GetString()=="local-1"&&e.GetProperty("causedBy").GetString()=="local-0"),"real lower explosion did not reach the upper player");
         });
         Check("Top Rules kicked lower bomb passes under bridge without hitting upper player", () =>
         {
@@ -127,7 +140,7 @@ internal static class TopRulesChecks
             var soft=new SoftBlockGrid(stage.Width,stage.Height);
             Assert(!BlastGeometry.Contains(stage,soft,5.5f,2.2f,1.5f,3,5.5f,2.2f,-.5f,true),"Elevated blast passed through rear wall.");
             var cells=Data(Match().StageJson!).GetProperty("cells");
-            Assert(Math.Abs(cells[5].GetProperty("oh").GetSingle()-3.1f)<.001f,"Wall crown was lost on the network boundary.");
+            Assert(Math.Abs(cells[5].GetProperty("oh").GetSingle()-stage.At(5,0).ObstacleHeight!.Value)<.001f,"Wall crown was lost on the network boundary.");
         });
         return passed;
     }

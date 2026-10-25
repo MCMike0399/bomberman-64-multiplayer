@@ -90,6 +90,7 @@ public sealed class StageLayout
     public int MaxSoftBlocks { get; init; } = int.MaxValue;
     public int OpeningCoverPerSpawn { get; init; } = 2;
     public bool RisingWater { get; init; }
+    public bool DecksBlockBlasts {get;init;}=true;
     public IReadOnlySet<(int X, int Z)> ClearCells { get; init; } = new HashSet<(int, int)>();
 
     public CellDef At(int x, int z)
@@ -446,4 +447,13 @@ public sealed class SoftBlockGrid
 public readonly record struct InputState(float X, float Z, bool A, bool B, bool R, bool Aim = false, bool Stop = false)
 {
     public float Length => MathF.Sqrt(X * X + Z * Z);
+}
+
+// A published warning and falling fireball. Only authority advances its impact.
+internal sealed class BlastMeteor
+{
+    public required string Id {get;init;}
+    public float X {get;init;}
+    public float Z {get;init;}
+    public float Remaining {get;set;}=BlastStages.MeteorWarningSeconds;
 }

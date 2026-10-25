@@ -81,6 +81,12 @@ public static class BombThrowRules
         for(int step=1;step<=steps;step++)
         {
             var candidate=Vector3.Lerp(position,flight.Position,(float)step/steps);
+            if(stage is not null)
+            {
+                float ceiling=stage.Ceiling(candidate.X,candidate.Z,BlastBomb.Radius,last.Y,candidate.Y,CoverHeight);
+                if(ceiling<candidate.Y)
+                    return new(new(candidate.X,ceiling,candidate.Z),new(flight.Velocity.X,Math.Min(0,flight.Velocity.Y),flight.Velocity.Z));
+            }
             if(StaticObstructed(candidate,velocity,surface,cellKind,hasCover,stage))
             {
                 if(!bounce)return new(new(last.X,flight.Position.Y,last.Z),new(0,flight.Velocity.Y,0));

@@ -14,7 +14,7 @@ internal sealed class TimedDangerField
     { _graph=graph;_stage=stage;Begins=new float[graph.Count];Ends=new float[graph.Count];BombOwners=new string?[graph.Count];Clear(); }
     private void Clear(){Array.Fill(Begins,float.PositiveInfinity);Array.Fill(Ends,float.NegativeInfinity);Array.Clear(BombOwners);}
     public bool Safe(int cell,float enter,float leave) => leave<Begins[cell] || enter>Ends[cell];
-    public void Build(SoftBlockGrid soft,IReadOnlyList<BlastBomb> bombs,IReadOnlyList<BlastHazard> hazards)
+    public void Build(SoftBlockGrid soft,IReadOnlyList<BlastBomb> bombs,IReadOnlyList<BlastHazard> hazards,IReadOnlyList<BlastMeteor>? meteors=null)
     {
         Clear();
         if(_times.Length<bombs.Count)Array.Resize(ref _times,Math.Max(bombs.Count,_times.Length*2));
@@ -24,6 +24,14 @@ internal sealed class TimedDangerField
             int cell=_graph.Cell(b.X,b.Z,Height(b));
             if(!b.Exploded&&b.State==BombState.Resting&&cell>=0)BombOwners[cell]=b.OwnerId??"unknown";
         }
+        // Published impacts can ignite ordinary or remote bombs before their own fuse.
+        if(meteors is not null)foreach(var meteor in meteors)
+            for(int i=0;i<bombs.Count;i++)
+            {
+                var bomb=bombs[i];if(bomb.Exploded||bomb.State==BombState.Carried)continue;
+                if(BlastGeometry.Contains(_stage,soft,meteor.X,0,meteor.Z,1.8f,bomb.X,Height(bomb),bomb.Z,true))
+                    _times[i]=Math.Min(_times[i],Math.Max(0,meteor.Remaining-.15f));
+            }
         // A visible short fuse can trigger a longer fuse; propagate until the earliest chain time stabilizes.
         // Soft cover may disappear before another detonation: future threats conservatively retain stone cover only.
         for(int pass=0;pass<bombs.Count;pass++)
@@ -57,6 +65,7 @@ internal sealed class TimedDangerField
                 }
             }
         }
+        if(meteors is not null)foreach(var m in meteors)AddSphere(soft,m.X,0,m.Z,1.75f,false,Math.Max(0,m.Remaining-.15f),m.Remaining+.55f);
         foreach(var h in hazards)AddSphere(soft,h.X,h.Y,h.Z,h.Radius+.45f,h.IsRed,0,h.LifeTimer+.1f);
     }
     public void AddHypothetical(SoftBlockGrid soft,BlastBomb bomb,float reactionMargin)

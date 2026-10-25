@@ -99,6 +99,7 @@ internal static class CapacityProbe
         private async Task<JsonElement> Api(string path, object body, string? token = null, CancellationToken cancel = default)
         {
             using var request = new HttpRequestMessage(HttpMethod.Post, "/realtime/v1/" + path) { Content = JsonContent.Create(body) };
+            request.Headers.Add("X-Blast-Protocol","2");
             if (token != null) request.Headers.Add("x-player-token", token);
             using var response = await _http.SendAsync(request, cancel);
             if (!response.IsSuccessStatusCode)
@@ -169,6 +170,7 @@ internal static class CapacityProbe
             _connectPath = url.Path; // Never retain the reservation token/query.
             _socket.Options.CollectHttpResponseDetails = true;
             _socket.Options.DangerousDeflateOptions = new WebSocketDeflateOptions { ClientContextTakeover = false, ServerContextTakeover = false };
+            _socket.Options.SetRequestHeader("X-Blast-Protocol","2");
             await _socket.ConnectAsync(url.Uri, cancel);
             _compressed = _socket.HttpResponseHeaders!.TryGetValue("Sec-WebSocket-Extensions", out var extensions) && string.Join(",", extensions).Contains("permessage-deflate", StringComparison.Ordinal);
             _reader = Read();

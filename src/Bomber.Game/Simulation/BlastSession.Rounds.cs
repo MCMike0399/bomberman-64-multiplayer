@@ -4,7 +4,7 @@ using Burbuja.Realtime.Abstractions;
 
 namespace Bomber.Game.Simulation;
 
-/// <summary>Round lifecycle, the Hurry column closure and the sudden-death flood.</summary>
+/// <summary>Round lifecycle and stage-owned sudden-death hazards.</summary>
 public sealed partial class BlastSession
 {
     // ─── round lifecycle ─────────────────────────────────────────────────────
@@ -21,6 +21,7 @@ public sealed partial class BlastSession
         _closedLeft = 0;
         _closedRight = 0;
         _hurryColTimer = 0;
+        _meteorTimer=0;_meteorSequence=0;_meteors.Clear();
 
         _bombs.Clear();
         _presentedKickContacts.Clear();
@@ -118,7 +119,7 @@ public sealed partial class BlastSession
                 Present("waterfall", magnitude: FloodRules.RisePerSecond, y: _waterLevel);
             }
         }
-        if (_phase == RoundPhase.Hurry && !_stage.RisingWater && _tutorialLesson is null)
+        if (_phase == RoundPhase.Hurry && !_stage.RisingWater && _stage.Id!=BlastStages.RockGarden && _tutorialLesson is null)
         {
             _hurryColTimer += dt;
             if (_hurryColTimer >= 1f)
@@ -135,6 +136,8 @@ public sealed partial class BlastSession
                 }
             }
         }
+
+        if(_phase==RoundPhase.Hurry&&_stage.Id==BlastStages.RockGarden)TickGardenMeteors(context,dt);
 
         // Time limit: draw.
         if (!_practice && timeLeft <= 0)

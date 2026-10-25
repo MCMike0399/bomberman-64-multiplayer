@@ -33,7 +33,7 @@ public sealed class BattleCameraRig(Camera3D camera)
             {
                 _bounds.Add(new(x+dx,y,z+dz));
                 // Match solid pillar crowns and keep standing-player headroom on walkable cells.
-                _bounds.Add(new(x+dx,y+(kind==1?(_castle?4.25f:1.21f):2.1f),z+dz));
+                _bounds.Add(new(x+dx,y+(kind==1?(cell.TryGetProperty("oh",out var crown)&&crown.ValueKind==JsonValueKind.Number?crown.GetSingle()*TempleStageView.HeightScale:1.21f):2.1f),z+dz));
             }
         }
     }

@@ -83,13 +83,13 @@ public sealed class PeerRoomSession(GameSessionOptions options) : GameSession
         if (total > (p.PlayerId == _host ? 2 * 1024 * 1024 : 64 * 1024)) return;
         if (message.Type == "peer.hello")
         {
-            if (d.TryGetProperty("version",out var version) && version.ValueKind==JsonValueKind.Number && version.TryGetInt32(out int v) && v==PeerProtocol.Revision)
+            if (d.TryGetProperty("version",out var version) && version.ValueKind==JsonValueKind.Number && version.TryGetInt32(out int v) && v==OnlineProtocol.Revision)
             { _ready.Add(p.PlayerId); _incompatible.Remove(p.PlayerId); _handshakes.Remove(p.PlayerId); if(p.PlayerId==_host)_lease=c.Now; Publish(c); }
             else
             {
                 _ready.Remove(p.PlayerId); _incompatible.Add(p.PlayerId); _handshakes.TryAdd(p.PlayerId,c.Now);
-                if(_phase=="playing")Reset(PeerProtocol.UpdateMessage);
-                c.Send(p.PlayerId,"party.error",new{message=PeerProtocol.UpdateMessage});Publish(c);
+                if(_phase=="playing")Reset(OnlineProtocol.UpdateMessage);
+                c.Send(p.PlayerId,"party.error",new{message=OnlineProtocol.UpdateMessage});Publish(c);
             }
             return;
         }
@@ -131,7 +131,7 @@ public sealed class PeerRoomSession(GameSessionOptions options) : GameSession
     public override void OnTick(ISessionContext c)
     {
         foreach (var pending in _handshakes.Where(p=>c.IsConnected(p.Key)&&!_ready.Contains(p.Key)&&c.Now-p.Value>TimeSpan.FromSeconds(10)).Select(p=>p.Key).ToArray())
-        { _handshakes.Remove(pending); c.Kick(pending,PeerProtocol.UpdateMessage); }
+        { _handshakes.Remove(pending); c.Kick(pending,OnlineProtocol.UpdateMessage); }
         if (_host is not null && _ready.Contains(_host) && c.Now - _lease > TimeSpan.FromSeconds(6))
         {
             if (_host is not null) _expiredHosts.Add(_host);
@@ -145,8 +145,8 @@ public sealed class PeerRoomSession(GameSessionOptions options) : GameSession
         leaderId = _host, phase = _phase, match = _match, canStart = _phase == "lobby" && Enough(c),
         bots = int.TryParse(_settings.GetValueOrDefault("bots"), out int bots) ? bots : 0,
         settings = _settings, hosting = "peer", minimumHumans = 2, epoch = _epoch, seed = options.Seed,
-        requiredPeerProtocol=PeerProtocol.Revision,
-        notice = _incompatible.Any(c.IsConnected) ? PeerProtocol.UpdateMessage : _phase == "lobby" && _members.Keys.Where(c.IsConnected).Any(id=>!_ready.Contains(id)) ? "Checking peer compatibility..." : _notice,
+        requiredOnlineProtocol=OnlineProtocol.Revision,
+        notice = _incompatible.Any(c.IsConnected) ? OnlineProtocol.UpdateMessage : _phase == "lobby" && _members.Keys.Where(c.IsConnected).Any(id=>!_ready.Contains(id)) ? "Checking peer compatibility..." : _notice,
         players = _members.Values.OrderBy(p => _order[p.PlayerId]).Select(p => new
         { playerId = p.PlayerId, displayName = PlayerNames.Display(p.DisplayName, p.Slot), slot = p.Slot, connected = c.IsConnected(p.PlayerId), appearance = _appearances.GetValueOrDefault(p.PlayerId, p.Slot) }).ToArray()
     });

@@ -66,6 +66,13 @@ public partial class PlaytestDriver
                     var materials=AuditDescendants(terrain).OfType<MeshInstance3D>().Select(n=>n.MaterialOverride)
                         .OfType<ShaderMaterial>().Where(m=>m.Shader.Code.Contains("uniform float quality_detail")).Distinct().ToArray();
                     Check(materials.Length>0&&materials.All(m=>m.GetShaderParameter("quality_detail").AsSingle()==(preset==GraphicsPreset.Low?0:1)),"live terrain shader detail follows preset on "+stage);
+                    var water=terrain.GetChildren().OfType<MeshInstance3D>().Where(n=>n.Mesh is PlaneMesh).ToArray();
+                    if(stage=="rock-garden")Check(water.Length==0,"garden preserves its dry grass setting at "+preset);
+                    else if(stage!="top-rules")
+                    {
+                        Check(water.Length==1,"sea arena retains one water surface: "+stage);
+                        Check(((ShaderMaterial)water[0].MaterialOverride).GetShaderParameter("quality_detail").AsSingle()==(preset==GraphicsPreset.Low?0:1),"live water detail follows preset");
+                    }
                     await Capture("graphics-"+stage+"-"+GraphicsQuality.ToWire(preset));
                     await MeasureGraphics(stage,preset);
                 }
@@ -124,7 +131,11 @@ public partial class PlaytestDriver
             dial.GrabFocus();
         }
         Check(_root.Preferences.Graphics==preset&&PlayerPreferences.Load(_root.PreferencesPath).Graphics==preset,"native graphics dial applies and persists "+preset);
-        if(session!=null)Check(ReferenceEquals(session,_root.ActiveSession)&&LightingArena.TimeOfDay==lighting,"graphics changes preserve session and lighting");
+        // Online rounds keep advancing while the graphics pipelines prepare.
+        // Their accepted lighting can change legitimately during this interval.
+        var expectedLighting=session is NetworkSession&&_root.LatestState is {} state
+            ? StageLighting.FromWire(state.GetProperty("stageLighting").GetString()):lighting;
+        if(session!=null)Check(ReferenceEquals(session,_root.ActiveSession)&&LightingArena.TimeOfDay==expectedLighting,"graphics changes preserve session and authoritative lighting");
         if(session is LocalSession)Check(_root.SnapshotCount==snapshots,"graphics changes preserve paused local authority");
         await KeyPress(Key.Escape);
         if(match)await ActivateNamed("ResumeGame");

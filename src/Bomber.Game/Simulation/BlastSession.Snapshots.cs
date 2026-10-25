@@ -138,7 +138,7 @@ public sealed partial class BlastSession
             timeLeft = MathF.Round(timeLeft, 1),
             closedLeft = _closedLeft,
             closedRight = _closedRight,
-            hurryMode = !_suddenDeath || _practice ? "none" : _stage.RisingWater ? "water" : "columns",
+            hurryMode = !_suddenDeath || _practice ? "none" : _stage.RisingWater ? "water" : _stage.Id==BlastStages.RockGarden?"meteors":"columns",
             waterLevel = _waterLevel,
             waterStartsIn = !_practice && _suddenDeath && _stage.RisingWater ? Math.Max(0,_roundSeconds-60+FloodRules.RiseDelay-_roundTimer) : -1,
             waterRiseRate = !_practice && _suddenDeath && _stage.RisingWater && _roundTimer >= _roundSeconds-60+FloodRules.RiseDelay ? FloodRules.RisePerSecond : 0,
@@ -146,6 +146,7 @@ public sealed partial class BlastSession
             players = playerList,
             bombs = bombList,
             hazards = hazardList,
+            meteors = _meteors.Where(_=>_phase==RoundPhase.Hurry).Select(m=>new {id=m.Id,x=m.X,z=m.Z,remaining=MathF.Round(m.Remaining,3)}),
             items = itemList,
             softBlocks = _softBlocks.ToBase64(),
         });

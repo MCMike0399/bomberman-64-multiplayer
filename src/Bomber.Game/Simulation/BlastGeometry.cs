@@ -26,9 +26,9 @@ public static class BlastGeometry
             var t = (float)i / steps; var x = ax + dx * t; var z = az + dz * t; var y = ay + dy * t;
             var cx = (int)MathF.Floor(x); var cz = (int)MathF.Floor(z);
             var top = stage.At(cx, cz);
-            if(top.Below is not null && y >= top.Tier - CellDef.DeckThickness && y <= top.Tier) return true;
-            var cell = stage.AtHeight(cx, cz,y);
-            var surface = stage.SurfaceAt(x, z,y);
+            if(stage.DecksBlockBlasts && top.Below is not null && y >= top.Tier - CellDef.DeckThickness && y <= top.Tier) return true;
+            var cell = !stage.DecksBlockBlasts&&top.Below is not null&&y<top.Tier ? top.Below : stage.AtHeight(cx, cz,y);
+            var surface = stage.SurfaceAt(x, z,!stage.DecksBlockBlasts&&top.Below is not null&&y<top.Tier?float.NegativeInfinity:y);
             if (!cell.IsElimination && surface > y + .02f) return true;
             if (cell.Kind == CellKind.Pillar && surface + (cell.ObstacleHeight ?? 1.75f) > y) return true;
             if ((cx == acx && cz == acz) || (cx == bcx && cz == bcz)) continue;

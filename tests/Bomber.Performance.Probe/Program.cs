@@ -41,6 +41,7 @@ finally
 async Task<JsonElement> Api(string path,object body,string? token=null)
 {
     using var request=new HttpRequestMessage(HttpMethod.Post,"/realtime/v1/"+path){Content=JsonContent.Create(body)};
+    request.Headers.Add("X-Blast-Protocol","2");
     if(token!=null)request.Headers.Add("x-player-token",token);
     using var response=await http.SendAsync(request);response.EnsureSuccessStatusCode();if(response.StatusCode==System.Net.HttpStatusCode.NoContent)return default;return await response.Content.ReadFromJsonAsync<JsonElement>();
 }
@@ -60,6 +61,7 @@ sealed class Peer(string token,int seat)
     public async Task Connect(Uri origin,JsonElement reservation)
     {
         var url=new UriBuilder(new Uri(origin,reservation.GetProperty("connectUrl").GetString()!));url.Scheme=url.Scheme=="https"?"wss":"ws";
+        _socket.Options.SetRequestHeader("X-Blast-Protocol","2");
         await _socket.ConnectAsync(url.Uri,_stop.Token);_reader=Read();
     }
     public void StartInputs()=>_writer=Write();

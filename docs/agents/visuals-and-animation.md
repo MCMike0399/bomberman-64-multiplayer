@@ -351,3 +351,12 @@ shells and billows. Purple bouncing and mint fast bombs match their pickup color
 Focus uses a cyan target symbol. Charge progress drives tension before the accepted
 pump animation. The fifth-tier Pyramid summit is a low mosaic, keeping playable
 space and rear water falls visible. Recheck camera fit on all enlarged arenas.
+
+## Rock Garden reconstruction (2026-10-24)
+
+Rock Garden has its own procedural turf, weathered gray limestone, five round
+columns, pale central paving and faceted destructible boulders. It renders dry
+land beyond the authority-owned enclosure instead of the temple sea. Scenery
+outside the walls is visual only. The column and cover crowns use shared throw
+support heights; the paving is a shallow cosmetic layer. The stage selector
+uses the real square layout. See the [stage contract](../rock-garden.md).
