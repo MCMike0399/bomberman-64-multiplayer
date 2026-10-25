@@ -32,6 +32,15 @@ def install():
                 data = bundle.read(entry)
                 if not target.exists() or target.read_bytes() != data:
                     target.write_bytes(data)
+    # Load the verified extension at engine startup. Discovering it during a cold
+    # Linux --import can race editor shutdown (reproduced with Godot 4.7.2).
+    # Preserve other extensions; this is disposable Godot cache, never tracked.
+    registry = ROOT / '.godot/extension_list.cfg'
+    extension = 'res://addons/webrtc_native/webrtc_native.gdextension'
+    entries = registry.read_text().splitlines() if registry.exists() else []
+    if extension not in entries:
+        registry.parent.mkdir(parents=True, exist_ok=True)
+        registry.write_text('\n'.join([*entries, extension]) + '\n')
     print(f'WebRTC {VERSION} verified: {SHA256}')
 
 

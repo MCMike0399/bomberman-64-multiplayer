@@ -20,9 +20,11 @@ class BootstrapChecks(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             root=Path(folder);payload=self.archive('addons/webrtc_native/lib/fixture.dylib')
             archive=root/'artifacts/dependencies/webrtc-native.zip';archive.parent.mkdir(parents=True);archive.write_bytes(payload)
+            registry=root/'.godot/extension_list.cfg';registry.parent.mkdir();registry.write_text('res://addons/existing/plugin.gdextension\n')
             with patch.object(module,'ROOT',root),patch.object(module,'SHA256',hashlib.sha256(payload).hexdigest()),patch.object(module.urllib.request,'urlopen',side_effect=AssertionError('must use verified cache')):
                 module.install();library=root/'addons/webrtc_native/lib/fixture.dylib';library.write_bytes(b'modified');module.install()
                 self.assertEqual(library.read_bytes(),b'library fixture')
+                self.assertEqual(registry.read_text().splitlines(),['res://addons/existing/plugin.gdextension','res://addons/webrtc_native/webrtc_native.gdextension'])
 
     def test_archive_cannot_escape_extension_directory(self):
         with tempfile.TemporaryDirectory() as folder:
