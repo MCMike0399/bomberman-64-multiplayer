@@ -10,7 +10,7 @@ public partial class PlaytestDriver
     private async Task HandlingPractice()
     {
         if(_root.ActiveSession!=null){Input(0,default);_root.Back();await Frames(3);}
-        Input(0,default);_root.StartLocal(new SessionSettings(Stage:"sunken-temple",Bots:0),1,practice:true);
+        Input(0,default);_root.StartLocal(new SessionSettings(Stage:"sunken-temple",Bots:0){Advanced=new AdvancedRules{DisabledItems="red,bounce,heart,focus,tiny,big,haste,slow"}},1,practice:true);
         await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"bomb handling reaches stock temple training",150);
     }
     private async Task BombHandling()

@@ -12,13 +12,13 @@ public partial class PlaytestDriver
         _root.Navigate("Setup");await Frames(3);await ActivateNamed("AdvancedSettings");
         Check(_root.ScreenName=="Advanced","match configuration opens the dedicated advanced page");
         var menu=_root.FindChildren("*","",true,false).OfType<ArcadeMenu>().Single();
-        Check(menu.Settings.Advanced.DropPercent==55,"advanced default drop chance is 55 percent");
+        Check(menu.Settings.Advanced.DropPercent==40,"advanced default drop chance is 40 percent");
+        await ActivateNamed("Itemdropchance");Check(menu.Settings.Advanced.DropPercent==45,"native dial changes independent drop chance");
         Check(_root.FindChild("Allow_fast",true,false)==null&&_root.FindChild("Allow_haste",true,false)!=null,"advanced menu exposes Haste without Fast bomb equipment");
-        await ActivateNamed("Itemdropchance");Check(menu.Settings.Advanced.DropPercent==60,"native dial changes independent drop chance");
         await ActivateNamed("Allow_big");Check(!menu.Settings.Advanced.Allows("big"),"native toggle disables a debuff item");
         await Capture("advanced-match-settings");
         await KeyPress(Key.Escape);Check(_root.ScreenName=="Setup","Escape returns to match setup");
-        await ActivateNamed("AdvancedSettings");Check(menu.Settings.Advanced.DropPercent==60&&!menu.Settings.Advanced.Allows("big"),"advanced edits survive back navigation");
+        await ActivateNamed("AdvancedSettings");Check(menu.Settings.Advanced.DropPercent==45&&!menu.Settings.Advanced.Allows("big"),"advanced edits survive back navigation");
         await ActivateNamed("ResetAdvanced");Check(menu.Settings.Advanced==new AdvancedRules(),"restore defaults resets every advanced option");
         await ActivateNamed("AdvancedBack");
         foreach(var (kind,x,z,scale) in new[]{("tiny",9.5f,15.5f,.65f),("big",15.5f,15.5f,1.4f),("haste",10.5f,16.5f,1f),("slow",14.5f,16.5f,1f)})
