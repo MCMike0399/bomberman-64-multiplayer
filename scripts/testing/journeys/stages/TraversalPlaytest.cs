@@ -79,7 +79,8 @@ public partial class PlaytestDriver
         await WaitState(_=>GrapplePlayer(0).GetProperty("ghost").GetBoolean(),"real fuse explosion produces a live ghost in an ordinary match",120);
         Check(GrapplePlayer(0).GetProperty("alive").GetBoolean()&&GrapplePlayer(1).GetProperty("alive").GetBoolean()&&!GrapplePlayer(1).GetProperty("ghost").GetBoolean(),"ghost death preserves the living target and active multiplayer round");
         await GrappleWalk(0,16,4);
-        Input(0,new PlayerInput(1,0));
+        // The front edge keeps the lower ghost visible from the battle camera.
+        Input(0,new PlayerInput(0,1));
         await WaitState(_=>GrapplePlayer(0).GetProperty("falling").GetBoolean(),"unlatched ghost walks off the crown using real gravity",30);
         Input(0,default);
         Check(GrappleValue(GrapplePlayer(0),"y")<4&&GrappleValue(GrapplePlayer(0),"y")>3,"ghost publishes an intermediate ledge-fall height");
