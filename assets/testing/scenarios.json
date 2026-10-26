@@ -14,6 +14,18 @@
       "manual": false
     },
     {
+      "id": "map-preview-loading",
+      "method": "MapPreviewLoading",
+      "domains": [
+        "rendering",
+        "performance",
+        "ui"
+      ],
+      "headless": false,
+      "timeout": 180,
+      "manual": false
+    },
+    {
       "id": "first-use-rendering",
       "method": "FirstUseRendering",
       "domains": [
@@ -529,6 +541,7 @@
       "id": "all",
       "steps": [
         "first-use-rendering",
+        "map-preview-loading",
         "performance-metrics",
         "display-settings",
         "graphics-settings",
@@ -866,6 +879,7 @@
     {
       "id": "menu-ux",
       "steps": [
+        "map-preview-loading",
         "menu-navigation",
         "performance-metrics",
         "display-settings",

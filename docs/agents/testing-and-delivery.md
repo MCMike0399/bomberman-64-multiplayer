@@ -138,6 +138,13 @@ creation. Preserve both receipts. Fixed-step frame intervals are diagnostic stal
 witnesses, not real-time GPU throughput. The default case tests every quality
 preset and retained shader resources after garbage collection.
 
+For map-picker freezes, run `map-preview-loading` in a fresh graphical process.
+It cycles all maps forward/backward through Setup, Practice and room settings
+at every preset, verifies retained scenes and paused inactive previews, and
+rejects synchronous pipeline creation during selection. Inspect its actual
+miniature captures alongside the timing/pipeline trace. `setup` also checks
+miniature bounds and starts ordinary gameplay after preview selection.
+
 Native popups have distinct window IDs; use the existing popup helpers and
 canvas-to-screen mouse transforms. Preserve ordinary input/hit testing rather
 than calling menu callbacks or forcing focus flags to obtain a green receipt.

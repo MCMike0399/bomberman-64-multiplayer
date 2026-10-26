@@ -87,6 +87,7 @@ public partial class ArcadeMenu : Control
     private PromptBar _inputFooter=null!;
     public int HumanCount => _practice?1:_localPlayers.Roster.Humans;
     public int[] PlayerAppearances => _practice?new[]{_localPlayers.Roster.AuthorityAppearances().FirstOrDefault()}:_localPlayers.Roster.AuthorityAppearances();
+    public Task PrepareArenas()=>_background.PrepareArenas(StageIds);
     public object RosterState=>_localPlayers.DiagnosticState;
     public int OnlineAppearance=>_onlineAppearance;
     public string ServerUrl=>_server.Text.Trim();

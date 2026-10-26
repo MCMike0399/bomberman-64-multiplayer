@@ -73,7 +73,7 @@ public partial class GameRoot
             string screen=ScreenName;bool menuVisible=_menu.Visible;var focus=GetViewport().GuiGetFocusOwner();
             _preparingGraphics=true;_menu.Visible=false;ControllerHub.Current.MenuNavigationEnabled=false;
             var loading=PreparationOverlay("Applying graphics...");
-            try {await EffectWarmup.Draw(this);await _arena.PrepareEffects();}
+            try {await EffectWarmup.Draw(this);await _arena.PrepareEffects();await _menu.PrepareArenas();}
             finally
             {
                 loading.QueueFree();_preparingGraphics=false;

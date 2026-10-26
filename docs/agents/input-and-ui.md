@@ -290,7 +290,12 @@ fixed-step VM readings establish functionality, not native hardware throughput.
 
 ## Arena selection
 
-The native arena dial cycles Sunken Temple, Rock Garden, Up & Down, Top Rules and Greedy Trap.
+The native arena dial cycles Sunken Temple, Rock Garden, Up & Down, Top Rules,
+Blizzard Battle and Greedy Trap. The real miniatures are built and rendered
+during startup preparation, then retained so cycling the dial only changes
+visibility. Graphics-preset preparation redraws every retained miniature and
+restores the selection before returning focus. See the
+[rendering guide](visuals-and-animation.md#first-use-effects).
 Use `StageIds.Length` for wraparound. Local battle, Practice and waiting-room
 settings use the same validated ids; the menu miniature includes thin castle
 bridges and their lower passages. `setup` checks both wrap directions;

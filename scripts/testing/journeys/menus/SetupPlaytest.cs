@@ -22,7 +22,7 @@ public partial class PlaytestDriver
         }
         Check(menu.Settings.Stage=="sunken-temple","setup starts with the configured temple");
         await Adjust("StageSelector",Key.Right);Check(menu.Settings.Stage=="rock-garden","right selects authority Rock Garden");await Capture("setup-rock-garden");
-        var garden=AuditDescendants(_root).OfType<TempleStageView>().Single(t=>t.GetParent().Name=="ArenaDiorama");
+        var garden=AuditDescendants(_root).OfType<TempleStageView>().Single(t=>t.GetParent().Name=="ArenaDiorama"&&t.IsVisibleInTree());
         var footprint=new Rect2(-.4f,-.4f,garden.Width+.8f,garden.Depth+.8f).Grow(.01f);
         var scenery=AuditDescendants(garden).OfType<MeshInstance3D>().Where(m=>m.IsVisibleInTree()&&m.Mesh!=null).ToArray();
         var spills=scenery.Where(m=>
@@ -33,7 +33,7 @@ public partial class PlaytestDriver
         Event("garden-miniature-bounds",new {meshes=scenery.Length,spills});
         Check(scenery.Length>0&&spills.Length==0,"Rock Garden miniature scenery stays within its display footprint");
         await Adjust("StageSelector",Key.Right);Check(menu.Settings.Stage=="up-and-down","right selects authority Up & Down");await Capture("setup-up-and-down");
-        var upAndDown=AuditDescendants(_root).OfType<TempleStageView>().Single(t=>t.GetParent().Name=="ArenaDiorama");
+        var upAndDown=AuditDescendants(_root).OfType<TempleStageView>().Single(t=>t.GetParent().Name=="ArenaDiorama"&&t.IsVisibleInTree());
         var displayMeshes=AuditDescendants(upAndDown).OfType<MeshInstance3D>().Where(m=>m.IsVisibleInTree()&&m.Mesh!=null).ToArray();
         var belowStand=displayMeshes.Where(m=>((upAndDown.GetParent<Node3D>().GlobalTransform.AffineInverse()*m.GlobalTransform)*m.Mesh.GetAabb()).Position.Y<-.312f).ToArray();
         Check(belowStand.Length==0,"Up & Down miniature foundations stop above the display stand");
