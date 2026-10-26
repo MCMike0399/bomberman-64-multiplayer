@@ -3,7 +3,7 @@
 The user resumed gameplay work on 2026-10-23 for controller ergonomics, aiming
 and knockdown/blast separation (iteration19). The first eighteen iterations
 remain historical evidence. Iteration20 then rebuilt the walk. Recorded
-release baseline: **v0.32.0/build 38**, published with independently verified Mac
+release baseline: **v0.33.0/build 39**, published with independently verified Mac
 and server archives (see [verification](../verification.md)). Previous runtime baseline: **v0.18.0**, commit
 `316a330d7d895a92f98c1a60be7d571ec445a8a3`. Later documentation commits may follow.
 Verify the live branch, source, tools and installed version before relying on
@@ -41,6 +41,12 @@ update the current guide rather than silently reviving old behavior.
 | [Latest verification](../verification.md) | Exact observed results and limitations, with earlier iterations below |
 
 ## Current decisions that supersede earlier experiments
+
+- v0.33 delivers PR #18's feature-folder/namespace restructure while retaining
+  v0.32 display behavior. The complete exported Metal suite passed 51 journeys;
+  native M5 Pro checks, trusted CI and both production workers passed. Native
+  frame-time comparisons retain desktop-load/focus limitations.
+  [Layout](codebase-map.md) and [delivery receipt](../verification.md#v0330-delivered).
 
 - v0.32 delivers saved resolution and Windowed/Fullscreen controls. Ordinary
   launch restores both choices; QA stays explicitly windowed. Native M5 Pro Metal,

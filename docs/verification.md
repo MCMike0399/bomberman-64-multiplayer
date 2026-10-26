@@ -1,3 +1,72 @@
+# v0.33.0 delivered
+
+Published **2026-10-26 15:17:05 UTC**: [v0.33.0 / signed update](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.33.0).
+[PR #18](https://github.com/MCMike0399/bomberman-64-multiplayer/pull/18) is merged;
+the immutable release/tag source is `93d5d469df586a8a24b3659e46bb34ac68a5e766`.
+The release is **v0.33.0/build 39/schema 6**, with exact admission token
+`6/0.33.0/39`.
+
+- [Trusted Verification 40344675351](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40344675351)
+  passed public, managed/network, Godot headless and Apple Silicon packaging.
+  CI's optional Metal lane remains skipped; the complete local exported Metal
+  suite and native M5 Pro measurements are recorded separately below.
+- [Protected deployment and publication 40346963595](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40346963595)
+  passed every job. Public, primary and fallback report the exact source and
+  admission token, with both `passed` and `connectionVerified` true for each.
+  The workflow required selected-worker gameplay and room retirement before
+  publication, then downloaded and compared the draft assets before publishing.
+- Independent CI and published downloads verified archive checksums, the Mac
+  identity/controller manifest, all 55 server/plugin file hashes, both P-256
+  signatures and all five signed asset hashes/sizes. All ten assets are public;
+  the latest stable feed and immutable tag point to this release. An independent
+  public identity/admission probe also passed. ZIPs were inspected in place;
+  the personal installed app was not replaced.
+
+Published archive SHA-256:
+
+```text
+Mac:    0973019603e982b15d84292927ce11077c9ebbb4f9ac974bf618b86b37e70c06
+Server: d4cf34ad06e93e7e632083343363e1643d85fe8c9bbf805977a23459770b10e5
+```
+
+## Refactor integration and local verification
+
+The feature-folder/namespace restructure retains v0.32 display preferences and
+gallery behavior. Integrating main exposed a `SessionSettings` import failure
+in the newer gallery partial. Its code and existing Godot UID now live under
+`journeys/rendering`, importing the relocated `Bomber.Client.Sessions` namespace.
+No gameplay or graphics tuning was changed.
+
+The clean local candidate `fa02034` has the same tree as the final merge. Public,
+headless and package gates passed. The complete exported macOS Metal suite passed
+**51 journeys, 4,236 assertions and 412 captures, with zero runtime errors**.
+All captures were reviewed in 18 contact sheets, with selected full-size checks
+of the model, settings, castle and Greedy Trap. One known SCTP stream-reset
+warning occurred during teardown.
+
+Managed checks passed on the combined source before its merge commit: 2,854 game,
+354 client, 80 AI, 19 audio, 23 cluster, 72 soak, 78 release connection/cleanup,
+real network smoke, nine forced-relay and 36 fleet checks. Later local gates ran
+on the clean committed candidate. Headless core/peer/adaptive/slow-poll counts
+were 1,528/19/9/10; exported package counts were 255/19/9/10. Trusted CI above
+independently tested the final merge and built the delivered artifacts.
+
+Native Apple M5 Pro Metal compared the inventory-verified local v0.32 export
+against v0.33 at 1920×1200, with identical .NET 10.0.12 runtime configurations,
+all presets and real eight-player battles. Both completed runs passed 47
+assertions with zero errors/warnings. Apple Metal HUD battle GPU medians
+(Low/Medium/High) were 2.84/6.62/9.42 ms before and 2.93/6.17/8.86 ms after.
+Frame p95 values were 10.998/8.593/8.747 ms before and 12.377/10.586/8.745 ms
+after; menu timing also varied. Shared desktop workloads limit frame-latency
+comparisons. Two supplementary attempts were rejected by foreground-focus
+assertions and remain retained; no focus or timing checks were relaxed.
+These are brief native rendering/GPU measurements, not statistical latency
+equivalence, sustained thermal or new physical-controller coverage.
+
+Ignored evidence remains under `artifacts/pr18/`: merge witness, all QA receipts,
+reviewed images, native measurements and interrupted trials, exact CI artifacts,
+deployment receipt and independent published-signature/hash verification.
+
 # v0.32.0 delivered
 
 Published **2026-10-26 09:15:01 UTC**: [v0.32.0 / signed update](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.32.0).

@@ -11,8 +11,9 @@ The public address is `https://blast.burbuja-lab.dev`. Raspberrypi is the primar
 game node; DiveMac keeps a resource-capped idle worker ready for overflow. Both
 share matchmaking and room codes. Follow [cluster operations](cluster-hosting.md)
 for routing, capacity limits, node updates and the limits of failure recovery.
-The [v0.30 delivery receipt](verification.md) records the current signed release,
-matching worker runtimes and protocol 4. The [v0.29.1 capacity receipt](smart-multiplayer-release-029.md)
+The [v0.33 delivery receipt](verification.md#v0330-delivered) records the current
+signed release, matching workers and exact `6/0.33.0/39` admission token.
+The [v0.29.1 capacity receipt](smart-multiplayer-release-029.md)
 retains measured operating caps and remaining load/fallback coverage limits.
 
 ## Release and deploy
