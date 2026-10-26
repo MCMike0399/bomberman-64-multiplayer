@@ -51,7 +51,9 @@ All six battle arenas support local, practice and online sessions. Circuit Garde
 
 ## Graphics and screenshots
 
-Choose **Settings → Graphics → High** for the highest preset: native rendering resolution, 4× MSAA, 4096-pixel shadows, higher-quality full-resolution ambient occlusion and indirect light bounce. Clear refracting shallows, caustics, toy-like materials, painterly terrain, and depth of field and haze outside the playable arena create the diorama look. Medium is the default; Low reduces rendering cost. [Preset details and limits](docs/graphics-research.md).
+Choose **Settings → Graphics → High** for the highest preset: full selected 3D resolution, 4× MSAA, 4096-pixel shadows, higher-quality full-resolution ambient occlusion and indirect light bounce. Clear refracting shallows, caustics, toy-like materials, painterly terrain, and depth of field and haze outside the playable arena create the diorama look. Medium is the default; Low reduces rendering cost. [Preset details and limits](docs/graphics-research.md).
+
+Settings also provides **Display mode** and **Resolution**, saved automatically for the next launch. Windowed mode fits the chosen window size to your display; fullscreen adjusts 3D resolution while keeping menus sharp.
 
 **Local lighting** offers Morning, Midday, Afternoon and Night. Online rounds use the server’s lighting; graphics quality remains your local preference.
 
@@ -115,9 +117,9 @@ The shared service runs independently of players’ computers. Peer rooms suppor
 
 ## macOS app and updates
 
-The Apple Silicon app bundles the game, .NET runtime, original assets and optional Switch 2 USB libraries. Local play needs neither the editor nor a server. Open the app normally for fullscreen play.
+The Apple Silicon app bundles the game, .NET runtime, original assets and optional Switch 2 USB libraries. Local play needs neither the editor nor a server. The app remembers your display mode and resolution; first launch uses fullscreen.
 
-**Settings → Game updates** checks for signed GitHub releases automatically. When an update is ready, leave your room and choose **Update and restart**. A failed launch restores the previous app. [Update details](docs/automatic-updates.md).
+**Settings → Game updates** checks for signed GitHub releases automatically. When an update is ready, leave your room and choose **Restart to update**. A failed launch restores the previous app. [Update details](docs/automatic-updates.md).
 
 The app uses Metal and opts into macOS Game Mode for eligible fullscreen play. macOS controls activation. The app is ad-hoc signed and is not notarized. [Packaging](docs/macos-app.md) · [Game Mode](docs/macos-game-mode.md).
 

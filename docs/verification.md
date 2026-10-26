@@ -1,3 +1,34 @@
+# v0.32 display settings candidate
+
+2026-10-26: source prepares **v0.32.0/build 38/schema 6** with saved display mode
+and resolution controls. Windowed mode fits the chosen size to the current
+screen; fullscreen caps 3D rendering while retaining sharp menus. Both choices
+save immediately and restore at startup; F11 and Alt+Enter save the same mode.
+[Behavior and ownership](agents/input-and-ui.md).
+
+- Public and complete managed/network gates passed: 2,854 game checks, 354 client
+  checks, 80 AI checks, 72 soak cases and the real staged-server/network/fleet gates.
+- Packaging passed native libusb/SDL startup, strict signatures and exported
+  package/peer/adaptive/slow-poll checks. The rebuilt app passed all **51 graphical
+  journeys: 4,236 assertions, 412 captures, zero runtime errors or warnings** on
+  isolated macOS Metal Forward+.
+- The same export passed the focused display journey on **native Apple M5 Pro
+  Metal**: 61 assertions / five captures. Its fresh executable restored the saved
+  mode and resolution (six further assertions / one capture). Actual images were
+  inspected, including fullscreen, restart restoration, the 1024 x 640 Settings
+  layout and both visible update actions.
+- Ordinary fullscreen startup, without the QA window override, passed seven
+  assertions / two captures in the isolated Metal desktop. QA files remain
+  separate from personal preferences. These are functional/rendering checks,
+  not new GPU throughput or physical-controller claims.
+
+Local receipts remain under ignored `artifacts/display-settings/`. An early
+50-second VM child-launch trial timed out; its failing receipt was retained.
+The final child budget is bounded at 90 seconds and passes in both the native
+focused run and the complete exported regression. No user settings are changed
+by these tests. Hosted CI, production rollout and signed publication remain
+separate delivery steps; v0.31 below is the previously delivered baseline.
+
 # v0.31.0 delivered
 
 2026-10-25 local time (published **2026-10-26 00:05:08 UTC**): the combined

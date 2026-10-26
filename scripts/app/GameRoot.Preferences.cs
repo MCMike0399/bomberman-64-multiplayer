@@ -20,6 +20,7 @@ public partial class GameRoot
             GraphicsQuality.Apply(_preferences.Graphics,GetViewport());
             _arena.ApplyGraphicsQuality();
             _appliedGraphics=_preferences.Graphics;
+            DisplayModeController.Current.ApplyRenderResolution();
         }
         ApplyStageLighting();
     }
@@ -45,8 +46,17 @@ public partial class GameRoot
         return layer;
     }
 
+    private void SaveDisplayShortcut()
+    {
+        _preferences.Fullscreen=DisplayModeController.Current.Fullscreen;
+        _menu.ConfigureDisplay(_preferences.Fullscreen,_preferences.Resolution);
+        if(_preferences.Save(PreferencesPath)!=Error.Ok)_menu.SettingsNotice("Could not save settings on this device.");
+    }
+
     private async void SavePreferences()
     {
+        DisplayModeController.Current.Configure(_menu.Fullscreen,_menu.Resolution);
+        _preferences.Fullscreen=_menu.Fullscreen;_preferences.Resolution=_menu.Resolution;
         bool graphicsChanged=_preferences.Graphics!=_menu.Graphics;
         _preferences.PlayerName=_menu.PlayerName;_preferences.ServerUrl=_menu.ServerUrl;
         _preferences.AutomaticUpdates=_menu.AutomaticUpdates;

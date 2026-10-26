@@ -9,12 +9,12 @@ public partial class ArcadeMenu
 {
     private void BuildSettings()
     {
-        var screen=Screen("Settings");var box=Card(screen,new(150,95),new(1140,690));
+        var screen=Screen("Settings");var box=Card(screen,new(150,65),new(1140,740));
         ArcadeTheme.Heading(box,"Settings",42);
         Copy(box,"Your preferences are saved on this device.",18);
         var columns=ArcadeTheme.Row(box,40);
         var player=ArcadeTheme.Column(columns,14);player.CustomMinimumSize=new(500,440);
-        var updates=ArcadeTheme.Column(columns,14);updates.CustomMinimumSize=new(500,440);
+        var updates=ArcadeTheme.Column(columns,6);updates.CustomMinimumSize=new(500,440);
         _volumeLabel=ArcadeTheme.Text(player,"Sound volume: 80%",22);
         _volume=new HSlider {Name="SoundVolume",MinValue=0,MaxValue=100,Step=5,Value=80,CustomMinimumSize=new(460,48)};player.AddChild(_volume);
         _volume.ValueChanged+=value=>{_volumeLabel.Text=$"Sound volume: {value:0}%";SettingsChanged?.Invoke();};
@@ -33,13 +33,26 @@ public partial class ArcadeMenu
             {Graphics=(GraphicsPreset)(((int)Graphics+direction+3)%3);_graphicsDescription.Text=GraphicsQuality.Description(Graphics);SettingsChanged?.Invoke();}};
         updates.AddChild(graphics);
         _graphicsDescription=Copy(updates,GraphicsQuality.Description(Graphics),16);
+        var mode=new ArcadeRuleDial {Name="DisplayMode",Caption="Display mode",ValueWidth=160,
+            ReadValue=()=>Fullscreen?"Fullscreen":"Windowed",
+            ChangeValue=_=>{Fullscreen=!Fullscreen;SettingsChanged?.Invoke();}};
+        updates.AddChild(mode);
+        var resolution=new ArcadeRuleDial {Name="DisplayResolution",Caption="Resolution",ValueWidth=190,
+            ReadValue=()=>DisplayModeController.ResolutionLabel(Resolution),ChangeValue=direction=>
+            {
+                var sizes=DisplayModeController.Resolutions;
+                Resolution=sizes[(Array.IndexOf(sizes,Resolution)+direction+sizes.Length)%sizes.Length];SettingsChanged?.Invoke();
+            }};
+        updates.AddChild(resolution);
+        Hint(updates,"Window size, or fullscreen 3D resolution. Fits your display; menus stay sharp.",16);
         Section(updates,"Game updates");
         _automaticUpdates=new ArcadeToggle {Name="AutomaticUpdates",Text="Check automatically",CustomMinimumSize=new(0,56),ButtonPressed=true};updates.AddChild(_automaticUpdates);
         _automaticUpdates.Toggled+=_=>SettingsChanged?.Invoke();
         _updateStatus=Copy(updates,"",17);
-        Copy(updates,"New versions download in the background. Finish your game, then restart to install.",18);
-        _checkUpdates=ArcadeTheme.Button(updates,"Check for updates",()=>CheckUpdatesRequested?.Invoke());_checkUpdates.Name="CheckUpdates";
-        _installUpdate=ArcadeTheme.Button(updates,"Update and restart",()=>InstallUpdateRequested?.Invoke(),true);_installUpdate.Name="InstallUpdate";_installUpdate.Visible=false;
+
+        var updateActions=ArcadeTheme.Row(updates,10);
+        _checkUpdates=ArcadeTheme.Button(updateActions,"Check now",()=>CheckUpdatesRequested?.Invoke());_checkUpdates.Name="CheckUpdates";
+        _installUpdate=ArcadeTheme.Button(updateActions,"Restart to update",()=>InstallUpdateRequested?.Invoke(),true);_installUpdate.Name="InstallUpdate";_installUpdate.Visible=false;
         var back=ArcadeTheme.Button(box,"Back",()=>BackRequested?.Invoke());back.Name="SettingsBack";
         RegisterNavigation("Settings",[],[back],Choices(player),Choices(updates));
     }
@@ -63,8 +76,13 @@ public partial class ArcadeMenu
         _vibration.SetPressedNoSignal(preferences.Vibration);_volume.SetValueNoSignal(preferences.Volume*100);
         _volumeLabel.Text=$"Sound volume: {preferences.Volume*100:0}%";
         LocalStageTime=preferences.StageLighting;
+        ConfigureDisplay(preferences.Fullscreen,preferences.Resolution);
         Graphics=preferences.Graphics;_graphicsDescription.Text=GraphicsQuality.Description(Graphics);
     }
+
+    public bool Fullscreen {get;private set;}=true;
+    public Vector2I Resolution {get;private set;}
+    public void ConfigureDisplay(bool fullscreen,Vector2I resolution){Fullscreen=fullscreen;Resolution=resolution;}
 
     public void UpdateStatus(string version,string status,bool busy,bool ready,bool canInstall)
     {

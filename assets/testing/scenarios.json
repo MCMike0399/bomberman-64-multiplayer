@@ -25,6 +25,18 @@
       "manual": false
     },
     {
+      "id": "display-settings",
+      "method": "DisplaySettings",
+      "domains": [
+        "rendering",
+        "settings",
+        "ui"
+      ],
+      "headless": false,
+      "timeout": 180,
+      "manual": false
+    },
+    {
       "id": "graphics-settings",
       "method": "GraphicsSettings",
       "domains": [
@@ -504,6 +516,7 @@
       "id": "all",
       "steps": [
         "first-use-rendering",
+        "display-settings",
         "graphics-settings",
         "advanced-settings",
         "ui-layout",
@@ -840,6 +853,7 @@
       "id": "menu-ux",
       "steps": [
         "menu-navigation",
+        "display-settings",
         "wasd-navigation",
         "controller-popups",
         "controllers",

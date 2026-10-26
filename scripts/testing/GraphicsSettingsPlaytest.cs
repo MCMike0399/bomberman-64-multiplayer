@@ -9,6 +9,123 @@ namespace BlastCircuit.Testing;
 
 public partial class PlaytestDriver
 {
+    private async Task DisplaySettings()
+    {
+        Check(!_headless,"display settings require a native graphical window");
+        if(OS.GetCmdlineUserArgs().Contains("--playtest-restore-display"))
+        {
+            Check(!_root.Preferences.Fullscreen&&_root.Preferences.Resolution==new Vector2I(1280,800),"fresh game process restores saved display choices");
+            await DisplaySize(new(1280,800));await ActivateNamed("OpenSettings");await Frames(4);
+            Check(!DisplayModeController.Current.Fullscreen&&DisplayModeController.Current.Resolution==new Vector2I(1280,800),"startup applies restored choices to display controller");
+            await Capture("display-restored-next-launch");return;
+        }
+        _root.Navigate("Modes");await ControllerFocusReady();
+        await ActivateNamed("OpenSettings");await Frames(4);
+        var display=DisplayModeController.Current;
+        Check(_root.Preferences.Fullscreen,"missing display preference defaults to fullscreen");
+        Check(_root.Preferences.Resolution==Vector2I.Zero,"missing resolution defaults to Automatic");
+        Check(GetWindow().Mode==Window.ModeEnum.Windowed,"QA window override preserves fullscreen preference");
+        await ActivateNamed("DisplayMode");await WindowMode(Window.ModeEnum.Windowed,"settings selects windowed mode");
+        Check(!PlayerPreferences.Load(_root.PreferencesPath).Fullscreen,"windowed preference survives reload");
+        foreach(var size in new[]{new Vector2I(1280,720),new Vector2I(1280,800)})
+        {
+            await ActivateNamed("DisplayResolution");await DisplaySize(size);
+            Check(PlayerPreferences.Load(_root.PreferencesPath).Resolution==size,"resolution survives reload: "+size);
+            AuditVisibleMenu("Settings",size);await Capture("display-settings-"+size.X+"x"+size.Y);
+        }
+        await KeyPress(Key.Escape);
+        _root.StartLocal(new SessionSettings(Bots:0),1,practice:true);await Frames(15);
+        var session=_root.ActiveSession;
+        await KeyPress(Key.Escape);await ActivateNamed("PauseSettings");
+        int snapshots=_root.SnapshotCount;
+        await ActivateNamed("DisplayMode");await WindowMode(Window.ModeEnum.Fullscreen,"settings enters real fullscreen");
+        await Frames(10);
+        float expected=Math.Min(1,Math.Min(1280f/GetWindow().Size.X,800f/GetWindow().Size.Y));
+        Check(Mathf.IsEqualApprox(GetWindow().Scaling3DScale,expected),"fullscreen resolution scales actual 3D output");
+        Check(ReferenceEquals(session,_root.ActiveSession)&&snapshots==_root.SnapshotCount,"display change preserves paused local session");
+        Check(PlayerPreferences.Load(_root.PreferencesPath).Fullscreen,"fullscreen selection persists");
+        await Capture("display-settings-fullscreen");
+        await KeyPress(Key.Escape);await ActivateNamed("ResumeGame");await Frames(20);
+        Check(ReferenceEquals(session,_root.ActiveSession)&&_root.SnapshotCount>snapshots,"same local session resumes after display change");
+        CheckFraming("sunken-temple",GetWindow().Size);await Capture("display-fullscreen-arena");
+        await KeyPress(Key.F11);await WindowMode(Window.ModeEnum.Windowed,"F11 returns to selected window size");
+        await DisplaySize(new(1280,800));
+        Check(!_root.Preferences.Fullscreen&&!PlayerPreferences.Load(_root.PreferencesPath).Fullscreen,"F11 updates saved display mode");
+        await KeyPress(Key.Enter,true);await WindowMode(Window.ModeEnum.Fullscreen,"Alt+Enter restores fullscreen");
+        await KeyPress(Key.Enter,true);await WindowMode(Window.ModeEnum.Windowed,"Alt+Enter returns to windowed");
+        _root.Back();await Frames(4);await ActivateNamed("OpenSettings");
+        Check(!display.Fullscreen,"shortcuts and settings share one display state");
+        await VerifyDisplayRestart();
+        // Wrap to Automatic through ordinary input; a smaller display must safely fit a saved 4K window.
+        for(int i=0;i<DisplayModeController.Resolutions.Length&&_root.Preferences.Resolution!=Vector2I.Zero;i++)
+        {
+            await ActivateNamed("DisplayResolution");
+            var usable=DisplayServer.ScreenGetUsableRect(GetWindow().CurrentScreen);
+            Check(GetWindow().Size.X<=usable.Size.X&&GetWindow().Size.Y<=usable.Size.Y,"oversized saved window fits current display");
+        }
+        await DisplaySize(new(1280,800));
+        var path=_root.PreferencesPath+".display-invalid";
+        try
+        {
+            var file=new ConfigFile();file.SetValue("video","fullscreen","invalid");file.SetValue("video","resolution",new Vector2I(99999,-4));file.Save(path);
+            var loaded=PlayerPreferences.Load(path);
+            Check(loaded.Fullscreen&&loaded.Resolution==Vector2I.Zero,"invalid saved display choices safely use defaults");
+            file.SetValue("video","resolution","1920x1080");file.Save(path);
+            Check(PlayerPreferences.Load(path).Resolution==Vector2I.Zero,"malformed resolution safely uses Automatic");
+        }
+        finally {DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(path));}
+        await Capture("display-settings-automatic");await KeyPress(Key.Escape);
+    }
+
+    private async Task VerifyDisplayRestart()
+    {
+        string id=Guid.NewGuid().ToString("N");
+        string path=ProjectSettings.GlobalizePath($"user://qa-preferences-{id}.cfg");
+        File.Copy(ProjectSettings.GlobalizePath(_root.PreferencesPath),path);
+        string output=Path.Combine(_output,"restart");Directory.CreateDirectory(output);
+        var info=new System.Diagnostics.ProcessStartInfo(OS.GetExecutablePath()) {UseShellExecute=false,RedirectStandardOutput=true,RedirectStandardError=true};
+        if(OS.HasFeature("editor")){info.ArgumentList.Add("--path");info.ArgumentList.Add(ProjectSettings.GlobalizePath("res://"));}
+        foreach(var arg in new[]{"--windowed","--max-fps","30","--","--playtest=display-settings","--playtest-restore-display","--playtest-preferences="+id,"--playtest-output="+output})info.ArgumentList.Add(arg);
+        Event("display-restart-launch",new {executable=info.FileName,args=info.ArgumentList.ToArray()});
+        using var process=System.Diagnostics.Process.Start(info)??throw new InvalidOperationException("Could not launch persistence witness");
+        // A fresh exported process can spend tens of seconds in cold Metal startup.
+        var stdout=process.StandardOutput.ReadToEndAsync();var stderr=process.StandardError.ReadToEndAsync();
+        try
+        {
+            var wall=System.Diagnostics.Stopwatch.StartNew();
+            while(!process.HasExited&&wall.Elapsed.TotalSeconds<90){await Frames(1);await Task.Delay(25);}
+            if(!process.HasExited){process.Kill(entireProcessTree:true);throw new TimeoutException("Fresh display process did not finish");}
+            File.WriteAllText(Path.Combine(output,"runtime.log"),await stdout+await stderr);
+            Check(process.ExitCode==0,"fresh executable restores persisted settings and exits successfully");
+            using var summary=JsonDocument.Parse(File.ReadAllText(Path.Combine(output,"summary.json")));
+            Check(summary.RootElement.GetProperty("passed").GetBoolean()&&summary.RootElement.GetProperty("assertions").GetInt32()>0,"fresh process retains its own successful graphical receipt");
+        }
+        finally
+        {
+            if(!process.HasExited)process.Kill(entireProcessTree:true);
+            await process.WaitForExitAsync();
+            File.WriteAllText(Path.Combine(output,"runtime.log"),await stdout+await stderr);
+            if(File.Exists(path))File.Delete(path);
+            GetWindow().GrabFocus();await Frames(10);
+        }
+    }
+
+    private async Task DisplaySize(Vector2I size)
+    {
+        var wall=System.Diagnostics.Stopwatch.StartNew();double? since=null;
+        while(wall.Elapsed.TotalSeconds<15)
+        {
+            await Frames(1);await Task.Delay(20);
+            if(GetWindow().Size==size)
+            {
+                since??=wall.Elapsed.TotalSeconds;
+                if(wall.Elapsed.TotalSeconds-since>=.5)break;
+            }
+            else since=null;
+        }
+        Check(since.HasValue&&wall.Elapsed.TotalSeconds-since>=.5,"product applies stable window resolution: "+size);
+    }
+
     private async Task GraphicsSettings()
     {
         _root.Navigate("Modes");
