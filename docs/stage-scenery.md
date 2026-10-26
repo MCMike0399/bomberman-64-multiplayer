@@ -92,3 +92,24 @@ miniature skips its scenery. Graphical runs capture the ordinary battle camera
 at Midday and Night, plus a labelled establishing inspection view per arena.
 Images, not numeric checks, decide whether the scenery has charm. Agent review is
 not user approval.
+
+## Verification receipt (2026-10-26)
+
+Source branch `t3/stage-visual-personality`, rebased on `main` 450df7e (v0.34.0).
+
+- `scenery-regression` in the isolated QA VM (Metal 4.0 Forward+, Apple
+  Paravirtual device) ran 14 journeys: first-use rendering, asset audit,
+  graphics settings, stage lighting, setup, menu preview, map-preview loading,
+  framing, stage scenery and the five stage journeys. Result: **2,843 assertions,
+  242 captures, zero runtime errors or warnings**.
+- Host headless: `stage-scenery` (105 assertions) and `core-headless`
+  (1,740 assertions). The five stage journeys also passed individually, along
+  with the `public` profile.
+- Before images come from a matched, never-committed capture-only twin of the
+  journey on the pre-change commit (a8a7cd6): same seed, roster, camera and Medium
+  preset. [Before/after and establishing/night strips](media/stage-scenery/).
+- Not covered: native-host GPU timing and physical play feel. Whether the scenery
+  has the intended personality is for the user to judge; agent review of the
+  images is not approval. Full `all` was not rerun, because the existing v0.34
+  fresh-display-child timeout is unrelated to this change. `display-settings` is
+  not in the focused suite.
