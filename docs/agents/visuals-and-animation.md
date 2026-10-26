@@ -400,6 +400,16 @@ pairs. `network` also changes quality while retaining the same connection and
 server lighting. Renderer timings in a VM are not native M-series benchmarks;
 zero GPU timing is unavailable evidence, never zero cost.
 
+### Menu startup render targets
+
+Keep the authored or last valid `RenderSurface` target while Control layout is
+pending or below 32 output pixels in either dimension. High's contact shading
+requires a depth mip pyramid; shrinking a newly created menu to 2×2 can produce
+`Too many mipmaps requested` and a native renderer crash before startup finishes.
+Changing to High after layout does not cover saved-High startup. The graphical
+`render-surface-startup` regression draws actual High preview geometry before
+layout, at the minimum target size and after normal sizing resumes.
+
 ### First-use effects
 
 Arena selection retains one real miniature per battle map. Startup builds and

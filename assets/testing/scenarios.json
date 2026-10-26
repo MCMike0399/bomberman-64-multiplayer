@@ -552,6 +552,7 @@
       "id": "all",
       "steps": [
         "first-use-rendering",
+        "render-surface-startup",
         "map-preview-loading",
         "performance-metrics",
         "display-settings",
@@ -897,6 +898,7 @@
     {
       "id": "menu-ux",
       "steps": [
+        "render-surface-startup",
         "map-preview-loading",
         "menu-navigation",
         "performance-metrics",
@@ -1142,6 +1144,17 @@
       ],
       "headless": false,
       "timeout": 1500,
+      "manual": false
+    },
+    {
+      "id": "render-surface-startup",
+      "method": "RenderSurfaceStartup",
+      "domains": [
+        "rendering",
+        "ui"
+      ],
+      "headless": false,
+      "timeout": 120,
       "manual": false
     }
   ]
