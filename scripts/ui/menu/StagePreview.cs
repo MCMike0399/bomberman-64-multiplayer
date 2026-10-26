@@ -1,5 +1,5 @@
 using Godot;
-using Bomber.Game.Simulation;
+using Bomber.Game.Simulation.Stages;
 namespace BlastCircuit.UI.Menu;
 
 public partial class StagePreview : Control

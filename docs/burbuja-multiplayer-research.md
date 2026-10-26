@@ -262,9 +262,9 @@ join-in-progress. Our persistent product room stays kernel-`Running` while its
 initial kernel start. A proposed product-aware eligibility snapshot or generic
 join-policy extension must advertise whether it can accept new members now.
 Source: `RealtimeFleet.BackfillCandidatesAsync`,
-[PublicLobbyGame](../src/Bomber.Game/PublicLobbyGame.cs),
-[PartySession](../src/Bomber.Game/PartySession.cs),
-[PeerRoomSession](../src/Bomber.Game/PeerRoomSession.cs).
+[PublicLobbyGame](../src/Bomber.Game/Online/WaitingRoomMatchmaker.cs),
+[PartySession](../src/Bomber.Game/Online/Rooms/PartySession.cs),
+[PeerRoomSession](../src/Bomber.Game/Online/Rooms/PeerRoomSession.cs).
 
 Preserve origin and visibility distinctions: hosted rooms receive codes;
 matchmade rooms currently do not. Public visibility alone does not make a hosted

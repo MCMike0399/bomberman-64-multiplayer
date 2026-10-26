@@ -1,7 +1,9 @@
 using System.Diagnostics;
 using System.Text.Json;
-using Bomber.Game.Simulation;
 using Bomber.Game.Simulation.Ai;
+using Bomber.Game.Simulation.Rules;
+using Bomber.Game.Simulation.Stages;
+using Bomber.Game.Simulation.State;
 
 if(args.Contains("--tactics")){ProactiveTacticsChecks.Run();return;}
 if(args.Contains("--top-rules")){TopRulesNavigationChecks.Run();return;}

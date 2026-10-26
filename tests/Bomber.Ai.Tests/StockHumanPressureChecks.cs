@@ -3,6 +3,9 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Bomber.Game.Simulation;
+using Bomber.Game.Simulation.Rules;
+using Bomber.Game.Simulation.Stages;
+using Bomber.Game.Simulation.State;
 
 // Stock Pyramid: ordinary slot-zero human vs slot-one bot, without moving spawns/cover/items.
 static class StockHumanPressureChecks

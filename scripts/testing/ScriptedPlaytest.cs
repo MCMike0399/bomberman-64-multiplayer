@@ -1,6 +1,6 @@
 using Godot;
-using Bomber.Client;
-using Bomber.Game;
+using Bomber.Client.Sessions;
+using Bomber.Game.Matches;
 using System.Text.Json;
 namespace BlastCircuit.Testing;
 

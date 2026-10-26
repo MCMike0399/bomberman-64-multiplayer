@@ -1,5 +1,7 @@
-using Bomber.Game.Simulation;
 using Bomber.Game.Simulation.Ai;
+using Bomber.Game.Simulation.Rules;
+using Bomber.Game.Simulation.Stages;
+using Bomber.Game.Simulation.State;
 
 // Declared authority fixtures isolate tactics; movement, placements and blasts use real ticks.
 internal static class ProactiveTacticsChecks

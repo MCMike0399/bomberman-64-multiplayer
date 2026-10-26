@@ -1,4 +1,4 @@
-using Bomber.Game;
+using Bomber.Game.Online;
 using System.Diagnostics;
 using System.Net.Http.Json;
 using System.Net.WebSockets;

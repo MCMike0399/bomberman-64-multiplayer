@@ -164,7 +164,7 @@ objects. [RenderingServer shadow APIs](https://docs.godotengine.org/en/4.7/class
    skipping genuinely invisible microdetail are candidates; inspect displacement,
    coastline and flooding at ordinary and close cameras before accepting them.
    [ArtMaterials](../scripts/rendering/ArtMaterials.cs),
-   [TempleStageView](../scripts/arena/TempleStageView.cs).
+   [TempleStageView](../scripts/arena/stages/TempleStageView.cs).
 5. **Preserve authored lighting rather than adding expensive features by default.**
    The arena already has sky reflections, SSAO, glow, filmic tonemapping and fog.
    SSR, SDFGI, volumetric fog, depth of field and motion blur are not prerequisites
@@ -180,14 +180,14 @@ The renderer changes are deliberately separate from these remaining seams:
 
 | Boundary | Observed implementation | Decision |
 | --- | --- | --- |
-| Local authority | [LocalSession](../src/Bomber.Client/LocalSession.cs) advances on the Godot thread at fixed 30 Hz, with at most five catch-up ticks. [LocalMatch](../src/Bomber.Game/LocalMatch.cs) encodes snapshots, then the adapter parses/buffers them. | Keep simulation cadence independent of quality. A typed local snapshot path might reduce allocations, but requires parity/lifetime evidence before changing that boundary. |
-| Network | [NetworkSession](../src/Bomber.Client/NetworkSession.cs) sends input asynchronously at 30 Hz and allocates a receive stream per envelope. [MessageBuffer](../src/Bomber.Client/ISession.cs) already coalesces state snapshots while retaining control messages. | Do not reduce input rates for Low. A bounded receive-buffer improvement needs fragmented-frame and ownership tests; no current client profile establishes this as the limiting cost. |
+| Local authority | [LocalSession](../src/Bomber.Client/Sessions/LocalSession.cs) advances on the Godot thread at fixed 30 Hz, with at most five catch-up ticks. [LocalMatch](../src/Bomber.Game/Matches/LocalMatch.cs) encodes snapshots, then the adapter parses/buffers them. | Keep simulation cadence independent of quality. A typed local snapshot path might reduce allocations, but requires parity/lifetime evidence before changing that boundary. |
+| Network | [NetworkSession](../src/Bomber.Client/Sessions/NetworkSession.cs) sends input asynchronously at 30 Hz and allocates a receive stream per envelope. [MessageBuffer](../src/Bomber.Client/Sessions/ISession.cs) already coalesces state snapshots while retaining control messages. | Do not reduce input rates for Low. A bounded receive-buffer improvement needs fragmented-frame and ownership tests; no current client profile establishes this as the limiting cost. |
 | Snapshot presentation | [ArenaView](../scripts/arena/ArenaView.cs) decodes/scans the cover bitset per snapshot and creates temporary collections. | Change detection is a possible allocation reduction; preserve initial, reset and destruction behavior. Profile before redesigning. |
 | Animation | Actor interpolation, carried sockets and [BomberModel](../scripts/arena/models/BomberModel.cs) spring animation run each frame; spring integration uses fixed 240 Hz substeps. | Preserve timing and the approved silhouette across presets. Numerical animation simplification is not justified by the current evidence. |
 | Terrain | [ArtGeometry](../scripts/rendering/ArtGeometry.cs) already caches meshes. The stage creates many instances, but measured empty-practice root draw calls are only 48/73/115 across Garden/Up-and-Down/Pyramid. | Node count alone is not draw-call count. Defer manual batching until a submission bottleneck is measured; static regional batches must keep destructible cover separate. |
 | Battle effects | [ExplosionView](../scripts/arena/effects/ExplosionView.cs) uses transparent lobes, with existing crowd reduction after 16 tracked explosions. [BombThrowPreview](../scripts/arena/effects/BombThrowPreview.cs) creates 24 cosmetic trajectory dots with default shadow casting. | Eight-player explosion overdraw and unnecessary marker shadows are future focused candidates. Preserve full danger extent and trajectory information; empty-practice results cannot rank their costs. |
 
-The [managed snapshot probe](../tests/Bomber.Game.Tests/SnapshotPerformance.cs)
+The [managed snapshot probe](../tests/Bomber.Game.Tests/Snapshots/SnapshotPerformance.cs)
 measures tick/encoding work, while the [network probe](../tests/Bomber.Performance.Probe/Program.cs)
 measures server generation and delivery intervals. Neither includes the Godot GPU
 or the complete client frame. Historical [server performance](server-performance.md)

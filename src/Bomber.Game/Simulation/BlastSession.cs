@@ -1,6 +1,10 @@
 // Adapted from burbuja-kernel Example.Blast, MIT (copyright 2026 MCMike0399).
 // Product-owned simulation; original baseline b0758339984bbeead1b3d1236f31e980aaa5f20e.
 using Burbuja.Realtime.Abstractions;
+using Bomber.Game.Matches;
+using Bomber.Game.Simulation.Stages;
+using Bomber.Game.Simulation.State;
+using Bomber.Game.Tutorial;
 
 namespace Bomber.Game.Simulation;
 

@@ -1,7 +1,7 @@
 using System.Numerics;
 using System.Text.Json;
-using Bomber.Client;
-using Bomber.Game;
+using Bomber.Client.Controls;
+using Bomber.Game.Matches;
 
 static class ControllerChecks
 {

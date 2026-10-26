@@ -1,5 +1,5 @@
 using Godot;
-using Bomber.Game.Simulation;
+using Bomber.Game.Simulation.Stages;
 using BlastCircuit.Rendering;
 using static BlastCircuit.Rendering.ArtGeometry;
 namespace BlastCircuit.Arena.Effects;

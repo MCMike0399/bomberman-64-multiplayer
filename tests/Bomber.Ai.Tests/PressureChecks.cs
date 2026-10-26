@@ -1,5 +1,6 @@
 using System.Text.Json;
-using Bomber.Game.Simulation;
+using Bomber.Game.Simulation.Rules;
+using Bomber.Game.Simulation.State;
 
 // Fixed visible-opponent fixtures isolate pursuit from random item drops and cover clearing.
 static class PressureChecks

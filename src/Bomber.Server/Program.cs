@@ -1,4 +1,5 @@
-using Bomber.Game;
+using Bomber.Game.Matches;
+using Bomber.Game.Online;
 using Burbuja.Hosting;
 using Burbuja.Realtime.Abstractions;
 

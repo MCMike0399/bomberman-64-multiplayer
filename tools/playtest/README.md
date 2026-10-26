@@ -172,7 +172,7 @@ apps after changing this test or its preparation behavior.
 
 For a new scenario:
 
-1. Add a partial `PlaytestDriver` file in `scripts/testing` with a private parameterless `async Task` method. Exercise ordinary inputs/product sessions and assert observable outcomes using `Check`; do not teleport actors or substitute fabricated state.
+1. Add a partial `PlaytestDriver` file in `scripts/testing/journeys/<area>/` with a private parameterless `async Task` method. Exercise ordinary inputs/product sessions and assert observable outcomes using `Check`; do not teleport actors or substitute fabricated state.
 2. Register its ID, method name, domains, headless capability, manual flag and timeout in the catalog. Add the ID to relevant suite `steps`. Graphical-only children cannot belong to a headless suite.
 3. Cover the actual failure first when fixing a regression. Keep rendering/physical-device assertions separate from simulation-only claims. For assets, extend [AssetAudit](../../docs/asset-audit.md) using actual production resources.
 4. Run the focused scenario, then the relevant canonical QA profile. An exported app must be rebuilt after catalog changes: its bundled SHA-256 must match the runner's catalog.

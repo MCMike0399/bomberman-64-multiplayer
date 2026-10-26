@@ -165,9 +165,10 @@ The `tutorial` journey covers the lesson browser, accepted-action completion/fai
 
 `assets/testing/scenarios.json` is the common Python/C# catalog. Add a private
 parameterless `async Task` on the `PlaytestDriver` partial class in a new
-`scripts/testing/*Playtest.cs` file,
-then register method, domains, headless capability, timeout and suite membership.
-Follow existing partial files under `scripts/testing` for actual naming/layout.
+`scripts/testing/journeys/<area>/*Playtest.cs` file (areas: combat, input, matches,
+menus, online, rendering, stages), then register method, domains, headless
+capability, timeout and suite membership. Journey files keep the
+`BlastCircuit.Testing` namespace; follow neighbouring journeys for naming/layout.
 Graphical-only children cannot enter a headless suite. Check `--list` afterward.
 
 Drive ordinary product sessions and inputs. Use bounded walking helpers,

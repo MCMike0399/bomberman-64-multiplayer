@@ -48,15 +48,15 @@ backend's canonical IDs. Nintendo confirms with printed A and backs with B.
 - [ControllerHub](../../scripts/input_devices/ControllerHub.cs) discovers devices,
   publishes native input, tracks active prompt family/keyboard seat, guards focus,
   and combines held state with bomb/remote/stop press edges through `Read`.
-- [MatchControllerBindings](../../src/Bomber.Client/MatchControllerBindings.cs)
-  fixes device seats during a match; [LocalControllerLayout](../../src/Bomber.Client/LocalControllerLayout.cs)
+- [MatchControllerBindings](../../src/Bomber.Client/Controls/MatchControllerBindings.cs)
+  fixes device seats during a match; [LocalControllerLayout](../../src/Bomber.Client/Controls/LocalControllerLayout.cs)
   handles the keyboard/gamepad layout. Consult these before changing hotplug.
-- [InputPolicy](../../src/Bomber.Client/InputPolicy.cs) resolves D-pad, stick and
+- [InputPolicy](../../src/Bomber.Client/Controls/InputPolicy.cs) resolves D-pad, stick and
   keyboard directions without summing device speed. Ordinary movement normalizes
   nonzero direction after radial stick drift rejection; diagonals gain no speed.
 - [GameRoot](../../scripts/app/GameRoot.cs) sends local commands to
-  [LocalSession](../../src/Bomber.Client/LocalSession.cs) or
-  [NetworkSession](../../src/Bomber.Client/NetworkSession.cs).
+  [LocalSession](../../src/Bomber.Client/Sessions/LocalSession.cs) or
+  [NetworkSession](../../src/Bomber.Client/Sessions/NetworkSession.cs).
   Both adapters retain action edges, including Aim, for authority consumption.
 
 Precision aim preserves partial analog strength; ordinary running stays equally
@@ -125,7 +125,7 @@ physical observation explicitly records them. Label synthetic results as such.
 WASD and arrows belong in native Godot `ui_*` actions. Keep ordinary text entry
 working; global key interception can steal W/A/S/D from text fields. Install
 per-device face-button confirm/cancel actions for embedded popup menus as well.
-Use [MenuStickNavigation](../../src/Bomber.Client/MenuStickNavigation.cs) for
+Use [MenuStickNavigation](../../src/Bomber.Client/Controls/MenuStickNavigation.cs) for
 sampled held-stick navigation, hysteresis and repeat: an axis that gradually
 crosses the engage threshold or stops sending changed reports must still work.
 D-pad holds use the same repeat timing; their native initial events remain intact

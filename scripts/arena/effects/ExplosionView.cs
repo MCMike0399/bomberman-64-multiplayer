@@ -1,6 +1,7 @@
 using Godot;
 using static BlastCircuit.Rendering.ArtGeometry;
 using BlastCircuit.Rendering;
+using BlastCircuit.Arena.Stages;
 namespace BlastCircuit.Arena.Effects;
 
 /// <summary>Toon fireball after the original's star-cored sphere: a white-hot pop, banded boiling body,

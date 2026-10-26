@@ -1,8 +1,8 @@
 using Godot;
-using Bomber.Game.Simulation;
+using Bomber.Game.Simulation.Rules;
 using static BlastCircuit.Rendering.ArtGeometry;
-using BlastCircuit.Rendering;
 using BlastCircuit.UI;
+using BlastCircuit.Arena.Stages;
 namespace BlastCircuit.Arena.Effects;
 
 /// <summary>Advisory arc for a controlled carrier. Static cover truncates it; combat can change its outcome.</summary>

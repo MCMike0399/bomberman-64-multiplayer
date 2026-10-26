@@ -1,5 +1,5 @@
 using Godot;
-using Bomber.Client;
+using Bomber.Client.Sessions;
 using System.Text.Json;
 namespace BlastCircuit.UI.Menu;
 

@@ -48,10 +48,10 @@ specific game and evaluation, not a performance prediction for Blast Circuit.
 
 ## Existing planner and opportunities
 
-The inspected [bot policy](../src/Bomber.Game/Simulation/BlastSession.Bots.cs)
+The inspected [bot policy](../src/Bomber.Game/Simulation/BlastSession/Bots/BlastSession.Bots.cs)
 already has bounded graph search, hypothetical placement escape checks,
 marginal pickup values, goal commitment and a clock that eventually favors
-engagement. [Navigation recovery](../src/Bomber.Game/Simulation/BlastSession.BotNavigation.cs)
+engagement. [Navigation recovery](../src/Bomber.Game/Simulation/BlastSession/Bots/BlastSession.BotNavigation.cs)
 also detects blocked movement and neutral idle. This is an existing heuristic
 planner; replacing it with reinforcement learning is unnecessary for this task.
 

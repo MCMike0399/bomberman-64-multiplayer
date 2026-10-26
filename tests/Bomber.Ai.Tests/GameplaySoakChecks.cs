@@ -2,6 +2,9 @@ using System.Reflection;
 using System.Text.Json;
 using Bomber.Game.Simulation;
 using Bomber.Game.Simulation.Ai;
+using Bomber.Game.Simulation.Rules;
+using Bomber.Game.Simulation.Stages;
+using Bomber.Game.Simulation.State;
 using Burbuja.Realtime.Abstractions;
 
 // Simulation-only gameplay measurements. Unlike the old benchmark's point samples,

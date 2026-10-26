@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using Bomber.Client;
+using Bomber.Client.Sessions;
 
 internal static class UiContextNetworkChecks
 {

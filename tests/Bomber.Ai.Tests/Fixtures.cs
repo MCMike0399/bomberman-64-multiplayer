@@ -1,4 +1,5 @@
 using Bomber.Game.Simulation;
+using Bomber.Game.Simulation.Stages;
 using Burbuja.Realtime.Abstractions;
 
 sealed class Fixture : ISessionContext

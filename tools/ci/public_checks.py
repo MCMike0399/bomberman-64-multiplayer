@@ -5,6 +5,7 @@ from pathlib import Path
 import subprocess
 
 import doc_links
+import source_layout
 from release_identity import check_exports
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -25,11 +26,13 @@ def main():
         ast.parse(path.read_text(), filename=str(path.relative_to(ROOT)))
     # Relative documentation links/anchors must survive file moves.
     failures.extend(doc_links.broken_links(ROOT, doc_links.tracked_markdown(ROOT)))
+    # C# namespaces, file names and folder sizes follow docs/agents/codebase-map.md.
+    failures.extend(source_layout.check(ROOT))
     for failure in failures:
         print(failure)
     if failures:
         return 1
-    print('Python syntax, documentation link and tracked private-material boundary checks passed.')
+    print('Python syntax, documentation link, source layout and tracked private-material boundary checks passed.')
     return 0
 
 

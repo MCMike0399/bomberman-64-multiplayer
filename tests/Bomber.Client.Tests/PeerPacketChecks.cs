@@ -1,6 +1,6 @@
 using System.Text;
-using Bomber.Client;
-using Bomber.Game;
+using Bomber.Client.Peer;
+using Bomber.Game.Matches;
 
 internal static class PeerPacketChecks
 {

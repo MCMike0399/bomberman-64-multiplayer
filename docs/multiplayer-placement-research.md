@@ -67,11 +67,11 @@ the deployed release. See [peer hosting](peer-hosting.md) and
 | Recovery | Peer host replacement starts fresh; node loss loses its rooms | Neither room failover nor mid-round authority migration is established |
 
 Implementation anchors:
-[client admission](../src/Bomber.Client/NetworkSession.cs),
-[public matchmaking](../src/Bomber.Game/PublicLobbyGame.cs),
+[client admission](../src/Bomber.Client/Sessions/NetworkSession.cs),
+[public matchmaking](../src/Bomber.Game/Online/WaitingRoomMatchmaker.cs),
 [placement](../src/Bomber.Cluster/ClusterPlugin.cs),
-[peer coordinator](../src/Bomber.Game/PeerRoomSession.cs),
-[peer client](../src/Bomber.Client/PeerRoomClient.cs),
+[peer coordinator](../src/Bomber.Game/Online/Rooms/PeerRoomSession.cs),
+[peer client](../src/Bomber.Client/Peer/PeerRoomClient.cs),
 [native transport adapter](../scripts/app/GodotPeerLink.cs),
 [player interpolation](../scripts/arena/SnapshotMotion.cs).
 In the pinned external kernel, `LobbyServer.TryAllocate` and

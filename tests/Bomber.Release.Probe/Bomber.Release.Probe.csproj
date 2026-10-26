@@ -5,6 +5,6 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- The deploy runner needs no private dependency to exercise the real wire contract. -->
-    <Compile Include="../../src/Bomber.Game/OnlineProtocol.cs" Link="OnlineProtocol.cs" />
+    <Compile Include="../../src/Bomber.Game/Online/OnlineProtocol.cs" Link="OnlineProtocol.cs" />
   </ItemGroup>
 </Project>

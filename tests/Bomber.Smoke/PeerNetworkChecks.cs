@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Text.Json;
-using Bomber.Client;
-using Bomber.Game;
+using Bomber.Client.Sessions;
+using Bomber.Game.Matches;
 
 internal static class PeerNetworkChecks
 {

@@ -1,5 +1,5 @@
 using Godot;
-using Bomber.Game;
+using Bomber.Game.Matches;
 namespace BlastCircuit.InputDevices;
 
 /// <summary>Engine input adapter. Every device produces the same authority-owned commands.</summary>

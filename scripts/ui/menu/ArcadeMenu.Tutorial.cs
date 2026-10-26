@@ -1,5 +1,5 @@
 using Godot;
-using Bomber.Game;
+using Bomber.Game.Tutorial;
 using BlastCircuit.UI.Hud;
 namespace BlastCircuit.UI.Menu;
 

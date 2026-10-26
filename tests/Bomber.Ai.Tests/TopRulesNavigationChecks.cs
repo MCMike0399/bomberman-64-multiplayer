@@ -1,5 +1,6 @@
-using Bomber.Game.Simulation;
 using Bomber.Game.Simulation.Ai;
+using Bomber.Game.Simulation.Stages;
+using Bomber.Game.Simulation.State;
 
 internal static class TopRulesNavigationChecks
 {

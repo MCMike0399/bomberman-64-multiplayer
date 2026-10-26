@@ -1,8 +1,8 @@
 using System.Diagnostics;
 using System.Text.Json;
-using Bomber.Client;
-using Bomber.Game;
-using Bomber.Game.Simulation;
+using Bomber.Client.Sessions;
+using Bomber.Game.Matches;
+using Bomber.Game.Simulation.Rules;
 
 internal static class NetworkAimChecks
 {

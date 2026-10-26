@@ -1,8 +1,8 @@
 using Godot;
 using System.Text.Json;
-using Bomber.Client;
-using Bomber.Game;
-using Bomber.Game.Simulation;
+using Bomber.Client.Sessions;
+using Bomber.Game.Simulation.Stages;
+using Bomber.Game.Tutorial;
 using BlastCircuit.InputDevices;
 using BlastCircuit.UI.Hud;
 namespace BlastCircuit.App;
