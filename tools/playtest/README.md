@@ -24,7 +24,7 @@ then provision once (the implementation was developed against Tart 2.41.1):
 
 ```sh
 tart clone ghcr.io/cirruslabs/macos-tahoe-base:latest blast-circuit-qa
-tart set blast-circuit-qa --cpu 4 --memory 8192 --display 1600x1000
+tart set blast-circuit-qa --cpu 4 --memory 8192 --display 1920x1200
 python3 tools/playtest/run.py --scenario menu
 python3 tools/qa/run.py --profile graphical
 ```
@@ -196,7 +196,7 @@ apps after changing this test or its preparation behavior.
 
 ### Registering scenarios
 
-`assets/testing/scenarios.json` is the shared source of truth for Python tooling and native C# dispatch. `python3 tools/playtest/run.py --list` prints the full catalog. `all` is the windowed graphical regression (1200-second limit, including the Up & Down traversal/flood journey); `core-headless` deliberately omits native UI/window journeys; `package-smoke` checks bundled assets, movement and charge/throw behavior. Manual controller observations remain separate.
+`assets/testing/scenarios.json` is the shared source of truth for Python tooling and native C# dispatch. `python3 tools/playtest/run.py --list` prints the full catalog. `all` is the windowed graphical regression (1500-second limit, including the Up & Down traversal/flood and stage-scenery journeys); `core-headless` deliberately omits native UI/window journeys; `package-smoke` checks bundled assets, movement and charge/throw behavior. Manual controller observations remain separate.
 
 For a new scenario:
 

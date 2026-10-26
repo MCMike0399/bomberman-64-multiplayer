@@ -30,6 +30,11 @@ public partial class RenderSurface : TextureRect
         var transform=GetViewport().GetScreenTransform()*GetGlobalTransformWithCanvas();
         var pixels=Size*new Vector2(transform.X.Length(),transform.Y.Length());
         var size=new Vector2I(Math.Max(2,Mathf.RoundToInt(pixels.X)),Math.Max(2,Mathf.RoundToInt(pixels.Y)));
+        // Ready/startup preparation can draw before Control layout has settled.
+        // High's contact shading needs five depth mip levels; a temporary 2x2
+        // target cannot supply them and crashes the renderer. Keep the authored
+        // (or last valid) target until layout can support that depth pyramid.
+        if(size.X<32||size.Y<32){_wasVisible=false;return;}
         bool redraw=!_wasVisible||_renderViewport.Size!=size||_revision!=GraphicsQuality.Revision;
         if(_renderViewport.Size!=size)_renderViewport.Size=size;
         if(_revision!=GraphicsQuality.Revision)

@@ -74,6 +74,7 @@ public partial class TempleStageView : Node3D
     public override void _Process(double delta)
     {
         if(!IsVisibleInTree())return;
+        AnimateScenery((float)delta);
         if(_blizzard){ProcessBlizzard((float)delta);return;}
         if(_greedy){ProcessGreedyTrap((float)delta);return;}
         if(_castle)
@@ -164,6 +165,11 @@ public partial class TempleStageView : Node3D
     }
     public void Build(JsonElement data)
     {
+        BuildTerrain(data);
+        BuildScenery();
+    }
+    private void BuildTerrain(JsonElement data)
+    {
         Width=data.GetProperty("width").GetInt32();Depth=data.GetProperty("height").GetInt32();_cells=data.GetProperty("cells").Clone();
         var cells=new CellDef[Width,Depth];
         for(int z=0;z<Depth;z++)for(int x=0;x<Width;x++)cells[x,z]=ReadCell(_cells[z*Width+x]);
@@ -205,9 +211,11 @@ public partial class TempleStageView : Node3D
                 {
                     float h=(to-from)*(step+1)/6f;
                     var point=new Vector3(x+.5f+dx*((step+.5f)/6-.5f),from+h/2,z+.5f+dz*((step+.5f)/6-.5f));
-                    Box(this,point,new(dx==0?.99f:1f/6,h,dz==0?.99f:1f/6),wall);
-                    // Thin pale treads over darker risers make each broad staircase legible.
-                    Box(this,new(point.X,from+h-.018f,point.Z),new(dx==0?.99f:1f/6,.036f,dz==0?.99f:1f/6),cap,.006f);
+                    // The pale tread owns the top surface. A full-height support
+                    // shares that plane and depth-fights it into dark moving patches.
+                    const float treadThickness=.036f;
+                    Box(this,point-Vector3.Up*treadThickness/2,new(dx==0?.99f:1f/6,h-treadThickness,dz==0?.99f:1f/6),wall);
+                    Box(this,new(point.X,from+h-treadThickness/2,point.Z),new(dx==0?.99f:1f/6,treadThickness,dz==0?.99f:1f/6),cap,.006f);
                 }
             }
             if(kind==1)

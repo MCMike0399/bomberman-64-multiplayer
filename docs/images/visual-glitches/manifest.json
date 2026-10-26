@@ -1,0 +1,117 @@
+{
+  "productBaseline": "a8a7cd60b2f668b4a487ffc97ad28fcb64bd336c",
+  "fixture": "visual-glitches; ordinary inputs and labelled inspection cameras; seed 64",
+  "renderer": "Metal 4.0 / Forward+ / Apple Paravirtual device (Apple5)",
+  "images": [
+    {
+      "file": "before-ring.png",
+      "sourceCapture": "ring-blast-Medium.png",
+      "sha256": "a25474cdaa3c79f6ca22fd7e53c6d682848a174a65448e9c84166594c93f74b7",
+      "view": "ordinary battle camera",
+      "preset": "Medium",
+      "width": 1280,
+      "height": 800,
+      "state": "before"
+    },
+    {
+      "file": "before-stairs.png",
+      "sourceCapture": "temple-stairs-detail-Medium.png",
+      "sha256": "4d5ebe4438a6d76255ff8e70f613fdcc47be460d38b484331355a40903533fbc",
+      "view": "stair inspection camera",
+      "preset": "Medium",
+      "width": 1280,
+      "height": 800,
+      "state": "before"
+    },
+    {
+      "file": "after-ring.png",
+      "sourceCapture": "ring-blast-Medium.png",
+      "sha256": "a718aaab1043c7a1d17387ec09f4a3b4f2d4f2e09249195589754e0f147b5e5e",
+      "view": "ordinary battle camera",
+      "preset": "Medium",
+      "width": 1280,
+      "height": 800,
+      "state": "after"
+    },
+    {
+      "file": "after-stairs.png",
+      "sourceCapture": "temple-stairs-detail-Medium.png",
+      "sha256": "7c684534234c39b0bb42ac2fde2e041edef6e2bc893d090a47f3c720d8da788f",
+      "view": "stair inspection camera",
+      "preset": "Medium",
+      "width": 1280,
+      "height": 800,
+      "state": "after"
+    },
+    {
+      "file": "after-waterline.png",
+      "sourceCapture": "shore-blast-waterline-inspection.png",
+      "sha256": "2036480bc3e22028da25d222b444c6b70c673798ec18ce298ab6d43dd9aa7987",
+      "view": "shoreline inspection camera",
+      "preset": "Medium",
+      "width": 1280,
+      "height": 800,
+      "state": "after"
+    },
+    {
+      "file": "before-waterline.png",
+      "sourceCapture": "shore-blast-waterline-inspection.png",
+      "sha256": "9ff5bfa07bd0830bb5f3a9fa433becf37af41533a8e60e6b6e5beff36b57b437",
+      "view": "shoreline inspection camera",
+      "preset": "Medium",
+      "width": 1280,
+      "height": 800,
+      "state": "before-depth-write",
+      "variant": "early water priority with depth writes disabled; isolates submerged-effect occlusion"
+    }
+  ],
+  "runtimeFixCommit": "92060a2a167869541f8a87c9bc5a42bb400897e6",
+  "publishedBaseline": "450df7e2616309ccb13fbd444b8249da8dd7f386",
+  "captureFixtureCommit": "fcde97cc23af20b0bcca67298650dcee14742c13",
+  "validation": {
+    "public": {
+      "passed": true,
+      "steps": 11
+    },
+    "exportedHeadless": {
+      "passed": true,
+      "assertions": 48
+    },
+    "exportedGraphical": {
+      "passed": true,
+      "journeys": [
+        "first-use-rendering",
+        "visual-glitches",
+        "graphics-settings",
+        "stage-lighting",
+        "framing",
+        "presentation",
+        "traversal",
+        "up-and-down",
+        "top-rules",
+        "rock-garden",
+        "blizzard-battle",
+        "greedy-trap",
+        "hurry-water",
+        "asset-audit"
+      ],
+      "assertions": 1758,
+      "captures": 202,
+      "runtimeErrors": 0,
+      "runtimeWarnings": [],
+      "renderer": "Metal 4.0 - Forward+ - Using Device #0: Apple - Apple Paravirtual device (Apple5)"
+    },
+    "completeGraphicalAttempt": {
+      "passed": false,
+      "assertionsBeforeFailure": 474,
+      "failure": "Fresh display process did not finish",
+      "completed": [
+        "first-use-rendering",
+        "map-preview-loading",
+        "performance-metrics"
+      ],
+      "note": "Existing v0.34 display-process timeout; not waived or counted as a full-suite pass."
+    }
+  },
+  "testedAppInventorySha256": "999139ebae53f81af05d4874951416c31b7c2b106d8da1a77b0dddc51aeaee17"
+}

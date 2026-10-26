@@ -3,7 +3,7 @@
 The user resumed gameplay work on 2026-10-23 for controller ergonomics, aiming
 and knockdown/blast separation (iteration19). The first eighteen iterations
 remain historical evidence. Iteration20 then rebuilt the walk. Recorded
-release baseline: **v0.34.0/build 40**, published with independently verified Mac
+release baseline: **v0.35.0/build 41**, published with independently verified Mac
 and server archives (see [verification](../verification.md)). Previous runtime baseline: **v0.18.0**, commit
 `316a330d7d895a92f98c1a60be7d571ec445a8a3`. Later documentation commits may follow.
 Verify the live branch, source, tools and installed version before relying on
@@ -42,6 +42,11 @@ update the current guide rather than silently reviving old behavior.
 
 ## Current decisions that supersede earlier experiments
 
+- v0.35 delivers the ready explosion/water/stair fixes and arena scenery through
+  PR #27 (#24 and #26). The complete exported Metal suite passed 56 journeys;
+  additional menu-preview checks, trusted CI and both production workers passed.
+  Performance PR #25 remains a draft. [Delivery and evidence](../verification.md#v0350-delivered).
+
 - v0.34 delivers the four reviewed metrics, cached-preview, overhead-hit and
   ledge-fall PRs through #23. Required trusted CI, protected publication and both
   workers passed. The user explicitly accepted an unfinished full graphical
@@ -70,6 +75,12 @@ update the current guide rather than silently reviving old behavior.
   setup](../releases.md) distinguish implemented gates from activation/host evidence.
 
 - Blizzard Battle source work (2026-10-25) adds the enclosed snowfield, sixteen ice cones, changing diagonal wind and bilateral avalanches. [Stage contract](../blizzard-battle.md) and [inspected references](../blizzard-battle-research.md) separate original evidence from eight-seat/timing tuning. Delivered in v0.31 with exact schema-6 release admission; standalone numeric protocol 5 is superseded.
+- Stage scenery (2026-10-26 source work): every arena gains original,
+  collision-free surroundings and small ambient animations outside the playable
+  volume, themed on Bomberman 64's worlds; menu miniatures skip them.
+  [References, composition and rules](../stage-scenery.md). Agent review is not
+  user approval of the art.
+
 - Greedy Trap adds the enclosed upper court, narrow middle ring and lower reward
   chamber, with four inner flights, two upper exits and closing side walls.
   [Stage contract](../greedy-trap.md) and [inspected references](../greedy-trap-research.md)

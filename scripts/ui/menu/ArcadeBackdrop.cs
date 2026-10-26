@@ -204,7 +204,7 @@ public partial class ArcadeBackdrop : RenderSurface
         }
         var data=JsonSerializer.SerializeToElement(new {id=layout.Id,width=layout.Width,height=layout.Height,coverHeight=layout.SoftBlockHeight,cells,underpasses=layout.Underpasses.Select(c=>c.Z*layout.Width+c.X).Order().ToArray()});
         float scale=8.1f/Math.Max(layout.Width,layout.Height);
-        var miniature=new TempleStageView(new ArtMaterials()) {Scale=Vector3.One*scale,Position=new(-layout.Width*scale/2,0,-layout.Height*scale/2)};
+        var miniature=new TempleStageView(new ArtMaterials()) {IncludeScenery=false,Scale=Vector3.One*scale,Position=new(-layout.Width*scale/2,0,-layout.Height*scale/2)};
         _arenaMount.AddChild(miniature);miniature.Build(data);
         if(id==BlastStages.BlizzardBattle)
             for(int z=1;z<layout.Height-1;z++)for(int x=1;x<layout.Width-1;x++)
