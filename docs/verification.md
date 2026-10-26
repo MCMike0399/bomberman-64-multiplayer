@@ -1,4 +1,84 @@
+# v0.35.1 delivered
+
+Published **2026-10-26 21:39:23 UTC**: [v0.35.1 / startup hotfix](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.35.1).
+[PR #28](https://github.com/MCMike0399/bomberman-64-multiplayer/pull/28) is merged.
+Immutable release/tag source: `8b760883062945a4a0bd1bbc49987e7208a6382d`.
+Identity: **v0.35.1/build 42/schema 6**, token `6/0.35.1/42`.
+
+This corrects the real user's update rollback after v0.35.0. Saved High graphics
+could enable contact shading while a newly created menu had a 2×2 render target,
+requesting five depth mip levels and crashing Metal before launch health passed.
+`RenderSurface` now retains its authored/last valid target until both output
+sizes reach 32 pixels. High quality, signature checks, failed-version suppression
+and the 45-second launch deadline remain intact. The newer patch is offered to
+clients that recorded v0.35.0 as failed; clearing their receipt is unnecessary.
+
+- [Trusted Verification 40403718100](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40403718100)
+  passed public, managed/network, Godot headless and Apple Silicon packaging on
+  the final merge. The optional hosted Metal lane remains skipped; local Metal
+  and actual updater evidence are recorded below.
+- [Protected rollout/publication 40405684614](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40405684614)
+  passed every job. Public, primary and fallback report this source/token with
+  both `passed` and `connectionVerified` true, including selected-worker gameplay
+  and room retirement. Signed draft-download comparisons and final live checks
+  preceded publication. An independent public identity/admission probe passed.
+- Independent public downloads verified both P-256 signatures, all five signed
+  asset hashes/sizes, the updater payload, Mac identity/controller metadata and
+  all 55 server/plugin inventory entries. Client/server archives, checksums and
+  metadata match CI byte for byte. All ten assets are public, and the anonymous
+  latest stable feed and immutable tag point to this hotfix. ZIPs were inspected
+  in place; the user's running app was preserved during diagnosis and testing.
+
+Published archive SHA-256:
+
+```text
+Mac:    f2f7ea4301dbd62f89dc53133243f25ee4c33ac1aeecc8ebffe8ca815325904e
+Server: fa8039715672d2ce86de6a2f9165058347234351e26a12e2ce39db9e16e444d8
+```
+
+## Startup reproduction and actual updater verification
+
+The user's failed-update receipt and native crash logs were retained privately.
+The updater's recorded candidate PID matched the crash; macOS crash metadata
+still labelled the bundle with its previous version. The minimal graphical
+`render-surface-startup` fixture then reproduced the exact invalid-mipmap error
+and native crash with High active before layout. Medium did not reproduce that
+renderer error. The corrected export passed **16 focused assertions / one
+capture**, including actual High rendering at 32×32, with no errors or warnings.
+
+The real macOS updater fixture passed three isolated-VM transactions: successful
+installation, rollback of a deliberately broken executable, and installation
+whose new process loads saved High/fullscreen settings before layout. Each
+expected app was verified still running after helper exit. The fixture's process
+lookup now recognizes Launch Services' canonical `/private/var` paths as well as
+`/var`, preserving ownership checks and cleanup. Its first PID-lookup failure and
+an earlier guest-agent startup timeout remain retained as failed test attempts.
+
+Affected exported Metal `menu-ux` passed **14 journeys, 1,871 assertions and 110
+captures**, with zero runtime errors or warnings. All captures were reviewed in
+five contact sheets. It covers startup, all map-preview presets, saved display
+restart, navigation, controllers, setup/layout, tutorial and real online play.
+The clean source candidate `54aa1dd` has the final merge's exact file tree.
+Local package checks passed; trusted CI independently passed the full managed,
+network, headless and exported package gates. This hotfix used the affected
+menu suite and actual updater transactions; the complete 57-journey `all` suite
+was not rerun. VM Metal does not establish new physical-controller or native-host
+throughput coverage.
+
+The v0.35.0 full suite started with default Medium and changed to High after
+layout, so its green result missed saved-High startup. Its earlier intermittent
+startup crash should have blocked publication pending diagnosis. The new
+regression belongs to `all` and `menu-ux`; the updater's VM-only
+`--high-fullscreen` fixture locks down the ordinary launch path as well.
+
+Ignored evidence: `artifacts/update-startup-failure/` (private failure witnesses,
+red/green fixtures, actual updater transactions and reviewed menu captures) and
+`artifacts/release-v0351/` (CI/published assets, signatures and rollout receipts).
+
 # v0.35.0 delivered
+
+**Subsequent correction:** [v0.35.1](#v0351-delivered) fixes the saved-High startup
+crash that caused a real update rollback after this release.
 
 Published **2026-10-26 20:10:36 UTC**: [v0.35.0 / signed update](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.35.0).
 [Integration PR #27](https://github.com/MCMike0399/bomberman-64-multiplayer/pull/27)
