@@ -81,6 +81,7 @@ public sealed partial class BlastSession
     }
     private bool AirborneTerrainBlocks(float x,float z,BlastPlayer p)
     {
+        if(p.Ghost&&_stage.AtHeight((int)MathF.Floor(x),(int)MathF.Floor(z),p.Y).IsElimination)return true;
         for(var cx=(int)MathF.Floor(x-PlayerRadius);cx<=(int)MathF.Floor(x+PlayerRadius);cx++)
             for(var cz=(int)MathF.Floor(z-PlayerRadius);cz<=(int)MathF.Floor(z+PlayerRadius);cz++)
             {
@@ -88,7 +89,7 @@ public sealed partial class BlastSession
                 if(EscapingCell(x,z,p,cx,cz))continue;
                 if(_stage.DeckOverlaps(cx,cz,p.Y,HeadHeight))return true;
                 var cell=_stage.AtHeight(cx,cz,p.Y);
-                if(cell.Kind==CellKind.Pillar||_softBlocks.IsAlive(cx,cz))return true;
+                if(cell.Kind==CellKind.Pillar||PlayerOverlapsSoftBlock(cx,cz,p.Y))return true;
                 if(cell.IsPassable&&_stage.SurfaceAt(Math.Clamp(x,cx+.001f,cx+.999f),Math.Clamp(z,cz+.001f,cz+.999f),p.Y)>p.Y+.02f)return true;
             }
         return false;

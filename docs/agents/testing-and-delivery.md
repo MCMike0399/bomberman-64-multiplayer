@@ -361,6 +361,15 @@ sideways input at three heights. The native `traversal` journey asserts those
 budgets on the stock temple and retains shore/ghost checks. [Reference research,
 comparisons and known validation limits](../falling-physics.md).
 
+`dotnet run --project tests/Bomber.Game.Tests -- --ledge-drops` retains the
+ghost snap-down and Pyramid lower-court crate regressions. It checks four
+directions, landing on cover, falling off it, solid crate sides, ghost drops
+onto cover and an upper-deck crate above a clear lower passage. These fixtures
+use ordinary input and actual explosion-created ghosts. The native `traversal`
+journey additionally walks a reachable stock Pyramid ledge above real seeded
+cover, captures its fall/landing, then records an unlatched ghost crown drop
+before verifying the existing latch lifecycle.
+
 ## Up & Down verification
 
 `dotnet run --project tests/Bomber.Game.Tests -- --up-and-down` checks six-flight
