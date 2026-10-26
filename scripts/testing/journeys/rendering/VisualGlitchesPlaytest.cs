@@ -147,7 +147,9 @@ public partial class PlaytestDriver
                     if(color.R>.35f&&color.R>color.G*1.4f&&color.R>color.B*1.6f)fire++;
                 }
                 Event("shore-water-probe",new{center=center.ToString(),radius,world=world.ToString(),pixel=pixel.ToString(),water=LightingArena.WaterHeight,fire});
-                Check(fire==0,"water occludes the submerged fireball instead of drawing it over the sea");
+                // Waves and MSAA can move the intersection through one five-pixel
+                // row. Missing depth fills the entire 5x5 patch with fire instead.
+                Check(fire<=5,"water occludes submerged fire beyond the moving shoreline edge");
             }
         }
         finally{camera.Transform=pose;Input(0,default);_root.Back();await Frames(3);}
