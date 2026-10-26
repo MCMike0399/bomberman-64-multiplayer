@@ -5,6 +5,7 @@ using System.Text.Json;
 using BlastCircuit.Arena.Models;
 using BlastCircuit.Rendering;
 using BlastCircuit.Arena.Stages;
+using BlastCircuit.Arena.Effects;
 namespace BlastCircuit.UI.Menu;
 
 /// <summary>A lit miniature theatre behind the actual menu controls.</summary>
@@ -22,6 +23,7 @@ public partial class ArcadeBackdrop : RenderSurface
     private SubViewport _viewport=null!;
     private Node3D _world=null!,_green=null!,_clouds=null!,_cabinet=null!,_arenaMount=null!,_resultsStage=null!,_resultsBoard=null!;
     private TempleStageView? _miniature;
+    private readonly Dictionary<string,TempleStageView> _miniatures=[];
     private string _arenaId="";
     private Camera3D _camera=null!;
     private Godot.Environment _environment=null!;
@@ -147,8 +149,53 @@ public partial class ArcadeBackdrop : RenderSurface
     }
     public void SelectArena(string id)
     {
-        if(_arenaId==id)return;_arenaId=id;
-        if(_miniature!=null){_arenaMount.RemoveChild(_miniature);_miniature.QueueFree();}
+        if(_arenaId==id)return;
+        if(_miniature!=null)
+        {
+            _miniature.Visible=false;
+            _miniature.ProcessMode=ProcessModeEnum.Disabled;
+        }
+        if(!_miniatures.TryGetValue(id,out var miniature))
+        {
+            miniature=BuildMiniature(id);
+            _miniatures.Add(id,miniature);
+        }
+        _miniature=miniature;_arenaId=id;
+        miniature.Visible=true;miniature.ProcessMode=ProcessModeEnum.Inherit;
+    }
+
+    /// <summary>Retain and draw the real miniatures behind the loading overlay, in the current render format.</summary>
+    public async Task PrepareArenas(IEnumerable<string> ids)
+    {
+        string selected=_arenaId;bool visible=_arenaMount.Visible;
+        GraphicsQuality.ApplyViewport(_viewport);
+        ApplyGraphics();
+        try
+        {
+            _arenaMount.Visible=true;
+            foreach(string id in ids)
+            {
+                // Yield before each procedural build so the loading screen can draw.
+                await EffectWarmup.Draw(this);
+                SelectArena(id);
+                for(int frame=0;frame<3;frame++)
+                {
+                    _viewport.RenderTargetUpdateMode=SubViewport.UpdateMode.Once;
+                    await EffectWarmup.Draw(this);
+                }
+                using var pixels=_viewport.GetTexture().GetImage();
+                if(pixels.IsEmpty())throw new InvalidOperationException("Arena preview did not render: "+id);
+            }
+        }
+        finally
+        {
+            if(selected.Length>0)SelectArena(selected);
+            _arenaMount.Visible=visible;
+        }
+    }
+
+    private TempleStageView BuildMiniature(string id)
+    {
         var layout=BlastStages.Get(id);
         var cells=new List<object>();
         for(int z=0;z<layout.Height;z++)for(int x=0;x<layout.Width;x++)
@@ -157,13 +204,13 @@ public partial class ArcadeBackdrop : RenderSurface
         }
         var data=JsonSerializer.SerializeToElement(new {id=layout.Id,width=layout.Width,height=layout.Height,coverHeight=layout.SoftBlockHeight,cells,underpasses=layout.Underpasses.Select(c=>c.Z*layout.Width+c.X).Order().ToArray()});
         float scale=8.1f/Math.Max(layout.Width,layout.Height);
-        _miniature=new TempleStageView(new ArtMaterials()) {Scale=Vector3.One*scale,Position=new(-layout.Width*scale/2,0,-layout.Height*scale/2)};
-        _arenaMount.AddChild(_miniature);_miniature.Build(data);
+        var miniature=new TempleStageView(new ArtMaterials()) {Scale=Vector3.One*scale,Position=new(-layout.Width*scale/2,0,-layout.Height*scale/2)};
+        _arenaMount.AddChild(miniature);miniature.Build(data);
         if(id==BlastStages.BlizzardBattle)
             for(int z=1;z<layout.Height-1;z++)for(int x=1;x<layout.Width-1;x++)
-                if(!layout.ClearCells.Contains((x,z)))_miniature.AddChild(_miniature.CreateCover(z*layout.Width+x));
+                if(!layout.ClearCells.Contains((x,z)))miniature.AddChild(miniature.CreateCover(z*layout.Width+x));
         // Keep the authority terrain/materials, while trimming exterior scenery to the display plinth.
-        foreach(var child in _miniature.GetChildren())
+        foreach(var child in miniature.GetChildren())
         {
             if(child is Node3D scenery&&child.Name=="GreedyExterior"){scenery.Visible=false;continue;}
             // The trimmed display plinth has no open sea, so it needs no seabed.
@@ -179,7 +226,8 @@ public partial class ArcadeBackdrop : RenderSurface
             // Gameplay's deep sea foundation would project through the display plinth.
             else if(child is MeshInstance3D {Mesh:not null} terrain&&terrain.Mesh.GetAabb().Position.Y< -3.5f)terrain.Visible=false;
         }
-        if(id==BlastStages.UpAndDown)_miniature.FitUpAndDownMiniature(4.45f/scale,-.31f/scale);
+        if(id==BlastStages.UpAndDown)miniature.FitUpAndDownMiniature(4.45f/scale,-.31f/scale);
+        return miniature;
     }
     public LineupPose Pose(int slot)=>slot<_rosterModels.Count?new(_clock,_rosterModels[slot].WalkPose,_rosterModels[slot].Position.Y,_renderedAppearances[slot],_rosterModels[slot].IsVisibleInTree()):default;
     public void ConfigureRoster(LocalRoster roster,int selected)
@@ -228,16 +276,18 @@ public partial class ArcadeBackdrop : RenderSurface
     {var mesh=new MeshInstance3D {Position=position,Scale=scale,Mesh=new SphereMesh {Radius=.5f,Height=1,RadialSegments=32,Rings=16},MaterialOverride=material};parent.AddChild(mesh);return mesh;}
     internal static MeshInstance3D Cylinder(Node parent,Vector3 position,float radius,float height,Material material)
     {var mesh=new MeshInstance3D {Position=position,Mesh=new CylinderMesh {TopRadius=radius,BottomRadius=radius,Height=height,RadialSegments=48},MaterialOverride=material};parent.AddChild(mesh);return mesh;}
+    private void ApplyGraphics()
+    {
+        if(_graphicsRevision==GraphicsQuality.Revision)return;
+        _environment.SsaoEnabled=GraphicsQuality.Current==GraphicsPreset.High;
+        _environment.SsaoRadius=.4f;_environment.SsaoIntensity=.8f;_environment.SsaoPower=1.2f;
+        _graphicsRevision=GraphicsQuality.Revision;
+    }
     public override void _Process(double delta)
     {
         base._Process(delta);
         if(!IsVisibleInTree())return;
-        if(_graphicsRevision!=GraphicsQuality.Revision)
-        {
-            _environment.SsaoEnabled=GraphicsQuality.Current==GraphicsPreset.High;
-            _environment.SsaoRadius=.4f;_environment.SsaoIntensity=.8f;_environment.SsaoPower=1.2f;
-            _graphicsRevision=GraphicsQuality.Revision;
-        }
+        ApplyGraphics();
         _clock+=delta;_untilDraw+=delta;
         if(_untilDraw<GraphicsQuality.MenuFrameInterval)return;float dt=(float)Math.Min(_untilDraw,.1);_untilDraw=0;
         for(int i=0;i<_heroes.Count;i++)

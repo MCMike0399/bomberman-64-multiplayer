@@ -119,6 +119,7 @@ public partial class GameRoot : Node3D
             {
                 await EffectWarmup.Draw(this);
                 await _arena.PrepareEffects();
+                await _menu.PrepareArenas();
             }
             finally
             {
