@@ -1,3 +1,102 @@
+# v0.34.0 delivered
+
+Published **2026-10-26 18:21:33 UTC**: [v0.34.0 / signed update](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.34.0).
+[Integration PR #23](https://github.com/MCMike0399/bomberman-64-multiplayer/pull/23)
+and original PRs #19–#22 are merged, preserving their commit ancestry. The immutable
+release/tag source is `450df7e2616309ccb13fbd444b8249da8dd7f386`.
+Identity: **v0.34.0/build 40/schema 6**, exact admission token `6/0.34.0/40`.
+
+**Explicit verification exception:** the user authorized publication with the
+complete 54-journey graphical gate unfinished after VM Metal/startup stalls.
+Native host GPU checks were skipped because the desktop was locked. These are
+recorded gaps; neither the incomplete local run nor CI's skipped optional Metal
+job is a passing full graphical result. This exception applies to this release.
+
+- [Trusted Verification 40371910806](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40371910806)
+  passed public, managed/network, Godot headless and Apple Silicon packaging on
+  the exact merge SHA. Managed receipts include 2,878 game, 354 client, 81 AI,
+  19 audio, 23 cluster, 72 soak, 79 release connection/cleanup, nine forced-relay
+  and 36 fleet checks, plus the complete real network smoke.
+- [Protected deployment and publication 40373747578, attempt 2](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40373747578)
+  passed every job. Public, primary and fallback each report the exact source
+  and token with `passed` and `connectionVerified` true. Selected-worker matches,
+  room retirement, signed draft-download comparison and final live checks all
+  preceded publication.
+- Independent published downloads verified both P-256 signatures against the
+  shipped public key, all five signed asset hashes/sizes, archive checksums,
+  ARM64 Mac identity/controller manifest and all 55 server/plugin inventory
+  entries. Both archives, checksum receipts and metadata files match trusted CI
+  byte for byte. All ten assets are public; the anonymous latest feed and tag
+  resolve to this release. ZIPs were inspected in place.
+- Independent read-only checks verified all 55 installed and mounted files on
+  each worker, both plugin directories, active state and preserved configuration
+  and resource caps. A separate public real match/room-retirement probe passed,
+  and the previous `6/0.33.0/39` client token was rejected with update feedback.
+
+## Published hashes and signatures
+
+The signed delivery manifest binds these exact assets:
+
+| Asset | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `Blast-Circuit-macos-arm64.zip` | 67378561 | `572c2fb4f24de5c803dfa828d137169523235d0ab93e50d2a80f242db2a0dfda` |
+| `Blast-Circuit-server-dotnet10.zip` | 4285967 | `a006eef5b3828983243908beb4993b191a9cbcee0af51465bd04185697862a8c` |
+| `Blast-Circuit-update.json` | 131 | `648a52b67fca50d92eb5681d97d089a712802b411e68e90a81cf6aa083e79d65` |
+| `build-metadata.json` | 585 | `ac1089a85e4306287bd08eea34298cb64b818622cdf0eaf2acf53b6b53eaa536` |
+| `server-build-metadata.json` | 6358 | `9d72ae0c02cbd63d8ea6660ef11f612856468ebbc28994efebd7472940c2bb16` |
+
+Public P-256 signature receipts (base64 DER, verified with SHA-256):
+
+```text
+Blast-Circuit-update.json.sig:
+MEUCIHPTa4+GRKqbGIr1hDT+UWe6O7ZpT6czPd8RyfQnWz9aAiEAxc/Bk5YZHQicNo/qD6LFcj5ALgkY7eUjrBtgPXXBkdA=
+Blast-Circuit-release.json.sig:
+MEQCIEVmUqOQpn7KaQ86rrIUIem+kTDPYTEHyuovw+vcgkTVAiAFBZmBPa9sBNSU0vAVCiNJljBLaQjkzbwbC2VI1XOfnA==
+```
+
+## Review, local evidence and limitations
+
+The release adds the saved F3/Settings performance bar (#19), prepared/cached
+arena previews (#20), body-height overhead explosion hits (#21) and gravity-based
+ghost/covered-ledge falls (#22). Standards review found one integration-test
+ownership defect; spec review found none. Commit `919c8c4` scopes Rock Garden's
+five-column/sixteen-boulder assertions to the gameplay ArenaView, excluding
+hidden cached miniatures. Its tree equals the final merge tree.
+
+Fresh candidate gates ran entirely on **DiveMac: Apple M5, 10 CPU cores,
+10 GPU cores, 16 GB RAM, macOS 26.6.2**. Public, managed/network, headless and
+package passed. Local managed release-connection checks numbered 78; hosted CI
+above numbered 79. Headless core/peer/adaptive/slow-poll assertions were
+1,635/19/9/10; exported package/peer/adaptive/slow-poll were 255/19/9/10.
+Actual libusb/SDL startup, macOS 14 imports, strict signing and the controller
+bundle audit passed. The personal installed app was not replaced.
+
+Partial exported graphical evidence used real isolated macOS Metal Forward+
+on Apple Paravirtual (Apple5). First-use rendering, all six cached miniatures at
+every preset and performance metrics completed before a display-restart child
+startup timeout. That run reached 474 assertions and 37 captures; every retained
+capture was inspected, with full-size metrics/settings/HUD checks. Further
+attempts retained a second restart timeout, guest-agent readiness failures and a
+Metal preparation stall in a separate release-only VM. An experimental parent
+rendering change was removed. No deadline or assertion was relaxed. These VM
+results establish no native M5 throughput or new physical-controller coverage.
+
+## Protected rollback and retry
+
+Attempt 1 failed its fallback match-creation probe while CPU-reserve admission
+excluded the idle fallback (zero available simulations with configured limit one).
+The workflow withheld publication and completed rollback/resume. Independent
+hashes verified both workers restored to v0.33.0 with all 55 files, configuration
+and resource caps preserved. After host headroom recovered through the normal
+monitor policy, attempt 2 reused the same trusted CI artifacts and succeeded.
+No admission threshold, worker limit, signing key or production configuration
+was changed to obtain a passing gate.
+
+Ignored receipts remain under `artifacts/qa/review-v034-*` and
+`artifacts/review-v034/`: local/hosted gates, retained failures and captures,
+review sheets, exact CI/published downloads, deployment receipt, independent
+signature/hash/feed/public-match checks and both worker inventories.
+
 # v0.33.0 delivered
 
 Published **2026-10-26 15:17:05 UTC**: [v0.33.0 / signed update](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.33.0).

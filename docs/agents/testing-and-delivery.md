@@ -168,6 +168,9 @@ reference. Server artifact creation is separate from deploying a service.
 
 For authorized server updates, follow the [shared-server guide](../online-server.md).
 It owns deployment and completion checks for the service used by all players.
+When a test host also runs a maintained worker, coordinate heavy QA/build work
+through protected publication: pressure admission must qualify naturally for
+the real fleet probes. Preserve admission policy and measured resource caps.
 The [historical party guide](../online-party.md) applies only to an explicit
 same-Wi-Fi party or relay task.
 

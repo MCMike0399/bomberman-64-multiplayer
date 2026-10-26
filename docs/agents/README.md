@@ -3,7 +3,7 @@
 The user resumed gameplay work on 2026-10-23 for controller ergonomics, aiming
 and knockdown/blast separation (iteration19). The first eighteen iterations
 remain historical evidence. Iteration20 then rebuilt the walk. Recorded
-release baseline: **v0.33.0/build 39**, published with independently verified Mac
+release baseline: **v0.34.0/build 40**, published with independently verified Mac
 and server archives (see [verification](../verification.md)). Previous runtime baseline: **v0.18.0**, commit
 `316a330d7d895a92f98c1a60be7d571ec445a8a3`. Later documentation commits may follow.
 Verify the live branch, source, tools and installed version before relying on
@@ -41,6 +41,12 @@ update the current guide rather than silently reviving old behavior.
 | [Latest verification](../verification.md) | Exact observed results and limitations, with earlier iterations below |
 
 ## Current decisions that supersede earlier experiments
+
+- v0.34 delivers the four reviewed metrics, cached-preview, overhead-hit and
+  ledge-fall PRs through #23. Required trusted CI, protected publication and both
+  workers passed. The user explicitly accepted an unfinished full graphical
+  gate after VM stalls and skipped native checks; this is a release-specific
+  verification exception. [Delivery and GPU gap](../verification.md#v0340-delivered).
 
 - v0.33 delivers PR #18's feature-folder/namespace restructure while retaining
   v0.32 display behavior. The complete exported Metal suite passed 51 journeys;
