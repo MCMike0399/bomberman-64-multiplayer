@@ -2,6 +2,17 @@
   "schemaVersion": 1,
   "scenarios": [
     {
+      "id": "blast-hitbox",
+      "method": "BlastHitbox",
+      "domains": [
+        "gameplay",
+        "physics"
+      ],
+      "headless": true,
+      "timeout": 120,
+      "manual": false
+    },
+    {
       "id": "tutorial",
       "method": "TutorialTour",
       "domains": [
@@ -14,10 +25,35 @@
       "manual": false
     },
     {
+      "id": "map-preview-loading",
+      "method": "MapPreviewLoading",
+      "domains": [
+        "rendering",
+        "performance",
+        "ui"
+      ],
+      "headless": false,
+      "timeout": 180,
+      "manual": false
+    },
+    {
       "id": "first-use-rendering",
       "method": "FirstUseRendering",
       "domains": [
         "rendering",
+        "performance"
+      ],
+      "headless": false,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "performance-metrics",
+      "method": "PerformanceMetrics",
+      "domains": [
+        "rendering",
+        "settings",
+        "ui",
         "performance"
       ],
       "headless": false,
@@ -516,6 +552,8 @@
       "id": "all",
       "steps": [
         "first-use-rendering",
+        "map-preview-loading",
+        "performance-metrics",
         "display-settings",
         "graphics-settings",
         "advanced-settings",
@@ -547,6 +585,7 @@
         "kick-physics",
         "body-contacts",
         "grapple",
+        "blast-hitbox",
         "local-actions",
         "ramp",
         "powerup-collect",
@@ -602,6 +641,7 @@
         "kick-physics",
         "body-contacts",
         "grapple",
+        "blast-hitbox",
         "traversal",
         "powerup-collect",
         "loot-opening",
@@ -852,7 +892,9 @@
     {
       "id": "menu-ux",
       "steps": [
+        "map-preview-loading",
         "menu-navigation",
+        "performance-metrics",
         "display-settings",
         "wasd-navigation",
         "controller-popups",

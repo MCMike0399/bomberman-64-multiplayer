@@ -17,6 +17,7 @@ public partial class GameRoot : Node3D
     private ArenaView _arena=null!;
     private ArcadeMenu _menu=null!;
     private BattleHud _hud=null!;
+    private PerformanceBar _performanceBar=null!;
     private TutorialHud _tutorialHud=null!;
     private string? _tutorialLessonId;
     private bool _trainingSession;
@@ -84,6 +85,8 @@ public partial class GameRoot : Node3D
         _menu=new ArcadeMenu();layer.AddChild(_menu);
         _hud=new BattleHud {Visible=false};layer.AddChild(_hud);
         BuildTutorialHud(layer);
+        var metricsLayer=new CanvasLayer {Layer=90};AddChild(metricsLayer);
+        _performanceBar=new PerformanceBar {Name="PerformanceBar",Visible=false};metricsLayer.AddChild(_performanceBar);
         _menu.AppearanceChanged+=index=>{if(_session is NetworkSession network)network.SetAppearance(index);};
         _menu.Navigation+=Navigate;_menu.BackRequested+=Back;_menu.ReplayRequested+=Replay;
         _menu.LocalRequested+=StartConfigured;_menu.OnlineRequested+=StartConfiguredOnline;
@@ -119,6 +122,7 @@ public partial class GameRoot : Node3D
             {
                 await EffectWarmup.Draw(this);
                 await _arena.PrepareEffects();
+                await _menu.PrepareArenas();
             }
             finally
             {
@@ -199,6 +203,11 @@ public partial class GameRoot : Node3D
     }
     public override void _Input(InputEvent @event)
     {
+        if(@event is InputEventKey {Pressed:true,Echo:false,Keycode:Key.F3,AltPressed:false,CtrlPressed:false,MetaPressed:false,ShiftPressed:false})
+        {
+            _menu.ConfigurePerformanceMetrics(!_preferences.PerformanceMetrics);SavePreferences();
+            GetViewport().SetInputAsHandled();return;
+        }
         // LineEdit consumes Escape itself. Back still leaves one menu in a single press.
         if(!_preparingGraphics&&!_menu.HasOpenPopup&&GetViewport().GuiGetFocusOwner() is LineEdit
             &&@event.IsActionPressed("ui_cancel"))

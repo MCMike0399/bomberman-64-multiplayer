@@ -1,6 +1,7 @@
 // Adapted from burbuja-kernel Example.Blast, MIT (copyright 2026 MCMike0399).
 // Product-owned simulation; original baseline b0758339984bbeead1b3d1236f31e980aaa5f20e.
 
+using Bomber.Game.Simulation.Rules;
 using Bomber.Game.Simulation.Stages;
 using Bomber.Game.Simulation.State;
 
@@ -20,7 +21,7 @@ public sealed partial class BlastSession
     private const float LedgeAirAcceleration = 8f;
 
     /// <summary>How high above its tier a player stands: a bomb coming down below this lands on their head.</summary>
-    private const float HeadHeight = 1.2f;
+    private const float HeadHeight = BlastGeometry.PlayerHeight;
 
     private void MovePlayer(BlastPlayer p, InputState input, float dt)
     {
@@ -74,7 +75,9 @@ public sealed partial class BlastSession
 
         var cell = _stage.AtHeight((int)MathF.Floor(p.X), (int)MathF.Floor(p.Z),previousY);
         var ground=PlayerLandingHeight(p.X,p.Z,previousY);
-        if(!p.Ghost&&ground<previousY-.05f&&!CellsConnected(originX,originZ,(int)MathF.Floor(p.X),(int)MathF.Floor(p.Z),previousY))
+        if(ground<previousY-.05f&&
+            (!CellsConnected(originX,originZ,(int)MathF.Floor(p.X),(int)MathF.Floor(p.Z),previousY)||
+                previousY>_stage.SurfaceAt(startX,startZ,previousY)+.05f))
         {
             p.Airborne=true;p.Falling=true;p.AirVY=0;
             p.AirVX=(p.X-startX)/Math.Max(dt,.0001f)*LedgeAirSpeedScale;
@@ -103,13 +106,30 @@ public sealed partial class BlastSession
     // Use the same water plane published to the renderer; void falls below the
     // lowest floor before elimination as well. The player center still defines
     // the ledge, so this does not extend the island by the collision radius.
-    private float PlayerLandingHeight(float x,float z,float y=float.PositiveInfinity) =>
-        _stage.AtHeight((int)MathF.Floor(x),(int)MathF.Floor(z),y).Kind switch
+    private float PlayerLandingHeight(float x,float z,float y=float.PositiveInfinity)
+    {
+        float ground=_stage.AtHeight((int)MathF.Floor(x),(int)MathF.Floor(z),y).Kind switch
         {
             CellKind.Water => _waterLevel,
             CellKind.Void => -1,
             _ => _stage.SurfaceAt(x,z,y),
         };
+        // Lower cover has a finite top: a player can leave a terrace above it,
+        // land on it, then walk off without sinking into its solid sides.
+        for(int cx=(int)MathF.Floor(x-PlayerRadius);cx<=(int)MathF.Floor(x+PlayerRadius);cx++)
+        for(int cz=(int)MathF.Floor(z-PlayerRadius);cz<=(int)MathF.Floor(z+PlayerRadius);cz++)
+        {
+            if(!_softBlocks.IsAlive(cx,cz)||!CircleOverlapsCell(x,z,cx,cz))continue;
+            float top=SoftBlockTop(cx,cz);
+            if(top<=y+.001f)ground=Math.Max(ground,top);
+        }
+        return ground;
+    }
+
+    private float SoftBlockTop(int x,int z)=>_stage.SurfaceAt(x+.5f,z+.5f)+_stage.SoftBlockHeight;
+
+    private bool PlayerOverlapsSoftBlock(int x,int z,float y)=>_softBlocks.IsAlive(x,z)&&
+        y<SoftBlockTop(x,z)-.001f&&y+HeadHeight>_stage.SurfaceAt(x+.5f,z+.5f)+.001f;
 
     private bool CollidesWithSolid(float x, float z, int tier, BlastPlayer mover)
     {
@@ -130,7 +150,7 @@ public sealed partial class BlastSession
                     if (CircleOverlapsCell(x, z, cx, cz))
                         return true;
                 }
-                if (_softBlocks.IsAlive(cx, cz))
+                if (PlayerOverlapsSoftBlock(cx,cz,mover.Y))
                 {
                     if (CircleOverlapsCell(x, z, cx, cz))
                         return true;

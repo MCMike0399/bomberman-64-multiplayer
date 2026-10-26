@@ -126,8 +126,9 @@ public partial class PlaytestDriver
             await KeyPress(Key.Down);await Focused("Vibration","down reaches vibration without jumping columns");
             await KeyPress(Key.Tab);await Focused("TestVibration","Tab follows reading order");
             await KeyPress(Key.Down);await Focused("StageLighting","down reaches lighting in the same column");
+            await KeyPress(Key.Down);await Focused("PerformanceMetrics","down reaches performance metrics");
             await KeyPress(Key.Down);await Focused("SettingsBack","down from last preference reaches Back");
-            await KeyPress(Key.Up);await Focused("StageLighting","up from Back restores the active column");
+            await KeyPress(Key.Up);await Focused("PerformanceMetrics","up from Back restores the active column");
             await Capture("navigation-settings");
             await Start("SettingsBack","save and return");await KeyPress(Key.Escape);
             Check(_root.ScreenName=="Modes"&&NamedButton("OpenSettings").HasFocus(),"settings Back restores its opener");

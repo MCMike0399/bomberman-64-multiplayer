@@ -32,6 +32,8 @@ public partial class ArcadeMenu : Control
     private CheckButton _vibration=null!;
     private HSlider _volume=null!;
     private CheckButton _automaticUpdates=null!;
+    private CheckButton _performanceMetrics=null!;
+    public bool PerformanceMetricsEnabled=>_performanceMetrics.ButtonPressed;
     private Label _updateStatus=null!;
     private Button _checkUpdates=null!,_installUpdate=null!,_settingsButton=null!;
     public bool AutomaticUpdates=>_automaticUpdates.ButtonPressed;
@@ -85,6 +87,7 @@ public partial class ArcadeMenu : Control
     private PromptBar _inputFooter=null!;
     public int HumanCount => _practice?1:_localPlayers.Roster.Humans;
     public int[] PlayerAppearances => _practice?new[]{_localPlayers.Roster.AuthorityAppearances().FirstOrDefault()}:_localPlayers.Roster.AuthorityAppearances();
+    public Task PrepareArenas()=>_background.PrepareArenas(StageIds);
     public object RosterState=>_localPlayers.DiagnosticState;
     public int OnlineAppearance=>_onlineAppearance;
     public string ServerUrl=>_server.Text.Trim();

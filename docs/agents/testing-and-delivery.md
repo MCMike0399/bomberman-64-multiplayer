@@ -138,6 +138,18 @@ creation. Preserve both receipts. Fixed-step frame intervals are diagnostic stal
 witnesses, not real-time GPU throughput. The default case tests every quality
 preset and retained shader resources after garbage collection.
 
+For map-picker freezes, run `map-preview-loading` in a fresh graphical process.
+It cycles all maps forward/backward through Setup, Practice and room settings
+at every preset, verifies retained scenes and paused inactive previews, and
+rejects synchronous pipeline creation during selection. Inspect its actual
+miniature captures alongside the timing/pipeline trace. `setup` also checks
+miniature bounds and starts ordinary gameplay after preview selection.
+
+Arena geometry assertions must inspect the active `ArenaView`, rather than
+counting across the composition root: cached menu miniatures retain hidden
+copies of stage geometry. The complete headless sequence retains the Rock
+Garden regression, where root-wide column counts included both scenes.
+
 Native popups have distinct window IDs; use the existing popup helpers and
 canvas-to-screen mouse transforms. Preserve ordinary input/hit testing rather
 than calling menu callbacks or forcing focus flags to obtain a green receipt.
@@ -156,6 +168,9 @@ reference. Server artifact creation is separate from deploying a service.
 
 For authorized server updates, follow the [shared-server guide](../online-server.md).
 It owns deployment and completion checks for the service used by all players.
+When a test host also runs a maintained worker, coordinate heavy QA/build work
+through protected publication: pressure admission must qualify naturally for
+the real fleet probes. Preserve admission policy and measured resource caps.
 The [historical party guide](../online-party.md) applies only to an explicit
 same-Wi-Fi party or relay task.
 
@@ -330,6 +345,20 @@ A local updater fixture does not prove hosted CI or a public release; verify tho
 separately when publication is authorized. Preserve the user's update preference
 and avoid replacement while a match/session is active.
 
+## Overhead explosion verification
+
+`dotnet run --project tests/Bomber.Game.Tests -- --blast-hitbox` reproduces
+zero- and three-pump overhead remote explosions whose spheres intersect a
+player's body while excluding its feet. Ordinary throws and remote inputs cover
+normal battle and practice, with and without a heart. Geometry checks retain
+out-of-range, elevated-player, hard-terrain, soft-cover, red-piercing and solid-deck
+boundaries. The AI suite checks the corresponding overhead danger interval.
+The `blast-hitbox` native journey walks three humans on the stock Temple, collects
+Remote, pumps/aims/throws and detonates over the victim. It checks the actual blast
+event's position and death, and captures the held bomb, overhead flight and
+explosion. It belongs to `all` and `core-headless`; graphical evidence uses the
+isolated desktop.
+
 ## Ledge fall verification
 
 For ledge movement, `dotnet run --project tests/Bomber.Game.Tests -- --falling`
@@ -339,6 +368,15 @@ accepted event-to-event duration/travel for forward, released, reversed and
 sideways input at three heights. The native `traversal` journey asserts those
 budgets on the stock temple and retains shore/ghost checks. [Reference research,
 comparisons and known validation limits](../falling-physics.md).
+
+`dotnet run --project tests/Bomber.Game.Tests -- --ledge-drops` retains the
+ghost snap-down and Pyramid lower-court crate regressions. It checks four
+directions, landing on cover, falling off it, solid crate sides, ghost drops
+onto cover and an upper-deck crate above a clear lower passage. These fixtures
+use ordinary input and actual explosion-created ghosts. The native `traversal`
+journey additionally walks a reachable stock Pyramid ledge above real seeded
+cover, captures its fall/landing, then records an unlatched ghost crown drop
+before verifying the existing latch lifecycle.
 
 ## Up & Down verification
 

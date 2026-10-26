@@ -28,6 +28,9 @@ public partial class ArcadeMenu
             ChangeValue=direction=>{LocalStageTime=(StageTime)(((int)LocalStageTime+direction+4)%4);SettingsChanged?.Invoke();}};
         player.AddChild(lighting);
         Copy(player,"Morning, midday, afternoon or night. Online rounds use the server's lighting.",16);
+        _performanceMetrics=new ArcadeToggle {Name="PerformanceMetrics",Text="Performance metrics · F3",CustomMinimumSize=new(460,56),
+            TooltipText="FPS, frame timing, video memory and draw calls. CPU temperature is unavailable: Godot has no portable sensor API."};player.AddChild(_performanceMetrics);
+        _performanceMetrics.Toggled+=_=>SettingsChanged?.Invoke();
         var graphics=new ArcadeRuleDial {Name="GraphicsPreset",Caption="Graphics",ValueWidth=160,
             ReadValue=()=>Graphics.ToString(),ChangeValue=direction=>
             {Graphics=(GraphicsPreset)(((int)Graphics+direction+3)%3);_graphicsDescription.Text=GraphicsQuality.Description(Graphics);SettingsChanged?.Invoke();}};
@@ -76,11 +79,13 @@ public partial class ArcadeMenu
         _vibration.SetPressedNoSignal(preferences.Vibration);_volume.SetValueNoSignal(preferences.Volume*100);
         _volumeLabel.Text=$"Sound volume: {preferences.Volume*100:0}%";
         LocalStageTime=preferences.StageLighting;
+        ConfigurePerformanceMetrics(preferences.PerformanceMetrics);
         ConfigureDisplay(preferences.Fullscreen,preferences.Resolution);
         Graphics=preferences.Graphics;_graphicsDescription.Text=GraphicsQuality.Description(Graphics);
     }
 
     public bool Fullscreen {get;private set;}=true;
+    public void ConfigurePerformanceMetrics(bool enabled)=>_performanceMetrics.SetPressedNoSignal(enabled);
     public Vector2I Resolution {get;private set;}
     public void ConfigureDisplay(bool fullscreen,Vector2I resolution){Fullscreen=fullscreen;Resolution=resolution;}
 

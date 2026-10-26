@@ -31,7 +31,7 @@ public sealed partial class BlastSession
         // Resolve visibility before destroying cover: the same explosion cannot remove a shield and
         // retroactively hit a player behind it. Chain candidates obey hard terrain/cover too.
         var victims = _players.Values.Where(p => p.InvincibleTimer <= 0 &&
-            InBlast(bomb.X, bomb.Z, BombY(bomb), r, p.X, p.Z, p.Y, bomb.IsRed)).ToArray();
+            BlastGeometry.HitsPlayer(_stage, _softBlocks, bomb.X, BombY(bomb), bomb.Z, r, p.X, p.Y, p.Z, bomb.IsRed)).ToArray();
         var chains = _bombs.Where(other => !other.Exploded && other.State != BombState.Carried &&
             InBlast(bomb.X, bomb.Z, BombY(bomb), r + .5f, other.X, other.Z, BombY(other), bomb.IsRed)).ToArray();
         DestroyBlocksInBlast(context, bomb.X, bomb.Z, r, bomb.IsRed, BombY(bomb));
