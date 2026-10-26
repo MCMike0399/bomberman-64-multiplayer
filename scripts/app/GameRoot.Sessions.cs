@@ -1,6 +1,7 @@
 using Godot;
-using Bomber.Client;
-using Bomber.Game;
+using Bomber.Client.Controls;
+using Bomber.Client.Sessions;
+using Bomber.Game.Matches;
 using BlastCircuit.InputDevices;
 namespace BlastCircuit.App;
 

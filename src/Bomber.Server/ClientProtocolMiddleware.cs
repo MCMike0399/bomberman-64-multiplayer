@@ -1,4 +1,4 @@
-using Bomber.Game;
+using Bomber.Game.Online;
 
 namespace Bomber.Server;
 

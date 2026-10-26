@@ -1,6 +1,7 @@
 using Godot;
 using BlastCircuit.Arena;
 using BlastCircuit.Rendering;
+using Bomber.Game.Tutorial;
 namespace BlastCircuit.App;
 
 /// <summary>Device-local choices, including the name used when joining a server.</summary>
@@ -8,7 +9,7 @@ public sealed class PlayerPreferences
 {
     public HashSet<string> CompletedTutorials {get;}=[];
     public string PlayerName { get; set; } = "";
-    public string ServerUrl { get; set; } = Bomber.Client.NetworkSession.DefaultServerUrl;
+    public string ServerUrl { get; set; } = Bomber.Client.Sessions.NetworkSession.DefaultServerUrl;
     public bool Vibration { get; set; }
     public bool AutomaticUpdates { get; set; } = true;
     public float Volume { get; set; } = .8f;
@@ -20,7 +21,7 @@ public sealed class PlayerPreferences
         var file = new ConfigFile();
         if (file.Load(path) != Error.Ok) return value;
         var completed=file.GetValue("tutorial","completed","");
-        if(completed.VariantType==Variant.Type.String)value.CompletedTutorials.UnionWith(completed.AsString().Split(',').Where(Bomber.Game.TutorialCourse.Contains));
+        if(completed.VariantType==Variant.Type.String)value.CompletedTutorials.UnionWith(completed.AsString().Split(',').Where(Bomber.Game.Tutorial.TutorialCourse.Contains));
         var name=file.GetValue("online","name","");
         var server=file.GetValue("online","server",value.ServerUrl);
         if(name.VariantType==Variant.Type.String)value.PlayerName=name.AsString();

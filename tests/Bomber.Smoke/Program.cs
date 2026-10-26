@@ -1,7 +1,8 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using Bomber.Client;
-using Bomber.Game;
+using Bomber.Client.Sessions;
+using Bomber.Game.Matches;
+using Bomber.Game.Online;
 using System.Net.Http.Json;
 using System.Net.WebSockets;
 using System.Text;
@@ -88,7 +89,7 @@ async Task PeerReconnect()
     string code=created.GetProperty("lobby").GetProperty("joinCode").GetString()!;
     await host.Connect(created.GetProperty("reservation"),http.BaseAddress!);
     foreach(var peer in new[]{second,third})await peer.Connect(await Api(HttpMethod.Post,"/realtime/v1/lobbies/join",new{code},peer.Token),http.BaseAddress!);
-    foreach(var peer in new[]{host,second,third})await peer.Send(new{t="peer.hello",d=new{version=Bomber.Game.OnlineProtocol.Revision}});
+    foreach(var peer in new[]{host,second,third})await peer.Send(new{t="peer.hello",d=new{version=Bomber.Game.Online.OnlineProtocol.Revision}});
     await host.Wait("party.status",d=>d.GetProperty("canStart").GetBoolean());
     await host.Send(new{t="party.start",d=new{}});var playing=await second.Wait("party.status",d=>d.GetProperty("phase").GetString()=="playing");
     var runningDeadline=Stopwatch.StartNew();
@@ -102,7 +103,7 @@ async Task PeerReconnect()
     await second.Wait("party.status",d=>d.GetProperty("leaderId").GetString()==second.PlayerId&&d.GetProperty("phase").GetString()=="lobby");
     await second.Send(new{t="party.start",d=new{}});await second.Wait("party.status",d=>d.GetProperty("phase").GetString()=="playing");
     await host.Connect(await Api(HttpMethod.Post,$"/realtime/v1/lobbies/{id}/join",new{},host.Token),http.BaseAddress!);
-    await host.Send(new{t="peer.hello",d=new{version=Bomber.Game.OnlineProtocol.Revision}});
+    await host.Send(new{t="peer.hello",d=new{version=Bomber.Game.Online.OnlineProtocol.Revision}});
     var restored=await second.Wait("party.status",d=>d.GetProperty("phase").GetString()=="lobby"&&d.GetProperty("canStart").GetBoolean());
     Check(restored.GetProperty("d").GetProperty("leaderId").GetString()==second.PlayerId,"former host reconnect keeps elected host and resets peer roster safely");
     foreach(var peer in new[]{host,second,third})await Api(HttpMethod.Post,$"/realtime/v1/lobbies/{id}/leave",new{},peer.Token);

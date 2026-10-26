@@ -1,7 +1,8 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Bomber.Client;
-using Bomber.Game;
+using Bomber.Client.Peer;
+using Bomber.Client.Sessions;
+using Bomber.Game.Matches;
 
 internal static class PeerFrameChecks
 {

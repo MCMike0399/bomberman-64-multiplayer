@@ -1,7 +1,7 @@
 using Godot;
 using System.Text.Json;
 using BlastCircuit.InputDevices;
-using BlastCircuit.Rendering;
+using Bomber.Game.Matches;
 namespace BlastCircuit.UI.Hud;
 
 /// <summary>Fuse clock flanked by participant tokens; game state remains owned by the session.</summary>
@@ -71,7 +71,7 @@ public partial class BattleHud : Control
             bool held=p.TryGetProperty("carriedBy",out var carrier)&&carrier.ValueKind==JsonValueKind.String;
             int appearance=p.TryGetProperty("appearance",out var suit)?suit.GetInt32():slot;
             token.Suit=BlastCircuit.Rendering.ArtMaterials.PlayerColors[Math.Clamp(appearance,0,7)];
-            token.Tag=Bomber.Game.PlayerNames.Display(p.GetProperty("name").GetString(),slot);
+            token.Tag=Bomber.Game.Matches.PlayerNames.Display(p.GetProperty("name").GetString(),slot);
             token.PlayerName=p.GetProperty("bot").GetBoolean()?"CPU":"";
             if(p.TryGetProperty("statusEffect",out var status)&&status.GetString() is {} effect&&effect!="none")token.PlayerName=$"{effect} {Math.Ceiling(p.GetProperty("statusRemaining").GetSingle())}s";
             token.Status=ghost?TokenStatus.Ghost:!alive?TokenStatus.Out:held?TokenStatus.Held:p.GetProperty("stunned").GetBoolean()?TokenStatus.Dizzy:TokenStatus.Alive;
@@ -104,7 +104,7 @@ public partial class BattleHud : Control
     private static string Hint(JsonElement state,JsonElement[] players)
     {
         var recovering=players.Where(p=>p.GetProperty("alive").GetBoolean()&&!p.GetProperty("ghost").GetBoolean()&&p.GetProperty("stunned").GetBoolean()).ToArray();
-        if(recovering.Length>0)return string.Join(", ",recovering.Select(p=>Bomber.Game.PlayerNames.Display(p.GetProperty("name").GetString(),p.GetProperty("slot").GetInt32())))+" dizzy: wiggle the stick and tap buttons to recover";
+        if(recovering.Length>0)return string.Join(", ",recovering.Select(p=>Bomber.Game.Matches.PlayerNames.Display(p.GetProperty("name").GetString(),p.GetProperty("slot").GetInt32())))+" dizzy: wiggle the stick and tap buttons to recover";
         var family=ControllerHub.Current.ActiveFamily;
         string primary=family==ControllerFamily.Keyboard?"J":ControllerProfile.BombName(family);
         string carry=family==ControllerFamily.Keyboard?"K":ControllerProfile.ButtonName(family,JoyButton.LeftShoulder)+" / "+ControllerProfile.ButtonName(family,ControllerProfile.CarryButton(family));
@@ -113,7 +113,7 @@ public partial class BattleHud : Control
         {
             int seat=p.GetProperty("slot").GetInt32();
             if(family==ControllerFamily.Keyboard){primary=seat==1?"N / ENTER":"J";carry=seat==1?"M":"K";remote=seat==1?", / BACKSPACE":"I / R";}
-            string who=Bomber.Game.PlayerNames.Display(p.GetProperty("name").GetString(),seat);
+            string who=Bomber.Game.Matches.PlayerNames.Display(p.GetProperty("name").GetString(),seat);
             if(p.GetProperty("carrying").GetString()=="bomb")
             {
                 bool latched=p.TryGetProperty("carryFromPrimary",out var primaryCarry)&&primaryCarry.GetBoolean();

@@ -1,5 +1,6 @@
 using Godot;
 using System.Text.Json;
+using BlastCircuit.Arena.Stages;
 namespace BlastCircuit.Arena;
 
 /// <summary>Fits playable terrain and standing characters into the space between the HUD and footer.</summary>

@@ -2,8 +2,8 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Net.WebSockets;
 using System.Text.Json;
-using Bomber.Client;
-using Bomber.Game;
+using Bomber.Client.Sessions;
+using Bomber.Game.Online;
 
 internal static class VersionCompatibilityChecks
 {

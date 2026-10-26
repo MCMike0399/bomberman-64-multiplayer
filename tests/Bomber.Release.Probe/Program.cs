@@ -1,7 +1,7 @@
 using System.Net.Http.Json;
 using System.Net.WebSockets;
 using System.Text.Json;
-using Bomber.Game;
+using Bomber.Game.Online;
 
 if (args.Length is not (1 or 3)) throw new ArgumentException("Usage: Bomber.Release.Probe ORIGIN [EXPECTED_SERVER REGION]");
 var origin = new Uri(args[0].TrimEnd('/') + "/");

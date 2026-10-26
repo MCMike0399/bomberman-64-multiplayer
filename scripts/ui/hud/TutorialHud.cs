@@ -1,6 +1,6 @@
 using Godot;
 using System.Text.Json;
-using Bomber.Game;
+using Bomber.Game.Tutorial;
 using BlastCircuit.InputDevices;
 namespace BlastCircuit.UI.Hud;
 

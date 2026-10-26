@@ -1,5 +1,5 @@
 using System.Text.Json;
-using Bomber.Client;
+using Bomber.Client.Peer;
 using Godot;
 
 namespace BlastCircuit.App;

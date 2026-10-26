@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Text.Json;
-using Bomber.Client;
-using Bomber.Game;
+using Bomber.Client.Sessions;
+using Bomber.Game.Matches;
 
 internal static class PartyNetworkChecks
 {
@@ -116,7 +116,7 @@ internal static class PartyNetworkChecks
         var start=await State(peer,s=>s.GetProperty("phase").GetInt32()==1);
         var later=await State(peer,s=>s.GetProperty("blizzard").GetProperty("time").GetSingle()>2);
         var weather=later.GetProperty("blizzard");
-        var wind=Bomber.Game.Simulation.BlizzardRules.Wind(weather.GetProperty("time").GetSingle(),weather.GetProperty("seed").GetInt32(),weather.GetProperty("round").GetInt32());
+        var wind=Bomber.Game.Simulation.Rules.BlizzardRules.Wind(weather.GetProperty("time").GetSingle(),weather.GetProperty("seed").GetInt32(),weather.GetProperty("round").GetInt32());
         if(Math.Abs(wind.X-weather.GetProperty("x").GetSingle())>.001f||Math.Abs(wind.Y-weather.GetProperty("z").GetSingle())>.001f)
             throw new Exception("Network weather differs from shared authoritative rules.");
         if(later.GetProperty("players").GetArrayLength()!=2||later.GetProperty("hurryMode").GetString()!="none")throw new Exception("Online snowfield lost room rules/seats.");

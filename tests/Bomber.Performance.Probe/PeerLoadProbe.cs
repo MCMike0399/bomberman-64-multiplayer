@@ -1,8 +1,9 @@
 using System.Diagnostics;
 using System.Net.Http.Json;
 using System.Text.Json;
-using Bomber.Client;
-using Bomber.Game;
+using Bomber.Client.Sessions;
+using Bomber.Game.Matches;
+using Bomber.Game.Online;
 
 // All participants use real public sockets; the elected player runs the production simulation.
 internal static class PeerLoadProbe

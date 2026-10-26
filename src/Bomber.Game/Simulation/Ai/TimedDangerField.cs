@@ -1,3 +1,7 @@
+using Bomber.Game.Simulation.Rules;
+using Bomber.Game.Simulation.Stages;
+using Bomber.Game.Simulation.State;
+
 namespace Bomber.Game.Simulation.Ai;
 
 /// <summary>Conservative time intervals from visible fuses, chain reactions and existing blast zones.

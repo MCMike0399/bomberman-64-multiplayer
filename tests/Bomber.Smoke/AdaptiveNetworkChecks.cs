@@ -1,7 +1,8 @@
 using System.Diagnostics;
 using System.Text.Json;
 using System.Reflection;
-using Bomber.Client;
+using Bomber.Client.Peer;
+using Bomber.Client.Sessions;
 
 internal static class AdaptiveNetworkChecks
 {
@@ -40,7 +41,7 @@ internal static class AdaptiveNetworkChecks
                     long oldSequence = Ack(departed); int connection = departed.ConnectionGeneration;
                     proxy.DropConnections();
                     await PumpUntil(() => departed.ConnectionGeneration > connection && departed.Status == "Connected", 10);
-                    departed.SendInput(0, new Bomber.Game.PlayerInput(0, 1));
+                    departed.SendInput(0, new Bomber.Game.Matches.PlayerInput(0, 1));
                     await PumpUntil(() => Ack(departed) is >= 1 && Ack(departed) < oldSequence, 10);
                     departed.ReleaseInputs();
                     Check(departed.Party?.Epoch == epoch && departed.Party.Match == match && departed.Party.Phase == "playing",

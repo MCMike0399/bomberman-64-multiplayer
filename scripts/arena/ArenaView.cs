@@ -1,13 +1,15 @@
 using Godot;
 using System.Text.Json;
-using Bomber.Client;
-using Bomber.Game;
-using Bomber.Game.Simulation;
+using Bomber.Client.Sessions;
+using Bomber.Game.Matches;
+using Bomber.Game.Simulation.Rules;
+using Bomber.Game.Simulation.Stages;
 using static BlastCircuit.Rendering.ArtGeometry;
 using BlastCircuit.Arena.Effects;
 using BlastCircuit.Arena.Models;
 using BlastCircuit.Audio;
 using BlastCircuit.Rendering;
+using BlastCircuit.Arena.Stages;
 namespace BlastCircuit.Arena;
 
 /// <summary>Snapshot-driven presentation. Geometry, movement authority, and UI never share mutable entities.</summary>
@@ -206,7 +208,7 @@ public partial class ArenaView : Node3D
             var color=Colors[Math.Clamp(appearance,0,Colors.Length-1)];
             if(!_entities.TryGetValue(id,out var node))
             {
-                node=new BomberModel(_art,color,Bomber.Game.PlayerNames.Display(p.GetProperty("name").GetString(),slot));_dynamic.AddChild(node);_entities[id]=node;node.Position=PositionOf(p);
+                node=new BomberModel(_art,color,Bomber.Game.Matches.PlayerNames.Display(p.GetProperty("name").GetString(),slot));_dynamic.AddChild(node);_entities[id]=node;node.Position=PositionOf(p);
             }
             ((BomberModel)node).SetSuitColor(color);
             ((BomberModel)node).StatusScale=p.TryGetProperty("statusScale",out var statusScale)?statusScale.GetSingle():1;

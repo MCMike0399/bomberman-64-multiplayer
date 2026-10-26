@@ -1,10 +1,10 @@
 using Godot;
-using Bomber.Client;
-using Bomber.Game.Simulation;
+using Bomber.Client.Sessions;
+using Bomber.Game.Simulation.Stages;
 using System.Text.Json;
-using BlastCircuit.Arena;
 using BlastCircuit.Arena.Models;
 using BlastCircuit.Rendering;
+using BlastCircuit.Arena.Stages;
 namespace BlastCircuit.UI.Menu;
 
 /// <summary>A lit miniature theatre behind the actual menu controls.</summary>

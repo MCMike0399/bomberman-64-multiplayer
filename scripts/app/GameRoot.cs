@@ -1,17 +1,14 @@
 using Godot;
-using Bomber.Client;
-using Bomber.Game;
+using Bomber.Client.Sessions;
+using Bomber.Game.Matches;
 using System.Text.Json;
 using BlastCircuit.Arena;
 using BlastCircuit.Arena.Effects;
-using BlastCircuit.Audio;
 using BlastCircuit.InputDevices;
 using BlastCircuit.Rendering;
-using BlastCircuit.Testing;
 using BlastCircuit.UI;
 using BlastCircuit.UI.Hud;
 using BlastCircuit.UI.Menu;
-using BlastCircuit.Updates;
 namespace BlastCircuit.App;
 
 /// <summary>Composition root for screen navigation, session lifetime, controls and snapshot presentation.</summary>

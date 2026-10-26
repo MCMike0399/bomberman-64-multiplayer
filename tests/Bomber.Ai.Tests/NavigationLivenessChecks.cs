@@ -1,4 +1,5 @@
-using Bomber.Game.Simulation;
+using Bomber.Game.Simulation.Stages;
+using Bomber.Game.Simulation.State;
 
 static class NavigationLivenessChecks
 {

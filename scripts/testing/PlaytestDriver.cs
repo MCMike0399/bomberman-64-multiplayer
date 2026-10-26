@@ -1,10 +1,9 @@
 using Godot;
-using Bomber.Client;
-using Bomber.Game;
+using Bomber.Client.Sessions;
+using Bomber.Game.Matches;
 using System.Diagnostics;
 using System.Text.Json;
 using BlastCircuit.App;
-using BlastCircuit.Arena;
 using BlastCircuit.Arena.Models;
 using BlastCircuit.Audio;
 using BlastCircuit.Rendering;

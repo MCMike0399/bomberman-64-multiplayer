@@ -1,5 +1,5 @@
 using Godot;
-using Bomber.Client;
+using Bomber.Client.Sessions;
 using BlastCircuit.InputDevices;
 namespace BlastCircuit.UI.Menu;
 

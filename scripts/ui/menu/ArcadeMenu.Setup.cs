@@ -1,6 +1,6 @@
 using Godot;
-using Bomber.Client;
-using Bomber.Game;
+using Bomber.Client.Sessions;
+using Bomber.Game.Matches;
 namespace BlastCircuit.UI.Menu;
 
 /// <summary>Mode select, local roster, match setup and advanced-rule screens.</summary>

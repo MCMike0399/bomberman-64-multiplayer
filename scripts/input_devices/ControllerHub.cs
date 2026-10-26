@@ -1,6 +1,6 @@
 using Godot;
-using Bomber.Client;
-using Bomber.Game;
+using Bomber.Client.Controls;
+using Bomber.Game.Matches;
 namespace BlastCircuit.InputDevices;
 
 public sealed record ControllerDevice(GamepadDevice Device,ControllerFamily Family,bool Mapped,string Backend);

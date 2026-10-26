@@ -1,0 +1,66 @@
+using System.Text.Json;
+using Bomber.Game.Matches;
+using Bomber.Game.Simulation.Rules;
+using Bomber.Game.Simulation.Stages;
+
+internal static class RegionalCoverChecks
+{
+    public static int Run()
+    {
+        int checks=0;
+        foreach(string id in new[]{BlastStages.SunkenTemple,BlastStages.RockGarden,BlastStages.UpAndDown})
+        {
+            var fingerprints=new HashSet<string>();int minimum=int.MaxValue,maximum=0;
+            for(int seed=0;seed<32;seed++)
+            {
+                var stage=BlastStages.Get(id);var options=new MatchOptions{Stage=id,HumanPlayers=8,BotPlayers=0,Seed=seed};
+                var a=new LocalMatch(options);var b=new LocalMatch(options);
+                string Encoded(LocalMatch match){using var d=JsonDocument.Parse(match.StateJson!);return d.RootElement.GetProperty("d").GetProperty("softBlocks").GetString()!;}
+                string encoded=Encoded(a);Assert(encoded==Encoded(b),"Cover is not deterministic for "+id);fingerprints.Add(encoded);
+                byte[] bits=Convert.FromBase64String(encoded);
+                bool Covered(int x,int z)=>x>=0&&z>=0&&x<stage.Width&&z<stage.Height&&(bits[(z*stage.Width+x)/8]&(1<<((z*stage.Width+x)%8)))!=0;
+                var cover=new List<(int X,int Z)>();
+                for(int x=0;x<stage.Width;x++)for(int z=0;z<stage.Height;z++)if(Covered(x,z))cover.Add((x,z));
+                minimum=Math.Min(minimum,cover.Count);maximum=Math.Max(maximum,cover.Count);
+                foreach(var spawn in stage.Spawns)foreach(var (dx,dz) in new[]{(0,0),(1,0),(-1,0),(0,1),(0,-1)})Assert(!Covered(spawn.X+dx,spawn.Z+dz),"Spawn clearance blocked on "+id);
+                foreach(var cell in cover){Assert(stage.At(cell.X,cell.Z).Kind==CellKind.Floor,"Cover occupies non-floor.");Assert(!stage.ClearCells.Contains(cell),"Reserved route blocked.");foreach(var (dx,dz) in new[]{(1,0),(-1,0),(0,1),(0,-1)})Assert(stage.At(cell.X+dx,cell.Z+dz).Kind!=CellKind.Ramp,"Ramp approach blocked.");}
+                if(id==BlastStages.SunkenTemple)
+                {
+                    var court=cover.Where(c=>stage.At(c.X,c.Z).Tier==0).ToArray();
+                    Assert(court.Length>=cover.Count*.5,"Pyramid still puts most cover above the lower courtyard.");
+                    Assert(court.Count(c=>c.X<12)>=18&&court.Count(c=>c.X>12)>=18,"Courtyard rewards miss a side pocket.");
+                    Assert(court.Count(c=>c.Z>=21)>=20,"Front of the courtyard still lacks reward clusters.");
+                    Assert(cover.All(c=>stage.At(c.X,c.Z).Tier<4),"Upper summit is cluttered with farming blocks.");
+                    foreach(int x in new[]{8,12,16})for(int z=15;z<=25;z++)Assert(!Covered(x,z),"Court's approach lane is blocked.");
+                    for(int x=5;x<=19;x++)Assert(!Covered(x,20),"Court crossing lane is blocked.");
+                    Assert(cover.Count is >=80 and <=90,"Pyramid lost its cover budget.");
+                }
+                else if(id==BlastStages.RockGarden)
+                {
+                    Assert(cover.Count==16,"Garden must have sparse boulder cover.");
+                    Assert(cover.Count(c=>Math.Abs(c.X-9)+Math.Abs(c.Z-9)<=3)>=3,"Garden lost its central boulder cluster.");
+                    foreach(int lane in new[]{8,10})for(int n=1;n<18;n++)
+                        Assert(!Covered(n,lane)&&!Covered(lane,n),"Garden center routes are blocked.");
+                }
+                else
+                {
+                    Assert(cover.Count==12,"Up & Down lost its sparse reference-inspired cover budget.");
+                    Assert(cover.Count(c=>stage.At(c.X,c.Z).Tier==0)==8,"Low reward deck must receive eight cover blocks.");
+                    Assert(cover.Count(c=>c.X<10&&stage.At(c.X,c.Z).Tier==2)==2&&cover.Count(c=>c.X>13&&stage.At(c.X,c.Z).Tier==2)==2,"Middle piers must each receive two blocks.");
+                    Assert(cover.All(c=>stage.At(c.X,c.Z).Below is null&&stage.At(c.X,c.Z).Tier<4),"Cover obstructs a bridge or upper route.");
+
+                }
+                checks++;
+            }
+            Assert(id==BlastStages.UpAndDown?fingerprints.Count==1:fingerprints.Count>=24,
+                "Cover must retain the authored Up & Down pattern or other stages' seeded variation.");
+            Console.WriteLine($"PASS {id}: 32 seeded layouts, {fingerprints.Count} patterns, {minimum}–{maximum} blocks, clear spawns and routes");
+        }
+        var random=new Random(287);var counts=new Dictionary<string,int>();
+        for(int i=0;i<10000;i++){string type=PowerUpRules.ChooseDrop(random);counts[type]=counts.GetValueOrDefault(type)+1;}
+        Assert(counts["fire"] is >2700 and <3300&&counts["bomb"] is >2700 and <3300,"Fire and Bomb are not the dominant individual drops.");
+        Assert((counts["fire"]+counts["bomb"])/10000d is >.58 and <.62&&counts.Count==AdvancedRules.ItemTypes.Length,"Basic upgrades are not a clear majority while preserving all equipment.");
+        Console.WriteLine("PASS Fire and Bomb make up about 60% of the varied drop pool");return checks+1;
+    }
+    static void Assert(bool value,string message){if(!value)throw new Exception(message);}
+}

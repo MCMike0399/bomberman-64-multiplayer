@@ -1,5 +1,5 @@
 using System.Text.Json;
-using Bomber.Game;
+using Bomber.Game.Matches;
 
 internal static class FrontPlacementChecks
 {

@@ -1,5 +1,5 @@
 using Godot;
-using Bomber.Game.Simulation;
+using Bomber.Game.Simulation.Rules;
 using BlastCircuit.UI;
 namespace BlastCircuit.Arena.Effects;
 
