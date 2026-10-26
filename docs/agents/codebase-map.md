@@ -147,7 +147,7 @@ concerns (`tests/Bomber.Game.Tests/{Bombs,Players,Bots,Items,Rounds,Snapshots,St
 | `BlastStages` | `Get` dispatch and `Fill` helper | one per arena: `SunkenTemple`, `RockGarden`, `UpAndDown`, `TopRules`, `BlizzardBattle`, `GreedyTrap`, `CircuitGarden` |
 | `NetworkSession` | fields, connect/lobby setup, input, dispose | `Http`, `Socket`, `Peer` |
 | `ArenaView` | fields, lifecycle, stage/lighting setup, `_Process` | `Snapshots`, `ThrowPreviews`, `Presentation`, `Tutorial` |
-| `TempleStageView` | shared terrain build and height queries | one per arena, plus `GreedyExterior` |
+| `TempleStageView` | shared terrain build, height queries and Sunken Temple | `Blizzard`, `CircuitGarden`, `GreedyTrap` (+ `GreedyExterior`), `RockGarden`, `TopRules`, `UpAndDown` |
 | `ArcadeMenu` | fields, layout helpers, screen switching | `Setup`, `Online`, `Results`, `Settings`, `Tutorial`, `Navigation` |
 | `GameRoot` | lifecycle, navigation, input dispatch, `_Process` | `Sessions`, `Preferences`, `Tutorial` |
 | `PlaytestDriver` | harness, capture, trace and input helpers | `ScenarioCatalog`, `ScriptedPlaytest`; one `journeys/<area>/*Playtest.cs` per journey family |
