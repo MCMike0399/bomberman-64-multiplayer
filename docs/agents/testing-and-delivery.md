@@ -585,3 +585,12 @@ fourteen affected rendering/stage journeys, keeping first-use preparation first.
 Inspect the actual before/after images separately from numeric checks. The
 complete graphical catalog has a 1500-second budget with the additional journey;
 per-case focus, readiness and render-preparation deadlines are unchanged.
+
+Source verification on 2026-10-26: the rebuilt export passed the fourteen-journey
+visual regression with 1,758 assertions, 202 captures and zero runtime errors or
+warnings on isolated Metal. Public QA passed all eleven steps; the same export
+passed 48 headless checks. Reviewed images cover the original/corrected rear-ring
+blast, Temple treads, shoreline occlusion, snow/ice and day/night flooding.
+[Image provenance and before/after files](../images/visual-glitches/manifest.json).
+The complete 55-journey attempt stopped at the existing fresh-display-process
+timeout after 474 checks, before the new journey; it is not a full-suite pass.
