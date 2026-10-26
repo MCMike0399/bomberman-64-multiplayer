@@ -1,4 +1,5 @@
 using Godot;
+using BlastCircuit.Arena;
 using Bomber.Client.Sessions;
 using Bomber.Game.Matches;
 using Bomber.Game.Simulation.Stages;
@@ -13,8 +14,9 @@ public partial class PlaytestDriver
         _root.StartLocal(new SessionSettings(Stage:stage.Id,Bots:0,SuddenDeath:false),4);
         await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"garden four-player battle starts",150);
         Check(State.GetProperty("players").GetArrayLength()==4,"garden quadrant starts support ordinary four-player battle");
-        Check(_root.FindChildren("*","",true,false).OfType<Node3D>().Count(n=>n.Name.ToString().StartsWith("GardenColumn"))==5,"actual garden renders five round columns");
-        Check(_root.FindChildren("*","",true,false).OfType<Node3D>().Count(n=>n.Name.ToString().StartsWith("GardenBoulder"))==16,"actual garden renders sixteen destructible boulders");
+        var arena=_root.GetChildren().OfType<ArenaView>().Single();
+        Check(arena.FindChildren("*","",true,false).OfType<Node3D>().Count(n=>n.Name.ToString().StartsWith("GardenColumn"))==5,"actual garden renders five round columns");
+        Check(arena.FindChildren("*","",true,false).OfType<Node3D>().Count(n=>n.Name.ToString().StartsWith("GardenBoulder"))==16,"actual garden renders sixteen destructible boulders");
         CheckFraming(stage.Id,GetWindow().Size);
         await Capture("rock-garden-four-player-opening");
         _root.Back();await Frames(3);

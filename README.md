@@ -55,6 +55,8 @@ Choose **Settings → Graphics → High** for the highest preset: full selected 
 
 Settings also provides **Display mode** and **Resolution**, saved automatically for the next launch. Windowed mode fits the chosen window size to your display; fullscreen adjusts 3D resolution while keeping menus sharp.
 
+**Settings → Performance metrics** or **F3** toggles a compact top bar with FPS, frame/process/physics timing, video memory and draw calls. The choice is saved on this device. CPU temperature shows **N/A** because Godot does not expose a portable temperature sensor.
+
 **Local lighting** offers Morning, Midday, Afternoon and Night. Online rounds use the server’s lighting; graphics quality remains your local preference.
 
 ![Settings with High graphics selected](docs/images/current/settings.png)

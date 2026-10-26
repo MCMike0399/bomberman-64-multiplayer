@@ -374,6 +374,21 @@ zero GPU timing is unavailable evidence, never zero cost.
 
 ### First-use effects
 
+Arena selection retains one real miniature per battle map. Startup builds and
+draws them sequentially behind “Getting ready…” before enabling menu input;
+preset changes redraw the retained scenes behind “Applying graphics…”, using
+the new MSAA/environment policy and restoring the selected map. Only the
+selected miniature is visible and processing. Keep these resources alive so
+revisiting a map does not rebuild geometry or recreate its shader pipelines.
+Headless QA builds miniatures on demand without claiming render preparation.
+
+`map-preview-loading` cycles every map in both directions through Setup,
+Practice and room settings at every preset, checks actual scene reuse and
+inactive processing, and rejects synchronous Mesh/Surface/Draw compilations.
+Frame intervals in its fixed-step receipt are stall diagnostics, not a native
+GPU throughput benchmark. `setup` retains the miniature bounds and subsequent
+gameplay-scene checks.
+
 `EffectWarmup` renders the real bomb/explosion, kick, exit and ghost/fading
 variants in a temporary 128×128 world with the current MSAA and arena environment.
 Startup shows “Getting ready…”; a changed preset shows “Applying graphics…”

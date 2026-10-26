@@ -12,6 +12,7 @@ public sealed partial class BlastSession
 
     private void TryLatch(BlastPlayer ghost)
     {
+        if(ghost.Airborne)return;
         foreach (var p in _players.Values)
         {
             if (p.Ghost || !p.Alive || p.LatchedToId is not null) continue;

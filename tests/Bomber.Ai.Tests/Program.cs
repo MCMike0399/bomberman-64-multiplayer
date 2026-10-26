@@ -82,6 +82,8 @@ danger.Build(soft,fringeChain,Array.Empty<BlastHazard>());
 Check(danger.Begins[3*flat.Width+6]<.5f,"danger includes the authority's half-cell bomb chain margin");
 danger.Build(soft,Array.Empty<BlastBomb>(),new[]{new BlastHazard {Id="blast",X=5.5f,Z=3.5f,Y=0,Radius=1.3f,LifeTimer=.4f}});
 Check(!danger.Safe(target,0,.2f)&&danger.Safe(target,.6f,.8f),"existing blast zones remain unsafe for their real remaining lifetime");
+danger.Build(soft,Array.Empty<BlastBomb>(),new[]{new BlastHazard {Id="overhead",X=5.5f,Z=3.5f,Y=2.8f,Radius=1.3f,LifeTimer=.4f}});
+Check(!danger.Safe(target,0,.2f),"CPU danger includes an overhead blast that reaches the body while missing the feet even with its safety margin");
 
 var resources=new Fixture(Fixture.Flat(spawns:[(2,2),(10,10)]),bots:2);Fight(resources);resources.Session.AiTestAddItem(1,2,"heart");resources.Step(25);
 Check(resources.Session.AiTestPlayers.First(p=>p.Slot==0).HasHeart,"a reachable power-up is deliberately collected before chasing a distant opponent");

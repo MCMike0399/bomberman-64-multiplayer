@@ -15,6 +15,7 @@ public sealed class PlayerPreferences
     public float Volume { get; set; } = .8f;
     public StageTime StageLighting {get;set;}=StageTime.Midday;
     public bool Fullscreen {get;set;}=true;
+    public bool PerformanceMetrics {get;set;}
     public Vector2I Resolution {get;set;}
     public GraphicsPreset Graphics {get;set;}=GraphicsPreset.Medium;
     public static PlayerPreferences Load(string path)
@@ -33,6 +34,8 @@ public sealed class PlayerPreferences
         if(graphics.VariantType==Variant.Type.String)value.Graphics=GraphicsQuality.FromWire(graphics.AsString());
         if(lighting.VariantType==Variant.Type.String)value.StageLighting=BlastCircuit.Arena.StageLighting.FromWire(lighting.AsString());
         var fullscreen=file.GetValue("video","fullscreen",true);
+        var metrics=file.GetValue("video","performanceMetrics",false);
+        if(metrics.VariantType==Variant.Type.Bool)value.PerformanceMetrics=metrics.AsBool();
         if(fullscreen.VariantType==Variant.Type.Bool)value.Fullscreen=fullscreen.AsBool();
         var resolution=file.GetValue("video","resolution",Vector2I.Zero);
         if(resolution.VariantType==Variant.Type.Vector2I)value.Resolution=DisplayModeController.ValidResolution(resolution.AsVector2I());
@@ -57,6 +60,7 @@ public sealed class PlayerPreferences
         file.SetValue("video","stageLighting",BlastCircuit.Arena.StageLighting.ToWire(StageLighting));
         file.SetValue("video","graphicsPreset",GraphicsQuality.ToWire(Graphics));
         file.SetValue("video","fullscreen",Fullscreen);
+        file.SetValue("video","performanceMetrics",PerformanceMetrics);
         file.SetValue("video","resolution",DisplayModeController.ValidResolution(Resolution));
         return file.Save(path);
     }

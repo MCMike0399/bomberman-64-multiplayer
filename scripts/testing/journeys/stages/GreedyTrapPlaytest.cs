@@ -23,7 +23,7 @@ public partial class PlaytestDriver
         menu.Configure(new SessionSettings(),1);NamedButton("StageSelector").GrabFocus();
         for(int i=0;i<5;i++)await KeyPress(Key.Right);
         Check(menu.Settings.Stage==BlastStages.GreedyTrap,"native arena selector reaches Greedy Trap");
-        var miniature=AuditDescendants(_root).OfType<TempleStageView>().Single(t=>t.GetParent().Name=="ArenaDiorama");
+        var miniature=AuditDescendants(_root).OfType<TempleStageView>().Single(t=>t.GetParent().Name=="ArenaDiorama"&&t.IsVisibleInTree());
         Check(!miniature.GetNode<Node3D>("GreedyExterior").IsVisibleInTree(),"menu miniature trims the exterior to keep the display plinth readable");
         await Capture("greedy-trap-menu-miniature");
         _root.StartLocal(new SessionSettings(Stage:BlastStages.GreedyTrap,Bots:0),4);
