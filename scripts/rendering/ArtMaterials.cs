@@ -38,7 +38,10 @@ public sealed partial class ArtMaterials
         material.SetShaderParameter("mortar_color",style==1?new Color("302b21"):style==3?new Color("454b3d"):new Color("75613f"));
         return material;
     }
-    public ShaderMaterial Water()=>new() { Shader=WaterShaderFor(GraphicsQuality.Current) };
+    // The sea samples opaque scene depth, then draws before transparent combat effects.
+    // Default distance sorting uses the large plane's center and can paint water
+    // over a rear-lane fireball even though that fireball is above the water.
+    public ShaderMaterial Water()=>new() { Shader=WaterShaderFor(GraphicsQuality.Current),RenderPriority=-16 };
     /// <summary>Low keeps opaque water; other presets add refraction, caustics and glints (one screen copy).</summary>
     public static Shader WaterShaderFor(GraphicsPreset preset)=>preset==GraphicsPreset.Low
         ? _waterShader??=new Shader {Code=WaterShader}
@@ -145,7 +148,7 @@ void fragment(){
 """;
     private const string WaterShader="""
 shader_type spatial;
-render_mode diffuse_burley, specular_schlick_ggx;
+render_mode diffuse_burley, specular_schlick_ggx, depth_draw_always;
 uniform sampler2D depth_texture : hint_depth_texture, repeat_disable, filter_nearest;
 #ifdef CLEAR_WATER
 uniform sampler2D screen_texture : hint_screen_texture, repeat_disable, filter_linear_mipmap;
@@ -302,8 +305,9 @@ void fragment(){
   float normal_variance=dot(dFdx(NORMAL),dFdx(NORMAL))+dot(dFdy(NORMAL),dFdy(NORMAL));
   ROUGHNESS=clamp(mix(surface_roughness,.58,foam)+normal_variance*2.0,.18,.65);
   METALLIC=0.0;SPECULAR=.55;
-  // Enter the transparent pass so the copied depth contains the opaque shoreline,
-  // rather than the water itself. Full opacity avoids sorting-dependent see-through.
+  // Stay in the transparent pass so the sampled scene copy contains the opaque
+  // shoreline. Early priority plus depth_draw_always then occludes submerged
+  // effects without painting water over fire and sparks above the surface.
   ALPHA=1.0;
 }
 """;

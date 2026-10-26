@@ -592,6 +592,7 @@
         "loot-opening",
         "pump-growth",
         "presentation",
+        "visual-glitches",
         "hurry-water",
         "ai-play",
         "combat",
@@ -604,7 +605,8 @@
         "up-and-down",
         "rock-garden",
         "blizzard-battle",
-        "greedy-trap"
+        "greedy-trap",
+        "stage-scenery"
       ],
       "domains": [
         "ai",
@@ -622,7 +624,7 @@
         "ui"
       ],
       "headless": false,
-      "timeout": 1200,
+      "timeout": 1500,
       "manual": false
     },
     {
@@ -655,7 +657,8 @@
         "up-and-down",
         "rock-garden",
         "blizzard-battle",
-        "greedy-trap"
+        "greedy-trap",
+        "stage-scenery"
       ],
       "domains": [
         "ai",
@@ -853,8 +856,10 @@
         "rock-garden",
         "blizzard-battle",
         "presentation",
+        "visual-glitches",
         "tutorial",
-        "greedy-trap"
+        "greedy-trap",
+        "stage-scenery"
       ],
       "domains": [
         "gameplay",
@@ -974,6 +979,17 @@
       "manual": false
     },
     {
+      "id": "stage-scenery",
+      "method": "StageSceneryTour",
+      "domains": [
+        "rendering",
+        "ui"
+      ],
+      "headless": true,
+      "timeout": 480,
+      "manual": false
+    },
+    {
       "id": "greedy-trap-regression",
       "steps": [
         "first-use-rendering",
@@ -1044,6 +1060,88 @@
       ],
       "headless": false,
       "timeout": 360,
+      "manual": false
+    },
+    {
+      "id": "visual-glitches",
+      "method": "VisualGlitches",
+      "domains": [
+        "rendering",
+        "gameplay"
+      ],
+      "headless": true,
+      "timeout": 240,
+      "manual": false
+    },
+    {
+      "id": "shore-blast",
+      "method": "ShorelineBlast",
+      "domains": [
+        "rendering",
+        "gameplay"
+      ],
+      "headless": true,
+      "timeout": 120,
+      "manual": false
+    },
+    {
+      "id": "visual-regression",
+      "steps": [
+        "first-use-rendering",
+        "visual-glitches",
+        "graphics-settings",
+        "stage-lighting",
+        "framing",
+        "presentation",
+        "traversal",
+        "up-and-down",
+        "top-rules",
+        "rock-garden",
+        "blizzard-battle",
+        "greedy-trap",
+        "hurry-water",
+        "asset-audit"
+      ],
+      "domains": [
+        "rendering",
+        "gameplay",
+        "physics",
+        "settings",
+        "animation",
+        "audio",
+        "assets",
+        "ui",
+        "performance"
+      ],
+      "headless": false,
+      "timeout": 1500,
+      "manual": false
+    },
+    {
+      "id": "scenery-regression",
+      "steps": [
+        "first-use-rendering",
+        "asset-audit",
+        "graphics-settings",
+        "stage-lighting",
+        "setup",
+        "menu-preview",
+        "map-preview-loading",
+        "framing",
+        "stage-scenery",
+        "rock-garden",
+        "up-and-down",
+        "top-rules",
+        "blizzard-battle",
+        "greedy-trap"
+      ],
+      "domains": [
+        "rendering",
+        "ui",
+        "gameplay"
+      ],
+      "headless": false,
+      "timeout": 1500,
       "manual": false
     }
   ]

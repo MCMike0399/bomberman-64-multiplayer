@@ -396,7 +396,7 @@ The initial topology failure is retained in ignored task artifacts.
 inputs cross all flights/underpasses, plant beneath the ring, fall into the sea,
 and observe normal three-human play flooding the low and middle levels in order.
 Graphical mode adds battle, oblique and underside inspection captures. The
-combined graphical suite has a bounded 1200-second budget for the longer journey;
+combined graphical suite has a bounded catalog budget (1500 seconds since stage scenery) for the longer journey;
 the QA profile reads that deadline from the catalog, retaining outer cleanup
 headroom. The former hardcoded deadline could interrupt the expanded suite after
 positive assertions; the catalog owns the bounded runtime.
@@ -457,6 +457,18 @@ its owned runs; this is renderer/synthetic-input evidence, not a fresh physical
 controller or native-host GPU performance certification. This source work does
 not establish installation, release publication or external server delivery.
 
+## Stage scenery verification
+
+`stage-scenery` (in `all`, `core-headless` and `stage-fidelity`) walks all seven
+arenas. It checks signature props, the absence of collision, asset-audit geometry
+rules, and that mesh bounds stay out of every passable cell's floor-to-2.1
+standing column, before and after animation. It also checks that animated nodes
+move, that a real timed flood lifts the sailboat with the rendered water, and that
+every setup miniature skips the scenery. Graphical runs add Midday/Night battle
+captures and a labelled establishing view per arena. `scenery-regression` pairs
+it with startup, asset, graphics, lighting, setup, menu-preview, framing and the
+five stage journeys. [Stage scenery](../stage-scenery.md).
+
 ## Greedy Trap verification
 
 Native resize QA allows up to twenty seconds for a slow first Metal frame, while
@@ -500,7 +512,7 @@ fireball warning/pause/escape/impact, CPU combat and graphical detail captures. 
 shared walking helper reads the active stage rather than assuming Temple.
 See the [stage contract](../rock-garden.md) and [research](../rock-garden-research.md).
 
-The combined graphical suite uses a 1200-second catalog budget for all journeys;
+The combined graphical suite uses a 1500-second catalog budget for all journeys (raised from 1200 for `stage-scenery`, 2026-10-26);
 QA forwards that deadline and retains outer cleanup/VM startup headroom. Online
 settings checks compare rendering with the latest accepted server lighting,
 since a real round can advance while graphics pipelines prepare.
@@ -573,3 +585,24 @@ fixture; the elected authority is polled between guests. This is deliberate test
 load, not observed Internet latency. Headless and package gates retain it, while
 `peer-adaptive-regression` reproduces the ordinary journey sequence. Production
 host leases and qualification budgets remain unchanged.
+
+## Small visual glitch regression
+
+`visual-glitches` uses ordinary practice movement, placement and charged throws
+for Up & Down rear-ring effects and Temple stairs/shoreline. It is included in
+`all` and `stage-fidelity`. Pixel probes normalize logical camera coordinates to
+actual capture pixels; headless mode only establishes gameplay/geometry checks.
+`shore-blast` is the tight standalone shoreline case. `visual-regression` runs
+fourteen affected rendering/stage journeys, keeping first-use preparation first.
+Inspect the actual before/after images separately from numeric checks. The
+complete graphical catalog has a 1500-second budget with the additional journey;
+per-case focus, readiness and render-preparation deadlines are unchanged.
+
+Source verification on 2026-10-26: the rebuilt export passed the fourteen-journey
+visual regression with 1,758 assertions, 202 captures and zero runtime errors or
+warnings on isolated Metal. Public QA passed all eleven steps; the same export
+passed 48 headless checks. Reviewed images cover the original/corrected rear-ring
+blast, Temple treads, shoreline occlusion, snow/ice and day/night flooding.
+[Image provenance and before/after files](../images/visual-glitches/manifest.json).
+The complete 55-journey attempt stopped at the existing fresh-display-process
+timeout after 474 checks, before the new journey; it is not a full-suite pass.

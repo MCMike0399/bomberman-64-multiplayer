@@ -163,12 +163,26 @@ ramps, shoreline, actors, bombs and previews consistent. Foundation/water art ma
 suggest the pyramid grows from the ground without inventing a safe floor. A prettier
 waterline cannot change where authority actually kills or supports a player.
 
+Temple stair backing must end below the pale .036-unit tread, whose top retains
+its authored step height. Full-height backing shares the tread's top plane and
+causes dark depth-fighting patches as the camera moves. The `visual-glitches`
+journey counts the actual rendered top faces at stair interiors across all presets;
+its headless mode establishes geometry only. Graphical captures remain necessary.
+
 Stone detail uses shader variation/relief and wetness. Water uses several bent,
 nonparallel wave components with matching analytic slopes, depth-derived contact
 foam, sky reflections and flood-dependent motion. Its fragment `NORMAL` is in
 view space; depth reconstruction handles renderer conventions. The transparent
 pass with full alpha is deliberate: sampled depth must contain opaque shore
-geometry rather than the water itself. Preserve that rationale when refactoring.
+geometry rather than the water itself. Water renders at priority -16, before
+transparent combat effects, and writes depth in that pass with `depth_draw_always`.
+Default center-distance sorting let the large sea plane paint over rear-lane
+fireballs; omitting depth writes also let submerged fire show over the sea.
+Keep both ordering and depth occlusion while preserving the opaque scene copy.
+The `visual-glitches` journey checks actual rear-ring fire pixels on every preset,
+stair top separation, and a real charged shoreline blast above/below the water.
+Godot documents [transparent depth drawing](https://docs.godotengine.org/en/stable/tutorials/shaders/shader_reference/spatial_shader.html#render-modes).
+Preserve that rationale when refactoring.
 Read [the rendering investigation](../history/iteration8-rendering.md) before replacing
 this shader; its fixed daytime Fresnel tint was superseded by the four lighting
 profiles below. Verify normal and hurry/flood states from more than one camera.
@@ -228,6 +242,20 @@ emission found it. Close-up concentric banding on the helmet predates this work.
 ### Blizzard Battle frozen snowfield
 
 [Stage contract](../blizzard-battle.md), [reference research](../blizzard-battle-research.md). `TempleStageView.Blizzard` builds opaque cyan ice, original violet faceted cones and snow-capped glacier walls. `ArtMaterials.Blizzard` owns world-space frost/fracture/strata textures; `BlizzardWeather` animates a bounded MultiMesh from accepted wind. Preserve shared graphics/lighting, depth-writing ice, local pause and camera-safe near walls. The user rejected the initial small spires: their tops now reach 1.755 render units and their bases span .94. Stage `coverHeight` drives both meshes and projectile collision/landing, including the miniature and aim preview. The miniature crops its exterior independently. New artwork is procedural; reference archives never ship. Keep the foundation below the ice slab to prevent coplanar flicker. Godot 4.7 shaders use `CLEARCOAT_ROUGHNESS`; the former `CLEARCOAT_GLOSS` name is rejected by the live compiler.
+### Stage scenery and ambient life (2026-10-26)
+
+Every arena now has original surroundings under one `StageScenery` node:
+lagoon ruins and palm islets (Sunken Temple), a meadow with a windmill and brook
+(Rock Garden), a lighthouse coast (Up & Down), a Black Fortress-style sky citadel
+with crag, turrets, banners, clouds and stars (Top Rules), a pine/igloo/penguin
+snowfield (Blizzard Battle), boats on Greedy Trap's reservoir and a training
+harbor (Circuit Garden). Small animations (boats riding the real water, gulls,
+flags, flames, sails, beams, butterflies, penguins) run from
+`TempleStageView._Process`. Scenery has no collision and never enters a passable
+cell's standing volume. Menu miniatures skip it. Top Rules keeps its dark
+backdrop; its emissive stars and flames disable fog. [References, composition
+and rules](../stage-scenery.md).
+
 ### Greedy Trap presentation
 
 The exterior now uses a Blue Resort-informed fortified reservoir: animated teal
