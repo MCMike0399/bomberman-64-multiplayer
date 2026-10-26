@@ -1,3 +1,36 @@
+# v0.36.0 delivered
+
+Published **2026-10-26 22:32:37 UTC**: [v0.36.0 / signed update](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.36.0).
+[Performance PR #25](https://github.com/MCMike0399/bomberman-64-multiplayer/pull/25) is merged.
+Immutable release/tag source: `77285697f89ad43d2640b96a410d0db067a9b782`.
+Identity: **v0.36.0/build 43/schema 6**, token `6/0.36.0/43`.
+
+The release reduces CPU and memory overhead without visual or gameplay changes.
+These include indexed procedural meshes, cached HUD drawing, one snow-buffer upload,
+packed cover bits and structured local messages. Allocations per frame fall by
+40–50%. Native frame rate is equivalent within run-order noise. It also fixes
+QA preference files that were PID-named, which rebooted guests reuse.
+[Measurements, method and limits](performance-research.md#v036-integration-re-check-2026-10-26).
+
+- Local gates on the exact merged tree passed: public, managed, headless,
+  package and the complete exported 57-journey Metal suite (5,002 assertions,
+  496 captures, zero runtime errors; known SCTP teardown warning only).
+- [Trusted Verification 40410931197](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40410931197)
+  passed on the merge commit. The optional Metal job remains skipped in CI.
+- [Protected deployment and publication 40412728738](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40412728738)
+  passed candidate, validate, deploy and draft. The public `/game` endpoint then
+  reported `0.36.0`, build `43`, token `6/0.36.0/43` and revision `77285697`.
+- Asset hashes below come from the published checksum and release manifest
+  assets. Signatures were verified by the protected workflow. An independent
+  local signature check and an installed-app replacement were not performed.
+
+Published archive SHA-256:
+
+```text
+Mac:    d295ac1b3ecc2375ab814345714f6b34b09ac4d6cac1b81fc85e5ddd7a6e926e
+Server: 0bfbb3464c33c0dec28e47699034b5301b0779a0181978724ee9aa179cc96a8c
+```
+
 # v0.35.1 delivered
 
 Published **2026-10-26 21:39:23 UTC**: [v0.35.1 / startup hotfix](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.35.1).

@@ -111,7 +111,10 @@ void fragment(){
     float aa=max(length(fwidth(q))*.35,.001);
     float seam=smoothstep(.008-aa,.027+aa,chippedEdge);
     float bevel=smoothstep(.015-aa,.09+aa,chippedEdge);
-    float pits=smoothstep(.72,.85,filtered_noise(p*31.0));
+    // filtered_noise stays at or below .5+weight/2, so pits are exactly zero
+    // until this octave is at least 43% resolved; skip the hashes until then.
+    float pit_weight=quality_detail*(1.0-smoothstep(.35,1.1,length(fwidth(p*31.0))));
+    float pits=pit_weight>.43?smoothstep(.72,.85,mix(.5,noise(p*31.0),pit_weight)):0.0;
     float tone=.84+hash(cell)*.19+(mineral-.5)*.15;
     vec3 stone=base_color.rgb*tone*(.85+bevel*.15);
     // Painterly per-block warmth keeps large courses from reading as one printed tile.
@@ -253,9 +256,12 @@ void fragment(){
   // the actual submerged terrain, also during flooding. Foam cannot invent a
   // safe floor or change authority geometry.
   float contact=smoothstep(.03,.07,thickness)*(1.0-smoothstep(.13,.2,thickness));
-  float band=smoothstep(.7,.92,sin(thickness*9.0-TIME*1.6)*.5+.5);
-  band*=smoothstep(.16,.24,thickness)*(1.0-smoothstep(.3,.5,thickness));
-  band*=smoothstep(.34,.6,noise(world.xz*5.0+vec2(TIME*.12,-TIME*.1)));
+  float band=0.0;
+  if(thickness>.16&&thickness<.5){
+    band=smoothstep(.7,.92,sin(thickness*9.0-TIME*1.6)*.5+.5);
+    band*=smoothstep(.16,.24,thickness)*(1.0-smoothstep(.3,.5,thickness));
+    band*=smoothstep(.34,.6,noise(world.xz*5.0+vec2(TIME*.12,-TIME*.1)));
+  }
   float foam=max(contact,band*.55);
   vec3 scene_cross=cross(dFdx(scene_view),dFdy(scene_view));
   float cross_length=length(scene_cross);
@@ -289,16 +295,19 @@ void fragment(){
   EMISSION=seen*transmit;
   // Sun-path glints: sparse twinkling points only where the ripples mirror the light.
   if(detail>.01){
-    vec3 view_world=normalize((INV_VIEW_MATRIX*vec4(VIEW,0.0)).xyz);
-    float path=pow(max(dot(reflect(-view_world,normal_world),normalize(sun_direction)),0.0),14.0);
     vec2 g=world.xz*1.7+vec2(TIME*.05,0.0);
+    float aa=fwidth(g.x)*1.2;
     vec2 cell=floor(g);
     float h=hash(cell+3.1);
-    vec2 centre=vec2(hash(cell+11.0),hash(cell+23.0))*.6+.2;
-    float twinkle=pow(max(sin(TIME*(1.3+h*2.2)+h*40.0),0.0),10.0);
-    float aa=fwidth(g.x)*1.2;
-    float point=1.0-smoothstep(.07-aa,.07+aa,length(fract(g)-centre));
-    EMISSION+=light_tint.rgb*point*twinkle*path*step(.45,h)*detail*(1.0-flood_amount)*3.0;
+    // Unlit cells and the dark part of each twinkle add exactly zero.
+    float twinkle=h<.45?0.0:pow(max(sin(TIME*(1.3+h*2.2)+h*40.0),0.0),10.0);
+    if(twinkle>0.0){
+      vec3 view_world=normalize((INV_VIEW_MATRIX*vec4(VIEW,0.0)).xyz);
+      float path=pow(max(dot(reflect(-view_world,normal_world),normalize(sun_direction)),0.0),14.0);
+      vec2 centre=vec2(hash(cell+11.0),hash(cell+23.0))*.6+.2;
+      float point=1.0-smoothstep(.07-aa,.07+aa,length(fract(g)-centre));
+      EMISSION+=light_tint.rgb*point*twinkle*path*step(.45,h)*detail*(1.0-flood_amount)*3.0;
+    }
   }
 #endif
   ALBEDO*=1.0-flood_amount*.08;

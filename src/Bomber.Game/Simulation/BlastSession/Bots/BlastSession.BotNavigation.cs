@@ -8,6 +8,8 @@ public sealed partial class BlastSession
     {
         public float X,Z,Elapsed,IdleX,IdleZ,IdleElapsed,RecoveryX,RecoveryZ;
         public int Waypoint=-1,Avoid=-1,AvoidUntil,Roam=-1,RoamUntil,RoamSequence,RecoveryUntil;
+        public int StepFrom=-1,StepTo=-1,StepUntil;
+        public int LastCell=-1,PreviousCell=-1,Reversals,BoredA=-1,BoredB=-1,BoredUntil;
     }
     private readonly Dictionary<string,BotMotion> _botMotion=new(StringComparer.Ordinal);
     private void BotResetNavigation()=>_botMotion.Clear();
@@ -45,6 +47,52 @@ public sealed partial class BlastSession
             bot.BotPlacingBomb=false;
         }
         motion.X=bot.X;motion.Z=bot.Z;motion.Elapsed=0;
+    }
+    /// <summary>Finish a started one-cell step while it stays open and safe. Danger
+    /// still preempts it through the urgent escape branch, which bypasses this.</summary>
+    private int BotFinishStep(BlastPlayer bot,int start,int waypoint)
+    {
+        var motion=BotMotionFor(bot);
+        if(motion.StepFrom==start&&motion.StepTo>=0&&motion.StepTo!=waypoint&&_tickCount<motion.StepUntil&&
+            BotOpen(motion.StepTo,start,bot,_aiDanger)&&BotSafe(_aiDanger,motion.StepTo,0,_aiProfile.SafetyHorizonSeconds))
+            return motion.StepTo;
+        if(waypoint>=0&&waypoint!=start&&(motion.StepFrom!=start||motion.StepTo!=waypoint))
+        {motion.StepFrom=start;motion.StepTo=waypoint;motion.StepUntil=_tickCount+StepCommitTicks;}
+        return waypoint;
+    }
+    // About two cell traversals at ordinary speed, including the turn alignment.
+    private const int StepCommitTicks=15,ReversalLimit=3,BoredTicks=60;
+    /// <summary>Count returns to the cell left one move ago. Two CPUs keeping their
+    /// distance can mirror each other across one boundary indefinitely; after a few
+    /// reversals without a bomb, both cells lose their appeal as goals for a while.</summary>
+    private void BotNoteCell(BlastPlayer bot,int cell)
+    {
+        var motion=BotMotionFor(bot);
+        if(cell==motion.LastCell)return;
+        motion.Reversals=cell==motion.PreviousCell?motion.Reversals+1:0;
+        motion.PreviousCell=motion.LastCell;motion.LastCell=cell;
+        if(motion.Reversals<ReversalLimit)return;
+        motion.BoredA=cell;motion.BoredB=motion.PreviousCell;motion.BoredUntil=_tickCount+BoredTicks;motion.Reversals=0;
+        // Choose afresh, then hold that choice (see BotSearch) for the whole interval.
+        _aiCommittedGoals.Remove(bot.Id);
+    }
+    private bool BotBored(BlastPlayer bot)=>_tickCount<BotMotionFor(bot).BoredUntil;
+    /// <summary>A body pressed against an obstacle on a cell boundary flickers between
+    /// two cells, and every decision then plans from the other side. Keep the previous
+    /// cell until the body is clearly past its edge.</summary>
+    private int BotStableCell(BlastPlayer bot,int cell)
+    {
+        int last=BotMotionFor(bot).LastCell;
+        if(last<0||last==cell||Math.Abs(_aiGraph.Height[last]-_aiGraph.Height[cell])>=.5f)return cell;
+        float x=_aiGraph.X(last),z=_aiGraph.Z(last);
+        return bot.X>x-CellHysteresis&&bot.X<x+1+CellHysteresis&&bot.Z>z-CellHysteresis&&bot.Z<z+1+CellHysteresis?last:cell;
+    }
+    private const float CellHysteresis=.12f;
+    private void BotNoteBomb(BlastPlayer bot)=>BotMotionFor(bot).Reversals=0;
+    private bool BotBoredWith(BlastPlayer bot,int cell)
+    {
+        var motion=BotMotionFor(bot);
+        return _tickCount<motion.BoredUntil&&(cell==motion.BoredA||cell==motion.BoredB);
     }
     private int BotIdleWaypoint(BlastPlayer bot,int start,int waypoint)
     {
@@ -94,7 +142,10 @@ public sealed partial class BlastSession
     private InputState BotUnblockedInput(BlastPlayer bot,int start,InputState desired)
     {
         var motion=BotMotionFor(bot);
-        if(_tickCount<motion.RecoveryUntil&&BotDirectionMoves(bot,start,motion.RecoveryX,motion.RecoveryZ))
+        // A held sidestep must not override a reversed plan: a stale recovery
+        // walked an escaping bot back into a kicked bomb's lane.
+        if(_tickCount<motion.RecoveryUntil&&motion.RecoveryX*desired.X+motion.RecoveryZ*desired.Z>=0&&
+            BotDirectionMoves(bot,start,motion.RecoveryX,motion.RecoveryZ))
             return new InputState(motion.RecoveryX,motion.RecoveryZ,false,false,false);
         if(desired.Length<.001f||BotDirectionMoves(bot,start,desired.X,desired.Z))return desired;
         float best=float.NegativeInfinity,bx=0,bz=0;

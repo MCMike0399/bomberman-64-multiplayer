@@ -31,7 +31,8 @@ public sealed partial class BlastSession
         foreach(var enemy in _players.Values)
         {
             if(enemy.Id==bot.Id||!enemy.Alive||enemy.Ghost)continue;
-            int cell=_aiGraph.Cell(enemy.X,enemy.Z,enemy.Y);
+            var (x,z)=BotLeadPosition(enemy);
+            int cell=_aiGraph.Cell(x,z,enemy.Y);
             if(cell<0||!_aiGraph.Walkable[cell]||_aiPursuit[cell]>=0)continue;
             _aiPursuit[cell]=0;_aiQueue[tail++]=cell;
         }

@@ -6,7 +6,7 @@ Run the behavioral checks without Godot or a network server:
 dotnet run -c Release --project tests/Bomber.Ai.Tests
 ```
 
-The current 76 checks cover cached legal terrain edges, timed chain reactions, expired hazards, deliberate power-up pursuit, fuse escape, climbing before flooding, fair difficulty response rates, eight-bot deterministic replay on all three maps, repeated bomb pressure against opponents, and reuse of search memory. Existing game integration checks separately exercise safe own-bomb placement, trapped-bot refusal and actual stair movement.
+The default run executes 98 checks, including the 2026-10-26 agency regressions below. The original 76 checks cover cached legal terrain edges, timed chain reactions, expired hazards, deliberate power-up pursuit, fuse escape, climbing before flooding, fair difficulty response rates, eight-bot deterministic replay on all three maps, repeated bomb pressure against opponents, and reuse of search memory. Existing game integration checks separately exercise safe own-bomb placement, trapped-bot refusal and actual stair movement.
 
 The planner sees current entities, visible bomb fuses and the known flood schedule. It never consumes future item randomness or changes movement speed, damage, blast radius or inventory. The menu offers **Easy, Medium, Hard**; `medium` and legacy `normal` select the same profile, with `normal` retained as the default wire value for saved clients.
 
@@ -84,7 +84,7 @@ The normal suite includes twelve 30-second open-arena fixtures: Easy/Medium/Hard
 
 Pressure counts newly placed bombs whose real visible blast geometry reaches the current human. It does not count hits or predict future movement. The longest gap includes initial approach and the final measurement tail. Open fixtures have no drops or cover and intentionally give identical observations for both seeds; the stock fixtures retain seeded cover and item drops and record initial cover fingerprints to verify matching baselines. Inventory availability in open fixtures counts ticks with spare capacity, without claiming an escape-safe placement exists on every tick.
 
-Medium and Hard must create at least six pressure bombs in 30 seconds, start within four seconds in the open arena/six on Pyramid, and leave no gap longer than six/eight seconds respectively. The stock bound allows ramp and pickup detours. Easy has a forgiving minimum of one, twelve seconds to begin, and a twenty-second maximum gap. All require a full 900 active ticks and no bot death. The earlier all-level regression still separately requires a real threatening explosion. `--measure-only` records observations without enforcing thresholds.
+Medium and Hard must create at least six pressure bombs in 30 seconds, start within four seconds in the open arena/six on Pyramid, and leave no gap longer than six/eight seconds respectively (since 2026-10-26 the open-arena *moving* gap is bounded across 24 start/phase variants in `AgencyChecks` instead of this single sample). The stock bound allows ramp and pickup detours. Easy has a forgiving minimum of one, twelve seconds to begin, and a twenty-second maximum gap. All require a full 900 active ticks and no bot death. The earlier all-level regression still separately requires a real threatening explosion. `--measure-only` records observations without enforcing thresholds.
 
 Two passivity causes were reproduced with red regressions. A reached tactical goal kept awarding its commitment bonus, discouraging reengagement after retreat. Commitment now expires upon reaching its cell and still stabilizes routes while traveling. On Pyramid, Medium could also retreat into the lower court and idle below a cliff after all bombs had expired: the eight-step ramp detour cost more than the geometric distance reward for getting closer. Goals that reach an opponent's actual visible blast range now receive a pressure reward during attack intent. This lets a valid detour beat that local optimum. Easy receives that reward only during its existing occasional attack turn. Cooldowns, reaction intervals, difficulty profiles, timed route safety, escape validation and physical rules remain unchanged.
 
@@ -158,3 +158,21 @@ CPU movement, bomb creation, escape and destruction run through authority ticks.
 These fixtures are separate from unedited native `ai-play` matches.
 
 [Research, adaptation and matched measurements](../../docs/cpu-ai-research.md).
+
+## Agency regressions (2026-10-26)
+
+```sh
+dotnet run -c Release --project tests/Bomber.Ai.Tests -- --agency-checks
+dotnet run -c Release --project tests/Bomber.Ai.Tests -- --agency --output=artifacts/ai-agency/matrix.json
+dotnet run -c Release --project tests/Bomber.Ai.Tests -- --agency --sweep
+dotnet run -c Release --project tests/Bomber.Ai.Tests -- --agency --trace=up-and-down,easy,64
+```
+
+`AgencyChecks` (17 assertions, 16 of which fail on the v0.36 policy) covers a
+Bouncing-bomb holder shuffling beside an idle player, Easy/Medium movement through
+Blizzard gusts, four-Hard-CPU lane standoffs, the longest reversal streak and
+idle-player gap across a 72-run arena matrix, moving-target gaps across 24
+start/phase variants (variant 0 is the fixed `PressureChecks` fixture), and a
+sidestep from the lane of a bomb a walking player is about to kick.
+`AgencyDiagnostics` owns the measurements; `--standoff` reports bombs by four CPUs
+in their first 20 seconds. [Mechanisms, changes and matched results](../../docs/cpu-agency.md).
