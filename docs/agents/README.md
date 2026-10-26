@@ -42,6 +42,13 @@ update the current guide rather than silently reviving old behavior.
 
 ## Current decisions that supersede earlier experiments
 
+- v0.36 integrates performance PR #25: indexed procedural meshes, cached HUD
+  drawing, one snow buffer upload, packed cover bits and structured local
+  messages. Presets, shaders, geometry, physics, AI and wire fields are unchanged.
+  Allocations/frame fall 40–50%; native FPS is equivalent within run-order noise,
+  and stable 120 FPS at 3024×1964 High is not achieved. QA preference files are
+  GUID-named because rebooted guests reuse PIDs. [Measurements and limits](../performance-research.md).
+
 - v0.35.1 fixes the saved-High startup crash and consequent update rollback.
   Menu targets retain usable dimensions before layout; direct Metal crash and
   real updater High/fullscreen regressions now cover this ordering. Treat an

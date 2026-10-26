@@ -452,6 +452,28 @@ lighting or quality. Test the real renderer; profile real-time play separately
 from fixed-step Movie Maker captures before claiming performance improvements.
 Ordinary launch restores saved display settings; QA starts windowed. Neither proves OS Game Mode.
 
+### Performance work that preserves presentation
+
+Procedural rounded/beveled boxes, helmets and face patches index identical
+complete vertices after normals are generated. Triangle order, winding, normals,
+UVs and geometry remain unchanged, including transparent ghost drawing. Mesh
+checks must traverse the index array rather than assuming consecutive vertices
+form a triangle. `asset-audit` records ordered expanded-stream hashes for matched
+comparisons; indexing reduces summed character mesh vertex entries from 83,288 to 21,172.
+
+Snow keeps its authored positions, wind integration and 72/152/240 preset counts.
+It uploads one reusable MultiMesh transform buffer, in Godot's 3×4 row layout,
+instead of crossing the C# boundary for every flake. The audit samples motion
+through quality changes and records a transform-stream hash. Identical hashes
+establish motion equivalence; update microbenchmarks are separate from FPS.
+
+HUD tokens retain cached drawing commands while their displayed fields are
+unchanged. Status, equipment, names, suit, wins and native resizing still redraw;
+the win-star animation runs until it settles. Arena presentation reuses unchanged
+cover data and frame-invariant interpolation factors without changing motion.
+See [performance research and measurements](../performance-research.md) for scope
+and candidate experiments. Preset values and shader code remain unchanged.
+
 Pickup **symbols** were enlarged independently of their baseplates: `PowerupModel`
 scales only its icon subtree and lifts it clear of the plate through its bob cycle.
 Preserve the requested distinction. Bomb mesh size is also separate from collision

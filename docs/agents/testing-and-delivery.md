@@ -90,6 +90,9 @@ fails the run; it never takes over the developer's desktop as a fallback.
 Use a 1920×1200 guest display for the complete suite: `graphics-settings` needs
 room for its actual 1600×1000 native test window. The v0.35 full Metal run used
 this size without weakening window, focus or startup checks.
+Each QA process uses its own GUID-named `qa-preferences-*.cfg`. Never key it by
+PID: a rebooted guest reuses PIDs, and a killed run leaves its file behind, so a
+new process silently inherits old display/volume choices (observed 2026-10-26).
 
 Assign one owner per test desktop/VM and one owner for shared builds. Explicit
 `--desktop shared` is for a desktop available for testing or physical-device
@@ -105,6 +108,24 @@ path; it is not part of `all`, and routine graphical regression stays isolated.
 Announce its brief windowed run before launch, keep the game foreground, and stop
 the QA VM/other owned rendering jobs first so they do not compete for the GPU.
 Do not reroute a failed isolated correctness run onto the host automatically.
+
+The native benchmark acquires an exclusive host GPU lock plus the QA VM's lock and verifies that Tart has
+no running local VMs before launching. A running VM or another QA owner fails
+the benchmark rather than producing contested GPU timings. Stop the VM before
+native Metal measurements; keep the lock through completion. This also prevents
+another checkout's isolated runner from starting that VM during the sample.
+Updated isolated runners hold a shared host GPU lock as well, so choosing another
+`--vm` cannot bypass a native benchmark. Individual VM ownership remains separate.
+
+Use `--benchmark-resolution WIDTHxHEIGHT`, `--benchmark-preset high`,
+`--benchmark-stage all` (or a single arena), and `--benchmark-seconds 30` for
+matched workloads. Native-panel-sized windows become borderless while remaining
+windowed; receipts require the actual pixel dimensions and full High/Medium
+render scale. The benchmark reports p99/max frame time, allocation/frame and the
+fraction above the 8.33 ms process-frame budget. That fraction is not a count of
+dropped display presents. `--benchmark-disable` is explicitly diagnostic and
+cannot count as full-quality evidence. `--gpu-profile` prints engine pass timings
+when supported; Godot 4.7.2's unavailable Metal timestamps remain unavailable.
 
 ```sh
 python3 tools/playtest/run.py --scenario graphics-benchmark --desktop shared --build

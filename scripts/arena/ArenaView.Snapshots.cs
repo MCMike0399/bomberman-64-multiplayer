@@ -24,14 +24,18 @@ public partial class ArenaView
         bool hurry=(int)F(data,"phase")==2;
         if(!eventsAvailable&&hurry&&!_wasHurry)_audio.Hurry();_wasHurry=hurry;
         if(data.TryGetProperty("waterLevel",out var water))_terrain.SetWaterLevel(water.GetSingle());
-        byte[] bits=Convert.FromBase64String(data.GetProperty("softBlocks").GetString()!);
-        for(int i=0;i<_terrain.Width*_terrain.Depth;i++)
+        string encoding=data.GetProperty("softBlocks").GetString()!;
+        if(encoding!=_softBlockEncoding)
         {
-            bool exists=i/8<bits.Length&&(bits[i/8]&(1<<(i%8)))!=0;
-            if(exists&&!_blocks.ContainsKey(i)){var block=_terrain.CreateCover(i);_dynamic.AddChild(block);_blocks[i]=block;}
-            if(!exists&&_blocks.Remove(i,out var old)){Debris(old.Position);old.QueueFree();}
+            _softBlockBits=Convert.FromBase64String(encoding);_softBlockEncoding=encoding;
+            for(int i=0;i<_terrain.Width*_terrain.Depth;i++)
+            {
+                bool exists=i/8<_softBlockBits.Length&&(_softBlockBits[i/8]&(1<<(i%8)))!=0;
+                if(exists&&!_blocks.ContainsKey(i)){var block=_terrain.CreateCover(i);_dynamic.AddChild(block);_blocks[i]=block;}
+                if(!exists&&_blocks.Remove(i,out var old)){Debris(old.Position);old.QueueFree();}
+            }
         }
-        var seen=new HashSet<string>();
+        var seen=_seenEntities;seen.Clear();
         foreach(var p in data.GetProperty("players").EnumerateArray())
         {
             string id="p:"+p.GetProperty("id").GetString();bool ghost=p.GetProperty("ghost").GetBoolean();
@@ -117,11 +121,13 @@ public partial class ArenaView
             }
             if(item.TryGetProperty("life",out var remaining)){float seconds=remaining.GetSingle();node.Visible=seconds<0||seconds>3||((int)(seconds*6)%2==0);}
         }
-        foreach(string id in _entities.Keys.Where(k=>!seen.Contains(k)).ToArray())
+        foreach(string id in _entities.Keys)if(!seen.Contains(id))_staleEntities.Add(id);
+        foreach(string id in _staleEntities)
         {
             _entities[id].QueueFree();_entities.Remove(id);_targets.Remove(id);_playerMotion.Remove(id);_facings.Remove(id);_ghostHosts.Remove(id);
         }
-        UpdateThrowPreviews(data,bits);
+        _staleEntities.Clear();
+        UpdateThrowPreviews(data,_softBlockBits);
         Present(_presentation.Read(data));
         if(data.TryGetProperty("blizzard",out var weather))_terrain.SetBlizzard(weather);
         int left=(int)F(data,"closedLeft"),right=(int)F(data,"closedRight");

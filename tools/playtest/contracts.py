@@ -44,7 +44,7 @@ def expanded(name, scenarios):
     return [leaf for child in entry['steps'] for leaf in expanded(child, scenarios)] if 'steps' in entry else [name]
 
 
-def validate_benchmark(receipt):
+def validate_benchmark(receipt, *, stage='sunken-temple', presets=('Low', 'Medium', 'High'), resolution=None, omission='none'):
     """Native timings must never silently accept VM, fixed-step or empty evidence."""
     errors = []
     if receipt.get('schemaVersion') != 1 or receipt.get('timingMode') != 'realtime-uncapped':
@@ -53,12 +53,25 @@ def validate_benchmark(receipt):
     if not gpu or any(word in gpu.lower() for word in ('paravirtual', 'llvmpipe', 'swiftshader', 'software')):
         errors.append('Native benchmark requires a physical GPU')
     samples = receipt.get('measurements', [])
-    expected = [(scene, preset) for preset in ('Low', 'Medium', 'High') for scene in ('menu', 'eight-player-temple')]
+    if receipt.get('stage', 'sunken-temple') != stage:
+        errors.append('Native benchmark stage does not match requested workload')
+    if receipt.get('diagnosticOmission', 'none') != omission or receipt.get('fullQuality', True) != (omission == 'none'):
+        errors.append('Diagnostic pass omissions must not be reported as full-quality results')
+    stages = ('sunken-temple', 'rock-garden', 'up-and-down', 'top-rules', 'blizzard-battle', 'greedy-trap') if stage == 'all' else (stage,)
+    battles = tuple('eight-player-temple' if s == 'sunken-temple' else 'eight-player-' + s for s in stages)
+    expected = [(scene, preset) for preset in presets for scene in ('menu', *battles)]
     if not isinstance(samples, list) or any(not isinstance(s, dict) for s in samples) or [(s.get('scene'), s.get('preset')) for s in samples] != expected:
         return errors + ['Native benchmark is missing scene/preset coverage']
     def positive(value):
         return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) and value > 0
     for sample in samples:
+        if resolution is not None and (sample.get('width'), sample.get('height')) != resolution:
+            errors.append('Native benchmark resolution does not match requested workload')
+        if 'requestedWidth' in receipt:
+            if (sample.get('width'), sample.get('height')) != (receipt['requestedWidth'], receipt.get('requestedHeight')):
+                errors.append('Native benchmark did not render the requested resolution')
+            if sample.get('preset') in ('Medium', 'High') and sample.get('renderScale') != 1:
+                errors.append('Native Medium/High benchmark must render at full resolution')
         if not isinstance(sample.get('samples'), int) or sample['samples'] < 30:
             errors.append('Insufficient native frame samples')
         for field in ('seconds', 'fps', 'frameMedianMs', 'frameP95Ms'):

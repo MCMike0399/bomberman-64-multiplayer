@@ -41,6 +41,25 @@ class PlaytestContracts(unittest.TestCase):
             modified=json.loads(json.dumps(receipt));modified['measurements'][1].update(change)
             self.assertTrue(validate_benchmark(modified))
 
+    def test_native_benchmark_checks_requested_maps_pixels_and_quality(self):
+        sample=dict(samples=100,seconds=10,fps=100,frameMedianMs=10,frameP95Ms=11,
+                    rootGpuMedianMs=None,rootGpuP95Ms=None,peakBombs=2,peakHazards=2,rootDrawCallsPeak=100,
+                    width=3024,height=1964,renderScale=1,preset='High')
+        scenes=('menu','eight-player-temple','eight-player-rock-garden','eight-player-up-and-down',
+                'eight-player-top-rules','eight-player-blizzard-battle','eight-player-greedy-trap')
+        receipt=dict(schemaVersion=1,timingMode='realtime-uncapped',gpu='Apple M5 Pro',stage='all',
+                     diagnosticOmission='none',fullQuality=True,requestedWidth=3024,requestedHeight=1964,
+                     measurements=[sample|dict(scene=s) for s in scenes])
+        options=dict(stage='all',presets=('High',),resolution=(3024,1964))
+        self.assertEqual([],validate_benchmark(receipt,**options))
+        for change in (dict(stage='sunken-temple'),dict(measurements=receipt['measurements'][:-1]),
+                       dict(diagnosticOmission='ssil',fullQuality=False)):
+            self.assertTrue(validate_benchmark(receipt|change,**options))
+        self.assertEqual([],validate_benchmark(receipt|dict(diagnosticOmission='ssil',fullQuality=False),omission='ssil',**options))
+        for change in (dict(width=1920),dict(renderScale=.85)):
+            changed=receipt|dict(measurements=[s|change for s in receipt['measurements']])
+            self.assertTrue(validate_benchmark(changed,**options))
+
     def receipt(self, **changes):
         return dict(schemaVersion=1, catalogSha256=hashlib.sha256(CATALOG.read_bytes()).hexdigest(), completedScenarios=['movement'], scenario='movement', passed=True, assertions=1,
                     checks=[{'description':'real check','passed':True}], seconds=1,

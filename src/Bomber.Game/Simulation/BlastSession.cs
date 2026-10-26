@@ -41,6 +41,11 @@ public sealed partial class BlastSession : GameSession
     private readonly int _botCount;
     private readonly int _lightingOffset;
     private static readonly string[] StageLightings=["morning","midday","afternoon","night"];
+    private static readonly (float X,float Z)[] BotPlacementDirections=Enumerable.Range(0,32).Select(direction=>
+    {
+        float angle=direction*MathF.Tau/32;
+        return (MathF.Cos(angle),MathF.Sin(angle));
+    }).ToArray();
 
     /// <summary>CPU players fill the arena, so a lobby with bots starts with one human, as in the original.</summary>
     public override int? MinPlayersToStart => _botCount > 0 ? 1 : null;

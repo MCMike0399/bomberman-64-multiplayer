@@ -36,11 +36,13 @@ public partial class PlaytestDriver
         var arrays=face.Mesh.SurfaceGetArrays(0);
         var vertices=arrays[(int)Mesh.ArrayType.Vertex].AsVector3Array();
         var normals=arrays[(int)Mesh.ArrayType.Normal].AsVector3Array();
-        bool sound=vertices.Length>0&&vertices.Length%3==0;
-        for(int i=0;i<vertices.Length;i+=3)
+        var indices=arrays[(int)Mesh.ArrayType.Index].VariantType==Variant.Type.Nil?Enumerable.Range(0,vertices.Length).ToArray():arrays[(int)Mesh.ArrayType.Index].AsInt32Array();
+        bool sound=indices.Length>0&&indices.Length%3==0;
+        for(int i=0;i<indices.Length;i+=3)
         {
-            var cross=(vertices[i+1]-vertices[i]).Cross(vertices[i+2]-vertices[i]);
-            sound&=cross.LengthSquared()>1e-12f&&cross.Dot(normals[i]+normals[i+1]+normals[i+2])<0;
+            int a=indices[i],b=indices[i+1],c=indices[i+2];
+            var cross=(vertices[b]-vertices[a]).Cross(vertices[c]-vertices[a]);
+            sound&=cross.LengthSquared()>1e-12f&&cross.Dot(normals[a]+normals[b]+normals[c])<0;
         }
         Check(sound,"actual curved face mesh has nondegenerate outward clockwise triangles");
         Event("model-profile-dimensions",new {helmet=headSize.ToString(),torso=bodySize.ToString()});

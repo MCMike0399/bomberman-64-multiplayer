@@ -150,6 +150,34 @@ inside UTC sample windows, inferring batch start from present intervals and
 excluding 250 ms boundary guards. HUD IDs count drawable presents; they are not
 Godot process frames. Raw console/unified logs remain available for inspection.
 
+### Native-resolution comparisons
+
+The native runner takes an exclusive host GPU lease and the selected QA VM's
+lease, then verifies that Tart has no running local VMs. Isolated runners hold
+a shared GPU lease, so a different `--vm` does not bypass native ownership.
+Stop the QA VM before benchmarking. No automatic desktop takeover or VM stop is
+performed when another owner holds a lease.
+
+```sh
+python3 tools/playtest/run.py --scenario graphics-benchmark --desktop shared \
+  --app /path/to/BlastCircuit.app --benchmark-resolution 3024x1964 \
+  --benchmark-preset high --benchmark-stage all --benchmark-seconds 30
+```
+
+The default remains 1920×1200, all presets and Sunken Temple. `all` selects six
+battle arenas; one arena ID selects a focused sample. The runner checks complete
+requested coverage and actual pixels. Oversized native-panel windows become
+borderless but remain windowed. High/Medium must retain 1.0 render scale.
+Receipts add frame p99/max, allocation/frame and the fraction of process frames
+above the 120 FPS time budget; that is not a dropped-display-frame count.
+
+`--benchmark-disable ssil|ssao|dof|glow|water|shadows` omits one pass only for
+cost diagnosis. Such a receipt explicitly has `fullQuality=false`; never report
+its FPS as an unchanged-quality gain. `--gpu-profile` requests engine per-pass
+GPU output. It requires functioning engine timestamps and enough timestamp-query
+capacity for all active menu viewports; ordinary Godot 4.7.2 Metal counters remain
+unavailable. Keep diagnostic runs separate from acceptance timing.
+
 ### First-use pipeline regression
 
 ```sh

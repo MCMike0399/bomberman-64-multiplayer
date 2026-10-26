@@ -97,6 +97,12 @@ def main():
     parser.add_argument('--script', type=Path, help='JSON scenario, see temple-walk.json')
     parser.add_argument('--record', action='store_true', help='Record actual gameplay at 30 FPS and export a validated MP4; requires ffmpeg')
     parser.add_argument('--metal-hud', action='store_true', help='Collect Apple GPU timing logs for the native macOS graphics-benchmark')
+    parser.add_argument('--gpu-profile', action='store_true', help='Print engine GPU pass timings during the native benchmark (requires working engine timestamps)')
+    parser.add_argument('--benchmark-resolution', default='1920x1200', help='Native benchmark output pixels, WIDTHxHEIGHT')
+    parser.add_argument('--benchmark-stage', choices=('all', 'sunken-temple', 'rock-garden', 'up-and-down', 'top-rules', 'blizzard-battle', 'greedy-trap'), default='sunken-temple')
+    parser.add_argument('--benchmark-seconds', type=int, default=10, help='Measured battle duration per preset (10–120 seconds)')
+    parser.add_argument('--benchmark-preset', choices=('all', 'low', 'medium', 'high'), default='all')
+    parser.add_argument('--benchmark-disable', choices=('none', 'ssil', 'ssao', 'dof', 'glow', 'water', 'shadows'), default='none', help='Diagnostic pass omission; never a full-quality performance result')
     parser.add_argument('--cold-effects', action='store_true', help='Disable startup warmup in first-use-rendering to retain a negative regression witness')
     parser.add_argument('--desktop', choices=('isolated', 'shared'), default='isolated' if platform.system() == 'Darwin' else 'shared', help='Graphical macOS QA uses a private VM by default; shared explicitly uses your desktop')
     parser.add_argument('--vm', default=os.environ.get('BLAST_QA_VM', 'blast-circuit-qa'), help='Stopped dedicated Tart VM for isolated graphical QA')
@@ -112,6 +118,10 @@ def main():
     parser.add_argument('--timeout', type=float, help='Override the catalog timeout (full suites default to 600 seconds)')
     parser.add_argument('--output', type=Path, default=ROOT / 'artifacts' / 'playtest')
     args = parser.parse_args()
+    if not re.fullmatch(r'[1-9][0-9]{2,3}x[1-9][0-9]{2,3}', args.benchmark_resolution) or any(int(n) > 7680 for n in args.benchmark_resolution.split('x')):
+        parser.error('--benchmark-resolution must be WIDTHxHEIGHT, between 100 and 7680 pixels per dimension')
+    if not 10 <= args.benchmark_seconds <= 120:
+        parser.error('--benchmark-seconds must be between 10 and 120')
     if args.list:
         print(json.dumps({'schemaVersion': 1, 'scenarios': list(scenarios.values())}, indent=2))
         return 0
@@ -122,6 +132,10 @@ def main():
     if args.headless and not scenarios[args.scenario]['headless']:
         parser.error('Scenario requires graphics; use core-headless for headless gameplay coverage')
     args.timeout = args.timeout if args.timeout is not None else scenarios[args.scenario]['timeout']
+    if args.scenario == 'graphics-benchmark':
+        stages = 6 if args.benchmark_stage == 'all' else 1
+        presets = 3 if args.benchmark_preset == 'all' else 1
+        args.timeout = max(args.timeout, 45 + presets * (15 + stages * (args.benchmark_seconds + 15)))
     if args.timeout <= 0:
         parser.error('--timeout must be positive')
     if args.scenario == 'script' and not args.script:
@@ -147,6 +161,7 @@ def main():
     runtime = None
     server_log = None
     graphical_lock = None
+    gpu_guard = contextlib.ExitStack()
     summary = None
     started = time.monotonic()
     result = {'passed': False, 'scenario': args.scenario, 'headless': args.headless, 'folder': str(folder),
@@ -162,6 +177,9 @@ def main():
             run_isolated(args, folder, result, 'network' in scenarios[args.scenario]['domains'], windowed)
         else:
             result['desktop'] = {'mode': 'headless' if args.headless else 'shared'}
+            if args.scenario == 'graphics-benchmark' and platform.system() == 'Darwin':
+                from isolated import native_gpu_lease
+                result['desktop']['gpuIsolation'] = gpu_guard.enter_context(native_gpu_lease(args.vm))
             if not args.headless and os.name == 'posix':
                 import fcntl
                 graphical_lock = open(Path(tempfile.gettempdir()) / ('blast-circuit-qa-' + str(os.getuid()) + '.lock'), 'a')
@@ -204,6 +222,8 @@ def main():
                 command.append('--windowed')
             if args.headless:
                 command.append('--headless')
+            if args.gpu_profile:
+                command.append('--gpu-profile')
             command += ['--', '--playtest=' + args.scenario, '--playtest-output=' + str(folder), '--playtest-server=' + args.server]
             if windowed:
                 command.append('--display-windowed')
@@ -211,6 +231,12 @@ def main():
                 command.append('--playtest-file=' + str(args.script.resolve()))
             if args.cold_effects:
                 command.append('--playtest-cold-effects')
+            if args.scenario == 'graphics-benchmark':
+                command += ['--benchmark-resolution=' + args.benchmark_resolution,
+                            '--benchmark-stage=' + args.benchmark_stage,
+                            '--benchmark-preset=' + args.benchmark_preset,
+                            '--benchmark-disable=' + args.benchmark_disable,
+                            '--benchmark-seconds=' + str(args.benchmark_seconds)]
             result['command'] = command
             if args.scenario == 'graphics-benchmark':
                 result['powerBefore'] = native_power_evidence()
@@ -245,7 +271,9 @@ def main():
         summary = json.loads(summary_path.read_text())
         receipt_errors = validate_summary(summary, folder, args.scenario, args.headless)
         if args.scenario == 'graphics-benchmark':
-            receipt_errors.extend(validate_benchmark(result['benchmark']) if result['benchmark'] else ['Missing native benchmark timing receipt'])
+            receipt_errors.extend(validate_benchmark(result['benchmark'], stage=args.benchmark_stage,
+                presets=('Low', 'Medium', 'High') if args.benchmark_preset == 'all' else (args.benchmark_preset.title(),),
+                resolution=tuple(map(int, args.benchmark_resolution.split('x'))), omission=args.benchmark_disable) if result['benchmark'] else ['Missing native benchmark timing receipt'])
             result['desktop']['nativeHostGpuCoverage'] = not receipt_errors
             if args.metal_hud and result['benchmark']:
                 from metal_metrics import summarize
@@ -290,6 +318,7 @@ def main():
             server_log.close()
         if graphical_lock:
             graphical_lock.close()
+        gpu_guard.close()
         result['seconds'] = round(time.monotonic() - started, 3)
         (folder / 'runner-summary.json').write_text(json.dumps(result, indent=2) + '\n')
         junit(folder / 'junit.xml', result, summary)
