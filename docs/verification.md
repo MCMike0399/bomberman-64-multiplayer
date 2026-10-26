@@ -1,3 +1,78 @@
+# v0.35.0 delivered
+
+Published **2026-10-26 20:10:36 UTC**: [v0.35.0 / signed update](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.35.0).
+[Integration PR #27](https://github.com/MCMike0399/bomberman-64-multiplayer/pull/27)
+merged the ready [visual fixes #24](https://github.com/MCMike0399/bomberman-64-multiplayer/pull/24)
+and [arena scenery #26](https://github.com/MCMike0399/bomberman-64-multiplayer/pull/26),
+preserving both original heads in main. Performance PR #25 remains a draft and
+is excluded. The immutable release/tag source is
+`ed6b1bca82fa71df5e4a23533c1ee310f05e408c`.
+Identity: **v0.35.0/build 41/schema 6**, exact admission token `6/0.35.0/41`.
+
+- [Trusted Verification 40390555477](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40390555477)
+  passed public, managed/network, Godot headless and Apple Silicon packaging on
+  the final merge. CI's optional Metal job remains skipped; the passing local
+  exported Metal evidence below is separate.
+- [Protected deployment and publication 40392658284](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40392658284)
+  passed every job. Public, primary and fallback each report the exact source
+  and token with both `passed` and `connectionVerified` true. Selected-worker
+  gameplay, room retirement, signed draft-download byte comparisons and final
+  live checks preceded publication.
+- Independent public downloads verified both P-256 signatures, all five signed
+  asset hashes/sizes, Mac identity/controller metadata and the complete 55-file
+  server/plugin inventory. Both archives, checksum receipts and build metadata
+  match their trusted CI downloads byte for byte. All ten assets are public;
+  the anonymous latest stable feed and immutable tag resolve to this release.
+  A separate public identity/admission probe passed. ZIPs were inspected in place;
+  the personal installed app was not replaced.
+
+Published archive SHA-256:
+
+```text
+Mac:    1ef1e4cec467480cd53ee0cee4d51910bb0c2e8e5ac094f6caf786a1d782bae7
+Server: 1be73fa10d53f064c879db53508e499f59ecfa2a3912f951bd581df0ec9227e2
+```
+
+## Combined source and Metal verification
+
+The clean local candidate `435a19ec1088afb4527d792c20ec66a2f9e26cb6` has exactly
+the final merge's file tree. The test-catalog merge preserves both PRs' journeys
+and focused suites. Rendering changes retain authority terrain and gameplay rules.
+
+The rebuilt export passed the complete **56-journey Metal Forward+ suite:
+4,966 assertions, 495 captures, zero runtime errors**. Two occurrences of the
+known SCTP stream-reset warning appeared during peer teardown. All 495 captures
+were reviewed in 21 contact sheets, with full-size rear-ring explosion, Temple
+stair, shoreline, castle, Blizzard and fresh-process display checks.
+The additional exported `menu-preview` journey passed **714 assertions / 40
+captures**, with zero runtime errors or warnings; its captures were reviewed in
+two more contact sheets. Together these runs cover every journey in both PRs'
+focused visual/scenery suites. The display restart child retained its own
+six-assertion / one-capture passing receipt.
+
+Public contracts and workflow lint passed. Local and trusted CI managed gates
+passed 2,878 game, 354 client, 81 AI, 19 audio, 23 cluster and 72 soak checks,
+plus release admission, 78 release connection/cleanup, real network smoke,
+nine forced-relay and 36 fleet checks. Local and CI headless core/peer/adaptive/
+slow-poll counts were 1,740/19/9/10; exported package counts were 255/19/9/10.
+
+Graphical correctness used a dedicated **1920×1200 macOS desktop with Apple
+Paravirtual Metal**. This is renderer and synthetic-input evidence, without new
+native-host throughput, sustained thermal or physical-controller measurements.
+Agent image review does not establish user approval of the art direction.
+
+An initial 1600×1000 guest diagnostic crashed in Metal texture initialization
+(`Too many mipmaps requested`) before the harness attached. Its failed receipt
+is retained. A subsequent dedicated display run passed 61 assertions plus six
+in its fresh executable; the complete suite above also passed that restart.
+No product fix or relaxed readiness/focus deadline is claimed for the initial
+crash. One public run was blocked by the sandbox denying `ps`; the complete
+unsandboxed rerun passed. Failed attempts are not counted as passing evidence.
+
+Ignored evidence remains under `artifacts/release-v035/`: all local/CI receipts,
+review sheets, initial failures, exact CI and published assets, deployment
+receipt, public probe and independent signature/hash comparison receipts.
+
 # v0.34.0 delivered
 
 Published **2026-10-26 18:21:33 UTC**: [v0.34.0 / signed update](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.34.0).

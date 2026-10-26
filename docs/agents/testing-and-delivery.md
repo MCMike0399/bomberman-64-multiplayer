@@ -87,6 +87,9 @@ working. Read [VM setup, execution and evidence limits](../../tools/playtest/REA
 before provisioning or diagnosing the guest. The real graphical suite runs in
 its own macOS desktop with unchanged focus/input checks. VM startup failure
 fails the run; it never takes over the developer's desktop as a fallback.
+Use a 1920×1200 guest display for the complete suite: `graphics-settings` needs
+room for its actual 1600×1000 native test window. The v0.35 full Metal run used
+this size without weakening window, focus or startup checks.
 
 Assign one owner per test desktop/VM and one owner for shared builds. Explicit
 `--desktop shared` is for a desktop available for testing or physical-device

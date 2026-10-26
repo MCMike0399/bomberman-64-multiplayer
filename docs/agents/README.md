@@ -3,7 +3,7 @@
 The user resumed gameplay work on 2026-10-23 for controller ergonomics, aiming
 and knockdown/blast separation (iteration19). The first eighteen iterations
 remain historical evidence. Iteration20 then rebuilt the walk. Recorded
-release baseline: **v0.34.0/build 40**, published with independently verified Mac
+release baseline: **v0.35.0/build 41**, published with independently verified Mac
 and server archives (see [verification](../verification.md)). Previous runtime baseline: **v0.18.0**, commit
 `316a330d7d895a92f98c1a60be7d571ec445a8a3`. Later documentation commits may follow.
 Verify the live branch, source, tools and installed version before relying on
@@ -41,6 +41,11 @@ update the current guide rather than silently reviving old behavior.
 | [Latest verification](../verification.md) | Exact observed results and limitations, with earlier iterations below |
 
 ## Current decisions that supersede earlier experiments
+
+- v0.35 delivers the ready explosion/water/stair fixes and arena scenery through
+  PR #27 (#24 and #26). The complete exported Metal suite passed 56 journeys;
+  additional menu-preview checks, trusted CI and both production workers passed.
+  Performance PR #25 remains a draft. [Delivery and evidence](../verification.md#v0350-delivered).
 
 - v0.34 delivers the four reviewed metrics, cached-preview, overhead-hit and
   ledge-fall PRs through #23. Required trusted CI, protected publication and both

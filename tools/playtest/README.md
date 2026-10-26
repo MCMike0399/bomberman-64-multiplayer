@@ -24,7 +24,7 @@ then provision once (the implementation was developed against Tart 2.41.1):
 
 ```sh
 tart clone ghcr.io/cirruslabs/macos-tahoe-base:latest blast-circuit-qa
-tart set blast-circuit-qa --cpu 4 --memory 8192 --display 1600x1000
+tart set blast-circuit-qa --cpu 4 --memory 8192 --display 1920x1200
 python3 tools/playtest/run.py --scenario menu
 python3 tools/qa/run.py --profile graphical
 ```
