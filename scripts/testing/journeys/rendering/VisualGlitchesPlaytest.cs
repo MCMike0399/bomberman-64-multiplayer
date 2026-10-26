@@ -135,7 +135,7 @@ public partial class PlaytestDriver
             if(!_headless)
             using(var image=Image.LoadFromFile(_screenshots[^1]))
             {
-                var world=center+new Vector3(0,-.48f,.8f)*radius;
+                var world=center+new Vector3(0,-.53f,.8f)*radius;
                 Check(world.Y<LightingArena.WaterHeight-.15f,"shore probe samples below the animated sea surface");
                 var pixel=camera.UnprojectPosition(world)*new Vector2(image.GetWidth(),image.GetHeight())/GetViewport().GetVisibleRect().Size;
                 Event("shore-water-probe-target",new{center=center.ToString(),radius,world=world.ToString(),pixel=pixel.ToString(),water=LightingArena.WaterHeight});
