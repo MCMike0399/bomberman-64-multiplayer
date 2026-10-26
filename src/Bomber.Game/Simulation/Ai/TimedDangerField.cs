@@ -1,3 +1,4 @@
+using System.Numerics;
 using Bomber.Game.Simulation.Rules;
 using Bomber.Game.Simulation.Stages;
 using Bomber.Game.Simulation.State;
@@ -14,6 +15,8 @@ internal sealed class TimedDangerField
     public float[] Ends {get;}
     public string?[] BombOwners {get;}
     private float[] _times=new float[64];
+    /// <summary>Visible weather forecast: wind displacement speed after the given number of seconds.</summary>
+    public Func<float,Vector2>? Wind {get;set;}
     public TimedDangerField(NavigationGraph graph,StageLayout stage)
     { _graph=graph;_stage=stage;Begins=new float[graph.Count];Ends=new float[graph.Count];BombOwners=new string?[graph.Count];Clear(); }
     private void Clear(){Array.Fill(Begins,float.PositiveInfinity);Array.Fill(Ends,float.NegativeInfinity);Array.Clear(BombOwners);}
@@ -59,14 +62,24 @@ internal sealed class TimedDangerField
             // cover as a shield; permanent terrain still blocks every sphere.
             bool ignoreSoftCover=b.IsRed||detonate is not null;
             AddSphere(soft,b.X,Height(b),b.Z,b.BlastRadius+.45f,ignoreSoftCover,time,b.IsRemote?4:time+.55f);
+            // Gusts push resting bombs across the snow. Cover the forecast drift
+            // path until detonation; players or bombs can stop it anywhere along it.
+            if(Wind is not null&&b.State is BombState.Resting or BombState.Rolling)AddDrift(soft,b,time);
             // Moving bombs are uncertain. Cover both their visible position and short velocity projection.
             if(b.State is BombState.Rolling or BombState.Flying)
             {
-                float horizon=Math.Min(time,.6f);float vx=b.State==BombState.Flying?b.FlyVX:b.VX,vz=b.State==BombState.Flying?b.FlyVZ:b.VZ;
+                // A kicked bomb keeps rolling until something stops it; fleeing along
+                // its line gets the bot knocked down beside its own blast.
+                bool rolling=b.State==BombState.Rolling;
+                if(rolling)AddRollImpact(soft,b);
+                float horizon=Math.Min(time,rolling&&!b.IsBouncy?2f:.6f);float vx=b.State==BombState.Flying?b.FlyVX:b.VX,vz=b.State==BombState.Flying?b.FlyVZ:b.VZ;
                 for(float t=.2f;t<=horizon+.01f;t+=.2f)
                 {
                     float x=b.X+vx*t,z=b.Z+vz*t;
-                    if(_graph.Cell(x,z)<0)break;
+                    int along=_graph.Cell(x,z,Height(b));
+                    if(along<0)break;
+                    if(rolling&&!b.IsBouncy&&(!_graph.Walkable[along]||soft.IsAlive((int)MathF.Floor(x),(int)MathF.Floor(z))))break;
+
                     // Ricochets can reverse direction at stone; cover the reflected side as well.
                     if(b.IsBouncy)AddSphere(soft,b.X-vx*t,b.State==BombState.Flying?b.FlyY:_stage.SurfaceAt(b.X-vx*t,b.Z-vz*t,Height(b)),b.Z-vz*t,b.BlastRadius+.45f,b.IsRed,Math.Max(0,time-.15f),time+.65f);
                     if(b.State==BombState.Flying)AddSphere(soft,x,b.FlyY,z,b.BlastRadius+.45f,b.IsRed,Math.Max(0,time-.15f),time+.65f);
@@ -77,8 +90,53 @@ internal sealed class TimedDangerField
         if(meteors is not null)foreach(var m in meteors)AddSphere(soft,m.X,0,m.Z,1.75f,false,Math.Max(0,m.Remaining-.15f),m.Remaining+.55f);
         foreach(var h in hazards)AddSphere(soft,h.X,h.Y,h.Z,h.Radius+.45f,h.IsRed,0,h.LifeTimer+.1f);
     }
+    /// <summary>Impact knocks a body down for over a second. A kick covers more than two
+    /// cells in a fifth of a second, so sample its path at sub-cell spacing from now.</summary>
+    private void AddRollImpact(SoftBlockGrid soft,BlastBomb b)
+    {
+        float speed=MathF.Sqrt(b.VX*b.VX+b.VZ*b.VZ);
+        if(speed<.01f)return;
+        float y=Height(b),step=.4f/speed;
+        for(float t=0;t<=1.2f;t+=step)
+        {
+            float x=b.X+b.VX*t,z=b.Z+b.VZ*t;
+            int cell=_graph.Cell(x,z,y);
+            if(cell<0||!b.IsBouncy&&(!_graph.Walkable[cell]||soft.IsAlive((int)MathF.Floor(x),(int)MathF.Floor(z))))break;
+            AddSphere(soft,x,_stage.SurfaceAt(x,z,y),z,.95f,true,Math.Max(0,t-.3f),t+.2f);
+        }
+    }
+    /// <summary>Immediate impact threat along the lane a kicked bomb would roll.</summary>
+    public void AddKickLane(SoftBlockGrid soft,BlastBomb bomb,float dx,float dz)
+    {
+        float y=Height(bomb);
+        for(float along=.5f;along<=KickLaneCells;along+=.5f)
+        {
+            float x=bomb.X+dx*along,z=bomb.Z+dz*along;
+            int cell=_graph.Cell(x,z,y);
+            if(cell<0||!_graph.Walkable[cell]||soft.IsAlive((int)MathF.Floor(x),(int)MathF.Floor(z)))break;
+            AddSphere(soft,x,y,z,.95f,true,0,KickWindow);
+        }
+    }
+    private const float KickLaneCells=7,KickWindow=.8f;
     public void AddHypothetical(SoftBlockGrid soft,BlastBomb bomb,float reactionMargin)
     {AddSphere(soft,bomb.X,Height(bomb),bomb.Z,bomb.BlastRadius+.45f,bomb.IsRed,Math.Max(0,bomb.FuseTimer-reactionMargin),bomb.FuseTimer+.55f);}
+    private void AddDrift(SoftBlockGrid soft,BlastBomb b,float time)
+    {
+        float x=b.X,z=b.Z,y=Height(b),horizon=Math.Min(b.IsRemote?2:time,4),covered=0;
+        const float step=.1f;
+        for(float t=0;t<horizon;t+=step)
+        {
+            var wind=Wind!(t);
+            if(wind==Vector2.Zero)continue;
+            float nx=x+wind.X*step,nz=z+wind.Y*step;
+            int cell=_graph.Cell(nx,nz,y);
+            if(cell<0||!_graph.Walkable[cell]||Math.Abs(_graph.Height[cell]-y)>.3f||soft.IsAlive((int)MathF.Floor(nx),(int)MathF.Floor(nz)))break;
+            covered+=MathF.Abs(nx-x)+MathF.Abs(nz-z);x=nx;z=nz;
+            if(covered<.3f)continue;
+            covered=0;AddSphere(soft,x,y,z,b.BlastRadius+.45f,b.IsRed,Math.Max(0,time-.15f),b.IsRemote?4:time+.55f);
+        }
+        AddSphere(soft,x,y,z,b.BlastRadius+.45f,b.IsRed,Math.Max(0,time-.15f),b.IsRemote?4:time+.55f);
+    }
     private float Height(BlastBomb b)=>b.State==BombState.Flying?b.FlyY:b.State==BombState.Resting?b.LandingY??_stage.SurfaceAt(b.X,b.Z,b.Tier):_stage.SurfaceAt(b.X,b.Z,b.Tier);
     private void AddSphere(SoftBlockGrid soft,float x,float y,float z,float radius,bool red,float begin,float end)
     {

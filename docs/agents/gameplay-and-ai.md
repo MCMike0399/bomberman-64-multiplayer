@@ -529,6 +529,15 @@ and full-type assertions when integrating that change.
 - Exclude legitimate stun/held/airborne/kick pauses from stall diagnosis.
 - Goal commitment stabilizes travel; expire it on reaching the committed cell so the
   reward cannot keep a bot in its post-blast refuge indefinitely.
+- Agency (2026-10-26): escapes outlast the whole threat at their start cell (a
+  3.5-second Bouncing fuse outlived Easy's horizon and froze placement); steering
+  leans into visible Blizzard wind; drifting, rolling and human-kickable bombs
+  are forecast; goals have hysteresis, started steps finish, and repeated
+  reversals between two cells make both unattractive for two seconds. Rivals are
+  led by their visible velocity. An overdue CPU may fence a rival walking straight
+  at it or take an off-center shot in reach. Only visible state is used: observed
+  displacement, never another player's input. [Diagnosis, rejected attempts and
+  matched results](../cpu-agency.md); `Bomber.Ai.Tests -- --agency-checks`.
 - Stock Pyramid exposed a second optimum: geometric distance favored the lower court
   over the ramp detour into real blast range. Attack-intent scoring now rewards actual
   visible blast positions. Changing reaction delay alone does not fix that route choice.
@@ -546,6 +555,7 @@ and full-type assertions when integrating that change.
 | Missing upgrade/icon | Loot, PowerUpRules, PowerupModel | LootAvailabilityChecks; `loot-opening`, `asset-audit` |
 | Bot freeze | BotNavigation, body collision, timed search | NavigationLivenessChecks; `--liveness`, `--soak` |
 | Bot retreats forever or never threatens | BotGoalScore, commitment, blast geometry | `--pressure`, `--stock-human-pressure`, `--tactics`; `ai-play` |
+| Bot shuffles one cell back and forth, mirrors a rival, or stalls in wind | Goal hysteresis, BotNavigation reversals/steering | `--agency-checks`; `--agency --trace=stage,level,seed` |
 
 Managed entrypoints: `dotnet run --project tests/Bomber.Game.Tests` and
 `dotnet run --project tests/Bomber.Ai.Tests -- --stock-human-pressure`.

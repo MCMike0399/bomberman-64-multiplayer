@@ -42,6 +42,15 @@ update the current guide rather than silently reviving old behavior.
 
 ## Current decisions that supersede earlier experiments
 
+- v0.37 delivers CPU agency (PR #29) and exact shader early-outs (PR #30). Bots
+  no longer shuffle one cell while a player idles (an Easy escape horizon shorter
+  than the Bouncing fuse), no longer stall in Blizzard gusts (steering leans into
+  visible wind) and break lane standoffs. Rival lead, kick-lane avoidance and goal
+  hysteresis were added. [Diagnosis and matched results](../cpu-agency.md). Released
+  at the user's request; numbers are not approval of fun. Shader early-outs skip
+  only exactly-zero terms and are byte-identical on native Metal
+  ([evidence](../performance-research.md#gpu-pass-costs-and-exact-shader-early-outs-2026-10-26)).
+
 - v0.36 delivers performance PR #25 ([receipt](../verification.md#v0360-delivered)): indexed procedural meshes, cached HUD
   drawing, one snow buffer upload, packed cover bits and structured local
   messages. Presets, shaders, geometry, physics, AI and wire fields are unchanged.

@@ -5,6 +5,8 @@ using Bomber.Game.Simulation.Rules;
 using Bomber.Game.Simulation.Stages;
 using Bomber.Game.Simulation.State;
 
+if(args.Contains("--agency")){AgencyDiagnostics.Run(args);return;}
+if(args.Contains("--agency-checks")){AgencyChecks.Run();return;}
 if(args.Contains("--tactics")){ProactiveTacticsChecks.Run();return;}
 if(args.Contains("--top-rules")){TopRulesNavigationChecks.Run();return;}
 if(args.Contains("--up-and-down")){UpAndDownAiChecks.Run();return;}
@@ -57,7 +59,7 @@ if(args.Contains("--benchmark"))
     var output=args.FirstOrDefault(a=>a.StartsWith("--output="));if(output!=null)File.WriteAllText(output[9..],json+"\n");
     return;
 }
-var checks=ProactiveTacticsChecks.Run()+TopRulesNavigationChecks.Run()+UpAndDownAiChecks.Run()+FrontPlacementChecks.Run()+NavigationLivenessChecks.Run()+PressureChecks.Run(Array.Empty<string>())+StockHumanPressureChecks.Run(Array.Empty<string>());
+var checks=AgencyChecks.Run()+ProactiveTacticsChecks.Run()+TopRulesNavigationChecks.Run()+UpAndDownAiChecks.Run()+FrontPlacementChecks.Run()+NavigationLivenessChecks.Run()+PressureChecks.Run(Array.Empty<string>())+StockHumanPressureChecks.Run(Array.Empty<string>());
 void Check(bool passed,string name){if(!passed)throw new Exception(name);checks++;Console.WriteLine("PASS "+name);}
 void Fight(Fixture f){f.Step(62);}
 
