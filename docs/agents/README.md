@@ -3,7 +3,7 @@
 The user resumed gameplay work on 2026-10-23 for controller ergonomics, aiming
 and knockdown/blast separation (iteration19). The first eighteen iterations
 remain historical evidence. Iteration20 then rebuilt the walk. Recorded
-release baseline: **v0.35.1/build 42**, published with independently verified Mac
+release baseline: **v0.36.0/build 43**, published with independently verified Mac
 and server archives (see [verification](../verification.md)). Previous runtime baseline: **v0.18.0**, commit
 `316a330d7d895a92f98c1a60be7d571ec445a8a3`. Later documentation commits may follow.
 Verify the live branch, source, tools and installed version before relying on
@@ -42,7 +42,7 @@ update the current guide rather than silently reviving old behavior.
 
 ## Current decisions that supersede earlier experiments
 
-- v0.36 integrates performance PR #25: indexed procedural meshes, cached HUD
+- v0.36 delivers performance PR #25 ([receipt](../verification.md#v0360-delivered)): indexed procedural meshes, cached HUD
   drawing, one snow buffer upload, packed cover bits and structured local
   messages. Presets, shaders, geometry, physics, AI and wire fields are unchanged.
   Allocations/frame fall 40–50%; native FPS is equivalent within run-order noise,
