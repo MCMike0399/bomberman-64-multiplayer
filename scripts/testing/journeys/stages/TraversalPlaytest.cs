@@ -68,6 +68,8 @@ public partial class PlaytestDriver
         await Capture("temple-shore-actual-water-contact");
         _root.Back();await Frames(3);
 
+        await TraverseCoveredPyramidLedge();
+
         foreach(int seat in new[]{0,1,2})Input(seat,default);
         _root.StartLocal(new SessionSettings(Stage:"sunken-temple",Bots:0),3,practice:false);
         await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"three-human real match reaches fight for ghost interaction",150);
@@ -76,6 +78,17 @@ public partial class PlaytestDriver
         Input(0,new PlayerInput(0,0,A:true));await Frames(2);Input(0,default);
         await WaitState(_=>GrapplePlayer(0).GetProperty("ghost").GetBoolean(),"real fuse explosion produces a live ghost in an ordinary match",120);
         Check(GrapplePlayer(0).GetProperty("alive").GetBoolean()&&GrapplePlayer(1).GetProperty("alive").GetBoolean()&&!GrapplePlayer(1).GetProperty("ghost").GetBoolean(),"ghost death preserves the living target and active multiplayer round");
+        await GrappleWalk(0,16,4);
+        Input(0,new PlayerInput(1,0));
+        await WaitState(_=>GrapplePlayer(0).GetProperty("falling").GetBoolean(),"unlatched ghost walks off the crown using real gravity",30);
+        Input(0,default);
+        Check(GrappleValue(GrapplePlayer(0),"y")<4&&GrappleValue(GrapplePlayer(0),"y")>3,"ghost publishes an intermediate ledge-fall height");
+        Check(GrapplePlayer(0).GetProperty("latchedTo").ValueKind==JsonValueKind.Null,"falling ghost remains unlatched");
+        await Capture("ghost-ledge-falling",0);
+        await WaitState(_=>!GrapplePlayer(0).GetProperty("airborne").GetBoolean(),"ghost lands on the lower terrace",40);
+        Check(GrapplePlayer(0).GetProperty("ghost").GetBoolean()&&!GrapplePlayer(0).GetProperty("stunned").GetBoolean(),"ghost landing preserves its active movement");
+        await Capture("ghost-ledge-landed");
+        await GrappleWalk(0,12,13);
         Input(0,new PlayerInput(1,0));
         await WaitState(_=>GrapplePlayer(0).GetProperty("latchedTo").ValueKind==JsonValueKind.String,"ghost approaches and latches through real movement inputs",65);
         string host=GrapplePlayer(1).GetProperty("id").GetString()!;
@@ -92,6 +105,40 @@ public partial class PlaytestDriver
         await WaitState(_=>GrapplePlayer(0).GetProperty("latchedTo").ValueKind==JsonValueKind.Null,"ghost latch expires and restores independent controls",260);
         Check(State.GetProperty("events").EnumerateArray().Any(e=>e.GetProperty("kind").GetString()=="ghost-detach"),"finite ghost detach is recorded by the authority");
         await Capture("ghost-detached");
+        _root.Back();await Frames(3);
+    }
+
+    private async Task TraverseCoveredPyramidLedge()
+    {
+        _root.StartLocal(new SessionSettings(Stage:"sunken-temple",Bots:0),3,practice:false);
+        await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"stock covered Pyramid reaches fight",150);
+        var layout=BlastStages.Get(BlastStages.SunkenTemple);
+        var soft=Convert.FromBase64String(State.GetProperty("softBlocks").GetString()!);
+        bool Covered(int x,int z)=>(soft[(z*layout.Width+x)/8]&(1<<((z*layout.Width+x)%8)))!=0;
+        var start=((int)GrappleValue(GrapplePlayer(0),"x"),(int)GrappleValue(GrapplePlayer(0),"z"));
+        var reached=new HashSet<(int X,int Z)>{start};var queue=new Queue<(int X,int Z)>();queue.Enqueue(start);
+        while(queue.TryDequeue(out var cell))
+        foreach(var (dx,dz) in new[]{(1,0),(-1,0),(0,1),(0,-1)})
+        {
+            var next=(X:cell.X+dx,Z:cell.Z+dz);
+            if(reached.Contains(next)||!layout.CanCross(cell.X,cell.Z,next.X,next.Z)||Covered(next.X,next.Z))continue;
+            reached.Add(next);queue.Enqueue(next);
+        }
+        var exits=(from z in Enumerable.Range(15,11) from x in new[]{4,20}
+            let direction=x==4?1:-1
+            where reached.Contains((x,z))&&Covered(x+direction,z)
+            select (X:x,Z:z,Direction:direction)).ToArray();
+        Check(exits.Length>0,"ordinary Pyramid has a reachable side ledge above stock lower-court cover");
+        var exit=exits[0];await GrappleWalk(0,exit.X,exit.Z);
+        await Capture("pyramid-covered-ledge-before");
+        Input(0,new PlayerInput(exit.Direction,0));
+        await WaitState(_=>GrapplePlayer(0).GetProperty("falling").GetBoolean(),"stock lower-court crate permits departure from the higher ledge",30);
+        Input(0,default);
+        await Capture("pyramid-covered-ledge-falling",0);
+        await WaitState(_=>!GrapplePlayer(0).GetProperty("airborne").GetBoolean(),"Pyramid drop lands on stock cover",40);
+        Check(Math.Abs(GrappleValue(GrapplePlayer(0),"y")-layout.SoftBlockHeight)<.001f,"player's feet rest on the visible crate top");
+        Check(!GrapplePlayer(0).GetProperty("stunned").GetBoolean(),"ordinary crate landing keeps controls active");
+        await Capture("pyramid-covered-ledge-landed");
         _root.Back();await Frames(3);
     }
 

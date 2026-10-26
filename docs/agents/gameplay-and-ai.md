@@ -253,6 +253,15 @@ and the input guide; older iteration tables are historical.
   Recovery consumes its action edges even on the get-up tick.
 - Ghost latching is finite, follows its victim and supports shake-off reversals.
   Keep ghost nuisance/expiry authoritative; ghost contact can destroy a pickup.
+  Unlatched ghosts use ordinary gravity, air correction and unstunned landings
+  when leaving dry ledges; they cannot latch during the fall. Their water/void
+  boundary remains solid, including while airborne.
+- Breakable cover blocks only bodies intersecting its actual vertical span.
+  A lower crate must not become an infinite wall at an upper ledge. Players and
+  ghosts can fall onto its physical top, walk across it and fall off again;
+  same-height/taller crate sides remain solid. Use accepted foot height and the
+  stage's cover height, never rounded player tiers, for this collision. Cover
+  on a suspended upper deck does not block the lower passage.
 - `StageLayout.AtHeight`/`SurfaceAt(x,z,y)` select bridge versus underpass from
   the entity's actual elevation. Navigation uses separate nodes for overlapping
   floors. `CellDef.Below` is stage-owned geometry, serialized in complete stage
@@ -305,9 +314,10 @@ upper slabs with a second tier-zero floor beneath. `SurfaceAt`/`CanCross`/`CanWa
 accept a support ceiling; use the actor's preceding accepted height for movement
 and flight. The default remains the topmost support for map authoring/spawns.
 Do not replace bridge cells with full-height cliffs or snap lower actors upward.
-Keep crate collision during ledge departure: filtering crates only by the
-player's rounded height let a falling temple CPU enter a crate. The focused
-`Bomber.Ai.Tests -- --soak --terrain-regression` retains Hard/seven CPUs/seed 64.
+Keep crate side collision and top support during ledge departure: filtering
+crates only by the player's rounded height let a falling temple CPU enter a
+crate. The focused `Bomber.Ai.Tests -- --soak --terrain-regression` retains
+Hard/seven CPUs/seed 64.
 
 Castle wall cells publish an optional `ObstacleHeight`; their visible crowns,
 throw collision and blast blocking agree. Null preserves existing pillar rules.
