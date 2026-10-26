@@ -238,7 +238,7 @@ snowfield (Blizzard Battle), boats on Greedy Trap's reservoir and a training
 harbor (Circuit Garden). Small animations (boats riding the real water, gulls,
 flags, flames, sails, beams, butterflies, penguins) run from
 `TempleStageView._Process`. Scenery has no collision and never enters a passable
-cell's standing volume. The menu miniature hides it. Top Rules keeps its dark
+cell's standing volume. Menu miniatures skip it. Top Rules keeps its dark
 backdrop; its emissive stars and flames disable fog. [References, composition
 and rules](../stage-scenery.md).
 

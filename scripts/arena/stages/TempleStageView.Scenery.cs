@@ -18,11 +18,14 @@ public partial class TempleStageView
     private static readonly Dictionary<string,Mesh> SceneryMeshes=[];
     private float _sceneryClock;
     public Node3D? Scenery=>_scenery;
+    /// <summary>Menu miniatures skip scenery: it would be trimmed anyway and costs build time.</summary>
+    public bool IncludeScenery {get;init;}=true;
     /// <summary>Animated props: boats, birds, flags, flames, beams and blades.</summary>
     public int SceneryMotionCount=>_sceneryMotion.Count;
 
     private void BuildScenery()
     {
+        if(!IncludeScenery)return;
         Action? build=Layout.Id switch
         {
             BlastStages.SunkenTemple=>BuildSunkenTempleExterior,

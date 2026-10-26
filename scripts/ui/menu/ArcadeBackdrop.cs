@@ -204,7 +204,7 @@ public partial class ArcadeBackdrop : RenderSurface
         }
         var data=JsonSerializer.SerializeToElement(new {id=layout.Id,width=layout.Width,height=layout.Height,coverHeight=layout.SoftBlockHeight,cells,underpasses=layout.Underpasses.Select(c=>c.Z*layout.Width+c.X).Order().ToArray()});
         float scale=8.1f/Math.Max(layout.Width,layout.Height);
-        var miniature=new TempleStageView(new ArtMaterials()) {Scale=Vector3.One*scale,Position=new(-layout.Width*scale/2,0,-layout.Height*scale/2)};
+        var miniature=new TempleStageView(new ArtMaterials()) {IncludeScenery=false,Scale=Vector3.One*scale,Position=new(-layout.Width*scale/2,0,-layout.Height*scale/2)};
         _arenaMount.AddChild(miniature);miniature.Build(data);
         if(id==BlastStages.BlizzardBattle)
             for(int z=1;z<layout.Height-1;z++)for(int x=1;x<layout.Width-1;x++)
@@ -212,7 +212,7 @@ public partial class ArcadeBackdrop : RenderSurface
         // Keep the authority terrain/materials, while trimming exterior scenery to the display plinth.
         foreach(var child in miniature.GetChildren())
         {
-            if(child is Node3D scenery&&(child.Name=="GreedyExterior"||child.Name==TempleStageView.SceneryNodeName)){scenery.Visible=false;continue;}
+            if(child is Node3D scenery&&child.Name=="GreedyExterior"){scenery.Visible=false;continue;}
             // The trimmed display plinth has no open sea, so it needs no seabed.
             if(child is MeshInstance3D seabed&&seabed.Name=="Seabed")seabed.Visible=false;
             if(child is MeshInstance3D {Mesh:PlaneMesh plane} water){plane.Size=new(layout.Width+.8f,layout.Height+.8f);water.Position=new(layout.Width/2f,-.53f,layout.Height/2f);}

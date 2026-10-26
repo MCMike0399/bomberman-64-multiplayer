@@ -461,7 +461,7 @@ arenas. It checks signature props, the absence of collision, asset-audit geometr
 rules, and that mesh bounds stay out of every passable cell's floor-to-2.1
 standing column, before and after animation. It also checks that animated nodes
 move, that a real timed flood lifts the sailboat with the rendered water, and that
-every setup miniature hides the scenery. Graphical runs add Midday/Night battle
+every setup miniature skips the scenery. Graphical runs add Midday/Night battle
 captures and a labelled establishing view per arena. `scenery-regression` pairs
 it with startup, asset, graphics, lighting, setup, menu-preview, framing and the
 five stage journeys. [Stage scenery](../stage-scenery.md).

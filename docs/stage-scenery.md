@@ -63,8 +63,9 @@ every time of day, while the crag and turrets still take the lighting profile.
 - **Authored for the real layout.** Props are placed around each arena's real
   dimensions. A packet whose size differs from the authored stage, such as the
   asset audit's reduced Up & Down packet, receives no scenery.
-- **Menu miniature.** `ArcadeBackdrop` hides `StageScenery`, exactly as it hides
-  `GreedyExterior`, so each setup plinth stays a clean miniature.
+- **Menu miniature.** `ArcadeBackdrop` builds its cached miniatures with
+  `IncludeScenery=false`, so each setup plinth stays clean and preview
+  preparation pays no scenery build cost.
 - **Cost.** Small props use a low-poly bead mesh. Shared meshes and materials are
   cached. Depth of field and haze keep scenery soft on Medium/High; on Low the
   same geometry renders without blur.
@@ -87,7 +88,7 @@ focused `scenery-regression` suite) checks every arena. For each one it verifies
 
 It also runs a real timed Sunken Temple flood and checks that the sailboat rises with the
 rendered water. It then steps the setup arena selector and checks that every
-miniature hides its scenery. Graphical runs capture the ordinary battle camera
+miniature skips its scenery. Graphical runs capture the ordinary battle camera
 at Midday and Night, plus a labelled establishing inspection view per arena.
 Images, not numeric checks, decide whether the scenery has charm. Agent review is
 not user approval.

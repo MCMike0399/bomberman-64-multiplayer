@@ -156,8 +156,8 @@ public partial class PlaytestDriver
         for(int i=0;i<10&&seen.Add(menu.Settings.Stage);i++)
         {
             await Frames(4);
-            var miniature=AuditDescendants(_root).OfType<TempleStageView>().Single(t=>t.GetParent().Name=="ArenaDiorama");
-            Check(miniature.Scenery==null||!miniature.Scenery.IsVisibleInTree(),"menu miniature hides arena scenery: "+menu.Settings.Stage);
+            var miniature=AuditDescendants(_root).OfType<TempleStageView>().Single(t=>t.GetParent().Name=="ArenaDiorama"&&t.IsVisibleInTree());
+            Check(miniature.Scenery==null,"menu miniature skips arena scenery: "+menu.Settings.Stage);
             await KeyPress(Key.Right);
         }
         Check(seen.Count>=6,"menu miniature check visited every selectable arena: "+string.Join(',',seen));
