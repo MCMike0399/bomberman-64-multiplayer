@@ -977,6 +977,18 @@
       "headless": true,
       "timeout": 120,
       "manual": false
+    },
+    {
+      "id": "readme-gallery",
+      "method": "ReadmeGallery",
+      "domains": [
+        "rendering",
+        "ui",
+        "gameplay"
+      ],
+      "headless": false,
+      "timeout": 360,
+      "manual": false
     }
   ]
 }

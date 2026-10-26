@@ -195,6 +195,14 @@ Bundling SDL/libusb does not by itself prove a fresh physical-controller test.
 
 ## Record evidence and state its limits
 
+For README/gallery refreshes, use the explicit `readme-gallery` journey with
+`--desktop shared --build --timeout 360` on the native Mac Metal renderer when
+high-resolution hardware captures are requested. It selects High through the UI
+and renders 3840×2400 in a borderless window, avoiding Cocoa's decorated-window
+height limit. Review actual PNG dimensions and every selected image; retain old
+media for historical links. [Capture recipe and provenance](../screenshots.md).
+Routine graphical correctness checks still default to the isolated desktop.
+
 ```sh
 python3 tools/playtest/run.py --scenario walk-feel --record --ffmpeg /path/to/ffmpeg
 python3 tools/playtest/run.py --app "$HOME/Applications/Blast Circuit.app" --scenario reticle
