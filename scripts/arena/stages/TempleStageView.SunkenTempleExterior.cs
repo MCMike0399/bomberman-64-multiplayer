@@ -60,10 +60,9 @@ public partial class TempleStageView
         for(int vine=0;vine<4;vine++)Box(gate,new(-.75f+vine*.48f,1.65f-vine%2*.2f,.32f),new(.07f,.75f+vine%2*.3f,.05f),moss);
         Box(gate,new(-1.7f,-.15f,.4f),new(.7f,.5f,.6f),weathered,.06f).Rotation=new(.2f,.4f,.15f);
 
-        // Low rocks near the front stay below the pyramid's sightlines.
-        Rock(scenery,new(-2.1f,sea-.25f,Depth+.4f),new(1,.6f,.9f),rock,3,.2f);
-        Rock(scenery,new(Width+2.2f,sea-.25f,Depth-.6f),new(.8f,.55f,.8f),rock,0,2.1f);
-        Rock(scenery,new(Width+2.9f,sea-.25f,Depth+.3f),new(.5f,.4f,.5f),rock,2,.8f);
+        // Low rocks beside the walkways; the front stays clear of the HUD footer.
+        Rock(scenery,new(-2.4f,sea-.25f,Depth-6),new(.9f,.6f,.8f),rock,3,.2f);
+        Rock(scenery,new(Width+2.3f,sea-.25f,Depth-8),new(.8f,.55f,.8f),rock,0,2.1f);
 
         Sailboat(scenery,new(Width+5.6f,sea,8.5f),.35f,new("2f7fb8"),new("f7f1e3"),0);
         Rowboat(scenery,new(-4.6f,sea,19),-.5f,new("d0603f"),1.3f);
@@ -76,6 +75,6 @@ public partial class TempleStageView
         Hill(scenery,new(Width*.22f,-1.2f,-26),new(22,4.2f,9),new("d7c48f"));
         Hill(scenery,new(Width*.22f,-.6f,-26.5f),new(16,7,7),new("5f8f55"));
         Hill(scenery,new(Width*.95f,-.6f,-34),new(24,9,9),new("6b9a63"));
-        Hill(scenery,new(-20,-.8f,-14),new(10,5,16),new("6b9a63"));
+        for(int i=0;i<4;i++)PalmTree(scenery,new(Width*.22f-4.5f+i*3.1f,1.6f+(i%2)*.5f,-25+(i%2)*1.2f),2.8f,i%2==0?.25f:-.25f,i*1.3f,i);
     }
 }

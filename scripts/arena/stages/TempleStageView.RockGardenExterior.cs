@@ -40,9 +40,9 @@ public partial class TempleStageView
             Box(bridge,new(side*.55f,.62f,0),new(.06f,.06f,2.2f),rail,.01f);
         }
 
-        Windmill(scenery,new(-5.2f,ground,-6.4f),.35f);
+        Windmill(scenery,new(-4.8f,ground,1.6f),.55f);
         RoundTree(scenery,new(-3.2f,ground,-1.4f),1.25f,new("5b9a4b"),.3f);
-        RoundTree(scenery,new(-4.4f,ground,4.5f),1.05f,new("6aa457"),1.9f);
+        RoundTree(scenery,new(-4.4f,ground,6.2f),1.05f,new("6aa457"),1.9f);
         RoundTree(scenery,new(-3.4f,ground,11.5f),1.2f,new("4f8f46"),3.3f);
         RoundTree(scenery,new(Width+3.3f,ground,-1.8f),1.35f,new("4f8f46"),.9f);
         RoundTree(scenery,new(Width+4.3f,ground,6.5f),1.1f,new("6aa457"),2.6f);
@@ -70,21 +70,18 @@ public partial class TempleStageView
         FlowerBed(scenery,new(-1.75f,ground,13),.7f,10,9);
         FlowerBed(scenery,new(Width+1.75f,ground,4),.7f,10,11);
         FlowerBed(scenery,new(Width+1.75f,ground,11.5f),.75f,11,13);
-        FlowerBed(scenery,new(Width*.3f,ground,Depth+1.6f),.8f,12,17);
-        FlowerBed(scenery,new(Width*.7f,ground,Depth+1.6f),.8f,12,19);
         foreach(float z in new[]{2.2f,8.8f,16.4f})
         {
             Bush(scenery,new(-1.5f,ground,z),.9f,new("4c8a42"));
             Bush(scenery,new(Width+1.5f,ground,z+.5f),.9f,new("4c8a42"));
         }
-        foreach(float x in new[]{3.5f,9.5f,15.5f})Bush(scenery,new(x,ground,Depth+1.3f),.8f,new("558f47"));
         Rock(scenery,new(-2.6f,ground,8.2f),new(.8f,.6f,.7f),pebble,3,.6f);
         Rock(scenery,new(Width+2.5f,ground,9.6f),new(.7f,.55f,.7f),pebble,1,2.2f);
 
         Butterfly(scenery,new(-1.75f,ground,5.5f),.9f,new("ffd34d"),0);
         Butterfly(scenery,new(Width+1.75f,ground,11.5f),.8f,new("f58fb4"),2.1f);
-        Butterfly(scenery,new(Width*.3f,ground,Depth+1.6f),1,new("8fd0ff"),4.2f);
-        Butterfly(scenery,new(Width*.7f,ground,Depth+1.6f),.9f,new("ffffff"),1.2f);
+        Butterfly(scenery,new(-1.75f,ground,13),.8f,new("8fd0ff"),4.2f);
+        Butterfly(scenery,new(Width+1.75f,ground,4),.9f,new("ffffff"),1.2f);
 
         // Soft rolling hills fill the horizon instead of an endless flat lawn.
         Hill(scenery,new(Width/2f,-1.5f,-24),new(46,9,14),new("6f9f58"));

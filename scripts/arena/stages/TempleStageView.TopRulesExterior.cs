@@ -26,11 +26,11 @@ public partial class TempleStageView
         // so the near wall stays low and the lower court remains visible.
         foreach(var (x,z,rear) in new[]{(-.45f,-.45f,true),(Width+.45f,-.45f,true),(-.45f,Depth+.45f,false),(Width+.45f,Depth+.45f,false)})
         {
-            float height=rear?6.9f:3.15f;
+            float height=rear?6.9f:3.15f,radius=rear?.92f:.7f;
             var turret=Prop(scenery,"Turret",new(x,-.94f,z));
-            Cylinder(turret,new(0,height/2,0),.92f,height,stone);
-            Cylinder(turret,new(0,height-.05f,0),1.04f,.14f,cap);
-            for(int band=1;band<=(rear?3:1);band++)Cylinder(turret,new(0,band*1.7f,0),.95f,.08f,gold);
+            Cylinder(turret,new(0,height/2,0),radius,height,stone);
+            Cylinder(turret,new(0,height-.05f,0),radius+.12f,.14f,cap);
+            for(int band=1;band<=(rear?3:1);band++)Cylinder(turret,new(0,band*1.7f,0),radius+.03f,.08f,gold);
             if(rear)
             {
                 for(int merlon=0;merlon<8;merlon++)
@@ -43,7 +43,7 @@ public partial class TempleStageView
             }
             else
             {
-                Cone(turret,new(0,height+.6f,0),1.12f,1.2f,slate,16);
+                Cone(turret,new(0,height+.6f,0),radius+.16f,1.2f,slate,16);
                 Pennant(turret,new(0,height+1.15f,0),.9f,new("c2263a"),x*.7f+z);
             }
         }

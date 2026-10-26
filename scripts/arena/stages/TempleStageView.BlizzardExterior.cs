@@ -24,6 +24,8 @@ public partial class TempleStageView
                 float z=Mathf.Lerp(z0,z1,(float)random.NextDouble());
                 if(x0<0&&x1<0)(x,z)=(Mathf.Lerp(x0,x1,(float)random.NextDouble()),Mathf.Lerp(z0,z1,(i+.5f)/count));
                 if(x0>Width)(x,z)=(Mathf.Lerp(x0,x1,(float)random.NextDouble()),Mathf.Lerp(z0,z1,(i+.5f)/count));
+                // Keep the pond and igloo clear of trees.
+                if(new Vector2(x-(Width+3.2f),z-9.5f).Length()<3.3f||new Vector2(x-(Width+3.4f),z+1.2f).Length()<2.4f)continue;
                 PineTree(scenery,new(x,ground,z),.95f+(float)random.NextDouble()*.75f,true,i*1.7f);
             }
 

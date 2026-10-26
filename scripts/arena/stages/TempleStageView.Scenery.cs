@@ -355,7 +355,7 @@ public partial class TempleStageView
         Sphere(root,new(0,height+1.2f,0),Vector3.One*.14f,dark);
         Box(root,new(0,.4f,.6f),new(.32f,.6f,.1f),_art.Color(new("4a3628"),.7f),.04f);
         var beam=new Node3D{Name="LighthouseBeam",Position=new(0,height+.4f,0)};root.AddChild(beam);
-        var light=Glow(new("fff3c4"),1.1f,.22f);
+        var light=Glow(new("fff3c4"),1.3f,.3f);
         foreach(int side in new[]{-1,1})
         {
             var ray=Taper(beam,new(side*3.3f,0,0),.12f,.55f,6.2f,light,12);

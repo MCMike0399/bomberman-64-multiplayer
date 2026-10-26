@@ -34,9 +34,10 @@ public partial class TempleStageView
             var stack=Prop(scenery,"SeaStack",at,variant*1.3f);
             Taper(stack,new(0,height/2-1,0),width*.42f,width*.32f,height+2,variant%2==0?cliff:cliffDark,7);
             Rock(stack,new(.2f,-.3f,.3f),new(width*.9f,1.1f,width*.8f),cliffDark,variant,.8f);
-            Taper(stack,new(0,height-.92f,0),width*.36f,width*.38f,.18f,grass,7);
-            Sphere(stack,new(0,height-.82f,0),new(width*.7f,.3f,width*.7f),grass);
-            if(tree)RoundTree(stack,new(.1f,height-.75f,0),.7f,new("5b9a4b"),variant);
+            // The column top is at `height`; the turf crown sits on it.
+            Taper(stack,new(0,height+.02f,0),width*.33f,width*.36f,.1f,grass,7);
+            Sphere(stack,new(0,height+.06f,0),new(width*.68f,.28f,width*.68f),grass);
+            if(tree)RoundTree(stack,new(.1f,height+.1f,0),.7f,new("5b9a4b"),variant);
         }
         Stack(new(Width+3.6f,sea,-1.5f),5.2f,2.4f,0,true);
         Stack(new(Width+6.2f,sea,1.4f),3.2f,1.8f,1,false);
