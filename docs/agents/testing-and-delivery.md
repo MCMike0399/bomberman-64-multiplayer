@@ -90,6 +90,9 @@ fails the run; it never takes over the developer's desktop as a fallback.
 Use a 1920×1200 guest display for the complete suite: `graphics-settings` needs
 room for its actual 1600×1000 native test window. The v0.35 full Metal run used
 this size without weakening window, focus or startup checks.
+Each QA process uses its own GUID-named `qa-preferences-*.cfg`. Never key it by
+PID: a rebooted guest reuses PIDs, and a killed run leaves its file behind, so a
+new process silently inherits old display/volume choices (observed 2026-10-26).
 
 Assign one owner per test desktop/VM and one owner for shared builds. Explicit
 `--desktop shared` is for a desktop available for testing or physical-device

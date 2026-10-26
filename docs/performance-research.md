@@ -138,5 +138,48 @@ The legacy benchmark forces text materialization inside its timed `Tick()`.
 The local benchmark measures input, authority, delivery and retained state,
 with hashing excluded. Do not compare those different scopes as if they were
 interchangeable. Preserve both failing and passing evidence and use matching
-build/runtime/power conditions. Final regression receipts are recorded with the
-PR after the public, managed, headless and complete exported graphical gates.
+build/runtime/power conditions.
+
+## v0.36 integration re-check (2026-10-26)
+
+PR #25 was merged with main through v0.35.1, which added arena scenery and the
+saved-High startup fix, then given the v0.36.0/build 43 identity. All gates
+were rerun on that exact tree:
+
+- Public, managed and headless profiles passed (2,880 game, 354 client, 81 AI
+  and 72 soak checks plus release admission, network, relay and fleet steps).
+  Package passed, and so did hosted PR Verification.
+- The rebuilt export passed the complete **57-journey Metal Forward+ suite in
+  the isolated VM: 5,002 assertions, 496 captures, zero runtime errors**. The
+  only warning was the known SCTP stream reset during peer teardown.
+- Every capture was pixel-compared with the same-named v0.35.0 suite capture.
+  113 are identical; the character model profiles and the eight-player Blizzard
+  match are identical apart from randomized pickups and explosion particles.
+  Other differences come from time-animated water/scenery, network timing and
+  server-chosen online lighting. Agent review is not user approval of the art.
+
+The first two graphical attempts failed in `display-settings`: the process had
+loaded a stale `qa-preferences-<pid>.cfg` (75% volume, windowed) left by a
+killed earlier run, because a rebooted guest reuses PIDs. The guest contained 23
+such files. Default QA processes now use a random GUID path. The rerun passed
+with that stale file still present; this was a harness defect, not a PR change.
+
+A matched native pair used the same tree with only the PR's product files
+reverted (both .NET 10.0.12, 3024×1964 High, all six arenas, AC power, VM stopped).
+Runs were ordered baseline, candidate, candidate, baseline:
+
+| Arena | Baseline FPS (run 1 / 4) | Candidate FPS (run 2 / 3) | Allocations/frame baseline → candidate |
+| --- | ---: | ---: | ---: |
+| Sunken Temple | 56.5 / 56.3 | 50.8 / 54.7 | 60 → 34–36 KiB |
+| Rock Garden | 75.9 / 70.0 | 70.0 / 75.9 | 38–41 → 20–21 KiB |
+| Up & Down | 56.9 / 50.8 | 49.9 / 56.7 | 50–55 → 25–28 KiB |
+| Top Rules | 79.7 / 72.1 | 73.9 / 81.6 | 41–45 → 22–24 KiB |
+| Blizzard Battle | 75.2 / 66.7 | 70.1 / 74.7 | 37–41 → 19–20 KiB |
+| Greedy Trap | 67.1 / 54.2 | 61.6 / 68.0 | 46–56 → 24–26 KiB |
+
+The second consecutive run is slower for either build, so the order effect
+(sustained load) is larger than any code difference. At matching positions,
+frame rate is equivalent within that noise; allocations are consistently
+40–50% lower. Menu FPS was bimodal (about 123 or 150) for both builds in four
+further alternating runs. Stable 120 FPS remains unachieved. Spotlight indexing
+was active during the first pair. Receipts are under ignored `artifacts/release-036/`.
