@@ -7,7 +7,7 @@ server assemblies embed these values. `X-Blast-Protocol` is the exact token
 release tokens, even when the schema revision stays the same. Increase the schema
 revision for incompatible peer messages as well. Local play is unaffected.
 
-**v0.33.0/build 39/schema 6** is delivered. The [delivery receipt](verification.md#v0330-delivered)
+**v0.34.0/build 40/schema 6** is delivered. The [delivery receipt](verification.md#v0340-delivered)
 records the exact CI artifacts, production rollout and signed update. Earlier clients advertise numeric `3`, `4` or branch-specific stage tokens and are rejected by the
 new server before identity creation, queue/room admission or WebSocket upgrade.
 Authenticated leave/cancel and operator endpoints preserve their existing policy.
@@ -21,7 +21,7 @@ and waits for rooms before replacing a process.
    a live deployment runner or fresh autoscaler heartbeat, explicit worker placement and persistent state.
    Presence is not proof that a key matches, a host is reachable or runner
    isolation is correct; the protected workflow and operator drill establish those.
-2. Prepare a new identity with `python3 tools/ci/release.py prepare 0.34.0`
+2. Prepare a new identity with `python3 tools/ci/release.py prepare 0.35.0`
    (use the intended next version). It increases the build and synchronizes
    exports. Add `--protocol N` for an incompatible schema. The preparation
    command rejects local downgrades; promotion independently compares published

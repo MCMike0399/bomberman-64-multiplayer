@@ -163,6 +163,11 @@ rejects synchronous pipeline creation during selection. Inspect its actual
 miniature captures alongside the timing/pipeline trace. `setup` also checks
 miniature bounds and starts ordinary gameplay after preview selection.
 
+Arena geometry assertions must inspect the active `ArenaView`, rather than
+counting across the composition root: cached menu miniatures retain hidden
+copies of stage geometry. The complete headless sequence retains the Rock
+Garden regression, where root-wide column counts included both scenes.
+
 Native popups have distinct window IDs; use the existing popup helpers and
 canvas-to-screen mouse transforms. Preserve ordinary input/hit testing rather
 than calling menu callbacks or forcing focus flags to obtain a green receipt.
@@ -181,6 +186,9 @@ reference. Server artifact creation is separate from deploying a service.
 
 For authorized server updates, follow the [shared-server guide](../online-server.md).
 It owns deployment and completion checks for the service used by all players.
+When a test host also runs a maintained worker, coordinate heavy QA/build work
+through protected publication: pressure admission must qualify naturally for
+the real fleet probes. Preserve admission policy and measured resource caps.
 The [historical party guide](../online-party.md) applies only to an explicit
 same-Wi-Fi party or relay task.
 
