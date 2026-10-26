@@ -85,6 +85,13 @@ dotnet run --project tests/Bomber.Update.Tests -- \
   artifacts/update-integration-fresh
 ```
 
+The optional fourth argument `--high-fullscreen` adds an actual update whose new
+process loads saved High graphics and fullscreen before menu layout. This mode
+refuses a physical Mac because it temporarily changes the isolated guest's
+preferences. The ordinary successful-install and deliberate failed-launch
+rollback cases remain included. Run it in the owned macOS QA VM with local guest
+bundles; do not mount personal preferences into the guest.
+
 The integration suite requires a newer export than the installed baseline and
 owns the graphical desktop during its windowed trials. It installs only into
 its fresh output directory, validates the resulting live process, closes only

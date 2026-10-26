@@ -5,6 +5,7 @@ using BlastCircuit.App;
 using BlastCircuit.Arena;
 using BlastCircuit.Rendering;
 using BlastCircuit.UI;
+using BlastCircuit.UI.Menu;
 using BlastCircuit.Arena.Stages;
 namespace BlastCircuit.Testing;
 
@@ -125,6 +126,40 @@ public partial class PlaytestDriver
             else since=null;
         }
         Check(since.HasValue&&wall.Elapsed.TotalSeconds-since>=.5,"product applies stable window resolution: "+size);
+    }
+
+    private async Task RenderSurfaceStartup()
+    {
+        Check(!_headless,"menu surface startup requires the real renderer");
+        var quality=_root.Preferences.Graphics;
+        await SelectGraphics(GraphicsPreset.High);
+        var backdrop=new ArcadeBackdrop {Name="StartupLayoutProbe",Size=Vector2.Zero,ProcessMode=ProcessModeEnum.Disabled};
+        _root.AddChild(backdrop);
+        try
+        {
+            var viewport=backdrop.GetChildren().OfType<SubViewport>().Single();
+            var authored=new Vector2I(1440,900);
+            Event("pending-layout-render",new {size=viewport.Size.ToString()});
+            // Startup preparation can draw before the parent Control is laid out.
+            // Exercise High's real contact shading and water in that exact state.
+            await backdrop.PrepareArenas(new[]{"up-and-down"});
+            Check(viewport.Size==authored,"an unlaid-out menu preserves its authored render target");
+            backdrop.Size=Vector2.One;backdrop._Process(0);
+            Check(viewport.Size==authored,"a transient one-pixel layout preserves a valid render target");
+            var transform=backdrop.GetViewport().GetScreenTransform()*backdrop.GetGlobalTransformWithCanvas();
+            backdrop.Size=new(32/transform.X.Length(),32/transform.Y.Length());backdrop._Process(0);
+            await backdrop.PrepareArenas(new[]{"up-and-down"});
+            using(var smallest=viewport.GetTexture().GetImage())
+                Check(smallest.GetWidth()==32&&smallest.GetHeight()==32,"the smallest accepted target renders High contact shading safely");
+            backdrop.Size=new(640,400);backdrop._Process(0);
+            var pixels=backdrop.Size*new Vector2(transform.X.Length(),transform.Y.Length());
+            Check(viewport.Size==new Vector2I(Mathf.RoundToInt(pixels.X),Mathf.RoundToInt(pixels.Y)),"settled menu layout resumes output-pixel sizing");
+            await backdrop.PrepareArenas(new[]{"up-and-down","blizzard-battle"});
+            using var image=viewport.GetTexture().GetImage();
+            Check(!image.IsEmpty()&&image.GetWidth()==viewport.Size.X&&image.GetHeight()==viewport.Size.Y,"the settled menu renders its real water and ice miniatures");
+            await Capture("render-surface-layout-settled");
+        }
+        finally {_root.RemoveChild(backdrop);backdrop.QueueFree();await SelectGraphics(quality);}
     }
 
     private async Task GraphicsSettings()

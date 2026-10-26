@@ -548,6 +548,15 @@ that environmental interruption.
 
 [Stage contract and commands](../blizzard-battle.md#verification-entrypoints). The `blizzard-battle` native leaf belongs to `all`, `core-headless` and `stage-fidelity`; `blizzard-regression` adds all-stage graphics, lighting, setup, framing, assets and network checks. Managed fixtures cover actual drift/fuses, future-wind flight prediction, cone budgets and avalanche reset; peer validation rejects malformed weather, and a real server room verifies advancing weather over WebSocket. The AI soak expands to sixty cases for five battle arenas. Keep actual image inspection separate from headless assertions. Full `graphics-settings` needs a guest display larger than its 1600×1000 test window; the Blizzard regression passed on a 1920×1200 guest. `SetupMenus` configures its own initial default settings so earlier arena tours cannot change its fixture precondition.
 
+## Saved-High startup regression
+
+`render-surface-startup` forces an unlaid-out real menu viewport while High is
+active, then renders its previews before layout, at the minimum valid target
+and at ordinary output size. The unfixed code reproduces the native invalid
+mipmap error and process crash; settled-preset sweeps do not cover this ordering.
+It belongs to `all` and `menu-ux`. Pair it with the actual updater fixture's
+VM-only `--high-fullscreen` option for release-to-release launch verification.
+
 ## Display settings verification
 
 `display-settings` is graphical-only and belongs to `all` and `menu-ux`. It checks

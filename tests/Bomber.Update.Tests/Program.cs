@@ -4,7 +4,11 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using Bomber.Client.Updates;
 
-if(!OperatingSystem.IsMacOS()||args.Length!=3)throw new ArgumentException("Run on macOS: <new app> <previous app> <fresh output directory>");
+if(!OperatingSystem.IsMacOS()||args.Length is <3 or >4)throw new ArgumentException("Run on macOS: <new app> <previous app> <fresh output directory> [--high-fullscreen]");
+bool highFullscreen=args.Length==4&&args[3]=="--high-fullscreen";
+if(args.Length==4&&!highFullscreen)throw new ArgumentException("Unknown fixture option.");
+if(highFullscreen&&!(await Tool("/usr/sbin/sysctl","-n","hw.model")).Trim().StartsWith("VirtualMac",StringComparison.Ordinal))
+    throw new InvalidOperationException("The saved High/fullscreen fixture requires an isolated macOS VM; it changes guest preferences.");
 string source=Path.GetFullPath(args[0]),previous=Path.GetFullPath(args[1]),output=Path.GetFullPath(args[2]);
 if(Directory.Exists(output))throw new IOException("Use a fresh output directory.");Directory.CreateDirectory(output);
 string version=await MacUpdateInstaller.PlistValue(source,"CFBundleShortVersionString");
@@ -26,10 +30,11 @@ try
 finally{if(Directory.Exists(badRoot))Directory.Delete(badRoot,true);}
 await RunCase("successful-install",goodArchive,true);
 await RunCase("failed-launch-rollback",badArchive,false);
+if(highFullscreen)await RunCase("successful-install-high-fullscreen",goodArchive,true,highStartup:true);
 File.WriteAllText(Path.Combine(output,"summary.json"),JsonSerializer.Serialize(new{passed=true,cases=results},new JsonSerializerOptions{WriteIndented=true}));
 Console.WriteLine("PASS actual macOS updater: signed feed/download, running-app handoff, verified new launch and failed-launch rollback");
 
-async Task RunCase(string name,string archive,bool success)
+async Task RunCase(string name,string archive,bool success,bool highStartup=false)
 {
     string folder=Path.Combine(output,name),installRoot=Path.Combine(folder,"Installed"),target=Path.Combine(installRoot,"Blast Circuit.app"),history=Path.Combine(folder,"History");
     Directory.CreateDirectory(installRoot);
@@ -43,6 +48,7 @@ async Task RunCase(string name,string archive,bool success)
     byte[] feed=JsonSerializer.SerializeToUtf8Bytes(new{draft=false,prerelease=false,tag_name="v"+version,assets=new[]{Asset(UpdateRelease.ArchiveName),Asset(UpdateRelease.ManifestName),Asset(UpdateRelease.ManifestName+".sig")}});
     using var service=new UpdateService(new FixtureHttp(new(){[UpdateRelease.Feed.AbsoluteUri]=feed,[Base(UpdateRelease.ArchiveName)]=archiveBytes,[Base(UpdateRelease.ManifestName)]=manifest,[Base(UpdateRelease.ManifestName+".sig")]=signature}),Convert.ToBase64String(key.ExportSubjectPublicKeyInfo()));
     using var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(100));
+    string? preferences=null;byte[]? savedPreferences=null;
     try
     {
         var release=await service.Check(oldVersion,timeout.Token)??throw new Exception("Missing fixture release");
@@ -51,9 +57,22 @@ async Task RunCase(string name,string archive,bool success)
         foreach(var arg in new[]{"--windowed","--","--display-windowed","--smoke","--smoke-seconds=4"})launch.ArgumentList.Add(arg);
         using var old=Process.Start(launch)!;
         var stdout=old.StandardOutput.ReadToEndAsync();var stderr=old.StandardError.ReadToEndAsync();
-        await MacUpdateInstaller.Schedule(prepared,old.Id,timeout.Token,windowed:true);
-        await Task.Delay(800,timeout.Token);
-        if(await MacUpdateInstaller.PlistValue(target,"CFBundleShortVersionString")!=oldVersion)throw new Exception("Updater replaced a running app before it exited.");
+        if(highStartup)
+        {
+            // The old build renders with settled/default settings first. The new
+            // process must then load High before any menu layout, as real updates do.
+            await old.WaitForExitAsync(timeout.Token);
+            preferences=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),"Library/Application Support/Godot/app_userdata/Blast Circuit/preferences.cfg");
+            if(File.Exists(preferences))savedPreferences=File.ReadAllBytes(preferences);
+            Directory.CreateDirectory(Path.GetDirectoryName(preferences)!);
+            File.WriteAllText(preferences,"[video]\ngraphicsPreset=\"high\"\nfullscreen=true\nresolution=Vector2i(0, 0)\n");
+        }
+        await MacUpdateInstaller.Schedule(prepared,old.Id,timeout.Token,windowed:!highStartup);
+        if(!highStartup)
+        {
+            await Task.Delay(800,timeout.Token);
+            if(await MacUpdateInstaller.PlistValue(target,"CFBundleShortVersionString")!=oldVersion)throw new Exception("Updater replaced a running app before it exited.");
+        }
         await old.WaitForExitAsync(timeout.Token);
         var oldLog=await stdout;File.WriteAllText(Path.Combine(folder,"old-launch.log"),oldLog+await stderr);
         if(old.ExitCode!=0||!oldLog.Contains("GODOT_SMOKE_OK"))throw new Exception("Old app did not complete real gameplay before update.");
@@ -68,13 +87,15 @@ async Task RunCase(string name,string archive,bool success)
         await Task.Delay(2500,timeout.Token);
         var active=await OwnedPids(target);
         if(active.Length!=1)throw new Exception("Expected exactly one running installed app after helper exit.");
-        results.Add(new{name,result,installedVersion=success?version:oldVersion,running=true});
+        results.Add(new{name,result,installedVersion=success?version:oldVersion,running=true,savedHighFullscreen=highStartup});
         Console.WriteLine("PASS "+name+": "+result);
     }
     finally
     {
         foreach(int pid in await OwnedPids(target))
         {try{using var process=Process.GetProcessById(pid);process.Kill();await process.WaitForExitAsync();}catch(ArgumentException){}}
+        if(preferences is not null)
+        {if(savedPreferences is not null)File.WriteAllBytes(preferences,savedPreferences);else File.Delete(preferences);}
         // These are isolated test bundles; preserve logs, never leave a second launchable app.
         if(Directory.Exists(installRoot))Directory.Delete(installRoot,true);
     }
