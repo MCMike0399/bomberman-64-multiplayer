@@ -66,10 +66,11 @@ void fragment(){
    float vein=abs(sin(p.x*8.0+noise(p*1.1)*3.0));
    float aa=max(fwidth(vein),.01);
    float crack=1.0-smoothstep(.025-aa,.025+aa,vein);
-   crack*=smoothstep(.5,.72,noise(p*1.5));
+   if(crack>0.0)crack*=smoothstep(.5,.72,noise(p*1.5));
    ALBEDO*=1.0-crack*.5;
    }
-   float moss=(1.0-abs(normal_world.y))*(1.0-smoothstep(.03,.25,world.y))*smoothstep(.35,.72,noise(world.xz*6.0));
+   // Moss is exactly zero from .25 upward; skip its hash there.
+   float moss=world.y<.25?(1.0-abs(normal_world.y))*(1.0-smoothstep(.03,.25,world.y))*smoothstep(.35,.72,noise(world.xz*6.0)):0.0;
    ALBEDO=mix(ALBEDO,vec3(.19,.28,.10),moss*.5);
    // Walls and columns deepen toward the turf, like soft bounce shadow in a diorama.
    ALBEDO*=mix(1.0,mix(.8,1.0,smoothstep(-.2,1.7,world.y)),1.0-abs(normal_world.y));
