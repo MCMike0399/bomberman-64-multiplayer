@@ -103,9 +103,13 @@ async Task RunCase(string name,string archive,bool success,bool highStartup=fals
 static async Task<int[]> OwnedPids(string app)
 {
     string command=Path.Combine(app,"Contents/MacOS/Blast Circuit");
+    // Launch Services canonicalizes /var to /private/var in guest temporary
+    // directories. Match the physical bundle path as well as the launch argv.
+    string physical=(await Tool("/bin/sh","-c","cd \"$1\" && /bin/pwd -P","owned-update-app",app)).Trim();
+    string canonical=Path.Combine(physical,"Contents/MacOS/Blast Circuit");
     var text=await Tool("/bin/ps","-axo","pid=,command=");
     return text.Split('\n',StringSplitOptions.RemoveEmptyEntries).Select(line=>line.Trim().Split(' ',2,StringSplitOptions.RemoveEmptyEntries))
-        .Where(parts=>parts.Length==2&&(parts[1]==command||parts[1].StartsWith(command+" ",StringComparison.Ordinal)))
+        .Where(parts=>parts.Length==2&&new[]{command,canonical}.Any(path=>parts[1]==path||parts[1].StartsWith(path+" ",StringComparison.Ordinal)))
         .Select(parts=>int.Parse(parts[0])).ToArray();
 }
 static async Task<string> Tool(string file,params string[] args)
