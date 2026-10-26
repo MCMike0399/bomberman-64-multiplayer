@@ -25,6 +25,19 @@
       "manual": false
     },
     {
+      "id": "performance-metrics",
+      "method": "PerformanceMetrics",
+      "domains": [
+        "rendering",
+        "settings",
+        "ui",
+        "performance"
+      ],
+      "headless": false,
+      "timeout": 180,
+      "manual": false
+    },
+    {
       "id": "display-settings",
       "method": "DisplaySettings",
       "domains": [
@@ -516,6 +529,7 @@
       "id": "all",
       "steps": [
         "first-use-rendering",
+        "performance-metrics",
         "display-settings",
         "graphics-settings",
         "advanced-settings",
@@ -853,6 +867,7 @@
       "id": "menu-ux",
       "steps": [
         "menu-navigation",
+        "performance-metrics",
         "display-settings",
         "wasd-navigation",
         "controller-popups",

@@ -30,6 +30,8 @@ readies and pumps without reaching across to A. Both held state and sub-frame
 taps use the alias; B remains menu Back, X remains remote, and A still works.
 
 Space has no gameplay action. F11 or Alt+Enter toggles fullscreen and saves the selected mode.
+F3 toggles the device-local performance bar and saves the same choice as
+Settings → Performance metrics. Repeated key-down events do not toggle it again.
 Keep both held-state sampling and short-press detection consistent when changing
 bindings: [PlayerControls](../../scripts/input_devices/PlayerControls.cs) owns keyboard states,
 `BombKey` and `RemoteKey`; [ControllerProfile](../../scripts/input_devices/ControllerProfile.cs)
@@ -262,6 +264,29 @@ persistence, fullscreen 3D scaling, oversized-window fitting and paused-match
 continuity. It also starts a fresh copy of the executable against an isolated
 copy of the saved preferences and retains that process's own rendered restoration
 receipt. QA never reads or writes the user's preferences file.
+
+## Performance metrics
+
+The saved `video/performanceMetrics` preference defaults off; malformed values
+also fall back to off. `PerformanceBar` is a pointer-transparent, nonfocusable
+CanvasLayer overlay shared by menus, local play and online play. Battle and
+tutorial HUDs move below the 32-unit strip while it is enabled. Hidden telemetry
+does no sampling. Visible counters update twice per second; Godot's FPS monitor
+itself updates once per second.
+
+FPS is Godot's actual rendered rate. FRAME averages engine frame deltas over the
+sample interval; PROCESS and PHYSICS use Godot's process monitors in milliseconds,
+not system CPU utilization. VRAM uses Godot's video-memory counter in MiB and
+shows N/A when the renderer reports zero/unsupported. DRAWS covers all rendered
+viewports. CPU TEMP explicitly shows N/A: the engine has no portable sensor API.
+No temperature is inferred from frame rate, and no privileged sensor helper is
+installed. [Godot monitor definitions](https://docs.godotengine.org/en/4.7/classes/class_performance.html).
+
+`performance-metrics` verifies real Settings and F3 inputs, persistence, live
+samples, key-repeat suppression, disabled sampling, multiple window sizes,
+paused-session continuity, ordinary bomb input, HUD clearance and rendered
+before/after pixels. It belongs to `all` and `menu-ux`. Review its actual captures;
+fixed-step VM readings establish functionality, not native hardware throughput.
 
 ## Arena selection
 

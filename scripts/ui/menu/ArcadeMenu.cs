@@ -32,6 +32,8 @@ public partial class ArcadeMenu : Control
     private CheckButton _vibration=null!;
     private HSlider _volume=null!;
     private CheckButton _automaticUpdates=null!;
+    private CheckButton _performanceMetrics=null!;
+    public bool PerformanceMetricsEnabled=>_performanceMetrics.ButtonPressed;
     private Label _updateStatus=null!;
     private Button _checkUpdates=null!,_installUpdate=null!,_settingsButton=null!;
     public bool AutomaticUpdates=>_automaticUpdates.ButtonPressed;

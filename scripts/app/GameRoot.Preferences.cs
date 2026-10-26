@@ -15,6 +15,9 @@ public partial class GameRoot
     {
         _uiAudio.Volume=_preferences.Volume;_arena.Audio.Volume=_preferences.Volume;
         ControllerHub.Current.VibrationEnabled=_preferences.Vibration;
+        _performanceBar.Visible=_preferences.PerformanceMetrics;
+        _hud.OffsetTop=_preferences.PerformanceMetrics?BlastCircuit.UI.Hud.PerformanceBar.BarHeight:0;
+        _tutorialHud.OffsetTop=_hud.OffsetTop;
         if(_appliedGraphics!=_preferences.Graphics)
         {
             GraphicsQuality.Apply(_preferences.Graphics,GetViewport());
@@ -62,6 +65,7 @@ public partial class GameRoot
         _preferences.AutomaticUpdates=_menu.AutomaticUpdates;
         _preferences.StageLighting=_menu.LocalStageTime;
         _preferences.Graphics=_menu.Graphics;
+        _preferences.PerformanceMetrics=_menu.PerformanceMetricsEnabled;
         _preferences.Vibration=_menu.VibrationEnabled;_preferences.Volume=_menu.SoundVolume;ApplyPreferences();
         if(_preferences.Save(PreferencesPath)!=Error.Ok)_menu.SettingsNotice("Could not save settings on this device.");
         if(graphicsChanged&&!_skipGraphicsPreparation)
