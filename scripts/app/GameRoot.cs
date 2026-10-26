@@ -97,7 +97,9 @@ public partial class GameRoot : Node3D
         _menu.TestVibrationRequested+=()=>_menu.SettingsNotice(ControllerHub.Current.TestVibration()?"Vibration sent to your controller.":_preferences.Vibration?"Connect a controller that supports vibration.":"Enable controller vibration first.");
         if(args.Any(a=>a.StartsWith("--playtest=")))
         {
-            PreferencesPath=$"user://qa-preferences-{OS.GetProcessId()}.cfg";
+            // Never key this by PID: a rebooted QA guest reuses PIDs, and a killed
+            // run leaves its file behind, so a new process would inherit stale choices.
+            PreferencesPath=$"user://qa-preferences-{Guid.NewGuid():N}.cfg";
             // A fresh QA process may reopen a fixture without touching personal settings.
             var id=args.FirstOrDefault(a=>a.StartsWith("--playtest-preferences="))?.Split('=',2)[1];
             if(Guid.TryParseExact(id,"N",out var fixture))PreferencesPath=$"user://qa-preferences-{fixture:N}.cfg";
