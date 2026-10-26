@@ -7,7 +7,7 @@ server assemblies embed these values. `X-Blast-Protocol` is the exact token
 release tokens, even when the schema revision stays the same. Increase the schema
 revision for incompatible peer messages as well. Local play is unaffected.
 
-**v0.31.0/build 37/schema 6** is delivered. The [delivery receipt](verification.md#v0310-delivered)
+**v0.32.0/build 38/schema 6** is delivered. The [delivery receipt](verification.md#v0320-delivered)
 records the exact CI artifacts, production rollout and signed update. Earlier clients advertise numeric `3`, `4` or branch-specific stage tokens and are rejected by the
 new server before identity creation, queue/room admission or WebSocket upgrade.
 Authenticated leave/cancel and operator endpoints preserve their existing policy.
@@ -21,7 +21,7 @@ and waits for rooms before replacing a process.
    a live deployment runner or fresh autoscaler heartbeat, explicit worker placement and persistent state.
    Presence is not proof that a key matches, a host is reachable or runner
    isolation is correct; the protected workflow and operator drill establish those.
-2. Prepare a new identity with `python3 tools/ci/release.py prepare 0.32.0`
+2. Prepare a new identity with `python3 tools/ci/release.py prepare 0.33.0`
    (use the intended next version). It increases the build and synchronizes
    exports. Add `--protocol N` for an incompatible schema. The preparation
    command rejects local downgrades; promotion independently compares published
@@ -132,6 +132,12 @@ PR events and non-release workflows before their steps. Each worker unregisters
 after its job; its private node tunnel is also stopped. A fresh controller heartbeat
 allows manual dispatch while no privileged worker is idle. Controller programs,
 SSH configuration and service locations remain in private operator documentation.
+
+Runner job hooks must use a supported script extension. If the guard is Python,
+point `ACTIONS_RUNNER_HOOK_JOB_STARTED` at an operator-owned `.sh` launcher that
+executes it; a direct `.py` path fails during runner setup before checkout. Keep
+the guard's allowlist intact and verify trusted release acceptance plus rejection
+of PR, feature and unrelated workflow contexts. [Supported hook scripts](https://docs.github.com/en/enterprise-cloud%40latest/actions/how-tos/manage-runners/self-hosted-runners/run-scripts).
 
 A runner with deployment access must be isolated from public PR workflows. Use
 a runner group restricted to this trusted workflow where supported; otherwise

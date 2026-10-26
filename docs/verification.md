@@ -1,7 +1,41 @@
-# v0.32 display settings candidate
+# v0.32.0 delivered
 
-2026-10-26: source prepares **v0.32.0/build 38/schema 6** with saved display mode
-and resolution controls. Windowed mode fits the chosen size to the current
+Published **2026-10-26 09:15:01 UTC**: [v0.32.0 / signed update](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.32.0).
+The immutable release/tag source is `2a18e3f9e183da0edd6a0135b3c5605c3bb37e4d`.
+
+- [Trusted Verification 40294601175](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40294601175)
+  passed public, managed/network, Godot headless and Apple Silicon packaging.
+  CI's optional Metal lane remains skipped; native and isolated Metal evidence
+  below was completed on the rebuilt candidate before pushing.
+- [Deployment and publication 40296241825, attempt 2](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40296241825)
+  passed all jobs. Public, primary and fallback routes report the exact release,
+  source and `6/0.32.0/38` admission token; each deployment receipt has both
+  `passed` and `connectionVerified` true. The protected workflow required actual
+  selected-worker gameplay and room retirement before publication.
+- Independent downloads confirmed the latest stable feed, both P-256 signatures,
+  all five signed asset hashes/sizes, the Mac identity/controller manifest and
+  the complete 55-file server/plugin inventory. All ten assets are published.
+  ZIPs were inspected in place; the personal installed app was not replaced.
+
+Published archive SHA-256:
+
+```text
+Mac:    344a4d27c69359e9cb0a788acf1973011a67521274b041028aae019a1ea7bc8c
+Server: 4bf484d7e019c7877b65c599d151612938f2cc41c30e343270cf44546688b6b5
+```
+
+The first publication attempt failed during runner setup, before checkout or
+any deployment. Its operator hook pointed directly to Python, which the runner
+rejects. A supported shell launcher now executes the unchanged Python security
+guard. Seven real wrapper checks accept trusted manual/automatic main releases
+and reject PR, feature, wrong-repository, CI and push contexts. The successful
+protected retry also exercised the actual hook. Private launcher backup and guard
+hash receipts remain on the operator host. [GitHub hook requirements](https://docs.github.com/en/enterprise-cloud%40latest/actions/how-tos/manage-runners/self-hosted-runners/run-scripts).
+No game binaries were rebuilt for the retry; it reused the exact trusted CI run.
+
+## Local candidate verification
+
+**v0.32.0/build 38/schema 6** adds saved display mode and resolution controls. Windowed mode fits the chosen size to the current
 screen; fullscreen caps 3D rendering while retaining sharp menus. Both choices
 save immediately and restore at startup; F11 and Alt+Enter save the same mode.
 [Behavior and ownership](agents/input-and-ui.md).
@@ -26,8 +60,8 @@ Local receipts remain under ignored `artifacts/display-settings/`. An early
 50-second VM child-launch trial timed out; its failing receipt was retained.
 The final child budget is bounded at 90 seconds and passes in both the native
 focused run and the complete exported regression. No user settings are changed
-by these tests. Hosted CI, production rollout and signed publication remain
-separate delivery steps; v0.31 below is the previously delivered baseline.
+by these tests. Hosted CI, production rollout and signed publication are
+independently recorded above; v0.31 below is the previous delivered baseline.
 
 # v0.31.0 delivered
 
