@@ -183,3 +183,59 @@ frame rate is equivalent within that noise; allocations are consistently
 40–50% lower. Menu FPS was bimodal (about 123 or 150) for both builds in four
 further alternating runs. Stable 120 FPS remains unachieved. Spotlight indexing
 was active during the first pair. Receipts are under ignored `artifacts/release-036/`.
+
+## GPU pass costs and exact shader early-outs (2026-10-26)
+
+This follow-up targeted GPU time on v0.36 (including arena scenery). It used a
+diagnostic-only Godot 4.8 beta source run with `--gpu-profile` at 3024×1964 High
+on the M5 Pro; the product remains on 4.7.2. Sunken Temple battle GPU time was
+about 17–19 ms per frame:
+
+| Pass | ms | Pass | ms |
+| --- | ---: | --- | ---: |
+| Opaque | 3.8–4.0 | Depth of field | 0.9 |
+| Transparent (water) | 3.0–3.1 | Depth pre-pass | 0.8–0.9 |
+| SSAO | 2.5–2.7 | Tonemap | 0.7 |
+| SSIL | 2.1 | MSAA resolves (four) | 1.6 |
+| Sky / fog-only sky | 0.4–0.5 | Screen + depth copies | 0.4 |
+| Directional shadows | 0.13 | Glow | 0.25 |
+
+Arena totals were Temple 17.2, Up & Down 17.3, Greedy Trap 14.9, Rock Garden 13.1,
+Blizzard 13.1 and Top Rules 12.3 ms. Every arena is GPU-bound above the 8.33 ms
+120 FPS budget. Shadows are not a target. With fog enabled, Godot draws a
+fog-only sky pass even with a color background, so changing the background saves
+nothing. Valid ceilings came from disabling a shader body inside `if(false)`
+(Godot rejects `return` in `fragment()`, which silently drops the material):
+water fragment math costs about 1.36 ms and stone about 1.0 ms. The remainder is
+lighting, MSAA, SSAO/SSIL, DOF and engine passes that define the look.
+
+Shipped edits skip work whose contribution is exactly zero: water shore bands
+outside 0.16 < thickness < 0.5, glints in unlit cells or dark twinkle phases,
+stone pits until the octave is at least 43% resolved, garden crack noise outside
+a crack, garden moss from height .25 upward, and ice sparkle outside sparkle cells.
+Derivatives stay outside the new branches.
+
+Byte identity was proven on native Metal with a one-off journey. It paused real
+eight-player battles on all six arenas (High and Low, two pinned shader times and
+a flooded configuration). It rewrote each live `Shader` resource's code in place,
+original versus optimized, and compared captured frames. **All 36 shipped
+configurations were byte-identical**, with reproducible frozen frames. Two lessons
+for future shader work:
+
+- Replace shader *code*, not shader objects. New `Shader` instances change draw
+  sorting and flip z-fighting seams; that alone produced 7,800-byte differences
+  with identical code.
+- Sine hashes (`fract(sin(x)*43758.5)`) amplify single-bit rounding. Under Apple's
+  fast-math compiler, mathematically exact restructuring can still change speckle.
+  Two candidates failed and were rejected: skipping the refraction read where
+  transmission is zero (3–50 bytes in five of nine configurations; it also saved
+  about nothing) and skipping stone wet/algae noise above the waterline (8 bytes
+  in flooded Up & Down).
+
+Measured gain with matched clocks (normalized by untouched passes): Sunken Temple
+−1.9% and Greedy Trap −1.7% GPU time; other arenas fell within ±1% thermal noise.
+Sustained load visibly throttled the GPU (Up & Down rose from 17 to 23 ms between
+runs), which dominates any such saving. This is the practical ceiling for
+visually exact shader work. Further FPS needs lower effect cost (a visual change)
+or engine changes. Harness sources, edit lists and profiles are under ignored
+`artifacts/equivalence-harness/` and `artifacts/equivalence-*` in the work tree.
