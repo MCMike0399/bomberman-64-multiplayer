@@ -25,6 +25,7 @@ if(args.Contains("--rock-garden"))
 }
 
 if(args.Contains("--snapshot-performance")){SnapshotPerformance.Run(args);return;}
+if(args.Contains("--snapshot-checks")){SnapshotChecks.Run((name,check)=>{check();Console.WriteLine("PASS "+name);});return;}
 if(args.Contains("--online-rooms")){OnlineRoomChecks.Run();return;}
 
 if(args.Contains("--pyramid-ledges")){PyramidLedgeChecks.Run();return;}

@@ -10,6 +10,42 @@ namespace BlastCircuit.Testing;
 
 public partial class PlaytestDriver
 {
+    private async Task HudRedrawCaching()
+    {
+        var token=new BlastCircuit.UI.Hud.PlayerToken {Size=new(180,98),Position=new(20,300)};
+        int draws=0,portraits=0;token.Draw+=()=>draws++;
+        _root.AddChild(token);
+        var portrait=token.GetChildren().OfType<BomberPortrait>().Single();portrait.Draw+=()=>portraits++;
+        try
+        {
+            token.Refresh();await Frames(3);int initial=draws,initialPortraits=portraits;
+            for(int i=0;i<12;i++){token.Refresh();await Frames(1);}
+            Check(draws==initial&&portraits==initialPortraits,"unchanged HUD snapshots reuse token and portrait draw commands");
+            foreach(var change in new Action[]{()=>token.Tag="Player two",()=>token.PlayerName="Haste 4s",()=>token.Bombs=4,
+                ()=>token.Fire=5,()=>token.Red=true,()=>token.Remote=true,()=>token.Heart=true,()=>token.BombType="bounce",
+                ()=>token.Focus=true,()=>token.WinTarget=3,()=>token.Status=BlastCircuit.UI.Hud.TokenStatus.Held})
+            {
+                int before=draws;change();token.Refresh();await Frames(2);
+                Check(draws>before,"changed HUD field redraws the visible token");
+            }
+            int beforePortrait=portraits;token.Suit=Colors.Red;token.Refresh();await Frames(2);
+            Check(portraits>beforePortrait&&portrait.Suit==Colors.Red,"changed suit redraws the portrait");
+            foreach(var status in new[]{BlastCircuit.UI.Hud.TokenStatus.Ghost,BlastCircuit.UI.Hud.TokenStatus.Out,BlastCircuit.UI.Hud.TokenStatus.Alive})
+            {
+                beforePortrait=portraits;token.Status=status;token.Refresh();await Frames(2);
+                Check(portraits>beforePortrait&&portrait.Ghost==(status==BlastCircuit.UI.Hud.TokenStatus.Ghost)&&portrait.Eliminated==(status==BlastCircuit.UI.Hud.TokenStatus.Out),"portrait follows ghost, elimination and respawn");
+            }
+            token.Wins=0;token.Refresh();await Frames(2);int beforeWin=draws;
+            token.Wins=1;token.Refresh();await Frames(6);
+            Check(draws>beforeWin+1,"winning star continues animating between snapshots");
+            await Frames(30);int settled=draws;token.Refresh();await Frames(3);
+            Check(draws==settled,"winning star stops redrawing after settling");
+            token.Size+=new Vector2(10,0);await Frames(2);
+            Check(draws>settled,"native size changes invalidate cached HUD commands");
+        }
+        finally {token.QueueFree();await Frames(2);}
+    }
+
     private async Task DisplaySettings()
     {
         Check(!_headless,"display settings require a native graphical window");
@@ -129,6 +165,7 @@ public partial class PlaytestDriver
 
     private async Task GraphicsSettings()
     {
+        await HudRedrawCaching();
         _root.Navigate("Modes");
         await ResizeWindow(new Vector2I(1600,1000));
         await Frames(60);

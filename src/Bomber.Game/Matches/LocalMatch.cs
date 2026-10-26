@@ -14,8 +14,12 @@ public sealed class LocalMatch
     private readonly LocalContext _context;
     private long _sequence;
     public event Action<string>? Message;
-    public string? StageJson { get; private set; }
-    public string? StateJson { get; private set; }
+    public event Action<JsonElement>? StructuredMessage;
+    private string? _stageJson,_stateJson;
+    public JsonElement? StageMessage { get; private set; }
+    public JsonElement? StateMessage { get; private set; }
+    public string? StageJson => _stageJson??=StageMessage?.GetRawText();
+    public string? StateJson => _stateJson??=StateMessage?.GetRawText();
     public bool IsEnded => _context.State == LobbyState.Ended;
     public MatchResult? Result => _context.Result;
     public int HumanPlayers => _context.Players.Count;
@@ -73,10 +77,14 @@ public sealed class LocalMatch
 
     private void Receive(string type, object? payload)
     {
-        var json = JsonSerializer.Serialize(new { t = type, k = _context.Tick, d = payload }, RealtimeJson.Default);
-        if (type == "stage") StageJson = json;
-        if (type == "state") StateJson = json;
-        Message?.Invoke(json);
+        // Serialize once into an owned, immutable document. Local presentation can
+        // retain its elements directly instead of encoding a string and parsing it again.
+        var message = JsonSerializer.SerializeToElement(new { t = type, k = _context.Tick, d = payload }, RealtimeJson.Default);
+        string? json=Message is null?null:message.GetRawText();
+        if (type == "stage") {StageMessage=message;_stageJson=json;}
+        if (type == "state") {StateMessage=message;_stateJson=json;}
+        StructuredMessage?.Invoke(message);
+        if(json is not null)Message?.Invoke(json);
     }
 
     private sealed class LocalContext : ISessionContext

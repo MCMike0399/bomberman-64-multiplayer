@@ -32,6 +32,8 @@ public partial class ArenaView : Node3D
     public event Action<string,string?>? PlayerFeedback;
     private readonly Node3D _dynamic=new(),_effects=new();
     private readonly Dictionary<string,Node3D> _entities=[];
+    private readonly HashSet<string> _seenEntities=new(StringComparer.Ordinal);
+    private readonly List<string> _staleEntities=[];
     private readonly Dictionary<string,Vector3> _targets=[];
     private readonly Dictionary<string,SnapshotMotion> _playerMotion=[];
     private readonly Dictionary<string,float> _facings=[];
@@ -39,6 +41,9 @@ public partial class ArenaView : Node3D
     private long _snapshotTick;
     private readonly Dictionary<int,Node3D> _blocks=[];
     private readonly Dictionary<string,ExplosionView> _explosions=[];
+    private readonly List<string> _expiredExplosions=[];
+    private string? _softBlockEncoding;
+    private byte[] _softBlockBits=[];
     private readonly Dictionary<string,int> _effectCounts=[];
     private readonly PresentationCursor _presentation=new();
     private readonly Dictionary<int,Node3D> _walls=[];
@@ -142,6 +147,8 @@ public partial class ArenaView : Node3D
     {
         if(_tutorialTarget!=null)_tutorialTarget.Visible=false;
         _localInputs.Clear();ClearThrowPreviews();
+        _seenEntities.Clear();_staleEntities.Clear();_expiredExplosions.Clear();
+        _softBlockEncoding=null;_softBlockBits=[];
         _playerMotion.Clear();_facings.Clear();_ghostHosts.Clear();_snapshotTick=0;
         _audio.StopAll();
         foreach(Node child in _dynamic.GetChildren())child.QueueFree();
@@ -153,6 +160,7 @@ public partial class ArenaView : Node3D
         string id=data.GetProperty("id").GetString()!;
         if(_stage==id)return;
         _stage=id;ClearThrowPreviews();
+        _softBlockEncoding=null;_softBlockBits=[];
         _environment.BackgroundMode=id==BlastStages.TopRules?Godot.Environment.BGMode.Color:Godot.Environment.BGMode.Sky;
         _environment.BackgroundColor=new Color("171a22");
         _environment.FogSkyAffect=id==BlastStages.TopRules?0:1;
@@ -183,6 +191,7 @@ public partial class ArenaView : Node3D
     public override void _Process(double delta)
     {
         _clock+=delta;float dt=(float)delta;
+        float positionBlend=1-Mathf.Exp(-20*dt),facingBlend=1-Mathf.Exp(-18*dt),carryBlend=1-Mathf.Exp(-24*dt);
         // Include projection offsets in the effective view used by radial fog.
         var viewTransform=_camera.GetCameraTransform();
         if(viewTransform!=_depthCueTransform){_depthCueTransform=viewTransform;_cameraRig.MeasureDepth();ApplyDepthCues();}
@@ -191,17 +200,21 @@ public partial class ArenaView : Node3D
             if(!_entities.TryGetValue(id,out var node))continue;
             if(node is BombModel {CarrierId:not null})continue;
             Vector3 previous=node.Position;
-            node.Position=_playerMotion.TryGetValue(id,out var motion)?motion.Advance(dt):previous.DistanceSquaredTo(target)>16?target:previous.Lerp(target,1-Mathf.Exp(-20*dt));
-            if(_facings.TryGetValue(id,out var angle))node.Rotation=new Vector3(0,Mathf.LerpAngle(node.Rotation.Y,angle,1-Mathf.Exp(-18*dt)),0);
-            if(node is BomberModel model)model.Animate(dt,new Vector2(node.Position.X-previous.X,node.Position.Z-previous.Z).Length());
+            var position=_playerMotion.TryGetValue(id,out var motion)?motion.Advance(dt):previous.DistanceSquaredTo(target)>16?target:previous.Lerp(target,positionBlend);
+            node.Position=position;
+            if(_facings.TryGetValue(id,out var angle))node.Rotation=new Vector3(0,Mathf.LerpAngle(node.Rotation.Y,angle,facingBlend),0);
+            if(node is BomberModel model)model.Animate(dt,new Vector2(position.X-previous.X,position.Z-previous.Z).Length());
         }
         foreach(var (ghost,host) in _ghostHosts)
             if(_entities.TryGetValue(ghost,out var rider)&&_entities.TryGetValue(host,out var living))
                 rider.Position=living.Position+new Vector3(0,1.5f,0);
-        foreach(var bomb in _entities.Values.OfType<BombModel>())
-            if(bomb.CarrierId is { } carrier&&_entities.TryGetValue("p:"+carrier,out var player)&&player is BomberModel actor)
-                bomb.Position=bomb.Position.Lerp(_dynamic.ToLocal(actor.BombSocket),1-Mathf.Exp(-24*dt));
-        foreach(var id in _explosions.Keys.Where(id=>!GodotObject.IsInstanceValid(_explosions[id])).ToArray())_explosions.Remove(id);
+        foreach(var entity in _entities.Values)
+            if(entity is BombModel {CarrierId: { } carrier} bomb&&_entities.TryGetValue("p:"+carrier,out var player)&&player is BomberModel actor)
+                bomb.Position=bomb.Position.Lerp(_dynamic.ToLocal(actor.BombSocket),carryBlend);
+        foreach(var (id,explosion) in _explosions)
+            if(!GodotObject.IsInstanceValid(explosion))_expiredExplosions.Add(id);
+        foreach(var id in _expiredExplosions)_explosions.Remove(id);
+        _expiredExplosions.Clear();
         _shake=Mathf.MoveToward(_shake,0,dt*.6f);_cameraRig.Shake((float)_clock,_shake);
         foreach(var preview in _throwPreviews.Values)preview.UpdateScreen(_camera);
     }

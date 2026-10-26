@@ -12,6 +12,7 @@ public partial class PlaytestDriver
 {
     private async Task AssetAudit()
     {
+        if(!_headless)AuditSnowUpload();
         Check(!AuditResourcePresent("res://assets/fonts/asset-audit-missing.ttf"),"asset audit detects a missing bundled resource without accepting a fallback");
         using var empty=new ArrayMesh();
         Check(AuditMeshProblems(empty).Count>0,"asset audit rejects an empty mesh");
@@ -85,7 +86,7 @@ public partial class PlaytestDriver
             foreach(var (name,model) in specimens)
             {
                 var problems=AuditModelProblems(model,out int meshes,out int vertices);
-                Event("asset-geometry",new {name,meshes,vertices,problems});
+                Event("asset-geometry",new {name,meshes,vertices,problems,triangleStream=TriangleStreamFingerprint(model)});
                 Check(problems.Count==0&&meshes>0&&vertices>0,"production asset has readable materials and finite nonempty geometry: "+name+" "+string.Join("; ",problems.Take(3)));
             }
             var logicalSize=_root.GetViewport().GetVisibleRect().Size;
@@ -121,6 +122,72 @@ public partial class PlaytestDriver
         return result??new Aabb();
     }
     private static bool AuditResourcePresent(string path)=>ResourceLoader.Exists(path)&&GD.Load<Resource>(path)!=null;
+    private void AuditSnowUpload()
+    {
+        var original=GraphicsQuality.Current;
+        var weather=new BlastCircuit.Arena.Effects.BlizzardWeather {Wind=new(.7f,-.2f)};
+        _root.AddChild(weather);weather.SetProcess(false);
+        using var bytes=new MemoryStream();using var writer=new BinaryWriter(bytes);
+        try
+        {
+            var mesh=weather.GetNode<MultiMeshInstance3D>("SnowFlurries").Multimesh;
+            float[] smallScales=[.018f,.025f,.032f,.039f];
+            double elapsed=0;int updates=0;bool valid=true,moved=false;var previous=mesh.GetInstanceTransform(0).Origin;
+            foreach(var preset in new[]{GraphicsPreset.Low,GraphicsPreset.High,GraphicsPreset.Medium,GraphicsPreset.High})
+            {
+                GraphicsQuality.Apply(preset,_root.GetViewport());
+                for(int frame=0;frame<120;frame++)
+                {
+                    weather.Wind=new(Mathf.Sin(frame*.07f),Mathf.Cos(frame*.11f));
+                    double dt=frame%3==0?1d/120:frame%3==1?1d/30:.2;
+                    long start=System.Diagnostics.Stopwatch.GetTimestamp();weather._Process(dt);
+                    elapsed+=System.Diagnostics.Stopwatch.GetElapsedTime(start).TotalMilliseconds;updates++;
+                    int count=weather.VisibleFlakes;writer.Write(count);
+                    valid&=count==(preset==GraphicsPreset.Low?72:preset==GraphicsPreset.Medium?152:240);
+                    for(int i=0;i<count;i++)
+                    {
+                        var transform=mesh.GetInstanceTransform(i);var p=transform.Origin;
+                        valid&=p.IsFinite()&&p.X>=.5f&&p.X<18.5f&&p.Z>=.5f&&p.Z<18.5f&&p.Y>=.18f&&p.Y<5.18f;
+                        float expectedScale=i%19==0?.075f:smallScales[i%4];
+                        valid&=transform.Basis.IsEqualApprox(Basis.Identity.Scaled(Vector3.One*expectedScale));
+                        foreach(var v in new[]{transform.Basis.X,transform.Basis.Y,transform.Basis.Z,p})
+                        {writer.Write(v.X==0?0f:v.X);writer.Write(v.Y==0?0f:v.Y);writer.Write(v.Z==0?0f:v.Z);}
+                    }
+                    var current=mesh.GetInstanceTransform(0).Origin;moved|=previous!=current;previous=current;
+                }
+            }
+            Event("snow-upload",new {updates,meanUpdateMs=elapsed/updates,transformsSha256=Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(bytes.ToArray()))});
+            Check(valid&&moved,"snow uploads retain wrapped motion, authored scales and every preset's particle count");
+        }
+        finally {weather.Free();GraphicsQuality.Apply(original,_root.GetViewport());}
+    }
+    // Indexing may share identical vertices, but must preserve the expanded draw
+    // stream, including normals/UVs and primitive order (also used by ghosts).
+    private static string TriangleStreamFingerprint(Node3D model)
+    {
+        using var bytes=new MemoryStream();using var writer=new BinaryWriter(bytes);
+        void Number(float value)=>writer.Write(value==0?0f:value);
+        foreach(var geometry in AuditDescendants(model).Prepend(model).OfType<MeshInstance3D>())
+        {
+            var mesh=geometry.Mesh;
+            for(int surface=0;surface<mesh.GetSurfaceCount();surface++)
+            {
+                var arrays=mesh.SurfaceGetArrays(surface);
+                var vertices=arrays[(int)Mesh.ArrayType.Vertex].AsVector3Array();
+                var normals=arrays[(int)Mesh.ArrayType.Normal].AsVector3Array();
+                var uv=arrays[(int)Mesh.ArrayType.TexUV].VariantType==Variant.Type.Nil?[]:arrays[(int)Mesh.ArrayType.TexUV].AsVector2Array();
+                var indices=arrays[(int)Mesh.ArrayType.Index].VariantType==Variant.Type.Nil?Enumerable.Range(0,vertices.Length).ToArray():arrays[(int)Mesh.ArrayType.Index].AsInt32Array();
+                writer.Write(indices.Length);writer.Write(uv.Length>0);
+                foreach(int index in indices)
+                {
+                    var v=vertices[index];var n=normals[index];
+                    Number(v.X);Number(v.Y);Number(v.Z);Number(n.X);Number(n.Y);Number(n.Z);
+                    if(uv.Length>0){Number(uv[index].X);Number(uv[index].Y);}
+                }
+            }
+        }
+        return Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(bytes.ToArray()));
+    }
     private static IEnumerable<Node> AuditDescendants(Node parent)
     {
         foreach(var child in parent.GetChildren()){yield return child;foreach(var descendant in AuditDescendants(child))yield return descendant;}

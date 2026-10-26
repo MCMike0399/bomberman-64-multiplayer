@@ -19,22 +19,31 @@ public partial class PlayerToken : Control
     private int _wins=-1;
     private float _pop;
     private BomberPortrait _portrait=null!;
-    public int Wins {get=>Math.Max(0,_wins);set{if(_wins>=0&&value>_wins)_pop=1;_wins=value;}}
+    private DisplayState? _displayed;
+    private readonly record struct DisplayState(Color Suit,string Tag,string Name,int Bombs,int Fire,bool Red,bool Remote,
+        bool Heart,string BombType,bool Focus,int WinTarget,TokenStatus Status,int Wins);
+    public int Wins {get=>Math.Max(0,_wins);set{if(_wins>=0&&value>_wins){_pop=1;SetProcess(true);}_wins=value;}}
     public override void _Ready()
     {
         CustomMinimumSize=new(128,98);MouseFilter=MouseFilterEnum.Ignore;
         _portrait=new BomberPortrait {HeadOnly=true,Position=new(0,0),Size=new(54,52),Suit=Suit};AddChild(_portrait);
+        _displayed=null;Refresh();SetProcess(_pop>0);
     }
     public void Refresh()
     {
+        var state=new DisplayState(Suit,Tag,PlayerName,Bombs,Fire,Red,Remote,Heart,BombType,Focus,WinTarget,Status,Wins);
+        if(_displayed==state)return;
+        _displayed=state;
         if(_portrait!=null)
         {
-            _portrait.Suit=Suit;_portrait.Eliminated=Status==TokenStatus.Out;_portrait.Ghost=Status==TokenStatus.Ghost;_portrait.QueueRedraw();
+            bool eliminated=Status==TokenStatus.Out,ghost=Status==TokenStatus.Ghost;
+            if(_portrait.Suit!=Suit||_portrait.Eliminated!=eliminated||_portrait.Ghost!=ghost)
+            {_portrait.Suit=Suit;_portrait.Eliminated=eliminated;_portrait.Ghost=ghost;_portrait.QueueRedraw();}
         }
         QueueRedraw();
     }
     public override void _Process(double delta)
-    {if(_pop>0){_pop=Mathf.MoveToward(_pop,0,(float)delta*1.6f);QueueRedraw();}}
+    {if(_pop>0){_pop=Mathf.MoveToward(_pop,0,(float)delta*1.6f);QueueRedraw();}if(_pop<=0)SetProcess(false);}
     public override void _Draw()
     {
         var ink=ArcadeTheme.Ink;bool outOfRound=Status==TokenStatus.Out;

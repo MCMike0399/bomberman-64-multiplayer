@@ -112,7 +112,7 @@ public sealed partial class BlastSession
             // the real action, including the small movement used to orient the bot.
             for(int direction=0;direction<32;direction++)
             {
-                float angle=direction*MathF.Tau/32,nx=MathF.Cos(angle),nz=MathF.Sin(angle);
+                var (nx,nz)=BotPlacementDirections[direction];
                 if(!TryBombPlacement(bot,nx,nz,.12f*(PlayerSpeed*bot.StatusSpeed)*_aiSteeringInterval,out float x,out float z))continue;
                 // Once engagement is due, follow an open route toward the rival
                 // instead of stopping at every incidental crate along that route.

@@ -15,6 +15,31 @@ import isolated_guest
 
 
 class IsolatedTests(unittest.TestCase):
+    def test_native_gpu_lease_excludes_vm_launch_and_rejects_running_vms(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            tart=Path(temporary)/'tart';tart.touch()
+            stopped=[{'Name':'qa','Source':'local','State':'stopped'}]
+            with patch.object(isolated,'tart_path',return_value=str(tart)), patch.object(isolated.tempfile,'gettempdir',return_value=temporary), patch.object(isolated.subprocess,'check_output',return_value=json.dumps(stopped)) as query:
+                with isolated.native_gpu_lease('qa') as evidence:
+                    self.assertEqual([],evidence['runningVms'])
+                    self.assertTrue(evidence['qaVmLeaseHeld'])
+                    with self.assertRaisesRegex(RuntimeError,'owns the GPU'):
+                        with isolated.native_gpu_lease('qa'):pass
+                    with self.assertRaisesRegex(RuntimeError,'owns the GPU'):
+                        with isolated.native_gpu_lease('different-vm'):pass
+                    with self.assertRaisesRegex(RuntimeError,'owns the GPU'):
+                        with isolated.gpu_lease(False):pass
+                # Released on exit, including errors; never shuts down a VM implicitly.
+                query.return_value=json.dumps([dict(stopped[0],State='running')])
+                with self.assertRaisesRegex(RuntimeError,'Stop running VMs'):
+                    with isolated.native_gpu_lease('qa'):pass
+                query.return_value=json.dumps(stopped)
+                with isolated.native_gpu_lease('qa'):pass
+                with isolated.gpu_lease(False):
+                    with isolated.gpu_lease(False):pass
+                    with self.assertRaisesRegex(RuntimeError,'owns the GPU'):
+                        with isolated.native_gpu_lease('different-vm'):pass
+
     def test_isolated_server_staging_works_in_a_fresh_process_without_ci_import_paths(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

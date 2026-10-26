@@ -1,5 +1,6 @@
 """A real macOS graphical desktop owned by QA, with no host input sharing."""
 import hashlib
+import contextlib
 import json
 import os
 from pathlib import Path
@@ -26,6 +27,39 @@ def vm_command(tart, vm, payload, output):
     return [tart, 'run', vm, '--no-graphics', '--no-clipboard', '--no-audio',
             '--no-usb-accessories', '--net-host',
             '--dir=payload:' + str(payload) + ':ro', '--dir=evidence:' + str(output)]
+
+
+@contextlib.contextmanager
+def gpu_lease(exclusive):
+    """All cooperating VM runners share the GPU; native timing owns it exclusively."""
+    import fcntl
+    with open(Path(tempfile.gettempdir()) / ('blast-circuit-gpu-' + str(os.getuid()) + '.lock'), 'a') as lock:
+        try:
+            fcntl.flock(lock, (fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH) | fcntl.LOCK_NB)
+        except BlockingIOError:
+            raise RuntimeError('Another QA run owns the GPU; native measurements and VM runs must be sequential') from None
+        yield
+
+
+@contextlib.contextmanager
+def native_gpu_lease(vm):
+    """Exclude isolated QA for the complete native timing interval; never stop others implicitly."""
+    import fcntl
+    lock_name = 'blast-circuit-vm-' + hashlib.sha256(vm.encode()).hexdigest()[:16] + '.lock'
+    with gpu_lease(True), open(Path(tempfile.gettempdir()) / lock_name, 'a') as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            raise RuntimeError('Isolated QA owns the GPU; stop its VM before native Metal measurements') from None
+        tart = tart_path()
+        if not Path(tart).is_file():
+            yield {'vm': vm, 'tartInstalled': False}
+            return
+        machines = json.loads(subprocess.check_output([tart, 'list', '--format', 'json'], text=True, timeout=15))
+        running = [m['Name'] for m in machines if m.get('Source') == 'local' and m.get('State') != 'stopped']
+        if running:
+            raise RuntimeError('Stop running VMs before native Metal measurements: ' + ', '.join(running))
+        yield {'vm': vm, 'tartInstalled': True, 'runningVms': running, 'qaVmLeaseHeld': True}
 
 
 def relocate_summary(folder):
@@ -108,7 +142,7 @@ def run(args, folder, result, network, windowed):
     vm = args.vm
     import fcntl
     lock_name = 'blast-circuit-vm-' + hashlib.sha256(vm.encode()).hexdigest()[:16] + '.lock'
-    with open(Path(tempfile.gettempdir()) / lock_name, 'a') as lock:
+    with gpu_lease(False), open(Path(tempfile.gettempdir()) / lock_name, 'a') as lock:
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:

@@ -88,6 +88,24 @@ GC/CPU counters cover the separately labeled sampling interval. Delivery gaps ca
 remain even with fast simulation, so do not infer server CPU trouble from a client
 freeze alone or promise that a bandwidth reduction eliminates all network jitter.
 
+`SoftBlockGrid` stores the same row-major bitset that snapshots transmit. Queries
+outside the grid remain false; writes outside it still fail rather than aliasing
+another row. Base64 encoding is cached until an actual cell change, and old
+snapshot strings remain immutable. Bot placement reuses the exact 32 direction
+vectors instead of recomputing their sine/cosine on each decision.
+
+Local presentation subscribes to `LocalMatch.StructuredMessage`: an owned immutable
+JSON element with the same envelope and payload as the legacy string event.
+`StageJson`/`StateJson` remain available and lazily cached for tools. This removes
+the local encode-to-string/parse round trip; network framing, authority cadence,
+input edges and wire fields are unchanged. Retain ordered-message and snapshot
+lifetime checks when changing this boundary. For an eight-participant comparison
+across all six arenas, use `--snapshot-performance --eight-player` in the game
+suite and `--local-performance` in the client suite, each with `--output=PATH`.
+Hash comparisons establish unchanged outcomes; the local benchmark includes
+input, delivery and retained state, while the legacy benchmark includes text
+inspection and must not be substituted for actual local-session costs.
+
 ## Adaptive rooms (v0.29)
 
 [Adaptive multiplayer](../smart-multiplayer.md) owns the current online flow.

@@ -3,35 +3,42 @@
 
 namespace Bomber.Game.Simulation.State;
 
-/// <summary>The mutable set of soft blocks still standing (one bool per grid cell).</summary>
+/// <summary>The mutable set of soft blocks still standing, in the snapshot's row-major bit order.</summary>
 public sealed class SoftBlockGrid
 {
-    private readonly bool[,] _alive;
+    private readonly int _width,_height;
+    private readonly byte[] _bits;
+    private string? _encoded;
 
-    public SoftBlockGrid(int width, int height) => _alive = new bool[width, height];
+    public SoftBlockGrid(int width, int height)
+    {
+        if(width<0||height<0)throw new OverflowException("Array dimensions must be nonnegative.");
+        _width=width;_height=height;
+        _bits=new byte[(checked(width*height)+7L)/8];
+    }
 
     public bool IsAlive(int x, int z)
     {
-        if (x < 0 || x >= _alive.GetLength(0) || z < 0 || z >= _alive.GetLength(1))
+        if ((uint)x >= (uint)_width || (uint)z >= (uint)_height)
             return false;
-        return _alive[x, z];
+        int index=z*_width+x;
+        return (_bits[index>>3]&(1<<(index&7)))!=0;
     }
 
-    public void Set(int x, int z, bool value) => _alive[x, z] = value;
+    public void Set(int x, int z, bool value)
+    {
+        // Preserve bounds checks: an invalid X must never alias the adjacent row.
+        if((uint)x>=(uint)_width||(uint)z>=(uint)_height)throw new IndexOutOfRangeException();
+        int index=z*_width+x;byte mask=(byte)(1<<(index&7));
+        if (((_bits[index>>3]&mask)!=0) == value) return;
+        if(value)_bits[index>>3]|=mask;else _bits[index>>3]&=(byte)~mask;
+        _encoded = null;
+    }
 
     /// <summary>Compact bitset as base64 (row-major).</summary>
     public string ToBase64()
     {
-        var w = _alive.GetLength(0);
-        var h = _alive.GetLength(1);
-        var bits = new byte[(w * h + 7) / 8];
-        for (var z = 0; z < h; z++)
-            for (var x = 0; x < w; x++)
-            {
-                var idx = z * w + x;
-                if (_alive[x, z])
-                    bits[idx / 8] |= (byte)(1 << (idx % 8));
-            }
-        return Convert.ToBase64String(bits);
+        if (_encoded is not null) return _encoded;
+        return _encoded = Convert.ToBase64String(_bits);
     }
 }

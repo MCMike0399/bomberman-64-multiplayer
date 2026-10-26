@@ -4,6 +4,7 @@ using Bomber.Client.Sessions;
 using Bomber.Game.Matches;
 
 if(args.Contains("--peer-packets")){PeerPacketChecks.Run();return;}
+if(args.Contains("--local-performance")){await LocalPerformance.Run(args);return;}
 
 var checks = await UpdateChecks.Run();
 checks += await ServerCompatibilityChecks.Run();

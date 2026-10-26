@@ -222,7 +222,8 @@ public partial class BomberModel : Node3D
             surface.AddVertex(a);surface.AddVertex(d);surface.AddVertex(c);
         }
         Cap(.985f,offset-.012f,false,1);
-        surface.GenerateNormals();return surface.Commit();
+        // Generate the authored normals before deduplicating complete vertices.
+        surface.GenerateNormals();surface.Index();return surface.Commit();
     }
     private static ArrayMesh CreateHelmet(bool extendedBack=true)
     {
@@ -258,7 +259,7 @@ public partial class BomberModel : Node3D
             if(ring<rings-1)Triangle(a,b,c);
             if(ring>0)Triangle(a,c,d);
         }
-        return surface.Commit();
+        surface.Index();return surface.Commit();
     }
     public void Pose(bool carrying,bool stunned,bool ghost)
     {

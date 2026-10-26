@@ -44,6 +44,8 @@ public static class ArtGeometry
                     else {Vertex(a);Vertex(b);Vertex(c);Vertex(a);Vertex(c);Vertex(d);}
                 }
             }
+            // Share identical attributes without changing triangles or their order.
+            surface.Index();
             Meshes[key]=mesh=surface.Commit();
         }
         return Add(parent,position,mesh,material);
@@ -87,6 +89,7 @@ public static class ArtGeometry
         }
         for(int sx=-1;sx<=1;sx+=2)for(int sy=-1;sy<=1;sy+=2)for(int sz=-1;sz<=1;sz+=2)
             Polygon(new(half.X*sx,inner.Y*sy,inner.Z*sz),new(inner.X*sx,half.Y*sy,inner.Z*sz),new(inner.X*sx,inner.Y*sy,half.Z*sz));
+        surface.Index();
         return surface.Commit();
     }
 }

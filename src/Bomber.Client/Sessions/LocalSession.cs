@@ -26,15 +26,11 @@ public sealed class LocalSession : ISession
         _match = new LocalMatch(new MatchOptions { HumanPlayers = humanCount, BotPlayers = settings.Bots, Advanced=settings.Advanced,
             Stage = settings.Stage, BotDifficulty = settings.BotDifficulty, Wins = settings.Wins, RoundSeconds = settings.RoundSeconds,
             SuddenDeath = settings.SuddenDeath, Ghosts = settings.Ghosts, Seed = seed, Practice = practice, TutorialLesson=tutorialLesson, PlayerAppearances = playerAppearances ?? Array.Empty<int>() });
-        _match.Message += OnMessage;
-        if (_match.StageJson is { } stage) OnMessage(stage);
-        if (_match.StateJson is { } state) OnMessage(state);
+        _match.StructuredMessage += OnMessage;
+        if (_match.StageMessage is { } stage) OnMessage(stage);
+        if (_match.StateMessage is { } state) OnMessage(state);
     }
-    private void OnMessage(string json)
-    {
-        using var document = JsonDocument.Parse(json);
-        _messages.Add(document.RootElement);
-    }
+    private void OnMessage(JsonElement message)=>_messages.Add(message);
     public void Advance(double deltaSeconds)
     {
         if (_disposed || !double.IsFinite(deltaSeconds) || deltaSeconds <= 0) return;
@@ -68,7 +64,7 @@ public sealed class LocalSession : ISession
     public IReadOnlyList<JsonElement> DrainMessages() => _messages.Drain();
     public ValueTask DisposeAsync()
     {
-        if (!_disposed) { _disposed = true; _match.Message -= OnMessage; }
+        if (!_disposed) { _disposed = true; _match.StructuredMessage -= OnMessage; }
         return ValueTask.CompletedTask;
     }
 }
