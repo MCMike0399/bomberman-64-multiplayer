@@ -88,7 +88,7 @@ internal sealed class TimedDangerField
         {
             for(int cell=cz*_graph.Width+cx;cell<_graph.Count;cell+=_stage.Width*_stage.Height)
             {
-                if(_graph.Walkable[cell]&&BlastGeometry.Contains(_stage,soft,x,y,z,radius,cx+.5f,_graph.Height[cell],cz+.5f,red||begin>0))
+                if(_graph.Walkable[cell]&&BlastGeometry.HitsPlayer(_stage,soft,x,y,z,radius,cx+.5f,_graph.Height[cell],cz+.5f,red||begin>0))
                 {Begins[cell]=Math.Min(Begins[cell],begin);Ends[cell]=Math.Max(Ends[cell],end);}
             }
         }

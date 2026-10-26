@@ -86,10 +86,10 @@ public sealed partial class BlastSession
             .Select(i => _stage.Spawns[(preferred + i) % _stage.Spawns.Length])
             .Where(s => _stage.At(s.X, s.Z).IsPassable && !_softBlocks.IsAlive(s.X, s.Z)).ToArray();
         var spawn = candidates.FirstOrDefault(s =>
-            !_bombs.Any(b => !b.Exploded && InBlast(b.X,b.Z,BombY(b),b.BlastRadius + PlayerRadius,
-                s.X+.5f,s.Z+.5f,_stage.SurfaceAt(s.X+.5f,s.Z+.5f),b.IsRed)) &&
-            !_hazards.Any(h => InBlast(h.X,h.Z,h.Y,h.Radius + PlayerRadius,
-                s.X+.5f,s.Z+.5f,_stage.SurfaceAt(s.X+.5f,s.Z+.5f),h.IsRed)),
+            !_bombs.Any(b => !b.Exploded && BlastGeometry.HitsPlayer(_stage,_softBlocks,b.X,BombY(b),b.Z,b.BlastRadius + PlayerRadius,
+                s.X+.5f,_stage.SurfaceAt(s.X+.5f,s.Z+.5f),s.Z+.5f,b.IsRed)) &&
+            !_hazards.Any(h => BlastGeometry.HitsPlayer(_stage,_softBlocks,h.X,h.Y,h.Z,h.Radius + PlayerRadius,
+                s.X+.5f,_stage.SurfaceAt(s.X+.5f,s.Z+.5f),s.Z+.5f,h.IsRed)),
             candidates.Length > 0 ? candidates[0] : _stage.Spawns[preferred]);
         player.X = spawn.X + .5f; player.Z = spawn.Z + .5f;
         player.SurfaceY = _stage.SurfaceAt(player.X,player.Z); player.Tier = (int)MathF.Round(player.SurfaceY);

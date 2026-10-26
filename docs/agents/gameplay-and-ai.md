@@ -214,6 +214,13 @@ and the input guide; older iteration tables are historical.
 
 ## Contact, terrain and recovery
 
+- Explosion damage tests the player's occupied height (feet through the 1.2-unit
+  head height), rather than only its foot position. An overhead full sphere can
+  hit the upper body while the feet remain outside. `BlastGeometry.HitsPlayer`
+  shares this rule with CPU threats, danger prediction and practice spawn safety;
+  horizontal blast reach, bomb chains, cover destruction and shielding retain
+  their existing rules. `BlastHitboxChecks` and the `blast-hitbox` journey retain
+  ordinary aimed remote throws at zero and three pumps with body-only overlap.
 - Ordinary ledge falls use heavier gravity, 45% of status-adjusted ground speed
   and bounded air acceleration. Departure uses collision-resolved velocity;
   release/reversal preserve a short coast. Full ground-speed air steering is

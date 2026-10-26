@@ -291,7 +291,7 @@ public sealed partial class BlastSession
     private bool BotAdjacentCover(int cell) => cell>=0&&_aiCover[cell];
     private bool BotEnemyInRange(float x,float y,float z,float radius,string owner,bool red)
     {
-        foreach(var p in _players.Values)if(p.Id!=owner&&p.Alive&&!p.Ghost&&InBlast(x,z,y,radius,p.X,p.Z,p.Y,red))return true;
+        foreach(var p in _players.Values)if(p.Id!=owner&&p.Alive&&!p.Ghost&&BlastGeometry.HitsPlayer(_stage,_softBlocks,x,y,z,radius,p.X,p.Y,p.Z,red))return true;
         return false;
     }
     private bool BotRemoteOpportunity(BlastPlayer bot)
@@ -299,7 +299,7 @@ public sealed partial class BlastSession
         foreach(var b in _bombs)if(!b.Exploded&&b.OwnerId==bot.Id&&b.IsRemote&&b.State!=BombState.Carried)
         {
             // Match authority selection: the oldest eligible remote may be rolling or flying.
-            if(InBlast(b.X,b.Z,BombY(b),b.BlastRadius+.45f,bot.X,bot.Z,bot.Y,b.IsRed))return false;
+            if(BlastGeometry.HitsPlayer(_stage,_softBlocks,b.X,BombY(b),b.Z,b.BlastRadius+.45f,bot.X,bot.Y,bot.Z,b.IsRed))return false;
             if(!BotEnemyInRange(b.X,BombY(b),b.Z,b.BlastRadius,bot.Id,b.IsRed)&&!BotAdjacentCover(_aiGraph.Cell(b.X,b.Z,BombY(b))))return false;
             int cell=_aiGraph.Cell(bot.X,bot.Z,bot.Y);if(cell<0)return false;
             // Triggering the oldest remote can ignite a second bomb beside its owner.
