@@ -36,8 +36,9 @@ Read the relevant guide before editing its area:
 
 ## Operational boundaries
 
-- QA/debug is **windowed**; ordinary app launch is fullscreen. One owner at a
-  time for shared builds/imports/exports and one for the graphical desktop.
+- QA/debug is **windowed**. Ordinary launch restores saved display settings;
+  first launch is fullscreen. One owner at a time for shared builds/imports/exports
+  and one for the graphical desktop.
   Parallel agents may own disjoint files; coordinate before shared builds.
 - Kernel is an ignored external dependency; game rules belong in this repo.
   Preserve the checked-in pin, MIT notices and public/private boundary.

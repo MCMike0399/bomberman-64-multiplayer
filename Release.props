@@ -1,8 +1,8 @@
 <Project>
   <!-- Canonical release identity. tools/ci/release_identity.py prepares exports. -->
   <PropertyGroup>
-    <BlastVersion>0.31.0</BlastVersion>
-    <BlastBuild>37</BlastBuild>
+    <BlastVersion>0.33.0</BlastVersion>
+    <BlastBuild>39</BlastBuild>
     <BlastProtocolRevision>6</BlastProtocolRevision>
   </PropertyGroup>
 </Project>

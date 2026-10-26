@@ -24,6 +24,14 @@ public partial class PlaytestDriver
         await Capture("ui-advanced");
         big.ButtonPressed=true;await ActivateNamed("AdvancedBack");
         _root.Navigate("Settings");await Frames(4);AuditCards("settings");await Capture("ui-settings");
+        // Presentation fixture: exercise the two update actions alongside the display controls.
+        _root.SetProcess(false);
+        try
+        {
+            menu.UpdateStatus("0.32.0","Ready to install",busy:false,ready:true,canInstall:true);
+            await Frames(4);AuditCards("settings-update-ready");await Capture("ui-settings-update-ready");
+        }
+        finally {_root.SetProcess(true);}
         _root.Navigate("Modes");await Frames(3);
         // A full eight-seat room fixture: long names and a reconnecting seat at the widest status text.
         string[] seats=["Maximiliano Supreme","P2","Wobbly Bomber Deluxe","P4","Explosive Grandma","P6","Captain Kaboom","P8"];

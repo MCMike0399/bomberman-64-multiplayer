@@ -266,6 +266,14 @@ These are included in `all`. Run only one graphical Godot instance at a time. Fo
 
 ## Record and inspect gameplay
 
+For documentation screenshots, `--scenario readme-gallery --timeout 360` captures
+the current menus, tutorial, every arena and real explosions at High,
+3840×2400 and Midday lighting. Run it with `--desktop shared --build` for
+the native Mac Metal renderer. It is graphical-only, uses the
+ordinary battle camera and leaves ordinary player preferences alone. See the
+[gallery provenance and selection map](../../docs/screenshots.md). It is an
+explicit capture journey rather than an addition to the full regression suite.
+
 ```sh
 python3 tools/playtest/run.py --app "artifacts/exports/Blast Circuit.app" --scenario kick-physics --record --ffmpeg /path/to/ffmpeg
 ```

@@ -2,8 +2,8 @@
 
 Blast Circuit v0.21 adds the install-once update path. Earlier builds need this
 one manual upgrade because they do not contain an updater. Settings includes
-**Check automatically** (on by default), **Check for updates**, and **Update and
-restart**. A ready update also marks Settings on the main menu. A current room
+**Check automatically** (on by default), **Check now**, and **Restart to
+update**. A ready update also marks Settings on the main menu. A current room
 must be left before installation; checking and downloading never quit a match.
 
 The updater reads the latest stable, published GitHub release from

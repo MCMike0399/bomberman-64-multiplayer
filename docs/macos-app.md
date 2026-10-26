@@ -2,7 +2,10 @@
 
 The exported bundle targets Apple Silicon and macOS 14 or newer. It includes the exported Godot game pack, self-contained .NET runtime, game/client assemblies, and kernel contract assembly. Local play uses the in-process simulation; online play connects to the independent kernel server selected in the lobby.
 
-The development build is installed at `~/Applications/Blast Circuit.app`. Normal launch is fullscreen; F11 or Alt+Enter changes window mode. Debug and harness launches remain windowed by default.
+The development build is installed at `~/Applications/Blast Circuit.app`. First launch is fullscreen. Settings saves display mode and resolution for future
+launches; F11 or Alt+Enter also saves the mode. Debug and harness launches remain
+windowed by default. Fullscreen resolution adjusts 3D rendering while menus stay
+sharp; oversized windowed choices fit the current display.
 
 ## Rebuild
 

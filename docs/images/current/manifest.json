@@ -1,0 +1,134 @@
+{
+  "schemaVersion": 1,
+  "capturedOn": "2026-10-25",
+  "gameVersion": "0.31.0",
+  "gameBuild": 37,
+  "baseRevision": "1006972cf9e5ff97a81e13f7b68a52c1665b691a",
+  "captureJourney": "readme-gallery",
+  "runtimeSource": "source-project",
+  "graphicsPreset": "High",
+  "lighting": "Midday",
+  "renderer": "Metal 4.0 - Forward+ - Using Device #0: Apple - Apple M5 Pro (Apple9)",
+  "assertions": 111,
+  "runCaptures": 36,
+  "runtimeErrors": 0,
+  "runtimeWarnings": [
+    "WARNING: 2 ObjectDB instances were leaked at exit (run with `--verbose` for details)."
+  ],
+  "images": {
+    "blast-large.png": {
+      "source": "blast-large-bloom.png",
+      "width": 3840,
+      "height": 2400,
+      "sha256": "d0b3a1e296f0702737a72ea8483da6905d4e8b01290e3bb6e23f0a520858e6b1"
+    },
+    "blast-power.png": {
+      "source": "blast-power-bloom.png",
+      "width": 3840,
+      "height": 2400,
+      "sha256": "5d24decb34bdd168b1608b0af9d57a665ac6a3175c2ff47047321aab4c40fc01"
+    },
+    "blast-small.png": {
+      "source": "blast-small-bloom.png",
+      "width": 3840,
+      "height": 2400,
+      "sha256": "4b8883255c2a1d36bef8394f2c8e2d01bf2411dce6db314e8ae147e899731a2a"
+    },
+    "blizzard-battle.png": {
+      "source": "gallery-blizzard-battle.png",
+      "width": 3840,
+      "height": 2400,
+      "sha256": "72680b18052a53c6e610c78f7643618bd0eb2d41d0636fc97be0a933632d046a"
+    },
+    "circuit-garden.png": {
+      "source": "gallery-circuit-garden.png",
+      "width": 3840,
+      "height": 2400,
+      "sha256": "4ed5951e81eeba6200e914f6d6ba0f65624f2bc281baf8d20d1f3ae2b1e7e548"
+    },
+    "controls.png": {
+      "source": "gallery-controls.png",
+      "width": 3840,
+      "height": 2400,
+      "sha256": "17baddaedd2552b3655be5eb29730a24980d24417eb4880a5d7887c653054df4"
+    },
+    "greedy-trap.png": {
+      "source": "gallery-greedy-trap.png",
+      "width": 3840,
+      "height": 2400,
+      "sha256": "e47b9e9bb843758db10dee2e6467677e27fcc265eb31e48a7cd05aa0fd29c5ca"
+    },
+    "mode-select.png": {
+      "source": "gallery-mode-select.png",
+      "width": 3840,
+      "height": 2400,
+      "sha256": "dceb0dd3ca3dca22a9d883148986c42416f71f4ca8923fb87984e5d75c2fc74d"
+    },
+    "online.png": {
+      "source": "gallery-online.png",
+      "width": 3840,
+      "height": 2400,
+      "sha256": "396c4c67d8629c5abe22d10b95d6d7de69013d0dc9c2301ab0435b4b45956f1a"
+    },
+    "results.png": {
+      "source": "results-cpu-victory.png",
+      "width": 3840,
+      "height": 2400,
+      "sha256": "2b7d255767bd2719a806142e8720a7923b35406ff7f078ba995ce830b8e902ac"
+    },
+    "rock-garden.png": {
+      "source": "gallery-rock-garden.png",
+      "width": 3840,
+      "height": 2400,
+      "sha256": "b09b767dc414e9e076acdc79da1e16739bbbe79f293369c2e45da688aee33bdf"
+    },
+    "roster.png": {
+      "source": "gallery-roster.png",
+      "width": 3840,
+      "height": 2400,
+      "sha256": "c6786bac92ec46ac64fae98e48484622c191a51462b5996b7c3ddddcfc678238"
+    },
+    "settings.png": {
+      "source": "gallery-settings.png",
+      "width": 3840,
+      "height": 2400,
+      "sha256": "6e09cf24d2a3e44802b09328f482987f0d70d36c19df4e0cbc7935844f0b0aac"
+    },
+    "setup.png": {
+      "source": "gallery-setup.png",
+      "width": 3840,
+      "height": 2400,
+      "sha256": "1483c0dacb3783aa201c2df8cb50c08318582c4c28a6755028a12c8b929268be"
+    },
+    "sunken-temple.png": {
+      "source": "gallery-sunken-temple.png",
+      "width": 3840,
+      "height": 2400,
+      "sha256": "15faf16d0137af5ce01ba93984a6bceca3f58c688c1cc5a2ddedbebd9b6e1873"
+    },
+    "top-rules.png": {
+      "source": "gallery-top-rules.png",
+      "width": 3840,
+      "height": 2400,
+      "sha256": "d01e20b8132231178b36571e429d2496ff382b196e90fb45ded1a22c701a5ad4"
+    },
+    "tutorial-lesson.png": {
+      "source": "gallery-tutorial-lesson.png",
+      "width": 3840,
+      "height": 2400,
+      "sha256": "f11a7bfdfe2fec82ab40660daa334a321964e89b19f86740915a9159c54c0228"
+    },
+    "tutorial.png": {
+      "source": "gallery-tutorial.png",
+      "width": 3840,
+      "height": 2400,
+      "sha256": "9e0057fea226a2e230b5e13d4b9e09a6f69b16917b058c87b0c55050afc38f03"
+    },
+    "up-and-down.png": {
+      "source": "gallery-up-and-down.png",
+      "width": 3840,
+      "height": 2400,
+      "sha256": "9bc4aed3a0c3acdcbbf72abc97d6957cfeccf0479a193d75b28406974ca59b14"
+    }
+  }
+}

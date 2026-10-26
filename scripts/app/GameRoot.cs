@@ -92,8 +92,16 @@ public partial class GameRoot : Node3D
         _menu.ResumeRequested+=ResumeGame;
         _menu.SettingsChanged+=SavePreferences;
         _menu.TestVibrationRequested+=()=>_menu.SettingsNotice(ControllerHub.Current.TestVibration()?"Vibration sent to your controller.":_preferences.Vibration?"Connect a controller that supports vibration.":"Enable controller vibration first.");
-        if(OS.GetCmdlineUserArgs().Any(a=>a.StartsWith("--playtest=")))PreferencesPath=$"user://qa-preferences-{OS.GetProcessId()}.cfg";
+        if(args.Any(a=>a.StartsWith("--playtest=")))
+        {
+            PreferencesPath=$"user://qa-preferences-{OS.GetProcessId()}.cfg";
+            // A fresh QA process may reopen a fixture without touching personal settings.
+            var id=args.FirstOrDefault(a=>a.StartsWith("--playtest-preferences="))?.Split('=',2)[1];
+            if(Guid.TryParseExact(id,"N",out var fixture))PreferencesPath=$"user://qa-preferences-{fixture:N}.cfg";
+        }
         _preferences=PlayerPreferences.Load(PreferencesPath);_menu.ConfigurePreferences(_preferences);_menu.TutorialProgress(_preferences.CompletedTutorials);ApplyPreferences();
+        DisplayModeController.Current.Configure(_preferences.Fullscreen,_preferences.Resolution,startup:true);
+        DisplayModeController.Current.Changed+=SaveDisplayShortcut;
         _menu.IdentityChanged+=SavePreferences;
         _arena.PlayerFeedback+=PlayerFeedback;
         _updater=new BlastCircuit.Updates.GameUpdater();AddChild(_updater);
@@ -323,5 +331,5 @@ public partial class GameRoot : Node3D
         if(session.IsEnded&&session.Status.StartsWith("Error",StringComparison.Ordinal)&&ScreenName!="Results")
         {ScreenName="Results";_hud.Visible=false;_menu.Visible=true;_menu.ShowResults(LatestState,JsonSerializer.SerializeToElement(new {reason=session.Status}));}
     }
-    public override void _ExitTree(){CancelConnection();ReleaseSession();if(PreferencesPath.StartsWith("user://qa-"))DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(PreferencesPath));}
+    public override void _ExitTree(){DisplayModeController.Current.Changed-=SaveDisplayShortcut;CancelConnection();ReleaseSession();if(PreferencesPath.StartsWith("user://qa-"))DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(PreferencesPath));}
 }

@@ -333,7 +333,11 @@ The signed release and existing shared server are delivered; see
 [verification](../verification.md). Agent inspection does not imply user approval
 of the art direction.
 
-Production uses Forward+ and Metal on macOS. Settings → Graphics selects Low,
+Production uses Forward+ and Metal on macOS. Settings also exposes saved display
+mode and resolution controls; [display behavior](input-and-ui.md) owns their
+window sizing, fullscreen 3D cap and restart persistence. `DisplayModeController`
+combines that cap with the graphics preset's scale, retaining native menu density.
+Settings → Graphics selects Low,
 Medium (default) or High; see [research and preset budgets](../graphics-research.md).
 `GraphicsQuality` owns the live viewport/postprocess/shadow policy, while
 `RenderSurface` sizes decorative menu worlds in output pixels. Root antialiasing
@@ -393,7 +397,7 @@ See [measurements and sources](../graphics-research.md#first-use-rendering-evide
 A headless shader-source assertion cannot prove GPU compilation, balanced
 lighting or quality. Test the real renderer; profile real-time play separately
 from fixed-step Movie Maker captures before claiming performance improvements.
-Fullscreen is product behavior, windowed is QA behavior; neither proves OS Game Mode.
+Ordinary launch restores saved display settings; QA starts windowed. Neither proves OS Game Mode.
 
 Pickup **symbols** were enlarged independently of their baseplates: `PowerupModel`
 scales only its icon subtree and lifts it clear of the plate through its bob cycle.

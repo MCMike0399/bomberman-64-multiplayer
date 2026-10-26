@@ -29,7 +29,7 @@ v0.19.1 adds printed Switch B as a primary/bomb alias so **hold Y + tap B**
 readies and pumps without reaching across to A. Both held state and sub-frame
 taps use the alias; B remains menu Back, X remains remote, and A still works.
 
-Space has no gameplay action. F11 or Alt+Enter toggles fullscreen.
+Space has no gameplay action. F11 or Alt+Enter toggles fullscreen and saves the selected mode.
 Keep both held-state sampling and short-press detection consistent when changing
 bindings: [PlayerControls](../../scripts/input_devices/PlayerControls.cs) owns keyboard states,
 `BombKey` and `RemoteKey`; [ControllerProfile](../../scripts/input_devices/ControllerProfile.cs)
@@ -241,6 +241,27 @@ device-local in online games too; it never overrides server lighting or room rul
 Use the existing arrow/A-D/controller dial navigation. `graphics-settings` checks
 native selection, persistence and paused local continuity; `network` checks online
 continuity. [Rendering budgets and rationale](../graphics-research.md).
+
+**Display mode** selects Windowed or Fullscreen. **Resolution** offers Automatic
+and common 16:9/16:10 sizes from 1280 x 720 through 3840 x 2400. Changes save
+immediately to `video/fullscreen` and `video/resolution` and restore on the next
+launch, including shortcut changes. Existing installations default to fullscreen
+and Automatic. Missing/malformed values safely retain those defaults.
+
+Windowed resolution sets the native window size, fitting oversized choices to
+the current display's usable area. Automatic opens a 1280 x 800 window.
+Fullscreen retains the monitor's native mode and aspect ratio; the selected size
+caps the arena's 3D resolution while menus stay at output density. Low's existing
+85% quality scale multiplies that cap. Automatic uses the native fullscreen 3D
+resolution. Moving/resizing the window recomputes rendering without restarting
+local/online sessions or effect preparation. `--display-windowed` overrides only
+initial presentation for QA and never overwrites a saved fullscreen preference.
+
+`display-settings` exercises the real controls, both shortcuts, resolution
+persistence, fullscreen 3D scaling, oversized-window fitting and paused-match
+continuity. It also starts a fresh copy of the executable against an isolated
+copy of the saved preferences and retains that process's own rendered restoration
+receipt. QA never reads or writes the user's preferences file.
 
 ## Arena selection
 

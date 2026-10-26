@@ -52,7 +52,11 @@ public partial class PlaytestDriver : Node
         try
         {
             await Frames(3);
-            if(!_headless)await WindowMode(_windowedRequested?Window.ModeEnum.Windowed:Window.ModeEnum.Fullscreen,"launch reaches requested display mode");
+            if(!_headless)
+            {
+                bool fullscreen=args.Contains("--playtest-restore-display")?_root.Preferences.Fullscreen:!_windowedRequested;
+                await WindowMode(fullscreen?Window.ModeEnum.Fullscreen:Window.ModeEnum.Windowed,"launch reaches requested display mode");
+            }
             Event("begin",new { scenario=_scenario,display=DisplayServer.GetName(),deterministicSeed=64 });
             _catalogHash=Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Godot.FileAccess.GetFileAsBytes("res://assets/testing/scenarios.json"))).ToLowerInvariant();
             var file=Arg("--playtest-file","");
