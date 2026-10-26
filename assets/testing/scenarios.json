@@ -1003,6 +1003,17 @@
       "headless": false,
       "timeout": 360,
       "manual": false
+    },
+    {
+      "id": "visual-glitches",
+      "method": "VisualGlitches",
+      "domains": [
+        "rendering",
+        "gameplay"
+      ],
+      "headless": true,
+      "timeout": 240,
+      "manual": false
     }
   ]
 }

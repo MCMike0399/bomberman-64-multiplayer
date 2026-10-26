@@ -163,6 +163,12 @@ ramps, shoreline, actors, bombs and previews consistent. Foundation/water art ma
 suggest the pyramid grows from the ground without inventing a safe floor. A prettier
 waterline cannot change where authority actually kills or supports a player.
 
+Temple stair backing must end below the pale .036-unit tread, whose top retains
+its authored step height. Full-height backing shares the tread's top plane and
+causes dark depth-fighting patches as the camera moves. The `visual-glitches`
+journey counts the actual rendered top faces at stair interiors across all presets;
+its headless mode establishes geometry only. Graphical captures remain necessary.
+
 Stone detail uses shader variation/relief and wetness. Water uses several bent,
 nonparallel wave components with matching analytic slopes, depth-derived contact
 foam, sky reflections and flood-dependent motion. Its fragment `NORMAL` is in

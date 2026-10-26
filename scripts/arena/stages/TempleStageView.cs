@@ -205,9 +205,11 @@ public partial class TempleStageView : Node3D
                 {
                     float h=(to-from)*(step+1)/6f;
                     var point=new Vector3(x+.5f+dx*((step+.5f)/6-.5f),from+h/2,z+.5f+dz*((step+.5f)/6-.5f));
-                    Box(this,point,new(dx==0?.99f:1f/6,h,dz==0?.99f:1f/6),wall);
-                    // Thin pale treads over darker risers make each broad staircase legible.
-                    Box(this,new(point.X,from+h-.018f,point.Z),new(dx==0?.99f:1f/6,.036f,dz==0?.99f:1f/6),cap,.006f);
+                    // The pale tread owns the top surface. A full-height support
+                    // shares that plane and depth-fights it into dark moving patches.
+                    const float treadThickness=.036f;
+                    Box(this,point-Vector3.Up*treadThickness/2,new(dx==0?.99f:1f/6,h-treadThickness,dz==0?.99f:1f/6),wall);
+                    Box(this,new(point.X,from+h-treadThickness/2,point.Z),new(dx==0?.99f:1f/6,treadThickness,dz==0?.99f:1f/6),cap,.006f);
                 }
             }
             if(kind==1)
