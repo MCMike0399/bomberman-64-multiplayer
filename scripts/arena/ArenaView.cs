@@ -2,9 +2,7 @@ using Godot;
 using System.Text.Json;
 using Bomber.Client.Sessions;
 using Bomber.Game.Matches;
-using Bomber.Game.Simulation.Rules;
 using Bomber.Game.Simulation.Stages;
-using static BlastCircuit.Rendering.ArtGeometry;
 using BlastCircuit.Arena.Effects;
 using BlastCircuit.Arena.Models;
 using BlastCircuit.Audio;
@@ -31,6 +29,7 @@ public partial class ArenaView : Node3D
     }
     public IReadOnlyList<ThrowPreviewState> ThrowPreviews {get;private set;}=[];
     public void SetLocalInput(string playerId,PlayerInput input)=>_localInputs[playerId]=input;
+    public event Action<string,string?>? PlayerFeedback;
     private readonly Node3D _dynamic=new(),_effects=new();
     private readonly Dictionary<string,Node3D> _entities=[];
     private readonly Dictionary<string,Vector3> _targets=[];
@@ -181,179 +180,6 @@ public partial class ArenaView : Node3D
         _environment.FogDepthBegin=_cameraRig.PlayableDistance+3;
         _environment.FogDepthEnd=_cameraRig.PlayableDistance+70;
     }
-    public void State(JsonElement data,long tick=-1)
-    {
-        if(_terrain==null)return;
-        _snapshotTick=tick<0?_snapshotTick+2:tick;
-        int round=(int)F(data,"round");
-        if(round!=_lastRound){_lastRound=round;_wasHurry=false;_pickups.Clear();}
-        bool eventsAvailable=data.TryGetProperty("events",out _);
-        bool hurry=(int)F(data,"phase")==2;
-        if(!eventsAvailable&&hurry&&!_wasHurry)_audio.Hurry();_wasHurry=hurry;
-        if(data.TryGetProperty("waterLevel",out var water))_terrain.SetWaterLevel(water.GetSingle());
-        byte[] bits=Convert.FromBase64String(data.GetProperty("softBlocks").GetString()!);
-        for(int i=0;i<_terrain.Width*_terrain.Depth;i++)
-        {
-            bool exists=i/8<bits.Length&&(bits[i/8]&(1<<(i%8)))!=0;
-            if(exists&&!_blocks.ContainsKey(i)){var block=_terrain.CreateCover(i);_dynamic.AddChild(block);_blocks[i]=block;}
-            if(!exists&&_blocks.Remove(i,out var old)){Debris(old.Position);old.QueueFree();}
-        }
-        var seen=new HashSet<string>();
-        foreach(var p in data.GetProperty("players").EnumerateArray())
-        {
-            string id="p:"+p.GetProperty("id").GetString();bool ghost=p.GetProperty("ghost").GetBoolean();
-            if(!p.GetProperty("alive").GetBoolean()&&!ghost)continue;
-            seen.Add(id);int slot=p.GetProperty("slot").GetInt32();
-            int appearance=p.TryGetProperty("appearance",out var selected)?selected.GetInt32():slot;
-            var color=Colors[Math.Clamp(appearance,0,Colors.Length-1)];
-            if(!_entities.TryGetValue(id,out var node))
-            {
-                node=new BomberModel(_art,color,Bomber.Game.Matches.PlayerNames.Display(p.GetProperty("name").GetString(),slot));_dynamic.AddChild(node);_entities[id]=node;node.Position=PositionOf(p);
-            }
-            ((BomberModel)node).SetSuitColor(color);
-            ((BomberModel)node).StatusScale=p.TryGetProperty("statusScale",out var statusScale)?statusScale.GetSingle():1;
-            ((BomberModel)node).KickWindup(F(p,"kickWindup"));
-            _targets[id]=PositionOf(p);
-            if(!_playerMotion.TryGetValue(id,out var motion))_playerMotion[id]=new SnapshotMotion(node.Position,_snapshotTick);
-            else motion.Push(_targets[id],_snapshotTick);
-            float angle=Mathf.Atan2(F(p,"fx"),F(p,"fz"));_facings[id]=angle;
-            if(p.TryGetProperty("latchedTo",out var latch)&&latch.ValueKind==JsonValueKind.String)_ghostHosts[id]="p:"+latch.GetString();
-            else _ghostHosts.Remove(id);
-            ((BomberModel)node).Pose(p.GetProperty("carrying").ValueKind!=JsonValueKind.Null,p.GetProperty("stunned").GetBoolean(),ghost);
-            bool falling=p.TryGetProperty("falling",out var fall)&&fall.GetBoolean();
-            ((BomberModel)node).RecoveryPose(p.TryGetProperty("carriedBy",out var heldBy)&&heldBy.ValueKind==JsonValueKind.String,!falling&&p.TryGetProperty("airborne",out var air)&&air.GetBoolean());
-            if(p.TryGetProperty("pickupSerial",out var serial))
-            {
-                int value=serial.GetInt32();
-                if(_pickups.TryGetValue(id,out int previous)&&value>previous&&p.TryGetProperty("lastPickup",out var pickup))
-                {
-                    string kind=pickup.GetString()??"";
-                    bool maximum=kind=="fire"&&F(p,"fire")>=(p.TryGetProperty("maxFire",out var mf)?mf.GetInt32():5)||kind=="bomb"&&F(p,"bombs")>=(p.TryGetProperty("maxBombs",out var mb)?mb.GetInt32():5);
-                    PowerupMessage(node.Position,kind,maximum);_audio.Pickup();
-                }
-                _pickups[id]=value;
-            }
-        }
-        foreach(var b in data.GetProperty("bombs").EnumerateArray())
-        {
-            string id="b:"+b.GetProperty("id").GetString();seen.Add(id);
-            if(!_entities.TryGetValue(id,out var node))
-            {
-                node=new BombModel(_art);_dynamic.AddChild(node);_entities[id]=node;node.Position=PositionOf(b);if(!eventsAvailable)_audio.Bomb();
-            }
-            _targets[id]=PositionOf(b);
-            string? carrier=b.TryGetProperty("carrierId",out var carriedBy)&&carriedBy.ValueKind==JsonValueKind.String?carriedBy.GetString():null;
-            var model=(BombModel)node;
-            if(model.UpdateState((int)F(b,"pumps"),(int)F(b,"level"),b.GetProperty("red").GetBoolean(),b.GetProperty("remote").GetBoolean(),F(b,"fuse"),carrier,(int)F(b,"state"),b.TryGetProperty("mode",out var bombMode)?bombMode.GetString()!:"normal",b.TryGetProperty("charge",out var charge)?charge.GetSingle():0))
-            {
-                if(!eventsAvailable)_audio.Pump(model.Charge);
-                if(carrier!=null&&_entities.TryGetValue("p:"+carrier,out var player)&&player is BomberModel bomber)bomber.Pump(model.Charge);
-            }
-        }
-        foreach(var h in data.GetProperty("hazards").EnumerateArray())
-        {
-            string id=h.GetProperty("id").GetString()!;
-            if(_explosions.TryGetValue(id,out var active)&&GodotObject.IsInstanceValid(active))continue;
-            float y=h.TryGetProperty("y",out var yValue)?yValue.GetSingle()*TempleStageView.HeightScale:_terrain.Surface(F(h,"x"),F(h,"z"));
-            float radius=F(h,"r"),age=h.TryGetProperty("age",out var lifeAge)?lifeAge.GetSingle():0;
-            bool red=h.TryGetProperty("red",out var redValue)&&redValue.GetBoolean();
-            var blast=new ExplosionView(_art,radius,red,age,_explosions.Count>=16){Position=new(F(h,"x"),y+.3f,F(h,"z"))};
-            _effects.AddChild(blast);_explosions[id]=blast;
-            CountEffect("blast-"+blast.Tier);_shake=Mathf.Max(_shake,Mathf.Clamp(radius*.024f,.04f,.15f));
-            if(!eventsAvailable)_audio.Blast(radius);
-        }
-        if(data.TryGetProperty("meteors",out var meteors))foreach(var meteor in meteors.EnumerateArray())
-        {
-            string id="m:"+meteor.GetProperty("id").GetString();seen.Add(id);
-            if(!_entities.TryGetValue(id,out var node))
-            {
-                node=new MeteorView(_art);_dynamic.AddChild(node);_entities[id]=node;
-            }
-            node.Position=new(F(meteor,"x"),0,F(meteor,"z"));
-            ((MeteorView)node).SetRemaining(F(meteor,"remaining"));
-            node.SetProcess(_battleActive);
-        }
-        foreach(var item in data.GetProperty("items").EnumerateArray())
-        {
-            string id="i:"+item.GetProperty("id").GetString();seen.Add(id);
-            if(!_entities.TryGetValue(id,out var node))
-            {
-                float x=F(item,"cx")+.5f,z=F(item,"cz")+.5f;node=new PowerupModel(_art,item.GetProperty("type").GetString()??"");
-                float y=item.TryGetProperty("y",out var height)?height.GetSingle()*TempleStageView.HeightScale:_terrain.Surface(x,z);
-                node.Position=new(x,y+.48f,z);_dynamic.AddChild(node);_entities[id]=node;
-            }
-            if(item.TryGetProperty("life",out var remaining)){float seconds=remaining.GetSingle();node.Visible=seconds<0||seconds>3||((int)(seconds*6)%2==0);}
-        }
-        foreach(string id in _entities.Keys.Where(k=>!seen.Contains(k)).ToArray())
-        {
-            _entities[id].QueueFree();_entities.Remove(id);_targets.Remove(id);_playerMotion.Remove(id);_facings.Remove(id);_ghostHosts.Remove(id);
-        }
-        UpdateThrowPreviews(data,bits);
-        Present(_presentation.Read(data));
-        if(data.TryGetProperty("blizzard",out var weather))_terrain.SetBlizzard(weather);
-        int left=(int)F(data,"closedLeft"),right=(int)F(data,"closedRight");
-        _terrain.SetGreedyCompression(left,right);
-        for(int x=0;_stage!=BlastStages.GreedyTrap&&x<_terrain.Width;x++)
-        {
-            bool closed=x<left||x>=_terrain.Width-right;
-            if(closed&&!_walls.ContainsKey(x))
-            {
-                var n=_stage==BlastStages.BlizzardBattle?_terrain.CreateAvalanche(x):new Node3D();
-                if(_stage==BlastStages.TopRules)
-                {
-                    var stone=_terrain.CastleWallMaterial;
-                    float wallHeight=(_terrain.Layout.At(0,_terrain.Depth/2).ObstacleHeight??3.9f)*TempleStageView.HeightScale;
-                    Box(n,new(x+.5f,wallHeight/2,_terrain.Depth/2f),new(1,wallHeight,_terrain.Depth-2),stone);
-                    Box(n,new(x+.5f,wallHeight+.05f,_terrain.Depth/2f),new(1.03f,.16f,_terrain.Depth-2),_art.Color(new Color("bdc4c5")),.025f);
-                }
-                else if(_stage!=BlastStages.BlizzardBattle)Box(n,new(x+.5f,2.1f,_terrain.Depth/2f),new(.92f,5.8f,_terrain.Depth),_art.Color(new Color(.92f,.18f,.17f,.4f),.7f,true),.03f);
-                _effects.AddChild(n);_walls[x]=n;
-            }
-            if(!closed&&_walls.Remove(x,out var wall))wall.QueueFree();
-        }
-    }
-    private void ClearThrowPreviews()
-    {
-        foreach(var view in _throwPreviews.Values){view.HidePreview();view.QueueFree();}
-        _throwPreviews.Clear();ThrowPreviews=[];
-    }
-    private void UpdateThrowPreviews(JsonElement data,byte[] cover)
-    {
-        if(!_battleActive||data.GetProperty("phase").GetInt32() is not (1 or 2))
-        {ClearThrowPreviews();return;}
-        if(_terrain==null)return;
-        var states=new List<ThrowPreviewState>();var seen=new HashSet<string>();
-        foreach(var player in data.GetProperty("players").EnumerateArray())
-        {
-            var id=player.GetProperty("id").GetString()!;
-            if(!_localInputs.TryGetValue(id,out var input)||player.GetProperty("bot").GetBoolean()||!player.GetProperty("alive").GetBoolean()||
-                player.GetProperty("ghost").GetBoolean()||player.GetProperty("stunned").GetBoolean()||player.GetProperty("carrying").GetString()!="bomb")continue;
-            var bomb=data.GetProperty("bombs").EnumerateArray().FirstOrDefault(b=>b.TryGetProperty("carrierId",out var carrier)&&carrier.GetString()==id);
-            if(bomb.ValueKind==JsonValueKind.Undefined)continue;
-            int pumps=bomb.GetProperty("pumps").GetInt32();
-            var origin=new System.Numerics.Vector3(F(player,"x"),F(player,"y")+BombThrowRules.LaunchHeight,F(player,"z"));
-            bool aimSet=player.TryGetProperty("aimSet",out var set)&&set.GetBoolean();
-            bool aiming=player.TryGetProperty("aiming",out var active)&&active.GetBoolean();
-            float range=aimSet?F(player,"aimRange"):0;
-            bool bounce=bomb.TryGetProperty("mode",out var mode)&&mode.GetString()=="bounce";
-            var velocity=aimSet?BombThrowRules.AimedVelocity(F(player,"aimX"),F(player,"aimZ"),range,pumps):
-                BombThrowRules.Velocity(F(player,"fx"),F(player,"fz"),MathF.Sqrt(input.X*input.X+input.Z*input.Z),pumps);
-            var projection=BombThrowRules.Project(origin,velocity,_terrain.AimSurface,_=>false,
-                bomb.GetProperty("remote").GetBoolean()?5:F(bomb,"fuse"),_terrain.AimCellKind,
-                (x,z)=>_terrain.AimCellKind(x+.5f,z+.5f),(x,z)=>_terrain.AimHasCover(x,z,cover),
-                waterLevel:data.GetProperty("hurryMode").GetString()=="water"&&data.GetProperty("phase").GetInt32()==2?F(data,"waterLevel"):null,
-                bounce:bounce,gravityScale:BombThrowRules.Weight(pumps),pumps:pumps,stage:_terrain.Layout,windAt:data.TryGetProperty("blizzard",out var weather)&&weather.ValueKind==JsonValueKind.Object?
-                    seconds=>BlizzardRules.Wind(weather.GetProperty("time").GetSingle()+seconds+BombThrowRules.SimulationStep,weather.GetProperty("seed").GetInt32(),weather.GetProperty("round").GetInt32()):null);
-            if(!_throwPreviews.TryGetValue(id,out var view))
-            {view=new BombThrowPreview();_effects.AddChild(view);_throwPreviews[id]=view;}
-            view.Update(projection,pumps,player.GetProperty("slot").GetInt32(),aimSet,aiming,range);seen.Add(id);
-            view.UpdateScreen(_camera);
-            states.Add(new(id,pumps,projection.Last.X,projection.Last.Y,projection.Last.Z,projection.End.ToString(),projection.Points.Count,view.LandingMarkerVisible,view.EndpointLabel,aimSet,aiming,range,view.EndpointMarkerVisible,view.EndpointScreenPosition.X,view.EndpointScreenPosition.Y,view.EndpointEdgeClamped));
-        }
-        foreach(var id in _throwPreviews.Keys.Where(id=>!seen.Contains(id)).ToArray())
-        {_throwPreviews[id].HidePreview();_throwPreviews[id].QueueFree();_throwPreviews.Remove(id);}
-        ThrowPreviews=states;
-    }
     public override void _Process(double delta)
     {
         _clock+=delta;float dt=(float)delta;
@@ -380,82 +206,6 @@ public partial class ArenaView : Node3D
         foreach(var preview in _throwPreviews.Values)preview.UpdateScreen(_camera);
     }
     public override void _ExitTree(){if(_cameraRig!=null)GetViewport().SizeChanged-=FitCamera;VisibilityChanged-=UpdateProcessing;}
-    private void CountEffect(string key)=>_effectCounts[key]=_effectCounts.GetValueOrDefault(key)+1;
-    public event Action<string,string?>? PlayerFeedback;
-    private void Present(IReadOnlyList<JsonElement> events)
-    {
-        foreach(var e in events)
-        {
-            string kind=e.GetProperty("kind").GetString()!,reason=e.GetProperty("reason").GetString()??"";
-            string? player=e.GetProperty("playerId").GetString();
-            PlayerFeedback?.Invoke(kind,player);
-            if(player!=null&&_entities.TryGetValue("p:"+player,out var actor)&&actor is BomberModel model)model.React(kind);
-            switch(kind)
-            {
-                case "bomb-blocked":PowerupMessage(PositionOf(e),reason=="capacity"?"BOMBS OUT!":"NEED ROOM!",false);CountEffect(kind);break;
-                case "bomb-drop":case "bomb-carry":_audio.Bomb();break;
-                case "kick-windup":CountEffect(kind);break;
-                case "kick":
-                    _audio.Kick();CountEffect("kick");
-                    var heading=player!=null&&_entities.TryGetValue("p:"+player,out var kicker)?kicker.Basis.Z:Vector3.Forward;
-                    _effects.AddChild(new KickBurst(_art,heading){Position=PositionOf(e)+Vector3.Up*.25f});break;
-                case "remote-fuse":PowerupMessage(PositionOf(e),"FUSE LIT!",false);CountEffect(kind);break;
-                case "lift":_audio.Lift();break;
-                case "player-grab":_audio.Lift();CountEffect(kind);break;
-                case "player-throw":_audio.Throw();CountEffect(kind);break;
-                case "player-release":case "recover":_audio.Pickup();CountEffect(kind);break;
-                case "player-land":_audio.Kick();break;
-                case "ghost-latch":_audio.Lift();CountEffect(kind);break;
-                case "ghost-detach":_audio.Throw();CountEffect(kind);break;
-                case "knockdown":
-                    _audio.Kick();CountEffect(kind);
-                    PowerupMessage(PositionOf(e),reason=="rolling-bomb"?"KICK IMPACT!":"FALLING BOMB HIT!",false);break;
-                case "pump":_audio.Pump((int)F(e,"magnitude"));break;
-                case "throw":_audio.Throw(F(e,"magnitude")/6);break;
-                case "blast":_audio.Blast(F(e,"radius"));break;
-                case "death":
-                    bool water=reason is "water" or "fall";
-                    if(water)_audio.Splash();else _audio.Death();
-                    var pos=PositionOf(e);
-                    if(water)
-                    {
-                        // Death is an immediate state transition. Finish the buffered fall
-                        // at its accepted contact point, but never rewind a practice respawn.
-                        if(player!=null&&_entities.TryGetValue("p:"+player,out var exiting)&&
-                            _targets.TryGetValue("p:"+player,out var latest)&&latest.DistanceTo(pos)<.3f)
-                        {exiting.Position=latest;_playerMotion["p:"+player]=new SnapshotMotion(latest,_snapshotTick);}
-                        pos.Y=WaterHeight;
-                    }
-                    _effects.AddChild(new ExitEffect(_art,water){Position=pos+Vector3.Up*(water?.12f:.8f)});CountEffect(water?"splash":"death");break;
-                case "round-ready":_audio.RoundReady();break;
-                case "fight":_audio.Fight();break;
-                case "hurry":_audio.Hurry();break;
-                case "waterfall":_audio.Splash();CountEffect("water-rise");break;
-                case "round-over":
-                    _audio.RoundWin();
-                    if(player!=null&&_entities.TryGetValue("p:"+player,out var winner)&&winner is BomberModel bomber)bomber.React("victory");break;
-            }
-        }
-    }
-    private void PowerupMessage(Vector3 position,string kind,bool maximum=false)
-    {
-        string text=kind switch {"fire"=>maximum?"MAX BLAST!":"BLAST UP!","bomb"=>maximum?"MAX BOMBS!":"BOMB UP!","remote"=>"REMOTE!","red"=>"POWER BOMB!","heart"=>"HEART!","bounce"=>"BOUNCE BOMBS!","focus"=>"QUICK CHARGE!","tiny"=>"TINY + QUICK!","big"=>"BIG + SLOW!","haste"=>"HASTE!","slow"=>"SLOWED!",_=>kind};
-        var label=new Label3D {Text=text,Position=position+new Vector3(0,2.2f,0),FontSize=34,PixelSize=.012f,Billboard=BaseMaterial3D.BillboardModeEnum.Enabled,NoDepthTest=true,OutlineSize=10,Modulate=new Color("ffe571"),OutlineModulate=new Color("233657")};
-        _effects.AddChild(label);var tween=label.CreateTween().SetParallel();tween.TweenProperty(label,"position",label.Position+Vector3.Up*.9f,1.2);tween.TweenProperty(label,"modulate:a",0f,1.2);tween.Chain().TweenCallback(Callable.From(label.QueueFree));
-    }
-    private void Debris(Vector3 position)
-    {
-        var root=new Node3D {Position=position};_effects.AddChild(root);
-        var material=_art.Color(new("d5b472"));
-        for(int i=0;i<6;i++)
-        {
-            float angle=i*Mathf.Tau/6;
-            var piece=_stage==BlastStages.BlizzardBattle?_terrain!.CreateIceShard(root,new(0,.4f,0),i):
-                Box(root,new(0,.4f,0),Vector3.One*(.12f+i*.008f),material,.02f);
-            var tween=piece.CreateTween().SetParallel();tween.TweenProperty(piece,"position",new Vector3(Mathf.Cos(angle)*.65f,.06f,Mathf.Sin(angle)*.65f),.35);tween.TweenProperty(piece,"rotation",new Vector3(i,2,i*.4f),.35);
-        }
-        var cleanup=root.CreateTween();cleanup.TweenInterval(.4);cleanup.TweenProperty(root,"scale",Vector3.Zero,.2);cleanup.TweenCallback(Callable.From(root.QueueFree));
-    }
     private static float F(JsonElement e,string key)=>e.GetProperty(key).GetSingle();
     private static Vector3 PositionOf(JsonElement e)=>new(F(e,"x"),F(e,"y")*TempleStageView.HeightScale,F(e,"z"));
 }
