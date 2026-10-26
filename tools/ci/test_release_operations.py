@@ -40,10 +40,18 @@ class ReleaseOperationsTests(unittest.TestCase):
         with patch.object(release, 'gh', side_effect=replies), patch.object(release, 'check_exports', return_value={'version': '1.0.0'}):
             checks = release.doctor('example/game', True)
         self.assertFalse(checks['production environment exists'])
-        self.assertFalse(checks['online dedicated deployment runner'])
+        self.assertFalse(checks['deployment runner online or autoscaler healthy'])
         self.assertTrue(checks['deployment target secret configured'])
         self.assertFalse(checks['worker placement secret configured'])
         self.assertNotIn('secret.example', json.dumps(checks))
+
+    def test_fresh_autoscaler_allows_dispatch_without_an_idle_privileged_runner(self):
+        for at, accepted in ((1000, True), (800, False), (1100, False), ('bad', False)):
+            replies = [json.dumps([{'variables': [{'name': 'BLAST_DEPLOY_AUTOSCALER_HEARTBEAT', 'value': str(at)}]}]),
+                       '[{"secrets":[]}]', '{"environments":[]}', '[{"runners":[]}]']
+            with self.subTest(at=at), patch.object(release, 'gh', side_effect=replies), patch.object(release, 'check_exports', return_value={'version': '1.0.0'}), patch.object(release.time, 'time', return_value=1010):
+                checks=release.doctor('example/game', True)
+            self.assertEqual(accepted, checks['deployment runner online or autoscaler healthy'])
 
     def test_interrupted_apply_recovers_from_disk_with_a_real_adapter(self):
         with tempfile.TemporaryDirectory() as temporary:

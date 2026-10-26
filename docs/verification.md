@@ -1,3 +1,58 @@
+# v0.31.0 delivered
+
+2026-10-25 local time (published **2026-10-26 00:05:08 UTC**): the combined
+PR #15 is merged and **v0.31.0/build 37/schema 6** is published to users.
+[Download / signed update](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.31.0).
+The immutable release source and tag target is
+`dc310b4c6230911af339071c14811404b25d97de`.
+
+- [Trusted main Verification](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40245910907)
+  passed public, managed/network, Godot headless and Apple Silicon packaging.
+  The optional CI Metal lane remains disabled; the prior full 51-journey source
+  verification and the exact CI archive's 36-assertion / three-capture isolated
+  Metal first-use replay are separate local evidence.
+- [Production deployment and publication](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40247433062)
+  passed validate, deploy and publish jobs. The operator-installed adapter's
+  two-worker drills proved partial-apply rollback, interrupted-run recovery,
+  failure fencing, refusal of room admission while fenced, and successful real
+  matches/room retirement before production use.
+- Both raspberrypi and DiveMac run the exact **55-file server/plugin inventory**
+  from that CI artifact and report `6/0.31.0/37`. Mounted-file checks passed on
+  both containers. Both are healthy and active; final authenticated fleet
+  observations showed zero rooms and players. Physical resource limits and host
+  configuration remain preserved: Pi one CPU, DiveMac half a CPU, both 384 MiB
+  memory/swap, 128 CPU shares and 256 PIDs; coordination/execution caps remain
+  8/2/1 and 1/1/0 respectively.
+- Public and both direct worker routes passed exact identity, old-token rejection,
+  current admission, actual selected-worker server-hosted gameplay and room
+  retirement. Matching server deployment preceded client publication.
+- Independent public downloads verified the latest-stable feed, **both P-256
+  signatures** and every signed asset hash/size. The ten assets are published;
+  the existing updater manifest/public key remains compatible with installed
+  updater-capable clients. The app is ad-hoc signed; Developer ID/notarization
+  remains deferred as requested.
+
+Published archive SHA-256:
+
+```text
+Mac:    ef472a20c35c0b0772c8db2a87d54dbfae53c452946950fd95a501bf5129fb88
+Server: b60cd4e9df349d22972e2b55041b3c3a97a940607ce29034845499e4b042d593
+```
+
+The protected production environment, target/placement secrets and persistent
+operator recovery state are configured. Automatic releases are enabled. A private
+controller starts ephemeral runners only for queued trusted main release jobs;
+an operator pre-job hook rejects other refs/events/workflows before steps.
+The controller heartbeat supports dispatch while no privileged runner is idle.
+Private configuration, raw diagnostics and service paths remain outside Git.
+
+The exact CI Mac ZIP was inspected on the host and extracted only inside the
+owned QA guest; its temporary guest bundle was deleted and the VM stopped.
+The personal installed app was not replaced. Existing users receive the signed
+update through Settings. [Pre-merge findings and full source evidence](review-release-031.md)
+remain a dated record; their formerly missing production prerequisites are now
+activated. Future releases follow the [release runbook](releases.md).
+
 # v0.31 reviewed candidate
 
 PR #15 now combines the reviewed #13, #14, #16 and #17 changes with the expanded

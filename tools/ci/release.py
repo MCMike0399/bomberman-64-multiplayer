@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import time
 
 from promote_release import gh, inspect_run, require_current_main
 from release_identity import ROOT, check_exports
@@ -55,7 +56,13 @@ def doctor(repository, publishing=False):
               'production environment exists': production is not None}
     if publishing:
         runners = [item for page in json.loads(gh('api', base + '/actions/runners?per_page=100', '--paginate', '--slurp')) for item in page['runners']]
-        checks['online dedicated deployment runner'] = any(item['status'] == 'online' and 'blast-deploy' in {label['name'] for label in item['labels']} for item in runners)
+        online = any(item['status'] == 'online' and 'blast-deploy' in {label['name'] for label in item['labels']} for item in runners)
+        try:
+            age = time.time() - int(variables.get('BLAST_DEPLOY_AUTOSCALER_HEARTBEAT', '0'))
+            autoscaler = -5 <= age <= 90
+        except ValueError:
+            autoscaler = False
+        checks['deployment runner online or autoscaler healthy'] = online or autoscaler
         checks['absolute operator adapter configured'] = Path(variables.get('BLAST_DEPLOY_ADAPTER', '')).is_absolute()
         checks['persistent deployment state configured'] = Path(variables.get('BLAST_DEPLOY_STATE_DIR', '')).is_absolute()
         checks['deployment target secret configured'] = 'BLAST_RELEASE_SERVER_URLS' in secrets

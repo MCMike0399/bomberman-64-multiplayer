@@ -3,7 +3,7 @@
 The user resumed gameplay work on 2026-10-23 for controller ergonomics, aiming
 and knockdown/blast separation (iteration19). The first eighteen iterations
 remain historical evidence. Iteration20 then rebuilt the walk. Recorded
-release baseline: **v0.30.0/build 36**, published with independently verified Mac
+release baseline: **v0.31.0/build 37**, published with independently verified Mac
 and server archives (see [verification](../verification.md)). Previous runtime baseline: **v0.18.0**, commit
 `316a330d7d895a92f98c1a60be7d571ec445a8a3`. Later documentation commits may follow.
 Verify the live branch, source, tools and installed version before relying on
@@ -11,8 +11,8 @@ that baseline. Start with [project instructions](../../AGENTS.md).
 
 The v0.30 review merged diorama polish first, then the five reviewed gameplay/UI
 PRs. Protocol 4 accompanies Fast-bomb removal; both maintained workers are updated.
-The later explosion-restyling and Blizzard Battle PRs are deferred to a future
-release. [Review fixes, complete gates and delivery](../verification.md).
+The subsequent v0.31 release includes the reviewed explosion, Blizzard Battle,
+Greedy Trap and Up & Down work together with the activated release pipeline. [Review fixes, complete gates and delivery](../verification.md).
 
 ## What this project is
 
@@ -42,17 +42,17 @@ update the current guide rather than silently reviving old behavior.
 
 ## Current decisions that supersede earlier experiments
 
-- v0.31 review candidate: PR #15 integrates all five pending PRs, both new arenas,
-  exact schema-6 release admission and repeatable signed delivery. [Final review
-  and verification](../review-release-031.md) distinguish the tested source/export
-  from unconfigured production activation.
+- v0.31 delivered: PR #15 merged the five reviewed PRs, both new arenas and
+  exact schema-6 admission. The signed update and both matching game workers
+  are live. [Delivery receipt](../verification.md#v0310-delivered) and
+  [release commands/recovery](../releases.md) own future delivery.
 
 - Release pipeline source (2026-10-25): `Release.props` owns version/build/schema;
   every release has an exact admission token. Publication requires deployment
   verification across all configured workers. [Release procedure and adapter
   setup](../releases.md) distinguish implemented gates from activation/host evidence.
 
-- Blizzard Battle source work (2026-10-25) adds the enclosed snowfield, sixteen ice cones, changing diagonal wind and bilateral avalanches. [Stage contract](../blizzard-battle.md) and [inspected references](../blizzard-battle-research.md) separate original evidence from eight-seat/timing tuning. Online protocol revision 5 requires matching clients and server; this does not update the deployed service.
+- Blizzard Battle source work (2026-10-25) adds the enclosed snowfield, sixteen ice cones, changing diagonal wind and bilateral avalanches. [Stage contract](../blizzard-battle.md) and [inspected references](../blizzard-battle-research.md) separate original evidence from eight-seat/timing tuning. Delivered in v0.31 with exact schema-6 release admission; standalone numeric protocol 5 is superseded.
 - Greedy Trap adds the enclosed upper court, narrow middle ring and lower reward
   chamber, with four inner flights, two upper exits and closing side walls.
   [Stage contract](../greedy-trap.md) and [inspected references](../greedy-trap-research.md)

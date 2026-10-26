@@ -7,8 +7,8 @@ server assemblies embed these values. `X-Blast-Protocol` is the exact token
 release tokens, even when the schema revision stays the same. Increase the schema
 revision for incompatible peer messages as well. Local play is unaffected.
 
-This source prepares **v0.31.0/build 37/schema 6**; it is not a publication or
-deployment receipt. Earlier clients advertise numeric `3`, `4` or branch-specific stage tokens and are rejected by the
+**v0.31.0/build 37/schema 6** is delivered. The [delivery receipt](verification.md#v0310-delivered)
+records the exact CI artifacts, production rollout and signed update. Earlier clients advertise numeric `3`, `4` or branch-specific stage tokens and are rejected by the
 new server before identity creation, queue/room admission or WebSocket upgrade.
 Authenticated leave/cancel and operator endpoints preserve their existing policy.
 Already-connected sessions are not evicted by changing source: deployment drains
@@ -18,7 +18,7 @@ and waits for rooms before replacing a process.
 
 1. Run `python3 tools/ci/release.py doctor --publish` first. This read-only audit
    reports missing repository/environment settings, credentials by name only,
-   a live deployment runner, explicit worker placement and persistent state.
+   a live deployment runner or fresh autoscaler heartbeat, explicit worker placement and persistent state.
    Presence is not proof that a key matches, a host is reachable or runner
    isolation is correct; the protected workflow and operator drill establish those.
 2. Prepare a new identity with `python3 tools/ci/release.py prepare 0.32.0`
@@ -85,6 +85,7 @@ Configure these settings before enabling automatic releases:
 | --- | --- | --- |
 | `production` environment | GitHub Actions | Restrict deployment to trusted main; apply the organization's deployment protection rules. |
 | `blast-deploy` runner label | Dedicated trusted runner | Python 3.11+, `gh`, network access to the public route and every worker, and the installed adapter. The workflow installs .NET SDK 10 for the dependency-free connection probe. Publishing uses this runner too, so private node origins remain private. |
+| `BLAST_DEPLOY_AUTOSCALER_HEARTBEAT` | Repository variable | Operator controller refreshes this Unix timestamp while healthy. Doctor accepts a heartbeat no older than 90 seconds, so on-demand runners can start after dispatch. Stale/far-future/malformed values fail readiness. |
 | `BLAST_DEPLOY_ADAPTER` | Production environment variable | Absolute executable path outside the checkout, e.g. `/opt/blast/bin/deploy-adapter`. |
 | `BLAST_RELEASE_SERVER_URLS` | Repository or production environment secret | JSON object mapping **every admission route/worker** to its origin, including the public gateway, primary and fallback. Deployment and publication must see the same value. |
 | `BLAST_DEPLOY_STATE_DIR` | Production environment variable | Absolute persistent directory outside checkout, owned by the runner user with mode 0700; journals, inspected artifacts and operator backups survive cleanup/reboots. |
@@ -124,6 +125,13 @@ workers. Do not weaken the gateway's operator/API allowlist to make a release
 check pass. HTTP is accepted only on loopback; HTTPS certificates are verified.
 Origins may include a routing prefix. Redirects, embedded credentials, duplicate
 origins, query strings and empty target sets are rejected.
+
+The activated operator controller starts an ephemeral runner only when a trusted
+main release job is queued. Its operator-owned pre-job hook rejects other refs,
+PR events and non-release workflows before their steps. Each worker unregisters
+after its job; its private node tunnel is also stopped. A fresh controller heartbeat
+allows manual dispatch while no privileged worker is idle. Controller programs,
+SSH configuration and service locations remain in private operator documentation.
 
 A runner with deployment access must be isolated from public PR workflows. Use
 a runner group restricted to this trusted workflow where supported; otherwise
@@ -234,8 +242,8 @@ checks, including releases marked prerelease after distribution. A newer deploye
 silently downgrade servers while retrying publication. Existing users may temporarily need to wait during this strict
 release cutover. Zero-downtime old/new client coexistence is outside this policy.
 
-The current production service and published release remain unchanged until
-this source is reviewed, merged, verified and explicitly released. Public QA,
+The v0.31 activation is complete; future candidates still require review, merge,
+trusted verification and explicit or opt-in automatic release. Public QA,
 local managed/network results and mocked adapter tests cannot establish a real
 host rollout or hosted CI run. Record those receipts separately when activated.
 
@@ -275,3 +283,16 @@ deployment runner, adapter path, persistent state setting or target/placement
 configuration. The existing update-signing secret and trusted-build credentials
 are configured by name. This is implemented and locally tested source, not a
 production rollout, published v0.31 release or installed-app replacement.
+
+## Production activation — v0.31
+
+The first manual production release passed the protected workflow, per-worker
+gameplay/retirement gates, signed draft download comparison and final publication.
+Automatic publication is enabled after that drill. The operator controller starts
+ephemeral workers on demand and refreshes its repository heartbeat; `doctor`
+therefore accepts a healthy controller without requiring an idle privileged worker.
+An operator-owned pre-job hook additionally limits those workers to the main
+release workflows. Fork workflows require approval from all outside contributors.
+The [delivery receipt](verification.md#v0310-delivered) supersedes the earlier
+source-only setup audit above. Installed scripts, private host configuration and
+recovery logs remain in operator storage.
