@@ -605,7 +605,8 @@
         "up-and-down",
         "rock-garden",
         "blizzard-battle",
-        "greedy-trap"
+        "greedy-trap",
+        "stage-scenery"
       ],
       "domains": [
         "ai",
@@ -656,7 +657,8 @@
         "up-and-down",
         "rock-garden",
         "blizzard-battle",
-        "greedy-trap"
+        "greedy-trap",
+        "stage-scenery"
       ],
       "domains": [
         "ai",
@@ -856,7 +858,8 @@
         "presentation",
         "visual-glitches",
         "tutorial",
-        "greedy-trap"
+        "greedy-trap",
+        "stage-scenery"
       ],
       "domains": [
         "gameplay",
@@ -973,6 +976,17 @@
       ],
       "headless": true,
       "timeout": 240,
+      "manual": false
+    },
+    {
+      "id": "stage-scenery",
+      "method": "StageSceneryTour",
+      "domains": [
+        "rendering",
+        "ui"
+      ],
+      "headless": true,
+      "timeout": 480,
       "manual": false
     },
     {
@@ -1098,6 +1112,33 @@
         "assets",
         "ui",
         "performance"
+      ],
+      "headless": false,
+      "timeout": 1500,
+      "manual": false
+    },
+    {
+      "id": "scenery-regression",
+      "steps": [
+        "first-use-rendering",
+        "asset-audit",
+        "graphics-settings",
+        "stage-lighting",
+        "setup",
+        "menu-preview",
+        "map-preview-loading",
+        "framing",
+        "stage-scenery",
+        "rock-garden",
+        "up-and-down",
+        "top-rules",
+        "blizzard-battle",
+        "greedy-trap"
+      ],
+      "domains": [
+        "rendering",
+        "ui",
+        "gameplay"
       ],
       "headless": false,
       "timeout": 1500,

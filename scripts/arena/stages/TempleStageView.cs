@@ -74,6 +74,7 @@ public partial class TempleStageView : Node3D
     public override void _Process(double delta)
     {
         if(!IsVisibleInTree())return;
+        AnimateScenery((float)delta);
         if(_blizzard){ProcessBlizzard((float)delta);return;}
         if(_greedy){ProcessGreedyTrap((float)delta);return;}
         if(_castle)
@@ -163,6 +164,11 @@ public partial class TempleStageView : Node3D
         return index/8<cover.Length&&(cover[index/8]&(1<<(index%8)))!=0;
     }
     public void Build(JsonElement data)
+    {
+        BuildTerrain(data);
+        BuildScenery();
+    }
+    private void BuildTerrain(JsonElement data)
     {
         Width=data.GetProperty("width").GetInt32();Depth=data.GetProperty("height").GetInt32();_cells=data.GetProperty("cells").Clone();
         var cells=new CellDef[Width,Depth];
