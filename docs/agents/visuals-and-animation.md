@@ -163,12 +163,26 @@ ramps, shoreline, actors, bombs and previews consistent. Foundation/water art ma
 suggest the pyramid grows from the ground without inventing a safe floor. A prettier
 waterline cannot change where authority actually kills or supports a player.
 
+Temple stair backing must end below the pale .036-unit tread, whose top retains
+its authored step height. Full-height backing shares the tread's top plane and
+causes dark depth-fighting patches as the camera moves. The `visual-glitches`
+journey counts the actual rendered top faces at stair interiors across all presets;
+its headless mode establishes geometry only. Graphical captures remain necessary.
+
 Stone detail uses shader variation/relief and wetness. Water uses several bent,
 nonparallel wave components with matching analytic slopes, depth-derived contact
 foam, sky reflections and flood-dependent motion. Its fragment `NORMAL` is in
 view space; depth reconstruction handles renderer conventions. The transparent
 pass with full alpha is deliberate: sampled depth must contain opaque shore
-geometry rather than the water itself. Preserve that rationale when refactoring.
+geometry rather than the water itself. Water renders at priority -16, before
+transparent combat effects, and writes depth in that pass with `depth_draw_always`.
+Default center-distance sorting let the large sea plane paint over rear-lane
+fireballs; omitting depth writes also let submerged fire show over the sea.
+Keep both ordering and depth occlusion while preserving the opaque scene copy.
+The `visual-glitches` journey checks actual rear-ring fire pixels on every preset,
+stair top separation, and a real charged shoreline blast above/below the water.
+Godot documents [transparent depth drawing](https://docs.godotengine.org/en/stable/tutorials/shaders/shader_reference/spatial_shader.html#render-modes).
+Preserve that rationale when refactoring.
 Read [the rendering investigation](../history/iteration8-rendering.md) before replacing
 this shader; its fixed daytime Fresnel tint was superseded by the four lighting
 profiles below. Verify normal and hurry/flood states from more than one camera.
