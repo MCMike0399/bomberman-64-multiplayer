@@ -42,6 +42,12 @@ update the current guide rather than silently reviving old behavior.
 
 ## Current decisions that supersede earlier experiments
 
+- CPU agency (2026-10-26 source work): fixes the one-cell neutral shuffle (an
+  Easy escape horizon shorter than the Bouncing fuse), the Blizzard gust stall
+  (steering now leans into visible wind) and CPU lane standoffs; adds rival lead,
+  kick-lane avoidance and goal hysteresis. [Diagnosis and matched results](../cpu-agency.md).
+  Not yet released or user-approved as fun.
+
 - v0.36 integrates performance PR #25: indexed procedural meshes, cached HUD
   drawing, one snow buffer upload, packed cover bits and structured local
   messages. Presets, shaders, geometry, physics, AI and wire fields are unchanged.
