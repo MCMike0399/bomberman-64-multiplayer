@@ -330,6 +330,20 @@ A local updater fixture does not prove hosted CI or a public release; verify tho
 separately when publication is authorized. Preserve the user's update preference
 and avoid replacement while a match/session is active.
 
+## Overhead explosion verification
+
+`dotnet run --project tests/Bomber.Game.Tests -- --blast-hitbox` reproduces
+zero- and three-pump overhead remote explosions whose spheres intersect a
+player's body while excluding its feet. Ordinary throws and remote inputs cover
+normal battle and practice, with and without a heart. Geometry checks retain
+out-of-range, elevated-player, hard-terrain, soft-cover, red-piercing and solid-deck
+boundaries. The AI suite checks the corresponding overhead danger interval.
+The `blast-hitbox` native journey walks three humans on the stock Temple, collects
+Remote, pumps/aims/throws and detonates over the victim. It checks the actual blast
+event's position and death, and captures the held bomb, overhead flight and
+explosion. It belongs to `all` and `core-headless`; graphical evidence uses the
+isolated desktop.
+
 ## Ledge fall verification
 
 For ledge movement, `dotnet run --project tests/Bomber.Game.Tests -- --falling`

@@ -6,6 +6,14 @@ namespace Bomber.Game.Simulation.Rules;
 /// <summary>Shared three-dimensional blast volume and sampled solid cover, used by damage and bot planning.</summary>
 public static class BlastGeometry
 {
+    public const float PlayerHeight = 1.2f;
+
+    /// <summary>Test the player's occupied height, keeping the existing horizontal blast reach.
+    /// An overhead sphere can intersect the body even when the feet lie outside it.</summary>
+    public static bool HitsPlayer(StageLayout stage, SoftBlockGrid soft, float bx, float by, float bz, float radius,
+        float x, float y, float z, bool piercing = false) =>
+        Contains(stage, soft, bx, by, bz, radius, x, Math.Clamp(by, y, y + PlayerHeight), z, piercing);
+
     public static bool Contains(StageLayout stage, SoftBlockGrid soft, float bx, float by, float bz, float radius,
         float x, float y, float z, bool piercing = false)
     {

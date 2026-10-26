@@ -1,6 +1,7 @@
 // Adapted from burbuja-kernel Example.Blast, MIT (copyright 2026 MCMike0399).
 // Product-owned simulation; original baseline b0758339984bbeead1b3d1236f31e980aaa5f20e.
 
+using Bomber.Game.Simulation.Rules;
 using Bomber.Game.Simulation.Stages;
 using Bomber.Game.Simulation.State;
 
@@ -20,7 +21,7 @@ public sealed partial class BlastSession
     private const float LedgeAirAcceleration = 8f;
 
     /// <summary>How high above its tier a player stands: a bomb coming down below this lands on their head.</summary>
-    private const float HeadHeight = 1.2f;
+    private const float HeadHeight = BlastGeometry.PlayerHeight;
 
     private void MovePlayer(BlastPlayer p, InputState input, float dt)
     {

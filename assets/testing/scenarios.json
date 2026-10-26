@@ -2,6 +2,17 @@
   "schemaVersion": 1,
   "scenarios": [
     {
+      "id": "blast-hitbox",
+      "method": "BlastHitbox",
+      "domains": [
+        "gameplay",
+        "physics"
+      ],
+      "headless": true,
+      "timeout": 120,
+      "manual": false
+    },
+    {
       "id": "tutorial",
       "method": "TutorialTour",
       "domains": [
@@ -547,6 +558,7 @@
         "kick-physics",
         "body-contacts",
         "grapple",
+        "blast-hitbox",
         "local-actions",
         "ramp",
         "powerup-collect",
@@ -602,6 +614,7 @@
         "kick-physics",
         "body-contacts",
         "grapple",
+        "blast-hitbox",
         "traversal",
         "powerup-collect",
         "loot-opening",
