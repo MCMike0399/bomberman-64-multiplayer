@@ -64,6 +64,12 @@ update the current guide rather than silently reviving old behavior.
   setup](../releases.md) distinguish implemented gates from activation/host evidence.
 
 - Blizzard Battle source work (2026-10-25) adds the enclosed snowfield, sixteen ice cones, changing diagonal wind and bilateral avalanches. [Stage contract](../blizzard-battle.md) and [inspected references](../blizzard-battle-research.md) separate original evidence from eight-seat/timing tuning. Delivered in v0.31 with exact schema-6 release admission; standalone numeric protocol 5 is superseded.
+- Stage scenery (2026-10-26 source work): every arena gains original,
+  collision-free surroundings and small ambient animations outside the playable
+  volume, themed on Bomberman 64's worlds; the menu miniature hides them.
+  [References, composition and rules](../stage-scenery.md). Agent review is not
+  user approval of the art.
+
 - Greedy Trap adds the enclosed upper court, narrow middle ring and lower reward
   chamber, with four inner flights, two upper exits and closing side walls.
   [Stage contract](../greedy-trap.md) and [inspected references](../greedy-trap-research.md)
