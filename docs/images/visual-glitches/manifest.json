@@ -1,0 +1,27 @@
+{
+  "productBaseline": "a8a7cd60b2f668b4a487ffc97ad28fcb64bd336c",
+  "fixture": "visual-glitches; ordinary inputs and labelled inspection cameras; seed 64",
+  "renderer": "Metal 4.0 / Forward+ / Apple Paravirtual device (Apple5)",
+  "images": [
+    {
+      "file": "before-ring.png",
+      "sourceCapture": "ring-blast-Medium.png",
+      "sha256": "a25474cdaa3c79f6ca22fd7e53c6d682848a174a65448e9c84166594c93f74b7",
+      "view": "ordinary battle camera",
+      "preset": "Medium",
+      "width": 1280,
+      "height": 800,
+      "state": "before"
+    },
+    {
+      "file": "before-stairs.png",
+      "sourceCapture": "temple-stairs-detail-Medium.png",
+      "sha256": "4d5ebe4438a6d76255ff8e70f613fdcc47be460d38b484331355a40903533fbc",
+      "view": "stair inspection camera",
+      "preset": "Medium",
+      "width": 1280,
+      "height": 800,
+      "state": "before"
+    }
+  ]
+}

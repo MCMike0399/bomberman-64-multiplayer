@@ -174,7 +174,15 @@ nonparallel wave components with matching analytic slopes, depth-derived contact
 foam, sky reflections and flood-dependent motion. Its fragment `NORMAL` is in
 view space; depth reconstruction handles renderer conventions. The transparent
 pass with full alpha is deliberate: sampled depth must contain opaque shore
-geometry rather than the water itself. Preserve that rationale when refactoring.
+geometry rather than the water itself. Water renders at priority -16, before
+transparent combat effects, and writes depth in that pass with `depth_draw_always`.
+Default center-distance sorting let the large sea plane paint over rear-lane
+fireballs; omitting depth writes also let submerged fire show over the sea.
+Keep both ordering and depth occlusion while preserving the opaque scene copy.
+The `visual-glitches` journey checks actual rear-ring fire pixels on every preset,
+stair top separation, and a real charged shoreline blast above/below the water.
+Godot documents [transparent depth drawing](https://docs.godotengine.org/en/stable/tutorials/shaders/shader_reference/spatial_shader.html#render-modes).
+Preserve that rationale when refactoring.
 Read [the rendering investigation](../history/iteration8-rendering.md) before replacing
 this shader; its fixed daytime Fresnel tint was superseded by the four lighting
 profiles below. Verify normal and hurry/flood states from more than one camera.

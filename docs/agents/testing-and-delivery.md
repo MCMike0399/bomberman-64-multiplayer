@@ -573,3 +573,15 @@ fixture; the elected authority is polled between guests. This is deliberate test
 load, not observed Internet latency. Headless and package gates retain it, while
 `peer-adaptive-regression` reproduces the ordinary journey sequence. Production
 host leases and qualification budgets remain unchanged.
+
+## Small visual glitch regression
+
+`visual-glitches` uses ordinary practice movement, placement and charged throws
+for Up & Down rear-ring effects and Temple stairs/shoreline. It is included in
+`all` and `stage-fidelity`. Pixel probes normalize logical camera coordinates to
+actual capture pixels; headless mode only establishes gameplay/geometry checks.
+`shore-blast` is the tight standalone shoreline case. `visual-regression` runs
+fourteen affected rendering/stage journeys, keeping first-use preparation first.
+Inspect the actual before/after images separately from numeric checks. The
+complete graphical catalog has a 1500-second budget with the additional journey;
+per-case focus, readiness and render-preparation deadlines are unchanged.

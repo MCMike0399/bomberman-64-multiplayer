@@ -592,6 +592,7 @@
         "loot-opening",
         "pump-growth",
         "presentation",
+        "visual-glitches",
         "hurry-water",
         "ai-play",
         "combat",
@@ -622,7 +623,7 @@
         "ui"
       ],
       "headless": false,
-      "timeout": 1200,
+      "timeout": 1500,
       "manual": false
     },
     {
@@ -853,6 +854,7 @@
         "rock-garden",
         "blizzard-battle",
         "presentation",
+        "visual-glitches",
         "tutorial",
         "greedy-trap"
       ],
@@ -1055,6 +1057,50 @@
       ],
       "headless": true,
       "timeout": 240,
+      "manual": false
+    },
+    {
+      "id": "shore-blast",
+      "method": "ShorelineBlast",
+      "domains": [
+        "rendering",
+        "gameplay"
+      ],
+      "headless": true,
+      "timeout": 120,
+      "manual": false
+    },
+    {
+      "id": "visual-regression",
+      "steps": [
+        "first-use-rendering",
+        "visual-glitches",
+        "graphics-settings",
+        "stage-lighting",
+        "framing",
+        "presentation",
+        "traversal",
+        "up-and-down",
+        "top-rules",
+        "rock-garden",
+        "blizzard-battle",
+        "greedy-trap",
+        "hurry-water",
+        "asset-audit"
+      ],
+      "domains": [
+        "rendering",
+        "gameplay",
+        "physics",
+        "settings",
+        "animation",
+        "audio",
+        "assets",
+        "ui",
+        "performance"
+      ],
+      "headless": false,
+      "timeout": 1500,
       "manual": false
     }
   ]
