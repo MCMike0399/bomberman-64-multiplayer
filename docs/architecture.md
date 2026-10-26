@@ -13,7 +13,7 @@ flowchart TD
     Session --> Local[LocalSession]
     Session --> Network[NetworkSession]
     Local --> Facade[LocalMatch]
-    Facade --> Rules[Product BlastSession / BlastSim / BlastStages]
+    Facade --> Rules[Product BlastSession / State / BlastStages]
     Network -->|HTTP + WebSocket JSON| Kernel[Independent Burbuja.Hosting + Realtime server]
     Network --> Peer[PeerMatch on elected player]
     Peer --> Rules
@@ -28,8 +28,8 @@ flowchart TD
 
 | Module | Owns | Dependency boundary |
 |---|---|---|
-| `src/Bomber.Game` | Match options/rosters, local/peer authority adapters, realtime registration and game rules | Kernel realtime contracts; no Godot rendering |
-| `src/Bomber.Client` | `ISession`, local accumulator, HTTP/WebSocket lobby/reconnect/input handling, bounded message handoff, input policies | Game and .NET APIs; no Godot dependency |
+| `src/Bomber.Game` | `Matches`: options and local/peer authority hosts; `Online`: realtime registration, admission and room sessions; `Tutorial`; `Simulation`: game rules (`BlastSession`, `State`, `Stages`, `Rules`, `Ai`) | Kernel realtime contracts; no Godot rendering |
+| `src/Bomber.Client` | `Sessions`: `ISession`, local accumulator, HTTP/WebSocket lobby/reconnect/input handling, bounded message handoff; `Peer`: peer-room transport; `Controls`: input policies; `Updates` | Game and .NET APIs; no Godot dependency |
 | `src/Bomber.Server` | Independent ASP.NET executable registering classic, random-lobby and peer-room modes | Game and Burbuja.Hosting |
 | `src/Bomber.Cluster` | Optional pressure-aware placement plugin for the public cluster | Kernel core/realtime abstractions |
 | `scripts/input_devices` | Device/focus/menu handling and physical-to-semantic intent (`ControllerHub`, `PlayerControls`) | Godot plus client input policies |

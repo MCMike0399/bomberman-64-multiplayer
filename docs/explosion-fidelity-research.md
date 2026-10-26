@@ -66,7 +66,7 @@ brown. Those are deliberate project choices, not established original features.
 The entire effect also uses `TempleStageView.HeightScale` (1.35) vertically.
 That conversion corresponds to the project's tier presentation; deleting it
 without checking the damage-volume mapping could make the displayed danger
-misleading. [Blast authority](../src/Bomber.Game/Simulation/BlastSession.Explosions.cs)
+misleading. [Blast authority](../src/Bomber.Game/Simulation/BlastSession/Bombs/BlastSession.Explosions.cs)
 and its geometry checks are separate from these meshes.
 
 ## Targeted original-procedural direction

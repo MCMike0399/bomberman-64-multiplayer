@@ -28,7 +28,7 @@ failed approaches; exact live values remain in source. Use the
 | Root interpolation and facing | [SnapshotMotion](../../scripts/arena/SnapshotMotion.cs), [ArenaView](../../scripts/arena/ArenaView.cs); `movement` |
 | Reusable mesh helpers | [ArtGeometry](../../scripts/rendering/ArtGeometry.cs); `asset-audit` |
 | Bomb shell/growth and pickup symbol | [BombModel](../../scripts/arena/models/BombModel.cs), [PowerupModel](../../scripts/arena/models/PowerupModel.cs); `pump-growth`, `loot-opening` |
-| Terrain visuals and height conversion | [TempleStageView](../../scripts/arena/TempleStageView.cs); `traversal`, `framing`, `hurry-water` |
+| Terrain visuals and height conversion | [TempleStageView](../../scripts/arena/stages/TempleStageView.cs); `traversal`, `framing`, `hurry-water` |
 | Stone/water shaders and lighting | [ArtMaterials](../../scripts/rendering/ArtMaterials.cs), ArenaView; graphical `asset-audit`, `presentation` |
 | Perspective framing/shake | [BattleCameraRig](../../scripts/arena/BattleCameraRig.cs); `framing` at supported aspect ratios |
 | Blast/action/exit visuals | [ExplosionView](../../scripts/arena/effects/ExplosionView.cs), [KickBurst](../../scripts/arena/effects/KickBurst.cs), [ExitEffect](../../scripts/arena/effects/ExitEffect.cs); `presentation`, `kick-physics` |
@@ -68,7 +68,7 @@ and preserve neck transition, front-to-back balance and readable eye placement.
 The user preferred a middle point: a separate plate without a paper-thin side
 profile, a slightly shorter oval head, and no massive rear/forehead volume.
 
-[ModelProfilePlaytest](../../scripts/testing/ModelProfilePlaytest.cs) checks actual
+[ModelProfilePlaytest](../../scripts/testing/journeys/rendering/ModelProfilePlaytest.cs) checks actual
 shell ellipsoid vertices, outward unit normals, torso depth, nonzero face depth
 and nondegenerate clockwise face triangles. Godot mesh winding matters: apparently
 missing faces may be backface culling, not a request to add thickness. Keep normals,
@@ -132,14 +132,14 @@ changing a cosmetic socket cannot repair a low physical throw launch.
 | Phase-locked upper body, welded antenna | Lateral/roll/shoulder spans passed | No momentum on starts/stops; use springs for follow-through and settle |
 | “Passing tests means charming” | Numeric bounds describe mechanics | State measured facts; user approval and perceived feel remain separate |
 
-[MovementPlaytest](../../scripts/testing/MovementPlaytest.cs) measures actual rig
+[MovementPlaytest](../../scripts/testing/journeys/combat/MovementPlaytest.cs) measures actual rig
 transforms, fixed stem length/hip attachment, bounded reach, boot grip while down,
 body/head/shoulder/antenna motion and composed boot continuity. The 1200 Hz diagnostic catches curve-boundary
 velocity corners; it is not a rendering-performance claim. Foot-center height
 and support/flight fractions are diagnostics, not proof of a planted sole or
 terrain IK. Avoid tightening those metrics until they force the rejected stretch.
 
-[WalkingShowcasePlaytest](../../scripts/testing/WalkingShowcasePlaytest.cs) walks
+[WalkingShowcasePlaytest](../../scripts/testing/journeys/rendering/WalkingShowcasePlaytest.cs) walks
 ordinary inputs across the real clear courtyard, reverses, settles and repeats
 through side, three-quarter and normal battle views. It logs authority/render
 positions and rig poses, so a future agent can tell travel stutter from gait issues.
@@ -246,7 +246,7 @@ lethal-water plane. [Stage and visual contract](../greedy-trap.md),
 
 ### Top Rules castle presentation
 
-[TempleStageView.TopRules](../../scripts/arena/TempleStageView.TopRules.cs)
+[TempleStageView.TopRules](../../scripts/arena/stages/TempleStageView.TopRules.cs)
 builds original gray masonry, brass-framed slate bridges, pale junctions,
 green stair treads and a patterned crimson court from the authority layout.
 Bridge undersides are thin, with visible space below. Keep the red court above

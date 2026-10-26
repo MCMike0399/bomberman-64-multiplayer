@@ -93,11 +93,15 @@ update the current guide rather than silently reviving old behavior.
   physics remain project tuning.
 
 
-- Repository layout (2026-10-24): Godot code lives in snake_case feature folders
-  under `scripts/` with folder-mirroring `BlastCircuit.*` namespaces; the scene is
-  `scenes/main.tscn`; shell launchers are in `tools/dev/`; dated iteration notes
-  are in `docs/history/`. Large classes are split into `Class.Concern.cs`
-  partials. The [codebase map](codebase-map.md) owns layout and naming rules.
+- Repository layout (2026-10-24, extended 2026-10-26): Godot code lives in
+  snake_case feature folders under `scripts/` and pure .NET code in PascalCase
+  feature folders under `src/`; namespaces mirror folders. `Bomber.Game` is split
+  into `Matches`, `Online`, `Tutorial` and `Simulation` (`State`, `Stages`, `Rules`,
+  `Ai`, and `BlastSession/` partials by concern). The scene is `scenes/main.tscn`;
+  shell launchers are in `tools/dev/`; dated iteration notes are in `docs/history/`.
+  Large classes are split into `Class.Concern.cs` partials. The public profile
+  enforces namespaces, file names and a 20-file folder limit. The
+  [codebase map](codebase-map.md) owns layout and naming rules.
 
 - Diorama polish (2026-10-25): clear refracting shallows with caustics, tilt-shift
   depth of field and haze outside the arena, lacquered toy materials and painterly

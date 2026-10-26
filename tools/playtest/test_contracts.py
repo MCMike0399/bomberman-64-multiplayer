@@ -48,7 +48,7 @@ class PlaytestContracts(unittest.TestCase):
 
     def test_catalog_resolves_real_methods_and_complete_domains(self):
         scenarios=catalog()
-        source='\n'.join(p.read_text() for p in (ROOT/'scripts/testing').glob('*.cs'))
+        source='\n'.join(p.read_text() for p in (ROOT/'scripts/testing').rglob('*.cs'))
         methods=set(re.findall(r'private\s+async\s+Task\s+(\w+)\s*\(\s*\)',source))
         for item in scenarios.values():
             if 'method' in item:self.assertIn(item['method'],methods,item['id'])

@@ -19,7 +19,7 @@ assets or Smash branding ship.
 Fast bomb equipment and its lesson were removed on 2026-10-25. Haste remains
 in Temporary changes as a player movement buff; it leaves bomb equipment intact.
 
-The [course](../src/Bomber.Game/TutorialCourse.cs) owns the lesson order, copy and
+The [course](../src/Bomber.Game/Tutorial/TutorialCourse.cs) owns the lesson order, copy and
 objectives. It covers movement, blast safety, both pickup/throw flows, three-level
 charging, precision aim, kick/stop, chain reactions, cover, all eleven pickup types,
 equipment swaps, expiration, terrain, impact/recovery, player holds/escape,
@@ -42,13 +42,13 @@ windows offer a retry. Free-practice pickups retain ordinary item lifetimes.
 
 ## Owning boundaries
 
-- [BlastStages.CircuitGarden](../src/Bomber.Game/Simulation/BlastStages.CircuitGarden.cs)
+- [BlastStages.CircuitGarden](../src/Bomber.Game/Simulation/Stages/BlastStages.CircuitGarden.cs)
   owns cells, support, ramps, canal and practice cache. Battle layouts are unchanged.
-- [BlastSession.Tutorial](../src/Bomber.Game/Simulation/BlastSession.Tutorial.cs)
+- [BlastSession.Tutorial](../src/Bomber.Game/Simulation/BlastSession/Rounds/BlastSession.Tutorial.cs)
   owns initial conditions, accepted-action progress, failure and completion.
   Bomb flight, fuse, collision, damage, inventory, recovery and AI use the existing
   simulation. The flood lesson applies the shared rise rate to the garden.
-- [LocalSession](../src/Bomber.Client/LocalSession.cs) accepts an optional local
+- [LocalSession](../src/Bomber.Client/Sessions/LocalSession.cs) accepts an optional local
   lesson ID. `MatchOptions` checks stage, participant count and lesson identity.
   Online settings cannot select the training arena or request a lesson; ordinary
   server sessions fall back to Sunken Temple for an injected garden stage ID.
@@ -58,7 +58,7 @@ windows offer a retry. Free-practice pickups retain ordinary item lifetimes.
 - [ArcadeMenu.Tutorial](../scripts/ui/menu/ArcadeMenu.Tutorial.cs) and
   [TutorialHud](../scripts/ui/hud/TutorialHud.cs) present the course and authoritative
   progress. Rendering does not decide whether a lesson passed.
-- [TempleStageView.CircuitGarden](../scripts/arena/TempleStageView.CircuitGarden.cs)
+- [TempleStageView.CircuitGarden](../scripts/arena/stages/TempleStageView.CircuitGarden.cs)
   adds grass, range marks, banners and landing mosaics. All geometry is decorative;
   authority cells remain the sole source of collision and water boundaries.
 

@@ -64,7 +64,7 @@ capability. Recheck native dependency compatibility before changing the pin.
 
 Our [GodotPeerLink](../scripts/app/GodotPeerLink.cs) currently configures one STUN
 endpoint and one reliable ordered channel. Our
-[PeerRoomClient](../src/Bomber.Client/PeerRoomClient.cs) uses recent pongs to decide
+[PeerRoomClient](../src/Bomber.Client/Peer/PeerRoomClient.cs) uses recent pongs to decide
 whether the native link is alive; it does not measure its RTT distribution or
 compare it with relay quality. Native links begin when a match starts.
 
