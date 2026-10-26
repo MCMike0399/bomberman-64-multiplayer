@@ -65,7 +65,8 @@ void fragment(){
     ROUGHNESS=.84;SPECULAR=.28;
   }
   if(detail>.5){
-    float sparkle=step(.996,hash(floor(p*90.0)))*pow(max(sin(weather_clock*1.6+hash(floor(p*90.0))*40.0),0.0),12.0);
+    float h=hash(floor(p*90.0));
+    float sparkle=h<.996?0.0:step(.996,h)*pow(max(sin(weather_clock*1.6+h*40.0),0.0),12.0);
     EMISSION=vec3(.58,.74,.9)*sparkle*.12;
   }
 }

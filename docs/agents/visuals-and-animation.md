@@ -472,7 +472,13 @@ unchanged. Status, equipment, names, suit, wins and native resizing still redraw
 the win-star animation runs until it settles. Arena presentation reuses unchanged
 cover data and frame-invariant interpolation factors without changing motion.
 See [performance research and measurements](../performance-research.md) for scope
-and candidate experiments. Preset values and shader code remain unchanged.
+and candidate experiments. Preset values remain unchanged.
+
+Shader early-outs are allowed only for terms that are exactly zero, and must be
+proven byte-identical on native Metal at High and Low. Rewrite the live shader
+resource's code in place for A/B frames: new shader objects reorder draws.
+Sine-hash noise is sensitive to compiler fusion, so moving it into a branch can
+change speckle. See [exact early-outs](../performance-research.md#gpu-pass-costs-and-exact-shader-early-outs-2026-10-26).
 
 Pickup **symbols** were enlarged independently of their baseplates: `PowerupModel`
 scales only its icon subtree and lifts it clear of the plate through its bob cycle.
