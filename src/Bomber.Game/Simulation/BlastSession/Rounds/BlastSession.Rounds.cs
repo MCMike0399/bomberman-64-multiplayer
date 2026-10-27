@@ -69,6 +69,7 @@ public sealed partial class BlastSession
             p.Tier = (int)MathF.Round(p.SurfaceY);
             p.FacingX = 0;
             p.FacingZ = 1;
+            p.FacingReleaseHold = 0;
             idx++;
         }
 

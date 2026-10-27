@@ -50,6 +50,24 @@ public static class BombThrowRules
         var speed=range/(ticks*SimulationStep);
         return new(directionX/length*speed,AimLiftSpeed,directionZ/length*speed);
     }
+    /// <summary>Level-ground range whose discrete arc, launched from a carrier standing at height 0,
+    /// first descends through <paramref name="rise"/> after <paramref name="distance"/> cells. Lets a
+    /// pointer place the landing on raised or lowered terrain; targets above the apex use the apex.</summary>
+    public static float RangeToTarget(float distance,float rise,int pumps=0)
+    {
+        if(!float.IsFinite(distance))return DefaultAimRange;
+        if(!float.IsFinite(rise))rise=0;
+        return Math.Clamp(Math.Max(0,distance)*DescentTicks(0,pumps)/DescentTicks(rise,pumps),MinAimRange,MaxAimRange);
+    }
+    private static int DescentTicks(float floor,int pumps)
+    {
+        var position=new Vector3(0,LaunchHeight,0);
+        var velocity=new Vector3(0,AimLiftSpeed,0);
+        var ticks=0;
+        do {var flight=Advance(position,velocity,SimulationStep,Weight(pumps));position=flight.Position;velocity=flight.Velocity;ticks++;}
+        while((velocity.Y>0||position.Y>floor)&&ticks<150);
+        return ticks;
+    }
     public static float Weight(int pumps) => 1 + .2f*Math.Clamp(pumps,0,3);
     public static bool CanBounce(int count,float verticalSpeed) => count<3 && verticalSpeed < -2;
     public static float BounceVelocity(float verticalSpeed) => MathF.Abs(verticalSpeed)*.62f;

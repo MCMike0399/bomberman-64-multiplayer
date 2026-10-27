@@ -12,17 +12,44 @@ namespace BlastCircuit.Arena;
 /// <summary>Advisory throw arcs for local carriers, sharing BombThrowRules with authority.</summary>
 public partial class ArenaView
 {
+    private readonly Dictionary<string,System.Numerics.Vector3> _localCarriers=[];
+    /// <summary>Arena position of a local player currently previewing a carried-bomb throw.</summary>
+    public bool LocalCarrier(string playerId,out System.Numerics.Vector3 position)=>_localCarriers.TryGetValue(playerId,out position);
+
+    /// <summary>The arena X/Z under a viewport position: the first terrain surface along the camera
+    /// ray, so a raised tier is picked where it is drawn. Off the stage, the floor plane is used.</summary>
+    public System.Numerics.Vector2? ArenaPoint(Godot.Vector2 screen)
+    {
+        if(_terrain==null||!_camera.IsInsideTree())return null;
+        var origin=_camera.ProjectRayOrigin(screen);var direction=_camera.ProjectRayNormal(screen);
+        if(direction.Y>-.01f)return null;
+        const float top=8*TempleStageView.HeightScale,bottom=-TempleStageView.HeightScale,step=.05f;
+        float Height(float t){var p=origin+direction*t;return p.Y-_terrain.AimSurface(p.X,p.Z)*TempleStageView.HeightScale;}
+        float start=Math.Max(0,(origin.Y-top)/-direction.Y),end=(origin.Y-bottom)/-direction.Y;
+        float previous=start;
+        for(float t=start+step;t<=end;t+=step)
+        {
+            if(Height(t)>0){previous=t;continue;}
+            float low=previous,high=t;
+            for(int i=0;i<12;i++){float mid=(low+high)*.5f;if(Height(mid)>0)low=mid;else high=mid;}
+            var hit=origin+direction*high;
+            return new(hit.X,hit.Z);
+        }
+        var floor=origin+direction*((origin.Y)/-direction.Y);
+        return new(floor.X,floor.Z);
+    }
+    public Godot.Vector2 ScreenPoint(System.Numerics.Vector3 arena)=>_camera.UnprojectPosition(new(arena.X,arena.Y*TempleStageView.HeightScale,arena.Z));
     private void ClearThrowPreviews()
     {
         foreach(var view in _throwPreviews.Values){view.HidePreview();view.QueueFree();}
-        _throwPreviews.Clear();ThrowPreviews=[];
+        _throwPreviews.Clear();ThrowPreviews=[];_localCarriers.Clear();
     }
     private void UpdateThrowPreviews(JsonElement data,byte[] cover)
     {
         if(!_battleActive||data.GetProperty("phase").GetInt32() is not (1 or 2))
         {ClearThrowPreviews();return;}
         if(_terrain==null)return;
-        var states=new List<ThrowPreviewState>();var seen=new HashSet<string>();
+        var states=new List<ThrowPreviewState>();var seen=new HashSet<string>();_localCarriers.Clear();
         foreach(var player in data.GetProperty("players").EnumerateArray())
         {
             var id=player.GetProperty("id").GetString()!;
@@ -32,6 +59,7 @@ public partial class ArenaView
             if(bomb.ValueKind==JsonValueKind.Undefined)continue;
             int pumps=bomb.GetProperty("pumps").GetInt32();
             var origin=new System.Numerics.Vector3(F(player,"x"),F(player,"y")+BombThrowRules.LaunchHeight,F(player,"z"));
+            _localCarriers[id]=new(F(player,"x"),F(player,"y"),F(player,"z"));
             bool aimSet=player.TryGetProperty("aimSet",out var set)&&set.GetBoolean();
             bool aiming=player.TryGetProperty("aiming",out var active)&&active.GetBoolean();
             float range=aimSet?F(player,"aimRange"):0;

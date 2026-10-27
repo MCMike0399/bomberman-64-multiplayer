@@ -190,6 +190,22 @@ and the input guide; older iteration tables are historical.
   the carry/new carry resets it. This supersedes the old relative rotation model.
 - Digital taps and partial analog intent use the same bounded fine-start adjustment.
   Ordinary movement returns to full normalized speed when Aim is inapplicable.
+- Pointer aim (2026-10-26): optional `InputState.AimTarget` (wire `tx`/`tz`) names
+  a landing point: absolute for the mouse, carrier-relative (`AimRelative`, wire
+  `tr`) for the right stick so snapshot latency cannot drag a walking stick aim.
+  It does not plant
+  the carrier and is resolved **after** that tick's movement, so a walking carrier
+  throws exactly at the point. `BombThrowRules.RangeToTarget` converts the plan
+  distance into the level-ground range whose discrete arc descends through the
+  target's static landing height (cover/pillar tops included); targets above the
+  apex use the apex. The last target persists when the pointer stops reporting.
+  Focus homing stays with the stance cursor: an explicit pointer target wins.
+  Bots never send a target. Older clients omit it; older servers ignore it.
+- Diagonal release grace (2026-10-26): when exactly one axis of a human's held
+  diagonal drops to zero, `TurnToward` keeps the diagonal heading for ~3 ticks.
+  A full release or throw in that window faces the diagonal; a held cardinal still
+  turns. Movement is immediate and unaffected; bots are excluded so AI/soak metrics
+  do not change. Facing feeds ordinary throws, placement and contextual kicks.
 - Pumps increase blast power; they do not change deliberately selected range.
   Ordinary non-aim throws retain their separate movement/pump-dependent launch rule.
 - Project the full bomb footprint against terrain, cover and pillar tops. Keep launch,
@@ -551,7 +567,7 @@ and full-type assertions when integrating that change.
 | Kick stops at a ledge, fuse stalls | Kicks, BombTravel, UpdateBombs | KickTimingChecks, BombTravelChecks; `kick-physics` |
 | Stuck crowd, recovery or victim hold | BodyContacts, Grapple | BodyContactChecks, GrappleChecks; `body-contacts`, `grapple` |
 | Shore death or ramp mismatch | StageLayout/CellDef, landing heights, FloodRules | TraversalAndGhostChecks; `traversal`, `hurry-water` |
-| Aim misses or guide disappears | BombThrowRules, ThrowAim, ArenaView | AimedThrowChecks; `precision-aim`, `reticle` |
+| Aim misses or guide disappears | BombThrowRules, ThrowAim, ArenaView | AimedThrowChecks; `precision-aim`, `aim-inputs`, `reticle` |
 | Missing upgrade/icon | Loot, PowerUpRules, PowerupModel | LootAvailabilityChecks; `loot-opening`, `asset-audit` |
 | Bot freeze | BotNavigation, body collision, timed search | NavigationLivenessChecks; `--liveness`, `--soak` |
 | Bot retreats forever or never threatens | BotGoalScore, commitment, blast geometry | `--pressure`, `--stock-human-pressure`, `--tactics`; `ai-play` |

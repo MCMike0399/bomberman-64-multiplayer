@@ -83,6 +83,7 @@ public partial class TutorialHud : Control
             .Replace("{bomb}",keys?"J":ControllerProfile.BombName(f))
             .Replace("{carry}",keys?"K":ControllerProfile.ButtonName(f,JoyButton.LeftShoulder))
             .Replace("{aim}",keys?"L":ControllerProfile.AimName(f))
+            .Replace("{point}",keys?"point with the mouse":"tilt the right stick")
             .Replace("{remote}",keys?"I":ControllerProfile.ButtonName(f,ControllerProfile.RemoteButton(f)))
             .Replace("{stop}",keys?"O":ControllerProfile.ButtonName(f,JoyButton.RightShoulder));
     }

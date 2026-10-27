@@ -30,16 +30,7 @@ public sealed partial class BlastSession
         var speed=PlayerSpeed*p.StatusSpeed*KickMovementScale(p);
         ApplyMoveDelta(p, input.X * speed * dt, input.Z * speed * dt,dt);
 
-        // Update facing for non-zero input.
-        if (input.X * input.X + input.Z * input.Z > 0.01f)
-        {
-            p.FacingX = input.X;
-            p.FacingZ = input.Z;
-            // Normalise.
-            var len = MathF.Sqrt(p.FacingX * p.FacingX + p.FacingZ * p.FacingZ);
-            p.FacingX /= len;
-            p.FacingZ /= len;
-        }
+        TurnToward(p, input, dt);
 
         // Check kick: walk into a resting bomb.
         if(!p.Ghost)CheckKick(p, input, startX, startZ, dt);
@@ -48,12 +39,26 @@ public sealed partial class BlastSession
     private void MovePlayerCarrying(BlastPlayer p, InputState input, float dt)
     {
         ApplyMoveDelta(p, input.X * PlayerSpeed * p.StatusSpeed * dt, input.Z * PlayerSpeed * p.StatusSpeed * dt,dt);
-        if (!p.AimSet && input.X * input.X + input.Z * input.Z > 0.01f)
-        {
-            p.FacingX = input.X; p.FacingZ = input.Z;
-            var len = MathF.Sqrt(p.FacingX * p.FacingX + p.FacingZ * p.FacingZ);
-            p.FacingX /= len; p.FacingZ /= len;
-        }
+        if (!p.AimSet) TurnToward(p, input, dt);
+    }
+
+    // Keys and D-pads rarely release both halves of a diagonal on the same tick.
+    // When exactly one axis of a held diagonal drops, keep the diagonal heading for
+    // about three ticks: a full release (or throw) inside that window still faces
+    // the diagonal, while a held cardinal turns promptly. Movement is unaffected.
+    private const float DiagonalReleaseGrace = .09f;
+
+    private static void TurnToward(BlastPlayer p, InputState input, float dt)
+    {
+        if (input.X * input.X + input.Z * input.Z <= 0.01f) { p.FacingReleaseHold = 0; return; }
+        var len = input.Length;
+        float x = input.X / len, z = input.Z / len;
+        var diagonal = MathF.Abs(p.FacingX) > .3f && MathF.Abs(p.FacingZ) > .3f;
+        var axisReleased = diagonal && !p.IsBot &&
+            (x == 0 && MathF.Sign(z) == MathF.Sign(p.FacingZ) || z == 0 && MathF.Sign(x) == MathF.Sign(p.FacingX));
+        if (axisReleased && p.FacingReleaseHold < DiagonalReleaseGrace) { p.FacingReleaseHold += dt; return; }
+        p.FacingReleaseHold = 0;
+        p.FacingX = x; p.FacingZ = z;
     }
 
     private void ApplyMoveDelta(BlastPlayer p, float dx, float dz,float dt)

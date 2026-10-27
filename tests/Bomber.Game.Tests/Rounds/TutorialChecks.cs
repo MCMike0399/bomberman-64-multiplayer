@@ -106,6 +106,11 @@ internal static class TutorialChecks
         LocalMatch Start(string id){var m=new LocalMatch(new MatchOptions{Stage=BlastStages.CircuitGarden,Practice=true,BotPlayers=0,TutorialLesson=id,BotDifficulty="easy"});Step(m,62);return m;}
         void Run(string name,Action check){try{check();passed++;Console.WriteLine("PASS "+name);}catch(Exception e){failures.Add(name+": "+e.Message);Console.WriteLine("FAIL "+name+": "+e.Message);}}
         Run("planting must survive its own bomb",()=>{var m=Start("bomb");Carry(m);Input(m,default,2);Go(m,5.5f,12.5f);Advance(m,120);Plant(m);Assert(!Done(m),"an earlier thrown blast cleared a newly planted live bomb");});
+        Run("pointer aiming completes the aim lesson while walking",()=>{
+            var m=Start("aim");Carry(m);var p=Player(m);
+            var target=new System.Numerics.Vector2(p.GetProperty("x").GetSingle()+3,p.GetProperty("z").GetSingle());
+            Input(m,new(0,-1,B:true,AimTarget:target),18);Input(m,new(0,0,AimTarget:target),4);
+            Assert(Done(m),"mouse or right-stick pointing could not complete Place your shot");});
         Run("Focus requires a charge completed with Focus",()=>{var m=Start("focus");Carry(m);Pump(m,1);Input(m,new(1,0,B:true),4);Assert(!Done(m),"merely collecting Focus credited a previous normal charge");Pump(m,1);Assert(Done(m),"a real Focus charge did not complete");});
         Run("ghost stays on dry land and can still finish",()=>{var m=Start("ghost");Plant(m);Advance(m,90);Assert(Player(m).GetProperty("ghost").GetBoolean(),"first death did not create a ghost");Input(m,new(-1,0),110);Assert(Player(m).GetProperty("alive").GetBoolean()&&!Failed(m),"ghost bypassed its land boundary");Go(m,12.5f,12.5f);Assert(Done(m),"ghost could not return from the edge and latch");});
         Run("graduation rival attacks normally",()=>{var m=Start("duel");bool attacked=false;m.Message+=json=>{var d=Data(json);if(d.TryGetProperty("bombs",out var bombs)&&bombs.EnumerateArray().Any(b=>b.GetProperty("ownerId").GetString()=="tutorial-partner"))attacked=true;};Advance(m,300);Assert(attacked,"the Easy CPU never placed a bomb");});

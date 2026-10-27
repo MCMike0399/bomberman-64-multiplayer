@@ -223,7 +223,10 @@ public sealed partial class BlastSession : GameSession
             var z = Finite(raw.Z);
             var len = MathF.Sqrt(x * x + z * z);
             if (len > 1f) { x /= len; z /= len; }
-            p.ReceiveInput(new InputState(x, z, raw.A, raw.B, raw.R, raw.Aim, raw.Stop));
+            // Optional pointer landing target; older clients omit it.
+            System.Numerics.Vector2? target = raw.Tx is { } tx && raw.Tz is { } tz && float.IsFinite(tx) && float.IsFinite(tz)
+                ? new(tx, tz) : null;
+            p.ReceiveInput(new InputState(x, z, raw.A, raw.B, raw.R, raw.Aim, raw.Stop, target, target is not null && raw.Tr));
         }
     }
 
@@ -321,6 +324,9 @@ public sealed partial class BlastSession : GameSession
         public bool R { get; set; }
         public bool Aim { get; set; }
         public bool Stop { get; set; }
+        public float? Tx { get; set; }
+        public float? Tz { get; set; }
+        public bool Tr { get; set; }
     }
 
 }

@@ -135,6 +135,63 @@ internal static class AimedThrowChecks
             m.SetInput(0,default);Step(m,64);var bomb=Bomb(m);
             Assert(N(bomb,"y")==4&&Math.Abs(N(bomb,"z")-projection.Last.Z)<.011f,"Elevated authoritative landing diverged from advisory.");
         });
+        Check("staggered diagonal key release keeps the diagonal heading and throw",()=>{
+            foreach(bool carrying in new[]{false,true}){
+                var m=Match();if(carrying)Lift(m);
+                m.SetInput(0,new PlayerInput(1,1,B:carrying));Step(m,6);
+                // One key is released a tick before the other: the classic keyboard diagonal miss.
+                m.SetInput(0,new PlayerInput(1,0,B:carrying));Step(m,1);
+                m.SetInput(0,new PlayerInput(0,0,B:carrying));Step(m,1);
+                var p=Player(m);
+                Assert(Math.Abs(N(p,"fx")-N(p,"fz"))<.001f&&N(p,"fx")>.7f,$"Staggered release snapped facing to a cardinal (carrying {carrying}).");
+                if(!carrying)continue;
+                float x=N(p,"x"),z=N(p,"z");
+                m.SetInput(0,default);Step(m,8);var bomb=Bomb(m);
+                float dx=N(bomb,"x")-x,dz=N(bomb,"z")-z;
+                Assert(dx>.5f&&Math.Abs(dx-dz)<.05f,$"Ordinary throw after a staggered release left the diagonal ({dx},{dz}).");
+            }
+        });
+        Check("pointer range on level ground is the distance and clamps at maximum",()=>{
+            foreach(int pumps in new[]{0,3})
+            foreach(float distance in new[]{0f,2.5f,6f}){
+                Assert(Math.Abs(BombThrowRules.RangeToTarget(distance,0,pumps)-distance)<.0001f,"Level pointer target changed its distance.");
+            }
+            Assert(BombThrowRules.RangeToTarget(40,0)==BombThrowRules.MaxAimRange&&BombThrowRules.RangeToTarget(float.NaN,0)==BombThrowRules.DefaultAimRange,"Pointer range escaped its bounds.");
+            Assert(BombThrowRules.RangeToTarget(4,2)>4&&BombThrowRules.RangeToTarget(4,-1)<4,"Raised and lowered targets need longer and shorter level ranges.");
+        });
+        Check("pointer target steers a walking carrier and lands where it points",()=>{
+            var m=Match();Lift(m);var start=Player(m);
+            var target=new Vector2(N(start,"x")+3,N(start,"z")+2);
+            m.SetInput(0,new PlayerInput(-1,0,B:true,AimTarget:target));Step(m,6);
+            var walking=Player(m);
+            Assert(N(walking,"x")<N(start,"x")-.5f&&!walking.GetProperty("aiming").GetBoolean()&&walking.GetProperty("aimSet").GetBoolean(),"Pointer aim planted the carrier or was not accepted.");
+            var expected=new Vector2(N(walking,"x"),N(walking,"z"))+new Vector2(N(walking,"aimX"),N(walking,"aimZ"))*N(walking,"aimRange");
+            Assert(Vector2.Distance(expected,target)<.01f,"Authority aim does not name the pointed point after the carrier moved.");
+            m.SetInput(0,new PlayerInput(0,0,AimTarget:target));Step(m,64);var bomb=Bomb(m);
+            Assert(bomb.GetProperty("state").GetInt32()==0&&Vector2.Distance(new(N(bomb,"x"),N(bomb,"z")),target)<.05f,"Pointer throw missed its target.");
+        });
+        Check("relative stick target follows the carrier's post-move position",()=>{
+            var m=Match();Lift(m);var offset=new Vector2(-2,3);
+            m.SetInput(0,new PlayerInput(1,0,B:true,AimTarget:offset,AimRelative:true));Step(m,5);var p=Player(m);
+            Assert(!p.GetProperty("aiming").GetBoolean()&&Vector2.Distance(new Vector2(N(p,"aimX"),N(p,"aimZ"))*N(p,"aimRange"),offset)<.01f,"Relative stick offset drifted while walking.");
+        });
+        Check("pointer target on raised terrain lands on that tier",()=>{
+            var m=Match(raised:true);Lift(m);var p=Player(m);
+            var target=new Vector2(N(p,"x")+1,15.5f);
+            m.SetInput(0,new PlayerInput(0,0,B:true,AimTarget:target));Step(m,2);
+            m.SetInput(0,new PlayerInput(0,0,AimTarget:target));Step(m,64);var bomb=Bomb(m);
+            Assert(N(bomb,"y")==4&&Vector2.Distance(new(N(bomb,"x"),N(bomb,"z")),target)<.15f,$"Raised pointer target missed: {bomb}.");
+        });
+        Check("pointer target without a carried bomb leaves heading and walking alone",()=>{
+            var m=Match();var before=Player(m);
+            m.SetInput(0,new PlayerInput(1,0,AimTarget:new(0,0)));Step(m,4);var after=Player(m);
+            Assert(N(after,"fx")>.999f&&N(after,"x")>N(before,"x")+.4f&&!after.GetProperty("aimSet").GetBoolean(),"An empty-handed pointer changed facing or movement.");
+        });
+        Check("deliberate turn from a diagonal to a cardinal still turns promptly",()=>{
+            var m=Match();m.SetInput(0,new PlayerInput(1,1));Step(m,6);
+            m.SetInput(0,new PlayerInput(1,0));Step(m,5);var p=Player(m);
+            Assert(N(p,"fx")>.999f&&Math.Abs(N(p,"fz"))<.001f,"Held cardinal input never replaced the old diagonal heading.");
+        });
         Check("new carry never inherits previous throw intent",()=>{
             var m=Match();Lift(m);m.SetInput(0,new PlayerInput(1,1,B:true,Aim:true));Step(m,20);
             m.SetInput(0,default);Step(m,2);

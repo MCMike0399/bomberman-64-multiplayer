@@ -423,7 +423,13 @@ public partial class PlaytestDriver
     private static void CtlReleaseAll()
     {
         foreach(var key in QaKeys)CtlKey(key,false);
-        foreach(var pad in QaPads){CtlAxis(pad.RuntimeId,JoyAxis.LeftX,0);CtlAxis(pad.RuntimeId,JoyAxis.LeftY,0);CtlAxis(pad.RuntimeId,JoyAxis.TriggerRight,0);foreach(var button in QaButtons)CtlButton(pad.RuntimeId,button,false);}
+        foreach(var pad in QaPads)
+        {
+            foreach(var axis in new[]{JoyAxis.LeftX,JoyAxis.LeftY,JoyAxis.RightX,JoyAxis.RightY,JoyAxis.TriggerRight})CtlAxis(pad.RuntimeId,axis,0);
+            foreach(var button in QaButtons)CtlButton(pad.RuntimeId,button,false);
+        }
+        foreach(var button in new[]{MouseButton.Left,MouseButton.Right})
+            EngineInput.ParseInputEvent(new InputEventMouseButton {ButtonIndex=button,Pressed=false});
     }
 }
 

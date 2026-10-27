@@ -123,8 +123,9 @@ public partial class BattleHud : Control
                 if(held.ValueKind!=JsonValueKind.Undefined&&held.TryGetProperty("charging",out var charging)&&charging.GetBoolean())
                     return $"{who}: charging {held.GetProperty("pumps").GetInt32()+1}/3 · {held.GetProperty("charge").GetSingle():P0} · {release}";
                 if(p.TryGetProperty("aiming",out var aiming)&&aiming.GetBoolean())
-                    return $"{who}: {(family==ControllerFamily.Keyboard?(seat==1?"arrows":"WASD"):"either stick")} moves the target · nudge to fine-tune · {release}";
-                return $"{who}: {PromptBar.Spoken(primary)} pumps · hold {aim} to aim · {release}";
+                    return $"{who}: {(family==ControllerFamily.Keyboard?(seat==1?"arrows":"WASD"):"stick / D-pad")} moves the target · nudge to fine-tune · {release}";
+                string point=family==ControllerFamily.Keyboard?(seat==1?"":"mouse or "):"right stick or ";
+                return $"{who}: {PromptBar.Spoken(primary)} pumps · {point}hold {aim} to aim · {release}";
             }
             if(state.GetProperty("bombs").EnumerateArray().Any(b=>b.GetProperty("remote").GetBoolean()&&b.GetProperty("ownerId").GetString()==p.GetProperty("id").GetString()))
                 return $"{who}'s remote bombs are waiting. {PromptBar.Spoken(remote)} sets them off";

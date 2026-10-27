@@ -56,7 +56,8 @@ public sealed partial class BlastSession
         if(_tutorialLesson.Id=="flood") _waterLevel=FloodRules.InitialLevel+_tutorialTime*FloodRules.RisePerSecond;
         if(p.PickupSerial!=_tutorialPickupSerial)
         { _tutorialPickupSerial=p.PickupSerial; _tutorialSignals.Add("item:"+p.LastPickup); }
-        if(p.Aiming && p.AimSet && p.Input.X*p.Input.X+p.Input.Z*p.Input.Z>.01f)
+        // Steering counts from the aim stance with movement keys or from a pointer (mouse / right stick).
+        if(p.AimSet && (p.Aiming && p.Input.X*p.Input.X+p.Input.Z*p.Input.Z>.01f || p.Input.AimTarget is not null && p.CarryingBombId is not null))
             _tutorialAimTime+=dt;
         if(p.CarryingBombId is { } carried)
         {
