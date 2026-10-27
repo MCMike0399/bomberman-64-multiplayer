@@ -132,11 +132,16 @@ public partial class PlaytestDriver
         if(OS.HasFeature("editor")){info.ArgumentList.Add("--path");info.ArgumentList.Add(ProjectSettings.GlobalizePath("res://"));}
         foreach(var arg in new[]{"--windowed","--max-fps","30","--","--playtest=display-settings","--playtest-restore-display","--playtest-preferences="+id,"--playtest-output="+output})info.ArgumentList.Add(arg);
         Event("display-restart-launch",new {executable=info.FileName,args=info.ArgumentList.ToArray()});
-        using var process=System.Diagnostics.Process.Start(info)??throw new InvalidOperationException("Could not launch persistence witness");
-        // A fresh exported process can spend tens of seconds in cold Metal startup.
-        var stdout=process.StandardOutput.ReadToEndAsync();var stderr=process.StandardError.ReadToEndAsync();
+        var parentWindow=GetWindow();bool parentVisible=parentWindow.Visible;
+        bool parentRendering=RenderingServer.RenderLoopEnabled;
+        System.Diagnostics.Process? process=null;Task<string>? stdout=null,stderr=null;
         try
         {
+            // The persistence witness owns the GPU and focus while it boots.
+            // The parent continues processing frames without competing rendering.
+            parentWindow.Hide();RenderingServer.RenderLoopEnabled=false;
+            process=System.Diagnostics.Process.Start(info)??throw new InvalidOperationException("Could not launch persistence witness");
+            stdout=process.StandardOutput.ReadToEndAsync();stderr=process.StandardError.ReadToEndAsync();
             var wall=System.Diagnostics.Stopwatch.StartNew();
             while(!process.HasExited&&wall.Elapsed.TotalSeconds<90){await Frames(1);await Task.Delay(25);}
             if(!process.HasExited){process.Kill(entireProcessTree:true);throw new TimeoutException("Fresh display process did not finish");}
@@ -147,11 +152,16 @@ public partial class PlaytestDriver
         }
         finally
         {
-            if(!process.HasExited)process.Kill(entireProcessTree:true);
-            await process.WaitForExitAsync();
-            File.WriteAllText(Path.Combine(output,"runtime.log"),await stdout+await stderr);
+            if(process is not null)
+            {
+                if(!process.HasExited)process.Kill(entireProcessTree:true);
+                await process.WaitForExitAsync();
+                if(stdout is not null&&stderr is not null)File.WriteAllText(Path.Combine(output,"runtime.log"),await stdout+await stderr);
+                process.Dispose();
+            }
             if(File.Exists(path))File.Delete(path);
-            GetWindow().GrabFocus();await Frames(10);
+            RenderingServer.RenderLoopEnabled=parentRendering;parentWindow.Visible=parentVisible;
+            parentWindow.GrabFocus();await Frames(10);
         }
     }
 

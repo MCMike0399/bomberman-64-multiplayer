@@ -103,6 +103,7 @@ def inspect_archive(directory, target, revision, release):
 
 def inspect(directory, revision, release, targets=None):
     """Require a native-OS exported smoke, bound to these exact archive bytes."""
+    from download_formats import FILES
     for target in (TARGETS if targets is None else targets):
         settings = TARGETS[target]
         inspect_archive(directory, target, revision, release)
@@ -121,6 +122,10 @@ def inspect(directory, revision, release, targets=None):
                 graphical.get('suite') != 'graphical-regression' or smoke.get('suite') != 'headless-regression'):
             raise RuntimeError('Full graphical desktop regression is missing or mismatched')
         desktop_validation.inspect_receipt(graphical, settings, revision, release)
+        for report in (smoke,graphical):
+            if (report.get('downloadSha256') != digest(directory / FILES[target]) or
+                    report.get('serverSha256') != digest(directory / 'Blast-Circuit-server-dotnet10.zip')):
+                raise RuntimeError('Complete desktop regression used different download/server bytes: ' + target)
         startup = json.loads((directory / item['startup']).read_text())
         desktop_validation.inspect_startup(startup, target, revision, release, digest(directory / item['archive']))
         desktop_update_gates.inspect(json.loads((directory / item['updater_test']).read_text()), target,
@@ -128,7 +133,8 @@ def inspect(directory, revision, release, targets=None):
     if targets is None:
         import crossplay
         desktop_validation.inspect_mac(json.loads((directory / desktop_validation.MAC_RECEIPT).read_text()), revision, release,
-            digest(directory / 'Blast-Circuit-macos-arm64.zip'), digest(directory / 'Blast-Circuit-macos-arm64.dmg'))
+            digest(directory / 'Blast-Circuit-macos-arm64.zip'), digest(directory / 'Blast-Circuit-macos-arm64.dmg'),
+            digest(directory / 'Blast-Circuit-server-dotnet10.zip'))
         crossplay.inspect_summary(json.loads((directory / crossplay.RECEIPT).read_text()), revision, release, directory)
 
 

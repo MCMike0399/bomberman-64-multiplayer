@@ -54,7 +54,9 @@ public partial class GameUpdater : Node
         {
             File.WriteAllText(Path.Combine(Path.GetDirectoryName(_healthPath)!,"health.json"),System.Text.Json.JsonSerializer.Serialize(new {
                 version=Version,platform=OS.GetName(),driver=RenderingServer.GetCurrentRenderingDriverName(),
-                method=RenderingServer.GetCurrentRenderingMethod(),adapter=RenderingServer.GetVideoAdapterName()}));
+                method=RenderingServer.GetCurrentRenderingMethod(),adapter=RenderingServer.GetVideoAdapterName(),
+                graphics=GetParent() is BlastCircuit.App.GameRoot root?root.AppliedGraphicsPreset:"unknown",
+                window=GetWindow().Mode.ToString().ToLowerInvariant()}));
             File.WriteAllText(_healthPath,Version);_healthPath=null;
             GD.Print("BLAST_UPDATE_HEALTHY "+Version);
         }

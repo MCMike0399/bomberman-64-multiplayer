@@ -140,8 +140,12 @@ def main():
                 raise RuntimeError('Mixed-platform gameplay/renderer evidence failed: ' + ', '.join(errors))
             state = json.loads((output / 'crossplay.json').read_text())
             if state.get('passed') is not True or state.get('role') != args.target: raise RuntimeError('Missing target crossplay witness')
+            origin = json.loads(args.origin.read_text())
+            if origin.get('revision') != data['revision'] or origin.get('release') != data['release']:
+                raise RuntimeError('Crossplay server identity differs from the installed client')
             receipt = {'schemaVersion': 1, 'passed': True, 'target': args.target, 'revision': data['revision'], 'release': data['release'],
                 'downloadSha256': desktop.digest(directory / downloads.FILES[args.target]), 'assertions': report['assertions'],
+                'serverArchiveSha256': origin['serverArchiveSha256'],
                 'runtimeErrors': runtime_errors, 'crossplay': state,
                 'captures': {Path(path).name: desktop.digest(Path(path)) for path in report['screenshots']}}
             print('PASS actual installed ' + args.target + ' shared Quick Play')

@@ -15,10 +15,10 @@ def inspect(receipt, target, revision, release, archive_sha):
     if tuple(map(int, future.get('version', '0').split('.'))) <= tuple(map(int, release['version'].split('.'))):
         raise RuntimeError('Actual desktop updater fixture must be newer than the candidate')
     cases = receipt.get('cases', [])
-    if [case.get('name') for case in cases] != ['successful-install', 'failed-launch-rollback']:
+    if [case.get('name') for case in cases] != ['successful-install', 'failed-launch-rollback', 'saved-high-fullscreen']:
         raise RuntimeError('Actual desktop updater is missing install/rollback transactions')
     for case in cases:
-        result = ('installed ' + future['version']) if case['name'] == 'successful-install' else ('failed ' + future['version'] + ' launch-rollback')
+        result = ('failed ' + future['version'] + ' launch-rollback') if case['name'] == 'failed-launch-rollback' else ('installed ' + future['version'])
         seconds = case.get('seconds')
         if (case.get('result') != result or case.get('fromVersion') != release['version'] or
                 case.get('toVersion') != future['version'] or case.get('oldGameplay') is not True or
@@ -30,6 +30,10 @@ def inspect(receipt, target, revision, release, archive_sha):
     if (health.get('version') != future['version'] or health.get('driver') != ('d3d12' if target == 'windows-x64' else 'vulkan') or
             health.get('method') != 'forward_plus' or not health.get('adapter') or cases[1].get('restoredGameplay') is not True):
         raise RuntimeError('Actual desktop updater is missing renderer/rollback gameplay evidence')
+    high=cases[2].get('health',{})
+    if (high.get('version')!=future['version'] or high.get('driver')!=health.get('driver') or
+            high.get('method')!='forward_plus' or not high.get('adapter') or high.get('graphics')!='high' or high.get('window')!='fullscreen'):
+        raise RuntimeError('Actual desktop updater is missing saved High/fullscreen relaunch evidence')
     return receipt
 
 

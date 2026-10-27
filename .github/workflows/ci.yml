@@ -382,6 +382,8 @@ jobs:
             artifacts/Blast-Circuit-windows-x64-updater-details/**/old-launch.log
             artifacts/Blast-Circuit-windows-x64-updater-details/**/restored-gameplay.log
             artifacts/Blast-Circuit-windows-x64-updater-details/**/helper-error.txt
+            artifacts/Blast-Circuit-windows-x64-updater-details/**/setup.log
+            artifacts/Blast-Circuit-windows-x64-updater-details/**/health.json
             artifacts/Blast-Circuit-windows-x64-Setup.exe
             artifacts/Blast-Circuit-windows-x64-Setup.exe.sha256
             artifacts/Blast-Circuit-windows-x64-download.json
@@ -474,6 +476,7 @@ jobs:
             artifacts/Blast-Circuit-linux-x64-updater-details/**/old-launch.log
             artifacts/Blast-Circuit-linux-x64-updater-details/**/restored-gameplay.log
             artifacts/Blast-Circuit-linux-x64-updater-details/**/helper-error.txt
+            artifacts/Blast-Circuit-linux-x64-updater-details/**/health.json
             artifacts/Blast-Circuit-linux-x64.AppImage
             artifacts/Blast-Circuit-linux-x64.AppImage.sha256
             artifacts/Blast-Circuit-linux-x64-download.json

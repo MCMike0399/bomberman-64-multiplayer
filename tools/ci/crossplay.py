@@ -72,6 +72,8 @@ def inspect_summary(receipt, revision, release, directory=None):
             import download_formats
             if report.get('downloadSha256') != desktop.digest(directory / download_formats.FILES[target]):
                 raise RuntimeError('Crossplay did not run the exact player download: ' + target)
+            if report.get('serverArchiveSha256') != desktop.digest(directory / 'Blast-Circuit-server-dotnet10.zip'):
+                raise RuntimeError('Crossplay did not run the exact staged server: ' + target)
     if not reports[1]['crossplay'].get('lateExcluded'): raise RuntimeError('Crossplay did not reject a late stranger')
     return receipt
 
@@ -220,6 +222,8 @@ def main():
         receipt = {'schemaVersion': 1, 'passed': True, 'targets': TARGETS,
             'release': reports[0]['release'], 'revision': reports[0]['revision'], 'lobbyId': states[0]['lobbyId'],
             'deadline': states[0]['deadline'], 'roster': states[0]['roster'], 'reports': reports}
+        if len({report.get('serverArchiveSha256') for report in reports}) != 1 or not reports[0].get('serverArchiveSha256'):
+            raise RuntimeError('Crossplay clients used different staged server archives')
         inspect_summary(receipt, receipt['revision'], receipt['release'])
         (directory / RECEIPT).write_text(json.dumps(receipt, indent=2) + '\n')
         print('PASS real Windows/Linux/Mac Quick Play: roster reset, real minute, shared match and accepted movement/bombs')

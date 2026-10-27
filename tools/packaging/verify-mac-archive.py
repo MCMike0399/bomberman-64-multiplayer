@@ -59,7 +59,8 @@ def main():
                 cases.append(report)
         (directory / 'Blast-Circuit-macos-arm64-regression.json').write_text(json.dumps({'schemaVersion': 1, 'passed': True,
             'revision': revision, 'release': release, 'archiveSha256': desktop.digest(directory / 'Blast-Circuit-macos-arm64.zip'),
-            'downloadSha256': desktop.digest(directory / 'Blast-Circuit-macos-arm64.dmg'), 'cases': cases}, indent=2) + '\n')
+            'downloadSha256': desktop.digest(directory / 'Blast-Circuit-macos-arm64.dmg'),
+            'serverSha256': desktop.digest(directory / 'Blast-Circuit-server-dotnet10.zip'), 'cases': cases}, indent=2) + '\n')
     finally:
         if (output / 'installed').exists(): shutil.rmtree(output / 'installed')
     print('PASS full DMG-installed Mac gameplay, multiplayer and graphical regression')

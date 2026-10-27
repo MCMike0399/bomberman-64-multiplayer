@@ -22,24 +22,30 @@ string version = newMetadata.RootElement.GetProperty("release").GetProperty("ver
 if (UpdateRelease.ParseVersion(version) <= UpdateRelease.ParseVersion(oldVersion)) throw new InvalidDataException("Fixture is not newer.");
 byte[] archive = await File.ReadAllBytesAsync(Path.Combine(fixture, UpdateRelease.ArchiveName));
 var cases = new List<object>();
-foreach (bool interrupt in new[] { false, true })
+foreach (var testCase in new[] { (Name:"successful-install",Interrupt:false,High:false),
+    (Name:"failed-launch-rollback",Interrupt:true,High:false), (Name:"saved-high-fullscreen",Interrupt:false,High:true) })
 {
+    bool interrupt=testCase.Interrupt;
     JsonElement? healthReport = null;
-    string folder = Path.Combine(output, interrupt ? "failed-launch-rollback" : "successful-install");
+    string folder = Path.Combine(output,testCase.Name);
     Directory.CreateDirectory(folder);
+    // Keep the installed runtime below classic Windows path limits. Evidence
+    // remains in the requested directory; a long CI artifact path is not a user install path.
+    string runtimeFolder=Path.Combine(Path.GetTempPath(),"bcu-"+Guid.NewGuid().ToString("N")[..10]);
+    Directory.CreateDirectory(runtimeFolder);
     string target, executable;
     if (image)
     {
-        target = Path.Combine(folder, "Installed game with spaces.AppImage");
+        target = Path.Combine(runtimeFolder, "Game with spaces.AppImage");
         File.Copy(Path.Combine(assets, stem + ".AppImage"), target);
         File.SetUnixFileMode(target, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
-        await Tool(target, folder, "--appimage-extract");
-        executable = Path.Combine(folder, "squashfs-root/usr/lib/blast-circuit/BlastCircuit.x86_64");
+        await Tool(target, runtimeFolder, "--appimage-extract");
+        executable = Path.Combine(runtimeFolder, "squashfs-root/usr/lib/blast-circuit/BlastCircuit.x86_64");
     }
     else
     {
-        target = Path.Combine(folder, "Installed game with spaces");
-        await Tool(Path.Combine(assets, stem + "-Setup.exe"), folder, "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/CURRENTUSER", "/DIR=" + target);
+        target = Path.Combine(runtimeFolder, "Game with spaces");
+        await Tool(Path.Combine(assets, stem + "-Setup.exe"), folder, "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/CURRENTUSER", "/DIR=" + target,"/LOG="+Path.Combine(folder,"setup.log"));
         executable = Path.Combine(target, "BlastCircuit.exe");
     }
     string history = Path.Combine(folder, "History");
@@ -56,11 +62,16 @@ foreach (bool interrupt in new[] { false, true })
     using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(300));
     var release = await service.Check(oldVersion, timeout.Token) ?? throw new Exception("No authenticated fixture release.");
     var prepared = await DesktopUpdateInstaller.Prepare(service, release, target, oldVersion, executable, history, timeout.Token);
-    string preferences = Path.Combine(folder, "profile"); Directory.CreateDirectory(preferences);
+    string preferences = Path.Combine(runtimeFolder, "profile"); Directory.CreateDirectory(preferences);
     Environment.SetEnvironmentVariable("XDG_DATA_HOME", Path.Combine(preferences, "data"));
     Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", Path.Combine(preferences, "config"));
     Environment.SetEnvironmentVariable("APPDATA", Path.Combine(preferences, "AppData"));
     if (image) Environment.SetEnvironmentVariable("APPIMAGE_EXTRACT_AND_RUN", null);
+    string userData=Path.Combine(image?Environment.GetEnvironmentVariable("XDG_DATA_HOME")!:Environment.GetEnvironmentVariable("APPDATA")!,
+        image?"godot":"Godot","app_userdata","Blast Circuit");
+    Directory.CreateDirectory(userData);
+    File.WriteAllText(Path.Combine(userData,"preferences.cfg"),"[player]\nautomaticUpdates=false\n[video]\ngraphicsPreset=\""+
+        (testCase.High?"high":"medium")+"\"\nfullscreen="+(testCase.High?"true":"false")+"\nresolution=Vector2i(0, 0)\n");
     var start = new ProcessStartInfo(image ? target : executable) { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true };
     foreach (string argument in new[] { "--headless", "--", "--smoke", "--smoke-seconds=6" }) start.ArgumentList.Add(argument);
     using var old = Process.Start(start)!;
@@ -68,7 +79,7 @@ foreach (bool interrupt in new[] { false, true })
     var clock = Stopwatch.StartNew();
     try
     {
-        await DesktopUpdateInstaller.Schedule(prepared, old.Id, timeout.Token, windowed: true);
+        await DesktopUpdateInstaller.Schedule(prepared, old.Id, timeout.Token, windowed:!testCase.High);
         await Task.Delay(300, timeout.Token);
         if (old.HasExited) throw new Exception("Old game exited before the handoff witness.");
         await old.WaitForExitAsync(timeout.Token);
@@ -87,7 +98,7 @@ foreach (bool interrupt in new[] { false, true })
         while (!File.Exists(receipt)) await Task.Delay(100, timeout.Token);
         string expected = interrupt ? "failed " + version + " launch-rollback" : "installed " + version;
         if ((await File.ReadAllTextAsync(receipt, timeout.Token)).Trim() != expected) throw new Exception("Incorrect updater outcome.");
-        while (File.Exists(Path.Combine(folder, ".blast-update-lock"))) await Task.Delay(100, timeout.Token);
+        while (File.Exists(Path.Combine(runtimeFolder, ".blast-update-lock"))) await Task.Delay(100, timeout.Token);
         if (!interrupt)
         {
             using var health = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(prepared.Stage, "health.json"), timeout.Token));
@@ -97,6 +108,8 @@ foreach (bool interrupt in new[] { false, true })
                 report.GetProperty("driver").GetString() != (image ? "vulkan" : "d3d12") ||
                 report.GetProperty("method").GetString() != "forward_plus" || string.IsNullOrWhiteSpace(report.GetProperty("adapter").GetString()))
                 throw new Exception("Updated game did not use the intended platform renderer.");
+            if(testCase.High&&(report.GetProperty("graphics").GetString()!="high"||report.GetProperty("window").GetString()!="fullscreen"))
+                throw new Exception("Saved High/fullscreen update did not restore both applied settings.");
             using var running = Process.GetProcessById(newPid);
             if (running.HasExited || (await File.ReadAllTextAsync(Path.Combine(prepared.Stage, "healthy"), timeout.Token)).Trim() != version)
                 throw new Exception("Installed game did not remain healthy after helper exit.");
@@ -125,7 +138,7 @@ foreach (bool interrupt in new[] { false, true })
             await Tool(Path.Combine(target, "unins000.exe"), folder, "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART");
             if (File.Exists(executable) || Directory.Exists(Path.Combine(target, "updater"))) throw new Exception("Uninstall after update left the game or updater installed.");
         }
-        cases.Add(new { name = interrupt ? "failed-launch-rollback" : "successful-install", result = expected,
+        cases.Add(new { name=testCase.Name, result = expected,
             fromVersion = oldVersion, toVersion = version, seconds = clock.Elapsed.TotalSeconds,
             oldGameplay = true, inventoryMatched = true, restoredGameplay = interrupt,
             uninstallVerified = !image, health = healthReport });
@@ -151,6 +164,10 @@ foreach (bool interrupt in new[] { false, true })
             catch (InvalidOperationException) { }
         }
         if (!old.HasExited) { old.Kill(true); await old.WaitForExitAsync(); }
+        foreach(string name in new[]{"helper-error.txt","health.json"})
+            if(File.Exists(Path.Combine(prepared.Stage,name)))File.Copy(Path.Combine(prepared.Stage,name),Path.Combine(folder,name),overwrite:true);
+        if(!File.Exists(Path.Combine(runtimeFolder,".blast-update-lock")))
+            try{Directory.Delete(runtimeFolder,true);}catch(IOException){}
     }
 }
 File.WriteAllText(Path.Combine(output, "summary.json"), JsonSerializer.Serialize(new { schemaVersion = 1, passed = true,
@@ -170,7 +187,7 @@ static async Task<string> Tool(string file, string directory, params string[] ar
     {
         await process.WaitForExitAsync(timeout.Token);
         string text = await stdout + await stderr;
-        if (process.ExitCode != 0) throw new IOException("Fixture tool failed: " + text);
+        if (process.ExitCode != 0) throw new IOException("Fixture tool failed ("+Path.GetFileName(file)+", exit "+process.ExitCode+"): " + text);
         return text;
     }
     catch { if (!process.HasExited) process.Kill(true); throw; }

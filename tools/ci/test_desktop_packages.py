@@ -18,6 +18,8 @@ RELEASE = {'version': '1.2.3', 'build': '42', 'protocolRevision': 6, 'admissionT
 
 def write_desktop(directory, revision=SHA, release=None):
     release = release or RELEASE
+    if not (directory / 'Blast-Circuit-server-dotnet10.zip').exists():
+        (directory / 'Blast-Circuit-server-dotnet10.zip').write_bytes(b'fixture server')
     for target, settings in desktop.TARGETS.items():
         item = desktop.names(target)
         files = {name: b'fixture runtime' for name in (
@@ -58,14 +60,18 @@ def write_desktop(directory, revision=SHA, release=None):
             'cases': [{'id': name, 'passed': True, 'adapter': 'Fixture GPU', 'seconds': 4, 'snapshots': 10, 'kind': name.rsplit('-', 1)[1]} for name in validation.STARTUP]}))
         (directory / download_formats.FILES[target]).write_bytes(b'MZ fixture installer' if target == 'windows-x64' else b'\x7fELF' + b'\x00'*4 + b'AI\x02 fixture AppImage')
         download_formats.record(directory, target, revision, release, item['archive'])
+        for key in ('smoke','graphical'):
+            path=directory/item[key];report=json.loads(path.read_text())
+            report.update(downloadSha256=desktop.digest(directory/download_formats.FILES[target]),serverSha256=desktop.digest(directory/'Blast-Circuit-server-dotnet10.zip'))
+            path.write_text(json.dumps(report))
         parts = release['version'].split('.')
         future = dict(release, version='.'.join([*parts[:2], str(int(parts[2]) + 1)]))
         cases = []
-        for name in ('successful-install', 'failed-launch-rollback'):
-            cases.append({'name': name, 'result': ('installed ' + future['version']) if name == 'successful-install' else 'failed ' + future['version'] + ' launch-rollback',
+        for name in ('successful-install', 'failed-launch-rollback', 'saved-high-fullscreen'):
+            cases.append({'name': name, 'result': ('failed ' + future['version'] + ' launch-rollback') if name == 'failed-launch-rollback' else 'installed ' + future['version'],
                           'fromVersion': release['version'], 'toVersion': future['version'], 'seconds': 5,
                           'oldGameplay': True, 'inventoryMatched': True, 'restoredGameplay': name != 'successful-install',
-                          'uninstallVerified': True, 'health': {'version': future['version'], 'driver': settings['driver'], 'method': 'forward_plus', 'adapter': 'Fixture GPU'}})
+                          'uninstallVerified': True, 'health': {'version': future['version'], 'driver': settings['driver'], 'method': 'forward_plus', 'adapter': 'Fixture GPU', 'graphics': 'high' if name == 'saved-high-fullscreen' else 'medium', 'window': 'fullscreen' if name == 'saved-high-fullscreen' else 'windowed'}})
         (directory / item['updater_test']).write_text(json.dumps({'schemaVersion': 1, 'passed': True, 'platform': target,
             'candidate': {'release': release, 'revision': revision}, 'fixture': {'release': future, 'revision': revision},
             'candidateArchiveSha256': desktop.digest(directory / item['archive']), 'cases': cases, 'runtimeErrors': []}))
@@ -83,6 +89,15 @@ class DesktopPackageTests(unittest.TestCase):
 
     def test_complete_runtime_and_native_exported_smoke_pass(self):
         desktop.inspect(self.root, SHA, RELEASE, targets=list(desktop.TARGETS))
+
+    def test_full_suite_receipts_must_bind_the_actual_download_and_server(self):
+        for key in ('smoke','graphical'):
+            path=self.root/self.item[key];original=path.read_text()
+            for field in ('downloadSha256','serverSha256'):
+                report=json.loads(original);report[field]='0'*64;path.write_text(json.dumps(report))
+                with self.subTest(key=key,field=field),self.assertRaisesRegex(RuntimeError,'different download/server'):
+                    desktop.inspect(self.root,SHA,RELEASE,targets=[self.target])
+            path.write_text(original)
 
     def test_linux_executable_permission_is_part_of_the_archive_contract(self):
         target = 'linux-x64'

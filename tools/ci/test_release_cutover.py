@@ -14,7 +14,7 @@ import desktop_packages
 import deploy_release
 import promote_release
 from deployment_state import Journal, locked
-from test_promotion import RELEASE, SHA, write_package, write_server
+from test_promotion import RELEASE, SHA, write_package, write_server, bind_server_receipts
 
 TARGETS = {'public': 'https://public.example', 'fallback': 'https://fallback.example'}
 
@@ -79,6 +79,7 @@ class ReleaseCutoverTests(unittest.TestCase):
                         value['files'][name] = hashlib.sha256(b'{}').hexdigest()
                 metadata.write_text(json.dumps(value))
                 (directory / (archive.name + '.sha256')).write_text(hashlib.sha256(archive.read_bytes()).hexdigest() + '  ' + archive.name)
+                bind_server_receipts(directory)
         elif args[:2] in (('release', 'create'), ('release', 'upload')):
             self.events.append('stage')
             for path in args[3:args.index('--repo')]:

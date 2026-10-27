@@ -60,11 +60,14 @@ Private builds still run only on trusted main. The independent
 `tests/Bomber.DesktopUpdate.Tests` process fixtures exercise helper handoff,
 replacement, uninstall preservation and launch rollback. Actual exported-game
 transactions are also mandatory through `verify-desktop-update.py`. They use a
-synthetic newer fixture identity, verify healthy renderer relaunch and deliberate
+synthetic newer fixture identity, verify healthy renderer relaunch (including
+saved High/fullscreen settings) and deliberate
 pre-health rollback, compare complete inventories, and uninstall after Windows
 updates. These tests require disposable Windows/Linux desktops or profiles.
 `startup-desktop.py` covers all nine saved preset/display launches using separate
 preference files and captures. Ordinary player preferences are not rewritten.
+Promotion compares complete regression receipts with the exact player-download
+and archived-server hashes, including Mac and mixed-platform evidence.
 
 ## Evidence limits
 

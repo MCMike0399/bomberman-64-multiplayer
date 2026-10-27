@@ -12,6 +12,8 @@ import unittest
 from unittest.mock import patch
 import zipfile
 import desktop_packages
+import desktop_validation
+import crossplay
 import download_formats
 from test_desktop_packages import write_desktop
 from test_crossplay import write_crossplay
@@ -69,6 +71,26 @@ def write_server(directory):
     (directory / 'server-build-metadata.json').write_text(json.dumps({'revision': SHA, 'version': '0.15.0', 'release': RELEASE,
         'kind': 'framework-dependent-server', 'targetFramework': 'net10.0',
         'files': {name: hashlib.sha256(contents).hexdigest() for name, contents in files.items()}}))
+    bind_server_receipts(directory)
+
+
+def bind_server_receipts(directory):
+    server_sha=desktop_packages.digest(directory/promotion.SERVER_ARCHIVE)
+    for target in desktop_packages.TARGETS:
+        for key in ('smoke','graphical'):
+            path=directory/desktop_packages.names(target)[key]
+            if path.exists():
+                report=json.loads(path.read_text());report['serverSha256']=server_sha
+                path.write_text(json.dumps(report))
+    path=directory/desktop_validation.MAC_RECEIPT
+    if path.exists():
+        report=json.loads(path.read_text());report['serverSha256']=server_sha
+        path.write_text(json.dumps(report))
+    path=directory/crossplay.RECEIPT
+    if path.exists():
+        report=json.loads(path.read_text())
+        for client in report['reports']:client['serverArchiveSha256']=server_sha
+        path.write_text(json.dumps(report))
 
 
 class PromotionTests(unittest.TestCase):

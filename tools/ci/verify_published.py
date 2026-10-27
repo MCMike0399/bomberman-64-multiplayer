@@ -122,7 +122,7 @@ def verify_assets(directory, version):
     if (directory / crossplay.RECEIPT).exists():
         crossplay.inspect_summary(json.loads((directory / crossplay.RECEIPT).read_text()), revision, release, directory)
         desktop_validation.inspect_mac(json.loads((directory / desktop_validation.MAC_RECEIPT).read_text()), revision, release,
-            digest(directory / ARCHIVE), digest(directory / download_formats.FILES['macos-arm64']))
+            digest(directory / ARCHIVE), digest(directory / download_formats.FILES['macos-arm64']), digest(directory / SERVER_ARCHIVE))
     return delivery
 
 

@@ -24,6 +24,10 @@ class DesktopUpdateGateTests(unittest.TestCase):
             for field, value in mutations:
                 with self.subTest(field=field), self.assertRaises(RuntimeError):
                     gates.inspect(dict(receipt, **{field: value}), target, SHA, RELEASE, archive)
+            wrong_high=copy.deepcopy(receipt)
+            wrong_high['cases'][2]['health']['graphics']='medium'
+            with self.assertRaisesRegex(RuntimeError,'High/fullscreen'):
+                gates.inspect(wrong_high,target,SHA,RELEASE,archive)
             for field, value in [('oldGameplay', False), ('inventoryMatched', False), ('uninstallVerified', False),
                                  ('health', {}), ('seconds', float('nan'))]:
                 wrong = copy.deepcopy(receipt)

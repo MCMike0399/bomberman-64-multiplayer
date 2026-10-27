@@ -125,6 +125,8 @@ jobs:
             artifacts/*-updater-details/**/old-launch.log
             artifacts/*-updater-details/**/restored-gameplay.log
             artifacts/*-updater-details/**/helper-error.txt
+            artifacts/*-updater-details/**/setup.log
+            artifacts/*-updater-details/**/health.json
             artifacts/*-Setup.exe
             artifacts/*-Setup.exe.sha256
             artifacts/*-download.json

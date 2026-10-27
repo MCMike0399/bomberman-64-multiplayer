@@ -51,6 +51,7 @@ public partial class GameRoot : Node3D
     private BlastCircuit.Updates.GameUpdater _updater=null!;
     public string PreferencesPath {get;private set;}="user://preferences.cfg";
     public PlayerPreferences Preferences=>_preferences;
+    internal string AppliedGraphicsPreset=>_appliedGraphics is {} preset?GraphicsQuality.ToWire(preset):"none";
     public double GraphicsWarmupMilliseconds {get;private set;}
     public string ScreenName
     {

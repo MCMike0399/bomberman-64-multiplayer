@@ -63,12 +63,14 @@ def inspect_startup(receipt, target, revision, release, archive_sha):
             raise RuntimeError('Desktop startup case is incomplete')
 
 
-def inspect_mac(receipt, revision, release, archive_sha, download_sha):
+def inspect_mac(receipt, revision, release, archive_sha, download_sha, server_sha):
     cases = receipt.get('cases', [])
     if (receipt.get('schemaVersion') != 1 or receipt.get('passed') is not True or receipt.get('revision') != revision or
             receipt.get('release') != release or receipt.get('archiveSha256') != archive_sha or receipt.get('downloadSha256') != download_sha or
             [case.get('scenario') for case in cases] != list((*HEADLESS, *GRAPHICAL))):
         raise RuntimeError('Complete Mac archive regression is missing or mismatched')
+    if receipt.get('serverSha256') != server_sha:
+        raise RuntimeError('Complete Mac archive regression used different server bytes')
     for case in cases:
         inspect_report(case, case['scenario'], {'os': 'macOS', 'driver': 'metal'}, revision, release, case['scenario'] in GRAPHICAL)
     return receipt
