@@ -3,7 +3,7 @@
 The user resumed gameplay work on 2026-10-23 for controller ergonomics, aiming
 and knockdown/blast separation (iteration19). The first eighteen iterations
 remain historical evidence. Iteration20 then rebuilt the walk. Recorded
-release baseline: **v0.38.0/build 45**, published with independently verified Mac
+release baseline: **v0.39.0/build 46**, published with independently verified Mac
 and server archives (see [verification](../verification.md)). Previous runtime baseline: **v0.18.0**, commit
 `316a330d7d895a92f98c1a60be7d571ec445a8a3`. Later documentation commits may follow.
 Verify the live branch, source, tools and installed version before relying on
@@ -41,6 +41,11 @@ update the current guide rather than silently reviving old behavior.
 | [Latest verification](../verification.md) | Exact observed results and limitations, with earlier iterations below |
 
 ## Current decisions that supersede earlier experiments
+
+- v0.39 delivers the eye-tested rendering savings and preset tiers, sharper
+  arena labels (#36), and approved walk-hop timing (#37). Trusted verification,
+  all nine archived startup cases, signed update from v0.38, both workers and
+  public asset/signature verification passed. [Delivery receipt](../verification.md#v0390-delivered).
 
 - v0.38 delivers pointer aiming/diagonal grace (#32), the frame-rate cap (#33),
   smooth sudden-death walls, Blizzard bomb/body drift collision and larger fireballs
