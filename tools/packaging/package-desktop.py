@@ -68,14 +68,18 @@ def main():
         published = Path(temporary) / item['root']
         published.mkdir()
         run([args.godot, '--headless', '--path', ROOT, '--export-release', settings['preset'], published / settings['executable']])
+        run(['dotnet', 'publish', ROOT / 'src/Bomber.Updater/Bomber.Updater.csproj', '-c', 'Release',
+             '-r', 'win-x64' if args.target == 'windows-x64' else 'linux-x64', '--nologo', '-m:1',
+             '-o', published / 'updater'])
         (published / 'release.json').write_text(json.dumps({'revision': revision, 'release': release, 'target': args.target}, indent=2) + '\n')
         notices(published / 'Notices', args.target, published)
         (published / 'README.txt').write_text(
             'Blast Circuit v' + release['version'] + '\n\n'
             'Extract the complete folder, then run ' + settings['executable'] + '.\n'
             'The .NET runtime is included. Keep the data folder and libraries beside the game.\n'
-            'Updates: download the matching platform archive from the latest release, close the game,\n'
-            'then extract it to a new folder. Your settings are stored separately.\n'
+            'Updates: enable automatic checks in Settings, then Restart to update when offered.\n'
+            'Windows installed and portable folders, and Linux AppImages, support signed updates.\n'
+            'Your settings are stored separately.\n'
             'https://github.com/MCMike0399/bomberman-64-multiplayer/releases/latest\n'
             'Online play requires the exact current release version/build.\n'
             'Rendering API: ' + settings['driver'] + '. GPU drivers and OS libraries are required.\n'
@@ -95,7 +99,7 @@ def main():
         (output / (item['archive'] + '.sha256')).write_text(desktop.digest(archive) + '  ' + item['archive'] + '\n')
         (output / item['metadata']).write_text(json.dumps({
             'schemaVersion': 1, 'target': args.target, 'revision': revision, 'release': release,
-            'driver': settings['driver'], 'automaticUpdates': False, 'files': files,
+            'driver': settings['driver'], 'automaticUpdates': True, 'files': files,
             'graphicalValidation': 'requires-target-hardware', 'signature': 'release-manifest-only',
         }, indent=2) + '\n')
         desktop.inspect_archive(output, args.target, revision, release)

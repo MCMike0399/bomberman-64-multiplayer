@@ -54,6 +54,9 @@ class ReleaseCutoverTests(unittest.TestCase):
         for name in ('Blast-Circuit-update.json', 'Blast-Circuit-update.json.sig',
                      'Blast-Circuit-release.json', 'Blast-Circuit-release.json.sig'):
             (directory / name).write_text('fixture signature; crypto is covered by test_release_signing')
+        for target in desktop_packages.TARGETS:
+            for suffix in ('.json', '.json.sig'):
+                (directory / ('Blast-Circuit-' + target + '-update' + suffix)).write_text('fixture signature')
         self.events.append('sign')
         return subprocess.CompletedProcess(command, 0)
 

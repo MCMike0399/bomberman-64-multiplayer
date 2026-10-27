@@ -14,6 +14,7 @@ import sys
 from release_identity import check_exports
 import release_gates
 import desktop_packages
+import download_formats
 from verify_deployment import targets_from_json, verify, verify_connections, placements_from_json
 
 ARTIFACT = 'Blast-Circuit-macos-arm64-ad-hoc'
@@ -197,6 +198,8 @@ def inspect_server(directory, revision, version, release=None):
 def stage_draft(repository, run_id, version, revision, directory, existing_draft, signed=True):
     """Upload already inspected/signed artifacts before changing the live fleet."""
     desktop_packages.inspect(directory, revision, check_exports())
+    for target in ('macos-arm64', *desktop_packages.TARGETS):
+        download_formats.inspect(directory, target, revision, check_exports())
     notes = directory / 'release-notes.txt'
     notes.write_text(f'Apple Silicon client and portable .NET 10 server from {revision}.\n\n'
                      f'Verification: https://github.com/{repository}/actions/runs/{run_id}\n\n'
@@ -207,14 +210,17 @@ def stage_draft(repository, run_id, version, revision, directory, existing_draft
     with notes.open('a') as stream:
         for target, settings in desktop_packages.TARGETS.items():
             stream.write(f'\n{target}: self-contained client using {settings["driver"]}; native-OS headless exported smoke passed. '
-                         'Automatic installation is not available: download and extract the matching current release. '
+                         'Signed automatic updates are supported from installed Windows folders and Linux AppImages. '
                          'Native GPU visuals/performance and physical controller support require separate hardware validation.\n')
     names = [ARCHIVE, ARCHIVE + '.sha256', SERVER_ARCHIVE, SERVER_ARCHIVE + '.sha256',
              'server-build-metadata.json', 'build-metadata.json']
     names += [name for target in desktop_packages.TARGETS for name in desktop_packages.asset_names(target)]
+    names += list(download_formats.names('macos-arm64'))
     if signed:
         names += ['Blast-Circuit-update.json', 'Blast-Circuit-update.json.sig',
                   'Blast-Circuit-release.json', 'Blast-Circuit-release.json.sig']
+        names += [name for target in desktop_packages.TARGETS for name in
+                  ('Blast-Circuit-' + target + '-update.json', 'Blast-Circuit-' + target + '-update.json.sig')]
     assets = [str(directory / name) for name in names]
     if existing_draft:
         gh('release', 'upload', 'v' + version, *assets, '--repo', repository, '--clobber')

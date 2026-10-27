@@ -4,6 +4,7 @@ import json
 from pathlib import Path, PurePosixPath
 import stat
 import zipfile
+import desktop_validation
 
 TARGETS = {
     'windows-x64': {'preset': 'Windows DirectX 12', 'os': 'Windows', 'driver': 'd3d12',
@@ -25,7 +26,8 @@ def names(target):
 
 def asset_names(target):
     item = names(target)
-    return (item['archive'], item['archive'] + '.sha256', item['metadata'], item['smoke'])
+    from download_formats import names as download_names
+    return (item['archive'], item['archive'] + '.sha256', item['metadata'], item['smoke'], *download_names(target))
 
 
 def artifacts(targets=None):
@@ -51,7 +53,7 @@ def inspect_archive(directory, target, revision, release):
     metadata = json.loads((directory / item['metadata']).read_text())
     if (metadata.get('schemaVersion') != 1 or metadata.get('target') != target or
             metadata.get('revision') != revision or metadata.get('release') != release or
-            metadata.get('driver') != settings['driver'] or metadata.get('automaticUpdates') is not False):
+            metadata.get('driver') != settings['driver'] or metadata.get('automaticUpdates') is not True):
         raise RuntimeError('Desktop package identity mismatch: ' + target)
     files = metadata.get('files', {})
     with zipfile.ZipFile(archive) as bundle:
@@ -100,10 +102,9 @@ def inspect(directory, revision, release, targets=None):
         if (smoke.get('passed') is not True or smoke.get('target') != target or
                 smoke.get('revision') != revision or smoke.get('release') != release or
                 smoke.get('archiveSha256') != digest(directory / item['archive']) or
-                smoke.get('os') != settings['os'] or smoke.get('scenario') != 'package-smoke' or
-                smoke.get('mode') not in ('headless', 'graphical') or
-                type(smoke.get('assertions')) is not int or smoke['assertions'] <= 0):
+                smoke.get('os') != settings['os']):
             raise RuntimeError('Desktop exported smoke is missing or mismatched: ' + target)
+        desktop_validation.inspect_receipt(smoke, settings, revision, release)
 
 
 def download(repository, run_id, directory, gh):

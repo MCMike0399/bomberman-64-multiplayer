@@ -57,13 +57,10 @@ public partial class ArcadeMenu
         Section(updates,"Game updates");
         _automaticUpdates=new ArcadeToggle {Name="AutomaticUpdates",Text="Check automatically",CustomMinimumSize=new(0,56),ButtonPressed=true};updates.AddChild(_automaticUpdates);
         _automaticUpdates.Toggled+=_=>SettingsChanged?.Invoke();
-        _automaticUpdates.Disabled=!OperatingSystem.IsMacOS();
-        if(_automaticUpdates.Disabled)_automaticUpdates.TooltipText="Download updates from the releases page.";
         _updateStatus=Copy(updates,"",17);
 
         var updateActions=ArcadeTheme.Row(updates,10);
         _checkUpdates=ArcadeTheme.Button(updateActions,"Check now",()=>CheckUpdatesRequested?.Invoke());_checkUpdates.Name="CheckUpdates";
-        if(!OperatingSystem.IsMacOS())_checkUpdates.Text="Download latest";
         _installUpdate=ArcadeTheme.Button(updateActions,"Restart to update",()=>InstallUpdateRequested?.Invoke(),true);_installUpdate.Name="InstallUpdate";_installUpdate.Visible=false;
         var back=ArcadeTheme.Button(box,"Back",()=>BackRequested?.Invoke());back.Name="SettingsBack";
         RegisterNavigation("Settings",[],[back],Choices(player),Choices(updates));
