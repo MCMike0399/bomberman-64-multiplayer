@@ -1,3 +1,52 @@
+# v0.40.0 delivered
+
+Published **2026-10-27 06:24:15 UTC**: [v0.40.0 / signed update](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.40.0).
+[PR #41](https://github.com/MCMike0399/bomberman-64-multiplayer/pull/41) adds
+screen-space scene reflections to High water, lowers Low to a 75% render scale,
+leaves Medium unchanged and carries the release identity
+**v0.40.0/build 48/schema 6**, token `6/0.40.0/48`.
+Immutable release source: `e2d62453ad8256ba130d29fe509ab9e0ce351b8c`.
+
+- Before merge: local `public` and `managed` profiles passed on the release
+  identity (26 managed steps); actionlint passed. Isolated Metal VM journeys on
+  the final tree: `graphics-settings` 547, `stage-lighting` 260, `visual-glitches`
+  56, `first-use-rendering` 36, `map-preview-loading` 357, `render-surface-startup`
+  16, `stage-scenery` 349, `greedy-trap` 198, `presentation` 52, `display-settings`
+  57, `menu-preview` 764, `up-and-down` 151, `top-rules` 94 and `setup` 105 checks,
+  all passing. The full `graphical` profile stops at the pre-existing
+  `performance-metrics` failure on main ("Settings Back stays above the input footer").
+- [Trusted Verification 40458928369](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40458928369)
+  passed public, managed/network, Godot headless, Apple Silicon packaging and both
+  required archived-client gates; the optional CI Metal journey was skipped.
+- The archived client passed all nine saved-settings startup cases on hosted
+  `VirtualMac2,1` with Apple Paravirtual Metal; the slowest launch took 79.757 seconds.
+- The signed v0.39.1 to v0.40.0 updater passed install, deliberate failed-launch
+  rollback and saved High/fullscreen relaunch on attempt two. Attempt one failed
+  at the fresh install's relaunch health deadline; its diagnostics hold a
+  `GODOT_SMOKE_OK` game log and no crash report, the documented crash-free retry case.
+- [Protected rollout and publication 40460479677](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40460479677)
+  passed validation, deployment, publication and public verification. The
+  deployment receipt confirms the exact release identity and verified connections
+  on the public, primary and fallback nodes.
+- The published-release receipt confirms anonymous downloads of all ten assets,
+  both P-256 signatures, tag/source identity, the latest stable channel and byte
+  equality with the Verification run's client/server archives and metadata.
+
+Published archive SHA-256:
+
+```text
+Mac:    90a751ea320aa8af1d1c63a6bf7b200af2cc4d5e70a745adc70e88ff877c9149
+Server: f8a4f87e80bba499bde2a38368eb365ce8b8276a90184e6e74cc5261e0b39c42
+```
+
+The PR retains its focused graphical evidence and the user's eye-test decisions
+(water reflections accepted; subsurface figures and the wider shadow kernel
+withdrawn). No native FPS ladder was recorded for this change: four benchmark
+attempts lost foreground focus to the desktop in use. The gates establish
+archived-client launch and update on paravirtual Metal, not native GPU
+performance or physical-controller behavior. No local installation was
+performed; users receive the signed in-game update.
+
 # v0.39.0 delivered
 
 Published **2026-10-27 04:35:53 UTC**: [v0.39.0 / signed update](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.39.0).
