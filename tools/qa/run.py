@@ -309,6 +309,7 @@ def execute(suite, app=None):
         suite.build('tests/Bomber.Release.Probe')
         suite.build('tests/Bomber.Audio.Tests')
         suite.step('audio', ['dotnet', 'run', '--no-build', '--project', 'tests/Bomber.Audio.Tests'], footer=FOOTERS['Bomber.Audio.Tests'])
+        suite.build('tests/Bomber.DesktopUpdate.GameTests')
         suite.build('tests/Bomber.DesktopUpdate.Tests')
         suite.step('desktop-update', ['dotnet', 'run', '--no-build', '--project', 'tests/Bomber.DesktopUpdate.Tests'], footer=FOOTERS['Bomber.DesktopUpdate.Tests'])
         return

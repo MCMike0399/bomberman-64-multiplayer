@@ -46,6 +46,17 @@ def write_desktop(directory, revision=SHA, release=None):
             'suite': 'headless-regression', 'cases': cases}))
         (directory / download_formats.FILES[target]).write_bytes(b'MZ fixture installer' if target == 'windows-x64' else b'\x7fELF' + b'\x00'*4 + b'AI\x02 fixture AppImage')
         download_formats.record(directory, target, revision, release, item['archive'])
+        parts = release['version'].split('.')
+        future = dict(release, version='.'.join([*parts[:2], str(int(parts[2]) + 1)]))
+        cases = []
+        for name in ('successful-install', 'failed-launch-rollback'):
+            cases.append({'name': name, 'result': ('installed ' + future['version']) if name == 'successful-install' else 'failed ' + future['version'] + ' launch-rollback',
+                          'fromVersion': release['version'], 'toVersion': future['version'], 'seconds': 5,
+                          'oldGameplay': True, 'inventoryMatched': True, 'restoredGameplay': name != 'successful-install',
+                          'uninstallVerified': True, 'health': {'version': future['version'], 'driver': settings['driver'], 'method': 'forward_plus', 'adapter': 'Fixture GPU'}})
+        (directory / item['updater_test']).write_text(json.dumps({'schemaVersion': 1, 'passed': True, 'platform': target,
+            'candidate': {'release': release, 'revision': revision}, 'fixture': {'release': future, 'revision': revision},
+            'candidateArchiveSha256': desktop.digest(directory / item['archive']), 'cases': cases, 'runtimeErrors': []}))
 
 
 

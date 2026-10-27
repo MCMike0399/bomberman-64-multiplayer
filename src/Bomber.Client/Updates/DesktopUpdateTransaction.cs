@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace Bomber.Client.Updates;
 
@@ -38,6 +39,17 @@ public static class DesktopUpdateTransaction
         Process? launched = null;
         try
         {
+            if (!request.AppImage)
+            {
+                // Inno's uninstall payload belongs to this installation. Portable
+                // update ZIPs intentionally do not contain machine-owned uninstall data.
+                foreach (string file in Directory.EnumerateFiles(target, "unins*"))
+                {
+                    if (!Regex.IsMatch(Path.GetFileName(file), @"^unins\d{3}\.(exe|dat|msg)$", RegexOptions.CultureInvariant)) continue;
+                    if (new FileInfo(file).LinkTarget is not null) throw new IOException("Uninstall payload must not be a symbolic link.");
+                    File.Copy(file, Path.Combine(next, Path.GetFileName(file)), overwrite: true);
+                }
+            }
             Move(target, previous, request.AppImage);
             replaced = true;
             Move(next, target, request.AppImage);
@@ -51,6 +63,13 @@ public static class DesktopUpdateTransaction
                 if (File.Exists(healthy) && (await File.ReadAllTextAsync(healthy, ct)).Trim() == request.Version)
                 {
                     WriteHistory(request.History, "installed " + request.Version);
+                    if (OperatingSystem.IsWindows())
+                    {
+                        using var registration = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
+                            @"Software\Microsoft\Windows\CurrentVersion\Uninstall\io.github.mcmike0399.blastcircuit_is1", writable: true);
+                        if (string.Equals((registration?.GetValue("InstallLocation") as string)?.TrimEnd('\\'), target.TrimEnd('\\'), StringComparison.OrdinalIgnoreCase))
+                            registration!.SetValue("DisplayVersion", request.Version);
+                    }
                     // Cleanup must never turn a completed transaction into a rollback.
                     try { if (request.AppImage) File.Delete(previous); else Directory.Delete(previous, true); }
                     catch (IOException) { }
@@ -76,6 +95,7 @@ public static class DesktopUpdateTransaction
                     Move(target, next, request.AppImage);
                 Move(previous, target, request.AppImage);
                 using var restored = Launch(target, request.AppImage, request.Windowed, null);
+                File.WriteAllText(Path.Combine(stage, "restoredpid"), restored.Id.ToString());
                 WriteHistory(request.History, "failed " + request.Version + " launch-rollback");
             }
             throw;
