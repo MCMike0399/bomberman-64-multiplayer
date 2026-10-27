@@ -1,0 +1,51 @@
+{
+  "productBaseline": "5b6737919f14dc9fdc34fd2adf047bf8bbfb6c46",
+  "fixture": "model-profile; seed 64; real local Sunken Temple practice; matching inspection cameras",
+  "renderer": "Metal 4.0 / Forward+ / Apple Paravirtual device (Apple5)",
+  "preset": "Medium (fresh QA defaults)",
+  "resolution": "1280x800",
+  "note": "Unedited viewport captures from separately rebuilt exports. Character pose/camera/input sequence is matched; nearby practice pickups animate independently. This is isolated renderer evidence, not native-host GPU performance evidence.",
+  "finish": {
+    "before": {
+      "specular": 0.5,
+      "clearcoat": 0.55,
+      "clearcoatRoughness": 0.16
+    },
+    "after": {
+      "specular": 0.35,
+      "clearcoat": 0.35,
+      "clearcoatRoughness": 0.24
+    }
+  },
+  "verification": {
+    "modelProfile": {
+      "passed": true,
+      "assertions": 13,
+      "captures": 5,
+      "runtimeErrors": 0,
+      "runtimeWarnings": 0
+    },
+    "publicProfile": {
+      "passed": true,
+      "steps": 11
+    }
+  },
+  "images": [
+    {
+      "file": "after-front.png",
+      "sha256": "f53c2f0e11aae37458846639c82a7dce8ae64ac5a254c47bc299a0d8905b5733"
+    },
+    {
+      "file": "after-three-quarter.png",
+      "sha256": "3eda3417c71f2d876b02744ff87b29318d0e503d12d3177bd388911dc5035660"
+    },
+    {
+      "file": "before-front.png",
+      "sha256": "45373d4545d18c030538ddf8ba1718d081ed051e7ef503ba0701fbb46dbb7c5a"
+    },
+    {
+      "file": "before-three-quarter.png",
+      "sha256": "c606f8a721b11db0c9bbdee5aa2870185535cefe6dc94a9329fa06821069ac94"
+    }
+  ]
+}
