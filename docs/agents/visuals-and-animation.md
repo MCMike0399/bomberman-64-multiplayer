@@ -387,19 +387,24 @@ shadowed warm key, cool fill, a rear rim light, sky-fed reflections behind a
 transparent background, and SSAO except on Low.
 
 Low uses 2× MSAA, 75% 3D resolution with spatial FSR, 1024 shadows and no SSAO/glow.
-Medium uses native resolution, 2× MSAA, 2048 shadows and half-resolution SSAO.
-High keeps native/2×, raises shadows to 4096, uses higher-quality SSAO (also
-half-resolution since v0.39; see [GPU cooling](../performance-research.md#cooler-gpu-at-the-60-fps-cap-2026-10-27)),
+Medium uses native resolution, 2× MSAA, 2048 shadows and half-resolution low-quality SSAO.
+High keeps native/2×, raises shadows to 4096, shares Medium's half-resolution
+SSAO (half-resolution since v0.39, medium quality since the 2026-10-27 native
+A/B; see [GPU cooling](../performance-research.md#cooler-gpu-at-the-60-fps-cap-2026-10-27)),
 and adds restrained menu contact shading. Medium/High retain the authored
 glow intensity. All menu textures remain at output resolution; no TAA/FXAA.
 Low skips fine shader noise/ripples and hides the `StageScenery` decorations
 while retaining the same arena geometry, lighting palettes, shoreline and
 gameplay. Low also keeps opaque water; Medium adds clear refracting shallows,
-and High alone adds diorama depth of field, contact-hardening sun shadows,
-half-resolution SSIL bounce and screen-space scene reflections in the water
-(`SCENE_REFLECTIONS` variant). The 2026-10-27 preset identity pass records
-these choices, and the subsurface-figure and wider-shadow-kernel ideas the user
-rejected on sight, in [graphics research](../graphics-research.md#preset-identity-2026-10-27).
+and High alone adds caustic webs and sun glints (`WATER_SPARKLE`), diorama
+depth of field, contact-hardening sun shadows, half-resolution low-quality SSIL bounce,
+screen-space scene reflections in the water (`SCENE_REFLECTIONS` variant) and
+the `quality_premium` surface tier on every stage shader (layered ice, carved snow
+and glitter, lawn wind and lichen, joints with depth, mica flecks, glazed pool
+tiles; upload it with `GraphicsQuality.ApplyShaderDetail`). Opaque SSR stays
+off: it showed no mirror on the ice for about 2 ms. The 2026-10-27
+passes record these choices, and the subsurface-figure and wider-shadow-kernel
+ideas the user rejected on sight, in [graphics research](../graphics-research.md#high-premium-and-medium-balance-2026-10-27).
 Shadow depth bias scales with preset and doubles for Morning/Afternoon; the
 smaller atlas otherwise exposes diagonal self-shadow marks under grazing light.
 

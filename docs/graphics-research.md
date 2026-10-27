@@ -98,22 +98,24 @@ inputs, model proportions and camera framing remain identical across presets.
 | Menu texture density | Output pixels | Output pixels | Output pixels |
 | Directional shadow atlas | 1024 | 2048 | 4096 |
 | Shadow filtering | Soft very low; no sun PCSS | Soft low; no sun PCSS | Soft medium with contact hardening |
-| Arena SSAO | Off | Half-resolution, medium quality | Half-resolution, high quality |
+| Arena SSAO | Off | Half-resolution, low quality | Half-resolution, medium quality |
 | Menu theatre SSAO | Off | Off | Restrained contact shading |
 | Glow | Off | Restrained intensity, small soft bloom | Restrained intensity, small soft bloom |
 | Temporal AA / FXAA | Off | Off | Off |
 | Stone/water microdetail | Reduced | Filtered | Filtered |
-| Water | Opaque; no screen copy | Clear refraction, caustics, glints (one screen copy) | Medium plus screen-space scene reflections |
+| Stage surface tier (`quality_premium`) | Off | Off | Layered ice, carved snow, sun glitter, lawn wind, lichen, joints with depth, mica flecks, glazed pool tiles |
+| Water | Opaque; no screen copy | Clear refraction and depth absorption (one screen copy) | Medium plus caustic webs, sun glints and screen-space scene reflections |
 | Diorama depth of field | Off | Off | Far/near blur outside the arena, low quality |
 | Stage decorations (`StageScenery`) | Hidden | Shown | Shown |
-| Indirect bounce (SSIL) | Off | Off | Half-resolution, medium quality |
+| Indirect bounce (SSIL) | Off | Off | Half-resolution, low quality |
 
 Medium is the default and sits between the other two on every row. High adds
-scene reflections in water, bounce light, diorama blur, contact-hardening sun
-shadows and higher-quality contact shading, without globally increasing
-saturation or contrast; Low renders 75% of the selected 3D pixels, hides every
-decoration outside the arena and keeps the Greedy reservoir town because
-floating play reads against it. See [preset identity](#preset-identity-2026-10-27). The 2026-10-25
+scene reflections in water, caustics and glints, the premium surface tier on
+every stage, bounce light, diorama blur and contact-hardening sun shadows,
+without globally increasing saturation or contrast; Low renders 75% of the selected 3D pixels, hides every decoration
+outside the arena and keeps the Greedy reservoir town because floating play
+reads against it. See [preset identity](#preset-identity-2026-10-27) and
+[High premium, Medium balance](#high-premium-and-medium-balance-2026-10-27). The 2026-10-25
 diorama polish ([rendering guide](agents/visuals-and-animation.md#diorama-polish-2026-10-25))
 added the water, depth-of-field and SSIL rows. Its VM receipts show render-thread
 CPU near 1 ms and one extra draw call (the seabed); GPU timings were unavailable
@@ -181,10 +183,101 @@ benchmark on a free desktop with the QA VM stopped before quoting numbers.
   clear refracting water, decorations, no bounce/blur/PCSS/reflections/diffusion.
 
 Not taken: volumetric fog light shafts (haze across the playable diorama and a
-froxel pass on every High frame), SDFGI, SSR on opaque stone (invisible at
-roughness .86), 4× MSAA and full-resolution SSAO (the user judged both
-indistinguishable in v0.39), higher SSIL quality (about +1.5 ms for a subtle
-change) and planar reflection cameras (a second scene render).
+froxel pass on every High frame), SDFGI, 4× MSAA and full-resolution SSAO (the
+user judged both indistinguishable in v0.39), higher SSIL quality (about +1.5 ms
+for a subtle change) and planar reflection cameras (a second scene render).
+Opaque SSR was skipped here because it is invisible on stone at roughness .86;
+the later premium pass tried it on polished ice and withdrew it (below).
+
+## High premium and Medium balance (2026-10-27)
+
+The user then asked for a High that feels astonishing on every stage, not only
+the water maps, a Medium that is the sweet spot for most players (removing
+visuals where that helps) and stable 60 FPS on High at the M5 Pro's native
+panel. High's cost rising is by design; half-resolution SSAO stays because the
+user's own v0.39 eye test found full resolution indistinguishable, and that
+budget now buys visible work instead.
+
+- **Premium surface tier.** Every stage shader declares `quality_premium`
+  (`GraphicsQuality.ShaderPremium`, uploaded with `quality_detail` by
+  `GraphicsQuality.ApplyShaderDetail`), 1 on High only. Low and Medium keep
+  their exact shader paths. On High:
+  - *Blizzard Battle* (`FrozenShader`): the ice court gains a deeper, softer
+    fracture layer and trapped bubbles offset along the view ray, so the sheet
+    reads as a thick block and is polished (roughness .17) for a tighter sun
+    highlight; snow gets wind-carved drifts that tilt the normal
+    with blue hollows; snow and ice carry sun glitter from randomly oriented
+    crystal facets that flash only on the key light's reflection path
+    (`StageLighting.ApplyKeyLight` feeds `sun_direction`/`light_tint`).
+  - *Rock Garden, Circuit Garden, Greedy exterior* (`GardenShader` and the
+    garden lawn): slow gusts cross the turf as travelling bright bands and a
+    blade-scale ripple tilts the normal; limestone shows sparse lichen rosettes.
+  - *Sunken Temple, Up & Down, Top Rules, Greedy quay* (`StoneShader`): joints
+    have depth (the view ray reaching a joint floor under the neighbouring block
+    meets its shaded side wall), faces darken toward joints like a cavity, and
+    sparse glossy mica flecks catch the sun.
+  - *Greedy Trap court* (`GreedyTrapShader`): the same joint depth and cavity
+    on cobbles, brick, ashlar and flagstones; the teal pool tiles get a clear glaze.
+- **Tried and withdrawn: opaque screen-space reflections.** `Environment.SsrEnabled`
+  (half-size, 64 steps, defaults otherwise) was enabled on High for the ice
+  court and the glazed pool, then only on those two stages because it cost
+  about 1 ms on stages with nothing glossy. Even with the ice polished to
+  roughness .17 and given a .3 metallic term, neither the isolated VM nor a
+  native desktop capture showed any mirror of walls, figures or bombs at the
+  37° battle camera, while Blizzard Battle and Greedy Trap lost about 4 ms per
+  frame at panel resolution. It is off on every preset; the ice keeps the
+  polish without the metallic term. Water keeps its own transparent-pass
+  march, now 12 steps with 3 bisections, stopping on the open sea more than
+  26 units from the stage centre, where the ray could only mirror sky.
+- **Medium trimmed to the sweet spot.** Medium water keeps clear refraction and
+  depth absorption but no longer runs the two Voronoi caustic webs or sun-path
+  glints: `WaterShaderFor` compiles those under `WATER_SPARKLE`, which only High
+  defines beside `SCENE_REFLECTIONS`. Everything else on Medium is unchanged.
+- **Evidence.** `graphics-settings` asserts the SSR flag, the `WATER_SPARKLE`
+  variant and the `quality_premium` uniform per preset on all seven stages;
+  captures are compared against the v0.40 baseline run
+  (`artifacts/playtest/preset-identity-graphics-settings-3`). Native
+  `graphics-benchmark --desktop shared` at 3024×1964, High, uncapped, 15 s per
+  eight-player stage on the M5 Pro (v0.40.0 → this branch, FPS / p99 ms):
+  Sunken Temple 66.4 / 16.4 → 75.0 / 14.6, Up & Down 65.7 / 15.8 → 71.7 / 14.4,
+  Rock Garden 101.7 → 96.2, Top Rules 110.3 → 122.8, Blizzard Battle 99.7 →
+  94.2, Greedy Trap 89.4 → 90.8 (receipt
+  `artifacts/playtest/high-premium-bench-final-high`; before the low-SSIL and
+  medium-SSAO step the water stages measured 69.5 and 67.6). Every stage now
+  clears 70 FPS uncapped with its 99th-percentile frame inside 14.6 ms. Medium
+  in the same conditions: Temple 110.6, Rock Garden 169.3, Up & Down 112.7, Top
+  Rules 183.4, Blizzard 157.5, Greedy 144.4 (`high-premium-bench-final-medium`). Three exact savings landed
+  with the pass: the water declares its screen copy `filter_linear` because it
+  only ever samples LOD 0 (a mipmapped hint made the renderer build a mip
+  chain of the panel-resolution copy every frame), the open sea skips the
+  refraction fetch and caustics it would multiply by zero, and the stone
+  joint-depth test reuses the pixel's own course jitter and chip noise (Top
+  Rules captures stayed byte-identical). Together they are worth about 0.3 ms
+  on the water stages.
+- **Imperceptible High savings toward 70 FPS (native A/B).** The benchmark's
+  `--benchmark-tweak` diagnostic captures a static practice scene at the
+  benchmark resolution before and after each candidate (plus the base again,
+  for the animation floor) and then times a bot battle per candidate. Scored
+  over the blocks that the animation floor leaves static (48 px, under 1/255):
+  SSIL low quality changed blocks by 0.3–0.5/255 on average (worst block 17/255
+  was a snowflake) and saved 0.5 ms (Temple), 0.5 ms (Up & Down) and 1.3 ms
+  (Blizzard); SSAO medium quality on High changed 0.1–0.2/255 and saved 0.1–0.5
+  ms; incremental sky radiance and very-low bokeh changed as little but saved
+  nothing measurable on the water stages, so they stay as they were. High now
+  runs SSIL low and SSAO medium (both half-resolution); the eye-test crops of
+  the worst static blocks are in the delivery receipt.
+- **Medium as the budget preset.** The same A/B on Medium (Temple, Rock
+  Garden) put low-quality SSAO under 0.1/255 on static blocks for about 0.2 ms,
+  so Medium runs half-resolution low-quality SSAO; incremental sky radiance
+  saved nothing and stays off. With the caustic webs and glints already moved
+  to High, Medium's remaining cost is the diorama itself (native resolution,
+  2× MSAA, clear refracting water, glow, decorations); on the M5 Pro it runs
+  111 FPS on Sunken Temple and 169 on Rock Garden at panel resolution. The water stages
+  were already at the 60 FPS line in v0.40 (its water mirror cost about 1.1 ms
+  over v0.39); this pass holds them there with the shorter march and the
+  far-sea skip, so further headroom on those two stages needs an identity
+  decision (SSIL, depth of field, MSAA or a High render scale below native). Back-to-back runs drift a few percent with
+  heat; measure with the QA VM stopped and the desktop free.
 
 ## Focused opportunities in the code
 

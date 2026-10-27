@@ -43,16 +43,18 @@ public sealed partial class ArtMaterials
     // over a rear-lane fireball even though that fireball is above the water.
     public ShaderMaterial Water()=>new() { Shader=WaterShaderFor(GraphicsQuality.Current),RenderPriority=-16 };
     /// <summary>
-    /// Low keeps opaque water; Medium adds refraction, caustics and glints (one screen copy);
-    /// High also mirrors the opaque scene in the surface with a short screen-space march.
+    /// Low keeps opaque water; Medium adds clear refracting shallows (one screen copy);
+    /// High adds caustic webs and sun glints and mirrors the opaque scene in the surface
+    /// with a short screen-space march.
     /// </summary>
     public static Shader WaterShaderFor(GraphicsPreset preset)=>preset switch
     {
         GraphicsPreset.Low=>_waterShader??=new Shader {Code=WaterShader},
-        GraphicsPreset.High=>_reflectiveWaterShader??=new Shader {Code=WaterShader.Replace("shader_type spatial;","shader_type spatial;\n#define CLEAR_WATER\n#define SCENE_REFLECTIONS",StringComparison.Ordinal)},
+        GraphicsPreset.High=>_reflectiveWaterShader??=new Shader {Code=WaterShader.Replace("shader_type spatial;","shader_type spatial;\n#define CLEAR_WATER\n#define WATER_SPARKLE\n#define SCENE_REFLECTIONS",StringComparison.Ordinal)},
         _=>_clearWaterShader??=new Shader {Code=WaterShader.Replace("shader_type spatial;","shader_type spatial;\n#define CLEAR_WATER",StringComparison.Ordinal)}
     };
     private const string StoneShader="""
+
 shader_type spatial;
 render_mode diffuse_burley;
 uniform vec4 base_color : source_color = vec4(.85,.71,.36,1);
@@ -60,6 +62,8 @@ uniform vec4 mortar_color : source_color = vec4(.5,.38,.18,1);
 uniform int stone_style=0;
 uniform float water_height=-0.53;
 uniform float quality_detail=1.0;
+// High only: joints with depth, cavity shading toward them and glossy mica flecks.
+uniform float quality_premium=0.0;
 varying vec3 world;
 varying vec3 world_normal;
 float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
@@ -79,6 +83,25 @@ float filtered_noise(vec2 p){
   if(weight<.01)return .5;
   return mix(.5,noise(p),weight);
 }
+// Offset Voronoi blocks produce the irregular broad cobbles of the recessed court.
+// Returns the gap between the two nearest seeds (zero on a joint) and the owning cell.
+float cobble_edge(vec2 pp,out vec2 owner){
+  vec2 q=pp*2.3,cell=floor(q),f=fract(q);owner=vec2(0);
+  float nearest=9.0,second=9.0;
+  for(int y=-1;y<=1;y++)for(int x=-1;x<=1;x++){
+    vec2 offset=vec2(float(x),float(y));
+    vec2 seed=offset+.25+hash2(cell+offset)*.5;
+    float distance=length(seed-f);
+    if(distance<nearest){second=nearest;nearest=distance;owner=cell+offset;}
+    else second=min(second,distance);
+  }
+  return second-nearest;
+}
+// Staggered courses: distance to the nearest joint in course units.
+float course_edge(vec2 q){
+  vec2 f=fract(q);
+  return min(min(f.x,1.0-f.x),min(f.y,1.0-f.y));
+}
 void fragment(){
   // World coordinates keep courses continuous across the authority's individual cells.
   bool top=abs(world_normal.y)>.6;
@@ -87,33 +110,38 @@ void fragment(){
   float grain=(filtered_noise(p*84.0)-.5)*.025;
   float relief=0.0;
   float dry_roughness=.86;
+  // High: the point on a joint's floor that the view ray reaches below this pixel.
+  // Where that floor lies under the neighbouring block, the ray met its side wall.
+  vec3 view_world=normalize((INV_VIEW_MATRIX*vec4(VIEW,0.0)).xyz);
+  vec2 view_plane=top?view_world.xz:(abs(world_normal.x)>.6?view_world.zy:view_world.xy);
+  vec2 floor_p=p-view_plane*(.006/max(abs(dot(view_world,world_normal)),.25));
+  float cavity=1.0;
   if(stone_style==1){
-    // Offset Voronoi blocks produce the irregular broad cobbles of the recessed court.
-    vec2 q=p*2.3,cell=floor(q),f=fract(q),owner=vec2(0);
-    float nearest=9.0,second=9.0;
-    for(int y=-1;y<=1;y++)for(int x=-1;x<=1;x++){
-      vec2 offset=vec2(float(x),float(y));
-      vec2 seed=offset+.25+hash2(cell+offset)*.5;
-      float distance=length(seed-f);
-      if(distance<nearest){second=nearest;nearest=distance;owner=cell+offset;}
-      else second=min(second,distance);
-    }
-    float edge=second-nearest;
+    vec2 owner;
+    float edge=cobble_edge(p,owner);
     float aa=max(fwidth(edge)*.5,.001);
     float bevel=smoothstep(.025-aa,.15+aa,edge);
     vec3 stone=base_color.rgb*(.76+hash(owner)*.33+grain);
-    ALBEDO=mix(mortar_color.rgb,stone*(.76+bevel*.24),smoothstep(.018-aa,.075+aa,edge));
+    float joint=smoothstep(.018-aa,.075+aa,edge);
+    ALBEDO=mix(mortar_color.rgb,stone*(.76+bevel*.24),joint);
     relief=bevel*.065;
     dry_roughness=.93;
+    if(quality_premium>.5){
+      vec2 floor_owner;
+      float wall=(1.0-joint)*smoothstep(.018,.075,cobble_edge(floor_p,floor_owner));
+      ALBEDO=mix(ALBEDO,stone*.5,wall);
+      cavity=mix(.8,1.0,smoothstep(0.0,.2,edge));
+    }
   }else{
-    vec2 q=top?p*vec2(.78,1.0):vec2(p.x/1.45,p.y/.52);
+    vec2 course_scale=top?vec2(.78,1.0):vec2(1.0/1.45,1.0/.52);
+    vec2 q=p*course_scale;
     q.x+=mod(floor(q.y),2.0)*.5;
     if(stone_style==3)q+=vec2(noise(p*2.0)*.35,noise(p*1.1)*.3);
-    vec2 f=fract(q),cell=floor(q);
-    float mineral=noise(p*5.1)*.6+filtered_noise(p*16.7)*.3+filtered_noise(p*48.0)*.1;
-    float edge=min(min(f.x,1.0-f.x),min(f.y,1.0-f.y));
+    vec2 cell=floor(q);
     // Uneven chamfers and occasional pits stay readable as stone at the game camera.
-    float chippedEdge=edge-(filtered_noise(p*24.0)-.5)*.014;
+    float chip=(filtered_noise(p*24.0)-.5)*.014;
+    float chippedEdge=course_edge(q)-chip;
+    float mineral=noise(p*5.1)*.6+filtered_noise(p*16.7)*.3+filtered_noise(p*48.0)*.1;
     float aa=max(length(fwidth(q))*.35,.001);
     float seam=smoothstep(.008-aa,.027+aa,chippedEdge);
     float bevel=smoothstep(.015-aa,.09+aa,chippedEdge);
@@ -131,6 +159,12 @@ void fragment(){
     stone=mix(stone,stone*vec3(1.07,.98,.85),vein*.26);
     ALBEDO=mix(mortar_color.rgb,stone,seam);
     relief=seam*(bevel*.12+mineral*.035-pits*.012);
+    if(quality_premium>.5){
+      // The joint floor a few millimetres away shares this pixel's jitter and chip noise.
+      float wall=(1.0-seam)*smoothstep(.008,.027,course_edge(q+(floor_p-p)*course_scale)-chip);
+      ALBEDO=mix(ALBEDO,stone*.5,wall);
+      cavity=mix(.82,1.0,smoothstep(0.0,.11,chippedEdge));
+    }
   }
   // Broad warm/cool drift across the stage, like sun-bleached and shaded weathering.
   float macro=noise(p*.17)*.7+noise(p*.43)*.3;
@@ -138,6 +172,7 @@ void fragment(){
   // Risers deepen toward their submerged roots so tiers read as a grounded diorama.
   float vertical=1.0-abs(world_normal.y);
   ALBEDO*=mix(1.0,mix(.8,1.0,smoothstep(water_height,water_height+2.6,world.y)),vertical);
+  ALBEDO*=cavity;
   vec3 dpdx=dFdx(VERTEX),dpdy=dFdy(VERTEX);
   vec3 r1=cross(dpdy,NORMAL),r2=cross(NORMAL,dpdx);
   float determinant=dot(dpdx,r1);
@@ -153,6 +188,20 @@ void fragment(){
   float normal_variance=dot(dFdx(NORMAL),dFdx(NORMAL))+dot(dFdy(NORMAL),dFdy(NORMAL));
   ROUGHNESS=clamp(mix(dry_roughness,.38,wet)+normal_variance*.5,.38,1.0);
   SPECULAR=mix(.18,.42,wet);
+  if(quality_premium>.5){
+    // Mica flecks: sparse glossy grains that only light up on the sun's reflection
+    // path. They fade before they could become subpixel sparkle.
+    vec2 fp=p*22.0,fcell=floor(fp);
+    float fh=hash(fcell+2.2);
+    float ffade=1.0-smoothstep(.4,1.0,length(fwidth(fp)));
+    float faa=fwidth(fp.x);
+    if(fh>.975&&ffade>.01){
+      vec2 centre=vec2(hash(fcell+4.1),hash(fcell+6.3))*.5+.25;
+      float fleck=(1.0-smoothstep(.16-faa,.3+faa,length(fract(fp)-centre)))*ffade;
+      ROUGHNESS=mix(ROUGHNESS,.2,fleck);SPECULAR=mix(SPECULAR,.7,fleck);
+      ALBEDO+=fleck*.06;
+    }
+  }
 }
 """;
     private const string WaterShader="""
@@ -160,12 +209,16 @@ shader_type spatial;
 render_mode diffuse_burley, specular_schlick_ggx, depth_draw_always;
 uniform sampler2D depth_texture : hint_depth_texture, repeat_disable, filter_nearest;
 #ifdef CLEAR_WATER
-uniform sampler2D screen_texture : hint_screen_texture, repeat_disable, filter_linear_mipmap;
+// LOD 0 only: requesting mipmaps would make the renderer build a mip chain of the
+// panel-resolution screen copy every frame that nothing samples.
+uniform sampler2D screen_texture : hint_screen_texture, repeat_disable, filter_linear;
 #endif
 uniform float flood_amount=0.0;
 uniform float wind_strength=1.0;
 uniform float surface_roughness=.31;
 uniform float quality_detail=1.0;
+// High's extra water work is the SCENE_REFLECTIONS variant; the tier uniform is shared plumbing.
+uniform float quality_premium=0.0;
 uniform vec4 deep_color : source_color = vec4(.055,.25,.32,1);
 uniform vec4 surface_color : source_color = vec4(.12,.49,.52,1);
 uniform vec4 foam_color : source_color = vec4(.60,.79,.72,1);
@@ -216,7 +269,7 @@ vec4 view_position(vec2 uv,mat4 inv_projection){
   vec3 scene=position.xyz/position.w;
   return vec4(scene,-scene.z<150.0?1.0:0.0);
 }
-#ifdef CLEAR_WATER
+#ifdef WATER_SPARKLE
 // Drifting Voronoi borders read as sunlit caustic webs on the submerged stone.
 float caustic_web(vec2 p,float speed){
   vec2 cell=floor(p),f=fract(p);
@@ -292,15 +345,21 @@ void fragment(){
   float bed_depth=max(0.0,world.y-bed.y);
   // Only real submerged geometry is revealed; open sea keeps its authored color.
   float transmit=refracted.w*step(seabed_height+.4,bed.y)*clarity*exp(-bed_depth*1.25)*(1.0-foam);
-  vec3 seen=textureLod(screen_texture,refract_uv,0.0).rgb;
-  float caustic_detail=quality_detail*(1.0-smoothstep(.25,.9,length(fwidth(bed.xz*1.5))));
-  if(caustic_detail>.01&&transmit>.02){
-    float web=max(caustic_web(bed.xz*1.5,.9),caustic_web(bed.xz*2.3+3.7,1.2)*.7);
-    float reach=smoothstep(.02,.12,bed_depth)*exp(-bed_depth*.9);
-    seen+=seen*web*reach*caustic_detail*1.4+light_tint.rgb*web*reach*caustic_detail*.05;
+  vec3 seen=vec3(0.0);
+  // The open sea transmits exactly nothing: its fetch and caustics would multiply to zero.
+  if(transmit>0.0){
+    seen=textureLod(screen_texture,refract_uv,0.0).rgb;
+#ifdef WATER_SPARKLE
+    float caustic_detail=quality_detail*(1.0-smoothstep(.25,.9,length(fwidth(bed.xz*1.5))));
+    if(caustic_detail>.01&&transmit>.02){
+      float web=max(caustic_web(bed.xz*1.5,.9),caustic_web(bed.xz*2.3+3.7,1.2)*.7);
+      float reach=smoothstep(.02,.12,bed_depth)*exp(-bed_depth*.9);
+      seen+=seen*web*reach*caustic_detail*1.4+light_tint.rgb*web*reach*caustic_detail*.05;
+    }
+#endif
+    // The floor takes on the water's hue before deeper absorption hides it.
+    seen*=mix(vec3(1.0),surface_color.rgb*2.1,.5);
   }
-  // The floor takes on the water's hue before deeper absorption hides it.
-  seen*=mix(vec3(1.0),surface_color.rgb*2.1,.5);
   ALBEDO*=1.0-transmit;
   EMISSION=seen*transmit;
 #ifdef SCENE_REFLECTIONS
@@ -322,13 +381,15 @@ void fragment(){
     // Reach grows with distance; a ray turning toward the camera plane stops short of it.
     float reach=clamp(-VERTEX.z*.8,2.0,14.0);
     if(ray.z>0.0)reach=min(reach,(-VERTEX.z-.5)/ray.z);
+    // The far open sea can only mirror sky, which it already shows: skip its march.
+    if(distance(world.xz,NODE_POSITION_WORLD.xz)>26.0)reach=0.0;
     if(fresnel>.01&&reach>.25){
       // Interleaved-gradient jitter per pixel turns step banding into fine
       // water sparkle instead of staircase edges on reflected decks.
       float jitter=fract(52.9829189*fract(dot(FRAGCOORD.xy,vec2(.06711056,.00583715))));
       vec3 previous=VERTEX;float t_previous=0.0;
-      for(int i=1;i<=16;i++){
-        float f=(float(i)-jitter*.9)/16.0;float t=reach*(f*f*.75+f*.25);
+      for(int i=1;i<=12;i++){
+        float f=(float(i)-jitter*.9)/12.0;float t=reach*(f*f*.75+f*.25);
         vec3 p=VERTEX+ray*t;
         vec4 clip=PROJECTION_MATRIX*vec4(p,1.0);
         vec2 uv=clip.xy/clip.w*.5+.5;
@@ -337,7 +398,7 @@ void fragment(){
         if(gap>0.0&&gap<max(.5,(t-t_previous)*1.5)){
           // Bisect between the last miss and this hit for a stable contact.
           vec3 a=previous,b=p;
-          for(int j=0;j<4;j++){
+          for(int j=0;j<3;j++){
             vec3 m=(a+b)*.5;vec4 mc=PROJECTION_MATRIX*vec4(m,1.0);vec2 muv=mc.xy/mc.w*.5+.5;
             if(view_position(muv,INV_PROJECTION_MATRIX).z>m.z)b=m;else a=m;
           }
@@ -354,6 +415,7 @@ void fragment(){
     EMISSION=EMISSION*(1.0-mirror)+mirrored*mirror;
   }
 #endif
+#ifdef WATER_SPARKLE
   // Sun-path glints: sparse twinkling points only where the ripples mirror the light.
   if(detail>.01){
     vec2 g=world.xz*1.7+vec2(TIME*.05,0.0);
@@ -370,6 +432,7 @@ void fragment(){
       EMISSION+=light_tint.rgb*point*twinkle*path*step(.45,h)*detail*(1.0-flood_amount)*3.0;
     }
   }
+#endif
 #endif
   ALBEDO*=1.0-flood_amount*.08;
   float normal_variance=dot(dFdx(NORMAL),dFdx(NORMAL))+dot(dFdy(NORMAL),dFdy(NORMAL));

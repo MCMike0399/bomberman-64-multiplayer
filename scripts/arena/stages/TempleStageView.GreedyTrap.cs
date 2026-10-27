@@ -148,7 +148,7 @@ public partial class TempleStageView
         }
         if(_graphicsRevision!=GraphicsQuality.Revision)
         {
-            foreach(var material in _greedyMaterials)material.SetShaderParameter("quality_detail",GraphicsQuality.Current==GraphicsPreset.Low?0:1);
+            foreach(var material in _greedyMaterials)GraphicsQuality.ApplyShaderDetail(material);
             UpdateGreedyExteriorQuality();
             _graphicsRevision=GraphicsQuality.Revision;
         }

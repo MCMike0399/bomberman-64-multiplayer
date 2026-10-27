@@ -111,18 +111,16 @@ public partial class TempleStageView
             if(i<4)Box(_greedyWaterwheel,Vector3.Zero,new(1.9f,.1f,.12f),timber).Rotation=new(0,0,angle);
         }
         var axle=Cylinder(_greedyWaterwheel,Vector3.Zero,.17f,.7f,rim);axle.RotationDegrees=new(90,0,0);
-        foreach(var material in _greedyExteriorMaterials)
-            material.SetShaderParameter("quality_detail",GraphicsQuality.Current==GraphicsPreset.Low?0:1);
+        foreach(var material in _greedyExteriorMaterials)GraphicsQuality.ApplyShaderDetail(material);
     }
 
     private void UpdateGreedyExteriorQuality()
     {
-        foreach(var material in _greedyExteriorMaterials)
-            material.SetShaderParameter("quality_detail",GraphicsQuality.Current==GraphicsPreset.Low?0:1);
+        foreach(var material in _greedyExteriorMaterials)GraphicsQuality.ApplyShaderDetail(material);
         if(_greedyMoat?.MaterialOverride is ShaderMaterial water)
         {
             water.Shader=ArtMaterials.WaterShaderFor(GraphicsQuality.Current);
-            water.SetShaderParameter("quality_detail",GraphicsQuality.Current==GraphicsPreset.Low?0:1);
+            GraphicsQuality.ApplyShaderDetail(water);
             if(_lighting!=null)_lighting.ApplyWater(water);
         }
     }

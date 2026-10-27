@@ -24,6 +24,12 @@ public partial class PlaytestDriver
         int seconds=int.Parse(Option("--benchmark-seconds","10"));
         string selected=Option("--benchmark-preset","all");
         string diagnosticOmission=Option("--benchmark-disable","none");
+        // Diagnostic A/B: native-resolution captures of a static practice scene before and
+        // after each candidate renderer tweak, then a timed bot battle per tweak. The ordinary
+        // full-quality measurements are taken untouched before any tweak is applied.
+        string tweakList=Option("--benchmark-tweak","none");
+        var tweaks=tweakList=="none"||tweakList.Length==0?Array.Empty<string>():tweakList.Split(',',StringSplitOptions.RemoveEmptyEntries);
+        var tweakMeasurements=new List<object>();
         var presets=selected=="all"?new[]{GraphicsPreset.Low,GraphicsPreset.Medium,GraphicsPreset.High}:new[]{GraphicsQuality.FromWire(selected)};
         Check(resolution.X is >=100 and <=7680&&resolution.Y is >=100 and <=7680&&seconds is >=10 and <=120,"benchmark workload is bounded");
         // A native-panel-sized window needs no title bar or dock reservation.
@@ -42,6 +48,7 @@ public partial class PlaytestDriver
                 await Capture("benchmark-menu-"+GraphicsQuality.ToWire(preset));
                 foreach(string arena in stages)
                 {
+                    if(tweaks.Length>0)await CaptureTweakPairs(arena,preset,tweaks);
                     // A 60-second round starts the final-minute flood immediately.
                     // Keep the timed workload in ordinary combat for comparable presets.
                     _root.StartLocal(new SessionSettings(Stage:arena,Bots:7,Wins:3,RoundSeconds:Math.Max(120,seconds+90)),1);
@@ -62,8 +69,15 @@ public partial class PlaytestDriver
                         case "water":foreach(var mesh in AuditDescendants(LightingArena).OfType<MeshInstance3D>())
                             if(mesh.MaterialOverride is ShaderMaterial material&&material.Shader.Code.Contains("uniform float seabed_height"))mesh.Visible=false;break;
                     }
-                    measurements.Add(await BenchmarkWindow(arena=="sunken-temple"?"eight-player-temple":"eight-player-"+arena,preset,seconds));
+                    string scene=arena=="sunken-temple"?"eight-player-temple":"eight-player-"+arena;
+                    measurements.Add(await BenchmarkWindow(scene,preset,seconds));
                     await Capture("benchmark-battle-"+arena+"-"+GraphicsQuality.ToWire(preset));
+                    foreach(string tweak in tweaks)
+                    {
+                        var revert=ApplyTweak(tweak,environment,attributes);
+                        try {tweakMeasurements.Add(new {tweak,result=await BenchmarkWindow(scene,preset,seconds)});}
+                        finally {revert();}
+                    }
                     _root.Back();await Frames(3);
                 }
             }
@@ -76,9 +90,68 @@ public partial class PlaytestDriver
             timingMode="realtime-uncapped",vsync=DisplayServer.WindowGetVsyncMode().ToString(),
             screenRefreshHz=DisplayServer.ScreenGetRefreshRate(),
             seed=64,warmupSeconds=3,stage,diagnosticOmission,fullQuality=diagnosticOmission=="none",requestedWidth=resolution.X,requestedHeight=resolution.Y,measurements,
+            diagnosticTweaks=tweaks,tweakMeasurements,
             limits="Windowed native hardware; diagnostics add CPU overhead. Root GPU timings cover the arena/UI, not independent menu surfaces. Unavailable GPU counters are null. Not a sustained thermal or other-platform benchmark."
         };
         File.WriteAllText(Path.Combine(_output,"graphics-benchmark.json"),JsonSerializer.Serialize(receipt,new JsonSerializerOptions {WriteIndented=true}));
+    }
+
+    /// <summary>Static practice captures at the benchmark resolution: base, each tweak, base again (animation floor).</summary>
+    private async Task CaptureTweakPairs(string arena,GraphicsPreset preset,string[] tweaks)
+    {
+        _root.StartLocal(new SessionSettings(Stage:arena,Bots:0),1,practice:true);
+        // Uncapped frames are short: wait on the clock, as the bot battles do.
+        var ready=Stopwatch.StartNew();
+        while((_root.LatestState is not {} state||state.GetProperty("phase").GetInt32()!=1)&&ready.Elapsed.TotalSeconds<10)await Frames(1);
+        Check(_root.LatestState is {} started&&started.GetProperty("phase").GetInt32()==1,"tweak capture enters "+arena);
+        await Frames(30);
+        var environment=AuditDescendants(LightingArena).OfType<WorldEnvironment>().Single().Environment;
+        var attributes=(CameraAttributesPractical)_root.GetViewport().GetCamera3D()!.Attributes;
+        string label="benchmark-ab-"+arena+"-"+GraphicsQuality.ToWire(preset);
+        await Capture(label+"-base");
+        foreach(string tweak in tweaks)
+        {
+            var revert=ApplyTweak(tweak,environment,attributes);
+            try {await Frames(12);await Capture(label+"-"+tweak);}
+            finally {revert();await Frames(12);}
+        }
+        await Capture(label+"-base-again");
+        _root.Back();await Frames(3);
+    }
+
+    /// <summary>Applies one named renderer tweak and returns the action that restores the previous state.</summary>
+    private Action ApplyTweak(string tweak,Godot.Environment environment,CameraAttributesPractical attributes)
+    {
+        switch(tweak)
+        {
+            case "sky-incremental":
+            {
+                var sky=environment.Sky!;var previous=sky.ProcessMode;sky.ProcessMode=Sky.ProcessModeEnum.Incremental;
+                return ()=>sky.ProcessMode=previous;
+            }
+            case "sky-quality":
+            {
+                var sky=environment.Sky!;var previous=sky.ProcessMode;sky.ProcessMode=Sky.ProcessModeEnum.Quality;
+                return ()=>sky.ProcessMode=previous;
+            }
+            case "dof-verylow":
+                RenderingServer.CameraAttributesSetDofBlurQuality(RenderingServer.DofBlurQuality.VeryLow,true);
+                return ()=>RenderingServer.CameraAttributesSetDofBlurQuality(RenderingServer.DofBlurQuality.Low,true);
+            case "ssao-medium":
+                RenderingServer.EnvironmentSetSsaoQuality(RenderingServer.EnvironmentSsaoQuality.Medium,true,.5f,2,50,300);
+                return ()=>GraphicsQuality.Apply(GraphicsQuality.Current,_root.GetViewport());
+            case "ssao-low":
+                RenderingServer.EnvironmentSetSsaoQuality(RenderingServer.EnvironmentSsaoQuality.Low,true,.5f,2,50,300);
+                return ()=>GraphicsQuality.Apply(GraphicsQuality.Current,_root.GetViewport());
+            case "ssil-low":
+                RenderingServer.EnvironmentSetSsilQuality(RenderingServer.EnvironmentSsilQuality.Low,true,.5f,2,50,300);
+                return ()=>GraphicsQuality.Apply(GraphicsQuality.Current,_root.GetViewport());
+            case "ssil-verylow":
+                RenderingServer.EnvironmentSetSsilQuality(RenderingServer.EnvironmentSsilQuality.VeryLow,true,.5f,2,50,300);
+                return ()=>GraphicsQuality.Apply(GraphicsQuality.Current,_root.GetViewport());
+            default:
+                Check(false,"unknown benchmark tweak: "+tweak);return ()=>{};
+        }
     }
 
     private async Task<object> BenchmarkWindow(string scene,GraphicsPreset preset,double seconds)
