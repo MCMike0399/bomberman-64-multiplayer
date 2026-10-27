@@ -38,6 +38,8 @@ public partial class ArenaView : Node3D
     private readonly Dictionary<string,SnapshotMotion> _playerMotion=[];
     private readonly Dictionary<string,float> _facings=[];
     private readonly Dictionary<string,string> _ghostHosts=[];
+    private readonly Dictionary<string,string> _holders=[];
+    private readonly Dictionary<string,(Color Suit,float Facing)> _lastLooks=[];
     private long _snapshotTick;
     private readonly Dictionary<int,Node3D> _blocks=[];
     private readonly Dictionary<string,ExplosionView> _explosions=[];
@@ -151,7 +153,7 @@ public partial class ArenaView : Node3D
         _localInputs.Clear();ClearThrowPreviews();
         _seenEntities.Clear();_staleEntities.Clear();_expiredExplosions.Clear();
         _softBlockEncoding=null;_softBlockBits=[];
-        _playerMotion.Clear();_facings.Clear();_ghostHosts.Clear();_snapshotTick=0;
+        _playerMotion.Clear();_facings.Clear();_ghostHosts.Clear();_holders.Clear();_lastLooks.Clear();_snapshotTick=0;
         _audio.StopAll();
         foreach(Node child in _dynamic.GetChildren())child.QueueFree();
         foreach(Node child in _effects.GetChildren())child.QueueFree();
@@ -166,7 +168,7 @@ public partial class ArenaView : Node3D
         _environment.BackgroundMode=id==BlastStages.TopRules?Godot.Environment.BGMode.Color:Godot.Environment.BGMode.Sky;
         _environment.BackgroundColor=new Color("171a22");
         _environment.FogSkyAffect=id==BlastStages.TopRules?0:1;
-        _playerMotion.Clear();_facings.Clear();_ghostHosts.Clear();
+        _playerMotion.Clear();_facings.Clear();_ghostHosts.Clear();_holders.Clear();_lastLooks.Clear();
         _terrain?.QueueFree();_terrain=new TempleStageView(_art);AddChild(_terrain);_terrain.Build(data);
         _terrain.SetLighting(StageLighting.For(TimeOfDay));
         _terrain.WeatherActive=_battleActive;
@@ -210,6 +212,10 @@ public partial class ArenaView : Node3D
         foreach(var (ghost,host) in _ghostHosts)
             if(_entities.TryGetValue(ghost,out var rider)&&_entities.TryGetValue(host,out var living))
                 rider.Position=living.Position+new Vector3(0,1.5f,0);
+        // Ride directly above the carrier's rendered hands; separate snapshot buffers would let the two drift apart.
+        foreach(var (victim,carrier) in _holders)
+            if(_entities.TryGetValue(victim,out var held)&&_entities.TryGetValue(carrier,out var lifter))
+                held.Position=new(lifter.Position.X,held.Position.Y,lifter.Position.Z);
         foreach(var entity in _entities.Values)
             if(entity is BombModel {CarrierId: { } carrier} bomb&&_entities.TryGetValue("p:"+carrier,out var player)&&player is BomberModel actor)
                 bomb.Position=bomb.Position.Lerp(_dynamic.ToLocal(actor.BombSocket),carryBlend);
