@@ -28,6 +28,7 @@ public partial class PlaytestDriver : Node
     private readonly Stopwatch _clock = new();
     private bool _headless, _windowedRequested;
     private bool _displayRestartRequested;
+    private bool _slowMovementFeedback;
 
     public static bool TryAttach(GameRoot root)
     {
@@ -221,6 +222,7 @@ public partial class PlaytestDriver : Node
         for(var i=0;i<maxFrames;i++)
         {
             var dx=x-Player.GetProperty("x").GetSingle();var dz=z-Player.GetProperty("z").GetSingle();
+            if(network&&_slowMovementFeedback)System.Threading.Thread.Sleep(180);
             if(MathF.Sqrt(dx*dx+dz*dz)<tolerance)
             {
                 Input(0,default);
@@ -234,6 +236,22 @@ public partial class PlaytestDriver : Node
                 await Frames(3);Check(true,$"walk to {x},{z}");return;
             }
             Input(0,new PlayerInput(Math.Clamp(dx*4,-1,1),Math.Clamp(dz*4,-1,1)));
+            if(_root.ActiveSession is NetworkSession connection&&connection.Party?.Hosting is not ("peer" or "auto"))
+            {
+                // An observer controls a real-time server from delayed snapshots.
+                // Bound the ordinary key press independently of a stalled engine
+                // frame, then observe fresh snapshots after release before steering.
+                var release=Task.Run(async()=>
+                {
+                    await Task.Delay(50).ConfigureAwait(false);
+                    connection.SendInput(0,default);
+                });
+                try {await Frames(1);await release;}
+                finally {Input(0,default);}
+                int stoppedAt=_root.SnapshotCount;
+                await WaitState(_=>_root.SnapshotCount>=stoppedAt+3,"network control pulse settles after release",120);
+                continue;
+            }
             await Frames(1);
             if(_root.ActiveSession is NetworkSession)await Task.Delay(16);
         }

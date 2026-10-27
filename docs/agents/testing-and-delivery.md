@@ -404,6 +404,15 @@ before the engine frame drains it into presentation. An immediate menu assertion
 after the transport acknowledgment races the normal UI update. Preserve the
 same expected arena and bounded wait; do not force menu callbacks or state.
 
+The native walking robot uses bounded ordinary movement pulses for a remote
+server, releases each pulse through the thread-safe input queue independently
+of an engine-frame stall, then observes fresh snapshots after release before steering
+again. Local/peer authority still runs on its owning polling thread. Greedy Trap's
+server tour deliberately delays feedback by 180 ms; the retained old controller
+overshot a landing while the pulsed controller keeps the original half-cell
+settle bound and real stair/basin checks. This tests controller lag, not changed
+physics or measured Internet tolerance.
+
 `battle-polish-regression` combines first-use rendering, all randomized-cover stage
 journeys, camera framing, active-blast hits, local/online post-match map selection,
 Quick Play permissions/countdown, the asset audit, pickup personality, the Greedy
