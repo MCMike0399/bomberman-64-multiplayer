@@ -31,4 +31,5 @@ textures/vram_compression/import_etc2_astc=true
 
 rendering_device/driver.macos="metal"
 rendering_device/driver.windows="d3d12"
+rendering_device/driver.linuxbsd="vulkan"
 anti_aliasing/quality/msaa_3d=1

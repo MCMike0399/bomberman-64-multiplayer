@@ -18,6 +18,19 @@ from test_release_signing import signer
 
 
 class PublishedReleaseTests(unittest.TestCase):
+    def test_historical_windows_only_release_remains_verifiable_after_linux_is_added(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            assets, trusted = self.signed_release(root)
+            for name in desktop_packages.asset_names('linux-x64'):
+                (assets / name).unlink()
+            with patch.object(signer, 'ROOT', root), contextlib.redirect_stdout(io.StringIO()):
+                signer.sign(assets / verify_published.ARCHIVE, root / 'fixture.pem', assets, assets / verify_published.SERVER_ARCHIVE)
+            with patch.object(verify_published, 'PUBLIC_KEY', trusted):
+                delivery = verify_published.verify_assets(assets, '0.15.0')
+            self.assertIn(desktop_packages.names('windows-x64')['archive'], delivery['assets'])
+            self.assertNotIn(desktop_packages.names('linux-x64')['archive'], delivery['assets'])
+
     def test_desktop_downloads_and_native_smoke_are_bound_by_the_delivery_signature(self):
         with tempfile.TemporaryDirectory() as temporary:
             assets, trusted = self.signed_release(Path(temporary))

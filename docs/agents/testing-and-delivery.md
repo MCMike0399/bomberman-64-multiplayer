@@ -259,7 +259,7 @@ Actual fullscreen launch likewise does not establish OS Game Mode activation.
 
 ## Deliver and keep one installed app
 
-Windows Direct3D 12 exports use the shared [desktop packaging and verification
+Windows Direct3D 12 and Linux Vulkan exports use the shared [desktop packaging and verification
 contract](../desktop-clients.md). Their trusted package and target-OS exported
 smoke are required for publication. Headless receipts do not establish GPU or
 physical-controller coverage; desktop ports initially use manual updates.
