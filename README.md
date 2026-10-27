@@ -53,7 +53,7 @@ All six battle arenas support local, practice and online sessions. Circuit Garde
 
 Choose **Settings → Graphics → High** for the highest preset: full selected 3D resolution, 2× MSAA, 4096-pixel shadows, higher-quality ambient occlusion and indirect light bounce. Clear refracting shallows, caustics, toy-like materials, painterly terrain, and depth of field and haze outside the playable arena create the diorama look. Medium is the default; Low reduces rendering cost. [Preset details and limits](docs/graphics-research.md).
 
-Settings also provides **Display mode** and **Resolution**, saved automatically for the next launch. Windowed mode fits the chosen window size to your display; fullscreen adjusts 3D resolution while keeping menus sharp.
+Settings also provides **Display mode** and **Resolution**, saved automatically for the next launch. Windowed mode fits the chosen window size to your display; fullscreen adjusts 3D resolution while keeping menus sharp. Only sizes that fit your screen are listed, and Settings shows the resulting 3D render size.
 
 **Settings → Performance metrics** or **F3** toggles a compact top bar with FPS, frame/process/physics timing, video memory and draw calls. The choice is saved on this device. CPU temperature shows **N/A** because Godot does not expose a portable temperature sensor.
 

@@ -289,8 +289,14 @@ Use the existing arrow/A-D/controller dial navigation. `graphics-settings` check
 native selection, persistence and paused local continuity; `network` checks online
 continuity. [Rendering budgets and rationale](../graphics-research.md).
 
-**Display mode** selects Windowed or Fullscreen. **Resolution** offers Automatic
-and common 16:9/16:10 sizes from 1280 x 720 through 3840 x 2400. Changes save
+**Display mode** selects Windowed or Fullscreen. **Resolution** offers Native
+(shown with the screen's pixel size; saved as Automatic) and the common 16:9/16:10
+sizes from 1280 x 720 through 3840 x 2400 that fit the current screen. Larger sizes
+rendered exactly like Native, so the user reported that resolution "did nothing"
+(v0.39.1 hotfix, 2026-10-26); they are no longer offered, though a saved larger
+size is kept for a bigger monitor. The hint under the dial states the live 3D
+output ("3D renders at W x H"), which changes instantly. Resolution needs no
+"Applying graphics" preparation: unlike a preset it compiles no shaders. Changes save
 immediately to `video/fullscreen` and `video/resolution` and restore on the next
 launch, including shortcut changes. Existing installations default to fullscreen
 and Automatic. Missing/malformed values safely retain those defaults.
