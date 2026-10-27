@@ -7,9 +7,57 @@ $output = Join-Path $PSScriptRoot '../../artifacts/windows-audio'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
 Add-Type -TypeDefinition @'
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 public static class BlastAudioEndpoint {
     [DllImport("user32.dll")] public static extern int GetSystemMetrics(int index);
+    [StructLayout(LayoutKind.Explicit, Size=220)] private struct Mode {
+        [FieldOffset(68)] public ushort Size;
+        [FieldOffset(72)] public uint Fields;
+        [FieldOffset(168)] public uint Bits;
+        [FieldOffset(172)] public uint Width;
+        [FieldOffset(176)] public uint Height;
+        [FieldOffset(184)] public uint Frequency;
+    }
+    [StructLayout(LayoutKind.Sequential)] private struct Rect { public int Left, Top, Right, Bottom; }
+    [DllImport("user32.dll", CharSet=CharSet.Unicode)] private static extern bool EnumDisplaySettingsW(string device, uint index, ref Mode mode);
+    [DllImport("user32.dll", CharSet=CharSet.Unicode)] private static extern int ChangeDisplaySettingsExW(string device, ref Mode mode, IntPtr window, uint flags, IntPtr parameter);
+    [DllImport("user32.dll", CharSet=CharSet.Unicode)] private static extern bool SystemParametersInfoW(uint action, uint parameter, ref Rect area, uint flags);
+    [DllImport("user32.dll", CharSet=CharSet.Unicode)] private static extern IntPtr FindWindowW(string name, string title);
+    [DllImport("user32.dll")] private static extern bool ShowWindow(IntPtr window, int command);
+    public static string[] Modes() {
+        var modes=new HashSet<string>();
+        for (uint i=0;i<512;i++) {
+            var mode=new Mode {Size=220};
+            if (!EnumDisplaySettingsW(null,i,ref mode)) break;
+            if (mode.Bits==32) modes.Add(mode.Width+"x"+mode.Height);
+        }
+        var result=new string[modes.Count];modes.CopyTo(result);return result;
+    }
+    public static int SelectMode(int width,int height) {
+        for (uint i=0;i<512;i++) {
+            var mode=new Mode {Size=220};
+            if (!EnumDisplaySettingsW(null,i,ref mode)) break;
+            if (mode.Bits==32 && mode.Width==width && mode.Height==height) {
+                mode.Fields=0x00040000|0x00080000|0x00100000|0x00400000;
+                return ChangeDisplaySettingsExW(null,ref mode,IntPtr.Zero,0,IntPtr.Zero);
+            }
+        }
+        return -2;
+    }
+    public static int[] WorkArea() {
+        var area=new Rect();
+        if (!SystemParametersInfoW(48,0,ref area,0)) throw new InvalidOperationException("Cannot query actual desktop work area");
+        return new int[] {area.Right-area.Left,area.Bottom-area.Top};
+    }
+    public static void UsePhysicalScreen() {
+        // Only an actual physical-size working area: never invent pixels beyond
+        // the selected OS mode. Hide the CI taskbar to fit the unchanged tests.
+        var taskbar=FindWindowW("Shell_TrayWnd",null);
+        if (taskbar!=IntPtr.Zero) ShowWindow(taskbar,0);
+        var area=new Rect {Right=GetSystemMetrics(0),Bottom=GetSystemMetrics(1)};
+        if (!SystemParametersInfoW(47,0,ref area,0)) throw new InvalidOperationException("Cannot set CI work area");
+    }
     [ComImport, Guid("BCDE0395-E52F-467C-8E3D-C4579291692E")] private class Enumerator {}
     [ComImport, Guid("A95664D2-9614-4F35-A746-DE8DB63617E6"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     private interface IDevices {
@@ -33,14 +81,29 @@ public static class BlastAudioEndpoint {
 $before = @(Get-Service Audiosrv, AudioEndpointBuilder | Select-Object Name, Status, StartType)
 $initial = [BlastAudioEndpoint]::Probe()
 $beforeScreen = @([BlastAudioEndpoint]::GetSystemMetrics(0), [BlastAudioEndpoint]::GetSystemMetrics(1))
-Set-DisplayResolution -Width 1920 -Height 1200 -Force
-$screenClock = [System.Diagnostics.Stopwatch]::StartNew()
-while (([BlastAudioEndpoint]::GetSystemMetrics(0) -lt 1920 -or [BlastAudioEndpoint]::GetSystemMetrics(1) -lt 1200) -and $screenClock.Elapsed.TotalSeconds -lt 20) {
+$modes = @([BlastAudioEndpoint]::Modes())
+$modes | Set-Content -Encoding utf8 (Join-Path $output 'display-modes.txt')
+$candidates = @($modes | ForEach-Object {
+    $size = $_ -split 'x'
+    @{Width=[int]$size[0];Height=[int]$size[1];Area=([int]$size[0]*[int]$size[1])}
+} | Where-Object { $_.Width -ge 1648 -and $_.Height -ge 1080 } | Sort-Object Area)
+$modeResults = @()
+foreach ($mode in $candidates) {
+    $code = [BlastAudioEndpoint]::SelectMode($mode.Width,$mode.Height)
+    $modeResults += @{width=$mode.Width;height=$mode.Height;result=$code}
+    if ($code -ne 0) { continue }
     Start-Sleep -Milliseconds 200
+    if ([BlastAudioEndpoint]::GetSystemMetrics(0) -ge 1648 -and [BlastAudioEndpoint]::GetSystemMetrics(1) -ge 1080) {
+        [BlastAudioEndpoint]::UsePhysicalScreen()
+        $area = [BlastAudioEndpoint]::WorkArea()
+        if ($area[0] -ge 1648 -and $area[1] -ge 1080) { break }
+    }
 }
-if ([BlastAudioEndpoint]::GetSystemMetrics(0) -lt 1920 -or [BlastAudioEndpoint]::GetSystemMetrics(1) -lt 1200) {
-    throw 'Disposable Windows desktop cannot provide the required 1920x1200 test surface'
-}
+$area = [BlastAudioEndpoint]::WorkArea()
+$screenReady = $area[0] -ge 1648 -and $area[1] -ge 1080
+@{modes=$modes;attempts=$modeResults;workArea=$area;ready=$screenReady;
+  width=[BlastAudioEndpoint]::GetSystemMetrics(0);height=[BlastAudioEndpoint]::GetSystemMetrics(1)} |
+    ConvertTo-Json -Depth 5 | Set-Content -Encoding utf8 (Join-Path $output 'display.json')
 foreach ($name in @('AudioEndpointBuilder', 'Audiosrv')) {
     if ((Get-Service $name).StartType -eq 'Disabled') { Set-Service -Name $name -StartupType Manual }
     Start-Service -Name $name
@@ -91,6 +154,10 @@ do {
 $report = @{
     beforeServices = $before
     beforeScreen = $beforeScreen
+    displayModes = $modes
+    modeResults = $modeResults
+    workArea = $area
+    screenReady = $screenReady
     virtualDriverInstallerExit = $driverExitCode
     beforeEndpoint = ('0x{0:X8}' -f $initial)
     afterServices = @(Get-Service Audiosrv, AudioEndpointBuilder | Select-Object Name, Status, StartType)
@@ -100,9 +167,10 @@ $report = @{
     screenWidth = [BlastAudioEndpoint]::GetSystemMetrics(0)
     screenHeight = [BlastAudioEndpoint]::GetSystemMetrics(1)
     hasDisplayResolutionCommand = [bool](Get-Command Set-DisplayResolution -ErrorAction SilentlyContinue)
-    passed = ($result -eq 0)
+    passed = ($result -eq 0 -and $screenReady)
 }
 $json = $report | ConvertTo-Json -Depth 5
 $json | Set-Content -Encoding utf8 -Path (Join-Path $output 'environment.json')
 Write-Output $json
 if ($result -ne 0) { throw 'Windows runner has no usable default WASAPI render endpoint after service setup' }
+if (-not $screenReady) { throw 'Windows runner cannot fit the unchanged 1600x1000 client test window' }

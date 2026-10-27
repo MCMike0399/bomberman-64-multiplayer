@@ -130,7 +130,11 @@ ordinary 20-second budget. These allowances change test scheduling, not game
 graphics or loading behavior, and cannot certify native GPU responsiveness.
 The disposable Linux desktop supplies X11 and a PulseAudio null sink. Physical
 speakers, controllers, native performance and Wayland remain separate evidence.
-The disposable Windows fixture requests 1920×1200 and a usable WASAPI endpoint.
+The disposable Windows fixture selects a real supported 32-bit display mode and
+requires enough actual desktop work area for the unchanged 1600×1000 window
+test, including the game's existing 48×80 decoration allowance. Its taskbar is
+hidden within the disposable desktop when needed; no pixels beyond the selected
+OS mode are invented. It also requires a usable WASAPI endpoint.
 When no endpoint exists, it downloads the hash-pinned basic
 [VB-CABLE 45](https://vb-audio.com/Cable/) driver from its vendor and requires
 ordinary Windows signature validation of its installer and Microsoft hardware
