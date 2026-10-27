@@ -12,7 +12,7 @@ jobs:
   windows-audio:
     if: github.event.label.name == 'windows-audio-diagnostics' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: windows-2025
-    timeout-minutes: 10
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
