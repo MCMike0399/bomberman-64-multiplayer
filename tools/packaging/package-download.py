@@ -50,7 +50,8 @@ def main():
                         if entry.is_dir() or not entry.filename.startswith('Blast Circuit.app/'):
                             continue
                         path = mount / entry.filename
-                        if hashlib.sha256(path.read_bytes()).digest() != hashlib.sha256(archive.read(entry)).digest():
+                        actual = os.readlink(path).encode() if path.is_symlink() else path.read_bytes()
+                        if hashlib.sha256(actual).digest() != hashlib.sha256(archive.read(entry)).digest():
                             raise RuntimeError('DMG payload differs from the verified app archive: ' + entry.filename)
             finally:
                 subprocess.run(['hdiutil', 'detach', str(mount)], check=True, timeout=120)
@@ -91,6 +92,11 @@ def main():
             (appdir / 'AppRun').chmod(0o755)
             (appdir / 'blast-circuit.desktop').write_text('[Desktop Entry]\nType=Application\nName=Blast Circuit\nExec=BlastCircuit\nIcon=blast-circuit\nCategories=Game;ArcadeGame;\nTerminal=false\n')
             shutil.copy2(ROOT / 'icon.svg', appdir / 'blast-circuit.svg')
+            runtime_notices = appdir / 'usr/share/doc/blast-circuit'
+            runtime_notices.mkdir(parents=True)
+            for notice in (ROOT / 'docs/licenses').glob('AppImage-*.txt'):
+                shutil.copy2(notice, runtime_notices / notice.name)
+            (runtime_notices / 'AppImage-RUNTIME-SOURCE.txt').write_text('Unmodified AppImage type-2 runtime, SHA-256 617aa77314d57c8b8e4fae9c3f0b35af7b30d5529cb69e98f64f92510ed98a46.\nSource and rebuild instructions: https://github.com/AppImage/type2-runtime/tree/fedfad51acc2860b2916a1eef32ba4a500ff31ef\nUse appimagetool --runtime-file to replace or relink the runtime.\n')
             # Hash pins deliberately fail if upstream replaces a continuous asset.
             # Update only after reviewing the new upstream runtime/tool release.
             pinned = (

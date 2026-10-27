@@ -439,7 +439,7 @@ jobs:
     name: Exported linux-x64 smoke
     needs: [linux-package, managed]
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -455,19 +455,25 @@ jobs:
         with:
           name: Blast-Circuit-server-dotnet10
           path: artifacts
-      - run: sudo apt-get update && sudo apt-get install -y squashfs-tools xvfb openbox mesa-vulkan-drivers
+      - run: sudo apt-get update && sudo apt-get install -y squashfs-tools fuse3 xvfb openbox pulseaudio mesa-vulkan-drivers
       - run: python3 tools/packaging/package-download.py --target linux-x64
       - run: dotnet run --project tests/Bomber.DesktopUpdate.Tests -m:1
       - run: python3 tools/packaging/verify-desktop.py --target linux-x64
       - run: python3 tools/packaging/package-update-fixture.py --target linux-x64 --unpack
       - run: python3 tools/packaging/package-download.py --target linux-x64 --directory artifacts/update-fixture
-      - run: xvfb-run -a -s '-screen 0 1920x1200x24' python3 tools/packaging/verify-desktop-update.py --target linux-x64
+      - run: python3 tools/packaging/linux-desktop.py -- python3 tools/packaging/verify-desktop-update.py --target linux-x64
+      - run: python3 tools/packaging/linux-desktop.py -- python3 tools/packaging/startup-desktop.py --target linux-x64
+      - run: python3 tools/packaging/linux-desktop.py -- python3 tools/packaging/verify-desktop.py --target linux-x64 --graphical
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: Blast-Circuit-linux-x64-smoke
           path: |
             artifacts/Blast-Circuit-linux-x64-smoke.json
+            artifacts/Blast-Circuit-linux-x64-graphical.json
+            artifacts/Blast-Circuit-linux-x64-startup.json
+            artifacts/Blast-Circuit-linux-x64-startup-details/**/runtime.log
+            artifacts/Blast-Circuit-linux-x64-startup-details/**/*.png
             artifacts/Blast-Circuit-linux-x64-updater-tests.json
             artifacts/Blast-Circuit-linux-x64-updater-details/**/runtime.log
             artifacts/Blast-Circuit-linux-x64-updater-details/**/summary.json
@@ -481,6 +487,6 @@ jobs:
             artifacts/Blast-Circuit-linux-x64-regression-details/**/runner-summary.json
             artifacts/Blast-Circuit-linux-x64-regression-details/**/junit.xml
             artifacts/Blast-Circuit-linux-x64-regression-details/**/runtime.log
-            artifacts/Blast-Circuit-linux-x64-regression-details/**/failure.png
+            artifacts/Blast-Circuit-linux-x64-regression-details/**/*.png
           retention-days: 14
           if-no-files-found: error

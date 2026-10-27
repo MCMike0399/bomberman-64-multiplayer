@@ -68,7 +68,7 @@ jobs:
         shell: bash
         run: python -c 'import json,os; m=json.load(open("artifacts/Blast-Circuit-"+os.environ["TARGET"]+"-metadata.json")); assert m["revision"]==os.environ["CANDIDATE_SHA"], "Candidate source mismatch"'
       - if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y squashfs-tools libicu74 xvfb openbox mesa-vulkan-drivers
+        run: sudo apt-get update && sudo apt-get install -y squashfs-tools fuse3 libicu74 xvfb openbox pulseaudio mesa-vulkan-drivers
       - if: runner.os == 'Windows'
         run: python tools/packaging/package-download.py --target windows-x64
       - if: runner.os == 'Linux'
@@ -91,8 +91,13 @@ jobs:
           TARGET: ${{ matrix.target }}
         shell: bash
         run: |
-          python tools/packaging/startup-desktop.py --target "$TARGET"
-          python tools/packaging/verify-desktop.py --target "$TARGET" --graphical
+          if [ "$TARGET" = linux-x64 ]; then
+            python tools/packaging/linux-desktop.py -- python tools/packaging/startup-desktop.py --target "$TARGET"
+            python tools/packaging/linux-desktop.py -- python tools/packaging/verify-desktop.py --target "$TARGET" --graphical
+          else
+            python tools/packaging/startup-desktop.py --target "$TARGET"
+            python tools/packaging/verify-desktop.py --target "$TARGET" --graphical
+          fi
       - name: Actual signed game update and rollback
         env:
           TARGET: ${{ matrix.target }}
@@ -100,7 +105,7 @@ jobs:
         run: |
           if [ "$TARGET" = linux-x64 ]; then
             python tools/packaging/package-download.py --target "$TARGET" --directory artifacts/update-fixture
-            xvfb-run -a -s '-screen 0 1920x1200x24' python tools/packaging/verify-desktop-update.py --target "$TARGET"
+            python tools/packaging/linux-desktop.py -- python tools/packaging/verify-desktop-update.py --target "$TARGET"
           else
             python tools/packaging/verify-desktop-update.py --target "$TARGET"
           fi
