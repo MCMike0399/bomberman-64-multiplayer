@@ -16,6 +16,13 @@ and waits for rooms before replacing a process.
 
 ## Developer procedure
 
+The startup gate allows 180 seconds for its single cold renderer launch and
+90 seconds for each subsequent launch. Hosted Metal pipeline compilation has
+measured 60–110 seconds; the first v0.38 candidate's 90-second cold-launch
+deadline expired before its smoke, while all eight subsequent cases passed.
+Receipts record each launch's deadline. There are no startup retries: crashes,
+engine errors, missing captures and incorrect applied settings still fail.
+
 1. Run `python3 tools/ci/release.py doctor --publish` first. This read-only audit
    reports missing repository/environment settings, credentials by name only,
    a live deployment runner or fresh autoscaler heartbeat, explicit worker placement and persistent state.

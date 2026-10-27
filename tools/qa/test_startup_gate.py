@@ -3,6 +3,7 @@ import importlib.util
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 SPEC = importlib.util.spec_from_file_location('startup_gate', Path(__file__).with_name('startup_gate.py'))
 gate = importlib.util.module_from_spec(SPEC)
@@ -11,6 +12,15 @@ REPORT = ' graphics=high window=fullscreen size=1920x1200 adapter=Apple Paravirt
 
 
 class StartupGateTests(unittest.TestCase):
+    def test_only_the_first_launch_gets_the_cold_renderer_budget(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary) / 'receipt'
+            output.mkdir()
+            with patch.object(gate, 'run_case', return_value={'passed': True}) as launch:
+                gate.run_cases(Path('/candidate'), output, Path(temporary), 90, 180, False)
+            self.assertEqual([180] + [90] * 8, [call.args[4] for call in launch.call_args_list])
+            self.assertEqual(list(gate.CASES), [call.args[1] for call in launch.call_args_list])
+
     def setUp(self):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)

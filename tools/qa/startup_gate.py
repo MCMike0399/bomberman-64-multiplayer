@@ -125,7 +125,8 @@ def run_case(executable, case, output, scratch, timeout, legacy):
     environment = dict(os.environ, HOME=str(home), XDG_DATA_HOME=support, XDG_CONFIG_HOME=support,
                        XDG_CACHE_HOME=str(home / 'Library/Caches'))
     command = [str(executable), '--', '--smoke-menu' if kind == 'menu' else '--smoke', '--smoke-seconds=4']
-    record = {'id': name, 'preset': preset, 'display': display, 'capture': kind, 'command': command[1:], 'passed': False}
+    record = {'id': name, 'preset': preset, 'display': display, 'capture': kind, 'command': command[1:],
+              'timeoutSeconds': timeout, 'passed': False}
     started = time.monotonic()
     log_path = folder / 'app.log'
     process = None
@@ -154,11 +155,20 @@ def run_case(executable, case, output, scratch, timeout, legacy):
     return record
 
 
+def run_cases(executable, output, scratch, timeout, cold_timeout, legacy):
+    # A fresh hosted VM compiles Metal pipelines on its first launch (observed
+    # 60–110 seconds). Keep that one cold launch bounded separately; every later
+    # case retains the ordinary deadline and every failed attempt remains fatal.
+    return [run_case(executable, case, output, scratch, max(timeout, cold_timeout) if index == 0 else timeout, legacy)
+            for index, case in enumerate(CASES)]
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--app', type=Path, required=True, help='Exported Blast Circuit.app (prefer one extracted from the release ZIP)')
     parser.add_argument('--output', type=Path, help='Fresh receipt directory (default: artifacts/qa/<time>-startup-gate)')
     parser.add_argument('--timeout', type=int, default=90, help='Seconds per launch, including first-use graphics preparation')
+    parser.add_argument('--cold-timeout', type=int, default=180, help='Seconds for the single first launch on a cold Metal renderer')
     parser.add_argument('--host-desktop', action='store_true',
                         help='Explicitly allow fullscreen launches on this physical Mac desktop (preferences stay isolated)')
     parser.add_argument('--accept-legacy-report', action='store_true',
@@ -180,7 +190,7 @@ def main(argv=None):
     print(f'Startup gate: v{identity["version"]} build {identity["build"]} on {model}', flush=True)
     started = time.monotonic()
     with tempfile.TemporaryDirectory(prefix='blast-startup-gate-') as scratch:
-        cases = [run_case(executable, case, output, Path(scratch), args.timeout, args.accept_legacy_report) for case in CASES]
+        cases = run_cases(executable, output, Path(scratch), args.timeout, args.cold_timeout, args.accept_legacy_report)
     passed = all(case['passed'] for case in cases)
     summary = {'schemaVersion': 1, 'gate': 'saved-settings-startup', 'passed': passed,
                'legacyReport': args.accept_legacy_report, 'app': {'path': str(app), **identity},
