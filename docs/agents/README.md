@@ -3,7 +3,7 @@
 The user resumed gameplay work on 2026-10-23 for controller ergonomics, aiming
 and knockdown/blast separation (iteration19). The first eighteen iterations
 remain historical evidence. Iteration20 then rebuilt the walk. Recorded
-release baseline: **v0.42.0/build 51**, published with independently verified Mac
+release baseline: **v0.42.1/build 52**, published with independently verified Mac
 and server archives (see [verification](../verification.md)). Previous runtime baseline: **v0.18.0**, commit
 `316a330d7d895a92f98c1a60be7d571ec445a8a3`. Later documentation commits may follow.
 Verify the live branch, source, tools and installed version before relying on
@@ -48,6 +48,17 @@ update the current guide rather than silently reviving old behavior.
 | [Latest verification](../verification.md) | Exact observed results and limitations, with earlier iterations below |
 
 ## Current decisions that supersede earlier experiments
+
+- Quick Play QA source work (2026-10-27): a stable roster of at least two
+  connected humans waits a full minute; roster changes restart it and fewer
+  than two cancel it. Anonymous players cannot start early or edit shared rules.
+  Public gameplay/results exclude new strangers, including delayed reservation
+  claims; private controls remain manual. [Policy and local QA evidence](../smart-multiplayer.md#quick-play-source-qa--2026-10-27).
+  This work is not a new release or maintained-worker deployment.
+
+- v0.42.1 delivers softer reflections on characters, bombs, pickups and painted
+  scenery (#49/#50). All required trusted gates, the protected rollout and
+  public asset verification passed. [Delivery receipt](../verification.md#v0421-delivered).
 
 - v0.42 delivers living stage scenery, the High water reflection speckle fix and
   the faster verified release cutover. All trusted release gates, public asset

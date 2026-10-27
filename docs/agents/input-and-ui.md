@@ -233,8 +233,13 @@ movement: prior mouse hover can leave the last item selected. See the
 ## Current online flow (v0.29)
 
 Online offers Play online, Create private room and Join with code. Private hosting
-can be Automatic, Server only or Player hosted. Public rooms count down with two
-humans; private owners still start manually. Changing simulation host does not
+can be Automatic, Server only or Player hosted. Quick Play source policy
+(2026-10-27) shows a one-minute countdown with at least two connected humans.
+Roster changes restart it; below two, it disappears. Public Start game and Room
+settings controls are hidden, and the authority rejects their commands. Shared
+rules replace anonymous owner controls; personal Settings stays available.
+Expired timers show host/capacity waiting instead of a frozen zero. Private
+owners still start manually. Changing simulation host does not
 transfer the room-owner controls. Reconnects rearm physical input. See
 [adaptive rooms](../smart-multiplayer.md) for privacy and recovery boundaries.
 

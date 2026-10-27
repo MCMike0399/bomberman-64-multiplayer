@@ -114,7 +114,7 @@ Menus accept WASD/arrows, Enter to confirm and Esc to return. Tab / Shift+Tab mo
 
 ## Online battle
 
-Use **Online Battle** with `https://blast.burbuja-lab.dev`, then choose **Play online**, **Create private room** or **Join with code**. Public rooms start an eight-second countdown once two people connect; the owner can start sooner. Private rooms wait for their owner to start. Each online instance controls one human seat.
+Use **Online Battle** with `https://blast.burbuja-lab.dev`, then choose **Play online**, **Create private room** or **Join with code**. Quick Play uses shared rules and an automatic one-minute countdown with at least two connected people. Player changes restart the minute; below two, it cancels. Anonymous players cannot start early or edit the rules. Private rooms wait for their owner to start. Each online instance controls one human seat. See [matchmaking policy and source/release status](docs/smart-multiplayer.md).
 
 Create a room, use **Copy code**, and have other players join with that code. The leader can edit room settings before starting. After results, everyone returns to the same room; leadership transfers if the leader leaves. Your name and server address are saved between launches; choose your suit before joining. Private hosting offers **Automatic**, **Server only** and **Player hosted**. Automatic chooses dedicated or qualified player authority using capacity and measured routes. Server only keeps authority on the cluster. Automatic and Server only support one human with CPUs; Player hosted needs two humans.
 

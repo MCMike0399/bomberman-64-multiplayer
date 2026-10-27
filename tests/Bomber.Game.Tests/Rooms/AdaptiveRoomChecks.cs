@@ -62,7 +62,9 @@ internal static class AdaptiveRoomChecks
         publicContext.Tick = 120;
         publicGame.OnPlayerJoined(publicContext, publicContext.Add("three", 2)); publicGame.OnTick(publicContext);
         publicContext.Tick = 240; publicGame.OnTick(publicContext);
-        Check(publicContext.Status.GetProperty("phase").GetString()=="playing", "later public arrivals do not indefinitely restart the automatic countdown");
+        Check(publicContext.Status.GetProperty("phase").GetString()=="lobby", "later public arrivals restart the automatic one-minute countdown");
+        publicContext.Tick = 64 * 30; publicGame.OnTick(publicContext);
+        Check(publicContext.Status.GetProperty("phase").GetString()=="playing", "public room automatically starts after the changed roster waits a full minute");
         bool rejected = false;
         try { new AdaptiveRoomGame().CreateSession(new("invalid", "blast-room", new Dictionary<string,string>{{"stage","unsupported"}},64)); }
         catch(ArgumentException) { rejected = true; }
@@ -140,6 +142,7 @@ internal static class AdaptiveRoomChecks
         public bool TryReserveResource(string name, int units)
         { if (units < 0 || !Limits.TryGetValue(name, out int limit) || units > limit) return false; if (units == 0) Claims.Remove(name); else Claims[name] = units; return true; }
         public RealtimePlayer Add(string id, int slot) { var p = new RealtimePlayer(id, id, slot, new Dictionary<string, string>()); _players.Add(p); Connected.Add(id); return p; }
+        public void Remove(RealtimePlayer player) { _players.Remove(player); Connected.Remove(player.PlayerId); }
         public bool IsConnected(string id) => Connected.Contains(id);
         public long? LastSequence(string id) => null;
         public long Tick { get; set; }

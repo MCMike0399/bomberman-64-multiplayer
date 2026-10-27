@@ -1,3 +1,36 @@
+# v0.42.1 delivered
+
+Published **2026-10-27 17:18:49 UTC**: [v0.42.1 / signed update](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.42.1).
+[PR #49](https://github.com/MCMike0399/bomberman-64-multiplayer/pull/49) softened character highlights;
+[PR #50](https://github.com/MCMike0399/bomberman-64-multiplayer/pull/50) extended the finish to bombs, pickups and painted scenery.
+[Release identity #51](https://github.com/MCMike0399/bomberman-64-multiplayer/pull/51)
+prepared **v0.42.1/build 52/schema 6**, source `cea93b368881ffcf9f948c5622d966128750b8e1`.
+
+- Focused rebuilt exports passed isolated Metal `model-profile` (13 checks/five
+  captures) and `asset-audit` (79 checks/one gallery), with zero runtime errors or
+  warnings. Reviewed character and bomb/pickup captures remain with their
+  [provenance](images/character-highlights/manifest.json).
+- Local public and complete managed/network profiles and actionlint passed.
+  An initial local managed run failed the release-identity check because its
+  source revision changed during the run; a fresh run on the committed release
+  identity passed all 26 steps, including the 72-case AI soak and fleet drill.
+- [Trusted Verification 40546632454](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40546632454)
+  passed public, managed/network, Godot headless, Apple Silicon packaging and both
+  archived-client gates. All nine saved-settings cases passed on Apple
+  Paravirtual Metal; the signed update from v0.42.0 passed install, deliberate
+  failed-launch rollback and saved High/fullscreen on attempt one. The optional
+  full CI Metal journey was skipped. The archived High gameplay capture was reviewed.
+- [Protected rollout and public verification 40548737990](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40548737990)
+  passed. Public, primary and fallback targets verified the exact revision/token,
+  connections and room placement without deferral. Anonymous downloads of all
+  ten assets, both signatures, latest stable identity and byte equality with the
+  tested client/server archives were verified.
+- Published archive SHA-256: Mac `d4dbc08eb35bf0a10d25b542af2954a9b59b3a2cb215423600c3791da6ee9f07`;
+  server `1f6c46c96ec3be1fb381b0637d3da0fb14705dcbad55dcdb9b2fdab288f93bac`.
+
+Existing users receive the signed in-game update. No local installation or
+native GPU performance measurement was performed for this release.
+
 # v0.42.0 delivered
 
 Published **2026-10-27 16:32:42 UTC**: [v0.42.0 / signed update](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.42.0).

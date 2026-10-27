@@ -125,5 +125,55 @@ public partial class PlaytestDriver
         await KeyPress(Key.Escape);await ActivateNamed("ResumeGame");
         Check(_root.ScreenName=="Match"&&ReferenceEquals(_root.ActiveSession,host),"online menu resumes the same match");
         _root.Back(); await Frames(4);
+        await QuickPlayLobby();
+    }
+
+    private async Task QuickPlayLobby()
+    {
+        _root.Navigate("Online");await Frames(3);
+        await _root.StartOnlineAsync(new Uri(_server),"Quick Play first",new SessionSettings(Bots:0),NetworkMode.QuickPlay);
+        var first=(NetworkSession)_root.ActiveSession!;
+        await LobbyUntil(()=>first.Party is {PublicRoom:true,StartAt:null});
+        Check(_root.ScreenName=="Lobby"&&VisibleText(_root).Contains("Waiting for a second player"),"lone Quick Play player sees a waiting lobby without a timer");
+        Check(!NamedButton("StartRoom").Visible&&!NamedButton("EditRoomSettings").Visible,"anonymous public owner has no manual-start or rule-edit controls");
+        Check(VisibleText(_root).Contains("Shared rules")&&!VisibleText(_root).Contains("Room owner:"),"public lobby explains shared rules without presenting an anonymous owner as an operator");
+        await Capture("quick-play-waiting-alone");
+        await using var second=await NetworkSession.ConnectAsync(new Uri(_server),"Quick Play second",new SessionSettings(Bots:0),NetworkMode.QuickPlay);
+        await LobbyUntil(()=>first.Party?.StartAt is not null);
+        long initial=first.Party!.StartAt!.Value;
+        Check(second.LobbyId==first.LobbyId,"graphical Quick Play joins the same real matchmade lobby");
+        Check(VisibleText(_root).Contains("Battle begins in "),"public lobby renders the authoritative countdown");
+        string before=VisibleText(_root);
+        await Task.Delay(1200);await Frames(3);
+        Check(VisibleText(_root)!=before&&_root.ScreenName=="Lobby"&&_root.LatestState is null,"visible countdown advances while gameplay remains stopped");
+        await Capture("quick-play-two-players-countdown");
+        await ActivateNamed("LobbySettings");await KeyPress(Key.Escape);await Frames(3);
+        Check(_root.ScreenName=="Lobby"&&ReferenceEquals(first,_root.ActiveSession)&&first.Party?.StartAt==initial,
+            "personal settings return to the same public countdown without resetting it");
+        await using var third=await NetworkSession.ConnectAsync(new Uri(_server),"Quick Play third",new SessionSettings(Bots:0),NetworkMode.QuickPlay);
+        await LobbyUntil(()=>first.Party?.StartAt>initial);
+        long changed=first.Party!.StartAt!.Value;
+        Check(VisibleText(_root).Contains("Quick Play third")&&VisibleText(_root).Contains("Player changes restart"),"late arrival appears alongside the countdown-reset explanation");
+        await Capture("quick-play-three-players-countdown");
+        await Task.Delay(1100);await third.DisposeAsync();
+        await LobbyUntil(()=>first.Party?.StartAt>changed);
+        Check(first.Party!.StartAt-DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()>55000,"three-to-two departure shows a fresh full minute");
+        await second.DisposeAsync();
+        await LobbyUntil(()=>first.Party?.StartAt is null);
+        Check(VisibleText(_root).Contains("Waiting for a second player")&&!VisibleText(_root).Contains("Battle begins in "),"below two players removes the visible countdown immediately");
+        Check(!NamedButton("StartRoom").Visible&&!NamedButton("EditRoomSettings").Visible,"roster changes never restore public owner powers");
+        await Capture("quick-play-departure-cancels-countdown");
+        _root.Back();await Frames(4);
+
+        async Task LobbyUntil(Func<bool> condition)
+        {
+            var elapsed=System.Diagnostics.Stopwatch.StartNew();
+            while(elapsed.Elapsed.TotalSeconds<15)
+            {
+                await Frames(1);await Task.Delay(16);
+                if(condition()){await Frames(2);return;}
+            }
+            throw new TimeoutException("Quick Play lobby condition timed out: "+first.Party);
+        }
     }
 }

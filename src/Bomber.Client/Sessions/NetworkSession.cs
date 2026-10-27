@@ -44,13 +44,13 @@ public sealed partial class NetworkSession : ISession
     private byte[]? _pendingRules;
     public void SetRoomSettings(SessionSettings settings)
     {
-        if(!IsLeader||Party?.Phase!="lobby")throw new InvalidOperationException("Only the waiting room leader can change the rules.");
+        if(!IsLeader||Party is not {Phase:"lobby",PublicRoom:false})throw new InvalidOperationException("Only a waiting private room's owner can change the rules.");
         Interlocked.Exchange(ref _pendingRules,JsonSerializer.SerializeToUtf8Bytes(new {t="party.settings",d=settings.ToWireSettings()}));
     }
     private readonly TaskCompletionSource _partyReady = new(TaskCreationOptions.RunContinuationsAsynchronously);
     public PartyStatus? Party => Volatile.Read(ref _party);
     public bool IsLeader => Party is { LeaderId: not null } party && party.LeaderId == PlayerId;
-    public void RequestStart() { if (IsLeader && Party?.CanStart == true) Interlocked.Exchange(ref _startPending, 1); }
+    public void RequestStart() { if (IsLeader && Party is {CanStart:true,PublicRoom:false}) Interlocked.Exchange(ref _startPending, 1); }
     public void ReleaseInputs() { lock (_inputGate) { _input = default; _buttons.Clear(); } }
     public int LocalPlayerCount => 1;
     public string Status => Volatile.Read(ref _status);
