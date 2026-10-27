@@ -55,26 +55,6 @@ def fetch_previous(repository, token, destination, version=None):
     return {'version': version, 'tag': release['tag_name'], 'sha256': digest(destination / ARCHIVE)}
 
 
-def warm_renderer(app, timeout=240):
-    """Pay a fresh VM's one-time pipeline compilation before the timed relaunches.
-
-    The first launch on a new hosted runner spends ~60-90 s compiling Metal
-    pipelines; later launches take ~20 s while either Godot's user-data cache or
-    the per-path driver cache is warm. The fixture relaunches copies at new paths
-    under the guest's own home, so warm the candidate there, with gameplay, before
-    the installer's 45 s health deadline applies. Cold start correctness itself is
-    covered by the startup gate's first case.
-    """
-    info = plistlib.loads((app / 'Contents/Info.plist').read_bytes())
-    started = time.monotonic()
-    result = subprocess.run([str(app / 'Contents/MacOS' / info['CFBundleExecutable']), '--windowed', '--',
-                             '--display-windowed', '--smoke', '--smoke-seconds=1'],
-                            cwd=app.parent, capture_output=True, text=True, timeout=timeout)
-    if result.returncode != 0 or 'GODOT_SMOKE_OK' not in result.stdout:
-        raise RuntimeError(f'{app.name} v{info["CFBundleShortVersionString"]} did not start on this runner (exit {result.returncode})')
-    return round(time.monotonic() - started, 3)
-
-
 @contextlib.contextmanager
 def no_background_updates():
     """Keep the fixture's old app from fetching a newer published release mid-transaction.
@@ -150,12 +130,14 @@ def run_update(candidate, previous_app, output, timeout, project, receipt, attem
     attempt stays in the receipt for review.
     """
     receipt['failedAttempts'] = []
+    receipt['attempts'] = []
     gate_started = time.time()
     for attempt in range(1, attempts + 1):
         started = time.time()
         try:
             cases = run_transactions(candidate, previous_app, output / f'attempt-{attempt}', timeout, project)
         except (RuntimeError, subprocess.TimeoutExpired) as error:
+            receipt['attempts'].append({'attempt': attempt, 'passed': False, 'seconds': round(time.time() - started, 3)})
             found = diagnostics(started, gate_started)
             receipt['failedAttempts'].append({'attempt': attempt, 'error': str(error), 'diagnostics': found})
             if found['crashReports']:
@@ -166,6 +148,7 @@ def run_update(candidate, previous_app, output, timeout, project, receipt, attem
         late = receipt['failedAttempts'] and diagnostics(started, gate_started)['crashReports']
         if late:
             raise RuntimeError('Candidate crashed during an earlier update attempt: ' + ', '.join(late))
+        receipt['attempts'].append({'attempt': attempt, 'passed': True, 'seconds': round(time.time() - started, 3)})
         return cases
     raise RuntimeError(f'Updater transactions failed in all {attempts} attempts')
 
@@ -211,7 +194,6 @@ def main(argv=None):
             else:
                 subprocess.run(['ditto', '-x', '-k', str(scratch / ARCHIVE), str(scratch / 'previous')], check=True)
                 with no_background_updates():
-                    receipt['warmupSeconds'] = warm_renderer(args.app.resolve())
                     receipt['cases'] = run_update(args.app.resolve(), scratch / 'previous/Blast Circuit.app', output,
                                                   args.timeout, args.update_test_project.resolve(), receipt)
                 receipt['passed'] = True

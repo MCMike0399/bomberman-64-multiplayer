@@ -80,6 +80,34 @@ verifies that key against the existing public key and verifies each generated si
 therefore fails before draining or changing servers. Release credentials are
 removed from the host adapter's subprocess environment.
 
+### Release latency
+
+The [2026-10-27 history review](release-pipeline-review.md) measured about twenty
+minutes after merge for healthy releases and nearly an hour when publication
+failed after rollout. The revised flow prepares the signed draft and verifies
+its downloaded bytes **before draining servers**. One protected runner then
+deploys, checks every worker's placement/gameplay/room retirement, rechecks release
+identities and publishes under the same fleet lock. It downloads/signs the
+candidate once and avoids a second runner allocation and duplicate match cycle.
+Public anonymous-download verification still follows publication.
+
+Documentation-only pushes (`README.md` and `docs/**/*.md`) run public contracts
+without trusted builds or release gates. Missing/unknown history, source,
+assets, instructions and workflow changes require every trusted lane; manual
+Verification dispatch also requests every lane. No candidate is released when
+packaging was skipped. Only public controller libraries/licenses are cached,
+keyed by OS, architecture, SDK and controller tools; their native initialization,
+deployment target and exported-bundle checks still run after a cache hit.
+`python3 tools/ci/release.py status` shows elapsed durations for verification
+and publication jobs, including in-progress work.
+
+The updater fixture warms the actual installation path once and reuses it for
+all three transactions. It waits for the installer's lock to disappear before
+deleting files or starting another transaction. Receipts retain warmup,
+per-transaction and per-attempt timings. The cold-start matrix and production
+handoff/health deadlines remain release requirements. Compare the next trusted
+run with the history review before claiming a measured delivery-time reduction.
+
 ### Fallback under host pressure
 
 The deployment and publication connection probes create a real server-hosted
@@ -108,7 +136,7 @@ Metal and a logged-in desktop):
 | `Release gate: saved-settings startup` | `tools/qa/startup_gate.py` starts the bundle with no engine overrides from an isolated user-data directory containing saved preferences: Low/Medium/High × fullscreen/windowed to the menu, plus a local match per preset in fullscreen. Each launch must finish its smoke, save a real viewport capture and report the applied preset, window mode, size and GPU adapter; any engine error, crash or software renderer fails. | `release-gate-startup` |
 | `Release gate: update from published` | `tools/ci/update_from_published.py` downloads the latest stable release anonymously, authenticates it through the signed updater manifest, and runs the production installer (`tests/Bomber.Update.Tests`) from it to the candidate: successful relaunch, deliberate failed-launch rollback, and relaunch with saved High/fullscreen before layout. | `release-gate-update` |
 
-The update gate warms the candidate once under the guest's home, and the
+The update fixture warms the candidate once at its actual installation path, and the
 fixture's old app runs headless while the helper waits for it. First-use
 pipeline compilation on a fresh hosted GPU takes 60–110 s, which would
 otherwise decide the installer's 60 s handoff. The product installer's 60 s
@@ -116,7 +144,7 @@ handoff and 45 s health deadline are unchanged. On hosted runners a healthy
 relaunch still occasionally misses that health deadline, so a failed attempt
 **without a native crash report** is retried, up to three attempts. Any crash
 report fails the gate immediately, and every failed attempt stays in the receipt.
-A self-hosted Metal runner would make the retry unnecessary.
+Changing the runner alone does not prove that retries can be removed.
 
 `promote_release.py` and `deploy_release.py` require both jobs to succeed and
 download/re-validate both receipts for the exact version and build before any
@@ -293,10 +321,14 @@ and report its path. These raw diagnostics are never included in uploaded
 receipts; inspect them on the runner and remove them under operator retention.
 
 Successful deployments upload `deployment-receipt.json` (30 days), containing
-only source/release identity and per-target verdicts. Publication stages all assets as a draft, downloads them and compares exact
-bytes, then rechecks live identities and matches immediately before publishing.
-An interrupted upload stays a draft. Promotion runs the expensive match/retirement
-probe once after upload, avoiding a redundant pre-upload match cycle. In addition to the existing updater manifest,
+only source/release identity and per-target verdicts, including when final publication
+fails. Publication stages all assets as a draft, downloads them and compares exact
+bytes before server drain. An interrupted upload leaves the old fleet serving
+and any partial release hidden as a draft. The protected deploy-and-publish CLI
+runs the expensive match/retirement probe once after resume, followed by a cheap
+live-identity recheck immediately before publishing. Standalone
+`promote_release.py --publish` still requires fresh identity and match checks;
+it accepts no receipt-based bypass. In addition to the existing updater manifest,
 `Blast-Circuit-release.json` and its P-256 signature bind client/server ZIPs,
 source/release metadata and the updater manifest as one delivery. The existing
 updater format and public key stay unchanged. Ad-hoc app signing remains the

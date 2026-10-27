@@ -61,11 +61,15 @@ jobs:
         run: python3 tools/ci/promote_release.py --check-only --run-id "$RUN_ID" --version "$VERSION"
 
   deploy:
+    name: Deploy and publish prepared release
     needs: validate
     if: inputs.publish
     environment: production
     runs-on: [self-hosted, blast-deploy]
     timeout-minutes: 65
+    permissions:
+      contents: write
+      actions: read
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -74,7 +78,7 @@ jobs:
       - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           dotnet-version: 10.0.x
-      - name: Deploy checked artifacts and verify every node
+      - name: Verify draft bytes, deploy once, verify every node and publish
         env:
           GH_TOKEN: ${{ github.token }}
           RUN_ID: ${{ inputs.run_id }}
@@ -95,22 +99,20 @@ jobs:
           printf '%s\n' "$BLAST_UPDATE_SIGNING_KEY" > "$key"
           python3 tools/ci/deploy_release.py --run-id "$RUN_ID" --version "$VERSION" \
             --expected-sha "$EXPECTED_SHA" --adapter "$BLAST_DEPLOY_ADAPTER" \
-            --signing-key "$key" --state-dir "$BLAST_DEPLOY_STATE_DIR" --output artifacts/deployment-receipt.json
+            --signing-key "$key" --state-dir "$BLAST_DEPLOY_STATE_DIR" --output artifacts/deployment-receipt.json --publish
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
         with:
           name: deployment-receipt
           path: artifacts/deployment-receipt.json
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 30
 
   draft:
-    needs: [validate, deploy]
-    if: >-
-      always() && needs.validate.result == 'success' &&
-      ((!inputs.publish && needs.deploy.result == 'skipped') ||
-       (inputs.publish && needs.deploy.result == 'success'))
+    needs: validate
+    if: '!inputs.publish'
     environment: production
-    runs-on: ${{ inputs.publish && fromJSON('["self-hosted","blast-deploy"]') || fromJSON('["ubuntu-24.04"]') }}
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     permissions:
       contents: write
@@ -120,35 +122,26 @@ jobs:
         with:
           persist-credentials: false
           ref: ${{ needs.validate.outputs.revision }}
-      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
-        if: inputs.publish
-        with:
-          dotnet-version: 10.0.x
       - env:
           GH_TOKEN: ${{ github.token }}
           RUN_ID: ${{ inputs.run_id }}
           VERSION: ${{ inputs.version }}
           EXPECTED_SHA: ${{ needs.validate.outputs.revision }}
           BLAST_UPDATE_SIGNING_KEY: ${{ secrets.BLAST_UPDATE_SIGNING_KEY }}
-          PUBLISH_RELEASE: ${{ inputs.publish }}
-          BLAST_RELEASE_SERVER_URLS: ${{ secrets.BLAST_RELEASE_SERVER_URLS }}
-          BLAST_RELEASE_PLACEMENTS: ${{ secrets.BLAST_RELEASE_PLACEMENTS }}
         run: |
           set -euo pipefail
           umask 077
-          python3 tools/ci/verify_deployment.py --mask-configuration
           key="$RUNNER_TEMP/blast-update-signing.pem"
           trap 'rm -f "$key"' EXIT
           test -n "$BLAST_UPDATE_SIGNING_KEY"
           printf '%s\n' "$BLAST_UPDATE_SIGNING_KEY" > "$key"
           args=(--run-id "$RUN_ID" --version "$VERSION" --expected-sha "$EXPECTED_SHA" --signing-key "$key")
-          if [[ "$PUBLISH_RELEASE" == true ]]; then args+=(--publish); fi
           python3 tools/ci/promote_release.py "${args[@]}"
 
   published:
     name: Verify published release
-    needs: [validate, draft]
-    if: always() && inputs.publish && needs.draft.result == 'success'
+    needs: [validate, deploy]
+    if: always() && inputs.publish && needs.deploy.result == 'success'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:

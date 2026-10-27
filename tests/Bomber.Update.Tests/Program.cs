@@ -15,6 +15,20 @@ string version=await MacUpdateInstaller.PlistValue(source,"CFBundleShortVersionS
 string oldVersion=await MacUpdateInstaller.PlistValue(previous,"CFBundleShortVersionString");
 if(UpdateRelease.ParseVersion(version)<=UpdateRelease.ParseVersion(oldVersion))throw new Exception("Fixtures need a newer app.");
 var results=new List<object>();
+// Every transaction installs at this exact path. Warming another bundle path on
+// a hosted Metal VM does not reliably warm Launch Services' replacement app.
+string installRoot=Path.Combine(output,"Installed"),target=Path.Combine(installRoot,"Blast Circuit.app");
+Directory.CreateDirectory(installRoot);
+var warmup=Stopwatch.StartNew();
+await Tool("/usr/bin/ditto",source,target);
+try
+{
+    string log=await Tool(Path.Combine(target,"Contents/MacOS/Blast Circuit"),"--windowed","--","--display-windowed","--smoke","--smoke-seconds=1");
+    if(!log.Contains("GODOT_SMOKE_OK"))throw new Exception("Candidate did not complete renderer warmup at the install path.");
+}
+finally{Directory.Delete(target,true);}
+warmup.Stop();
+Console.WriteLine($"WARM install path: {warmup.Elapsed.TotalSeconds:F3}s");
 string goodArchive=Path.Combine(output,"good.zip"),badArchive=Path.Combine(output,"bad.zip");
 await Tool("/usr/bin/ditto","-c","-k","--sequesterRsrc","--keepParent",source,goodArchive);
 string badRoot=Path.Combine(output,"crash-fixture"),badApp=Path.Combine(badRoot,"Blast Circuit.app");Directory.CreateDirectory(badRoot);
@@ -31,12 +45,14 @@ finally{if(Directory.Exists(badRoot))Directory.Delete(badRoot,true);}
 await RunCase("successful-install",goodArchive,true);
 await RunCase("failed-launch-rollback",badArchive,false);
 if(highFullscreen)await RunCase("successful-install-high-fullscreen",goodArchive,true,highStartup:true);
-File.WriteAllText(Path.Combine(output,"summary.json"),JsonSerializer.Serialize(new{passed=true,cases=results},new JsonSerializerOptions{WriteIndented=true}));
+File.WriteAllText(Path.Combine(output,"summary.json"),JsonSerializer.Serialize(new{passed=true,warmupSeconds=warmup.Elapsed.TotalSeconds,cases=results},new JsonSerializerOptions{WriteIndented=true}));
 Console.WriteLine("PASS actual macOS updater: signed feed/download, running-app handoff, verified new launch and failed-launch rollback");
 
 async Task RunCase(string name,string archive,bool success,bool highStartup=false)
 {
-    string folder=Path.Combine(output,name),installRoot=Path.Combine(folder,"Installed"),target=Path.Combine(installRoot,"Blast Circuit.app"),history=Path.Combine(folder,"History");
+    var elapsed=Stopwatch.StartNew();
+    string folder=Path.Combine(output,name),history=Path.Combine(folder,"History");
+    Directory.CreateDirectory(folder);
     Directory.CreateDirectory(installRoot);
     await Tool("/usr/bin/ditto",previous,target);
     using var key=ECDsa.Create(ECCurve.NamedCurves.nistP256);
@@ -86,16 +102,23 @@ async Task RunCase(string name,string archive,bool success,bool highStartup=fals
         string expected=success?"installed "+version:"failed "+version+" launch-rollback";
         if(result!=expected)throw new Exception(name+": "+result);
         if(await MacUpdateInstaller.PlistValue(target,"CFBundleShortVersionString")!=(success?version:oldVersion))throw new Exception("Installed version does not match transaction result.");
+        // The history receipt precedes removal of previous.app/failed.app. The
+        // production helper releases its transaction lock only after cleanup.
+        await WaitForInstaller(timeout.Token);
         await Tool("/usr/bin/codesign","--verify","--deep","--strict",target);
         // The relaunched app must outlive the installer, not disappear with its process group.
         await Task.Delay(2500,timeout.Token);
         var active=await OwnedPids(target);
         if(active.Length!=1)throw new Exception("Expected exactly one running installed app after helper exit.");
-        results.Add(new{name,result,installedVersion=success?version:oldVersion,running=true,savedHighFullscreen=highStartup});
+        results.Add(new{name,result,installedVersion=success?version:oldVersion,running=true,savedHighFullscreen=highStartup,seconds=elapsed.Elapsed.TotalSeconds});
         Console.WriteLine("PASS "+name+": "+result);
     }
     finally
     {
+        // A timeout may leave the helper finishing a rollback. Never delete its
+        // files or start the next case while it still owns this installation.
+        using var cleanup=new CancellationTokenSource(TimeSpan.FromSeconds(125));
+        await WaitForInstaller(cleanup.Token);
         foreach(int pid in await OwnedPids(target))
         {try{using var process=Process.GetProcessById(pid);process.Kill();await process.WaitForExitAsync();}catch(ArgumentException){}}
         if(preferences is not null)
@@ -103,6 +126,10 @@ async Task RunCase(string name,string archive,bool success,bool highStartup=fals
         // These are isolated test bundles; preserve logs, never leave a second launchable app.
         if(Directory.Exists(installRoot))Directory.Delete(installRoot,true);
     }
+}
+async Task WaitForInstaller(CancellationToken ct)
+{
+    while(Directory.Exists(Path.Combine(installRoot,".blast-update-lock")))await Task.Delay(100,ct);
 }
 static async Task<int[]> OwnedPids(string app)
 {

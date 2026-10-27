@@ -16,6 +16,13 @@ from deployment_state import Journal, locked, recover, write_json
 import release
 
 
+class ReleaseTimingTests(unittest.TestCase):
+    def test_job_durations_and_absent_queue_timestamps(self):
+        self.assertEqual(' [3m09s]', release.elapsed('2026-10-27T10:00:00Z', '2026-10-27T10:03:09Z'))
+        self.assertEqual('', release.elapsed(None))
+        self.assertEqual(' [0m00s]', release.elapsed('2026-10-27T10:01:00Z', '2026-10-27T10:00:00Z'))
+
+
 class ReleaseOperationsTests(unittest.TestCase):
     def test_prepare_increments_build_preserves_schema_and_refuses_downgrade(self):
         with tempfile.TemporaryDirectory() as temporary:

@@ -11,7 +11,7 @@ import time
 
 from deployment_state import Journal, locked, write_json, sync_directory, validate_adapter
 
-from promote_release import ARTIFACT, SERVER_ARTIFACT, gh, inspect_gates, inspect_package, inspect_run, inspect_server, require_current_main, inspect_existing_release
+from promote_release import ARTIFACT, SERVER_ARTIFACT, gh, inspect_gates, inspect_package, inspect_run, inspect_server, require_current_main, inspect_existing_release, stage_draft, publish_draft
 from release_identity import check_exports
 from verify_deployment import targets_from_json, verify, verify_connections, build_probe, placements_from_json
 
@@ -71,6 +71,7 @@ def main(argv=None):
     parser.add_argument('--repository', default=os.environ.get('GITHUB_REPOSITORY', ''))
     parser.add_argument('--adapter', type=Path, required=True)
     parser.add_argument('--signing-key', type=Path, required=True)
+    parser.add_argument('--publish', action='store_true', help='Stage the signed draft before rollout, then publish after live verification in this transaction')
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--state-dir', type=Path, required=True, help='Persistent private operator directory outside checkout')
     args = parser.parse_args(argv)
@@ -82,7 +83,7 @@ def main(argv=None):
     release = check_exports()
     if revision != args.expected_sha or release['version'] != args.version:
         raise RuntimeError('Deployment source/version mismatch')
-    inspect_existing_release(args.repository, args.version, revision, publish=True)
+    existing_draft = inspect_existing_release(args.repository, args.version, revision, publish=True)
     build_probe()  # Toolchain/configuration failure must happen before draining production.
     validate_adapter(args.adapter)
     with locked(args.state_dir):
@@ -98,11 +99,23 @@ def main(argv=None):
                 if any(previous.get(key) != value for key, value in
                        (('revision', revision), ('release', release), ('targets', targets), ('placements', placements))):
                     raise RuntimeError('Completed deployment context differs; do not reuse this run')
+                # Retry an interrupted publication using inspected durable artifacts.
+                # No host phases are repeated and main may have advanced meanwhile.
+                if args.publish:
+                    inspect_package(directory, revision, args.version)
+                    inspect_server(directory, revision, args.version)
+                    inspect_gates(args.repository, args.run_id, args.version)
+                    notes = stage_draft(args.repository, args.run_id, args.version, revision, directory, existing_draft)
                 receipts = verify(targets, release, revision)
-                verify_connections(targets, placements)
-                for receipt in receipts: receipt['connectionVerified'] = True
+                deferred = verify_connections(targets, placements) or []
+                for receipt in receipts:
+                    receipt['connectionVerified'] = True
+                    receipt['roomPlacementDeferred'] = receipt.get('node') in deferred
                 args.output.parent.mkdir(parents=True, exist_ok=True)
                 write_json(args.output, {'revision': revision, 'release': release, 'nodes': receipts})
+                if args.publish:
+                    verify(targets, release, revision)
+                    publish_draft(args.repository, args.version, notes)
                 print('Previously deployed candidate verified; retry publication without redeployment')
                 return
             # No host phase started, or recovery restored the old fleet. Preserve the
@@ -130,6 +143,8 @@ def main(argv=None):
         for plugin in ('Blast.Cluster', 'Realtime.Redis'):
             if f'plugins/{plugin}/plugin.json' not in inventory:
                 raise RuntimeError('Deployment artifact is missing its fleet-tested plugin: ' + plugin)
+        if args.publish:
+            notes = stage_draft(args.repository, args.run_id, args.version, revision, directory, existing_draft)
         context = directory / 'deployment.json'
         write_json(context, {'schemaVersion': 1, 'runId': args.run_id, 'revision': revision,
                              'release': release, 'artifacts': str(directory), 'targets': targets, 'placements': placements})
@@ -139,7 +154,12 @@ def main(argv=None):
         receipts = deploy(args.adapter, context, targets, release, revision, journal, placements)
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps({'revision': revision, 'release': release, 'nodes': receipts}, indent=2) + '\n')
-    print('Verified deployment on every configured target; ready to publish')
+        if args.publish:
+            # deploy() just proved placement/gameplay/retirement on every target.
+            # Keep the fleet lock through publication; repeat cheap identities only.
+            verify(targets, release, revision)
+            publish_draft(args.repository, args.version, notes)
+    print('Verified deployment on every configured target; ' + ('published signed update' if args.publish else 'ready to publish'))
 
 
 if __name__ == '__main__':

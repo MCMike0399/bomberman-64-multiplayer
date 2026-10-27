@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """One release entrypoint: prepare identity, diagnose setup, follow a candidate, dispatch or verify delivery."""
 import argparse
+import datetime
 import json
 import os
 from pathlib import Path
@@ -87,6 +88,17 @@ def dispatch(repository, run_id, publishing, retry_deployed=False):
     print(f'https://github.com/{repository}/actions/workflows/promote.yml')
 
 
+def elapsed(started, finished=None):
+    """Format GitHub UTC timestamps; absent timestamps are queued work, not zero time."""
+    if not started:
+        return ''
+    start = datetime.datetime.fromisoformat(started.replace('Z', '+00:00'))
+    end = (datetime.datetime.fromisoformat(finished.replace('Z', '+00:00')) if finished
+           else datetime.datetime.now(datetime.timezone.utc))
+    seconds = max(0, int((end - start).total_seconds()))
+    return f' [{seconds // 60}m{seconds % 60:02d}s]'
+
+
 def status(repository, revision):
     """Where is this commit in the pipeline? One read-only call instead of several gh queries."""
     lines = [f'Commit {revision[:12]}']
@@ -98,12 +110,12 @@ def status(repository, revision):
     lines.append(f"Verification {run['id']}: {run['status']}/{run.get('conclusion') or 'pending'} {run['html_url']}")
     jobs = json.loads(gh('api', f"repos/{repository}/actions/runs/{run['id']}/jobs?per_page=100"))['jobs']
     for job in jobs:
-        lines.append(f"  {job.get('conclusion') or job['status']:<10} {job['name']}")
+        lines.append(f"  {job.get('conclusion') or job['status']:<10} {job['name']}" + elapsed(job.get('started_at'), job.get('completed_at')))
     release = check_exports()
     releases = json.loads(gh('api', f'repos/{repository}/releases?per_page=20'))
     match = next((item for item in releases if item.get('tag_name') == 'v' + release['version']), None)
     if match is None:
-        state = 'not created (an unchanged version never releases)'
+        state = 'not created'
     else:
         state = ('draft' if match['draft'] else 'prerelease' if match['prerelease'] else 'published') + ' ' + match['html_url']
     lines.append(f"Release v{release['version']} build {release['build']}: {state}")
@@ -111,6 +123,9 @@ def status(repository, revision):
     promotion = next((item for item in promotions if item.get('head_sha') == revision), None)
     if promotion:
         lines.append(f"Publish verified update {promotion['id']}: {promotion['status']}/{promotion.get('conclusion') or 'pending'} {promotion['html_url']}")
+        jobs = json.loads(gh('api', f"repos/{repository}/actions/runs/{promotion['id']}/jobs?per_page=100"))['jobs']
+        for job in jobs:
+            lines.append(f"  {job.get('conclusion') or job['status']:<10} {job['name']}" + elapsed(job.get('started_at'), job.get('completed_at')))
     return lines
 
 

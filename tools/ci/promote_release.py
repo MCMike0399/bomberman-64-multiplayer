@@ -192,6 +192,34 @@ def inspect_server(directory, revision, version, release=None):
     return archive
 
 
+def stage_draft(repository, run_id, version, revision, directory, existing_draft, signed=True):
+    """Upload already inspected/signed artifacts before changing the live fleet."""
+    notes = directory / 'release-notes.txt'
+    notes.write_text(f'Apple Silicon client and portable .NET 10 server from {revision}.\n\n'
+                     f'Verification: https://github.com/{repository}/actions/runs/{run_id}\n\n'
+                     'Managed, network, headless and export checks passed. The archived app also passed saved-settings startup on every '
+                     'graphics preset/display mode and an actual signed update from the latest published release. '
+                     'The full Metal journey suite is a separate optional lane. '
+                     'Ad-hoc signature; Apple notarization and physical controller validation are not claimed.\n')
+    names = [ARCHIVE, ARCHIVE + '.sha256', SERVER_ARCHIVE, SERVER_ARCHIVE + '.sha256',
+             'server-build-metadata.json', 'build-metadata.json']
+    if signed:
+        names += ['Blast-Circuit-update.json', 'Blast-Circuit-update.json.sig',
+                  'Blast-Circuit-release.json', 'Blast-Circuit-release.json.sig']
+    assets = [str(directory / name) for name in names]
+    if existing_draft:
+        gh('release', 'upload', 'v' + version, *assets, '--repo', repository, '--clobber')
+    else:
+        gh('release', 'create', 'v' + version, *assets, '--repo', repository,
+           '--draft', '--target', revision, '--title', 'Blast Circuit v' + version, '--notes-file', str(notes))
+    verify_uploaded(repository, version, assets)
+    return notes
+
+
+def publish_draft(repository, version, notes):
+    gh('release', 'edit', 'v' + version, '--repo', repository, '--draft=false', '--latest', '--notes-file', str(notes))
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--run-id', required=True)
@@ -227,38 +255,20 @@ def main(argv=None):
         inspect_gates(args.repository, args.run_id, version)
         gh('run', 'download', args.run_id, '--repo', args.repository, '--name', SERVER_ARTIFACT, '--dir', str(directory))
         server = inspect_server(directory, revision, version)
-        signed = []
         if args.signing_key:
             signer = Path(__file__).resolve().parents[1] / 'updates/sign_release.py'
             subprocess.run([sys.executable, str(signer), '--archive', str(archive), '--key', str(args.signing_key), '--output', str(directory), '--server', str(server)], check=True)
-            signed = [str(directory / name) for name in ('Blast-Circuit-update.json', 'Blast-Circuit-update.json.sig',
-                                                      'Blast-Circuit-release.json', 'Blast-Circuit-release.json.sig')]
         elif args.publish or tuple(map(int, version.split('.'))) >= (0, 21, 0):
             raise RuntimeError('This release requires --signing-key for authenticated in-app updates')
         if args.publish:
             verify(targets, check_exports(), revision)
-        notes = directory / 'release-notes.txt'
-        notes.write_text(f'Apple Silicon client and portable .NET 10 server from {revision}.\n\n'
-                         f'Verification: https://github.com/{args.repository}/actions/runs/{args.run_id}\n\n'
-                         'Managed, network, headless and export checks passed. The archived app also passed saved-settings startup on every '
-                         'graphics preset/display mode and an actual signed update from the latest published release. '
-                         'The full Metal journey suite is a separate optional lane. '
-                         'Ad-hoc signature; Apple notarization and physical controller validation are not claimed.\n')
-        assets = [str(archive), str(directory / (ARCHIVE + '.sha256')), str(server), str(directory / (SERVER_ARCHIVE + '.sha256')),
-                  str(directory / 'server-build-metadata.json'), str(directory / 'build-metadata.json'), *signed]
-        if existing_draft:
-            gh('release', 'upload', 'v' + version, *assets, '--repo', args.repository, '--clobber')
-        else:
-            gh('release', 'create', 'v' + version, *assets, '--repo', args.repository,
-               '--draft', '--target', revision,
-               '--title', 'Blast Circuit v' + version, '--notes-file', str(notes))
-        verify_uploaded(args.repository, version, assets)
+        notes = stage_draft(args.repository, args.run_id, version, revision, directory, existing_draft, bool(args.signing_key))
         if args.publish:
             # Main may advance after deployment. The exact live fleet is the publication
             # authority; rechecking it allows safe publication retry without another rollout.
             verify(targets, check_exports(), revision)
             verify_connections(targets, placements)
-            gh('release', 'edit', 'v' + version, '--repo', args.repository, '--draft=false', '--latest', '--notes-file', str(notes))
+            publish_draft(args.repository, version, notes)
         print(('Published signed release v' if args.publish else 'Created draft release v') + version + ' at ' + revision)
 
 
