@@ -88,9 +88,9 @@ public partial class PlaytestDriver
 
         _root.StartLocal(new SessionSettings(Stage:BlastStages.UpAndDown,Bots:0,Wins:3,RoundSeconds:90,Ghosts:false),3);
         await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"normal three-human Up & Down battle starts",150);
-        Check(Convert.FromBase64String(State.GetProperty("softBlocks").GetString()!).Sum(b=>System.Numerics.BitOperations.PopCount((uint)b))==12,"normal stage has twelve lower/middle cover blocks");
+        Check(Convert.FromBase64String(State.GetProperty("softBlocks").GetString()!).Sum(b=>System.Numerics.BitOperations.PopCount((uint)b))==36,"normal stage has thirty-six lower/middle cover blocks");
         await Capture("up-and-down-normal-cover");
-        Check(AuditDescendants(_root).OfType<Node3D>().Count(n=>n.Name.ToString().StartsWith("UpAndDownBlock",StringComparison.Ordinal))==12,
+        Check(AuditDescendants(_root).OfType<Node3D>().Count(n=>n.Name.ToString().StartsWith("UpAndDownBlock",StringComparison.Ordinal))==36,
             "all normal Up & Down destructible blocks use their own gray stone model");
         var block=AuditDescendants(_root).OfType<Node3D>().First(n=>n.Name.ToString().StartsWith("UpAndDownBlock",StringComparison.Ordinal));
         float blockTop=BombThrowRules.CoverHeight*TempleStageView.HeightScale;
@@ -106,11 +106,19 @@ public partial class PlaytestDriver
         }
         // Clear center lanes and flights stay available in ordinary cover-filled play.
         await Go(0,11,2,4);await Go(0,11,7,4);await Go(0,5,7,2);await Go(0,5,14,2);
-        await Go(0,5,18,2);
+        bool Covered(int x,int z)
+        {
+            var bits=Convert.FromBase64String(State.GetProperty("softBlocks").GetString()!);
+            int i=z*24+x;return (bits[i/8]&(1<<(i%8)))!=0;
+        }
+        var opening=Enumerable.Range(8,13).SelectMany(z=>new[]{4,6}.Select(x=>(X:x,Z:z)))
+            .Where(c=>Math.Abs(c.Z-14)>=3&&Covered(c.X,c.Z)).OrderBy(c=>Math.Abs(c.Z-18)).First();
+        await Go(0,5,opening.Z,2);
         Input(0,new PlayerInput(0,0,A:true));await Frames(2);Input(0,default);await Frames(2);
-        await Go(0,5,15,2);
-        await WaitState(s=>(Convert.FromBase64String(s.GetProperty("softBlocks").GetString()!)[(18*24+4)/8]&(1<<((18*24+4)%8)))==0,
-            "ordinary bomb destroys the stage-specific pier stone block",120);
+        await Go(0,5,14,2);
+        await WaitState(_=>!Covered(opening.X,opening.Z),
+            "ordinary bomb destroys an actual randomly placed pier stone block",120);
+        Check(GrapplePlayer(0).GetProperty("alive").GetBoolean(),"clear pier aisle permits a safe retreat from the random cache");
         await Capture("up-and-down-stone-block-destroyed");
         await Go(0,5,14,2);await Go(0,11,14,0);
         await Go(2,11,2,4);await Go(2,11,7,4);await Go(2,18,7,2);await Go(2,18,17,2);

@@ -163,7 +163,7 @@ to upgrade its mechanics claims into established facts.
 ## Blast Circuit implementation choices
 
 The implementation uses an original 19×17 layout, tier-two thin decks, four-cell
-stair flights, twelve seeded masonry blocks on the lower court and eight safe
+stair flights, 48 seeded masonry blocks on the lower court and eight safe
 starts. The first four occupy the outer lane ends; the other four support this
 project's larger roster. These dimensions, counts and timings are project tuning.
 Physical bridge slabs block upward throws while preserving horizontal lower

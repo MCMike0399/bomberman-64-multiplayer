@@ -65,10 +65,8 @@ internal static class UpAndDownChecks
                 Assert(fell&&landed,$"Inward side drop missed the middle pier: side={side}, z={z}, death={death}, player={Player(match)}");
             }
         });
-        run("Up & Down authored paired stone blocks retain advanced density and empty practice", () =>
+        run("Up & Down random pier and low-deck stone blocks retain advanced density and empty practice", () =>
         {
-            var expected=new HashSet<(int X,int Z)> {(4,11),(4,18),(19,11),(19,18)};
-            foreach(int x in new[]{10,12})foreach(int z in new[]{13,16,18,23})expected.Add((x,z));
             foreach(int seed in new[]{0,17,64})foreach(int percent in new[]{0,50,100})
             {
                 var match=new LocalMatch(new MatchOptions {Stage=BlastStages.UpAndDown,Seed=seed,
@@ -78,8 +76,7 @@ internal static class UpAndDownChecks
                 var actual=new HashSet<(int X,int Z)>();
                 for(int x=0;x<stage.Width;x++)for(int z=0;z<stage.Height;z++)
                     if((bits[(z*stage.Width+x)/8]&(1<<((z*stage.Width+x)%8)))!=0)actual.Add((x,z));
-                Assert(actual.Count==12*percent/100&&actual.IsSubsetOf(expected),"Density moved authored stone blocks into travel routes.");
-                if(percent==100)Assert(actual.SetEquals(expected),"Default blocks lost their reference-inspired paired arrangement.");
+                Assert(actual.Count==36*percent/100&&actual.All(c=>stage.At(c.X,c.Z).Tier<4&&stage.At(c.X,c.Z).Below is null&&!stage.ClearCells.Contains(c)),"Density moved authored stone blocks into travel routes.");
             }
             var practice=new LocalMatch(new MatchOptions {Stage=BlastStages.UpAndDown,Practice=true});
             Assert(Convert.FromBase64String(State(practice).GetProperty("softBlocks").GetString()!).All(b=>b==0),"Authored cover leaked into practice.");

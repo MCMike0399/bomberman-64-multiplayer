@@ -21,7 +21,7 @@ internal static class GreedyTrapChecks
             Assert(stage.Cells.Cast<CellDef>().All(c=>!c.IsElimination),"Turquoise floor was mistaken for lethal water.");
             Assert(stage.Spawns.Length==8&&stage.Spawns.Distinct().Count()==8&&stage.Spawns.All(s=>stage.At(s.X,s.Z).Tier==2),"Eight separate upper-court starts required.");
         });
-        check("Greedy Trap bottom has eight blocks and advanced density remains effective",()=>
+        check("Greedy Trap upper stockpiles and bottom islands and advanced density remains effective",()=>
         {
             foreach(int percent in new[]{0,50,100})
             {
@@ -30,8 +30,8 @@ internal static class GreedyTrapChecks
                 var stage=BlastStages.Get(id);int count=0;
                 for(int z=0;z<stage.Height;z++)for(int x=0;x<stage.Width;x++)
                     if((bits[(z*stage.Width+x)/8]&(1<<((z*stage.Width+x)%8)))!=0)
-                    {count++;Assert(stage.At(x,z).Tier==0&&x is >=7 and <=11&&z is >=7 and <=11,"Cover escaped the bottom reward chamber.");}
-                Assert(count==8*percent/100,$"Expected {8*percent/100} bottom blocks; got {count}.");
+                    {count++;Assert(stage.At(x,z).Tier is 0 or 2&&!stage.ClearCells.Contains((x,z)),"Cover obstructed the middle ring or reserved crossing.");}
+                Assert(count==64*percent/100,$"Expected {64*percent/100} regional blocks; got {count}.");
             }
         });
         check("Greedy Trap ordinary movement descends and returns through north and south stairs",()=>

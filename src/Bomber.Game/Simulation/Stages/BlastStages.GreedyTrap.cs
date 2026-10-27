@@ -32,15 +32,24 @@ public static partial class BlastStages
             cells[6,z]=CellDef.Ramp(0,1,-1,0);
             cells[12,z]=CellDef.Ramp(0,1,1,0);
         }
-        HashSet<(int X,int Z)> cover=[(8,7),(10,7),(7,9),(9,9),(11,9),(8,11),(9,11),(10,11)];
+        // Upper stockpiles frame four corner courts. The lower treasure cache
+        // varies within four pockets around a clear cross; the middle ring stays empty.
+        var clear=Enumerable.Range(0,size).SelectMany(x=>Enumerable.Range(0,size).Select(z=>(X:x,Z:z)))
+            .Where(c=>cells[c.X,c.Z].Tier==1 || (cells[c.X,c.Z].Tier==0
+                ? c.X is 6 or 9 or 12 || c.Z is 6 or 9 or 12
+                : c.X is 2 or 9 or 16 || c.Z is 2 or 9 or 16)).ToHashSet();
         return new StageLayout
         {
             Id=GreedyTrap,Name="Greedy Trap",Width=size,Height=size,Cells=cells,
             Spawns=[(2,2),(16,2),(2,16),(16,16),(6,2),(12,2),(6,16),(12,16)],
-            OpeningCoverPerSpawn=0,SoftBlockDensity=1,MaxSoftBlocks=8,
-            CoverAreas=[new("reward-pit",1,7,11,7,11,0,0)],
-            ClearCells=Enumerable.Range(0,size).SelectMany(x=>Enumerable.Range(0,size).Select(z=>(X:x,Z:z)))
-                .Where(c=>!cover.Contains(c)).ToHashSet(),
+            OpeningCoverPerSpawn=0,SoftBlockDensity=1,MaxSoftBlocks=64,
+            CoverAreas=[
+                new("reward-pit",.1875,7,11,7,11,0,0),
+                new("northwest-stockpile",.203125,1,8,1,8,2,2){Centers=[(4,4),(3,6)]},
+                new("northeast-stockpile",.203125,10,17,1,8,2,2){Centers=[(14,4),(15,6)]},
+                new("southwest-stockpile",.203125,1,8,10,17,2,2){Centers=[(4,14),(3,12)]},
+                new("southeast-stockpile",.203125,10,17,10,17,2,2){Centers=[(14,14),(15,12)]}],
+            ClearCells=clear,
         };
     }
 }

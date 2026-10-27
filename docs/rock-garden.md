@@ -29,10 +29,10 @@ and a pending target warning.
 - The first four seats start in separate quadrants: `(5,5)`, `(13,5)`, `(5,13)`
   and `(13,13)`. Four additional seats start at the interior corners. All starts
   are distinct and have a clear opening cross.
-- A default normal battle has sixteen destructible boulders. Seeded opening
-  cover supplies one nearby target per spawn and four boulders on the central
-  paving, with the rest balanced across the quadrants. Rows/columns 8 and 10 remain
-  clear for travel around the center. Advanced block percentage scales that
+- A default normal battle has 64 destructible boulders in four seeded groves
+  around a smaller central cluster. Opening cover supplies one nearby target
+  per spawn. Rows/columns 2 and 16 form a clear perimeter loop, inner spawn
+  avenues join rows/columns 8 and 10 for travel around the center. Advanced block percentage scales that
   budget; practice has no boulders. Item rolls retain the existing independent
   configured chance and pool.
 - The central paving is cosmetic and flat. Column and boulder meshes use the

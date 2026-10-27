@@ -27,13 +27,13 @@ internal static class BlizzardBattleChecks
                 Assert(stage.At(x,z).Kind==(x is 0 or 18||z is 0 or 18?CellKind.Pillar:CellKind.Floor)&&stage.At(x,z).Tier==0,"Snowfield must be flat, with no interior permanent obstacles.");
             Assert(stage.Spawns.Distinct().Count()==8&&stage.Spawns.All(s=>stage.At(s.X,s.Z).IsPassable),"Eight distinct snowfield starts required.");
         });
-        Check("sixteen authored cones, block settings and spawn safety",()=>
+        Check("four authored ice banks, block settings and spawn safety",()=>
         {
             foreach(int percent in new[]{0,50,100})
             {
                 var match=new LocalMatch(new MatchOptions{Stage=stage.Id,HumanPlayers=8,BotPlayers=0,Advanced=new AdvancedRules{BlockPercent=percent}});
                 var bits=Convert.FromBase64String(State(match).GetProperty("softBlocks").GetString()!);
-                Assert(bits.Sum(b=>BitOperations.PopCount((uint)b))==16*percent/100,"Ice cone count ignored advanced settings.");
+                Assert(bits.Sum(b=>BitOperations.PopCount((uint)b))==64*percent/100,"Ice cone count ignored advanced settings.");
                 for(int z=0;z<19;z++)for(int x=0;x<19;x++)if((bits[(z*19+x)/8]&(1<<((z*19+x)%8)))!=0)
                 {
                     Assert(!stage.ClearCells.Contains((x,z)),"Cone outside reference composition.");
