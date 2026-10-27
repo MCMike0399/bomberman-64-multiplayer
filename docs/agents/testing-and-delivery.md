@@ -262,7 +262,7 @@ Actual fullscreen launch likewise does not establish OS Game Mode activation.
 Windows Direct3D 12 and Linux Vulkan exports use the shared [desktop packaging and verification
 contract](../desktop-clients.md). Their trusted package and target-OS exported
 smoke are required for publication. Headless receipts do not establish GPU or
-physical-controller coverage; desktop ports initially use manual updates.
+physical-controller coverage; installed desktop releases use signed automatic updates.
 
 Use the package branch only when shipping changed runtime/assets, not for docs.
 Check toolchain/backend requirements in [macOS packaging](../macos-app.md).

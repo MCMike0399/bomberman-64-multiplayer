@@ -35,11 +35,14 @@ def main():
     parser.add_argument('--target', choices=desktop.TARGETS, required=True)
     parser.add_argument('--directory', type=Path, default=ROOT / 'artifacts')
     parser.add_argument('--graphical', action='store_true', help='Run every graphical gameplay/UI/network journey on an owned desktop')
+    parser.add_argument('--disposable-desktop', action='store_true', help='Confirm this Windows VM/profile is reserved for installer tests')
     parser.add_argument('--software-renderer', action='store_true', help='Allow a bounded two-hour all-suite on a verified CPU renderer; provides no native GPU performance evidence')
     args = parser.parse_args()
     if args.software_renderer and not args.graphical:
         parser.error('--software-renderer requires --graphical')
     item, settings = desktop.names(args.target), desktop.TARGETS[args.target]
+    if args.target == 'windows-x64' and os.environ.get('GITHUB_ACTIONS') != 'true' and not args.disposable_desktop:
+        raise RuntimeError('Windows installer regression requires a disposable VM/profile; use --disposable-desktop only there')
     if platform.system() != settings['os'] or platform.machine().lower() not in ('x86_64', 'amd64'):
         raise RuntimeError('Packaged regression must run on its actual target OS and x64 CPU')
     directory = args.directory.resolve()
@@ -55,7 +58,7 @@ def main():
     qa = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(qa)
     cases = []
-    with tempfile.TemporaryDirectory(prefix='blast-packaged-regression-') as temporary:
+    with tempfile.TemporaryDirectory(prefix='blast-packaged-regression-') as temporary, contextlib.ExitStack() as cleanup:
         extracted = Path(temporary)
         extract(directory / item['archive'], extracted)
         extract(directory / 'Blast-Circuit-server-dotnet10.zip', extracted)
@@ -64,6 +67,8 @@ def main():
             installed = extracted / 'Installed game with spaces'
             subprocess.run([str(directory / downloads.FILES[args.target]), '/VERYSILENT', '/SUPPRESSMSGBOXES',
                             '/NORESTART', '/CURRENTUSER', '/DIR=' + str(installed)], check=True, timeout=180)
+            cleanup.callback(subprocess.run, [str(installed / 'unins000.exe'), '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART'],
+                             check=True, timeout=180)
             for name, digest in metadata['files'].items():
                 if desktop.digest(installed / name) != digest:
                     raise RuntimeError('Installer changed or omitted a packaged file: ' + name)

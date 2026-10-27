@@ -88,6 +88,10 @@ def inspect_archive(directory, target, revision, release):
                     'BlastCircuit.pck', 'release.json', 'Blast-Circuit-MIT.txt', 'WebRTC-SOURCE.txt', 'DotNet-LICENSE.TXT'}
         if not required.issubset(basenames):
             raise RuntimeError('Desktop runtime is incomplete: ' + ', '.join(sorted(required - basenames)))
+        if target == 'windows-x64':
+            manifest = item['root'] + '/installed-files.txt'
+            if manifest not in bundle.namelist() or bundle.read(manifest).decode().splitlines() != sorted(files):
+                raise RuntimeError('Windows uninstall inventory must cover every current payload file')
         identity = json.loads(bundle.read(item['root'] + '/release.json'))
         if identity != {'revision': revision, 'release': release, 'target': target}:
             raise RuntimeError('Archived desktop identity mismatch')

@@ -113,6 +113,13 @@ foreach (bool failedLaunch in new[] { false, true })
         Check(File.Exists(Path.Combine(target, "old-marker")) == failedLaunch, "Installed bytes must match success or rollback");
         Check(File.ReadAllText(Path.Combine(target, "unins000.dat")) == "installed uninstall data", "Installed uninstall data must survive update and rollback");
         Check(File.ReadAllText(request.History).Trim() == (failedLaunch ? "failed 99.0.0 launch-rollback" : "installed 99.0.0"), "History must report actual outcome");
+        if (failedLaunch)
+        {
+            string[] identity = File.ReadAllText(Path.Combine(stage, "restoredpid")).Split(' ');
+            Check(identity.Length == 2, "Rollback marker must include PID and start time");
+            using var restored = Process.GetProcessById(int.Parse(identity[0]));
+            Check(restored.StartTime.ToUniversalTime().Ticks == long.Parse(identity[1]), "Rollback marker identifies the exact restored process");
+        }
         while (Directory.GetFiles(root, "fixture-pid-*").Length < (failedLaunch ? 3 : 2))
             await Task.Delay(20, timeout.Token);
         Check(true, "Replacement or restored executable actually started before cleanup");

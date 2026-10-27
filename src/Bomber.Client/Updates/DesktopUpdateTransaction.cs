@@ -95,7 +95,7 @@ public static class DesktopUpdateTransaction
                     await Move(target, next, request.AppImage, CancellationToken.None);
                 await Move(previous, target, request.AppImage, CancellationToken.None);
                 using var restored = Launch(target, request.AppImage, request.Windowed, null);
-                File.WriteAllText(Path.Combine(stage, "restoredpid"), restored.Id.ToString());
+                File.WriteAllText(Path.Combine(stage, "restoredpid"), restored.Id + " " + restored.StartTime.ToUniversalTime().Ticks);
                 WriteHistory(request.History, "failed " + request.Version + " launch-rollback");
             }
             throw;

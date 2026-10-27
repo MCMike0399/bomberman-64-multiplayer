@@ -32,7 +32,13 @@ public partial class GameUpdater : Node
             {
                 string stage=Path.Combine(Path.GetDirectoryName(_bundle)!,".blast-update-"+token.ToString("N"));
                 if(Directory.Exists(stage)&&new DirectoryInfo(stage).LinkTarget is null)
-                { _healthPath=Path.Combine(stage,"healthy");File.WriteAllText(Path.Combine(stage,"newpid"),OS.GetProcessId().ToString()); }
+                {
+                    _healthPath=Path.Combine(stage,"healthy");
+                    using var process=System.Diagnostics.Process.GetCurrentProcess();
+                    // Keep the Mac shell updater's legacy PID format unchanged.
+                    string identity=process.Id.ToString()+(_desktop?" "+process.StartTime.ToUniversalTime().Ticks:"");
+                    string marker=Path.Combine(stage,"newpid");File.WriteAllText(marker+".tmp",identity);File.Move(marker+".tmp",marker,true);
+                }
             }
             Version=_desktop?OnlineProtocol.ReleaseVersion:await MacUpdateInstaller.PlistValue(_bundle,"CFBundleShortVersionString",_stop.Token);
             if(_desktop)DesktopUpdateInstaller.CleanupCompleted(_bundle,Version);

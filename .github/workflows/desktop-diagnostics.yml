@@ -41,6 +41,15 @@ jobs:
           PY
       - name: Require the same Windows sharing and rollback regression to pass
         run: dotnet run --project tests/Bomber.DesktopUpdate.Tests -m:1
+      - name: Compare old and current uninstall coverage for update-added files
+        run: python tools/packaging/windows-installer-probe.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: windows-installer-probe
+          path: artifacts/windows-installer-probe
+          retention-days: 14
+          if-no-files-found: warn
 
   windows-peer:
     if: github.event.pull_request.head.repo.full_name == github.repository && contains(github.event.pull_request.labels.*.name, 'desktop-diagnostics')

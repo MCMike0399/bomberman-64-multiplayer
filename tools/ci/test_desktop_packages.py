@@ -1,7 +1,11 @@
 """Reject incomplete runtimes, tampered inventories, unsafe ZIPs and unrelated smoke evidence."""
 import hashlib
+import importlib.util
 import json
+import os
 from pathlib import Path
+import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -38,6 +42,8 @@ def write_desktop(directory, revision=SHA, release=None):
             'BlastCircuit.pck', 'Notices/Blast-Circuit-MIT.txt', 'Notices/WebRTC-SOURCE.txt', 'Notices/DotNet-LICENSE.TXT')}
         files['release.json'] = json.dumps({'revision': revision, 'release': release, 'target': target}).encode()
         files['data/Bomberman64Multiplayer.runtimeconfig.json'] = b'{"runtimeOptions":{"includedFrameworks":[{"name":"Microsoft.NETCore.App","version":"10.0.0"}]}}'
+        if target == 'windows-x64':
+            files['installed-files.txt'] = ('\n'.join(sorted(set(files) | {'installed-files.txt'})) + '\n').encode()
         with zipfile.ZipFile(directory / item['archive'], 'w') as bundle:
             for name, data in files.items():
                 entry = zipfile.ZipInfo(item['root'] + '/' + name)
@@ -100,6 +106,39 @@ class DesktopPackageTests(unittest.TestCase):
 
     def test_complete_runtime_and_native_exported_smoke_pass(self):
         desktop.inspect(self.root, SHA, RELEASE, targets=list(desktop.TARGETS))
+
+    def test_windows_regression_requires_a_disposable_profile_before_installing(self):
+        environment = dict(os.environ, GITHUB_ACTIONS='false')
+        result = subprocess.run([sys.executable, str(validation.ROOT / 'tools/packaging/verify-desktop.py'),
+                                 '--target', 'windows-x64', '--directory', str(self.root / 'missing')],
+                                env=environment, capture_output=True, text=True, timeout=10)
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn('disposable VM/profile', result.stderr)
+
+    def test_future_fixture_adds_root_and_new_directory_files_to_uninstall_inventory(self):
+        spec = importlib.util.spec_from_file_location('update_fixture', validation.ROOT / 'tools/packaging/package-update-fixture.py')
+        fixture = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(fixture)
+        fixture.add_windows_files(self.root)
+        metadata = desktop.inspect_archive(self.root, self.target, SHA, RELEASE)
+        self.assertIn('update-added.txt', metadata['files'])
+        self.assertIn('extra-runtime/update-added.txt', metadata['files'])
+
+    def test_matching_archive_metadata_cannot_hide_an_incomplete_uninstall_inventory(self):
+        archive = self.root / self.item['archive']
+        name = self.item['root'] + '/installed-files.txt'
+        changed = b'BlastCircuit.exe\ninstalled-files.txt\n'
+        with zipfile.ZipFile(archive) as source:
+            entries = [(entry, changed if entry.filename == name else source.read(entry)) for entry in source.infolist()]
+        with zipfile.ZipFile(archive, 'w') as destination:
+            for entry, data in entries: destination.writestr(entry, data)
+        metadata_path = self.root / self.item['metadata']
+        metadata = json.loads(metadata_path.read_text())
+        metadata['files']['installed-files.txt'] = hashlib.sha256(changed).hexdigest()
+        metadata_path.write_text(json.dumps(metadata))
+        archive.with_suffix('.zip.sha256').write_text(desktop.digest(archive) + '  ' + archive.name)
+        with self.assertRaisesRegex(RuntimeError, 'uninstall inventory'):
+            desktop.inspect_archive(self.root, self.target, SHA, RELEASE)
 
     def test_software_renderer_allowance_requires_actual_cpu_devices(self):
         path=self.root/self.item['graphical']

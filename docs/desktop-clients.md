@@ -38,8 +38,8 @@ run on their actual target systems.
 ```sh
 python3 tools/packaging/package-desktop.py --target windows-x64 --godot /path/to/godot
 python3 tools/packaging/package-download.py --target windows-x64
-python3 tools/packaging/verify-desktop.py --target windows-x64
-python3 tools/packaging/verify-desktop.py --target windows-x64 --graphical
+python3 tools/packaging/verify-desktop.py --target windows-x64 --disposable-desktop
+python3 tools/packaging/verify-desktop.py --target windows-x64 --graphical --disposable-desktop
 ```
 
 The regression tool requires the matching archived server and metadata beside
@@ -53,6 +53,10 @@ runs `all` plus additional menu-preview and water journeys. Every case retains
 exact leaf order, catalog hash, compiled release/platform, assertions, captures
 and runtime errors. Promotion rejects package-smoke-only receipts. CI retains
 failure summaries, JUnit, runtime logs and failure captures.
+Windows regression refuses a personal desktop by default because the production
+AppId owns per-user installer registration and shortcuts. Use a disposable VM or
+profile (`--disposable-desktop` outside CI); the runner uninstalls its fixture in
+cleanup before removing the temporary payload.
 
 The opt-in `desktop-validation` PR label runs native hosted tests of separately
 prepared exact-SHA draft candidate assets, without private build credentials.
@@ -64,6 +68,12 @@ synthetic newer fixture identity, verify healthy renderer relaunch (including
 saved High/fullscreen settings) and deliberate
 pre-health rollback, compare complete inventories, and uninstall after Windows
 updates. These tests require disposable Windows/Linux desktops or profiles.
+The Windows payload carries an exact `installed-files.txt` inventory. Its
+preserved uninstaller reads the current inventory so files and directories added
+by later updates are removed too. It deletes listed files and empty directories
+inside the installation, rejecting outside paths and reparse parents, while
+preserving unrelated files. Newer update fixtures add both a root file and a new
+directory; actual game-update tests require complete removal after uninstall.
 Windows transactions allow up to ten seconds per atomic rename for native
 sharing/lock violations (32/33), including rollback after process termination.
 Other I/O failures are immediate. The native helper regression first proves a

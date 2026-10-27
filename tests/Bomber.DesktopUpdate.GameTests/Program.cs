@@ -87,11 +87,10 @@ foreach (var testCase in new[] { (Name:"successful-install",Interrupt:false,High
         if (old.ExitCode != 0 || !oldLog.Contains("GODOT_SMOKE_OK")) throw new Exception("Old game did not complete real gameplay.");
         string pidPath = Path.Combine(prepared.Stage, "newpid");
         while (!File.Exists(pidPath)) await Task.Delay(20, timeout.Token);
-        int newPid = int.Parse(await File.ReadAllTextAsync(pidPath, timeout.Token));
         if (interrupt)
         {
             if (File.Exists(Path.Combine(prepared.Stage, "healthy"))) throw new Exception("Candidate already reported health before the deliberate failure.");
-            using var candidate = Process.GetProcessById(newPid);
+            using var candidate = MarkedProcess(pidPath);
             candidate.Kill(true); await candidate.WaitForExitAsync(timeout.Token);
         }
         string receipt = Path.Combine(history, "last-update.txt");
@@ -110,7 +109,7 @@ foreach (var testCase in new[] { (Name:"successful-install",Interrupt:false,High
                 throw new Exception("Updated game did not use the intended platform renderer.");
             if(testCase.High&&(report.GetProperty("graphics").GetString()!="high"||report.GetProperty("window").GetString()!="fullscreen"))
                 throw new Exception("Saved High/fullscreen update did not restore both applied settings.");
-            using var running = Process.GetProcessById(newPid);
+            using var running = MarkedProcess(pidPath);
             if (running.HasExited || (await File.ReadAllTextAsync(Path.Combine(prepared.Stage, "healthy"), timeout.Token)).Trim() != version)
                 throw new Exception("Installed game did not remain healthy after helper exit.");
             running.Kill(true); await running.WaitForExitAsync(timeout.Token);
@@ -124,9 +123,8 @@ foreach (var testCase in new[] { (Name:"successful-install",Interrupt:false,High
         else
         {
             if (!Inventory(target, image).SequenceEqual(initialInventory)) throw new Exception("Rollback did not restore the complete original game inventory.");
-            int restoredPid = int.Parse(await File.ReadAllTextAsync(Path.Combine(prepared.Stage, "restoredpid"), timeout.Token));
             await Task.Delay(1500, timeout.Token);
-            using var restored = Process.GetProcessById(restoredPid);
+            using var restored = MarkedProcess(Path.Combine(prepared.Stage, "restoredpid"));
             if (restored.HasExited) throw new Exception("Restored game did not remain running.");
             restored.Kill(true); await restored.WaitForExitAsync(timeout.Token);
             string restoredLog = await Tool(image ? target : executable, folder, "--headless", "--", "--smoke", "--smoke-seconds=2");
@@ -135,8 +133,13 @@ foreach (var testCase in new[] { (Name:"successful-install",Interrupt:false,High
         }
         if (!image)
         {
+            var installedFiles = Inventory(target, false).Keys.Where(name => !Path.GetFileName(name).StartsWith("unins", StringComparison.Ordinal)).ToArray();
+            string note = Path.Combine(target, "unrelated-user-note.txt");
+            File.WriteAllText(note, "Keep this unrelated file.");
             await Tool(Path.Combine(target, "unins000.exe"), folder, "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART");
-            if (File.Exists(executable) || Directory.Exists(Path.Combine(target, "updater"))) throw new Exception("Uninstall after update left the game or updater installed.");
+            if (installedFiles.Any(name => File.Exists(Path.Combine(target, name))) ||
+                File.ReadAllText(note) != "Keep this unrelated file.")
+                throw new Exception("Uninstall must remove every current product file and preserve unrelated files.");
         }
         cases.Add(new { name=testCase.Name, result = expected,
             fromVersion = oldVersion, toVersion = version, seconds = clock.Elapsed.TotalSeconds,
@@ -155,9 +158,10 @@ foreach (var testCase in new[] { (Name:"successful-install",Interrupt:false,High
             string[] identity = File.ReadAllText(path).Trim().Split(' ');
             try
             {
-                using var process = Process.GetProcessById(int.Parse(identity[0]));
-                if (identity.Length == 2 && process.StartTime.ToUniversalTime().Ticks != long.Parse(identity[1])) continue;
-                if (process.StartTime.ToUniversalTime() < DateTime.UtcNow - TimeSpan.FromMinutes(6)) continue;
+                if (identity.Length != 2 || !int.TryParse(identity[0], out int pid) || pid <= 0 ||
+                    !long.TryParse(identity[1], out long startTicks) || startTicks <= 0) continue;
+                using var process = Process.GetProcessById(pid);
+                if (process.StartTime.ToUniversalTime().Ticks != startTicks) continue;
                 if (!process.HasExited) { process.Kill(true); await process.WaitForExitAsync(); }
             }
             catch (ArgumentException) { }
@@ -175,6 +179,16 @@ File.WriteAllText(Path.Combine(output, "summary.json"), JsonSerializer.Serialize
     fixture = new { release = newMetadata.RootElement.GetProperty("release").Clone(), revision = newMetadata.RootElement.GetProperty("revision").GetString() },
     candidateArchiveSha256 = Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(Path.Combine(assets, stem + ".zip")))), cases }, new JsonSerializerOptions { WriteIndented = true }));
 Console.WriteLine("PASS actual desktop game updater: authenticated feed/download, running-app handoff, healthy relaunch and rollback");
+
+static Process MarkedProcess(string path)
+{
+    string[] identity = File.ReadAllText(path).Trim().Split(' ');
+    if (identity.Length != 2) throw new InvalidDataException("Missing PID/start-time process identity.");
+    var process = Process.GetProcessById(int.Parse(identity[0]));
+    if (process.StartTime.ToUniversalTime().Ticks == long.Parse(identity[1])) return process;
+    process.Dispose();
+    throw new IOException("Update child identity was reused; refusing to control another process.");
+}
 
 static async Task<string> Tool(string file, string directory, params string[] arguments)
 {

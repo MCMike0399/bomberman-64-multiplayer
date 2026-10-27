@@ -84,6 +84,9 @@ def main():
             'Online play requires the exact current release version/build.\n'
             'Rendering API: ' + settings['driver'] + '. GPU drivers and OS libraries are required.\n'
             'Physical controller coverage and native GPU performance are not certified by headless smoke.\n')
+        if args.target == 'windows-x64':
+            owned = sorted({path.relative_to(published).as_posix() for path in published.rglob('*') if path.is_file()} | {'installed-files.txt'})
+            (published / 'installed-files.txt').write_text('\n'.join(owned) + '\n')
         files = {}
         archive = output / item['archive']
         with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED) as bundle:
