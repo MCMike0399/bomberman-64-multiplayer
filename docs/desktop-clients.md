@@ -75,7 +75,8 @@ inside the installation, rejecting outside paths and reparse parents, while
 preserving unrelated files. Newer update fixtures add both a root file and a new
 directory; actual game-update tests require complete removal after uninstall.
 Windows transactions allow up to ten seconds per atomic rename for native
-sharing/lock violations (32/33), including rollback after process termination.
+access/sharing/lock violations (5/32/33), including rollback after process termination.
+Persistent permission denial still fails at that bound; no permissions change.
 Other I/O failures are immediate. The native helper regression first proves a
 real directory handle blocks renaming, then holds it across replacement and
 rollback; the diagnostic lane compares the retained old transaction with the fix.

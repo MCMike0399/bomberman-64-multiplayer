@@ -89,6 +89,9 @@ public static class DesktopUpdateTransaction
                 catch (System.ComponentModel.Win32Exception) when (launched.HasExited) { }
                 await launched.WaitForExitAsync(CancellationToken.None);
             }
+            // Release the terminated image's process handle before renaming its
+            // installation. Windows may retain image resources while it is open.
+            launched?.Dispose(); launched = null;
             if (replaced)
             {
                 if (request.AppImage ? File.Exists(target) : Directory.Exists(target))
@@ -126,12 +129,14 @@ public static class DesktopUpdateTransaction
                 if (file) File.Move(from, to); else Directory.Move(from, to);
                 return;
             }
-            catch (IOException error) when (OperatingSystem.IsWindows() &&
-                (error.HResult & 0xffff) is 32 or 33 && clock.Elapsed < TimeSpan.FromSeconds(10))
+            catch (Exception error) when (OperatingSystem.IsWindows() &&
+                error is IOException or UnauthorizedAccessException &&
+                (error.HResult & 0xffff) is 5 or 32 or 33 && clock.Elapsed < TimeSpan.FromSeconds(10))
             {
                 // Windows may retain mapped files briefly after process exit.
-                // Only sharing/lock violations are transient; other I/O errors
-                // must retain their original failure and rollback behavior.
+                // Actual installed-game handoff also reports access denied after
+                // process exit. Persistent ACL denials still fail at the bound;
+                // no permissions are changed, and other I/O errors fail immediately.
                 await Task.Delay(100, ct);
             }
         }

@@ -75,6 +75,7 @@ foreach (var testCase in new[] { (Name:"successful-install",Interrupt:false,High
     var start = new ProcessStartInfo(image ? target : executable) { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true };
     foreach (string argument in new[] { "--headless", "--", "--smoke", "--smoke-seconds=6" }) start.ArgumentList.Add(argument);
     using var old = Process.Start(start)!;
+    bool oldReleased = false;
     var stdout = old.StandardOutput.ReadToEndAsync(); var stderr = old.StandardError.ReadToEndAsync();
     var clock = Stopwatch.StartNew();
     try
@@ -85,8 +86,14 @@ foreach (var testCase in new[] { (Name:"successful-install",Interrupt:false,High
         await old.WaitForExitAsync(timeout.Token);
         string oldLog = await stdout + await stderr; File.WriteAllText(Path.Combine(folder, "old-launch.log"), oldLog);
         if (old.ExitCode != 0 || !oldLog.Contains("GODOT_SMOKE_OK")) throw new Exception("Old game did not complete real gameplay.");
+        old.Dispose(); oldReleased = true;
         string pidPath = Path.Combine(prepared.Stage, "newpid");
-        while (!File.Exists(pidPath)) await Task.Delay(20, timeout.Token);
+        while (!File.Exists(pidPath))
+        {
+            string failure = Path.Combine(prepared.Stage, "helper-error.txt");
+            if (File.Exists(failure)) throw new IOException("Update helper failed before candidate startup: " + await File.ReadAllTextAsync(failure, timeout.Token));
+            await Task.Delay(20, timeout.Token);
+        }
         if (interrupt)
         {
             if (File.Exists(Path.Combine(prepared.Stage, "healthy"))) throw new Exception("Candidate already reported health before the deliberate failure.");
@@ -167,7 +174,7 @@ foreach (var testCase in new[] { (Name:"successful-install",Interrupt:false,High
             catch (ArgumentException) { }
             catch (InvalidOperationException) { }
         }
-        if (!old.HasExited) { old.Kill(true); await old.WaitForExitAsync(); }
+        if (!oldReleased && !old.HasExited) { old.Kill(true); await old.WaitForExitAsync(); }
         foreach(string name in new[]{"helper-error.txt","health.json"})
             if(File.Exists(Path.Combine(prepared.Stage,name)))File.Copy(Path.Combine(prepared.Stage,name),Path.Combine(folder,name),overwrite:true);
         if(!File.Exists(Path.Combine(runtimeFolder,".blast-update-lock")))
