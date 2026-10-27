@@ -71,7 +71,7 @@ class UpdateGateTests(unittest.TestCase):
             with patch.object(update_from_published, 'identity', return_value={'version': candidate, 'build': '10'}), \
                     patch.object(update_from_published, 'fetch_previous', return_value={'version': previous, 'sha256': 'c' * 64}), \
                     patch.object(update_from_published.sys, 'platform', 'darwin'), \
-                    patch.object(update_from_published, 'warm_renderer', return_value=1.0), patch.object(update_from_published, 'no_background_updates'), \
+                    patch.object(update_from_published, 'no_background_updates'), \
                     patch.object(update_from_published.subprocess, 'run', return_value=type('Result', (), {'stdout': 'VirtualMac2,1'})()), \
                     run as transactions, contextlib.redirect_stdout(io.StringIO()):
                 code = update_from_published.main(['--app', '/fixture/Blast Circuit.app', '--output', str(output)])

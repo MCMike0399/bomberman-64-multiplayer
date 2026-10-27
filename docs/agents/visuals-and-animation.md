@@ -191,6 +191,21 @@ The `visual-glitches` journey checks actual rear-ring fire pixels on every prese
 stair top separation, and a real charged shoreline blast above/below the water.
 Godot documents [transparent depth drawing](https://docs.godotengine.org/en/stable/tutorials/shaders/shader_reference/spatial_shader.html#render-modes).
 Preserve that rationale when refactoring.
+High's water reflection march must validate the **refined** depth hit, not just
+its coarse crossing. At an opaque silhouette, bisection can converge on a screen
+pixel boundary even when the ray never meets that surface. Sampling its bright
+stone color created isolated white particles across Up & Down's open water,
+especially at Night. Fade hits whose final view-depth residual exceeds .04–.16
+world units; misses retain the existing sky reflection. Keep the march jitter:
+removing it did not fix the particles and can reintroduce reflected-deck banding.
+The graphical `water-surface` journey pins the water clock at three wave phases,
+checks clear water patches across all lighting profiles/presets, and compares a
+reflection-disabled control to ensure High still mirrors actual columns. Its
+fixed 1600×1000 pixel probes require the ordinary battle camera; inspect the
+captures as well. `visual-glitches` separately protects foam/fire depth ordering.
+Godot's [screen-reading contract](https://docs.godotengine.org/en/stable/tutorials/shaders/screen-reading_shaders.html)
+explains why the opaque depth/color copy includes foreground occluders; it cannot
+supply hidden surfaces for a reflected ray.
 Read [the rendering investigation](../history/iteration8-rendering.md) before replacing
 this shader; its fixed daytime Fresnel tint was superseded by the four lighting
 profiles below. Verify normal and hurry/flood states from more than one camera.
@@ -320,6 +335,32 @@ outward normals; `asset-audit` retains the winding regression. `menu-preview`
 exercises preparation, preset changes, asset inspection and real setup navigation;
 setup checks the rendered green summit as well as settings state. Agent image
 inspection is still required.
+
+### Living stage worlds (2026-10-27 source work)
+
+The accepted lacquered figures, painterly surfaces, High premium tier, water
+reflections, lighting profiles and battle camera remain the visual baseline.
+The living-worlds pass enriches the three dry battle arenas around that baseline:
+Rock Garden gets rooted wind-driven grass and leaf clusters; Top Rules gains
+painted planets, rings, a moon and slow orbital debris around its sky castle;
+Blizzard mixes glacier shelves/icicles and bare frosted trees with smaller pine
+groves, plus wind-driven snowfall across the surrounding snowfield.
+[Inspected Nintendo/Konami references](../living-stage-worlds-research.md)
+distinguish franchise evidence from these original adaptations.
+
+`ArtMaterials.Ambient` owns opaque foliage/planet/nebula shaders. Their
+`ambient_clock` comes from the stage's scenery clock, freezes with local pause
+and stops advancing while Low hides scenery. Foliage roots remain fixed; vertex
+bending affects decorations outside the stone enclosure. Existing High lawn
+gust shading remains on the playable grass. Blizzard retains its existing court
+snow budget and adds one bounded exterior MultiMesh, sharing accepted wind and
+pause state; Low hides the exterior layer.
+
+The `stage-scenery` journey retains Midday/Night and labelled establishing
+captures, adds High/motion captures and pause checks, and audits every individual
+MultiMesh instance against standing space. Only the tiny weather flakes may
+cross play space. Miniatures still omit scenery. These checks establish geometry,
+motion and visibility contracts; inspect actual captures to judge the artwork.
 
 ### Four stage lighting variants (2026-10-23)
 

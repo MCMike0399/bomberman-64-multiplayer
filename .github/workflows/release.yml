@@ -36,11 +36,18 @@ jobs:
         run: |
           set -euo pipefail
           version=$(python3 -c 'import sys; sys.path.insert(0,"tools/ci"); from release_identity import check_exports; print(check_exports()["version"])')
-          python3 tools/ci/promote_release.py --check-only --run-id "$RUN_ID" --version "$version" --expected-sha "$EXPECTED_SHA"
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          if gh release view "v$version" >/dev/null 2>&1; then
+          # Documentation-only pushes have no candidate artifacts. An existing
+          # release needs no promotion; every new version still validates all jobs.
+          skipped=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/jobs?per_page=100" \
+            --jq '[.jobs[] | select(.name == "Trusted Apple Silicon package" and .conclusion == "skipped")] | length')
+          if [[ "$skipped" == 1 ]]; then
+            echo 'exists=true' >> "$GITHUB_OUTPUT"
+            echo 'No release candidate: trusted package lane was skipped.' >> "$GITHUB_STEP_SUMMARY"
+          elif gh release view "v$version" >/dev/null 2>&1; then
             echo 'exists=true' >> "$GITHUB_OUTPUT"
           else
+            python3 tools/ci/promote_release.py --check-only --run-id "$RUN_ID" --version "$version" --expected-sha "$EXPECTED_SHA"
             echo 'exists=false' >> "$GITHUB_OUTPUT"
           fi
 

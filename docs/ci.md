@@ -4,7 +4,7 @@ The canonical entry point is `python3 tools/qa/run.py --profile PROFILE`. CI cal
 
 | Profile/job | Environment | Evidence and boundary |
 | --- | --- | --- |
-| `public` | Every PR and main push, hosted Ubuntu | Python syntax, tracked private-file boundary, Markdown link/anchor resolution, tool contract tests (`tools/{ci,cluster,packaging,party,playtest,qa}`), deterministic PCM tests. No kernel credentials. |
+| `public` | Every PR and main push, hosted Ubuntu | Python syntax, tracked private-file boundary, Markdown link/anchor resolution, tool contract tests (`tools/{ci,cluster,packaging,party,playtest,qa}`), deterministic PCM tests. No kernel credentials. Proven documentation-only pushes stop here; manual dispatch and unknown history run all enabled lanes. |
 | `managed` | Trusted main, hosted Ubuntu | Managed gameplay/client/AI/audio checks, portable Release server publish, and real HTTP/WebSocket smoke against the exact staged server delivery. Produces the server ZIP. |
 | `headless` | Trusted main, hosted Ubuntu, Godot .NET | Resource import/build and simulation scenarios. No screenshot/rendering claim. |
 | `graphical` | Trusted main, isolated macOS ARM64 Metal runner | Windowed real Godot journeys and actual viewport captures. No physical-controller claim. |
@@ -48,7 +48,7 @@ Standard hosted macOS ARM64 is used for export, not as evidence that native Meta
 
 The editor and .NET export templates come from the official Godot 4.7.2 release. `tools/ci/install_godot.py` verifies checked-in SHA-512 hashes before extracting downloads; update the project SDK, the installer version/hashes and export-template version together. .NET uses the current supported `10.0.x` servicing SDK. Managed builds run with `-m:1` to avoid competing Godot/MSBuild workers. Godot's [command-line import and export interface](https://docs.godotengine.org/en/stable/tutorials/editor/command_line_tutorial.html) supports headless CI; headless execution does not provide rendered-image evidence.
 
-Actions are pinned to immutable commits. Public PRs receive read-only repository permissions; checkout never persists GitHub credentials. Build caches are intentionally absent: private dependency outputs never enter a cache readable from untrusted PRs. The package job runs beside managed and headless to shorten the critical path; promotion still requires every trusted job, including both release gates, to pass for the same run. The separate optional Metal lane must also pass when rendering approval is required; a package artifact alone does not establish that.
+Actions are pinned to immutable commits. Public PRs receive read-only repository permissions; checkout never persists GitHub credentials. The package job caches only four public SDL/libusb libraries and licenses, keyed by OS/architecture, SDK and controller-tool hashes. Private dependency checkouts, compiled game outputs and credentials stay outside caches, which [PRs can read](https://docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching#restrictions-for-accessing-a-cache). Cache restoration still passes the native initialization/deployment-target and bundle checks. The package job runs beside managed and headless to shorten the critical path; promotion still requires every trusted job, including both release gates, to pass for the same run. The separate optional Metal lane must also pass when rendering approval is required; a package artifact alone does not establish that.
 
 The public job also installs version-pinned actionlint v1.7.12 and validates all
 three workflows, including the reusable deployment/publication path. Release
@@ -75,12 +75,15 @@ Service supervision, external binding, reverse proxy/TLS, authentication policy,
 Verification delivers downloadable, tested client/server artifacts. **Release
 verified game** validates a successful trusted main run, required jobs, source,
 archive inventories, bundle identity and the canonical `Release.props` contract.
-It creates a signed draft by default. Explicit publication first runs a protected
+It creates a signed draft by default. Explicit publication prepares and verifies
+the complete signed draft before running a protected
 `production` deployment on a dedicated `blast-deploy` runner through an
 operator-installed adapter. It requires authenticated drained/empty-fleet
 evidence, applies the exact server/plugins, verifies every configured worker and
-public admission route, and invokes rollback on failure. Publication repeats live
-identity/admission checks before exposing the signed client update. The opt-in
+public admission route, and invokes rollback on deployment failure. Deployment and
+publication share one runner, artifact directory and fleet lock. The just-completed
+placement/gameplay/retirement checks cover the publication; a final live
+identity/admission recheck precedes exposing the signed client update. The opt-in
 **Publish verified update** workflow calls this same workflow; it has no separate
 publication bypass. Existing exact-source drafts can be promoted, but published
 tags are immutable. Superseded main runs cannot deploy or publish.

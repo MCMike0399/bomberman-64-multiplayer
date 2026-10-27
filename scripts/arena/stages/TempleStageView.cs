@@ -20,6 +20,7 @@ public partial class TempleStageView : Node3D
     private bool _castle;
     private bool _blizzard;
     private BlizzardWeather? _blizzardWeather;
+    private BlizzardWeather? _exteriorSnow;
     private float _blizzardClock;
     private Vector2 _blizzardWind;
     private readonly List<ShaderMaterial> _frozenMaterials=[];

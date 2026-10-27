@@ -1,0 +1,233 @@
+{
+  "baseline": "de68212e02658b2b0bede061167ce0119f39fcdd",
+  "renderer": "Metal 4.0 / Forward+ / Apple Paravirtual device (Apple5)",
+  "fixture": "stage-scenery within scenery-regression; real local sessions, default seed/roster; ordinary battle camera except explicit establishing view",
+  "comparison": "Medium before/after use the same arena, camera and lighting. Harness waits differ, so actors, combat, particles and ambient phase may differ. High captures are additional views, not pixel-matched baseline comparisons.",
+  "images": [
+    {
+      "file": "rock-garden-before.png",
+      "sourceCapture": "artifacts/living-worlds/before/20261027T154121.063364Z-stage-scenery/scenery-rock-garden-battle-midday.png",
+      "sha256": "6e7f650e50f6daca1adfbf8f5c06f5685d55d3abd04e02f93ca7c68c7e6bd713",
+      "stage": "rock-garden",
+      "state": "before",
+      "preset": "Medium",
+      "view": "ordinary battle camera",
+      "lighting": "Midday",
+      "width": 1280,
+      "height": 800
+    },
+    {
+      "file": "rock-garden-after.png",
+      "sourceCapture": "artifacts/living-worlds/regression/20261027T155216.771235Z-scenery-regression/scenery-rock-garden-battle-midday.png",
+      "sha256": "839bcb9f1a66cc55b74c0ae448328e605e23558fe7225a6fdede8b6848bbeb98",
+      "stage": "rock-garden",
+      "state": "after",
+      "preset": "Medium",
+      "view": "ordinary battle camera",
+      "lighting": "Midday",
+      "width": 1280,
+      "height": 800
+    },
+    {
+      "file": "rock-garden-high.png",
+      "sourceCapture": "artifacts/living-worlds/regression/20261027T155216.771235Z-scenery-regression/scenery-rock-garden-high.png",
+      "sha256": "bd66acb3a3d68bdbb1d5da55fc8435bac7fa0785e6e62512f4d4239d9026bfa7",
+      "stage": "rock-garden",
+      "state": "high",
+      "preset": "High",
+      "view": "ordinary battle camera",
+      "lighting": "Midday",
+      "width": 1280,
+      "height": 800
+    },
+    {
+      "file": "rock-garden-night.png",
+      "sourceCapture": "artifacts/living-worlds/regression/20261027T155216.771235Z-scenery-regression/scenery-rock-garden-battle-night.png",
+      "sha256": "e08262a48f82a18ca3bedd8e6f90a7c25a4805401dd29f1db58aa1915312483f",
+      "stage": "rock-garden",
+      "state": "night",
+      "preset": "Medium",
+      "view": "ordinary battle camera",
+      "lighting": "Night",
+      "width": 1280,
+      "height": 800
+    },
+    {
+      "file": "top-rules-before.png",
+      "sourceCapture": "artifacts/living-worlds/before/20261027T154121.063364Z-stage-scenery/scenery-top-rules-battle-midday.png",
+      "sha256": "913498650a660bbb93763f2b2d7651e84d7f4471e58f33306e2153f7200c2fad",
+      "stage": "top-rules",
+      "state": "before",
+      "preset": "Medium",
+      "view": "ordinary battle camera",
+      "lighting": "Midday",
+      "width": 1280,
+      "height": 800
+    },
+    {
+      "file": "top-rules-after.png",
+      "sourceCapture": "artifacts/living-worlds/regression/20261027T155216.771235Z-scenery-regression/scenery-top-rules-battle-midday.png",
+      "sha256": "18d08e5c6bb2eb6fde697f80ae10bd85636b4b0316fe5e017a60a470791f99d9",
+      "stage": "top-rules",
+      "state": "after",
+      "preset": "Medium",
+      "view": "ordinary battle camera",
+      "lighting": "Midday",
+      "width": 1280,
+      "height": 800
+    },
+    {
+      "file": "top-rules-high.png",
+      "sourceCapture": "artifacts/living-worlds/regression/20261027T155216.771235Z-scenery-regression/scenery-top-rules-high.png",
+      "sha256": "f09a25f850467c3db7569265c3c47eb83824a5a27b6d7b4adde568deac775064",
+      "stage": "top-rules",
+      "state": "high",
+      "preset": "High",
+      "view": "ordinary battle camera",
+      "lighting": "Midday",
+      "width": 1280,
+      "height": 800
+    },
+    {
+      "file": "top-rules-night.png",
+      "sourceCapture": "artifacts/living-worlds/regression/20261027T155216.771235Z-scenery-regression/scenery-top-rules-battle-night.png",
+      "sha256": "b4720781970fa13594de0140c2ace80b550305e954cf173c30b00f818a73d09c",
+      "stage": "top-rules",
+      "state": "night",
+      "preset": "Medium",
+      "view": "ordinary battle camera",
+      "lighting": "Night",
+      "width": 1280,
+      "height": 800
+    },
+    {
+      "file": "blizzard-battle-before.png",
+      "sourceCapture": "artifacts/living-worlds/before/20261027T154121.063364Z-stage-scenery/scenery-blizzard-battle-battle-midday.png",
+      "sha256": "936ed2ca6fe7ee6e930edf133be7612aeefceb48720800be9d36226ecea16e79",
+      "stage": "blizzard-battle",
+      "state": "before",
+      "preset": "Medium",
+      "view": "ordinary battle camera",
+      "lighting": "Midday",
+      "width": 1280,
+      "height": 800
+    },
+    {
+      "file": "blizzard-battle-after.png",
+      "sourceCapture": "artifacts/living-worlds/regression/20261027T155216.771235Z-scenery-regression/scenery-blizzard-battle-battle-midday.png",
+      "sha256": "aa9e7f81b646382819b67ff9e8ce7a7f7a9aee594d52b52089187073b5736307",
+      "stage": "blizzard-battle",
+      "state": "after",
+      "preset": "Medium",
+      "view": "ordinary battle camera",
+      "lighting": "Midday",
+      "width": 1280,
+      "height": 800
+    },
+    {
+      "file": "blizzard-battle-high.png",
+      "sourceCapture": "artifacts/living-worlds/regression/20261027T155216.771235Z-scenery-regression/scenery-blizzard-battle-high.png",
+      "sha256": "58c6ee5023053ce3aa474176165a31bf71020ceae7eb6073397932783a866eb0",
+      "stage": "blizzard-battle",
+      "state": "high",
+      "preset": "High",
+      "view": "ordinary battle camera",
+      "lighting": "Midday",
+      "width": 1280,
+      "height": 800
+    },
+    {
+      "file": "blizzard-battle-night.png",
+      "sourceCapture": "artifacts/living-worlds/regression/20261027T155216.771235Z-scenery-regression/scenery-blizzard-battle-battle-night.png",
+      "sha256": "19a7ddd8fba16beea9d81e45a7764a2d15bd69eff323de008b7fc3e01f892917",
+      "stage": "blizzard-battle",
+      "state": "night",
+      "preset": "Medium",
+      "view": "ordinary battle camera",
+      "lighting": "Night",
+      "width": 1280,
+      "height": 800
+    },
+    {
+      "file": "blizzard-battle-establishing.png",
+      "sourceCapture": "artifacts/living-worlds/regression/20261027T155216.771235Z-scenery-regression/scenery-blizzard-battle-establishing.png",
+      "sha256": "b2dd73ecdb04234e5054e68a10605ac485696379303dde00abc7410d683fa9fd",
+      "stage": "blizzard-battle",
+      "state": "after",
+      "preset": "Medium",
+      "view": "labelled establishing inspection camera",
+      "lighting": "Midday",
+      "width": 1280,
+      "height": 800
+    }
+  ],
+  "beforeRuntime": {
+    "Contents/Resources/Blast Circuit.pck": {
+      "sha256": "a829406df5297e3669affb0bdd80c3517660a105d58f13e1e7d20ce6f6fe59b9"
+    },
+    "Contents/Resources/data_Bomberman64Multiplayer_macos_arm64/Bomberman64Multiplayer.dll": {
+      "sha256": "f64f8abe786346bce08c6e47315fcb00f4c67f1f44c18fed9ecf19e2e67f2bcd"
+    }
+  },
+  "afterRuntime": {
+    "Contents/Resources/Blast Circuit.pck": {
+      "sha256": "8a83dac6aee89495a43c68718a90f3eef367f02b4e9905409fc13f36b81bf4b6"
+    },
+    "Contents/Resources/data_Bomberman64Multiplayer_macos_arm64/Bomberman64Multiplayer.dll": {
+      "sha256": "d161bff76acbaf8774ee215f4fba092b51d815c3fbf1218883fc523810426435"
+    }
+  },
+  "implementationSha256": {
+    "scripts/arena/stages/TempleStageView.Blizzard.cs": "5651a5c6316cbd7df8458290d6258eb7399ab63c8c130e9103d5bb59f457cde0",
+    "scripts/arena/stages/TempleStageView.BlizzardExterior.cs": "67cd2655eb99f74211b78153b831e9e4ffe224a044f2fe5eb52de70db791d97f",
+    "scripts/arena/stages/TempleStageView.Meadow.cs": "c01acf9cc4f69ea5d64cf967c5306beaf33ac3d7290710c6b9874ca6cde0a305",
+    "scripts/arena/stages/TempleStageView.Orbital.cs": "cb5357b2ca9631d9746e2ccbdaf9eaa270e049141d1258bc106ad15271c78151",
+    "scripts/arena/stages/TempleStageView.RockGardenExterior.cs": "77d292b8aaeb598e37e919ed8c98c017e7db17929c0919cf4339bc55a97b2b19",
+    "scripts/arena/stages/TempleStageView.Scenery.cs": "4220f2569f8a8bc2431703253887fc95839b6cd37d23627e7143ce2580ea52f0",
+    "scripts/arena/stages/TempleStageView.TopRulesExterior.cs": "e1799d261b5abea1cc0a44d6c3a4329a78786a4327973472d3bd26ef28395d15",
+    "scripts/arena/stages/TempleStageView.cs": "913fb272960573589018615f44d2050c95022fc09960f52b09e2ae02cc494176",
+    "scripts/rendering/ArtMaterials.Ambient.cs": "b6a4dce4a030159b6c0c22f1104c47f0b5e7bff3e676a34524a03712c85cda13",
+    "scripts/testing/journeys/stages/StageSceneryPlaytest.cs": "ead5020ea5385d3192447e9248d91db234ae8e905f93d51ff09e4bb53958fe15"
+  },
+  "validation": {
+    "baseline": {
+      "passed": true,
+      "assertions": 349,
+      "screenshots": 30,
+      "expandedScenarios": [
+        "stage-scenery"
+      ],
+      "runtimeErrors": [],
+      "runtimeWarnings": [],
+      "receipt": "artifacts/living-worlds/before/20261027T154121.063364Z-stage-scenery/runner-summary.json"
+    },
+    "graphical": {
+      "passed": true,
+      "assertions": 3247,
+      "screenshots": 259,
+      "expandedScenarios": [
+        "first-use-rendering",
+        "asset-audit",
+        "graphics-settings",
+        "stage-lighting",
+        "setup",
+        "menu-preview",
+        "map-preview-loading",
+        "framing",
+        "stage-scenery",
+        "rock-garden",
+        "up-and-down",
+        "top-rules",
+        "blizzard-battle",
+        "greedy-trap"
+      ],
+      "runtimeErrors": [],
+      "runtimeWarnings": [],
+      "receipt": "artifacts/living-worlds/regression/20261027T155216.771235Z-scenery-regression/runner-summary.json"
+    },
+    "public": {
+      "passed": true,
+      "receipt": "artifacts/living-worlds/public-final/summary.json"
+    }
+  }
+}

@@ -361,6 +361,14 @@ QA. Run actionlint over all three workflow files. Server delivery now includes
 the exact plugins used by the fleet drill. Both manual and automatic publication
 require the protected deployment gate and matching live release identities.
 
+The [release-latency policy](../releases.md#release-latency) owns the fast path:
+documentation-only pushes stop after public contracts, public controller libraries
+can be cached, and publication prepares the signed draft before server cutover.
+Deployment and publication share one protected runner and one fresh fleet match
+cycle. Retry a failed publication with the same run; the durable successful
+deployment is rechecked without reapplying it. Preserve the archived startup/update
+gates and record actual hosted timings before claiming delivery-time gains.
+
 Read [CI](../ci.md) for trusted-job configuration and artifact validation. Public
 PR checks use no private dependency credentials; private builds run only on
 trusted main. Keep both bootstrap tools aligned with the checked-in dependency

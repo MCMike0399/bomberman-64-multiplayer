@@ -384,8 +384,8 @@ void fragment(){
     // The far open sea can only mirror sky, which it already shows: skip its march.
     if(distance(world.xz,NODE_POSITION_WORLD.xz)>26.0)reach=0.0;
     if(fresnel>.01&&reach>.25){
-      // Interleaved-gradient jitter per pixel turns step banding into fine
-      // water sparkle instead of staircase edges on reflected decks.
+      // Interleaved-gradient jitter per pixel avoids staircase bands on reflected
+      // decks. Refined hit validation below keeps misses from becoming white speckles.
       float jitter=fract(52.9829189*fract(dot(FRAGCOORD.xy,vec2(.06711056,.00583715))));
       vec3 previous=VERTEX;float t_previous=0.0;
       for(int i=1;i<=12;i++){
@@ -404,8 +404,13 @@ void fragment(){
           }
           vec4 hc=PROJECTION_MATRIX*vec4(b,1.0);vec2 huv=hc.xy/hc.w*.5+.5;
           vec2 border=smoothstep(vec2(0.0),vec2(.08),huv)*smoothstep(vec2(0.0),vec2(.08),1.0-huv);
-          mirror=fresnel*border.x*border.y*(1.0-smoothstep(.6,1.0,f));
-          mirrored=textureLod(screen_texture,huv,0.0).rgb;
+          // A depth discontinuity can make bisection converge on an occluder's
+          // silhouette rather than an intersection. Reject that false hit before
+          // fetching its bright color; jitter otherwise scatters it over open water.
+          float hit_error=abs(view_position(huv,INV_PROJECTION_MATRIX).z-b.z);
+          float confidence=1.0-smoothstep(.04,.16,hit_error);
+          mirror=fresnel*border.x*border.y*(1.0-smoothstep(.6,1.0,f))*confidence;
+          if(mirror>0.0)mirrored=textureLod(screen_texture,huv,0.0).rgb;
           break;
         }
         previous=p;t_previous=t;
