@@ -8,7 +8,7 @@ same source and `Release.props`.
 
 The requested player downloads are a per-user Windows installer
 `Blast-Circuit-windows-x64-Setup.exe`, Linux `Blast-Circuit-linux-x64.AppImage`
-(from the stacked Linux PR), and macOS `Blast-Circuit-macos-arm64.dmg`.
+and macOS `Blast-Circuit-macos-arm64.dmg`.
 Windows installs without administrator privileges. Each client includes its
 .NET runtime, PCK, native networking library and notices. Windows executables
 are not Authenticode signed; the signed delivery inventory authenticates the
@@ -44,8 +44,7 @@ python3 tools/packaging/verify-desktop.py --target windows-x64 --graphical
 
 The regression tool requires the matching archived server and metadata beside
 the client archive. It installs the real Windows EXE into a path containing
-spaces and compares every installed payload hash before testing. Linux's PR
-runs the actual AppImage. Only the harness's own server starts, on a fresh
+spaces and compares every installed payload hash before testing. Linux runs the actual AppImage. Only the harness's own server starts, on a fresh
 Kestrel-selected loopback port.
 
 Headless regression covers the complete core suite, direct/relay peer rooms,

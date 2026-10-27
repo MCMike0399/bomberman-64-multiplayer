@@ -11,6 +11,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import urllib.request
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -71,7 +72,42 @@ def main():
                             '/DGameBuild=' + str(metadata['release']['build']),
                             str(ROOT / 'tools/packaging/windows-installer.iss')], check=True, timeout=300)
     else:
-        raise RuntimeError('Linux AppImage packaging is added by the Linux platform PR')
+        if platform.system() != 'Linux' or platform.machine().lower() != 'x86_64':
+            raise RuntimeError('AppImage packaging requires Linux x64')
+        item = desktop.names(target)
+        metadata = json.loads((directory / item['metadata']).read_text())
+        desktop.inspect_archive(directory, target, metadata['revision'], metadata['release'])
+        spec = importlib.util.spec_from_file_location('verify_desktop', ROOT / 'tools/packaging/verify-desktop.py')
+        verifier = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(verifier)
+        with tempfile.TemporaryDirectory(prefix='blast-appimage-') as temporary:
+            temporary = Path(temporary)
+            verifier.extract(directory / item['archive'], temporary)
+            appdir = temporary / 'BlastCircuit.AppDir'
+            payload = appdir / 'usr/lib/blast-circuit'
+            payload.parent.mkdir(parents=True)
+            shutil.move(str(temporary / item['root']), payload)
+            (appdir / 'AppRun').write_text('#!/bin/sh\nset -eu\nAPP_ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)\nexec "$APP_ROOT/usr/lib/blast-circuit/BlastCircuit.x86_64" "$@"\n')
+            (appdir / 'AppRun').chmod(0o755)
+            (appdir / 'blast-circuit.desktop').write_text('[Desktop Entry]\nType=Application\nName=Blast Circuit\nExec=BlastCircuit\nIcon=blast-circuit\nCategories=Game;ArcadeGame;\nTerminal=false\n')
+            shutil.copy2(ROOT / 'icon.svg', appdir / 'blast-circuit.svg')
+            # Hash pins deliberately fail if upstream replaces a continuous asset.
+            # Update only after reviewing the new upstream runtime/tool release.
+            pinned = (
+                ('https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage',
+                 '95cbe7cce9717fce90c484e34052ee7c7f1d7635b33c12525b4776826a7d29b6', 'appimagetool.AppImage'),
+                ('https://github.com/AppImage/type2-runtime/releases/download/continuous/runtime-x86_64',
+                 '617aa77314d57c8b8e4fae9c3f0b35af7b30d5529cb69e98f64f92510ed98a46', 'runtime-x86_64'))
+            for url, digest, filename in pinned:
+                path = temporary / filename
+                urllib.request.urlretrieve(url, path)
+                if desktop.digest(path) != digest:
+                    raise RuntimeError('AppImage build tool/runtime checksum mismatch: ' + filename)
+                path.chmod(0o755)
+            environment = dict(os.environ, ARCH='x86_64', APPIMAGE_EXTRACT_AND_RUN='1')
+            subprocess.run([str(temporary / 'appimagetool.AppImage'), '--runtime-file', str(temporary / 'runtime-x86_64'),
+                            str(appdir), str(directory / name)], env=environment, check=True, timeout=300)
+        (directory / name).chmod(0o755)
     downloads.record(directory, target, metadata['revision'], metadata['release'], 'Blast-Circuit-' + target + '.zip')
     downloads.inspect(directory, target, metadata['revision'], metadata['release'])
     print('Packaged native download: ' + name)

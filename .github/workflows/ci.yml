@@ -415,7 +415,7 @@ jobs:
 
   linux-smoke:
     name: Exported linux-x64 smoke
-    needs: linux-package
+    needs: [linux-package, managed]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -426,11 +426,30 @@ jobs:
         with:
           name: Blast-Circuit-linux-x64
           path: artifacts
-      # No SDK, private source or credentials: launch only the archived self-contained client.
-      - run: python3 tools/packaging/smoke-desktop.py --target linux-x64
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: Blast-Circuit-server-dotnet10
+          path: artifacts
+      - run: sudo apt-get update && sudo apt-get install -y squashfs-tools
+      - run: python3 tools/packaging/package-download.py --target linux-x64
+      - run: dotnet run --project tests/Bomber.DesktopUpdate.Tests -m:1
+      - run: python3 tools/packaging/verify-desktop.py --target linux-x64
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
         with:
           name: Blast-Circuit-linux-x64-smoke
-          path: artifacts/Blast-Circuit-linux-x64-smoke.json
+          path: |
+            artifacts/Blast-Circuit-linux-x64-smoke.json
+            artifacts/Blast-Circuit-linux-x64.AppImage
+            artifacts/Blast-Circuit-linux-x64.AppImage.sha256
+            artifacts/Blast-Circuit-linux-x64-download.json
+            artifacts/Blast-Circuit-linux-x64-regression-details/**/summary.json
+            artifacts/Blast-Circuit-linux-x64-regression-details/**/runner-summary.json
+            artifacts/Blast-Circuit-linux-x64-regression-details/**/junit.xml
+            artifacts/Blast-Circuit-linux-x64-regression-details/**/runtime.log
+            artifacts/Blast-Circuit-linux-x64-regression-details/**/failure.png
           retention-days: 14
           if-no-files-found: error

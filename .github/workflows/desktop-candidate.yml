@@ -22,6 +22,8 @@ jobs:
         include:
           - target: windows-x64
             runner: windows-2025
+          - target: linux-x64
+            runner: ubuntu-24.04
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 40
     steps:
@@ -41,8 +43,12 @@ jobs:
         run: |
           gh release download "qa-desktop-$CANDIDATE_SHA" --dir artifacts --pattern "Blast-Circuit-$TARGET*" --pattern 'Blast-Circuit-server-dotnet10*' --pattern server-build-metadata.json
           python -c 'import json,os; m=json.load(open("artifacts/Blast-Circuit-"+os.environ["TARGET"]+"-metadata.json")); assert m["revision"]==os.environ["CANDIDATE_SHA"], "Candidate source mismatch"'
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y squashfs-tools libicu74
       - if: runner.os == 'Windows'
         run: python tools/packaging/package-download.py --target windows-x64
+      - if: runner.os == 'Linux'
+        run: python3 tools/packaging/package-download.py --target linux-x64
       - run: dotnet run --project tests/Bomber.DesktopUpdate.Tests -m:1
       - name: Full packaged gameplay and multiplayer regression
         env:
