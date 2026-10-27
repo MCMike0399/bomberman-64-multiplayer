@@ -84,6 +84,21 @@ class DesktopPackageTests(unittest.TestCase):
     def test_complete_runtime_and_native_exported_smoke_pass(self):
         desktop.inspect(self.root, SHA, RELEASE)
 
+    def test_linux_executable_permission_is_part_of_the_archive_contract(self):
+        target = 'linux-x64'
+        item = desktop.names(target)
+        archive = self.root / item['archive']
+        with zipfile.ZipFile(archive) as bundle:
+            entries = [(entry, bundle.read(entry)) for entry in bundle.infolist()]
+        with zipfile.ZipFile(archive, 'w') as bundle:
+            for entry, data in entries:
+                if entry.filename.endswith('/' + desktop.TARGETS[target]['executable']):
+                    entry.external_attr = 0o100644 << 16
+                bundle.writestr(entry, data)
+        (self.root / (archive.name + '.sha256')).write_text(desktop.digest(archive) + '  ' + archive.name)
+        with self.assertRaisesRegex(RuntimeError, 'executable permission'):
+            desktop.inspect_archive(self.root, target, SHA, RELEASE)
+
     def test_archive_tampering_fails_before_extraction(self):
         with (self.root / self.item['archive']).open('ab') as stream:
             stream.write(b'tampered')

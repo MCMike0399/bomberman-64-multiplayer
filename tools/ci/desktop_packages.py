@@ -12,6 +12,10 @@ TARGETS = {
                     'executable': 'BlastCircuit.exe', 'runtime': 'coreclr.dll',
                     'webrtc': 'libwebrtc_native.windows.template_release.x86_64.dll',
                     'runner': 'windows-2025'},
+    'linux-x64': {'preset': 'Linux Vulkan', 'os': 'Linux', 'driver': 'vulkan',
+                  'executable': 'BlastCircuit.x86_64', 'runtime': 'libcoreclr.so',
+                  'webrtc': 'libwebrtc_native.linux.template_release.x86_64.so',
+                  'runner': 'ubuntu-24.04'},
 }
 
 
