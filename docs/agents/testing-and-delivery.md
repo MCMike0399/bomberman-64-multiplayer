@@ -752,3 +752,9 @@ in receipts; the four-leaf package smoke is insufficient for promotion.
 `tests/Bomber.DesktopUpdate.Tests` verifies helper handoff and rollback with
 real fixture processes. Keep that separate from actual game updates and
 physical/GPU evidence. See [desktop clients](../desktop-clients.md).
+
+Keep long-running platform QA independent of Mac stable releases: use the
+separate worktree, private exact-SHA drafts, owned matching server and pinned
+diagnostic updater baseline described in [independent platform QA](../desktop-clients.md#independent-platform-qa).
+Integrate current main and select the final public identity when ready; stable
+publication still tests the actual latest release and rejects diagnostic receipts.

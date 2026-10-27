@@ -164,12 +164,14 @@ jobs:
           path: artifacts
       - run: python3 tools/packaging/macos-test-display.py
       - run: python3 tools/packaging/verify-mac-archive.py
-      - name: Actual signed Mac update from the latest published release
+      # Keep long-running platform QA independent of new Mac stable releases.
+      # This explicit baseline is diagnostic; trusted main still tests latest.
+      - name: Actual signed Mac update from the pinned QA baseline (v0.43.0)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           ditto -x -k artifacts/Blast-Circuit-macos-arm64.zip "$RUNNER_TEMP/mac-update-candidate"
-          python3 tools/ci/update_from_published.py --app "$RUNNER_TEMP/mac-update-candidate/Blast Circuit.app" --output artifacts/candidate-mac-update
+          python3 tools/ci/update_from_published.py --previous-version 0.43.0 --app "$RUNNER_TEMP/mac-update-candidate/Blast Circuit.app" --output artifacts/candidate-mac-update
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:

@@ -29,6 +29,28 @@ regression receipts, player downloads and signed platform update manifests are
 published together. These paths remain source work until the exact candidate
 passes target-OS validation.
 
+## Independent platform QA
+
+Mac stable releases can continue on `main` while platform delivery is validated
+on its separate branch and worktree. Keep candidate archives in private
+`qa-desktop-<full-source-SHA>` drafts and run them against the harness-owned,
+matching server. Do not deploy these candidates to maintained workers or install
+them over the developer's stable Mac app.
+
+The candidate workflow pins its signed Mac updater baseline to v0.43.0 instead
+of following latest. Its receipt declares an explicit diagnostic baseline, which
+cannot satisfy the stable publication gate. Candidate tests disable background
+updates in their disposable guest; normal players retain the stable update feed.
+Mac releases therefore do not change this QA input or its staged server.
+
+The branch's v0.44.0/build54 identity is internal test data and reserves no public
+version. Do not repeatedly merge or rebase onto advancing Mac releases during
+qualification. When the platform work is ready, integrate current `main` once,
+choose the next available public version and build, and rebuild and verify the
+combined source. Final trusted gates must use those exact bytes and test updating
+from the actual latest stable release before matching-server deployment and
+publication. Earlier candidate evidence remains attached to its original SHA.
+
 ## Build and verify
 
 Build with .NET 10, the pinned private dependency and official matching Godot
