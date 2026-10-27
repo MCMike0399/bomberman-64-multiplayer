@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using System.Text.Json;
+using System.Runtime.InteropServices;
+using Microsoft.Win32.SafeHandles;
 using Bomber.Client.Updates;
 
 if (args.Contains("--fixture"))
@@ -20,7 +22,17 @@ if (args.Contains("--fixture"))
 if (args.Contains("--") || args.Any(a => a.StartsWith("--update-token=")))
 {
     MarkStarted();
-    if (File.Exists(Path.Combine(Path.GetDirectoryName(Environment.ProcessPath!)!, "fail-launch"))) return 23;
+    if (File.Exists(Path.Combine(Path.GetDirectoryName(Environment.ProcessPath!)!, "fail-launch")))
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            string root = Path.GetDirectoryName(Path.GetDirectoryName(Environment.ProcessPath!))!;
+            File.WriteAllText(Path.Combine(root, "rollback-ready"), "ready");
+            using var ready = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            while (!File.Exists(Path.Combine(root, "rollback-locked"))) await Task.Delay(10, ready.Token);
+        }
+        return 23;
+    }
     string? token = args.FirstOrDefault(a => a.StartsWith("--update-token="))?.Split('=', 2)[1];
     if (token is not null)
     {
@@ -54,11 +66,32 @@ foreach (bool failedLaunch in new[] { false, true })
             old.Id, old.StartTime.ToUniversalTime().Ticks, true, false);
         string path = Path.Combine(stage, "request.json"); File.WriteAllText(path, JsonSerializer.Serialize(request));
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        Task? sharing = null;
+        if (OperatingSystem.IsWindows())
+        {
+            // Hold a real non-delete-sharing directory handle after process exit.
+            // The same boundary occurs when Windows still holds mapped game files.
+            var handle = DirectoryHandle.Open(target);
+            sharing = Task.Run(async () =>
+            {
+                using (handle)
+                {
+                    await old.WaitForExitAsync(timeout.Token);
+                    await Task.Delay(500, timeout.Token);
+                }
+                if (!failedLaunch) return;
+                while (!File.Exists(Path.Combine(root, "rollback-ready"))) await Task.Delay(10, timeout.Token);
+                using var rollbackHandle = DirectoryHandle.Open(target);
+                File.WriteAllText(Path.Combine(root, "rollback-locked"), "locked");
+                await Task.Delay(500, timeout.Token);
+            });
+        }
         var transaction = DesktopUpdateTransaction.Run(path, timeout.Token);
         while (!File.Exists(Path.Combine(stage, "ready"))) await Task.Delay(20, timeout.Token);
         Check(File.Exists(Path.Combine(target, "old-marker")), "A running game must remain installed during handoff");
         try { await transaction; Check(!failedLaunch, "Failed launch must report failure"); }
         catch (IOException) when (failedLaunch) { checks++; }
+        if (sharing is not null) await sharing;
         Check(File.Exists(Path.Combine(target, "old-marker")) == failedLaunch, "Installed bytes must match success or rollback");
         Check(File.ReadAllText(Path.Combine(target, "unins000.dat")) == "installed uninstall data", "Installed uninstall data must survive update and rollback");
         Check(File.ReadAllText(request.History).Trim() == (failedLaunch ? "failed 99.0.0 launch-rollback" : "installed 99.0.0"), "History must report actual outcome");
@@ -98,4 +131,19 @@ void MarkStarted()
 {
     string root = Path.GetDirectoryName(Path.GetDirectoryName(Environment.ProcessPath!))!;
     File.WriteAllText(Path.Combine(root, "fixture-pid-" + Environment.ProcessId), "started");
+}
+
+static class DirectoryHandle
+{
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern SafeFileHandle CreateFileW(string name, uint access, uint share, IntPtr security,
+        uint creation, uint flags, IntPtr template);
+
+    public static SafeFileHandle Open(string path)
+    {
+        // FILE_SHARE_READ|WRITE, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS.
+        var handle = CreateFileW(path, 0, 3, IntPtr.Zero, 3, 0x02000000, IntPtr.Zero);
+        if (handle.IsInvalid) throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
+        return handle;
+    }
 }
