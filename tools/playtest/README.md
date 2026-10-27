@@ -228,7 +228,9 @@ Reports require the exact completed scenario list, positive assertion counts, ma
 New focused scenarios include:
 
 - `asset-audit`: actual fonts, glyphs, model/material geometry, UI bounds and a graphical inspection gallery; headless mode explicitly omits GPU evidence.
+- `pickup-showcase`: a labelled studio lineup of every pickup kind at the battle-camera angle (two fixed animation instants), then both restricted Sunken Temple practice caches from the battle and a closer camera. Use it for matched before/after pickup art captures.
 - `walk-feel`: real courtyard travel, reversal and stopping with measured boot contacts and a temporary following inspection camera. Suitable for normal-speed recording.
+- `mishap-feel`: real kicked-bomb knockdown, grab and remote-bomb elimination with close-up and battle captures of the dazed, held and charred burnout poses, then a fixed pose/burnout sheet on the courtyard.
 - `charge-aim`: ordinary carry/pump/throw inputs, preview ownership, projected landing, actual hand-to-release continuity and water-endpoint behavior.
 
 Earlier built-in scenarios:

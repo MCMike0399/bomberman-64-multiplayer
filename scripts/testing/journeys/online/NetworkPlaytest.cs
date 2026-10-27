@@ -12,6 +12,48 @@ namespace BlastCircuit.Testing;
 /// <summary>Real HTTP/WebSocket host and guest sessions against an independent server.</summary>
 public partial class PlaytestDriver
 {
+    private async Task PostMatch()
+    {
+        await Results();
+        var settings=new SessionSettings(Bots:0,Wins:1,Ghosts:false){Hosting="server"};
+        await using var owner=await NetworkSession.ConnectAsync(new Uri(_server),"Map selection owner",settings,NetworkMode.CreatePrivate);
+        await _root.StartOnlineAsync(new Uri(_server),"Map selection guest",settings,NetworkMode.JoinCode,owner.JoinCode,appearance:5);
+        var guest=(NetworkSession)_root.ActiveSession!;
+        string? code=guest.JoinCode,lobby=guest.LobbyId;
+        await Until(()=>owner.Party?.CanStart==true&&guest.Party?.CanStart==true,"online map fixture has two connected players");
+        owner.RequestStart();
+        await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"online map fixture reaches fight",900);
+        Check(State.GetProperty("players").EnumerateArray().All(p=>p.GetProperty("bombs").GetInt32()==2&&p.GetProperty("fire").GetInt32()==1),"online players start with zero collected upgrades");
+        Input(0,new PlayerInput(0,0,A:true));await Frames(4);Input(0,default);
+        await Until(()=>_root.ScreenName=="Results","ordinary bomb completes the online match");
+        await Capture("online-post-match-results");
+        await Until(()=>_root.ScreenName=="Setup"&&guest.Party?.Phase=="lobby","online results automatically return to map selection");
+        Check(ReferenceEquals(guest,_root.ActiveSession)&&guest.JoinCode==code&&guest.LobbyId==lobby,"map selection retains the same online room and connection");
+        Check(NamedButton("StageSelector").Disabled&&NamedButton("LaunchMatch").Disabled&&NamedButton("AdvancedSettings").Disabled,"online guest cannot change rules or start the next battle");
+        await Capture("online-guest-map-selection");
+        owner.SetRoomSettings(settings with{Stage="rock-garden"});
+        await Until(()=>guest.Party?.Settings?.GetValueOrDefault("stage")=="rock-garden","guest receives the owner's selected arena");
+        var menu=_root.FindChildren("*","",true,false).OfType<BlastCircuit.UI.Menu.ArcadeMenu>().Single();
+        Check(menu.OnlineSettings.Stage=="rock-garden","guest map preview follows accepted room settings");
+        await owner.DisposeAsync();
+        await Until(()=>guest.IsLeader&&!NamedButton("StageSelector").Disabled,"room ownership transfer enables map selection for the new host");
+        Check(NamedButton("LaunchMatch").Disabled,"host cannot start without another human or CPU");
+        NamedButton("CPUrivals").GrabFocus();await KeyPress(Key.Right);
+        await Until(()=>guest.Party?.CanStart==true&&!NamedButton("LaunchMatch").Disabled,"accepted CPU rival enables next battle");
+        NamedButton("StageSelector").GrabFocus();await KeyPress(Key.Right);
+        await Capture("online-host-map-selection");await ActivateNamed("LaunchMatch");
+        await WaitState(_=>_root.ScreenName=="Match"&&_root.LatestStage?.GetProperty("id").GetString()=="up-and-down","host starts the next match on the chosen arena",900);
+        Check(guest.JoinCode==code&&guest.LobbyId==lobby,"next online battle keeps its room code and identity");
+        _root.Back();await Frames(3);
+
+        async Task Until(Func<bool> predicate,string description)
+        {
+            var clock=System.Diagnostics.Stopwatch.StartNew();
+            while(!predicate()&&clock.Elapsed.TotalSeconds<45){await Frames(1);await Task.Delay(16);}
+            Check(predicate(),description);
+        }
+    }
+
     private async Task Network()
     {
         _root.Navigate("Online");_root.SetOnlineAppearance(3);await Frames(3);
@@ -125,5 +167,60 @@ public partial class PlaytestDriver
         await KeyPress(Key.Escape);await ActivateNamed("ResumeGame");
         Check(_root.ScreenName=="Match"&&ReferenceEquals(_root.ActiveSession,host),"online menu resumes the same match");
         _root.Back(); await Frames(4);
+        await QuickPlayLobby();
+    }
+
+    private async Task QuickPlayLobby()
+    {
+        _root.Navigate("Online");await Frames(3);
+        await _root.StartOnlineAsync(new Uri(_server),"Quick Play first",new SessionSettings(Bots:0),NetworkMode.QuickPlay);
+        var first=(NetworkSession)_root.ActiveSession!;
+        await LobbyUntil(()=>first.Party is {PublicRoom:true,StartAt:null});
+        Check(_root.ScreenName=="Lobby"&&VisibleText(_root).Contains("Waiting for a second player"),"lone Quick Play player sees a waiting lobby without a timer");
+        Check(!NamedButton("StartRoom").Visible&&!NamedButton("EditRoomSettings").Visible,"anonymous public owner has no manual-start or rule-edit controls");
+        Check(VisibleText(_root).Contains("Shared rules")&&!VisibleText(_root).Contains("Room owner:"),"public lobby explains shared rules without presenting an anonymous owner as an operator");
+        await Capture("quick-play-waiting-alone");
+        await using var second=await NetworkSession.ConnectAsync(new Uri(_server),"Quick Play second",new SessionSettings(Bots:0),NetworkMode.QuickPlay);
+        await LobbyUntil(()=>first.Party?.StartAt is not null);
+        long initial=first.Party!.StartAt!.Value;
+        Check(second.LobbyId==first.LobbyId,"graphical Quick Play joins the same real matchmade lobby");
+        Check(VisibleText(_root).Contains("Battle begins in "),"public lobby renders the authoritative countdown");
+        string before=VisibleText(_root);
+        await Task.Delay(1200);await Frames(3);
+        Check(VisibleText(_root)!=before&&_root.ScreenName=="Lobby"&&_root.LatestState is null,"visible countdown advances while gameplay remains stopped");
+        await Capture("quick-play-two-players-countdown");
+        await ActivateNamed("LobbySettings");await KeyPress(Key.Escape);await Frames(3);
+        Check(_root.ScreenName=="Lobby"&&ReferenceEquals(first,_root.ActiveSession)&&first.Party?.StartAt==initial,
+            "personal settings return to the same public countdown without resetting it");
+        await using var third=await NetworkSession.ConnectAsync(new Uri(_server),"Quick Play third",new SessionSettings(Bots:0),NetworkMode.QuickPlay);
+        await LobbyUntil(()=>first.Party?.StartAt>initial);
+        long changed=first.Party!.StartAt!.Value;
+        Check(VisibleText(_root).Contains("Quick Play third")&&VisibleText(_root).Contains("Player changes restart"),"late arrival appears alongside the countdown-reset explanation");
+        await Capture("quick-play-three-players-countdown");
+        await Task.Delay(1100);await third.DisposeAsync();
+        await LobbyUntil(()=>first.Party?.StartAt>changed);
+        Check(first.Party!.StartAt-DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()>55000,"three-to-two departure shows a fresh full minute");
+        await second.DisposeAsync();
+        await LobbyUntil(()=>first.Party?.StartAt is null);
+        Check(VisibleText(_root).Contains("Waiting for a second player")&&!VisibleText(_root).Contains("Battle begins in "),"below two players removes the visible countdown immediately");
+        Check(!NamedButton("StartRoom").Visible&&!NamedButton("EditRoomSettings").Visible,"roster changes never restore public owner powers");
+        await Capture("quick-play-departure-cancels-countdown");
+        // The post-match map screen must keep the same public-room permissions even without a countdown.
+        var menu=_root.FindChildren("*","",true,false).OfType<BlastCircuit.UI.Menu.ArcadeMenu>().Single();
+        menu.UpdateMapSelection(first.IsLeader,first.Party!);
+        Check(NamedButton("StageSelector").Disabled&&NamedButton("CPUrivals").Disabled&&NamedButton("AdvancedSettings").Disabled,
+            "Quick Play map selection never grants anonymous owners rule-edit powers when the countdown is cancelled");
+        _root.Back();await Frames(4);
+
+        async Task LobbyUntil(Func<bool> condition)
+        {
+            var elapsed=System.Diagnostics.Stopwatch.StartNew();
+            while(elapsed.Elapsed.TotalSeconds<15)
+            {
+                await Frames(1);await Task.Delay(16);
+                if(condition()){await Frames(2);return;}
+            }
+            throw new TimeoutException("Quick Play lobby condition timed out: "+first.Party);
+        }
     }
 }

@@ -1,0 +1,13 @@
+{
+  "steps": [
+    {"op":"resize","width":1280,"height":800},
+    {"op":"start-local","stage":"sunken-temple","practice":false,"bots":7,"humans":1},
+    {"op":"frames","count":100},
+    {"op":"assert-state","path":"phase","equals":1},
+    {"op":"assert-state","path":"players.7.bot","equals":true},
+    {"op":"assert-state","path":"players.7.alive","equals":true},
+    {"op":"capture","label":"pyramid-eight-player-battle"},
+    {"op":"frames","count":90},
+    {"op":"capture","label":"pyramid-eight-player-action"}
+  ]
+}

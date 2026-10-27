@@ -26,6 +26,7 @@ public sealed partial class BlastSession
             Id = NextHazardId(),
             X = bomb.X, Z = bomb.Z, Tier = bomb.Tier, Y = BombY(bomb),
             Radius = r, IsRed = bomb.IsRed,
+            OwnerId = bomb.OwnerId, CoverAtIgnition = _softBlocks.Copy(),
         });
 
         // Resolve visibility before destroying cover: the same explosion cannot remove a shield and
@@ -63,9 +64,19 @@ public sealed partial class BlastSession
     {
         for (var i = _hazards.Count - 1; i >= 0; i--)
         {
-            _hazards[i].LifeTimer -= dt;
-            if (_hazards[i].LifeTimer <= 0)
+            var hazard = _hazards[i];
+            hazard.LifeTimer -= dt;
+            if (hazard.LifeTimer <= 0)
+            {
                 _hazards.RemoveAt(i);
+                continue;
+            }
+            // The visible bloom remains hazardous, including to players who enter after ignition.
+            // Keep the original cover instead of allowing destroyed shields to expose their occupants.
+            foreach (var player in _players.Values)
+                if (BlastGeometry.HitsPlayer(_stage, hazard.CoverAtIgnition,
+                    hazard.X, hazard.Y, hazard.Z, hazard.Radius, player.X, player.Y, player.Z, hazard.IsRed))
+                    HitPlayer(context, player, "explosion", hazard.OwnerId);
         }
     }
 }

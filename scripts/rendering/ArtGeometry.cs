@@ -56,6 +56,13 @@ public static class ArtGeometry
         if(!Meshes.TryGetValue(key,out var mesh))Meshes[key]=mesh=new CylinderMesh {TopRadius=radius,BottomRadius=radius,Height=height,RadialSegments=24};
         return Add(parent,position,mesh,material);
     }
+    /// <summary>Upright cone whose base lies half its height below the position.</summary>
+    public static MeshInstance3D Cone(Node parent,Vector3 position,float radius,float height,Material material)
+    {
+        string key=$"cone:{radius}:{height}";
+        if(!Meshes.TryGetValue(key,out var mesh))Meshes[key]=mesh=new CylinderMesh {TopRadius=0,BottomRadius=radius,Height=height,RadialSegments=24};
+        return Add(parent,position,mesh,material);
+    }
     private static MeshInstance3D Add(Node parent,Vector3 position,Mesh mesh,Material material)
     {
         var node=new MeshInstance3D {Mesh=mesh,Position=position,MaterialOverride=material};parent.AddChild(node);return node;

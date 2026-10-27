@@ -408,6 +408,17 @@
       "manual": false
     },
     {
+      "id": "quick-play",
+      "method": "QuickPlayLobby",
+      "domains": [
+        "network",
+        "ui"
+      ],
+      "headless": false,
+      "timeout": 120,
+      "manual": false
+    },
+    {
       "id": "network",
       "method": "Network",
       "domains": [
@@ -438,6 +449,18 @@
       ],
       "headless": true,
       "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "post-match",
+      "method": "PostMatch",
+      "domains": [
+        "ui",
+        "gameplay",
+        "network"
+      ],
+      "headless": false,
+      "timeout": 240,
       "manual": false
     },
     {
@@ -529,6 +552,18 @@
       "manual": false
     },
     {
+      "id": "pickup-showcase",
+      "method": "PickupShowcase",
+      "domains": [
+        "assets",
+        "models",
+        "rendering"
+      ],
+      "headless": true,
+      "timeout": 240,
+      "manual": false
+    },
+    {
       "id": "controller-observe",
       "method": "ControllerObserve",
       "domains": [
@@ -576,6 +611,7 @@
         "model-profile",
         "movement",
         "walk-feel",
+        "mishap-feel",
         "traversal",
         "placement",
         "bomb-handling",
@@ -599,6 +635,7 @@
         "ai-play",
         "combat",
         "results",
+        "post-match",
         "network",
         "peer-rooms",
         "adaptive-rooms",
@@ -723,6 +760,18 @@
       ],
       "headless": false,
       "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "mishap-feel",
+      "method": "MishapShowcase",
+      "domains": [
+        "animation",
+        "models",
+        "rendering"
+      ],
+      "headless": false,
+      "timeout": 300,
       "manual": false
     },
     {
@@ -969,6 +1018,16 @@
       "manual": false
     },
     {
+      "id": "greedy-canal",
+      "method": "GreedyCanalTour",
+      "domains": [
+        "rendering"
+      ],
+      "headless": true,
+      "timeout": 240,
+      "manual": false
+    },
+    {
       "id": "greedy-trap",
       "method": "GreedyTrapTour",
       "domains": [
@@ -998,6 +1057,7 @@
       "steps": [
         "first-use-rendering",
         "greedy-trap",
+        "greedy-canal",
         "setup",
         "graphics-settings",
         "stage-lighting",
@@ -1105,7 +1165,8 @@
         "blizzard-battle",
         "greedy-trap",
         "hurry-water",
-        "asset-audit"
+        "asset-audit",
+        "pickup-showcase"
       ],
       "domains": [
         "rendering",
@@ -1138,7 +1199,8 @@
         "up-and-down",
         "top-rules",
         "blizzard-battle",
-        "greedy-trap"
+        "greedy-trap",
+        "greedy-canal"
       ],
       "domains": [
         "rendering",
@@ -1168,6 +1230,58 @@
       ],
       "headless": false,
       "timeout": 240,
+      "manual": false
+    },
+    {
+      "id": "cover-regression",
+      "steps": [
+        "cover-layout",
+        "top-rules",
+        "up-and-down",
+        "rock-garden",
+        "blizzard-battle",
+        "greedy-trap"
+      ],
+      "domains": [
+        "ai",
+        "assets",
+        "gameplay",
+        "physics",
+        "rendering",
+        "ui"
+      ],
+      "headless": true,
+      "timeout": 1200,
+      "manual": false
+    },
+    {
+      "id": "battle-polish-regression",
+      "steps": [
+        "first-use-rendering",
+        "cover-regression",
+        "framing",
+        "blast-hitbox",
+        "post-match",
+        "quick-play",
+        "asset-audit",
+        "pickup-showcase",
+        "greedy-canal",
+        "mishap-feel"
+      ],
+      "domains": [
+        "ai",
+        "animation",
+        "assets",
+        "gameplay",
+        "models",
+        "network",
+        "performance",
+        "physics",
+        "rendering",
+        "ui"
+      ],
+      "headless": false,
+      "timeout": 1500,
       "manual": false
     }
   ]

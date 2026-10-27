@@ -114,6 +114,15 @@ relay capacity before starting, and retain ordinary guest departure/reconnect
 without resetting a healthy peer match. The cluster pool excludes legacy IDs
 so they cannot bypass active-execution budgets.
 
+Quick Play's 2026-10-27 source policy is a service-owned 60-second countdown
+for a stable roster of at least two connected humans. Joins, departures and
+reconnects restart it while two remain; otherwise cancel it. Anonymous leaders
+have no start/rule-edit privileges, including before a second player arrives.
+Public matches exclude new strangers during gameplay/results while retained
+seats can reconnect. Preserve the fresh countdown after results and cancellation
+of expired capacity retries on roster changes. `PublicMatchmakingChecks` retains
+the original eight-second-start regression and the related lifecycle checks.
+
 ## Legacy random lobbies and player-hosted rooms
 
 [Peer hosting](../peer-hosting.md) owns the v0.27 connection and failure contract.
@@ -255,6 +264,13 @@ and the input guide; older iteration tables are historical.
   horizontal blast reach, bomb chains, cover destruction and shielding retain
   their existing rules. `BlastHitboxChecks` and the `blast-hitbox` journey retain
   ordinary aimed remote throws at zero and three pumps with body-only overlap.
+- Explosion damage persists for the accepted 0.4-second hazard window, including
+  players entering after ignition. The same body-height geometry and heart/respawn
+  protection apply on every tick; the original owner retains kill credit. Each
+  hazard retains cover at ignition so destroying a shield cannot expose players
+  to that same blast later in its bloom. Red blasts still pierce soft cover.
+  Decorative sparks, the power ring and the post-hazard vapor are cosmetic;
+  they do not enlarge the authoritative sphere or extend its lifetime.
 - Ordinary ledge falls use heavier gravity, 45% of status-adjusted ground speed
   and bounded air acceleration. Departure uses collision-resolved velocity;
   release/reversal preserve a short coast. Full ground-speed air steering is
@@ -325,7 +341,7 @@ and the input guide; older iteration tables are historical.
   [stage contract](../up-and-down.md). Its twelve cover blocks intentionally
   replace the former filled terrace layout and 88-block budget. The 2026-10-25
   correction widens each pier to the inward side-rail lip for ordinary drops
-  without changing fall physics. Cover uses eight paired low sites and two per
+  without changing fall physics. Cover uses twelve randomly sampled low sites and twelve per
   pier; Advanced density selects subsets. The summit uses a flat mosaic rather
   than a blocking prop.
 - Ghosts pass through bombs and cannot place, carry, kick, stop, pump, throw or
@@ -343,7 +359,7 @@ and the input guide; older iteration tables are historical.
 
 ## Blizzard Battle (2026-10-25)
 
-[Stage contract](../blizzard-battle.md) owns the flat enclosed snowfield, sixteen authored ice cones (1.3-unit stage-owned cover height), eight seats, shared seeded weather and bilateral avalanche closure. Wind affects free bombs and living players through collision, with weaker player response, and the advisory arc uses the same future schedule. Preserve fuse clocks and carried attachment. CPU closure avoidance uses the three-second avalanche interval. Protocol revision 5 gates the expanded stage/weather contract.
+[Stage contract](../blizzard-battle.md) owns the flat enclosed snowfield, 64 randomly sampled ice cones (1.3-unit stage-owned cover height), eight seats, shared seeded weather and bilateral avalanche closure. Wind affects free bombs and living players through collision, with weaker player response, and the advisory arc uses the same future schedule. Preserve fuse clocks and carried attachment. CPU closure avoidance uses the three-second avalanche interval. Protocol revision 5 gates the expanded stage/weather contract.
 
 ## Top Rules castle (2026-10-24)
 
@@ -368,7 +384,7 @@ lower horizontal travel remains open. The CPU graph has separate lower nodes
 only on maps with underpasses. Use its `X`/`Z` helpers and height-aware `Cell`
 lookup; dividing a layered node by arena width invents an out-of-bounds Z.
 
-The 19×17 footprint, tier-two decks, extra four starts and twelve seeded lower
+The 19×17 footprint, tier-two decks, extra four starts and 48 seeded lower
 court blocks are Blast Circuit tuning, not recovered original constants. The
 first four starts follow the reference's outer lane ends; upper lanes, stairs
 and lower crossing routes stay clear. Optional sudden death uses shared column
@@ -387,7 +403,7 @@ now covers five stages (60 combinations), including Blizzard Battle.
 
 ## Inventory, cover and pickup rendering
 
-Greedy Trap uses three solid stories, six flights, eight bottom masonry blocks
+Greedy Trap uses three solid stories, six flights, 64 regional masonry blocks
 and ordinary closing-column Hurry. Its turquoise basin is safe floor; it must
 not inherit ordinary water elimination or an unverified sliding rule. The
 [stage contract](../greedy-trap.md) owns topology, eight-seat adaptations and
@@ -395,14 +411,15 @@ focused authority/AI checks. Online revision 5 gates the newly supported arena.
 
 - [Loot placement](../../src/Bomber.Game/Simulation/BlastSession/Items/BlastSession.Loot.cs) uses map-owned
   `CoverAreas`: regional budget shares and cluster centers, with seeded weighted
-  sampling. Temple seeds two nearby crates per spawn; Rock Garden seeds one plus a central paving cluster. Top Rules keeps a sparse twelve-block lower court. Up & Down keeps its upper ring clear, placing eight crates on the low deck and two on each middle pier. All policies preserve spawn clearance, ramps and reserved lanes.
+  sampling. Temple seeds two nearby crates per spawn; Rock Garden seeds one plus a central paving cluster. Top Rules has 48 lower-court blocks, preserving its upper network and ground through-routes. Up & Down places twelve blocks on the low deck and twelve on each middle pier; its ring, crown, bridges and flights remain clear. Blizzard Battle has four independently sampled 16-cone regions with clear cross/perimeter corridors; Greedy Trap has 52 random upper stockpile blocks and twelve random bottom blocks around a clear cross. All policies preserve spawn clearance, ramps and reserved lanes.
   Every destroyed crate uses the same independent configured drop chance; there are
   no guaranteed opening rewards.
 - Pyramid targets 60% of 90 blocks in the lower court, 15% along the lower wings,
   and a lighter remainder on upper side terraces/base approaches. Its top two tiers
   and ascent stay clear; thin court lanes replace the old broad empty strips.
-  Rock Garden has sixteen boulders with clear center routes. Up & Down has twelve
-  lower/middle blocks, keeping its ring, summit, bridges and flights clear.
+  Rock Garden has 64 boulders with clear center routes, a perimeter loop and
+  connecting spawn avenues. Up & Down has 36 lower/middle blocks, keeping its
+  ring, summit, bridges and flights clear.
 - Advanced match settings default to a uniform independent 40% chance per
   destroyed block. Item weights are Fire/Bomb 30% each,
   Heart/Focus/Tiny/Big/Haste/Slow 5% each; Remote/Red/Bounce divide the remaining 10% equally.
@@ -412,7 +429,9 @@ focused authority/AI checks. Online revision 5 gates the newly supported arena.
 - `AdvancedRules` owns drop chance (0–100%), block amount (0–100% of the authored
   regional budget), item lifetime (5–60s), blast cap (1–5), bomb cap (1–8), effect
   duration (5–30s) and per-item exclusions. Defaults: 40%, 100%, 20s, 5, 5, 10s.
-  Starting capacity is min(3, configured cap); blast starts at one, and three
+  Starting bomb capacity is min(2, configured cap) and blast strength is one
+  (zero collected upgrades).
+  The HUD shows upgrade counts above that base; three
   pumps can raise a maximum five-stack blast to effective level eight.
 - Tiny uniformly scales the model to .65 and movement to 1.5; Big uses 1.4/.65.
   Haste/Slow affect movement only at 1.5/.65. One temporary effect replaces the
@@ -450,6 +469,19 @@ focused authority/AI checks. Online revision 5 gates the newly supported arena.
   matching real inventory/counters and item-model removal. Its focused inspection camera
   is identified separately from normal battle-camera evidence.
   [Loot checks](../../tests/Bomber.Game.Tests/Items/LootAvailabilityChecks.cs).
+
+### Expanded battle cover (2026-10-27)
+
+The user requested richer cover on the other battle maps using Pyramid as the
+reference, with explicit care for areas that must stay empty. This supersedes
+the former 8–16-block budgets; geometry, spawns, drops and physics retain their
+existing rules. [Layouts, protected routes and screenshots](../denser-cover.md).
+`Bomber.Game.Tests -- --cover-layout` checks all six arenas over 32 seeds,
+five block percentages, empty practice, full-density variation on every map
+and protected route connectivity from every spawn. Ordinary local starts and
+replays use fresh seeds; QA pins its seed in the playtest driver, with explicit
+alternate-seed and unpinned-start checks. Use the `cover-layout` graphical journey for High-preset battle
+screenshots, plus the existing stage journeys for real movement/bomb/loot checks.
 
 ### Item density tuning (2026-10-25)
 

@@ -96,6 +96,9 @@ public partial class BomberModel : Node3D
             case "throw":_throwPulse=1;break;
             case "pump":_pumpPulse=1;break;
             case "death":_deathPulse=1;break;
+            case "knockdown":case "player-land":_impactPulse=1;break;
+            case "recover":case "player-release":_recoverPulse=1;break;
+            case "player-grab":_liftPulse=1;break;
             case "win":case "victory":_victoryPulse=1;break;
         }
     }
@@ -131,6 +134,7 @@ public partial class BomberModel : Node3D
             var eye=new MeshInstance3D {Mesh=eyeMesh,MaterialOverride=dark,Position=new(x,EyeCenterY,0)};
             _head.AddChild(eye);_eyes.Add(eye);
         }
+        BuildMishapFace(dark);
         // The antenna pivots just inside the crown so its springy wobble never opens a gap.
         _antenna.Position=new(0,HelmetHalfHeight-.03f,HelmetForward);_head.AddChild(_antenna);
         Cylinder(_antenna,new(0,.032f,0),.058f,.1f,dark);
@@ -156,10 +160,10 @@ public partial class BomberModel : Node3D
         AddChild(_stars);
         for(int i=0;i<3;i++)
         {
-            float a=Mathf.Tau*i/3;var star=Box(_stars,new(Mathf.Cos(a)*.42f,1.62f,Mathf.Sin(a)*.42f),new(.13f,.13f,.04f),gold,.02f);
+            float a=Mathf.Tau*i/3;var star=Box(_stars,new(Mathf.Cos(a)*.42f,0,Mathf.Sin(a)*.42f),new(.13f,.13f,.04f),gold,.02f);
             star.RotationDegrees=new(0,0,45);
         }
-        _stars.Visible=false;
+        _stars.Position=new(0,StandingStarHeight,0);_stars.Visible=false;
         _nameLabel=new Label3D {Text=name,Font=BlastCircuit.UI.ArcadeTheme.Display,Position=new(0,1.87f,0),FontSize=84,PixelSize=.003f,Billboard=BaseMaterial3D.BillboardModeEnum.Enabled,Modulate=new Color("fff7d5"),OutlineModulate=new Color("232942"),OutlineSize=30,NoDepthTest=true};_nameLabel.PixelSize*=Math.Min(1,660f/Math.Max(1,_nameLabel.Font.GetStringSize(name,HorizontalAlignment.Left,-1,84).X));AddChild(_nameLabel);
         var shadow=Cylinder(this,new(0,.018f,0),.34f,.008f,art.Toy(new Color(.13f,.1f,.08f,.22f)));shadow.CastShadow=GeometryInstance3D.ShadowCastingSetting.Off;
     }
@@ -261,12 +265,13 @@ public partial class BomberModel : Node3D
         }
         surface.Index();return surface.Commit();
     }
-    public void Pose(bool carrying,bool stunned,bool ghost)
+    public void Pose(bool carrying,bool stunned,bool ghost,bool liftingPlayer=false)
     {
         if(_carrying&&!carrying)_throwPulse=1;
-        _carrying=carrying;_stunned=stunned;_stars.Visible=stunned;
+        _carrying=carrying;_stunned=stunned;_liftingPlayer=carrying&&liftingPlayer;
         if(!carrying)_charge=0;
-        if(_ghost!=ghost)SetGhostOpacity(_body,ghost?.48f:0);
+        // A fresh ghost rises out of the blast instead of popping in at full strength.
+        if(_ghost!=ghost){_ghostFade=ghost?1:0;SetGhostOpacity(_body,ghost?GhostTransparency(1):0);}
         _ghost=ghost;
     }
     private static void SetGhostOpacity(Node node,float transparency)
@@ -292,6 +297,7 @@ public partial class BomberModel : Node3D
         _kickWindupRemaining=Mathf.Max(0,_kickWindupRemaining-dt);
         _kickPulse=Mathf.MoveToward(_kickPulse,0,dt/.22f);_liftPulse=Mathf.MoveToward(_liftPulse,0,dt*3.2f);
         _deathPulse=Mathf.MoveToward(_deathPulse,0,dt*1.8f);_victoryPulse=Mathf.MoveToward(_victoryPulse,0,dt*.7f);
+        _impactPulse=Mathf.MoveToward(_impactPulse,0,dt/.28f);_recoverPulse=Mathf.MoveToward(_recoverPulse,0,dt/.45f);
         float pump=Mathf.Sin(_pumpPulse*Mathf.Pi),toss=Mathf.Sin(_throwPulse*Mathf.Pi);
         float kickTime=1-_kickPulse;
         float kick=_kickWinding?-.5f*(1-Mathf.Clamp(_kickWindupRemaining/(4f/30f),0,1)):
@@ -335,7 +341,7 @@ public partial class BomberModel : Node3D
         float leftImpact=leftStep.Impact*freeStride,rightImpact=rightStep.Impact*freeStride;
         _leftBoot.Scale=BootScale*new Vector3(1+leftImpact*.09f,1-leftImpact*.14f,1+leftImpact*.05f);
         _rightBoot.Scale=BootScale*new Vector3(1+rightImpact*.09f,1-rightImpact*.14f,1+rightImpact*.05f);
-        float spread=.25f+_charge*.065f*_carryBlend;
+        float spread=.25f+_charge*.065f*_carryBlend+(_liftingPlayer?.05f*_carryBlend:0);
         _leftArm.Position=new(-spread,.68f+_carryBlend*.12f+Mathf.Max(0,swingLeft)*.015f,swingLeft*.02f);_rightArm.Position=new(spread,.68f+_carryBlend*.12f+Mathf.Max(0,swingRight)*.015f,swingRight*.02f);
         _leftArm.Scale=new(1,1+_carryBlend*.8f,1);_rightArm.Scale=new(1,1+_carryBlend*.8f,1);
         // Forward swings reach higher and cross in toward the chest; back swings stay short.
@@ -351,8 +357,7 @@ public partial class BomberModel : Node3D
         _body.Rotation=new(_lean.Value+low*.03f*freeStride-_carryBlend*_charge*.025f+toss*.12f,-shoulderTurn*.35f,(_stunned?Mathf.Sin(_time*9)*.22f:0)+death*.48f-hipWeight*.05f+walk*.012f+sway*.012f+_bank.Value);
         _body.Position+=new Vector3(0,-drop*.035f,kick*.045f+drop*.018f);
         _body.Rotation+=new Vector3(-kick*.16f,kick*.1f,0);
-        _body.Position=_body.Position.Lerp(new Vector3(0,.22f,0),_downBlend);
-        _body.Rotation=_body.Rotation.Lerp(new Vector3(_airborne?Mathf.Sin(_time*8)*.3f:0,0,1.35f+(_heldVictim?Mathf.Sin(_time*12)*.045f:0)),_downBlend);
+        ApplyMishapBody(dt);
         _upperBody.Rotation=new(low*.03f*freeStride,shoulderTurn,hipWeight*.022f);
         // The heavy helmet trails the body's rise and fall, nods into each landing,
         // counters the hip roll and leads turns. It keeps its round proportions.
@@ -364,6 +369,7 @@ public partial class BomberModel : Node3D
         _head.Position=new(-hipWeight*.008f,HeadCenter+headLag*.6f,0);
         _head.Scale=new(1/(1+suitSquash*.5f),1/(1-suitSquash),1/(1+suitSquash*.5f));
         _head.Rotation=new(breath*.025f-_lean.Value*.55f-pump*.08f-headLag*2.2f,glance*.11f-shoulderTurn*.62f+_headTurn.Value,_headRoll.Value-sway*.025f);
+        ApplyMishapHead();
         // The antenna ball trails the helmet: starts tip it back, steps make it
         // jiggle, and turns swing it outward before it settles upright again.
         float headPitch=_body.Rotation.X+_head.Rotation.X,headRoll=_body.Rotation.Z+_head.Rotation.Z;
@@ -378,9 +384,10 @@ public partial class BomberModel : Node3D
         float blinkPhase=_time%4.7f;
         float eyeHeight=blinkPhase>4.52f?Mathf.Max(.12f,Mathf.Abs(blinkPhase-4.61f)/.09f):1;
         foreach(var eye in _eyes)eye.Scale=new(1,eyeHeight,1);
-        _stars.Rotation=new(0,_time*3,0);
+        ApplyMishapFace();
         _nameLabel.Position=new(0,1.87f+_carryBlend*(.65f+_charge*.35f),0);
         Scale=Vector3.One*(_ghost?.85f:1.12f*StatusScale);
+        if(_ghost&&_ghostFade>0){_ghostFade=Mathf.MoveToward(_ghostFade,0,dt/1.6f);SetGhostOpacity(_body,GhostTransparency(_ghostFade));}
     }
     /// <summary>Eases toward a limit instead of stopping dead against it.</summary>
     private static float SoftLimit(float value,float limit)=>limit*(float)Math.Tanh(value/limit);

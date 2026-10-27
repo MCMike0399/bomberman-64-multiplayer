@@ -391,6 +391,15 @@ For v0.27 connection changes, include the `peer-rooms` journey and the
 [peer transport checks](../peer-hosting.md#verification-entrypoints). The official
 WebRTC extension is a hash-pinned build dependency, installed before import/export.
 
+## Battle polish integration regression (2026-10-27)
+
+`battle-polish-regression` combines first-use rendering, all randomized-cover stage
+journeys, camera framing, active-blast hits, local/online post-match map selection,
+Quick Play permissions/countdown, the asset audit, pickup personality, the Greedy
+Trap canal and mishap poses. Run it on the final Mac export when integrating these
+features. Quick Play's map-selection controls stay disabled even for a lone public
+room owner after its countdown cancels; the private-host editor remains available.
+
 ## Automatic updater checks
 
 Read [automatic updates](../automatic-updates.md) before changing release signing,
@@ -411,11 +420,19 @@ player's body while excluding its feet. Ordinary throws and remote inputs cover
 normal battle and practice, with and without a heart. Geometry checks retain
 out-of-range, elevated-player, hard-terrain, soft-cover, red-piercing and solid-deck
 boundaries. The AI suite checks the corresponding overhead danger interval.
+
+The focused suite also walks players into already-active small, three-pump and
+maximum-level blasts, with expired-blast controls, hearts, owner attribution and
+original-cover/red-piercing regressions. The missed-hit red witness was a player
+3.30 units from a radius-4 center at age 0.33 seconds who survived because only
+ignition applied damage. Retain this temporal case separately from spatial tests.
+
 The `blast-hitbox` native journey walks three humans on the stock Temple, collects
 Remote, pumps/aims/throws and detonates over the victim. It checks the actual blast
 event's position and death, and captures the held bomb, overhead flight and
-explosion. It belongs to `all` and `core-headless`; graphical evidence uses the
-isolated desktop.
+explosion. It also enters small and three-pump blooms after surviving ignition,
+checks the actual death position/age and captures ignition and contact. It belongs
+to `all` and `core-headless`; graphical evidence uses the isolated desktop.
 
 ## Ledge fall verification
 
@@ -539,6 +556,13 @@ native `greedy-trap` journey cover its three stories, six flights, actual bottom
 loot, quality/lighting variants and crushing animation. The
 `greedy-trap-regression` suite adds startup preparation, setup, graphics,
 lighting, framing and real network regression. See [stage verification](../greedy-trap.md).
+The `greedy-canal` leaf, included in `greedy-trap-regression` and
+`scenery-regression`, checks the actual rotating wheel mesh bounds against the
+quay/fortress clearance through a full turn, checks nearby rowboat/oar clearance,
+and captures ordinary battle and labelled canal inspection views at all presets.
+Headless runs check geometry at the current preset; graphical runs select each
+preset through Settings. See the [capture provenance](../media/greedy-waterwheel/manifest.json).
+
 
 ## Top Rules verification
 
@@ -585,6 +609,18 @@ policy intact rather than weakening it to accommodate the fixture.
 For the combined v0.28 release, `stage-fidelity` is the focused fresh-process suite for all reconstructed arenas, explosion presentation and tutorial. The complete `all` suite and package gate remain the release regression. [Combined receipts](../stages-release-028.md).
 
 ## Adaptive multiplayer verification (v0.29)
+
+For Quick Play changes, run the deterministic timer/permissions/lifecycle regressions:
+
+```sh
+dotnet run --project tests/Bomber.Game.Tests -- --public-matchmaking
+```
+
+The managed smoke's `--quick-only` uses real queue admission and the complete
+one-minute wait without a production timer override. The graphical `quick-play`
+leaf (also included in `network`) checks actual lobby text, countdown updates,
+hidden public owner actions, personal Settings return and departure cancellation.
+Keep source verification separate from a released client/server deployment.
 
 The managed gate includes real adaptive sessions, a separately configured owned
 server with zero simulation permits to force relay, and a two-process Valkey

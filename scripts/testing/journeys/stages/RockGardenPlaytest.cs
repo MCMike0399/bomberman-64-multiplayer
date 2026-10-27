@@ -16,7 +16,7 @@ public partial class PlaytestDriver
         Check(State.GetProperty("players").GetArrayLength()==4,"garden quadrant starts support ordinary four-player battle");
         var arena=_root.GetChildren().OfType<ArenaView>().Single();
         Check(arena.FindChildren("*","",true,false).OfType<Node3D>().Count(n=>n.Name.ToString().StartsWith("GardenColumn"))==5,"actual garden renders five round columns");
-        Check(arena.FindChildren("*","",true,false).OfType<Node3D>().Count(n=>n.Name.ToString().StartsWith("GardenBoulder"))==16,"actual garden renders sixteen destructible boulders");
+        Check(arena.FindChildren("*","",true,false).OfType<Node3D>().Count(n=>n.Name.ToString().StartsWith("GardenBoulder"))==64,"actual garden renders four generous boulder groves");
         CheckFraming(stage.Id,GetWindow().Size);
         await Capture("rock-garden-four-player-opening");
         _root.Back();await Frames(3);

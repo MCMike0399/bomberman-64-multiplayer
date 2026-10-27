@@ -52,12 +52,15 @@ public static class EffectWarmup
             Add(new ExplosionView(art,4f,true,.08f),new(0,0,4));
             Add(new KickBurst(art,Vector3.Forward),new(-6,0,4));
             Add(new ExitEffect(art,true),new(-2,0,4));Add(new ExitEffect(art,false),new(2,0,4));
+            // Zap flash first, then (after the advance below) flames on soot and the closing smoke puff.
+            var flames=new BurnoutEffect(art,ArtMaterials.PlayerColors[0],0);Add(flames,new(-2,0,8));
+            var smoke=new BurnoutEffect(art,ArtMaterials.PlayerColors[0],0);Add(smoke,new(2,0,8));
             var actor=new BomberModel(art,ArtMaterials.PlayerColors[0],"");actor.ShowName(false);actor.Pose(false,true,false);
             Add(actor,new(6,0,4));
             for(int i=0;i<6;i++)ArtGeometry.Box(world,new(-5+i*2,.4f,6),Vector3.One*(.12f+i*.008f),art.Color(new("d5b472")),.02f);
             for(int frame=0;frame<3;frame++)await Draw(owner);
             // Geometry transparency activates another pipeline during the fade.
-            foreach(var effect in effects)effect._Process(effect is ExitEffect?.4:.2);
+            foreach(var effect in effects)effect._Process(effect==flames?1:effect==smoke?1.8:effect is ExitEffect?.4:.2);
             actor.Pose(false,true,true);
             for(int frame=0;frame<3;frame++)await Draw(owner);
             // Synchronize the small actual render, rather than assuming a preload

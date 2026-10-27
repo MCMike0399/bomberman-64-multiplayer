@@ -56,7 +56,7 @@ internal static class RockGardenChecks
                 Assert(State(disabled).GetProperty("meteors").GetArrayLength()==0,"Disabled sudden death or practice spawned fireballs.");
             }
         });
-        run("Rock Garden center column shields blasts and sparse cover respects advanced budget",()=>
+        run("Rock Garden center column shields blasts and grove cover respects advanced budget",()=>
         {
             var stage=BlastStages.Get(BlastStages.RockGarden);var cover=new SoftBlockGrid(19,19);
             Assert(!BlastGeometry.Contains(stage,cover,8.5f,0,9.5f,4,10.5f,0,9.5f,true),"Central column failed to shield a piercing blast.");
@@ -64,7 +64,7 @@ internal static class RockGardenChecks
             {
                 var match=new LocalMatch(new MatchOptions{Stage=BlastStages.RockGarden,HumanPlayers=8,BotPlayers=0,Advanced=new AdvancedRules{BlockPercent=percent}});
                 var bits=Convert.FromBase64String(State(match).GetProperty("softBlocks").GetString()!);
-                Assert(bits.Sum(b=>System.Numerics.BitOperations.PopCount((uint)b))==16*percent/100,"Sparse boulder count ignored advanced settings.");
+                Assert(bits.Sum(b=>System.Numerics.BitOperations.PopCount((uint)b))==64*percent/100,"Boulder grove count ignored advanced settings.");
                 if(percent==100)
                 {
                     int central=Enumerable.Range(0,19).SelectMany(x=>Enumerable.Range(0,19).Select(z=>(X:x,Z:z)))

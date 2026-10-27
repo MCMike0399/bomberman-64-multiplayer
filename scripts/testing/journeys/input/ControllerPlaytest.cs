@@ -381,7 +381,7 @@ public partial class PlaytestDriver
         _root.StartLocal(new SessionSettings(Stage:"rock-garden",Bots:0),1,practice:true);
         await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"retained-binding menu trial reaches fight",150);
         var session=_root.ActiveSession;var bindings=hub.Bindings;
-        _root.Navigate("Results");await ControllerFrames(3);FindButton("PLAY AGAIN").GrabFocus();await ControllerFrames(1);
+        _root.Navigate("Results");await ControllerFrames(3);FindButton("MAP SELECT").GrabFocus();await ControllerFrames(1);
         foreach(float value in new[]{.3f,.35f,.42f,.48f,.65f}){CtlAxis(1001,JoyAxis.LeftX,value);await ControllerFrames(1);}
         Check(FindButton("MODE SELECT").HasFocus(),"results analog navigation works while match controller bindings remain attached");
         CtlAxis(1001,JoyAxis.LeftX,0);await ControllerFrames(2);

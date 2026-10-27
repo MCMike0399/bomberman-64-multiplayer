@@ -83,6 +83,8 @@ Black bombs are the starting type. A bomb slot holds **Red**, **Remote** or **Bo
 
 ![Blue power explosion from a red bomb](docs/images/current/blast-power.png)
 
+Bomb and flame counters start at **0 upgrades**: two active bombs and base blast strength. Collect Bomb Up and Fire Up to increase them.
+
 **Advanced settings** controls block amount, independent item drop chance (40% default), item lifetime (20 seconds), blast and bomb stack caps (five each), temporary effect duration (10 seconds), and enabled items. Default drops favor capacity/fire upgrades (60%), temporary effects (30%) and bomb types (10%). Tiny, Big, Haste and Slow share one temporary-effect slot. Practice on Sunken Temple and Circuit Garden starts with six expiring training pickups; Reset Practice rolls a fresh cache.
 
 ## Controls
@@ -114,7 +116,7 @@ Menus accept WASD/arrows, Enter to confirm and Esc to return. Tab / Shift+Tab mo
 
 ## Online battle
 
-Use **Online Battle** with `https://blast.burbuja-lab.dev`, then choose **Play online**, **Create private room** or **Join with code**. Public rooms start an eight-second countdown once two people connect; the owner can start sooner. Private rooms wait for their owner to start. Each online instance controls one human seat.
+Use **Online Battle** with `https://blast.burbuja-lab.dev`, then choose **Play online**, **Create private room** or **Join with code**. Quick Play uses shared rules and an automatic one-minute countdown with at least two connected people. Player changes restart the minute; below two, it cancels. Anonymous players cannot start early or edit the rules. Private rooms wait for their owner to start. Each online instance controls one human seat. See [matchmaking policy and source/release status](docs/smart-multiplayer.md).
 
 Create a room, use **Copy code**, and have other players join with that code. The leader can edit room settings before starting. After results, everyone returns to the same room; leadership transfers if the leader leaves. Your name and server address are saved between launches; choose your suit before joining. Private hosting offers **Automatic**, **Server only** and **Player hosted**. Automatic chooses dedicated or qualified player authority using capacity and measured routes. Server only keeps authority on the cluster. Automatic and Server only support one human with CPUs; Player hosted needs two humans.
 

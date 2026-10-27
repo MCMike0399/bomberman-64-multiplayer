@@ -9,6 +9,12 @@ internal static class BlastHitboxChecks
     public static int Run()
     {
         int count=0;
+        foreach(int pumps in new[]{0,3})
+        foreach(bool heart in new[]{false,true})
+        foreach(bool expired in new[]{false,true})
+        {CheckLateEntry(pumps,heart,expired);count++;}
+        CheckLateEntry(3,false,false,4);count++;
+        foreach(bool red in new[]{false,true}){CheckCoverDuringBloom(red);count++;}
         foreach(int pumps in new[]{3,0})
         foreach(bool practice in new[]{false,true})
         foreach(bool heart in new[]{false,true})
@@ -92,4 +98,74 @@ internal static class BlastHitboxChecks
         });
         return count;
     }
+    private static void CheckLateEntry(int pumps,bool heart,bool expired,int firePickups=0)
+    {
+        var items=new List<(int,int,string)>{(8,8,"remote")};
+        if(heart)items.Add((8,19,"heart"));
+        for(int i=0;i<firePickups;i++)items.Add((8,8,"fire"));
+        var stage=new StageLayout{Id="fixture",Width=25,Height=25,Cells=FlatArena([(8,8)],25).Cells,
+            Spawns=[(8,8),(8,19),(23,23)],SoftBlockDensity=0,InitialItems=items};
+        var match=new LocalMatch(new MatchOptions{HumanPlayers=3,BotPlayers=0,Ghosts=false,SuddenDeath=false},stage);
+        Fight(match);
+        match.SetInput(0,new PlayerInput(0,0,A:true,B:true));Step(match,2);
+        for(int pump=0;pump<pumps;pump++)
+        {
+            match.SetInput(0,new PlayerInput(0,0,B:true));Step(match,2);
+            match.SetInput(0,new PlayerInput(0,0,A:true,B:true));Step(match,16);
+        }
+        match.SetInput(0,new PlayerInput(0,0,B:true,AimTarget:new(8.5f,8.5f)));Step(match,2);
+        match.SetInput(0,new PlayerInput(-1,0));Step(match,32);
+        match.SetInput(0,default);Step(match,30);
+        var bomb=State(match).GetProperty("bombs")[0];
+        float bx=bomb.GetProperty("x").GetSingle(),bz=bomb.GetProperty("z").GetSingle();
+        Assert(bomb.GetProperty("pumps").GetInt32()==pumps,"Late-entry bomb did not complete the requested pumps.");
+        float radius=bomb.GetProperty("effectiveLevel").GetInt32()*.9f+.4f;
+        // Approach to just outside the full-size sphere before ignition.
+        match.SetInput(1,new PlayerInput(0,-1));
+        for(int tick=0;tick<100&&Player(match,1).GetProperty("z").GetSingle()>bz+radius+.6f;tick+=2)Step(match,2);
+        match.SetInput(1,default);Step(match,2);
+        match.SetInput(0,new PlayerInput(0,0,R:true));Step(match,2);
+        Assert(State(match).GetProperty("hazards").GetArrayLength()==1,"Remote did not create the late-entry blast: "+State(match));
+        Assert(Player(match,1).GetProperty("alive").GetBoolean(),"Late-entry victim was already inside at ignition.");
+        if(expired)Step(match,14);
+        match.SetInput(1,new PlayerInput(0,-1));Step(match,8);
+        match.SetInput(1,default);
+        var victim=Player(match,1);var hazards=State(match).GetProperty("hazards");
+        float dx=victim.GetProperty("x").GetSingle()-bx,dz=victim.GetProperty("z").GetSingle()-bz;
+        Console.WriteLine($"WITNESS late-entry distance={MathF.Sqrt(dx*dx+dz*dz)} radius={radius} hazards={hazards} alive={victim.GetProperty("alive")}");
+        Assert(dx*dx+dz*dz<radius*radius,"Late-entry victim never entered the sphere.");
+        Assert((hazards.GetArrayLength()==0)==expired,"Blast lifetime does not match the entry fixture.");
+        Assert(victim.GetProperty("alive").GetBoolean()==(heart||expired),"Player walked inside a still-active explosion and survived, or an expired/protected blast killed them.");
+        if(heart)
+        {
+            Assert(victim.GetProperty("heart").GetBoolean()==expired,"Active bloom did not consume exactly one heart.");
+            Step(match,18);
+            Assert(Player(match,1).GetProperty("alive").GetBoolean(),"Lingering blast bypassed heart protection.");
+        }
+        if(!heart&&!expired)
+            Assert(Events(match).Any(e=>Kind(e)=="death"&&e.GetProperty("playerId").GetString()=="local-1"&&
+                e.GetProperty("causedBy").GetString()=="local-0"),"Late-entry kill lost the bomb owner's attribution.");
+        Console.WriteLine($"PASS late-entry pumps={pumps} firePickups={firePickups} heart={heart} expired={expired}");
+    }
+
+    private static void CheckCoverDuringBloom(bool red)
+    {
+        var stage=new StageLayout{Id="fixture",Width=21,Height=21,Cells=FlatArena([(3,8)],21).Cells,
+            Spawns=[(3,8),(6,8),(19,19)],SoftBlockDensity=0,FixedSoftBlocks=new HashSet<(int,int)>{(5,8)},
+            InitialItems=[(3,8,red?"red":"remote"),(3,8,"fire"),(3,8,"fire"),(3,8,"fire")]};
+        var match=new LocalMatch(new MatchOptions{HumanPlayers=3,BotPlayers=0,Ghosts=false,SuddenDeath=false},stage);
+        Fight(match);
+        match.SetInput(0,new PlayerInput(0,0,A:true));Step(match,2);
+        match.SetInput(0,default);Step(match,2);
+        if(!red)match.SetInput(0,new PlayerInput(0,0,R:true));
+        for(int ticks=0;ticks<100&&State(match).GetProperty("hazards").GetArrayLength()==0;ticks++)Step(match,1);
+        Assert(State(match).GetProperty("hazards").GetArrayLength()==1,"Cover fixture did not detonate.");
+        byte[] blocks=Convert.FromBase64String(State(match).GetProperty("softBlocks").GetString()!);
+        Assert((blocks[(8*21+5)/8]&(1<<((8*21+5)%8)))==0,"Explosion did not destroy the shielding block.");
+        Step(match,10);
+        Assert(Player(match,1).GetProperty("alive").GetBoolean()!=red,
+            "Lingering blast ignored original cover shielding or red piercing.");
+        Console.WriteLine($"PASS original cover shields throughout bloom; red={red}");
+    }
+
 }

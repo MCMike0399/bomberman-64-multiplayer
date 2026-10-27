@@ -60,7 +60,14 @@ public partial class ArenaView
                         {exiting.Position=latest;_playerMotion["p:"+player]=new SnapshotMotion(latest,_snapshotTick);}
                         pos.Y=WaterHeight;
                     }
-                    _effects.AddChild(new ExitEffect(_art,water){Position=pos+Vector3.Up*(water?.12f:.8f)});CountEffect(water?"splash":"death");break;
+                    if(water)_effects.AddChild(new ExitEffect(_art,true){Position=pos+Vector3.Up*.12f});
+                    else
+                    {
+                        // Blasts leave a charred, flailing stand-in; the real actor is already gone or ghosted.
+                        var look=player!=null&&_lastLooks.TryGetValue("p:"+player,out var last)?last:(Suit:Colors[0],Facing:0f);
+                        _effects.AddChild(new BurnoutEffect(_art,look.Suit,look.Facing){Position=pos});
+                    }
+                    CountEffect(water?"splash":"death");break;
                 case "round-ready":_audio.RoundReady();break;
                 case "fight":_audio.Fight();break;
                 case "hurry":_audio.Hurry();break;

@@ -6,6 +6,7 @@ if(args.Contains("--loot-density")){ItemDensityChecks.Run();return;}
 if(args.Contains("--ledge-drops")){LedgeDropChecks.Run();return;}
 if(args.Contains("--falling")){FallingChecks.Run();return;}
 if(args.Contains("--measure-falls")){FallingChecks.Measure();return;}
+if(args.Contains("--public-matchmaking")){PublicMatchmakingChecks.Run();return;}
 if(args.Contains("--adaptive-rooms")){AdaptiveRoomChecks.Run();return;}
 if(args.Contains("--stage-integration")){StageIntegrationChecks.Run();return;}
 if(args.Contains("--tutorial-review")){TutorialChecks.ReviewRegressions();return;}
@@ -47,6 +48,7 @@ SnapshotChecks.Run(Run);
 passed += FallingChecks.Run();
 passed += OnlineRoomChecks.Run();
 passed += AdaptiveRoomChecks.Run();
+passed += PublicMatchmakingChecks.Run();
 MatchRulesChecks.Run(Run);
 TerrainChecks.Run(Run);
 GreedyTrapChecks.Run(Run);

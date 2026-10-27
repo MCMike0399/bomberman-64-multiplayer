@@ -17,16 +17,17 @@ public static partial class BlastStages
             // Low near rim keeps the whole court readable from the battle camera.
             cells[n,size-1]=new CellDef{Kind=CellKind.Pillar,ObstacleHeight=.35f};
         }
-        (int X,int Z)[] cones=[(6,2),(10,3),(9,4),(6,5),(10,5),(11,5),(14,7),(16,7),
-            (5,8),(2,10),(6,10),(7,12),(15,12),(14,14),(10,15),(12,15)];
+        // Sample each quadrant independently. Only the perimeter loop and
+        // central cross are reserved; individual spires are never mirrored.
         return new StageLayout
         {
             Id=BlizzardBattle,Name="Blizzard Battle",Width=size,Height=size,Cells=cells,
             Spawns=[(2,2),(16,2),(2,16),(16,16),(9,1),(9,17),(1,8),(17,10)],
-            SoftBlockDensity=1,MaxSoftBlocks=16,OpeningCoverPerSpawn=0,SoftBlockHeight=1.3f,
-            CoverAreas=[new("ice-cones",1,1,17,1,17)],
+            SoftBlockDensity=1,MaxSoftBlocks=64,OpeningCoverPerSpawn=0,SoftBlockHeight=1.3f,
+            CoverAreas=[new("northwest-bank",.25,1,8,1,8),new("northeast-bank",.25,10,17,1,8),
+                new("southwest-bank",.25,1,8,10,17),new("southeast-bank",.25,10,17,10,17)],
             ClearCells=Enumerable.Range(1,17).SelectMany(x=>Enumerable.Range(1,17).Select(z=>(X:x,Z:z)))
-                .Where(c=>!cones.Contains(c)).ToHashSet(),
+                .Where(c=>c.X is 1 or 9 or 17 || c.Z is 1 or 9 or 17).ToHashSet(),
         };
     }
 }
