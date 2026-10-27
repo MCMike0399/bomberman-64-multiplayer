@@ -386,7 +386,7 @@ render every display frame on Medium/High and at 30 Hz on Low
 shadowed warm key, cool fill, a rear rim light, sky-fed reflections behind a
 transparent background, and SSAO except on Low.
 
-Low uses 2× MSAA, 85% 3D resolution with spatial FSR, 1024 shadows and no SSAO/glow.
+Low uses 2× MSAA, 75% 3D resolution with spatial FSR, 1024 shadows and no SSAO/glow.
 Medium uses native resolution, 2× MSAA, 2048 shadows and half-resolution SSAO.
 High keeps native/2×, raises shadows to 4096, uses higher-quality SSAO (also
 half-resolution since v0.39; see [GPU cooling](../performance-research.md#cooler-gpu-at-the-60-fps-cap-2026-10-27)),
@@ -395,8 +395,11 @@ glow intensity. All menu textures remain at output resolution; no TAA/FXAA.
 Low skips fine shader noise/ripples and hides the `StageScenery` decorations
 while retaining the same arena geometry, lighting palettes, shoreline and
 gameplay. Low also keeps opaque water; Medium adds clear refracting shallows,
-and High alone adds diorama depth of field, contact-hardening sun shadows and
-half-resolution SSIL bounce (since v0.39; Medium had blur and PCSS before).
+and High alone adds diorama depth of field, contact-hardening sun shadows,
+half-resolution SSIL bounce and screen-space scene reflections in the water
+(`SCENE_REFLECTIONS` variant). The 2026-10-27 preset identity pass records
+these choices, and the subsurface-figure and wider-shadow-kernel ideas the user
+rejected on sight, in [graphics research](../graphics-research.md#preset-identity-2026-10-27).
 Shadow depth bias scales with preset and doubles for Morning/Afternoon; the
 smaller atlas otherwise exposes diagonal self-shadow marks under grazing light.
 

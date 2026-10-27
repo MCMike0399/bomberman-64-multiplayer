@@ -75,7 +75,7 @@ public partial class DisplayModeController : Node
         var window=GetWindow();float scale=1;
         if(window.Mode is Window.ModeEnum.Fullscreen or Window.ModeEnum.ExclusiveFullscreen&&Resolution!=Vector2I.Zero)
             scale=Math.Min(1,Math.Min((float)Resolution.X/Math.Max(1,window.Size.X),(float)Resolution.Y/Math.Max(1,window.Size.Y)));
-        scale*=GraphicsQuality.Current==GraphicsPreset.Low?.85f:1;
+        scale*=GraphicsQuality.RenderScale;
         window.Scaling3DScale=Math.Clamp(scale,.1f,1);
         window.Scaling3DMode=scale<1?Viewport.Scaling3DModeEnum.Fsr:Viewport.Scaling3DModeEnum.Bilinear;
         var render=new Vector2I(Mathf.RoundToInt(window.Size.X*window.Scaling3DScale),Mathf.RoundToInt(window.Size.Y*window.Scaling3DScale));
