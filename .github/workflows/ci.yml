@@ -66,7 +66,7 @@ jobs:
     needs: public
     if: needs.public.outputs.runtime == 'true' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.KERNEL_CI_ENABLED == 'true'
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -348,7 +348,7 @@ jobs:
     name: Exported windows-x64 smoke
     needs: [windows-package, managed]
     runs-on: windows-2025
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -365,8 +365,12 @@ jobs:
           name: Blast-Circuit-server-dotnet10
           path: artifacts
       - run: python tools/packaging/package-download.py --target windows-x64
-      - run: dotnet run --project tests/Bomber.DesktopUpdate.Tests -m:1
+      - run: |
+          dotnet build tests/Bomber.DesktopUpdate.Tests --nologo -m:1
+          dotnet run --no-build --project tests/Bomber.DesktopUpdate.Tests
       - run: python tools/packaging/verify-desktop.py --target windows-x64
+      - run: python tools/packaging/startup-desktop.py --target windows-x64
+      - run: python tools/packaging/verify-desktop.py --target windows-x64 --graphical
       - run: python tools/packaging/package-update-fixture.py --target windows-x64 --unpack
       - run: python tools/packaging/verify-desktop-update.py --target windows-x64
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -375,6 +379,10 @@ jobs:
           name: Blast-Circuit-windows-x64-smoke
           path: |
             artifacts/Blast-Circuit-windows-x64-smoke.json
+            artifacts/Blast-Circuit-windows-x64-graphical.json
+            artifacts/Blast-Circuit-windows-x64-startup.json
+            artifacts/Blast-Circuit-windows-x64-startup-details/**/runtime.log
+            artifacts/Blast-Circuit-windows-x64-startup-details/**/*.png
             artifacts/Blast-Circuit-windows-x64-updater-tests.json
             artifacts/Blast-Circuit-windows-x64-updater-details/**/runtime.log
             artifacts/Blast-Circuit-windows-x64-updater-details/**/summary.json
@@ -388,7 +396,7 @@ jobs:
             artifacts/Blast-Circuit-windows-x64-regression-details/**/runner-summary.json
             artifacts/Blast-Circuit-windows-x64-regression-details/**/junit.xml
             artifacts/Blast-Circuit-windows-x64-regression-details/**/runtime.log
-            artifacts/Blast-Circuit-windows-x64-regression-details/**/failure.png
+            artifacts/Blast-Circuit-windows-x64-regression-details/**/*.png
           retention-days: 14
           if-no-files-found: error
 

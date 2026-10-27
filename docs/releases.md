@@ -7,13 +7,12 @@ server assemblies embed these values. `X-Blast-Protocol` is the exact token
 release tokens, even when the schema revision stays the same. Increase the schema
 revision for incompatible peer messages as well. Local play is unaffected.
 
-Enabled [desktop clients](desktop-clients.md) are packaged and smoke-tested on
-their target OS from the same trusted run. Their archives, metadata and smoke
-receipts are included in the signed delivery inventory and anonymous public
-verification. Missing/failed desktop jobs block promotion before any host changes.
-These initial desktop ports use manual updates; the Mac updater format is unchanged.
+Enabled [desktop clients](desktop-clients.md) are packaged and tested on their
+target OS from the same trusted run. Native regression, saved startup, signed
+updater transactions and the EXE/AppImage/DMG downloads are required before
+promotion or host changes. The Mac updater format and public key are preserved.
 
-**v0.40.0/build 48/schema 6** is delivered. The [delivery receipt](verification.md#v0400-delivered)
+**v0.42.1/build 52/schema 6** is delivered. The [delivery receipt](verification.md#v0421-delivered)
 records the exact CI artifacts, production rollout and signed update. Earlier clients advertise numeric `3`, `4` or branch-specific stage tokens and are rejected by the
 new server before identity creation, queue/room admission or WebSocket upgrade.
 Authenticated leave/cancel and operator endpoints preserve their existing policy.
@@ -410,3 +409,17 @@ release workflows. Fork workflows require approval from all outside contributors
 The [delivery receipt](verification.md#v0310-delivered) supersedes the earlier
 source-only setup audit above. Installed scripts, private host configuration and
 recovery logs remain in operator storage.
+
+
+## Desktop client release gates
+
+Windows/Linux delivery source adds required native archived-game regression jobs.
+Promotion requires complete core and graphical journey coverage, the nine saved
+startup cases, actual game updater install/rollback receipts, and player-facing
+EXE/AppImage/DMG downloads bound to the original portable archive. The native
+job's updater fixture has a deliberately newer test-only identity and is never
+published. Failed jobs retain allowlisted logs, receipts and captures. Missing,
+stale, partial, wrong-platform or runtime-error evidence blocks delivery.
+The existing Mac startup/update, monotonic identity, fleet rollout and anonymous
+post-publication checks remain required. Read [desktop clients](desktop-clients.md)
+for exact commands and remaining hardware/device evidence boundaries.
