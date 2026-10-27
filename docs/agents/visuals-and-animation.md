@@ -111,7 +111,15 @@ The body has a short airborne beat, squashes toward the planted boots and leans
 into the run with the legs compensated. Damped springs (fixed 240 Hz substeps)
 give gloves, lean, turn bank, head and the crown antenna momentum, lag and
 overshoot; avoid replacing them with phase-locked sines. The antenna pivots inside
-the crown and is soft-limited. See [iteration twenty](../history/iteration20-walking.md). The carry socket follows `upperParts` with
+the crown and is soft-limited. Since 2026-10-26 the hop weight is ballistic: the contact
+weight is squared, so the body hangs near its apex for most of each beat and
+lands briefly (same .04 hop and .055 squash amplitudes; the boot-lift ceiling in
+`movement`/`walk-feel` is .14 because a passing boot is sampled up to .003
+higher). The user accepted it from before/after frames at the recorded 30 FPS.
+Known trade: at the opt-in 30 FPS cap the landing takes one of five frames
+(worst alignment .89 of the bounce, the symmetric cosine reached .75); at the
+default 60 FPS it spreads over two frames (.44). `movement` sweeps start
+offsets at both rates, so do not judge the hop from one alignment. See [iteration twenty](../history/iteration20-walking.md). The carry socket follows `upperParts` with
 the hands; a new pivot without updating the socket can separate bomb and hands.
 Keep local/world conversions explicit (`ToGlobal`, arena-local attachment and
 `TempleStageView.HeightScale`). `BombThrowRules` owns authority launch height;

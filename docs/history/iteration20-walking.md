@@ -86,3 +86,22 @@ head bounds are retained.
 
 Whether this reads as charming and "original" is the user's call; these checks
 establish mechanics, not approval.
+
+## Addendum 2026-10-26: ballistic hop timing
+
+The user approved this walk and model as the game's identity, then accepted one
+timing-only polish from before/after frames: `BomberModel` squares the contact
+weight (`low*=low`) so the body spends most of each beat near the apex of its
+hop and drops through a brief landing. Stride, amplitudes, springs and geometry
+are unchanged. Movement at 30/60/120 FPS still passes (bounce range .028,
+compression .052, skating .06–.09, 12 contacts per 18 units).
+
+The trade is at the opt-in 30 FPS cap. With five frames per step, a landing
+that takes one frame moves up to .89 of the bounce in that frame at the worst
+phase alignment; the symmetric cosine reached .75 at its worst alignment, and
+the old `walk-phrasing` check only ever sampled one alignment, so its earlier
+pass was partly luck. The check now sweeps four start offsets at 30 and 60 FPS
+with bounds .92 and .55 (60 FPS worst case is .44). The boot-lift ceiling in
+`movement` and `walk-feel` rose from .135 to .14 because the three-quarter leg
+already sampled .1345 before and a passing boot now sits up to .003 higher
+while the body hangs. Evidence: `artifacts/walk-hang/{before,after,movement,compare}`.
