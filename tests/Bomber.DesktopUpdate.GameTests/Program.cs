@@ -97,7 +97,7 @@ foreach (var testCase in new[] { (Name:"successful-install",Interrupt:false,High
         if (interrupt)
         {
             if (File.Exists(Path.Combine(prepared.Stage, "healthy"))) throw new Exception("Candidate already reported health before the deliberate failure.");
-            using var candidate = MarkedProcess(pidPath);
+            using var candidate = DesktopProcessIdentity.OpenMarker(pidPath);
             candidate.Kill(true); await candidate.WaitForExitAsync(timeout.Token);
         }
         string receipt = Path.Combine(history, "last-update.txt");
@@ -116,7 +116,7 @@ foreach (var testCase in new[] { (Name:"successful-install",Interrupt:false,High
                 throw new Exception("Updated game did not use the intended platform renderer.");
             if(testCase.High&&(report.GetProperty("graphics").GetString()!="high"||report.GetProperty("window").GetString()!="fullscreen"))
                 throw new Exception("Saved High/fullscreen update did not restore both applied settings.");
-            using var running = MarkedProcess(pidPath);
+            using var running = DesktopProcessIdentity.OpenMarker(pidPath);
             if (running.HasExited || (await File.ReadAllTextAsync(Path.Combine(prepared.Stage, "healthy"), timeout.Token)).Trim() != version)
                 throw new Exception("Installed game did not remain healthy after helper exit.");
             running.Kill(true); await running.WaitForExitAsync(timeout.Token);
@@ -131,7 +131,7 @@ foreach (var testCase in new[] { (Name:"successful-install",Interrupt:false,High
         {
             if (!Inventory(target, image).SequenceEqual(initialInventory)) throw new Exception("Rollback did not restore the complete original game inventory.");
             await Task.Delay(1500, timeout.Token);
-            using var restored = MarkedProcess(Path.Combine(prepared.Stage, "restoredpid"));
+            using var restored = DesktopProcessIdentity.OpenMarker(Path.Combine(prepared.Stage, "restoredpid"));
             if (restored.HasExited) throw new Exception("Restored game did not remain running.");
             restored.Kill(true); await restored.WaitForExitAsync(timeout.Token);
             string restoredLog = await Tool(image ? target : executable, folder, "--headless", "--", "--smoke", "--smoke-seconds=2");
@@ -162,17 +162,14 @@ foreach (var testCase in new[] { (Name:"successful-install",Interrupt:false,High
         {
             string path = Path.Combine(prepared.Stage, marker);
             if (!File.Exists(path)) continue;
-            string[] identity = File.ReadAllText(path).Trim().Split(' ');
             try
             {
-                if (identity.Length != 2 || !int.TryParse(identity[0], out int pid) || pid <= 0 ||
-                    !long.TryParse(identity[1], out long startTicks) || startTicks <= 0) continue;
-                using var process = Process.GetProcessById(pid);
-                if (process.StartTime.ToUniversalTime().Ticks != startTicks) continue;
+                using var process = DesktopProcessIdentity.OpenMarker(path);
                 if (!process.HasExited) { process.Kill(true); await process.WaitForExitAsync(); }
             }
             catch (ArgumentException) { }
             catch (InvalidOperationException) { }
+            catch (IOException) { /* Exited, malformed or reused identity: never kill it. */ }
         }
         if (!oldReleased && !old.HasExited) { old.Kill(true); await old.WaitForExitAsync(); }
         foreach(string name in new[]{"helper-error.txt","health.json"})
@@ -186,16 +183,6 @@ File.WriteAllText(Path.Combine(output, "summary.json"), JsonSerializer.Serialize
     fixture = new { release = newMetadata.RootElement.GetProperty("release").Clone(), revision = newMetadata.RootElement.GetProperty("revision").GetString() },
     candidateArchiveSha256 = Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(Path.Combine(assets, stem + ".zip")))), cases }, new JsonSerializerOptions { WriteIndented = true }));
 Console.WriteLine("PASS actual desktop game updater: authenticated feed/download, running-app handoff, healthy relaunch and rollback");
-
-static Process MarkedProcess(string path)
-{
-    string[] identity = File.ReadAllText(path).Trim().Split(' ');
-    if (identity.Length != 2) throw new InvalidDataException("Missing PID/start-time process identity.");
-    var process = Process.GetProcessById(int.Parse(identity[0]));
-    if (process.StartTime.ToUniversalTime().Ticks == long.Parse(identity[1])) return process;
-    process.Dispose();
-    throw new IOException("Update child identity was reused; refusing to control another process.");
-}
 
 static async Task<string> Tool(string file, string directory, params string[] arguments)
 {

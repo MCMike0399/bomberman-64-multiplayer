@@ -13,7 +13,7 @@ public static class DesktopUpdateTransaction
             ?? throw new InvalidDataException("Missing update request.");
         string target = Path.GetFullPath(request.Target), stage = Path.GetFullPath(request.Stage);
         string parent = Path.GetDirectoryName(target)!;
-        if (!Guid.TryParseExact(request.Token, "N", out _) ||
+        if (string.IsNullOrEmpty(request.ParentIdentity) || !Guid.TryParseExact(request.Token, "N", out _) ||
             stage != Path.Combine(parent, ".blast-update-" + request.Token) ||
             Path.GetFullPath(requestPath) != Path.Combine(stage, "request.json") ||
             new DirectoryInfo(stage).LinkTarget is not null || new DirectoryInfo(parent).LinkTarget is not null)
@@ -31,7 +31,7 @@ public static class DesktopUpdateTransaction
         try
         {
             using var old = Process.GetProcessById(request.ParentPid);
-            if (old.StartTime.ToUniversalTime().Ticks == request.ParentStartTicks)
+            if (DesktopProcessIdentity.Matches(old, request.ParentIdentity))
                 await old.WaitForExitAsync(deadline.Token);
         }
         catch (ArgumentException) { /* The original game has already exited. */ }
@@ -98,7 +98,7 @@ public static class DesktopUpdateTransaction
                     await Move(target, next, request.AppImage, CancellationToken.None);
                 await Move(previous, target, request.AppImage, CancellationToken.None);
                 using var restored = Launch(target, request.AppImage, request.Windowed, null);
-                File.WriteAllText(Path.Combine(stage, "restoredpid"), restored.Id + " " + restored.StartTime.ToUniversalTime().Ticks);
+                DesktopProcessIdentity.WriteMarker(Path.Combine(stage, "restoredpid"), restored);
                 WriteHistory(request.History, "failed " + request.Version + " launch-rollback");
             }
             throw;

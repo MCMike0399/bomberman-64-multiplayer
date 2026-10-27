@@ -80,6 +80,11 @@ Persistent permission denial still fails at that bound; no permissions change.
 Other I/O failures are immediate. The native helper regression first proves a
 real directory handle blocks renaming, then holds it across replacement and
 rollback; the diagnostic lane compares the retained old transaction with the fix.
+Updater parent/child markers use an exact kernel birth identity. Linux compares
+the boot ID and `/proc/PID/stat` field22 start counter, avoiding wall-clock
+`Process.StartTime` estimates that can differ across runtimes. Windows retains
+its kernel creation timestamp, and the existing Mac shell marker is unchanged.
+Both handoff and cleanup reject a reused PID without controlling that process.
 `startup-desktop.py` covers all nine saved preset/display launches using separate
 preference files and captures. Ordinary player preferences are not rewritten.
 Promotion compares complete regression receipts with the exact player-download

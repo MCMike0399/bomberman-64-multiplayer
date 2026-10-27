@@ -127,14 +127,15 @@ public static class DesktopUpdateInstaller
         ct.ThrowIfCancellationRequested();
         using var parent = Process.GetProcessById(currentPid);
         var request = new DesktopUpdateRequest(update.Target, update.Stage, update.Version, update.Token,
-            update.History, currentPid, parent.StartTime.ToUniversalTime().Ticks, windowed, OperatingSystem.IsLinux());
+            update.History, currentPid, parent.StartTime.ToUniversalTime().Ticks, windowed, OperatingSystem.IsLinux(),
+            DesktopProcessIdentity.StartToken(parent));
         string path = Path.Combine(update.Stage, "request.json");
         File.WriteAllText(path, JsonSerializer.Serialize(request));
         string helper = Path.Combine(update.Stage, OperatingSystem.IsWindows() ? "BlastUpdater.exe" : "BlastUpdater");
         var start = new ProcessStartInfo(helper) { UseShellExecute = false, CreateNoWindow = true, WorkingDirectory = update.Stage };
         start.ArgumentList.Add(path);
         using var process = Process.Start(start) ?? throw new IOException("Could not start update helper.");
-        File.WriteAllText(Path.Combine(update.Stage, "helperpid"), process.Id + " " + process.StartTime.ToUniversalTime().Ticks);
+        DesktopProcessIdentity.WriteMarker(Path.Combine(update.Stage, "helperpid"), process);
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
         timeout.CancelAfter(TimeSpan.FromSeconds(10));
         string ready = Path.Combine(update.Stage, "ready");

@@ -36,8 +36,9 @@ public partial class GameUpdater : Node
                     _healthPath=Path.Combine(stage,"healthy");
                     using var process=System.Diagnostics.Process.GetCurrentProcess();
                     // Keep the Mac shell updater's legacy PID format unchanged.
-                    string identity=process.Id.ToString()+(_desktop?" "+process.StartTime.ToUniversalTime().Ticks:"");
-                    string marker=Path.Combine(stage,"newpid");File.WriteAllText(marker+".tmp",identity);File.Move(marker+".tmp",marker,true);
+                    string marker=Path.Combine(stage,"newpid");
+                    if(_desktop)DesktopProcessIdentity.WriteMarker(marker,process);
+                    else {File.WriteAllText(marker+".tmp",process.Id.ToString());File.Move(marker+".tmp",marker,true);}
                 }
             }
             Version=_desktop?OnlineProtocol.ReleaseVersion:await MacUpdateInstaller.PlistValue(_bundle,"CFBundleShortVersionString",_stop.Token);

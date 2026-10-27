@@ -45,6 +45,27 @@ if (args.Contains("--") || args.Any(a => a.StartsWith("--update-token=")))
 int checks = 0;
 void Check(bool value, string description)
 { if (!value) throw new Exception(description); checks++; }
+using (var self = Process.GetCurrentProcess())
+{
+    string token = DesktopProcessIdentity.StartToken(self);
+    if (OperatingSystem.IsLinux())
+        Check(token.StartsWith("linux:" + File.ReadAllText("/proc/sys/kernel/random/boot_id").Trim() + ":") &&
+            ulong.TryParse(token.Split(':')[2], out ulong counter) && counter > 0,
+            "Linux identity contains the current boot and a positive kernel birth counter");
+    Check(DesktopProcessIdentity.Matches(self, token), "Independent process queries agree on the exact birth identity");
+    Check(!DesktopProcessIdentity.Matches(self, token + "-different"), "A different process birth identity never matches a live PID");
+    string marker = Path.GetTempFileName();
+    try
+    {
+        DesktopProcessIdentity.WriteMarker(marker, self);
+        using var observed = DesktopProcessIdentity.OpenMarker(marker);
+        Check(observed.Id == self.Id, "Atomic marker opens the exact live process");
+        File.WriteAllText(marker, self.Id + " " + token + "-different");
+        try { using var wrong = DesktopProcessIdentity.OpenMarker(marker); Check(false, "Wrong birth identity must fail"); }
+        catch (IOException) { checks++; }
+    }
+    finally { File.Delete(marker); }
+}
 if (OperatingSystem.IsWindows())
 {
     string probe = Path.Combine(Path.GetTempPath(), "blast-lock-probe-" + Guid.NewGuid().ToString("N"));
@@ -82,7 +103,7 @@ foreach (bool failedLaunch in new[] { false, true })
         using var old = Process.Start(start)!;
         children.Add(old);
         var request = new DesktopUpdateRequest(target, stage, "99.0.0", token, Path.Combine(root, "history/result.txt"),
-            old.Id, old.StartTime.ToUniversalTime().Ticks, true, false);
+            old.Id, old.StartTime.ToUniversalTime().Ticks, true, false, DesktopProcessIdentity.StartToken(old));
         string path = Path.Combine(stage, "request.json"); File.WriteAllText(path, JsonSerializer.Serialize(request));
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
         if (OperatingSystem.IsWindows())
@@ -115,10 +136,8 @@ foreach (bool failedLaunch in new[] { false, true })
         Check(File.ReadAllText(request.History).Trim() == (failedLaunch ? "failed 99.0.0 launch-rollback" : "installed 99.0.0"), "History must report actual outcome");
         if (failedLaunch)
         {
-            string[] identity = File.ReadAllText(Path.Combine(stage, "restoredpid")).Split(' ');
-            Check(identity.Length == 2, "Rollback marker must include PID and start time");
-            using var restored = Process.GetProcessById(int.Parse(identity[0]));
-            Check(restored.StartTime.ToUniversalTime().Ticks == long.Parse(identity[1]), "Rollback marker identifies the exact restored process");
+            using var restored = DesktopProcessIdentity.OpenMarker(Path.Combine(stage, "restoredpid"));
+            Check(!restored.HasExited, "Rollback marker identifies the exact live restored process");
         }
         while (Directory.GetFiles(root, "fixture-pid-*").Length < (failedLaunch ? 3 : 2))
             await Task.Delay(20, timeout.Token);
@@ -139,10 +158,11 @@ foreach (bool failedLaunch in new[] { false, true })
         {
             try
             {
-                using var process = Process.GetProcessById(int.Parse(Path.GetFileName(marker)[12..]));
+                using var process = DesktopProcessIdentity.OpenMarker(marker);
                 if (!process.HasExited) { process.Kill(true); await process.WaitForExitAsync(); }
             }
             catch (ArgumentException) { }
+            catch (IOException) { }
         }
         // A terminated Windows image may still be mapped briefly after WaitForExit.
         // Require actual removal, but allow the owned fixture's image to unload.
@@ -172,7 +192,8 @@ void CopyFixture(string destination)
 void MarkStarted()
 {
     string root = Path.GetDirectoryName(Path.GetDirectoryName(Environment.ProcessPath!))!;
-    File.WriteAllText(Path.Combine(root, "fixture-pid-" + Environment.ProcessId), "started");
+    using var process = Process.GetCurrentProcess();
+    DesktopProcessIdentity.WriteMarker(Path.Combine(root, "fixture-pid-" + Environment.ProcessId), process);
 }
 
 static class DirectoryHandle

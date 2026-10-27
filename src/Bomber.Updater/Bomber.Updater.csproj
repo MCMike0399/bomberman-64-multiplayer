@@ -8,6 +8,7 @@
     <DebugType>none</DebugType>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="../Bomber.Client/Updates/DesktopProcessIdentity.cs" Link="DesktopProcessIdentity.cs" />
     <Compile Include="../Bomber.Client/Updates/DesktopUpdateRequest.cs" Link="DesktopUpdateRequest.cs" />
     <Compile Include="../Bomber.Client/Updates/DesktopUpdateTransaction.cs" Link="DesktopUpdateTransaction.cs" />
   </ItemGroup>
