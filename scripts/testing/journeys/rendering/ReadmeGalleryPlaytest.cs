@@ -40,7 +40,7 @@ public partial class PlaytestDriver
             await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"gallery enters "+stage,180);
             await Frames(6);
             var view=_root.GetViewport();
-            Check(_root.Preferences.Graphics==GraphicsPreset.High&&view.Msaa3D==Viewport.Msaa.Msaa4X&&Mathf.IsEqualApprox(view.Scaling3DScale,1),"gallery uses native resolution and High 4x AA: "+stage);
+            Check(_root.Preferences.Graphics==GraphicsPreset.High&&view.Msaa3D==Viewport.Msaa.Msaa2X&&Mathf.IsEqualApprox(view.Scaling3DScale,1),"gallery uses native resolution and High 2x AA: "+stage);
             Check(GetWindow().Size==new Vector2I(3840,2400),"gallery output is 3840x2400: "+stage);
             await Capture("gallery-"+stage);
             if(!practice){await Frames(90);await Capture("gallery-"+stage+"-action");}

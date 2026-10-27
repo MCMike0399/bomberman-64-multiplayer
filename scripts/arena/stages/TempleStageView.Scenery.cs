@@ -41,9 +41,11 @@ public partial class TempleStageView
         // keep only the terrain they actually received.
         var authored=build==null?null:BlastStages.Get(Layout.Id);
         if(build==null||authored==null||authored.Width!=Width||authored.Height!=Depth)return;
-        _scenery=new Node3D{Name=SceneryNodeName};AddChild(_scenery);
+        _scenery=new Node3D{Name=SceneryNodeName,Visible=GraphicsQuality.Current!=GraphicsPreset.Low};AddChild(_scenery);
         build();
     }
+    /// <summary>Low hides every decoration; the arena, its water and the Greedy reservoir town remain.</summary>
+    public void SetSceneryVisible(bool visible){if(_scenery!=null)_scenery.Visible=visible;}
 
     private void AnimateScenery(float delta)
     {

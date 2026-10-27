@@ -218,7 +218,7 @@ public partial class PlaytestDriver
             Event("graphics-viewport",new {owner=c.GetType().Name,size=view.Size.ToString(),physical=physical.ToString(),msaa=view.Msaa3D.ToString()});
         }
         await Capture("graphics-menu-default");
-        Check(views.All(v=>v.Msaa3D==Viewport.Msaa.Msaa4X),"default quality antialiases every visible menu world at 4x");
+        Check(views.All(v=>v.Msaa3D==Viewport.Msaa.Msaa2X),"default quality antialiases every visible menu world at 2x");
         Check(plaques.Sum(p=>p.RenderRequests)-before<=6,"settled plaques reuse their rendered texture");
         CheckMenuSampling();
         Check(_root.GetViewport().Disable3D,"opaque menu skips the hidden arena rendering pass");
@@ -249,13 +249,13 @@ public partial class PlaytestDriver
                     var view=_root.GetViewport();
                     Check(!view.Disable3D,"match restores arena rendering");
                     var environment=AuditDescendants(LightingArena).OfType<WorldEnvironment>().Single().Environment;
-                    Check(view.Msaa3D==(preset==GraphicsPreset.Low?Viewport.Msaa.Msaa2X:Viewport.Msaa.Msaa4X),"arena antialiasing follows "+preset);
+                    Check(view.Msaa3D==Viewport.Msaa.Msaa2X,"arena antialiasing is 2x at "+preset);
                     Check(Mathf.IsEqualApprox(view.Scaling3DScale,preset==GraphicsPreset.Low?.85f:1),"arena resolution follows "+preset);
                     Check(environment.SsaoEnabled==(preset!=GraphicsPreset.Low)&&environment.GlowEnabled==(preset!=GraphicsPreset.Low),"arena effects follow "+preset);
                     Check(!view.UseTaa&&view.ScreenSpaceAA==Viewport.ScreenSpaceAAEnum.Disabled,"sharp non-temporal AA policy");
                     Check(environment.SsilEnabled==(preset==GraphicsPreset.High),"indirect bounce is High-only at "+preset);
                     var depthCues=(CameraAttributesPractical)view.GetCamera3D()!.Attributes;
-                    Check(depthCues.DofBlurFarEnabled==(preset!=GraphicsPreset.Low)&&depthCues.DofBlurNearEnabled==(preset!=GraphicsPreset.Low),"diorama depth of field follows "+preset);
+                    Check(depthCues.DofBlurFarEnabled==(preset==GraphicsPreset.High)&&depthCues.DofBlurNearEnabled==(preset==GraphicsPreset.High),"diorama depth of field is High-only at "+preset);
                     var playable=LightingArena.PlayableDepth;
                     Check(depthCues.DofBlurFarDistance>playable.Y&&depthCues.DofBlurNearDistance<playable.X&&environment.FogDepthBegin>playable.Y,
                         $"blur and haze stay outside the playable depth {playable} on {stage}");

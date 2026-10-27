@@ -1,3 +1,4 @@
+using BlastCircuit.Rendering;
 using Godot;
 using Bomber.Client.Sessions;
 using Bomber.Game.Simulation.Stages;
@@ -39,7 +40,7 @@ public partial class PlaytestDriver
                     await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"scenery tour enters "+stage,180);
                     await Frames(6);
                     var terrain=AuditDescendants(LightingArena).OfType<TempleStageView>().Single();
-                    if(time==StageTime.Midday)await CheckScenery(stage,terrain,signature);
+                    if(time==StageTime.Midday){await CheckScenery(stage,terrain,signature);if(!_headless)await SceneryHiddenOnLow(stage);}
                     if(!_headless)CheckFraming(stage,GetWindow().Size);
                     string look=StageLighting.ToWire(time);
                     await Capture($"scenery-{stage}-battle-{look}");
@@ -68,6 +69,22 @@ public partial class PlaytestDriver
             _root.Navigate("Modes");
             if(!_headless)await SelectLocalLighting(lighting);
         }
+    }
+
+    private async Task SceneryHiddenOnLow(string stage)
+    {
+        var original=_root.Preferences.Graphics;
+        try
+        {
+            await SelectGraphics(GraphicsPreset.Low);await Frames(3);
+            var terrain=AuditDescendants(LightingArena).OfType<TempleStageView>().Single();
+            Check(terrain.Scenery is {} hidden&&!hidden.IsVisibleInTree(),"Low preset hides decorative scenery: "+stage);
+            await Capture($"scenery-{stage}-low");
+            await SelectGraphics(GraphicsPreset.High);await Frames(3);
+            terrain=AuditDescendants(LightingArena).OfType<TempleStageView>().Single();
+            Check(terrain.Scenery is {} shown&&shown.IsVisibleInTree(),"High preset restores decorative scenery: "+stage);
+        }
+        finally {await SelectGraphics(original);await Frames(3);}
     }
 
     private async Task CheckScenery(string stage,TempleStageView terrain,string[] signature)

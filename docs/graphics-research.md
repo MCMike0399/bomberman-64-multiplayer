@@ -15,7 +15,7 @@ upscaling on its own.
 
 The baseline code has two relevant facts:
 
-- [project.godot](../project.godot) enables 4× MSAA for the root viewport.
+- [project.godot](../project.godot) enables 2× MSAA for the root viewport (4× until v0.38).
   [ArcadeBackdrop](../scripts/ui/menu/ArcadeBackdrop.cs),
   [ArcadeModeButton](../scripts/ui/ArcadeModeButton.cs),
   [CharacterPreview](../scripts/ui/menu/CharacterPreview.cs) and
@@ -93,22 +93,25 @@ inputs, model proportions and camera framing remain identical across presets.
 
 | Setting | Low | Medium | High |
 | --- | --- | --- | --- |
-| Gameplay MSAA | 2× | 4× | 4× |
+| Gameplay MSAA | 2× | 2× | 2× |
 | Gameplay 3D scale | 0.85 | 1.0 | 1.0 |
 | Menu texture density | Output pixels | Output pixels | Output pixels |
 | Directional shadow atlas | 1024 | 2048 | 4096 |
-| Shadow filtering | Soft very low; no sun PCSS | Soft low | Soft medium |
-| Arena SSAO | Off | Half-resolution, medium quality | Full-resolution, high quality |
+| Shadow filtering | Soft very low; no sun PCSS | Soft low; no sun PCSS | Soft medium with contact hardening |
+| Arena SSAO | Off | Half-resolution, medium quality | Half-resolution, high quality |
 | Menu theatre SSAO | Off | Off | Restrained contact shading |
 | Glow | Off | Restrained intensity, small soft bloom | Restrained intensity, small soft bloom |
 | Temporal AA / FXAA | Off | Off | Off |
 | Stone/water microdetail | Reduced | Filtered | Filtered |
 | Water | Opaque; no screen copy | Clear refraction, caustics, glints (one screen copy) | Same as Medium |
-| Diorama depth of field | Off | Far/near blur outside the arena, low quality | Same, medium quality |
+| Diorama depth of field | Off | Off | Far/near blur outside the arena, low quality |
+| Stage decorations (`StageScenery`) | Hidden | Shown | Shown |
 | Indirect bounce (SSIL) | Off | Off | Half-resolution, medium quality |
 
-Medium is the default. High improves contact shading, bounce light and shadow
-detail without globally increasing saturation or contrast. The 2026-10-25
+Medium is the default. High adds bounce light, diorama blur, contact-hardening
+sun shadows and higher-quality contact shading without globally increasing
+saturation or contrast; Low hides every decoration outside the arena and keeps
+the Greedy reservoir town because floating play reads against it. The 2026-10-25
 diorama polish ([rendering guide](agents/visuals-and-animation.md#diorama-polish-2026-10-25))
 added the water, depth-of-field and SSIL rows. Its VM receipts show render-thread
 CPU near 1 ms and one extra draw call (the seabed); GPU timings were unavailable

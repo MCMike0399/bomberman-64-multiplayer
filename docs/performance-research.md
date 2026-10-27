@@ -239,3 +239,55 @@ runs), which dominates any such saving. This is the practical ceiling for
 visually exact shader work. Further FPS needs lower effect cost (a visual change)
 or engine changes. Harness sources, edit lists and profiles are under ignored
 `artifacts/equivalence-harness/` and `artifacts/equivalence-*` in the work tree.
+
+## Cooler GPU at the 60 FPS cap (2026-10-27)
+
+The user plays High at the native 3024×1964 panel with a 60 FPS cap, so GPU
+heat follows milliseconds per frame: Sunken Temple and Up & Down sit at or
+above the 16.7 ms budget and keep the GPU at full clock. Pixel-exact savings
+were exhausted by PR #30, so the user accepted renderer changes that are
+indistinguishable by eye on this panel while rejecting any visible change to
+the High look. Each candidate was measured twice on the M5 Pro with the
+diagnostic Godot 4.8 beta `--gpu-profile` run (product stays 4.7.2): once for
+per-pass GPU time during a real eight-player battle, and once in a paused,
+time-frozen frame compared byte-for-byte against the untouched renderer
+(control frames reproduced exactly; every candidate returned to the control
+frame afterwards).
+
+| Candidate on High | GPU saving per frame | Pixel change (max channel / 255, share of bytes) | Decision |
+| --- | ---: | --- | --- |
+| SSAO half resolution, same high quality | −1.65 to −1.77 ms SSAO plus −0.12 ms depth preparation on every arena (Night totals: Temple 17.8→15.9, Up & Down 17.2→15.3, Greedy Trap 15.4→13.7, Rock Garden 13.8→11.6, Blizzard 14.2→12.1, Top Rules 12.6→11.5) | 8–26 max, 3.0–5.4% of bytes, mean 0.03–0.06 | **Shipped**: contact edges only, invisible in native crops on all six arenas |
+| SSAO medium quality at full resolution | −1.0 ms | 5–9 max, 0.8–0.9% | Not taken; half resolution saves more for the same visibility |
+| Depth of field low quality | −0.36 ms | 46–178 max, 0.8–5.2%, confined to blurred scenery | **Shipped** after the user's eye test on all six arenas |
+| 2× MSAA | −1.6 ms | 170–218 max on silhouettes, 2.9–5.5% | **Shipped** after the user's eye test; silhouettes differ only under magnification |
+| SSIL off, glow off, shadow filter/atlas/PCSS changes | 0.25–2.1 ms | Clearly visible (16–28% of bytes, up to 186 max) | Rejected: part of the High identity |
+| DOF without jitter, near DOF off, roughness limiter off | ≈0 | 0 / 0 / 34 max | No saving, left unchanged |
+
+Pass costs were stable to about ±3% between the control and candidate runs
+of the same arena; sustained back-to-back runs still drift with thermal
+throttling, so each pair was taken with cool-down gaps and compared on the
+untouched passes. Receipts remain under the ignored profiling worktree's
+`artifacts/exp2/` (Midday and Night runs, control/candidate PNGs and
+amplified difference images for every arena).
+
+### Preset ladder after the change
+
+Native uncapped benchmark on the final tree (3024×1964, Night, eight-player
+battles, same 4.8 diagnostic engine, VSync off). Each tier is faster than the
+one above it on both arenas, and High itself gained roughly a quarter over
+v0.38 (Temple was 56.7 FPS Midday in the matched v0.36 pair):
+
+| Arena | High | Medium | Low |
+| --- | ---: | ---: | ---: |
+| Sunken Temple | 72.0 FPS (13.8 ms median, 14.7 p95) | 97.5 FPS (10.2 ms, 10.6 p95) | 120 FPS (8.3 ms, 9.1 p95) |
+| Rock Garden | 94.2 FPS (10.4 ms, 11.2 p95) | 151.7 FPS (6.5 ms, 7.2 p95) | 245 FPS (4.0 ms, 4.4 p95) |
+
+High keeps SSIL, depth of field, contact-hardening sun shadows and 4096
+shadows; Medium drops those four; Low additionally hides `StageScenery`,
+runs at 85% scale with spatial FSR and opaque water. Draw calls fall from
+267 to 189 on Temple and 224 to 141 on Rock Garden when the decorations go.
+Name tags and floating arena labels now rasterize at three times the glyph
+resolution at the same world size, which removed the soft edges visible in
+native captures. Receipts: ignored `artifacts/exp2/L-*` in the profiling
+worktree.
+
