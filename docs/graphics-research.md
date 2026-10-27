@@ -103,17 +103,21 @@ inputs, model proportions and camera framing remain identical across presets.
 | Glow | Off | Restrained intensity, small soft bloom | Restrained intensity, small soft bloom |
 | Temporal AA / FXAA | Off | Off | Off |
 | Stone/water microdetail | Reduced | Filtered | Filtered |
-| Water | Opaque; no screen copy | Clear refraction, caustics, glints (one screen copy) | Medium plus screen-space scene reflections |
+| Stage surface tier (`quality_premium`) | Off | Off | Layered ice, carved snow, sun glitter, lawn wind, lichen, joints with depth, mica flecks, glazed pool tiles |
+| Water | Opaque; no screen copy | Clear refraction and depth absorption (one screen copy) | Medium plus caustic webs, sun glints and screen-space scene reflections |
+| Opaque screen-space reflections | Off | Off | Half-size, 64 steps on Blizzard Battle and Greedy Trap only (the stages with glossy opaque surfaces) |
 | Diorama depth of field | Off | Off | Far/near blur outside the arena, low quality |
 | Stage decorations (`StageScenery`) | Hidden | Shown | Shown |
 | Indirect bounce (SSIL) | Off | Off | Half-resolution, medium quality |
 
 Medium is the default and sits between the other two on every row. High adds
-scene reflections in water, bounce light, diorama blur, contact-hardening sun
-shadows and higher-quality contact shading, without globally increasing
-saturation or contrast; Low renders 75% of the selected 3D pixels, hides every
-decoration outside the arena and keeps the Greedy reservoir town because
-floating play reads against it. See [preset identity](#preset-identity-2026-10-27). The 2026-10-25
+scene reflections in water and on ice, caustics and glints, the premium surface
+tier on every stage, bounce light, diorama blur, contact-hardening sun shadows
+and higher-quality contact shading, without globally increasing saturation or
+contrast; Low renders 75% of the selected 3D pixels, hides every decoration
+outside the arena and keeps the Greedy reservoir town because floating play
+reads against it. See [preset identity](#preset-identity-2026-10-27) and
+[High premium, Medium balance](#high-premium-and-medium-balance-2026-10-27). The 2026-10-25
 diorama polish ([rendering guide](agents/visuals-and-animation.md#diorama-polish-2026-10-25))
 added the water, depth-of-field and SSIL rows. Its VM receipts show render-thread
 CPU near 1 ms and one extra draw call (the seabed); GPU timings were unavailable
@@ -181,10 +185,68 @@ benchmark on a free desktop with the QA VM stopped before quoting numbers.
   clear refracting water, decorations, no bounce/blur/PCSS/reflections/diffusion.
 
 Not taken: volumetric fog light shafts (haze across the playable diorama and a
-froxel pass on every High frame), SDFGI, SSR on opaque stone (invisible at
-roughness .86), 4× MSAA and full-resolution SSAO (the user judged both
-indistinguishable in v0.39), higher SSIL quality (about +1.5 ms for a subtle
-change) and planar reflection cameras (a second scene render).
+froxel pass on every High frame), SDFGI, 4× MSAA and full-resolution SSAO (the
+user judged both indistinguishable in v0.39), higher SSIL quality (about +1.5 ms
+for a subtle change) and planar reflection cameras (a second scene render).
+Opaque SSR was skipped here because it is invisible on stone at roughness .86;
+the later premium pass enables it for the glossy ice and glaze instead.
+
+## High premium and Medium balance (2026-10-27)
+
+The user then asked for a High that feels astonishing on every stage, not only
+the water maps, a Medium that is the sweet spot for most players (removing
+visuals where that helps) and stable 60 FPS on High at the M5 Pro's native
+panel. High's cost rising is by design; half-resolution SSAO stays because the
+user's own v0.39 eye test found full resolution indistinguishable, and that
+budget now buys visible work instead.
+
+- **Premium surface tier.** Every stage shader declares `quality_premium`
+  (`GraphicsQuality.ShaderPremium`, uploaded with `quality_detail` by
+  `GraphicsQuality.ApplyShaderDetail`), 1 on High only. Low and Medium keep
+  their exact shader paths. On High:
+  - *Blizzard Battle* (`FrozenShader`): the ice court gains a deeper, softer
+    fracture layer and trapped bubbles offset along the view ray, so the sheet
+    reads as a thick block and is polished (roughness .17, metallic .3) so the
+    SSR mirror carries weight; snow gets wind-carved drifts that tilt the normal
+    with blue hollows; snow and ice carry sun glitter from randomly oriented
+    crystal facets that flash only on the key light's reflection path
+    (`StageLighting.ApplyKeyLight` feeds `sun_direction`/`light_tint`).
+  - *Rock Garden, Circuit Garden, Greedy exterior* (`GardenShader` and the
+    garden lawn): slow gusts cross the turf as travelling bright bands and a
+    blade-scale ripple tilts the normal; limestone shows sparse lichen rosettes.
+  - *Sunken Temple, Up & Down, Top Rules, Greedy quay* (`StoneShader`): joints
+    have depth (the view ray reaching a joint floor under the neighbouring block
+    meets its shaded side wall), faces darken toward joints like a cavity, and
+    sparse glossy mica flecks catch the sun.
+  - *Greedy Trap court* (`GreedyTrapShader`): the same joint depth and cavity
+    on cobbles, brick, ashlar and flagstones; the teal pool tiles get a clear glaze.
+- **Opaque screen-space reflections on High.** `Environment.SsrEnabled` with
+  64 steps, fade-in .15, fade-out 2, depth tolerance .25 and
+  `RenderingServer.EnvironmentSetSsrHalfSize(true)`, only on the stages
+  `GraphicsQuality.GlossyStage` names (Blizzard Battle, Greedy Trap). Godot
+  shades only glossy opaque surfaces, so the ice court and glazed pool mirror
+  walls, figures and bombs; the matte stone stages skip the pass. Water stays
+  on its own transparent-pass march, which now stops on the open sea more than
+  26 units from the stage centre, where the ray could only mirror sky.
+- **Medium trimmed to the sweet spot.** Medium water keeps clear refraction and
+  depth absorption but no longer runs the two Voronoi caustic webs or sun-path
+  glints: `WaterShaderFor` compiles those under `WATER_SPARKLE`, which only High
+  defines beside `SCENE_REFLECTIONS`. Everything else on Medium is unchanged.
+- **Evidence.** `graphics-settings` asserts the SSR flag, the `WATER_SPARKLE`
+  variant and the `quality_premium` uniform per preset on all seven stages;
+  captures are compared against the v0.40 baseline run
+  (`artifacts/playtest/preset-identity-graphics-settings-3`). Native
+  `graphics-benchmark --desktop shared` at 3024×1964, High, uncapped, 15 s per
+  eight-player stage on the M5 Pro (v0.40.0 → this branch, FPS / p99 ms):
+  Sunken Temple 66.4 / 16.4 → 65.4 / 16.4, Up & Down 65.7 / 15.8 → 63.9 / 16.4,
+  Rock Garden 101.7 → 83.2, Top Rules 110.3 → 101.3, Blizzard Battle 99.7 →
+  69.7, Greedy Trap 89.4 → 69.7. Every stage keeps its 99th-percentile frame
+  inside the 16.7 ms budget. The water stages were already at the 60 FPS line
+  in v0.40 (its water mirror cost about 1.1 ms over v0.39); this pass holds
+  them there with the SSR gating and the far-sea skip, so further headroom on
+  those two stages needs an identity decision (SSIL, depth of field, MSAA or a
+  High render scale below native). Back-to-back runs drift a few percent with
+  heat; measure with the QA VM stopped and the desktop free.
 
 ## Focused opportunities in the code
 

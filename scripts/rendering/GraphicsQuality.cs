@@ -15,6 +15,19 @@ public static class GraphicsQuality
     public static float RenderScale=>Current==GraphicsPreset.Low?.75f:1;
     /// <summary>Seconds between animated menu-world renders: Low keeps 30 Hz, other presets follow the display.</summary>
     public static double MenuFrameInterval=>Current==GraphicsPreset.Low?1d/30:0;
+    /// <summary>Stage shader microdetail (grain, ripples, flowers): off on Low.</summary>
+    public static float ShaderDetail=>Current==GraphicsPreset.Low?0:1;
+    /// <summary>
+    /// High-only stage embellishments: layered ice, carved snow and glitter, lawn wind and
+    /// lichen, joints with depth, mica flecks and glazed tiles. Medium keeps its exact look.
+    /// </summary>
+    public static float ShaderPremium=>Current==GraphicsPreset.High?1:0;
+    /// <summary>Upload both detail tiers to a stage material that declares them.</summary>
+    public static void ApplyShaderDetail(ShaderMaterial material)
+    {
+        material.SetShaderParameter("quality_detail",ShaderDetail);
+        material.SetShaderParameter("quality_premium",ShaderPremium);
+    }
     public static GraphicsPreset FromWire(string? value)=>value switch
     { "low"=>GraphicsPreset.Low,"high"=>GraphicsPreset.High,_=>GraphicsPreset.Medium };
     public static string ToWire(GraphicsPreset value)=>value switch
@@ -22,8 +35,8 @@ public static class GraphicsQuality
     public static string Description(GraphicsPreset value)=>value switch
     {
         GraphicsPreset.Low=>"Lightest rendering: 75% 3D resolution, no decorations, effects or fine detail.",
-        GraphicsPreset.High=>"Scene reflections in water, bounce light, diorama blur and finer contact-hardening shadows.",
-        _=>"Balanced look for everyday play: clear water, glow and contact shading at native resolution."
+        GraphicsPreset.High=>"Mirror-like water and ice, bounce light, diorama blur and richer stone, snow and lawn detail.",
+        _=>"Balanced look for everyday play: clear calm water, glow and contact shading at native resolution."
     };
 
     public static void Apply(GraphicsPreset preset,Viewport viewport)
@@ -57,11 +70,21 @@ public static class GraphicsQuality
         viewport.UseTaa=false;
         viewport.UseDebanding=true;
     }
-    public static void ApplyArena(Godot.Environment environment,CameraAttributesPractical? camera=null)
+    /// <summary>Stages with glossy opaque surfaces (polished ice, glazed pool tiles) that opaque SSR can mirror.</summary>
+    public static bool GlossyStage(string stageId)=>stageId is "blizzard-battle" or "greedy-trap";
+    public static void ApplyArena(Godot.Environment environment,CameraAttributesPractical? camera=null,bool glossyStage=true)
     {
         environment.SsaoEnabled=Current!=GraphicsPreset.Low;
         environment.GlowEnabled=Current!=GraphicsPreset.Low;
         environment.SsilEnabled=Current==GraphicsPreset.High;
+        // Opaque screen-space reflections: visible only on glossy surfaces (ice, glazed
+        // tiles), so matte stone and turf keep their look. Water is transparent and
+        // mirrors the scene through its own shader instead; stages without glossy
+        // opaque surfaces skip the pass to protect the 60 FPS budget at panel resolution.
+        environment.SsrEnabled=Current==GraphicsPreset.High&&glossyStage;
+        // Half-size reflections: ice and glaze blur them with roughness anyway, and the
+        // full-size pass would spend about a millisecond of the 60 FPS budget on nothing visible.
+        RenderingServer.EnvironmentSetSsrHalfSize(true);
         if(camera==null)return;
         // Diorama depth of field only touches scenery outside the fitted arena; High only.
         camera.DofBlurFarEnabled=Current==GraphicsPreset.High;

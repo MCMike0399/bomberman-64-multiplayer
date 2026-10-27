@@ -9,6 +9,7 @@ public partial class TempleStageView
         var grass=new ShaderMaterial {Shader=new Shader {Code="""
             shader_type spatial;
             uniform float quality_detail=1.0;
+            uniform float quality_premium=0.0;
             varying vec3 ground_position;
             void vertex(){ground_position=(MODEL_MATRIX*vec4(VERTEX,1.0)).xyz;}
             void fragment(){
@@ -17,10 +18,15 @@ public partial class TempleStageView
                 float grain=sin(p.x*31.0+p.y*17.0)*sin(p.y*37.0-p.x*13.0);
                 float visible_grain=quality_detail*(1.0-smoothstep(.025,.10,length(fwidth(p))));
                 ALBEDO=mix(vec3(.24,.39,.19),vec3(.38,.51,.27),broad*.5+.5)+grain*.018*visible_grain;
+                // High: slow gusts cross the lawn as travelling bright bands.
+                if(quality_premium>.5){
+                    float gust=sin(p.x*.9+sin(p.y*.7)*1.4+TIME*.8)*sin(p.y*.6+p.x*.25-TIME*.45);
+                    ALBEDO*=1.0+gust*.05;
+                }
                 ROUGHNESS=.94;
             }
             """}};
-        grass.SetShaderParameter("quality_detail",BlastCircuit.Rendering.GraphicsQuality.Current==BlastCircuit.Rendering.GraphicsPreset.Low?0:1);
+        BlastCircuit.Rendering.GraphicsQuality.ApplyShaderDetail(grass);
         _gardenMaterials.Add(grass);
         var chalk=_art.Color(new("f4e8b5"));var teal=_art.Color(new("258d8f"));var gold=_art.Color(new("efc65b"));
         // The garden is an academy built into old stonework: open grass, a pale range,

@@ -24,8 +24,7 @@ public partial class TempleStageView
         {
             material.SetShaderParameter("weather_clock",_blizzardClock);
             material.SetShaderParameter("wind",_blizzardWind);
-            if(_graphicsRevision!=GraphicsQuality.Revision)
-                material.SetShaderParameter("quality_detail",GraphicsQuality.Current==GraphicsPreset.Low?0:1);
+            if(_graphicsRevision!=GraphicsQuality.Revision)GraphicsQuality.ApplyShaderDetail(material);
         }
         _graphicsRevision=GraphicsQuality.Revision;
         if(_blizzardWeather!=null)_blizzardWeather.Active=WeatherActive;

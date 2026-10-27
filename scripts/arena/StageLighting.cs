@@ -37,6 +37,14 @@ public sealed record StageLighting(
         StageTime.Morning=>Morning,StageTime.Afternoon=>Afternoon,StageTime.Night=>Night,_=>Midday
     };
 
+    /// <summary>World-space direction toward the sun/moon: a directional light shines along its local -Z.</summary>
+    public Vector3 SunDirection=>Basis.FromEuler(KeyRotation*(Mathf.Pi/180)).Z.Normalized();
+    /// <summary>Caustics, glints and snow glitter follow the same key light that shades the stage.</summary>
+    public void ApplyKeyLight(ShaderMaterial material)
+    {
+        material.SetShaderParameter("sun_direction", SunDirection);
+        material.SetShaderParameter("light_tint", KeyColor*KeyEnergy);
+    }
     public void ApplyWater(ShaderMaterial material)
     {
         material.SetShaderParameter("deep_color", DeepWater);
@@ -44,9 +52,6 @@ public sealed record StageLighting(
         material.SetShaderParameter("foam_color", Foam);
         material.SetShaderParameter("wind_strength", Wind);
         material.SetShaderParameter("surface_roughness", WaterRoughness);
-        // Caustics and glints follow the same key light that shades the stage.
-        // A directional light shines along its local -Z, so +Z points toward the sun/moon.
-        material.SetShaderParameter("sun_direction", Basis.FromEuler(KeyRotation*(Mathf.Pi/180)).Z.Normalized());
-        material.SetShaderParameter("light_tint", KeyColor*KeyEnergy);
+        ApplyKeyLight(material);
     }
 }

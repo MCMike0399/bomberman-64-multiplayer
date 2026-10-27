@@ -263,6 +263,7 @@ public partial class PlaytestDriver
                     Check(environment.SsaoEnabled==(preset!=GraphicsPreset.Low)&&environment.GlowEnabled==(preset!=GraphicsPreset.Low),"arena effects follow "+preset);
                     Check(!view.UseTaa&&view.ScreenSpaceAA==Viewport.ScreenSpaceAAEnum.Disabled,"sharp non-temporal AA policy");
                     Check(environment.SsilEnabled==(preset==GraphicsPreset.High),"indirect bounce is High-only at "+preset);
+                    Check(environment.SsrEnabled==(preset==GraphicsPreset.High&&GraphicsQuality.GlossyStage(stage)),"opaque screen-space reflections are High-only and limited to glossy stages at "+preset+" on "+stage);
                     var sun=AuditDescendants(LightingArena).OfType<DirectionalLight3D>().Single(l=>l.ShadowEnabled);
                     Check((sun.LightAngularDistance>0)==(preset==GraphicsPreset.High),"contact-hardening sun shadows are High-only at "+preset);
                     var depthCues=(CameraAttributesPractical)view.GetCamera3D()!.Attributes;
@@ -275,6 +276,8 @@ public partial class PlaytestDriver
                     var materials=AuditDescendants(terrain).OfType<MeshInstance3D>().Select(n=>n.MaterialOverride)
                         .OfType<ShaderMaterial>().Where(m=>m.Shader.Code.Contains("uniform float quality_detail")).Distinct().ToArray();
                     Check(materials.Length>0&&materials.All(m=>m.GetShaderParameter("quality_detail").AsSingle()==(preset==GraphicsPreset.Low?0:1)),"live terrain shader detail follows preset on "+stage);
+                    var premium=materials.Where(m=>m.Shader.Code.Contains("uniform float quality_premium")).ToArray();
+                    Check(premium.Length>0&&premium.All(m=>m.GetShaderParameter("quality_premium").AsSingle()==(preset==GraphicsPreset.High?1:0)),"High-only stage embellishments follow preset on "+stage);
                     var water=terrain.GetChildren().OfType<MeshInstance3D>().Where(n=>n.Mesh is PlaneMesh).ToArray();
                     if(stage is "rock-garden" or "blizzard-battle")Check(water.Length==0,"garden preserves its dry grass setting at "+preset);
                     else if(stage is not ("top-rules" or "greedy-trap"))
@@ -285,6 +288,7 @@ public partial class PlaytestDriver
                         Check(waterShader==ArtMaterials.WaterShaderFor(preset)&&waterShader.Code.Contains("#define CLEAR_WATER")==(preset!=GraphicsPreset.Low),
                             "clear refracting water is used only above Low: "+preset);
                         Check(waterShader.Code.Contains("#define SCENE_REFLECTIONS")==(preset==GraphicsPreset.High),"scene reflections in water are High-only: "+preset);
+                        Check(waterShader.Code.Contains("#define WATER_SPARKLE")==(preset==GraphicsPreset.High),"caustic webs and sun glints are High-only: "+preset);
                     }
                     await Capture("graphics-"+stage+"-"+GraphicsQuality.ToWire(preset));
                     await MeasureGraphics(stage,preset);

@@ -395,11 +395,15 @@ glow intensity. All menu textures remain at output resolution; no TAA/FXAA.
 Low skips fine shader noise/ripples and hides the `StageScenery` decorations
 while retaining the same arena geometry, lighting palettes, shoreline and
 gameplay. Low also keeps opaque water; Medium adds clear refracting shallows,
-and High alone adds diorama depth of field, contact-hardening sun shadows,
-half-resolution SSIL bounce and screen-space scene reflections in the water
-(`SCENE_REFLECTIONS` variant). The 2026-10-27 preset identity pass records
-these choices, and the subsurface-figure and wider-shadow-kernel ideas the user
-rejected on sight, in [graphics research](../graphics-research.md#preset-identity-2026-10-27).
+and High alone adds caustic webs and sun glints (`WATER_SPARKLE`), diorama
+depth of field, contact-hardening sun shadows, half-resolution SSIL bounce,
+screen-space scene reflections in the water (`SCENE_REFLECTIONS` variant),
+half-size opaque SSR that mirrors the scene in ice and glaze, and the
+`quality_premium` surface tier on every stage shader (layered ice, carved snow
+and glitter, lawn wind and lichen, joints with depth, mica flecks, glazed pool
+tiles; upload it with `GraphicsQuality.ApplyShaderDetail`). The 2026-10-27
+passes record these choices, and the subsurface-figure and wider-shadow-kernel
+ideas the user rejected on sight, in [graphics research](../graphics-research.md#high-premium-and-medium-balance-2026-10-27).
 Shadow depth bias scales with preset and doubles for Morning/Afternoon; the
 smaller atlas otherwise exposes diagonal self-shadow marks under grazing light.
 

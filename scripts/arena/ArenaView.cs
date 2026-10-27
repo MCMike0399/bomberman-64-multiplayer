@@ -84,7 +84,7 @@ public partial class ArenaView : Node3D
     public Task PrepareEffects()=>EffectWarmup.Run(GetParent(),_art,_environment,_keyLight,_fillLight);
     public void ApplyGraphicsQuality()
     {
-        GraphicsQuality.ApplyArena(_environment,_cameraAttributes);
+        GraphicsQuality.ApplyArena(_environment,_cameraAttributes,GraphicsQuality.GlossyStage(_stage));
         // Smaller shadow texels need more depth bias to avoid speckled self-shadowing.
         float grazingSun=TimeOfDay is StageTime.Morning or StageTime.Afternoon?2:1;
         _keyLight.ShadowBias=grazingSun*(GraphicsQuality.Current switch {GraphicsPreset.Low=>.12f,GraphicsPreset.Medium=>.06f,_=>.025f});
@@ -110,7 +110,10 @@ public partial class ArenaView : Node3D
             // perspective stays off: a downward camera would sample the dark lower sky.
             FogEnabled=true,FogMode=Godot.Environment.FogModeEnum.Depth,FogDensity=.32f,FogDepthCurve=1.6f,
             FogSunScatter=.15f,
-            SsilRadius=2.6f,SsilIntensity=.75f,SsilNormalRejection=.8f
+            SsilRadius=2.6f,SsilIntensity=.75f,SsilNormalRejection=.8f,
+            // High-only (see GraphicsQuality.ApplyArena): a short march keeps the mirror
+            // on nearby walls and figures; fades hide the screen border and grazing misses.
+            SsrEnabled=false,SsrMaxSteps=64,SsrFadeIn=.15f,SsrFadeOut=2,SsrDepthTolerance=.25f
         };
         AddChild(new WorldEnvironment {Environment=_environment});
         _keyLight=new DirectionalLight3D {ShadowEnabled=true,
@@ -166,6 +169,7 @@ public partial class ArenaView : Node3D
         _environment.BackgroundMode=id==BlastStages.TopRules?Godot.Environment.BGMode.Color:Godot.Environment.BGMode.Sky;
         _environment.BackgroundColor=new Color("171a22");
         _environment.FogSkyAffect=id==BlastStages.TopRules?0:1;
+        ApplyGraphicsQuality();
         _playerMotion.Clear();_facings.Clear();_ghostHosts.Clear();
         _terrain?.QueueFree();_terrain=new TempleStageView(_art);AddChild(_terrain);_terrain.Build(data);
         _terrain.SetLighting(StageLighting.For(TimeOfDay));

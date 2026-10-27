@@ -65,6 +65,7 @@ public partial class TempleStageView : Node3D
         _lighting=lighting;
         if(_water?.MaterialOverride is ShaderMaterial material)lighting.ApplyWater(material);
         if(_greedyMoat?.MaterialOverride is ShaderMaterial moat)lighting.ApplyWater(moat);
+        foreach(var frozen in _frozenMaterials)lighting.ApplyKeyLight(frozen);
     }
     public void SetWaterLevel(float tierLevel)
     {
@@ -81,7 +82,7 @@ public partial class TempleStageView : Node3D
         {
             if(_graphicsRevision!=GraphicsQuality.Revision)
             {
-                foreach(var material in _castleStone)material.SetShaderParameter("quality_detail",GraphicsQuality.Current==GraphicsPreset.Low?0:1);
+                foreach(var material in _castleStone)GraphicsQuality.ApplyShaderDetail(material);
                 _graphicsRevision=GraphicsQuality.Revision;
             }
             return;
@@ -90,7 +91,7 @@ public partial class TempleStageView : Node3D
         {
             if(_graphicsRevision!=GraphicsQuality.Revision)
             {
-                foreach(var material in _gardenMaterials)material.SetShaderParameter("quality_detail",GraphicsQuality.Current==GraphicsPreset.Low?0:1);
+                foreach(var material in _gardenMaterials)GraphicsQuality.ApplyShaderDetail(material);
                 _graphicsRevision=GraphicsQuality.Revision;
             }
             return;
@@ -102,15 +103,13 @@ public partial class TempleStageView : Node3D
             // of the surrounding theatre. Stone still follows quality changes.
             if(_graphicsRevision!=GraphicsQuality.Revision)
             {
-                foreach(var material in new[]{_stone,_cobble,_masonry,_bedrock})
-                    material.SetShaderParameter("quality_detail",GraphicsQuality.Current==GraphicsPreset.Low?0:1);
+                foreach(var material in new[]{_stone,_cobble,_masonry,_bedrock})GraphicsQuality.ApplyShaderDetail(material);
                 _graphicsRevision=GraphicsQuality.Revision;
             }
             return;
         }
         if(_graphicsRevision!=GraphicsQuality.Revision)
         {
-            float detail=GraphicsQuality.Current==GraphicsPreset.Low?0:1;
             var shader=ArtMaterials.WaterShaderFor(GraphicsQuality.Current);
             if(water.Shader!=shader)
             {
@@ -118,8 +117,8 @@ public partial class TempleStageView : Node3D
                 water.Shader=shader;_uploadedFlood=float.NaN;
                 if(_lighting!=null)_lighting.ApplyWater(water);
             }
-            foreach(var material in new[]{water,_stone,_cobble,_masonry,_bedrock})material.SetShaderParameter("quality_detail",detail);
-            foreach(var material in _gardenMaterials)material.SetShaderParameter("quality_detail",detail);
+            foreach(var material in new[]{water,_stone,_cobble,_masonry,_bedrock})GraphicsQuality.ApplyShaderDetail(material);
+            foreach(var material in _gardenMaterials)GraphicsQuality.ApplyShaderDetail(material);
             _graphicsRevision=GraphicsQuality.Revision;
         }
         var p=_water.Position;p.Y=Mathf.Lerp(p.Y,_targetWater,1-Mathf.Exp(-7*(float)delta));
