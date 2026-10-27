@@ -49,6 +49,12 @@ update the current guide rather than silently reviving old behavior.
 
 ## Current decisions that supersede earlier experiments
 
+- Pickup personality (2026-10-27 source work): every pickup is a lacquered toy
+  on a stamped coin whose badge names its family, with bomber-style faces and
+  per-kind idle motion; plate, root/icon scale and bob are unchanged.
+  [Design and evidence](visuals-and-animation.md#pickup-personality-2026-10-27-source-work).
+  Agent review is not user approval of the art.
+
 - v0.42.1 delivers softer reflections on characters, bombs, pickups and painted
   scenery (#49/#50). All required trusted gates, the protected rollout and
   public asset verification passed. [Delivery receipt](../verification.md#v0421-delivered).

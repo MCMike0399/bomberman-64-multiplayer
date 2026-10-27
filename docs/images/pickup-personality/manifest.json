@@ -1,0 +1,114 @@
+{
+  "productBaseline": "d9936e5907fab2a8ab9c01c739248571c73f5c7e",
+  "beforeRevision": "59f99e0b52b8b2fcee86fac6d8ae7affbe4c0943",
+  "afterRevision": "60e9dff5d954f13efc984422f4b539ade7177d54",
+  "fixture": "pickup-showcase: labelled studio lineup of all eleven kinds at the battle-camera angle (pose instants .9 s and 2.35 s), then Sunken Temple practice, seed 64, with two restricted six-item pools from the battle camera and a closer inspection camera",
+  "renderer": "Metal 4.0 / Forward+ / Apple Paravirtual device (Apple5)",
+  "preset": "Medium (fresh QA defaults)",
+  "resolution": "1280x800",
+  "note": "Unedited viewport captures from separately exported apps built from the matched revisions; the journey is identical; only the pickup model and its cone helper differ. Animated icons are posed at fixed instants in the studio; arena pickups animate from spawn. Isolated renderer evidence, not native-host GPU performance evidence, and not user approval of the art.",
+  "verification": {
+    "pickupShowcase": {
+      "before": {
+        "passed": true,
+        "assertions": 7,
+        "captures": 6,
+        "runtimeErrors": 0,
+        "runtimeWarnings": 0
+      },
+      "after": {
+        "passed": true,
+        "assertions": 7,
+        "captures": 6,
+        "runtimeErrors": 0,
+        "runtimeWarnings": 0
+      }
+    },
+    "assetAudit": {
+      "passed": true,
+      "assertions": 103,
+      "captures": 1,
+      "runtimeErrors": 0,
+      "runtimeWarnings": 0,
+      "headlessAssertions": 83
+    },
+    "lootOpening": {
+      "passed": true,
+      "assertions": 26,
+      "captures": 2,
+      "runtimeErrors": 0
+    },
+    "advancedSettings": {
+      "passed": true,
+      "assertions": 47,
+      "captures": 7,
+      "runtimeErrors": 0
+    },
+    "sandbox": {
+      "passed": true,
+      "assertions": 34,
+      "captures": 11,
+      "runtimeErrors": 0
+    },
+    "publicProfile": {
+      "passed": true,
+      "steps": 11
+    },
+    "coreHeadless": {
+      "passed": true,
+      "assertions": 1780,
+      "runtimeErrors": 0
+    }
+  },
+  "images": [
+    {
+      "file": "after-battle-abilities-effects.png",
+      "sha256": "63b9329c4369c407f0711f08eb4a24c0339d718f2edb25480b44f2cb8e129869"
+    },
+    {
+      "file": "after-closeup-abilities-effects.png",
+      "sha256": "e3be415a9bf5c5f13728d6a711e77c7d67814a8d55490a3972f1c4ade475a5a2"
+    },
+    {
+      "file": "after-closeup-upgrades-equipment.png",
+      "sha256": "226881f92f5bc5af58178b2255f52d576ce76088cbc9f65275678c9fb763ef1f"
+    },
+    {
+      "file": "after-studio-motion.png",
+      "sha256": "18f6ec08f26ef092149a2e5c644db7ce015395f0196a4a811d4e3fac4c8066b2"
+    },
+    {
+      "file": "after-studio.png",
+      "sha256": "b03dd2ff06d80a1bc533335bd376f0314b8b540e2e9097039bb845087e70290f"
+    },
+    {
+      "file": "before-battle-abilities-effects.png",
+      "sha256": "882eb32930654dab330fcaf90df63ec7394ce64aecdc1eb8755ca2c852b9db1f"
+    },
+    {
+      "file": "before-closeup-abilities-effects.png",
+      "sha256": "6490e30729bf006fc352a8ae6848195cd1d27a31568fb702fa83db3b28d4c7d9"
+    },
+    {
+      "file": "before-closeup-upgrades-equipment.png",
+      "sha256": "fb7f8ee1b6b28fa926871180b4597c55b12afcd30c83b79d99df6881cca1ccc3"
+    },
+    {
+      "file": "before-studio.png",
+      "sha256": "9a14d11394e0e3be343e4462520edf8838db9665a1a04b5c2e4a69f9d1903556"
+    }
+  ],
+  "meshesPerPickup": {
+    "fire": 10,
+    "bomb": 11,
+    "heart": 10,
+    "focus": 17,
+    "remote": 10,
+    "red": 11,
+    "bounce": 11,
+    "tiny": 13,
+    "big": 13,
+    "haste": 15,
+    "slow": 14
+  }
+}

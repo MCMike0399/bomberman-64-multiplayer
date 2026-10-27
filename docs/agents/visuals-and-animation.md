@@ -27,7 +27,7 @@ failed approaches; exact live values remain in source. Use the
 | Character mesh, rig, face and poses | [BomberModel](../../scripts/arena/models/BomberModel.cs); `model-profile`, `movement`, `walk-feel` |
 | Root interpolation and facing | [SnapshotMotion](../../scripts/arena/SnapshotMotion.cs), [ArenaView](../../scripts/arena/ArenaView.cs); `movement` |
 | Reusable mesh helpers | [ArtGeometry](../../scripts/rendering/ArtGeometry.cs); `asset-audit` |
-| Bomb shell/growth and pickup symbol | [BombModel](../../scripts/arena/models/BombModel.cs), [PowerupModel](../../scripts/arena/models/PowerupModel.cs); `pump-growth`, `loot-opening` |
+| Bomb shell/growth and pickup symbol | [BombModel](../../scripts/arena/models/BombModel.cs), [PowerupModel](../../scripts/arena/models/PowerupModel.cs); `pump-growth`, `loot-opening`, `pickup-showcase` |
 | Terrain visuals and height conversion | [TempleStageView](../../scripts/arena/stages/TempleStageView.cs); `traversal`, `framing`, `hurry-water` |
 | Stone/water shaders and lighting | [ArtMaterials](../../scripts/rendering/ArtMaterials.cs), ArenaView; graphical `asset-audit`, `presentation` |
 | Perspective framing/shake | [BattleCameraRig](../../scripts/arena/BattleCameraRig.cs); `framing` at supported aspect ratios |
@@ -579,6 +579,39 @@ boot pickup represents the temporary Haste player buff;
 Focus uses a cyan target symbol. Charge progress drives tension before the accepted
 pump animation. The fifth-tier Pyramid summit is a low mosaic, keeping playable
 space and rear water falls visible. Recheck camera fit on all enlarged arenas.
+
+## Pickup personality (2026-10-27 source work)
+
+The user asked for pickups with more personality that follow the existing toy
+style. `PowerupModel` keeps its root scale, unchanged gold plate, enlarged icon
+subtree and bob, and changes only what sits on and above the plate:
+
+- **Stamped coin.** An ink lip under the plate echoes the menu's stamped keys;
+  an inset badge names the family: coral upgrades (Blast/Bomb up), aqua
+  abilities (Heart/Focus), indigo bomb types (Remote/Power/Bounce), mint helpful
+  effects (Tiny/Haste) and violet hindering effects (Big/Slow). At battle
+  distance the badge and silhouette carry recognition; faces read up close.
+- **Faces.** Flame, bombs, heart, bounce ball, Tiny/Big heads and the snail use
+  the bomber's simple tall eyes (cream on dark shells) and blink. The Power bomb
+  frowns; the bounce ball's eyes are closed ^ ^ strokes. No white glint dots:
+  the user found small bright highlights distracting.
+- **Symbols.** Flame with tongues; bombs with fuse and spark (Power bomb's spark is
+  the blue of its blast); a blue remote with the remote bomb's green lamp; a
+  bomber head small or swollen with inward/outward chevrons for Tiny/Big; a
+  winged sneaker for Haste and a snail for Slow.
+- **Motion.** Icons sway toward the battle camera and twirl once every 4.2 s at a
+  position-derived phase instead of spinning continuously. A short ease-out-back
+  pop plays when a reward appears. Each kind has its own idle: flicker, lub-dub
+  beat, hop with squash, closing reticle brackets, breathing head, running boot
+  and flapping wings, creeping snail with wobbling stalks, blinking lamp.
+- **Budget.** Faces, trim and the stand skip the shadow pass. Icons stay within
+  the asset audit's bob clearance above the plate.
+
+`pickup-showcase` captures a labelled studio lineup of all eleven kinds at the
+battle-camera angle (two animation instants) plus both restricted Sunken Temple
+practice caches from the battle camera and a closer inspection camera.
+[Before/after captures and receipts](../images/pickup-personality/manifest.json). Agent review is not
+user approval of the art.
 
 ## Rock Garden reconstruction (2026-10-24)
 
