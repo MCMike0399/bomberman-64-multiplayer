@@ -27,6 +27,7 @@ public partial class GameRoot : Node3D
     private readonly Dictionary<int,PlayerInput> _injected=[];
     private bool _connecting,_practice,_setupForHost,_smoke,_editingRoom;
     private string _capture="gameplay";
+    private string? _smokeOutput;
     private double _elapsed,_smokeDuration=8;
     private SessionSettings _lastSettings=new();
     private int _lastHumans=1;
@@ -106,6 +107,13 @@ public partial class GameRoot : Node3D
             // A fresh QA process may reopen a fixture without touching personal settings.
             var id=args.FirstOrDefault(a=>a.StartsWith("--playtest-preferences="))?.Split('=',2)[1];
             if(Guid.TryParseExact(id,"N",out var fixture))PreferencesPath=$"user://qa-preferences-{fixture:N}.cfg";
+        }
+        if(args.Any(a=>a is "--smoke" or "--smoke-menu"))
+        {
+            string? fixture=args.FirstOrDefault(a=>a.StartsWith("--smoke-preferences="))?.Split('=',2)[1];
+            string? output=args.FirstOrDefault(a=>a.StartsWith("--smoke-output="))?.Split('=',2)[1];
+            if(fixture is not null&&Path.IsPathFullyQualified(fixture))PreferencesPath=fixture;
+            if(output is not null&&Path.IsPathFullyQualified(output))_smokeOutput=output;
         }
         _preferences=PlayerPreferences.Load(PreferencesPath);_menu.ConfigurePreferences(_preferences);_menu.TutorialProgress(_preferences.CompletedTutorials);ApplyPreferences();
         DisplayModeController.Current.Configure(_preferences.Fullscreen,_preferences.Resolution,startup:true);
@@ -305,7 +313,7 @@ public partial class GameRoot : Node3D
                 bool captured=true;
                 if(DisplayServer.GetName()!="headless")
                 {
-                    string folder=ProjectSettings.GlobalizePath(OS.HasFeature("editor")?"res://artifacts":"user://captures");
+                    string folder=_smokeOutput??ProjectSettings.GlobalizePath(OS.HasFeature("editor")?"res://artifacts":"user://captures");
                     captured=DirAccess.MakeDirRecursiveAbsolute(folder)==Error.Ok
                         &&GetViewport().GetTexture().GetImage().SavePng(System.IO.Path.Combine(folder,_capture+".png"))==Error.Ok;
                 }

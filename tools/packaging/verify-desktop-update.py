@@ -19,6 +19,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--target', choices=desktop.TARGETS, required=True)
     parser.add_argument('--directory', type=Path, default=ROOT / 'artifacts')
+    parser.add_argument('--disposable-desktop', action='store_true', help='Confirm this local VM/user profile is reserved for installer tests')
     args = parser.parse_args()
     settings, item = desktop.TARGETS[args.target], desktop.names(args.target)
     if platform.system() != settings['os']:
@@ -30,8 +31,12 @@ def main():
     receipt = {'schemaVersion': 1, 'passed': False, 'platform': args.target}
     try:
         with (output / 'runtime.log').open('w') as log:
-            result = subprocess.run(['dotnet', 'run', '--project', str(ROOT / 'tests/Bomber.DesktopUpdate.GameTests'), '-m:1', '--',
-                                     str(directory), str(directory / 'update-fixture'), str(output / 'transactions')],
+            subprocess.run(['dotnet', 'build', str(ROOT / 'tests/Bomber.DesktopUpdate.GameTests'), '--nologo', '-m:1'],
+                           cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, check=True, timeout=180)
+            command = ['dotnet', 'run', '--no-build', '--project', str(ROOT / 'tests/Bomber.DesktopUpdate.GameTests'), '--',
+                       str(directory), str(directory / 'update-fixture'), str(output / 'transactions')]
+            if args.disposable_desktop: command.append('--disposable-desktop')
+            result = subprocess.run(command,
                                     cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, timeout=720)
         text = (output / 'runtime.log').read_text(errors='replace')
         errors = [line for line in text.splitlines() if re.search(r'(^|\s)(ERROR:|SCRIPT ERROR:|Unhandled exception|Unhandled Exception|FATAL:)', line)]

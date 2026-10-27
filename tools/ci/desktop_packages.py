@@ -23,13 +23,15 @@ def names(target):
     stem = 'Blast-Circuit-' + target
     return {'artifact': stem, 'archive': stem + '.zip', 'metadata': stem + '-metadata.json',
             'smoke_artifact': stem + '-smoke', 'smoke': stem + '-smoke.json', 'root': stem,
-            'updater_test': stem + '-updater-tests.json'}
+            'updater_test': stem + '-updater-tests.json', 'graphical': stem + '-graphical.json',
+            'startup': stem + '-startup.json'}
 
 
 def asset_names(target):
     item = names(target)
     from download_formats import names as download_names
-    return (item['archive'], item['archive'] + '.sha256', item['metadata'], item['smoke'], item['updater_test'], *download_names(target))
+    return (item['archive'], item['archive'] + '.sha256', item['metadata'], item['smoke'], item['graphical'],
+            item['startup'], item['updater_test'], *download_names(target))
 
 
 def artifacts(targets=None):
@@ -107,6 +109,15 @@ def inspect(directory, revision, release, targets=None):
                 smoke.get('os') != settings['os']):
             raise RuntimeError('Desktop exported smoke is missing or mismatched: ' + target)
         desktop_validation.inspect_receipt(smoke, settings, revision, release)
+        graphical = json.loads((directory / item['graphical']).read_text())
+        if (graphical.get('passed') is not True or graphical.get('target') != target or
+                graphical.get('revision') != revision or graphical.get('release') != release or
+                graphical.get('archiveSha256') != digest(directory / item['archive']) or
+                graphical.get('suite') != 'graphical-regression' or smoke.get('suite') != 'headless-regression'):
+            raise RuntimeError('Full graphical desktop regression is missing or mismatched')
+        desktop_validation.inspect_receipt(graphical, settings, revision, release)
+        startup = json.loads((directory / item['startup']).read_text())
+        desktop_validation.inspect_startup(startup, target, revision, release, digest(directory / item['archive']))
         desktop_update_gates.inspect(json.loads((directory / item['updater_test']).read_text()), target,
                                      revision, release, digest(directory / item['archive']))
 

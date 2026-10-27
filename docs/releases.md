@@ -410,3 +410,17 @@ release workflows. Fork workflows require approval from all outside contributors
 The [delivery receipt](verification.md#v0310-delivered) supersedes the earlier
 source-only setup audit above. Installed scripts, private host configuration and
 recovery logs remain in operator storage.
+
+
+## Desktop client release gates
+
+Windows/Linux delivery source adds required native archived-game regression jobs.
+Promotion requires complete core and graphical journey coverage, the nine saved
+startup cases, actual game updater install/rollback receipts, and player-facing
+EXE/AppImage/DMG downloads bound to the original portable archive. The native
+job's updater fixture has a deliberately newer test-only identity and is never
+published. Failed jobs retain allowlisted logs, receipts and captures. Missing,
+stale, partial, wrong-platform or runtime-error evidence blocks delivery.
+The existing Mac startup/update, monotonic identity, fleet rollout and anonymous
+post-publication checks remain required. Read [desktop clients](desktop-clients.md)
+for exact commands and remaining hardware/device evidence boundaries.

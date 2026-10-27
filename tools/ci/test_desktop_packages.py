@@ -39,11 +39,23 @@ def write_desktop(directory, revision=SHA, release=None):
             cases.append({'passed': True, 'platform': settings['os'], 'release': dict(release, revision=revision),
                           'scenario': scenario, 'catalogSha256': validation.catalog_digest(),
                           'completedScenarios': validation.expanded(scenario, validation.catalog()),
-                          'assertions': 200, 'runtimeErrors': [], 'screenshotMode': 'disabled-headless'})
+                          'assertions': 200, 'checks': [{'passed': True}] * 200, 'runtimeErrors': [], 'screenshotMode': 'disabled-headless'})
         (directory / item['smoke']).write_text(json.dumps({
             'schemaVersion': 2, 'passed': True, 'target': target, 'revision': revision, 'release': release,
             'archiveSha256': desktop.digest(directory / item['archive']), 'os': settings['os'],
             'suite': 'headless-regression', 'cases': cases}))
+        graphical = []
+        for scenario in validation.GRAPHICAL:
+            graphical.append({'passed': True, 'platform': settings['os'], 'release': dict(release, revision=revision),
+                              'scenario': scenario, 'catalogSha256': validation.catalog_digest(),
+                              'completedScenarios': validation.expanded(scenario, validation.catalog()),
+                              'assertions': 200, 'checks': [{'passed': True}] * 200, 'runtimeErrors': [], 'screenshotMode': 'graphical',
+                              'renderingDriver': settings['driver'], 'renderingMethod': 'forward_plus', 'adapter': 'Fixture GPU', 'screenshots': ['capture.png']})
+        (directory / item['graphical']).write_text(json.dumps({'schemaVersion': 2, 'passed': True, 'target': target, 'revision': revision,
+            'release': release, 'archiveSha256': desktop.digest(directory / item['archive']), 'suite': 'graphical-regression', 'cases': graphical}))
+        (directory / item['startup']).write_text(json.dumps({'schemaVersion': 1, 'passed': True, 'target': target, 'revision': revision,
+            'release': release, 'archiveSha256': desktop.digest(directory / item['archive']),
+            'cases': [{'id': name, 'passed': True, 'adapter': 'Fixture GPU', 'seconds': 4, 'snapshots': 10, 'kind': name.rsplit('-', 1)[1]} for name in validation.STARTUP]}))
         (directory / download_formats.FILES[target]).write_bytes(b'MZ fixture installer' if target == 'windows-x64' else b'\x7fELF' + b'\x00'*4 + b'AI\x02 fixture AppImage')
         download_formats.record(directory, target, revision, release, item['archive'])
         parts = release['version'].split('.')

@@ -201,7 +201,11 @@ def stage_draft(repository, run_id, version, revision, directory, existing_draft
     for target in ('macos-arm64', *desktop_packages.TARGETS):
         download_formats.inspect(directory, target, revision, check_exports())
     notes = directory / 'release-notes.txt'
-    notes.write_text(f'Apple Silicon client and portable .NET 10 server from {revision}.\n\n'
+    downloads = [('Windows installer', download_formats.FILES['windows-x64']), ('Mac disk image', download_formats.FILES['macos-arm64'])]
+    if 'linux-x64' in desktop_packages.TARGETS:
+        downloads.insert(1, ('Linux AppImage', download_formats.FILES['linux-x64']))
+    links = ' · '.join(f'[{label}](https://github.com/{repository}/releases/download/v{version}/{name})' for label, name in downloads)
+    notes.write_text(f'{links}\n\nClient and matching portable .NET 10 server from {revision}.\n\n'
                      f'Verification: https://github.com/{repository}/actions/runs/{run_id}\n\n'
                      'Managed, network, headless and export checks passed. The archived app also passed saved-settings startup on every '
                      'graphics preset/display mode and an actual signed update from the latest published release. '
@@ -209,7 +213,7 @@ def stage_draft(repository, run_id, version, revision, directory, existing_draft
                      'Ad-hoc signature; Apple notarization and physical controller validation are not claimed.\n')
     with notes.open('a') as stream:
         for target, settings in desktop_packages.TARGETS.items():
-            stream.write(f'\n{target}: self-contained client using {settings["driver"]}; native-OS headless exported smoke passed. '
+            stream.write(f'\n{target}: self-contained client using {settings["driver"]}; complete native-OS gameplay, multiplayer, graphical/startup and actual updater gates passed. '
                          'Signed automatic updates are supported from installed Windows folders and Linux AppImages. '
                          'Native GPU visuals/performance and physical controller support require separate hardware validation.\n')
     names = [ARCHIVE, ARCHIVE + '.sha256', SERVER_ARCHIVE, SERVER_ARCHIVE + '.sha256',

@@ -5,8 +5,11 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using Bomber.Client.Updates;
 
-if (args.Length != 3 || !(OperatingSystem.IsWindows() || OperatingSystem.IsLinux()))
-    throw new ArgumentException("Run on Windows/Linux: <candidate assets> <newer fixture assets> <fresh output directory>");
+if (args.Length is < 3 or > 4 || !(OperatingSystem.IsWindows() || OperatingSystem.IsLinux()) ||
+    args.Length == 4 && args[3] != "--disposable-desktop")
+    throw new ArgumentException("Run on Windows/Linux: <candidate assets> <newer fixture assets> <fresh output directory> [--disposable-desktop]");
+if (Environment.GetEnvironmentVariable("GITHUB_ACTIONS") != "true" && !args.Contains("--disposable-desktop"))
+    throw new InvalidOperationException("Actual installer/update tests require a disposable VM or user profile; the Windows installer changes its AppId registration. Use --disposable-desktop only there.");
 string assets = Path.GetFullPath(args[0]), fixture = Path.GetFullPath(args[1]), output = Path.GetFullPath(args[2]);
 if (Directory.Exists(output)) throw new IOException("Use a fresh updater evidence directory.");
 Directory.CreateDirectory(output);
