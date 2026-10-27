@@ -125,9 +125,13 @@ public partial class PlaytestDriver
         Input(0,new PlayerInput(0,0,A:true));await Frames(2);Input(0,default);
         await WaitState(s=>!Player.GetProperty("alive").GetBoolean(),"real blast drops the equipped item under a bridge",150);
         await Frames(4);
-        var item=State.GetProperty("items").EnumerateArray().Single(i=>i.GetProperty("type").GetString()=="red");
+        // Denser courts can leave several revealed rewards. Identify the actual
+        // death drop under this bridge, rather than assuming it is the only red item.
+        var item=State.GetProperty("items").EnumerateArray().Single(i=>i.GetProperty("type").GetString()=="red"&&
+            i.GetProperty("cx").GetInt32()==5&&i.GetProperty("cz").GetInt32()==6);
         Check(item.GetProperty("cx").GetInt32()==5&&item.GetProperty("cz").GetInt32()==6&&item.GetProperty("y").GetSingle()==0,"death-drop snapshot retains lower-floor support");
-        var pickup=AuditDescendants(LightingArena).OfType<PowerupModel>().Single();
+        var pickup=AuditDescendants(LightingArena).OfType<PowerupModel>().Single(p=>p.Kind=="red"&&
+            Math.Abs(p.Position.X-5.5f)<.01f&&Math.Abs(p.Position.Z-6.5f)<.01f);
         Check(Math.Abs(pickup.Position.Y-.48f)<.01f,"actual pickup mesh uses accepted lower-floor height instead of the bridge top");
         await Capture("top-rules-real-loot-under-bridge");
         _root.Back();await Frames(3);

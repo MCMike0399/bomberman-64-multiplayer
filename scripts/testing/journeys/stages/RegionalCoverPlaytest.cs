@@ -1,13 +1,19 @@
 using Bomber.Client.Sessions;
 using Bomber.Game.Matches;
 using Bomber.Game.Simulation.Stages;
+using BlastCircuit.Rendering;
+using Godot;
 namespace BlastCircuit.Testing;
 
 public partial class PlaytestDriver
 {
     private async Task RegionalCoverTour()
     {
-        foreach(var (id,budget) in new[]{(BlastStages.SunkenTemple,90),(BlastStages.RockGarden,16),(BlastStages.UpAndDown,12)})
+        var previousPreset=_root.Preferences.Graphics;
+        if(!_headless)await SelectGraphics(GraphicsPreset.High);
+        if((_scenario is "cover-layout" or "cover-regression")&&!_headless)await ResizeWindow(new Vector2I(1600,1000));
+        foreach(var (id,budget) in new[]{(BlastStages.SunkenTemple,90),(BlastStages.RockGarden,64),
+            (BlastStages.UpAndDown,36),(BlastStages.TopRules,48),(BlastStages.BlizzardBattle,64),(BlastStages.GreedyTrap,64)})
         {
             Input(0,default);Input(1,default);
             _root.StartLocal(new SessionSettings(Stage:id,Bots:0,SuddenDeath:false,Ghosts:false){Advanced=new AdvancedRules{DropPercent=100,DisabledItems="remote,red,bounce,heart,focus,tiny,big,haste,slow"}},2);
@@ -17,6 +23,7 @@ public partial class PlaytestDriver
             int count=bits.Sum(b=>System.Numerics.BitOperations.PopCount((uint)b));
             Check(count==budget,"normal battle supplies its authored regional cover budget: "+id);
             Check(State.GetProperty("items").GetArrayLength()==0,"normal battle rewards must be revealed through real destruction: "+id);
+            Event("regional-cover-layout",new {stage=id,blocks=count,preset=_root.Preferences.Graphics.ToString(),lighting=_root.Preferences.StageLighting.ToString(),camera="ordinary battle camera",humans=2,bots=0,practice=false});
             await Capture("regional-cover-"+id);
             if(id==BlastStages.SunkenTemple)
             {
@@ -47,5 +54,6 @@ public partial class PlaytestDriver
             }
             _root.Back();await Frames(3);
         }
+        if(!_headless)await SelectGraphics(previousPreset);
     }
 }

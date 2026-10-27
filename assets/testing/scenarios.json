@@ -1169,6 +1169,28 @@
       "headless": false,
       "timeout": 240,
       "manual": false
+    },
+    {
+      "id": "cover-regression",
+      "steps": [
+        "cover-layout",
+        "top-rules",
+        "up-and-down",
+        "rock-garden",
+        "blizzard-battle",
+        "greedy-trap"
+      ],
+      "domains": [
+        "ai",
+        "assets",
+        "gameplay",
+        "physics",
+        "rendering",
+        "ui"
+      ],
+      "headless": true,
+      "timeout": 1200,
+      "manual": false
     }
   ]
 }

@@ -1,0 +1,159 @@
+{
+  "capturedOn": "2026-10-27",
+  "sourceRun": "20261027T192633.039543Z-cover-regression",
+  "scenario": "cover-regression",
+  "sourceBaseRevision": "d9936e5907fab2a8ab9c01c739248571c73f5c7e",
+  "sourceWorktreeDirty": true,
+  "sourceSha256": {
+    "scripts/testing/journeys/stages/BlizzardBattlePlaytest.cs": "060084e6a76a2cb50b93ae3cafaed2fbd0d488b6cfe3fceb8aa0827af87d157a",
+    "scripts/testing/journeys/stages/GreedyTrapPlaytest.cs": "cd9f54bf1b9c1bc1fd293f0d652ce40c090763beee6da5cd7151379ff68fd000",
+    "scripts/testing/journeys/stages/RegionalCoverPlaytest.cs": "0d49a26ab4c6c874289aa8793893766f68c240a48c9243f6d3f5638a34e1db3f",
+    "scripts/testing/journeys/stages/RockGardenPlaytest.cs": "7f8ee4a86bb7a90f62cc4da13d308207105acb92958c319f23cd54f9d97092be",
+    "scripts/testing/journeys/stages/TopRulesPlaytest.cs": "21204d1b61958b22fbbbadb03912347e1a81e6029ec9960dd050fa5424a36b6a",
+    "scripts/testing/journeys/stages/UpAndDownPlaytest.cs": "15aaa8addf7e72c0e75684fba8da88460114edf6918e7b87b1e7501cf7b76617",
+    "src/Bomber.Game/Simulation/Stages/BlastStages.BlizzardBattle.cs": "a671088085bcdeab37288de6cfb516b60b84b6443648e306616e7c06be8da0dc",
+    "src/Bomber.Game/Simulation/Stages/BlastStages.GreedyTrap.cs": "6c7007c947cb6a858251b9cf93e589f64045828bd38b5f528a38ce1c4ba98400",
+    "src/Bomber.Game/Simulation/Stages/BlastStages.RockGarden.cs": "7d4c01757638b4792cdb2f2db3598e300581034a39dd8d6f971a3f09b27dfae8",
+    "src/Bomber.Game/Simulation/Stages/BlastStages.TopRules.cs": "ebdcd5fcc4d13449ec963386c453a9747ba6c4fd09e27433cab17ae63dd24e85",
+    "src/Bomber.Game/Simulation/Stages/BlastStages.UpAndDown.cs": "df17546218ca67ec6ba83bb105a91dc007d4fdcdd44a8e6ff1534fd75fd70fc9"
+  },
+  "catalogSha256": "cb435c108de8197091f8d6a07210af698afc290f4c67ddc315c11b0e0215fa16",
+  "assemblies": {
+    "Contents/Resources/data_Bomberman64Multiplayer_macos_arm64/Bomber.Game.dll": {
+      "sha256": "ce1f8020978f8697ed08a1d536f88412ea7460c2e642eb62932dcfbc857c82d8"
+    },
+    "Contents/Resources/data_Bomberman64Multiplayer_macos_arm64/Bomberman64Multiplayer.dll": {
+      "sha256": "8c619ad90528b60a618b24328d11ff0c522ffc757a28a6adcdbcd772efe1a87c"
+    }
+  },
+  "renderer": "Metal 4.0 - Forward+ - Using Device #0: Apple - Apple Paravirtual device (Apple5)",
+  "desktop": "isolated macOS VM",
+  "camera": "ordinary battle camera",
+  "seed": 64,
+  "fixture": {
+    "humans": 2,
+    "bots": 0,
+    "practice": false,
+    "blockPercent": 100,
+    "dropPercent": 100,
+    "enabledItems": [
+      "fire",
+      "bomb"
+    ],
+    "suddenDeath": false,
+    "ghosts": false
+  },
+  "verification": {
+    "passed": true,
+    "journeys": [
+      "cover-layout",
+      "top-rules",
+      "up-and-down",
+      "rock-garden",
+      "blizzard-battle",
+      "greedy-trap"
+    ],
+    "assertions": 646,
+    "screenshots": 79,
+    "runtimeErrors": 0
+  },
+  "images": [
+    {
+      "file": "sunken-temple.png",
+      "sourceCapture": "regional-cover-sunken-temple.png",
+      "sha256": "196402ed937779aa846110589f186718d36ecc365590aa0d67aa9b9cf3fcebb4",
+      "width": 1600,
+      "height": 1000,
+      "frame": 161,
+      "stage": "sunken-temple",
+      "blocks": 90,
+      "preset": "High",
+      "lighting": "Midday",
+      "camera": "ordinary battle camera",
+      "humans": 2,
+      "bots": 0,
+      "practice": false
+    },
+    {
+      "file": "rock-garden.png",
+      "sourceCapture": "regional-cover-rock-garden.png",
+      "sha256": "7fca4992a17c2f7f25c60e5dc4fda04d5f7580fbde50d3854444f52161d4626b",
+      "width": 1600,
+      "height": 1000,
+      "frame": 458,
+      "stage": "rock-garden",
+      "blocks": 64,
+      "preset": "High",
+      "lighting": "Midday",
+      "camera": "ordinary battle camera",
+      "humans": 2,
+      "bots": 0,
+      "practice": false
+    },
+    {
+      "file": "up-and-down.png",
+      "sourceCapture": "regional-cover-up-and-down.png",
+      "sha256": "f8135ee690b201c90c10fcbaae762af8be1fe10ad8d954280b68c8ade0964954",
+      "width": 1600,
+      "height": 1000,
+      "frame": 523,
+      "stage": "up-and-down",
+      "blocks": 36,
+      "preset": "High",
+      "lighting": "Midday",
+      "camera": "ordinary battle camera",
+      "humans": 2,
+      "bots": 0,
+      "practice": false
+    },
+    {
+      "file": "top-rules.png",
+      "sourceCapture": "regional-cover-top-rules.png",
+      "sha256": "f02094ef1ae2505fd72b7c32b800b05f2f6c399257c5dadce275d92e32da6d3c",
+      "width": 1600,
+      "height": 1000,
+      "frame": 588,
+      "stage": "top-rules",
+      "blocks": 48,
+      "preset": "High",
+      "lighting": "Midday",
+      "camera": "ordinary battle camera",
+      "humans": 2,
+      "bots": 0,
+      "practice": false
+    },
+    {
+      "file": "blizzard-battle.png",
+      "sourceCapture": "regional-cover-blizzard-battle.png",
+      "sha256": "2dbbfd5cc17bcea65b19464d7327f4580b591b022d5cbd131544ff29c8c2e97c",
+      "width": 1600,
+      "height": 1000,
+      "frame": 653,
+      "stage": "blizzard-battle",
+      "blocks": 64,
+      "preset": "High",
+      "lighting": "Midday",
+      "camera": "ordinary battle camera",
+      "humans": 2,
+      "bots": 0,
+      "practice": false
+    },
+    {
+      "file": "greedy-trap.png",
+      "sourceCapture": "regional-cover-greedy-trap.png",
+      "sha256": "fa5a7d637f0c3527f60f3b6d988f1bb50a8ec839d28b95d592f4e348d230122b",
+      "width": 1600,
+      "height": 1000,
+      "frame": 718,
+      "stage": "greedy-trap",
+      "blocks": 64,
+      "preset": "High",
+      "lighting": "Midday",
+      "camera": "ordinary battle camera",
+      "humans": 2,
+      "bots": 0,
+      "practice": false
+    }
+  ],
+  "limits": "Unedited real viewport captures. VM evidence does not establish physical GPU performance or physical controller support."
+}

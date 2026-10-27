@@ -27,7 +27,7 @@ public partial class PlaytestDriver
             var terrain=AuditDescendants(LightingArena).OfType<TempleStageView>().Single();
             var cones=terrain.GetParent().GetChildren().SelectMany(n=>AuditDescendants(n)).OfType<Node3D>()
                 .Where(n=>n.Name.ToString().StartsWith("IceCone")).ToArray();
-            Check(cones.Length==16,"actual opening renders sixteen pointed destructible ice cones");
+            Check(cones.Length==64,"actual opening renders four banks of pointed destructible ice cones");
             Check(State.GetProperty("players").GetArrayLength()==4,"reference four-player corner arrangement starts");
             Check(terrain.FindChild("FrozenCourt",true,false)!=null&&terrain.FindChild("Seabed",true,false)==null,"snowfield uses opaque ice with no ocean");
             var court=terrain.GetNode<MeshInstance3D>("FrozenCourt");var foundation=terrain.GetNode<MeshInstance3D>("GlacierFoundation");
@@ -80,7 +80,7 @@ public partial class PlaytestDriver
             await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"ice cone loot battle starts",150);
             await MoveTo(5.5f,2.5f,120);
             Input(0,new PlayerInput(1,0));await Frames(1);Input(0,new PlayerInput(0,0,A:true));await Frames(2);Input(0,default);
-            await MoveTo(3.5f,5.5f,100);
+            await MoveTo(2.5f,2.5f,100);
             await WaitState(s=>s.GetProperty("bombs").GetArrayLength()==0&&s.GetProperty("hazards").GetArrayLength()==0,"real fuse destroys an ice cone",150);
             Check(State.GetProperty("items").GetArrayLength()>0,"shattered ice exposes a real dropped upgrade");
             await Capture("blizzard-shattered-ice-reward");

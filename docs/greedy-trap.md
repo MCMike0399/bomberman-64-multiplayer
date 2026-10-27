@@ -15,9 +15,11 @@ pockets are middle-height dead ends. Bare lips permit ordinary downward falls;
 upward travel uses stairs. There are no bridges or underpasses.
 
 The first four starts occupy the upper-court quadrants. Four additional upper
-starts support this project's eight-player battles. Eight destructible masonry
-blocks concentrate rewards below; spawn regions, stairs and the middle ring
-remain clear. The normal regional-cover path still honors Advanced block density,
+starts support this project's eight-player battles. 64 destructible masonry
+blocks form four upper stockpiles (48 blocks) and four bottom reward islands
+(16 blocks). Spawn escape cells, a perimeter loop, both upper stair approaches,
+the entire middle ring and the bottom cross remain clear. The normal regional-cover
+path still honors Advanced block density,
 item toggles, independent drop chance and item lifetime. Practice clears cover.
 The chosen block coordinates are authored tuning, not recovered original data.
 
@@ -86,7 +88,7 @@ python3 tools/playtest/run.py --scenario greedy-trap-regression --start-server
 ```
 
 The managed checks cover three-story topology, all six real stair routes,
-separate starts, eight/half/zero block budgets, legal CPU edges and timed crushing.
+separate starts, full/half/zero block budgets, legal CPU edges and timed crushing.
 The focused AI soak covers three difficulties, three/seven CPUs and two seeds
 (12 scenarios), with the same activity and safe-exit liveness checks as the
 canonical 48-scenario existing-stage matrix.

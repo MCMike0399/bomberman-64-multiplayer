@@ -46,9 +46,12 @@ public static partial class BlastStages
             Id = TopRules, Name = "Top Rules", Width = width, Height = height, DecksBlockBlasts=false,
             Cells = cells,
             Spawns = [(5, 2), (13, 2), (5, 14), (13, 14), (9, 2), (9, 14), (1, 8), (17, 8)],
-            SoftBlockDensity = .32, MaxSoftBlocks = 12,
-            CoverAreas = [new("lower-west", .5, 3, 8, 3, 13, 0, 0),
-                          new("lower-east", .5, 10, 15, 3, 13, 0, 0)],
+            SoftBlockDensity = 1, MaxSoftBlocks = 48,
+            CoverAreas = [
+                new("northwest-court", .25, 3, 8, 3, 7, 0, 0) { Centers = [(6,4),(8,4)] },
+                new("northeast-court", .25, 10, 15, 3, 7, 0, 0) { Centers = [(11,4),(14,4)] },
+                new("southwest-court", .25, 3, 8, 9, 13, 0, 0) { Centers = [(6,12),(8,12)] },
+                new("southeast-court", .25, 10, 15, 9, 13, 0, 0) { Centers = [(11,12),(14,12)] }],
             // Keep the entire upper network, stairs and lower through routes clear.
             ClearCells = Enumerable.Range(0, width).SelectMany(x => Enumerable.Range(0, height).Select(z => (X: x, Z: z)))
                 .Where(c => cells[c.X, c.Z].Tier > 0 || cells[c.X, c.Z].Kind == CellKind.Ramp ||

@@ -28,7 +28,7 @@ public partial class PlaytestDriver
         await Capture("greedy-trap-menu-miniature");
         _root.StartLocal(new SessionSettings(Stage:BlastStages.GreedyTrap,Bots:0),4);
         await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"ordinary four-player Greedy Trap battle starts",150);
-        Check(State.GetProperty("players").GetArrayLength()==4&&CoverCount()==8,"four upper starts surround eight real bottom blocks");
+        Check(State.GetProperty("players").GetArrayLength()==4&&CoverCount()==64,"upper stockpiles surround four bottom block islands");
         var openingTerrain=AuditDescendants(LightingArena).OfType<TempleStageView>().Single();
         foreach(var tread in openingTerrain.GetChildren().OfType<MeshInstance3D>().Where(n=>n.Name.ToString().StartsWith("GreedyTread_")))
         {

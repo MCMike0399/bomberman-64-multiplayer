@@ -368,7 +368,7 @@ lower horizontal travel remains open. The CPU graph has separate lower nodes
 only on maps with underpasses. Use its `X`/`Z` helpers and height-aware `Cell`
 lookup; dividing a layered node by arena width invents an out-of-bounds Z.
 
-The 19×17 footprint, tier-two decks, extra four starts and twelve seeded lower
+The 19×17 footprint, tier-two decks, extra four starts and 48 seeded lower
 court blocks are Blast Circuit tuning, not recovered original constants. The
 first four starts follow the reference's outer lane ends; upper lanes, stairs
 and lower crossing routes stay clear. Optional sudden death uses shared column
@@ -387,7 +387,7 @@ now covers five stages (60 combinations), including Blizzard Battle.
 
 ## Inventory, cover and pickup rendering
 
-Greedy Trap uses three solid stories, six flights, eight bottom masonry blocks
+Greedy Trap uses three solid stories, six flights, 64 regional masonry blocks
 and ordinary closing-column Hurry. Its turquoise basin is safe floor; it must
 not inherit ordinary water elimination or an unverified sliding rule. The
 [stage contract](../greedy-trap.md) owns topology, eight-seat adaptations and
@@ -395,14 +395,15 @@ focused authority/AI checks. Online revision 5 gates the newly supported arena.
 
 - [Loot placement](../../src/Bomber.Game/Simulation/BlastSession/Items/BlastSession.Loot.cs) uses map-owned
   `CoverAreas`: regional budget shares and cluster centers, with seeded weighted
-  sampling. Temple seeds two nearby crates per spawn; Rock Garden seeds one plus a central paving cluster. Top Rules keeps a sparse twelve-block lower court. Up & Down keeps its upper ring clear, placing eight crates on the low deck and two on each middle pier. All policies preserve spawn clearance, ramps and reserved lanes.
+  sampling. Temple seeds two nearby crates per spawn; Rock Garden seeds one plus a central paving cluster. Top Rules has 48 lower-court blocks, preserving its upper network and ground through-routes. Up & Down places twelve blocks on the low deck and twelve on each middle pier; its ring, crown, bridges and flights remain clear. Blizzard Battle has four 16-cone banks with clear cross/diagonal corridors; Greedy Trap has 48 upper stockpile blocks and sixteen bottom blocks around a clear cross. All policies preserve spawn clearance, ramps and reserved lanes.
   Every destroyed crate uses the same independent configured drop chance; there are
   no guaranteed opening rewards.
 - Pyramid targets 60% of 90 blocks in the lower court, 15% along the lower wings,
   and a lighter remainder on upper side terraces/base approaches. Its top two tiers
   and ascent stay clear; thin court lanes replace the old broad empty strips.
-  Rock Garden has sixteen boulders with clear center routes. Up & Down has twelve
-  lower/middle blocks, keeping its ring, summit, bridges and flights clear.
+  Rock Garden has 64 boulders with clear center routes, a perimeter loop and
+  connecting spawn avenues. Up & Down has 36 lower/middle blocks, keeping its
+  ring, summit, bridges and flights clear.
 - Advanced match settings default to a uniform independent 40% chance per
   destroyed block. Item weights are Fire/Bomb 30% each,
   Heart/Focus/Tiny/Big/Haste/Slow 5% each; Remote/Red/Bounce divide the remaining 10% equally.
@@ -450,6 +451,17 @@ focused authority/AI checks. Online revision 5 gates the newly supported arena.
   matching real inventory/counters and item-model removal. Its focused inspection camera
   is identified separately from normal battle-camera evidence.
   [Loot checks](../../tests/Bomber.Game.Tests/Items/LootAvailabilityChecks.cs).
+
+### Expanded battle cover (2026-10-27)
+
+The user requested richer cover on the other battle maps using Pyramid as the
+reference, with explicit care for areas that must stay empty. This supersedes
+the former 8–16-block budgets; geometry, spawns, drops and physics retain their
+existing rules. [Layouts, protected routes and screenshots](../denser-cover.md).
+`Bomber.Game.Tests -- --cover-layout` checks all six arenas over 32 seeds,
+five block percentages, empty practice and protected route connectivity from
+every spawn. Use the `cover-layout` graphical journey for High-preset battle
+screenshots, plus the existing stage journeys for real movement/bomb/loot checks.
 
 ### Item density tuning (2026-10-25)
 

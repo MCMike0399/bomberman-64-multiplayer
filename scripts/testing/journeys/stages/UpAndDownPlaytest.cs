@@ -88,9 +88,9 @@ public partial class PlaytestDriver
 
         _root.StartLocal(new SessionSettings(Stage:BlastStages.UpAndDown,Bots:0,Wins:3,RoundSeconds:90,Ghosts:false),3);
         await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"normal three-human Up & Down battle starts",150);
-        Check(Convert.FromBase64String(State.GetProperty("softBlocks").GetString()!).Sum(b=>System.Numerics.BitOperations.PopCount((uint)b))==12,"normal stage has twelve lower/middle cover blocks");
+        Check(Convert.FromBase64String(State.GetProperty("softBlocks").GetString()!).Sum(b=>System.Numerics.BitOperations.PopCount((uint)b))==36,"normal stage has thirty-six lower/middle cover blocks");
         await Capture("up-and-down-normal-cover");
-        Check(AuditDescendants(_root).OfType<Node3D>().Count(n=>n.Name.ToString().StartsWith("UpAndDownBlock",StringComparison.Ordinal))==12,
+        Check(AuditDescendants(_root).OfType<Node3D>().Count(n=>n.Name.ToString().StartsWith("UpAndDownBlock",StringComparison.Ordinal))==36,
             "all normal Up & Down destructible blocks use their own gray stone model");
         var block=AuditDescendants(_root).OfType<Node3D>().First(n=>n.Name.ToString().StartsWith("UpAndDownBlock",StringComparison.Ordinal));
         float blockTop=BombThrowRules.CoverHeight*TempleStageView.HeightScale;

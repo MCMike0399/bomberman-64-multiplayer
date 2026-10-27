@@ -17,14 +17,18 @@ public static partial class BlastStages
             // Low near rim keeps the whole court readable from the battle camera.
             cells[n,size-1]=new CellDef{Kind=CellKind.Pillar,ObstacleHeight=.35f};
         }
-        (int X,int Z)[] cones=[(6,2),(10,3),(9,4),(6,5),(10,5),(11,5),(14,7),(16,7),
-            (5,8),(2,10),(6,10),(7,12),(15,12),(14,14),(10,15),(12,15)];
+        // Four mirrored chevrons make breakable windbreaks. The central cross
+        // and both corner-to-corner diagonals remain continuous escape lanes.
+        (int X,int Z)[] bank=[(2,4),(2,5),(2,6),(3,5),(3,6),(3,7),(4,6),(4,7),
+            (6,2),(6,3),(7,3),(6,4),(7,4),(7,5),(5,7),(7,2)];
+        var cones=bank.SelectMany(c=>new[]{c,(18-c.X,c.Z),(c.X,18-c.Z),(18-c.X,18-c.Z)}).ToHashSet();
         return new StageLayout
         {
             Id=BlizzardBattle,Name="Blizzard Battle",Width=size,Height=size,Cells=cells,
             Spawns=[(2,2),(16,2),(2,16),(16,16),(9,1),(9,17),(1,8),(17,10)],
-            SoftBlockDensity=1,MaxSoftBlocks=16,OpeningCoverPerSpawn=0,SoftBlockHeight=1.3f,
-            CoverAreas=[new("ice-cones",1,1,17,1,17)],
+            SoftBlockDensity=1,MaxSoftBlocks=64,OpeningCoverPerSpawn=0,SoftBlockHeight=1.3f,
+            CoverAreas=[new("northwest-bank",.25,1,8,1,8),new("northeast-bank",.25,10,17,1,8),
+                new("southwest-bank",.25,1,8,10,17),new("southeast-bank",.25,10,17,10,17)],
             ClearCells=Enumerable.Range(1,17).SelectMany(x=>Enumerable.Range(1,17).Select(z=>(X:x,Z:z)))
                 .Where(c=>!cones.Contains(c)).ToHashSet(),
         };
