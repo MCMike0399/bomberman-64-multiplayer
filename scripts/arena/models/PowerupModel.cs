@@ -16,7 +16,7 @@ public partial class PowerupModel : Node3D
     {
         Kind=kind;Scale=Vector3.One*VisualScale;
         _icon.Name="Icon";_icon.Scale=Vector3.One*IconScale;_icon.Position=new(0,IconLift,0);AddChild(_icon);
-        var white=art.Toy(new("fff9dc"),.4f);var ink=art.Toy(new("253453"),.3f);var gold=art.Toy(new("ffd653"),.4f,true);
+        var white=art.Toy(new("fff9dc"),.4f);var ink=art.Toy(new("253453"),.35f);var gold=art.Toy(new("ffd653"),.4f,true);
         Cylinder(this,new(0,-.3f,0),.3f,.05f,gold);
         switch(kind)
         {
@@ -62,7 +62,7 @@ public partial class PowerupModel : Node3D
                 }
                 Sphere(_icon,Vector3.Zero,Vector3.One*.13f,white);break;
             default:
-                Sphere(_icon,Vector3.Zero,Vector3.One*.4f,kind=="red"?art.Toy(new("e8384e"),.25f):ink);
+                Sphere(_icon,Vector3.Zero,Vector3.One*.4f,kind=="red"?art.Toy(new("e8384e"),.32f):ink);
                 Cylinder(_icon,new(0,.24f,0),.035f,.14f,gold);
                 if(kind=="bomb")
                 {
