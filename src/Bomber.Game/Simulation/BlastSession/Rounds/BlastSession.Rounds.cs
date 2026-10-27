@@ -127,7 +127,7 @@ public sealed partial class BlastSession
         if (_phase == RoundPhase.Hurry && !_stage.RisingWater && _stage.Id!=BlastStages.RockGarden && _tutorialLesson is null)
         {
             _hurryColTimer += dt;
-            float interval=_stage.Id==BlastStages.BlizzardBattle?BlizzardRules.AvalancheStepSeconds:1f;
+            float interval=BlastStages.HurryColumnSeconds(_stage.Id);
             if (_hurryColTimer >= interval)
             {
                 _hurryColTimer -= interval;

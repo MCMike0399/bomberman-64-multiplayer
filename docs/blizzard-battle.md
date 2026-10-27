@@ -33,7 +33,10 @@ reference evidence establishes wind over a snowfield, not Lost at Sea's ice phys
 
 Wind displaces living ground/airborne players and free resting, kicked and
 thrown bombs through their existing collision paths. Held objects follow the
-carrier. Wind does not change facing, vertical gravity, stored throw momentum,
+carrier. Drift may separate a bomb from a body it overlaps but never pushes it
+deeper; that includes a fresh bomb's owner. Before 2026-10-26 the owner was
+exempt, so a bomb placed facing into a gust slid straight through its owner.
+Wind does not change facing, vertical gravity, stored throw momentum,
 charge time or fuse ownership. The aim guide samples the same schedule for its
 future static arc; moving combatants and future cover changes remain advisory
 limitations. CPU players retain the same resources and movement rules.
@@ -61,8 +64,10 @@ All four lighting profiles and the existing lacquered character palette apply.
 A bounded MultiMesh animates snow along accepted wind, with sparse larger flakes
 and fine flurries. Low/Medium/High draw 72/152/240 flakes. Low omits fine shader
 sparkles. Local pause freezes the snow clock and authoritative gust progression.
-Snow never changes collision. Avalanches swell into their accepted columns,
-then settle into packed banks. The menu miniature uses the same terrain and ice
+Snow never changes collision. Between accepted closures the next snow bank
+creeps out from behind the packed snow and reaches its column as that column
+becomes lethal, then settles in place (2026-10-26; earlier banks popped in a
+whole column every three seconds). The menu miniature uses the same terrain and ice
 cones with its exterior cropped to the display plinth.
 
 ## Verification entrypoints

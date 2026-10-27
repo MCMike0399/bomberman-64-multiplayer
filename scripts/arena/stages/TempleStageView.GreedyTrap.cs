@@ -98,6 +98,7 @@ public partial class TempleStageView
                     Box(root,new(face,2.9f,Depth/2f),new(.025f,.12f,Depth-2),_greedyMaterials[5]);
             }
         }
+        if(left==0)_greedyFrontLeft=_greedyFrontRight=0;
         if(left!=_greedyClosed||right!=_greedyClosedRight||!_greedyWallsInitialized)
         {
             // Fill the whole closed strip behind each moving face. A one-cell
@@ -114,11 +115,26 @@ public partial class TempleStageView
             _greedyWallsInitialized=true;_greedyGearImpulse=1;
         }
         SizeGreedyCrushers();
+        ShowGreedyCrushers(Math.Max(left,_greedyFrontLeft),Math.Max(right,_greedyFrontRight));
+        _greedyClosed=left;_greedyClosedRight=right;
+        _greedyMaterials[5].SetShaderParameter("compression",left>0?1:0);
+    }
+
+    /// <summary>Creeps both crusher faces toward the next closure between authoritative steps.</summary>
+    public void AdvanceGreedyCompression(float left,float right)
+    {
+        if(!_greedy||!_greedyWallsInitialized)return;
+        _greedyFrontLeft=left;_greedyFrontRight=right;
+        _greedyLeftTarget=new(Math.Max(.5f,left/2),0,0);_greedyRightTarget=new(Math.Min(Width-.5f,Width-right/2),0,0);
+        _greedyCrushers[0].Position=_greedyLeftTarget;_greedyCrushers[1].Position=_greedyRightTarget;_greedyWallAge=.12f;
+        SizeGreedyCrushers();ShowGreedyCrushers(left,right);
+    }
+
+    private void ShowGreedyCrushers(float left,float right)
+    {
         _greedyCrushers[0].Visible=left>1;_greedyCrushers[1].Visible=right>1;
         foreach(var wall in _greedyOuterLeft)wall.Visible=left<=1;
         foreach(var wall in _greedyOuterRight)wall.Visible=right<=1;
-        _greedyClosed=left;_greedyClosedRight=right;
-        _greedyMaterials[5].SetShaderParameter("compression",left>0?1:0);
     }
 
     private void ProcessGreedyTrap(float delta)

@@ -564,4 +564,9 @@ a real red-pickup bomb and captures its sequence. Remaining choices are
 subjective tuning: how much smoke to show, how long the flash lasts, and the
 light's strength.
 
-Castle stone and garden surfaces use bounded terrain-owned materials. Repeated rounds and new closing walls must retain the selected quality preset. Inspect actual captures; shape/aspect/lifetime tests are supporting evidence, not aesthetic approval.
+Castle stone and garden surfaces use bounded terrain-owned materials. Repeated rounds and new closing walls must retain the selected quality preset.
+Hurry walls advance continuously (`ArenaView.Closure`): authority still seals a whole
+column per `BlastStages.HurryColumnSeconds`, while the client paces the leading face
+across the next column from the last accepted closure. It reaches the column as the
+column becomes lethal. Translucent walls are one slab per side; stone, snow and
+Greedy crushers slide in. Do not reintroduce per-column pops. Inspect actual captures; shape/aspect/lifetime tests are supporting evidence, not aesthetic approval.

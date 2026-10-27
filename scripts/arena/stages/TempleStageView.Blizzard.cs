@@ -98,7 +98,7 @@ public partial class TempleStageView
             MaterialOverride=_crystalMaterial,Scale=Vector3.One*(.21f+variant*.015f)};
         parent.AddChild(shard);return shard;
     }
-    public Node3D CreateAvalanche(int column)
+    public Node3D CreateAvalanche(int column,bool swell=true)
     {
         var root=new Node3D{Name="AvalancheColumn"+column};
         float x=column+.5f;
@@ -109,8 +109,7 @@ public partial class TempleStageView
             Sphere(root,new(x,h,z+.5f),new(.99f,.65f,1.1f),_snowMaterial);
         }
         // A short advancing swell, then settled packed snow. Collision is snapshot-owned.
-        root.Position=new(column<Width/2?-.7f:.7f,0,0);
-        _avalancheSwells.Add((root,0));
+        if(swell){root.Position=new(column<Width/2?-.7f:.7f,0,0);_avalancheSwells.Add((root,0));}
         return root;
     }
 }

@@ -8,6 +8,9 @@ public static partial class BlastStages
 {
     public const string RockGarden = "rock-garden";
     public const float MeteorWarningSeconds=1.2f;
+    /// <summary>Fireball impact strength; the warning ring and CPU danger use the matching radius.</summary>
+    public const int MeteorFireLevel=2;
+    public const float MeteorBlastRadius=MeteorFireLevel*.9f+.4f;
 
     // Reference composition: an enclosed lawn, five isolated round columns,
     // a central paved cross and sparse boulders. Units/extra seats are our tuning.

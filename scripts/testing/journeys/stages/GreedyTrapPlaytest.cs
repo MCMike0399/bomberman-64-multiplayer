@@ -128,8 +128,15 @@ public partial class PlaytestDriver
         Check(arena.GetNode<Node3D>("GreedyExterior").Transform==Transform3D.Identity&&
             Math.Abs(arena.GetNode<MeshInstance3D>("GreedyExterior/GreedyReservoirWater").Position.Y-TempleStageView.GreedyMoatHeight)<.001f,
             "closing walls leave the decorative reservoir and town stationary");
-        Check(left.Visible&&right.Visible&&Math.Abs(left.Position.X+left.Scale.X*.5f-State.GetProperty("closedLeft").GetInt32())<.01f,"left crushing face matches authority collision boundary");
-        Check(Math.Abs(right.Position.X-right.Scale.X*.5f-(19-State.GetProperty("closedRight").GetInt32()))<.01f,"right crushing face matches authority collision boundary");
+        // Faces creep across the next column between closures: never behind the
+        // lethal boundary and never more than the one column about to close.
+        float LeftFace()=>left.Position.X+left.Scale.X*.5f;float RightFace()=>right.Position.X-right.Scale.X*.5f;
+        int closedLeft=State.GetProperty("closedLeft").GetInt32(),closedRight=State.GetProperty("closedRight").GetInt32();
+        Check(left.Visible&&right.Visible&&LeftFace()>=closedLeft-.01f&&LeftFace()<=closedLeft+1.01f,"left crushing face leads authority collision by at most the closing column");
+        Check(RightFace()<=19-closedRight+.01f&&RightFace()>=18-closedRight-.01f,"right crushing face leads authority collision by at most the closing column");
+        float leftFace=LeftFace(),rightFace=RightFace();await Frames(4);
+        if(State.GetProperty("closedLeft").GetInt32()==closedLeft)
+            Check(LeftFace()>leftFace+.01f&&RightFace()<rightFace-.01f,"crushing faces advance smoothly between authority closures");
         Check(Math.Abs(left.Position.X-left.Scale.X*.5f)<.01f&&Math.Abs(right.Position.X+right.Scale.X*.5f-19)<.01f,
             "solid compression volumes cover every closed column without false outside lanes");
         var gear=arena.GetChildren().OfType<Node3D>().First(n=>n.Name.ToString().StartsWith("GreedyFlywheel"));float angle=gear.Rotation.Z;

@@ -215,6 +215,7 @@ public partial class ArenaView : Node3D
             if(!GodotObject.IsInstanceValid(explosion))_expiredExplosions.Add(id);
         foreach(var id in _expiredExplosions)_explosions.Remove(id);
         _expiredExplosions.Clear();
+        AdvanceClosure(dt);
         _shake=Mathf.MoveToward(_shake,0,dt*.6f);_cameraRig.Shake((float)_clock,_shake);
         foreach(var preview in _throwPreviews.Values)preview.UpdateScreen(_camera);
     }

@@ -20,6 +20,9 @@ public static partial class BlastStages
 
     // Each arena's id constant and builder live in its BlastStages.<Arena>.cs partial.
 
+    /// <summary>Seconds between Hurry column closures; clients pace the advancing wall face with it.</summary>
+    public static float HurryColumnSeconds(string id) => id == BlizzardBattle ? Rules.BlizzardRules.AvalancheStepSeconds : 1f;
+
     private static CellDef[,] Fill(int w, int h, CellDef def)
     {
         var cells = new CellDef[w, h];

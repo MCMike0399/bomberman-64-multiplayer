@@ -83,6 +83,26 @@ internal static class BlizzardBattleChecks
             sideSession.AiTestAddBomb(low);Step(side,10);
             Assert(low.X<9-BlastBomb.Radius,"Grounded wind drift penetrated a spire side.");
         });
+        Check("wind never drags a fresh upwind placement through its owner",()=>
+        {
+            var match=Match();Fight(match);
+            var session=(BlastSession)typeof(LocalMatch).GetField("_session",BindingFlags.Instance|BindingFlags.NonPublic)!.GetValue(match)!;
+            var owner=session.AiTestPlayers.First();session.AiTestPosition(owner.Id,9.5f,9.5f);
+            // Seed 64 opens with a +X/+Z gust: face into it so the bomb lands upwind of the feet.
+            match.SetInput(0,new PlayerInput(-1,-1));Step(match,3);
+            match.SetInput(0,new PlayerInput(0,0,A:true));Step(match,2);match.SetInput(0,default);
+            var bomb=session.AiTestBombs.Single();
+            float Gap()=>Vector2.Distance(new(bomb.X,bomb.Z),new(owner.X,owner.Z));
+            float gap=Gap();
+            Assert(gap<.75f&&bomb.OwnerMayLeave,"Fixture must start with the owner overlapping its fresh bomb.");
+            for(int tick=0;tick<60;tick++)
+            {
+                match.Tick();
+                Assert(Gap()>=gap-.001f||Gap()>=.75f,$"Wind pushed a bomb deeper into its owner: {gap:F3} -> {Gap():F3}.");
+                gap=Gap();
+            }
+            Assert(gap>=.74f&&bomb.X<owner.X&&bomb.Z<owner.Z,"Bomb crossed to the downwind side of its owner.");
+        });
         Check("seeded four-diagonal gusts, calm and bounded ramps",()=>
         {
             var directions=new HashSet<(int,int)>();bool calm=false;
