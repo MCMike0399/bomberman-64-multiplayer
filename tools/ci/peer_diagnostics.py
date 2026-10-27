@@ -38,16 +38,28 @@ def main():
     verifier.extract(directory / item['archive'], staged)
     verifier.extract(directory / 'Blast-Circuit-server-dotnet10.zip', staged)
     qa = load('peer_qa', ROOT / 'tools/qa/run.py'); suite = qa.Suite('peer-diagnostic', output, 'unused')
+    executable = staged / item['root'] / desktop.TARGETS[target]['executable']
+    if target == 'windows-x64':
+        installed = output / 'Installed game with spaces'
+        subprocess.run([str(directory / 'Blast-Circuit-windows-x64-Setup.exe'), '/VERYSILENT', '/SUPPRESSMSGBOXES',
+            '/NORESTART', '/CURRENTUSER', '/DIR=' + str(installed)], check=True, timeout=180)
+        for name, digest in metadata['files'].items():
+            if desktop.digest(installed / name) != digest: raise RuntimeError('Installed diagnostic payload differs')
+        executable = installed / desktop.TARGETS[target]['executable']
     results = []
     for attempt in range(5):
         attempt_output = output / ('attempt-' + str(attempt + 1)); attempt_output.mkdir()
         with suite.server(dll=staged / 'Blast-Circuit-server-dotnet10/Bomber.Server.dll') as origin:
+            core = subprocess.run([sys.executable, str(ROOT / 'tools/playtest/run.py'), '--executable', str(executable),
+                '--scenario', 'core-headless', '--headless', '--desktop', 'shared', '--server', origin,
+                '--output', str(attempt_output)], timeout=650)
+            if core.returncode != 0: raise RuntimeError('Core primer failed before the capacity repro')
             primer = subprocess.run([sys.executable, str(ROOT / 'tools/playtest/run.py'), '--executable',
-                str(staged / item['root'] / desktop.TARGETS[target]['executable']), '--scenario', 'peer-rooms',
+                str(executable), '--scenario', 'peer-rooms',
                 '--headless', '--desktop', 'shared', '--server', origin, '--output', str(attempt_output)], timeout=200)
             if primer.returncode != 0: raise RuntimeError('Peer-room primer failed before the capacity repro')
             result = subprocess.run([sys.executable, str(ROOT / 'tools/playtest/run.py'), '--executable',
-                str(staged / item['root'] / desktop.TARGETS[target]['executable']), '--scenario', 'peer-capacity',
+                str(executable), '--scenario', 'peer-capacity',
                 '--headless', '--desktop', 'shared', '--server', origin, '--output', str(attempt_output)], timeout=150)
         results.append(result.returncode)
     events = []

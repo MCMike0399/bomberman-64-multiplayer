@@ -1,0 +1,12 @@
+{
+  "steps": [
+    {"op":"resize","width":1280,"height":800},
+    {"op":"navigate","screen":"Settings"},
+    {"op":"frames","count":6},
+    {"op":"assert-screen","screen":"Settings"},
+    {"op":"assert-above-footer","name":"SettingsBack","margin":60},
+    {"op":"resize","width":1024,"height":640},
+    {"op":"frames","count":6},
+    {"op":"assert-above-footer","name":"SettingsBack","margin":60}
+  ]
+}

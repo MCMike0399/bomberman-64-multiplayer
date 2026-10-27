@@ -12,7 +12,9 @@ public partial class ArcadeMenu
         var screen=Screen("Settings");var box=Card(screen,new(150,65),new(1140,740));
         ArcadeTheme.Heading(box,"Settings",42);
         Copy(box,"Your preferences are saved on this device.",18);
-        var columns=ArcadeTheme.Row(box,40);
+        var scroll=new ScrollContainer {Name="SettingsScroll",SizeFlagsVertical=SizeFlags.ExpandFill,
+            HorizontalScrollMode=ScrollContainer.ScrollMode.Disabled,FollowFocus=true};box.AddChild(scroll);
+        var columns=ArcadeTheme.Row(scroll,40);columns.SizeFlagsHorizontal=SizeFlags.ExpandFill;
         var player=ArcadeTheme.Column(columns,14);player.CustomMinimumSize=new(500,440);
         var updates=ArcadeTheme.Column(columns,6);updates.CustomMinimumSize=new(500,440);
         _volumeLabel=ArcadeTheme.Text(player,"Sound volume: 80%",22);
