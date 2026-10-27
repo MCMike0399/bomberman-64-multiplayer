@@ -38,18 +38,22 @@ def main():
     verifier.extract(directory / item['archive'], staged)
     verifier.extract(directory / 'Blast-Circuit-server-dotnet10.zip', staged)
     qa = load('peer_qa', ROOT / 'tools/qa/run.py'); suite = qa.Suite('peer-diagnostic', output, 'unused')
-    with suite.server(dll=staged / 'Blast-Circuit-server-dotnet10/Bomber.Server.dll') as origin:
-        result = subprocess.run([sys.executable, str(ROOT / 'tools/playtest/run.py'), '--executable',
-            str(staged / item['root'] / desktop.TARGETS[target]['executable']), '--scenario', 'peer-capacity',
-            '--headless', '--desktop', 'shared', '--server', origin, '--output', str(output)], timeout=150)
+    results = []
+    for attempt in range(5):
+        attempt_output = output / ('attempt-' + str(attempt + 1)); attempt_output.mkdir()
+        with suite.server(dll=staged / 'Blast-Circuit-server-dotnet10/Bomber.Server.dll') as origin:
+            result = subprocess.run([sys.executable, str(ROOT / 'tools/playtest/run.py'), '--executable',
+                str(staged / item['root'] / desktop.TARGETS[target]['executable']), '--scenario', 'peer-capacity',
+                '--headless', '--desktop', 'shared', '--server', origin, '--output', str(attempt_output)], timeout=150)
+        results.append(result.returncode)
     events = []
-    for trace in output.glob('*/trace.jsonl'):
+    for trace in output.glob('attempt-*/*/trace.jsonl'):
         for line in trace.read_text(errors='replace').splitlines():
             event = json.loads(line)
             if event.get('type') == 'peer-capacity-failure': events.append(redact(event))
     (output / 'peer-diagnostic.json').write_text(json.dumps({'mode': 'diagnostic-only', 'target': target,
-        'revision': metadata['revision'], 'exitCode': result.returncode, 'events': events}, indent=2) + '\n')
-    print(json.dumps({'mode': 'diagnostic-only', 'exitCode': result.returncode, 'events': events}, indent=2))
+        'revision': metadata['revision'], 'exitCodes': results, 'events': events}, indent=2) + '\n')
+    print(json.dumps({'mode': 'diagnostic-only', 'exitCodes': results, 'events': events}, indent=2))
 
 
 if __name__ == '__main__': main()
