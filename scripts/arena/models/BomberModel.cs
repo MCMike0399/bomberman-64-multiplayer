@@ -308,6 +308,10 @@ public partial class BomberModel : Node3D
         // A bouncy scamper: squash just after each heel strike, rise through
         // push-off into a brief airborne beat, then drop into the next contact.
         float bounce=Bounce(Mathf.PosMod(_walkPhase*2,1)),low=(1-bounce)*.5f;
+        // Ballistic weight: squaring the contact weight keeps the body near the
+        // top of its hop for most of each beat, then drops it through a brief,
+        // crisp landing, so the squash reads as a plop instead of a slow dip.
+        low*=low;
         float bodyHop=(1-low)*.04f*freeStride;
         float suitSquash=(low*low*.055f-(1-low)*(1-low)*.018f)*freeStride;
         float hipWeight=-Mathf.Sin((_walkPhase-.06f)*Mathf.Tau)*freeStride;
