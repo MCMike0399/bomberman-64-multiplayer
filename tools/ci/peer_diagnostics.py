@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Replay only the retained native eight-peer failure and retain bounded non-credential diagnostics."""
 import importlib.util
+import concurrent.futures
 import json
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import sys
 
@@ -46,22 +48,18 @@ def main():
         for name, digest in metadata['files'].items():
             if desktop.digest(installed / name) != digest: raise RuntimeError('Installed diagnostic payload differs')
         executable = installed / desktop.TARGETS[target]['executable']
-    results = []
-    for attempt in range(5):
+    def trial(attempt):
         attempt_output = output / ('attempt-' + str(attempt + 1)); attempt_output.mkdir()
-        with suite.server(dll=staged / 'Blast-Circuit-server-dotnet10/Bomber.Server.dll') as origin:
-            core = subprocess.run([sys.executable, str(ROOT / 'tools/playtest/run.py'), '--executable', str(executable),
-                '--scenario', 'core-headless', '--headless', '--desktop', 'shared', '--server', origin,
-                '--output', str(attempt_output)], timeout=650)
-            if core.returncode != 0: raise RuntimeError('Core primer failed before the capacity repro')
-            primer = subprocess.run([sys.executable, str(ROOT / 'tools/playtest/run.py'), '--executable',
-                str(executable), '--scenario', 'peer-rooms',
-                '--headless', '--desktop', 'shared', '--server', origin, '--output', str(attempt_output)], timeout=200)
-            if primer.returncode != 0: raise RuntimeError('Peer-room primer failed before the capacity repro')
+        server_root = attempt_output / 'server'
+        shutil.copytree(staged / 'Blast-Circuit-server-dotnet10', server_root)
+        local_suite = qa.Suite('peer-contention', attempt_output, 'unused')
+        with local_suite.server(dll=server_root / 'Bomber.Server.dll') as origin:
             result = subprocess.run([sys.executable, str(ROOT / 'tools/playtest/run.py'), '--executable',
                 str(executable), '--scenario', 'peer-capacity',
                 '--headless', '--desktop', 'shared', '--server', origin, '--output', str(attempt_output)], timeout=150)
-        results.append(result.returncode)
+        return result.returncode
+    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
+        results = list(pool.map(trial, range(15)))
     events = []
     for trace in output.glob('attempt-*/*/trace.jsonl'):
         for line in trace.read_text(errors='replace').splitlines():
