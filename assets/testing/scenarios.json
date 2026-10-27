@@ -576,6 +576,7 @@
         "model-profile",
         "movement",
         "walk-feel",
+        "mishap-feel",
         "traversal",
         "placement",
         "bomb-handling",
@@ -723,6 +724,18 @@
       ],
       "headless": false,
       "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "mishap-feel",
+      "method": "MishapShowcase",
+      "domains": [
+        "animation",
+        "models",
+        "rendering"
+      ],
+      "headless": false,
+      "timeout": 300,
       "manual": false
     },
     {

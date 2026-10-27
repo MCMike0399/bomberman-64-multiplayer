@@ -31,7 +31,8 @@ failed approaches; exact live values remain in source. Use the
 | Terrain visuals and height conversion | [TempleStageView](../../scripts/arena/stages/TempleStageView.cs); `traversal`, `framing`, `hurry-water` |
 | Stone/water shaders and lighting | [ArtMaterials](../../scripts/rendering/ArtMaterials.cs), ArenaView; graphical `asset-audit`, `presentation` |
 | Perspective framing/shake | [BattleCameraRig](../../scripts/arena/BattleCameraRig.cs); `framing` at supported aspect ratios |
-| Blast/action/exit visuals | [ExplosionView](../../scripts/arena/effects/ExplosionView.cs), [KickBurst](../../scripts/arena/effects/KickBurst.cs), [ExitEffect](../../scripts/arena/effects/ExitEffect.cs); `presentation`, `kick-physics` |
+| Blast/action/exit visuals | [ExplosionView](../../scripts/arena/effects/ExplosionView.cs), [KickBurst](../../scripts/arena/effects/KickBurst.cs), [ExitEffect](../../scripts/arena/effects/ExitEffect.cs), [BurnoutEffect](../../scripts/arena/effects/BurnoutEffect.cs); `presentation`, `kick-physics`, `mishap-feel` |
+| Knockdown, held and death poses | [BomberModel.Mishaps](../../scripts/arena/models/BomberModel.Mishaps.cs), [BomberModel.Burnout](../../scripts/arena/models/BomberModel.Burnout.cs); `mishap-feel`, `grapple` |
 | Event/audio playback | [BattleAudio](../../scripts/audio/BattleAudio.cs), [SoundSynth](../../scripts/audio/SoundSynth.cs); audio executable tests plus `presentation` |
 
 These are original code-generated meshes/materials/audio, not imported original
@@ -124,6 +125,39 @@ the hands; a new pivot without updating the socket can separate bomb and hands.
 Keep local/world conversions explicit (`ToGlobal`, arena-local attachment and
 `TempleStageView.HeightScale`). `BombThrowRules` owns authority launch height;
 changing a cosmetic socket cannot repair a low physical throw launch.
+
+## Knockdown, held and blast-death poses (2026-10-27 source work)
+
+Original Bomberman 64 battle footage (inspected frame by frame, not shipped):
+a blasted player becomes a burning, flailing heap that is briefly flung up,
+thrashes for roughly 1.5 seconds and vanishes in a white smoke puff; stunned
+players show spinning sparkles. The user remembered that death as funny, so the
+gag is timing and exaggeration, not gore or copied assets.
+[BomberModel.Mishaps](../../scripts/arena/models/BomberModel.Mishaps.cs) layers
+three convex sub-poses over `_downBlend`; the weights freeze while recovering,
+so leaving any of them never pops:
+
+- **Dazed** (grounded stun): flat on the back about a belly pivot, rocking, boots
+  paddling the air, head lolling, swirl eyes (12 cached conforming spiral meshes,
+  swapped rather than rotated so they stay on the curved face) and the existing
+  stars orbiting the actual head. Impact squash on `knockdown`/`player-land`;
+  `recover`/`player-release` add a hop and a head shake.
+- **Tumbling** (impact or thrown flight): a starfish backflip that finishes on the
+  nearest whole turn and unwinds it (antenna spring shifted with it) before recovery.
+- **Held**: face-up across the carrier's raised gloves, wriggling, bicycling and
+  windmilling, squeezed `> <` eyes. `ArenaView` turns the victim with the carrier and
+  pins its X/Z to the carrier's rendered root; the carrier teeters and spreads its arms.
+
+Blast deaths (not water/fall) spawn [BurnoutEffect](../../scripts/arena/effects/BurnoutEffect.cs)
+with the player's last suit color/facing; [BomberModel.Burnout](../../scripts/arena/models/BomberModel.Burnout.cs)
+poses a separate stand-in: white zap, soot with white eyes and a sizzling antenna
+fuse, a fling and panicked hops while running in place and windmilling inside
+licking flames, a stiff beat, then a crumble hidden by the smoke puff (2.4 seconds
+total). Authority is unchanged; a fresh ghost fades in over 1.6 seconds instead of
+popping on top of the gag. `EffectWarmup` renders the zap, flame and smoke stages.
+The `mishap-feel` journey uses the real grapple setup (kicked-bomb knockdown, grab,
+remote snipe) and a fixed pose/burnout sheet for screenshots. Its numeric checks
+are mechanics; whether the gag is funny is the user's call.
 
 ## Rejected experiments: do not repeat them blindly
 
