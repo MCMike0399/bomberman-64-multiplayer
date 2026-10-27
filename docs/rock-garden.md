@@ -42,8 +42,10 @@ and a pending target warning.
   of warning. Fireballs arrive every .9 seconds, accelerating to .35 seconds;
   every third warning targets a living player's observed position, the others
   use seeded floor positions. Moving after warning escapes the target. Impacts
-  use the existing level-one spherical blast, shielding, hearts, chains and
-  loot rules. Bots plan around those same published warnings. Practice and
+  use an ordinary level-two spherical blast (2.2-cell radius, enlarged from
+  level one on 2026-10-26 at the user's request) with existing shielding,
+  hearts, chains and loot rules. `BlastStages.MeteorBlastRadius` sizes the
+  warning ring and CPU danger so all three agree. Bots plan around those same published warnings. Practice and
   disabled sudden death spawn none; new rounds clear all warnings. Local pause
   also freezes rendered descent; online snapshots keep updating under the menu.
   Peer-hosted snapshots validate the warning list, coordinates and countdown

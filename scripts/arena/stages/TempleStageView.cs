@@ -38,7 +38,7 @@ public partial class TempleStageView : Node3D
     private int _greedyClosedRight;
     private bool _greedyWallsInitialized;
     private Vector3 _greedyLeftFrom,_greedyRightFrom,_greedyLeftTarget,_greedyRightTarget;
-    private float _greedyWallAge=.12f;
+    private float _greedyWallAge=.12f,_greedyFrontLeft,_greedyFrontRight;
     private float _greedyGearImpulse;
     private readonly List<ShaderMaterial> _castleStone = [];
     private static Shader? _castleFloorShader;

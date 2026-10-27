@@ -86,7 +86,7 @@ Folder names are snake_case; each namespace mirrors its folder in PascalCase.
 | Folder | Namespace | Owns |
 | --- | --- | --- |
 | `app/` | `BlastCircuit.App` | `GameRoot` composition root (+ `Sessions`/`Preferences` partials), display-mode autoload, saved preferences |
-| `arena/` | `BlastCircuit.Arena` | `ArenaView` (+ `Snapshots`/`ThrowPreviews`/`Presentation`/`Tutorial` partials), camera rig, lighting, snapshot interpolation |
+| `arena/` | `BlastCircuit.Arena` | `ArenaView` (+ `Snapshots`/`ThrowPreviews`/`Presentation`/`Tutorial`/`Closure` partials), camera rig, lighting, snapshot interpolation |
 | `arena/stages/` | `BlastCircuit.Arena.Stages` | `TempleStageView` terrain builder with one partial per arena |
 | `arena/models/` | `BlastCircuit.Arena.Models` | Procedural bomber, bomb and power-up models |
 | `arena/effects/` | `BlastCircuit.Arena.Effects` | Explosions, kick/exit effects, throw preview, reticle, first-use warmup |
@@ -146,7 +146,7 @@ concerns (`tests/Bomber.Game.Tests/{Bombs,Players,Bots,Items,Rounds,Snapshots,St
 | `BlastSession` | settings, state, IGameSession callbacks, helpers | In `BlastSession/`: `Players/` (`Input`, `Movement`, `BodyContacts`, `Grapple`, `Ghosts`, `Eliminations`), `Bombs/` (`BombActions`, `BombTravel`, `Kicks`, `ThrowAim`, `Explosions`), `Bots/` (`Bots`, `BotNavigation`, `BotObjectives`, `AiTestHooks`), `Items/` (`Loot`), `Rounds/` (`Rounds`, `Tutorial`, `Blizzard`, `Meteors`), `Snapshots/` (`Snapshots`, `Presentation`) |
 | `BlastStages` | `Get` dispatch and `Fill` helper | one per arena: `SunkenTemple`, `RockGarden`, `UpAndDown`, `TopRules`, `BlizzardBattle`, `GreedyTrap`, `CircuitGarden` |
 | `NetworkSession` | fields, connect/lobby setup, input, dispose | `Http`, `Socket`, `Peer` |
-| `ArenaView` | fields, lifecycle, stage/lighting setup, `_Process` | `Snapshots`, `ThrowPreviews`, `Presentation`, `Tutorial` |
+| `ArenaView` | fields, lifecycle, stage/lighting setup, `_Process` | `Snapshots`, `ThrowPreviews`, `Presentation`, `Tutorial`, `Closure` |
 | `TempleStageView` | shared terrain build, height queries and Sunken Temple | `Blizzard`, `CircuitGarden`, `GreedyTrap` (+ `GreedyExterior`), `RockGarden`, `TopRules`, `UpAndDown`; decorative `Scenery` plus one `<Arena>Exterior` per arena (`SunkenTemple`, `RockGarden`, `UpAndDown`, `TopRules`, `Blizzard`, `CircuitGarden`, which also holds Greedy Trap water life) |
 | `ArcadeMenu` | fields, layout helpers, screen switching | `Setup`, `Online`, `Results`, `Settings`, `Tutorial`, `Navigation` |
 | `GameRoot` | lifecycle, navigation, input dispatch, `_Process` | `Sessions`, `Preferences`, `Tutorial` |

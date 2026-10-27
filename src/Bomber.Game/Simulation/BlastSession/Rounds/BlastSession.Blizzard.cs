@@ -29,9 +29,17 @@ public sealed partial class BlastSession
         bool Clear(float x,float z)=>!BombThrowRules.StaticObstructed(new(x,y,z),new(x-bomb.X,0,z-bomb.Z),
             (sx,sz)=>_stage.SurfaceAt(sx,sz,y),(cx,cz)=>_stage.AtHeight(cx,cz,y).Kind,_softBlocks.IsAlive,_stage)&&
             !_players.Values.Any(p=>p.Alive&&!p.Ghost&&p.CarriedById==null&&Math.Abs(p.Y-BombY(bomb))<.6f&&
-                !(bomb.OwnerMayLeave&&p.Id==bomb.OwnerId)&&Dist2(x,z,p.X,p.Z)<MathF.Pow(PlayerRadius+BlastBomb.Radius,2))&&
+                BodyBlocksDrift(x,z,p))&&
             !_bombs.Any(b=>b!=bomb&&!b.Exploded&&b.State!=BombState.Carried&&Math.Abs(BombY(b)-BombY(bomb))<.6f&&
                 Dist2(x,z,b.X,b.Z)<MathF.Pow(BlastBomb.Radius*2,2));
+        // Wind may separate a bomb from a body it already overlaps (a fresh placement),
+        // but never push it deeper. Exempting the owner let upwind placements slide
+        // straight through the player who dropped them.
+        bool BodyBlocksDrift(float x,float z,BlastPlayer p)
+        {
+            float clearance=MathF.Pow(PlayerRadius+BlastBomb.Radius,2),next=Dist2(x,z,p.X,p.Z);
+            return next<clearance&&next<=Dist2(bomb.X,bomb.Z,p.X,p.Z)+.00001f;
+        }
         float nx=bomb.X+wind.X*dt,nz=bomb.Z+wind.Y*dt;
         if(Clear(nx,bomb.Z))bomb.X=nx;
         if(Clear(bomb.X,nz))bomb.Z=nz;

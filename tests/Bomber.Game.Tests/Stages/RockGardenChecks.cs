@@ -41,6 +41,8 @@ internal static class RockGardenChecks
             a.SetInput(0,new PlayerInput(1,0));Step(a,26);a.SetInput(0,default);Step(a,14);Step(b,40);
             Assert(Player(a).GetProperty("alive").GetBoolean(),"Player could not escape the published target.");
             Assert(!Player(b).GetProperty("alive").GetBoolean(),"Stationary player was not hit by real fireball impact.");
+            Assert(State(b).GetProperty("hazards").EnumerateArray().Any(h=>Math.Abs(h.GetProperty("r").GetSingle()-BlastStages.MeteorBlastRadius)<.01f)&&BlastStages.MeteorBlastRadius>2,
+                "Fireball impact must use the enlarged blast radius the warning ring shows.");
             Assert(Events(b).Any(e=>Kind(e)=="blast"&&Math.Abs(e.GetProperty("x").GetSingle()-x)<.01f&&Math.Abs(e.GetProperty("z").GetSingle()-z)<.01f),"Meteor impact failed to emit the real blast event at its warned position.");
             var graph=Bomber.Game.Simulation.Ai.NavigationGraph.For(BlastStages.Get(BlastStages.RockGarden));
             var danger=new Bomber.Game.Simulation.Ai.TimedDangerField(graph,BlastStages.Get(BlastStages.RockGarden));

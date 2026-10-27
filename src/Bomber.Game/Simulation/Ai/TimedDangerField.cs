@@ -37,7 +37,7 @@ internal sealed class TimedDangerField
             for(int i=0;i<bombs.Count;i++)
             {
                 var bomb=bombs[i];if(bomb.Exploded||bomb.State==BombState.Carried)continue;
-                if(BlastGeometry.Contains(_stage,soft,meteor.X,0,meteor.Z,1.8f,bomb.X,Height(bomb),bomb.Z,true))
+                if(BlastGeometry.Contains(_stage,soft,meteor.X,0,meteor.Z,BlastStages.MeteorBlastRadius+.5f,bomb.X,Height(bomb),bomb.Z,true))
                     _times[i]=Math.Min(_times[i],Math.Max(0,meteor.Remaining-.15f));
             }
         // A visible short fuse can trigger a longer fuse; propagate until the earliest chain time stabilizes.
@@ -87,7 +87,7 @@ internal sealed class TimedDangerField
                 }
             }
         }
-        if(meteors is not null)foreach(var m in meteors)AddSphere(soft,m.X,0,m.Z,1.75f,false,Math.Max(0,m.Remaining-.15f),m.Remaining+.55f);
+        if(meteors is not null)foreach(var m in meteors)AddSphere(soft,m.X,0,m.Z,BlastStages.MeteorBlastRadius+.45f,false,Math.Max(0,m.Remaining-.15f),m.Remaining+.55f);
         foreach(var h in hazards)AddSphere(soft,h.X,h.Y,h.Z,h.Radius+.45f,h.IsRed,0,h.LifeTimer+.1f);
     }
     /// <summary>Impact knocks a body down for over a second. A kick covers more than two

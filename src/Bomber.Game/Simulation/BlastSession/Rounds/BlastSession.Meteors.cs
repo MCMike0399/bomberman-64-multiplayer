@@ -1,6 +1,7 @@
 // Adapted from burbuja-kernel Example.Blast, MIT (copyright 2026 MCMike0399).
 // Product-owned simulation; original baseline b0758339984bbeead1b3d1236f31e980aaa5f20e.
 using Burbuja.Realtime.Abstractions;
+using Bomber.Game.Simulation.Stages;
 using Bomber.Game.Simulation.State;
 namespace Bomber.Game.Simulation;
 
@@ -16,7 +17,7 @@ public sealed partial class BlastSession
             // Ordinary spherical blast rules resolve shielding, cover, hearts,
             // chains and loot. A fireball has no player owner or inventory cost.
             ExplodeBomb(context,new BlastBomb{Id=meteor.Id,X=meteor.X,Z=meteor.Z,
-                CellX=(int)meteor.X,CellZ=(int)meteor.Z,FireLevel=1});
+                CellX=(int)meteor.X,CellZ=(int)meteor.Z,FireLevel=BlastStages.MeteorFireLevel});
         }
         _meteorTimer-=dt;if(_meteorTimer>0)return;
         float hurryAge=Math.Max(0,_roundTimer-(_roundSeconds-60));

@@ -130,25 +130,6 @@ public partial class ArenaView
         UpdateThrowPreviews(data,_softBlockBits);
         Present(_presentation.Read(data));
         if(data.TryGetProperty("blizzard",out var weather))_terrain.SetBlizzard(weather);
-        int left=(int)F(data,"closedLeft"),right=(int)F(data,"closedRight");
-        _terrain.SetGreedyCompression(left,right);
-        for(int x=0;_stage!=BlastStages.GreedyTrap&&x<_terrain.Width;x++)
-        {
-            bool closed=x<left||x>=_terrain.Width-right;
-            if(closed&&!_walls.ContainsKey(x))
-            {
-                var n=_stage==BlastStages.BlizzardBattle?_terrain.CreateAvalanche(x):new Node3D();
-                if(_stage==BlastStages.TopRules)
-                {
-                    var stone=_terrain.CastleWallMaterial;
-                    float wallHeight=(_terrain.Layout.At(0,_terrain.Depth/2).ObstacleHeight??3.9f)*TempleStageView.HeightScale;
-                    Box(n,new(x+.5f,wallHeight/2,_terrain.Depth/2f),new(1,wallHeight,_terrain.Depth-2),stone);
-                    Box(n,new(x+.5f,wallHeight+.05f,_terrain.Depth/2f),new(1.03f,.16f,_terrain.Depth-2),_art.Color(new Color("bdc4c5")),.025f);
-                }
-                else if(_stage!=BlastStages.BlizzardBattle)Box(n,new(x+.5f,2.1f,_terrain.Depth/2f),new(.92f,5.8f,_terrain.Depth),_art.Color(new Color(.92f,.18f,.17f,.4f),.7f,true),.03f);
-                _effects.AddChild(n);_walls[x]=n;
-            }
-            if(!closed&&_walls.Remove(x,out var wall))wall.QueueFree();
-        }
+        UpdateClosure(data,(int)F(data,"closedLeft"),(int)F(data,"closedRight"));
     }
 }
