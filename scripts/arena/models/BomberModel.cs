@@ -80,8 +80,8 @@ public partial class BomberModel : Node3D
     {
         if(_suitColor==color)return;
         _suitColor=color;
-        foreach(var part in _suitParts)part.MaterialOverride=_art.CharacterToy(color,.46f);
-        foreach(var part in _torsoParts)part.MaterialOverride=_art.CharacterToy(TorsoColor(color),.46f);
+        foreach(var part in _suitParts)part.MaterialOverride=_art.Toy(color,.46f);
+        foreach(var part in _torsoParts)part.MaterialOverride=_art.Toy(TorsoColor(color),.46f);
     }
     private static Color TorsoColor(Color color)=>color.R>.85f&&color.G>.85f&&color.B>.8f?new Color("315dc5"):color;
     /// <summary>Accepted actions briefly animate joints without moving the authoritative character root.</summary>
@@ -103,18 +103,18 @@ public partial class BomberModel : Node3D
     {
         _art=art;_suitColor=color;
         _time=(color.R*3.1f+color.G*5.3f+color.B*7.7f)%4.7f;
-        var suit=art.CharacterToy(color,.46f);var white=art.CharacterToy(new("fff7e9"),.48f);var pink=art.CharacterToy(new("ee4a90"),.42f);
-        var face=art.CharacterToy(new("ffe0b7"),.78f);var dark=art.CharacterToy(new("272341"),.55f);var gold=art.CharacterToy(new("ffd15a"),.36f);
+        var suit=art.Toy(color,.46f);var white=art.Toy(new("fff7e9"),.48f);var pink=art.Toy(new("ee4a90"),.42f);
+        var face=art.Toy(new("ffe0b7"),.78f);var dark=art.Toy(new("272341"),.55f);var gold=art.Toy(new("ffd15a"),.36f);
         AddChild(_body);
         // Upper-body pivot at the waist: shoulders can follow the planted hips
         // without dragging the short legs or rotating the helmet around the floor.
         _upperBody.Position=new(0,.37f,0);_upperParts.Position=new(0,-.37f,0);
         _body.AddChild(_upperBody);_upperBody.AddChild(_upperParts);
         // The suit is a compact pear: tucked shoulders over a slightly fuller waist.
-        var torso=new MeshInstance3D {Name="Torso",Mesh=_torsoMesh??=CreateHelmet(false),MaterialOverride=art.CharacterToy(TorsoColor(color),.46f),
+        var torso=new MeshInstance3D {Name="Torso",Mesh=_torsoMesh??=CreateHelmet(false),MaterialOverride=art.Toy(TorsoColor(color),.46f),
             Position=new(0,.53f,0),Scale=new(.395f/.854f,.38f/.79f,.37f/.73f),Rotation=new(0,0,Mathf.Pi)};
         _upperParts.AddChild(torso);_torsoParts.Add(torso);
-        _torsoParts.Add(Sphere(_upperParts,new(0,.722f,0),new(.16f,.065f,.16f),art.CharacterToy(TorsoColor(color),.46f)));
+        _torsoParts.Add(Sphere(_upperParts,new(0,.722f,0),new(.16f,.065f,.16f),art.Toy(TorsoColor(color),.46f)));
         RoundedBox(_upperParts,new(0,.405f,.015f),new(.395f,.085f,.34f),dark);
         RoundedBox(_upperParts,new(0,.41f,.195f),new(.13f,.12f,.055f),gold,.35f);
         RoundedBox(_upperParts,new(0,.41f,.227f),new(.066f,.06f,.012f),dark,.2f);
@@ -122,7 +122,7 @@ public partial class BomberModel : Node3D
         _head.Position=new(0,HeadCenter,0);_upperParts.AddChild(_head);
         var helmet=new MeshInstance3D {Name="HelmetShell",Mesh=_helmetMesh??=CreateHelmet(),MaterialOverride=suit};
         _head.AddChild(helmet);_suitParts.Add(helmet);
-        _head.AddChild(new MeshInstance3D {Name="FaceRim",Mesh=_faceRimMesh??=CreateCurvedFacePatch(.646f,.466f,0,FaceCenterY,.009f),MaterialOverride=art.CharacterToy(new("8b755c"),.8f),Position=new(0,FaceCenterY,0)});
+        _head.AddChild(new MeshInstance3D {Name="FaceRim",Mesh=_faceRimMesh??=CreateCurvedFacePatch(.646f,.466f,0,FaceCenterY,.009f),MaterialOverride=art.Toy(new("8b755c"),.8f),Position=new(0,FaceCenterY,0)});
         _head.AddChild(new MeshInstance3D {Name="FaceSurface",Mesh=_faceMesh??=CreateCurvedFacePatch(.634f,.454f,0,FaceCenterY,.016f),MaterialOverride=face,Position=new(0,FaceCenterY,0)});
         foreach(float x in new[]{-.134f,.134f})
         {

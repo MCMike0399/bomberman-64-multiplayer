@@ -249,10 +249,10 @@ The implementation is original shader/material work; nothing is copied.
   looking down would sample the dark lower sky and grey the sea. Blur is off on Low.
 - **Lacquered toys.** `ArtMaterials.Toy` adds a thin clear coat and a soft light rim to
   characters, bombs and pickups. Geometry, proportions and animation are untouched.
-  Characters use `CharacterToy` for gentler specular highlights (.35) and coat
-  (.35 strength, .24 roughness)
-  so small white reflections are less distracting in menu close-ups and matches.
-  Suit recoloring uses the same finish; bombs and pickups retain the original coat.
+  The shared finish uses gentler specular highlights (.35) and coat (.35 strength,
+  .24 roughness) so small white reflections are less distracting on characters,
+  bombs, pickups and painted scenery in menus and matches. Bomb shells use .32
+  roughness to spread their highlights; suit/bomb recoloring keeps this finish.
 - **Painterly terrain.** Stone gains per-block warmth, broad warm/cool weathering,
   risers that deepen toward their submerged roots and an algae fringe at the waterline
   (the castle sets `water_height` far below so it stays dry). Garden turf gains tufts,

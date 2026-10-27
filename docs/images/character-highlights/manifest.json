@@ -4,7 +4,7 @@
   "renderer": "Metal 4.0 / Forward+ / Apple Paravirtual device (Apple5)",
   "preset": "Medium (fresh QA defaults)",
   "resolution": "1280x800",
-  "note": "Unedited viewport captures from separately rebuilt exports. Character pose/camera/input sequence is matched; nearby practice pickups animate independently. This is isolated renderer evidence, not native-host GPU performance evidence.",
+  "note": "Unedited viewport captures from separately rebuilt exports. The shared gentler finish now also covers bombs, pickups and painted scenery. Character pose/camera/input sequence is matched; nearby practice pickups animate independently. Isolated renderer evidence, not native-host GPU performance evidence.",
   "finish": {
     "before": {
       "specular": 0.5,
@@ -28,16 +28,27 @@
     "publicProfile": {
       "passed": true,
       "steps": 11
+    },
+    "assetAudit": {
+      "passed": true,
+      "assertions": 79,
+      "captures": 1,
+      "runtimeErrors": 0,
+      "runtimeWarnings": 0
     }
   },
   "images": [
     {
+      "file": "after-asset-gallery.png",
+      "sha256": "99f5d89ae9f66f17168e2d7e85d5292b1c7fb7825d2e6a445697191137050bdd"
+    },
+    {
       "file": "after-front.png",
-      "sha256": "f53c2f0e11aae37458846639c82a7dce8ae64ac5a254c47bc299a0d8905b5733"
+      "sha256": "e09da678bd8a304b657b40672ba4252ea8c24632abbbab00c877c8d645405bfd"
     },
     {
       "file": "after-three-quarter.png",
-      "sha256": "3eda3417c71f2d876b02744ff87b29318d0e503d12d3177bd388911dc5035660"
+      "sha256": "21c12bc440566d8c233307f819bcc9b8fa0830782c74b08d97971583bfd4768c"
     },
     {
       "file": "before-front.png",
@@ -47,5 +58,19 @@
       "file": "before-three-quarter.png",
       "sha256": "c606f8a721b11db0c9bbdee5aa2870185535cefe6dc94a9329fa06821069ac94"
     }
-  ]
+  ],
+  "bombShellRoughness": {
+    "before": 0.2,
+    "after": 0.32
+  },
+  "bombPickupRoughness": {
+    "dark": {
+      "before": 0.3,
+      "after": 0.35
+    },
+    "red": {
+      "before": 0.25,
+      "after": 0.32
+    }
+  }
 }

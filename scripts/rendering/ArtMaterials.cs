@@ -10,19 +10,9 @@ public sealed partial class ArtMaterials
     private static Shader? _stoneShader,_waterShader,_clearWaterShader,_reflectiveWaterShader,_gardenShader,_frozenShader;
     /// <summary>
     /// Characters, bombs and pickups read as lacquered miniature figures: a thin glossy
-    /// clear coat over the painted color, plus a soft light-driven rim at the silhouette.
+    /// softened clear coat over the painted color, plus a soft light-driven rim at the silhouette.
     /// </summary>
     public StandardMaterial3D Toy(Color color, float roughness=.72f, bool glow=false)=>Color(color,roughness,glow,toy:true);
-    /// <summary>Keep the character's painted-toy sheen without pin-bright clear-coat reflections.</summary>
-    public StandardMaterial3D CharacterToy(Color color, float roughness=.72f)
-    {
-        string key=$"character:{color.ToHtml()}:{roughness}";
-        if(_cache.TryGetValue(key,out var material))return material;
-        material=(StandardMaterial3D)Toy(color,roughness).Duplicate();
-        material.MetallicSpecular=.35f;
-        material.Clearcoat=.35f;material.ClearcoatRoughness=.24f;
-        _cache[key]=material;return material;
-    }
     public StandardMaterial3D Color(Color color, float roughness=.72f, bool glow=false, bool toy=false)
     {
         string key=$"{color.ToHtml()}:{roughness}:{glow}:{toy}";
@@ -30,7 +20,8 @@ public sealed partial class ArtMaterials
         material=new StandardMaterial3D {AlbedoColor=color,Roughness=roughness};
         if(toy)
         {
-            material.ClearcoatEnabled=true;material.Clearcoat=.55f;material.ClearcoatRoughness=.16f;
+            material.MetallicSpecular=.35f;
+            material.ClearcoatEnabled=true;material.Clearcoat=.35f;material.ClearcoatRoughness=.24f;
             material.RimEnabled=true;material.Rim=.3f;material.RimTint=.45f;
         }
         if(glow){material.EmissionEnabled=true;material.Emission=color;material.EmissionEnergyMultiplier=.35f;}
