@@ -118,6 +118,7 @@ foreach (bool failedLaunch in new[] { false, true })
         Check(true, "Replacement or restored executable actually started before cleanup");
         Check(!File.Exists(Path.Combine(root, ".blast-update-lock")), "Completed helper must release its lock");
         Check(failedLaunch || !Directory.Exists(Path.Combine(stage, "previous")), "Successful update must remove previous payload");
+        Console.WriteLine("PASS transaction " + (failedLaunch ? "rollback" : "replacement") + ": complete inventory, uninstall data, history, relaunch and lock release");
     }
     catch (Exception error)
     {
@@ -136,7 +137,17 @@ foreach (bool failedLaunch in new[] { false, true })
             }
             catch (ArgumentException) { }
         }
-        Directory.Delete(root, true);
+        // A terminated Windows image may still be mapped briefly after WaitForExit.
+        // Require actual removal, but allow the owned fixture's image to unload.
+        var cleanup = Stopwatch.StartNew();
+        while (Directory.Exists(root))
+        {
+            try { Directory.Delete(root, true); }
+            catch (Exception error) when (OperatingSystem.IsWindows() &&
+                error is IOException or UnauthorizedAccessException &&
+                (error.HResult & 0xffff) is 5 or 32 or 33 && cleanup.Elapsed < TimeSpan.FromSeconds(5))
+            { await Task.Delay(100); }
+        }
     }
 }
 Console.WriteLine($"PASS {checks} desktop updater handoff, replacement and rollback checks");
