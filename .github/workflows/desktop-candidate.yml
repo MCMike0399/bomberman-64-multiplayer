@@ -68,7 +68,7 @@ jobs:
         shell: bash
         run: python -c 'import json,os; m=json.load(open("artifacts/Blast-Circuit-"+os.environ["TARGET"]+"-metadata.json")); assert m["revision"]==os.environ["CANDIDATE_SHA"], "Candidate source mismatch"'
       - if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y squashfs-tools libicu74
+        run: sudo apt-get update && sudo apt-get install -y squashfs-tools libicu74 xvfb openbox mesa-vulkan-drivers
       - if: runner.os == 'Windows'
         run: python tools/packaging/package-download.py --target windows-x64
       - if: runner.os == 'Linux'
@@ -88,7 +88,13 @@ jobs:
         env:
           TARGET: ${{ matrix.target }}
         shell: bash
-        run: python tools/packaging/verify-desktop-update.py --target "$TARGET"
+        run: |
+          if [ "$TARGET" = linux-x64 ]; then
+            python tools/packaging/package-download.py --target "$TARGET" --directory artifacts/update-fixture
+            xvfb-run -a -s '-screen 0 1920x1200x24' python tools/packaging/verify-desktop-update.py --target "$TARGET"
+          else
+            python tools/packaging/verify-desktop-update.py --target "$TARGET"
+          fi
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
