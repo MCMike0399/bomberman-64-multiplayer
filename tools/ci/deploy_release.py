@@ -11,7 +11,7 @@ import time
 
 from deployment_state import Journal, locked, write_json, sync_directory, validate_adapter
 
-from promote_release import ARTIFACT, SERVER_ARTIFACT, gh, inspect_package, inspect_run, inspect_server, require_current_main, inspect_existing_release
+from promote_release import ARTIFACT, SERVER_ARTIFACT, gh, inspect_gates, inspect_package, inspect_run, inspect_server, require_current_main, inspect_existing_release
 from release_identity import check_exports
 from verify_deployment import targets_from_json, verify, verify_connections, build_probe, placements_from_json
 
@@ -118,6 +118,7 @@ def main(argv=None):
         for artifact in (ARTIFACT, SERVER_ARTIFACT):
             gh('run', 'download', args.run_id, '--repo', args.repository, '--name', artifact, '--dir', str(directory))
         archive = inspect_package(directory, revision, args.version)
+        inspect_gates(args.repository, args.run_id, args.version)
         server = inspect_server(directory, revision, args.version)
         signer = Path(__file__).resolve().parents[1] / 'updates/sign_release.py'
         signed = subprocess.run([sys.executable, str(signer), '--archive', str(archive), '--key', str(args.signing_key),

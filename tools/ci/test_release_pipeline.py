@@ -111,6 +111,7 @@ class DeploymentTransactionTests(unittest.TestCase):
                 patch.object(deploy_release, 'require_current_main'), patch.object(deploy_release, 'inspect_existing_release'), \
                 patch.object(deploy_release, 'build_probe'), patch.object(deploy_release, 'gh'), \
                 patch.object(deploy_release, 'inspect_package', return_value=Path('/fixture/archive.zip')), \
+                patch.object(deploy_release, 'inspect_gates'), \
                 patch.object(deploy_release, 'inspect_server'), \
                 patch.object(deploy_release.subprocess, 'run', return_value=subprocess.CompletedProcess([], 1, b'', b'wrong key')), \
                 patch.object(deploy_release, 'deploy') as host, patch.object(deploy_release, 'validate_adapter'):
