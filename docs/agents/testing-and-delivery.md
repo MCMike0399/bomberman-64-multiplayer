@@ -683,3 +683,14 @@ blast, Temple treads, shoreline occlusion, snow/ice and day/night flooding.
 [Image provenance and before/after files](../images/visual-glitches/manifest.json).
 The complete 55-journey attempt stopped at the existing fresh-display-process
 timeout after 474 checks, before the new journey; it is not a full-suite pass.
+
+## Windows/Linux archived regression
+
+The desktop delivery PRs add `tools/packaging/verify-desktop.py`: run complete
+packaged core/online journeys against an owned matching archived server, and
+use `--graphical` for the full renderer suite. Windows installs the actual EXE;
+Linux launches its AppImage. Exact catalog coverage and runtime errors survive
+in receipts; the four-leaf package smoke is insufficient for promotion.
+`tests/Bomber.DesktopUpdate.Tests` verifies helper handoff and rollback with
+real fixture processes. Keep that separate from actual game updates and
+physical/GPU evidence. See [desktop clients](../desktop-clients.md).

@@ -1,63 +1,73 @@
 # Desktop clients
 
-The Windows x64 client uses Godot 4.7.2 .NET, Forward+ and Direct3D 12. The
-Apple Silicon client retains Metal. Shared gameplay, graphics presets and the
-exact online admission token come from the same source and `Release.props`.
+Windows x64 uses Direct3D 12 and Linux x64 uses Vulkan, with Godot Forward+.
+Apple Silicon retains Metal. Gameplay and online release identity share the
+same source and `Release.props`.
 
-## Downloads and updates
+## Downloads and signed updates
 
-Windows users extract the entire `Blast-Circuit-windows-x64.zip` and run
-`BlastCircuit.exe`. Keep the PCK, data directory and native libraries beside it.
-The .NET runtime and WebRTC extension are included; Godot and a .NET SDK are not
-required on the player's computer. A Direct3D 12-capable GPU and current drivers
-are required for the intended renderer. The Windows executable is not Authenticode
-signed; the release's signed delivery manifest authenticates the archive.
+The requested player downloads are a per-user Windows installer
+`Blast-Circuit-windows-x64-Setup.exe`, Linux `Blast-Circuit-linux-x64.AppImage`
+(from the stacked Linux PR), and macOS `Blast-Circuit-macos-arm64.dmg`.
+Windows installs without administrator privileges. Each client includes its
+.NET runtime, PCK, native networking library and notices. Windows executables
+are not Authenticode signed; the signed delivery inventory authenticates the
+installer. The DMG retains the existing ad-hoc Mac signature.
 
-These initial desktop ports use manual updates. Settings → Download latest opens
-the official releases page. Close the game and extract the new archive to a fresh
-folder. Device preferences live outside the installation and are preserved.
-Automatic checks/installation are unavailable on these platforms. macOS retains
-its existing signed automatic updater and rollback behavior.
+Settings enables automatic signed update checks on installed releases. Windows
+replaces the complete installed folder after the old game exits. Linux replaces
+the original AppImage outside its temporary mount. A detached helper launches
+the replacement and requires a matching health token; launch failure or a
+missing response restores and relaunches the previous payload. Desktop cold
+rendering gets a bounded 180-second health window. The Mac transaction stays
+unchanged. P-256 signatures, bounded downloads and SHA-256 authenticate update
+payloads. Preferences remain outside the installation.
 
-Every online client must match the server's exact version/build; installing only
-an older platform archive will not join a newer server. Publication includes all
-enabled desktop targets from the same trusted Verification run, and fails if an
-archive or native-OS exported smoke is missing.
+ZIPs remain available as portable runtimes and updater/archive inputs. Online
+clients must match the server's exact version/build. Enabled packages, native
+regression receipts, player downloads and signed platform update manifests are
+published together. These paths remain source work until the exact candidate
+passes target-OS validation.
 
 ## Build and verify
 
-Use the .NET 10 SDK, the pinned private build dependency and the matching official
-Godot .NET export templates. Builds may cross-export from macOS/Linux; the target
-OS must run the archived executable for its smoke check.
+Build with .NET 10, the pinned private dependency and official matching Godot
+.NET export templates. Portable clients can cross-export; installers and tests
+run on their actual target systems.
 
 ```sh
 python3 tools/packaging/package-desktop.py --target windows-x64 --godot /path/to/godot
-python3 tools/packaging/smoke-desktop.py --target windows-x64
+python3 tools/packaging/package-download.py --target windows-x64
+python3 tools/packaging/verify-desktop.py --target windows-x64
+python3 tools/packaging/verify-desktop.py --target windows-x64 --graphical
 ```
 
-The second command runs on Windows x64. It extracts the inspected archive into a
-temporary location and runs `package-smoke` without the editor, SDK or private
-checkout. The game reports its compiled release identity and OS. Receipts bind
-that result to the archive checksum. The temporary client is removed; detailed
-logs and captures remain under `artifacts/Blast-Circuit-windows-x64-smoke-details`.
+The regression tool requires the matching archived server and metadata beside
+the client archive. It installs the real Windows EXE into a path containing
+spaces and compares every installed payload hash before testing. Linux's PR
+runs the actual AppImage. Only the harness's own server starts, on a fresh
+Kestrel-selected loopback port.
 
-On an owned Windows graphical desktop, add `--graphical` to require Direct3D 12,
-Forward+, a hardware adapter and actual captures. This is a windowed QA launch.
-Inspect the captures. Also exercise saved Low/Medium/High startup, fullscreen,
-water/reflections, explosion warmup, controller hotplug/rumble/focus and mixed-OS
-public/direct/relay/host-takeover journeys before claiming hardware coverage.
+Headless regression covers the complete core suite, direct/relay peer rooms,
+adaptive rooms, Greedy Trap server gameplay and slow polling. Graphical mode
+runs `all` plus additional menu-preview and water journeys. Every case retains
+exact leaf order, catalog hash, compiled release/platform, assertions, captures
+and runtime errors. Promotion rejects package-smoke-only receipts. CI retains
+failure summaries, JUnit, runtime logs and failure captures.
 
-CI cross-exports on Ubuntu and runs the exact archived Windows client headless on
-`windows-2025`. Both jobs are trusted-main-only; public PR checks never receive
-private build credentials. Headless smoke establishes packaged runtime/assets
-and local gameplay, not native graphics, performance, physical controllers or
-Internet cross-play. Those remain explicit hardware validation requirements.
+The opt-in `desktop-validation` PR label runs native hosted tests of separately
+prepared exact-SHA draft candidate assets, without private build credentials.
+Private builds still run only on trusted main. The independent
+`tests/Bomber.DesktopUpdate.Tests` process fixtures exercise helper handoff,
+replacement and launch rollback without the private dependency. They do not
+substitute for actual Godot update transactions.
 
-Archives include a per-file inventory, notices, release identity and .NET runtime.
-Promotion, deployment preflight and anonymous post-publication verification check
-their identity, inventory and smoke receipts. The existing Mac startup/update and
-fleet deployment gates remain required. Historical Mac-only releases remain
-verifiable with their original signed asset sets.
+## Evidence limits
 
-The special SDL/libusb Switch 2 USB backend remains macOS-only. Windows uses
-Godot's controller backend; support for individual physical pads must be tested.
+Headless execution establishes packaged gameplay and loopback multiplayer.
+D3D12/Vulkan visuals, native performance, physical pad hotplug/rumble,
+X11/Wayland behavior and mixed-OS Internet play require their own evidence.
+Run the full native renderer suite and inspect captures before claiming visual
+parity. The SDL/libusb Switch 2 USB backend remains Mac-only; observe individual
+Windows/Linux physical pads before claiming their support. Linux x64 initially
+targets Ubuntu 24.04; ARM64 and other distributions need separate validation.

@@ -12,6 +12,7 @@ import unittest
 from unittest.mock import patch
 import zipfile
 import desktop_packages
+import download_formats
 from test_desktop_packages import write_desktop
 
 SPEC = importlib.util.spec_from_file_location('promotion', Path(__file__).with_name('promote_release.py'))
@@ -35,6 +36,8 @@ def write_package(directory, version='0.15.0', revision=SHA):
     (directory / (promotion.ARCHIVE + '.sha256')).write_text(digest + '  ' + promotion.ARCHIVE + '\n')
     (directory / 'build-metadata.json').write_text(json.dumps({'revision': revision, 'version': version, 'release': RELEASE, 'features': {'switch2UsbBackend': True}}))
     write_desktop(directory, revision, RELEASE)
+    (directory / download_formats.FILES["macos-arm64"]).write_bytes(b"fixture-dmg")
+    download_formats.record(directory, "macos-arm64", revision, RELEASE, promotion.ARCHIVE)
 
 
 def write_gate(directory, name, version='0.15.0', build='10', **changes):

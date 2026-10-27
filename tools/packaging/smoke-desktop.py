@@ -52,7 +52,7 @@ def main():
         if report.get('platform') != settings['os'] or report.get('release') != expected:
             raise RuntimeError('Exported executable release/platform differs from archive metadata')
         if args.graphical and (report.get('renderingDriver') != settings['driver'] or
-                               report.get('renderingMethod') != 'forward_plus' or not report.get('screenshots') or
+                               report.get('renderingMethod') != 'forward_plus' or not report.get('adapter') or not report.get('screenshots') or
                                any(word in report.get('adapter', '').lower() for word in ('software', 'llvmpipe', 'swiftshader', 'basic render', 'warp'))):
             raise RuntimeError('Graphical smoke did not use the intended native GPU renderer')
         receipt = {'schemaVersion': 1, 'passed': report.get('passed'), 'target': args.target,

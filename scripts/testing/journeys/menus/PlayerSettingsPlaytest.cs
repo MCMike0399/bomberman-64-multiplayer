@@ -31,16 +31,8 @@ public partial class PlaytestDriver
             Check(Engine.MaxFps==engineCap,"command-line --max-fps keeps QA timing over the saved cap");
             await KeyPress(Key.Right);Check(_root.Preferences.FrameCap==0,"frame cap returns to unlimited");
             Check(_root.Preferences.AutomaticUpdates,"automatic update checking defaults on");
-            if(OperatingSystem.IsMacOS())
-            {
-                await ActivateNamed("AutomaticUpdates");Check(!PlayerPreferences.Load(_root.PreferencesPath).AutomaticUpdates,"automatic update preference persists");
-                await ActivateNamed("AutomaticUpdates");
-            }
-            else
-            {
-                Check(NamedButton("AutomaticUpdates").Disabled,"manual-update platforms disable automatic installation");
-                Check(NamedButton("CheckUpdates").Text=="Download latest","manual-update platforms offer the release download page");
-            }
+            await ActivateNamed("AutomaticUpdates");Check(!PlayerPreferences.Load(_root.PreferencesPath).AutomaticUpdates,"automatic update preference persists");
+            await ActivateNamed("AutomaticUpdates");
             await Capture("player-settings");await KeyPress(Key.Escape);Check(_root.ScreenName=="Modes","Esc returns from settings");
             _root.StartLocal(new SessionSettings(Bots:0),1,practice:true);await Frames(5);
             await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"haptic gameplay reaches fight",180);

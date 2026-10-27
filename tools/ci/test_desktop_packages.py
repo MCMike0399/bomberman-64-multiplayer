@@ -8,6 +8,8 @@ from unittest.mock import patch
 import zipfile
 
 import desktop_packages as desktop
+import desktop_validation as validation
+import download_formats
 import promote_release
 
 SHA = 'a' * 40
@@ -31,11 +33,20 @@ def write_desktop(directory, revision=SHA, release=None):
         (directory / (item['archive'] + '.sha256')).write_text(desktop.digest(directory / item['archive']) + '  ' + item['archive'])
         (directory / item['metadata']).write_text(json.dumps({
             'schemaVersion': 1, 'target': target, 'revision': revision, 'release': release, 'driver': settings['driver'],
-            'automaticUpdates': False, 'files': {name: hashlib.sha256(data).hexdigest() for name, data in files.items()}}))
+            'automaticUpdates': True, 'files': {name: hashlib.sha256(data).hexdigest() for name, data in files.items()}}))
+        cases = []
+        for scenario in validation.HEADLESS:
+            cases.append({'passed': True, 'platform': settings['os'], 'release': dict(release, revision=revision),
+                          'scenario': scenario, 'catalogSha256': validation.catalog_digest(),
+                          'completedScenarios': validation.expanded(scenario, validation.catalog()),
+                          'assertions': 200, 'runtimeErrors': [], 'screenshotMode': 'disabled-headless'})
         (directory / item['smoke']).write_text(json.dumps({
-            'passed': True, 'target': target, 'revision': revision, 'release': release,
+            'schemaVersion': 2, 'passed': True, 'target': target, 'revision': revision, 'release': release,
             'archiveSha256': desktop.digest(directory / item['archive']), 'os': settings['os'],
-            'scenario': 'package-smoke', 'mode': 'headless', 'assertions': 200}))
+            'suite': 'headless-regression', 'cases': cases}))
+        (directory / download_formats.FILES[target]).write_bytes(b'MZ fixture installer' if target == 'windows-x64' else b'\x7fELF' + b'\x00'*4 + b'AI\x02 fixture AppImage')
+        download_formats.record(directory, target, revision, release, item['archive'])
+
 
 
 class DesktopPackageTests(unittest.TestCase):
@@ -60,11 +71,11 @@ class DesktopPackageTests(unittest.TestCase):
         path = self.root / self.item['smoke']
         original = path.read_text()
         for changes in ({'passed': False}, {'os': 'Darwin'}, {'archiveSha256': 'b' * 64},
-                        {'revision': 'b' * 40}, {'release': {}}, {'assertions': 0}, {'mode': 'unknown'}):
+                        {'revision': 'b' * 40}, {'release': {}}, {'schemaVersion': 1}, {'suite': 'unknown'}):
             value = json.loads(original)
             value.update(changes)
             path.write_text(json.dumps(value))
-            with self.subTest(changes=changes), self.assertRaisesRegex(RuntimeError, 'smoke'):
+            with self.subTest(changes=changes), self.assertRaises(RuntimeError):
                 desktop.inspect(self.root, SHA, RELEASE)
 
     def test_matching_metadata_cannot_authorize_traversal_or_links(self):

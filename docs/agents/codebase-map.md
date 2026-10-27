@@ -248,3 +248,10 @@ Older notes and receipts may cite pre-restructure paths:
 | `tools/package-macos.py`, `tools/cleanup-macos-builds.py` | `tools/packaging/` |
 | `tools/party-relay.sh`, `tools/prepare-party-server.py` | `tools/party/` |
 | `docs/iteration*.md` and early research notes | `docs/history/` |
+
+The desktop updater's detached process is `src/Bomber.Updater`; it links shared
+request/transaction files from `Bomber.Client/Updates` without a private kernel
+dependency. Process fixtures live in `tests/Bomber.DesktopUpdate.Tests`.
+Player downloads use `tools/packaging/package-download.py` and
+`windows-installer.iss`; portable ZIPs remain the inventoried runtime source
+and Windows updater payload.
