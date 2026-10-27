@@ -62,7 +62,7 @@ public partial class PlaytestDriver
             var bomb=new BombModel(art);bomb.UpdateState(pumps,3,red,remote,1.5f,null);bomb._Process(.2);
             specimens.Add((name,bomb));
         }
-        foreach(string kind in new[]{"fire","bomb","remote","red","heart"})
+        foreach(var (kind,_) in ShowcasePickups)
         {
             var pickup=new PowerupModel(art,kind);
             var pickupIcon=pickup.GetNode<Node3D>("Icon");
@@ -284,7 +284,7 @@ public partial class PlaytestDriver
             int suits=0,bombs=0,pickups=0;
             foreach(var (_,model) in specimens)
             {
-                model.Position=model switch {BomberModel=>new((suits++-3.5f)*1.5f,0,-2.2f),BombModel=>new((bombs++-1.5f)*2.6f,0,1),PowerupModel=>new((pickups++-2)*1.7f,.5f,3.5f),_=>new(-2.25f,0,5.4f)};
+                model.Position=model switch {BomberModel=>new((suits++-3.5f)*1.5f,0,-2.2f),BombModel=>new((bombs++-1.5f)*2.6f,0,1),PowerupModel=>new((pickups++-(ShowcasePickups.Length-1)/2f)*1.45f,.5f,3.5f),_=>new(-2.25f,0,5.4f)};
                 world.AddChild(model);model.ProcessMode=ProcessModeEnum.Disabled;
             }
             await Capture("asset-audit-inspection-gallery",5);
