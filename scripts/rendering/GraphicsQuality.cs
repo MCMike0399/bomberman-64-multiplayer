@@ -50,13 +50,19 @@ public static class GraphicsQuality
         RenderingServer.DirectionalShadowAtlasSetSize(Current switch {GraphicsPreset.Low=>1024,GraphicsPreset.High=>4096,_=>2048},true);
         RenderingServer.DirectionalSoftShadowFilterSetQuality(Current switch
         {GraphicsPreset.Low=>RenderingServer.ShadowQuality.SoftVeryLow,GraphicsPreset.High=>RenderingServer.ShadowQuality.SoftMedium,_=>RenderingServer.ShadowQuality.SoftLow});
-        // Half-resolution SSAO on every preset: at native panel density the bilateral upsample
-        // measured within 10/255 of full resolution while saving about 1.8 ms per High frame.
-        RenderingServer.EnvironmentSetSsaoQuality(Current==GraphicsPreset.High?RenderingServer.EnvironmentSsaoQuality.High:RenderingServer.EnvironmentSsaoQuality.Medium,
+        // Half-resolution, medium-quality SSAO on every preset: at native panel density the
+        // bilateral upsample measured within 10/255 of full resolution (about 1.8 ms per High
+        // frame), and High's extra samples changed static blocks by under 0.2/255 on average
+        // for 0.1-0.5 ms (2026-10-27 native A/B, graphics-benchmark --benchmark-tweak).
+        // Medium, the budget preset, takes low quality: its static blocks moved under 0.1/255
+        // in the same A/B for about 0.2 ms, and its contact shading reads the same.
+        RenderingServer.EnvironmentSetSsaoQuality(Current==GraphicsPreset.High?RenderingServer.EnvironmentSsaoQuality.Medium:RenderingServer.EnvironmentSsaoQuality.Low,
             true,.5f,2,50,300);
         RenderingServer.ScreenSpaceRoughnessLimiterSetActive(true,.25f,.18f);
         // Indirect bounce exists only on High; it is half-resolution and fades with distance.
-        RenderingServer.EnvironmentSetSsilQuality(RenderingServer.EnvironmentSsilQuality.Medium,true,.5f,2,50,300);
+        // Low quality: the same native A/B put its static-block change under 0.5/255 while it
+        // saved 0.5-1.3 ms per frame, the largest single saving toward 70 FPS at panel size.
+        RenderingServer.EnvironmentSetSsilQuality(RenderingServer.EnvironmentSsilQuality.Low,true,.5f,2,50,300);
         // Low bokeh quality everywhere: the blur only touches scenery outside the arena and
         // medium quality cost 0.36 ms more per frame without a visible difference.
         RenderingServer.CameraAttributesSetDofBlurQuality(RenderingServer.DofBlurQuality.Low,true);

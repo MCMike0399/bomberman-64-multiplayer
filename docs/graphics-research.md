@@ -98,7 +98,7 @@ inputs, model proportions and camera framing remain identical across presets.
 | Menu texture density | Output pixels | Output pixels | Output pixels |
 | Directional shadow atlas | 1024 | 2048 | 4096 |
 | Shadow filtering | Soft very low; no sun PCSS | Soft low; no sun PCSS | Soft medium with contact hardening |
-| Arena SSAO | Off | Half-resolution, medium quality | Half-resolution, high quality |
+| Arena SSAO | Off | Half-resolution, low quality | Half-resolution, medium quality |
 | Menu theatre SSAO | Off | Off | Restrained contact shading |
 | Glow | Off | Restrained intensity, small soft bloom | Restrained intensity, small soft bloom |
 | Temporal AA / FXAA | Off | Off | Off |
@@ -107,13 +107,12 @@ inputs, model proportions and camera framing remain identical across presets.
 | Water | Opaque; no screen copy | Clear refraction and depth absorption (one screen copy) | Medium plus caustic webs, sun glints and screen-space scene reflections |
 | Diorama depth of field | Off | Off | Far/near blur outside the arena, low quality |
 | Stage decorations (`StageScenery`) | Hidden | Shown | Shown |
-| Indirect bounce (SSIL) | Off | Off | Half-resolution, medium quality |
+| Indirect bounce (SSIL) | Off | Off | Half-resolution, low quality |
 
 Medium is the default and sits between the other two on every row. High adds
 scene reflections in water, caustics and glints, the premium surface tier on
-every stage, bounce light, diorama blur, contact-hardening sun shadows
-and higher-quality contact shading, without globally increasing saturation or
-contrast; Low renders 75% of the selected 3D pixels, hides every decoration
+every stage, bounce light, diorama blur and contact-hardening sun shadows,
+without globally increasing saturation or contrast; Low renders 75% of the selected 3D pixels, hides every decoration
 outside the arena and keeps the Greedy reservoir town because floating play
 reads against it. See [preset identity](#preset-identity-2026-10-27) and
 [High premium, Medium balance](#high-premium-and-medium-balance-2026-10-27). The 2026-10-25
@@ -240,18 +239,40 @@ budget now buys visible work instead.
   (`artifacts/playtest/preset-identity-graphics-settings-3`). Native
   `graphics-benchmark --desktop shared` at 3024×1964, High, uncapped, 15 s per
   eight-player stage on the M5 Pro (v0.40.0 → this branch, FPS / p99 ms):
-  Sunken Temple 66.4 / 16.4 → 68.7 / 15.4, Up & Down 65.7 / 15.8 → 66.2 / 15.7,
-  Rock Garden 101.7 → 86.2, Top Rules 110.3 → 108.2, Blizzard Battle 99.7 →
-  82.8, Greedy Trap 89.4 → 81.9 (receipt
-  `artifacts/playtest/high-premium-bench-opt`). Every stage keeps its
-  99th-percentile frame inside the 16.7 ms budget. Three exact savings landed
+  Sunken Temple 66.4 / 16.4 → 75.0 / 14.6, Up & Down 65.7 / 15.8 → 71.7 / 14.4,
+  Rock Garden 101.7 → 96.2, Top Rules 110.3 → 122.8, Blizzard Battle 99.7 →
+  94.2, Greedy Trap 89.4 → 90.8 (receipt
+  `artifacts/playtest/high-premium-bench-final-high`; before the low-SSIL and
+  medium-SSAO step the water stages measured 69.5 and 67.6). Every stage now
+  clears 70 FPS uncapped with its 99th-percentile frame inside 14.6 ms. Medium
+  in the same conditions: Temple 110.6, Rock Garden 169.3, Up & Down 112.7, Top
+  Rules 183.4, Blizzard 157.5, Greedy 144.4 (`high-premium-bench-final-medium`). Three exact savings landed
   with the pass: the water declares its screen copy `filter_linear` because it
   only ever samples LOD 0 (a mipmapped hint made the renderer build a mip
   chain of the panel-resolution copy every frame), the open sea skips the
   refraction fetch and caustics it would multiply by zero, and the stone
   joint-depth test reuses the pixel's own course jitter and chip noise (Top
   Rules captures stayed byte-identical). Together they are worth about 0.3 ms
-  on the water stages. The water stages
+  on the water stages.
+- **Imperceptible High savings toward 70 FPS (native A/B).** The benchmark's
+  `--benchmark-tweak` diagnostic captures a static practice scene at the
+  benchmark resolution before and after each candidate (plus the base again,
+  for the animation floor) and then times a bot battle per candidate. Scored
+  over the blocks that the animation floor leaves static (48 px, under 1/255):
+  SSIL low quality changed blocks by 0.3–0.5/255 on average (worst block 17/255
+  was a snowflake) and saved 0.5 ms (Temple), 0.5 ms (Up & Down) and 1.3 ms
+  (Blizzard); SSAO medium quality on High changed 0.1–0.2/255 and saved 0.1–0.5
+  ms; incremental sky radiance and very-low bokeh changed as little but saved
+  nothing measurable on the water stages, so they stay as they were. High now
+  runs SSIL low and SSAO medium (both half-resolution); the eye-test crops of
+  the worst static blocks are in the delivery receipt.
+- **Medium as the budget preset.** The same A/B on Medium (Temple, Rock
+  Garden) put low-quality SSAO under 0.1/255 on static blocks for about 0.2 ms,
+  so Medium runs half-resolution low-quality SSAO; incremental sky radiance
+  saved nothing and stays off. With the caustic webs and glints already moved
+  to High, Medium's remaining cost is the diorama itself (native resolution,
+  2× MSAA, clear refracting water, glow, decorations); on the M5 Pro it runs
+  111 FPS on Sunken Temple and 169 on Rock Garden at panel resolution. The water stages
   were already at the 60 FPS line in v0.40 (its water mirror cost about 1.1 ms
   over v0.39); this pass holds them there with the shorter march and the
   far-sea skip, so further headroom on those two stages needs an identity

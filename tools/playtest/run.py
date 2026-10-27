@@ -102,6 +102,7 @@ def main():
     parser.add_argument('--benchmark-stage', choices=('all', 'sunken-temple', 'rock-garden', 'up-and-down', 'top-rules', 'blizzard-battle', 'greedy-trap'), default='sunken-temple')
     parser.add_argument('--benchmark-seconds', type=int, default=10, help='Measured battle duration per preset (10–120 seconds)')
     parser.add_argument('--benchmark-preset', choices=('all', 'low', 'medium', 'high'), default='all')
+    parser.add_argument('--benchmark-tweak', default='none', help='Diagnostic comma-separated renderer tweaks: static A/B captures per stage plus a timed battle per tweak; ordinary measurements stay untouched')
     parser.add_argument('--benchmark-disable', choices=('none', 'ssil', 'ssao', 'dof', 'glow', 'water', 'shadows'), default='none', help='Diagnostic pass omission; never a full-quality performance result')
     parser.add_argument('--cold-effects', action='store_true', help='Disable startup warmup in first-use-rendering to retain a negative regression witness')
     parser.add_argument('--desktop', choices=('isolated', 'shared'), default='isolated' if platform.system() == 'Darwin' else 'shared', help='Graphical macOS QA uses a private VM by default; shared explicitly uses your desktop')
@@ -135,7 +136,8 @@ def main():
     if args.scenario == 'graphics-benchmark':
         stages = 6 if args.benchmark_stage == 'all' else 1
         presets = 3 if args.benchmark_preset == 'all' else 1
-        args.timeout = max(args.timeout, 45 + presets * (15 + stages * (args.benchmark_seconds + 15)))
+        tweaks = 0 if args.benchmark_tweak == 'none' else len([t for t in args.benchmark_tweak.split(',') if t])
+        args.timeout = max(args.timeout, 45 + presets * (15 + stages * (args.benchmark_seconds + 15 + tweaks * (args.benchmark_seconds + 8) + (25 if tweaks else 0))))
     if args.timeout <= 0:
         parser.error('--timeout must be positive')
     if args.scenario == 'script' and not args.script:
@@ -236,6 +238,7 @@ def main():
                             '--benchmark-stage=' + args.benchmark_stage,
                             '--benchmark-preset=' + args.benchmark_preset,
                             '--benchmark-disable=' + args.benchmark_disable,
+                            '--benchmark-tweak=' + args.benchmark_tweak,
                             '--benchmark-seconds=' + str(args.benchmark_seconds)]
             result['command'] = command
             if args.scenario == 'graphics-benchmark':

@@ -150,6 +150,16 @@ inside UTC sample windows, inferring batch start from present intervals and
 excluding 250 ms boundary guards. HUD IDs count drawable presents; they are not
 Godot process frames. Raw console/unified logs remain available for inspection.
 
+### Renderer A/B diagnostics
+
+`--benchmark-tweak name[,name...]` (for example `ssil-low,ssao-medium`) captures
+a static practice scene at the benchmark resolution before and after each named
+tweak, then the base again so the animation floor is known, and times one extra
+bot battle per tweak after the untouched full-quality measurement. Names:
+`sky-incremental`, `sky-quality`, `dof-verylow`, `ssao-medium`, `ssao-low`,
+`ssil-low`, `ssil-verylow`. The receipt lists them under `diagnosticTweaks` and
+`tweakMeasurements`; the ordinary `measurements` remain full quality.
+
 ### Native-resolution comparisons
 
 The native runner takes an exclusive host GPU lease and the selected QA VM's
