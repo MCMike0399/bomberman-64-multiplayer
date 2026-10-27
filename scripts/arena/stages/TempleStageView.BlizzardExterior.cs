@@ -1,4 +1,5 @@
 using Godot;
+using BlastCircuit.Arena.Effects;
 using static BlastCircuit.Rendering.ArtGeometry;
 
 namespace BlastCircuit.Arena.Stages;
@@ -15,9 +16,14 @@ public partial class TempleStageView
         var snow=_snowMaterial;var white=_art.Color(new("f4f8fb"),.6f);
         var shadowSnow=_art.Color(new("dbe6f0"),.75f);
 
-        // Pine groves frame the rear and both sides.
+        // Snow carries the accepted wind across the whole diorama, beyond the court.
+        // The original court budget stays intact; this bounded second draw hides on Low.
+        _exteriorSnow=new BlizzardWeather{Name="ExteriorSnowfall",Width=Width+20,Depth=Depth+20,Position=new(-10,0,-10)};
+        scenery.AddChild(_exteriorSnow);
+
+        // Small groves leave breathing room for ice shelves and bare winter trees.
         var random=new Random(31);
-        foreach(var (x0,x1,z0,z1,count) in new[]{(-9f,Width+9f,-7.5f,-2.2f,15),(-8f,-2.2f,-1f,Depth-3f,7),(Width+2.2f,Width+8f,-1f,Depth-5f,6)})
+        foreach(var (x0,x1,z0,z1,count) in new[]{(-9f,Width+9f,-7.5f,-2.2f,7),(-8f,-2.2f,-1f,Depth-3f,3),(Width+2.2f,Width+8f,-1f,Depth-5f,3)})
             for(int i=0;i<count;i++)
             {
                 float x=Mathf.Lerp(x0,x1,(i+(float)random.NextDouble()*.6f)/count);
@@ -25,9 +31,11 @@ public partial class TempleStageView
                 if(x0<0&&x1<0)(x,z)=(Mathf.Lerp(x0,x1,(float)random.NextDouble()),Mathf.Lerp(z0,z1,(i+.5f)/count));
                 if(x0>Width)(x,z)=(Mathf.Lerp(x0,x1,(float)random.NextDouble()),Mathf.Lerp(z0,z1,(i+.5f)/count));
                 // Keep the pond and igloo clear of trees.
-                if(new Vector2(x-(Width+3.2f),z-9.5f).Length()<3.3f||new Vector2(x-(Width+3.4f),z+1.2f).Length()<2.4f)continue;
+                if(new Vector2(x-(Width+3.2f),z-9.5f).Length()<3.3f||new Vector2(x-(Width+3.4f),z+1.2f).Length()<2.4f
+                    ||new Vector2(x+4.1f,z-4.4f).Length()<3.2f)continue;
                 PineTree(scenery,new(x,ground,z),.95f+(float)random.NextDouble()*.75f,true,i*1.7f);
             }
+        BuildGlacierLandmarks(ground);
 
         // An igloo with a block pattern and a dark doorway, beyond the north-east corner.
         var igloo=Prop(scenery,"Igloo",new(Width+3.4f,ground,-1.2f),-.7f);
@@ -80,6 +88,69 @@ public partial class TempleStageView
             Cone(peak,new(0,height/2,0),radius,height,_art.Color(new("8ea3bd"),.9f),9).CastShadow=GeometryInstance3D.ShadowCastingSetting.Off;
             Cone(peak,new(0,height*.8f,0),radius*.42f,height*.4f+.05f,_art.Color(new("f2f7fb"),.7f),9).CastShadow=GeometryInstance3D.ShadowCastingSetting.Off;
         }
+    }
+
+    /// <summary>White Ice's shelves and hanging icicles, reinterpreted as an original
+    /// miniature glacier arch and a broken frozen crown beyond the battle walls.</summary>
+    private void BuildGlacierLandmarks(float ground)
+    {
+        var scenery=_scenery!;
+        var ice=_art.FrozenSurface(0);_frozenMaterials.Add(ice);
+        var blue=_art.FrozenSurface(3);_frozenMaterials.Add(blue);
+        var arch=Prop(scenery,"GlacierArch",new(-4.1f,ground,4.4f),1.3f);
+        foreach(int side in new[]{-1,1})
+        {
+            var foot=Box(arch,new(0,1.4f,side*1.65f),new(2.1f,2.8f,1.3f),blue,.22f);foot.Rotation=new(0,side*.15f,side*-.08f);
+            Sphere(arch,new(0,.15f,side*1.8f),new(2.8f,.7f,1.9f),_snowMaterial);
+        }
+        Box(arch,new(0,3.05f,0),new(2.3f,1.0f,4.7f),ice,.24f);
+        Box(arch,new(0,3.58f,0),new(2.45f,.26f,4.9f),_snowMaterial,.12f);
+        for(int i=0;i<9;i++)
+        {
+            float z=-1.9f+i*.47f,h=.5f+(i%3)*.25f;
+            Cone(arch,new(.95f,2.65f-h/2,z),.14f,h,_crystalMaterial,6).Rotation=new(Mathf.Pi,0,0);
+        }
+        // A blue frozen crown replaces a uniform line of trees at the rear.
+        var crown=Prop(scenery,"FrozenCrown",new(Width*.53f,ground,-6.1f),-.2f);
+        for(int i=0;i<5;i++)
+        {
+            float h=2.1f+Mathf.Sin(i*1.7f)*.6f;
+            var shard=new MeshInstance3D{Name="CrownShard",Mesh=IceConeMesh(i,h),MaterialOverride=ice,
+                Position=new((i-2)*1.15f,0,(i%2)*.4f),Scale=new(1.7f,1,1.7f),Rotation=new(0,i*1.3f,(i-2)*-.08f)};
+            crown.AddChild(shard);
+            Sphere(crown,new((i-2)*1.15f,.12f,(i%2)*.4f),new(1.6f,.5f,1.5f),_snowMaterial);
+        }
+        WinterTree(scenery,new(-3.4f,ground,11.8f),1.05f,.4f);
+        WinterTree(scenery,new(Width+3.1f,ground,3.8f),1.15f,2.1f);
+        WinterTree(scenery,new(Width*.22f,ground,-3.3f),.9f,3.4f);
+
+        var camp=Prop(scenery,"GlacierLantern",new(Width+1.9f,ground,8.1f));
+        var timber=_art.Color(new("76677b"),.85f);
+        Cylinder(camp,new(0,.65f,0),.045f,1.3f,timber);
+        Box(camp,new(.19f,1.29f,0),new(.44f,.045f,.045f),timber);
+        var lantern=Prop(camp,"LanternSway",new(.36f,1.22f,0));
+        Box(lantern,new(0,-.18f,0),new(.23f,.3f,.23f),Glow(new("ffcc78"),1.3f),.025f);
+        Box(lantern,new(0,-.35f,0),new(.3f,.04f,.3f),timber,.01f);
+        Cone(lantern,new(0,.02f,0),.22f,.15f,timber,4);
+        _sceneryMotion.Add(t=>lantern.Rotation=new(Mathf.Sin(t*1.4f)*.09f,0,Mathf.Sin(t*1.1f)*.12f));
+    }
+
+    private void WinterTree(Node3D parent,Vector3 position,float scale,float phase)
+    {
+        var tree=Prop(parent,"WinterTree",position,phase,scale);
+        var bark=_art.Color(new("8e7b91"),.9f);
+        Taper(tree,new(0,.8f,0),.14f,.075f,1.6f,bark,8);
+        var branches=Prop(tree,"WinterBranches",new(0,1.2f,0));
+        for(int i=0;i<5;i++)
+        {
+            float a=i*2.39996f;
+            var branch=Prop(branches,"FrostBranch",new(0,i*.17f,0),a);
+            Taper(branch,new(.35f,.28f,0),.065f,.025f,.9f,bark,7).Rotation=new(0,0,-.9f);
+            Sphere(branch,new(.37f,.39f,0),new(.7f,.14f,.22f),_snowMaterial).Rotation=new(0,0,.55f);
+            Taper(branch,new(.65f,.66f,0),.035f,.008f,.5f,bark,6).Rotation=new(0,0,-.25f);
+            Sphere(branch,new(.69f,.85f,0),new(.18f,.12f,.18f),_snowMaterial);
+        }
+        _sceneryMotion.Add(t=>branches.Rotation=new(Mathf.Sin(t*.85f+phase)*.025f,0,Mathf.Sin(t*1.1f+phase)*.04f));
     }
 
     private void Penguin(Node3D parent,Vector3 position,float phase)

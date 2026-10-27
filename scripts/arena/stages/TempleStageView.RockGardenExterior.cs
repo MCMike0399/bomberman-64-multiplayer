@@ -12,6 +12,7 @@ public partial class TempleStageView
     {
         var scenery=_scenery!;
         const float ground=-.24f;
+        MeadowGrass();
         var stone=_art.Color(new("b9b6a2"),.95f);var mossy=_art.Color(new("8f9a76"),.95f);
         var timber=_art.Color(new("8a6542"),.85f);var rail=_art.Color(new("b38a5a"),.8f);
         var pebble=_art.Color(new("9d9a8c"),.95f);

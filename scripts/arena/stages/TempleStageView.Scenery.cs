@@ -15,6 +15,8 @@ public partial class TempleStageView
     private Node3D? _scenery;
     private readonly List<Action<float>> _sceneryMotion=[];
     private readonly Dictionary<string,StandardMaterial3D> _sceneryMaterials=[];
+    private readonly Dictionary<string,ShaderMaterial> _foliageMaterials=[];
+    private readonly List<ShaderMaterial> _ambientMaterials=[];
     private static readonly Dictionary<string,Mesh> SceneryMeshes=[];
     private float _sceneryClock;
     public Node3D? Scenery=>_scenery;
@@ -49,9 +51,10 @@ public partial class TempleStageView
 
     private void AnimateScenery(float delta)
     {
-        if(_scenery==null||_sceneryMotion.Count==0||!_scenery.Visible)return;
+        if(_scenery==null||!_scenery.Visible||!WeatherActive)return;
         _sceneryClock+=delta;
         foreach(var motion in _sceneryMotion)motion(_sceneryClock);
+        foreach(var material in _ambientMaterials)material.SetShaderParameter("ambient_clock",_sceneryClock);
     }
 
     /// <summary>The visible surface floating props ride, including a rising flood.</summary>
@@ -180,10 +183,17 @@ public partial class TempleStageView
         var root=Prop(parent,"RoundTree",position,phase,scale);
         Taper(root,new(0,.45f,0),.17f,.12f,.9f,_art.Color(new("7a5f45"),.9f),10);
         var canopy=new Node3D{Name="Canopy",Position=new(0,1.35f,0)};root.AddChild(canopy);
-        Sphere(canopy,Vector3.Zero,new(1.5f,1.35f,1.5f),_art.Color(leaves,.9f));
-        Sphere(canopy,new(-.38f,.32f,.15f),new(.95f,.9f,.95f),_art.Color(leaves.Lightened(.14f),.9f));
-        Sphere(canopy,new(.4f,.12f,-.25f),new(.85f,.8f,.85f),_art.Color(leaves.Darkened(.1f),.9f));
-        _sceneryMotion.Add(t=>canopy.Rotation=new(Mathf.Sin(t*.7f+phase)*.03f,0,Mathf.Sin(t*.9f+phase)*.035f));
+        Sphere(canopy,Vector3.Zero,new(1.5f,1.35f,1.5f),WindPaint(leaves));
+        Sphere(canopy,new(-.38f,.32f,.15f),new(.95f,.9f,.95f),WindPaint(leaves.Lightened(.14f)));
+        Sphere(canopy,new(.4f,.12f,-.25f),new(.85f,.8f,.85f),WindPaint(leaves.Darkened(.1f)));
+        // A few leaf clusters break the balloon silhouette and flutter locally.
+        for(int i=0;i<(_garden?7:0);i++)
+        {
+            float a=i*Mathf.Tau/7;
+            Bead(canopy,new(Mathf.Cos(a)*.65f,.2f+(i%3)*.18f,Mathf.Sin(a)*.65f),new(.42f,.28f,.38f),WindPaint(leaves.Lightened(.08f)));
+        }
+        if(_garden)_sceneryMotion.Add(t=>canopy.Rotation=new(Mathf.Sin(t*.9f+position.X*.63f+position.Z*.37f)*.055f,0,Mathf.Sin(t*1.3f+phase)*.065f));
+        else _sceneryMotion.Add(t=>canopy.Rotation=new(Mathf.Sin(t*.7f+phase)*.03f,0,Mathf.Sin(t*.9f+phase)*.035f));
         return root;
     }
 
@@ -204,9 +214,9 @@ public partial class TempleStageView
     private void Bush(Node3D parent,Vector3 position,float scale,Color color)
     {
         var root=Prop(parent,"Bush",position,position.X*1.7f,scale);
-        Sphere(root,new(0,.22f,0),new(.9f,.55f,.8f),_art.Color(color,.9f));
-        Sphere(root,new(.32f,.18f,.12f),new(.55f,.42f,.55f),_art.Color(color.Lightened(.12f),.9f));
-        Sphere(root,new(-.3f,.16f,-.1f),new(.5f,.38f,.5f),_art.Color(color.Darkened(.08f),.9f));
+        Sphere(root,new(0,.22f,0),new(.9f,.55f,.8f),WindPaint(color));
+        Sphere(root,new(.32f,.18f,.12f),new(.55f,.42f,.55f),WindPaint(color.Lightened(.12f)));
+        Sphere(root,new(-.3f,.16f,-.1f),new(.5f,.38f,.5f),WindPaint(color.Darkened(.08f)));
     }
 
     private void FlowerBed(Node3D parent,Vector3 center,float radius,int count,int seed)
