@@ -42,6 +42,10 @@ def main():
     for attempt in range(5):
         attempt_output = output / ('attempt-' + str(attempt + 1)); attempt_output.mkdir()
         with suite.server(dll=staged / 'Blast-Circuit-server-dotnet10/Bomber.Server.dll') as origin:
+            primer = subprocess.run([sys.executable, str(ROOT / 'tools/playtest/run.py'), '--executable',
+                str(staged / item['root'] / desktop.TARGETS[target]['executable']), '--scenario', 'peer-rooms',
+                '--headless', '--desktop', 'shared', '--server', origin, '--output', str(attempt_output)], timeout=200)
+            if primer.returncode != 0: raise RuntimeError('Peer-room primer failed before the capacity repro')
             result = subprocess.run([sys.executable, str(ROOT / 'tools/playtest/run.py'), '--executable',
                 str(staged / item['root'] / desktop.TARGETS[target]['executable']), '--scenario', 'peer-capacity',
                 '--headless', '--desktop', 'shared', '--server', origin, '--output', str(attempt_output)], timeout=150)
