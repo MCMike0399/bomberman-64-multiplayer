@@ -5,6 +5,7 @@ using Bomber.Game.Simulation.Rules;
 using System.Text.Json;
 using BlastCircuit.Arena.Effects;
 using BlastCircuit.InputDevices;
+using EngineInput=Godot.Input;
 namespace BlastCircuit.Testing;
 
 public partial class PlaytestDriver
@@ -91,7 +92,8 @@ public partial class PlaytestDriver
         Event("aim-input-mode",new{source="ordinary synthetic keyboard/canonical events; Switch uses production native bridge",physicalInputClaim=false,triggerThreshold=.35f});
         try
         {
-            foreach(var (pad,rightStick) in new (GamepadDevice? Pad,bool RightStick)[]{(null,false),(QaPads[0],false),(QaPads[1],false),(QaPads[2],false),(QaPads[0],true),(QaPads[1],true),(QaPads[2],true)})
+            // RightStick=true selects pointer aiming: the right stick for pads, the mouse for keyboard.
+            foreach(var (pad,rightStick) in new (GamepadDevice? Pad,bool RightStick)[]{(null,false),(null,true),(QaPads[0],false),(QaPads[1],false),(QaPads[2],false),(QaPads[0],true),(QaPads[1],true),(QaPads[2],true)})
             {
                 CtlReleaseAll();hub.OverrideDevicesForPlaytest(pad is null?[]:[pad]);
                 // Navigation uses ordinary authority movement, then native controls perform
@@ -99,8 +101,8 @@ public partial class PlaytestDriver
                 await HandlingPractice();await GrappleWalk(0,8,18);
                 Input(0,new PlayerInput(1,0));await Frames(2);Input(0,default);await Frames(2);
                 _root.InjectInput(0,null);await ControllerFocusReady();_controllerFocusTrial=true;
-                string name=pad is null?"Keyboard":pad.Name+(rightStick?" right stick":" left stick");
-                if(pad is null)
+                string name=pad is null?(rightStick?"Keyboard mouse":"Keyboard"):pad.Name+(rightStick?" right stick":" left stick");
+                if(pad is null&&!rightStick)
                 {
                     foreach(var key in new[]{Key.Ctrl,Key.Enter,Key.Backspace})
                     {
@@ -132,8 +134,15 @@ public partial class PlaytestDriver
                 }
                 JoyButton primary=pad is null?JoyButton.A:ControllerProfile.BombButton(ControllerProfile.Family(pad.Name));
                 JoyButton carry=JoyButton.LeftShoulder;
-                void Carry(bool down){if(pad is null)CtlKey(Key.K,down);else CtlButton(pad.RuntimeId,carry,down);}
-                void Primary(bool down){if(pad is null)CtlKey(Key.J,down);else CtlButton(pad.RuntimeId,primary,down);}
+                bool mouse=pad is null&&rightStick;
+                Godot.Vector2 pointer=GetViewport().GetVisibleRect().Size*.5f;
+                void Click(MouseButton button,bool down)
+                {
+                    EngineInput.ParseInputEvent(new InputEventMouseButton {ButtonIndex=button,Pressed=down,Position=pointer,GlobalPosition=pointer});
+                    EngineInput.FlushBufferedEvents();
+                }
+                void Carry(bool down){if(mouse)Click(MouseButton.Right,down);else if(pad is null)CtlKey(Key.K,down);else CtlButton(pad.RuntimeId,carry,down);}
+                void Primary(bool down){if(mouse)Click(MouseButton.Left,down);else if(pad is null)CtlKey(Key.J,down);else CtlButton(pad.RuntimeId,primary,down);}
                 void Aim(float value){if(pad is null)CtlKey(Key.L,value>.35f);else Axis(JoyAxis.TriggerRight,value);}
                 void Range(bool down){if(pad is null)CtlKey(Key.W,down);else Axis(rightStick?JoyAxis.RightY:JoyAxis.LeftY,down?-1:0);}
                 void Turn(bool down){if(pad is null)CtlKey(Key.D,down);else Axis(rightStick?JoyAxis.RightX:JoyAxis.LeftX,down?1:0);}
@@ -141,6 +150,63 @@ public partial class PlaytestDriver
                 if(pad is null){var intent=PlayerControls.Read(0,1);Check(intent.B&&!intent.Aim,"keyboard K holds carry without entering aim");}
                 Primary(true);await ControllerFrames(2);Primary(false);await ControllerFrames(14);
                 Check(Player.GetProperty("carrying").GetString()=="bomb",name+": native carry plus primary creates the held bomb");
+                if(rightStick)
+                {
+                    // The drawn ring is the static projected landing, including height compensation for
+                    // raised spots such as cover tops; it must sit where the player points.
+                    System.Numerics.Vector2 Ring()=>new(PrecisionPreview.X,PrecisionPreview.Z);
+                    bool At(System.Numerics.Vector2 expected)=>PrecisionPreview.End=="Landing"&&System.Numerics.Vector2.Distance(Ring(),expected)<.25f;
+                    System.Numerics.Vector2 Carrier()=>new(AimNumber(Player,"x"),AimNumber(Player,"z"));
+                    System.Numerics.Vector2 target;
+                    if(mouse)
+                    {
+                        // Real pointer motion over the drawn arena: the ring lands under the cursor.
+                        void Point(System.Numerics.Vector2 at)
+                        {
+                            var screen=_root.ArenaScreenPoint(new(at.X,AimNumber(Player,"y"),at.Y));
+                            var relative=screen-pointer;pointer=screen;GetViewport().WarpMouse(screen);
+                            EngineInput.ParseInputEvent(new InputEventMouseMotion {Position=screen,GlobalPosition=screen,Relative=relative});
+                            EngineInput.FlushBufferedEvents();
+                        }
+                        float row=AimNumber(Player,"z"),start=AimNumber(Player,"x");
+                        target=new(start+3,row);Point(target);await ControllerFrames(4);
+                        Check(Player.GetProperty("aimSet").GetBoolean()&&!Player.GetProperty("aiming").GetBoolean()&&At(target),
+                            name+$": moving the mouse places the landing ring under the cursor without planting ({Ring()} vs {target})");
+                        target=new(start-2,row);Point(target);await ControllerFrames(4);
+                        Check(At(target),name+$": the landing ring follows the mouse behind the carrier ({Ring()} vs {target})");
+                        CtlKey(Key.D,true);await ControllerFrames(6);CtlKey(Key.D,false);await ControllerFrames(2);
+                        Check(AimNumber(Player,"x")>start+.4f&&At(target),name+$": walking keeps the ring on the still cursor ({Ring()} vs {target})");
+                    }
+                    else
+                    {
+                        float Reach(float tilt)=>AimStickPointer.MinRange+Math.Clamp((tilt-InputPolicy.StickDeadzone)/(AimStickPointer.OuterDeflection-InputPolicy.StickDeadzone),0,1)*(BombThrowRules.MaxAimRange-AimStickPointer.MinRange);
+                        Axis(JoyAxis.RightX,.56f);await ControllerFrames(4);
+                        target=Carrier()+new System.Numerics.Vector2(Reach(.56f),0);
+                        Check(Player.GetProperty("aimSet").GetBoolean()&&!Player.GetProperty("aiming").GetBoolean()&&AimNumber(Player,"aimX")>.999f&&At(target),
+                            name+$": partial right-stick tilt places the ring east without the trigger ({Ring()} vs {target})");
+                        Axis(JoyAxis.RightX,-1);await ControllerFrames(4);
+                        Check(AimNumber(Player,"aimX")<-.999f&&AimNumber(Player,"aimRange")>=BombThrowRules.MaxAimRange-.6f,name+": full right-stick tilt points behind the carrier near maximum reach");
+                        Axis(JoyAxis.RightX,.56f);await ControllerFrames(4);target=Ring();
+                        Axis(JoyAxis.RightX,0);await ControllerFrames(4);
+                        Check(AimNumber(Player,"aimX")>.999f&&At(target),name+$": releasing the right stick keeps the chosen target ({Ring()} vs {target})");
+                        float before=AimNumber(Player,"x");
+                        Axis(JoyAxis.LeftX,-1);Axis(JoyAxis.RightX,.56f);await ControllerFrames(6);
+                        Check(AimNumber(Player,"x")<before-.4f&&!Player.GetProperty("aiming").GetBoolean()&&AimNumber(Player,"aimX")>.999f,name+": left stick walks while the right stick keeps pointing");
+                        Axis(JoyAxis.LeftX,0);Axis(JoyAxis.RightX,0);await ControllerFrames(3);
+                        target=Ring();
+                    }
+                    Primary(true);await ControllerFrames(2);Primary(false);await ControllerFrames(14);
+                    Check(HandlingBomb.GetProperty("pumps").GetInt32()==1&&At(target),name+$": pumping keeps the pointed target ({Ring()} vs {target})");
+                    await Capture("precision-input-"+(pad?.RuntimeId.ToString()??"keyboard")+"-pointer",0);
+                    Carry(false);await ControllerFrames(4);
+                    Check(Player.GetProperty("carrying").ValueKind==JsonValueKind.Null,name+": carry release throws the pointed bomb");
+                    await WaitState(s=>s.GetProperty("bombs").GetArrayLength()==1&&HandlingBomb.GetProperty("state").GetInt32()==0,name+": pointed bomb comes to rest",100);
+                    var rest=new System.Numerics.Vector2(AimNumber(HandlingBomb,"x"),AimNumber(HandlingBomb,"z"));
+                    Check(System.Numerics.Vector2.Distance(rest,target)<.35f,name+": the bomb lands at the pointed target");
+                    Event("aim-pointer-result",new{name,target=new{target.X,target.Y},rest=new{rest.X,rest.Y},physicalInputClaim=false});
+                    _controllerFocusTrial=false;CtlReleaseAll();_root.Back();await Frames(3);
+                    continue;
+                }
                 if(pad is not null){Aim(.3f);await ControllerFrames(2);Check(!Player.GetProperty("aiming").GetBoolean(),name+": below-threshold right trigger does not enter aim");}
                 Aim(1);await ControllerFrames(4);float startRange=AimNumber(Player,"aimRange"),px=AimNumber(Player,"x"),pz=AimNumber(Player,"z");
                 Check(Player.GetProperty("aiming").GetBoolean(),name+": L or canonical right trigger enters the authoritative aim stance");

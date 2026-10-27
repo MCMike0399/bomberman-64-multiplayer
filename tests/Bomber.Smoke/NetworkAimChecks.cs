@@ -61,7 +61,20 @@ internal static class NetworkAimChecks
             return crossedHead&&bomb.GetProperty("state").GetInt32()==0;
         });
         Check(aboveHead&&crossedHead,"network throw crosses descending head height before resting");
-        Console.WriteLine("PASS production NetworkSession precision aim: planted stance, local protocol parity, retained intent, finite release fuse and safe descending head height");
+
+        // A pointer (mouse or right stick) target uses the same encoder and steers without planting.
+        await Wait(observer,frame=>FindBomb(frame,id) is null);
+        host.SendInput(0,new PlayerInput(0,0,A:true,B:true));
+        var relifted=Player(await Wait(observer,frame=>Player(frame,id).GetProperty("carrying").GetString()=="bomb"),id);
+        var target=new System.Numerics.Vector2(F(relifted,"x")+2,F(relifted,"z")+1.5f);
+        host.SendInput(0,new PlayerInput(0,0,B:true,AimTarget:target));
+        var pointed=Player(await Wait(observer,frame=>Player(frame,id).GetProperty("aimSet").GetBoolean()),id);
+        var toward=System.Numerics.Vector2.Normalize(target-new System.Numerics.Vector2(F(pointed,"x"),F(pointed,"z")));
+        Check(!pointed.GetProperty("aiming").GetBoolean()&&F(pointed,"aimX")*toward.X+F(pointed,"aimZ")*toward.Y>.999f&&F(pointed,"aimRange") is >1.5f and <3.5f,
+            "network pointer target sets direction and range without the planted stance");
+        host.SendInput(0,default);
+        await Wait(observer,frame=>Player(frame,id).GetProperty("carrying").ValueKind==JsonValueKind.Null&&!Player(frame,id).GetProperty("aimSet").GetBoolean());
+        Console.WriteLine("PASS production NetworkSession precision aim: planted stance, local protocol parity, retained intent, finite release fuse, safe descending head height and pointer targets");
     }
 
     private static async Task<JsonElement> LocalAcceptance(SessionSettings settings)

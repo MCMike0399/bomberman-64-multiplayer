@@ -22,6 +22,8 @@ public sealed class BlastPlayer
     public int Tier { get; set; }
     public float FacingX { get; set; } = 0;
     public float FacingZ { get; set; } = 1;
+    // Time a held diagonal heading has outlasted one of its released axes.
+    internal float FacingReleaseHold;
 
     // Vital state.
     public bool Alive { get; set; } = true;

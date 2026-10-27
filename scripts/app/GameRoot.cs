@@ -66,6 +66,7 @@ public partial class GameRoot : Node3D
     public JsonElement? LatestStage { get; private set; }
     public ISession? ActiveSession=>_session;
     public IReadOnlyList<BlastCircuit.Arena.Effects.ThrowPreviewState> ThrowPreviews=>_arena.ThrowPreviews;
+    public Vector2 ArenaScreenPoint(System.Numerics.Vector3 arena)=>_arena.ScreenPoint(arena);
     public IReadOnlyList<BlastCircuit.Arena.BombRenderPose> BombRenderPoses=>_arena.BombRenderPoses;
     public object VisualState=>new {waterHeight=_arena.WaterHeight,largestBombScale=_arena.LargestBombScale,pumpAnimations=_arena.PumpAnimationCount,pumpIntensity=_arena.PumpIntensity,carriedBombs=_arena.CarriedBombs,powerups=_arena.VisiblePowerups};
     public JsonElement? LatestLobby=>_lobby;
@@ -257,6 +258,25 @@ public partial class GameRoot : Node3D
         _session?.ReleaseInputs();ControllerHub.Current.StopVibration();ControllerHub.Current.RearmControls();
         ScreenName="Lobby";_arena.Visible=false;_hud.Visible=false;_menu.SetOverlay(false);_menu.Visible=true;_menu.ShowScreen("Lobby",restoreFocus);
     }
+    /// <summary>Adds a right-stick offset or mouse/trackpad point for a seat's carried bomb.</summary>
+    private PlayerInput WithPointer(PlayerInput input,int seat,string? playerId)
+    {
+        var hub=ControllerHub.Current;
+        var offset=hub.AimStickOffset(seat);
+        if(playerId==null||!_arena.LocalCarrier(playerId,out _)){hub.MouseAimActive(seat,false);return input;}
+        if(offset is {} stick)return input with {AimTarget=stick,AimRelative=true};
+        return hub.MouseAimActive(seat,true)?input with {AimTarget=_arena.ArenaPoint(GetViewport().GetMousePosition())}:input;
+    }
+    private bool _matchCursor;
+    /// <summary>In matches the pointer is a crosshair while the mouse is in use and hides when idle,
+    /// so keyboard and controller players are not left with an arrow over the arena.</summary>
+    private void UpdateMatchCursor()
+    {
+        bool match=ScreenName=="Match"&&_session!=null;
+        if(match!=_matchCursor){_matchCursor=match;Input.SetDefaultCursorShape(match?Input.CursorShape.Cross:Input.CursorShape.Arrow);}
+        var mode=match&&ControllerHub.Current.HasApplicationFocus&&ControllerHub.Current.MouseIdleSeconds>2?Input.MouseModeEnum.Hidden:Input.MouseModeEnum.Visible;
+        if(Input.MouseMode!=mode)Input.MouseMode=mode;
+    }
     private void PlayerFeedback(string kind,string? player)
     {
         if(ScreenName!="Match"||_session==null||player==null)return;
@@ -287,14 +307,15 @@ public partial class GameRoot : Node3D
                 bool passed=captured&&(_capture is "menu" or "roster"||SnapshotCount>0);GD.Print($"{(passed?"GODOT_SMOKE_OK":"GODOT_SMOKE_FAILED")} {_capture} snapshots={SnapshotCount}");GetTree().Quit(passed?0:1);return;
             }
         }
+        UpdateMatchCursor();
         var session=_session;if(session==null)return;
         if(session is NetworkSession reconnecting&&reconnecting.ConnectionGeneration!=_networkGeneration)
         {_networkGeneration=reconnecting.ConnectionGeneration;session.ReleaseInputs();ControllerHub.Current.RearmControls();}
         if(ScreenName=="Match" && !(_tutorialLessonId is not null && _tutorialHud.Finished))for(int i=0;i<session.LocalPlayerCount;i++)
         {
-            var input=_injected.TryGetValue(i,out var injected)?injected:PlayerControls.Read(i,session.LocalPlayerCount);
-            session.SendInput(i,input);
             var playerId=session is NetworkSession network?network.PlayerId:$"local-{i}";
+            var input=_injected.TryGetValue(i,out var injected)?injected:WithPointer(PlayerControls.Read(i,session.LocalPlayerCount),i,playerId);
+            session.SendInput(i,input);
             if(playerId!=null)_arena.SetLocalInput(playerId,input);
         }
         if(session is not LocalSession || ScreenName=="Match")session.Advance(delta);

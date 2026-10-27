@@ -99,7 +99,7 @@ public sealed partial class BlastSession
         player.ClearInput(); player.PrevA = player.PrevB = player.PrevR = player.PrevStop = false;
         PowerUpRules.Reset(player,_advanced);
         player.ActiveBombs = _bombs.Count(b => b.OwnerId == player.Id && !b.Exploded);
-        player.FacingX = 0; player.FacingZ = 1; player.BotThinkTimer = 0;
+        player.FacingX = 0; player.FacingZ = 1; player.FacingReleaseHold = 0; player.BotThinkTimer = 0;
     }
 
     private void DropPowerUpOnDeath(BlastPlayer p)

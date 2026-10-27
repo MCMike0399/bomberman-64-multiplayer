@@ -15,11 +15,11 @@ public static class InputPolicy
         if(length<=deadzone||length==0)return Vector2.Zero;
         return new((float)(x/length),(float)(z/length));
     }
-    public static PlayerInput Resolve(PlayerInput keyboard,PlayerInput stick=default,PlayerInput dpad=default,PlayerInput aimStick=default)
+    /// <summary>Right-stick pointing is resolved separately (see <see cref="AimStickPointer"/>).</summary>
+    public static PlayerInput Resolve(PlayerInput keyboard,PlayerInput stick=default,PlayerInput dpad=default)
     {
         bool aim=keyboard.Aim||stick.Aim||dpad.Aim;
-        var direction=aim?AnalogAim(aimStick.X,aimStick.Z):Vector2.Zero;
-        if(direction==Vector2.Zero)direction=Direction(dpad.X,dpad.Z);
+        var direction=Direction(dpad.X,dpad.Z);
         if(direction==Vector2.Zero)
         {
             direction=Direction(stick.X,stick.Z,StickDeadzone);

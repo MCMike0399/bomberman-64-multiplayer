@@ -83,6 +83,8 @@ public sealed partial class BlastSession
                 else
                     MovePlayerCarrying(p, input, dt);
             }
+            if(input.AimTarget is {} point&&p.CarryingBombId is not null)
+                PointThrowAim(p,input.AimRelative?new(p.X+point.X,p.Z+point.Y):point);
 
             // R: remote detonate.
             if (rPress && p.HasRemote)

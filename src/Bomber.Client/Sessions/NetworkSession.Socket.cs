@@ -190,10 +190,15 @@ public sealed partial class NetworkSession
         }
     }
 
-    public static byte[] EncodeInput(PlayerInput input, long sequence) => JsonSerializer.SerializeToUtf8Bytes(new
+    public static byte[] EncodeInput(PlayerInput input, long sequence)
     {
-        t = "input", s = sequence,
-        d = new { x = float.IsFinite(input.X) ? Math.Clamp(input.X, -1, 1) : 0,
-            z = float.IsFinite(input.Z) ? Math.Clamp(input.Z, -1, 1) : 0, a = input.A, b = input.B, r = input.R, aim = input.Aim, stop = input.Stop }
-    });
+        var target = input.AimTarget is { } t && float.IsFinite(t.X) && float.IsFinite(t.Y) ? t : (System.Numerics.Vector2?)null;
+        return JsonSerializer.SerializeToUtf8Bytes(new
+        {
+            t = "input", s = sequence,
+            d = new { x = float.IsFinite(input.X) ? Math.Clamp(input.X, -1, 1) : 0,
+                z = float.IsFinite(input.Z) ? Math.Clamp(input.Z, -1, 1) : 0, a = input.A, b = input.B, r = input.R, aim = input.Aim, stop = input.Stop,
+                tx = target?.X, tz = target?.Y, tr = target is not null && input.AimRelative }
+        });
+    }
 }

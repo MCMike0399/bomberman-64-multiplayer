@@ -4,7 +4,7 @@
 namespace Bomber.Game.Simulation.State;
 
 /// <summary>One player's input as received from the client.</summary>
-public readonly record struct InputState(float X, float Z, bool A, bool B, bool R, bool Aim = false, bool Stop = false)
+public readonly record struct InputState(float X, float Z, bool A, bool B, bool R, bool Aim = false, bool Stop = false, System.Numerics.Vector2? AimTarget = null, bool AimRelative = false)
 {
     public float Length => MathF.Sqrt(X * X + Z * Z);
 }

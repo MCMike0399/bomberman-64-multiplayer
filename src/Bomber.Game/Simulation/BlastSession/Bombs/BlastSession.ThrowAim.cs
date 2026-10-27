@@ -36,6 +36,8 @@ public sealed partial class BlastSession
     {
         if(player.CarryingBombId is null){ClearThrowAim(player);return;}
         player.Aiming=input.Aim;
+        // A pointer target is resolved after this tick's movement (see ProcessInputs).
+        if(input.AimTarget is not null){ClearAimRamp(player);return;}
         if(!player.Aiming)
         {
             ClearAimRamp(player);
@@ -71,5 +73,25 @@ public sealed partial class BlastSession
         }
         player.AimX=aim.X;player.AimZ=aim.Z;player.AimRange=aim.Range;
         player.FacingX=aim.X;player.FacingZ=aim.Z;
+    }
+
+    /// <summary>A pointer names the landing point directly. The carrier keeps walking unless the aim
+    /// stance is also held; the chosen intent persists once the pointer stops reporting.</summary>
+    private void PointThrowAim(BlastPlayer player,System.Numerics.Vector2 target)
+    {
+        float dx=target.X-player.X,dz=target.Y-player.Z,distance=MathF.Sqrt(dx*dx+dz*dz);
+        if(distance>.001f){player.AimX=dx/distance;player.AimZ=dz/distance;}
+        else if(!player.AimSet){player.AimX=player.FacingX;player.AimZ=player.FacingZ;}
+        // Compensate for the target's height so the bomb lands on the pointed surface.
+        float rise=0;
+        if(target.X>=0&&target.Y>=0&&target.X<_stage.Width&&target.Y<_stage.Height)
+        {
+            float apex=player.Y+BombThrowRules.LaunchHeight+BombThrowRules.AimLiftSpeed*BombThrowRules.AimLiftSpeed/(2*BlastBomb.Gravity);
+            rise=StaticBombLandingHeight(target.X,target.Y,apex)-player.Y;
+        }
+        int pumps=_bombs.FirstOrDefault(b=>b.Id==player.CarryingBombId)?.Pumps??0;
+        player.AimRange=BombThrowRules.RangeToTarget(distance,rise,pumps);
+        player.AimSet=true;ClearAimRamp(player);
+        player.FacingX=player.AimX;player.FacingZ=player.AimZ;
     }
 }

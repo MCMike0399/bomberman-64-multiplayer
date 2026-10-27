@@ -45,11 +45,13 @@ public sealed class LocalMatch
         if (localSlot < 0 || localSlot >= HumanPlayers) throw new ArgumentOutOfRangeException(nameof(localSlot));
         if (IsEnded) return;
         var player = _context.Players[localSlot];
+        var target = input.AimTarget is { } t && float.IsFinite(t.X) && float.IsFinite(t.Y) ? t : (System.Numerics.Vector2?)null;
         var data = JsonSerializer.SerializeToElement(new
         {
             x = float.IsFinite(input.X) ? input.X : 0,
             z = float.IsFinite(input.Z) ? input.Z : 0,
             a = input.A, b = input.B, r = input.R, aim = input.Aim, stop = input.Stop,
+            tx = target?.X, tz = target?.Y, tr = target is not null && input.AimRelative,
         });
         var sequence = ++_sequence;
         _context.Sequences[player.PlayerId] = sequence;

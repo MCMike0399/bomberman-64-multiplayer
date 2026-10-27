@@ -26,10 +26,27 @@ public partial class ControllerHub : Node
     private IReadOnlyList<GamepadDevice>? _testDevices;
     private readonly bool[] _keyboardBomb=new bool[2],_keyboardRemote=new bool[2],_keyboardStop=new bool[2],_armed=new bool[8];
     private readonly Dictionary<int,(bool Bomb,bool Remote,bool Stop)> _taps=[];
+    private readonly AimStickPointer[] _aimSticks=Enumerable.Range(0,8).Select(_=>new AimStickPointer()).ToArray();
+    private readonly ulong[] _aimStickClock=new ulong[8];
+    private readonly MouseAimGate _mouseAim=new();
     private bool _focused=true,_inMatch,_vibrationEnabled;
     public int VibrationRequestCount {get;private set;}
     public bool VibrationEnabled {get=>_vibrationEnabled;set{_vibrationEnabled=value;if(!value)StopVibration();}}
     public void RearmControls(){ClearEdges();Array.Fill(_armed,false);}
+    /// <summary>Right-stick landing offset for a seat's carried bomb, in arena cells; null at rest.
+    /// Call once per frame: the filter uses real elapsed time to recognize a released stick.</summary>
+    public System.Numerics.Vector2? AimStickOffset(int seat)
+    {
+        if(seat is <0 or >=8)return null;
+        if(!_focused||!_inMatch||Bindings?.DeviceIdForSeat(seat) is not {} pad){_aimSticks[seat].Reset();_aimStickClock[seat]=0;return null;}
+        ulong now=Time.GetTicksUsec(),last=_aimStickClock[seat];_aimStickClock[seat]=now;
+        return _aimSticks[seat].Step(Input.GetJoyAxis(pad,JoyAxis.RightX),Input.GetJoyAxis(pad,JoyAxis.RightY),last==0?0:(now-last)/1e6f);
+    }
+    /// <summary>Whether the mouse/trackpad points the first keyboard seat's carried bomb.</summary>
+    public bool MouseAimActive(int seat,bool carrying)=>seat==0&&_focused&&_inMatch&&_mouseAim.Active(carrying,Time.GetTicksMsec()/1000d);
+    /// <summary>Seconds since the mouse last moved in a match; drives the in-match cursor visibility.</summary>
+    public double MouseIdleSeconds=>Time.GetTicksMsec()/1000d-_mouseMovedAt;
+    private double _mouseMovedAt=double.NegativeInfinity;
     public bool VibrateSeat(int seat,float weak,float strong,float seconds)=>Bindings?.DeviceIdForSeat(seat) is {} id && Vibrate(id,weak,strong,seconds);
     public bool TestVibration()=>_devices.FirstOrDefault(d=>d.Mapped) is {} pad && Vibrate(pad.Device.RuntimeId,.35f,.5f,.2f);
     private bool Vibrate(int id,float weak,float strong,float seconds)
@@ -97,7 +114,7 @@ public partial class ControllerHub : Node
     public void BeginMatch(int humanCount)
     {
         RefreshDevices();Bindings=new(humanCount,_devices.Where(d=>d.Mapped).Select(d=>d.Device).ToArray());_inMatch=true;MenuNavigationEnabled=false;ClearEdges();
-        Array.Fill(_armed,false);
+        Array.Fill(_armed,false);_mouseAim.Reset();
     }
     public void EndMatch(){StopVibration();_inMatch=false;MenuNavigationEnabled=true;Bindings=null;ClearEdges();}
     public PlayerInput Read(int seat)
@@ -105,7 +122,7 @@ public partial class ControllerHub : Node
         if(!_focused||!_inMatch||Bindings==null)return default;
         var keyboard=PlayerControls.Keyboard(seat);
         int? id=Bindings.DeviceIdForSeat(seat);
-        PlayerInput stick=default,dpad=default,aimStick=default;
+        PlayerInput stick=default,dpad=default;
         if(id is {} pad)
         {
             var family=DeviceFamily(pad);
@@ -116,7 +133,6 @@ public partial class ControllerHub : Node
                 Input.GetJoyAxis(pad,JoyAxis.TriggerRight)>.35f,Button(pad,JoyButton.RightShoulder));
             dpad=new((Button(pad,JoyButton.DpadRight)?1:0)-(Button(pad,JoyButton.DpadLeft)?1:0),
                 (Button(pad,JoyButton.DpadDown)?1:0)-(Button(pad,JoyButton.DpadUp)?1:0));
-            aimStick=new(Input.GetJoyAxis(pad,JoyAxis.RightX),Input.GetJoyAxis(pad,JoyAxis.RightY));
         }
         // Release menu-confirm before it can drop a bomb in the newly entered match.
         if(!_armed[seat])
@@ -136,7 +152,9 @@ public partial class ControllerHub : Node
             if(id is {} device&&_taps.Remove(device,out var taps))
                 stick=stick with {A=stick.A||taps.Bomb,R=stick.R||taps.Remote,Stop=stick.Stop||taps.Stop};
         }
-        return InputPolicy.Resolve(keyboard,stick,dpad,aimStick);
+        // Steering the cursor with keys hands aim back from the mouse until it moves again.
+        if(seat==0&&keyboard.Aim&&(keyboard.X!=0||keyboard.Z!=0))_mouseAim.KeyboardAimed(Time.GetTicksMsec()/1000d);
+        return InputPolicy.Resolve(keyboard,stick,dpad);
     }
     private static bool Button(int id,JoyButton button)=>Input.IsJoyButtonPressed(id,button);
     private void OnConnection(long id,bool connected)=>RefreshDevices();
@@ -303,6 +321,24 @@ public partial class ControllerHub : Node
                 _keyboardStop[seat]|=PlayerControls.StopKey(seat,physical);
             }
         }
+        else if(@event is InputEventMouseMotion mouse)
+        {
+            if(_inMatch&&_focused)
+            {
+                double now=Time.GetTicksMsec()/1000d;
+                _mouseAim.MouseMoved(mouse.Relative.Length(),now);
+                if(mouse.Relative.LengthSquared()>0)_mouseMovedAt=now;
+            }
+        }
+        else if(@event is InputEventMouseButton {Pressed:true,ButtonIndex:MouseButton.Left or MouseButton.Right or MouseButton.Middle} click&&_inMatch&&_focused)
+        {
+            // Mouse buttons alias the first keyboard seat: left = J (bomb/pump), right = K (carry).
+            if(ActiveKeyboardSeat!=0){ActiveKeyboardSeat=0;PromptChanged?.Invoke();}
+            SetActiveFamily(ControllerFamily.Keyboard);
+            _keyboardBomb[0]|=PlayerControls.BombMouseButton(click.ButtonIndex);
+            double now=Time.GetTicksMsec()/1000d;
+            _mouseAim.MouseMoved(MouseAimGate.MotionThreshold,now);_mouseMovedAt=now;
+        }
         else if(@event is InputEventJoypadButton {Pressed:true} button)
         {
             SetActiveDevice(button.Device);
@@ -346,7 +382,7 @@ public partial class ControllerHub : Node
     {if(ActiveFamily==family)return;ActiveFamily=family;PromptChanged?.Invoke();}
     public override void _Notification(int what)
     {
-        if(what==NotificationApplicationFocusOut){_focused=false;StopVibration();ClearEdges();}
+        if(what==NotificationApplicationFocusOut){_focused=false;StopVibration();ClearEdges();_mouseAim.Reset();}
         if(what==NotificationApplicationFocusIn){_focused=true;Array.Fill(_armed,false);}
     }
     private void ClearEdges(){Array.Clear(_keyboardBomb);Array.Clear(_keyboardRemote);Array.Clear(_keyboardStop);_taps.Clear();_menuSticks.Clear();_menuDpads.Clear();_menuDpadLast.Clear();}
