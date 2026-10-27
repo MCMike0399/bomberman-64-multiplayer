@@ -74,6 +74,8 @@ public partial class PlaytestDriver
                 _root.StartLocal(new SessionSettings(Stage:stage,Bots:0),1,practice:true);await Frames(10);
                 Check(_root.LatestStage is not null,"camera check receives stage "+stage);
                 CheckFraming(stage,GetWindow().Size);
+                if(stage=="sunken-temple")
+                    await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"Pyramid framing capture clears the countdown",180);
                 await Capture($"framing-{stage}-{view}");_root.Back();await Frames(3);
             }
         }
@@ -117,6 +119,8 @@ public partial class PlaytestDriver
         Check(!behind,"all playable geometry is in front of camera: "+stage);
         Check(minX>=.02f&&maxX<=.98f,$"stage and character extents fit horizontal view: {stage} {window}");
         Check(minY>=.14f&&maxY<=.90f,$"stage and character extents avoid HUD: {stage} {window}");
+        if(stage=="sunken-temple")
+            Check(maxX-minX>=.60f,$"Pyramid uses at least 60% of the view width instead of excess sea: {window}");
     }
 
     private async Task RosterSelection()
