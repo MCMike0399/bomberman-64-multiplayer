@@ -116,8 +116,17 @@ def build_probe():
     return root, project
 
 
+# Only the idle fallback may defer room placement. Its host monitor deliberately excludes it from
+# new rooms while the host is under pressure, and the kernel then answers no_capacity. The probe
+# still requires the fallback to admit the current client and answer with the exact release
+# token; public and primary must always host a real advancing match.
+DEFERRABLE_TARGETS = frozenset({'fallback'})
+
+
 def verify_connections(targets, placements=None):
+    """Run the real connection probe per target. Returns the names whose room placement deferred."""
     root, project = build_probe()
+    deferred = []
     for name, origin in targets.items():
         placement = placements.get(name) if placements else None
         arguments = ['dotnet', 'run', '--no-build', '--project', str(project), '--', origin]
@@ -128,9 +137,16 @@ def verify_connections(targets, placements=None):
         except (subprocess.TimeoutExpired, OSError) as error:
             log = private_failure_log(str(error))
             raise RuntimeError('Deployment connection probe timed out or could not start: ' + name + '. Private log: ' + log) from None
-        if probe.returncode or not any(re.fullmatch(r'PASS [1-9][0-9]* release connection and cleanup checks', line) for line in probe.stdout.splitlines()):
+        lines = probe.stdout.splitlines()
+        if not probe.returncode and name in DEFERRABLE_TARGETS and any(
+                re.fullmatch(r'DEFERRED [1-9][0-9]* release admission checks; room placement answered no_capacity', line) for line in lines):
+            print('Connection check: ' + name + ' admitted the current client; room placement deferred (host monitor exclusion or full)')
+            deferred.append(name)
+            continue
+        if probe.returncode or not any(re.fullmatch(r'PASS [1-9][0-9]* release connection and cleanup checks', line) for line in lines):
             log = private_failure_log(probe.stdout + probe.stderr)
             raise RuntimeError('Deployment real lobby/WebSocket connection failed: ' + name + '. Private log: ' + log)
+    return deferred
 
 
 def mask_configuration():

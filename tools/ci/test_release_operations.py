@@ -100,6 +100,28 @@ class ReleaseOperationsTests(unittest.TestCase):
         self.assertNotIn(private, output)
         log.assert_called_once()
 
+    def test_only_the_fallback_may_defer_room_placement(self):
+        deferred = subprocess.CompletedProcess([], 0, stdout='DEFERRED 2 release admission checks; room placement answered no_capacity\n', stderr='')
+        passed = subprocess.CompletedProcess([], 0, stdout='PASS 9 release connection and cleanup checks\n', stderr='')
+        fixture = (Path('/fixture'), Path('/fixture/probe'))
+        targets = {'public': 'https://public.example', 'primary': 'https://primary.example', 'fallback': 'https://fallback.example'}
+        def run(arguments, **_):
+            return deferred if 'https://fallback.example' in arguments else passed
+        with patch.object(verify_deployment, 'build_probe', return_value=fixture), patch.object(verify_deployment.subprocess, 'run', side_effect=run):
+            self.assertEqual(verify_deployment.verify_connections(targets), ['fallback'])
+        for name in ('public', 'primary'):
+            with patch.object(verify_deployment, 'build_probe', return_value=fixture), \
+                    patch.object(verify_deployment.subprocess, 'run', return_value=deferred), \
+                    patch.object(verify_deployment, 'private_failure_log', return_value='/private/failure.log'):
+                with self.assertRaises(RuntimeError, msg=name + ' must host a real match'):
+                    verify_deployment.verify_connections({name: targets[name]})
+        failed = subprocess.CompletedProcess([], 1, stdout='DEFERRED 2 release admission checks; room placement answered no_capacity\n', stderr='')
+        with patch.object(verify_deployment, 'build_probe', return_value=fixture), \
+                patch.object(verify_deployment.subprocess, 'run', return_value=failed), \
+                patch.object(verify_deployment, 'private_failure_log', return_value='/private/failure.log'):
+            with self.assertRaises(RuntimeError):
+                verify_deployment.verify_connections({'fallback': targets['fallback']})
+
     def test_actions_masks_individual_origins_and_hostnames_with_command_escaping(self):
         output = io.StringIO()
         origin = 'https://private.example/path%25\n::warning::fixture'
