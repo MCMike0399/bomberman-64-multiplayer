@@ -145,7 +145,7 @@ public partial class PowerupModel : Node3D
                 bool tiny=kind=="tiny";float d=tiny?.3f:.46f;
                 var tint=art.Toy(new(tiny?"70e6ff":"f6a156"),.35f,true);
                 // A miniature bomber head, shrunk or swollen, with chevrons that say which way.
-                var head=Pivot(_pose,new(0,tiny?-.06f:0,0));head.Rotation=new(-.35f,0,0);
+                var head=Pivot(_pose,new(0,tiny?-.06f:.04f,0));head.Rotation=new(-.35f,0,0);
                 Sphere(head,Vector3.Zero,new(d,d*.94f,d*.92f),white);
                 Sphere(head,new(0,-d*.04f,d*.32f),new(d*.6f,d*.46f,d*.4f),art.Toy(new("fbd2a6"),.7f));
                 foreach(float side in new[]{-1f,1f})Eye(head,new(side*d*.12f,0,d*.505f),new(d*.085f,d*.19f,d*.06f),eyeInk);
