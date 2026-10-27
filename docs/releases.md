@@ -31,13 +31,15 @@ and waits for rooms before replacing a process.
    python3 tools/ci/release_identity.py --sync
    python3 tools/qa/run.py --profile public
    python3 tools/qa/run.py --profile managed
-   actionlint .github/workflows/ci.yml .github/workflows/promote.yml .github/workflows/release.yml
+   actionlint .github/workflows/*.yml
    ```
 
 3. Complete the changed area's gates in the [delivery guide](agents/testing-and-delivery.md).
    Merge/push through the project's authorized review process. Trusted main
-   Verification builds and tests the client, portable server and cluster plugins.
+   Verification builds and tests the client, portable server and cluster plugins,
+   then runs the two [release gates](#release-gates) on the archived client.
    Both archive metadata receipts must match the source's exact release identity.
+   `python3 tools/ci/release.py status` shows the run, each job and the release state.
    The server's pre-test per-file inventory includes the same plugin files used
    by the real fleet drill; mutation after testing prevents archive creation.
 4. Dispatch **Release verified game** with the successful Verification `run_id`
@@ -70,6 +72,46 @@ The deployment job first signs the inspected client with the configured key and
 verifies that key against the existing public key and verifies each generated signature. A missing/wrong signing key
 therefore fails before draining or changing servers. Release credentials are
 removed from the host adapter's subprocess environment.
+
+## Release gates
+
+v0.35.0 passed every existing gate and still failed for players: saved High
+crashed Metal before launch health, so the updater rolled every such user back.
+The full graphical suite started on Medium; package smoke is headless. Two
+trusted jobs now launch the **exact archived client** after `package`, in
+parallel, on hosted `macos-15` (an Apple Virtualization guest with paravirtual
+Metal and a logged-in desktop):
+
+| Job | What it does | Receipt artifact |
+| --- | --- | --- |
+| `Release gate: saved-settings startup` | `tools/qa/startup_gate.py` starts the bundle with no engine overrides from an isolated user-data directory containing saved preferences: Low/Medium/High × fullscreen/windowed to the menu, plus a local match per preset in fullscreen. Each launch must finish its smoke, save a real viewport capture and report the applied preset, window mode, size and GPU adapter; any engine error, crash or software renderer fails. | `release-gate-startup` |
+| `Release gate: update from published` | `tools/ci/update_from_published.py` downloads the latest stable release anonymously, authenticates it through the signed updater manifest, and runs the production installer (`tests/Bomber.Update.Tests`) from it to the candidate: successful relaunch, deliberate failed-launch rollback, and relaunch with saved High/fullscreen before layout. | `release-gate-update` |
+
+The update gate warms the candidate once under the guest's home, and the
+fixture's old app runs headless while the helper waits for it. First-use
+pipeline compilation on a fresh hosted GPU takes 60–110 s, which would
+otherwise decide the installer's 60 s handoff. The product installer's 60 s
+handoff and 45 s health deadline are unchanged. On hosted runners a healthy
+relaunch still occasionally misses that health deadline, so a failed attempt
+**without a native crash report** is retried, up to three attempts. Any crash
+report fails the gate immediately, and every failed attempt stays in the receipt.
+A self-hosted Metal runner would make the retry unnecessary.
+
+`promote_release.py` and `deploy_release.py` require both jobs to succeed and
+download/re-validate both receipts for the exact version and build before any
+signing, server drain or publication. A version that is already the latest
+published release skips the update transactions; that run can never be promoted.
+An explicit `--previous-version` baseline is for diagnosis only and is rejected.
+
+Observed on hosted CI with published clients (2026-10-26/27): the startup gate
+fails v0.35.0 with SIGSEGV in all three High cases (Low/Medium pass), while
+v0.35.1 and v0.36.0 pass all nine (about 4.5 minutes, the first launch compiling
+pipelines). The update gate from v0.34.0 fails v0.35.0 on the first attempt in the
+saved High/fullscreen relaunch, with a SIGSEGV crash report and no retry; v0.35.1
+to v0.36.0 passes. [Probe receipts](verification.md#release-pipeline-gates--source-verification). The gates prove
+launch/update on a paravirtual GPU, not physical-controller input, native-GPU
+performance or art approval. Run the startup gate locally only in a VM or with
+`--host-desktop` on a desktop you own; it never touches the user's preferences.
 
 ## Operator setup (one time)
 
@@ -264,8 +306,15 @@ processes and fixture signing keys; they do not certify the production adapter.
 
 A release is complete only with the exact Verification run, final client/server
 archive hashes, signature verification, successful per-worker match/retirement
-receipt, draft-download byte verification and published release URL. Record these
-in a dated repository verification note. Separate those from installation or
+receipt, draft-download byte verification and published release URL. After
+publication, the **Verify published release** job (`tools/ci/verify_published.py`)
+downloads every asset anonymously, verifies both P-256 signatures and the signed
+asset inventory, inspects both archives in place, and checks that the tag resolves
+to the signed source, the latest stable channel points to the release and the bytes
+equal the Verification artifacts. Its `published-release-receipt` (30 days) and
+job summary replace the manual download checks; rerun it with
+`python3 tools/ci/release.py verify-published --version X --run-id N`. Record
+these in a dated repository verification note. Separate those from installation or
 physical-device evidence. Failed setup ends with the missing prerequisite names,
 not an improvised manual deployment. Automatic releases stay disabled until the
 manual production drill has a retained receipt.

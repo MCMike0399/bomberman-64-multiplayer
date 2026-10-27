@@ -98,3 +98,8 @@ its fresh output directory, validates the resulting live process, closes only
 its own apps and removes temporary launchable copies. It never updates the
 canonical installed app. Retain its receipts; do not call a local fixture test
 an observation of a published GitHub release.
+
+Trusted CI runs these transactions on every candidate through
+`tools/ci/update_from_published.py`: the previous app is the latest published
+release, authenticated by its signed manifest, and `--high-fullscreen` is always
+on. Deployment and publication require that receipt ([release gates](releases.md#release-gates)).

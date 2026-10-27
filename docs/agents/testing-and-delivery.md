@@ -11,7 +11,7 @@ references are [playtests](../../tools/playtest/README.md), [CI](../ci.md),
 | Change | Tight loop | Completion gate |
 | --- | --- | --- |
 | Docs only | Read changed instructions; verify links, paths and command flags | `python3 tools/ci/doc_links.py`, diff/whitespace review; no packaging, GPU, install or service restart |
-| Python QA/CI tooling | Relevant `unittest` module plus malformed/failure receipts | `public`; workflow edits also `actionlint .github/workflows/ci.yml` |
+| Python QA/CI tooling | Relevant `unittest` module plus malformed/failure receipts | `public`; workflow edits also `actionlint .github/workflows/*.yml` |
 | File moves/renames | `git grep` old paths; build; editor import for `.uid` files | `public` plus the moved area's gate; see [codebase map](codebase-map.md#moving-files-safely) |
 | Simulation/rules | Corresponding executable managed suite with a red regression | `managed`, relevant native journey, `headless` |
 | Client/session/protocol | Client checks and real HTTP/WebSocket repro | `managed` plus `network`; restart only an owned stale server |
@@ -325,6 +325,31 @@ diagnostic and fails on other unregister errors. Never broadly delete artifacts.
 
 ## CI and publication boundaries
 
+**Release fast path (2026-10-26).** Trusted CI now owns the release-critical
+launch checks, so a routine release no longer needs a local full Metal suite or
+hand-run download/signature checks:
+
+1. Run the changed branch's tight loop and completion gate from the table above.
+   Add a local graphical journey only for rendering/menu/input changes, and run
+   the affected suite rather than `all` unless the change is broad.
+2. Merge. Trusted Verification builds once and runs, in parallel, managed/network,
+   headless, package and then two **release gates** on the archived app with a
+   hosted macOS VM's real Metal renderer: saved-settings startup for all three
+   presets × fullscreen/windowed plus gameplay, and an actual signed update from
+   the latest published release (install, rollback, saved High/fullscreen).
+   Deployment and publication re-validate both receipts and refuse without them.
+3. Follow progress with `python3 tools/ci/release.py status` instead of polling
+   several `gh` commands. After publication, the **Verify published release**
+   job downloads every asset anonymously and checks signatures, signed inventory,
+   archives, tag, latest channel and byte equality with CI. Its receipt is the
+   post-publish evidence; `release.py verify-published` reruns it locally.
+
+A failed gate, an unexplained startup crash or a missing receipt blocks the
+release; do not retry until green or relax a check. The gates prove launch and
+update on paravirtual Metal, not art approval, physical controllers or native
+GPU performance. Gameplay, rendering and input changes still need their own
+journeys. [Gate details](../releases.md#release-gates).
+
 Read [release identity and deployment gates](../releases.md) before changing
 release configuration or preparing, retrying or recovering a release. Start with
 `python3 tools/ci/release.py doctor --publish`; the release guide owns the
@@ -365,8 +390,9 @@ downloads or installation. The client signature key is public; the signing secre
 stays outside Git. Release fixtures must never be published. Test both successful
 relaunch and failed-launch rollback with the production installer and an isolated
 app location. Run the existing public contracts and actionlint for workflow edits.
-A local updater fixture does not prove hosted CI or a public release; verify those
-separately when publication is authorized. Preserve the user's update preference
+A local updater fixture does not prove hosted CI or a public release; the trusted
+`Release gate: update from published` job runs the same transactions from the
+latest published app to every candidate. Preserve the user's update preference
 and avoid replacement while a match/session is active.
 
 ## Overhead explosion verification
@@ -577,6 +603,11 @@ and at ordinary output size. The unfixed code reproduces the native invalid
 mipmap error and process crash; settled-preset sweeps do not cover this ordering.
 It belongs to `all` and `menu-ux`. Pair it with the actual updater fixture's
 VM-only `--high-fullscreen` option for release-to-release launch verification.
+Both now run automatically on every trusted candidate: `tools/qa/startup_gate.py`
+launches the archived app with each saved preset/display mode, and
+`tools/ci/update_from_published.py` updates the latest published app to it. On
+hosted CI the unfixed v0.35.0 crashes (SIGSEGV) in all three High cases while
+v0.35.1/v0.36.0 pass all nine.
 
 ## Display settings verification
 

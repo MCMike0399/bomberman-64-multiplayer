@@ -8,7 +8,8 @@ The canonical entry point is `python3 tools/qa/run.py --profile PROFILE`. CI cal
 | `managed` | Trusted main, hosted Ubuntu | Managed gameplay/client/AI/audio checks, portable Release server publish, and real HTTP/WebSocket smoke against the exact staged server delivery. Produces the server ZIP. |
 | `headless` | Trusted main, hosted Ubuntu, Godot .NET | Resource import/build and simulation scenarios. No screenshot/rendering claim. |
 | `graphical` | Trusted main, isolated macOS ARM64 Metal runner | Windowed real Godot journeys and actual viewport captures. No physical-controller claim. |
-| `package` | Trusted main, hosted macOS ARM64 | Self-contained Apple Silicon export, bundle/signature checks and exported-app headless smoke. Artifact is ad-hoc signed. |
+| `package` | Trusted main, hosted macOS ARM64, beside managed/headless | Self-contained Apple Silicon export, bundle/signature checks and exported-app headless smoke. Artifact is ad-hoc signed. |
+| Release gates | Trusted main after `package`, two parallel hosted macOS ARM64 VMs | The archived app on paravirtual Metal: saved-settings startup for every preset/display mode, and an actual signed update from the latest published release. Required for deployment/publication; see [release gates](releases.md#release-gates). |
 
 ## Enabling trusted builds
 
@@ -47,7 +48,7 @@ Standard hosted macOS ARM64 is used for export, not as evidence that native Meta
 
 The editor and .NET export templates come from the official Godot 4.7.2 release. `tools/ci/install_godot.py` verifies checked-in SHA-512 hashes before extracting downloads; update the project SDK, the installer version/hashes and export-template version together. .NET uses the current supported `10.0.x` servicing SDK. Managed builds run with `-m:1` to avoid competing Godot/MSBuild workers. Godot's [command-line import and export interface](https://docs.godotengine.org/en/stable/tutorials/editor/command_line_tutorial.html) supports headless CI; headless execution does not provide rendered-image evidence.
 
-Actions are pinned to immutable commits. Public PRs receive read-only repository permissions; checkout never persists GitHub credentials. Build caches are intentionally absent: private dependency outputs never enter a cache readable from untrusted PRs. Package jobs depend on passing managed and headless gates. The separate optional Metal lane must also pass when rendering approval is required; a package artifact alone does not establish that.
+Actions are pinned to immutable commits. Public PRs receive read-only repository permissions; checkout never persists GitHub credentials. Build caches are intentionally absent: private dependency outputs never enter a cache readable from untrusted PRs. The package job runs beside managed and headless to shorten the critical path; promotion still requires every trusted job, including both release gates, to pass for the same run. The separate optional Metal lane must also pass when rendering approval is required; a package artifact alone does not establish that.
 
 The public job also installs version-pinned actionlint v1.7.12 and validates all
 three workflows, including the reusable deployment/publication path. Release
@@ -101,4 +102,4 @@ players' Macs are separate from the authenticated update signature.
 
 Add gameplay scenarios to the canonical playtest manifest and assign them to the appropriate QA profile. Keep graphical-only behavior out of the headless profile. Prefer actual input and observable assertions; scene startup, a nonzero screenshot count, or a missing optional capability does not independently prove the requested behavior. A timeout, missing receipt, runtime error or failed assertion must fail the corresponding profile. Keep build/server ownership in the shared orchestrator rather than adding background server processes to YAML.
 
-For workflow changes run `actionlint .github/workflows/ci.yml`; `.github/actionlint.yaml` declares the custom runner label. `python3 tools/ci/public_checks.py` and the standalone audio suite are safe from a clean public clone. Validate private profiles in an authorized checkout before enabling the trusted jobs.
+For workflow changes run `actionlint .github/workflows/*.yml`; `.github/actionlint.yaml` declares the custom runner label. `python3 tools/ci/public_checks.py` and the standalone audio suite are safe from a clean public clone. Validate private profiles in an authorized checkout before enabling the trusted jobs.
