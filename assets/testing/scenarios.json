@@ -594,6 +594,7 @@
         "pump-growth",
         "presentation",
         "visual-glitches",
+        "water-surface",
         "hurry-water",
         "ai-play",
         "combat",
@@ -858,6 +859,7 @@
         "blizzard-battle",
         "presentation",
         "visual-glitches",
+        "water-surface",
         "tutorial",
         "greedy-trap",
         "stage-scenery"
@@ -1091,6 +1093,7 @@
       "steps": [
         "first-use-rendering",
         "visual-glitches",
+        "water-surface",
         "graphics-settings",
         "stage-lighting",
         "framing",
@@ -1155,6 +1158,16 @@
       ],
       "headless": false,
       "timeout": 120,
+      "manual": false
+    },
+    {
+      "id": "water-surface",
+      "method": "WaterSurface",
+      "domains": [
+        "rendering"
+      ],
+      "headless": false,
+      "timeout": 240,
       "manual": false
     }
   ]

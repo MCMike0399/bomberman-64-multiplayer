@@ -191,6 +191,21 @@ The `visual-glitches` journey checks actual rear-ring fire pixels on every prese
 stair top separation, and a real charged shoreline blast above/below the water.
 Godot documents [transparent depth drawing](https://docs.godotengine.org/en/stable/tutorials/shaders/shader_reference/spatial_shader.html#render-modes).
 Preserve that rationale when refactoring.
+High's water reflection march must validate the **refined** depth hit, not just
+its coarse crossing. At an opaque silhouette, bisection can converge on a screen
+pixel boundary even when the ray never meets that surface. Sampling its bright
+stone color created isolated white particles across Up & Down's open water,
+especially at Night. Fade hits whose final view-depth residual exceeds .04–.16
+world units; misses retain the existing sky reflection. Keep the march jitter:
+removing it did not fix the particles and can reintroduce reflected-deck banding.
+The graphical `water-surface` journey pins the water clock at three wave phases,
+checks clear water patches across all lighting profiles/presets, and compares a
+reflection-disabled control to ensure High still mirrors actual columns. Its
+fixed 1600×1000 pixel probes require the ordinary battle camera; inspect the
+captures as well. `visual-glitches` separately protects foam/fire depth ordering.
+Godot's [screen-reading contract](https://docs.godotengine.org/en/stable/tutorials/shaders/screen-reading_shaders.html)
+explains why the opaque depth/color copy includes foreground occluders; it cannot
+supply hidden surfaces for a reflected ray.
 Read [the rendering investigation](../history/iteration8-rendering.md) before replacing
 this shader; its fixed daytime Fresnel tint was superseded by the four lighting
 profiles below. Verify normal and hurry/flood states from more than one camera.
