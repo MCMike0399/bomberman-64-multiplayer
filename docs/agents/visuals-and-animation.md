@@ -380,8 +380,9 @@ transparent background, and SSAO except on Low.
 
 Low uses 2× MSAA, 85% 3D resolution with spatial FSR, 1024 shadows and no SSAO/glow.
 Medium uses native resolution, 4× MSAA, 2048 shadows and half-resolution SSAO.
-High keeps native/4×, raises shadows to 4096, uses full-resolution higher-quality
-SSAO, and adds restrained menu contact shading. Medium/High retain the authored
+High keeps native/4×, raises shadows to 4096, uses higher-quality SSAO (also
+half-resolution since v0.39; see [GPU cooling](../performance-research.md#cooler-gpu-at-the-60-fps-cap-2026-10-27)),
+and adds restrained menu contact shading. Medium/High retain the authored
 glow intensity. All menu textures remain at output resolution; no TAA/FXAA.
 Low skips fine shader noise/ripples and contact-hardening sun shadows while
 retaining the same geometry, lighting palettes, shoreline and gameplay. Low also

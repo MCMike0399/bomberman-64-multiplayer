@@ -98,7 +98,7 @@ inputs, model proportions and camera framing remain identical across presets.
 | Menu texture density | Output pixels | Output pixels | Output pixels |
 | Directional shadow atlas | 1024 | 2048 | 4096 |
 | Shadow filtering | Soft very low; no sun PCSS | Soft low | Soft medium |
-| Arena SSAO | Off | Half-resolution, medium quality | Full-resolution, high quality |
+| Arena SSAO | Off | Half-resolution, medium quality | Half-resolution, high quality |
 | Menu theatre SSAO | Off | Off | Restrained contact shading |
 | Glow | Off | Restrained intensity, small soft bloom | Restrained intensity, small soft bloom |
 | Temporal AA / FXAA | Off | Off | Off |

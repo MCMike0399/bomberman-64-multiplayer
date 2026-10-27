@@ -239,3 +239,33 @@ runs), which dominates any such saving. This is the practical ceiling for
 visually exact shader work. Further FPS needs lower effect cost (a visual change)
 or engine changes. Harness sources, edit lists and profiles are under ignored
 `artifacts/equivalence-harness/` and `artifacts/equivalence-*` in the work tree.
+
+## Cooler GPU at the 60 FPS cap (2026-10-27)
+
+The user plays High at the native 3024×1964 panel with a 60 FPS cap, so GPU
+heat follows milliseconds per frame: Sunken Temple and Up & Down sit at or
+above the 16.7 ms budget and keep the GPU at full clock. Pixel-exact savings
+were exhausted by PR #30, so the user accepted renderer changes that are
+indistinguishable by eye on this panel while rejecting any visible change to
+the High look. Each candidate was measured twice on the M5 Pro with the
+diagnostic Godot 4.8 beta `--gpu-profile` run (product stays 4.7.2): once for
+per-pass GPU time during a real eight-player battle, and once in a paused,
+time-frozen frame compared byte-for-byte against the untouched renderer
+(control frames reproduced exactly; every candidate returned to the control
+frame afterwards).
+
+| Candidate on High | GPU saving per frame | Pixel change (max channel / 255, share of bytes) | Decision |
+| --- | ---: | --- | --- |
+| SSAO half resolution, same high quality | −1.65 to −1.77 ms SSAO plus −0.12 ms depth preparation on every arena (Night totals: Temple 17.8→15.9, Up & Down 17.2→15.3, Greedy Trap 15.4→13.7, Rock Garden 13.8→11.6, Blizzard 14.2→12.1, Top Rules 12.6→11.5) | 8–26 max, 3.0–5.4% of bytes, mean 0.03–0.06 | **Shipped**: contact edges only, invisible in native crops on all six arenas |
+| SSAO medium quality at full resolution | −1.0 ms | 5–9 max, 0.8–0.9% | Not taken; half resolution saves more for the same visibility |
+| Depth of field low quality | −0.36 ms | 71 max, 4.9%, confined to blurred scenery | User's call; crops offered |
+| 2× MSAA | −1.6 ms | 213 max on silhouettes, 5.7% | User's call; softer edges visible under magnification |
+| SSIL off, glow off, shadow filter/atlas/PCSS changes | 0.25–2.1 ms | Clearly visible (16–28% of bytes, up to 186 max) | Rejected: part of the High identity |
+| DOF without jitter, near DOF off, roughness limiter off | ≈0 | 0 / 0 / 34 max | No saving, left unchanged |
+
+Pass costs were stable to about ±3% between the control and candidate runs
+of the same arena; sustained back-to-back runs still drift with thermal
+throttling, so each pair was taken with cool-down gaps and compared on the
+untouched passes. Receipts remain under the ignored profiling worktree's
+`artifacts/exp2/` (Midday and Night runs, control/candidate PNGs and
+amplified difference images for every arena).
