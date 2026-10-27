@@ -25,7 +25,7 @@ public partial class ArcadeMenu
         _resultRows=ArcadeTheme.Column(_standingsBoard,4);_resultRows.SizeFlagsHorizontal=SizeFlags.ExpandFill;
         var scores=ArcadeTheme.Text(_results,"",1);scores.Name="Standings";scores.Visible=false;
         var row=ArcadeTheme.Row(_results,25);
-        var replay=new ArcadeModeButton {Text="Play Again",CustomMinimumSize=new(590,88),FaceColor=Coral,Accent=ArcadeTheme.Gold,SizeFlagsHorizontal=SizeFlags.ExpandFill};replay.Pressed+=()=>ReplayRequested?.Invoke();row.AddChild(replay);_replay=replay;
+        var replay=new ArcadeModeButton {Text="Map Select",CustomMinimumSize=new(590,88),FaceColor=Coral,Accent=ArcadeTheme.Gold,SizeFlagsHorizontal=SizeFlags.ExpandFill};replay.Pressed+=()=>ReplayRequested?.Invoke();row.AddChild(replay);_replay=replay;
         var modes=new ArcadeModeButton {Text="Mode Select",CustomMinimumSize=new(590,88),FaceColor=ArcadeTheme.Indigo,Accent=ArcadeTheme.Pink,SizeFlagsHorizontal=SizeFlags.ExpandFill};modes.Pressed+=()=>Navigation?.Invoke("Modes");row.AddChild(modes);
         RegisterNavigation("Results",[],Choices(row));
     }
@@ -64,7 +64,8 @@ public partial class ArcadeMenu
 
     public void ShowResults(JsonElement? state,JsonElement? result,bool party=false)
     {
-        _replay.Text=party?"Return to lobby":"Play Again";
+        _replay.Text="Map Select";
+        _replay.Disabled=party;
         var text="The battle has ended.";
         JsonElement? rows=null;
         if(result is { } final && final.TryGetProperty("details",out var details) && details.ValueKind==JsonValueKind.Object && details.TryGetProperty("scoreboard",out var scoreboard)) rows=scoreboard;

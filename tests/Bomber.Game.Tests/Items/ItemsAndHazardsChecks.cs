@@ -45,11 +45,11 @@ internal static class ItemsAndHazardsChecks
                 InitialItems=[(1,3,"fire"),(1,3,"bomb"),(1,3,"remote"),(1,3,"red"),(1,3,"heart")]};
             for(var z=0;z<9;z++)arena.Cells[0,z]=CellDef.Water;
             var match=new LocalMatch(new MatchOptions {HumanPlayers=2,BotPlayers=0,Wins=5},arena);Fight(match);
-            Assert(Player(match).GetProperty("fire").GetInt32()==2&&Player(match).GetProperty("bombs").GetInt32()==4&&Player(match).GetProperty("remote").GetBoolean(),"Visible pickups did not upgrade actual player.");
+            Assert(Player(match).GetProperty("fire").GetInt32()==2&&Player(match).GetProperty("bombs").GetInt32()==3&&Player(match).GetProperty("remote").GetBoolean(),"Visible pickups did not upgrade actual player.");
             Assert(Player(match).GetProperty("pickupSerial").GetInt64()==5,"Pickup animation sequence missing.");
             match.SetInput(0,new PlayerInput(-1,0));Step(match,20);match.SetInput(0,default);Step(match,94);
             Assert(State(match).GetProperty("round").GetInt32()==2,"Test did not advance round.");
-            var reset=Player(match);Assert(reset.GetProperty("fire").GetInt32()==1&&reset.GetProperty("bombs").GetInt32()==3&&!reset.GetProperty("remote").GetBoolean()&&!reset.GetProperty("red").GetBoolean()&&!reset.GetProperty("heart").GetBoolean(),"Equipment leaked into next round.");
+            var reset=Player(match);Assert(reset.GetProperty("fire").GetInt32()==1&&reset.GetProperty("bombs").GetInt32()==2&&!reset.GetProperty("remote").GetBoolean()&&!reset.GetProperty("red").GetBoolean()&&!reset.GetProperty("heart").GetBoolean(),"Equipment leaked into next round.");
         });
         run("holding lift then bomb creates held bomb and pumps cap at six effective levels", () =>
         {

@@ -176,3 +176,8 @@ start/phase variants (variant 0 is the fixed `PressureChecks` fixture), and a
 sidestep from the lane of a bomb a walking player is about to kick.
 `AgencyDiagnostics` owns the measurements; `--standoff` reports bombs by four CPUs
 in their first 20 seconds. [Mechanisms, changes and matched results](../../docs/cpu-agency.md).
+
+The agency matrix and moving-target comparison checks pin their original three-bomb
+reference loadout so changes to starting inventory do not change the policy
+comparison. CLI diagnostics, fixed-seed pressure checks, stock-human pressure
+checks and the gameplay soak retain the current two-bomb default.

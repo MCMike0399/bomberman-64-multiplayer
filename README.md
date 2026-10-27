@@ -83,6 +83,8 @@ Black bombs are the starting type. A bomb slot holds **Red**, **Remote** or **Bo
 
 ![Blue power explosion from a red bomb](docs/images/current/blast-power.png)
 
+Bomb and flame counters start at **0 upgrades**: two active bombs and base blast strength. Collect Bomb Up and Fire Up to increase them.
+
 **Advanced settings** controls block amount, independent item drop chance (40% default), item lifetime (20 seconds), blast and bomb stack caps (five each), temporary effect duration (10 seconds), and enabled items. Default drops favor capacity/fire upgrades (60%), temporary effects (30%) and bomb types (10%). Tiny, Big, Haste and Slow share one temporary-effect slot. Practice on Sunken Temple and Circuit Garden starts with six expiring training pickups; Reset Practice rolls a fresh cache.
 
 ## Controls

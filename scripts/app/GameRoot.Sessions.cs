@@ -13,6 +13,17 @@ public partial class GameRoot
 
     private void StartConfigured()
     {
+        if(_postMatchSetup)
+        {
+            if(_session is NetworkSession {IsLeader:true,Party.Phase:"lobby",Party.CanStart:true} next)
+            {
+                var selected=_menu.OnlineSettings;
+                // Unchanged settings do not emit another status in adaptive rooms.
+                if(next.Party.Settings is {} accepted&&SessionSettings.FromWire(accepted)==selected)next.RequestStart();
+                else {_startAfterSettings=selected;next.SetRoomSettings(selected);}
+            }
+            return;
+        }
         if(_editingRoom)
         {
             if(_session is NetworkSession {IsLeader:true,Party.Phase:"lobby"} room)room.SetRoomSettings(_menu.OnlineSettings);
@@ -87,12 +98,43 @@ public partial class GameRoot
 
     private void EnterMatch()
     {
-        _editingRoom=false;ScreenName="Match";_menu.Visible=false;_arena.Visible=true;_hud.Visible=true;GetViewport().GuiReleaseFocus();ShowTutorialHud();
+        _postMatchSetup=false;_startAfterSettings=null;_editingRoom=false;ScreenName="Match";_menu.Visible=false;_arena.Visible=true;_hud.Visible=true;GetViewport().GuiReleaseFocus();ShowTutorialHud();
     }
 
     public void InjectInput(int seat,PlayerInput? input)
     {
         if(input is { } value)_injected[seat]=value;else _injected.Remove(seat);
+    }
+
+    private void ContinueAfterResults()
+    {
+        if(_session is NetworkSession {Party:not null} room)
+        {
+            if(room.Party.Phase=="lobby")ShowMapSelection();
+            return;
+        }
+        if(_session is LocalSession)
+        {
+            Navigate("Setup");return;
+        }
+        Replay();
+    }
+
+    private void ShowMapSelection()
+    {
+        if(_session is not NetworkSession {Party.Settings:{} rules} room)return;
+        _session.ReleaseInputs();ControllerHub.Current.StopVibration();ControllerHub.Current.RearmControls();
+        _postMatchSetup=true;_editingRoom=true;_setupForHost=true;
+        _menu.Configure(SessionSettings.FromWire(rules));
+        ScreenName="Setup";_arena.Visible=false;_hud.Visible=false;_menu.SetOverlay(false);_menu.Visible=true;
+        _menu.ShowScreen("RematchSetup");RefreshMapSelection();
+    }
+
+    private void RefreshMapSelection()
+    {
+        if(_session is not NetworkSession {Party:{} party} room)return;
+        if(!room.IsLeader&&party.Settings is {} rules)_menu.Configure(SessionSettings.FromWire(rules));
+        _menu.UpdateMapSelection(room.IsLeader,party);
     }
 
     private void Replay()
@@ -121,7 +163,7 @@ public partial class GameRoot
 
     private void ReleaseSession()
     {
-        var old=_session;_session=null;_injected.Clear();
+        var old=_session;_session=null;_injected.Clear();_postMatchSetup=false;_startAfterSettings=null;
         _tutorialLessonId=null;_trainingSession=false;if(_tutorialHud!=null)_tutorialHud.Visible=false;
         ControllerHub.Current.EndMatch();
         if(old!=null)_=DisposeSessionAsync(old);

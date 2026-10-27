@@ -24,7 +24,7 @@ internal static class PowerUpModeChecks
             foreach(var mode in new[]{"remote","red"}){
                 var p=new BlastPlayer();PowerUpRules.Apply(p,mode);
                 foreach(var item in new[]{"fire","bomb","heart"})PowerUpRules.Apply(p,item);
-                Assert(p.FireLevel==2&&p.BombCapacity==4&&p.HasHeart,"Mode interfered with ordinary inventory upgrades.");
+                Assert(p.FireLevel==2&&p.BombCapacity==3&&p.HasHeart,"Mode interfered with ordinary inventory upgrades.");
                 Assert(p.HasRemote==(mode=="remote")&&p.HasRed==(mode=="red"),"Ordinary pickup replaced the bomb mode.");
             }
         });

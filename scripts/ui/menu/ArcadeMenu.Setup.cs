@@ -61,7 +61,7 @@ public partial class ArcadeMenu
         _difficulty=new OptionButton {Name="Difficulty"};foreach(var title in new[]{"Easy","Medium","Hard"})_difficulty.AddItem(title);_difficulty.Select(1);state.AddChild(_difficulty);
         _sudden=new CheckButton {Name="SuddenDeath",ButtonPressed=true};state.AddChild(_sudden);
         _ghosts=new CheckButton {Name="Ghosts",ButtonPressed=true};state.AddChild(_ghosts);
-        _stageDial=new ArcadeRuleDial {Name="StageSelector",Position=new(80,602),Size=new(640,76),Caption="Arena",ValueWidth=300,ReadValue=()=>_stage.GetItemText(_stage.Selected),ChangeValue=direction=>{_stage.Select((_stage.Selected+direction+StageIds.Length)%StageIds.Length);UpdateStageDescription();}};
+        _stageDial=new ArcadeRuleDial {Name="StageSelector",Position=new(80,602),Size=new(640,76),Caption="Arena",ValueWidth=300,ReadValue=()=>_stage.GetItemText(_stage.Selected),ChangeValue=direction=>{_stage.Select((_stage.Selected+direction+StageIds.Length)%StageIds.Length);UpdateStageDescription();RoomSettingsChanged?.Invoke();}};
         screen.AddChild(_stageDial);
         _stageDescription=ArcadeTheme.Text(screen,"",18);_stageDescription.Position=new(104,694);_stageDescription.Size=new(620,70);
         _stage.ItemSelected+=_=>UpdateStageDescription();
@@ -81,6 +81,20 @@ public partial class ArcadeMenu
         _launch=new ArcadeModeButton {Name="LaunchMatch",Text="Start Battle",Position=new(797,699),Size=new(550,86),FaceColor=Coral,Accent=ArcadeTheme.Gold};screen.AddChild(_launch);_launch.Pressed+=()=>LocalRequested?.Invoke();
         RegisterNavigation("Setup",[back],[_launch],[_stageDial],Choices(rail));
         UpdateStageDescription();
+    }
+
+    public void UpdateMapSelection(bool leader,PartyStatus party)
+    {
+        bool editable=leader&&party.Phase=="lobby"&&!(party.PublicRoom&&party.StartAt is not null);
+        _stageDial.Disabled=!editable;
+        foreach(var dial in _ruleDials)dial.Disabled=!editable;
+        ((Button)_screens["Setup"].FindChild("AdvancedSettings",true,false)).Disabled=!editable;
+        _launch.Disabled=!editable||!party.CanStart;
+        _launch.Text=party.PublicRoom?"Starting automatically":leader?"Start Battle":"Waiting for host";
+        if(party.PublicRoom)_launch.Disabled=true;
+        _rosterSummary.Text=$"Same room • {party.Bots} CPU rivals";
+        _notice.Text=party.PublicRoom?"The next battle starts automatically when the room is ready.":leader?"Choose an arena and start the next battle with this room.":"The room host chooses the next arena. You stay in the same room.";
+        RefreshNavigation();
     }
 
     private void BuildAdvanced()
@@ -121,7 +135,7 @@ public partial class ArcadeMenu
 
     public void ShowAdvanced()
     {
-        _advancedReturn=_practice?"Practice":_hostBotBox.Visible?"HostSetup":"Setup";
+        _advancedReturn=_page=="RematchSetup"?"RematchSetup":_practice?"Practice":_hostBotBox.Visible?"HostSetup":"Setup";
         ShowScreen("Advanced");
         foreach(string type in AdvancedRules.ItemTypes)
             ((CheckButton)_screens["Advanced"].FindChild("Allow_"+type,true,false)).SetPressedNoSignal(_advanced.Allows(type));
@@ -131,7 +145,7 @@ public partial class ArcadeMenu
 
     private ArcadeRuleDial Dial(Node parent,string caption,Func<string> value,Action<int> change)
     {
-        var dial=new ArcadeRuleDial {Name=caption.Replace(" ",""),Caption=caption,ReadValue=value,ChangeValue=change};parent.AddChild(dial);_ruleDials.Add(dial);return dial;
+        var dial=new ArcadeRuleDial {Name=caption.Replace(" ",""),Caption=caption,ReadValue=value,ChangeValue=direction=>{change(direction);RoomSettingsChanged?.Invoke();}};parent.AddChild(dial);_ruleDials.Add(dial);return dial;
     }
 
     private static int Cycle(int value,int direction,int min,int max)=>value+direction>max?min:value+direction<min?max:value+direction;

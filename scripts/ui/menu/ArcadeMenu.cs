@@ -21,6 +21,7 @@ public partial class ArcadeMenu : Control
     public event Action<int>? AppearanceChanged;
     private readonly Dictionary<string,int> _lobbyAppearances=[];
     private readonly Dictionary<string,CharacterPreview> _lobbyPreviews=[];
+    public event Action? RoomSettingsChanged;
     public event Action? LocalRequested, ReplayRequested, BackRequested, StartRoomRequested, ResumeRequested, SettingsChanged, TestVibrationRequested, CheckUpdatesRequested, InstallUpdateRequested;
     private Button _retryLesson=null!,_pauseLeave=null!;
     private string? _pausedTutorial;
@@ -140,17 +141,20 @@ public partial class ArcadeMenu : Control
     public void ShowScreen(string screen,bool restoreFocus=false)
     {
         _background.Visible=screen is not ("Pause" or "Settings") || !_overlayBackground;
-        _background.Page=screen;_background.Quiet=screen=="Roster";_background.Results=screen=="Results";_background.QueueRedraw();
+        _background.Page=screen=="RematchSetup"?"HostSetup":screen;_background.Quiet=screen=="Roster";_background.Results=screen=="Results";_background.QueueRedraw();
         _page=screen;
-        _screen=screen=="Practice"||screen=="HostSetup"?"Setup":screen;
+        _screen=screen is "Practice" or "HostSetup" or "RematchSetup"?"Setup":screen;
         if(screen!="Advanced")_practice=screen=="Practice";
-        _setupTitle.Text=_practice?"Practice Setup":screen=="HostSetup"?"Private Room Settings":"Match Setup";
-        _launch.Text=screen=="HostSetup"?"Save Room Settings":_practice?"Start Practice":"Start Battle";
+        ((Button)_screens["Setup"].FindChild("SetupBack",true,false)).Text=screen=="RematchSetup"?"Leave room":"Back";
+        _setupTitle.Text=screen=="RematchSetup"?"Choose the next arena":_practice?"Practice Setup":screen=="HostSetup"?"Private Room Settings":"Match Setup";
+        _launch.Disabled=false;_stageDial.Disabled=false;
+        ((Button)_screens["Setup"].FindChild("AdvancedSettings",true,false)).Disabled=false;
+        _launch.Text=screen=="RematchSetup"?"Start Battle":screen=="HostSetup"?"Save Room Settings":_practice?"Start Practice":"Start Battle";
         foreach(var dial in _ruleDials)dial.Disabled=_practice;
         _difficulty.Disabled=_practice;_bots.Editable=!_practice;_wins.Editable=!_practice;_rounds.Editable=!_practice;_sudden.Disabled=_practice;_ghosts.Disabled=_practice;
-        _hostBotBox.Visible=screen=="HostSetup";_editPlayers.Visible=screen=="Setup";
+        _hostBotBox.Visible=screen is "HostSetup" or "RematchSetup";_editPlayers.Visible=screen=="Setup";
         int humans=_localPlayers.Roster.Humans,cpu=_localPlayers.Roster.CpuPlayers;
-        _rosterSummary.Text=_practice?"One bomber, free training":screen=="HostSetup"?"Online room: you plus CPU rivals":$"{_localPlayers.Roster.Participants} bombers: {humans} {(humans==1?"human":"humans")}, {cpu} CPU";
+        _rosterSummary.Text=_practice?"One bomber, free training":screen is "HostSetup" or "RematchSetup"?"Online room: you plus CPU rivals":$"{_localPlayers.Roster.Participants} bombers: {humans} {(humans==1?"human":"humans")}, {cpu} CPU";
         if(_practice)_notice.Text="Collect the training power-ups. There is no timer and no win target.";
         else if(screen=="Setup")_notice.Text="Your roster and suits carry into the battle. The last bomber standing takes the round.";
         else if(screen=="HostSetup")_notice.Text="These settings apply to the server. Each online player controls one bomber.";
