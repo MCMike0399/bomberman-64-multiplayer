@@ -56,7 +56,7 @@ public partial class PlaytestDriver
         world.AddChild(new DirectionalLight3D {RotationDegrees=new(-52,-28,0),LightEnergy=1.25f,ShadowEnabled=true});
         // Pickups float .48 above the accepted surface, exactly as ArenaView places them.
         ArtGeometry.Box(world,new(0,-.73f,0),new(11,.5f,4.6f),art.Stone());
-        var camera=new Camera3D {Fov=23,Current=true};world.AddChild(camera);
+        var camera=new Camera3D {Fov=25,Current=true};world.AddChild(camera);
         camera.Position=new Vector3(0,0,.15f)+new Vector3(0,.6f,.8f)*12.4f;camera.LookAt(new(0,0,.15f));
         var heading=ArcadeTheme.Heading(layer,"Pickup lineup",28,ArcadeTheme.Ink);heading.Position=new(28,18);
         var models=new List<PowerupModel>();
@@ -66,10 +66,10 @@ public partial class PlaytestDriver
             {
                 var (kind,name)=ShowcasePickups[i];
                 bool front=i>=6;int column=front?i-6:i;int count=front?ShowcasePickups.Length-6:6;
-                var position=new Vector3((column-(count-1)/2f)*1.42f,0,front?1.05f:-1.05f);
+                var position=new Vector3((column-(count-1)/2f)*1.45f,0,front?1.05f:-1.05f);
                 var model=new PowerupModel(art,kind) {Position=position};world.AddChild(model);models.Add(model);
                 model.ProcessMode=ProcessModeEnum.Disabled;model._Process(poseTime);
-                world.AddChild(new Label3D {Text=name,Font=ArcadeTheme.Display,FontSize=56,PixelSize=.0042f,OutlineSize=18,Modulate=ArcadeTheme.Ink,OutlineModulate=ArcadeTheme.Cream,
+                world.AddChild(new Label3D {Text=name,Font=ArcadeTheme.Display,FontSize=40,PixelSize=.0042f,OutlineSize=14,Modulate=ArcadeTheme.Ink,OutlineModulate=ArcadeTheme.Cream,
                     Billboard=BaseMaterial3D.BillboardModeEnum.Enabled,NoDepthTest=true,Position=position+new Vector3(0,-.44f,.7f)});
             }
             Check(models.Select(m=>m.Kind).SequenceEqual(ShowcasePickups.Select(p=>p.Kind)),"studio lineup builds every collectible kind: "+label);
