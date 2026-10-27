@@ -59,8 +59,13 @@ The opt-in `desktop-validation` PR label runs native hosted tests of separately
 prepared exact-SHA draft candidate assets, without private build credentials.
 Private builds still run only on trusted main. The independent
 `tests/Bomber.DesktopUpdate.Tests` process fixtures exercise helper handoff,
-replacement and launch rollback without the private dependency. They do not
-substitute for actual Godot update transactions.
+replacement, uninstall preservation and launch rollback. Actual exported-game
+transactions are also mandatory through `verify-desktop-update.py`. They use a
+synthetic newer fixture identity, verify healthy renderer relaunch and deliberate
+pre-health rollback, compare complete inventories, and uninstall after Windows
+updates. These tests require disposable Windows/Linux desktops or profiles.
+`startup-desktop.py` covers all nine saved preset/display launches using separate
+preference files and captures. Ordinary player preferences are not rewritten.
 
 ## Evidence limits
 

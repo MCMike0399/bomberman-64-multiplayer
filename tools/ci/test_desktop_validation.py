@@ -11,6 +11,22 @@ from test_desktop_packages import write_desktop, SHA, RELEASE
 
 
 class DesktopValidationTests(unittest.TestCase):
+    def test_graphics_and_saved_startup_cannot_be_omitted_from_promotion(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            write_desktop(directory)
+            item = desktop.names('windows-x64')
+            for name in (item['graphical'], item['startup']):
+                original = (directory / name).read_text()
+                (directory / name).write_text('{}')
+                with self.subTest(name=name), self.assertRaises(RuntimeError):
+                    desktop.inspect(directory, SHA, RELEASE)
+                (directory / name).write_text(original)
+            startup = json.loads((directory / item['startup']).read_text())
+            startup['cases'].pop()
+            with self.assertRaisesRegex(RuntimeError, 'startup matrix'):
+                validation.inspect_startup(startup, 'windows-x64', SHA, RELEASE, desktop.digest(directory / item['archive']))
+
     def test_promotion_rejects_partial_stale_or_erroneous_gameplay_evidence(self):
         with tempfile.TemporaryDirectory() as temporary:
             directory = Path(temporary)
@@ -42,7 +58,7 @@ class DesktopValidationTests(unittest.TestCase):
         report = {'passed': True, 'platform': 'Windows', 'release': dict(RELEASE, revision=SHA),
                   'scenario': 'all', 'catalogSha256': validation.catalog_digest(),
                   'completedScenarios': validation.expanded('all', validation.catalog()),
-                  'assertions': 200, 'runtimeErrors': [], 'screenshotMode': 'graphical',
+                  'assertions': 200, 'checks': [{'passed': True}] * 200, 'runtimeErrors': [], 'screenshotMode': 'graphical',
                   'renderingDriver': 'd3d12', 'renderingMethod': 'forward_plus',
                   'adapter': 'Target GPU', 'screenshots': ['capture.png']}
         validation.inspect_report(report, 'all', settings, SHA, RELEASE, True)

@@ -100,7 +100,7 @@ def main():
                    'downloadSha256': desktop.digest(directory / downloads.FILES[args.target]),
                    'cases': cases, 'limits': 'Physical devices, native GPU performance and mixed-OS Internet play require separate evidence.'}
         validation.inspect_receipt(receipt, settings, revision, release)
-        (directory / item['smoke']).write_text(json.dumps(receipt, indent=2) + '\n')
+        (directory / item['graphical' if args.graphical else 'smoke']).write_text(json.dumps(receipt, indent=2) + '\n')
     print('PASS full packaged ' + args.target + ' ' + receipt['suite'])
 
 
