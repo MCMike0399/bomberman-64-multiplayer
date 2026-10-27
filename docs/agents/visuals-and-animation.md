@@ -157,7 +157,8 @@ total). Authority is unchanged; a fresh ghost fades in over 1.6 seconds instead 
 popping on top of the gag. `EffectWarmup` renders the zap, flame and smoke stages.
 The `mishap-feel` journey uses the real grapple setup (kicked-bomb knockdown, grab,
 remote snipe) and a fixed pose/burnout sheet for screenshots. Its numeric checks
-are mechanics; whether the gag is funny is the user's call.
+are mechanics; whether the gag is funny is the user's call. Matched before/after
+captures and hashes: [knockout-grab-death](../images/knockout-grab-death/manifest.json).
 
 ## Rejected experiments: do not repeat them blindly
 

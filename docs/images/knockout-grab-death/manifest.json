@@ -1,0 +1,42 @@
+{
+  "capturedOn": "2026-10-27",
+  "scenario": "mishap-feel",
+  "preset": "Medium (QA default)",
+  "display": "isolated macOS VM, Metal, 1280x800 captures",
+  "after": {
+    "run": "20261027T201202.449772Z-mishap-feel",
+    "revision": "3ae7215 (tested source identical; run started before commit)",
+    "baseRevision": "d9936e5907fab2a8ab9c01c739248571c73f5c7e",
+    "sourceSha256": {
+      "scripts/arena/models/BomberModel.cs": "39178e359aeae7e3d5ceacc48678ef9c4a9abb1f4badc79e148401cd1b846e90",
+      "scripts/arena/models/BomberModel.Mishaps.cs": "42cea9312d96a4a819f37ae0b760b81a47fe5e4bd3c4b3d84314af0833546ccf",
+      "scripts/arena/models/BomberModel.Burnout.cs": "d1d0f7a27a8684b9582f219047fb10faa955e1b91fd28ec885fcda5ea36ac838",
+      "scripts/arena/effects/BurnoutEffect.cs": "105984833ec3a33f25153711f1046a5f2c244a06aee3c90cb28cec03a3d6e1d4",
+      "scripts/arena/ArenaView.cs": "7c3ed4ed63ca136a7b43c33e67a4d585765d7702d81a8c4af7a49700c27804f9",
+      "scripts/arena/ArenaView.Snapshots.cs": "c1dde88449e8d5b2a8c70b1764a261c69002c5539cdae1d0a5b57b135466be18",
+      "scripts/arena/ArenaView.Presentation.cs": "422156587ccadc0ec2ec1525bffa2b5117c0ab62e28dabc23ffc3dad0f1426dd",
+      "scripts/testing/journeys/rendering/MishapShowcasePlaytest.cs": "bd068119d918cea7ff52aef92a06b41543f37c240a7832f946da85bf025bc229"
+    }
+  },
+  "before": {
+    "run": "20261027T201454.361611Z-mishap-feel",
+    "revision": "d9936e5907fab2a8ab9c01c739248571c73f5c7e",
+    "note": "unchanged main plus a baseline-only mishap-feel journey with the same sessions, inputs and cameras"
+  },
+  "images": {
+    "after-burnout-flail-closeup.png": "024614bfc8bcb3fadcf0c66697b444d7f0a36b5a2336be3d2c5e5729c86d2d82",
+    "after-burnout-poof-closeup.png": "6704b70ddd22cf1327ce27eec0ecb02ce264e9436a97b8c78d7a1fd97dbf5d95",
+    "after-burnout-stiff-closeup.png": "fd4dc131b0973592dbc5076855e77ff0945aacb050477b48dd91a958c28a40fa",
+    "after-dazed-battle.png": "e82028210f1a2d42d7a34fbc161c4b239a299999a7b56b3d4346b89b55377648",
+    "after-dazed-closeup.png": "41346c7fde590337b8d95e415f6527886bf2be0fff56404f450446afde36b184",
+    "after-held-closeup.png": "1e682c09c0fca1db8b455421bbc6e0ecf49bef12e4bf8a74832cc4d6c948987a",
+    "after-sheet-burnout.png": "f9045a1bc317a742ebd75fa00e22c44d83a8cd46b73764ca429287f9c1acfe20",
+    "after-sheet-dizzy-face.png": "a18c1277290dd1a477fe64fced9c3cf54c2cbbf7b2ab4baf39c6b6d281a3334a",
+    "after-sheet-poses.png": "4d1accc11628437efbafd03939dddc0c73bdf4d6089fe0692ed32ae1584260c5",
+    "before-burnout-flail-closeup.png": "4f07c383c01ee02a01f756703659a380d8954780301c93a4d318dfe56d9be619",
+    "before-dazed-closeup.png": "68663578b128baeb183d35402d5a0722ae58cc947207c245569f89bb3a13ef73",
+    "before-held-closeup.png": "dfb382fb44fbaf8fbacce64e8c70bcf06b774d18e2b45d2d2d33e727ea4debed",
+    "before-sheet-burnout.png": "da0d21f2a2736336ea648289e36ed4ed5607babf3cd0152bdb667e5c5dd2d0d2",
+    "before-sheet-poses.png": "3793254af6f60c02d9678ba637ab3dca10c5976e85e3cce70c8a195f22af9319"
+  }
+}
