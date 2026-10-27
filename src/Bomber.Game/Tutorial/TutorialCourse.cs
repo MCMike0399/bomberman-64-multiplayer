@@ -21,7 +21,7 @@ public static class TutorialCourse
             ["Steer the aiming cursor","Throw your aimed bomb"],"Pointing lets you keep walking; holding aim plants your feet for fine nudges. Either way the target stays until you throw. The warning X marks an unsafe or blocked landing."),
         new("kick","Bomb handling","Kick and stop","Tap {bomb}, walk away, then walk back into the bomb to kick it. Press {stop} while it rolls.",
             ["Kick a resting bomb","Stop your rolling bomb"],"A fresh bomb lets its owner walk out once. Only the last kicker can stop it. The fuse keeps burning."),
-        new("chain","Bomb handling","Start a chain reaction","Collect the Bomb Up, plant two bombs close together, then retreat. Let the first explosion set off the second.",
+        new("chain","Bomb handling","Start a chain reaction","Plant two bombs close together, then retreat. Let the first explosion set off the second.",
             ["Trigger a chain reaction","Survive both blasts"],"Explosions can ignite other bombs early. Kicking one bomb into another transfers its roll, so check the whole escape route."),
         new("cover","Equipment","Break a path","Destroy a marked block with a bomb and retreat safely.",
             ["Destroy a block","Survive the blast"],"Stone pillars block blasts; breakable blocks can reveal items. Drops are random in battles, and items expire."),

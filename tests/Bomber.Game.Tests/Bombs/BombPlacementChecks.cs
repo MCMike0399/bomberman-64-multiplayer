@@ -35,7 +35,7 @@ internal static class BombPlacementChecks
             Assert(Bombs(m).GetArrayLength()==1,"Second A created an overlapping duplicate.");
         });
         Check("repeated A taps leave three stationary bombs while walking",()=>{
-            var m=Match(upgrades:2);for(int i=0;i<3;i++){
+            var m=Match(upgrades:1);for(int i=0;i<3;i++){
                 m.SetInput(0,new PlayerInput(1,0,A:true));Step(m,1);m.SetInput(0,new PlayerInput(1,0));Step(m,9);
             }
             m.SetInput(0,default);

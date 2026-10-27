@@ -24,12 +24,12 @@ public sealed partial class BlastSession
             foreach(var cell in new[]{(12,12),(13,12),(12,13)}) _softBlocks.Set(cell.Item1,cell.Item2,true);
         string[] items=id switch
         {
-            "chain"=>["bomb"], "swap"=>["remote","heart","red","focus"], "expiry"=>["tiny"], "duel"=>["heart","remote"], "items"=>["fire","bomb"], "effects"=>["tiny","big","haste","slow"],
+            "swap"=>["remote","heart","red","focus"], "expiry"=>["tiny"], "duel"=>["heart","remote"], "items"=>["fire","bomb"], "effects"=>["tiny","big","haste","slow"],
             "remote" or "red" or "bounce" or "heart" or "focus"=>[id], _=>[]
         };
         _tutorialItems=items;
         for(int i=0;i<items.Length;i++)
-            _items.Add(new BlastItem {Id=NextItemId(),CellX=id=="chain"?8:id=="duel"?9-i*2:9+i*2,CellZ=12,Tier=0,Type=items[i],LifeRemaining=60});
+            _items.Add(new BlastItem {Id=NextItemId(),CellX=id=="duel"?9-i*2:9+i*2,CellZ=12,Tier=0,Type=items[i],LifeRemaining=60});
         if(id is "impact" or "grapple" or "ghost" or "escape" or "shake" or "duel")
         {
             var partner=new BlastPlayer {Id="tutorial-partner",Slot=1,Appearance=2,DisplayName="Training partner",

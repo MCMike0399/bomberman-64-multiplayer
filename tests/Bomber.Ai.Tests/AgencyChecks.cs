@@ -47,22 +47,23 @@ static class AgencyChecks
             Check(placed>=8,$"four Hard CPUs break lane standoffs on {stage} seed {seed} ({placed} bombs in 20 seconds; prior policy 0)");
         }
 
-        var matrix=AgencyDiagnostics.Matrix();
+        // Preserve the original algorithm-comparison loadout; current defaults are
+        // exercised independently by PressureChecks, StockHumanPressureChecks and the soak.
+        var matrix=AgencyDiagnostics.Matrix(startingBombs:3);
         int worstRun=matrix.Max(r=>r.LongestPingPongStreak);
         int worstIdleGap=matrix.Where(r=>r.Scenario=="idle-human").Max(r=>r.LongestPressureGapTicks);
         int idleDeaths=matrix.Where(r=>r.Scenario=="idle-human").Sum(r=>r.BotDeaths);
-        Check(worstRun<=20,$"no sustained single-cell shuffle across 72 stock arena runs (longest {worstRun} reversals; prior policy 99)");
+        Check(worstRun<=20,$"no sustained single-cell shuffle across 72 arena runs with the three-bomb reference loadout (longest {worstRun} reversals; prior policy 99)");
         Check(worstIdleGap<=20*30,$"an idle player is threatened at least every 20 seconds on every stock arena (longest {worstIdleGap/30f:F1}s; prior policy 60s)");
         Check(idleDeaths<=2,$"bots rarely defeat themselves while attacking an idle player ({idleDeaths} in 36 minutes; prior policy 3)");
 
         // A walking target was trailed from one cell behind, just outside fire-1 reach;
-        // leading its visible movement intercepts it. A single base bomb slot limits
-        // repeat pressure until its fuse finishes; require six threats in 30 seconds. Prior Medium: p90 12.8s, max 26.1s.
+        // leading its visible movement intercepts it. Prior Medium: p90 12.8s, max 26.1s.
         foreach(string level in new[]{"medium","hard"})
         {
-            var sweep=AgencyDiagnostics.PressureSweep(level,true);
-            Check(sweep.Deaths==0&&sweep.MedianGapSeconds<=6&&sweep.P90GapSeconds<=10&&sweep.MaxGapSeconds<=15&&sweep.MeanHits>=6,
-                $"{level} intercepts a patrolling target across 24 starts/phases (median {sweep.MedianGapSeconds:F1}s, p90 {sweep.P90GapSeconds:F1}s, max {sweep.MaxGapSeconds:F1}s, {sweep.MeanHits:F1} hits)");
+            var sweep=AgencyDiagnostics.PressureSweep(level,true,startingBombs:3);
+            Check(sweep.Deaths==0&&sweep.MedianGapSeconds<=6&&sweep.P90GapSeconds<=10&&sweep.MaxGapSeconds<=15&&sweep.MeanHits>=8,
+                $"{level} intercepts a patrolling target across 24 starts/phases with the three-bomb reference loadout (median {sweep.MedianGapSeconds:F1}s, p90 {sweep.P90GapSeconds:F1}s, max {sweep.MaxGapSeconds:F1}s, {sweep.MeanHits:F1} hits)");
         }
 
         // A rival walking at a resting bomb kicks it along their heading at 12 cells/s.

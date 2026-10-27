@@ -412,7 +412,8 @@ focused authority/AI checks. Online revision 5 gates the newly supported arena.
 - `AdvancedRules` owns drop chance (0–100%), block amount (0–100% of the authored
   regional budget), item lifetime (5–60s), blast cap (1–5), bomb cap (1–8), effect
   duration (5–30s) and per-item exclusions. Defaults: 40%, 100%, 20s, 5, 5, 10s.
-  Starting bomb capacity and blast strength are one (zero collected upgrades).
+  Starting bomb capacity is min(2, configured cap) and blast strength is one
+  (zero collected upgrades).
   The HUD shows upgrade counts above that base; three
   pumps can raise a maximum five-stack blast to effective level eight.
 - Tiny uniformly scales the model to .65 and movement to 1.5; Big uses 1.4/.65.

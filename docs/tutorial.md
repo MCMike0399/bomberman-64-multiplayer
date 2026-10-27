@@ -37,7 +37,6 @@ Completed stars survive replay and restart; merely opening a lesson awards none.
 Lessons deliberately author their starting conditions: required pickups and
 cover, a stationary partner, an initial knockdown/hold/latch, or an Easy CPU.
 Recovery and hold lessons therefore start in the state named in their description.
-The chain-reaction lesson supplies a Bomb Up at the starting position so its two-bomb objective works with the unupgraded one-bomb default.
 Supplied pickups last 60 seconds; expired required items and missed short recovery
 windows offer a retry. Free-practice pickups retain ordinary item lifetimes.
 

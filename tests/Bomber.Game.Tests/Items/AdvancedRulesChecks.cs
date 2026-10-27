@@ -12,11 +12,11 @@ internal static class AdvancedRulesChecks
         int checks=0;
         void Check(bool value,string message){if(!value)throw new Exception(message);checks++;}
         var fresh=new BlastPlayer();
-        Check(fresh.BombCapacity==1&&fresh.FireLevel==1,"Fresh players must have zero collected bomb/fire upgrades.");
+        Check(fresh.BombCapacity==2&&fresh.FireLevel==1,"Fresh players must have zero collected bomb/fire upgrades.");
         PowerUpRules.Apply(fresh,"bomb");PowerUpRules.Apply(fresh,"fire");
-        Check(fresh.BombCapacity==2&&fresh.FireLevel==2,"First pickups must grant the first upgrades.");
+        Check(fresh.BombCapacity==3&&fresh.FireLevel==2,"First pickups must grant the first upgrades.");
         PowerUpRules.Reset(fresh);
-        Check(fresh.BombCapacity==1&&fresh.FireLevel==1,"Round/respawn reset must remove collected upgrades.");
+        Check(fresh.BombCapacity==2&&fresh.FireLevel==1,"Round/respawn reset must remove collected upgrades.");
         var defaults=new AdvancedRules();Check(defaults.DropPercent==40&&defaults.MaxFire==5&&defaults.MaxBombs==5,"Unexpected defaults.");
         Check(AdvancedRules.ItemTypes.Where(PowerUpRules.IsBombType).Order().SequenceEqual(new[]{"bounce","red","remote"}),"Only Bounce, Red and Remote should occupy the bomb slot.");
         Check(!AdvancedRules.ItemTypes.Contains("fast")&&!PowerUpRules.CanCollect(new BlastPlayer(),"fast"),"Removed Fast bomb still exists as a pickup.");
@@ -44,7 +44,7 @@ internal static class AdvancedRulesChecks
             float travel=Player(match).GetProperty("x").GetSingle()-before;
             Check(Math.Abs(travel-(effect is "tiny" or "haste"?4.5f:1.95f))<.05f,"Status did not change real movement speed.");
             Step(match,140);p=Player(match);Check(p.GetProperty("statusEffect").GetString()=="none"&&p.GetProperty("statusScale").GetSingle()==1,"Status failed to expire.");
-            Check(p.GetProperty("bombs").GetInt32()==1,"Starting inventory must remain unupgraded with a custom cap.");
+            Check(p.GetProperty("bombs").GetInt32()==2,"Starting inventory must remain unupgraded with a custom cap.");
         }
         var player=new BlastPlayer();PowerUpRules.Reset(player,rules);
         for(int i=0;i<12;i++){PowerUpRules.Apply(player,"fire");PowerUpRules.Apply(player,"bomb");}

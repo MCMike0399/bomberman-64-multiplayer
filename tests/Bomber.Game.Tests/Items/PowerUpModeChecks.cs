@@ -24,7 +24,7 @@ internal static class PowerUpModeChecks
             foreach(var mode in new[]{"remote","red"}){
                 var p=new BlastPlayer();PowerUpRules.Apply(p,mode);
                 foreach(var item in new[]{"fire","bomb","heart"})PowerUpRules.Apply(p,item);
-                Assert(p.FireLevel==2&&p.BombCapacity==2&&p.HasHeart,"Mode interfered with ordinary inventory upgrades.");
+                Assert(p.FireLevel==2&&p.BombCapacity==3&&p.HasHeart,"Mode interfered with ordinary inventory upgrades.");
                 Assert(p.HasRemote==(mode=="remote")&&p.HasRed==(mode=="red"),"Ordinary pickup replaced the bomb mode.");
             }
         });
@@ -63,7 +63,7 @@ internal static class PowerUpModeChecks
     }
     static LocalMatch Match(string first,string second){var cells=new CellDef[30,15];for(int x=0;x<30;x++)for(int z=0;z<15;z++)cells[x,z]=CellDef.Floor0;
         var m=new LocalMatch(new MatchOptions{HumanPlayers=2,BotPlayers=0,Practice=true,SuddenDeath=false},
-            new StageLayout{Id="bomb-mode",Width=30,Height=15,Cells=cells,Spawns=[(3,3),(27,12)],SoftBlockDensity=0,InitialItems=[(3,3,first),(3,3,"bomb"),(5,3,second)]});Step(m,64);return m;}
+            new StageLayout{Id="bomb-mode",Width=30,Height=15,Cells=cells,Spawns=[(3,3),(27,12)],SoftBlockDensity=0,InitialItems=[(3,3,first),(5,3,second)]});Step(m,64);return m;}
     static JsonElement Place(LocalMatch m){int count=Bombs(m).Length;m.SetInput(0,new PlayerInput(0,0,A:true));Step(m,2);m.SetInput(0,default);Step(m,2);
         Assert(Bombs(m).Length==count+1,"Fixture failed to place its next bomb.");return Bombs(m).Last();}
     static void CollectNext(LocalMatch m){m.SetInput(0,new PlayerInput(1,0));Step(m,16);m.SetInput(0,new PlayerInput(0,1));Step(m,1);m.SetInput(0,default);Step(m,3);}

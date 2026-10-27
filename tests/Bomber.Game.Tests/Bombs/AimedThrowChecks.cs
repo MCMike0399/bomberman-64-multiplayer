@@ -193,7 +193,7 @@ internal static class AimedThrowChecks
             Assert(N(p,"fx")>.999f&&Math.Abs(N(p,"fz"))<.001f,"Held cardinal input never replaced the old diagonal heading.");
         });
         Check("new carry never inherits previous throw intent",()=>{
-            var m=Match(extraBomb:true);Lift(m);m.SetInput(0,new PlayerInput(1,1,B:true,Aim:true));Step(m,20);
+            var m=Match();Lift(m);m.SetInput(0,new PlayerInput(1,1,B:true,Aim:true));Step(m,20);
             m.SetInput(0,default);Step(m,2);
             m.SetInput(0,new PlayerInput(0,0,A:true,B:true));Step(m,2);
             Assert(Player(m).GetProperty("carrying").GetString()=="bomb"&&!Player(m).GetProperty("aimSet").GetBoolean(),"A second carried bomb inherited old intent.");
@@ -288,14 +288,13 @@ internal static class AimedThrowChecks
         });
         return count;
     }
-    static LocalMatch Match(bool raised=false,CellKind? support=null,bool waterEdge=false,bool extraBomb=false)
+    static LocalMatch Match(bool raised=false,CellKind? support=null,bool waterEdge=false)
     {
         var cells=new CellDef[31,31];for(int x=0;x<31;x++)for(int z=0;z<31;z++)cells[x,z]=new CellDef{Kind=CellKind.Floor,Tier=raised&&z>=13?4:0};
         if(waterEdge)for(int x=0;x<31;x++)for(int z=14;z<31;z++)cells[x,z]=CellDef.Water;
         if(support==CellKind.Pillar)cells[10,15]=CellDef.Pillar;
         var m=new LocalMatch(new MatchOptions{HumanPlayers=2,BotPlayers=0,Practice=true},new StageLayout{
             Id="aim-fixture",Width=31,Height=31,Cells=cells,Spawns=[(10,10),support is null?(waterEdge?(28,10):(28,28)):(11,15)],SoftBlockDensity=0,
-            InitialItems=extraBomb?[(10,10,"bomb")]:[],
             TrainingItems=support is null?[]:[(10,10,"remote")],FixedSoftBlocks=support==CellKind.Floor?new HashSet<(int,int)>{(10,15)}:null});
         Step(m,64);return m;
     }

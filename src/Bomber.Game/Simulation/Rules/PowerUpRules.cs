@@ -6,7 +6,7 @@ namespace Bomber.Game.Simulation.Rules;
 /// <summary>Stacking upgrades and two independent, replaceable equipment slots.</summary>
 public static class PowerUpRules
 {
-    public const int StartingBombs=1,MaximumBombs=5,MaximumNormalFire=5,MaximumMegaFire=8;
+    public const int StartingBombs=2,MaximumBombs=5,MaximumNormalFire=5,MaximumMegaFire=8;
     public const float ItemLifetime=20,SwapPickupDelay=1.5f,NormalPumpSeconds=.45f,FocusPumpSeconds=.15f;
     public const double DropChance=AdvancedRules.DefaultDropPercent/100d;
     public static bool IsBombType(string type)=>type is "red" or "remote" or "bounce";

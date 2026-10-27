@@ -242,7 +242,7 @@ Online Back leaves the room; explicit Mode Select remains available on Results.
 Tutorial retry/next and Practice reset retain their existing behavior.
 
 Bomb and flame HUD counters show collected upgrades, starting at 0/0. Base play
-still permits one active bomb and ordinary level-one blasts. Pickups raise each
+still permits two active bombs and ordinary level-one blasts. Pickups raise each
 counter by one; round and respawn resets clear the collected upgrades.
 
 ## Current online flow (v0.29)

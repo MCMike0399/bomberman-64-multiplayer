@@ -200,7 +200,7 @@ public partial class PlaytestDriver
         await ActivateNamed("LaunchMatch");
         await WaitState(_=>_root.LatestStage?.GetProperty("id").GetString()=="rock-garden","next match uses the selected arena",150);
         Check(State.GetProperty("players").EnumerateArray().Select(p=>p.GetProperty("appearance").GetInt32()).SequenceEqual(new[]{4,6}),"next match keeps the selected suits");
-        Check(State.GetProperty("players").EnumerateArray().All(p=>p.GetProperty("bombs").GetInt32()==1&&p.GetProperty("fire").GetInt32()==1),"new battle starts with base bombs and fire");
+        Check(State.GetProperty("players").EnumerateArray().All(p=>p.GetProperty("bombs").GetInt32()==2&&p.GetProperty("fire").GetInt32()==1),"new battle starts with base bombs and fire");
         Check(_root.FindChildren("*","",true,false).OfType<BlastCircuit.UI.Hud.PlayerToken>().All(t=>t.Bombs==0&&t.Fire==0),"HUD starts both upgrade counters at zero");
         _root.Back();await Frames(3);
         Check(_root.ScreenName=="Modes" && _root.ActiveSession==null,"leaving the next match returns to mode selector");

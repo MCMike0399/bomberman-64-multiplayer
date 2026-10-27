@@ -172,8 +172,12 @@ dotnet run -c Release --project tests/Bomber.Ai.Tests -- --agency --trace=up-and
 Bouncing-bomb holder shuffling beside an idle player, Easy/Medium movement through
 Blizzard gusts, four-Hard-CPU lane standoffs, the longest reversal streak and
 idle-player gap across a 72-run arena matrix, moving-target gaps across 24
-start/phase variants (variant 0 is the fixed `PressureChecks` fixture; at least
-six threats per 30 seconds with the unupgraded one-bomb capacity), and a
+start/phase variants (variant 0 is the fixed `PressureChecks` fixture), and a
 sidestep from the lane of a bomb a walking player is about to kick.
 `AgencyDiagnostics` owns the measurements; `--standoff` reports bombs by four CPUs
 in their first 20 seconds. [Mechanisms, changes and matched results](../../docs/cpu-agency.md).
+
+The agency matrix and moving-target comparison checks pin their original three-bomb
+reference loadout so changes to starting inventory do not change the policy
+comparison. CLI diagnostics, fixed-seed pressure checks, stock-human pressure
+checks and the gameplay soak retain the current two-bomb default.

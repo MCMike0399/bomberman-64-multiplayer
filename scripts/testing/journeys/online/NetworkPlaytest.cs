@@ -23,7 +23,7 @@ public partial class PlaytestDriver
         await Until(()=>owner.Party?.CanStart==true&&guest.Party?.CanStart==true,"online map fixture has two connected players");
         owner.RequestStart();
         await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"online map fixture reaches fight",900);
-        Check(State.GetProperty("players").EnumerateArray().All(p=>p.GetProperty("bombs").GetInt32()==1&&p.GetProperty("fire").GetInt32()==1),"online players start with zero collected upgrades");
+        Check(State.GetProperty("players").EnumerateArray().All(p=>p.GetProperty("bombs").GetInt32()==2&&p.GetProperty("fire").GetInt32()==1),"online players start with zero collected upgrades");
         Input(0,new PlayerInput(0,0,A:true));await Frames(4);Input(0,default);
         await Until(()=>_root.ScreenName=="Results","ordinary bomb completes the online match");
         await Capture("online-post-match-results");

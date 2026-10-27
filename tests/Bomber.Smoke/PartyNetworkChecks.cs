@@ -56,7 +56,7 @@ internal static class PartyNetworkChecks
         await Until(()=>peer.Party?.Settings is {} rules&&SessionSettings.FromWire(rules).Advanced==custom.Advanced,"peer receives full advanced rules edit");
         await Start(host);
         var snapshot=await State(peer,s=>s.GetProperty("phase").GetInt32()==1);
-        if(Convert.FromBase64String(snapshot.GetProperty("softBlocks").GetString()!).Any(b=>b!=0)||snapshot.GetProperty("players").EnumerateArray().Any(p=>p.GetProperty("bombs").GetInt32()!=1||p.GetProperty("maxBombs").GetInt32()!=2||p.GetProperty("maxFire").GetInt32()!=4))throw new Exception("Online authority ignored advanced settings.");
+        if(Convert.FromBase64String(snapshot.GetProperty("softBlocks").GetString()!).Any(b=>b!=0)||snapshot.GetProperty("players").EnumerateArray().Any(p=>p.GetProperty("bombs").GetInt32()!=2||p.GetProperty("maxBombs").GetInt32()!=2||p.GetProperty("maxFire").GetInt32()!=4))throw new Exception("Online authority ignored advanced settings.");
         Console.WriteLine("PASS real network advanced rules edit reaches peer and controls cover, starting inventory and caps");
     }
     private static async Task TopRulesRoom(Uri origin)
