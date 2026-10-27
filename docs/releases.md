@@ -7,7 +7,7 @@ server assemblies embed these values. `X-Blast-Protocol` is the exact token
 release tokens, even when the schema revision stays the same. Increase the schema
 revision for incompatible peer messages as well. Local play is unaffected.
 
-**v0.42.1/build 52/schema 6** is delivered. The [delivery receipt](verification.md#v0421-delivered)
+**v0.43.0/build 53/schema 6** is delivered. The [delivery receipt](verification.md#v0430-delivered)
 records the exact CI artifacts, production rollout and signed update. Earlier clients advertise numeric `3`, `4` or branch-specific stage tokens and are rejected by the
 new server before identity creation, queue/room admission or WebSocket upgrade.
 Authenticated leave/cancel and operator endpoints preserve their existing policy.
