@@ -25,9 +25,9 @@ static class AgencyDiagnostics
 
     /// <summary>One bot against one idle, renewed-invulnerable player on a stock arena:
     /// the reported "neutral" situation where nothing forces the CPU to react.</summary>
-    internal static Result IdleHuman(string stageId,string level,int seed,int ticks=1800,bool trace=false)
+    internal static Result IdleHuman(string stageId,string level,int seed,int ticks=1800,bool trace=false,int? startingBombs=null)
     {
-        var arena=BlastStages.Get(stageId);var f=new Fixture(arena,2,seed,level);
+        var arena=BlastStages.Get(stageId);var f=new Fixture(arena,2,seed,level,startingBombs:startingBombs);
         f.Session.AiTestAddHuman("cpu-0",0);
         var spawn=arena.Spawns[0];f.Session.AiTestPosition("cpu-0",spawn.X+.5f,spawn.Z+.5f);f.Step(61);
         var human=f.Session.AiTestPlayers.Single(p=>p.Id=="cpu-0");
@@ -36,9 +36,9 @@ static class AgencyDiagnostics
     }
 
     /// <summary>Ordinary all-CPU match observed from the first bot slot.</summary>
-    internal static Result AllBots(string stageId,string level,int seed,int bots,int ticks=1800,bool trace=false)
+    internal static Result AllBots(string stageId,string level,int seed,int bots,int ticks=1800,bool trace=false,int? startingBombs=null)
     {
-        var arena=BlastStages.Get(stageId);var f=new Fixture(arena,bots,seed,level);f.Step(61);
+        var arena=BlastStages.Get(stageId);var f=new Fixture(arena,bots,seed,level,startingBombs:startingBombs);f.Step(61);
         var bot=f.Session.AiTestPlayers.Single(p=>p.Id=="cpu-0");
         return Observe(f,arena,level,seed,$"{bots}-bots",ticks,bot,null,trace);
     }
@@ -104,14 +104,14 @@ static class AgencyDiagnostics
     /// <summary>The fixed open-arena pressure fixture is one deterministic sample: small
     /// timing changes move its single longest gap by seconds. Variant zero is that
     /// fixture; the others vary the target's start cell and patrol phase.</summary>
-    internal static SweepResult PressureSweep(string level,bool moving,int? only=null)
+    internal static SweepResult PressureSweep(string level,bool moving,int? only=null,int? startingBombs=null)
     {
         var gaps=new List<int>();var hits=new List<int>();int deaths=0;
         for(int variant=0;variant<24;variant++)
         {
             if(only is not null&&only!=variant)continue;
             int hx=variant==0?9:7+variant%4,hz=variant==0?6:3+variant/4%6,phase=variant*7%160;
-            var arena=Fixture.Flat(spawns:[(3,6),(hx,hz)]);var f=new Fixture(arena,2,64,level);
+            var arena=Fixture.Flat(spawns:[(3,6),(hx,hz)]);var f=new Fixture(arena,2,64,level,startingBombs:startingBombs);
             f.Session.AiTestAddHuman("cpu-1",1);f.Session.AiTestPosition("cpu-1",hx+.5f,hz+.5f);f.Step(61);
             var human=f.Session.AiTestPlayers.Single(p=>p.Id=="cpu-1");var bot=f.Session.AiTestPlayers.Single(p=>p.Id=="cpu-0");
             var soft=new SoftBlockGrid(arena.Width,arena.Height);var known=new HashSet<string>();
@@ -176,15 +176,15 @@ static class AgencyDiagnostics
 
     /// <summary>Every stock battle arena, level and both soak seeds: one bot facing an idle
     /// player, and the first of four CPUs in an ordinary match. 60 seconds each.</summary>
-    internal static List<Result> Matrix()
+    internal static List<Result> Matrix(int? startingBombs=null)
     {
         var results=new List<Result>();
         foreach(string stage in new[]{"sunken-temple","rock-garden","up-and-down","top-rules","blizzard-battle","greedy-trap"})
         foreach(string level in new[]{"easy","medium","hard"})
         foreach(int seed in new[]{64,9876})
         {
-            results.Add(IdleHuman(stage,level,seed));
-            results.Add(AllBots(stage,level,seed,4));
+            results.Add(IdleHuman(stage,level,seed,startingBombs:startingBombs));
+            results.Add(AllBots(stage,level,seed,4,startingBombs:startingBombs));
         }
         return results;
     }

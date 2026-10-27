@@ -63,6 +63,58 @@ public partial class PlaytestDriver
             }
             Check(overlap,"ordinary thrown bomb reaches the victim's body while its feet remain outside the blast sphere");
         }
+        await BlastLateEntry();
         _root.Back();await Frames(3);
     }
+    private async Task BlastLateEntry()
+    {
+        foreach(int pumps in new[]{3,0})
+        {
+            _root.Back();await Frames(3);
+            for(int seat=0;seat<3;seat++)Input(seat,default);
+            _root.StartLocal(new SessionSettings(Stage:"sunken-temple",Bots:0){Advanced=new AdvancedRules{
+                DisabledItems="fire,bomb,red,bounce,heart,focus,tiny,big,haste,slow"}},3,practice:true);
+            await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"late-entry training reaches fight",150);
+            await GrappleWalk(0,10,13);
+            await GrappleWalk(0,12,13);await GrappleWalk(0,12,20);
+            await GrappleWalk(1,8,12);await GrappleWalk(1,8,20);
+            await GrappleWalk(1,12,20);await GrappleWalk(1,12,25);
+            var thrower=GrapplePlayer(0);
+            var target=new System.Numerics.Vector2(AimNumber(thrower,"x"),AimNumber(thrower,"z"));
+            Input(0,new PlayerInput(0,0,A:true,B:true));await Frames(2);
+            for(int pump=0;pump<pumps;pump++)
+            {
+                Input(0,new PlayerInput(0,0,B:true));await Frames(2);
+                Input(0,new PlayerInput(0,0,A:true,B:true));await Frames(16);
+            }
+            Input(0,new PlayerInput(0,0,B:true,AimTarget:target));await Frames(2);
+            Input(0,new PlayerInput(-1,0));await Frames(32);
+            Input(0,default);await Frames(30);
+            var bomb=HandlingBomb;
+            float bx=AimNumber(bomb,"x"),bz=AimNumber(bomb,"z"),radius=bomb.GetProperty("effectiveLevel").GetInt32()*.9f+.4f;
+            Check(bomb.GetProperty("pumps").GetInt32()==pumps,"late-entry fixture completes requested pumps");
+            Input(1,new PlayerInput(0,-1));
+            await WaitState(_=>AimNumber(GrapplePlayer(1),"z")<=bz+radius+.6f,"victim approaches outside the blast",100);
+            Input(1,default);await Frames(2);
+            string id=GrapplePlayer(1).GetProperty("id").GetString()!;
+            bool Died()=>State.GetProperty("events").EnumerateArray().Any(e=>e.GetProperty("kind").GetString()=="death"&&
+                e.GetProperty("playerId").GetString()==id&&e.GetProperty("reason").GetString()=="explosion");
+            Input(0,new PlayerInput(0,0,R:true));await Frames(2);
+            Check(State.GetProperty("hazards").GetArrayLength()==1&&!Died(),"victim survives ignition outside the blast");
+            Event("late-entry-ignition",new{pumps,bomb,victim=GrapplePlayer(1)});
+            await Capture($"blast-late-entry-{pumps}-ignition",0);
+            Input(1,new PlayerInput(0,-1));
+            await WaitState(_=>Died(),"entering the visible active bloom kills the victim",8);
+            Input(1,default);
+            var hazard=State.GetProperty("hazards")[0];
+            Check(AimNumber(hazard,"age")>0&&AimNumber(hazard,"age")<.4f,"late-entry death occurs during the hazard window");
+            var death=State.GetProperty("events").EnumerateArray().Single(e=>e.GetProperty("kind").GetString()=="death"&&
+                e.GetProperty("playerId").GetString()==id);
+            float dx=AimNumber(death,"x")-bx,dz=AimNumber(death,"z")-bz;
+            Check(dx*dx+dz*dz<=radius*radius,"late-entry death lies inside the actual blast sphere");
+            Event("late-entry-hit",new{pumps,hazard,death});
+            await Capture($"blast-late-entry-{pumps}-hit",0);
+        }
+    }
+
 }

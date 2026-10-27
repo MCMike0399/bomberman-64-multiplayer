@@ -25,6 +25,14 @@ public sealed class SoftBlockGrid
         return (_bits[index>>3]&(1<<(index&7)))!=0;
     }
 
+    /// <summary>Retain cover at ignition so removing a shield cannot expose players to that same blast.</summary>
+    internal SoftBlockGrid Copy()
+    {
+        var copy = new SoftBlockGrid(_width, _height);
+        _bits.CopyTo(copy._bits, 0);
+        return copy;
+    }
+
     public void Set(int x, int z, bool value)
     {
         // Preserve bounds checks: an invalid X must never alias the adjacent row.

@@ -13,7 +13,7 @@ public static partial class BlastStages
     public const float MeteorBlastRadius=MeteorFireLevel*.9f+.4f;
 
     // Reference composition: an enclosed lawn, five isolated round columns,
-    // a central paved cross and sparse boulders. Units/extra seats are our tuning.
+    // a central paved cross and four boulder groves. Units/extra seats are our tuning.
     private static StageLayout BuildRockGarden()
     {
         const int size=19;
@@ -30,16 +30,18 @@ public static partial class BlastStages
             Id=RockGarden,Name="Rock Garden",Width=size,Height=size,Cells=cells,
             // First four seats retain the screenshot's quadrant arrangement.
             Spawns=[(5,5),(13,5),(5,13),(13,13),(2,2),(16,2),(2,16),(16,16)],
-            SoftBlockDensity=1,MaxSoftBlocks=16,OpeningCoverPerSpawn=1,
+            SoftBlockDensity=1,MaxSoftBlocks=64,OpeningCoverPerSpawn=1,
             CoverAreas=[
-                new("central-paving",.25,6,12,6,12){Centers=[(7,9),(9,7),(11,9),(9,11)]},
-                new("northwest",.1875,1,8,1,8){Centers=[(4,3),(4,6)]},
-                new("northeast",.1875,10,17,1,8){Centers=[(14,3),(14,6)]},
-                new("southwest",.1875,1,8,10,17){Centers=[(4,12),(6,15)]},
-                new("southeast",.1875,10,17,10,17){Centers=[(14,12),(12,15)]}],
-            // Continuous routes around each side of the center column.
+                new("central-paving",.125,6,12,6,12){Centers=[(7,9),(9,7),(11,9),(9,11)]},
+                new("northwest",.21875,1,8,1,8){Centers=[(4,3),(4,6)]},
+                new("northeast",.21875,10,17,1,8){Centers=[(14,3),(14,6)]},
+                new("southwest",.21875,1,8,10,17){Centers=[(4,12),(6,15)]},
+                new("southeast",.21875,10,17,10,17){Centers=[(14,12),(12,15)]}],
+            // A perimeter loop joins the corner starts; inner spawn avenues feed
+            // the continuous routes around each side of the center column.
             ClearCells=Enumerable.Range(1,17).SelectMany(x=>Enumerable.Range(1,17).Select(z=>(X:x,Z:z)))
-                .Where(c=>c.X is 8 or 10||c.Z is 8 or 10||
+                .Where(c=>c.X is 2 or 8 or 10 or 16||c.Z is 2 or 8 or 10 or 16||
+                    c.X is >=5 and <=13&&c.Z is 5 or 13||
                     c.X is >=6 and <=12&&c.Z is >=6 and <=12&&Math.Abs(c.X-9)+Math.Abs(c.Z-9)>3).ToHashSet(),
         };
     }

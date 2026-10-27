@@ -53,12 +53,15 @@ public partial class ArenaView
             _targets[id]=PositionOf(p);
             if(!_playerMotion.TryGetValue(id,out var motion))_playerMotion[id]=new SnapshotMotion(node.Position,_snapshotTick);
             else motion.Push(_targets[id],_snapshotTick);
-            float angle=Mathf.Atan2(F(p,"fx"),F(p,"fz"));_facings[id]=angle;
+            float angle=Mathf.Atan2(F(p,"fx"),F(p,"fz"));_facings[id]=angle;_lastLooks[id]=(color,angle);
             if(p.TryGetProperty("latchedTo",out var latch)&&latch.ValueKind==JsonValueKind.String)_ghostHosts[id]="p:"+latch.GetString();
             else _ghostHosts.Remove(id);
-            ((BomberModel)node).Pose(p.GetProperty("carrying").ValueKind!=JsonValueKind.Null,p.GetProperty("stunned").GetBoolean(),ghost);
+            var carrying=p.GetProperty("carrying");
+            ((BomberModel)node).Pose(carrying.ValueKind!=JsonValueKind.Null,p.GetProperty("stunned").GetBoolean(),ghost,carrying.ValueKind==JsonValueKind.String&&carrying.GetString()=="player");
             bool falling=p.TryGetProperty("falling",out var fall)&&fall.GetBoolean();
-            ((BomberModel)node).RecoveryPose(p.TryGetProperty("carriedBy",out var heldBy)&&heldBy.ValueKind==JsonValueKind.String,!falling&&p.TryGetProperty("airborne",out var air)&&air.GetBoolean());
+            bool held=p.TryGetProperty("carriedBy",out var heldBy)&&heldBy.ValueKind==JsonValueKind.String;
+            if(held)_holders[id]="p:"+heldBy.GetString();else _holders.Remove(id);
+            ((BomberModel)node).RecoveryPose(held,!falling&&p.TryGetProperty("airborne",out var air)&&air.GetBoolean());
             if(p.TryGetProperty("pickupSerial",out var serial))
             {
                 int value=serial.GetInt32();
@@ -71,6 +74,9 @@ public partial class ArenaView
                 _pickups[id]=value;
             }
         }
+        // A held player lies across the carrier's shoulders, so it turns with them.
+        foreach(var (victim,carrier) in _holders)
+            if(_facings.TryGetValue(carrier,out var carrierFacing))_facings[victim]=carrierFacing;
         foreach(var b in data.GetProperty("bombs").EnumerateArray())
         {
             string id="b:"+b.GetProperty("id").GetString();seen.Add(id);
@@ -124,7 +130,7 @@ public partial class ArenaView
         foreach(string id in _entities.Keys)if(!seen.Contains(id))_staleEntities.Add(id);
         foreach(string id in _staleEntities)
         {
-            _entities[id].QueueFree();_entities.Remove(id);_targets.Remove(id);_playerMotion.Remove(id);_facings.Remove(id);_ghostHosts.Remove(id);
+            _entities[id].QueueFree();_entities.Remove(id);_targets.Remove(id);_playerMotion.Remove(id);_facings.Remove(id);_ghostHosts.Remove(id);_holders.Remove(id);
         }
         _staleEntities.Clear();
         UpdateThrowPreviews(data,_softBlockBits);

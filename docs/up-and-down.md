@@ -17,8 +17,8 @@ The old filled 23×19 terraces and 88-crate farm are superseded.
   surfaces. Exposed edges have ordinary gravity and lethal water contact.
 - The first four spawns occupy the ring corners; four additional starts support
   this project's eight-player matches on the upper perimeter.
-- Normal cover is eight blocks below and two on each middle pier, selected
-  from an authored paired arrangement. Ring, crown, bridges, center lanes and
+- Normal cover is 36 blocks: twelve below and twelve on each middle pier,
+  sampled randomly beside clear center aisles. Ring, crown, bridges, center lanes and
   flights stay clear. Advanced block/drop rules still apply. Practice clears
   cover through its existing rules.
 - Sudden death uses the shared rising-water policy, beginning at the one-minute
@@ -28,13 +28,13 @@ The middle piers extend to the inward side-rail lips: ordinary inward drops
 land on stone, while exposed outward exits still reach water. Destructible
 blocks use original procedural gray stone cubes with pale worn rims and square
 insets, independent of the temple's sandstone/diamond model. Default cover has
-eight low blocks in pairs and two per pier; reduced Advanced block density
-selects a subset of those sites, and Practice remains empty.
+twelve random low blocks and twelve per pier; Advanced block density
+scales the random regional budgets, and Practice remains empty.
 
 Grid dimensions, elevations, exact flight offsets, additional spawns, block
-allocation and flood constants are **Blast Circuit tuning**. The twelve-block
-budget follows a plausible visual reading, not a verified original coordinate
-census. No original textures, models, music or reference scans ship in the game.
+allocation and flood constants are **Blast Circuit tuning**. The expanded 36-block
+budget is requested gameplay tuning; the former twelve-block layout followed
+a plausible visual reading, not a verified original coordinate census. No original textures, models, music or reference scans ship in the game.
 
 ## Rendered views
 

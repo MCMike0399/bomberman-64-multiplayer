@@ -15,4 +15,6 @@ public sealed class BlastHazard
     public float Radius { get; init; }
     public float LifeTimer { get; set; } = 0.4f; // seconds it stays hazardous
     public bool IsRed { get; init; }
+    public string? OwnerId { get; init; }
+    internal SoftBlockGrid CoverAtIgnition { get; init; } = new(0, 0);
 }

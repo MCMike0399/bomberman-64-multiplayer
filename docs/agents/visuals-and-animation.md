@@ -27,11 +27,12 @@ failed approaches; exact live values remain in source. Use the
 | Character mesh, rig, face and poses | [BomberModel](../../scripts/arena/models/BomberModel.cs); `model-profile`, `movement`, `walk-feel` |
 | Root interpolation and facing | [SnapshotMotion](../../scripts/arena/SnapshotMotion.cs), [ArenaView](../../scripts/arena/ArenaView.cs); `movement` |
 | Reusable mesh helpers | [ArtGeometry](../../scripts/rendering/ArtGeometry.cs); `asset-audit` |
-| Bomb shell/growth and pickup symbol | [BombModel](../../scripts/arena/models/BombModel.cs), [PowerupModel](../../scripts/arena/models/PowerupModel.cs); `pump-growth`, `loot-opening` |
+| Bomb shell/growth and pickup symbol | [BombModel](../../scripts/arena/models/BombModel.cs), [PowerupModel](../../scripts/arena/models/PowerupModel.cs); `pump-growth`, `loot-opening`, `pickup-showcase` |
 | Terrain visuals and height conversion | [TempleStageView](../../scripts/arena/stages/TempleStageView.cs); `traversal`, `framing`, `hurry-water` |
 | Stone/water shaders and lighting | [ArtMaterials](../../scripts/rendering/ArtMaterials.cs), ArenaView; graphical `asset-audit`, `presentation` |
 | Perspective framing/shake | [BattleCameraRig](../../scripts/arena/BattleCameraRig.cs); `framing` at supported aspect ratios |
-| Blast/action/exit visuals | [ExplosionView](../../scripts/arena/effects/ExplosionView.cs), [KickBurst](../../scripts/arena/effects/KickBurst.cs), [ExitEffect](../../scripts/arena/effects/ExitEffect.cs); `presentation`, `kick-physics` |
+| Blast/action/exit visuals | [ExplosionView](../../scripts/arena/effects/ExplosionView.cs), [KickBurst](../../scripts/arena/effects/KickBurst.cs), [ExitEffect](../../scripts/arena/effects/ExitEffect.cs), [BurnoutEffect](../../scripts/arena/effects/BurnoutEffect.cs); `presentation`, `kick-physics`, `mishap-feel` |
+| Knockdown, held and death poses | [BomberModel.Mishaps](../../scripts/arena/models/BomberModel.Mishaps.cs), [BomberModel.Burnout](../../scripts/arena/models/BomberModel.Burnout.cs); `mishap-feel`, `grapple` |
 | Event/audio playback | [BattleAudio](../../scripts/audio/BattleAudio.cs), [SoundSynth](../../scripts/audio/SoundSynth.cs); audio executable tests plus `presentation` |
 
 These are original code-generated meshes/materials/audio, not imported original
@@ -125,6 +126,40 @@ Keep local/world conversions explicit (`ToGlobal`, arena-local attachment and
 `TempleStageView.HeightScale`). `BombThrowRules` owns authority launch height;
 changing a cosmetic socket cannot repair a low physical throw launch.
 
+## Knockdown, held and blast-death poses (2026-10-27 source work)
+
+Original Bomberman 64 battle footage (inspected frame by frame, not shipped):
+a blasted player becomes a burning, flailing heap that is briefly flung up,
+thrashes for roughly 1.5 seconds and vanishes in a white smoke puff; stunned
+players show spinning sparkles. The user remembered that death as funny, so the
+gag is timing and exaggeration, not gore or copied assets.
+[BomberModel.Mishaps](../../scripts/arena/models/BomberModel.Mishaps.cs) layers
+three convex sub-poses over `_downBlend`; the weights freeze while recovering,
+so leaving any of them never pops:
+
+- **Dazed** (grounded stun): flat on the back about a belly pivot, rocking, boots
+  paddling the air, head lolling, swirl eyes (12 cached conforming spiral meshes,
+  swapped rather than rotated so they stay on the curved face) and the existing
+  stars orbiting the actual head. Impact squash on `knockdown`/`player-land`;
+  `recover`/`player-release` add a hop and a head shake.
+- **Tumbling** (impact or thrown flight): a starfish backflip that finishes on the
+  nearest whole turn and unwinds it (antenna spring shifted with it) before recovery.
+- **Held**: face-up across the carrier's raised gloves, wriggling, bicycling and
+  windmilling, squeezed `> <` eyes. `ArenaView` turns the victim with the carrier and
+  pins its X/Z to the carrier's rendered root; the carrier teeters and spreads its arms.
+
+Blast deaths (not water/fall) spawn [BurnoutEffect](../../scripts/arena/effects/BurnoutEffect.cs)
+with the player's last suit color/facing; [BomberModel.Burnout](../../scripts/arena/models/BomberModel.Burnout.cs)
+poses a separate stand-in: white zap, soot with white eyes and a sizzling antenna
+fuse, a fling and panicked hops while running in place and windmilling inside
+licking flames, a stiff beat, then a crumble hidden by the smoke puff (2.4 seconds
+total). Authority is unchanged; a fresh ghost fades in over 1.6 seconds instead of
+popping on top of the gag. `EffectWarmup` renders the zap, flame and smoke stages.
+The `mishap-feel` journey uses the real grapple setup (kicked-bomb knockdown, grab,
+remote snipe) and a fixed pose/burnout sheet for screenshots. Its numeric checks
+are mechanics; whether the gag is funny is the user's call. Matched before/after
+captures and hashes: [knockout-grab-death](../images/knockout-grab-death/manifest.json).
+
 ## Rejected experiments: do not repeat them blindly
 
 | Failure | Why it passed superficial checks | Better check / retained lesson |
@@ -170,6 +205,15 @@ convert to render height through one `HeightScale` (currently 1.35). Keep floors
 ramps, shoreline, actors, bombs and previews consistent. Foundation/water art may
 suggest the pyramid grows from the ground without inventing a safe floor. A prettier
 waterline cannot change where authority actually kills or supports a player.
+
+Pyramid (Sunken Temple) uses a 30-degree battle-camera elevation so the tall
+terraces fit closer without filling the sides with sea. Keep the complete
+playable terrain and standing-character headroom inside the existing HUD-safe
+band; do not crop the outer walkways to zoom. Other arenas retain their own
+camera directions. The graphical `framing` journey checks 16:9 and 16:10 and
+requires Pyramid to occupy at least 60% of the view width. Recheck
+`graphics-settings` after camera edits because blur/haze bounds follow the fit.
+[Before/after captures and measured framing](../images/pyramid-framing/README.md).
 
 Temple stair backing must end below the pale .036-unit tread, whose top retains
 its authored step height. Full-height backing shares the tread's top plane and
@@ -289,6 +333,10 @@ The exterior now uses a Blue Resort-informed fortified reservoir: animated teal
 water, quays, blue roofs, sparse rounded trees and a slow waterwheel. It shares
 other outdoor arenas' sky, lighting, water presets and depth cues. The landscape
 is an original extension, not an exterior recovered from Greedy Trap footage.
+The waterwheel rotates alongside the west quay in the canal, on a fixed
+axle and bank-mounted pedestal. Keep the rotating timber clear of the bank
+and fortress throughout its turn; `greedy-canal` retains the geometry regression
+and labelled inspection views at every graphics preset.
 All scenery stays outside/below play, remains separate from compression and is
 hidden in the menu miniature. [Background sources](../greedy-trap-background-research.md).
 
@@ -579,6 +627,39 @@ boot pickup represents the temporary Haste player buff;
 Focus uses a cyan target symbol. Charge progress drives tension before the accepted
 pump animation. The fifth-tier Pyramid summit is a low mosaic, keeping playable
 space and rear water falls visible. Recheck camera fit on all enlarged arenas.
+
+## Pickup personality (2026-10-27 source work)
+
+The user asked for pickups with more personality that follow the existing toy
+style. `PowerupModel` keeps its root scale, unchanged gold plate, enlarged icon
+subtree and bob, and changes only what sits on and above the plate:
+
+- **Stamped coin.** An ink lip under the plate echoes the menu's stamped keys;
+  an inset badge names the family: coral upgrades (Blast/Bomb up), aqua
+  abilities (Heart/Focus), indigo bomb types (Remote/Power/Bounce), mint helpful
+  effects (Tiny/Haste) and violet hindering effects (Big/Slow). At battle
+  distance the badge and silhouette carry recognition; faces read up close.
+- **Faces.** Flame, bombs, heart, bounce ball, Tiny/Big heads and the snail use
+  the bomber's simple tall eyes (cream on dark shells) and blink. The Power bomb
+  frowns; the bounce ball's eyes are closed ^ ^ strokes. No white glint dots:
+  the user found small bright highlights distracting.
+- **Symbols.** Flame with tongues; bombs with fuse and spark (Power bomb's spark is
+  the blue of its blast); a blue remote with the remote bomb's green lamp; a
+  bomber head small or swollen with inward/outward chevrons for Tiny/Big; a
+  winged sneaker for Haste and a snail for Slow.
+- **Motion.** Icons sway toward the battle camera and twirl once every 4.2 s at a
+  position-derived phase instead of spinning continuously. A short ease-out-back
+  pop plays when a reward appears. Each kind has its own idle: flicker, lub-dub
+  beat, hop with squash, closing reticle brackets, breathing head, running boot
+  and flapping wings, creeping snail with wobbling stalks, blinking lamp.
+- **Budget.** Faces, trim and the stand skip the shadow pass. Icons stay within
+  the asset audit's bob clearance above the plate.
+
+`pickup-showcase` captures a labelled studio lineup of all eleven kinds at the
+battle-camera angle (two animation instants) plus both restricted Sunken Temple
+practice caches from the battle camera and a closer inspection camera.
+[Before/after captures and receipts](../images/pickup-personality/manifest.json). Agent review is not
+user approval of the art.
 
 ## Rock Garden reconstruction (2026-10-24)
 

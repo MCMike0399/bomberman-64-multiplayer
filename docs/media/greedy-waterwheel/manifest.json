@@ -1,0 +1,74 @@
+{
+  "baseline": "d9936e5907fab2a8ab9c01c739248571c73f5c7e",
+  "renderer": "Metal 4.0 / Forward+ / Apple Paravirtual device (Apple5)",
+  "fixture": "greedy-canal, real local two-human Greedy Trap battle, seed 64, Midday lighting; inspected unedited viewport PNGs",
+  "comparison": "Before/after High use the same camera pose, settings and battle fixture. Ambient/water phases may differ. Medium and Low are captured later in the same battle.",
+  "inspectionCamera": {
+    "position": [
+      -10,
+      10,
+      17
+    ],
+    "lookAt": [
+      -3,
+      -0.3,
+      7
+    ]
+  },
+  "images": [
+    {
+      "file": "before-high.png",
+      "sourceCapture": "artifacts/greedy-canal-before/20261027T200045.778739Z-greedy-canal/greedy-canal-inspection-high.png",
+      "sha256": "64410d28d4b98f11638c2357def245c9e85bb6772fbe61fb91863025169f33bf",
+      "preset": "High",
+      "view": "labelled canal inspection",
+      "width": 1280,
+      "height": 800
+    },
+    {
+      "file": "after-high.png",
+      "sourceCapture": "artifacts/greedy-verified-regression/20261027T200708.353400Z-greedy-trap-regression/greedy-canal-inspection-high.png",
+      "sha256": "edea8d5d8263f9fc7502fa27e28247108ca67229e02f38b2a1964582105f786a",
+      "preset": "High",
+      "view": "labelled canal inspection",
+      "width": 1280,
+      "height": 800
+    },
+    {
+      "file": "after-medium.png",
+      "sourceCapture": "artifacts/greedy-verified-regression/20261027T200708.353400Z-greedy-trap-regression/greedy-canal-inspection-medium.png",
+      "sha256": "77ea3fa6cf346336af8c4c752384c38244c6b68eaa6ad643a23f6de6a430deb8",
+      "preset": "Medium",
+      "view": "labelled canal inspection",
+      "width": 1280,
+      "height": 800
+    },
+    {
+      "file": "after-low.png",
+      "sourceCapture": "artifacts/greedy-verified-regression/20261027T200708.353400Z-greedy-trap-regression/greedy-canal-inspection-low.png",
+      "sha256": "37f05d2b7de8a631b924353cb0fce9d1ef5815d7dbb863de85b22759a2a94f48",
+      "preset": "Low",
+      "view": "labelled canal inspection",
+      "width": 1280,
+      "height": 800
+    },
+    {
+      "file": "after-battle-high.png",
+      "sourceCapture": "artifacts/greedy-verified-regression/20261027T200708.353400Z-greedy-trap-regression/greedy-canal-battle-high.png",
+      "sha256": "44043b227a4377f492fbf598e5ddd1f3c0693fd7eae5e73b7689077240f06409",
+      "preset": "High",
+      "view": "ordinary battle camera",
+      "width": 1280,
+      "height": 800
+    },
+    {
+      "file": "after-motion-high.png",
+      "sourceCapture": "artifacts/greedy-verified-regression/20261027T200708.353400Z-greedy-trap-regression/greedy-canal-motion-high.png",
+      "sha256": "78ca1c190a11937f1b8358a38340b7e114012ec3ddcb823d4c90484d4c2f40ff",
+      "preset": "High",
+      "view": "labelled canal inspection, later animation phase",
+      "width": 1280,
+      "height": 800
+    }
+  ]
+}

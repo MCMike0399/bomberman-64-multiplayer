@@ -41,6 +41,8 @@ public partial class GameRoot : Node3D
     private string _screenName="Modes", _settingsReturn="Modes", _pauseReturn="Match", _menuRoute="Modes";
     private readonly Stack<string> _menuHistory=[];
     private int _partyMatch=-1;
+    private bool _postMatchSetup;
+    private SessionSettings? _startAfterSettings;
     private int _networkGeneration;
     private PlayerPreferences _preferences=new();
     private GraphicsPreset? _appliedGraphics;
@@ -95,7 +97,11 @@ public partial class GameRoot : Node3D
         var metricsLayer=new CanvasLayer {Layer=90};AddChild(metricsLayer);
         _performanceBar=new PerformanceBar {Name="PerformanceBar",Visible=false};metricsLayer.AddChild(_performanceBar);
         _menu.AppearanceChanged+=index=>{if(_session is NetworkSession network)network.SetAppearance(index);};
-        _menu.Navigation+=Navigate;_menu.BackRequested+=Back;_menu.ReplayRequested+=Replay;
+        _menu.Navigation+=Navigate;_menu.BackRequested+=Back;_menu.ReplayRequested+=ContinueAfterResults;
+        _menu.RoomSettingsChanged+=()=>
+        {
+            if(_postMatchSetup&&_session is NetworkSession {IsLeader:true,Party.Phase:"lobby"} room&&!room.Party.PublicRoom)room.SetRoomSettings(_menu.OnlineSettings);
+        };
         _menu.LocalRequested+=StartConfigured;_menu.OnlineRequested+=StartConfiguredOnline;
         _hud.LeaveRequested+=OpenGameMenu;_hud.RestartRequested+=Replay;
         _menu.StartRoomRequested+=()=>{if(_session is NetworkSession network)network.RequestStart();};
@@ -208,14 +214,15 @@ public partial class GameRoot : Node3D
     }
     public void Back()
     {
-        if(ScreenName=="Advanced"){ScreenName="Setup";_menu.CloseAdvanced();return;}
+        if(ScreenName=="Advanced"){ScreenName="Setup";_menu.CloseAdvanced();if(_postMatchSetup)RefreshMapSelection();return;}
+        if(_postMatchSetup&&ScreenName=="Setup"){ReleaseSession();Navigate("Online",restoreFocus:true);return;}
         if(_editingRoom&&ScreenName=="Setup"){_editingRoom=false;ShowPartyLobby(restoreFocus:true);return;}
         if(ScreenName=="Settings"){RestoreScreen(_settingsReturn);return;}
         if(ScreenName=="Pause"){ResumeGame();return;}
         if(_connecting){CancelConnection();_menu.SetBusy(false,"Connection cancelled.");ScreenName="Online";_menu.ShowScreen("Online",restoreFocus:true);return;}
         if(_session!=null)
         {
-            string target=_trainingSession?"Tutorial":_session is NetworkSession&&ScreenName is "Lobby" or "Results"?"Online":"Modes";
+            string target=_session is LocalSession&&ScreenName=="Results"?"Setup":_trainingSession?"Tutorial":_session is NetworkSession&&ScreenName is "Lobby" or "Results"?"Online":"Modes";
             ReleaseSession();Navigate(target,restoreFocus:true);return;
         }
         Navigate(_menuHistory.TryPop(out var previous)?previous:"Modes",restoreFocus:true);
@@ -266,11 +273,13 @@ public partial class GameRoot : Node3D
     {
         if(screen=="Pause"){ScreenName="Pause";_menu.Visible=true;_menu.SetOverlay(LatestState!=null);_menu.ShowPause(_session is NetworkSession,_trainingSession,_tutorialLessonId,restoreFocus:true);return;}
         if(screen=="Match"&&_session!=null){EnterMatch();return;}
+        if(screen=="Setup"&&_postMatchSetup){ScreenName="Setup";_menu.ShowScreen("RematchSetup",restoreFocus:true);RefreshMapSelection();return;}
         if(screen=="Lobby"&&_session!=null){ShowPartyLobby(restoreFocus:true);return;}
         Navigate(screen,restoreFocus:true);
     }
     private void ShowPartyLobby(bool restoreFocus=false)
     {
+        if(_partyMatch>=0&&_session is NetworkSession {Party.Phase:"lobby"}){ShowMapSelection();return;}
         _session?.ReleaseInputs();ControllerHub.Current.StopVibration();ControllerHub.Current.RearmControls();
         ScreenName="Lobby";_arena.Visible=false;_hud.Visible=false;_menu.SetOverlay(false);_menu.Visible=true;_menu.ShowScreen("Lobby",restoreFocus);
     }
@@ -355,10 +364,13 @@ public partial class GameRoot : Node3D
                         _partyMatch=party.Match;_arena.ResetMatch();_hud.Reset();LatestState=null;LatestStage=null;ControllerHub.Current.RearmControls();
                         EnterMatch();
                     }
-                    else if(party.Phase=="lobby"&&ScreenName is "Match" or "Results")ShowPartyLobby();
+                    else if(party.Phase=="lobby"&&ScreenName is "Match" or "Results")ShowMapSelection();
+                    else if(_postMatchSetup)RefreshMapSelection();
                     else if(party.Phase=="lobby"&&ScreenName is "Pause" or "Settings")_pauseReturn="Lobby";
+                    if(_startAfterSettings is {} pending&&party.Phase=="lobby"&&party.Settings is {} accepted&&SessionSettings.FromWire(accepted)==pending)
+                    {_startAfterSettings=null;(session as NetworkSession)?.RequestStart();}
                     break;
-                case "party.error":_menu.Notice(data.GetProperty("message").GetString()??"Room settings rejected.");break;
+                case "party.error":_startAfterSettings=null;_menu.Notice(data.GetProperty("message").GetString()??"Room settings rejected.");break;
                 case "party.result":
                     _result=data.Clone();session.ReleaseInputs();ControllerHub.Current.StopVibration();ScreenName="Results";_hud.Visible=false;_menu.SetOverlay(false);_menu.Visible=true;_menu.ShowResults(LatestState,_result,true);break;
                 case "appearance":

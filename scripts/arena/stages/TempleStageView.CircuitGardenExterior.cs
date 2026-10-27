@@ -49,8 +49,8 @@ public partial class TempleStageView
     {
         var scenery=_scenery!;
         float water=GreedyMoatHeight;
-        Rowboat(scenery,new(-2.6f,water,4.2f),.3f,new("c2573f"),0);
-        Rowboat(scenery,new(Width+2.6f,water,Depth-4.5f),-2.6f,new("3e6f8e"),1.8f);
+        Rowboat(scenery,new(-2.6f,water,4.2f),.3f,new("c2573f"),0).Name="GreedyWestRowboat";
+        Rowboat(scenery,new(Width+2.6f,water,Depth-4.5f),-2.6f,new("3e6f8e"),1.8f).Name="GreedyEastRowboat";
         Sailboat(scenery,new(Width*.7f,water,-2.8f),Mathf.Pi/2+.2f,new("f2f0e6"),new("4c8990"),.9f);
         Gull(scenery,new(-6.4f,5.6f,Depth/2f),2.6f,.5f,0);
         Gull(scenery,new(Width+6.4f,6.1f,4),2.2f,-.6f,2);

@@ -9,16 +9,18 @@ All shipped geometry, textures and animation are original procedural work.
 
 The 19×19 layout has seventeen playable cells across, tall glacier side walls,
 a lower rear rim and a low near rim that preserves the ordinary battle view.
-Sixteen pointed violet ice cones follow the supplied screenshot's irregular
-composition. Opening footage shows a different arrangement: this composition
-is an authored adaptation, not a recovered original placement algorithm.
+64 pointed violet ice cones are sampled independently within four quadrants.
+Only the perimeter loop, central cross and spawn escape cells are reserved.
+Coordinates are not mirrored and no fixed cone pattern is filled at 100%.
+These authored safety regions and budgets are gameplay tuning rather than a
+recovered original placement algorithm.
 After the user requested larger spires, their tops rise **1.755 render units**
 (1.3 authority units), just over twice the initial height. Their broad bases
 span .94 units. Stage `coverHeight` drives both the mesh and projectile
 obstruction/landing; tall cover also extends blast shielding.
 The first four seats start at the corners; four additional seats start on the
 perimeter. Spawn escape cells remain clear. Advanced block percentages apply to
-the sixteen-cone budget; practice has no cover. Bomb destruction and loot use
+the 64-cone budget; practice has no cover. Bomb destruction and loot use
 ordinary rules and the configured item pool/drop probability.
 
 ## Weather and sudden death
