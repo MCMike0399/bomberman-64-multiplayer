@@ -1,3 +1,49 @@
+# v0.38.0 delivered
+
+Published **2026-10-27 01:44:36 UTC**: [v0.38.0 / signed update](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.38.0).
+Merged all four open ready PRs: [pointer aiming and diagonal throws #32](https://github.com/MCMike0399/bomberman-64-multiplayer/pull/32),
+[frame-rate cap #33](https://github.com/MCMike0399/bomberman-64-multiplayer/pull/33),
+[sudden-death walls, Blizzard collision and fireballs #34](https://github.com/MCMike0399/bomberman-64-multiplayer/pull/34),
+and [archived-client release gates #35](https://github.com/MCMike0399/bomberman-64-multiplayer/pull/35).
+Immutable release/tag source: `bfc7ded5e1ba4813539fabd23b8e36fdbd68480b`.
+Identity: **v0.38.0/build 45/schema 6**, token `6/0.38.0/45`.
+
+- [Trusted Verification 40432837691](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40432837691)
+  passed public, managed/network, headless, package and both required archived-client
+  launch gates. Managed checks cover 2,889 game, 377 client, 98 AI and 72 soak cases,
+  plus real WebSocket, relay, admission, match cleanup and fleet tests.
+- The archived app passed nine saved-settings startup cases on hosted macOS 15.7.9,
+  `VirtualMac2,1`, Apple Paravirtual Metal. The slowest launch took 72.564 seconds.
+  The actual signed v0.37.0 → v0.38.0 update passed install, intentional rollback and
+  saved High/fullscreen relaunch on its first attempt.
+- The first candidate's [run 40431267106](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40431267106)
+  failed its first cold startup at 90 seconds, with no engine error in its log;
+  the other eight startup cases and all updater transactions passed. The gate now
+  budgets 180 seconds for the single cold launch, retaining 90 seconds for later
+  launches, all nine cases and fatal crash/error/capture/settings checks. A deadline
+  regression, public checks and documentation checks passed locally before the
+  final trusted run. The earlier failed run was not promoted.
+- [Protected rollout and publication 40433948077](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40433948077)
+  passed candidate, validation, deployment, publication and post-publish verification.
+  Its `deployment-receipt` confirms public, primary and fallback identities and live
+  match/cleanup probes for this exact commit/token.
+- The `published-release-receipt` confirms anonymous downloads, both P-256 signatures,
+  signed inventory, tag/source identity, latest stable channel and byte equality
+  with both original CI archives. Player-facing release notes describe the changes.
+
+Published archive SHA-256:
+
+```text
+Mac:    8145631d0c1951003593a60f8f334dd8d0bce141406d9e4a4153aeb022c9c4f4
+Server: 8e86db81441da110f1c621359dfaade30447e4bfe20ea6fb16d54a1db2161306
+```
+
+The PRs retain their focused graphical evidence. The optional full CI Metal journey
+job was skipped; the new launch gates establish actual archived-client rendering
+and updating, not a new complete gameplay graphical suite, physical controller
+feel, native GPU performance or user art approval. No local app installation was
+performed; existing users receive the signed update through the normal updater.
+
 # Release pipeline gates — source verification
 
 **2026-10-27, source change; no release.** v0.35.0 passed every existing gate,
@@ -39,7 +85,7 @@ anonymously and found them byte-identical to Verification
 [40421664611](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40421664611),
 in 9–16 s.
 
-Limitations: the trusted gate jobs, the settings report from a freshly built
+Historical pre-merge limitations (superseded by the v0.38 delivery above): the trusted gate jobs, the settings report from a freshly built
 client and the post-publish job have not yet run on main. The first main push
 exercises the gates and fails closed. Hosted paravirtual Metal establishes launch
 and update behavior, not native-GPU performance, physical controllers or art
