@@ -47,14 +47,18 @@ async Task RunCase(string name,string archive,bool success,bool highStartup=fals
     object Asset(string file)=>new{name=file,browser_download_url=Base(file)};
     byte[] feed=JsonSerializer.SerializeToUtf8Bytes(new{draft=false,prerelease=false,tag_name="v"+version,assets=new[]{Asset(UpdateRelease.ArchiveName),Asset(UpdateRelease.ManifestName),Asset(UpdateRelease.ManifestName+".sig")}});
     using var service=new UpdateService(new FixtureHttp(new(){[UpdateRelease.Feed.AbsoluteUri]=feed,[Base(UpdateRelease.ArchiveName)]=archiveBytes,[Base(UpdateRelease.ManifestName)]=manifest,[Base(UpdateRelease.ManifestName+".sig")]=signature}),Convert.ToBase64String(key.ExportSubjectPublicKeyInfo()));
-    using var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(100));
+    // Fixture budget only; the installer keeps its own 60 s handoff and 45 s health deadlines.
+    using var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(180));
     string? preferences=null;byte[]? savedPreferences=null;
     try
     {
         var release=await service.Check(oldVersion,timeout.Token)??throw new Exception("Missing fixture release");
         var prepared=await MacUpdateInstaller.Prepare(service,release,target,history,timeout.Token);
         var launch=new ProcessStartInfo(Path.Combine(target,"Contents/MacOS/Blast Circuit")){UseShellExecute=false,RedirectStandardOutput=true,RedirectStandardError=true};
-        foreach(var arg in new[]{"--windowed","--","--display-windowed","--smoke","--smoke-seconds=4"})launch.ArgumentList.Add(arg);
+        // While the helper waits (60 s) for this running app, run it headless: first-use pipeline
+        // compilation on a slow CI GPU must not decide the handoff. The relaunch always renders.
+        foreach(var arg in highStartup?new[]{"--windowed","--","--display-windowed","--smoke","--smoke-seconds=4"}:new[]{"--headless","--","--smoke","--smoke-seconds=4"})
+            launch.ArgumentList.Add(arg);
         using var old=Process.Start(launch)!;
         var stdout=old.StandardOutput.ReadToEndAsync();var stderr=old.StandardError.ReadToEndAsync();
         if(highStartup)

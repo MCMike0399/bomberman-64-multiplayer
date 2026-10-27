@@ -15,9 +15,11 @@ import zipfile
 SPEC = importlib.util.spec_from_file_location('promotion', Path(__file__).with_name('promote_release.py'))
 promotion = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(promotion)
+INSPECT_GATES = promotion.inspect_gates  # End-to-end tests below replace it; gate tests use the real check.
 SHA = 'a' * 40
 REPO = 'example/game'
 RELEASE = {'version': '0.15.0', 'build': '10', 'protocolRevision': 4, 'admissionToken': '4/0.15.0/10'}
+UPDATE_CASES = ['successful-install', 'failed-launch-rollback', 'successful-install-high-fullscreen']
 
 
 def write_package(directory, version='0.15.0', revision=SHA):
@@ -30,6 +32,22 @@ def write_package(directory, version='0.15.0', revision=SHA):
     digest = hashlib.sha256(archive.read_bytes()).hexdigest()
     (directory / (promotion.ARCHIVE + '.sha256')).write_text(digest + '  ' + promotion.ARCHIVE + '\n')
     (directory / 'build-metadata.json').write_text(json.dumps({'revision': revision, 'version': version, 'release': RELEASE, 'features': {'switch2UsbBackend': True}}))
+
+
+def write_gate(directory, name, version='0.15.0', build='10', **changes):
+    """Receipts in the shape tools/qa/startup_gate.py and update_from_published.py write."""
+    directory.mkdir(parents=True, exist_ok=True)
+    if name == promotion.release_gates.STARTUP_ARTIFACT:
+        receipt = {'schemaVersion': 1, 'gate': 'saved-settings-startup', 'passed': True, 'legacyReport': False,
+                   'app': {'version': version, 'build': build}, 'host': {'model': 'VirtualMac2,1'},
+                   'cases': [{'id': f'case-{index}', 'passed': True, 'seconds': 20,
+                              'report': {'graphics': 'high', 'adapter': 'Apple Paravirtual device'}} for index in range(9)]}
+    else:
+        receipt = {'schemaVersion': 1, 'gate': 'update-from-published', 'passed': True,
+                   'candidate': {'version': version, 'build': build}, 'previous': {'version': '0.14.0', 'sha256': 'b' * 64},
+                   'cases': [{'name': case} for case in UPDATE_CASES]}
+    receipt.update(changes)
+    (directory / 'summary.json').write_text(json.dumps(receipt))
 
 
 def write_server(directory):
@@ -59,6 +77,9 @@ class PromotionTests(unittest.TestCase):
         upload = patch.object(promotion, 'verify_uploaded')
         upload.start()
         self.addCleanup(upload.stop)
+        gates = patch.object(promotion, 'inspect_gates')
+        gates.start()
+        self.addCleanup(gates.stop)
         probe = patch.object(promotion, 'verify_connections')
         self.connection_probe = probe.start()
         self.addCleanup(probe.stop)
@@ -99,6 +120,48 @@ class PromotionTests(unittest.TestCase):
             (directory / 'build-metadata.json').write_text(json.dumps({'revision': SHA, 'version': '0.15.0', 'release': RELEASE}))
             with self.assertRaisesRegex(RuntimeError, 'feature manifest'):
                 promotion.inspect_package(directory, SHA, '0.15.0')
+
+    def test_launch_gate_receipts_must_pass_for_this_exact_client(self):
+        startup, update = promotion.release_gates.STARTUP_ARTIFACT, promotion.release_gates.UPDATE_ARTIFACT
+        failures = (
+            (startup, {'passed': False}, 'startup gate did not pass'),
+            (startup, {'legacyReport': True}, 'startup gate did not pass'),
+            (startup, {'app': {'version': '0.15.0', 'build': '9'}}, 'exact client'),
+            (startup, {'cases': []}, 'missing passing'),
+            (update, {'passed': False, 'skipped': 'candidate version is already the latest published release'}, 'did not pass every'),
+            (update, {'cases': [{'name': 'successful-install'}]}, 'did not pass every'),
+            (update, {'previous': {'version': '0.15.0'}}, 'older published'),
+            (update, {'candidate': {'version': '0.15.0', 'build': '11'}}, 'exact client'),
+            (update, {'baseline': 'explicit'}, 'latest published'),
+            (update, {'failedAttempts': [{'attempt': 1, 'diagnostics': {'crashReports': {'Blast Circuit.ips': []}}}]}, 'crashed'),
+        )
+        for broken, changes, message in failures:
+            def github(*arguments):
+                name = arguments[arguments.index('--name') + 1]
+                write_gate(Path(arguments[arguments.index('--dir') + 1]), name, **(changes if name == broken else {}))
+                return ''
+            with self.subTest(broken=broken, changes=changes), patch.object(promotion, 'gh', side_effect=github):
+                with self.assertRaisesRegex(RuntimeError, message):
+                    INSPECT_GATES(REPO, '12', '0.15.0')
+
+    def test_passing_gates_return_compact_evidence(self):
+        def github(*arguments):
+            write_gate(Path(arguments[arguments.index('--dir') + 1]), arguments[arguments.index('--name') + 1])
+            return ''
+        with patch.object(promotion, 'gh', side_effect=github):
+            evidence = INSPECT_GATES(REPO, '12', '0.15.0')
+        self.assertEqual('0.14.0', evidence['update']['from'])
+        self.assertEqual(9, len(evidence['startup']['cases']))
+
+    def test_run_without_both_gate_jobs_is_not_promotable(self):
+        valid = {'head_repository': {'full_name': REPO}, 'head_branch': 'main', 'status': 'completed',
+                 'conclusion': 'success', 'event': 'push', 'path': '.github/workflows/ci.yml', 'head_sha': SHA}
+        jobs = [{'name': name, 'conclusion': 'success'} for name in ('Public contracts and audio', 'Trusted managed and network',
+                'Trusted Godot headless', 'Trusted Apple Silicon package', promotion.release_gates.STARTUP_JOB)]
+        jobs.append({'name': promotion.release_gates.UPDATE_JOB, 'conclusion': 'skipped'})
+        with patch.object(promotion, 'gh', side_effect=[json.dumps(valid), json.dumps({'jobs': jobs})]):
+            with self.assertRaisesRegex(RuntimeError, 'jobs did not all pass'):
+                promotion.inspect_run(REPO, '12')
 
     def test_claimed_controller_feature_requires_real_archived_libraries(self):
         with tempfile.TemporaryDirectory() as temporary:

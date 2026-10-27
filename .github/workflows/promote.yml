@@ -144,3 +144,30 @@ jobs:
           args=(--run-id "$RUN_ID" --version "$VERSION" --expected-sha "$EXPECTED_SHA" --signing-key "$key")
           if [[ "$PUBLISH_RELEASE" == true ]]; then args+=(--publish); fi
           python3 tools/ci/promote_release.py "${args[@]}"
+
+  published:
+    name: Verify published release
+    needs: [validate, draft]
+    if: always() && inputs.publish && needs.draft.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          ref: ${{ needs.validate.outputs.revision }}
+      - name: Verify anonymous downloads, signatures, tag, latest channel and CI byte equality
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.run_id }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          python3 tools/ci/verify_published.py --version "$VERSION" --run-id "$RUN_ID" \
+            --output artifacts/published-release-receipt.json > /dev/null
+          python3 tools/ci/release.py summarize-receipt artifacts/published-release-receipt.json >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: published-release-receipt
+          path: artifacts/published-release-receipt.json
+          if-no-files-found: error
+          retention-days: 30

@@ -151,6 +151,9 @@ public partial class GameRoot : Node3D
         BlastCircuit.Testing.PlaytestDriver.TryAttach(this);
     }
 
+    // Release startup gates compare these with the saved preferences they launched.
+    private string SmokeSettings()=>$"graphics={(_appliedGraphics is {} preset?GraphicsQuality.ToWire(preset):"none")} window={GetWindow().Mode.ToString().ToLowerInvariant()} size={GetWindow().Size.X}x{GetWindow().Size.Y} adapter={RenderingServer.GetVideoAdapterName()}";
+
     public void Navigate(string screen)=>Navigate(screen,restoreFocus:false);
 
     private void Navigate(string screen,bool restoreFocus)
@@ -306,7 +309,7 @@ public partial class GameRoot : Node3D
                     captured=DirAccess.MakeDirRecursiveAbsolute(folder)==Error.Ok
                         &&GetViewport().GetTexture().GetImage().SavePng(System.IO.Path.Combine(folder,_capture+".png"))==Error.Ok;
                 }
-                bool passed=captured&&(_capture is "menu" or "roster"||SnapshotCount>0);GD.Print($"{(passed?"GODOT_SMOKE_OK":"GODOT_SMOKE_FAILED")} {_capture} snapshots={SnapshotCount}");GetTree().Quit(passed?0:1);return;
+                bool passed=captured&&(_capture is "menu" or "roster"||SnapshotCount>0);GD.Print($"{(passed?"GODOT_SMOKE_OK":"GODOT_SMOKE_FAILED")} {_capture} snapshots={SnapshotCount} {SmokeSettings()}");GetTree().Quit(passed?0:1);return;
             }
         }
         UpdateMatchCursor();

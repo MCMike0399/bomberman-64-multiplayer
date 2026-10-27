@@ -12,6 +12,7 @@ import tempfile
 import zipfile
 import sys
 from release_identity import check_exports
+import release_gates
 from verify_deployment import targets_from_json, verify, verify_connections, placements_from_json
 
 ARTIFACT = 'Blast-Circuit-macos-arm64-ad-hoc'
@@ -37,16 +38,29 @@ def inspect_run(repository, run_id):
         raise RuntimeError('Promotion requires a successful completed Verification run from this repository main branch')
     # Overall success can include skipped jobs: require the actual package gate.
     jobs = json.loads(gh('api', f'repos/{repository}/actions/runs/{run_id}/jobs?per_page=100'))['jobs']
-    required = {'Public contracts and audio', 'Trusted managed and network', 'Trusted Godot headless', 'Trusted Apple Silicon package'}
+    required = {'Public contracts and audio', 'Trusted managed and network', 'Trusted Godot headless', 'Trusted Apple Silicon package',
+                release_gates.STARTUP_JOB, release_gates.UPDATE_JOB}
     passed = {item['name'] for item in jobs if item.get('conclusion') == 'success'}
     if not required.issubset(passed):
         raise RuntimeError('Required verification/package jobs did not all pass')
     artifacts = json.loads(gh('api', f'repos/{repository}/actions/runs/{run_id}/artifacts?per_page=100'))['artifacts']
-    for name in (ARTIFACT, SERVER_ARTIFACT):
+    for name in (ARTIFACT, SERVER_ARTIFACT, release_gates.STARTUP_ARTIFACT, release_gates.UPDATE_ARTIFACT):
         candidates = [item for item in artifacts if item['name'] == name and not item.get('expired')]
         if len(candidates) != 1:
             raise RuntimeError('Expected exactly one unexpired tested artifact: ' + name)
     return run['head_sha']
+
+
+def inspect_gates(repository, run_id, version, build=None):
+    """Re-validate the archived client's startup/update gate receipts from the same run."""
+    with tempfile.TemporaryDirectory(prefix='blast-release-gates-') as temporary:
+        folders = {}
+        for name in (release_gates.STARTUP_ARTIFACT, release_gates.UPDATE_ARTIFACT):
+            folders[name] = Path(temporary) / name
+            gh('run', 'download', str(run_id), '--repo', repository, '--name', name, '--dir', str(folders[name]))
+        return release_gates.summarize(folders[release_gates.STARTUP_ARTIFACT] / 'summary.json',
+                                       folders[release_gates.UPDATE_ARTIFACT] / 'summary.json', version,
+                                       build or check_exports()['build'])
 
 
 def require_current_main(repository, revision):
@@ -108,7 +122,7 @@ def verify_uploaded(repository, version, assets):
                 raise RuntimeError('Uploaded release bytes differ: ' + source.name)
 
 
-def inspect_package(directory, revision, version):
+def inspect_package(directory, revision, version, release=None):
     archive = directory / ARCHIVE
     receipt = (directory / (ARCHIVE + '.sha256')).read_text().strip()
     match = re.fullmatch(r'([0-9a-fA-F]{64})\s+\*?' + re.escape(ARCHIVE), receipt)
@@ -121,7 +135,7 @@ def inspect_package(directory, revision, version):
     metadata = json.loads((directory / 'build-metadata.json').read_text())
     if metadata.get('revision') != revision or metadata.get('version') != version:
         raise RuntimeError('Artifact source revision or version does not match the requested release')
-    if metadata.get('release') != check_exports() or metadata['release']['version'] != version:
+    if metadata.get('release') != (release or check_exports()) or metadata['release']['version'] != version:
         raise RuntimeError('Client release compatibility identity does not match the verified source')
     if metadata.get('features', {}).get('switch2UsbBackend') is not True:
         raise RuntimeError('Artifact feature manifest does not include the required Switch 2 USB backend')
@@ -138,7 +152,7 @@ def inspect_package(directory, revision, version):
     return archive
 
 
-def inspect_server(directory, revision, version):
+def inspect_server(directory, revision, version, release=None):
     archive = directory / SERVER_ARCHIVE
     receipt = (directory / (SERVER_ARCHIVE + '.sha256')).read_text().strip()
     match = re.fullmatch(r'([0-9a-fA-F]{64})\s+\*?' + re.escape(SERVER_ARCHIVE), receipt)
@@ -150,7 +164,7 @@ def inspect_server(directory, revision, version):
     if (metadata.get('revision') != revision or metadata.get('version') != version
             or metadata.get('kind') != 'framework-dependent-server' or metadata.get('targetFramework') != 'net10.0'):
         raise RuntimeError('Server artifact revision/version/runtime does not match the release')
-    if metadata.get('release') != check_exports() or metadata['release']['version'] != version:
+    if metadata.get('release') != (release or check_exports()) or metadata['release']['version'] != version:
         raise RuntimeError('Server release compatibility identity does not match the verified source')
     prefix = 'Blast-Circuit-server-dotnet10/'
     with zipfile.ZipFile(archive) as bundle:
@@ -210,6 +224,7 @@ def main(argv=None):
         directory = Path(temporary)
         gh('run', 'download', args.run_id, '--repo', args.repository, '--name', ARTIFACT, '--dir', str(directory))
         archive = inspect_package(directory, revision, version)
+        inspect_gates(args.repository, args.run_id, version)
         gh('run', 'download', args.run_id, '--repo', args.repository, '--name', SERVER_ARTIFACT, '--dir', str(directory))
         server = inspect_server(directory, revision, version)
         signed = []
@@ -225,7 +240,9 @@ def main(argv=None):
         notes = directory / 'release-notes.txt'
         notes.write_text(f'Apple Silicon client and portable .NET 10 server from {revision}.\n\n'
                          f'Verification: https://github.com/{args.repository}/actions/runs/{args.run_id}\n\n'
-                         'Managed, network, headless and export checks passed. Metal graphical validation is a separate optional lane. '
+                         'Managed, network, headless and export checks passed. The archived app also passed saved-settings startup on every '
+                         'graphics preset/display mode and an actual signed update from the latest published release. '
+                         'The full Metal journey suite is a separate optional lane. '
                          'Ad-hoc signature; Apple notarization and physical controller validation are not claimed.\n')
         assets = [str(archive), str(directory / (ARCHIVE + '.sha256')), str(server), str(directory / (SERVER_ARCHIVE + '.sha256')),
                   str(directory / 'server-build-metadata.json'), str(directory / 'build-metadata.json'), *signed]

@@ -42,6 +42,15 @@ update the current guide rather than silently reviving old behavior.
 
 ## Current decisions that supersede earlier experiments
 
+- Release pipeline (2026-10-26): trusted CI launches the archived client on a
+  hosted macOS VM's Metal renderer before any deployment/publication. It checks
+  saved-settings startup for every preset/display mode and an actual signed
+  update from the latest published release. Packaging runs beside managed tests;
+  a post-publish job verifies the public assets automatically. Routine releases
+  no longer need a local full Metal suite or hand-run download checks;
+  `release.py status` follows a commit. [Fast path](testing-and-delivery.md#ci-and-publication-boundaries),
+  [gates](../releases.md#release-gates).
+
 - v0.37 delivers CPU agency (PR #29) and exact shader early-outs (PR #30) ([receipt](../verification.md#v0370-delivered)). Bots
   no longer shuffle one cell while a player idles (an Easy escape horizon shorter
   than the Bouncing fuse), no longer stall in Blizzard gusts (steering leans into

@@ -1,3 +1,55 @@
+# Release pipeline gates — source verification
+
+**2026-10-27, source change; no release.** v0.35.0 passed every existing gate,
+yet players with saved High graphics crashed on launch and the updater rolled
+them back. The full Metal suite starts on Medium and package smoke is headless,
+so nothing launched the shipped archive with saved High before layout.
+This change adds two required launch gates on the archived client, runs packaging
+beside the managed tests, and verifies each published release automatically.
+[Design and policy](releases.md#release-gates).
+
+Pull requests cannot fetch the private dependency, so the trusted jobs first run
+on main after merge. Before merging, a temporary branch-only workflow ran the new
+tools on hosted `macos-15` (`VirtualMac2,1`, macOS 15.7.9, Apple Paravirtual
+Metal) against **published** clients. The updater transactions there were
+compiled against the published v0.36.0 client libraries:
+
+| Run | Observation |
+| --- | --- |
+| [40421429400](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40421429400) | Startup gate: v0.35.0 exits -11 (SIGSEGV) in High fullscreen/windowed menu and High gameplay; its six Low/Medium cases pass. v0.35.1 and v0.36.0 pass 9/9. The first launch takes 70–86 s and the rest 22–35 s. |
+| [40424460727](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40424460727) | Launch timing: the first launch on a runner takes 78 s (55 s of it pipeline preparation); a repeat or a fresh copy at a new path takes about 19 s. |
+| [40427644206](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40427644206) | v0.35.0 at default Medium, relaunched through Launch Services with the windowed override, passes 3/3, so Medium is not its failure. A healthy v0.36.0 update was rolled back once in two runs (missed the health deadline). |
+| [40428409395](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40428409395) | The v0.35.0 crash report was written about 30 s after its rollback, so a retry started before the report existed. Diagnostics now wait for reports and count them across all attempts. |
+| [40429596808](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40429596808) | Final policy: v0.34.0 to v0.35.0 passes install and rollback, then fails the saved High/fullscreen relaunch with an `EXC_BAD_ACCESS`/SIGSEGV report, which fails the gate immediately. v0.35.1 to v0.36.0 passes twice, once after one crash-free retry. |
+
+Earlier probe runs established the fixture changes. The fixture's old app now
+runs headless while the helper waits: first-use pipeline compilation exceeded the
+helper's 60 s handoff. The candidate is warmed under the guest's home, and the
+fixture's own per-case budget is 180 s. The installer's 60 s handoff, 45 s health
+deadline, signatures and rollback are unchanged.
+
+Local checks: the `public` profile passed. It includes 75 CI-tool and 25 QA-tool
+unit tests with real fixture P-256 signatures, tampering, crash-aware retries and
+gate-receipt rejection. All workflows pass actionlint 1.7.12, documentation
+links resolve, and the game and updater fixture build. A headless source smoke
+emitted the new settings report, which the gate parser reads. `verify_published.py`
+passed against live v0.36.0 and v0.37.0. Each run downloaded every asset
+anonymously and found them byte-identical to Verification
+[40410931197](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40410931197) and
+[40421664611](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40421664611),
+in 9–16 s.
+
+Limitations: the trusted gate jobs, the settings report from a freshly built
+client and the post-publish job have not yet run on main. The first main push
+exercises the gates and fails closed. Hosted paravirtual Metal establishes launch
+and update behavior, not native-GPU performance, physical controllers or art
+approval. A healthy relaunch can still miss the 45 s deadline there, so
+crash-free attempts may retry; a self-hosted Metal runner would remove that.
+Trusted Verification becomes about 17 minutes instead of 14 (public, package,
+then the update gate; up to about 24 with retries). The release time saved is the
+local full-suite and manual post-publish checks that routine releases no longer
+need.
+
 # v0.37.0 delivered
 
 Published **2026-10-27 00:01:03 UTC**: [v0.37.0 / signed update](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.37.0).

@@ -161,7 +161,8 @@ jobs:
 
   package:
     name: Trusted Apple Silicon package
-    needs: [managed, headless]
+    # Runs beside managed/headless; promotion still requires every trusted job to pass.
+    needs: public
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.KERNEL_CI_ENABLED == 'true'
     runs-on: macos-15
     timeout-minutes: 25
@@ -205,4 +206,81 @@ jobs:
           name: package-receipts
           path: artifacts/ci-reports
           retention-days: 7
+          if-no-files-found: warn
+
+  # Release gates launch the archived bytes players receive on a hosted macOS VM's
+  # real Metal renderer, in parallel. Deployment and publication require both
+  # jobs and re-validate their receipts (tools/ci/release_gates.py).
+  startup-gate:
+    name: 'Release gate: saved-settings startup'
+    needs: package
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.KERNEL_CI_ENABLED == 'true'
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: Blast-Circuit-macos-arm64-ad-hoc
+          path: artifacts
+      - name: Extract the exact tested archive
+        working-directory: artifacts
+        run: |
+          shasum -a 256 -c Blast-Circuit-macos-arm64.zip.sha256
+          ditto -x -k Blast-Circuit-macos-arm64.zip "$RUNNER_TEMP/candidate"
+      - name: Launch every saved graphics preset and display mode
+        run: python3 tools/qa/startup_gate.py --app "$RUNNER_TEMP/candidate/Blast Circuit.app" --output artifacts/release-gate-startup
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: release-gate-startup
+          path: |
+            artifacts/release-gate-startup/summary.json
+            artifacts/release-gate-startup/*/*.png
+          retention-days: 14
+          if-no-files-found: warn
+
+  update-gate:
+    name: 'Release gate: update from published'
+    needs: package
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.KERNEL_CI_ENABLED == 'true'
+    runs-on: macos-15
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Fetch pinned private dependency
+        env:
+          KERNEL_REPOSITORY: ${{ secrets.KERNEL_REPOSITORY }}
+          KERNEL_READ_TOKEN: ${{ secrets.KERNEL_READ_TOKEN }}
+          KERNEL_DEPLOY_KEY: ${{ secrets.KERNEL_DEPLOY_KEY }}
+          GITHUB_METADATA_TOKEN: ${{ github.token }}
+        run: python3 tools/ci/bootstrap_kernel.py
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: Blast-Circuit-macos-arm64-ad-hoc
+          path: artifacts
+      - name: Extract the exact tested archive
+        working-directory: artifacts
+        run: |
+          shasum -a 256 -c Blast-Circuit-macos-arm64.zip.sha256
+          ditto -x -k Blast-Circuit-macos-arm64.zip "$RUNNER_TEMP/candidate"
+      - name: Update the latest published app to this candidate (install, rollback, saved High/fullscreen)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/ci/update_from_published.py --app "$RUNNER_TEMP/candidate/Blast Circuit.app" --output artifacts/release-gate-update
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: release-gate-update
+          path: |
+            artifacts/release-gate-update/summary.json
+            artifacts/release-gate-update/attempt-*/transactions/summary.json
+          retention-days: 14
           if-no-files-found: warn
