@@ -45,10 +45,12 @@ jobs:
         include:
           - target: windows-x64
             runner: windows-2025
+            timeout: 60
           - target: linux-x64
             runner: ubuntu-24.04
+            timeout: 210
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 60
+    timeout-minutes: ${{ matrix.timeout }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -104,7 +106,7 @@ jobs:
         run: |
           if [ "$TARGET" = linux-x64 ]; then
             python tools/packaging/linux-desktop.py -- python tools/packaging/startup-desktop.py --target "$TARGET"
-            python tools/packaging/linux-desktop.py -- python tools/packaging/verify-desktop.py --target "$TARGET" --graphical
+            python tools/packaging/linux-desktop.py -- python tools/packaging/verify-desktop.py --target "$TARGET" --graphical --software-renderer
           else
             python tools/packaging/startup-desktop.py --target "$TARGET"
             python tools/packaging/verify-desktop.py --target "$TARGET" --graphical

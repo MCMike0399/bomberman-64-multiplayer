@@ -77,6 +77,7 @@ public partial class PlaytestDriver : Node
                 failure=failure?.ToString(),screen=_root.ScreenName,snapshots=_root.SnapshotCount,finalState=_root.LatestState,
                 platform=OS.GetName(),renderingDriver=RenderingServer.GetCurrentRenderingDriverName(),
                 renderingMethod=RenderingServer.GetCurrentRenderingMethod(),adapter=RenderingServer.GetVideoAdapterName(),
+                adapterType=RenderingServer.GetVideoAdapterType().ToString(),
                 release=new {version=OnlineProtocol.ReleaseVersion,build=OnlineProtocol.ReleaseBuild,
                     protocolRevision=OnlineProtocol.Revision,admissionToken=OnlineProtocol.WireRevision,revision=OnlineProtocol.SourceRevision} };
             File.WriteAllText(Path.Combine(_output,"summary.json"),JsonSerializer.Serialize(summary,new JsonSerializerOptions { WriteIndented=true }));

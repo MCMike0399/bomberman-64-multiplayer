@@ -384,7 +384,15 @@ public partial class PlaytestDriver
         {
             await KeyPress(Key.Right);
             var warmup=System.Diagnostics.Stopwatch.StartNew();
-            while(_root.GraphicsPreparing&&warmup.Elapsed.TotalSeconds<20)await Frames(1);
+            // Hosted Vulkan can be a CPU device: the retained llvmpipe witness
+            // rendered only 14 preparation frames in 20 seconds. This is a
+            // correctness allowance, not a native GPU responsiveness result.
+            double budget=RenderingServer.GetVideoAdapterType()==RenderingDevice.DeviceType.Cpu?180:20;
+            ulong firstFrame=Engine.GetProcessFrames();
+            while(_root.GraphicsPreparing&&warmup.Elapsed.TotalSeconds<budget)await Frames(1);
+            Event("graphics-preparation",new {preset=GraphicsQuality.ToWire(preset),seconds=warmup.Elapsed.TotalSeconds,
+                frames=Engine.GetProcessFrames()-firstFrame,budget,finished=!_root.GraphicsPreparing,
+                adapter=RenderingServer.GetVideoAdapterName(),adapterType=RenderingServer.GetVideoAdapterType().ToString()});
             Check(!_root.GraphicsPreparing,"graphics preparation finishes before returning control");
             dial.GrabFocus();
         }

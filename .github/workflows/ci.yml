@@ -435,7 +435,7 @@ jobs:
     name: Exported linux-x64 smoke
     needs: [linux-package, managed]
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 210
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -459,7 +459,7 @@ jobs:
       - run: python3 tools/packaging/package-download.py --target linux-x64 --directory artifacts/update-fixture
       - run: python3 tools/packaging/linux-desktop.py -- python3 tools/packaging/verify-desktop-update.py --target linux-x64
       - run: python3 tools/packaging/linux-desktop.py -- python3 tools/packaging/startup-desktop.py --target linux-x64
-      - run: python3 tools/packaging/linux-desktop.py -- python3 tools/packaging/verify-desktop.py --target linux-x64 --graphical
+      - run: python3 tools/packaging/linux-desktop.py -- python3 tools/packaging/verify-desktop.py --target linux-x64 --graphical --software-renderer
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:

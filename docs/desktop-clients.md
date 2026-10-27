@@ -101,5 +101,11 @@ shared roster and player-download hash evidence is signed into
 The full headless suite also exercises an eight-player direct-peer room. Native
 rendering receipts identify the adapter, including software/paravirtual adapters;
 those runs establish functional rendering rather than physical GPU throughput.
+CPU-device graphics preparation has a bounded 180-second QA allowance; hardware
+devices retain 20 seconds. The explicit software-renderer full-suite runner
+allows two hours for `all` and rejects receipts whose actual adapter type is
+not CPU. The retained Linux failure drew only 14 preparation frames in the
+ordinary 20-second budget. These allowances change test scheduling, not game
+graphics or loading behavior, and cannot certify native GPU responsiveness.
 The disposable Linux desktop supplies X11 and a PulseAudio null sink. Physical
 speakers, controllers, native performance and Wayland remain separate evidence.

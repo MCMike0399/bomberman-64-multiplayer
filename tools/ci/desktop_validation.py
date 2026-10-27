@@ -47,6 +47,8 @@ def inspect_receipt(receipt, settings, revision, release):
         raise RuntimeError('Desktop regression is missing required gameplay/multiplayer cases')
     for case in cases:
         inspect_report(case, case['scenario'], settings, revision, release, graphical)
+    if receipt.get('softwareRendererBudget') and (not graphical or any(case.get('adapterType')!='Cpu' for case in cases)):
+        raise RuntimeError('Software-renderer time allowance requires actual CPU-device receipts')
     return receipt
 
 

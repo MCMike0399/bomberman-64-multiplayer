@@ -35,7 +35,10 @@ def main():
     parser.add_argument('--target', choices=desktop.TARGETS, required=True)
     parser.add_argument('--directory', type=Path, default=ROOT / 'artifacts')
     parser.add_argument('--graphical', action='store_true', help='Run every graphical gameplay/UI/network journey on an owned desktop')
+    parser.add_argument('--software-renderer', action='store_true', help='Allow a bounded two-hour all-suite on a verified CPU renderer; provides no native GPU performance evidence')
     args = parser.parse_args()
+    if args.software_renderer and not args.graphical:
+        parser.error('--software-renderer requires --graphical')
     item, settings = desktop.names(args.target), desktop.TARGETS[args.target]
     if platform.system() != settings['os'] or platform.machine().lower() not in ('x86_64', 'amd64'):
         raise RuntimeError('Packaged regression must run on its actual target OS and x64 CPU')
@@ -77,11 +80,13 @@ def main():
                            str(executable), '--scenario', scenario,
                            '--output', str(output), '--desktop', 'shared', '--server', origin]
                 command += ['--rendering-driver', settings['driver']] if args.graphical else ['--headless']
+                timeout=7200 if args.software_renderer and scenario=='all' else 1500
+                if args.software_renderer:command += ['--timeout',str(timeout)]
                 environment = os.environ.copy()
                 if args.target == 'linux-x64':
                     # Modern AppImage runtime supports extraction on CI without a FUSE mount.
                     environment['APPIMAGE_EXTRACT_AND_RUN'] = '1'
-                subprocess.run(command, cwd=ROOT, env=environment, check=True, timeout=1800)
+                subprocess.run(command, cwd=ROOT, env=environment, check=True, timeout=timeout+300)
                 reports = [folder / 'summary.json' for folder in output.iterdir()
                            if folder not in previous and (folder / 'summary.json').is_file()]
                 if len(reports) != 1:
@@ -98,7 +103,8 @@ def main():
                    'serverSha256': desktop.digest(directory / 'Blast-Circuit-server-dotnet10.zip'),
                    'os': settings['os'], 'suite': 'graphical-regression' if args.graphical else 'headless-regression',
                    'downloadSha256': desktop.digest(directory / downloads.FILES[args.target]),
-                   'cases': cases, 'limits': 'Physical devices, native GPU performance and mixed-OS Internet play require separate evidence.'}
+                   'cases': cases, 'softwareRendererBudget': args.software_renderer,
+                   'limits': 'Physical devices, native GPU performance and mixed-OS Internet play require separate evidence.'}
         validation.inspect_receipt(receipt, settings, revision, release)
         (directory / item['graphical' if args.graphical else 'smoke']).write_text(json.dumps(receipt, indent=2) + '\n')
     print('PASS full packaged ' + args.target + ' ' + receipt['suite'])
