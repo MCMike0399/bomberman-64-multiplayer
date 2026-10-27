@@ -269,3 +269,25 @@ throttling, so each pair was taken with cool-down gaps and compared on the
 untouched passes. Receipts remain under the ignored profiling worktree's
 `artifacts/exp2/` (Midday and Night runs, control/candidate PNGs and
 amplified difference images for every arena).
+
+### Preset ladder after the change
+
+Native uncapped benchmark on the final tree (3024×1964, Night, eight-player
+battles, same 4.8 diagnostic engine, VSync off). Each tier is faster than the
+one above it on both arenas, and High itself gained roughly a quarter over
+v0.38 (Temple was 56.7 FPS Midday in the matched v0.36 pair):
+
+| Arena | High | Medium | Low |
+| --- | ---: | ---: | ---: |
+| Sunken Temple | 72.0 FPS (13.8 ms median, 14.7 p95) | 97.5 FPS (10.2 ms, 10.6 p95) | 120 FPS (8.3 ms, 9.1 p95) |
+| Rock Garden | 94.2 FPS (10.4 ms, 11.2 p95) | 151.7 FPS (6.5 ms, 7.2 p95) | 245 FPS (4.0 ms, 4.4 p95) |
+
+High keeps SSIL, depth of field, contact-hardening sun shadows and 4096
+shadows; Medium drops those four; Low additionally hides `StageScenery`,
+runs at 85% scale with spatial FSR and opaque water. Draw calls fall from
+267 to 189 on Temple and 224 to 141 on Rock Garden when the decorations go.
+Name tags and floating arena labels now rasterize at three times the glyph
+resolution at the same world size, which removed the soft edges visible in
+native captures. Receipts: ignored `artifacts/exp2/L-*` in the profiling
+worktree.
+
