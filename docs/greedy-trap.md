@@ -16,8 +16,8 @@ upward travel uses stairs. There are no bridges or underpasses.
 
 The first four starts occupy the upper-court quadrants. Four additional upper
 starts support this project's eight-player battles. 64 destructible masonry
-blocks form four upper stockpiles (48 blocks) and four bottom reward islands
-(16 blocks). Spawn escape cells, a perimeter loop, both upper stair approaches,
+blocks form four random upper stockpiles (52 blocks) and a random bottom cache
+(12 blocks). Spawn escape cells, a perimeter loop, both upper stair approaches,
 the entire middle ring and the bottom cross remain clear. The normal regional-cover
 path still honors Advanced block density,
 item toggles, independent drop chance and item lifetime. Practice clears cover.

@@ -38,6 +38,7 @@ public partial class PlaytestDriver : Node
 
     public override async void _Ready()
     {
+        _root.LocalMatchSeedOverride=64;
         var args=OS.GetCmdlineUserArgs();
         string Arg(string key,string fallback) => args.FirstOrDefault(a => a.StartsWith(key+"="))?[(key.Length+1)..] ?? fallback;
         _scenario=Arg("--playtest","all");

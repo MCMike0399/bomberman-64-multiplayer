@@ -106,11 +106,19 @@ public partial class PlaytestDriver
         }
         // Clear center lanes and flights stay available in ordinary cover-filled play.
         await Go(0,11,2,4);await Go(0,11,7,4);await Go(0,5,7,2);await Go(0,5,14,2);
-        await Go(0,5,18,2);
+        bool Covered(int x,int z)
+        {
+            var bits=Convert.FromBase64String(State.GetProperty("softBlocks").GetString()!);
+            int i=z*24+x;return (bits[i/8]&(1<<(i%8)))!=0;
+        }
+        var opening=Enumerable.Range(8,13).SelectMany(z=>new[]{4,6}.Select(x=>(X:x,Z:z)))
+            .Where(c=>Math.Abs(c.Z-14)>=3&&Covered(c.X,c.Z)).OrderBy(c=>Math.Abs(c.Z-18)).First();
+        await Go(0,5,opening.Z,2);
         Input(0,new PlayerInput(0,0,A:true));await Frames(2);Input(0,default);await Frames(2);
-        await Go(0,5,15,2);
-        await WaitState(s=>(Convert.FromBase64String(s.GetProperty("softBlocks").GetString()!)[(18*24+4)/8]&(1<<((18*24+4)%8)))==0,
-            "ordinary bomb destroys the stage-specific pier stone block",120);
+        await Go(0,5,14,2);
+        await WaitState(_=>!Covered(opening.X,opening.Z),
+            "ordinary bomb destroys an actual randomly placed pier stone block",120);
+        Check(GrapplePlayer(0).GetProperty("alive").GetBoolean(),"clear pier aisle permits a safe retreat from the random cache");
         await Capture("up-and-down-stone-block-destroyed");
         await Go(0,5,14,2);await Go(0,11,14,0);
         await Go(2,11,2,4);await Go(2,11,7,4);await Go(2,18,7,2);await Go(2,18,17,2);

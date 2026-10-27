@@ -155,7 +155,11 @@ public partial class PlaytestDriver
         _root.StartLocal(new SessionSettings(Stage:BlastStages.GreedyTrap,Bots:0,SuddenDeath:false,Ghosts:false){Advanced=rules},3);
         await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"three-human loot journey begins",150);
         await MoveTo(9.5f,2.5f,110);await MoveTo(9.5f,5.5f,70);await MoveTo(5.5f,5.5f,80);
-        await MoveTo(5.5f,6.5f,40);await MoveTo(7.5f,6.5f,60);await MoveTo(9.5f,6.5f,60);await MoveTo(9.5f,7.5f,40);
+        await MoveTo(5.5f,6.5f,40);await MoveTo(7.5f,6.5f,60);await MoveTo(9.5f,6.5f,60);
+        var bits=Convert.FromBase64String(State.GetProperty("softBlocks").GetString()!);
+        var opening=Enumerable.Range(7,5).SelectMany(z=>new[]{8,10}.Select(x=>(X:x,Z:z)))
+            .First(c=>(bits[(c.Z*19+c.X)/8]&(1<<((c.Z*19+c.X)%8)))!=0);
+        await MoveTo(9.5f,opening.Z+.5f,100);
         Input(0,new PlayerInput(0,0,A:true));await Frames(2);Input(0,default);
         await MoveTo(9.5f,6.5f,40);await MoveTo(7.5f,6.5f,60);await MoveTo(5.5f,6.5f,60);
         await WaitState(s=>s.GetProperty("bombs").GetArrayLength()==0&&s.GetProperty("hazards").GetArrayLength()==0,"bottom bomb destroys masonry through its real fuse",150);
@@ -163,7 +167,7 @@ public partial class PlaytestDriver
         var pickup=AuditDescendants(LightingArena).OfType<PowerupModel>().First();
         Check(Math.Abs(pickup.Position.Y-.48f)<.01f,"bottom reward mesh uses accepted floor height");
         await Capture("greedy-trap-real-bottom-loot");
-        await MoveTo(7.5f,6.5f,60);await MoveTo(8.5f,6.5f,40);await MoveTo(8.5f,7.5f,40);
+        await MoveTo(9.5f,6.5f,100);await MoveTo(9.5f,opening.Z+.5f,100);await MoveTo(opening.X+.5f,opening.Z+.5f,60);
         Check(Player.GetProperty("bombType").GetString()=="red","ordinary pickup equips a reward from the pit");
         await Capture("greedy-trap-collected-reward");_root.Back();await Frames(3);
     }

@@ -8,6 +8,9 @@ namespace BlastCircuit.App;
 /// <summary>Local and online session lifetime: start, replay, connection cancellation and disposal.</summary>
 public partial class GameRoot
 {
+    // Local-only QA seam; ordinary starts and replays leave this unset.
+    internal int? LocalMatchSeedOverride {get;set;}
+
     private void StartConfigured()
     {
         if(_editingRoom)
@@ -28,13 +31,14 @@ public partial class GameRoot
         StartLocal(_menu.Settings,humans,_menu.Practice,_menu.PlayerAppearances);
     }
 
-    public void StartLocal(SessionSettings settings,int humans=1,bool practice=false,IReadOnlyList<int>? playerAppearances=null)
+    public void StartLocal(SessionSettings settings,int humans=1,bool practice=false,IReadOnlyList<int>? playerAppearances=null,int? seed=null)
     {
         if(_connecting)return;
         try
         {
-            // A fresh practice cache should offer different effects/equipment on replay.
-            var session=new LocalSession(settings,humans,seed:practice?System.Random.Shared.Next():64,practice:practice,playerAppearances:playerAppearances);
+            // Ordinary starts/replays choose a fresh layout; QA can explicitly reproduce a seed.
+            int matchSeed=seed??(!practice?LocalMatchSeedOverride:null)??System.Random.Shared.Next();
+            var session=new LocalSession(settings,humans,seed:matchSeed,practice:practice,playerAppearances:playerAppearances);
             _lastSettings=settings;_lastHumans=humans;_lastAppearances=playerAppearances?.ToArray();_practice=practice;_lastServer=null;
             Begin(session,false);
         }

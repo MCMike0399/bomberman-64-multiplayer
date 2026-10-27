@@ -18,7 +18,7 @@ The old filled 23×19 terraces and 88-crate farm are superseded.
 - The first four spawns occupy the ring corners; four additional starts support
   this project's eight-player matches on the upper perimeter.
 - Normal cover is 36 blocks: twelve below and twelve on each middle pier,
-  in paired shelves facing a clear center aisle. Ring, crown, bridges, center lanes and
+  sampled randomly beside clear center aisles. Ring, crown, bridges, center lanes and
   flights stay clear. Advanced block/drop rules still apply. Practice clears
   cover through its existing rules.
 - Sudden death uses the shared rising-water policy, beginning at the one-minute
@@ -28,8 +28,8 @@ The middle piers extend to the inward side-rail lips: ordinary inward drops
 land on stone, while exposed outward exits still reach water. Destructible
 blocks use original procedural gray stone cubes with pale worn rims and square
 insets, independent of the temple's sandstone/diamond model. Default cover has
-twelve low blocks in pairs and twelve per pier; reduced Advanced block density
-selects a subset of those sites, and Practice remains empty.
+twelve random low blocks and twelve per pier; Advanced block density
+scales the random regional budgets, and Practice remains empty.
 
 Grid dimensions, elevations, exact flight offsets, additional spawns, block
 allocation and flood constants are **Blast Circuit tuning**. The expanded 36-block

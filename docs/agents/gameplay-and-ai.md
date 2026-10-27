@@ -325,7 +325,7 @@ and the input guide; older iteration tables are historical.
   [stage contract](../up-and-down.md). Its twelve cover blocks intentionally
   replace the former filled terrace layout and 88-block budget. The 2026-10-25
   correction widens each pier to the inward side-rail lip for ordinary drops
-  without changing fall physics. Cover uses eight paired low sites and two per
+  without changing fall physics. Cover uses twelve randomly sampled low sites and twelve per
   pier; Advanced density selects subsets. The summit uses a flat mosaic rather
   than a blocking prop.
 - Ghosts pass through bombs and cannot place, carry, kick, stop, pump, throw or
@@ -343,7 +343,7 @@ and the input guide; older iteration tables are historical.
 
 ## Blizzard Battle (2026-10-25)
 
-[Stage contract](../blizzard-battle.md) owns the flat enclosed snowfield, sixteen authored ice cones (1.3-unit stage-owned cover height), eight seats, shared seeded weather and bilateral avalanche closure. Wind affects free bombs and living players through collision, with weaker player response, and the advisory arc uses the same future schedule. Preserve fuse clocks and carried attachment. CPU closure avoidance uses the three-second avalanche interval. Protocol revision 5 gates the expanded stage/weather contract.
+[Stage contract](../blizzard-battle.md) owns the flat enclosed snowfield, 64 randomly sampled ice cones (1.3-unit stage-owned cover height), eight seats, shared seeded weather and bilateral avalanche closure. Wind affects free bombs and living players through collision, with weaker player response, and the advisory arc uses the same future schedule. Preserve fuse clocks and carried attachment. CPU closure avoidance uses the three-second avalanche interval. Protocol revision 5 gates the expanded stage/weather contract.
 
 ## Top Rules castle (2026-10-24)
 
@@ -395,7 +395,7 @@ focused authority/AI checks. Online revision 5 gates the newly supported arena.
 
 - [Loot placement](../../src/Bomber.Game/Simulation/BlastSession/Items/BlastSession.Loot.cs) uses map-owned
   `CoverAreas`: regional budget shares and cluster centers, with seeded weighted
-  sampling. Temple seeds two nearby crates per spawn; Rock Garden seeds one plus a central paving cluster. Top Rules has 48 lower-court blocks, preserving its upper network and ground through-routes. Up & Down places twelve blocks on the low deck and twelve on each middle pier; its ring, crown, bridges and flights remain clear. Blizzard Battle has four 16-cone banks with clear cross/diagonal corridors; Greedy Trap has 48 upper stockpile blocks and sixteen bottom blocks around a clear cross. All policies preserve spawn clearance, ramps and reserved lanes.
+  sampling. Temple seeds two nearby crates per spawn; Rock Garden seeds one plus a central paving cluster. Top Rules has 48 lower-court blocks, preserving its upper network and ground through-routes. Up & Down places twelve blocks on the low deck and twelve on each middle pier; its ring, crown, bridges and flights remain clear. Blizzard Battle has four independently sampled 16-cone regions with clear cross/perimeter corridors; Greedy Trap has 52 random upper stockpile blocks and twelve random bottom blocks around a clear cross. All policies preserve spawn clearance, ramps and reserved lanes.
   Every destroyed crate uses the same independent configured drop chance; there are
   no guaranteed opening rewards.
 - Pyramid targets 60% of 90 blocks in the lower court, 15% along the lower wings,
@@ -459,8 +459,10 @@ reference, with explicit care for areas that must stay empty. This supersedes
 the former 8–16-block budgets; geometry, spawns, drops and physics retain their
 existing rules. [Layouts, protected routes and screenshots](../denser-cover.md).
 `Bomber.Game.Tests -- --cover-layout` checks all six arenas over 32 seeds,
-five block percentages, empty practice and protected route connectivity from
-every spawn. Use the `cover-layout` graphical journey for High-preset battle
+five block percentages, empty practice, full-density variation on every map
+and protected route connectivity from every spawn. Ordinary local starts and
+replays use fresh seeds; QA pins its seed in the playtest driver, with explicit
+alternate-seed and unpinned-start checks. Use the `cover-layout` graphical journey for High-preset battle
 screenshots, plus the existing stage journeys for real movement/bomb/loot checks.
 
 ### Item density tuning (2026-10-25)

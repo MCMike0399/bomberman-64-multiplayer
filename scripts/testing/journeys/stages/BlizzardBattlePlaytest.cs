@@ -78,14 +78,26 @@ public partial class PlaytestDriver
             _root.StartLocal(new SessionSettings(Stage:BlastStages.BlizzardBattle,Bots:0,SuddenDeath:false,Ghosts:false)
                 {Advanced=new AdvancedRules{DropPercent=100,DisabledItems="remote,red,bounce,heart,focus,tiny,big,haste,slow"}},2);
             await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"ice cone loot battle starts",150);
-            await MoveTo(5.5f,2.5f,120);
-            Input(0,new PlayerInput(1,0));await Frames(1);Input(0,new PlayerInput(0,0,A:true));await Frames(2);Input(0,default);
-            await MoveTo(2.5f,2.5f,100);
-            await WaitState(s=>s.GetProperty("bombs").GetArrayLength()==0&&s.GetProperty("hazards").GetArrayLength()==0,"real fuse destroys an ice cone",150);
-            Check(State.GetProperty("items").GetArrayLength()>0,"shattered ice exposes a real dropped upgrade");
+            var layout=BlastStages.Get(BlastStages.BlizzardBattle);
+            var bits=Convert.FromBase64String(State.GetProperty("softBlocks").GetString()!);
+            bool Covered((int X,int Z) c){int i=c.Z*layout.Width+c.X;return (bits[i/8]&(1<<(i%8)))!=0;}
+            var lootStart=(X:(int)Player.GetProperty("x").GetSingle(),Z:(int)Player.GetProperty("z").GetSingle());
+            var reachable=LootReachable(layout,lootStart,Covered,8);
+            var opening=reachable.OrderBy(c=>c.Value).SelectMany(c=>new[]{(1,0),(0,1)}
+                .Select(d=>(From:c.Key,Cover:(X:c.Key.X+d.Item1,Z:c.Key.Z+d.Item2))))
+                .First(c=>layout.At(c.Cover.X,c.Cover.Z).IsPassable&&Covered(c.Cover));
+            var retreat=LootReachable(layout,opening.From,Covered,6)
+                .Where(c=>(c.Key.X-opening.From.X)*(c.Key.X-opening.From.X)+(c.Key.Z-opening.From.Z)*(c.Key.Z-opening.From.Z)>=9)
+                .OrderBy(c=>c.Value).First().Key;
+            await GrappleWalk(0,opening.From.X,opening.From.Z);
+            Input(0,new PlayerInput(opening.Cover.X-opening.From.X,opening.Cover.Z-opening.From.Z));await Frames(1);
+            Input(0,new PlayerInput(0,0,A:true));await Frames(2);Input(0,default);
+            await GrappleWalk(0,retreat.X,retreat.Z);
+            await WaitState(s=>s.GetProperty("bombs").GetArrayLength()==0&&s.GetProperty("hazards").GetArrayLength()==0,"real fuse destroys randomly placed ice",150);
+            Check(State.GetProperty("items").GetArrayLength()>0&&Player.GetProperty("alive").GetBoolean(),"shattered random ice exposes a reward and the player survives retreat");
             await Capture("blizzard-shattered-ice-reward");
             var item=State.GetProperty("items")[0];long serial=Player.GetProperty("pickupSerial").GetInt64();
-            await MoveTo(item.GetProperty("cx").GetInt32()+.5f,item.GetProperty("cz").GetInt32()+.5f,140);
+            await GrappleWalk(0,item.GetProperty("cx").GetInt32(),item.GetProperty("cz").GetInt32());
             Check(Player.GetProperty("pickupSerial").GetInt64()>serial,"walking collects an upgrade from broken ice");
             _root.Back();await Frames(3);
 

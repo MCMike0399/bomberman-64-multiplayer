@@ -11,7 +11,7 @@ internal static class RegionalCoverChecks
         int checks=0;
         foreach(string id in new[]{BlastStages.SunkenTemple,BlastStages.RockGarden,BlastStages.UpAndDown,BlastStages.TopRules,BlastStages.BlizzardBattle,BlastStages.GreedyTrap})
         {
-            var fingerprints=new HashSet<string>();int minimum=int.MaxValue,maximum=0;
+            var fingerprints=new HashSet<string>();var regions=new Dictionary<string,HashSet<string>>();int minimum=int.MaxValue,maximum=0;
             for(int seed=0;seed<32;seed++)
             {
                 var stage=BlastStages.Get(id);var options=new MatchOptions{Stage=id,HumanPlayers=8,BotPlayers=0,Seed=seed};
@@ -58,6 +58,12 @@ internal static class RegionalCoverChecks
                     int budget=id==BlastStages.TopRules?48:64;
                     Assert(cover.Count==budget,$"Expanded cover budget missing on {id}: expected {budget}, got {cover.Count}.");
                 }
+                if(id is BlastStages.UpAndDown or BlastStages.BlizzardBattle or BlastStages.GreedyTrap)
+                    foreach(var area in stage.CoverAreas)
+                    {
+                        if(!regions.TryGetValue(area.Name,out var layouts))regions[area.Name]=layouts=[];
+                        layouts.Add(string.Join(';',cover.Where(c=>area.Contains(c.X,c.Z,stage.At(c.X,c.Z)))));
+                    }
                 CheckProtectedRoutes(stage,Covered);
                 foreach(int percent in new[]{0,25,50,75})
                 {
@@ -70,8 +76,9 @@ internal static class RegionalCoverChecks
                 Assert(Convert.FromBase64String(Encoded(practice)).All(b=>b==0),"Battle cover leaked into practice on "+id);
                 checks+=2;
             }
-            Assert(id is BlastStages.UpAndDown or BlastStages.BlizzardBattle?fingerprints.Count==1:fingerprints.Count>=24,
-                "Cover must retain fixed Up & Down/Blizzard patterns and the other stages' seeded variation.");
+            foreach(var region in regions)Assert(region.Value.Count>=16,$"Region {id}/{region.Key} still stamps a fixed or near-fixed layout.");
+            Assert(fingerprints.Count>=24,
+                "Every battle map must vary its full-density layout across seeds.");
             Console.WriteLine($"PASS {id}: 32 seeded layouts, {fingerprints.Count} patterns, {minimum}–{maximum} blocks, clear spawns and routes");
         }
         var random=new Random(287);var counts=new Dictionary<string,int>();
@@ -105,9 +112,8 @@ internal static class RegionalCoverChecks
         }
         else if(id==BlastStages.BlizzardBattle)
         {
-            for(int n=1;n<=17;n++){Clear(9,n);Clear(n,9);}
-            for(int x=1;x<=17;x++)for(int z=1;z<=17;z++)
-                if(Math.Abs(x-z)<=1||Math.Abs(x+z-18)<=1)Clear(x,z);
+            foreach(int lane in new[]{1,9,17})for(int n=1;n<=17;n++)
+                {Clear(lane,n);Clear(n,lane);}
             targets.Add((9,9,0));
         }
         else if(id==BlastStages.GreedyTrap)

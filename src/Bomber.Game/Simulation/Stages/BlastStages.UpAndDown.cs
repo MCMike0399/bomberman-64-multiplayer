@@ -43,17 +43,13 @@ public static partial class BlastStages
         for (int z = 3; z < 21; z++) { Bridge(2, z); Bridge(21, z); }
         for (int z = 3; z <= 6; z++) Bridge(11, z);
         for (int z = 11; z <= 20; z++) Bridge(13, z);
-        // Paired shelves face a continuous middle aisle on each pier and the
-        // low deck. Crossings beside every flight and the upper ring stay open.
-        var cover=new HashSet<(int X,int Z)>();
-        foreach(int x in new[]{4,6,17,19})
-            foreach(int z in new[]{10,11,16,17,18,23})cover.Add((x,z));
-        foreach(int x in new[]{10,12})
-            foreach(int z in new[]{12,13,16,17,18,23})cover.Add((x,z));
+        // Random caches can occupy any safe lower/middle floor outside these
+        // through-routes, rather than filling a fixed list of paired shelves.
         var clear = new HashSet<(int X, int Z)>();
         for (int x = 0; x < width; x++) for (int z = 0; z < height; z++)
-            if (!cover.Contains((x,z)))
-                clear.Add((x, z));
+            if (cells[x,z].Tier>=4 || cells[x,z].Below is not null ||
+                x is 5 or 11 or 18 || z is 7 or 14 or 21 or 22)
+                clear.Add((x,z));
         return new StageLayout
         {
             Id = UpAndDown, Name = "Up & Down", Width = width, Height = height,
@@ -62,9 +58,9 @@ public static partial class BlastStages
             // Three equal caches reward the descent without obstructing a return.
             OpeningCoverPerSpawn = 0, SoftBlockDensity = 1, MaxSoftBlocks = 36,
             CoverAreas = [
-                new("lower-deck", 1d/3, 10, 13, 12, 23, 0, 0) { Centers = [(10,16),(12,18),(10,23)] },
-                new("west-pier", 1d/3, 4, 6, 7, 23, 2, 2) { Centers = [(4,17),(6,23)] },
-                new("east-pier", 1d/3, 17, 19, 7, 23, 2, 2) { Centers = [(17,17),(19,23)] }],
+                new("lower-deck", 1d/3, 10, 13, 12, 23, 0, 0),
+                new("west-pier", 1d/3, 3, 6, 7, 23, 2, 2),
+                new("east-pier", 1d/3, 17, 20, 7, 23, 2, 2)],
             ClearCells = clear,
         };
     }

@@ -17,11 +17,8 @@ public static partial class BlastStages
             // Low near rim keeps the whole court readable from the battle camera.
             cells[n,size-1]=new CellDef{Kind=CellKind.Pillar,ObstacleHeight=.35f};
         }
-        // Four mirrored chevrons make breakable windbreaks. The central cross
-        // and both corner-to-corner diagonals remain continuous escape lanes.
-        (int X,int Z)[] bank=[(2,4),(2,5),(2,6),(3,5),(3,6),(3,7),(4,6),(4,7),
-            (6,2),(6,3),(7,3),(6,4),(7,4),(7,5),(5,7),(7,2)];
-        var cones=bank.SelectMany(c=>new[]{c,(18-c.X,c.Z),(c.X,18-c.Z),(18-c.X,18-c.Z)}).ToHashSet();
+        // Sample each quadrant independently. Only the perimeter loop and
+        // central cross are reserved; individual spires are never mirrored.
         return new StageLayout
         {
             Id=BlizzardBattle,Name="Blizzard Battle",Width=size,Height=size,Cells=cells,
@@ -30,7 +27,7 @@ public static partial class BlastStages
             CoverAreas=[new("northwest-bank",.25,1,8,1,8),new("northeast-bank",.25,10,17,1,8),
                 new("southwest-bank",.25,1,8,10,17),new("southeast-bank",.25,10,17,10,17)],
             ClearCells=Enumerable.Range(1,17).SelectMany(x=>Enumerable.Range(1,17).Select(z=>(X:x,Z:z)))
-                .Where(c=>!cones.Contains(c)).ToHashSet(),
+                .Where(c=>c.X is 1 or 9 or 17 || c.Z is 1 or 9 or 17).ToHashSet(),
         };
     }
 }
