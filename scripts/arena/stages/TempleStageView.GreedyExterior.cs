@@ -96,10 +96,19 @@ public partial class TempleStageView
             Sphere(_greedyExterior,new(x-.35f,1.2f,z-.12f),new(1.05f,1.25f,1.1f),_art.Color(new("81956a"),.95f));
         }
 
-        // An authored working-waterworks accent: slow rotation, no gameplay cue.
-        _greedyWaterwheel=new Node3D{Name="GreedyWaterwheel",Position=new(-4.65f,-.12f,cz-3)};
-        _greedyExterior.AddChild(_greedyWaterwheel);
+        // Put the rotating wheel beside the quay, in the water. The fixed mount
+        // turns its local XY wheel plane along the canal (YZ in arena space),
+        // while the rotor keeps its local Z animation axis. Moving the old wheel
+        // outward alone left the paddles sweeping through the solid bank.
         var timber=_art.Color(new("786343"),.85f);var rim=_art.Color(new("aa8b54"),.7f);
+        float wheelZ=cz-3;
+        var mount=new Node3D{Name="GreedyWaterwheelMount",Position=new(-3.6f,-.25f,wheelZ),Rotation=new(0,Mathf.Pi/2,0)};
+        _greedyExterior.AddChild(mount);
+        _greedyWaterwheel=new Node3D{Name="GreedyWaterwheel"};mount.AddChild(_greedyWaterwheel);
+        // The pedestal sits on the quay; only the stationary shaft crosses its edge.
+        Box(_greedyExterior,new(-4.55f,-.40f,wheelZ),new(.42f,.44f,.48f),quay,.035f).Name="GreedyWheelPedestal";
+        var shaft=Cylinder(_greedyExterior,new(-4.1f,-.25f,wheelZ),.12f,1.25f,rim);
+        shaft.Name="GreedyWheelShaft";shaft.RotationDegrees=new(0,0,90);
         var wheelRim=new TorusMesh{InnerRadius=.91f,OuterRadius=1.06f,Rings=32,RingSegments=8};
         foreach(float zz in new[]{-.22f,.22f})
             _greedyWaterwheel.AddChild(new MeshInstance3D{Mesh=wheelRim,MaterialOverride=rim,Position=new(0,0,zz),RotationDegrees=new(90,0,0)});

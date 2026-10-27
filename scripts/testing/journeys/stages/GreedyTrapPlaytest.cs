@@ -12,6 +12,58 @@ namespace BlastCircuit.Testing;
 
 public partial class PlaytestDriver
 {
+    /// <summary>Real canal geometry and matched inspection views; no gameplay mutation.</summary>
+    private async Task GreedyCanalTour()
+    {
+        Event("greedy-canal-policy",new{ordinarySession=true,stateMutation=false,inspectionCamera="explicitly labelled and restored"});
+        var quality=_root.Preferences.Graphics;
+        var lighting=_root.Preferences.StageLighting;
+        if(!_headless)await SelectLocalLighting(StageTime.Midday);
+        _root.StartLocal(new SessionSettings(Stage:BlastStages.GreedyTrap,Bots:0,SuddenDeath:false),2);
+        await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"canal inspection enters a real local battle",180);
+        var terrain=AuditDescendants(LightingArena).OfType<TempleStageView>().Single();
+        var wheel=terrain.GetNode<Node3D>("GreedyExterior/GreedyWaterwheelMount/GreedyWaterwheel");
+        var camera=_root.GetViewport().GetCamera3D()!;
+        var pose=camera.Transform;float size=camera.Size,h=camera.HOffset,v=camera.VOffset;
+        try
+        {
+            var presets=_headless?new[]{quality}:new[]{GraphicsPreset.High,GraphicsPreset.Medium,GraphicsPreset.Low};
+            foreach(var preset in presets)
+            {
+                if(!_headless)await SelectGraphics(preset);
+                var boats=new[]{terrain.Scenery!.GetNode<Node3D>("GreedyWestRowboat"),terrain.Scenery.GetNode<Node3D>("GreedyEastRowboat")};
+                Check(boats.All(boat=>AuditDescendants(boat).OfType<MeshInstance3D>().All(n=>
+                {
+                    var b=(terrain.GlobalTransform.AffineInverse()*n.GlobalTransform)*n.Mesh.GetAabb();
+                    return boat.Position.X<0?b.Position.X> -4.1f&&b.End.X<-.725f
+                        :b.Position.X>terrain.Width+.725f&&b.End.X<terrain.Width+4.1f;
+                })),"both rowboats and oars clear the quays and fortress: "+preset);
+                await Capture("greedy-canal-battle-"+GraphicsQuality.ToWire(preset));
+                camera.HOffset=0;camera.VOffset=0;camera.Size=10;
+                camera.Position=new(-10,10,17);camera.LookAt(new Vector3(-3,-.3f,7));
+                await Capture("greedy-canal-inspection-"+GraphicsQuality.ToWire(preset));
+                // Sample real animation over a complete revolution. The quay paving
+                // reaches x=-4.1; moving timber must stay in the canal.
+                for(int phase=0;phase<=32;phase++)
+                {
+                    var bounds=AuditDescendants(wheel).OfType<MeshInstance3D>()
+                        .Select(n=>(terrain.GlobalTransform.AffineInverse()*n.GlobalTransform)*n.Mesh.GetAabb()).ToArray();
+                    Check(bounds.All(b=>b.Position.X> -4.1f&&b.End.X<-.725f),
+                        $"waterwheel clears quay and fortress through rotation: {preset} phase={phase}");
+                    if(phase==8)await Capture("greedy-canal-motion-"+GraphicsQuality.ToWire(preset));
+                    await Frames(25);
+                }
+                camera.Transform=pose;camera.Size=size;camera.HOffset=h;camera.VOffset=v;
+            }
+        }
+        finally
+        {
+            camera.Transform=pose;camera.Size=size;camera.HOffset=h;camera.VOffset=v;
+            _root.Back();_root.Navigate("Modes");await Frames(3);
+            if(!_headless){await SelectGraphics(quality);await SelectLocalLighting(lighting);}
+        }
+    }
+
     private async Task GreedyTrapTour()
     {
         Event("greedy-trap-policy",new{ordinaryInputs=true,stateMutation=false,inspectionCameras="explicitly labelled",turquoiseFloor="dry opaque tiles"});
@@ -48,7 +100,7 @@ public partial class PlaytestDriver
             return bounds.End.Y>=0&&playable.Intersects(new Rect2(bounds.Position.X,bounds.Position.Z,bounds.Size.X,bounds.Size.Z));
         }).Select(n=>n.Name.ToString()).ToArray();
         Check(intrusive.Length==0,"exterior architecture stays below or outside the playable volume: "+string.Join(',',intrusive));
-        var wheel=scenery!.GetNode<Node3D>("GreedyWaterwheel");float wheelAngle=wheel.Rotation.Z;
+        var wheel=scenery!.GetNode<Node3D>("GreedyWaterwheelMount/GreedyWaterwheel");float wheelAngle=wheel.Rotation.Z;
         await Frames(8);Check(Math.Abs(wheel.Rotation.Z-wheelAngle)>.01f,"decorative waterwheel rotates independently of match hazards");
         var brick=openingTerrain.GetNode<MeshInstance3D>("GreedyWallBrick_9_0");
         var cap=openingTerrain.GetNode<MeshInstance3D>("GreedyWallCap_9_0");

@@ -547,6 +547,13 @@ native `greedy-trap` journey cover its three stories, six flights, actual bottom
 loot, quality/lighting variants and crushing animation. The
 `greedy-trap-regression` suite adds startup preparation, setup, graphics,
 lighting, framing and real network regression. See [stage verification](../greedy-trap.md).
+The `greedy-canal` leaf, included in `greedy-trap-regression` and
+`scenery-regression`, checks the actual rotating wheel mesh bounds against the
+quay/fortress clearance through a full turn, checks nearby rowboat/oar clearance,
+and captures ordinary battle and labelled canal inspection views at all presets.
+Headless runs check geometry at the current preset; graphical runs select each
+preset through Settings. See the [capture provenance](../media/greedy-waterwheel/manifest.json).
+
 
 ## Top Rules verification
 

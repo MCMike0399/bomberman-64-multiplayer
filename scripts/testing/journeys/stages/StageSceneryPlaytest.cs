@@ -17,7 +17,7 @@ public partial class PlaytestDriver
         (BlastStages.UpAndDown,["Lighthouse","SeaStack","Buoy","Jetty","Sailboat","Gull"]),
         (BlastStages.TopRules,["FortressCrag","Turret","WallBanner","Cloud","FloatingIslet","Starfield","RingedPlanet","BluePlanet","OrbitingMoon","AsteroidBelt","Nebula"]),
         (BlastStages.BlizzardBattle,["Igloo","Snowman","Penguin","PineTree","FrozenPond","GlacierPeak","GlacierArch","FrozenCrown","WinterTree","ExteriorSnowfall"]),
-        (BlastStages.GreedyTrap,["Rowboat","Sailboat","Gull"]),
+        (BlastStages.GreedyTrap,["GreedyWestRowboat","GreedyEastRowboat","Sailboat","Gull"]),
         (BlastStages.CircuitGarden,["TargetRaft","Jetty","Buoy","PalmTree"]),
     ];
 
