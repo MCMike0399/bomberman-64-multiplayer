@@ -4,7 +4,7 @@ An original Godot C# arena battle game inspired by Bomberman 64: **2–8 partici
 
 ![Eight-player Sunken Temple at High graphics](docs/images/release-042/scenery-sunken-temple-high.png)
 
-**[Download v0.42.0 for Apple Silicon](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.42.0)** · [Release verification](docs/verification.md) · [Build from source](#build-from-source)
+**[Download Blast Circuit](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/latest)** · Windows EXE · Linux AppImage · Mac DMG · [Release verification](docs/verification.md) · [Build from source](#build-from-source)
 
 The current release includes six battle arenas, animated stage surroundings, refined water reflections and graphics presets, pointer aiming, and improved CPU rivals. All visuals and synthesized sounds are original. Eight-player support and numerical gameplay tuning are project adaptations; the original game supports four players. [Research and sources](docs/history/research.md).
 
@@ -124,13 +124,13 @@ The shared service runs independently of players’ computers. Peer rooms suppor
 
 ![Results after a completed local duel](docs/images/current/results.png)
 
-## macOS app and updates
+## Desktop downloads and updates
 
-The Apple Silicon app bundles the game, .NET runtime, original assets and optional Switch 2 USB libraries. Local play needs neither the editor nor a server. The app remembers your display mode and resolution; first launch uses fullscreen.
+Choose your download from the [GitHub release page](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/latest): install the Windows `.exe`, make the Linux `.AppImage` executable and run it, or open the Mac `.dmg` and copy the app to Applications. Windows/Linux target x64; Mac targets Apple Silicon. The game and .NET runtime are bundled. Local play needs neither the editor nor a server. Display mode and resolution are remembered; first launch uses fullscreen.
 
 **Settings → Game updates** checks for signed GitHub releases automatically. When an update is ready, leave your room and choose **Restart to update**. A failed launch restores the previous app. [Update details](docs/automatic-updates.md).
 
-The app uses Metal and opts into macOS Game Mode for eligible fullscreen play. macOS controls activation. The app is ad-hoc signed and is not notarized. [Packaging](docs/macos-app.md) · [Game Mode](docs/macos-game-mode.md).
+Windows uses Direct3D 12, Linux uses Vulkan and Mac uses Metal. The Mac app opts into Game Mode for eligible fullscreen play; macOS controls activation. Mac signing remains ad-hoc, without notarization; Windows executables are not Authenticode signed. Release signatures authenticate the downloads. [Desktop requirements and verification](docs/desktop-clients.md) · [Mac packaging](docs/macos-app.md).
 
 ## Build from source
 
