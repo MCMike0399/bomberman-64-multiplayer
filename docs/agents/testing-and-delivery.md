@@ -662,9 +662,16 @@ v0.35.1/v0.36.0 pass all nine.
 
 `display-settings` is graphical-only and belongs to `all` and `menu-ux`. It checks
 native window sizes, actual fullscreen transitions, persistent shortcuts, 3D
-resolution scaling and paused local-session continuity. Its fresh-executable child
-uses a unique QA-only preference fixture and retains a separate `restart/`
-graphical receipt. This is process-startup evidence beyond in-process config
+resolution scaling and paused local-session continuity. It retains a unique
+QA-only preference fixture; after the parent game exits, the runner launches the
+same executable and requires a separate `restart/` graphical receipt within
+90 seconds. The child restores the saved choices through real controls and
+captures; it does not inherit a QA display override. Promotion requires this
+child's matching catalog, release, renderer, positive assertions and zero errors.
+The VM transport envelope includes the additional sequential leg while each
+game keeps its own deadline. Concurrent parent/child Metal startup stalled in
+native pipeline creation on hosted Mac; the identical child passed after parent
+exit. This is process-startup evidence beyond in-process config
 reloads; personal preferences remain untouched. Native host display checks use
 an explicitly announced `--desktop shared` run, separate from VM Metal evidence.
 

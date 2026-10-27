@@ -114,3 +114,7 @@ ordinary 20-second budget. These allowances change test scheduling, not game
 graphics or loading behavior, and cannot certify native GPU responsiveness.
 The disposable Linux desktop supplies X11 and a PulseAudio null sink. Physical
 speakers, controllers, native performance and Wayland remain separate evidence.
+Saved-display process restoration runs sequentially after the main graphical
+process exits. Its unchanged 90-second child deadline, real persisted settings,
+independent capture/check receipt and zero-error requirement remain release gates.
+This avoids resident parent/child renderer contention without changing game graphics.

@@ -9,7 +9,7 @@ import crossplay
 import desktop_packages as desktop
 import desktop_validation as validation
 import download_formats
-from test_desktop_packages import write_desktop, SHA, RELEASE
+from test_desktop_packages import write_desktop, add_display_restart, SHA, RELEASE
 
 
 def write_crossplay(directory, revision=SHA, release=None):
@@ -31,11 +31,11 @@ def write_crossplay(directory, revision=SHA, release=None):
     cases = []
     for scenario in (*validation.HEADLESS, *validation.GRAPHICAL):
         graphical = scenario in validation.GRAPHICAL
-        cases.append({'passed': True, 'platform': 'macOS', 'release': dict(release, revision=revision), 'scenario': scenario,
+        cases.append(add_display_restart({'passed': True, 'platform': 'macOS', 'release': dict(release, revision=revision), 'scenario': scenario,
             'catalogSha256': validation.catalog_digest(), 'completedScenarios': validation.expanded(scenario, validation.catalog()),
             'assertions': 20, 'checks': [{'passed': True}] * 20, 'runtimeErrors': [],
             'screenshotMode': 'graphical' if graphical else 'disabled-headless', 'renderingDriver': 'metal',
-            'renderingMethod': 'forward_plus', 'adapter': 'Fixture GPU', 'screenshots': ['capture.png'] if graphical else []})
+            'renderingMethod': 'forward_plus', 'adapter': 'Fixture GPU', 'screenshots': ['capture.png'] if graphical else []}))
     (directory / validation.MAC_RECEIPT).write_text(json.dumps({'schemaVersion': 1, 'passed': True, 'release': release, 'revision': revision,
         'archiveSha256': desktop.digest(directory / 'Blast-Circuit-macos-arm64.zip'),
         'serverSha256': desktop.digest(directory / 'Blast-Circuit-server-dotnet10.zip'),

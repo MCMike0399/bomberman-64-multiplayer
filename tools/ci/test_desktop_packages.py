@@ -16,6 +16,17 @@ SHA = 'a' * 40
 RELEASE = {'version': '1.2.3', 'build': '42', 'protocolRevision': 6, 'admissionToken': '6/1.2.3/42'}
 
 
+def add_display_restart(report):
+    if 'display-settings' in report['completedScenarios']:
+        child = {key: report[key] for key in ('platform', 'release', 'catalogSha256', 'renderingDriver', 'renderingMethod', 'adapter')}
+        child.update(schemaVersion=1, passed=True, scenario='display-settings', completedScenarios=['display-settings'],
+                     displayRestoration=True, screenshotMode='graphical', assertions=6,
+                     checks=[{'passed': True}] * 6, screenshots=['restart/display-restored-next-launch.png'])
+        report['displayRestart'] = {'passed': True, 'parentExited': True, 'exitCode': 0, 'timeout': 90,
+                                   'runtimeErrors': [], 'preferencesSha256': 'c' * 64, 'summary': child}
+    return report
+
+
 def write_desktop(directory, revision=SHA, release=None):
     release = release or RELEASE
     if not (directory / 'Blast-Circuit-server-dotnet10.zip').exists():
@@ -48,11 +59,11 @@ def write_desktop(directory, revision=SHA, release=None):
             'suite': 'headless-regression', 'cases': cases}))
         graphical = []
         for scenario in validation.GRAPHICAL:
-            graphical.append({'passed': True, 'platform': settings['os'], 'release': dict(release, revision=revision),
+            graphical.append(add_display_restart({'passed': True, 'platform': settings['os'], 'release': dict(release, revision=revision),
                               'scenario': scenario, 'catalogSha256': validation.catalog_digest(),
                               'completedScenarios': validation.expanded(scenario, validation.catalog()),
                               'assertions': 200, 'checks': [{'passed': True}] * 200, 'runtimeErrors': [], 'screenshotMode': 'graphical',
-                              'renderingDriver': settings['driver'], 'renderingMethod': 'forward_plus', 'adapter': 'Fixture GPU', 'screenshots': ['capture.png']})
+                              'renderingDriver': settings['driver'], 'renderingMethod': 'forward_plus', 'adapter': 'Fixture GPU', 'screenshots': ['capture.png']}))
         (directory / item['graphical']).write_text(json.dumps({'schemaVersion': 2, 'passed': True, 'target': target, 'revision': revision,
             'release': release, 'archiveSha256': desktop.digest(directory / item['archive']), 'suite': 'graphical-regression', 'cases': graphical}))
         (directory / item['startup']).write_text(json.dumps({'schemaVersion': 1, 'passed': True, 'target': target, 'revision': revision,
@@ -104,6 +115,23 @@ class DesktopPackageTests(unittest.TestCase):
         path.write_text(json.dumps(report))
         with self.assertRaisesRegex(RuntimeError,'CPU-device'):
             desktop.inspect(self.root,SHA,RELEASE,targets=[self.target])
+
+    def test_complete_graphical_pass_cannot_omit_or_substitute_the_fresh_display_witness(self):
+        import copy
+        path = self.root / self.item['graphical']
+        original = json.loads(path.read_text())
+        for field, value in [('passed', False), ('parentExited', False), ('exitCode', 1), ('timeout', 180),
+                             ('runtimeErrors', ['ERROR: fixture']), ('summary', {})]:
+            broken = copy.deepcopy(original)
+            broken['cases'][0]['displayRestart'][field] = value
+            path.write_text(json.dumps(broken))
+            with self.subTest(field=field), self.assertRaisesRegex(RuntimeError, 'fresh-display'):
+                desktop.inspect(self.root, SHA, RELEASE, targets=[self.target])
+        broken = copy.deepcopy(original)
+        del broken['cases'][0]['displayRestart']
+        path.write_text(json.dumps(broken))
+        with self.assertRaisesRegex(RuntimeError, 'fresh-display'):
+            desktop.inspect(self.root, SHA, RELEASE, targets=[self.target])
 
     def test_full_suite_receipts_must_bind_the_actual_download_and_server(self):
         for key in ('smoke','graphical'):

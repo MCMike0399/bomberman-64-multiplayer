@@ -390,6 +390,7 @@ jobs:
             artifacts/Blast-Circuit-windows-x64-regression-details/**/summary.json
             artifacts/Blast-Circuit-windows-x64-regression-details/**/runner-summary.json
             artifacts/*-regression-details/**/peer-capacity-diagnostics.json
+            artifacts/*-regression-details/**/display-restart.json
             artifacts/Blast-Circuit-windows-x64-regression-details/**/junit.xml
             artifacts/Blast-Circuit-windows-x64-regression-details/**/runtime.log
             artifacts/Blast-Circuit-windows-x64-regression-details/**/*.png
@@ -483,6 +484,7 @@ jobs:
             artifacts/Blast-Circuit-linux-x64-regression-details/**/summary.json
             artifacts/Blast-Circuit-linux-x64-regression-details/**/runner-summary.json
             artifacts/*-regression-details/**/peer-capacity-diagnostics.json
+            artifacts/*-regression-details/**/display-restart.json
             artifacts/Blast-Circuit-linux-x64-regression-details/**/junit.xml
             artifacts/Blast-Circuit-linux-x64-regression-details/**/runtime.log
             artifacts/Blast-Circuit-linux-x64-regression-details/**/*.png
@@ -520,6 +522,7 @@ jobs:
             artifacts/Blast-Circuit-macos-arm64-regression-details/**/summary.json
             artifacts/Blast-Circuit-macos-arm64-regression-details/**/runner-summary.json
             artifacts/*-regression-details/**/peer-capacity-diagnostics.json
+            artifacts/*-regression-details/**/display-restart.json
             artifacts/Blast-Circuit-macos-arm64-regression-details/**/runtime.log
             artifacts/Blast-Circuit-macos-arm64-regression-details/**/*.png
           retention-days: 14

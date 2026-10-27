@@ -55,6 +55,7 @@ def main():
                 runner = json.loads((reports[0].parent / 'runner-summary.json').read_text())
                 if runner.get('passed') is not True or runner.get('errors') != []: raise RuntimeError('Mac exported runner failed')
                 report['runtimeErrors'] = runner.get('runtimeErrors')
+                if 'displayRestart' in runner: report['displayRestart'] = runner['displayRestart']
                 validation.inspect_report(report, scenario, settings, revision, release, graphical)
                 cases.append(report)
         (directory / 'Blast-Circuit-macos-arm64-regression.json').write_text(json.dumps({'schemaVersion': 1, 'passed': True,

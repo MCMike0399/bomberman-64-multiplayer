@@ -122,46 +122,21 @@ public partial class PlaytestDriver
         await Capture("display-settings-automatic");await KeyPress(Key.Escape);
     }
 
-    private async Task VerifyDisplayRestart()
+    private Task VerifyDisplayRestart()
     {
         string id=Guid.NewGuid().ToString("N");
         string path=ProjectSettings.GlobalizePath($"user://qa-preferences-{id}.cfg");
         File.Copy(ProjectSettings.GlobalizePath(_root.PreferencesPath),path);
         string output=Path.Combine(_output,"restart");Directory.CreateDirectory(output);
-        var info=new System.Diagnostics.ProcessStartInfo(OS.GetExecutablePath()) {UseShellExecute=false,RedirectStandardOutput=true,RedirectStandardError=true};
-        if(OS.HasFeature("editor")){info.ArgumentList.Add("--path");info.ArgumentList.Add(ProjectSettings.GlobalizePath("res://"));}
-        foreach(var arg in new[]{"--windowed","--max-fps","30","--","--playtest=display-settings","--playtest-restore-display","--playtest-preferences="+id,"--playtest-output="+output})info.ArgumentList.Add(arg);
-        Event("display-restart-launch",new {executable=info.FileName,args=info.ArgumentList.ToArray()});
-        bool parentRendering=RenderingServer.RenderLoopEnabled;
-        System.Diagnostics.Process? process=null;Task<string>? stdout=null,stderr=null;
-        try
-        {
-            // The persistence witness owns the GPU and focus while it boots.
-            // The parent continues processing frames without competing rendering.
-            RenderingServer.RenderLoopEnabled=false;
-            process=System.Diagnostics.Process.Start(info)??throw new InvalidOperationException("Could not launch persistence witness");
-            stdout=process.StandardOutput.ReadToEndAsync();stderr=process.StandardError.ReadToEndAsync();
-            var wall=System.Diagnostics.Stopwatch.StartNew();
-            while(!process.HasExited&&wall.Elapsed.TotalSeconds<90){await Frames(1);await Task.Delay(25);}
-            if(!process.HasExited){process.Kill(entireProcessTree:true);throw new TimeoutException("Fresh display process did not finish");}
-            File.WriteAllText(Path.Combine(output,"runtime.log"),await stdout+await stderr);
-            Check(process.ExitCode==0,"fresh executable restores persisted settings and exits successfully");
-            using var summary=JsonDocument.Parse(File.ReadAllText(Path.Combine(output,"summary.json")));
-            Check(summary.RootElement.GetProperty("passed").GetBoolean()&&summary.RootElement.GetProperty("assertions").GetInt32()>0,"fresh process retains its own successful graphical receipt");
-        }
-        finally
-        {
-            if(process is not null)
-            {
-                if(!process.HasExited)process.Kill(entireProcessTree:true);
-                await process.WaitForExitAsync();
-                if(stdout is not null&&stderr is not null)File.WriteAllText(Path.Combine(output,"runtime.log"),await stdout+await stderr);
-                process.Dispose();
-            }
-            if(File.Exists(path))File.Delete(path);
-            RenderingServer.RenderLoopEnabled=parentRendering;
-            GetWindow().GrabFocus();await Frames(10);
-        }
+        // The external runner launches the exact executable after this process
+        // exits, so only one game owns the renderer. It requires the child's
+        // complete restoration receipt, with the same 90-second deadline.
+        string hash=Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(path))).ToLowerInvariant();
+        File.WriteAllText(Path.Combine(output,"request.json"),JsonSerializer.Serialize(new {fixtureId=id,preferencesPath=path,preferencesSha256=hash}));
+        _displayRestartRequested=true;
+        Check(File.Exists(path),"saved display choices are retained for the next executable process");
+        Event("display-restart-request",new {fixtureId=id,preferencesSha256=hash});
+        return Task.CompletedTask;
     }
 
     private string SettingsText()=>string.Join("\n",AuditDescendants(_root).OfType<Label>().Where(label=>label.IsVisibleInTree()).Select(label=>label.Text));

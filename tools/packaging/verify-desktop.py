@@ -96,6 +96,7 @@ def main():
                 if runner.get('passed') is not True or runner.get('exitCode') != 0 or runner.get('errors') != []:
                     raise RuntimeError('Exported runner failed: ' + scenario)
                 report['runtimeErrors'] = runner.get('runtimeErrors')
+                if 'displayRestart' in runner: report['displayRestart'] = runner['displayRestart']
                 validation.inspect_report(report, scenario, settings, revision, release, args.graphical)
                 cases.append(report)
         receipt = {'schemaVersion': 2, 'passed': True, 'target': args.target, 'revision': revision,

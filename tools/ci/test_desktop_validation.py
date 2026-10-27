@@ -7,7 +7,7 @@ import unittest
 
 import desktop_packages as desktop
 import desktop_validation as validation
-from test_desktop_packages import write_desktop, SHA, RELEASE
+from test_desktop_packages import write_desktop, add_display_restart, SHA, RELEASE
 
 
 class DesktopValidationTests(unittest.TestCase):
@@ -61,6 +61,7 @@ class DesktopValidationTests(unittest.TestCase):
                   'assertions': 200, 'checks': [{'passed': True}] * 200, 'runtimeErrors': [], 'screenshotMode': 'graphical',
                   'renderingDriver': 'd3d12', 'renderingMethod': 'forward_plus',
                   'adapter': 'Target GPU', 'screenshots': ['capture.png']}
+        add_display_restart(report)
         validation.inspect_report(report, 'all', settings, SHA, RELEASE, True)
         for field, value in (('renderingDriver', 'vulkan'), ('adapter', ''), ('screenshots', [])):
             with self.subTest(field=field), self.assertRaises(RuntimeError):

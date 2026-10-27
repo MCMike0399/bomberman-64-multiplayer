@@ -79,6 +79,19 @@ def relocate_summary(folder):
     summary['screenshots'] = relocated
     (folder / 'guest-summary.json').write_text(raw)
     path.write_text(json.dumps(summary, indent=2) + '\n')
+    restart = folder / 'display-restart.json'
+    if restart.exists():
+        receipt = json.loads(restart.read_text())
+        document = receipt.get('summary', {})
+        relocated = []
+        for value in document.get('screenshots', []):
+            relative = Path(value).relative_to(GUEST_OUTPUT)
+            if '..' in relative.parts: raise ValueError('Guest restart capture escapes the evidence directory')
+            host = folder / relative
+            host.resolve().relative_to((folder / 'restart').resolve())
+            relocated.append(str(host))
+        document['screenshots'] = relocated
+        restart.write_text(json.dumps(receipt, indent=2) + '\n')
 
 
 def inventory(app):
@@ -119,6 +132,7 @@ def prepare(args, payload, folder, network, windowed):
             shutil.rmtree(published)
             (folder / 'tested-server-files.json').write_text(json.dumps(inventory(payload / 'server'), indent=2) + '\n')
     shutil.copy2(Path(__file__).with_name('isolated_guest.py'), payload / 'guest.py')
+    shutil.copy2(Path(__file__).with_name('display_restart.py'), payload / 'display_restart.py')
     if args.script:
         shutil.copy2(args.script, payload / 'script.json')
     engine_args = ['--max-fps', '30', '--fixed-fps', '30', '--disable-vsync']
@@ -189,9 +203,11 @@ def run(args, folder, result, network, windowed):
                     command = [tart, 'exec', vm, '/usr/bin/python3',
                                '/Volumes/My Shared Files/payload/guest.py']
                     result['command'] = command
+                    from contracts import catalog, expanded
+                    restart_budget = 90 if 'display-settings' in expanded(args.scenario, catalog()) else 0
                     with (folder / 'runtime.log').open('w') as log:
                         trial = subprocess.run(command, stdout=log, stderr=subprocess.STDOUT,
-                                               timeout=args.timeout + 90)
+                                               timeout=args.timeout + 90 + restart_budget)
                     result['exitCode'] = trial.returncode
                     if (folder / 'guest-command.json').is_file():
                         result['guestCommand'] = json.loads((folder / 'guest-command.json').read_text())

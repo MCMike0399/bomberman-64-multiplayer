@@ -27,6 +27,7 @@ public partial class PlaytestDriver : Node
     private readonly Dictionary<int, PlayerInput> _inputs = [];
     private readonly Stopwatch _clock = new();
     private bool _headless, _windowedRequested;
+    private bool _displayRestartRequested;
 
     public static bool TryAttach(GameRoot root)
     {
@@ -78,6 +79,7 @@ public partial class PlaytestDriver : Node
                 platform=OS.GetName(),renderingDriver=RenderingServer.GetCurrentRenderingDriverName(),
                 renderingMethod=RenderingServer.GetCurrentRenderingMethod(),adapter=RenderingServer.GetVideoAdapterName(),
                 adapterType=RenderingServer.GetVideoAdapterType().ToString(),
+                displayRestartRequested=_displayRestartRequested,displayRestoration=args.Contains("--playtest-restore-display"),
                 release=new {version=OnlineProtocol.ReleaseVersion,build=OnlineProtocol.ReleaseBuild,
                     protocolRevision=OnlineProtocol.Revision,admissionToken=OnlineProtocol.WireRevision,revision=OnlineProtocol.SourceRevision} };
             File.WriteAllText(Path.Combine(_output,"summary.json"),JsonSerializer.Serialize(summary,new JsonSerializerOptions { WriteIndented=true }));

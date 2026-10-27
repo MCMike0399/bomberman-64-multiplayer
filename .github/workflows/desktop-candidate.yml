@@ -135,6 +135,7 @@ jobs:
             artifacts/*-regression-details/**/summary.json
             artifacts/*-regression-details/**/runner-summary.json
             artifacts/*-regression-details/**/peer-capacity-diagnostics.json
+            artifacts/*-regression-details/**/display-restart.json
             artifacts/*-regression-details/**/junit.xml
             artifacts/*-regression-details/**/runtime.log
             artifacts/*-regression-details/**/*.png
@@ -175,6 +176,7 @@ jobs:
             artifacts/Blast-Circuit-macos-arm64-regression-details/**/summary.json
             artifacts/Blast-Circuit-macos-arm64-regression-details/**/runner-summary.json
             artifacts/*-regression-details/**/peer-capacity-diagnostics.json
+            artifacts/*-regression-details/**/display-restart.json
             artifacts/Blast-Circuit-macos-arm64-regression-details/**/runtime.log
             artifacts/Blast-Circuit-macos-arm64-regression-details/**/*.png
             artifacts/candidate-mac-update/summary.json

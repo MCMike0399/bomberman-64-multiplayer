@@ -262,6 +262,11 @@ def main():
                 with MetalHudCapture(folder, runtime.pid) if args.metal_hud else contextlib.nullcontext():
                     runtime.wait(timeout=args.timeout)
             result['exitCode'] = runtime.returncode
+            if runtime.returncode == 0:
+                from display_restart import run as restore_display
+                parent_summary = json.loads((folder / 'summary.json').read_text())
+                restore_display(folder, command, parent_summary, runtime,
+                                cwd=folder if args.app or args.executable else ROOT, environment=runtime_env)
             if args.scenario == 'graphics-benchmark':
                 result['powerAfter'] = native_power_evidence()
         summary_path = folder / 'summary.json'
@@ -283,6 +288,16 @@ def main():
             result['benchmark'] = json.loads(benchmark_path.read_text()) if benchmark_path.is_file() else {}
         summary = json.loads(summary_path.read_text())
         receipt_errors = validate_summary(summary, folder, args.scenario, args.headless)
+        if not args.headless and 'display-settings' in expanded(args.scenario, scenarios):
+            from display_restart import inspect as inspect_display_restart
+            restart_path = folder / 'display-restart.json'
+            restart = json.loads(restart_path.read_text()) if restart_path.is_file() else {}
+            try:
+                inspect_display_restart(restart, summary)
+                receipt_errors.extend(validate_summary(restart['summary'], folder / 'restart', 'display-settings', False))
+                result['displayRestart'] = restart
+            except (RuntimeError, KeyError) as error:
+                receipt_errors.append(str(error))
         if args.scenario == 'graphics-benchmark':
             receipt_errors.extend(validate_benchmark(result['benchmark'], stage=args.benchmark_stage,
                 presets=('Low', 'Medium', 'High') if args.benchmark_preset == 'all' else (args.benchmark_preset.title(),),

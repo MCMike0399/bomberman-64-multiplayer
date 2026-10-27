@@ -35,6 +35,9 @@ def inspect_report(report, scenario, settings, revision, release, graphical):
                        report.get('renderingMethod') != 'forward_plus' or
                        not report.get('adapter') or not report.get('screenshots')):
         raise RuntimeError('Missing intended renderer/adapter/captures: ' + scenario)
+    if graphical and 'display-settings' in expanded(scenario, catalog()):
+        from display_restart import inspect as inspect_display_restart
+        inspect_display_restart(report.get('displayRestart', {}), report)
 
 
 def inspect_receipt(receipt, settings, revision, release):
