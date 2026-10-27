@@ -10,8 +10,11 @@ import re
 import subprocess
 import tempfile
 import zipfile
+import sys
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'tools/ci'))
+import desktop_packages
 
 
 def sign_bytes(path, key, trusted):
@@ -50,6 +53,11 @@ def sign(archive, key, output, server=None):
                 metadata.get('version') != version or server_metadata.get('version') != version):
             raise RuntimeError('Client/server signing identities differ')
         assets = [archive, server, output / 'build-metadata.json', output / 'server-build-metadata.json', path]
+        # Preserve verification of historical Mac-only releases and the existing updater format.
+        if desktop_packages.present(output):
+            targets = desktop_packages.present_targets(output)
+            desktop_packages.inspect(output, metadata['revision'], metadata['release'], targets=targets)
+            assets += [output / name for target in targets for name in desktop_packages.asset_names(target)]
         inventory = {asset.name: {'sha256': hashlib.sha256(asset.read_bytes()).hexdigest(), 'size': asset.stat().st_size} for asset in assets}
         delivery = output / 'Blast-Circuit-release.json'
         delivery.write_text(json.dumps({'schemaVersion': 1, 'revision': metadata['revision'],

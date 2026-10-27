@@ -13,6 +13,7 @@ from deployment_state import Journal, locked, write_json, sync_directory, valida
 
 from promote_release import ARTIFACT, SERVER_ARTIFACT, gh, inspect_gates, inspect_package, inspect_run, inspect_server, require_current_main, inspect_existing_release, stage_draft, publish_draft
 from release_identity import check_exports
+import desktop_packages
 from verify_deployment import targets_from_json, verify, verify_connections, build_probe, placements_from_json
 
 
@@ -104,6 +105,7 @@ def main(argv=None):
                 if args.publish:
                     inspect_package(directory, revision, args.version)
                     inspect_server(directory, revision, args.version)
+                    desktop_packages.inspect(directory, revision, release)
                     inspect_gates(args.repository, args.run_id, args.version)
                     notes = stage_draft(args.repository, args.run_id, args.version, revision, directory, existing_draft)
                 receipts = verify(targets, release, revision)
@@ -134,6 +136,8 @@ def main(argv=None):
         archive = inspect_package(directory, revision, args.version)
         inspect_gates(args.repository, args.run_id, args.version)
         server = inspect_server(directory, revision, args.version)
+        desktop_packages.download(args.repository, args.run_id, directory, gh)
+        desktop_packages.inspect(directory, revision, release)
         signer = Path(__file__).resolve().parents[1] / 'updates/sign_release.py'
         signed = subprocess.run([sys.executable, str(signer), '--archive', str(archive), '--key', str(args.signing_key),
                                  '--output', str(directory), '--server', str(server)], capture_output=True, timeout=60)

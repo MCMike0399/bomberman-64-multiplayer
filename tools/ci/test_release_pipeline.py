@@ -18,6 +18,21 @@ TARGETS = {'primary': 'https://primary.example', 'fallback': 'https://fallback.e
 
 
 class IdentityTests(unittest.TestCase):
+    def test_windows_product_and_file_versions_follow_the_canonical_identity(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / 'Release.props').write_text('<Project><PropertyGroup><BlastVersion>1.2.3</BlastVersion><BlastBuild>42</BlastBuild><BlastProtocolRevision>4</BlastProtocolRevision></PropertyGroup></Project>')
+            exports = root / 'export_presets.cfg'
+            exports.write_text('platform="macOS"\napplication/short_version="1.2.3"\napplication/version="42"\nplatform="Windows Desktop"\napplication/product_version="1.2.2"\napplication/file_version="1.2.2.41"\n')
+            with self.assertRaisesRegex(ValueError, 'differs from exports'):
+                release_identity.check_exports(root)
+            release_identity.check_exports(root, write=True)
+            self.assertIn('application/product_version="1.2.3"', exports.read_text())
+            self.assertIn('application/file_version="1.2.3.42"', exports.read_text())
+            exports.write_text(exports.read_text().replace('application/file_version="1.2.3.42"\n', ''))
+            with self.assertRaisesRegex(ValueError, 'Windows export identity'):
+                release_identity.check_exports(root)
+
     def test_superseded_main_run_cannot_deploy_or_publish(self):
         with patch.object(promote_release, 'gh', return_value=json.dumps({'object': {'sha': 'b' * 40}})):
             with self.assertRaisesRegex(RuntimeError, 'stale deployment'):
@@ -113,6 +128,7 @@ class DeploymentTransactionTests(unittest.TestCase):
                 patch.object(deploy_release, 'inspect_package', return_value=Path('/fixture/archive.zip')), \
                 patch.object(deploy_release, 'inspect_gates'), \
                 patch.object(deploy_release, 'inspect_server'), \
+                patch.object(deploy_release.desktop_packages, 'inspect'), \
                 patch.object(deploy_release.subprocess, 'run', return_value=subprocess.CompletedProcess([], 1, b'', b'wrong key')), \
                 patch.object(deploy_release, 'deploy') as host, patch.object(deploy_release, 'validate_adapter'):
             with self.assertRaisesRegex(RuntimeError, 'signing preflight failed'):

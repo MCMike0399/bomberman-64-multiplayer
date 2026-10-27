@@ -1,5 +1,6 @@
 using Godot;
 using Bomber.Client.Updates;
+using Bomber.Game.Online;
 namespace BlastCircuit.Updates;
 
 /// <summary>Checks in the background and offers a verified update only at a safe menu boundary.</summary>
@@ -18,6 +19,12 @@ public partial class GameUpdater : Node
     public bool Busy=>_busy;
     public override async void _Ready()
     {
+        if(!OperatingSystem.IsMacOS())
+        {
+            Version=OnlineProtocol.ReleaseVersion;
+            Status="Download the latest release, close the game, then extract it to a new folder. Your settings are kept.";
+            return;
+        }
         if(!OperatingSystem.IsMacOS()||OS.HasFeature("editor")||OS.GetCmdlineUserArgs().Any(a=>a.StartsWith("--playtest=")))return;
         try
         {
@@ -55,6 +62,11 @@ public partial class GameUpdater : Node
     }
     public async Task Check()
     {
+        if(!OperatingSystem.IsMacOS())
+        {
+            OS.ShellOpen($"https://github.com/{UpdateRelease.Repository}/releases/latest");
+            return;
+        }
         if(!_initialized||_bundle==null||_busy||UpdateReady)return;
         _busy=true;Status="Checking for updates…";
         try

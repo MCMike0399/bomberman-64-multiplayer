@@ -13,7 +13,7 @@ The repository root is the Godot project root (`res://`). Folders that contain a
 | Path | Contents | Godot |
 | --- | --- | --- |
 | `Release.props` | Canonical version/build/protocol identity; shared assembly metadata | Root |
-| `project.godot`, `export_presets.cfg`, `icon.svg` | Engine settings, autoloads, the `macOS Metal` export preset (version/build synchronized from `Release.props`) | Root |
+| `project.godot`, `export_presets.cfg`, `icon.svg` | Engine settings, autoloads, Mac Metal and Windows Direct3D 12 export presets (identity synchronized from `Release.props`) | Root |
 | `Bomberman64Multiplayer.csproj`, `.sln` | Godot C# project; compiles `scripts/**/*.cs` and references `Bomber.Client` | Root |
 | `Directory.Build.props` | Shared `net10.0`, nullable and implicit-using defaults for every project here | — |
 | `scenes/` | `main.tscn`, the only scene; menus, arenas and models are built in code | Imported |
@@ -27,6 +27,11 @@ The repository root is the Godot project root (`res://`). Folders that contain a
 | `native/`, `artifacts/`, `burbuja-kernel/` | Local SDL build, outputs, pinned external kernel (all Git-ignored) | Ignored |
 
 ## Assemblies and dependency direction
+
+[Desktop client packaging](../desktop-clients.md) uses
+`tools/packaging/package-desktop.py`, `smoke-desktop.py` and the artifact contracts
+in `tools/ci/desktop_packages.py`. Add platforms through that registry; keep game
+rules and rendering presets shared.
 
 ```mermaid
 flowchart LR

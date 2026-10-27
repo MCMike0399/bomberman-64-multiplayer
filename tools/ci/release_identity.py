@@ -30,6 +30,11 @@ def check_exports(root=ROOT, write=False):
         expected, count = re.subn(r'^application/' + key + r'="[^"]*"$', f'application/{key}="{value}"', expected, flags=re.MULTILINE)
         if count != 1:
             raise ValueError('Expected one Godot export identity: ' + key)
+    # Windows has different metadata keys; all enabled export presets use one identity.
+    for key, value in (('product_version', release['version']), ('file_version', release['version'] + '.' + release['build'])):
+        expected, count = re.subn(r'^application/' + key + r'="[^"]*"$', f'application/{key}="{value}"', expected, flags=re.MULTILINE)
+        if 'platform="Windows Desktop"' in original and count != 1:
+            raise ValueError('Expected one Windows export identity: ' + key)
     if write:
         path.write_text(expected)
     elif original != expected:

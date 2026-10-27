@@ -7,6 +7,12 @@ server assemblies embed these values. `X-Blast-Protocol` is the exact token
 release tokens, even when the schema revision stays the same. Increase the schema
 revision for incompatible peer messages as well. Local play is unaffected.
 
+Enabled [desktop clients](desktop-clients.md) are packaged and smoke-tested on
+their target OS from the same trusted run. Their archives, metadata and smoke
+receipts are included in the signed delivery inventory and anonymous public
+verification. Missing/failed desktop jobs block promotion before any host changes.
+These initial desktop ports use manual updates; the Mac updater format is unchanged.
+
 **v0.40.0/build 48/schema 6** is delivered. The [delivery receipt](verification.md#v0400-delivered)
 records the exact CI artifacts, production rollout and signed update. Earlier clients advertise numeric `3`, `4` or branch-specific stage tokens and are rejected by the
 new server before identity creation, queue/room admission or WebSocket upgrade.

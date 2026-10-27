@@ -19,6 +19,7 @@ import subprocess
 import tempfile
 import time
 import urllib.request
+import desktop_packages
 
 from promote_release import ARCHIVE, ARTIFACT, SERVER_ARCHIVE, SERVER_ARTIFACT, gh, inspect_gates, inspect_package, inspect_server
 
@@ -88,6 +89,8 @@ def verify_assets(directory, version):
     if delivery.get('schemaVersion') != 1 or release.get('version') != version or not re.fullmatch(r'[0-9a-f]{40}', revision):
         raise RuntimeError('Signed delivery manifest does not describe this version')
     expected = {ARCHIVE, SERVER_ARCHIVE, 'build-metadata.json', 'server-build-metadata.json', 'Blast-Circuit-update.json'}
+    if desktop_packages.present(directory):
+        expected |= {name for target in desktop_packages.present_targets(directory) for name in desktop_packages.asset_names(target)}
     if set(delivery.get('assets', {})) != expected:
         raise RuntimeError('Signed delivery manifest has an unexpected asset inventory')
     for name, entry in delivery['assets'].items():
@@ -96,6 +99,8 @@ def verify_assets(directory, version):
             raise RuntimeError('Published asset differs from its signed hash/size: ' + name)
     inspect_package(directory, revision, version, release=release)
     inspect_server(directory, revision, version, release=release)
+    if desktop_packages.present(directory):
+        desktop_packages.inspect(directory, revision, release, targets=desktop_packages.present_targets(directory))
     return delivery
 
 
@@ -111,9 +116,11 @@ def compare_run_artifacts(repository, run_id, revision, directory):
     if run.get('head_sha') != revision or run.get('conclusion') != 'success':
         raise RuntimeError('Verification run does not match the published source revision')
     with tempfile.TemporaryDirectory(prefix='blast-published-ci-') as temporary:
-        for artifact in (ARTIFACT, SERVER_ARTIFACT):
+        for artifact in (ARTIFACT, SERVER_ARTIFACT, *desktop_packages.artifacts(desktop_packages.present_targets(directory))):
             gh('run', 'download', str(run_id), '--repo', repository, '--name', artifact, '--dir', temporary)
         names = (ARCHIVE, ARCHIVE + '.sha256', 'build-metadata.json', SERVER_ARCHIVE, SERVER_ARCHIVE + '.sha256', 'server-build-metadata.json')
+        if desktop_packages.present(directory):
+            names += tuple(name for target in desktop_packages.present_targets(directory) for name in desktop_packages.asset_names(target))
         for name in names:
             if digest(Path(temporary) / name) != digest(directory / name):
                 raise RuntimeError('Published bytes differ from the trusted Verification artifact: ' + name)
@@ -125,7 +132,14 @@ def verify(repository, version, token=None, run_id=None, superseded=False, lates
     if release.get('draft') or release.get('prerelease'):
         raise RuntimeError('Release is not a published stable release')
     published = {item['name']: item for item in release.get('assets', [])}
-    if set(published) != set(ASSETS):
+    # A historical release may predate a target. Accept only complete target groups;
+    # their inclusion is subsequently authenticated by the signed delivery inventory.
+    expected_assets = set(ASSETS)
+    for target in desktop_packages.TARGETS:
+        group = set(desktop_packages.asset_names(target))
+        if group & set(published):
+            expected_assets |= group
+    if set(published) != expected_assets:
         raise RuntimeError('Published asset set differs: ' + ', '.join(sorted(set(published) ^ set(ASSETS))))
     deadline = time.monotonic() + latest_wait
     while True:

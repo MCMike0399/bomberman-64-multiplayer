@@ -13,6 +13,7 @@ import zipfile
 import sys
 from release_identity import check_exports
 import release_gates
+import desktop_packages
 from verify_deployment import targets_from_json, verify, verify_connections, placements_from_json
 
 ARTIFACT = 'Blast-Circuit-macos-arm64-ad-hoc'
@@ -40,11 +41,12 @@ def inspect_run(repository, run_id):
     jobs = json.loads(gh('api', f'repos/{repository}/actions/runs/{run_id}/jobs?per_page=100'))['jobs']
     required = {'Public contracts and audio', 'Trusted managed and network', 'Trusted Godot headless', 'Trusted Apple Silicon package',
                 release_gates.STARTUP_JOB, release_gates.UPDATE_JOB}
+    required |= desktop_packages.jobs()
     passed = {item['name'] for item in jobs if item.get('conclusion') == 'success'}
     if not required.issubset(passed):
         raise RuntimeError('Required verification/package jobs did not all pass')
     artifacts = json.loads(gh('api', f'repos/{repository}/actions/runs/{run_id}/artifacts?per_page=100'))['artifacts']
-    for name in (ARTIFACT, SERVER_ARTIFACT, release_gates.STARTUP_ARTIFACT, release_gates.UPDATE_ARTIFACT):
+    for name in (ARTIFACT, SERVER_ARTIFACT, release_gates.STARTUP_ARTIFACT, release_gates.UPDATE_ARTIFACT, *desktop_packages.artifacts()):
         candidates = [item for item in artifacts if item['name'] == name and not item.get('expired')]
         if len(candidates) != 1:
             raise RuntimeError('Expected exactly one unexpired tested artifact: ' + name)
@@ -194,6 +196,7 @@ def inspect_server(directory, revision, version, release=None):
 
 def stage_draft(repository, run_id, version, revision, directory, existing_draft, signed=True):
     """Upload already inspected/signed artifacts before changing the live fleet."""
+    desktop_packages.inspect(directory, revision, check_exports())
     notes = directory / 'release-notes.txt'
     notes.write_text(f'Apple Silicon client and portable .NET 10 server from {revision}.\n\n'
                      f'Verification: https://github.com/{repository}/actions/runs/{run_id}\n\n'
@@ -201,8 +204,14 @@ def stage_draft(repository, run_id, version, revision, directory, existing_draft
                      'graphics preset/display mode and an actual signed update from the latest published release. '
                      'The full Metal journey suite is a separate optional lane. '
                      'Ad-hoc signature; Apple notarization and physical controller validation are not claimed.\n')
+    with notes.open('a') as stream:
+        for target, settings in desktop_packages.TARGETS.items():
+            stream.write(f'\n{target}: self-contained client using {settings["driver"]}; native-OS headless exported smoke passed. '
+                         'Automatic installation is not available: download and extract the matching current release. '
+                         'Native GPU visuals/performance and physical controller support require separate hardware validation.\n')
     names = [ARCHIVE, ARCHIVE + '.sha256', SERVER_ARCHIVE, SERVER_ARCHIVE + '.sha256',
              'server-build-metadata.json', 'build-metadata.json']
+    names += [name for target in desktop_packages.TARGETS for name in desktop_packages.asset_names(target)]
     if signed:
         names += ['Blast-Circuit-update.json', 'Blast-Circuit-update.json.sig',
                   'Blast-Circuit-release.json', 'Blast-Circuit-release.json.sig']
@@ -255,6 +264,8 @@ def main(argv=None):
         inspect_gates(args.repository, args.run_id, version)
         gh('run', 'download', args.run_id, '--repo', args.repository, '--name', SERVER_ARTIFACT, '--dir', str(directory))
         server = inspect_server(directory, revision, version)
+        desktop_packages.download(args.repository, args.run_id, directory, gh)
+        desktop_packages.inspect(directory, revision, check_exports())
         if args.signing_key:
             signer = Path(__file__).resolve().parents[1] / 'updates/sign_release.py'
             subprocess.run([sys.executable, str(signer), '--archive', str(archive), '--key', str(args.signing_key), '--output', str(directory), '--server', str(server)], check=True)

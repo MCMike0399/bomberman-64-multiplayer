@@ -9,6 +9,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 import zipfile
+import desktop_packages
 
 import deploy_release
 import promote_release
@@ -113,7 +114,7 @@ class ReleaseCutoverTests(unittest.TestCase):
     def test_upload_is_verified_before_drain_and_one_match_cycle_precedes_publication(self):
         deploy_release.main(self.args)
         self.assertEqual(['sign', 'stage', 'check-upload', 'drain', 'apply', 'identity', 'resume', 'match', 'identity', 'publish'], self.events)
-        self.assertEqual(2, self.downloads, 'download client/server once')
+        self.assertEqual(2 + len(desktop_packages.artifacts()), self.downloads, 'download client/server and desktop artifacts once')
         receipt = json.loads((self.root / 'receipt.json').read_text())
         self.assertTrue(receipt['nodes'][1]['roomPlacementDeferred'])
 
@@ -134,7 +135,7 @@ class ReleaseCutoverTests(unittest.TestCase):
         with patch.object(deploy_release, 'require_current_main', side_effect=RuntimeError('main advanced')):
             deploy_release.main(self.args)
         self.assertEqual(['stage', 'check-upload', 'identity', 'match', 'identity', 'publish'], self.events)
-        self.assertEqual(2, self.downloads, 'retry must use the durable inspected artifacts')
+        self.assertEqual(2 + len(desktop_packages.artifacts()), self.downloads, 'retry must use the durable inspected artifacts')
 
     def test_retry_against_newer_fleet_cannot_publish_old_candidate(self):
         self.fail_publish = True

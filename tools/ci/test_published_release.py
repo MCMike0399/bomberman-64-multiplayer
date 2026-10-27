@@ -12,11 +12,26 @@ from unittest.mock import patch
 
 import update_from_published
 import verify_published
+import desktop_packages
 from test_promotion import RELEASE, SHA, write_package, write_server
 from test_release_signing import signer
 
 
 class PublishedReleaseTests(unittest.TestCase):
+    def test_desktop_downloads_and_native_smoke_are_bound_by_the_delivery_signature(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            assets, trusted = self.signed_release(Path(temporary))
+            with patch.object(verify_published, 'PUBLIC_KEY', trusted):
+                delivery = verify_published.verify_assets(assets, '0.15.0')
+                for target in desktop_packages.TARGETS:
+                    for name in desktop_packages.asset_names(target):
+                        self.assertIn(name, delivery['assets'])
+                target = next(iter(desktop_packages.TARGETS))
+                smoke = assets / desktop_packages.names(target)['smoke']
+                smoke.write_text(smoke.read_text().replace('"assertions": 200', '"assertions": 0'))
+                with self.assertRaisesRegex(RuntimeError, 'signed hash/size'):
+                    verify_published.verify_assets(assets, '0.15.0')
+
     def signed_release(self, root):
         key = root / 'fixture.pem'
         subprocess.run(['openssl', 'genpkey', '-algorithm', 'EC', '-pkeyopt', 'ec_paramgen_curve:P-256', '-out', str(key)],
