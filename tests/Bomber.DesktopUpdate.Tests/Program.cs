@@ -45,6 +45,24 @@ if (args.Contains("--") || args.Any(a => a.StartsWith("--update-token=")))
 int checks = 0;
 void Check(bool value, string description)
 { if (!value) throw new Exception(description); checks++; }
+if (OperatingSystem.IsWindows())
+{
+    string probe = Path.Combine(Path.GetTempPath(), "blast-lock-probe-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(probe);
+    try
+    {
+        using var handle = DirectoryHandle.Open(probe);
+        bool blocked = false;
+        try { Directory.Move(probe, probe + "-moved"); }
+        catch (IOException error) when ((error.HResult & 0xffff) == 32) { blocked = true; }
+        Check(blocked, "The Windows sharing probe must actually block a directory rename");
+    }
+    finally
+    {
+        if (Directory.Exists(probe)) Directory.Delete(probe);
+        if (Directory.Exists(probe + "-moved")) Directory.Delete(probe + "-moved");
+    }
+}
 foreach (bool failedLaunch in new[] { false, true })
 {
     string root = Path.Combine(OperatingSystem.IsMacOS() ? "/private/tmp" : Path.GetTempPath(), "blast-update-transaction-" + Guid.NewGuid().ToString("N"));
@@ -142,7 +160,7 @@ static class DirectoryHandle
     public static SafeFileHandle Open(string path)
     {
         // FILE_SHARE_READ|WRITE, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS.
-        var handle = CreateFileW(path, 0, 3, IntPtr.Zero, 3, 0x02000000, IntPtr.Zero);
+        var handle = CreateFileW(path, 0x80000000, 3, IntPtr.Zero, 3, 0x02000000, IntPtr.Zero);
         if (handle.IsInvalid) throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
         return handle;
     }
