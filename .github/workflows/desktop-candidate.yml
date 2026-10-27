@@ -8,7 +8,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: desktop-candidate-${{ github.event.pull_request.number }}
+  group: desktop-candidate-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
   cancel-in-progress: true
 
 jobs:
@@ -153,7 +153,7 @@ jobs:
         with:
           name: desktop-candidate-inputs
           path: artifacts
-      - run: swift tools/packaging/macos-test-display.swift
+      - run: python3 tools/packaging/macos-test-display.py
       - run: python3 tools/packaging/verify-mac-archive.py
       - name: Actual signed Mac update from the latest published release
         env:

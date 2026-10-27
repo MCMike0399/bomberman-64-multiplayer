@@ -504,7 +504,7 @@ jobs:
         with:
           name: Blast-Circuit-server-dotnet10
           path: artifacts
-      - run: swift tools/packaging/macos-test-display.swift
+      - run: python3 tools/packaging/macos-test-display.py
       - run: python3 tools/packaging/verify-mac-archive.py
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()

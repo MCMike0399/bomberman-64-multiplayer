@@ -85,7 +85,7 @@ jobs:
           name: ${{ inputs.mode == 'candidate' && format('candidate-{0}', matrix.target) || format('Blast-Circuit-{0}-smoke', matrix.target) }}
           path: artifacts
       - if: runner.os == 'macOS'
-        run: swift tools/packaging/macos-test-display.swift
+        run: python3 tools/packaging/macos-test-display.py
       - if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y fuse3 xvfb openbox pulseaudio mesa-vulkan-drivers
       - name: Wait for the isolated public test origin
