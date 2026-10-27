@@ -132,14 +132,13 @@ public partial class PlaytestDriver
         if(OS.HasFeature("editor")){info.ArgumentList.Add("--path");info.ArgumentList.Add(ProjectSettings.GlobalizePath("res://"));}
         foreach(var arg in new[]{"--windowed","--max-fps","30","--","--playtest=display-settings","--playtest-restore-display","--playtest-preferences="+id,"--playtest-output="+output})info.ArgumentList.Add(arg);
         Event("display-restart-launch",new {executable=info.FileName,args=info.ArgumentList.ToArray()});
-        var parentWindow=GetWindow();bool parentVisible=parentWindow.Visible;
         bool parentRendering=RenderingServer.RenderLoopEnabled;
         System.Diagnostics.Process? process=null;Task<string>? stdout=null,stderr=null;
         try
         {
             // The persistence witness owns the GPU and focus while it boots.
             // The parent continues processing frames without competing rendering.
-            parentWindow.Hide();RenderingServer.RenderLoopEnabled=false;
+            RenderingServer.RenderLoopEnabled=false;
             process=System.Diagnostics.Process.Start(info)??throw new InvalidOperationException("Could not launch persistence witness");
             stdout=process.StandardOutput.ReadToEndAsync();stderr=process.StandardError.ReadToEndAsync();
             var wall=System.Diagnostics.Stopwatch.StartNew();
@@ -160,8 +159,8 @@ public partial class PlaytestDriver
                 process.Dispose();
             }
             if(File.Exists(path))File.Delete(path);
-            RenderingServer.RenderLoopEnabled=parentRendering;parentWindow.Visible=parentVisible;
-            parentWindow.GrabFocus();await Frames(10);
+            RenderingServer.RenderLoopEnabled=parentRendering;
+            GetWindow().GrabFocus();await Frames(10);
         }
     }
 
