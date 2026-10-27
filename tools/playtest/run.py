@@ -113,6 +113,8 @@ def main():
     display.add_argument('--fullscreen', action='store_true', help='Explicitly test fullscreen; normal QA stays windowed')
     parser.add_argument('--godot', default=os.environ.get('GODOT', '/Applications/Godot_mono.app/Contents/MacOS/Godot'))
     parser.add_argument('--app', type=Path, help='Test an exported macOS .app independently of the source project')
+    parser.add_argument('--executable', type=Path, help='Test an exported Windows/Linux executable independently of the source project')
+    parser.add_argument('--rendering-driver', choices=('d3d12', 'vulkan', 'metal'), help='Require a rendering driver for a graphical exported-client check')
     parser.add_argument('--server', default='http://127.0.0.1:18496')
     parser.add_argument('--start-server', action='store_true', help='Start local server if unreachable; stop only the process this runner owns')
     parser.add_argument('--build', action='store_true', help='Build Godot and server projects first')
@@ -204,7 +206,13 @@ def main():
                     if owned_server.poll() is not None or time.monotonic() > deadline:
                         raise RuntimeError('Server startup failed; inspect server.log')
                     time.sleep(.1)
-            if args.app:
+            if args.app and args.executable:
+                raise RuntimeError('Choose --app or --executable')
+            if args.executable:
+                if not args.executable.is_file():
+                    raise RuntimeError('Exported executable does not exist')
+                command = [str(args.executable.resolve())]
+            elif args.app:
                 import plistlib
                 app = args.app.resolve()
                 with (app / 'Contents/Info.plist').open('rb') as plist:
@@ -215,7 +223,9 @@ def main():
                     (folder / 'tested-app-files.json').write_text(json.dumps(inventory(app), indent=2) + '\n')
             else:
                 command = [args.godot, '--path', str(ROOT)]
-            result['runtimeSource'] = 'app-bundle' if args.app else 'source-project'
+            result['runtimeSource'] = 'exported-executable' if args.executable else 'app-bundle' if args.app else 'source-project'
+            if args.rendering_driver:
+                command += ['--rendering-driver', args.rendering_driver]
             command += engine_timing_args(args.scenario)
             result['timingMode'] = 'realtime-uncapped' if args.scenario == 'graphics-benchmark' else 'fixed-step-30'
             if args.record:
@@ -247,7 +257,7 @@ def main():
                 runtime_env = os.environ.copy()
                 if args.metal_hud:
                     runtime_env.update(MTL_HUD_ENABLED='1', MTL_HUD_LOG_ENABLED='1', MTL_HUD_OPACITY='0')
-                runtime = subprocess.Popen(command, cwd=folder if args.app else ROOT, stdout=log, stderr=subprocess.STDOUT, start_new_session=True, env=runtime_env)
+                runtime = subprocess.Popen(command, cwd=folder if args.app or args.executable else ROOT, stdout=log, stderr=subprocess.STDOUT, start_new_session=os.name == 'posix', env=runtime_env)
                 from metal_metrics import MetalHudCapture
                 with MetalHudCapture(folder, runtime.pid) if args.metal_hud else contextlib.nullcontext():
                     runtime.wait(timeout=args.timeout)

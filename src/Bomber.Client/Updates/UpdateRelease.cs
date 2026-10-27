@@ -7,8 +7,10 @@ namespace Bomber.Client.Updates;
 public sealed record UpdateRelease(string Version, string Sha256, long Size)
 {
     public const string Repository = "MCMike0399/bomberman-64-multiplayer";
-    public const string ArchiveName = "Blast-Circuit-macos-arm64.zip";
-    public const string ManifestName = "Blast-Circuit-update.json";
+    public static string ArchiveName => OperatingSystem.IsWindows() ? "Blast-Circuit-windows-x64.zip" :
+        OperatingSystem.IsLinux() ? "Blast-Circuit-linux-x64.AppImage" : "Blast-Circuit-macos-arm64.zip";
+    public static string ManifestName => OperatingSystem.IsWindows() ? "Blast-Circuit-windows-x64-update.json" :
+        OperatingSystem.IsLinux() ? "Blast-Circuit-linux-x64-update.json" : "Blast-Circuit-update.json";
     public static readonly Uri Feed = new($"https://api.github.com/repos/{Repository}/releases/latest");
     public Uri ArchiveUrl => new($"https://github.com/{Repository}/releases/download/v{Version}/{ArchiveName}");
     public static Version ParseVersion(string value)

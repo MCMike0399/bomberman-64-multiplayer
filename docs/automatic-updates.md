@@ -1,4 +1,4 @@
-# Automatic Mac updates
+# Automatic updates
 
 Blast Circuit v0.21 adds the install-once update path. Earlier builds need this
 one manual upgrade because they do not contain an updater. Settings includes
@@ -103,3 +103,28 @@ Trusted CI runs these transactions on every candidate through
 `tools/ci/update_from_published.py`: the previous app is the latest published
 release, authenticated by its signed manifest, and `--high-fullscreen` is always
 on. Deployment and publication require that receipt ([release gates](releases.md#release-gates)).
+
+
+## Windows and Linux delivery work
+
+The desktop ports extend this same public key and stable-feed policy to Windows
+installed/portable folders and Linux AppImages. This remains source work until
+the target-OS gates pass and a release is published. Windows signs an update
+manifest for its portable ZIP; Linux signs one for the AppImage. The separate
+player-facing Windows Setup EXE and Mac DMG are bound into the delivery inventory.
+
+A copied self-contained helper waits for the old game to exit, replaces the
+payload and requires version-matched health from the actual target renderer.
+The desktop cold-rendering deadline is 180 seconds. Failed launch restores and
+reopens the previous payload. Windows retains installer-owned uninstall data
+and updates its per-user Apps & Features version. Completed staging is removed
+on a later ordinary launch after the helper releases its lock.
+
+Native jobs require the complete headless and graphical game suites, all nine
+saved preset/display startup cases, and an actual signed fixture update from the
+candidate to deliberately newer game code with the same logic. They verify
+healthy relaunch, deliberate failure before health, complete rollback hashes,
+restored gameplay and Windows uninstall after updating. Fixture versions are
+never published. Raw diagnostics remain separate from the compact signed
+receipts. Physical device and hardware coverage remains distinct from hosted
+functional rendering. See [desktop verification](desktop-clients.md).
