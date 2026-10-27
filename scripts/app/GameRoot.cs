@@ -43,6 +43,8 @@ public partial class GameRoot : Node3D
     private int _networkGeneration;
     private PlayerPreferences _preferences=new();
     private GraphicsPreset? _appliedGraphics;
+    // The project sets no cap, so a launch-time value came from --max-fps (QA timing) and outranks the saved cap.
+    private readonly int _launchMaxFps=Engine.MaxFps;
     private bool _preparingGraphics,_skipGraphicsPreparation;
     public bool GraphicsPreparing=>_preparingGraphics;
     private BlastCircuit.Updates.GameUpdater _updater=null!;

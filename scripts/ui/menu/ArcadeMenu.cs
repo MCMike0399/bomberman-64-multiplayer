@@ -30,7 +30,8 @@ public partial class ArcadeMenu : Control
     private ArcadeModeButton _replay=null!;
     private Label _partyHint=null!,_pauseHint=null!,_settingsNotice=null!,_volumeLabel=null!;
     private CheckButton _vibration=null!;
-    private HSlider _volume=null!;
+    private HSlider _volume=null!,_frameCap=null!;
+    private Label _frameCapLabel=null!;
     private CheckButton _automaticUpdates=null!;
     private CheckButton _performanceMetrics=null!;
     public bool PerformanceMetricsEnabled=>_performanceMetrics.ButtonPressed;
@@ -41,6 +42,7 @@ public partial class ArcadeMenu : Control
     private string? _localPlayer;
     public bool VibrationEnabled=>_vibration.ButtonPressed;
     public float SoundVolume=>(float)_volume.Value/100;
+    public int FrameCap=>BlastCircuit.App.PlayerPreferences.FrameCaps[(int)_frameCap.Value];
     public StageTime LocalStageTime {get;private set;}=StageTime.Midday;
     public event Action<NetworkMode>? OnlineRequested;
     private Control _content=null!;

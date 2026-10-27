@@ -48,6 +48,11 @@ public partial class ArcadeMenu
             }};
         updates.AddChild(resolution);
         Hint(updates,"Window size, or fullscreen 3D resolution. Fits your display; menus stay sharp.",16);
+        _frameCapLabel=ArcadeTheme.Text(updates,FrameCapText(0),22);
+        _frameCap=new HSlider {Name="FrameCap",MinValue=0,MaxValue=PlayerPreferences.FrameCaps.Length-1,Step=1,
+            Value=PlayerPreferences.FrameCaps.Length-1,CustomMinimumSize=new(460,40),
+            TooltipText="Limits rendered frames to save power and heat. Unlimited still follows display sync."};updates.AddChild(_frameCap);
+        _frameCap.ValueChanged+=_=>{_frameCapLabel.Text=FrameCapText(FrameCap);SettingsChanged?.Invoke();};
         Section(updates,"Game updates");
         _automaticUpdates=new ArcadeToggle {Name="AutomaticUpdates",Text="Check automatically",CustomMinimumSize=new(0,56),ButtonPressed=true};updates.AddChild(_automaticUpdates);
         _automaticUpdates.Toggled+=_=>SettingsChanged?.Invoke();
@@ -80,9 +85,13 @@ public partial class ArcadeMenu
         _volumeLabel.Text=$"Sound volume: {preferences.Volume*100:0}%";
         LocalStageTime=preferences.StageLighting;
         ConfigurePerformanceMetrics(preferences.PerformanceMetrics);
+        _frameCap.SetValueNoSignal(Array.IndexOf(PlayerPreferences.FrameCaps,PlayerPreferences.ValidFrameCap(preferences.FrameCap)));
+        _frameCapLabel.Text=FrameCapText(FrameCap);
         ConfigureDisplay(preferences.Fullscreen,preferences.Resolution);
         Graphics=preferences.Graphics;_graphicsDescription.Text=GraphicsQuality.Description(Graphics);
     }
+
+    private static string FrameCapText(int cap)=>cap==0?"Frame rate cap: Unlimited":$"Frame rate cap: {cap} FPS";
 
     public bool Fullscreen {get;private set;}=true;
     public void ConfigurePerformanceMetrics(bool enabled)=>_performanceMetrics.SetPressedNoSignal(enabled);

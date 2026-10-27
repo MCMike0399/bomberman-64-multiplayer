@@ -18,6 +18,10 @@ public sealed class PlayerPreferences
     public bool PerformanceMetrics {get;set;}
     public Vector2I Resolution {get;set;}
     public GraphicsPreset Graphics {get;set;}=GraphicsPreset.Medium;
+    /// <summary>Rendered frames per second; 0 is unlimited (display sync still applies).</summary>
+    public int FrameCap {get;set;}
+    public static readonly int[] FrameCaps=[30,45,60,75,90,120,144,165,240,0];
+    public static int ValidFrameCap(int value)=>FrameCaps.Contains(value)?value:0;
     public static PlayerPreferences Load(string path)
     {
         var value = new PlayerPreferences();
@@ -37,6 +41,8 @@ public sealed class PlayerPreferences
         var metrics=file.GetValue("video","performanceMetrics",false);
         if(metrics.VariantType==Variant.Type.Bool)value.PerformanceMetrics=metrics.AsBool();
         if(fullscreen.VariantType==Variant.Type.Bool)value.Fullscreen=fullscreen.AsBool();
+        var frameCap=file.GetValue("video","frameCap",0);
+        if(frameCap.VariantType==Variant.Type.Int)value.FrameCap=ValidFrameCap(frameCap.AsInt32());
         var resolution=file.GetValue("video","resolution",Vector2I.Zero);
         if(resolution.VariantType==Variant.Type.Vector2I)value.Resolution=DisplayModeController.ValidResolution(resolution.AsVector2I());
         var automatic = file.GetValue("player", "automaticUpdates", true);
@@ -62,6 +68,7 @@ public sealed class PlayerPreferences
         file.SetValue("video","fullscreen",Fullscreen);
         file.SetValue("video","performanceMetrics",PerformanceMetrics);
         file.SetValue("video","resolution",DisplayModeController.ValidResolution(Resolution));
+        file.SetValue("video","frameCap",ValidFrameCap(FrameCap));
         return file.Save(path);
     }
 }
