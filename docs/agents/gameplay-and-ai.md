@@ -264,6 +264,13 @@ and the input guide; older iteration tables are historical.
   horizontal blast reach, bomb chains, cover destruction and shielding retain
   their existing rules. `BlastHitboxChecks` and the `blast-hitbox` journey retain
   ordinary aimed remote throws at zero and three pumps with body-only overlap.
+- Explosion damage persists for the accepted 0.4-second hazard window, including
+  players entering after ignition. The same body-height geometry and heart/respawn
+  protection apply on every tick; the original owner retains kill credit. Each
+  hazard retains cover at ignition so destroying a shield cannot expose players
+  to that same blast later in its bloom. Red blasts still pierce soft cover.
+  Decorative sparks, the power ring and the post-hazard vapor are cosmetic;
+  they do not enlarge the authoritative sphere or extend its lifetime.
 - Ordinary ledge falls use heavier gravity, 45% of status-adjusted ground speed
   and bounded air acceleration. Departure uses collision-resolved velocity;
   release/reversal preserve a short coast. Full ground-speed air steering is
