@@ -86,6 +86,8 @@ jobs:
           path: artifacts
       - if: runner.os == 'macOS'
         run: python3 tools/packaging/macos-test-display.py
+      - if: runner.os == 'Windows'
+        run: ./tools/packaging/windows-test-desktop.ps1
       - if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y fuse3 xvfb openbox pulseaudio mesa-vulkan-drivers
       - name: Wait for the isolated public test origin
@@ -146,6 +148,7 @@ jobs:
             artifacts/crossplay-${{ matrix.target }}/summary.json
             artifacts/crossplay-${{ matrix.target }}/runtime.log
             artifacts/crossplay-${{ matrix.target }}/launcher.log
+            artifacts/windows-audio/*.json
             artifacts/crossplay-${{ matrix.target }}/*.png
           retention-days: 14
           if-no-files-found: warn

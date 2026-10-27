@@ -72,6 +72,8 @@ jobs:
       - if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y squashfs-tools fuse3 libicu74 xvfb openbox pulseaudio mesa-vulkan-drivers
       - if: runner.os == 'Windows'
+        run: ./tools/packaging/windows-test-desktop.ps1
+      - if: runner.os == 'Windows'
         run: python tools/packaging/package-download.py --target windows-x64
       - if: runner.os == 'Linux'
         run: python3 tools/packaging/package-download.py --target linux-x64
@@ -119,6 +121,7 @@ jobs:
             artifacts/*-smoke.json
             artifacts/*-graphical.json
             artifacts/*-startup.json
+            artifacts/windows-audio/*.json
             artifacts/*-startup-details/**/runtime.log
             artifacts/*-startup-details/**/*.png
             artifacts/*-updater-tests.json

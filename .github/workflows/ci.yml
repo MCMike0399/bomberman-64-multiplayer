@@ -357,6 +357,7 @@ jobs:
         with:
           name: Blast-Circuit-server-dotnet10
           path: artifacts
+      - run: ./tools/packaging/windows-test-desktop.ps1
       - run: python tools/packaging/package-download.py --target windows-x64
       - run: |
           dotnet build tests/Bomber.DesktopUpdate.Tests --nologo -m:1
@@ -374,6 +375,7 @@ jobs:
             artifacts/Blast-Circuit-windows-x64-smoke.json
             artifacts/Blast-Circuit-windows-x64-graphical.json
             artifacts/Blast-Circuit-windows-x64-startup.json
+            artifacts/windows-audio/*.json
             artifacts/Blast-Circuit-windows-x64-startup-details/**/runtime.log
             artifacts/Blast-Circuit-windows-x64-startup-details/**/*.png
             artifacts/Blast-Circuit-windows-x64-updater-tests.json

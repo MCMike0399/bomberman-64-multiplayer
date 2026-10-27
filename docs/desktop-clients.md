@@ -130,6 +130,14 @@ ordinary 20-second budget. These allowances change test scheduling, not game
 graphics or loading behavior, and cannot certify native GPU responsiveness.
 The disposable Linux desktop supplies X11 and a PulseAudio null sink. Physical
 speakers, controllers, native performance and Wayland remain separate evidence.
+The disposable Windows fixture requests 1920×1200 and a usable WASAPI endpoint.
+When no endpoint exists, it downloads the hash-pinned basic
+[VB-CABLE 45](https://vb-audio.com/Cable/) driver from its vendor and requires
+ordinary Windows signature validation of its installer and Microsoft hardware
+catalog. No trust-store changes, test-signing mode or dummy backend override
+are used. This donationware is a CI prerequisite only, subject to its
+[vendor terms](https://vb-audio.com/Services/licensing.htm); it is not shipped in
+the game downloads. The fixture fails if its real endpoint or display is absent.
 Saved-display process restoration runs sequentially after the main graphical
 process exits. Its unchanged 90-second child deadline, real persisted settings,
 independent capture/check receipt and zero-error requirement remain release gates.
