@@ -1,3 +1,40 @@
+# v0.37.0 delivered
+
+Published **2026-10-27 00:01:03 UTC**: [v0.37.0 / signed update](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.37.0).
+[Integration PR #31](https://github.com/MCMike0399/bomberman-64-multiplayer/pull/31) merged
+[CPU agency #29](https://github.com/MCMike0399/bomberman-64-multiplayer/pull/29) and
+[exact shader early-outs #30](https://github.com/MCMike0399/bomberman-64-multiplayer/pull/30),
+preserving both original heads. Immutable release/tag source:
+`acdf475599726fa14d717040c4d28c945edcab79`. Identity: **v0.37.0/build 44/schema 6**,
+token `6/0.37.0/44`. Released at the user's request; agent checks are not approval of fun.
+
+- Local gates on the exact release tree passed. They covered public; managed
+  (2,880 game, 354 client, 98 AI including agency, 72 soak scenarios with a longest
+  open stationary window of 1.43 s, plus release, network, relay and fleet steps);
+  headless; package; and the complete exported **57-journey Metal suite**
+  (5,001 assertions, 496 captures, zero runtime errors; known SCTP teardown
+  warning only). Static framing and map-preview captures matched v0.36 exactly.
+- Shader early-outs were proven byte-identical on native M5 Pro Metal across
+  36 battle configurations
+  ([method](performance-research.md#gpu-pass-costs-and-exact-shader-early-outs-2026-10-26)).
+  CPU agency evidence is in [cpu-agency.md](cpu-agency.md).
+- [Trusted Verification 40421664611](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40421664611)
+  passed on the merge commit; the optional CI Metal job remains skipped.
+- [Protected deployment and publication 40423218510](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40423218510)
+  passed candidate, validate, deploy and draft. Server-hosted CPUs therefore run the
+  new policy. The public `/game` endpoint then reported `0.37.0`, build `44`, token
+  `6/0.37.0/44` and revision `acdf4755`.
+- Hashes come from the published checksum assets; signatures were verified by the
+  protected workflow. No independent local signature check or installed-app
+  replacement was performed (the personal app updates through the signed updater).
+
+Published archive SHA-256:
+
+```text
+Mac:    52a71a82bf1d6d2574d77c20f1c9e7fbdb7fac08050e75524ff51261a6d2478b
+Server: 7e7b85ea9d7707641886093cd58fd12a7fbed6a728abee30835f8f4047dca1a2
+```
+
 # v0.36.0 delivered
 
 Published **2026-10-26 22:32:37 UTC**: [v0.36.0 / signed update](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.36.0).

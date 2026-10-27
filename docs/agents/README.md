@@ -3,7 +3,7 @@
 The user resumed gameplay work on 2026-10-23 for controller ergonomics, aiming
 and knockdown/blast separation (iteration19). The first eighteen iterations
 remain historical evidence. Iteration20 then rebuilt the walk. Recorded
-release baseline: **v0.36.0/build 43**, published with independently verified Mac
+release baseline: **v0.37.0/build 44**, published with independently verified Mac
 and server archives (see [verification](../verification.md)). Previous runtime baseline: **v0.18.0**, commit
 `316a330d7d895a92f98c1a60be7d571ec445a8a3`. Later documentation commits may follow.
 Verify the live branch, source, tools and installed version before relying on
@@ -42,7 +42,7 @@ update the current guide rather than silently reviving old behavior.
 
 ## Current decisions that supersede earlier experiments
 
-- v0.37 delivers CPU agency (PR #29) and exact shader early-outs (PR #30). Bots
+- v0.37 delivers CPU agency (PR #29) and exact shader early-outs (PR #30) ([receipt](../verification.md#v0370-delivered)). Bots
   no longer shuffle one cell while a player idles (an Easy escape horizon shorter
   than the Bouncing fuse), no longer stall in Blizzard gusts (steering leans into
   visible wind) and break lane standoffs. Rival lead, kick-lane avoidance and goal
