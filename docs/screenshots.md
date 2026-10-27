@@ -1,6 +1,21 @@
 # README screenshot gallery
 
-The README’s `docs/images/current/` gallery was refreshed on 2026-10-25 from
+## Current map and character views
+
+The README's seven High-preset arena views come from the 2026-10-27 living
+stage worlds `scenery-regression` capture: real local sessions in a macOS VM
+using Metal Forward+, at 1280×800 with the ordinary battle camera. The four
+images in `images/release-042/` are the `scenery-<stage>-high.png` captures
+from that run; the other three are recorded in the [living scenery manifest](media/living-stage-worlds/manifest.json).
+The shipped v0.42.0 includes this scenery pass; see its [delivery receipt](verification.md#v0420-delivered).
+
+The two character views in `images/release-042/` were captured on 2026-10-27
+from the installed v0.42.0 app using `model-profile` in the isolated macOS VM
+with Metal Forward+. The journey passed 13 assertions with five captures and
+zero runtime errors or warnings. It uses an inspection camera in practice;
+these are unedited game viewport images, not the ordinary battle camera.
+
+The README’s remaining `docs/images/current/` gallery was refreshed on 2026-10-25 from
 v0.31.0/build 37 game content, with a documentation-only capture journey added
 to the source build. These are unedited PNGs from a freshly built game’s real
 Metal Forward+ viewport, rendered directly on an Apple M5 Pro.

@@ -2,17 +2,21 @@
 
 An original Godot C# arena battle game inspired by Bomberman 64: **2–8 participants**, local multiplayer, online rooms and CPU rivals. Carry, pump, kick and throw bombs across layered arenas, collect equipment, and survive each stage’s sudden death.
 
-![Eight-player Sunken Temple at High graphics](docs/images/current/sunken-temple.png)
+![Eight-player Sunken Temple at High graphics](docs/images/release-042/scenery-sunken-temple-high.png)
 
-**[Download v0.31.0 for Apple Silicon](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.31.0)** · [Release verification](docs/verification.md) · [Build from source](#build-from-source)
+**[Download v0.42.0 for Apple Silicon](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.42.0)** · [Release verification](docs/verification.md) · [Build from source](#build-from-source)
 
-The current release includes Blizzard Battle, Greedy Trap, the rebuilt Up & Down, updated explosions and diorama rendering. All visuals and synthesized sounds are original. Eight-player support and numerical gameplay tuning are project adaptations; the original game supports four players. [Research and sources](docs/history/research.md).
+The current release includes six battle arenas, animated stage surroundings, refined water reflections and graphics presets, pointer aiming, and improved CPU rivals. All visuals and synthesized sounds are original. Eight-player support and numerical gameplay tuning are project adaptations; the original game supports four players. [Research and sources](docs/history/research.md).
 
 ## Play
 
 Choose **Local Battle**, assign Human / CPU / Off to the eight roster seats, choose suits, then select an arena and rules. One human can play against up to seven CPUs. Easy, Medium and Hard change CPU decisions while keeping the same movement speed, resources and visible information as human players.
 
 Two keyboard layouts are available. With one or two humans, gamepads can also control those seats. With three or more local humans, the first two use keyboards and connected gamepads fill the remaining seats.
+
+| Character, front | Character, three-quarter view |
+| --- | --- |
+| ![Character model from the front](docs/images/release-042/model-profile-front.png) | ![Character model in practice](docs/images/release-042/model-profile-three-quarter.png) |
 
 **Practice** lets one player explore without CPU opponents. **Tutorial** opens Circuit Garden’s replayable lessons on movement, bomb handling, equipment, terrain, rivals and hazards, with saved progress, retry and free practice. [Tutorial guide](docs/tutorial.md).
 
@@ -35,17 +39,17 @@ All six battle arenas support local, practice and online sessions. Circuit Garde
 | **[Blizzard Battle](docs/blizzard-battle.md)** | Snowfield with sixteen violet ice cones, changing diagonal wind and animated snow. Avalanches advance from both sides. |
 | **[Greedy Trap](docs/greedy-trap.md)** | Upper court and narrow middle ring above a turquoise reward chamber, four inner stairways and two upper exits. Sliding walls compress the arena. |
 
-![Rock Garden with eight participants](docs/images/current/rock-garden.png)
+![Rock Garden battle with wind-swept scenery](docs/media/living-stage-worlds/rock-garden-high.png)
 
-![Rebuilt Up & Down with suspended platforms and purple stairs](docs/images/current/up-and-down.png)
+![Up & Down with suspended platforms and purple stairs](docs/images/release-042/scenery-up-and-down-high.png)
 
-![Top Rules castle and lower passages](docs/images/current/top-rules.png)
+![Top Rules castle surrounded by planets](docs/media/living-stage-worlds/top-rules-high.png)
 
-![Blizzard Battle snowfield and violet ice cones](docs/images/current/blizzard-battle.png)
+![Blizzard Battle snowfield and glacier scenery](docs/media/living-stage-worlds/blizzard-battle-high.png)
 
-![Greedy Trap reward chamber and reservoir exterior](docs/images/current/greedy-trap.png)
+![Greedy Trap reward chamber and reservoir exterior](docs/images/release-042/scenery-greedy-trap-high.png)
 
-![Circuit Garden free practice](docs/images/current/circuit-garden.png)
+![Circuit Garden practice arena](docs/images/release-042/scenery-circuit-garden-high.png)
 
 <a id="screenshots"></a>
 
@@ -59,9 +63,11 @@ Settings also provides **Display mode** and **Resolution**, saved automatically 
 
 **Local lighting** offers Morning, Midday, Afternoon and Night. Online rounds use the server’s lighting; graphics quality remains your local preference.
 
+Living scenery brings wind-swept plants to Rock Garden, planets and drifting asteroids to Top Rules, and a glacier, frosted trees and snowfall to Blizzard Battle. [Explore the stage worlds](docs/living-stage-worlds.md). Settings also lets you set a frame-rate cap.
+
 ![Settings with High graphics selected](docs/images/current/settings.png)
 
-The screenshots on this page are fresh **3840×2400 High-preset** captures from the real game’s native Metal Forward+ renderer on an Apple M5 Pro, using Midday lighting. Arena images use the ordinary battle camera. [Capture recipe and provenance](docs/screenshots.md). Historical videos retain their original versions and settings: [walking](docs/videos/walk-personality.mp4), [precision aiming](docs/videos/precision-aim.mp4), and [CPU difficulties](docs/videos/ai-difficulties.mp4).
+The arena screenshots show the latest shipped scenery in High using the ordinary battle camera, captured in a macOS VM with Metal Forward+. Menu, tutorial and explosion images are from the earlier v0.31 gallery on an Apple M5 Pro. [Capture provenance](docs/screenshots.md) · [Living scenery](docs/living-stage-worlds.md). Historical videos retain their original versions and settings: [walking](docs/videos/walk-personality.mp4), [precision aiming](docs/videos/precision-aim.mp4), and [CPU difficulties](docs/videos/ai-difficulties.mp4).
 
 ## Bombs and equipment
 
