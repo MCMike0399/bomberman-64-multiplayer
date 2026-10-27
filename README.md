@@ -51,7 +51,7 @@ All six battle arenas support local, practice and online sessions. Circuit Garde
 
 ## Graphics and screenshots
 
-Choose **Settings → Graphics → High** for the highest preset: full selected 3D resolution, 2× MSAA, 4096-pixel shadows, higher-quality ambient occlusion and indirect light bounce. Clear refracting shallows, caustics, toy-like materials, painterly terrain, and depth of field and haze outside the playable arena create the diorama look. Medium is the default; Low reduces rendering cost. [Preset details and limits](docs/graphics-research.md).
+Choose **Settings → Graphics → High** for the highest preset: full selected 3D resolution, 2× MSAA, 4096-pixel contact-hardening shadows, higher-quality ambient occlusion, indirect light bounce and scene reflections in the water. Clear refracting shallows, caustics, toy-like materials, painterly terrain, and depth of field and haze outside the playable arena create the diorama look. Medium is the default and keeps the clear water, glow and contact shading at native resolution; Low renders 75% of the 3D pixels without decorations or effects. [Preset details and limits](docs/graphics-research.md).
 
 Settings also provides **Display mode** and **Resolution**, saved automatically for the next launch. Windowed mode fits the chosen window size to your display; fullscreen adjusts 3D resolution while keeping menus sharp. Only sizes that fit your screen are listed, and Settings shows the resulting 3D render size.
 

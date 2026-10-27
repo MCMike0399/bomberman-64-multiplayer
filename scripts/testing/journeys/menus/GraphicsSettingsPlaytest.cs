@@ -259,10 +259,12 @@ public partial class PlaytestDriver
                     Check(!view.Disable3D,"match restores arena rendering");
                     var environment=AuditDescendants(LightingArena).OfType<WorldEnvironment>().Single().Environment;
                     Check(view.Msaa3D==Viewport.Msaa.Msaa2X,"arena antialiasing is 2x at "+preset);
-                    Check(Mathf.IsEqualApprox(view.Scaling3DScale,preset==GraphicsPreset.Low?.85f:1),"arena resolution follows "+preset);
+                    Check(Mathf.IsEqualApprox(view.Scaling3DScale,preset==GraphicsPreset.Low?.75f:1),"arena resolution follows "+preset);
                     Check(environment.SsaoEnabled==(preset!=GraphicsPreset.Low)&&environment.GlowEnabled==(preset!=GraphicsPreset.Low),"arena effects follow "+preset);
                     Check(!view.UseTaa&&view.ScreenSpaceAA==Viewport.ScreenSpaceAAEnum.Disabled,"sharp non-temporal AA policy");
                     Check(environment.SsilEnabled==(preset==GraphicsPreset.High),"indirect bounce is High-only at "+preset);
+                    var sun=AuditDescendants(LightingArena).OfType<DirectionalLight3D>().Single(l=>l.ShadowEnabled);
+                    Check((sun.LightAngularDistance>0)==(preset==GraphicsPreset.High),"contact-hardening sun shadows are High-only at "+preset);
                     var depthCues=(CameraAttributesPractical)view.GetCamera3D()!.Attributes;
                     Check(depthCues.DofBlurFarEnabled==(preset==GraphicsPreset.High)&&depthCues.DofBlurNearEnabled==(preset==GraphicsPreset.High),"diorama depth of field is High-only at "+preset);
                     var playable=LightingArena.PlayableDepth;
@@ -282,6 +284,7 @@ public partial class PlaytestDriver
                         var waterShader=((ShaderMaterial)water[0].MaterialOverride).Shader;
                         Check(waterShader==ArtMaterials.WaterShaderFor(preset)&&waterShader.Code.Contains("#define CLEAR_WATER")==(preset!=GraphicsPreset.Low),
                             "clear refracting water is used only above Low: "+preset);
+                        Check(waterShader.Code.Contains("#define SCENE_REFLECTIONS")==(preset==GraphicsPreset.High),"scene reflections in water are High-only: "+preset);
                     }
                     await Capture("graphics-"+stage+"-"+GraphicsQuality.ToWire(preset));
                     await MeasureGraphics(stage,preset);

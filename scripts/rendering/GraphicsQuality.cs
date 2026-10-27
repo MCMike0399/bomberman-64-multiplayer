@@ -11,6 +11,8 @@ public static class GraphicsQuality
     // 2× MSAA on every preset: at native panel density the user judged 4× indistinguishable
     // on all six arenas while it cost about 1.6 ms per High frame.
     public static Viewport.Msaa Antialiasing=>Viewport.Msaa.Msaa2X;
+    /// <summary>Gameplay 3D resolution scale: Low renders 75% and upscales with spatial FSR; UI stays native.</summary>
+    public static float RenderScale=>Current==GraphicsPreset.Low?.75f:1;
     /// <summary>Seconds between animated menu-world renders: Low keeps 30 Hz, other presets follow the display.</summary>
     public static double MenuFrameInterval=>Current==GraphicsPreset.Low?1d/30:0;
     public static GraphicsPreset FromWire(string? value)=>value switch
@@ -19,9 +21,9 @@ public static class GraphicsQuality
     { GraphicsPreset.Low=>"low",GraphicsPreset.High=>"high",_=>"medium" };
     public static string Description(GraphicsPreset value)=>value switch
     {
-        GraphicsPreset.Low=>"Lightest rendering: no stage decorations, effects or fine detail.",
-        GraphicsPreset.High=>"Richer contact shading, bounce light, diorama blur and finer shadows.",
-        _=>"Balanced look for everyday play, without bounce light or diorama blur."
+        GraphicsPreset.Low=>"Lightest rendering: 75% 3D resolution, no decorations, effects or fine detail.",
+        GraphicsPreset.High=>"Scene reflections in water, bounce light, diorama blur and finer contact-hardening shadows.",
+        _=>"Balanced look for everyday play: clear water, glow and contact shading at native resolution."
     };
 
     public static void Apply(GraphicsPreset preset,Viewport viewport)
@@ -29,7 +31,7 @@ public static class GraphicsQuality
         Current=Enum.IsDefined(preset)?preset:GraphicsPreset.Medium;
         Revision++;
         ApplyViewport(viewport);
-        viewport.Scaling3DScale=Current==GraphicsPreset.Low?.85f:1;
+        viewport.Scaling3DScale=RenderScale;
         // Spatial upscaling is portable across Metal/Vulkan; UI always stays native.
         viewport.Scaling3DMode=Current==GraphicsPreset.Low?Viewport.Scaling3DModeEnum.Fsr:Viewport.Scaling3DModeEnum.Bilinear;
         RenderingServer.DirectionalShadowAtlasSetSize(Current switch {GraphicsPreset.Low=>1024,GraphicsPreset.High=>4096,_=>2048},true);

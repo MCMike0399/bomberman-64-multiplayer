@@ -7,7 +7,7 @@ public sealed partial class ArtMaterials
     public static readonly Color[] PlayerColors = [new("f6f0df"),new("30314a"),new("ec3d50"),new("356be0"),new("56b76b"),new("ffba37"),new("9d56ce"),new("31c9c5")];
     private readonly Dictionary<string, StandardMaterial3D> _cache = [];
     private static Shader? _greedyTrapShader;
-    private static Shader? _stoneShader,_waterShader,_clearWaterShader,_gardenShader,_frozenShader;
+    private static Shader? _stoneShader,_waterShader,_clearWaterShader,_reflectiveWaterShader,_gardenShader,_frozenShader;
     /// <summary>
     /// Characters, bombs and pickups read as lacquered miniature figures: a thin glossy
     /// clear coat over the painted color, plus a soft light-driven rim at the silhouette.
@@ -42,10 +42,16 @@ public sealed partial class ArtMaterials
     // Default distance sorting uses the large plane's center and can paint water
     // over a rear-lane fireball even though that fireball is above the water.
     public ShaderMaterial Water()=>new() { Shader=WaterShaderFor(GraphicsQuality.Current),RenderPriority=-16 };
-    /// <summary>Low keeps opaque water; other presets add refraction, caustics and glints (one screen copy).</summary>
-    public static Shader WaterShaderFor(GraphicsPreset preset)=>preset==GraphicsPreset.Low
-        ? _waterShader??=new Shader {Code=WaterShader}
-        : _clearWaterShader??=new Shader {Code=WaterShader.Replace("shader_type spatial;","shader_type spatial;\n#define CLEAR_WATER",StringComparison.Ordinal)};
+    /// <summary>
+    /// Low keeps opaque water; Medium adds refraction, caustics and glints (one screen copy);
+    /// High also mirrors the opaque scene in the surface with a short screen-space march.
+    /// </summary>
+    public static Shader WaterShaderFor(GraphicsPreset preset)=>preset switch
+    {
+        GraphicsPreset.Low=>_waterShader??=new Shader {Code=WaterShader},
+        GraphicsPreset.High=>_reflectiveWaterShader??=new Shader {Code=WaterShader.Replace("shader_type spatial;","shader_type spatial;\n#define CLEAR_WATER\n#define SCENE_REFLECTIONS",StringComparison.Ordinal)},
+        _=>_clearWaterShader??=new Shader {Code=WaterShader.Replace("shader_type spatial;","shader_type spatial;\n#define CLEAR_WATER",StringComparison.Ordinal)}
+    };
     private const string StoneShader="""
 shader_type spatial;
 render_mode diffuse_burley;
@@ -231,6 +237,10 @@ void fragment(){
   // Fine capillary ripples add glints without more vertices; fade them in the
   // distance to avoid crawling highlights at the normal battle camera.
   float detail=quality_detail*(1.0-smoothstep(.35,1.2,length(fwidth(world.xz*12.0))));
+#ifdef SCENE_REFLECTIONS
+  // The mirror follows the broad swell only; per-pixel capillary ripples would tear it.
+  vec2 swell=w.yz;
+#endif
   if(detail>.01){
     w.yz+=detail*(wave(world.xz,normalize(vec2(.9,-.6)),12.0,.0025,2.0).yz
                   +wave(world.xz,normalize(vec2(.2,1)),17.0,.0015,1.7).yz);
@@ -293,6 +303,57 @@ void fragment(){
   seen*=mix(vec3(1.0),surface_color.rgb*2.1,.5);
   ALBEDO*=1.0-transmit;
   EMISSION=seen*transmit;
+#ifdef SCENE_REFLECTIONS
+  // High: mirror the opaque scene copy in the surface. A short screen-space march
+  // along the reflected view ray against the opaque depth finds walls, columns,
+  // figures and bombs beyond each water pixel; the wave normal makes the mirror
+  // image wobble. Misses keep the sky radiance reflection, so nothing new appears
+  // where the scene cannot be seen. Fresnel is deliberately stronger than physical:
+  // the steep battle camera would otherwise hide the effect, and the lacquered
+  // diorama reads better with a visible mirror. Shallow clear water still shows
+  // its floor through the remaining transmission.
+  {
+    swell*=wind_strength*mix(1.0,.2,smoothstep(0.0,.2,flood_amount))*.6;
+    vec3 mirror_normal=normalize((VIEW_MATRIX*vec4(normalize(vec3(-swell.x,1.0,-swell.y)),0.0)).xyz);
+    vec3 ray=reflect(-VIEW,mirror_normal);
+    float mirror=0.0;vec3 mirrored=vec3(0.0);
+    float facing=clamp(dot(VIEW,mirror_normal),0.0,1.0);
+    float fresnel=mix(.24,.85,pow(1.0-facing,3.0))*(1.0-foam);
+    // Reach grows with distance; a ray turning toward the camera plane stops short of it.
+    float reach=clamp(-VERTEX.z*.8,2.0,14.0);
+    if(ray.z>0.0)reach=min(reach,(-VERTEX.z-.5)/ray.z);
+    if(fresnel>.01&&reach>.25){
+      // Interleaved-gradient jitter per pixel turns step banding into fine
+      // water sparkle instead of staircase edges on reflected decks.
+      float jitter=fract(52.9829189*fract(dot(FRAGCOORD.xy,vec2(.06711056,.00583715))));
+      vec3 previous=VERTEX;float t_previous=0.0;
+      for(int i=1;i<=16;i++){
+        float f=(float(i)-jitter*.9)/16.0;float t=reach*(f*f*.75+f*.25);
+        vec3 p=VERTEX+ray*t;
+        vec4 clip=PROJECTION_MATRIX*vec4(p,1.0);
+        vec2 uv=clip.xy/clip.w*.5+.5;
+        if(any(lessThan(uv,vec2(0.0)))||any(greaterThan(uv,vec2(1.0))))break;
+        float gap=view_position(uv,INV_PROJECTION_MATRIX).z-p.z;
+        if(gap>0.0&&gap<max(.5,(t-t_previous)*1.5)){
+          // Bisect between the last miss and this hit for a stable contact.
+          vec3 a=previous,b=p;
+          for(int j=0;j<4;j++){
+            vec3 m=(a+b)*.5;vec4 mc=PROJECTION_MATRIX*vec4(m,1.0);vec2 muv=mc.xy/mc.w*.5+.5;
+            if(view_position(muv,INV_PROJECTION_MATRIX).z>m.z)b=m;else a=m;
+          }
+          vec4 hc=PROJECTION_MATRIX*vec4(b,1.0);vec2 huv=hc.xy/hc.w*.5+.5;
+          vec2 border=smoothstep(vec2(0.0),vec2(.08),huv)*smoothstep(vec2(0.0),vec2(.08),1.0-huv);
+          mirror=fresnel*border.x*border.y*(1.0-smoothstep(.6,1.0,f));
+          mirrored=textureLod(screen_texture,huv,0.0).rgb;
+          break;
+        }
+        previous=p;t_previous=t;
+      }
+    }
+    ALBEDO*=1.0-mirror;
+    EMISSION=EMISSION*(1.0-mirror)+mirrored*mirror;
+  }
+#endif
   // Sun-path glints: sparse twinkling points only where the ripples mirror the light.
   if(detail>.01){
     vec2 g=world.xz*1.7+vec2(TIME*.05,0.0);

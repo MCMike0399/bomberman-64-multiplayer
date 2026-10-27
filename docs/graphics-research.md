@@ -94,7 +94,7 @@ inputs, model proportions and camera framing remain identical across presets.
 | Setting | Low | Medium | High |
 | --- | --- | --- | --- |
 | Gameplay MSAA | 2× | 2× | 2× |
-| Gameplay 3D scale | 0.85 | 1.0 | 1.0 |
+| Gameplay 3D scale | 0.75 (spatial FSR) | 1.0 | 1.0 |
 | Menu texture density | Output pixels | Output pixels | Output pixels |
 | Directional shadow atlas | 1024 | 2048 | 4096 |
 | Shadow filtering | Soft very low; no sun PCSS | Soft low; no sun PCSS | Soft medium with contact hardening |
@@ -103,15 +103,17 @@ inputs, model proportions and camera framing remain identical across presets.
 | Glow | Off | Restrained intensity, small soft bloom | Restrained intensity, small soft bloom |
 | Temporal AA / FXAA | Off | Off | Off |
 | Stone/water microdetail | Reduced | Filtered | Filtered |
-| Water | Opaque; no screen copy | Clear refraction, caustics, glints (one screen copy) | Same as Medium |
+| Water | Opaque; no screen copy | Clear refraction, caustics, glints (one screen copy) | Medium plus screen-space scene reflections |
 | Diorama depth of field | Off | Off | Far/near blur outside the arena, low quality |
 | Stage decorations (`StageScenery`) | Hidden | Shown | Shown |
 | Indirect bounce (SSIL) | Off | Off | Half-resolution, medium quality |
 
-Medium is the default. High adds bounce light, diorama blur, contact-hardening
-sun shadows and higher-quality contact shading without globally increasing
-saturation or contrast; Low hides every decoration outside the arena and keeps
-the Greedy reservoir town because floating play reads against it. The 2026-10-25
+Medium is the default and sits between the other two on every row. High adds
+scene reflections in water, bounce light, diorama blur, contact-hardening sun
+shadows and higher-quality contact shading, without globally increasing
+saturation or contrast; Low renders 75% of the selected 3D pixels, hides every
+decoration outside the arena and keeps the Greedy reservoir town because
+floating play reads against it. See [preset identity](#preset-identity-2026-10-27). The 2026-10-25
 diorama polish ([rendering guide](agents/visuals-and-animation.md#diorama-polish-2026-10-25))
 added the water, depth-of-field and SSIL rows. Its VM receipts show render-thread
 CPU near 1 ms and one extra draw call (the seabed); GPU timings were unavailable
@@ -135,6 +137,54 @@ preset value in player preferences and reapply it to newly created scenes.
 Do not assume that modifying a ProjectSettings value updates existing renderer
 objects. [RenderingServer shadow APIs](https://docs.godotengine.org/en/4.7/classes/class_renderingserver.html#class-renderingserver-method-directional-shadow-atlas-set-size),
 [Environment/post-processing quality settings](https://docs.godotengine.org/en/4.7/tutorials/3d/environment_and_post_processing.html).
+
+## Preset identity (2026-10-27)
+
+The user asked for a clearer ladder: a more premium High, a Medium balanced on
+every row and a minimal Low, all keeping the diorama identity. v0.39's cooling
+work had already removed the invisible costs from High (half-resolution SSAO,
+low-quality bokeh, 2× MSAA); this pass adds visible value instead, so High's
+GPU time rises again by design. Four native `graphics-benchmark` attempts on
+2026-10-27 lost foreground focus to the desktop in use and were correctly
+refused, so the native ladder for this change is still unrecorded; rerun the
+benchmark on a free desktop with the QA VM stopped before quoting numbers.
+
+- **Scene reflections in water (High).** `ArtMaterials.WaterShaderFor(High)`
+  compiles the clear-water source with `SCENE_REFLECTIONS`. After the refraction
+  term, the fragment marches twelve quadratically spaced steps along the view-space
+  reflected ray against the opaque depth copy, bisects the first crossing three
+  times and samples the opaque screen copy there. Misses (sky, off-screen, thin
+  gaps) keep the existing sky radiance reflection, so nothing appears where the
+  scene cannot be seen. The Fresnel weight is deliberately stronger than physical
+  (0.26 facing, 0.85 grazing) because the 37° battle camera would otherwise hide
+  the mirror; foam and screen borders fade it, and clear shallows keep showing
+  their floor through the remaining transmission. The wave normal makes the mirror
+  image wobble. SSR in `Environment` would not have helped: water draws in the
+  transparent pass and Godot's SSR only shades opaque surfaces. Low/Medium shader
+  code is unchanged; High compiles one more water variant, warmed by the same
+  "Applying graphics…" redraw as the clear variant.
+- **Rejected after the user's eye test: subsurface figures and a wider shadow
+  kernel.** A first cut declared `SubsurfScatterEnabled` on `ArtMaterials.Toy`
+  and ran Godot's screen-space diffusion pass on High, and raised the soft-shadow
+  filter to high with blended cascades. On figures only a few dozen pixels tall
+  the diffusion blurred the diffuse and flattened the clear-coat highlights that
+  make them read as lacquered toys (worst on the menu heroes), and the wider
+  kernel showed no visible gain at the battle camera for a real cost. Both were
+  removed; High's figures and shadows are exactly v0.39.1's.
+- **Minimal Low.** The gameplay 3D scale drops from 85% to 75% (spatial FSR
+  upscales; 2D UI and menu textures stay at output pixels). `DisplayModeController`
+  combines it with the fullscreen cap through `GraphicsQuality.RenderScale`.
+  Everything else on Low is unchanged: 2× MSAA, 1024 soft-very-low shadows, no
+  SSAO/glow/SSIL/DOF/PCSS, opaque water, no decorations, 30 Hz menu worlds.
+- **Medium unchanged.** It already sits between Low and High on every row:
+  native resolution, 2048 soft-low shadows, half-resolution medium SSAO, glow,
+  clear refracting water, decorations, no bounce/blur/PCSS/reflections/diffusion.
+
+Not taken: volumetric fog light shafts (haze across the playable diorama and a
+froxel pass on every High frame), SDFGI, SSR on opaque stone (invisible at
+roughness .86), 4× MSAA and full-resolution SSAO (the user judged both
+indistinguishable in v0.39), higher SSIL quality (about +1.5 ms for a subtle
+change) and planar reflection cameras (a second scene render).
 
 ## Focused opportunities in the code
 
