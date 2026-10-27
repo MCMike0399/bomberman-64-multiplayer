@@ -15,6 +15,14 @@ python3 tools/playtest/run.py --scenario script --script tools/playtest/temple-w
 
 The default Godot path is the installed macOS .NET editor; override with `--godot` or `GODOT`. Isolated network tests use their own guest server on a fresh loopback port. On an explicitly shared desktop, existing healthy kernel servers are reused; `--start-server` starts and later stops a server only when the runner created it. Network scenarios require a real available server and fail if absent.
 
+`water-surface` checks isolated bright pixels in Up & Down's open water at
+1600×1000, across every preset/lighting profile and three High wave phases. It
+also checks that High retains visible scene reflections against a temporarily
+reflection-disabled control. Only the water shader clock is pinned; gameplay,
+geometry, lighting and opaque scene inputs remain real. Inspect its captures;
+the fixed pixel probes are tied to the ordinary battle camera. It is graphical
+only and belongs to `all`, `stage-fidelity` and `visual-regression`.
+
 ## Isolated macOS desktop
 
 Use an Apple Silicon Mac and a dedicated Tart macOS guest with automatic login,

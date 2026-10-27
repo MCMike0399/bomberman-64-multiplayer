@@ -16,6 +16,7 @@ public partial class TempleStageView
         _blizzardClock=weather.GetProperty("time").GetSingle();
         _blizzardWind=new(weather.GetProperty("x").GetSingle(),weather.GetProperty("z").GetSingle());
         if(_blizzardWeather!=null)_blizzardWeather.Wind=_blizzardWind;
+        if(_exteriorSnow!=null)_exteriorSnow.Wind=_blizzardWind;
     }
     private void ProcessBlizzard(float delta)
     {
@@ -28,6 +29,7 @@ public partial class TempleStageView
         }
         _graphicsRevision=GraphicsQuality.Revision;
         if(_blizzardWeather!=null)_blizzardWeather.Active=WeatherActive;
+        if(_exteriorSnow!=null)_exteriorSnow.Active=WeatherActive;
         for(int i=_avalancheSwells.Count-1;i>=0;i--)
         {
             var (bank,age)=_avalancheSwells[i];

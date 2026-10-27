@@ -95,6 +95,13 @@ not user approval.
 
 ## Verification receipt (2026-10-26)
 
+The original receipt below covers the first scenery pass. The
+[living-worlds references](living-stage-worlds-research.md) and
+[current rendering guide](agents/visuals-and-animation.md#living-stage-worlds-2026-10-27-source-work)
+describe the subsequent meadow, orbital castle and glacier additions. Their
+evidence and screenshots are in [the living-worlds gallery](living-stage-worlds.md);
+the counts below belong to the original pass.
+
 Source branch `t3/stage-visual-personality`, rebased on `main` 450df7e (v0.34.0).
 
 - `scenery-regression` in the isolated QA VM (Metal 4.0 Forward+, Apple

@@ -86,6 +86,7 @@ public partial class TempleStageView
         }
 
         Starfield(scenery,new(Width/2f,-10,Depth/2f),120,30,520,17);
+        BuildOrbitalBackdrop();
     }
 
     /// <summary>Layered irregular rings narrowing to a point well below the foundation.</summary>
