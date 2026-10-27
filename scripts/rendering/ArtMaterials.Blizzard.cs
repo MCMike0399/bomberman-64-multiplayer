@@ -19,7 +19,7 @@ shader_type spatial;
 render_mode diffuse_burley;
 uniform int surface_style=0;
 uniform float quality_detail=1.0;
-// High only: thick layered ice with trapped bubbles, wind-carved drifts and sun glitter.
+// High only: thick layered polished ice with trapped bubbles, wind-carved drifts and sun glitter.
 uniform float quality_premium=0.0;
 uniform float weather_clock=0.0;
 uniform vec2 wind=vec2(0.0);
@@ -79,9 +79,8 @@ void fragment(){
     ice=mix(ice,vec3(.84,.94,.97),wisp*.07*min(length(wind),1.0));
     ALBEDO=ice+(grain-.5)*.035*detail;
     ROUGHNESS=.29+frost*.3;SPECULAR=.55;CLEARCOAT=.38;CLEARCOAT_ROUGHNESS=.3;
-    // Polished on High: a light metallic term lifts the mirror above a dielectric's
-    // few percent so the opaque screen-space reflections show walls, figures and bombs.
-    if(premium){ROUGHNESS=.17+frost*.2;METALLIC=.3;SPECULAR=.7;}
+    // Polished on High: a tighter, brighter sun highlight on the clear plates.
+    if(premium)ROUGHNESS=.17+frost*.2;
   }else if(surface_style==1){
     float strata=sin(model.y*75.0+model.x*22.0+noise(p*11.0)*2.0)*.5+.5;
     float frost=smoothstep(.52,.94,noise(world.xy*16.0))*detail;

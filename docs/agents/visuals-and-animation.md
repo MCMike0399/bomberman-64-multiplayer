@@ -397,11 +397,11 @@ while retaining the same arena geometry, lighting palettes, shoreline and
 gameplay. Low also keeps opaque water; Medium adds clear refracting shallows,
 and High alone adds caustic webs and sun glints (`WATER_SPARKLE`), diorama
 depth of field, contact-hardening sun shadows, half-resolution SSIL bounce,
-screen-space scene reflections in the water (`SCENE_REFLECTIONS` variant),
-half-size opaque SSR that mirrors the scene in ice and glaze, and the
-`quality_premium` surface tier on every stage shader (layered ice, carved snow
+screen-space scene reflections in the water (`SCENE_REFLECTIONS` variant) and
+the `quality_premium` surface tier on every stage shader (layered ice, carved snow
 and glitter, lawn wind and lichen, joints with depth, mica flecks, glazed pool
-tiles; upload it with `GraphicsQuality.ApplyShaderDetail`). The 2026-10-27
+tiles; upload it with `GraphicsQuality.ApplyShaderDetail`). Opaque SSR stays
+off: it showed no mirror on the ice for about 2 ms. The 2026-10-27
 passes record these choices, and the subsurface-figure and wider-shadow-kernel
 ideas the user rejected on sight, in [graphics research](../graphics-research.md#high-premium-and-medium-balance-2026-10-27).
 Shadow depth bias scales with preset and doubles for Morning/Afternoon; the

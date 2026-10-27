@@ -70,21 +70,15 @@ public static class GraphicsQuality
         viewport.UseTaa=false;
         viewport.UseDebanding=true;
     }
-    /// <summary>Stages with glossy opaque surfaces (polished ice, glazed pool tiles) that opaque SSR can mirror.</summary>
-    public static bool GlossyStage(string stageId)=>stageId is "blizzard-battle" or "greedy-trap";
-    public static void ApplyArena(Godot.Environment environment,CameraAttributesPractical? camera=null,bool glossyStage=true)
+    public static void ApplyArena(Godot.Environment environment,CameraAttributesPractical? camera=null)
     {
         environment.SsaoEnabled=Current!=GraphicsPreset.Low;
         environment.GlowEnabled=Current!=GraphicsPreset.Low;
         environment.SsilEnabled=Current==GraphicsPreset.High;
-        // Opaque screen-space reflections: visible only on glossy surfaces (ice, glazed
-        // tiles), so matte stone and turf keep their look. Water is transparent and
-        // mirrors the scene through its own shader instead; stages without glossy
-        // opaque surfaces skip the pass to protect the 60 FPS budget at panel resolution.
-        environment.SsrEnabled=Current==GraphicsPreset.High&&glossyStage;
-        // Half-size reflections: ice and glaze blur them with roughness anyway, and the
-        // full-size pass would spend about a millisecond of the 60 FPS budget on nothing visible.
-        RenderingServer.EnvironmentSetSsrHalfSize(true);
+        // Opaque screen-space reflections stay off on every preset: on the polished ice
+        // they produced no visible mirror at the 37° battle camera, even with a metallic
+        // term, for about 2 ms per frame at panel resolution (2026-10-27). Water mirrors
+        // the scene through its own transparent-pass shader instead.
         if(camera==null)return;
         // Diorama depth of field only touches scenery outside the fitted arena; High only.
         camera.DofBlurFarEnabled=Current==GraphicsPreset.High;

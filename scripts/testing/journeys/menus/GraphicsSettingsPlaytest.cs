@@ -263,7 +263,7 @@ public partial class PlaytestDriver
                     Check(environment.SsaoEnabled==(preset!=GraphicsPreset.Low)&&environment.GlowEnabled==(preset!=GraphicsPreset.Low),"arena effects follow "+preset);
                     Check(!view.UseTaa&&view.ScreenSpaceAA==Viewport.ScreenSpaceAAEnum.Disabled,"sharp non-temporal AA policy");
                     Check(environment.SsilEnabled==(preset==GraphicsPreset.High),"indirect bounce is High-only at "+preset);
-                    Check(environment.SsrEnabled==(preset==GraphicsPreset.High&&GraphicsQuality.GlossyStage(stage)),"opaque screen-space reflections are High-only and limited to glossy stages at "+preset+" on "+stage);
+                    Check(!environment.SsrEnabled,"opaque screen-space reflections stay off at "+preset+" on "+stage);
                     var sun=AuditDescendants(LightingArena).OfType<DirectionalLight3D>().Single(l=>l.ShadowEnabled);
                     Check((sun.LightAngularDistance>0)==(preset==GraphicsPreset.High),"contact-hardening sun shadows are High-only at "+preset);
                     var depthCues=(CameraAttributesPractical)view.GetCamera3D()!.Attributes;

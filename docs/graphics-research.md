@@ -105,14 +105,13 @@ inputs, model proportions and camera framing remain identical across presets.
 | Stone/water microdetail | Reduced | Filtered | Filtered |
 | Stage surface tier (`quality_premium`) | Off | Off | Layered ice, carved snow, sun glitter, lawn wind, lichen, joints with depth, mica flecks, glazed pool tiles |
 | Water | Opaque; no screen copy | Clear refraction and depth absorption (one screen copy) | Medium plus caustic webs, sun glints and screen-space scene reflections |
-| Opaque screen-space reflections | Off | Off | Half-size, 64 steps on Blizzard Battle and Greedy Trap only (the stages with glossy opaque surfaces) |
 | Diorama depth of field | Off | Off | Far/near blur outside the arena, low quality |
 | Stage decorations (`StageScenery`) | Hidden | Shown | Shown |
 | Indirect bounce (SSIL) | Off | Off | Half-resolution, medium quality |
 
 Medium is the default and sits between the other two on every row. High adds
-scene reflections in water and on ice, caustics and glints, the premium surface
-tier on every stage, bounce light, diorama blur, contact-hardening sun shadows
+scene reflections in water, caustics and glints, the premium surface tier on
+every stage, bounce light, diorama blur, contact-hardening sun shadows
 and higher-quality contact shading, without globally increasing saturation or
 contrast; Low renders 75% of the selected 3D pixels, hides every decoration
 outside the arena and keeps the Greedy reservoir town because floating play
@@ -189,7 +188,7 @@ froxel pass on every High frame), SDFGI, 4× MSAA and full-resolution SSAO (the
 user judged both indistinguishable in v0.39), higher SSIL quality (about +1.5 ms
 for a subtle change) and planar reflection cameras (a second scene render).
 Opaque SSR was skipped here because it is invisible on stone at roughness .86;
-the later premium pass enables it for the glossy ice and glaze instead.
+the later premium pass tried it on polished ice and withdrew it (below).
 
 ## High premium and Medium balance (2026-10-27)
 
@@ -206,8 +205,8 @@ budget now buys visible work instead.
   their exact shader paths. On High:
   - *Blizzard Battle* (`FrozenShader`): the ice court gains a deeper, softer
     fracture layer and trapped bubbles offset along the view ray, so the sheet
-    reads as a thick block and is polished (roughness .17, metallic .3) so the
-    SSR mirror carries weight; snow gets wind-carved drifts that tilt the normal
+    reads as a thick block and is polished (roughness .17) for a tighter sun
+    highlight; snow gets wind-carved drifts that tilt the normal
     with blue hollows; snow and ice carry sun glitter from randomly oriented
     crystal facets that flash only on the key light's reflection path
     (`StageLighting.ApplyKeyLight` feeds `sun_direction`/`light_tint`).
@@ -220,13 +219,16 @@ budget now buys visible work instead.
     sparse glossy mica flecks catch the sun.
   - *Greedy Trap court* (`GreedyTrapShader`): the same joint depth and cavity
     on cobbles, brick, ashlar and flagstones; the teal pool tiles get a clear glaze.
-- **Opaque screen-space reflections on High.** `Environment.SsrEnabled` with
-  64 steps, fade-in .15, fade-out 2, depth tolerance .25 and
-  `RenderingServer.EnvironmentSetSsrHalfSize(true)`, only on the stages
-  `GraphicsQuality.GlossyStage` names (Blizzard Battle, Greedy Trap). Godot
-  shades only glossy opaque surfaces, so the ice court and glazed pool mirror
-  walls, figures and bombs; the matte stone stages skip the pass. Water stays
-  on its own transparent-pass march, which now stops on the open sea more than
+- **Tried and withdrawn: opaque screen-space reflections.** `Environment.SsrEnabled`
+  (half-size, 64 steps, defaults otherwise) was enabled on High for the ice
+  court and the glazed pool, then only on those two stages because it cost
+  about 1 ms on stages with nothing glossy. Even with the ice polished to
+  roughness .17 and given a .3 metallic term, neither the isolated VM nor a
+  native desktop capture showed any mirror of walls, figures or bombs at the
+  37° battle camera, while Blizzard Battle and Greedy Trap lost about 4 ms per
+  frame at panel resolution. It is off on every preset; the ice keeps the
+  polish without the metallic term. Water keeps its own transparent-pass
+  march, now 12 steps with 3 bisections, stopping on the open sea more than
   26 units from the stage centre, where the ray could only mirror sky.
 - **Medium trimmed to the sweet spot.** Medium water keeps clear refraction and
   depth absorption but no longer runs the two Voronoi caustic webs or sun-path
@@ -238,14 +240,15 @@ budget now buys visible work instead.
   (`artifacts/playtest/preset-identity-graphics-settings-3`). Native
   `graphics-benchmark --desktop shared` at 3024×1964, High, uncapped, 15 s per
   eight-player stage on the M5 Pro (v0.40.0 → this branch, FPS / p99 ms):
-  Sunken Temple 66.4 / 16.4 → 65.4 / 16.4, Up & Down 65.7 / 15.8 → 63.9 / 16.4,
-  Rock Garden 101.7 → 83.2, Top Rules 110.3 → 101.3, Blizzard Battle 99.7 →
-  69.7, Greedy Trap 89.4 → 69.7. Every stage keeps its 99th-percentile frame
-  inside the 16.7 ms budget. The water stages were already at the 60 FPS line
-  in v0.40 (its water mirror cost about 1.1 ms over v0.39); this pass holds
-  them there with the SSR gating and the far-sea skip, so further headroom on
-  those two stages needs an identity decision (SSIL, depth of field, MSAA or a
-  High render scale below native). Back-to-back runs drift a few percent with
+  Sunken Temple 66.4 / 16.4 → 68.7 / 15.4, Up & Down 65.7 / 15.8 → 66.2 / 15.7,
+  Rock Garden 101.7 → 86.0, Top Rules 110.3 → 106.9, Blizzard Battle 99.7 →
+  83.4, Greedy Trap 89.4 → 80.7 (receipt
+  `artifacts/playtest/high-premium-bench-final`). Every stage keeps its
+  99th-percentile frame inside the 16.7 ms budget. The water stages
+  were already at the 60 FPS line in v0.40 (its water mirror cost about 1.1 ms
+  over v0.39); this pass holds them there with the shorter march and the
+  far-sea skip, so further headroom on those two stages needs an identity
+  decision (SSIL, depth of field, MSAA or a High render scale below native). Back-to-back runs drift a few percent with
   heat; measure with the QA VM stopped and the desktop free.
 
 ## Focused opportunities in the code
