@@ -259,6 +259,13 @@ resolution. Moving/resizing the window recomputes rendering without restarting
 local/online sessions or effect preparation. `--display-windowed` overrides only
 initial presentation for QA and never overwrites a saved fullscreen preference.
 
+**Frame rate cap** is a slider with stops at 30, 45, 60, 75, 90, 120, 144, 165,
+240 and Unlimited (default). It saves `video/frameCap` (0 = unlimited; unknown
+values fall back to unlimited) and sets `Engine.MaxFps` immediately. Display sync
+still applies on top of it. A launch-time `--max-fps` (QA's 30 FPS timing, the
+uncapped benchmark) outranks the saved cap. `player-settings` checks the slider,
+persistence and that override.
+
 `display-settings` exercises the real controls, both shortcuts, resolution
 persistence, fullscreen 3D scaling, oversized-window fitting and paused-match
 continuity. It also starts a fresh copy of the executable against an isolated

@@ -24,6 +24,12 @@ public partial class PlaytestDriver
             slider.GrabFocus();await KeyPress(Key.Left);
             Check(_root.Preferences.Volume<.8f&&_root.BattleAudio.Volume==_root.Preferences.Volume,"volume control changes actual game audio");
             Check(PlayerPreferences.Load(_root.PreferencesPath).Volume==_root.Preferences.Volume,"sound preference persists");
+            var cap=_root.FindChild("FrameCap",true,false) as HSlider??throw new Exception("Missing frame cap slider");
+            int engineCap=Engine.MaxFps;Check(_root.Preferences.FrameCap==0,"frame rate cap defaults to unlimited");
+            cap.GrabFocus();await KeyPress(Key.Left);
+            Check(_root.Preferences.FrameCap==240&&PlayerPreferences.Load(_root.PreferencesPath).FrameCap==240,"frame cap slider persists its choice");
+            Check(Engine.MaxFps==engineCap,"command-line --max-fps keeps QA timing over the saved cap");
+            await KeyPress(Key.Right);Check(_root.Preferences.FrameCap==0,"frame cap returns to unlimited");
             Check(_root.Preferences.AutomaticUpdates,"automatic update checking defaults on");
             await ActivateNamed("AutomaticUpdates");Check(!PlayerPreferences.Load(_root.PreferencesPath).AutomaticUpdates,"automatic update preference persists");
             await ActivateNamed("AutomaticUpdates");
