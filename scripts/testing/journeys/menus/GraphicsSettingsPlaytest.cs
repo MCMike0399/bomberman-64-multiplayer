@@ -80,6 +80,13 @@ public partial class PlaytestDriver
         await Frames(10);
         float expected=Math.Min(1,Math.Min(1280f/GetWindow().Size.X,800f/GetWindow().Size.Y));
         Check(Mathf.IsEqualApprox(GetWindow().Scaling3DScale,expected),"fullscreen resolution scales actual 3D output");
+        var render=DisplayModeController.Current.RenderSize;
+        Check(Math.Abs(render.X-GetWindow().Size.X*expected)<=1&&Math.Abs(render.Y-GetWindow().Size.Y*expected)<=1,"settings report the actual 3D output size");
+        Check(SettingsText().Contains($"3D renders at {render.X} x {render.Y}"),"settings show the applied 3D resolution");
+        var screen=DisplayModeController.Current.ScreenPixels;
+        var offered=DisplayModeController.Current.AvailableResolutions();
+        Check(offered[0]==Vector2I.Zero&&offered.Skip(1).All(size=>size.X<=screen.X&&size.Y<=screen.Y),"resolution choices never exceed the screen: "+screen);
+        Check(DisplayModeController.Resolutions.Where(size=>size.X>screen.X||size.Y>screen.Y).All(size=>!offered.Contains(size)),"sizes beyond the screen are not offered");
         Check(ReferenceEquals(session,_root.ActiveSession)&&snapshots==_root.SnapshotCount,"display change preserves paused local session");
         Check(PlayerPreferences.Load(_root.PreferencesPath).Fullscreen,"fullscreen selection persists");
         await Capture("display-settings-fullscreen");
@@ -147,6 +154,8 @@ public partial class PlaytestDriver
             GetWindow().GrabFocus();await Frames(10);
         }
     }
+
+    private string SettingsText()=>string.Join("\n",AuditDescendants(_root).OfType<Label>().Where(label=>label.IsVisibleInTree()).Select(label=>label.Text));
 
     private async Task DisplaySize(Vector2I size)
     {

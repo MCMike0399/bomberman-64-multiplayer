@@ -192,5 +192,6 @@ public partial class ArcadeMenu : Control
     private bool _overlayBackground;
     public GraphicsPreset Graphics {get;private set;}=GraphicsPreset.Medium;
     private Label _graphicsDescription=null!;
+    private Label _resolutionHint=null!;
     public void SetOverlay(bool overlay)=>_overlayBackground=overlay;
 }

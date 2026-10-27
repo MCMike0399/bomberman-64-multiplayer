@@ -41,13 +41,14 @@ public partial class ArcadeMenu
             ChangeValue=_=>{Fullscreen=!Fullscreen;SettingsChanged?.Invoke();}};
         updates.AddChild(mode);
         var resolution=new ArcadeRuleDial {Name="DisplayResolution",Caption="Resolution",ValueWidth=190,
-            ReadValue=()=>DisplayModeController.ResolutionLabel(Resolution),ChangeValue=direction=>
+            ReadValue=()=>DisplayModeController.ResolutionLabel(Resolution,DisplayModeController.Current.ScreenPixels),ChangeValue=direction=>
             {
-                var sizes=DisplayModeController.Resolutions;
+                var sizes=DisplayModeController.Current.AvailableResolutions();
                 Resolution=sizes[(Array.IndexOf(sizes,Resolution)+direction+sizes.Length)%sizes.Length];SettingsChanged?.Invoke();
             }};
         updates.AddChild(resolution);
-        Hint(updates,"Window size, or fullscreen 3D resolution. Fits your display; menus stay sharp.",16);
+        _resolutionHint=Hint(updates,ResolutionHint(),16);
+        DisplayModeController.Current.RenderSizeChanged+=()=>{if(IsInstanceValid(_resolutionHint))_resolutionHint.Text=ResolutionHint();};
         _frameCapLabel=ArcadeTheme.Text(updates,FrameCapText(0),22);
         _frameCap=new HSlider {Name="FrameCap",MinValue=0,MaxValue=PlayerPreferences.FrameCaps.Length-1,Step=1,
             Value=PlayerPreferences.FrameCaps.Length-1,CustomMinimumSize=new(460,40),
@@ -89,6 +90,14 @@ public partial class ArcadeMenu
         _frameCapLabel.Text=FrameCapText(FrameCap);
         ConfigureDisplay(preferences.Fullscreen,preferences.Resolution);
         Graphics=preferences.Graphics;_graphicsDescription.Text=GraphicsQuality.Description(Graphics);
+    }
+
+    /// <summary>Resolution applies immediately; state the real 3D output so every choice is observable.</summary>
+    private static string ResolutionHint()
+    {
+        var render=DisplayModeController.Current.RenderSize;
+        if(render==Vector2I.Zero)return "Window size, or fullscreen 3D resolution. Fits your display; menus stay sharp.";
+        return $"3D renders at {render.X} x {render.Y}. Applies instantly; menus stay sharp.";
     }
 
     private static string FrameCapText(int cap)=>cap==0?"Frame rate cap: Unlimited":$"Frame rate cap: {cap} FPS";
