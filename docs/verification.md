@@ -1,3 +1,28 @@
+# v0.42.0 delivered
+
+Published **2026-10-27 16:32:42 UTC**: [v0.42.0 / signed update](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.42.0).
+The combined [PR #48](https://github.com/MCMike0399/bomberman-64-multiplayer/pull/48)
+merged release cutover #45, water reflection fix #46 and living stage scenery #47.
+Release identity: **v0.42.0/build 51/schema 6**, source
+`08a3433ed5da52f37c05bef984c4f46ae4aef36c`.
+
+- Local public and managed profiles and actionlint passed on the combined candidate.
+- [Trusted Verification 40539186248](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40539186248)
+  passed public, managed/network, Godot headless, Apple Silicon package and both
+  archived-client release gates; the optional CI Metal journey was skipped.
+  All nine saved-settings cases passed on Apple Paravirtual Metal; the signed
+  update from v0.41.0 passed install, rollback and High/fullscreen on attempt one.
+- [Protected rollout and public verification 40541314790](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40541314790)
+  passed. Public, primary and fallback targets all verified their exact identity,
+  connections and room placement without deferral. Anonymous downloads, both
+  signatures, latest stable identity and archive equality with the trusted build
+  were verified.
+- Published archive SHA-256: Mac `34818491185ddaa3ee1bbe3afbbaee5e00ceeb0b94e91dab7195c912e104d34e`;
+  server `652c4f1fd3ca78b885950d319cb8888b9ae3c25d816831ab2e8705e55c40d376`.
+
+The originating PRs retain their focused isolated Metal visual evidence. Native
+M5 Pro performance and a local installation were not checked for this release.
+
 # v0.40.0 delivered
 
 Published **2026-10-27 06:24:15 UTC**: [v0.40.0 / signed update](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.40.0).
