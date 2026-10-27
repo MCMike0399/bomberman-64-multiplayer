@@ -3,7 +3,7 @@
 The user resumed gameplay work on 2026-10-23 for controller ergonomics, aiming
 and knockdown/blast separation (iteration19). The first eighteen iterations
 remain historical evidence. Iteration20 then rebuilt the walk. Recorded
-release baseline: **v0.39.0/build 46**, published with independently verified Mac
+release baseline: **v0.40.0/build 48**, published with independently verified Mac
 and server archives (see [verification](../verification.md)). Previous runtime baseline: **v0.18.0**, commit
 `316a330d7d895a92f98c1a60be7d571ec445a8a3`. Later documentation commits may follow.
 Verify the live branch, source, tools and installed version before relying on
@@ -13,6 +13,13 @@ The v0.30 review merged diorama polish first, then the five reviewed gameplay/UI
 PRs. Protocol 4 accompanies Fast-bomb removal; both maintained workers are updated.
 The subsequent v0.31 release includes the reviewed explosion, Blizzard Battle,
 Greedy Trap and Up & Down work together with the activated release pipeline. [Review fixes, complete gates and delivery](../verification.md).
+
+v0.40 delivers the preset identity pass (#41): High water mirrors the opaque
+scene, Low renders at 75%, Medium is unchanged; subsurface figures and a wider
+shadow kernel were tried and withdrawn after the user's eye test. Trusted
+verification, all nine archived startup cases, the signed update from v0.39.1
+(attempt two), all three workers and public asset/signature verification
+passed. [Delivery receipt](../verification.md#v0400-delivered).
 
 ## What this project is
 
