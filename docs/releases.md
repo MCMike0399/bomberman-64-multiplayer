@@ -80,6 +80,20 @@ verifies that key against the existing public key and verifies each generated si
 therefore fails before draining or changing servers. Release credentials are
 removed from the host adapter's subprocess environment.
 
+### Fallback under host pressure
+
+The deployment and publication connection probes create a real server-hosted
+room on every target. The private host monitor can exclude the idle fallback
+from new rooms while its host is busy (`excludedServers` in its placement
+snapshot), and the kernel then answers room creation with `503 no_capacity`.
+v0.41.0's publication failed twice for that reason alone (2026-10-27), with the
+fleet already serving the new release. Since v0.41.1 the `fallback` target, and
+only that target, may report `DEFERRED`. It must still admit the current client,
+answer with the exact release token and reject obsolete clients; the receipt
+records `roomPlacementDeferred`. Public and primary must always host an
+advancing match. A deferral with any other error, or on another target, fails
+closed as before.
+
 ## Release gates
 
 v0.35.0 passed every existing gate and still failed for players: saved High

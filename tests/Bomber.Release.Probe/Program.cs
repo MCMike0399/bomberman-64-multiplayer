@@ -25,12 +25,23 @@ async Task<JsonElement> Request(HttpMethod method, string path, object? data, Ca
     if (token is not null) request.Headers.Add("x-player-token", token);
     if (data is not null) request.Content = JsonContent.Create(data);
     using var response = await http.SendAsync(request, ct);
+    if (method == HttpMethod.Post && path == "lobbies" && response.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable)
+    {
+        // The node answered with the current release but placed no room: the host monitor has
+        // excluded it, or it is full. The caller decides whether that target may defer.
+        Check(response.Headers.TryGetValues(OnlineProtocol.HeaderName, out var deferredValues) && OnlineProtocol.Accepts(deferredValues), "matching worker response");
+        using var refusal = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct));
+        if (refusal.RootElement.TryGetProperty("error", out var error) && error.TryGetProperty("code", out var code) && code.GetString() == "no_capacity")
+            throw new PlacementDeferredException();
+    }
     Check(response.IsSuccessStatusCode, "current client API admission");
     Check(response.Headers.TryGetValues(OnlineProtocol.HeaderName, out var values) && OnlineProtocol.Accepts(values), "matching worker response");
     if (response.StatusCode == System.Net.HttpStatusCode.NoContent) return default;
     using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct));
     return json.RootElement.Clone();
 }
+try
+{
 try
 {
     var guest = await Request(HttpMethod.Post, "guests", new { displayName = "Release connection check" }, deadline.Token);
@@ -121,4 +132,12 @@ finally
     }
     socket.Abort();
 }
+}
+catch (PlacementDeferredException)
+{
+    Console.WriteLine($"DEFERRED {checks} release admission checks; room placement answered no_capacity");
+    return;
+}
 Console.WriteLine($"PASS {checks} release connection and cleanup checks");
+
+sealed class PlacementDeferredException() : Exception("Room placement answered no_capacity");

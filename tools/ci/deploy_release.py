@@ -43,9 +43,10 @@ def deploy(adapter, context, targets, release, revision, journal=None, placement
         call('apply')
         receipts = verify(targets, release, revision)
         call('resume')
-        verify_connections(targets, placements)
+        deferred = verify_connections(targets, placements) or []
         for receipt in receipts:
             receipt['connectionVerified'] = True
+            receipt['roomPlacementDeferred'] = receipt.get('node') in deferred
         drained = False
         if journal:
             journal.record('transaction', 'succeeded')
