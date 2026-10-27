@@ -398,6 +398,12 @@ WebRTC extension is a hash-pinned build dependency, installed before import/expo
 
 ## Battle polish integration regression (2026-10-27)
 
+Post-match network checks await the guest menu's accepted arena separately from
+`NetworkSession.Party`: the socket worker publishes that transport snapshot
+before the engine frame drains it into presentation. An immediate menu assertion
+after the transport acknowledgment races the normal UI update. Preserve the
+same expected arena and bounded wait; do not force menu callbacks or state.
+
 `battle-polish-regression` combines first-use rendering, all randomized-cover stage
 journeys, camera framing, active-blast hits, local/online post-match map selection,
 Quick Play permissions/countdown, the asset audit, pickup personality, the Greedy

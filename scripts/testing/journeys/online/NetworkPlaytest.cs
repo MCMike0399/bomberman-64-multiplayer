@@ -34,7 +34,9 @@ public partial class PlaytestDriver
         owner.SetRoomSettings(settings with{Stage="rock-garden"});
         await Until(()=>guest.Party?.Settings?.GetValueOrDefault("stage")=="rock-garden","guest receives the owner's selected arena");
         var menu=_root.FindChildren("*","",true,false).OfType<BlastCircuit.UI.Menu.ArcadeMenu>().Single();
-        Check(menu.OnlineSettings.Stage=="rock-garden","guest map preview follows accepted room settings");
+        // Party is published by the socket worker before GameRoot drains that
+        // message on the next engine frame. Require the actual menu state too.
+        await Until(()=>menu.OnlineSettings.Stage=="rock-garden","guest map preview follows accepted room settings");
         await owner.DisposeAsync();
         await Until(()=>guest.IsLeader&&!NamedButton("StageSelector").Disabled,"room ownership transfer enables map selection for the new host");
         Check(NamedButton("LaunchMatch").Disabled,"host cannot start without another human or CPU");
