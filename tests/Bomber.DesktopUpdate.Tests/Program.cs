@@ -41,6 +41,7 @@ foreach (bool failedLaunch in new[] { false, true })
     string stage = Path.Combine(root, ".blast-update-" + token), next = Path.Combine(stage, "next");
     CopyFixture(target); CopyFixture(next);
     File.WriteAllText(Path.Combine(target, "old-marker"), "old");
+    File.WriteAllText(Path.Combine(target, "unins000.dat"), "installed uninstall data");
     if (failedLaunch) File.WriteAllText(Path.Combine(next, "fail-launch"), "fail");
     var children = new List<Process>();
     try
@@ -59,6 +60,7 @@ foreach (bool failedLaunch in new[] { false, true })
         try { await transaction; Check(!failedLaunch, "Failed launch must report failure"); }
         catch (IOException) when (failedLaunch) { checks++; }
         Check(File.Exists(Path.Combine(target, "old-marker")) == failedLaunch, "Installed bytes must match success or rollback");
+        Check(File.ReadAllText(Path.Combine(target, "unins000.dat")) == "installed uninstall data", "Installed uninstall data must survive update and rollback");
         Check(File.ReadAllText(request.History).Trim() == (failedLaunch ? "failed 99.0.0 launch-rollback" : "installed 99.0.0"), "History must report actual outcome");
         while (Directory.GetFiles(root, "fixture-pid-*").Length < (failedLaunch ? 3 : 2))
             await Task.Delay(20, timeout.Token);

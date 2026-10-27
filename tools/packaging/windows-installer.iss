@@ -24,5 +24,12 @@ Source: "{#GameDirectory}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubd
 [Icons]
 Name: "{group}\Blast Circuit"; Filename: "{app}\BlastCircuit.exe"; WorkingDir: "{app}"
 
+[UninstallDelete]
+; Automatic updates can add runtime files after the installer log was written.
+; Restrict recursive removal to these product-owned subdirectories.
+Type: filesandordirs; Name: "{app}\data_Bomberman64Multiplayer_windows_x86_64"
+Type: filesandordirs; Name: "{app}\updater"
+Type: filesandordirs; Name: "{app}\Notices"
+
 [Run]
 Filename: "{app}\BlastCircuit.exe"; Description: "Play Blast Circuit"; Flags: nowait postinstall skipifsilent

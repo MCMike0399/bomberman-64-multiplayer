@@ -52,6 +52,9 @@ public partial class GameUpdater : Node
         _uptime+=delta;
         if(_healthPath!=null&&_initialized&&_uptime>=3&&Engine.GetFramesDrawn()>2)
         {
+            File.WriteAllText(Path.Combine(Path.GetDirectoryName(_healthPath)!,"health.json"),System.Text.Json.JsonSerializer.Serialize(new {
+                version=Version,platform=OS.GetName(),driver=RenderingServer.GetCurrentRenderingDriverName(),
+                method=RenderingServer.GetCurrentRenderingMethod(),adapter=RenderingServer.GetVideoAdapterName()}));
             File.WriteAllText(_healthPath,Version);_healthPath=null;
             GD.Print("BLAST_UPDATE_HEALTHY "+Version);
         }

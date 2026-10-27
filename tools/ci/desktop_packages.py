@@ -5,6 +5,7 @@ from pathlib import Path, PurePosixPath
 import stat
 import zipfile
 import desktop_validation
+import desktop_update_gates
 
 TARGETS = {
     'windows-x64': {'preset': 'Windows DirectX 12', 'os': 'Windows', 'driver': 'd3d12',
@@ -21,13 +22,14 @@ TARGETS = {
 def names(target):
     stem = 'Blast-Circuit-' + target
     return {'artifact': stem, 'archive': stem + '.zip', 'metadata': stem + '-metadata.json',
-            'smoke_artifact': stem + '-smoke', 'smoke': stem + '-smoke.json', 'root': stem}
+            'smoke_artifact': stem + '-smoke', 'smoke': stem + '-smoke.json', 'root': stem,
+            'updater_test': stem + '-updater-tests.json'}
 
 
 def asset_names(target):
     item = names(target)
     from download_formats import names as download_names
-    return (item['archive'], item['archive'] + '.sha256', item['metadata'], item['smoke'], *download_names(target))
+    return (item['archive'], item['archive'] + '.sha256', item['metadata'], item['smoke'], item['updater_test'], *download_names(target))
 
 
 def artifacts(targets=None):
@@ -105,6 +107,8 @@ def inspect(directory, revision, release, targets=None):
                 smoke.get('os') != settings['os']):
             raise RuntimeError('Desktop exported smoke is missing or mismatched: ' + target)
         desktop_validation.inspect_receipt(smoke, settings, revision, release)
+        desktop_update_gates.inspect(json.loads((directory / item['updater_test']).read_text()), target,
+                                     revision, release, digest(directory / item['archive']))
 
 
 def download(repository, run_id, directory, gh):

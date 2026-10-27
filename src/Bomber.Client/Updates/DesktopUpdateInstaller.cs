@@ -134,6 +134,7 @@ public static class DesktopUpdateInstaller
         var start = new ProcessStartInfo(helper) { UseShellExecute = false, CreateNoWindow = true, WorkingDirectory = update.Stage };
         start.ArgumentList.Add(path);
         using var process = Process.Start(start) ?? throw new IOException("Could not start update helper.");
+        File.WriteAllText(Path.Combine(update.Stage, "helperpid"), process.Id + " " + process.StartTime.ToUniversalTime().Ticks);
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
         timeout.CancelAfter(TimeSpan.FromSeconds(10));
         string ready = Path.Combine(update.Stage, "ready");

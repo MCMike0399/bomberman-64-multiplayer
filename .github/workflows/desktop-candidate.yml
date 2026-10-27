@@ -12,7 +12,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  candidate-assets:
+    # Draft release visibility requires contents:write. Keep that permission on
+    # a disposable download-only runner that never checks out or runs PR code.
+    if: github.event.pull_request.head.repo.full_name == github.repository && contains(github.event.pull_request.labels.*.name, 'desktop-validation')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Download separately prepared exact-source candidates
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          CANDIDATE_SHA: ${{ github.event.pull_request.head.sha }}
+        run: gh release download "qa-desktop-$CANDIDATE_SHA" --dir artifacts
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: desktop-candidate-inputs
+          path: artifacts
+          retention-days: 2
+          if-no-files-found: error
+
   packaged:
+    needs: candidate-assets
     # This job has no private build credentials. Maintainers separately export
     # reviewed candidates into a private draft; missing/exact-SHA assets fail.
     if: github.event.pull_request.head.repo.full_name == github.repository && contains(github.event.pull_request.labels.*.name, 'desktop-validation')
@@ -34,15 +57,16 @@ jobs:
       - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           dotnet-version: 10.0.x
-      - name: Download separately prepared exact candidate bytes
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: desktop-candidate-inputs
+          path: artifacts
+      - name: Verify the compiled candidate source identity
         env:
-          GH_TOKEN: ${{ github.token }}
           CANDIDATE_SHA: ${{ github.event.pull_request.head.sha }}
           TARGET: ${{ matrix.target }}
         shell: bash
-        run: |
-          gh release download "qa-desktop-$CANDIDATE_SHA" --dir artifacts --pattern "Blast-Circuit-$TARGET*" --pattern 'Blast-Circuit-server-dotnet10*' --pattern server-build-metadata.json
-          python -c 'import json,os; m=json.load(open("artifacts/Blast-Circuit-"+os.environ["TARGET"]+"-metadata.json")); assert m["revision"]==os.environ["CANDIDATE_SHA"], "Candidate source mismatch"'
+        run: python -c 'import json,os; m=json.load(open("artifacts/Blast-Circuit-"+os.environ["TARGET"]+"-metadata.json")); assert m["revision"]==os.environ["CANDIDATE_SHA"], "Candidate source mismatch"'
       - if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y squashfs-tools libicu74
       - if: runner.os == 'Windows'
@@ -50,17 +74,33 @@ jobs:
       - if: runner.os == 'Linux'
         run: python3 tools/packaging/package-download.py --target linux-x64
       - run: dotnet run --project tests/Bomber.DesktopUpdate.Tests -m:1
+      - name: Unpack the deliberately newer real-game updater fixture
+        env:
+          TARGET: ${{ matrix.target }}
+        shell: bash
+        run: python tools/packaging/package-update-fixture.py --target "$TARGET" --unpack
       - name: Full packaged gameplay and multiplayer regression
         env:
           TARGET: ${{ matrix.target }}
         shell: bash
         run: python tools/packaging/verify-desktop.py --target "$TARGET"
+      - name: Actual signed game update and rollback
+        env:
+          TARGET: ${{ matrix.target }}
+        shell: bash
+        run: python tools/packaging/verify-desktop-update.py --target "$TARGET"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: candidate-${{ matrix.target }}
           path: |
             artifacts/*-smoke.json
+            artifacts/*-updater-tests.json
+            artifacts/*-updater-details/**/runtime.log
+            artifacts/*-updater-details/**/summary.json
+            artifacts/*-updater-details/**/old-launch.log
+            artifacts/*-updater-details/**/restored-gameplay.log
+            artifacts/*-updater-details/**/helper-error.txt
             artifacts/*-Setup.exe
             artifacts/*-Setup.exe.sha256
             artifacts/*-download.json
