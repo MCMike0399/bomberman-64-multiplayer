@@ -529,6 +529,18 @@
       "manual": false
     },
     {
+      "id": "pickup-showcase",
+      "method": "PickupShowcase",
+      "domains": [
+        "assets",
+        "models",
+        "rendering"
+      ],
+      "headless": true,
+      "timeout": 240,
+      "manual": false
+    },
+    {
       "id": "controller-observe",
       "method": "ControllerObserve",
       "domains": [
@@ -1105,7 +1117,8 @@
         "blizzard-battle",
         "greedy-trap",
         "hurry-water",
-        "asset-audit"
+        "asset-audit",
+        "pickup-showcase"
       ],
       "domains": [
         "rendering",
