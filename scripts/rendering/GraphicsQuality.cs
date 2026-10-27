@@ -8,7 +8,9 @@ public static class GraphicsQuality
 {
     public static GraphicsPreset Current {get;private set;}=GraphicsPreset.Medium;
     public static int Revision {get;private set;}
-    public static Viewport.Msaa Antialiasing=>Current==GraphicsPreset.Low?Viewport.Msaa.Msaa2X:Viewport.Msaa.Msaa4X;
+    // 2× MSAA on every preset: at native panel density the user judged 4× indistinguishable
+    // on all six arenas while it cost about 1.6 ms per High frame.
+    public static Viewport.Msaa Antialiasing=>Viewport.Msaa.Msaa2X;
     /// <summary>Seconds between animated menu-world renders: Low keeps 30 Hz, other presets follow the display.</summary>
     public static double MenuFrameInterval=>Current==GraphicsPreset.Low?1d/30:0;
     public static GraphicsPreset FromWire(string? value)=>value switch
@@ -17,9 +19,9 @@ public static class GraphicsQuality
     { GraphicsPreset.Low=>"low",GraphicsPreset.High=>"high",_=>"medium" };
     public static string Description(GraphicsPreset value)=>value switch
     {
-        GraphicsPreset.Low=>"Lighter effects and softer detail for lower power use.",
-        GraphicsPreset.High=>"Crisp edges, richer contact shading and finer shadows.",
-        _=>"Crisp edges and balanced effects for everyday play."
+        GraphicsPreset.Low=>"Lightest rendering: no stage decorations, effects or fine detail.",
+        GraphicsPreset.High=>"Richer contact shading, bounce light, diorama blur and finer shadows.",
+        _=>"Balanced look for everyday play, without bounce light or diorama blur."
     };
 
     public static void Apply(GraphicsPreset preset,Viewport viewport)
@@ -40,7 +42,9 @@ public static class GraphicsQuality
         RenderingServer.ScreenSpaceRoughnessLimiterSetActive(true,.25f,.18f);
         // Indirect bounce exists only on High; it is half-resolution and fades with distance.
         RenderingServer.EnvironmentSetSsilQuality(RenderingServer.EnvironmentSsilQuality.Medium,true,.5f,2,50,300);
-        RenderingServer.CameraAttributesSetDofBlurQuality(Current==GraphicsPreset.High?RenderingServer.DofBlurQuality.Medium:RenderingServer.DofBlurQuality.Low,true);
+        // Low bokeh quality everywhere: the blur only touches scenery outside the arena and
+        // medium quality cost 0.36 ms more per frame without a visible difference.
+        RenderingServer.CameraAttributesSetDofBlurQuality(RenderingServer.DofBlurQuality.Low,true);
         RenderingServer.CameraAttributesSetDofBlurBokehShape(RenderingServer.DofBokehShape.Circle);
     }
 
@@ -57,8 +61,8 @@ public static class GraphicsQuality
         environment.GlowEnabled=Current!=GraphicsPreset.Low;
         environment.SsilEnabled=Current==GraphicsPreset.High;
         if(camera==null)return;
-        // Diorama depth of field only touches scenery outside the fitted arena.
-        camera.DofBlurFarEnabled=Current!=GraphicsPreset.Low;
-        camera.DofBlurNearEnabled=Current!=GraphicsPreset.Low;
+        // Diorama depth of field only touches scenery outside the fitted arena; High only.
+        camera.DofBlurFarEnabled=Current==GraphicsPreset.High;
+        camera.DofBlurNearEnabled=Current==GraphicsPreset.High;
     }
 }

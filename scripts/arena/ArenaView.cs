@@ -88,7 +88,9 @@ public partial class ArenaView : Node3D
         // Smaller shadow texels need more depth bias to avoid speckled self-shadowing.
         float grazingSun=TimeOfDay is StageTime.Morning or StageTime.Afternoon?2:1;
         _keyLight.ShadowBias=grazingSun*(GraphicsQuality.Current switch {GraphicsPreset.Low=>.12f,GraphicsPreset.Medium=>.06f,_=>.025f});
-        _keyLight.LightAngularDistance=GraphicsQuality.Current==GraphicsPreset.Low?0:TimeOfDay==StageTime.Afternoon?2.4f:1.8f;
+        // Contact-hardening sun shadows (blocker search per pixel) stay a High feature.
+        _keyLight.LightAngularDistance=GraphicsQuality.Current==GraphicsPreset.High?(TimeOfDay==StageTime.Afternoon?2.4f:1.8f):0;
+        _terrain?.SetSceneryVisible(GraphicsQuality.Current!=GraphicsPreset.Low);
     }
 
     public override void _Ready()

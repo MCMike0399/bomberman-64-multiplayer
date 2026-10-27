@@ -258,8 +258,8 @@ frame afterwards).
 | --- | ---: | --- | --- |
 | SSAO half resolution, same high quality | −1.65 to −1.77 ms SSAO plus −0.12 ms depth preparation on every arena (Night totals: Temple 17.8→15.9, Up & Down 17.2→15.3, Greedy Trap 15.4→13.7, Rock Garden 13.8→11.6, Blizzard 14.2→12.1, Top Rules 12.6→11.5) | 8–26 max, 3.0–5.4% of bytes, mean 0.03–0.06 | **Shipped**: contact edges only, invisible in native crops on all six arenas |
 | SSAO medium quality at full resolution | −1.0 ms | 5–9 max, 0.8–0.9% | Not taken; half resolution saves more for the same visibility |
-| Depth of field low quality | −0.36 ms | 71 max, 4.9%, confined to blurred scenery | User's call; crops offered |
-| 2× MSAA | −1.6 ms | 213 max on silhouettes, 5.7% | User's call; softer edges visible under magnification |
+| Depth of field low quality | −0.36 ms | 46–178 max, 0.8–5.2%, confined to blurred scenery | **Shipped** after the user's eye test on all six arenas |
+| 2× MSAA | −1.6 ms | 170–218 max on silhouettes, 2.9–5.5% | **Shipped** after the user's eye test; silhouettes differ only under magnification |
 | SSIL off, glow off, shadow filter/atlas/PCSS changes | 0.25–2.1 ms | Clearly visible (16–28% of bytes, up to 186 max) | Rejected: part of the High identity |
 | DOF without jitter, near DOF off, roughness limiter off | ≈0 | 0 / 0 / 34 max | No saving, left unchanged |
 

@@ -74,7 +74,7 @@ public partial class ArenaView
     private void PowerupMessage(Vector3 position,string kind,bool maximum=false)
     {
         string text=kind switch {"fire"=>maximum?"MAX BLAST!":"BLAST UP!","bomb"=>maximum?"MAX BOMBS!":"BOMB UP!","remote"=>"REMOTE!","red"=>"POWER BOMB!","heart"=>"HEART!","bounce"=>"BOUNCE BOMBS!","focus"=>"QUICK CHARGE!","tiny"=>"TINY + QUICK!","big"=>"BIG + SLOW!","haste"=>"HASTE!","slow"=>"SLOWED!",_=>kind};
-        var label=new Label3D {Text=text,Position=position+new Vector3(0,2.2f,0),FontSize=34,PixelSize=.012f,Billboard=BaseMaterial3D.BillboardModeEnum.Enabled,NoDepthTest=true,OutlineSize=10,Modulate=new Color("ffe571"),OutlineModulate=new Color("233657")};
+        var label=new Label3D {Text=text,Position=position+new Vector3(0,2.2f,0),FontSize=102,PixelSize=.004f,Billboard=BaseMaterial3D.BillboardModeEnum.Enabled,NoDepthTest=true,OutlineSize=30,Modulate=new Color("ffe571"),OutlineModulate=new Color("233657")};
         _effects.AddChild(label);var tween=label.CreateTween().SetParallel();tween.TweenProperty(label,"position",label.Position+Vector3.Up*.9f,1.2);tween.TweenProperty(label,"modulate:a",0f,1.2);tween.Chain().TweenCallback(Callable.From(label.QueueFree));
     }
     private void Debris(Vector3 position)
