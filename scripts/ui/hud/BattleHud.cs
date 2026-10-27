@@ -75,7 +75,7 @@ public partial class BattleHud : Control
             token.PlayerName=p.GetProperty("bot").GetBoolean()?"CPU":"";
             if(p.TryGetProperty("statusEffect",out var status)&&status.GetString() is {} effect&&effect!="none")token.PlayerName=$"{effect} {Math.Ceiling(p.GetProperty("statusRemaining").GetSingle())}s";
             token.Status=ghost?TokenStatus.Ghost:!alive?TokenStatus.Out:held?TokenStatus.Held:p.GetProperty("stunned").GetBoolean()?TokenStatus.Dizzy:TokenStatus.Alive;
-            token.Bombs=p.GetProperty("bombs").GetInt32();token.Fire=p.GetProperty("fire").GetInt32();
+            token.Bombs=Math.Max(0,p.GetProperty("bombs").GetInt32()-1);token.Fire=Math.Max(0,p.GetProperty("fire").GetInt32()-1);
             token.Red=p.GetProperty("red").GetBoolean();token.Remote=p.GetProperty("remote").GetBoolean();token.Heart=p.GetProperty("heart").GetBoolean();
             token.BombType=p.TryGetProperty("bombType",out var type)?type.GetString()!:"normal";
             token.Focus=p.TryGetProperty("ability",out var ability)&&ability.GetString()=="focus";

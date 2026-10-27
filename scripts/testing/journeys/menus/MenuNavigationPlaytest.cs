@@ -173,7 +173,7 @@ public partial class PlaytestDriver
             await KeyPress(Key.Escape);_root.Navigate("Controls");await ControllerFrames(3);
             await Start("ControlsBack","Back from controller tester");await Pad(JoyButton.A);Check(_root.ScreenName=="Modes","confirm after Start leaves the controller tester");
             _root.Navigate("Results");await ControllerFrames(3);await KeyPress(Key.Right);
-            await Start(FindButton("Play Again").Name.ToString(),"Play again");await Capture("navigation-results");
+            await Start(FindButton("Map Select").Name.ToString(),"Map select");await Capture("navigation-results");
             _root.Navigate("Modes");_root.StartLocal(new SessionSettings(Bots:0),1,practice:true);
             await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"navigation trial starts an actual practice session",150);
             var session=_root.ActiveSession;

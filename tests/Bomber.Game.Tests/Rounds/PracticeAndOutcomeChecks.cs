@@ -28,7 +28,10 @@ internal static class PracticeAndOutcomeChecks
             var player=Player(match);
             Assert(player.GetProperty("alive").GetBoolean()&&!player.GetProperty("ghost").GetBoolean(),"Water left practice player dead/ghost.");
             Assert(player.GetProperty("x").GetSingle()>=1&&player.GetProperty("carrying").ValueKind==JsonValueKind.Null,"Practice spawn remained in water or kept a carried entity.");
-            Walk(match,2.5f,3.5f);match.SetInput(0,new PlayerInput(0,0,true));Step(match,2);
+            Walk(match,2.5f,3.5f);
+            // The dropped bomb still occupies the sole base slot until its real fuse finishes.
+            Step(match,100);
+            match.SetInput(0,new PlayerInput(0,0,true));Step(match,2);
             Assert(State(match).GetProperty("bombs").EnumerateArray().Any(b=>b.GetProperty("x").GetSingle()>2),"Practice actions failed after water respawn.");
         });
         run("bot match win retains the final scoreboard in the end envelope", () =>

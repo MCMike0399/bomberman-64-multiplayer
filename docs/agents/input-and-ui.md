@@ -205,7 +205,7 @@ During play Esc still opens Pause, and Esc from Pause resumes the same session.
 
 Start/Menu/+/Options **focuses**, without activating: Continue on player select,
 Start/Save on setup, Back on Advanced/Settings, Try it on lessons, Resume on Pause,
-and replay/return-to-lobby on Results. Online uses Create in the hosting column,
+and Map Select on Results. Online uses Create in the hosting column,
 Join from the room-code controls, Play online otherwise, or Cancel while busy.
 A room leader gets Start game when enabled; guests get Copy code or Settings.
 Controls keeps diagnostic face buttons until Start focuses Back and arms confirm.
@@ -229,6 +229,21 @@ session; functional failures remain failures. Keep invalid-attempt evidence.
 For popup tests, reach a known endpoint with real keys before testing the next
 movement: prior mouse hover can leave the last item selected. See the
 [native focus guidance](../../tools/playtest/README.md#native-focus-interruptions).
+
+## Post-match map selection (2026-10-27 source work)
+
+Local Results → Map Select opens Match Setup with the same roster, suits and
+rules, focused on the arena selector. The next Start Battle uses that selection.
+Online results keep their standings interval, then open the same map/rule picker
+inside the existing room and code. Only the room owner can edit rules or start;
+guests see accepted settings and wait there. Ownership changes update these
+permissions. Public rooms keep their authoritative automatic countdown.
+Online Back leaves the room; explicit Mode Select remains available on Results.
+Tutorial retry/next and Practice reset retain their existing behavior.
+
+Bomb and flame HUD counters show collected upgrades, starting at 0/0. Base play
+still permits one active bomb and ordinary level-one blasts. Pickups raise each
+counter by one; round and respawn resets clear the collected upgrades.
 
 ## Current online flow (v0.29)
 

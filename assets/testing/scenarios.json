@@ -441,6 +441,14 @@
       "manual": false
     },
     {
+      "id": "post-match",
+      "method": "PostMatch",
+      "domains": ["ui", "gameplay", "network"],
+      "headless": false,
+      "timeout": 240,
+      "manual": false
+    },
+    {
       "id": "results",
       "method": "Results",
       "domains": [
@@ -599,6 +607,7 @@
         "ai-play",
         "combat",
         "results",
+        "post-match",
         "network",
         "peer-rooms",
         "adaptive-rooms",

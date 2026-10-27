@@ -172,7 +172,10 @@ public partial class PlaytestDriver
 
     private async Task Results()
     {
-        _root.StartLocal(new SessionSettings(Stage:"sunken-temple",Bots:1,Wins:1,Ghosts:false),1);
+        var menu=_root.FindChildren("*","",true,false).OfType<BlastCircuit.UI.Menu.ArcadeMenu>().Single();
+        var settings=new SessionSettings(Stage:"sunken-temple",Bots:1,Wins:1,Ghosts:false);
+        menu.Configure(settings,1);_root.ConfigureRosterSlot(0,"human",4);_root.ConfigureRosterSlot(1,"cpu",6);
+        _root.Navigate("Roster");await Frames(8);await ActivateNamed("RosterContinue");await ActivateNamed("LaunchMatch");
         await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"results duel reaches fight",150);
         Input(0,new PlayerInput(0,0,A:true));await Frames(4);Input(0,default);
         Check(State.GetProperty("bombs").GetArrayLength()>0,"results duel places real self-elimination bomb");
@@ -184,13 +187,22 @@ public partial class PlaytestDriver
         var preview=(_root.FindChild("WinnerPreview",true,false) as BlastCircuit.UI.Menu.CharacterPreview)!;
         Check(preview.Appearance==winner.GetProperty("appearance").GetInt32()&&preview.Celebrating,"results celebrate the actual winner's selected suit");
         await Frames(12);
-        var replayButton=VisibleButton("Play Again");var modeButton=VisibleButton("Mode Select");
-        replayButton.GrabFocus();await KeyPress(Key.D);Check(modeButton.HasFocus(),"D moves across Results actions");
-        await KeyPress(Key.A);Check(replayButton.HasFocus(),"A returns to the Results replay action");
+        var mapButton=VisibleButton("Map Select");var modeButton=VisibleButton("Mode Select");
+        mapButton.GrabFocus();await KeyPress(Key.D);Check(modeButton.HasFocus(),"D moves across Results actions");
+        await KeyPress(Key.A);Check(mapButton.HasFocus(),"A returns to the Results map selection action");
         await Capture("results-cpu-victory");
-        await Click("PLAY AGAIN");await Frames(4);
-        Check(_root.ScreenName=="Match" && _root.ActiveSession!=null,"results replay button starts fresh match");
+        await Click("MAP SELECT");await Frames(4);
+        Check(_root.ScreenName=="Setup"&&_root.ActiveSession==null,"results returns to map selection and releases the finished session");
+        Check(NamedButton("StageSelector").HasFocus(),"post-match setup focuses the arena selector");
+        Check(menu.Settings==settings&&menu.PlayerAppearances.SequenceEqual(new[]{4,6}),"post-match setup preserves rules, roster and suits");
+        await Capture("results-map-selection");await KeyPress(Key.Right);
+        Check(menu.Settings.Stage=="rock-garden","post-match selector changes arena");
+        await ActivateNamed("LaunchMatch");
+        await WaitState(_=>_root.LatestStage?.GetProperty("id").GetString()=="rock-garden","next match uses the selected arena",150);
+        Check(State.GetProperty("players").EnumerateArray().Select(p=>p.GetProperty("appearance").GetInt32()).SequenceEqual(new[]{4,6}),"next match keeps the selected suits");
+        Check(State.GetProperty("players").EnumerateArray().All(p=>p.GetProperty("bombs").GetInt32()==1&&p.GetProperty("fire").GetInt32()==1),"new battle starts with base bombs and fire");
+        Check(_root.FindChildren("*","",true,false).OfType<BlastCircuit.UI.Hud.PlayerToken>().All(t=>t.Bombs==0&&t.Fire==0),"HUD starts both upgrade counters at zero");
         _root.Back();await Frames(3);
-        Check(_root.ScreenName=="Modes" && _root.ActiveSession==null,"leave replay returns to mode selector");
+        Check(_root.ScreenName=="Modes" && _root.ActiveSession==null,"leaving the next match returns to mode selector");
     }
 }

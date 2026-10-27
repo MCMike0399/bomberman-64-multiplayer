@@ -12,6 +12,48 @@ namespace BlastCircuit.Testing;
 /// <summary>Real HTTP/WebSocket host and guest sessions against an independent server.</summary>
 public partial class PlaytestDriver
 {
+    private async Task PostMatch()
+    {
+        await Results();
+        var settings=new SessionSettings(Bots:0,Wins:1,Ghosts:false){Hosting="server"};
+        await using var owner=await NetworkSession.ConnectAsync(new Uri(_server),"Map selection owner",settings,NetworkMode.CreatePrivate);
+        await _root.StartOnlineAsync(new Uri(_server),"Map selection guest",settings,NetworkMode.JoinCode,owner.JoinCode,appearance:5);
+        var guest=(NetworkSession)_root.ActiveSession!;
+        string? code=guest.JoinCode,lobby=guest.LobbyId;
+        await Until(()=>owner.Party?.CanStart==true&&guest.Party?.CanStart==true,"online map fixture has two connected players");
+        owner.RequestStart();
+        await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"online map fixture reaches fight",900);
+        Check(State.GetProperty("players").EnumerateArray().All(p=>p.GetProperty("bombs").GetInt32()==1&&p.GetProperty("fire").GetInt32()==1),"online players start with zero collected upgrades");
+        Input(0,new PlayerInput(0,0,A:true));await Frames(4);Input(0,default);
+        await Until(()=>_root.ScreenName=="Results","ordinary bomb completes the online match");
+        await Capture("online-post-match-results");
+        await Until(()=>_root.ScreenName=="Setup"&&guest.Party?.Phase=="lobby","online results automatically return to map selection");
+        Check(ReferenceEquals(guest,_root.ActiveSession)&&guest.JoinCode==code&&guest.LobbyId==lobby,"map selection retains the same online room and connection");
+        Check(NamedButton("StageSelector").Disabled&&NamedButton("LaunchMatch").Disabled&&NamedButton("AdvancedSettings").Disabled,"online guest cannot change rules or start the next battle");
+        await Capture("online-guest-map-selection");
+        owner.SetRoomSettings(settings with{Stage="rock-garden"});
+        await Until(()=>guest.Party?.Settings?.GetValueOrDefault("stage")=="rock-garden","guest receives the owner's selected arena");
+        var menu=_root.FindChildren("*","",true,false).OfType<BlastCircuit.UI.Menu.ArcadeMenu>().Single();
+        Check(menu.OnlineSettings.Stage=="rock-garden","guest map preview follows accepted room settings");
+        await owner.DisposeAsync();
+        await Until(()=>guest.IsLeader&&!NamedButton("StageSelector").Disabled,"room ownership transfer enables map selection for the new host");
+        Check(NamedButton("LaunchMatch").Disabled,"host cannot start without another human or CPU");
+        NamedButton("CPUrivals").GrabFocus();await KeyPress(Key.Right);
+        await Until(()=>guest.Party?.CanStart==true&&!NamedButton("LaunchMatch").Disabled,"accepted CPU rival enables next battle");
+        NamedButton("StageSelector").GrabFocus();await KeyPress(Key.Right);
+        await Capture("online-host-map-selection");await ActivateNamed("LaunchMatch");
+        await WaitState(_=>_root.ScreenName=="Match"&&_root.LatestStage?.GetProperty("id").GetString()=="up-and-down","host starts the next match on the chosen arena",900);
+        Check(guest.JoinCode==code&&guest.LobbyId==lobby,"next online battle keeps its room code and identity");
+        _root.Back();await Frames(3);
+
+        async Task Until(Func<bool> predicate,string description)
+        {
+            var clock=System.Diagnostics.Stopwatch.StartNew();
+            while(!predicate()&&clock.Elapsed.TotalSeconds<45){await Frames(1);await Task.Delay(16);}
+            Check(predicate(),description);
+        }
+    }
+
     private async Task Network()
     {
         _root.Navigate("Online");_root.SetOnlineAppearance(3);await Frames(3);

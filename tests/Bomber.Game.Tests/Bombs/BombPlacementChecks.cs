@@ -35,7 +35,7 @@ internal static class BombPlacementChecks
             Assert(Bombs(m).GetArrayLength()==1,"Second A created an overlapping duplicate.");
         });
         Check("repeated A taps leave three stationary bombs while walking",()=>{
-            var m=Match();for(int i=0;i<3;i++){
+            var m=Match(upgrades:2);for(int i=0;i<3;i++){
                 m.SetInput(0,new PlayerInput(1,0,A:true));Step(m,1);m.SetInput(0,new PlayerInput(1,0));Step(m,9);
             }
             m.SetInput(0,default);
@@ -50,8 +50,8 @@ internal static class BombPlacementChecks
         });
         return n;
     }
-    static LocalMatch Match(bool wall=false){var cells=new CellDef[15,15];for(int x=0;x<15;x++)for(int z=0;z<15;z++)cells[x,z]=CellDef.Floor0;if(wall)cells[3,4]=CellDef.Pillar;
-        var m=new LocalMatch(new MatchOptions{HumanPlayers=2,BotPlayers=0,Practice=true},new StageLayout{Id="foot-placement",Width=15,Height=15,Cells=cells,Spawns=[(3,3),(12,12)],SoftBlockDensity=0});Step(m,64);return m;}
+    static LocalMatch Match(bool wall=false,int upgrades=0){var cells=new CellDef[15,15];for(int x=0;x<15;x++)for(int z=0;z<15;z++)cells[x,z]=CellDef.Floor0;if(wall)cells[3,4]=CellDef.Pillar;
+        var m=new LocalMatch(new MatchOptions{HumanPlayers=2,BotPlayers=0,Practice=true},new StageLayout{Id="foot-placement",Width=15,Height=15,Cells=cells,Spawns=[(3,3),(12,12)],SoftBlockDensity=0,InitialItems=Enumerable.Repeat((3,3,"bomb"),upgrades).ToArray()});Step(m,64);return m;}
     static void Tap(LocalMatch m){m.SetInput(0,new PlayerInput(0,0,A:true));Step(m,2);m.SetInput(0,default);Step(m,2);}
     static void Step(LocalMatch m,int n){for(int i=0;i<n;i++)m.Tick();}
     static JsonElement State(LocalMatch m){using var d=JsonDocument.Parse(m.StateJson!);return d.RootElement.GetProperty("d").Clone();}
