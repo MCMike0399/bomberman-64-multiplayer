@@ -410,7 +410,10 @@
     {
       "id": "quick-play",
       "method": "QuickPlayLobby",
-      "domains": ["network", "ui"],
+      "domains": [
+        "network",
+        "ui"
+      ],
       "headless": false,
       "timeout": 120,
       "manual": false
@@ -451,7 +454,11 @@
     {
       "id": "post-match",
       "method": "PostMatch",
-      "domains": ["ui", "gameplay", "network"],
+      "domains": [
+        "ui",
+        "gameplay",
+        "network"
+      ],
       "headless": false,
       "timeout": 240,
       "manual": false
@@ -1013,7 +1020,9 @@
     {
       "id": "greedy-canal",
       "method": "GreedyCanalTour",
-      "domains": ["rendering"],
+      "domains": [
+        "rendering"
+      ],
       "headless": true,
       "timeout": 240,
       "manual": false
@@ -1243,6 +1252,36 @@
       ],
       "headless": true,
       "timeout": 1200,
+      "manual": false
+    },
+    {
+      "id": "battle-polish-regression",
+      "steps": [
+        "first-use-rendering",
+        "cover-regression",
+        "framing",
+        "blast-hitbox",
+        "post-match",
+        "quick-play",
+        "asset-audit",
+        "pickup-showcase",
+        "greedy-canal",
+        "mishap-feel"
+      ],
+      "domains": [
+        "ai",
+        "animation",
+        "assets",
+        "gameplay",
+        "models",
+        "network",
+        "performance",
+        "physics",
+        "rendering",
+        "ui"
+      ],
+      "headless": false,
+      "timeout": 1500,
       "manual": false
     }
   ]

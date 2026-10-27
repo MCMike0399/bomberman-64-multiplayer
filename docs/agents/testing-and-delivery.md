@@ -391,6 +391,15 @@ For v0.27 connection changes, include the `peer-rooms` journey and the
 [peer transport checks](../peer-hosting.md#verification-entrypoints). The official
 WebRTC extension is a hash-pinned build dependency, installed before import/export.
 
+## Battle polish integration regression (2026-10-27)
+
+`battle-polish-regression` combines first-use rendering, all randomized-cover stage
+journeys, camera framing, active-blast hits, local/online post-match map selection,
+Quick Play permissions/countdown, the asset audit, pickup personality, the Greedy
+Trap canal and mishap poses. Run it on the final Mac export when integrating these
+features. Quick Play's map-selection controls stay disabled even for a lone public
+room owner after its countdown cancels; the private-host editor remains available.
+
 ## Automatic updater checks
 
 Read [automatic updates](../automatic-updates.md) before changing release signing,

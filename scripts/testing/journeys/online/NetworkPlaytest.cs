@@ -205,6 +205,11 @@ public partial class PlaytestDriver
         Check(VisibleText(_root).Contains("Waiting for a second player")&&!VisibleText(_root).Contains("Battle begins in "),"below two players removes the visible countdown immediately");
         Check(!NamedButton("StartRoom").Visible&&!NamedButton("EditRoomSettings").Visible,"roster changes never restore public owner powers");
         await Capture("quick-play-departure-cancels-countdown");
+        // The post-match map screen must keep the same public-room permissions even without a countdown.
+        var menu=_root.FindChildren("*","",true,false).OfType<BlastCircuit.UI.Menu.ArcadeMenu>().Single();
+        menu.UpdateMapSelection(first.IsLeader,first.Party!);
+        Check(NamedButton("StageSelector").Disabled&&NamedButton("CPUrivals").Disabled&&NamedButton("AdvancedSettings").Disabled,
+            "Quick Play map selection never grants anonymous owners rule-edit powers when the countdown is cancelled");
         _root.Back();await Frames(4);
 
         async Task LobbyUntil(Func<bool> condition)

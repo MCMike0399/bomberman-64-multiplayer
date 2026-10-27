@@ -85,7 +85,7 @@ public partial class ArcadeMenu
 
     public void UpdateMapSelection(bool leader,PartyStatus party)
     {
-        bool editable=leader&&party.Phase=="lobby"&&!(party.PublicRoom&&party.StartAt is not null);
+        bool editable=leader&&party.Phase=="lobby"&&!party.PublicRoom;
         _stageDial.Disabled=!editable;
         foreach(var dial in _ruleDials)dial.Disabled=!editable;
         ((Button)_screens["Setup"].FindChild("AdvancedSettings",true,false)).Disabled=!editable;

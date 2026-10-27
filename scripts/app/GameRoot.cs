@@ -96,7 +96,7 @@ public partial class GameRoot : Node3D
         _menu.Navigation+=Navigate;_menu.BackRequested+=Back;_menu.ReplayRequested+=ContinueAfterResults;
         _menu.RoomSettingsChanged+=()=>
         {
-            if(_postMatchSetup&&_session is NetworkSession {IsLeader:true,Party.Phase:"lobby"} room&&!(room.Party.PublicRoom&&room.Party.StartAt is not null))room.SetRoomSettings(_menu.OnlineSettings);
+            if(_postMatchSetup&&_session is NetworkSession {IsLeader:true,Party.Phase:"lobby"} room&&!room.Party.PublicRoom)room.SetRoomSettings(_menu.OnlineSettings);
         };
         _menu.LocalRequested+=StartConfigured;_menu.OnlineRequested+=StartConfiguredOnline;
         _hud.LeaveRequested+=OpenGameMenu;_hud.RestartRequested+=Replay;
