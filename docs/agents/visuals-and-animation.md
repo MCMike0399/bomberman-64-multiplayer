@@ -171,6 +171,15 @@ ramps, shoreline, actors, bombs and previews consistent. Foundation/water art ma
 suggest the pyramid grows from the ground without inventing a safe floor. A prettier
 waterline cannot change where authority actually kills or supports a player.
 
+Pyramid (Sunken Temple) uses a 30-degree battle-camera elevation so the tall
+terraces fit closer without filling the sides with sea. Keep the complete
+playable terrain and standing-character headroom inside the existing HUD-safe
+band; do not crop the outer walkways to zoom. Other arenas retain their own
+camera directions. The graphical `framing` journey checks 16:9 and 16:10 and
+requires Pyramid to occupy at least 60% of the view width. Recheck
+`graphics-settings` after camera edits because blur/haze bounds follow the fit.
+[Before/after captures and measured framing](../images/pyramid-framing/README.md).
+
 Temple stair backing must end below the pale .036-unit tread, whose top retains
 its authored step height. Full-height backing shares the tread's top plane and
 causes dark depth-fighting patches as the camera moves. The `visual-glitches`
