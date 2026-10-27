@@ -67,7 +67,7 @@ The screenshots on this page are fresh **3840×2400 High-preset** captures from 
 
 Tap the primary button to place a bomb near your feet, then move away. A fresh press beside a bomb kicks it; walking back into a resting bomb after leaving it also kicks it. Hold carry to lift, tap primary to pump up to three levels, and release carry to throw. Holding primary after placement can also lift the same bomb. Timed fuses pause while carried and resume after release.
 
-Explosions expand through spherical distance with cover occlusion. The reticle and dotted arc forecast the shared static trajectory, including terrain, cover, fuse expiry and water or void endpoints. Moving opponents can interrupt the forecast. Precision aiming moves the landing target in arena directions; charging increases blast power without moving an aimed target.
+Explosions expand through spherical distance with cover occlusion. The reticle and dotted arc forecast the shared static trajectory, including terrain, cover, fuse expiry and water or void endpoints. Moving opponents can interrupt the forecast. Pointing with the mouse or right stick places the landing target directly, compensating for raised or lowered ground; precision aiming nudges it in arena directions. Charging increases blast power without moving an aimed target.
 
 Black bombs are the starting type. A bomb slot holds **Red**, **Remote** or **Bouncing** equipment; a separate ability slot holds **Heart** or **Focus**. Replacing equipment drops the previous item for others. Red bombs have larger blue blasts and penetrate breakable cover. Remote bombs wait for their owner’s detonation command. Bouncing bombs ricochet and rebound after charged throws. Focus speeds charging and assists neutral aiming; deliberate aim takes priority. A heart absorbs one blast; water remains lethal.
 
@@ -84,14 +84,15 @@ Black bombs are the starting type. A bomb slot holds **Red**, **Remote** or **Bo
 | Action | Keyboard 1 | Keyboard 2 | Xbox | Switch 2 | PS5 |
 | --- | --- | --- | --- | --- | --- |
 | Move | WASD | Arrows | Stick / D-pad | Stick / D-pad | Stick / D-pad |
-| Bomb / kick / pump | J | N or Enter | A | A or B | Cross |
-| Hold carry / release throw | K | M or Numpad 1 | LB or X | L or Y | L1 or Square |
+| Bomb / kick / pump | J or left click | N or Enter | A | A or B | Cross |
+| Hold carry / release throw | K or right click | M or Numpad 1 | LB or X | L or Y | L1 or Square |
+| Point the throw while carrying | Mouse / trackpad | — | Right stick | Right stick | Right stick |
 | Precision aim while carrying | L or Shift | Ctrl | RT | ZR | R2 |
 | Remote detonation | I or R | Comma or Backspace | B | X | Circle |
 | Stop kicked bombs | O | Period or Numpad 3 | RB | R | R1 |
 | Game menu | Esc | Esc | Menu | + | Options |
 
-Hold the aim modifier and steer the target with WASD, either stick or the D-pad. On Switch, holding Y and tapping B also readies/pumps a bomb. Keyboard 2 additionally supports numpad 0 / 1 / 2 / 3 for bomb / carry / remote / stop.
+While carrying, move the mouse or tilt the right stick to place the landing ring and keep walking: the mouse picks the spot under the cursor, and right-stick tilt picks direction and distance (letting go keeps the target). For fine nudges, hold the aim modifier to plant your feet and steer with WASD, the left stick or the D-pad. Staggered diagonal key releases keep the diagonal heading, so diagonal throws work from the keyboard. On Switch, holding Y and tapping B also readies/pumps a bomb. Keyboard 2 additionally supports numpad 0 / 1 / 2 / 3 for bomb / carry / remote / stop.
 
 Menus accept WASD/arrows, Enter to confirm and Esc to return. Tab / Shift+Tab moves focus; shoulder buttons switch columns. Start / Menu / + / Options focuses the primary action without activating it. Switch uses printed **A to confirm, B to go back**. **F11** or **Alt+Enter** toggles fullscreen. Local play pauses in the game menu; online rounds continue.
 

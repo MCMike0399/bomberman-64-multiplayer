@@ -18,8 +18,9 @@ with both hands on keys and restored K carry because Space felt awkward.
 | Action | Keyboard 1 | Keyboard 2 | Xbox | Switch printed labels | PlayStation |
 |---|---|---|---|---|---|
 | Move | WASD | Arrows | Stick / D-pad | Stick / D-pad | Stick / D-pad |
-| Bomb, contextual kick, pump | J | N / Enter / Num 0 | A | A / B | Cross |
-| Hold carry, release throw | K | M / Num 1 | LB / X | L / Y | L1 / Square |
+| Bomb, contextual kick, pump | J / left click | N / Enter / Num 0 | A | A / B | Cross |
+| Hold carry, release throw | K / right click | M / Num 1 | LB / X | L / Y | L1 / Square |
+| Point throw while carrying | Mouse / trackpad | — | Right stick | Right stick | Right stick |
 | Precision aim | L / Shift | Ctrl | RT | ZR | R2 |
 | Remote detonation | I / R | Comma / Backspace / Num 2 | B | X | Circle |
 | Stop kicked bombs | O | Period / Num 3 | RB | R | R1 |
@@ -73,11 +74,15 @@ Preserve speed, aim caps and command semantics across local/network/device paths
 2. Tap J while carrying to pump. Hold L to plant the carrier in precision stance.
 3. Use WASD to move the target in arena directions. Short nudges begin slowly;
    sustained same-direction input accelerates. Controllers hold ZR/RT/R2 and use
-   either stick or D-pad; promote L/LB/L1 for carry so the thumb stays free.
-   Active right-stick intent wins while aiming, then D-pad/left stick/keyboard.
+   the left stick or D-pad; promote L/LB/L1 for carry so the thumb stays free.
+   The right stick no longer drives this rate cursor; it points (below).
 4. Release L while retaining K: the bomb stays overhead, the chosen aim persists,
    and WASD moves again. Re-enter L to adjust. Release K to throw.
 5. I or R detonates owned remote bombs. Shift is an alternative aim modifier.
+
+Pointing is the faster alternative to steps 2–4: while carrying, move the mouse
+or tilt the right stick and the ring goes there while you keep walking. Holding
+L/ZR still plants the carrier; a pointer target then wins over the nudge keys.
 
 A separate primary-button flow exists: tap J to place, keep the original press
 held while stationary to lift that bomb, release J, then tap J to pump. This
@@ -94,6 +99,46 @@ to aim behind them. Close self-lobs are dangerous, not protected.
 resets chosen intent. Pumping changes blast strength while deliberate aim keeps
 its selected range. Read [precision throw research](../history/iteration16-aim.md)
 when changing the underlying throw policy.
+
+## Pointer aiming: mouse/trackpad and right stick (2026-10-26)
+
+User request: keyboard players track the reticle with the mouse/trackpad, controller
+players with the right stick, and keyboard diagonal throws must stop snapping to the
+last-released key. Both channels produce `PlayerInput.AimTarget`: an absolute arena X/Z point for the
+mouse, a carrier-relative offset (`AimRelative`) for the right stick; the authority owns range, height compensation and persistence
+([gameplay guide](gameplay-and-ai.md#throws-precision-aim-and-fuse-ownership)).
+`GameRoot.PointerTarget` resolves it per seat only while `ArenaView` shows that
+local player carrying a bomb.
+
+- **Mouse** (Keyboard 1, seat 0, only). `ArenaView.ArenaPoint` ray-marches the camera ray
+  against the drawn terrain so a raised tier is picked where it appears; off-stage
+  points use the floor plane. The target is absolute, so the ring stays under a
+  still cursor while the carrier walks, and network latency cannot shift it.
+  [MouseAimGate](../../src/Bomber.Client/Controls/MouseAimGate.cs) protects
+  keyboard-only players: the mouse points only if one continuous motion (pauses over
+  .3 s restart the count, so sensor jitter never adds up) covered ≥6 px during the
+  carry or within 1.5 s before it began, and L/Shift + WASD hands control back until the
+  mouse moves again. Left click aliases J and right click aliases K (held carry); the wheel does nothing;
+  both join the focus re-arm check. In matches the cursor is a crosshair and hides
+  after 2 s without motion; it is restored outside `Match` before any early return.
+- **Right stick** (every pad). [AimStickPointer](../../src/Bomber.Client/Controls/AimStickPointer.cs)
+  maps tilt to direction and deflection (radial deadzone .2, full at .92) to 1–9
+  cells from the carrier, without ZR. A spring-loaded release sweeps through short
+  deflections; an inward sweep faster than 6 deflection/s keeps the previous target,
+  and the deadzone stops reporting, so letting go never shortens the throw. Slow
+  deliberate pull-backs still shorten it. Samples use real elapsed time per `Read`.
+- **Diagonal release grace** is authority-side (`TurnToward`), not an input delay:
+  movement stays immediate and only the heading waits ~100 ms when one axis drops.
+
+Alternatives considered: right-stick rate cursor without ZR (no snapback problem,
+but slow to cross 9 cells and not what "track" means); relative mouse offsets (latency
+moves the landing online); a client-side diagonal latch (changes movement physics).
+Tests: `AimedThrowChecks` (grace, pointer range/landing/raised tier), `TutorialChecks`
+(pointer completes Place your shot), `AimInputChecks` (filter, gate, wire format,
+LocalSession), `NetworkAimChecks` (real WebSocket target), and native `aim-inputs`
+(real mouse motion/clicks and right stick on Xbox/Switch native/DualSense). All are
+synthetic production-path inputs; physical mouse, trackpad and stick feel still need
+the user's hands-on review.
 
 ## Switch 2 USB: preserve the real sampling path
 
@@ -351,7 +396,7 @@ Find scenario membership/headless support in the single
 [ScenarioCatalog](../../scripts/testing/ScenarioCatalog.cs). Use `controllers`
 for mappings, seats, focus/hotplug and menus; `aim-inputs` for native K/J/L and
 canonical pad parity; `precision-aim` for authority range/turn/landing;
-`reticle` for actual marker pixels and Results cleanup; `wasd-menu` for native
+`reticle` for actual marker pixels and Results cleanup; `aim-inputs` also covers mouse and right-stick pointing; `wasd-menu` for native
 menu/text-field behavior. `menu-navigation` covers focus routes, Start, nested
 Back, grid rows and complete Tab cycles; `menu-ux` combines it with existing
 graphical menu, popup, controller, settings, tutorial and real-network journeys. Native scenarios are synthetic production-path tests,
