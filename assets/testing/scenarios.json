@@ -611,6 +611,7 @@
         "combat",
         "results",
         "network",
+        "peer-ice-order",
         "peer-rooms",
         "adaptive-rooms",
         "tutorial",
@@ -1192,6 +1193,16 @@
       ],
       "headless": false,
       "timeout": 600,
+      "manual": false
+    },
+    {
+      "id": "peer-ice-order",
+      "method": "PeerIceOrder",
+      "domains": [
+        "network"
+      ],
+      "headless": true,
+      "timeout": 30,
       "manual": false
     }
   ]

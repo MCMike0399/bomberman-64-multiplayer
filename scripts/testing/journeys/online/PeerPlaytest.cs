@@ -31,6 +31,7 @@ public partial class PlaytestDriver
         await Until(()=>_root.LatestState is {} s&&s.GetProperty("bombs").GetArrayLength()>0&&states.TryGetValue(third.PlayerId!,out var remote)&&remote.GetProperty("bombs").GetArrayLength()>0,"remote direct input creates a bomb visible to other peers");
         second.ReleaseInputs(); await Capture("peer-direct-three-players");
         Check(host.DirectPacketsReceived>0&&second.DirectPacketsSent>0&&third.DirectPacketsReceived>0,"gameplay packets traversed real direct channels, not only signalling");
+        await Until(()=>host.PeerTransport=="Direct P2P"&&peers.All(p=>p.PeerTransport=="Direct P2P"),"all direct links are healthy immediately before injecting loss");
         dropDirect=true;
         await Until(()=>second.PeerTransport=="Relay","silent direct-link failure selects the relay within the health timeout");
         long beforeRelay=states[third.PlayerId!].GetProperty("presentationSeq").GetInt64();
@@ -62,6 +63,7 @@ public partial class PlaytestDriver
                 }
                 await Frames(1);await Task.Delay(16);
             }
+            if(!predicate())File.WriteAllText(Path.Combine(_output,"peer-room-diagnostics.json"),JsonSerializer.Serialize(new{description,host=PeerDiagnostics(host),peers=peers.Select(PeerDiagnostics)},new JsonSerializerOptions{WriteIndented=true}));
             Check(predicate(),description);
         }
     }
@@ -118,7 +120,12 @@ public partial class PlaytestDriver
                 }
                 await Task.Delay(16);
             }
-            if(!predicate())Event("peer-capacity-failure",new{description,host=host.PeerTransport,hostStatus=host.Status,hostParty=host.Party,guests=guests.Select(p=>new{p.PlayerId,p.PeerTransport,p.DirectPacketsSent,p.DirectPacketsReceived,p.Status,notice=p.Party?.Notice,members=rosters.GetValueOrDefault(p.PlayerId!),phase=p.Party?.Phase,epoch=p.Party?.Epoch,state=states.TryGetValue(p.PlayerId!,out var state)?state.GetProperty("players").GetArrayLength():0})});
+            if(!predicate())
+            {
+                var diagnostic=new{description,host=host.PeerTransport,hostStatus=host.Status,hostParty=host.Party,guests=guests.Select(p=>new{p.PlayerId,p.PeerTransport,p.DirectPacketsSent,p.DirectPacketsReceived,p.Status,notice=p.Party?.Notice,members=rosters.GetValueOrDefault(p.PlayerId!),phase=p.Party?.Phase,epoch=p.Party?.Epoch,state=states.TryGetValue(p.PlayerId!,out var state)?state.GetProperty("players").GetArrayLength():0,statePhase=states.TryGetValue(p.PlayerId!,out var phaseState)?phaseState.GetProperty("phase").GetInt32():-1,serverTime=states.TryGetValue(p.PlayerId!,out var timedState)?timedState.GetProperty("serverTime").GetInt64():-1})};
+                Event("peer-capacity-failure",diagnostic);
+                File.WriteAllText(Path.Combine(_output,"peer-capacity-diagnostics.json"),JsonSerializer.Serialize(new{room=diagnostic,host=PeerDiagnostics(host),guests=guests.Select(PeerDiagnostics)},new JsonSerializerOptions{WriteIndented=true}));
+            }
             Check(predicate(),description);
         }
     }

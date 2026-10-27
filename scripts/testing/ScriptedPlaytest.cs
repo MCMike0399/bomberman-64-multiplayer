@@ -29,6 +29,7 @@ public partial class PlaytestDriver
                 case "move-to":await MoveTo(Scalar("x"),Scalar("z"),Number("maxFrames",300));break;
                 case "capture":await Capture(step.GetProperty("label").GetString()!);break;
                 case "assert-screen":Check(_root.ScreenName==step.GetProperty("screen").GetString(),"script screen "+step.GetProperty("screen"));break;
+                case "peer-ice-order":await PeerIceOrder();break;
                 case "assert-above-footer":
                     var control=_root.FindChild(step.GetProperty("name").GetString()!,true,false) as Control??throw new InvalidOperationException("Missing scripted control");
                     Check(control.GetGlobalRect().End.Y<GetViewport().GetVisibleRect().End.Y-Scalar("margin",60),"script control "+control.Name+" stays above the input footer");break;
