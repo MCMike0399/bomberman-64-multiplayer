@@ -1,6 +1,8 @@
 # Adaptive multiplayer rooms
 
-Behavior delivered in v0.29.1. [Delivery evidence and operating limits](smart-multiplayer-release-029.md) records the verified release.
+Adaptive rooms were delivered in v0.29.1. The Quick Play policy below includes
+the 2026-10-27 matchmaking QA changes in source; it does not claim a new release.
+[Delivery evidence and operating limits](smart-multiplayer-release-029.md) records the original verified release.
 This implements the first persistent-room/local-or-peer milestone of the
 [placement research](multiplayer-placement-research.md) and
 [Kernel implementation assessment](burbuja-multiplayer-research.md).
@@ -14,16 +16,31 @@ player authority. Private Automatic/Server only still supports one human plus
 CPUs; player hosting requires two humans. Codes protect private admission and
 are not included in public matchmaking.
 
-Public matchmaking fills compatible rooms in one FIFO population. Two humans
-start an eight-second automatic countdown; later arrivals do not keep resetting
-it. The owner can start sooner. Rules lock during the public countdown. Private
-rooms retain explicit owner start. A start waiting for capacity retries while
-membership/rules remain valid; leaving or changing ownership cancels that intent.
+Public matchmaking fills compatible waiting rooms in one FIFO population. Two
+connected humans start a **60-second automatic countdown**. Each connected
+roster change restarts the full minute while at least two remain; below two,
+the countdown cancels immediately. Reconnects receive a fresh minute. Later
+cleanup of an already disconnected seat does not reset the same roster again.
+An unchanged full eight-player room also waits until its deadline.
+
+Quick Play uses server-defined shared rules with no CPUs. Anonymous players
+cannot edit those rules or start early, including the first arrival or a
+replacement leader. Personal settings and suits remain available. The lobby
+shows the shared countdown, explains resets and reports a capacity wait once
+the timer expires. New strangers cannot join a public match during gameplay or
+results; retained seats may reconnect. After results, the room reopens with a
+fresh minute. Continuous roster churn can postpone a start under this policy.
+
+Private rooms retain explicit owner start and editable rules. A start waiting
+for capacity retries while membership/rules remain valid; leaving or changing
+ownership cancels that intent. Public capacity retries begin only after the
+current roster's deadline and are cancelled/reset by roster changes.
 
 `AdaptiveRoomSession` keeps one Kernel lobby and one seat per player. It wraps the
 existing `PartySession` and `PeerRoomSession`, selecting one authority for each
-match. The room owner controls settings and start; the selected player host can
-be someone else. Match numbers remain monotonic across authority kinds. Both
+match. In private rooms the owner controls settings and start; the selected
+player host can be someone else. Public starts and rules belong to the service.
+Match numbers remain monotonic across authority kinds. Both
 kinds run the same `BlastSession` rules and preserve all battle arenas.
 
 Public matches prefer available dedicated authority. Automatic private rooms
@@ -134,6 +151,14 @@ peer disappears. Abrupt network failure still uses normal reconnect/relay recove
 
 - `--adaptive-rooms` in `Bomber.Game.Tests` checks selection, leadership,
   reservations, privacy policy, countdown, initial settings and reconnect input.
+- `dotnet run --project tests/Bomber.Game.Tests -- --public-matchmaking` covers
+  countdown boundaries, late/full rosters, owner permissions, departure,
+  reconnect, capacity cancellation/recovery, fallback-host loss and rematches.
+- `Bomber.Smoke -- --quick-only` exercises the actual one-minute server wait,
+  queue backfill, churn, permissions and exclusion of active public matches.
+- `python3 tools/playtest/run.py --scenario quick-play` exercises the rendered
+  countdown, absent public owner controls, personal settings and departure text
+  against a real server in the isolated graphical desktop. `network` includes it.
 - The normal managed smoke covers adaptive dedicated play. Its second owned
   instance disables simulation capacity and runs `--adaptive-peer-only`, proving
   real relay gameplay, TCP interruption/reconnect and guest/host departure.
@@ -150,3 +175,25 @@ peer disappears. Abrupt network failure still uses normal reconnect/relay recove
   Test public routes after deploying the exact verified runtime and matching
   plugins. Local Docker, native WebRTC, arbitrary NAT coverage and physical
   hardware capacity are different kinds of evidence.
+
+### Quick Play source QA — 2026-10-27
+
+Retained failing witnesses caught the old eight-second start and a socket
+claiming a pre-start reservation after gameplay began. The final authority
+passes 47 focused matchmaking checks and the complete 2,937-check game suite.
+The rebuilt real HTTP/WebSocket Quick Play smoke passes the full sixty-second
+wait, roster churn, cancellation, automatic start and active-match admission,
+including rejection and release of that delayed reservation.
+
+The complete managed profile also passed: 377 client checks, 98 AI checks,
+72 AI soak scenarios, 19 audio checks, 23 cluster contracts, 78 release connection
+checks, 2–8-player network smoke, nine adaptive relay checks and 36 real fleet
+checks. The final delayed-reservation guard was additionally checked with the
+rebuilt full game suite and focused real-network smoke.
+
+The rebuilt exported client/server passed the isolated windowed Metal `network`
+journey with 93 assertions, eight captures and zero runtime errors or warnings.
+Reviewed captures show the live public countdown, cancellation below two players,
+absent public owner actions and preserved private-room controls. This is local
+source/export verification; publication, maintained-worker deployment, public
+WAN testing and physical controller coverage are outside this receipt.

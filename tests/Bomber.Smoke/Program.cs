@@ -112,24 +112,89 @@ async Task PeerReconnect()
 
 async Task QuickPlay()
 {
-    using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(20));
-    await using var first = await NetworkSession.ConnectAsync(new Uri(origin), "Smoke quick first", new SessionSettings(Bots:0), NetworkMode.QuickPlay, cancellationToken:timeout.Token);
-    Check(first.IsLeader && first.Party?.CanStart == false, "first queued player owns a waiting lobby, cannot start alone");
-    first.RequestStart();
-    await Task.Delay(200);
-    Check(!first.DrainMessages().Any(m => m.GetProperty("t").GetString() == "state"), "lone queued player has no simulation");
-    await using var second = await NetworkSession.ConnectAsync(new Uri(origin), "Smoke quick second", new SessionSettings(Bots:0), NetworkMode.QuickPlay, cancellationToken:timeout.Token);
-    var connected = new[] { first, second };
-    Check(first.LobbyId==second.LobbyId,"quick-play clients share matched lobby");
-    while (first.Party?.CanStart != true) await Task.Delay(20,timeout.Token);
-    Check(first.IsLeader && !second.IsLeader,"FIFO lobby leadership is stable");
-    second.RequestStart(); await Task.Delay(100);
-    Check(first.Party?.Phase == "lobby", "guest cannot start random lobby");
-    first.RequestStart();
-    var ids=new[] { first.PlayerId, second.PlayerId }.Order().ToArray();
-    foreach(var session in connected)
-        await ProductState(session,d => d.GetProperty("players").GetArrayLength()==2 && d.GetProperty("players").EnumerateArray().Select(p => p.GetProperty("id").GetString()).Order().SequenceEqual(ids));
-    Console.WriteLine("PASS product random lobby admission, two-human minimum, leader start and shared authoritative roster");
+    using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(150));
+    var connected = new List<NetworkSession>();
+    var states = new Dictionary<string, JsonElement>();
+    try
+    {
+        var first = await Join("Smoke quick first");
+        Check(first.IsLeader && first.Party is { PublicRoom:true, CanStart:false, StartAt:null }, "first queued player waits without a public start override");
+        bool rejected = false;
+        try { first.SetRoomSettings(new SessionSettings(Bots:7)); } catch (InvalidOperationException) { rejected = true; }
+        Check(rejected, "product client rejects anonymous public rule changes");
+        var second = await Join("Smoke quick second");
+        Check(first.LobbyId == second.LobbyId, "quick-play clients share matched lobby");
+        await Until(() => first.Party?.StartAt is not null && first.Party.StartAt == second.Party?.StartAt);
+        long original = first.Party!.StartAt!.Value;
+        Check(original - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() is > 55000 and <= 61000, "real server publishes a full one-minute shared deadline");
+        first.RequestStart(); second.RequestStart();
+        await Task.Delay(1100, timeout.Token); Pump();
+        Check(connected.All(c => c.Party is { Phase:"lobby", CanStart:false }) && states.Count == 0, "neither public owner nor guest starts gameplay early");
+        var third = await Join("Smoke quick late join");
+        await Until(() => first.Party?.StartAt > original && connected.All(c => c.Party?.StartAt == first.Party.StartAt));
+        long withThird = first.Party!.StartAt!.Value;
+        Check(third.LobbyId == first.LobbyId, "late queued player fills the existing waiting room");
+        await Task.Delay(1100, timeout.Token);
+        await third.DisposeAsync(); connected.Remove(third);
+        await Until(() => first.Party?.StartAt > withThird && first.Party.StartAt == second.Party?.StartAt);
+        Check(states.Count == 0, "real three-to-two departure resets the minute without starting a match");
+        await first.DisposeAsync(); connected.Remove(first);
+        await Until(() => second.Party is { Phase:"lobby", StartAt:null });
+        Check(second.IsLeader, "lone remaining player inherits bookkeeping leadership and a cancelled timer");
+        var replacement = await Join("Smoke quick replacement");
+        await Until(() => second.Party?.StartAt is not null && second.Party.StartAt == replacement.Party?.StartAt);
+        long deadline = second.Party!.StartAt!.Value;
+        var ids = connected.Select(c => c.PlayerId).Order().ToArray();
+        await using var stale = await Guest("Smoke held seat");
+        await Until(() => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() >= deadline - 1500, 75);
+        var heldReservation = await Api(HttpMethod.Post, $"/realtime/v1/lobbies/{second.LobbyId}/join", new { }, stale.Token);
+        await Until(() => connected.All(c => c.Party?.Phase == "playing" && states.TryGetValue(c.PlayerId!, out var state) &&
+            state.GetProperty("players").EnumerateArray().Select(p => p.GetProperty("id").GetString()).Order().SequenceEqual(ids)), 75);
+        Check(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() >= deadline, "real Quick Play starts automatically only after the replacement roster's full minute");
+        Check(connected.All(c => c.Party is { StartAt:null, Hosting:"cluster" }), "both clients enter the same dedicated match and clear their countdown");
+        await stale.Connect(heldReservation, new Uri(origin));
+        var rejectedAt = Stopwatch.StartNew();
+        bool staleReleased = false;
+        while (rejectedAt.Elapsed.TotalSeconds < 5)
+        {
+            Pump();
+            var me = await Api(HttpMethod.Get, "/realtime/v1/me", token:stale.Token);
+            if (me.GetProperty("lobbyId").ValueKind == JsonValueKind.Null) { staleReleased = true; break; }
+            await Task.Delay(20, timeout.Token);
+        }
+        Check(staleReleased && connected.All(c => c.Party?.Phase == "playing" && states[c.PlayerId!].GetProperty("players").GetArrayLength() == 2),
+            "a socket holding a pre-start reservation is released instead of entering the active public match");
+        var late = await Join("Smoke quick next match");
+        Check(late.LobbyId != second.LobbyId && late.Party is { Phase:"lobby", StartAt:null }, "new anonymous arrivals queue for another lobby instead of joining an active public match");
+        Console.WriteLine("PASS product Quick Play full-minute countdown, churn, permissions, cancellation, automatic start and active-match admission");
+    }
+    finally { foreach (var session in connected) await session.DisposeAsync(); }
+
+    async Task<NetworkSession> Join(string name)
+    {
+        var session = await NetworkSession.ConnectAsync(new Uri(origin), name, new SessionSettings(Bots:0), NetworkMode.QuickPlay, cancellationToken:timeout.Token);
+        connected.Add(session); return session;
+    }
+    void Pump()
+    {
+        foreach (var session in connected)
+        {
+            session.Advance(1d/60);
+            foreach (var frame in session.DrainMessages())
+                if (frame.GetProperty("t").GetString() == "state") states[session.PlayerId!] = frame.GetProperty("d").Clone();
+            if (session.IsEnded) throw new Exception(session.Status);
+        }
+    }
+    async Task Until(Func<bool> predicate, double seconds = 10)
+    {
+        var elapsed = Stopwatch.StartNew();
+        while (elapsed.Elapsed.TotalSeconds < seconds)
+        {
+            Pump(); if (predicate()) return;
+            await Task.Delay(20, timeout.Token);
+        }
+        throw new TimeoutException("Quick Play condition timed out: " + string.Join("; ", connected.Select(c => c.Party)));
+    }
 }
 
 async Task LobbyAppearanceCatchup()

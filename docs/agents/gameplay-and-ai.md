@@ -114,6 +114,15 @@ relay capacity before starting, and retain ordinary guest departure/reconnect
 without resetting a healthy peer match. The cluster pool excludes legacy IDs
 so they cannot bypass active-execution budgets.
 
+Quick Play's 2026-10-27 source policy is a service-owned 60-second countdown
+for a stable roster of at least two connected humans. Joins, departures and
+reconnects restart it while two remain; otherwise cancel it. Anonymous leaders
+have no start/rule-edit privileges, including before a second player arrives.
+Public matches exclude new strangers during gameplay/results while retained
+seats can reconnect. Preserve the fresh countdown after results and cancellation
+of expired capacity retries on roster changes. `PublicMatchmakingChecks` retains
+the original eight-second-start regression and the related lifecycle checks.
+
 ## Legacy random lobbies and player-hosted rooms
 
 [Peer hosting](../peer-hosting.md) owns the v0.27 connection and failure contract.
