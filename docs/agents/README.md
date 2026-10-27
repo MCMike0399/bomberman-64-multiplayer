@@ -3,7 +3,7 @@
 The user resumed gameplay work on 2026-10-23 for controller ergonomics, aiming
 and knockdown/blast separation (iteration19). The first eighteen iterations
 remain historical evidence. Iteration20 then rebuilt the walk. Recorded
-release baseline: **v0.42.1/build 52**, published with independently verified Mac
+release baseline: **v0.43.0/build 53**, published with independently verified Mac
 and server archives (see [verification](../verification.md)). Previous runtime baseline: **v0.18.0**, commit
 `316a330d7d895a92f98c1a60be7d571ec445a8a3`. Later documentation commits may follow.
 Verify the live branch, source, tools and installed version before relying on
@@ -49,12 +49,17 @@ update the current guide rather than silently reviving old behavior.
 
 ## Current decisions that supersede earlier experiments
 
-- Quick Play QA source work (2026-10-27): a stable roster of at least two
+- v0.43 delivers Quick Play fixes, closer Pyramid framing, active-blast damage,
+  randomized denser cover, post-match arena selection, base-loadout counters,
+  pickup personality, the Greedy Trap canal and comic mishap poses (#64).
+  Mac and server delivery passed; Windows/Linux #52/#53/#57 remain separate.
+  [Full gates, installed native smoke and publication](../verification.md#v0430-delivered).
+
+- Quick Play (delivered in v0.43, source QA 2026-10-27): a stable roster of at least two
   connected humans waits a full minute; roster changes restart it and fewer
   than two cancel it. Anonymous players cannot start early or edit shared rules.
   Public gameplay/results exclude new strangers, including delayed reservation
   claims; private controls remain manual. [Policy and local QA evidence](../smart-multiplayer.md#quick-play-source-qa--2026-10-27).
-  This work is not a new release or maintained-worker deployment.
 
 - Pickup personality (2026-10-27 source work): every pickup is a lacquered toy
   on a stamped coin whose badge names its family, with bomber-style faces and

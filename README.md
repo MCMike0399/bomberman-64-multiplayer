@@ -4,7 +4,9 @@ An original Godot C# arena battle game inspired by Bomberman 64: **2–8 partici
 
 ![Eight-player Sunken Temple at High graphics](docs/images/release-042/scenery-sunken-temple-high.png)
 
-**[Download Blast Circuit](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/latest)** · Windows EXE · Linux AppImage · Mac DMG · [Release verification](docs/verification.md) · [Build from source](#build-from-source)
+**[Download v0.43.0 for Apple Silicon](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.43.0)** · [Release verification](docs/verification.md) · [Build from source](#build-from-source)
+
+Windows EXE, Linux AppImage and Mac DMG downloads are pending the [three-platform release gates](docs/desktop-clients.md).
 
 The current release includes six battle arenas, animated stage surroundings, refined water reflections and graphics presets, pointer aiming, and improved CPU rivals. All visuals and synthesized sounds are original. Eight-player support and numerical gameplay tuning are project adaptations; the original game supports four players. [Research and sources](docs/history/research.md).
 

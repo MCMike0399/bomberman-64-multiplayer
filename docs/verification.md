@@ -1,3 +1,47 @@
+# v0.43.0 delivered
+
+Published **2026-10-27 20:43:54 UTC**: [v0.43.0 / signed update](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.43.0).
+[Combined release #64](https://github.com/MCMike0399/bomberman-64-multiplayer/pull/64)
+integrates #55, #56 and #58–#63: Quick Play countdown/permissions, Pyramid framing,
+active-blast damage, denser randomized cover, post-match arena selection and zero
+starting collected upgrades, pickup personality, the Greedy Trap waterwheel
+canal and comic mishap poses. **v0.43.0/build 53/schema 6**, source
+`8bc6dccc848e5a01f77a95ae05c94dd89db7c7d5`, token `6/0.43.0/53`.
+Windows/Linux #52/#53 and their draft integration #57 remain outside this release.
+
+- Integration retained a failing isolated Metal witness for the post-match editor
+  re-enabling a lone anonymous Quick Play owner's controls after countdown
+  cancellation. Public controls now remain read-only; private hosts keep their
+  editor. The final regression passes.
+- Local public, managed/network, exported headless, package and workflow checks
+  passed. Managed coverage includes 4,007 game, 377 client, 98 AI, 19 audio and
+  23 cluster checks, 72 AI soaks, 78 release connection, nine relay and 36 real
+  fleet checks, plus the complete real network smoke.
+- The final combined export passed `battle-polish-regression`: 15 journeys,
+  1,333 assertions, 148 captures and zero runtime errors/warnings on isolated
+  Metal. Reviewed cover, framing, map flow, pickups, canal and mishap captures.
+  This is agent art inspection, not a claim of user approval.
+- [Trusted Verification 40578490262](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40578490262)
+  passed public, managed/network, Godot headless, Apple Silicon package and both
+  archived-client gates. All nine saved-settings startup cases passed on Apple
+  Paravirtual Metal. The signed update from v0.42.1 passed install, deliberate
+  failed-launch rollback and saved High/fullscreen on attempt one. The optional
+  full CI Metal journey was skipped; local focused graphical evidence is above.
+- [Protected rollout and public verification 40580292089](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40580292089)
+  passed. Public, primary and fallback verified the exact identity, connections
+  and room placement without deferral. Anonymous downloads of all ten assets,
+  both signatures, latest stable identity and byte equality with the tested
+  client/server archives were verified.
+- The CI Mac archive was installed at the canonical application path. All 228
+  files/symlinks match the inspected archive; strict signing and Launch Services
+  smoke passed on the native M5 Pro: High, windowed, 59 snapshots, a reviewed
+  viewport capture and no runtime errors. The task's duplicate export and old
+  installed backup were removed after verification. Other sessions' QA bundles
+  were left under their ownership. This is a launch check, not a GPU benchmark
+  or physical-controller validation.
+- Published archive SHA-256: Mac `c338216ad4d19284d6fff08a7c40dfc23abe5b3f8f1f3833a12faa3b1bf71836`;
+  server `ccd15d72ef4fa99c2dbb94b01bc763ad68ad0d0ba0c4e306a8d944317603e911`.
+
 # v0.42.1 delivered
 
 Published **2026-10-27 17:18:49 UTC**: [v0.42.1 / signed update](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.42.1).

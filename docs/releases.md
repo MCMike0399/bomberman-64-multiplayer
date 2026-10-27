@@ -12,7 +12,7 @@ target OS from the same trusted run. Native regression, saved startup, signed
 updater transactions and the EXE/AppImage/DMG downloads are required before
 promotion or host changes. The Mac updater format and public key are preserved.
 
-**v0.42.1/build 52/schema 6** is delivered. The [delivery receipt](verification.md#v0421-delivered)
+**v0.43.0/build 53/schema 6** is delivered. The [delivery receipt](verification.md#v0430-delivered)
 records the exact CI artifacts, production rollout and signed update. Earlier clients advertise numeric `3`, `4` or branch-specific stage tokens and are rejected by the
 new server before identity creation, queue/room admission or WebSocket upgrade.
 Authenticated leave/cancel and operator endpoints preserve their existing policy.
