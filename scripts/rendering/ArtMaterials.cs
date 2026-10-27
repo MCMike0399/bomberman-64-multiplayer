@@ -97,15 +97,10 @@ float cobble_edge(vec2 pp,out vec2 owner){
   }
   return second-nearest;
 }
-// Staggered courses: distance to the nearest joint in course units, with chipped edges.
-float course_edge(vec2 pp,bool top,out vec2 cell,out vec2 q){
-  q=top?pp*vec2(.78,1.0):vec2(pp.x/1.45,pp.y/.52);
-  q.x+=mod(floor(q.y),2.0)*.5;
-  if(stone_style==3)q+=vec2(noise(pp*2.0)*.35,noise(pp*1.1)*.3);
-  vec2 f=fract(q);cell=floor(q);
-  float edge=min(min(f.x,1.0-f.x),min(f.y,1.0-f.y));
-  // Uneven chamfers and occasional pits stay readable as stone at the game camera.
-  return edge-(filtered_noise(pp*24.0)-.5)*.014;
+// Staggered courses: distance to the nearest joint in course units.
+float course_edge(vec2 q){
+  vec2 f=fract(q);
+  return min(min(f.x,1.0-f.x),min(f.y,1.0-f.y));
 }
 void fragment(){
   // World coordinates keep courses continuous across the authority's individual cells.
@@ -138,8 +133,14 @@ void fragment(){
       cavity=mix(.8,1.0,smoothstep(0.0,.2,edge));
     }
   }else{
-    vec2 cell,q;
-    float chippedEdge=course_edge(p,top,cell,q);
+    vec2 course_scale=top?vec2(.78,1.0):vec2(1.0/1.45,1.0/.52);
+    vec2 q=p*course_scale;
+    q.x+=mod(floor(q.y),2.0)*.5;
+    if(stone_style==3)q+=vec2(noise(p*2.0)*.35,noise(p*1.1)*.3);
+    vec2 cell=floor(q);
+    // Uneven chamfers and occasional pits stay readable as stone at the game camera.
+    float chip=(filtered_noise(p*24.0)-.5)*.014;
+    float chippedEdge=course_edge(q)-chip;
     float mineral=noise(p*5.1)*.6+filtered_noise(p*16.7)*.3+filtered_noise(p*48.0)*.1;
     float aa=max(length(fwidth(q))*.35,.001);
     float seam=smoothstep(.008-aa,.027+aa,chippedEdge);
@@ -159,8 +160,8 @@ void fragment(){
     ALBEDO=mix(mortar_color.rgb,stone,seam);
     relief=seam*(bevel*.12+mineral*.035-pits*.012);
     if(quality_premium>.5){
-      vec2 floor_cell,floor_q;
-      float wall=(1.0-seam)*smoothstep(.008,.027,course_edge(floor_p,top,floor_cell,floor_q));
+      // The joint floor a few millimetres away shares this pixel's jitter and chip noise.
+      float wall=(1.0-seam)*smoothstep(.008,.027,course_edge(q+(floor_p-p)*course_scale)-chip);
       ALBEDO=mix(ALBEDO,stone*.5,wall);
       cavity=mix(.82,1.0,smoothstep(0.0,.11,chippedEdge));
     }
@@ -208,7 +209,9 @@ shader_type spatial;
 render_mode diffuse_burley, specular_schlick_ggx, depth_draw_always;
 uniform sampler2D depth_texture : hint_depth_texture, repeat_disable, filter_nearest;
 #ifdef CLEAR_WATER
-uniform sampler2D screen_texture : hint_screen_texture, repeat_disable, filter_linear_mipmap;
+// LOD 0 only: requesting mipmaps would make the renderer build a mip chain of the
+// panel-resolution screen copy every frame that nothing samples.
+uniform sampler2D screen_texture : hint_screen_texture, repeat_disable, filter_linear;
 #endif
 uniform float flood_amount=0.0;
 uniform float wind_strength=1.0;
@@ -342,17 +345,21 @@ void fragment(){
   float bed_depth=max(0.0,world.y-bed.y);
   // Only real submerged geometry is revealed; open sea keeps its authored color.
   float transmit=refracted.w*step(seabed_height+.4,bed.y)*clarity*exp(-bed_depth*1.25)*(1.0-foam);
-  vec3 seen=textureLod(screen_texture,refract_uv,0.0).rgb;
+  vec3 seen=vec3(0.0);
+  // The open sea transmits exactly nothing: its fetch and caustics would multiply to zero.
+  if(transmit>0.0){
+    seen=textureLod(screen_texture,refract_uv,0.0).rgb;
 #ifdef WATER_SPARKLE
-  float caustic_detail=quality_detail*(1.0-smoothstep(.25,.9,length(fwidth(bed.xz*1.5))));
-  if(caustic_detail>.01&&transmit>.02){
-    float web=max(caustic_web(bed.xz*1.5,.9),caustic_web(bed.xz*2.3+3.7,1.2)*.7);
-    float reach=smoothstep(.02,.12,bed_depth)*exp(-bed_depth*.9);
-    seen+=seen*web*reach*caustic_detail*1.4+light_tint.rgb*web*reach*caustic_detail*.05;
-  }
+    float caustic_detail=quality_detail*(1.0-smoothstep(.25,.9,length(fwidth(bed.xz*1.5))));
+    if(caustic_detail>.01&&transmit>.02){
+      float web=max(caustic_web(bed.xz*1.5,.9),caustic_web(bed.xz*2.3+3.7,1.2)*.7);
+      float reach=smoothstep(.02,.12,bed_depth)*exp(-bed_depth*.9);
+      seen+=seen*web*reach*caustic_detail*1.4+light_tint.rgb*web*reach*caustic_detail*.05;
+    }
 #endif
-  // The floor takes on the water's hue before deeper absorption hides it.
-  seen*=mix(vec3(1.0),surface_color.rgb*2.1,.5);
+    // The floor takes on the water's hue before deeper absorption hides it.
+    seen*=mix(vec3(1.0),surface_color.rgb*2.1,.5);
+  }
   ALBEDO*=1.0-transmit;
   EMISSION=seen*transmit;
 #ifdef SCENE_REFLECTIONS

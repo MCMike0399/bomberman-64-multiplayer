@@ -241,10 +241,17 @@ budget now buys visible work instead.
   `graphics-benchmark --desktop shared` at 3024×1964, High, uncapped, 15 s per
   eight-player stage on the M5 Pro (v0.40.0 → this branch, FPS / p99 ms):
   Sunken Temple 66.4 / 16.4 → 68.7 / 15.4, Up & Down 65.7 / 15.8 → 66.2 / 15.7,
-  Rock Garden 101.7 → 86.0, Top Rules 110.3 → 106.9, Blizzard Battle 99.7 →
-  83.4, Greedy Trap 89.4 → 80.7 (receipt
-  `artifacts/playtest/high-premium-bench-final`). Every stage keeps its
-  99th-percentile frame inside the 16.7 ms budget. The water stages
+  Rock Garden 101.7 → 86.2, Top Rules 110.3 → 108.2, Blizzard Battle 99.7 →
+  82.8, Greedy Trap 89.4 → 81.9 (receipt
+  `artifacts/playtest/high-premium-bench-opt`). Every stage keeps its
+  99th-percentile frame inside the 16.7 ms budget. Three exact savings landed
+  with the pass: the water declares its screen copy `filter_linear` because it
+  only ever samples LOD 0 (a mipmapped hint made the renderer build a mip
+  chain of the panel-resolution copy every frame), the open sea skips the
+  refraction fetch and caustics it would multiply by zero, and the stone
+  joint-depth test reuses the pixel's own course jitter and chip noise (Top
+  Rules captures stayed byte-identical). Together they are worth about 0.3 ms
+  on the water stages. The water stages
   were already at the 60 FPS line in v0.40 (its water mirror cost about 1.1 ms
   over v0.39); this pass holds them there with the shorter march and the
   far-sea skip, so further headroom on those two stages needs an identity
