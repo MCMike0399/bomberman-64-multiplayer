@@ -74,6 +74,7 @@ foreach (bool failedLaunch in new[] { false, true })
     File.WriteAllText(Path.Combine(target, "unins000.dat"), "installed uninstall data");
     if (failedLaunch) File.WriteAllText(Path.Combine(next, "fail-launch"), "fail");
     var children = new List<Process>();
+    Task? sharing = null;
     try
     {
         var start = new ProcessStartInfo(Path.Combine(target, "BlastCircuit.exe")) { UseShellExecute = false };
@@ -84,7 +85,6 @@ foreach (bool failedLaunch in new[] { false, true })
             old.Id, old.StartTime.ToUniversalTime().Ticks, true, false);
         string path = Path.Combine(stage, "request.json"); File.WriteAllText(path, JsonSerializer.Serialize(request));
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
-        Task? sharing = null;
         if (OperatingSystem.IsWindows())
         {
             // Hold a real non-delete-sharing directory handle after process exit.
@@ -119,8 +119,14 @@ foreach (bool failedLaunch in new[] { false, true })
         Check(!File.Exists(Path.Combine(root, ".blast-update-lock")), "Completed helper must release its lock");
         Check(failedLaunch || !Directory.Exists(Path.Combine(stage, "previous")), "Successful update must remove previous payload");
     }
+    catch (Exception error)
+    {
+        Console.Error.WriteLine("TRANSACTION_FAILURE " + error);
+        throw;
+    }
     finally
     {
+        if (sharing is not null) await sharing;
         foreach (string marker in Directory.GetFiles(root, "fixture-pid-*"))
         {
             try

@@ -64,6 +64,11 @@ synthetic newer fixture identity, verify healthy renderer relaunch (including
 saved High/fullscreen settings) and deliberate
 pre-health rollback, compare complete inventories, and uninstall after Windows
 updates. These tests require disposable Windows/Linux desktops or profiles.
+Windows transactions allow up to ten seconds per atomic rename for native
+sharing/lock violations (32/33), including rollback after process termination.
+Other I/O failures are immediate. The native helper regression first proves a
+real directory handle blocks renaming, then holds it across replacement and
+rollback; the diagnostic lane compares the retained old transaction with the fix.
 `startup-desktop.py` covers all nine saved preset/display launches using separate
 preference files and captures. Ordinary player preferences are not rewritten.
 Promotion compares complete regression receipts with the exact player-download

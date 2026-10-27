@@ -50,9 +50,9 @@ public static class DesktopUpdateTransaction
                     File.Copy(file, Path.Combine(next, Path.GetFileName(file)), overwrite: true);
                 }
             }
-            Move(target, previous, request.AppImage);
+            await Move(target, previous, request.AppImage, ct);
             replaced = true;
-            Move(next, target, request.AppImage);
+            await Move(next, target, request.AppImage, ct);
             launched = Launch(target, request.AppImage, request.Windowed, request.Token);
             string healthy = Path.Combine(stage, "healthy");
             var clock = Stopwatch.StartNew();
@@ -92,8 +92,8 @@ public static class DesktopUpdateTransaction
             if (replaced)
             {
                 if (request.AppImage ? File.Exists(target) : Directory.Exists(target))
-                    Move(target, next, request.AppImage);
-                Move(previous, target, request.AppImage);
+                    await Move(target, next, request.AppImage, CancellationToken.None);
+                await Move(previous, target, request.AppImage, CancellationToken.None);
                 using var restored = Launch(target, request.AppImage, request.Windowed, null);
                 File.WriteAllText(Path.Combine(stage, "restoredpid"), restored.Id.ToString());
                 WriteHistory(request.History, "failed " + request.Version + " launch-rollback");
@@ -116,8 +116,26 @@ public static class DesktopUpdateTransaction
         return Process.Start(start) ?? throw new IOException("Could not launch installed game.");
     }
 
-    private static void Move(string from, string to, bool file)
-    { if (file) File.Move(from, to); else Directory.Move(from, to); }
+    private static async Task Move(string from, string to, bool file, CancellationToken ct)
+    {
+        var clock = Stopwatch.StartNew();
+        while (true)
+        {
+            try
+            {
+                if (file) File.Move(from, to); else Directory.Move(from, to);
+                return;
+            }
+            catch (IOException error) when (OperatingSystem.IsWindows() &&
+                (error.HResult & 0xffff) is 32 or 33 && clock.Elapsed < TimeSpan.FromSeconds(10))
+            {
+                // Windows may retain mapped files briefly after process exit.
+                // Only sharing/lock violations are transient; other I/O errors
+                // must retain their original failure and rollback behavior.
+                await Task.Delay(100, ct);
+            }
+        }
+    }
     private static void WriteHistory(string path, string result)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
