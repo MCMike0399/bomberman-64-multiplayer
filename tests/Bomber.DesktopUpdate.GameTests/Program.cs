@@ -175,7 +175,19 @@ foreach (var testCase in new[] { (Name:"successful-install",Interrupt:false,High
         foreach(string name in new[]{"helper-error.txt","health.json"})
             if(File.Exists(Path.Combine(prepared.Stage,name)))File.Copy(Path.Combine(prepared.Stage,name),Path.Combine(folder,name),overwrite:true);
         if(!File.Exists(Path.Combine(runtimeFolder,".blast-update-lock")))
-            try{Directory.Delete(runtimeFolder,true);}catch(IOException){}
+        {
+            // Native Windows can retain a terminated helper image briefly.
+            // Require real cleanup; never turn a persistent failure into a pass.
+            var cleanup=Stopwatch.StartNew();
+            while(Directory.Exists(runtimeFolder))
+            {
+                try{Directory.Delete(runtimeFolder,true);}
+                catch(Exception error) when(OperatingSystem.IsWindows()&&
+                    error is IOException or UnauthorizedAccessException&&
+                    (error.HResult&0xffff) is 5 or 32 or 33&&cleanup.Elapsed<TimeSpan.FromSeconds(5))
+                {await Task.Delay(100);}
+            }
+        }
     }
 }
 File.WriteAllText(Path.Combine(output, "summary.json"), JsonSerializer.Serialize(new { schemaVersion = 1, passed = true,
