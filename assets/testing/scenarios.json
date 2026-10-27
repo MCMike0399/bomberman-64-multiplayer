@@ -408,6 +408,14 @@
       "manual": false
     },
     {
+      "id": "quick-play",
+      "method": "QuickPlayLobby",
+      "domains": ["network", "ui"],
+      "headless": false,
+      "timeout": 120,
+      "manual": false
+    },
+    {
       "id": "network",
       "method": "Network",
       "domains": [

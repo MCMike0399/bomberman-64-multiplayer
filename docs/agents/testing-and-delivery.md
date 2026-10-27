@@ -586,6 +586,18 @@ For the combined v0.28 release, `stage-fidelity` is the focused fresh-process su
 
 ## Adaptive multiplayer verification (v0.29)
 
+For Quick Play changes, run the deterministic timer/permissions/lifecycle regressions:
+
+```sh
+dotnet run --project tests/Bomber.Game.Tests -- --public-matchmaking
+```
+
+The managed smoke's `--quick-only` uses real queue admission and the complete
+one-minute wait without a production timer override. The graphical `quick-play`
+leaf (also included in `network`) checks actual lobby text, countdown updates,
+hidden public owner actions, personal Settings return and departure cancellation.
+Keep source verification separate from a released client/server deployment.
+
 The managed gate includes real adaptive sessions, a separately configured owned
 server with zero simulation permits to force relay, and a two-process Valkey
 fleet drill. The native `adaptive-rooms` journey joins eight clients, measures

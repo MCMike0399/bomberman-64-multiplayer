@@ -26,6 +26,7 @@ public sealed class AdaptiveRoomSession : GameSession
     private bool _startRequested;
     private int _matchSerial;
     private DateTimeOffset? _countdown;
+    private string[] _countdownRoster = [];
     private DateTimeOffset _retryAt;
     private int PeerEpoch => _peerStatus?["epoch"]?.GetValue<int>() ?? 0;
 
@@ -41,30 +42,37 @@ public sealed class AdaptiveRoomSession : GameSession
         _peer = new PeerRoomSession(options, stableRoster: true);
     }
     public override int? MinPlayersToStart => 1;
-    public override bool AcceptsNewPlayers => _active != "peer" || _phase != "playing";
+    public override bool AcceptsNewPlayers => _public ? _active is null && _phase == "lobby" : _active != "peer" || _phase != "playing";
 
     public override void OnPlayerJoined(ISessionContext c, RealtimePlayer p)
     {
+        // A reservation made during the countdown can be claimed after gameplay starts.
+        if (_public && !AcceptsNewPlayers && !_members.ContainsKey(p.PlayerId))
+        { c.Kick(p.PlayerId, "This Quick Play match has started. Use Play online to find another lobby."); return; }
         CancelPendingStart();
         _members[p.PlayerId] = p; _joined.TryAdd(p.PlayerId, ++_joinSerial); ElectLeader(c);
         _connections[p.PlayerId] = _connections.GetValueOrDefault(p.PlayerId) + 1;
+        RefreshPublicCountdown(c);
         _server.OnPlayerJoined(Wrap(c, false), p); _peer.OnPlayerJoined(Wrap(c, true), p);
         Publish(c);
     }
     public override void OnPlayerLeft(ISessionContext c, RealtimePlayer p, LeaveReason reason)
     {
+        if (!_members.ContainsKey(p.PlayerId)) return;
         CancelPendingStart();
         _members.Remove(p.PlayerId); _joined.Remove(p.PlayerId); _quality.Remove(p.PlayerId); _budgets.Remove(p.PlayerId); ElectLeader(c);
         _connections.Remove(p.PlayerId);
+        RefreshPublicCountdown(c);
         _server.OnPlayerLeft(Wrap(c, false), p, reason); _peer.OnPlayerLeft(Wrap(c, true), p, reason);
         Publish(c);
     }
     public override void OnPlayerConnectionChanged(ISessionContext c, RealtimePlayer p, bool connected)
     {
+        if (!_members.ContainsKey(p.PlayerId)) return;
         CancelPendingStart();
         if (connected) _connections[p.PlayerId] = _connections.GetValueOrDefault(p.PlayerId) + 1;
         _quality.Remove(p.PlayerId); ElectLeader(c);
-        if (Connected(c).Count < 2) _countdown = null;
+        RefreshPublicCountdown(c, reconnect: connected);
         _server.OnPlayerConnectionChanged(Wrap(c, false), p, connected);
         _peer.OnPlayerConnectionChanged(Wrap(c, true), p, connected);
         Publish(c);
@@ -79,10 +87,9 @@ public sealed class AdaptiveRoomSession : GameSession
         if (_active != "cluster") _peer.OnTick(Wrap(c, true));
         if (_active is null && _startRequested && c.Now >= _retryAt)
         { _retryAt = c.Now.AddSeconds(.5); Start(c); }
-        if (!_public || _active is not null) return;
-        if (Connected(c).Count < 2) { _countdown = null; return; }
-        if (_countdown is null) { _countdown = c.Now.AddSeconds(8); Publish(c); }
-        if (c.Now >= _countdown && c.Now >= _retryAt)
+        if (!_public || _active is not null || _phase != "lobby") return;
+        if (RefreshPublicCountdown(c)) Publish(c);
+        if (_countdown is { } deadline && c.Now >= deadline && c.Now >= _retryAt)
         { _retryAt = c.Now.AddSeconds(2); Start(c); }
     }
 
@@ -106,12 +113,12 @@ public sealed class AdaptiveRoomSession : GameSession
             return;
         }
         if (message.Type == "party.start")
-        { if (p.PlayerId == _leader && _active is null) { _startRequested = true; Start(c); } return; }
+        { if (!_public && p.PlayerId == _leader && _active is null) { _startRequested = true; Start(c); } return; }
         if (message.Type == "party.settings")
         {
+            if (_public)
+            { c.Send(p.PlayerId, "party.error", new { message = "Quick Play uses shared rules. Create a private room to choose your own." }); return; }
             if (p.PlayerId != _leader || _active is not null) return;
-            if (_public && _countdown is not null)
-            { c.Send(p.PlayerId, "party.error", new { message = "The public match is starting. Change rules before the next countdown." }); return; }
             _countdown = null; _startRequested = false;
             _server.OnMessage(Wrap(c, false), p, message);
             _policy = _public ? "auto" : _serverStatus?["settings"]?["hosting"]?.GetValue<string>() ?? "auto";
@@ -140,7 +147,7 @@ public sealed class AdaptiveRoomSession : GameSession
             bool selected = _peer.SelectHost(Wrap(c, true), candidate.PlayerId);
             if (selected)
             {
-                _active = "peer"; _notice = "Player hosted. The room owner still controls the rules.";
+                _active = "peer"; _notice = _public ? "Player hosted." : "Player hosted. The room owner still controls the rules.";
                 _peer.OnMessage(Wrap(c, true), _members[candidate.PlayerId], new("party.start", JsonSerializer.SerializeToElement(new { }), null, c.Now));
             }
             _selecting = false;
@@ -167,6 +174,18 @@ public sealed class AdaptiveRoomSession : GameSession
         return humans >= (_public || _policy == "peer" ? 2 : 1) && humans + bots >= 2;
     }
     private List<string> Connected(ISessionContext c) => _members.Keys.Where(c.IsConnected).OrderBy(id => _joined[id]).ToList();
+    private bool RefreshPublicCountdown(ISessionContext c, bool reconnect = false)
+    {
+        if (!_public || _active is not null || _phase != "lobby") return false;
+        var players = Connected(c).ToArray();
+        // Removing a disconnected seat later is cleanup, not another roster change.
+        if (!reconnect && players.SequenceEqual(_countdownRoster) && (players.Length < 2 || _countdown is not null)) return false;
+        _countdownRoster = players;
+        _countdown = players.Length >= 2 ? c.Now.AddMinutes(1) : null;
+        _retryAt = default;
+        _notice = "";
+        return true;
+    }
     private void ElectLeader(ISessionContext c)
     {
         if (_leader is null || !_members.ContainsKey(_leader) || !c.IsConnected(_leader))
@@ -196,7 +215,7 @@ public sealed class AdaptiveRoomSession : GameSession
         data["epoch"] = PeerEpoch;
         data["phase"] = _phase;
         data["match"] = _matchSerial;
-        data["canStart"] = _active is null && Enough(c);
+        data["canStart"] = !_public && _active is null && _phase == "lobby" && Enough(c);
         data["minimumHumans"] = _public || _policy == "peer" ? 2 : 1;
         data["publicRoom"] = _public;
         data["startAt"] = _countdown?.ToUnixTimeMilliseconds();

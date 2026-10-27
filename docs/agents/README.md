@@ -49,6 +49,13 @@ update the current guide rather than silently reviving old behavior.
 
 ## Current decisions that supersede earlier experiments
 
+- Quick Play QA source work (2026-10-27): a stable roster of at least two
+  connected humans waits a full minute; roster changes restart it and fewer
+  than two cancel it. Anonymous players cannot start early or edit shared rules.
+  Public gameplay/results exclude new strangers, including delayed reservation
+  claims; private controls remain manual. [Policy and local QA evidence](../smart-multiplayer.md#quick-play-source-qa--2026-10-27).
+  This work is not a new release or maintained-worker deployment.
+
 - v0.42.1 delivers softer reflections on characters, bombs, pickups and painted
   scenery (#49/#50). All required trusted gates, the protected rollout and
   public asset verification passed. [Delivery receipt](../verification.md#v0421-delivered).

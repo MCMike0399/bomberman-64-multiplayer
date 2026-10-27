@@ -51,7 +51,7 @@ public partial class ArcadeMenu
         _onlineButtons[1].Name="JoinWithCode";
         join.AddChild(new Control {CustomMinimumSize=new(0,10)});
         Section(join,"Find players");
-        Copy(join,"Meet other players. The battle starts automatically with at least two people and a suitable host.");
+        Copy(join,"Meet other players. With two or more people, a one-minute countdown starts. Player changes restart it.");
         _onlineButtons.Add(ArcadeTheme.Button(join,"Play online",()=>OnlineRequested?.Invoke(NetworkMode.QuickPlay)));
         _onlineButtons[2].Name="PlayOnline";
         Hint(join,"Casual matches may use a player host. Direct peers share connection addresses. Private Server only rooms keep authority on the cluster.",15);
@@ -123,8 +123,12 @@ public partial class ArcadeMenu
 
     public void UpdateConnection(string connection)
     {
-        if(_countdown is { } end)_lobbyStatus.Text=$"Battle begins in {Math.Max(0,(int)Math.Ceiling((end-DateTimeOffset.UtcNow).TotalSeconds))}";
-        else if(connection.StartsWith("Reconnecting")||connection.StartsWith("Error"))_lobbyStatus.Text=connection;
+        if(connection.StartsWith("Reconnecting")||connection.StartsWith("Error"))_lobbyStatus.Text=connection;
+        else if(_countdown is { } end)
+        {
+            int seconds=Math.Max(0,(int)Math.Ceiling((end-DateTimeOffset.UtcNow).TotalSeconds));
+            _lobbyStatus.Text=seconds>0?$"Battle begins in {seconds / 60}:{seconds % 60:00}":"Finding an available host...";
+        }
     }
 
     public void ShowParty(JsonElement data,string? localPlayer)
@@ -136,15 +140,19 @@ public partial class ArcadeMenu
 
     private void ApplyParty()
     {
-        _startRoom.Visible=_party!=null;_roomRules.Visible=_party!=null;
-        if(_party is not {} data)return;
+        if(_party is not {} data){_startRoom.Visible=_roomRules.Visible=false;return;}
         var status=PartyStatus.Parse(data);bool leader=status.LeaderId==_localPlayer;
+        _startRoom.Visible=_roomRules.Visible=!status.PublicRoom;
+        _countdown=status.PublicRoom&&status.Phase=="lobby"&&status.StartAt is {} start?DateTimeOffset.FromUnixTimeMilliseconds(start):null;
         _startRoom.Disabled=!leader||!status.CanStart;_roomRules.Disabled=!leader||status.Phase!="lobby"||status.PublicRoom&&status.StartAt is not null;
         string leaderName=data.GetProperty("players").EnumerateArray().FirstOrDefault(p=>p.GetProperty("playerId").GetString()==status.LeaderId) is var player&&player.ValueKind==JsonValueKind.Object?player.GetProperty("displayName").GetString()??"Leader":"Leader";
         _lobbyStatus.Text=status.Phase switch {"starting"=>"Starting the battle...","results"=>"Battle complete — returning to the room...","playing"=>"Battle in progress",_=>leader?status.CanStart?"You are the host. Start when everyone is here.":status.MinimumHumans>=2?"Waiting for a second connected player.":"Waiting for another player or CPU rival.":$"Waiting for {leaderName} to start."};
-        if(status.PublicRoom&&status.Phase=="lobby")_lobbyStatus.Text=status.CanStart?status.StartAt is not null?"The battle starts shortly...":"Finding a suitable host...":"Waiting for a second player.";
+        if(status.PublicRoom&&status.Phase=="lobby")_lobbyStatus.Text=status.StartAt is not null?"The battle starts shortly...":"Waiting for a second player.";
         else if(status.Adaptive&&leader&&status.Phase=="lobby"&&status.CanStart)_lobbyStatus.Text="You own this room. Start when everyone is here.";
-        _partyHint.Text=$"Room owner: {leaderName}  •  CPU rivals: {status.Bots}\n"+
-            (status.Notice.Length>0?status.Notice:status.PublicRoom?"The battle starts automatically when enough players are ready.":status.Adaptive?"The owner starts each match. Your hosting preference is checked before play.":status.Hosting=="peer"?"If the host leaves, the next player hosts and everyone returns here.":"The host starts each match. Leadership transfers if they leave.");
+        _partyHint.Text=status.PublicRoom?"Quick Play • Shared rules • Automatic start\n"+
+            "At least two players are needed. Player changes restart the one-minute countdown.":$"Room owner: {leaderName}  •  CPU rivals: {status.Bots}\n"+
+            (status.Notice.Length>0?status.Notice:status.Adaptive?"The owner starts each match. Your hosting preference is checked before play.":status.Hosting=="peer"?"If the host leaves, the next player hosts and everyone returns here.":"The host starts each match. Leadership transfers if they leave.");
+        if(status.PublicRoom&&status.Notice.Length>0)_partyHint.Text+="\n"+status.Notice;
+        if(status.PublicRoom)UpdateConnection("Connected");
     }
 }

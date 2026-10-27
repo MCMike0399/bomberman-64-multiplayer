@@ -14,5 +14,5 @@ public sealed class PublicAdaptiveRoomGame : IRealtimeGame
     public IReadOnlyList<string> ReplaceableMessageTypes { get; } = ["state", "peer.state"];
     public IMatchmakingStrategy Matchmaking { get; } = new WaitingRoomMatchmaker();
     public IGameSession CreateSession(GameSessionOptions options) => new AdaptiveRoomSession(options with
-    { Settings = options.Settings.Count == 0 ? new MatchOptions { HumanPlayers = 2, BotPlayers = 0 }.ToSettings() : options.Settings }, publicRoom: true);
+    { Settings = new MatchOptions { HumanPlayers = 2, BotPlayers = 0 }.ToSettings() }, publicRoom: true);
 }
