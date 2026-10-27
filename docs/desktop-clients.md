@@ -75,3 +75,28 @@ Run the full native renderer suite and inspect captures before claiming visual
 parity. The SDL/libusb Switch 2 USB backend remains Mac-only; observe individual
 Windows/Linux physical pads before claiming their support. Linux x64 initially
 targets Ubuntu 24.04; ARM64 and other distributions need separate validation.
+
+
+## One three-platform release witness
+
+The release also requires complete DMG-installed Mac regression and
+`cross-platform-quick-play`. The latter launches one actual installed Windows
+client, Linux AppImage and DMG-installed Mac client against the same isolated
+packaged server. An ephemeral HTTPS test tunnel exposes only that disposable
+server; maintained workers and player rooms are not used for this pre-release
+journey. The tunnel executable is hash-pinned and stops with its runner.
+
+An Actions artifact barrier waits for all three real renderers before joining.
+Windows leaves and rejoins; every client must observe its replacement identity
+and the same fresh one-minute deadline. All three then observe the same server
+match, accepted movement and carried bombs from every participant. A late
+stranger must get another waiting room. A second barrier keeps original players
+connected until every witness finishes. Complete source/release, driver, capture,
+shared roster and player-download hash evidence is signed into
+`Blast-Circuit-crossplay.json`. Independent per-OS passes cannot replace it.
+
+The full headless suite also exercises an eight-player direct-peer room. Native
+rendering receipts identify the adapter, including software/paravirtual adapters;
+those runs establish functional rendering rather than physical GPU throughput.
+The disposable Linux desktop supplies X11 and a PulseAudio null sink. Physical
+speakers, controllers, native performance and Wayland remain separate evidence.

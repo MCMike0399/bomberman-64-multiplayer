@@ -278,13 +278,6 @@ jobs:
       - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           dotnet-version: 10.0.x
-      - name: Fetch pinned private dependency
-        env:
-          KERNEL_REPOSITORY: ${{ secrets.KERNEL_REPOSITORY }}
-          KERNEL_READ_TOKEN: ${{ secrets.KERNEL_READ_TOKEN }}
-          KERNEL_DEPLOY_KEY: ${{ secrets.KERNEL_DEPLOY_KEY }}
-          GITHUB_METADATA_TOKEN: ${{ github.token }}
-        run: python3 tools/ci/bootstrap_kernel.py
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: Blast-Circuit-macos-arm64-ad-hoc
@@ -369,10 +362,10 @@ jobs:
           dotnet build tests/Bomber.DesktopUpdate.Tests --nologo -m:1
           dotnet run --no-build --project tests/Bomber.DesktopUpdate.Tests
       - run: python tools/packaging/verify-desktop.py --target windows-x64
-      - run: python tools/packaging/startup-desktop.py --target windows-x64
-      - run: python tools/packaging/verify-desktop.py --target windows-x64 --graphical
       - run: python tools/packaging/package-update-fixture.py --target windows-x64 --unpack
       - run: python tools/packaging/verify-desktop-update.py --target windows-x64
+      - run: python tools/packaging/startup-desktop.py --target windows-x64
+      - run: python tools/packaging/verify-desktop.py --target windows-x64 --graphical
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
@@ -439,7 +432,7 @@ jobs:
     name: Exported linux-x64 smoke
     needs: [linux-package, managed]
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -455,19 +448,25 @@ jobs:
         with:
           name: Blast-Circuit-server-dotnet10
           path: artifacts
-      - run: sudo apt-get update && sudo apt-get install -y squashfs-tools xvfb openbox mesa-vulkan-drivers
+      - run: sudo apt-get update && sudo apt-get install -y squashfs-tools fuse3 xvfb openbox pulseaudio mesa-vulkan-drivers
       - run: python3 tools/packaging/package-download.py --target linux-x64
       - run: dotnet run --project tests/Bomber.DesktopUpdate.Tests -m:1
       - run: python3 tools/packaging/verify-desktop.py --target linux-x64
       - run: python3 tools/packaging/package-update-fixture.py --target linux-x64 --unpack
       - run: python3 tools/packaging/package-download.py --target linux-x64 --directory artifacts/update-fixture
-      - run: xvfb-run -a -s '-screen 0 1920x1200x24' python3 tools/packaging/verify-desktop-update.py --target linux-x64
+      - run: python3 tools/packaging/linux-desktop.py -- python3 tools/packaging/verify-desktop-update.py --target linux-x64
+      - run: python3 tools/packaging/linux-desktop.py -- python3 tools/packaging/startup-desktop.py --target linux-x64
+      - run: python3 tools/packaging/linux-desktop.py -- python3 tools/packaging/verify-desktop.py --target linux-x64 --graphical
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: Blast-Circuit-linux-x64-smoke
           path: |
             artifacts/Blast-Circuit-linux-x64-smoke.json
+            artifacts/Blast-Circuit-linux-x64-graphical.json
+            artifacts/Blast-Circuit-linux-x64-startup.json
+            artifacts/Blast-Circuit-linux-x64-startup-details/**/runtime.log
+            artifacts/Blast-Circuit-linux-x64-startup-details/**/*.png
             artifacts/Blast-Circuit-linux-x64-updater-tests.json
             artifacts/Blast-Circuit-linux-x64-updater-details/**/runtime.log
             artifacts/Blast-Circuit-linux-x64-updater-details/**/summary.json
@@ -481,6 +480,52 @@ jobs:
             artifacts/Blast-Circuit-linux-x64-regression-details/**/runner-summary.json
             artifacts/Blast-Circuit-linux-x64-regression-details/**/junit.xml
             artifacts/Blast-Circuit-linux-x64-regression-details/**/runtime.log
-            artifacts/Blast-Circuit-linux-x64-regression-details/**/failure.png
+            artifacts/Blast-Circuit-linux-x64-regression-details/**/*.png
           retention-days: 14
           if-no-files-found: error
+
+  mac-regression:
+    name: Exported macos-arm64 regression
+    needs: [package, managed]
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: Blast-Circuit-macos-arm64-ad-hoc
+          path: artifacts
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: Blast-Circuit-server-dotnet10
+          path: artifacts
+      - run: swift tools/packaging/macos-test-display.swift
+      - run: python3 tools/packaging/verify-mac-archive.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: Blast-Circuit-macos-arm64-regression
+          path: |
+            artifacts/Blast-Circuit-macos-arm64-regression.json
+            artifacts/Blast-Circuit-macos-arm64-regression-details/**/summary.json
+            artifacts/Blast-Circuit-macos-arm64-regression-details/**/runner-summary.json
+            artifacts/Blast-Circuit-macos-arm64-regression-details/**/runtime.log
+            artifacts/Blast-Circuit-macos-arm64-regression-details/**/*.png
+          retention-days: 14
+          if-no-files-found: warn
+
+  crossplay:
+    name: Cross-platform Quick Play
+    needs: [windows-smoke, linux-smoke, mac-regression]
+    permissions:
+      contents: read
+      actions: read
+    uses: ./.github/workflows/crossplay.yml
+    with:
+      mode: verification
+      revision: ${{ github.sha }}

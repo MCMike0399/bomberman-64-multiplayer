@@ -410,7 +410,10 @@
     {
       "id": "quick-play",
       "method": "QuickPlayLobby",
-      "domains": ["network", "ui"],
+      "domains": [
+        "network",
+        "ui"
+      ],
       "headless": false,
       "timeout": 120,
       "manual": false
@@ -1176,6 +1179,19 @@
       ],
       "headless": false,
       "timeout": 240,
+      "manual": false
+    },
+    {
+      "id": "cross-platform-quick-play",
+      "method": "CrossPlatformQuickPlay",
+      "domains": [
+        "network",
+        "gameplay",
+        "ui",
+        "rendering"
+      ],
+      "headless": false,
+      "timeout": 600,
       "manual": false
     }
   ]

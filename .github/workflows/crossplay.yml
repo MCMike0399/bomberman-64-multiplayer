@@ -1,0 +1,181 @@
+name: Cross-platform Quick Play
+
+on:
+  workflow_call:
+    inputs:
+      mode:
+        type: string
+        required: true
+      revision:
+        type: string
+        required: true
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  server:
+    name: Staged crossplay server
+    runs-on: ubuntu-24.04
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.revision }}
+          persist-credentials: false
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: ${{ inputs.mode == 'candidate' && 'desktop-candidate-inputs' || 'Blast-Circuit-server-dotnet10' }}
+          path: artifacts
+      - name: Start only the disposable packaged server and HTTPS tunnel
+        run: python3 tools/ci/crossplay.py server-start
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: crossplay-origin
+          path: artifacts/crossplay-server/origin.json
+          retention-days: 2
+          if-no-files-found: error
+      - name: Keep staging alive until every native client finishes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/ci/crossplay.py wait --names crossplay-windows-x64 crossplay-linux-x64 crossplay-macos-arm64 --timeout 1000
+      - name: Stop only this job's server and tunnel
+        if: always()
+        run: python3 tools/ci/crossplay.py server-stop
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: crossplay-server
+          path: |
+            artifacts/crossplay-server/server-summary.json
+            artifacts/crossplay-server/launcher.log
+          retention-days: 14
+          if-no-files-found: warn
+
+  clients:
+    name: Client ${{ matrix.target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: windows-x64
+            runner: windows-2025
+          - target: linux-x64
+            runner: ubuntu-24.04
+          - target: macos-arm64
+            runner: macos-15
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.revision }}
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: ${{ inputs.mode == 'candidate' && 'desktop-candidate-inputs' || (matrix.target == 'macos-arm64' && 'Blast-Circuit-macos-arm64-ad-hoc' || format('Blast-Circuit-{0}', matrix.target)) }}
+          path: artifacts
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        if: matrix.target != 'macos-arm64'
+        with:
+          name: ${{ inputs.mode == 'candidate' && format('candidate-{0}', matrix.target) || format('Blast-Circuit-{0}-smoke', matrix.target) }}
+          path: artifacts
+      - if: runner.os == 'macOS'
+        run: swift tools/packaging/macos-test-display.swift
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y fuse3 xvfb openbox pulseaudio mesa-vulkan-drivers
+      - name: Wait for the isolated public test origin
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          python tools/ci/crossplay.py wait --names crossplay-origin --timeout 300
+          gh run download "$GITHUB_RUN_ID" --name crossplay-origin --dir artifacts/origin
+      - name: Install the real download and warm its actual renderer
+        env:
+          TARGET: ${{ matrix.target }}
+        shell: bash
+        run: python tools/ci/crossplay_runtime.py start --target "$TARGET" --output "artifacts/crossplay-$TARGET"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: crossplay-ready-${{ matrix.target }}
+          path: artifacts/crossplay-${{ matrix.target }}/crossplay-ready.json
+          retention-days: 2
+          if-no-files-found: error
+      - name: Release all three already-rendering clients together
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python tools/ci/crossplay.py wait --names crossplay-ready-windows-x64 crossplay-ready-linux-x64 crossplay-ready-macos-arm64 --timeout 300
+      - name: Require shared countdown, real minute, match and accepted actions
+        env:
+          TARGET: ${{ matrix.target }}
+        shell: bash
+        run: python tools/ci/crossplay_runtime.py release --target "$TARGET" --output "artifacts/crossplay-$TARGET"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: crossplay-actions-${{ matrix.target }}
+          path: artifacts/crossplay-${{ matrix.target }}/crossplay-actions.json
+          retention-days: 2
+          if-no-files-found: error
+      - name: Hold every original participant until all action/admission witnesses finish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python tools/ci/crossplay.py wait --names crossplay-actions-windows-x64 crossplay-actions-linux-x64 crossplay-actions-macos-arm64 --timeout 120
+      - name: Finish and validate the rendered game receipt
+        env:
+          TARGET: ${{ matrix.target }}
+        shell: bash
+        run: python tools/ci/crossplay_runtime.py finish --target "$TARGET" --output "artifacts/crossplay-$TARGET"
+      - name: Close only this client's owned test processes
+        if: always()
+        env:
+          TARGET: ${{ matrix.target }}
+        shell: bash
+        run: python tools/ci/crossplay_runtime.py stop --target "$TARGET" --output "artifacts/crossplay-$TARGET"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: crossplay-${{ matrix.target }}
+          path: |
+            artifacts/crossplay-${{ matrix.target }}/crossplay-receipt.json
+            artifacts/crossplay-${{ matrix.target }}/crossplay.json
+            artifacts/crossplay-${{ matrix.target }}/summary.json
+            artifacts/crossplay-${{ matrix.target }}/runtime.log
+            artifacts/crossplay-${{ matrix.target }}/launcher.log
+            artifacts/crossplay-${{ matrix.target }}/*.png
+          retention-days: 14
+          if-no-files-found: warn
+
+  parity:
+    name: Three-platform parity
+    needs: [server, clients]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.revision }}
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: crossplay-windows-x64
+          path: artifacts/windows-x64
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: crossplay-linux-x64
+          path: artifacts/linux-x64
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: crossplay-macos-arm64
+          path: artifacts/macos-arm64
+      - run: python3 tools/ci/crossplay.py aggregate
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-gate-crossplay
+          path: artifacts/Blast-Circuit-crossplay.json
+          retention-days: 14
+          if-no-files-found: error

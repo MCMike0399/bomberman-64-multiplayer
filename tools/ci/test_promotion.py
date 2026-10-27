@@ -14,6 +14,7 @@ import zipfile
 import desktop_packages
 import download_formats
 from test_desktop_packages import write_desktop
+from test_crossplay import write_crossplay
 
 SPEC = importlib.util.spec_from_file_location('promotion', Path(__file__).with_name('promote_release.py'))
 promotion = importlib.util.module_from_spec(SPEC)
@@ -38,6 +39,7 @@ def write_package(directory, version='0.15.0', revision=SHA):
     write_desktop(directory, revision, RELEASE)
     (directory / download_formats.FILES["macos-arm64"]).write_bytes(b"fixture-dmg")
     download_formats.record(directory, "macos-arm64", revision, RELEASE, promotion.ARCHIVE)
+    write_crossplay(directory, revision, RELEASE)
 
 
 def write_gate(directory, name, version='0.15.0', build='10', **changes):

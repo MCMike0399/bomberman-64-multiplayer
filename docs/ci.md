@@ -106,3 +106,31 @@ players' Macs are separate from the authenticated update signature.
 Add gameplay scenarios to the canonical playtest manifest and assign them to the appropriate QA profile. Keep graphical-only behavior out of the headless profile. Prefer actual input and observable assertions; scene startup, a nonzero screenshot count, or a missing optional capability does not independently prove the requested behavior. A timeout, missing receipt, runtime error or failed assertion must fail the corresponding profile. Keep build/server ownership in the shared orchestrator rather than adding background server processes to YAML.
 
 For workflow changes run `actionlint .github/workflows/*.yml`; `.github/actionlint.yaml` declares the custom runner label. `python3 tools/ci/public_checks.py` and the standalone audio suite are safe from a clean public clone. Validate private profiles in an authorized checkout before enabling the trusted jobs.
+
+
+## Three-platform archived delivery
+
+Desktop delivery requires native Windows/Linux full gameplay, graphical and
+saved-startup journeys, real signed game updater install/rollback transactions,
+Windows uninstall after updating, complete DMG-installed Mac regression and the
+mixed Windows/Linux/Mac Quick Play witness. The shared server is the exact staged
+portable archive. Mac tests retain the signed update from the latest published
+release and saved-High/fullscreen regression. No private source is needed on
+native runtime runners: pure updater integration projects link their public
+implementation files and the archived games include their runtimes.
+
+`desktop-candidate.yml` can test separately prepared exact-source draft assets
+before merge, at the maintainer's `desktop-validation` PR label. Draft retrieval
+has contents-write permission on a disposable download-only runner that never
+checks out or executes PR code. Runtime jobs receive read-only artifact access.
+The private kernel build boundary remains trusted main. Newer updater fixture
+identities are explicitly test-only and are not publication assets.
+
+`crossplay.yml` is shared by candidate and trusted verification. It starts an
+owned temporary server and hash-pinned Quick Tunnel, synchronizes three rendered
+clients through artifact barriers, verifies one shared real-minute match and
+accepted actions, then stops only owned processes. GitHub credentials are removed
+from game and tunnel environments. Allowlisted receipts/captures survive failures;
+raw guest/server traces remain private. Promotion requires the aggregate parity
+job and receipt; signatures and anonymous publication verification bind it to
+all three actual downloads. No production room is used for this pre-release test.

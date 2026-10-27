@@ -21,6 +21,8 @@ import time
 import urllib.request
 import desktop_packages
 import download_formats
+import crossplay
+import desktop_validation
 
 from promote_release import ARCHIVE, ARTIFACT, SERVER_ARCHIVE, SERVER_ARTIFACT, gh, inspect_gates, inspect_package, inspect_server
 
@@ -95,6 +97,8 @@ def verify_assets(directory, version):
         expected |= {'Blast-Circuit-' + target + '-update.json' for target in desktop_packages.present_targets(directory)}
     if 'macos-arm64' in download_formats.present(directory):
         expected |= set(download_formats.names('macos-arm64'))
+    if (directory / crossplay.RECEIPT).exists():
+        expected |= {crossplay.RECEIPT, desktop_validation.MAC_RECEIPT}
     if set(delivery.get('assets', {})) != expected:
         raise RuntimeError('Signed delivery manifest has an unexpected asset inventory')
     for name, entry in delivery['assets'].items():
@@ -115,6 +119,10 @@ def verify_assets(directory, version):
                 raise RuntimeError('Platform updater manifest differs from published payload: ' + target)
     if 'macos-arm64' in download_formats.present(directory):
         download_formats.inspect(directory, 'macos-arm64', revision, release)
+    if (directory / crossplay.RECEIPT).exists():
+        crossplay.inspect_summary(json.loads((directory / crossplay.RECEIPT).read_text()), revision, release, directory)
+        desktop_validation.inspect_mac(json.loads((directory / desktop_validation.MAC_RECEIPT).read_text()), revision, release,
+            digest(directory / ARCHIVE), digest(directory / download_formats.FILES['macos-arm64']))
     return delivery
 
 
@@ -132,11 +140,15 @@ def compare_run_artifacts(repository, run_id, revision, directory):
     with tempfile.TemporaryDirectory(prefix='blast-published-ci-') as temporary:
         for artifact in (ARTIFACT, SERVER_ARTIFACT, *desktop_packages.artifacts(desktop_packages.present_targets(directory))):
             gh('run', 'download', str(run_id), '--repo', repository, '--name', artifact, '--dir', temporary)
+        if (directory / crossplay.RECEIPT).exists():
+            for artifact in (crossplay.ARTIFACT, desktop_validation.MAC_ARTIFACT):
+                gh('run', 'download', str(run_id), '--repo', repository, '--name', artifact, '--dir', temporary)
         names = (ARCHIVE, ARCHIVE + '.sha256', 'build-metadata.json', SERVER_ARCHIVE, SERVER_ARCHIVE + '.sha256', 'server-build-metadata.json')
         if desktop_packages.present(directory):
             names += tuple(name for target in desktop_packages.present_targets(directory) for name in desktop_packages.asset_names(target))
         if 'macos-arm64' in download_formats.present(directory):
             names += download_formats.names('macos-arm64')
+        if (directory / crossplay.RECEIPT).exists(): names += (crossplay.RECEIPT, desktop_validation.MAC_RECEIPT)
         for name in names:
             if digest(Path(temporary) / name) != digest(directory / name):
                 raise RuntimeError('Published bytes differ from the trusted Verification artifact: ' + name)
@@ -157,6 +169,8 @@ def verify(repository, version, token=None, run_id=None, superseded=False, lates
             expected_assets |= group
     if set(download_formats.names('macos-arm64')) & set(published):
         expected_assets |= set(download_formats.names('macos-arm64'))
+    if {crossplay.RECEIPT, desktop_validation.MAC_RECEIPT} & set(published):
+        expected_assets |= {crossplay.RECEIPT, desktop_validation.MAC_RECEIPT}
     if set(published) != expected_assets:
         raise RuntimeError('Published asset set differs: ' + ', '.join(sorted(set(published) ^ set(ASSETS))))
     deadline = time.monotonic() + latest_wait

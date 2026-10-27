@@ -35,11 +35,16 @@ def asset_names(target):
 
 
 def artifacts(targets=None):
-    return [names(target)[key] for target in (TARGETS if targets is None else targets) for key in ('artifact', 'smoke_artifact')]
+    values = [names(target)[key] for target in (TARGETS if targets is None else targets) for key in ('artifact', 'smoke_artifact')]
+    if targets is None:
+        import crossplay
+        values += [desktop_validation.MAC_ARTIFACT, crossplay.ARTIFACT]
+    return values
 
 
 def jobs():
-    return {f'Trusted {target} package' for target in TARGETS} | {f'Exported {target} smoke' for target in TARGETS}
+    return ({f'Trusted {target} package' for target in TARGETS} | {f'Exported {target} smoke' for target in TARGETS} |
+            {'Exported macos-arm64 regression', 'Cross-platform Quick Play / Three-platform parity'})
 
 
 def digest(path):
@@ -120,6 +125,11 @@ def inspect(directory, revision, release, targets=None):
         desktop_validation.inspect_startup(startup, target, revision, release, digest(directory / item['archive']))
         desktop_update_gates.inspect(json.loads((directory / item['updater_test']).read_text()), target,
                                      revision, release, digest(directory / item['archive']))
+    if targets is None:
+        import crossplay
+        desktop_validation.inspect_mac(json.loads((directory / desktop_validation.MAC_RECEIPT).read_text()), revision, release,
+            digest(directory / 'Blast-Circuit-macos-arm64.zip'), digest(directory / 'Blast-Circuit-macos-arm64.dmg'))
+        crossplay.inspect_summary(json.loads((directory / crossplay.RECEIPT).read_text()), revision, release, directory)
 
 
 def download(repository, run_id, directory, gh):

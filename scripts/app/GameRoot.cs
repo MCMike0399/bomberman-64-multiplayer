@@ -66,6 +66,8 @@ public partial class GameRoot : Node3D
     }
     public int SnapshotCount { get; private set; }
     public JsonElement? LatestState { get; private set; }
+    public JsonElement? LatestParty { get; private set; }
+    public long? FirstNetworkStateServerTime { get; private set; }
     public JsonElement? LatestStage { get; private set; }
     public ISession? ActiveSession=>_session;
     public IReadOnlyList<BlastCircuit.Arena.Effects.ThrowPreviewState> ThrowPreviews=>_arena.ThrowPreviews;
@@ -339,10 +341,13 @@ public partial class GameRoot : Node3D
             {
                 case "stage":LatestStage=data.Clone();_arena.Stage(data);_hud.Stage(data);break;
                 case "state":
+                    if(session is NetworkSession&&FirstNetworkStateServerTime is null&&data.TryGetProperty("serverTime",out var firstTime))
+                        FirstNetworkStateServerTime=firstTime.GetInt64();
                     LatestState=data.Clone();SnapshotCount++;ApplyStageLighting();_arena.State(data,envelope.TryGetProperty("k",out var stateTick)&&stateTick.ValueKind==JsonValueKind.Number?stateTick.GetInt64():-1);_hud.State(data);TutorialState(data);
                     if(ScreenName=="Lobby")EnterMatch();
                     break;
                 case "party.status":
+                    LatestParty=data.Clone();
                     var party=PartyStatus.Parse(data);_menu.ShowParty(data,(session as NetworkSession)?.PlayerId);
                     if(party.Phase=="playing"&&party.Match!=_partyMatch)
                     {

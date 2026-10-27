@@ -9,9 +9,11 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools/playtest'))
 from contracts import catalog, expanded
 
-HEADLESS = ('core-headless', 'peer-rooms', 'adaptive-rooms', 'greedy-trap-network', 'adaptive-slow-poll')
+HEADLESS = ('core-headless', 'peer-rooms', 'peer-capacity', 'adaptive-rooms', 'greedy-trap-network', 'adaptive-slow-poll')
 GRAPHICAL = ('all', 'menu-preview', 'water-surface')
 STARTUP = tuple('-'.join((p, d, 'menu')) for p in ('low', 'medium', 'high') for d in ('fullscreen', 'windowed')) + tuple(p + '-fullscreen-gameplay' for p in ('low', 'medium', 'high'))
+MAC_ARTIFACT = 'Blast-Circuit-macos-arm64-regression'
+MAC_RECEIPT = MAC_ARTIFACT + '.json'
 
 
 def catalog_digest():
@@ -59,3 +61,14 @@ def inspect_startup(receipt, target, revision, release, archive_sha):
         if (case.get('passed') is not True or not case.get('adapter') or not isinstance(seconds, (int, float)) or
                 not math.isfinite(seconds) or seconds <= 0 or case.get('kind') == 'gameplay' and case.get('snapshots', 0) <= 0):
             raise RuntimeError('Desktop startup case is incomplete')
+
+
+def inspect_mac(receipt, revision, release, archive_sha, download_sha):
+    cases = receipt.get('cases', [])
+    if (receipt.get('schemaVersion') != 1 or receipt.get('passed') is not True or receipt.get('revision') != revision or
+            receipt.get('release') != release or receipt.get('archiveSha256') != archive_sha or receipt.get('downloadSha256') != download_sha or
+            [case.get('scenario') for case in cases] != list((*HEADLESS, *GRAPHICAL))):
+        raise RuntimeError('Complete Mac archive regression is missing or mismatched')
+    for case in cases:
+        inspect_report(case, case['scenario'], {'os': 'macOS', 'driver': 'metal'}, revision, release, case['scenario'] in GRAPHICAL)
+    return receipt

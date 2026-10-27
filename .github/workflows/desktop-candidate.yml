@@ -68,7 +68,7 @@ jobs:
         shell: bash
         run: python -c 'import json,os; m=json.load(open("artifacts/Blast-Circuit-"+os.environ["TARGET"]+"-metadata.json")); assert m["revision"]==os.environ["CANDIDATE_SHA"], "Candidate source mismatch"'
       - if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y squashfs-tools libicu74 xvfb openbox mesa-vulkan-drivers
+        run: sudo apt-get update && sudo apt-get install -y squashfs-tools fuse3 libicu74 xvfb openbox pulseaudio mesa-vulkan-drivers
       - if: runner.os == 'Windows'
         run: python tools/packaging/package-download.py --target windows-x64
       - if: runner.os == 'Linux'
@@ -86,13 +86,6 @@ jobs:
           TARGET: ${{ matrix.target }}
         shell: bash
         run: python tools/packaging/verify-desktop.py --target "$TARGET"
-      - name: Full native-renderer gameplay and saved-startup regression
-        env:
-          TARGET: ${{ matrix.target }}
-        shell: bash
-        run: |
-          python tools/packaging/startup-desktop.py --target "$TARGET"
-          python tools/packaging/verify-desktop.py --target "$TARGET" --graphical
       - name: Actual signed game update and rollback
         env:
           TARGET: ${{ matrix.target }}
@@ -100,9 +93,21 @@ jobs:
         run: |
           if [ "$TARGET" = linux-x64 ]; then
             python tools/packaging/package-download.py --target "$TARGET" --directory artifacts/update-fixture
-            xvfb-run -a -s '-screen 0 1920x1200x24' python tools/packaging/verify-desktop-update.py --target "$TARGET"
+            python tools/packaging/linux-desktop.py -- python tools/packaging/verify-desktop-update.py --target "$TARGET"
           else
             python tools/packaging/verify-desktop-update.py --target "$TARGET"
+          fi
+      - name: Full native-renderer gameplay and saved-startup regression
+        env:
+          TARGET: ${{ matrix.target }}
+        shell: bash
+        run: |
+          if [ "$TARGET" = linux-x64 ]; then
+            python tools/packaging/linux-desktop.py -- python tools/packaging/startup-desktop.py --target "$TARGET"
+            python tools/packaging/linux-desktop.py -- python tools/packaging/verify-desktop.py --target "$TARGET" --graphical
+          else
+            python tools/packaging/startup-desktop.py --target "$TARGET"
+            python tools/packaging/verify-desktop.py --target "$TARGET" --graphical
           fi
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
@@ -130,3 +135,53 @@ jobs:
             artifacts/*-regression-details/**/*.png
           retention-days: 14
           if-no-files-found: warn
+
+  mac-regression:
+    name: Packaged Mac regression
+    needs: candidate-assets
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: desktop-candidate-inputs
+          path: artifacts
+      - run: swift tools/packaging/macos-test-display.swift
+      - run: python3 tools/packaging/verify-mac-archive.py
+      - name: Actual signed Mac update from the latest published release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ditto -x -k artifacts/Blast-Circuit-macos-arm64.zip "$RUNNER_TEMP/mac-update-candidate"
+          python3 tools/ci/update_from_published.py --app "$RUNNER_TEMP/mac-update-candidate/Blast Circuit.app" --output artifacts/candidate-mac-update
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: candidate-macos-arm64
+          path: |
+            artifacts/Blast-Circuit-macos-arm64-regression.json
+            artifacts/Blast-Circuit-macos-arm64-regression-details/**/summary.json
+            artifacts/Blast-Circuit-macos-arm64-regression-details/**/runner-summary.json
+            artifacts/Blast-Circuit-macos-arm64-regression-details/**/runtime.log
+            artifacts/Blast-Circuit-macos-arm64-regression-details/**/*.png
+            artifacts/candidate-mac-update/summary.json
+          retention-days: 14
+          if-no-files-found: warn
+
+  crossplay:
+    name: Cross-platform Quick Play
+    needs: [packaged, mac-regression]
+    permissions:
+      contents: read
+      actions: read
+    uses: ./.github/workflows/crossplay.yml
+    with:
+      mode: candidate
+      revision: ${{ github.event.pull_request.head.sha }}

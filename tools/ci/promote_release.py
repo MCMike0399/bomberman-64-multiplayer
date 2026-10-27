@@ -15,6 +15,8 @@ from release_identity import check_exports
 import release_gates
 import desktop_packages
 import download_formats
+import crossplay
+import desktop_validation
 from verify_deployment import targets_from_json, verify, verify_connections, placements_from_json
 
 ARTIFACT = 'Blast-Circuit-macos-arm64-ad-hoc'
@@ -220,6 +222,7 @@ def stage_draft(repository, run_id, version, revision, directory, existing_draft
              'server-build-metadata.json', 'build-metadata.json']
     names += [name for target in desktop_packages.TARGETS for name in desktop_packages.asset_names(target)]
     names += list(download_formats.names('macos-arm64'))
+    names += [crossplay.RECEIPT, desktop_validation.MAC_RECEIPT]
     if signed:
         names += ['Blast-Circuit-update.json', 'Blast-Circuit-update.json.sig',
                   'Blast-Circuit-release.json', 'Blast-Circuit-release.json.sig']

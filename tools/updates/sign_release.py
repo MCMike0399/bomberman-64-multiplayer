@@ -16,6 +16,8 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools/ci'))
 import desktop_packages
 import download_formats
+import crossplay
+import desktop_validation
 
 
 def sign_bytes(path, key, trusted):
@@ -70,6 +72,9 @@ def sign(archive, key, output, server=None):
         if 'macos-arm64' in download_formats.present(output):
             download_formats.inspect(output, 'macos-arm64', metadata['revision'], metadata['release'])
             assets += [output / name for name in download_formats.names('macos-arm64')]
+        if (output / crossplay.RECEIPT).exists():
+            crossplay.inspect_summary(json.loads((output / crossplay.RECEIPT).read_text()), metadata['revision'], metadata['release'], output)
+            assets += [output / crossplay.RECEIPT, output / desktop_validation.MAC_RECEIPT]
         inventory = {asset.name: {'sha256': hashlib.sha256(asset.read_bytes()).hexdigest(), 'size': asset.stat().st_size} for asset in assets}
         delivery = output / 'Blast-Circuit-release.json'
         delivery.write_text(json.dumps({'schemaVersion': 1, 'revision': metadata['revision'],

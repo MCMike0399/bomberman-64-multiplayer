@@ -60,7 +60,7 @@ foreach (bool interrupt in new[] { false, true })
     Environment.SetEnvironmentVariable("XDG_DATA_HOME", Path.Combine(preferences, "data"));
     Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", Path.Combine(preferences, "config"));
     Environment.SetEnvironmentVariable("APPDATA", Path.Combine(preferences, "AppData"));
-    if (image) Environment.SetEnvironmentVariable("APPIMAGE_EXTRACT_AND_RUN", "1");
+    if (image) Environment.SetEnvironmentVariable("APPIMAGE_EXTRACT_AND_RUN", null);
     var start = new ProcessStartInfo(image ? target : executable) { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true };
     foreach (string argument in new[] { "--headless", "--", "--smoke", "--smoke-seconds=6" }) start.ArgumentList.Add(argument);
     using var old = Process.Start(start)!;

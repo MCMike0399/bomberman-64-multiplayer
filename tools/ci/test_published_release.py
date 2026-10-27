@@ -13,6 +13,8 @@ from unittest.mock import patch
 import update_from_published
 import verify_published
 import desktop_packages
+import crossplay
+import desktop_validation
 from test_promotion import RELEASE, SHA, write_package, write_server
 from test_release_signing import signer
 
@@ -23,6 +25,9 @@ class PublishedReleaseTests(unittest.TestCase):
             root = Path(temporary)
             assets, trusted = self.signed_release(root)
             for name in desktop_packages.asset_names('linux-x64'):
+                (assets / name).unlink()
+            for name in (crossplay.RECEIPT, desktop_validation.MAC_RECEIPT,
+                         'Blast-Circuit-linux-x64-update.json', 'Blast-Circuit-linux-x64-update.json.sig'):
                 (assets / name).unlink()
             with patch.object(signer, 'ROOT', root), contextlib.redirect_stdout(io.StringIO()):
                 signer.sign(assets / verify_published.ARCHIVE, root / 'fixture.pem', assets, assets / verify_published.SERVER_ARCHIVE)

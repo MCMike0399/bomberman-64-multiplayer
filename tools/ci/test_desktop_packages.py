@@ -82,7 +82,7 @@ class DesktopPackageTests(unittest.TestCase):
         self.item = desktop.names(self.target)
 
     def test_complete_runtime_and_native_exported_smoke_pass(self):
-        desktop.inspect(self.root, SHA, RELEASE)
+        desktop.inspect(self.root, SHA, RELEASE, targets=list(desktop.TARGETS))
 
     def test_linux_executable_permission_is_part_of_the_archive_contract(self):
         target = 'linux-x64'
