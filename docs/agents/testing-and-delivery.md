@@ -858,6 +858,12 @@ Research proposals for parity and delivery (not qualification receipts) are in
   child fails, lacks positive completion or reports no assertions; a later pass
   cannot hide an earlier failure. Diagnostic runner and frozen payload revisions
   are recorded separately.
+  A merge-conflicted isolated PR cannot trigger `pull_request` workflows.
+  Focused diagnostics also accept a push on `qa/three-platform-release` only
+  when `BLAST_DIAGNOSTIC_RUNNER_SHA` equals that exact pushed SHA. Set frozen
+  payload variables separately, arm the runner SHA before pushing, and retain
+  both identities. Ordinary later pushes and main releases do not opt in.
+  This keeps Mac stable independent until planned final integration.
 
 Keep long-running platform QA independent of Mac stable releases: use the
 separate worktree, private exact-SHA drafts, owned matching server and pinned

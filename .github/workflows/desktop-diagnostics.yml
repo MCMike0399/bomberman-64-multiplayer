@@ -1,6 +1,10 @@
 name: Native desktop diagnostics
 
 on:
+  # A conflicted isolated QA PR cannot receive pull_request workflows. Arm only
+  # one exact runner SHA; ordinary QA pushes and main releases do not opt in.
+  push:
+    branches: [qa/three-platform-release]
   pull_request:
     types: [labeled, synchronize]
 
@@ -16,7 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - run: ./tools/packaging/windows-test-desktop.ps1
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
@@ -45,7 +49,7 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
@@ -69,7 +73,7 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
@@ -111,7 +115,7 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
@@ -145,7 +149,9 @@ jobs:
     # Focused graphical online journeys on WARP for exact private-draft payloads.
     # vars.BLAST_DIAGNOSTIC_SHAS lists payload revisions, e.g. a retained failing
     # control and a diagnostic build; runner code is this PR head for both.
-    if: github.event.label.name == 'windows-online-diagnostics' && github.event.pull_request.head.repo.full_name == github.repository
+    if: >-
+      (github.event_name == 'push' && vars.BLAST_DIAGNOSTIC_RUNNER_SHA == github.sha) ||
+      (github.event_name == 'pull_request' && github.event.label.name == 'windows-online-diagnostics' && github.event.pull_request.head.repo.full_name == github.repository)
     strategy:
       fail-fast: false
       matrix:
@@ -157,7 +163,7 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
@@ -193,7 +199,9 @@ jobs:
   crossplay-inputs:
     # Diagnostic three-OS match from one exact private draft (vars.BLAST_CROSSPLAY_SHA),
     # independent of graphical tours. Never a promotion receipt.
-    if: github.event.label.name == 'crossplay-diagnostics' && github.event.pull_request.head.repo.full_name == github.repository
+    if: >-
+      (github.event_name == 'push' && vars.BLAST_DIAGNOSTIC_RUNNER_SHA == github.sha) ||
+      (github.event_name == 'pull_request' && github.event.label.name == 'crossplay-diagnostics' && github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -265,7 +273,7 @@ jobs:
     with:
       mode: candidate
       revision: ${{ needs.crossplay-inputs.outputs.revision }}
-      runner-revision: ${{ github.event.pull_request.head.sha }}
+      runner-revision: ${{ github.event.pull_request.head.sha || github.sha }}
 
   mac-display:
     if: github.event.label.name == 'mac-display-diagnostics' && github.event.pull_request.head.repo.full_name == github.repository
@@ -274,7 +282,7 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - run: python3 tools/packaging/macos-test-display.py
       - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
