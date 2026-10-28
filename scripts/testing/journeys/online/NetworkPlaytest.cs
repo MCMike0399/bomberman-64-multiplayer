@@ -50,8 +50,8 @@ public partial class PlaytestDriver
 
         async Task Until(Func<bool> predicate,string description)
         {
-            var clock=System.Diagnostics.Stopwatch.StartNew();
-            while(!predicate()&&clock.Elapsed.TotalSeconds<45){await Frames(1);await Task.Delay(16);}
+            var clock=System.Diagnostics.Stopwatch.StartNew();ulong startFrame=Godot.Engine.GetProcessFrames();
+            while(!predicate()&&Waiting(clock,45,startFrame)){await Frames(1);await Task.Delay(16);}
             Check(predicate(),description);
         }
     }
@@ -216,8 +216,8 @@ public partial class PlaytestDriver
 
         async Task LobbyUntil(Func<bool> condition)
         {
-            var elapsed=System.Diagnostics.Stopwatch.StartNew();
-            while(elapsed.Elapsed.TotalSeconds<15)
+            var elapsed=System.Diagnostics.Stopwatch.StartNew();ulong startFrame=Godot.Engine.GetProcessFrames();
+            while(Waiting(elapsed,15,startFrame))
             {
                 await Frames(1);await Task.Delay(16);
                 if(condition()){await Frames(2);return;}

@@ -178,6 +178,25 @@ source/release, or different archive, server or download hashes. It also
 requires the tours' completed leaves to equal the catalog's `all` order
 exactly. Every journey, capture, assertion and zero-error check is unchanged;
 only scheduling moves across runners.
+
+Some journeys wait for network or preparation events with wall-clock
+deadlines. On WARP those waits saw as few as 4 frames in 20 seconds. The
+driver's `Waiting` helper keeps hardware deadlines, but on a verified software
+renderer also allows the frames a 30 FPS machine would draw in that time.
+A wedged predicate still fails.
+
+The 2026-10-28 run compared same-label captures with Mac. Windows WARP High
+matched Mac sharpness within 1%. Linux llvmpipe High was blurred across the
+whole 3D scene (about 45% of Mac's edge sharpness), while Low/Medium matched.
+A minimal engine scene with the game's depth-of-field settings isolates the
+cause: on llvmpipe, 2x MSAA halves in-focus sharpness (0.127 to 0.059), while
+the same scene on Apple M5 hardware is unaffected under both Metal and
+Vulkan (MoltenVK) (0.127 either way). This is a Mesa software-driver defect in MSAA depth resolve. The High water
+mirror marches that same resolved depth, so on llvmpipe it never finds the
+scene: its reflection on/off probe differed by 0 pixels even with depth of
+field disabled. The game is unchanged. On verified software renderers only, the
+probe compares reflection on/off with MSAA temporarily disabled. Real Linux GPU drivers still need separate evidence.
+
 The disposable Linux desktop supplies X11 and a PulseAudio null sink. Physical
 speakers, controllers, native performance and Wayland remain separate evidence.
 The disposable Windows fixture selects a real supported 32-bit display mode and

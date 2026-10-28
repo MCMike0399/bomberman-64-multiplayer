@@ -264,6 +264,17 @@ public partial class PlaytestDriver : Node
         _checks.Add(new { description,passed,frame=_frame }); Event("assert",new {description,passed});
         if(!passed)throw new InvalidOperationException("Assertion failed: "+description);
     }
+    // Verified software rasterizers: Mesa's CPU device, or Windows WARP, which
+    // Godot's D3D12 driver reports as IntegratedGpu under this exact name.
+    private static bool SoftwareRenderer=>RenderingServer.GetVideoAdapterType()==RenderingDevice.DeviceType.Cpu||
+        OS.GetName()=="Windows"&&RenderingServer.GetCurrentRenderingDriverName()=="d3d12"&&
+        RenderingServer.GetVideoAdapterName()=="Microsoft Basic Render Driver";
+    // Deadline for "wait until" loops. Hardware keeps the wall-clock deadline.
+    // Hosted WARP can draw about one frame per second, so a software renderer
+    // also gets the frames a 30 FPS machine would draw in that time. A wedged
+    // predicate still fails; this is not native GPU responsiveness evidence.
+    private static bool Waiting(Stopwatch clock,double seconds,ulong firstFrame)=>clock.Elapsed.TotalSeconds<seconds||
+        SoftwareRenderer&&Engine.GetProcessFrames()-firstFrame<(ulong)(seconds*30);
     private void Event(string type,object data) => _trace.WriteLine(JsonSerializer.Serialize(new {frame=_frame,type,data}));
     private Image CapturePixels()
     {

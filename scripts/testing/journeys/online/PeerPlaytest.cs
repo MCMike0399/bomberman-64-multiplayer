@@ -52,8 +52,8 @@ public partial class PlaytestDriver
 
         async Task Until(Func<bool> predicate,string description)
         {
-            var clock=Stopwatch.StartNew();
-            while(!predicate()&&clock.Elapsed<TimeSpan.FromSeconds(20))
+            var clock=Stopwatch.StartNew();ulong startFrame=Godot.Engine.GetProcessFrames();
+            while(!predicate()&&Waiting(clock,20,startFrame))
             {
                 foreach(var peer in peers)
                 {
@@ -101,8 +101,8 @@ public partial class PlaytestDriver
         finally{foreach(var peer in guests)await peer.DisposeAsync();_root.Back();}
         async Task Until(Func<bool> predicate,string description)
         {
-            var clock=Stopwatch.StartNew();
-            while(!predicate()&&clock.Elapsed.TotalSeconds<20)
+            var clock=Stopwatch.StartNew();ulong startFrame=Godot.Engine.GetProcessFrames();
+            while(!predicate()&&Waiting(clock,20,startFrame))
             {
                 host.Advance(1d/30);
                 foreach(var peer in guests)

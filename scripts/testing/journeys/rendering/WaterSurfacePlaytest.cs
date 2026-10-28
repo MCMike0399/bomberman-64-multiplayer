@@ -67,6 +67,17 @@ public partial class PlaytestDriver
                             {
                                 // A clean patch must not be achieved by removing High's mirror.
                                 // Compare stationary columns with the reflection branch alone disabled.
+                                // The mirror marches the resolved MSAA depth texture. Mesa llvmpipe's
+                                // resolved depth is unusable (its depth of field also blurs in-focus
+                                // pixels; hardware Metal and MoltenVK do not), so the march never hits.
+                                // On verified software renderers only, compare both images without MSAA.
+                                var viewport=GetViewport();var msaa=viewport.Msaa3D;bool software=SoftwareRenderer;
+                                if(software)
+                                {
+                                    viewport.Msaa3D=Viewport.Msaa.Disabled;await Frames(6);
+                                    await Capture("water-reflection-on-without-msaa",0);reflected=_screenshots[^1];
+                                    Event("water-reflection-software-msaa",new{adapter=RenderingServer.GetVideoAdapterName(),msaa=msaa.ToString()});
+                                }
                                 shader.Code=clocked.Replace("#define SCENE_REFLECTIONS","",StringComparison.Ordinal);
                                 try
                                 {
@@ -82,7 +93,12 @@ public partial class PlaytestDriver
                                     Event("water-scene-reflection",new{mirrored});
                                     if(mirrored<250)defects.Add($"High lost its visible scene reflection: {mirrored} pixels");
                                 }
-                                finally {shader.Code=clocked;await Frames(3);}
+                                finally
+                                {
+                                    shader.Code=clocked;
+                                    if(software)viewport.Msaa3D=msaa;
+                                    await Frames(3);
+                                }
                             }
                         }
                     }

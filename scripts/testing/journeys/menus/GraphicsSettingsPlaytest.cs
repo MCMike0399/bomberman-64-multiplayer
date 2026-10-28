@@ -360,15 +360,12 @@ public partial class PlaytestDriver
             await KeyPress(Key.Right);
             var warmup=System.Diagnostics.Stopwatch.StartNew();
             // Retained llvmpipe and WARP runs rendered only 14-15 preparation
-            // frames in 20 seconds. Godot reports Windows WARP as IntegratedGpu,
-            // so also recognize that exact D3D12 software adapter. This is a
-            // correctness allowance, not a native GPU responsiveness result.
-            bool software=RenderingServer.GetVideoAdapterType()==RenderingDevice.DeviceType.Cpu||
-                OS.GetName()=="Windows"&&RenderingServer.GetCurrentRenderingDriverName()=="d3d12"&&
-                RenderingServer.GetVideoAdapterName()=="Microsoft Basic Render Driver";
-            double budget=software?180:20;
+            // frames in 20 seconds; WARP once needed 182 seconds for 28 frames.
+            // Software renderers get frame-equivalent time (see Waiting).
+            bool software=SoftwareRenderer;
+            double budget=20;
             ulong firstFrame=Engine.GetProcessFrames();
-            while(_root.GraphicsPreparing&&warmup.Elapsed.TotalSeconds<budget)await Frames(1);
+            while(_root.GraphicsPreparing&&Waiting(warmup,budget,firstFrame))await Frames(1);
             var preparation=new {preset=GraphicsQuality.ToWire(preset),seconds=warmup.Elapsed.TotalSeconds,
                 frames=Engine.GetProcessFrames()-firstFrame,budget,finished=!_root.GraphicsPreparing,
                 software,adapter=RenderingServer.GetVideoAdapterName(),adapterType=RenderingServer.GetVideoAdapterType().ToString()};

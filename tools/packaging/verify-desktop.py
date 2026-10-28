@@ -101,36 +101,44 @@ def main():
             executable.chmod(0o755)
         suite = qa.Suite('desktop', output, 'unused', desktop='shared')
         server = extracted / 'Blast-Circuit-server-dotnet10' / 'Bomber.Server.dll'
+        failures = []
         with suite.server(dll=server) as origin:
             for scenario in [case for case in validation.SHARDED_GRAPHICAL if case in owned] if args.graphical else validation.HEADLESS:
-                previous = set(output.iterdir())
-                command = [sys.executable, str(ROOT / 'tools/playtest/run.py'), '--executable',
-                           str(executable), '--scenario', scenario,
-                           '--output', str(output), '--desktop', 'shared', '--server', origin]
-                command += ['--rendering-driver', settings['driver']] if args.graphical else ['--headless']
-                # Software rendering is slow: retained WARP spent ~90 min in
-                # graphics-settings alone and ~5 min per stage load. Each tour
-                # gets its own process and a bounded allowance below the job limit.
-                heavy = scenario in validation.TOURS or scenario == 'menu-preview'
-                timeout = (12600 if heavy else 5400) if args.software_renderer else 1500
-                if args.software_renderer:command += ['--timeout',str(timeout)]
-                environment = os.environ.copy()
-                if args.target == 'linux-x64':
-                    # Modern AppImage runtime supports extraction on CI without a FUSE mount.
-                    environment['APPIMAGE_EXTRACT_AND_RUN'] = '1'
-                subprocess.run(command, cwd=ROOT, env=environment, check=True, timeout=timeout+300)
-                reports = [folder / 'summary.json' for folder in output.iterdir()
-                           if folder not in previous and (folder / 'summary.json').is_file()]
-                if len(reports) != 1:
-                    raise RuntimeError('Missing unique exported regression report: ' + scenario)
-                report = json.loads(reports[0].read_text())
-                runner = json.loads((reports[0].parent / 'runner-summary.json').read_text())
-                if runner.get('passed') is not True or runner.get('exitCode') != 0 or runner.get('errors') != []:
-                    raise RuntimeError('Exported runner failed: ' + scenario)
-                report['runtimeErrors'] = runner.get('runtimeErrors')
-                if 'displayRestart' in runner: report['displayRestart'] = runner['displayRestart']
-                validation.inspect_report(report, scenario, settings, revision, release, args.graphical)
-                cases.append(report)
+                # Keep running this runner's remaining cases after a failure so one
+                # native run reports every failing case; the receipt still fails.
+                try:
+                    previous = set(output.iterdir())
+                    command = [sys.executable, str(ROOT / 'tools/playtest/run.py'), '--executable',
+                               str(executable), '--scenario', scenario,
+                               '--output', str(output), '--desktop', 'shared', '--server', origin]
+                    command += ['--rendering-driver', settings['driver']] if args.graphical else ['--headless']
+                    # Software rendering is slow: retained WARP spent ~90 min in
+                    # graphics-settings alone and ~5 min per stage load. Each tour
+                    # gets its own process and a bounded allowance below the job limit.
+                    heavy = scenario in validation.TOURS or scenario == 'menu-preview'
+                    timeout = (12600 if heavy else 5400) if args.software_renderer else 1500
+                    if args.software_renderer:command += ['--timeout',str(timeout)]
+                    environment = os.environ.copy()
+                    if args.target == 'linux-x64':
+                        # Modern AppImage runtime supports extraction on CI without a FUSE mount.
+                        environment['APPIMAGE_EXTRACT_AND_RUN'] = '1'
+                    subprocess.run(command, cwd=ROOT, env=environment, check=True, timeout=timeout+300)
+                    reports = [folder / 'summary.json' for folder in output.iterdir()
+                               if folder not in previous and (folder / 'summary.json').is_file()]
+                    if len(reports) != 1:
+                        raise RuntimeError('Missing unique exported regression report: ' + scenario)
+                    report = json.loads(reports[0].read_text())
+                    runner = json.loads((reports[0].parent / 'runner-summary.json').read_text())
+                    if runner.get('passed') is not True or runner.get('exitCode') != 0 or runner.get('errors') != []:
+                        raise RuntimeError('Exported runner failed: ' + scenario)
+                    report['runtimeErrors'] = runner.get('runtimeErrors')
+                    if 'displayRestart' in runner: report['displayRestart'] = runner['displayRestart']
+                    validation.inspect_report(report, scenario, settings, revision, release, args.graphical)
+                    cases.append(report)
+                except (RuntimeError, subprocess.SubprocessError) as error:
+                    failures.append(scenario + ': ' + str(error))
+            if failures:
+                raise RuntimeError('Exported regression failed: ' + '; '.join(failures))
         receipt = {'schemaVersion': 2, 'passed': True, 'target': args.target, 'revision': revision,
                    'release': release, 'archiveSha256': desktop.digest(directory / item['archive']),
                    'serverSha256': desktop.digest(directory / 'Blast-Circuit-server-dotnet10.zip'),

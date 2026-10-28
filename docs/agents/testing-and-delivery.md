@@ -768,7 +768,10 @@ Change tour boundaries only in `assets/testing/scenarios.json` and runner
 grouping only in `desktop_validation.SOFTWARE_PARTS`; contracts reject gaps,
 repeats or reordering. A leaf that needs a predecessor's state belongs inside
 the same tour. To reproduce a failed part locally, run its tour with
-`run.py --scenario tour-NN`.
+`run.py --scenario tour-NN`. A part runs all of its cases even after one
+fails, so a single run reports every failure. Use `PlaytestDriver.Waiting`
+for new "wait until" loops; it gives verified software renderers
+frame-equivalent time. Fixed-duration measurements must stay wall-clock.
 
 Keep long-running platform QA independent of Mac stable releases: use the
 separate worktree, private exact-SHA drafts, owned matching server and pinned
