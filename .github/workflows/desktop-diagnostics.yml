@@ -150,8 +150,9 @@ jobs:
     # vars.BLAST_DIAGNOSTIC_SHAS lists payload revisions, e.g. a retained failing
     # control and a diagnostic build; runner code is this PR head for both.
     if: >-
-      (github.event_name == 'push' && vars.BLAST_DIAGNOSTIC_RUNNER_SHA == github.sha) ||
-      (github.event_name == 'pull_request' && github.event.label.name == 'windows-online-diagnostics' && github.event.pull_request.head.repo.full_name == github.repository)
+      vars.BLAST_DIAGNOSTIC_SHAS != '[]' &&
+      ((github.event_name == 'push' && vars.BLAST_DIAGNOSTIC_RUNNER_SHA == github.sha) ||
+      (github.event_name == 'pull_request' && github.event.label.name == 'windows-online-diagnostics' && github.event.pull_request.head.repo.full_name == github.repository))
     strategy:
       fail-fast: false
       matrix:

@@ -150,6 +150,10 @@ def main():
                     report.get('platform') != SYSTEMS[args.target][1] or report.get('renderingDriver') != SYSTEMS[args.target][2] or
                     report.get('renderingMethod') != 'forward_plus' or not report.get('adapter')):
                 raise RuntimeError('Mixed-platform gameplay/renderer evidence failed: ' + ', '.join(errors))
+            if (output / 'crossplay-committed.json').exists():
+                committed = (output / 'crossplay-committed.json').read_bytes()
+                if (output / 'crossplay.json').read_bytes() != committed or (output / 'crossplay-actions.json').read_bytes() != committed:
+                    raise RuntimeError('Final crossplay receipt differs from its immutable completed-action witness')
             state = json.loads((output / 'crossplay.json').read_text())
             if state.get('passed') is not True or state.get('role') != args.target: raise RuntimeError('Missing target crossplay witness')
             origin = json.loads(args.origin.read_text())

@@ -49,6 +49,31 @@ public partial class PlaytestDriver
         }
         finally{Input(0,default);_root.Back();await Frames(4);}
     }
+    private static JsonElement CommitCrossplayWitness(Func<object> capture)
+    {
+        var snapshot=JsonSerializer.SerializeToElement(capture());
+        if(snapshot.GetProperty("hosting").GetString()!="cluster")throw new InvalidDataException("Completed witness did not use cluster authority");
+        var roster=snapshot.GetProperty("roster").EnumerateArray().Select(x=>x.GetString()!).ToHashSet(StringComparer.Ordinal);
+        if(roster.Count!=3||!roster.SetEquals(snapshot.GetProperty("moved").EnumerateArray().Select(x=>x.GetString()!))||
+            !roster.SetEquals(snapshot.GetProperty("bombOwners").EnumerateArray().Select(x=>x.GetString()!)))
+            throw new InvalidDataException("Completed witness lacks the same three actors/actions");
+        return snapshot;
+    }
+    private Task CrossplayWitnessLifetime()
+    {
+        var actors=new[]{"a","b","c"};
+        var source=new Dictionary<string,object>{["hosting"]="cluster",["match"]=2,["epoch"]=6,["roster"]=actors,["moved"]=actors,["bombOwners"]=actors};
+        var committed=CommitCrossplayWitness(()=>source);
+        actors[0]="changed-after-commit";
+        source["hosting"]="auto";source["match"]=99;source["epoch"]=100;source["roster"]=new[]{"c"};
+        var serialized=JsonSerializer.SerializeToElement(committed);
+        Check(serialized.GetProperty("hosting").GetString()=="cluster"&&serialized.GetProperty("match").GetInt32()==2&&serialized.GetProperty("epoch").GetInt32()==6,
+            "post-commit lobby mutation cannot rewrite the completed authority/match witness");
+        Check(serialized.GetProperty("roster").GetArrayLength()==3&&serialized.GetProperty("roster")[0].GetString()=="a","completed witness retains original cohort after nested mutation and peer teardown");
+        bool rejected=false;try{CommitCrossplayWitness(()=>source);}catch(InvalidDataException){rejected=true;}
+        Check(rejected,"a witness actually committed under auto/lobby authority is rejected");
+        return Task.CompletedTask;
+    }
     private async Task CrossPlatformQuickPlayCore()
     {
         var args = OS.GetCmdlineUserArgs();
@@ -118,7 +143,7 @@ public partial class PlaytestDriver
         var moved = new HashSet<string>(); var bombOwners = new HashSet<string>();
         var directions=State.GetProperty("players").EnumerateArray().ToDictionary(p=>p.GetProperty("id").GetString()!,SafeNetworkNudge);
         var firstAcks=State.GetProperty("players").EnumerateArray().ToDictionary(p=>p.GetProperty("id").GetString()!,p=>p.GetProperty("ack").GetInt64());
-        int observedRound=State.GetProperty("round").GetInt32();
+        int observedRound=State.GetProperty("round").GetInt32(),observedMatch=session.Party!.Match,observedEpoch=session.Party.Epoch;
         long actionAt = deadline + 14000;
         await ObserveUntil(() => State.GetProperty("serverTime").GetInt64() >= actionAt, 20);
         // Establish a persistent accepted bomb before moving. Both the injected
@@ -150,16 +175,27 @@ public partial class PlaytestDriver
         Check(State.GetProperty("players").GetArrayLength() == 3, "late matchmaking cannot change this match roster");
         long lastTime = State.GetProperty("serverTime").GetInt64();
         int snapshots = _root.SnapshotCount - firstSnapshots;
-        File.WriteAllText(Path.Combine(_output, "crossplay-actions.json"), JsonSerializer.Serialize(new { passed = true, role, lobbyId = lobby, deadline }));
-        await Until(() => File.Exists(Path.Combine(_output, "finish")), "all three clients finish before any original participant leaves", 120);
-        File.WriteAllText(Path.Combine(_output, "crossplay.json"), JsonSerializer.Serialize(new {
+        // Commit all match evidence before announcing readiness for peer cleanup.
+        // Party/state can legitimately return to lobby while the finish file travels.
+        var committedParty=session.Party??throw new InvalidDataException("Missing party at witness commit");
+        var committedState=State.Clone();
+        Check(committedParty.Phase=="playing"&&committedParty.Match==observedMatch&&committedParty.Epoch==observedEpoch&&
+            committedState.GetProperty("phase").GetInt32()==1&&committedState.GetProperty("round").GetInt32()==observedRound&&
+            committedState.GetProperty("players").EnumerateArray().Select(p=>p.GetProperty("id").GetString()).Order().SequenceEqual(roster),
+            "completed witness remains in the same active match, round and cohort");
+        var committed=CommitCrossplayWitness(()=>new {
             passed = true, role, platform = OS.GetName(), lobbyId = lobby, roster, initialDeadline = initial,
             deadline, resetObserved = deadline > initial + 2000, moved = moved.Order().ToArray(), bombOwners = bombOwners.Order().ToArray(),
             snapshots, firstServerTime = firstTime, firstGameplayServerTime = _root.FirstNetworkStateServerTime,
-            lastServerTime = lastTime, lateExcluded,
-            hosting = session.Party?.Hosting,
+            lastServerTime = lastTime, lateExcluded,hosting=committedParty.Hosting,match=committedParty.Match,epoch=committedParty.Epoch,
+            round=committedState.GetProperty("round").GetInt32(),authority=committedState,
+            captures=_screenshots.Select(path=>new{file=Path.GetFileName(path),sha256=ReplayHash(File.ReadAllBytes(path))}).ToArray(),
             driver = RenderingServer.GetCurrentRenderingDriverName(), method = RenderingServer.GetCurrentRenderingMethod(), adapter = RenderingServer.GetVideoAdapterName()
-        }, new JsonSerializerOptions { WriteIndented = true }));
+        });
+        File.WriteAllText(Path.Combine(_output,"crossplay-committed.json"),committed.GetRawText());
+        File.WriteAllText(Path.Combine(_output,"crossplay-actions.json"),committed.GetRawText());
+        await Until(() => File.Exists(Path.Combine(_output, "finish")), "all three observers commit required match evidence before cleanup is permitted", 120);
+        File.WriteAllText(Path.Combine(_output,"crossplay.json"),committed.GetRawText());
         CrossplayMark("finished");RecordProgress();
 
         string[] Roster() => _root.LatestParty is { } raw

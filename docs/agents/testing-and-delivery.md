@@ -825,6 +825,21 @@ and network failure diagnostics, and the owned server logs, are uploaded with
 CI artifacts. Candidate crossplay starts once exact downloads and the Mac
 archive exist; trusted main still waits for every smoke job. It records
 per-phase timings for budget decisions.
+Crossplay commits one immutable witness (authority/match/round/actors/actions,
+server-time bounds, renderer and capture references) BEFORE publishing its action
+readiness artifact. The finish barrier permits cleanup once all observers committed
+their evidence; it does not promise simultaneous exits. Final serialization uses
+that frozen witness. A lobby transition during teardown cannot rewrite recorded
+cluster hosting; an actual auto-hosted witness is still rejected. The diagnostic
+`crossplay-witness-lifetime` regression mutates the source after commit.
+
+The `visual-parity` fixture uses the full production ArenaView at original
+High/native scale/2×MSAA/Circle-jitter-on/SSIL. It records fresh render-buffer
+history, explicit zero-step draws/readbacks, actual resource inventories and
+package-bound manifests. Same-draw/fresh-target/fresh-process equality and
+DOF/mirror negative controls are separate from gameplay and hardware claims.
+[Recipe, provenance and limits](../full-high-capture.md). A source image with
+matching pixels but no package provenance remains diagnostic, not qualification.
 
 The diagnostic `authority-replay` leaf executes the shipped `LocalMatch` at
 exact ticks and writes complete ordered observable messages plus separate math/RNG

@@ -1650,6 +1650,26 @@
       "headless": true,
       "timeout": 60,
       "manual": false
+    },
+    {
+      "id": "crossplay-witness-lifetime",
+      "method": "CrossplayWitnessLifetime",
+      "domains": [
+        "network"
+      ],
+      "headless": true,
+      "timeout": 30,
+      "manual": false
+    },
+    {
+      "id": "visual-parity",
+      "method": "VisualParity",
+      "domains": [
+        "rendering"
+      ],
+      "headless": false,
+      "timeout": 240,
+      "manual": false
     }
   ]
 }
