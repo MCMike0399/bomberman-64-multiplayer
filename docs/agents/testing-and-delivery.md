@@ -730,8 +730,14 @@ actual capture pixels; headless mode only establishes gameplay/geometry checks.
 `shore-blast` is the tight standalone shoreline case. `visual-regression` runs
 fourteen affected rendering/stage journeys, keeping first-use preparation first.
 Inspect the actual before/after images separately from numeric checks. The
-complete graphical catalog has a 1500-second budget with the additional journey;
-per-case focus, readiness and render-preparation deadlines are unchanged.
+complete graphical catalog defaults to a 1500-second budget. Archived Mac
+verification allows 2400 seconds for the complete tour: the hosted Metal run on
+2026-10-28 reached journey 56/61 with 459 captures and no engine errors before
+the old overall cutoff. Its last capture was still advancing seconds before
+termination. This changes only the suite allowance; per-case focus, readiness
+and render-preparation deadlines are unchanged. Timeout remains a failure, and
+promotion still requires every leaf in order, positive assertions and zero
+engine errors. Candidate and trusted Mac jobs retain `progress.json` for diagnosis.
 
 Source verification on 2026-10-26: the rebuilt export passed the fourteen-journey
 visual regression with 1,758 assertions, 202 captures and zero runtime errors or

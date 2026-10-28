@@ -149,7 +149,8 @@ jobs:
     name: Packaged Mac regression
     needs: candidate-assets
     runs-on: macos-15
-    timeout-minutes: 60
+    # Full archived tour (40 min), separate updater transactions, setup/upload.
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -180,6 +181,7 @@ jobs:
             artifacts/Blast-Circuit-macos-arm64-regression.json
             artifacts/Blast-Circuit-macos-arm64-regression-details/**/summary.json
             artifacts/Blast-Circuit-macos-arm64-regression-details/**/runner-summary.json
+            artifacts/Blast-Circuit-macos-arm64-regression-details/**/progress.json
             artifacts/*-regression-details/**/peer-capacity-diagnostics.json
             artifacts/*-regression-details/**/display-restart.json
             artifacts/Blast-Circuit-macos-arm64-regression-details/**/runtime.log

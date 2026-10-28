@@ -48,7 +48,11 @@ def main():
                 command = [sys.executable, str(ROOT / 'tools/playtest/run.py'), '--app', str(app),
                            '--scenario', scenario, '--server', origin, '--desktop', 'shared', '--output', str(output)]
                 command += ['--rendering-driver', 'metal'] if graphical else ['--headless']
-                subprocess.run(command, cwd=ROOT, check=True, timeout=1800)
+                # The hosted Metal run was still capturing journey 56/61 at
+                # the catalog's 1500-second cutoff. Allow the complete archive
+                # tour to finish without changing any journey's own waits.
+                if scenario == 'all': command += ['--timeout', '2400']
+                subprocess.run(command, cwd=ROOT, check=True, timeout=2700 if scenario == 'all' else 1800)
                 reports = [p / 'summary.json' for p in output.iterdir() if p not in previous and (p / 'summary.json').exists()]
                 if len(reports) != 1: raise RuntimeError('Missing unique Mac exported scenario receipt')
                 report = json.loads(reports[0].read_text())
