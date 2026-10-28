@@ -166,3 +166,21 @@ The Linux-only `depth-diagnostics.yml` runs only on the isolated QA branch and e
 `BLAST_DEPTH_RUNNER_SHA`. Its purpose is to distinguish raw samples, resolved depth
 and later focus reconstruction before selecting a driver/engine remedy; no preset,
 shader or production engine change follows from a subsystem's name alone.
+
+The first Linux resource run (`40782793580`) records zero in **every** raw MSAA
+sample and resolved pixel at post-transparent. Its MSAA-off control records the
+expected depths at all three planes; M5 records those depths in both cases. The
+checker planes remain visibly rendered. This is a bounded resource observation,
+not yet a driver-versus-engine attribution. Tagged4.7.2 performs its final depth
+resolve before this callback ([render order](https://github.com/godotengine/godot/blob/4.7.2-stable/servers/rendering/renderer_rd/forward_clustered/render_forward_clustered.cpp#L2431-L2458)).
+
+A third, separately labeled process adds pre-opaque and post-opaque observers,
+retaining the post-transparent observer. All still leave resolve-request flags
+disabled. This distinguishes already-invalid prepass samples from later loss and
+also exposes observer-induced synchronization changes. It must not be treated as
+a production fix if merely observing earlier makes the later output correct.
+All three stages reproduce expected depths on the M5. Each stage requires its
+own complete data; a missing stage fails collection. The initial missing-stage
+prototype was rejected because mutating a returned compositor-array property did
+not register the new effects; explicit setter publication resolves that fixture
+bug. The original two-process Linux receipt remains unchanged.

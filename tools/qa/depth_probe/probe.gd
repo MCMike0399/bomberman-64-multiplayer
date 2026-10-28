@@ -6,6 +6,7 @@ class DepthEffect extends CompositorEffect:
     var calls := 0
     var armed := false
     var multisampled := true
+    var stage_label := "post-transparent"
     func _init():
         effect_callback_type = EFFECT_CALLBACK_TYPE_POST_TRANSPARENT
         access_resolved_depth = false # Observe existing resource; do not force an extra resolve.
@@ -60,12 +61,13 @@ result.values[p.y*s.x+p.x]=vec4(texelFetch(raw_depth,p,0).r,texelFetch(raw_depth
             "planes":[{"pixel":[115,128],"worldDepth":5.0},{"pixel":[192,128],"worldDepth":10.0},{"pixel":[269,128],"worldDepth":20.0}],
             "camera":{"projection":"orthographic","near":0.1,"far":100.0,"size":10.0},
             "ssao":true,"ssil":true,"dof":"Circle/Low/jitterOn/amount0.075/near7.5transition2/far12transition10",
-            "stage":"post-transparent; built-in postprocessing follows; no explicit resolve request",
+            "stage":stage_label+"; no explicit resolve request",
             "engine":Engine.get_version_info(),"bytes":bytes.size(),"driver":RenderingServer.get_current_rendering_driver_name(),"device":RenderingServer.get_video_adapter_name()}
         file=FileAccess.open(output_dir + "/depth-resources.json",FileAccess.WRITE); file.store_string(JSON.stringify(metadata,"  ")); file.close()
         for rid in [uniform_set,output,sampler,pipeline,shader]: rd.free_rid(rid)
 
 var effect: DepthEffect
+var extra_effects: Array[DepthEffect]=[]
 var output_dir: String
 func _initialize():
     output_dir=OS.get_cmdline_user_args()[0]
@@ -79,6 +81,12 @@ func run():
     environment.environment.ssao_enabled=true;environment.environment.ssil_enabled=true
     effect=DepthEffect.new();effect.output_dir=output_dir;effect.multisampled=root.msaa_3d==Viewport.MSAA_2X
     environment.compositor=Compositor.new();environment.compositor.compositor_effects=[effect];scene.add_child(environment)
+    if OS.get_cmdline_user_args().has("--stage-history"):
+        for stage in [["pre-opaque",CompositorEffect.EFFECT_CALLBACK_TYPE_PRE_OPAQUE],["post-opaque",CompositorEffect.EFFECT_CALLBACK_TYPE_POST_OPAQUE]]:
+            var observer:=DepthEffect.new();observer.stage_label=stage[0];observer.effect_callback_type=stage[1]
+            observer.output_dir=output_dir+"/"+stage[0];DirAccess.make_dir_recursive_absolute(observer.output_dir)
+            extra_effects.append(observer)
+        environment.compositor.compositor_effects=[extra_effects[0],extra_effects[1],effect]
     var camera:=Camera3D.new();camera.projection=Camera3D.PROJECTION_ORTHOGONAL;camera.size=10;camera.near=.1;camera.far=100
     var attributes:=CameraAttributesPractical.new();attributes.dof_blur_amount=.075
     attributes.dof_blur_near_enabled=true;attributes.dof_blur_near_distance=7.5;attributes.dof_blur_near_transition=2
@@ -94,10 +102,11 @@ func run():
     create_timer(60).timeout.connect(func(): quit(3))
     for i in 24: await process_frame
     effect.armed=true
+    for observer in extra_effects: observer.armed=true
     var deadline:=Time.get_ticks_msec()+20000
     while not FileAccess.file_exists(output_dir+"/depth-resources.json") and Time.get_ticks_msec()<deadline:await process_frame
     await RenderingServer.frame_post_draw
     root.get_texture().get_image().save_png(output_dir+"/scene.png")
     print("DEPTH_PROBE ", FileAccess.file_exists(output_dir+"/depth-resources.json"))
-    root.remove_child(scene);scene.free();effect=null
+    root.remove_child(scene);scene.free();effect=null;extra_effects.clear()
     quit(0 if FileAccess.file_exists(output_dir+"/depth-resources.json") else 1)

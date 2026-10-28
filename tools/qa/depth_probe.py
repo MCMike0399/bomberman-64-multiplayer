@@ -44,7 +44,7 @@ def run(godot, output, driver):
     report = {'diagnosticOnly': True, 'claim': 'Pinned-editor resource localization; not the shipped game, pixel parity, or release approval.',
               'collected': False, 'engineExecutableSha256': engine_sha, 'cases': []}
     try:
-        for label, args in [('msaa-2x', []), ('msaa-off-control', ['--no-msaa'])]:
+        for label, args in [('msaa-2x', []), ('msaa-off-control', ['--no-msaa']), ('msaa-2x-stage-history', ['--stage-history'])]:
             case = output / label; case.mkdir()
             command = [str(godot), '--path', str(ROOT / 'tools/qa/depth_probe'), '--script', 'probe.gd', '--windowed',
                        '--rendering-method', 'forward_plus', '--rendering-driver', driver, '--audio-driver', 'Dummy', '--', str(case), *args]
@@ -54,8 +54,10 @@ def run(godot, output, driver):
             if process.returncode or re.search(r'(^|\n)(ERROR:|SCRIPT ERROR:|FATAL:)', raw):
                 raise RuntimeError('Depth probe did not complete cleanly: ' + label)
             evidence = inspect(case)
-            if evidence['metadata']['rawSamples'] != (1 if not args else 0):
+            if evidence['metadata']['rawSamples'] != (0 if '--no-msaa' in args else 1):
                 raise ValueError('Depth probe used an unexpected sample count')
+            if '--stage-history' in args:
+                evidence['stageHistory'] = {stage: inspect(case / stage) for stage in ('pre-opaque', 'post-opaque')}
             report['cases'].append({'name': label, **evidence})
         report['collected'] = True
     except (OSError, ValueError, RuntimeError, KeyError, subprocess.SubprocessError) as error:
