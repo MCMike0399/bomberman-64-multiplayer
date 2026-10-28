@@ -275,6 +275,15 @@ public partial class PlaytestDriver : Node
     // predicate still fails; this is not native GPU responsiveness evidence.
     private static bool Waiting(Stopwatch clock,double seconds,ulong firstFrame)=>clock.Elapsed.TotalSeconds<seconds||
         SoftwareRenderer&&Engine.GetProcessFrames()-firstFrame<(ulong)(seconds*30);
+    private sealed class FrameSubscription(SceneTree tree,Action pump):IDisposable
+    {
+        private bool _active=Subscribe(tree,pump);
+        private static bool Subscribe(SceneTree tree,Action pump){tree.ProcessFrame+=pump;return true;}
+        public void Dispose(){if(_active){tree.ProcessFrame-=pump;_active=false;}}
+    }
+    // Discards a fixture session's queued messages every engine frame; tests
+    // still read its socket-published Party state.
+    private IDisposable DrainEachFrame(NetworkSession session)=>new FrameSubscription(GetTree(),()=>session.DrainMessages());
     private void Event(string type,object data) => _trace.WriteLine(JsonSerializer.Serialize(new {frame=_frame,type,data}));
     private Image CapturePixels()
     {

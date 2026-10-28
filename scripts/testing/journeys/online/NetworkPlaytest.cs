@@ -17,6 +17,10 @@ public partial class PlaytestDriver
         await Results();
         var settings=new SessionSettings(Bots:0,Wins:1,Ghosts:false){Hosting="server"};
         await using var owner=await NetworkSession.ConnectAsync(new Uri(_server),"Map selection owner",settings,NetworkMode.CreatePrivate);
+        // This fixture owner has no game loop. Drain it each frame as GameRoot
+        // drains the player's session; a ~15 minute software-rendered match
+        // otherwise overflowed its control queue and handed the room to the guest.
+        using var drainOwner=DrainEachFrame(owner);
         await _root.StartOnlineAsync(new Uri(_server),"Map selection guest",settings,NetworkMode.JoinCode,owner.JoinCode,appearance:5);
         var guest=(NetworkSession)_root.ActiveSession!;
         string? code=guest.JoinCode,lobby=guest.LobbyId;
@@ -37,7 +41,7 @@ public partial class PlaytestDriver
         // Party is published by the socket worker before GameRoot drains that
         // message on the next engine frame. Require the actual menu state too.
         await Until(()=>menu.OnlineSettings.Stage=="rock-garden","guest map preview follows accepted room settings");
-        await owner.DisposeAsync();
+        drainOwner.Dispose();await owner.DisposeAsync();
         await Until(()=>guest.IsLeader&&!NamedButton("StageSelector").Disabled,"room ownership transfer enables map selection for the new host");
         Check(NamedButton("LaunchMatch").Disabled,"host cannot start without another human or CPU");
         NamedButton("CPUrivals").GrabFocus();await KeyPress(Key.Right);

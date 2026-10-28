@@ -11,6 +11,15 @@ public partial class PlaytestDriver
 {
     private async Task PeerRooms()
     {
+        if(SoftwareRenderer)
+        {
+            // A fresh software-rendered process stalls for seconds on its first
+            // Top Rules load, beyond the 6-second peer host lease. Hardware and
+            // the single-process Mac tour already have these pipelines warm.
+            _root.StartLocal(new SessionSettings(Stage:"top-rules",Bots:0),1,practice:true);
+            await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"software renderer warms the peer arena",900);
+            _root.Back();await Frames(3);
+        }
         _root.Navigate("Online"); await Frames(3); await Capture("peer-online-options");
         Check(_root.FindChildren("*","",true,false).OfType<Godot.Button>().Any(b=>b.IsVisibleInTree()&&b.Text=="Create private room") && _root.FindChildren("*","",true,false).OfType<Godot.Button>().Any(b=>b.IsVisibleInTree()&&b.Text=="Play online"),"online screen offers automatic private rooms and public matchmaking");
         await _root.StartOnlineAsync(new Uri(_server),"Peer host",new SessionSettings(Stage:"top-rules",Bots:0,Wins:1),NetworkMode.CreatePeer);
@@ -22,6 +31,19 @@ public partial class PlaytestDriver
         await using var third=await NetworkSession.ConnectAsync(new Uri(_server),"Peer third",new SessionSettings(Bots:0),NetworkMode.JoinCode,host.JoinCode,peerFactory:()=>new GodotPeerLink(useStun:!new Uri(_server).IsLoopback));
         var peers=new[]{second,third};
         var states=new Dictionary<string,JsonElement>();
+        // Real clients advance every engine frame. Pump these fixture peers the
+        // same way, including between waits; a fixture that becomes host would
+        // otherwise miss heartbeats while slow frames render.
+        void Pump()
+        {
+            foreach(var peer in peers)
+            {
+                peer.Advance(1d/30);
+                foreach(var message in peer.DrainMessages())
+                    if(message.GetProperty("t").GetString()=="state")states[peer.PlayerId!]=message.GetProperty("d").Clone();
+            }
+        }
+        using var pump=new FrameSubscription(GetTree(),Pump);
         await Until(()=>host.Party?.CanStart==true&&peers.All(p=>p.Party?.CanStart==true)&&NamedButton("StartRoom").IsVisibleInTree()&&!NamedButton("StartRoom").Disabled,"three peers join lobby and the rendered start control is ready");
         await ActivateNamed("StartRoom");
         await Until(()=>host.PeerTransport=="Direct P2P"&&peers.All(p=>p.PeerTransport=="Direct P2P")&&_root.LatestState is {} s&&s.GetProperty("phase").GetInt32()==1,"actual encrypted WebRTC channels connect");
@@ -47,22 +69,13 @@ public partial class PlaytestDriver
         Check(second.LobbyId==third.LobbyId,"host takeover keeps the room identity");
         Event("peer-transport",new {second=second.PeerTransport,third=third.PeerTransport,epoch=second.Party!.Epoch});
         await Capture("peer-host-takeover-complete");
-        await second.DisposeAsync();await third.DisposeAsync();
+        pump.Dispose();await second.DisposeAsync();await third.DisposeAsync();
         await PeerFullRoom();
 
         async Task Until(Func<bool> predicate,string description)
         {
             var clock=Stopwatch.StartNew();ulong startFrame=Godot.Engine.GetProcessFrames();
-            while(!predicate()&&Waiting(clock,20,startFrame))
-            {
-                foreach(var peer in peers)
-                {
-                    peer.Advance(1d/30);
-                    foreach(var message in peer.DrainMessages())
-                        if(message.GetProperty("t").GetString()=="state")states[peer.PlayerId!]=message.GetProperty("d").Clone();
-                }
-                await Frames(1);await Task.Delay(16);
-            }
+            while(!predicate()&&Waiting(clock,20,startFrame))await Frames(1);
             if(!predicate())File.WriteAllText(Path.Combine(_output,"peer-room-diagnostics.json"),JsonSerializer.Serialize(new{description,host=PeerDiagnostics(host),peers=peers.Select(PeerDiagnostics)},new JsonSerializerOptions{WriteIndented=true}));
             Check(predicate(),description);
         }

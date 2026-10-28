@@ -147,9 +147,10 @@ public partial class PlaytestDriver
                     if(color.R>.35f&&color.R>color.G*1.4f&&color.R>color.B*1.6f)fire++;
                 }
                 Event("shore-water-probe",new{center=center.ToString(),radius,world=world.ToString(),pixel=pixel.ToString(),water=LightingArena.WaterHeight,fire});
-                // Waves and MSAA can move the intersection through one five-pixel
-                // row. Missing depth fills the entire 5x5 patch with fire instead.
-                Check(fire<=5,"water occludes submerged fire beyond the moving shoreline edge");
+                // Waves and MSAA move the intersection through this patch: retained
+                // Mac captures put the edge at rows 629-633 by wave phase (3 rows).
+                // Missing depth fills the entire 5x5 patch (25) with fire instead.
+                Check(fire<=15,"water occludes submerged fire beyond the moving shoreline edge");
             }
         }
         finally{camera.Transform=pose;Input(0,default);_root.Back();await Frames(3);}

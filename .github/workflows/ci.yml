@@ -563,6 +563,8 @@ jobs:
             artifacts/*-regression-details/**/graphics-preparation.json
             artifacts/*-regression-details/**/progress.json
             artifacts/*-regression-details/**/display-restart.json
+            artifacts/*-regression-details/**/peer-room-diagnostics.json
+            artifacts/*-regression-details/**/leaf-memory.json
             artifacts/*-regression-details/**/junit.xml
             artifacts/*-regression-details/**/runtime.log
             artifacts/*-regression-details/**/*.png
@@ -636,6 +638,8 @@ jobs:
             artifacts/*-regression-details/**/progress.json
             artifacts/*-regression-details/**/peer-capacity-diagnostics.json
             artifacts/*-regression-details/**/display-restart.json
+            artifacts/*-regression-details/**/peer-room-diagnostics.json
+            artifacts/*-regression-details/**/leaf-memory.json
             artifacts/*-regression-details/**/junit.xml
             artifacts/*-regression-details/**/runtime.log
             artifacts/*-regression-details/**/*.png
@@ -676,6 +680,8 @@ jobs:
             artifacts/Blast-Circuit-macos-arm64-regression-details/**/graphics-preparation.json
             artifacts/*-regression-details/**/peer-capacity-diagnostics.json
             artifacts/*-regression-details/**/display-restart.json
+            artifacts/*-regression-details/**/peer-room-diagnostics.json
+            artifacts/*-regression-details/**/leaf-memory.json
             artifacts/Blast-Circuit-macos-arm64-regression-details/**/runtime.log
             artifacts/Blast-Circuit-macos-arm64-regression-details/**/*.png
           retention-days: 14

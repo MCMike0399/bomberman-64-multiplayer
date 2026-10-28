@@ -131,9 +131,19 @@ public partial class ArcadeMenu
         }
     }
 
+    private bool _partyRefreshQueued;
     public void ShowParty(JsonElement data,string? localPlayer)
     {
         _party=data.Clone();_localPlayer=localPlayer;_countdown=null;
+        // Each rebuild recreates every member's 3D preview viewport. Several
+        // statuses can arrive in one slow frame; render only the latest, once.
+        if(_partyRefreshQueued)return;
+        _partyRefreshQueued=true;Callable.From(RefreshParty).CallDeferred();
+    }
+    private void RefreshParty()
+    {
+        _partyRefreshQueued=false;
+        if(_party is not {} data)return;
         var lobby=JsonSerializer.SerializeToElement(new {state="open",players=data.GetProperty("players")});
         ShowLobby(lobby,_roomCode,"Connected");
     }
