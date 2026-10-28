@@ -1,3 +1,35 @@
+# v0.44.1 delivered
+
+Published **2026-10-28 22:46:05 UTC**: [v0.44.1 / signed update](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.44.1).
+[PR #71](https://github.com/MCMike0399/bomberman-64-multiplayer/pull/71)
+fixes Blizzard Battle moving-wall deaths falling through to the burned animation:
+`avalanche` and `columns` now share the existing crush effect. Blizzard Battle,
+Greedy Trap and Top Rules retain focused [screenshots and provenance](images/avalanche-crush-fix/README.md).
+Identity: **v0.44.1/build 55/schema 6**, source
+`b5479a437ff89a7f751c9bc05338f97985bc2682`, token `6/0.44.1/55`.
+
+- Focused source headless checks passed (31 assertions); rebuilt export on the
+  isolated macOS Metal desktop passed 32 assertions with 13 screenshots and no
+  runtime errors/warnings. Agent-inspected art is not user approval.
+- Local public and full managed/network profiles and workflow lint passed.
+  [Trusted Verification 40780597731](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40780597731)
+  passed public, managed/network, headless, package and both archived-client gates.
+  All nine preset/display startup cases passed; update from v0.44.0 passed install,
+  deliberate failed-launch rollback and saved High/fullscreen on attempt one.
+  The optional full Metal journey lane was skipped.
+- [Rollout and public verification 40782111597](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40782111597)
+  passed. Public, primary and fallback all verified the exact identity and real
+  connections/room placement without deferral. Anonymous verification checked all
+  ten assets, both P-256 signatures, latest stable, tag/source identity and byte
+  equality with CI archives. Retained artifacts: `deployment-receipt`,
+  `published-release-receipt`, `release-gate-startup`, `release-gate-update`.
+  No local app installation or physical-controller certification was performed.
+
+Archive SHA-256:
+
+- Mac: `38fc9887454a8fa030314076020656fa99cbe29742c167651d46a4dfb7d88642`
+- Server: `05daf41cb91dec8fd747d88088f2f41370991a2148052d7c4acf78fe88468058`
+
 # v0.44.0 delivered
 
 Published **2026-10-28 19:38:21 UTC**: [v0.44.0 / signed update](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.44.0).
