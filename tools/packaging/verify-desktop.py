@@ -36,7 +36,7 @@ def main():
     parser.add_argument('--directory', type=Path, default=ROOT / 'artifacts')
     parser.add_argument('--graphical', action='store_true', help='Run every graphical gameplay/UI/network journey on an owned desktop')
     parser.add_argument('--disposable-desktop', action='store_true', help='Confirm this Windows VM/profile is reserved for installer tests')
-    parser.add_argument('--software-renderer', action='store_true', help='Allow a bounded two-hour all-suite on a verified CPU or Windows WARP renderer; provides no native GPU performance evidence')
+    parser.add_argument('--software-renderer', action='store_true', help='Allow a bounded five-hour all-suite on a verified CPU or Windows WARP renderer; provides no native GPU performance evidence')
     args = parser.parse_args()
     if args.software_renderer and not args.graphical:
         parser.error('--software-renderer requires --graphical')
@@ -85,7 +85,11 @@ def main():
                            str(executable), '--scenario', scenario,
                            '--output', str(output), '--desktop', 'shared', '--server', origin]
                 command += ['--rendering-driver', settings['driver']] if args.graphical else ['--headless']
-                timeout=7200 if args.software_renderer and scenario=='all' else 1500
+                # Retained llvmpipe run reached frame 25230 in 7179 seconds;
+                # the complete matching Mac tour took 58692 frames. Keep a
+                # bounded allowance for that actual software-rendering work.
+                software_timeouts={'all':18000,'menu-preview':3600}
+                timeout=software_timeouts.get(scenario,1500) if args.software_renderer else 1500
                 if args.software_renderer:command += ['--timeout',str(timeout)]
                 environment = os.environ.copy()
                 if args.target == 'linux-x64':

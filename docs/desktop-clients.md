@@ -150,11 +150,19 @@ devices retain 20 seconds. Windows D3D12 also recognizes the exact
 [WARP software adapter](https://learn.microsoft.com/en-us/windows/win32/direct3ddxgi/d3d10-graphics-programming-guide-dxgi)
 as `IntegratedGpu` and drew only 15 preparation frames before the 20-second
 deadline. Other integrated GPUs retain the hardware allowance. The explicit
-software-renderer full-suite runner allows two hours for `all` and rejects
+software-renderer full-suite runner allows five hours for `all`, one hour for
+`menu-preview`, and rejects
 receipts identifying neither a CPU device nor that exact Windows/D3D12 WARP
 adapter. The retained Linux failure drew only 14 preparation frames in the
 ordinary 20-second budget. These allowances change test scheduling, not game
 graphics or loading behavior, and cannot certify native GPU responsiveness.
+The retained 2026-10-28 Linux run reached 25,230 frames and 3,643 assertions
+in 7,179 seconds, still advancing through `aim-inputs` when the old two-hour
+suite limit terminated it. The matching successful Mac tour needed 58,692
+frames; extrapolating the observed Linux rate gives roughly 4 hours 40 minutes.
+The five-hour suite and six-hour job bounds allow that work while preserving
+every journey, capture, assertion and error check. This is a scheduling
+estimate; only an actual complete passing run qualifies the candidate.
 The disposable Linux desktop supplies X11 and a PulseAudio null sink. Physical
 speakers, controllers, native performance and Wayland remain separate evidence.
 The disposable Windows fixture selects a real supported 32-bit display mode and

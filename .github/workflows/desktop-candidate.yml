@@ -45,10 +45,10 @@ jobs:
         include:
           - target: windows-x64
             runner: windows-2025
-            timeout: 210
+            timeout: 360
           - target: linux-x64
             runner: ubuntu-24.04
-            timeout: 210
+            timeout: 360
     runs-on: ${{ matrix.runner }}
     timeout-minutes: ${{ matrix.timeout }}
     steps:

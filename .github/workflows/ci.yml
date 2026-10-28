@@ -341,7 +341,7 @@ jobs:
     name: Exported windows-x64 smoke
     needs: [windows-package, managed]
     runs-on: windows-2025
-    timeout-minutes: 210
+    timeout-minutes: 360
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -440,7 +440,7 @@ jobs:
     name: Exported linux-x64 smoke
     needs: [linux-package, managed]
     runs-on: ubuntu-24.04
-    timeout-minutes: 210
+    timeout-minutes: 360
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
