@@ -39,15 +39,27 @@ public partial class PlaytestDriver
             var native=NativePeer(second,host.PlayerId!);
             Check(native is not null,"second peer exposes its native link to the host");
             int epoch=second.Party!.Epoch;
-            native!.Close();
-            Event("peer-native-close",new{from=second.PlayerId,to=host.PlayerId,epoch,generation=second.ConnectionGeneration});
+            string injection=Guid.NewGuid().ToString("N");
+            void Mark(string stage)
+            {
+                var marker=new{injection,stage,utcMs=DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),frame=Engine.GetProcessFrames(),epoch,
+                    from=second.PlayerId,to=host.PlayerId};
+                GD.Print("QA_NATIVE_LINK_FAULT "+JsonSerializer.Serialize(marker));Event("peer-native-fault-stage",marker);
+            }
+            Mark("begin");native!.Close();Mark("closed");
+            Event("peer-native-close",new{from=second.PlayerId,to=host.PlayerId,epoch,generation=second.ConnectionGeneration,injection});
             Check(await Until(()=>second.PeerTransport!="Direct P2P",20),"terminal native close leaves direct transport");
             long before=latest!.Value.GetProperty("serverTime").GetInt64();
             Check(await Until(()=>latest!.Value.GetProperty("serverTime").GetInt64()>before+2000&&second.Party?.Epoch==epoch,30),
                 "authoritative state continues over relay in the same match after a terminal close");
             bool recovered=await Until(()=>host.PeerTransport=="Direct P2P"&&second.PeerTransport=="Direct P2P",60);
+            Mark(recovered?"recovered":"not-recovered");
             Record(recovered?"recovered":"not-recovered");
             Check(recovered,"direct transport recovers after a terminal native link close");
+            await Capture("peer-link-recovered");
+            Check(host.PeerTransport=="Direct P2P"&&second.PeerTransport=="Direct P2P"&&second.Party?.Epoch==epoch&&_root.ScreenName=="Match",
+                "recovered direct links and the same match survive the actual capture");
+            Record("recovered-after-capture");Mark("capture-complete");
         }
         catch(InvalidOperationException){if(!File.Exists(Path.Combine(_output,"peer-link-recovery.json")))Record("failed");throw;}
         finally{live.Dispose();_root.Back();await Frames(3);}

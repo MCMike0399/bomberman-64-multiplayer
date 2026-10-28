@@ -34,6 +34,9 @@ public sealed partial class NetworkSession : ISession
     private PlayerInput _input;
     private readonly Queue<(bool A, bool B, bool R, bool Aim, bool Stop)> _buttons = new();
     private long _sequence;
+    /// <summary>Latest allocated outgoing input sequence; an authority ack at or
+    /// beyond it establishes that a diagnostic observation is fresh.</summary>
+    public long InputSequence => Volatile.Read(ref _sequence);
     private int _disposed;
     private int _appearance;
     private int _appearancePending, _startPending;

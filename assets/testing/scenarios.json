@@ -1142,6 +1142,16 @@
       "manual": false
     },
     {
+      "id": "network-input-pulse",
+      "method": "NetworkInputPulse",
+      "domains": [
+        "network"
+      ],
+      "headless": true,
+      "timeout": 120,
+      "manual": false
+    },
+    {
       "id": "top-rules",
       "method": "TopRulesTour",
       "domains": [

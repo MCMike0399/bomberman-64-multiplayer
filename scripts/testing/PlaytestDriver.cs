@@ -290,6 +290,41 @@ public partial class PlaytestDriver : Node
         await Task.Run(async()=>{await Task.Delay(milliseconds).ConfigureAwait(false);connection.SendInput(0,hold);});
         await Frames(1);
     }
+    private async Task<long> NetworkPulse(NetworkSession connection,PlayerInput press,PlayerInput hold=default,int milliseconds=100)
+    {
+        if(milliseconds is <1 or >1000)throw new ArgumentOutOfRangeException(nameof(milliseconds));
+        if(!ReferenceEquals(_root.ActiveSession,connection))throw new InvalidOperationException("Input pulse requires its owned active session");
+        int generation=connection.ConnectionGeneration;
+        Input(0,hold);
+        long started=Stopwatch.GetTimestamp(),expires=started+(long)(Stopwatch.Frequency*milliseconds/1000d);
+        // The engine thread checks the same expiry before republishing. A late
+        // frame must never resurrect movement after the socket worker released it.
+        _root.InjectInputProvider(0,()=>Stopwatch.GetTimestamp()<expires?press:hold);
+        connection.SendInput(0,press);
+        async Task<double> Release()
+        {
+            await Task.Delay(milliseconds).ConfigureAwait(false);
+            if(connection.ConnectionGeneration==generation)connection.SendInput(0,hold); // thread-safe; no engine calls here
+            return Stopwatch.GetElapsedTime(started).TotalMilliseconds;
+        }
+        var released=Release();
+        long sequence;
+        try
+        {
+            double actual=await released;sequence=connection.InputSequence;
+            await Frames(1);
+            Event("network-input-pulse",new{requestedMs=milliseconds,releasedMs=actual,resumedMs=Stopwatch.GetElapsedTime(started).TotalMilliseconds,
+                sequence,x=press.X,z=press.Z,primary=press.A,carry=press.B,holdCarry=hold.B});
+        }
+        finally
+        {
+            await released;
+            if(ReferenceEquals(_root.ActiveSession,connection)&&connection.ConnectionGeneration==generation)Input(0,hold);
+        }
+        if(!ReferenceEquals(_root.ActiveSession,connection)||connection.ConnectionGeneration!=generation)
+            throw new InvalidOperationException("Input pulse session changed before its observation");
+        return sequence;
+    }
     // The single owner of a game-loop-free fixture session: advance and drain it
     // like a 30 FPS client on the engine thread (Godot peer polling stays there),
     // never faster in uncapped headless frames. Messages go to onMessage; others

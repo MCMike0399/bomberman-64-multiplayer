@@ -634,7 +634,24 @@ validation rejects a lengthened lease on any non-software receipt.
 Online test robots that press a button for N frames turn a tap into a
 multi-second hold on software renderers, and a held A charges a throw. Use
 `NetworkTap`: it sends the press edge immediately and releases it 100 ms
-later in wall time. On llvmpipe, `post-match` played six drawn rounds before
+later in wall time.
+For crossplay movement use `NetworkPulse`: one owner controls the injected
+provider and socket intent. The provider checks a monotonic expiry before every
+frame publication; a worker releases transport input without engine calls. It
+records requested/release/resume times and the outgoing sequence. Observe an
+authority acknowledgement beyond that sequence before judging a pulse; after a
+long frame, a newer snapshot can still predate the command. `network-input-pulse`
+is a diagnostic leaf outside release suites. The old frame controller moved
+4.23 cells for a short tap under a one-second stall; the bounded pulse moved
+0.45 cells with a two-second stall and retained carry beyond a full bomb fuse.
+Crossplay selects a short supported inward path from actual stage/cover/actor
+state, creates a carried bomb first, and only counts fresh healthy movement
+along that intent. It holds carry through the cohort barrier. Failure retains
+`crossplay-progress.json`; deliberate frame-stall receipts remain unqualified.
+Personal Quick Play Settings is opened while alone; the second client joins
+while it is open, so the unchanged real minute starts immediately before the
+return check instead of being consumed by screenshots. Starting a match while
+Settings is open is a separate phase transition, not evidence of a reset. On llvmpipe, `post-match` played six drawn rounds before
 this fix and now ends in 6 frames, as on Mac.
 
 For the combined v0.28 release, `stage-fidelity` is the focused fresh-process suite for all reconstructed arenas, explosion presentation and tutorial. The complete `all` suite and package gate remain the release regression. [Combined receipts](../stages-release-028.md).
@@ -831,7 +848,11 @@ Research proposals for parity and delivery (not qualification receipts) are in
   ignored. Attempts reset when the coordinator reports a new member connection.
   Healthy,
   transiently disconnected and relay paths are left alone. Pinned
-  webrtc-native cannot re-offer a closed peer.
+  webrtc-native cannot re-offer a closed peer. The forced-close diagnostic emits
+  UTC/frame/injection markers into both runtime and trace logs and captures the
+  recovered real scene. Its deliberate fault remains outside release suites;
+  functional assertions and generic zero-error/graphical verdicts are separate.
+  A native SCTP error without timing correlation is not a clean qualification.
   Focused Windows diagnostics include this leaf alongside `network` and
   `peer-rooms`. The runner retains every case and exits unsuccessfully if any
   child fails, lacks positive completion or reports no assertions; a later pass

@@ -12,6 +12,11 @@ public partial class PlaytestDriver
     private async Task CrossPlatformQuickPlay()
     {
         Check(!_headless, "three-platform Quick Play uses the real platform renderer");
+        try{await CrossPlatformQuickPlayCore();}
+        finally{Input(0,default);_root.Back();await Frames(4);}
+    }
+    private async Task CrossPlatformQuickPlayCore()
+    {
         var args = OS.GetCmdlineUserArgs();
         string role = args.FirstOrDefault(a => a.StartsWith("--crossplay-role="))?.Split('=', 2)[1] ?? throw new InvalidOperationException("Missing crossplay role");
         string barrier = args.FirstOrDefault(a => a.StartsWith("--crossplay-release="))?.Split('=', 2)[1] ?? throw new InvalidOperationException("Missing crossplay release barrier");
@@ -66,26 +71,27 @@ public partial class PlaytestDriver
         var positions = State.GetProperty("players").EnumerateArray().ToDictionary(p => p.GetProperty("id").GetString()!,
             p => new Vector2(p.GetProperty("x").GetSingle(), p.GetProperty("z").GetSingle()));
         var moved = new HashSet<string>(); var bombOwners = new HashSet<string>();
+        var directions=State.GetProperty("players").EnumerateArray().ToDictionary(p=>p.GetProperty("id").GetString()!,SafeNetworkNudge);
+        var firstAcks=State.GetProperty("players").EnumerateArray().ToDictionary(p=>p.GetProperty("id").GetString()!,p=>p.GetProperty("ack").GetInt64());
+        int observedRound=State.GetProperty("round").GetInt32();
         long actionAt = deadline + 14000;
         await ObserveUntil(() => State.GetProperty("serverTime").GetInt64() >= actionAt, 20);
-        foreach (var direction in new[] { Vector2.Right, Vector2.Down, Vector2.Left, Vector2.Up })
-        {
-            if (moved.Contains(session.PlayerId!)) break;
-            Input(0, new PlayerInput(direction.X, direction.Y));
-            var clock = Stopwatch.StartNew();
-            while (clock.Elapsed.TotalSeconds < .8 && !moved.Contains(session.PlayerId!))
-            { await Frames(1); await Task.Delay(16); Observe(); }
-        }
-        Input(0, default);
-        Check(moved.Contains(session.PlayerId!), "ordinary local movement is accepted by the shared authority");
-        await ObserveUntil(() => State.GetProperty("serverTime").GetInt64() >= actionAt + 6000, 15);
-        // Hold carry plus primary is a normal input path. Keep its fuse paused
-        // while the other OS clients finish observing the same accepted bomb.
-        Input(0, new PlayerInput(0, 0, B: true)); await Frames(2); await Task.Delay(120);
-        Input(0, new PlayerInput(0, 0, A: true, B: true));
-        await Frames(2); await Task.Delay(120); Observe(); Input(0, new PlayerInput(0, 0, B: true));
+        // Establish a persistent accepted bomb before moving. Both the injected
+        // input and socket baseline retain carry until the final cohort barrier.
+        var carry=new PlayerInput(0,0,B:true);
+        await NetworkPulse(session,new PlayerInput(0,0,A:true,B:true),carry);
+        await ObserveUntil(()=>bombOwners.Contains(session.PlayerId!),15);
+        Check(true,"a healthy local actor owns and carries an accepted bomb");
+        var direction=directions[session.PlayerId!];
+        long movementSequence=await NetworkPulse(session,new PlayerInput(direction.X,direction.Y,B:true),carry);
+        await ObserveUntil(()=>moved.Contains(session.PlayerId!)&&State.GetProperty("players").EnumerateArray()
+            .Single(p=>p.GetProperty("id").GetString()==session.PlayerId).GetProperty("ack").GetInt64()>movementSequence,15);
+        Check(true,"ordinary local movement is accepted by the shared authority without leaving supported ground");
         await ObserveUntil(() => players.All(bombOwners.Contains) && players.All(moved.Contains), 20);
         Check(true, "every platform observes movement and accepted bombs from all three players");
+        Check(State.GetProperty("players").EnumerateArray().All(HealthyNetworkActor)&&players.All(id=>
+            State.GetProperty("bombs").EnumerateArray().Any(b=>b.GetProperty("ownerId").GetString()==id&&b.GetProperty("carrierId").GetString()==id)),
+            "all three healthy actors retain their own carried bombs through the action barrier");
         Check(_root.SnapshotCount - firstSnapshots > 4 && State.GetProperty("serverTime").GetInt64() - firstTime > 5000,
             "all clients observe advancing authoritative gameplay");
         await Capture("crossplay-three-os-gameplay");
@@ -109,7 +115,7 @@ public partial class PlaytestDriver
             hosting = session.Party?.Hosting,
             driver = RenderingServer.GetCurrentRenderingDriverName(), method = RenderingServer.GetCurrentRenderingMethod(), adapter = RenderingServer.GetVideoAdapterName()
         }, new JsonSerializerOptions { WriteIndented = true }));
-        _root.Back(); await Frames(4);
+        RecordProgress();
 
         string[] Roster() => _root.LatestParty is { } raw
             ? LobbyStatus.Parse(raw).Players.Where(p => p.Connected).Select(p => p.Id).Order().ToArray() : [];
@@ -128,21 +134,33 @@ public partial class PlaytestDriver
         }
         void Observe()
         {
-            foreach (var player in State.GetProperty("players").EnumerateArray())
+            var state=State;
+            if(state.GetProperty("round").GetInt32()!=observedRound||state.GetProperty("phase").GetInt32()!=1)
+                throw new InvalidOperationException("Crossplay actions must stay in the same live round");
+            var actors=state.GetProperty("players").EnumerateArray().ToDictionary(p=>p.GetProperty("id").GetString()!);
+            foreach (var (id,player) in actors)
             {
-                string id = player.GetProperty("id").GetString()!;
-                if (positions.TryGetValue(id, out var initialPosition) && initialPosition.DistanceTo(new(player.GetProperty("x").GetSingle(), player.GetProperty("z").GetSingle())) > .12f)
+                if(!HealthyNetworkActor(player)||!positions.TryGetValue(id,out var initialPosition))continue;
+                var displacement=new Vector2(player.GetProperty("x").GetSingle(),player.GetProperty("z").GetSingle())-initialPosition;
+                var direction=directions[id];
+                if(state.GetProperty("serverTime").GetInt64()>=actionAt&&player.GetProperty("ack").GetInt64()>firstAcks[id]&&
+                    displacement.Dot(direction)>.12f&&displacement.Length()<1&&Math.Abs(displacement.Cross(direction))<.2f)
                     moved.Add(id);
             }
-            foreach (var bomb in State.GetProperty("bombs").EnumerateArray())
-                if (bomb.TryGetProperty("ownerId", out var owner) && owner.GetString() is { } id) bombOwners.Add(id);
+            foreach (var bomb in state.GetProperty("bombs").EnumerateArray())
+                if (bomb.TryGetProperty("ownerId",out var owner)&&owner.GetString() is {} id&&
+                    bomb.TryGetProperty("carrierId",out var carrier)&&carrier.GetString()==id&&
+                    actors.TryGetValue(id,out var actor)&&HealthyNetworkActor(actor)&&actor.GetProperty("carrying").GetString()=="bomb")bombOwners.Add(id);
         }
+        void RecordProgress()=>File.WriteAllText(Path.Combine(_output,"crossplay-progress.json"),JsonSerializer.Serialize(new{
+            role,deadline,observedRound,moved=moved.Order(),bombOwners=bombOwners.Order(),state=State,
+            connection=session.ConnectionEvents},new JsonSerializerOptions{WriteIndented=true}));
         async Task ObserveUntil(Func<bool> condition, double seconds)
         {
             var clock = Stopwatch.StartNew();
             while (!condition())
             {
-                if (clock.Elapsed.TotalSeconds > seconds) throw new TimeoutException("Three-platform movement/bomb witness timed out");
+                if (clock.Elapsed.TotalSeconds > seconds){RecordProgress();throw new TimeoutException("Three-platform movement/bomb witness timed out");}
                 await Frames(1); await Task.Delay(16); Observe();
             }
         }

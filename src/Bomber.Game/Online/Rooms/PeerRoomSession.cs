@@ -15,6 +15,9 @@ public sealed class PeerRoomSession(GameSessionOptions options, bool stableRoste
     private readonly Dictionary<string, long> _budgetNotices = [];
     private void Trace(string text) => (trace ?? PeerRoomTrace.None).Write($"peer-room {options.LobbyId} epoch={_epoch} phase={_phase} host={_host ?? "-"} {text}");
     private readonly HashSet<string> _ready = [];
+    // A transport disconnect and its later grace-expiry removal describe one
+    // loss. The latter must not cancel a match already started by the survivors.
+    private readonly HashSet<string> _disconnected = [];
     private readonly HashSet<string> _incompatible = [];
     private readonly Dictionary<string, DateTimeOffset> _handshakes = [];
     private readonly Dictionary<string, (long Window, int Bytes)> _budgets = [];
@@ -38,7 +41,7 @@ public sealed class PeerRoomSession(GameSessionOptions options, bool stableRoste
     {
         if (stableRoster && _phase == "playing")
         { c.Kick(p.PlayerId, "This match has started. Join again when the room returns to its lobby."); return; }
-        _members[p.PlayerId] = p; _order.TryAdd(p.PlayerId, ++_serial);
+        _members[p.PlayerId] = p; _disconnected.Remove(p.PlayerId); _order.TryAdd(p.PlayerId, ++_serial);
         _handshakes[p.PlayerId] = c.Now;
         // A changed roster starts a new epoch; existing rounds cannot admit uninitialised peers.
         if (_phase == "playing") Reset("A player joined. Start a fresh match when everyone is ready.");
@@ -46,21 +49,28 @@ public sealed class PeerRoomSession(GameSessionOptions options, bool stableRoste
     }
     public override void OnPlayerLeft(ISessionContext c, RealtimePlayer p, LeaveReason reason)
     {
-        _members.Remove(p.PlayerId); _order.Remove(p.PlayerId); _appearances.Remove(p.PlayerId);
+        if (!_members.Remove(p.PlayerId)) return;
+        bool affectsMatch = !_disconnected.Remove(p.PlayerId);
+        _order.Remove(p.PlayerId); _appearances.Remove(p.PlayerId);
         _expiredHosts.Remove(p.PlayerId); _budgets.Remove(p.PlayerId);
         _ready.Remove(p.PlayerId); _handshakes.Remove(p.PlayerId); _incompatible.Remove(p.PlayerId);
-        Changed(c, p.PlayerId, false);
+        Changed(c, p.PlayerId, false, affectsMatch);
     }
     public override void OnPlayerConnectionChanged(ISessionContext c, RealtimePlayer p, bool connected)
     {
-        if (connected) { _expiredHosts.Remove(p.PlayerId); _handshakes[p.PlayerId] = c.Now; }
-        else _ready.Remove(p.PlayerId);
-        Changed(c, p.PlayerId, connected);
+        if (!_members.ContainsKey(p.PlayerId)) return;
+        bool changed = connected ? _disconnected.Remove(p.PlayerId) : _disconnected.Add(p.PlayerId);
+        if (changed)
+        {
+            if (connected) { _expiredHosts.Remove(p.PlayerId); _handshakes[p.PlayerId] = c.Now; }
+            else _ready.Remove(p.PlayerId);
+        }
+        Changed(c, p.PlayerId, connected, changed);
     }
-    private void Changed(ISessionContext c, string id, bool connected)
+    private void Changed(ISessionContext c, string id, bool connected, bool affectsMatch)
     {
         Trace($"member player={id} connected={connected}");
-        if (_phase == "playing" && (!stableRoster || id == _host)) Reset(connected
+        if (affectsMatch && _phase == "playing" && (!stableRoster || id == _host)) Reset(connected
             ? "A player reconnected. The interrupted match was discarded; start again with the restored roster."
             : id == _host ? "Host left. A new host is taking over; the interrupted match was discarded."
             : "A player disconnected. The interrupted match was discarded.");

@@ -103,8 +103,12 @@ public partial class GameRoot
 
     public void InjectInput(int seat,PlayerInput? input)
     {
-        if(input is { } value)_injected[seat]=value;else _injected.Remove(seat);
+        if(input is { } value)_injected[seat]=()=>value;else _injected.Remove(seat);
     }
+
+    // QA providers may expire a synthetic hold before a stalled frame republishes it.
+    // Real device sampling remains in PlayerControls.
+    public void InjectInputProvider(int seat,Func<PlayerInput> input)=>_injected[seat]=input;
 
     private void ContinueAfterResults()
     {

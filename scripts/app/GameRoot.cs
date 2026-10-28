@@ -24,7 +24,7 @@ public partial class GameRoot : Node3D
     private BlastCircuit.Audio.BattleAudio _uiAudio=null!;
     private ISession? _session;
     private CancellationTokenSource? _connectCancel;
-    private readonly Dictionary<int,PlayerInput> _injected=[];
+    private readonly Dictionary<int,Func<PlayerInput>> _injected=[];
     private bool _connecting,_practice,_setupForHost,_smoke,_editingRoom;
     private string _capture="gameplay";
     private string? _smokeOutput;
@@ -343,7 +343,7 @@ public partial class GameRoot : Node3D
         if(ScreenName=="Match" && !(_tutorialLessonId is not null && _tutorialHud.Finished))for(int i=0;i<session.LocalPlayerCount;i++)
         {
             var playerId=session is NetworkSession network?network.PlayerId:$"local-{i}";
-            var input=_injected.TryGetValue(i,out var injected)?injected:WithPointer(PlayerControls.Read(i,session.LocalPlayerCount),i,playerId);
+            var input=_injected.TryGetValue(i,out var injected)?injected():WithPointer(PlayerControls.Read(i,session.LocalPlayerCount),i,playerId);
             session.SendInput(i,input);
             if(playerId!=null)_arena.SetLocalInput(playerId,input);
         }

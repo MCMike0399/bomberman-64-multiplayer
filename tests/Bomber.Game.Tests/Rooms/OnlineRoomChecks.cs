@@ -10,6 +10,7 @@ internal static class OnlineRoomChecks
     {
         int passed = 0;
         void Check(bool condition, string name) { if (!condition) throw new Exception("FAIL " + name); passed++; }
+        ConnectionLifecycleChecks(Check);
         var legacy=new Context();var legacyRoom=new PeerRoomSession(new("legacy","blast-peer",legacy.Settings,64));
         var legacyHost=legacy.Add("old-host",0);var legacyGuest=legacy.Add("old-guest",1);
         foreach(var p in new[]{legacyHost,legacyGuest})
@@ -128,6 +129,54 @@ internal static class OnlineRoomChecks
         void Send(RealtimePlayer player,string type,object data)=>room.OnMessage(c,player,new(type,JsonSerializer.SerializeToElement(data),null,c.Now));
         JsonElement Status()=>c.Frames.Last(f=>f.Type=="party.status").Data;
     }
+    private static void ConnectionLifecycleChecks(Action<bool,string> check)
+    {
+        foreach(bool stable in new[]{false,true})
+        {
+            var c=new Context();var room=new PeerRoomSession(new("grace","blast-peer",c.Settings,64),stableRoster:stable);
+            var a=c.Add("a",0);var b=c.Add("b",1);var d=c.Add("c",2);
+            void Send(RealtimePlayer p,string type,object data)=>room.OnMessage(c,p,new(type,JsonSerializer.SerializeToElement(data),null,c.Now));
+            JsonElement Status()=>c.Frames.Last(f=>f.Type=="party.status").Data;
+            foreach(var p in new[]{a,b,d}){room.OnPlayerJoined(c,p);Send(p,"peer.hello",new{version=OnlineProtocol.Revision});}
+            Send(a,"party.start",new{});
+            c.Connected.Remove(a.PlayerId);room.OnPlayerConnectionChanged(c,a,false);
+            check(Status().GetProperty("leaderId").GetString()==b.PlayerId&&Status().GetProperty("phase").GetString()=="lobby","old authority loss elects the next live host");
+            Send(b,"party.start",new{});
+            int epoch=Status().GetProperty("epoch").GetInt32(),match=Status().GetProperty("match").GetInt32();
+            for(int seconds=1;seconds<=20;seconds++)
+            {c.Tick=seconds*30;Send(b,"peer.heartbeat",new{epoch});room.OnTick(c);}
+            room.OnPlayerConnectionChanged(c,a,false);
+            check(Status().GetProperty("phase").GetString()=="playing"&&Status().GetProperty("epoch").GetInt32()==epoch,
+                "duplicate disconnect while the old seat is retained cannot cancel the successor's match");
+            room.OnPlayerLeft(c,a,LeaveReason.Disconnected);
+            check(Status().GetProperty("phase").GetString()=="playing"&&Status().GetProperty("epoch").GetInt32()==epoch&&
+                Status().GetProperty("match").GetInt32()==match&&Status().GetProperty("leaderId").GetString()==b.PlayerId,
+                "late final removal of the disconnected old host preserves its successor's live match");
+            check(Status().GetProperty("players").EnumerateArray().Select(p=>p.GetProperty("playerId").GetString()).Order().SequenceEqual(new[]{"b","c"}),
+                "expired old host is removed from the roster without changing the current cohort");
+            room.OnPlayerLeft(c,a,LeaveReason.Disconnected);room.OnPlayerConnectionChanged(c,a,false);
+            check(Status().GetProperty("phase").GetString()=="playing"&&Status().GetProperty("epoch").GetInt32()==epoch,
+                "duplicate old-seat disconnect/removal notifications cannot reset a later match");
+            c.Frames.Clear();Send(b,"peer.state",new{epoch,to=d.PlayerId,payload=new{t="state",d=new{}}});
+            check(c.Frames.Count==1&&c.Frames[0].Recipient==d.PlayerId,"successor continues relaying authoritative state after old-seat expiry");
+            c.Connected.Remove(d.PlayerId);room.OnPlayerConnectionChanged(c,d,false);
+            check(Status().GetProperty("phase").GetString()==(stable?"playing":"lobby"),
+                "active guest loss retains the stable-roster policy and cancels an ordinary peer match");
+        }
+        foreach(bool stable in new[]{false,true})foreach(bool hostLeaves in new[]{false,true})
+        {
+            var c=new Context();var room=new PeerRoomSession(new("direct-leave","blast-peer",c.Settings,64),stableRoster:stable);
+            var players=new[]{c.Add("a",0),c.Add("b",1),c.Add("c",2)};
+            void Send(RealtimePlayer p,string type,object data)=>room.OnMessage(c,p,new(type,JsonSerializer.SerializeToElement(data),null,c.Now));
+            JsonElement Status()=>c.Frames.Last(f=>f.Type=="party.status").Data;
+            foreach(var p in players){room.OnPlayerJoined(c,p);Send(p,"peer.hello",new{version=OnlineProtocol.Revision});}
+            Send(players[0],"party.start",new{});var leaving=players[hostLeaves?0:1];
+            c.Connected.Remove(leaving.PlayerId);room.OnPlayerLeft(c,leaving,LeaveReason.Left);
+            check(Status().GetProperty("phase").GetString()==(stable&&!hostLeaves?"playing":"lobby"),
+                "direct departure without a prior disconnect still follows host/guest match policy");
+        }
+    }
+
     private sealed class Context : ISessionContext
     {
         public string LobbyId=>"peer"; public string GameId=>"blast-peer";

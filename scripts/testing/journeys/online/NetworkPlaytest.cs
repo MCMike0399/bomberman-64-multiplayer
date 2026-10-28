@@ -199,19 +199,26 @@ public partial class PlaytestDriver
         Check(!NamedButton("StartRoom").Visible&&!NamedButton("EditRoomSettings").Visible,"anonymous public owner has no manual-start or rule-edit controls");
         Check(VisibleText(_root).Contains("Shared rules")&&!VisibleText(_root).Contains("Room owner:"),"public lobby explains shared rules without presenting an anonymous owner as an operator");
         await Capture("quick-play-waiting-alone");
+        // Open personal Settings while alone. Start the real minute only once
+        // the expensive page transition has completed, then test the return
+        // before captures consume that minute on a software renderer.
+        await ActivateNamed("LobbySettings");
+        Check(_root.ScreenName=="Settings"&&ReferenceEquals(first,_root.ActiveSession),"personal settings keep the lone Quick Play session");
         await using var second=await NetworkSession.ConnectAsync(new Uri(_server),"Quick Play second",new SessionSettings(Bots:0),NetworkMode.QuickPlay);
         using var liveSecond=KeepFixtureLive(second);
         await LobbyUntil(()=>first.Party?.StartAt is not null);
+        var observed=first.DeadlineObserved;
         long initial=first.Party!.StartAt!.Value;
+        Check(observed?.StartAt==initial,"the first public deadline is coherently received while Settings is open");
+        await KeyPress(Key.Escape);
+        Check(_root.ScreenName=="Lobby"&&ReferenceEquals(first,_root.ActiveSession)&&first.Party?.StartAt==initial,
+            "personal settings return to the same public countdown without resetting it");
         Check(second.LobbyId==first.LobbyId,"graphical Quick Play joins the same real matchmade lobby");
         Check(VisibleText(_root).Contains("Battle begins in "),"public lobby renders the authoritative countdown");
         string before=VisibleText(_root);
         await Task.Delay(1200);await Frames(3);
         Check(VisibleText(_root)!=before&&_root.ScreenName=="Lobby"&&_root.LatestState is null,"visible countdown advances while gameplay remains stopped");
         await Capture("quick-play-two-players-countdown");
-        await ActivateNamed("LobbySettings");await KeyPress(Key.Escape);await Frames(3);
-        Check(_root.ScreenName=="Lobby"&&ReferenceEquals(first,_root.ActiveSession)&&first.Party?.StartAt==initial,
-            "personal settings return to the same public countdown without resetting it");
         await using var third=await NetworkSession.ConnectAsync(new Uri(_server),"Quick Play third",new SessionSettings(Bots:0),NetworkMode.QuickPlay);
         using var liveThird=KeepFixtureLive(third);
         await LobbyUntil(()=>first.Party?.StartAt>initial);
