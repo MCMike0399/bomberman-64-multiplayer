@@ -584,69 +584,382 @@
       "script": true
     },
     {
-      "id": "all",
+      "id": "tour-01",
       "steps": [
         "first-use-rendering",
-        "render-surface-startup",
+        "render-surface-startup"
+      ],
+      "domains": [
+        "performance",
+        "rendering",
+        "ui"
+      ],
+      "headless": false,
+      "timeout": 300,
+      "manual": false
+    },
+    {
+      "id": "tour-02",
+      "steps": [
         "map-preview-loading",
         "performance-metrics",
-        "display-settings",
-        "graphics-settings",
+        "display-settings"
+      ],
+      "domains": [
+        "performance",
+        "rendering",
+        "settings",
+        "ui"
+      ],
+      "headless": false,
+      "timeout": 540,
+      "manual": false
+    },
+    {
+      "id": "tour-03",
+      "steps": [
+        "graphics-settings"
+      ],
+      "domains": [
+        "rendering",
+        "settings",
+        "ui"
+      ],
+      "headless": false,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "tour-04",
+      "steps": [
         "advanced-settings",
-        "ui-layout",
-        "cover-layout",
+        "ui-layout"
+      ],
+      "domains": [
+        "gameplay",
+        "rendering",
+        "settings",
+        "ui"
+      ],
+      "headless": false,
+      "timeout": 360,
+      "manual": false
+    },
+    {
+      "id": "tour-05",
+      "steps": [
+        "cover-layout"
+      ],
+      "domains": [
+        "ai",
+        "assets",
+        "gameplay"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "tour-06",
+      "steps": [
         "sandbox",
         "party-polish",
-        "player-settings",
-        "stage-lighting",
+        "player-settings"
+      ],
+      "domains": [
+        "assets",
+        "gameplay",
+        "input",
+        "mechanics",
+        "rendering",
+        "settings",
+        "ui"
+      ],
+      "headless": false,
+      "timeout": 480,
+      "manual": false
+    },
+    {
+      "id": "tour-07",
+      "steps": [
+        "stage-lighting"
+      ],
+      "domains": [
+        "rendering",
+        "settings",
+        "ui"
+      ],
+      "headless": false,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "tour-08",
+      "steps": [
         "asset-audit",
         "menu-navigation",
         "menu",
-        "wasd-navigation",
+        "wasd-navigation"
+      ],
+      "domains": [
+        "assets",
+        "input",
+        "models",
+        "ui"
+      ],
+      "headless": false,
+      "timeout": 720,
+      "manual": false
+    },
+    {
+      "id": "tour-09",
+      "steps": [
         "setup",
         "controllers",
         "controller-popups",
-        "roster",
-        "framing",
+        "roster"
+      ],
+      "domains": [
+        "input",
+        "mechanics",
+        "ui"
+      ],
+      "headless": false,
+      "timeout": 720,
+      "manual": false
+    },
+    {
+      "id": "tour-10",
+      "steps": [
+        "framing"
+      ],
+      "domains": [
+        "rendering",
+        "ui"
+      ],
+      "headless": false,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "tour-11",
+      "steps": [
         "model-profile",
         "movement",
         "walk-feel",
-        "mishap-feel",
+        "mishap-feel"
+      ],
+      "domains": [
+        "animation",
+        "assets",
+        "models",
+        "physics",
+        "rendering"
+      ],
+      "headless": false,
+      "timeout": 840,
+      "manual": false
+    },
+    {
+      "id": "tour-12",
+      "steps": [
         "traversal",
         "placement",
         "bomb-handling",
-        "charge-aim",
+        "charge-aim"
+      ],
+      "domains": [
+        "input",
+        "mechanics",
+        "physics",
+        "rendering"
+      ],
+      "headless": false,
+      "timeout": 720,
+      "manual": false
+    },
+    {
+      "id": "tour-13",
+      "steps": [
         "aim-inputs",
         "reticle",
         "precision-aim",
-        "kick-physics",
+        "kick-physics"
+      ],
+      "domains": [
+        "input",
+        "mechanics",
+        "physics",
+        "rendering"
+      ],
+      "headless": false,
+      "timeout": 660,
+      "manual": false
+    },
+    {
+      "id": "tour-14",
+      "steps": [
         "body-contacts",
         "grapple",
         "blast-hitbox",
         "local-actions",
-        "ramp",
+        "ramp"
+      ],
+      "domains": [
+        "gameplay",
+        "mechanics",
+        "physics"
+      ],
+      "headless": true,
+      "timeout": 840,
+      "manual": false
+    },
+    {
+      "id": "tour-15",
+      "steps": [
         "powerup-collect",
         "loot-opening",
         "pump-growth",
-        "presentation",
+        "presentation"
+      ],
+      "domains": [
+        "animation",
+        "assets",
+        "audio",
+        "gameplay",
+        "mechanics",
+        "rendering"
+      ],
+      "headless": true,
+      "timeout": 720,
+      "manual": false
+    },
+    {
+      "id": "tour-16",
+      "steps": [
         "visual-glitches",
         "water-surface",
         "hurry-water",
-        "ai-play",
+        "ai-play"
+      ],
+      "domains": [
+        "ai",
+        "gameplay",
+        "physics",
+        "rendering"
+      ],
+      "headless": false,
+      "timeout": 840,
+      "manual": false
+    },
+    {
+      "id": "tour-17",
+      "steps": [
         "combat",
         "results",
         "post-match",
+        "network"
+      ],
+      "domains": [
+        "ai",
+        "gameplay",
         "network",
+        "ui"
+      ],
+      "headless": false,
+      "timeout": 780,
+      "manual": false
+    },
+    {
+      "id": "tour-18",
+      "steps": [
         "peer-ice-order",
         "peer-rooms",
         "adaptive-rooms",
-        "tutorial",
+        "tutorial"
+      ],
+      "domains": [
+        "gameplay",
+        "network",
+        "rendering",
+        "ui"
+      ],
+      "headless": true,
+      "timeout": 570,
+      "manual": false
+    },
+    {
+      "id": "tour-19",
+      "steps": [
         "top-rules",
         "up-and-down",
-        "rock-garden",
+        "rock-garden"
+      ],
+      "domains": [
+        "ai",
+        "gameplay",
+        "physics",
+        "rendering",
+        "ui"
+      ],
+      "headless": true,
+      "timeout": 660,
+      "manual": false
+    },
+    {
+      "id": "tour-20",
+      "steps": [
         "blizzard-battle",
-        "greedy-trap",
+        "greedy-trap"
+      ],
+      "domains": [
+        "ai",
+        "gameplay",
+        "physics",
+        "rendering",
+        "ui"
+      ],
+      "headless": true,
+      "timeout": 480,
+      "manual": false
+    },
+    {
+      "id": "tour-21",
+      "steps": [
         "stage-scenery"
+      ],
+      "domains": [
+        "rendering",
+        "ui"
+      ],
+      "headless": true,
+      "timeout": 480,
+      "manual": false
+    },
+    {
+      "id": "all",
+      "steps": [
+        "tour-01",
+        "tour-02",
+        "tour-03",
+        "tour-04",
+        "tour-05",
+        "tour-06",
+        "tour-07",
+        "tour-08",
+        "tour-09",
+        "tour-10",
+        "tour-11",
+        "tour-12",
+        "tour-13",
+        "tour-14",
+        "tour-15",
+        "tour-16",
+        "tour-17",
+        "tour-18",
+        "tour-19",
+        "tour-20",
+        "tour-21"
       ],
       "domains": [
         "ai",

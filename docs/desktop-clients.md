@@ -71,7 +71,8 @@ Kestrel-selected loopback port.
 
 Headless regression covers the complete core suite, direct/relay peer rooms,
 adaptive rooms, Greedy Trap server gameplay and slow polling. Graphical mode
-runs `all` plus additional menu-preview and water journeys. Every case retains
+runs the `controller-popups` preflight, every `all` tour, and the additional
+menu-preview and water journeys. Every case retains
 exact leaf order, catalog hash, compiled release/platform, assertions, captures
 and runtime errors. Promotion rejects package-smoke-only receipts. CI retains
 failure summaries, JUnit, runtime logs and failure captures.
@@ -150,8 +151,8 @@ devices retain 20 seconds. Windows D3D12 also recognizes the exact
 [WARP software adapter](https://learn.microsoft.com/en-us/windows/win32/direct3ddxgi/d3d10-graphics-programming-guide-dxgi)
 as `IntegratedGpu` and drew only 15 preparation frames before the 20-second
 deadline. Other integrated GPUs retain the hardware allowance. The explicit
-software-renderer full-suite runner allows five hours for `all`, one hour for
-`menu-preview`, and rejects
+software-renderer runner allows 3.5 hours for each tour and `menu-preview`,
+1.5 hours for other cases, and rejects
 receipts identifying neither a CPU device nor that exact Windows/D3D12 WARP
 adapter. The retained Linux failure drew only 14 preparation frames in the
 ordinary 20-second budget. These allowances change test scheduling, not game
@@ -160,9 +161,23 @@ The retained 2026-10-28 Linux run reached 25,230 frames and 3,643 assertions
 in 7,179 seconds, still advancing through `aim-inputs` when the old two-hour
 suite limit terminated it. The matching successful Mac tour needed 58,692
 frames; extrapolating the observed Linux rate gives roughly 4 hours 40 minutes.
-The five-hour suite and six-hour job bounds allow that work while preserving
-every journey, capture, assertion and error check. This is a scheduling
-estimate; only an actual complete passing run qualifies the candidate.
+The retained Windows WARP run in the same CI run was far slower. It needed
+about 90 minutes for `graphics-settings` alone and about 5 minutes per stage
+load, completing 5 of 61 leaves in 7,128 seconds. A serial WARP tour would need
+roughly 20 hours, beyond any hosted job limit.
+
+The catalog therefore composes `all` from 21 contiguous `tour-NN` suites.
+Mac still runs `all` in one process, which also covers cross-leaf sequencing.
+Windows and Linux run each tour in a fresh process on separate runners.
+`desktop_validation.SOFTWARE_PARTS` assigns 22 Windows runners and
+5 Linux runners. Each player download is built once per target and shared by
+every part, so all parts test identical installer/AppImage bytes. The final
+`Exported <target> smoke` job merges the part receipts. Promotion requires that
+job to succeed. The merge rejects a missing or repeated case, mismatched
+source/release, or different archive, server or download hashes. It also
+requires the tours' completed leaves to equal the catalog's `all` order
+exactly. Every journey, capture, assertion and zero-error check is unchanged;
+only scheduling moves across runners.
 The disposable Linux desktop supplies X11 and a PulseAudio null sink. Physical
 speakers, controllers, native performance and Wayland remain separate evidence.
 The disposable Windows fixture selects a real supported 32-bit display mode and

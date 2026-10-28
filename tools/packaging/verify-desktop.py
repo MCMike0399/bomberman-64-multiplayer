@@ -36,14 +36,27 @@ def main():
     parser.add_argument('--directory', type=Path, default=ROOT / 'artifacts')
     parser.add_argument('--graphical', action='store_true', help='Run every graphical gameplay/UI/network journey on an owned desktop')
     parser.add_argument('--disposable-desktop', action='store_true', help='Confirm this Windows VM/profile is reserved for installer tests')
-    parser.add_argument('--software-renderer', action='store_true', help='Allow a bounded five-hour all-suite on a verified CPU or Windows WARP renderer; provides no native GPU performance evidence')
+    parser.add_argument('--software-renderer', action='store_true', help='Allow bounded multi-hour tours on a verified CPU or Windows WARP renderer; provides no native GPU performance evidence')
+    parser.add_argument('--cases', help='Comma-separated graphical cases this runner owns; writes a part receipt for --merge')
+    parser.add_argument('--part', help='Unique label for this runner\'s part receipt')
+    parser.add_argument('--merge', action='store_true', help='Combine every part receipt into the complete graphical receipt without running the game')
     args = parser.parse_args()
     if args.software_renderer and not args.graphical:
         parser.error('--software-renderer requires --graphical')
+    if (args.cases or args.part or args.merge) and not args.graphical:
+        parser.error('--cases/--part/--merge require --graphical')
+    if bool(args.cases) != bool(args.part) or args.merge and args.cases:
+        parser.error('--cases and --part go together; --merge runs no cases')
+    owned = args.cases.split(',') if args.cases else list(validation.SHARDED_GRAPHICAL)
+    if args.part and not args.part.replace('-', '').isalnum():
+        parser.error('--part must be alphanumeric with dashes')
+    if any(case not in validation.SHARDED_GRAPHICAL for case in owned) or len(set(owned)) != len(owned):
+        parser.error('--cases must name distinct required graphical cases')
     item, settings = desktop.names(args.target), desktop.TARGETS[args.target]
-    if args.target == 'windows-x64' and os.environ.get('GITHUB_ACTIONS') != 'true' and not args.disposable_desktop:
+    # Merging only reads receipts and hashes bytes; it never runs the game.
+    if not args.merge and args.target == 'windows-x64' and os.environ.get('GITHUB_ACTIONS') != 'true' and not args.disposable_desktop:
         raise RuntimeError('Windows installer regression requires a disposable VM/profile; use --disposable-desktop only there')
-    if platform.system() != settings['os'] or platform.machine().lower() not in ('x86_64', 'amd64'):
+    if not args.merge and (platform.system() != settings['os'] or platform.machine().lower() not in ('x86_64', 'amd64')):
         raise RuntimeError('Packaged regression must run on its actual target OS and x64 CPU')
     directory = args.directory.resolve()
     metadata = json.loads((directory / item['metadata']).read_text())
@@ -51,6 +64,16 @@ def main():
     desktop.inspect_archive(directory, args.target, revision, release)
     downloads.inspect(directory, args.target, revision, release)
     inspect_server(directory, revision, release['version'], release=release)
+    if args.merge:
+        parts = [json.loads(path.read_text()) for path in sorted(directory.glob(item['graphical'][:-5] + '-part-*.json'))]
+        receipt = validation.merge_parts(parts, settings, revision, release)
+        for key, name in (('archiveSha256', item['archive']), ('serverSha256', 'Blast-Circuit-server-dotnet10.zip'),
+                          ('downloadSha256', downloads.FILES[args.target])):
+            if receipt[key] != desktop.digest(directory / name):
+                raise RuntimeError('Graphical parts did not test these exact bytes: ' + name)
+        (directory / item['graphical']).write_text(json.dumps(receipt, indent=2) + '\n')
+        print('PASS merged ' + str(len(parts)) + ' graphical parts for ' + args.target)
+        return
     output = directory / (item['root'] + '-regression-details')
     output.mkdir(exist_ok=True)
     # Reuse the canonical owned Kestrel port/readiness/cleanup lifecycle, without building source.
@@ -79,17 +102,17 @@ def main():
         suite = qa.Suite('desktop', output, 'unused', desktop='shared')
         server = extracted / 'Blast-Circuit-server-dotnet10' / 'Bomber.Server.dll'
         with suite.server(dll=server) as origin:
-            for scenario in validation.GRAPHICAL if args.graphical else validation.HEADLESS:
+            for scenario in [case for case in validation.SHARDED_GRAPHICAL if case in owned] if args.graphical else validation.HEADLESS:
                 previous = set(output.iterdir())
                 command = [sys.executable, str(ROOT / 'tools/playtest/run.py'), '--executable',
                            str(executable), '--scenario', scenario,
                            '--output', str(output), '--desktop', 'shared', '--server', origin]
                 command += ['--rendering-driver', settings['driver']] if args.graphical else ['--headless']
-                # Retained llvmpipe run reached frame 25230 in 7179 seconds;
-                # the complete matching Mac tour took 58692 frames. Keep a
-                # bounded allowance for that actual software-rendering work.
-                software_timeouts={'all':18000,'menu-preview':3600}
-                timeout=software_timeouts.get(scenario,1500) if args.software_renderer else 1500
+                # Software rendering is slow: retained WARP spent ~90 min in
+                # graphics-settings alone and ~5 min per stage load. Each tour
+                # gets its own process and a bounded allowance below the job limit.
+                heavy = scenario in validation.TOURS or scenario == 'menu-preview'
+                timeout = (12600 if heavy else 5400) if args.software_renderer else 1500
                 if args.software_renderer:command += ['--timeout',str(timeout)]
                 environment = os.environ.copy()
                 if args.target == 'linux-x64':
@@ -115,6 +138,11 @@ def main():
                    'downloadSha256': desktop.digest(directory / downloads.FILES[args.target]),
                    'cases': cases, 'softwareRendererBudget': args.software_renderer,
                    'limits': 'Physical devices, native GPU performance and mixed-OS Internet play require separate evidence.'}
+        if args.part:
+            receipt.update(suite='graphical-part', part=args.part)
+            (directory / (item['graphical'][:-5] + '-part-' + args.part + '.json')).write_text(json.dumps(receipt, indent=2) + '\n')
+            print('PASS packaged ' + args.target + ' graphical part ' + args.part + ': ' + ', '.join(owned))
+            return
         validation.inspect_receipt(receipt, settings, revision, release)
         (directory / item['graphical' if args.graphical else 'smoke']).write_text(json.dumps(receipt, indent=2) + '\n')
     print('PASS full packaged ' + args.target + ' ' + receipt['suite'])

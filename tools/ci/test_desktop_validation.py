@@ -52,6 +52,8 @@ class DesktopValidationTests(unittest.TestCase):
         for scenario in validation.HEADLESS:
             self.assertTrue(scenarios[scenario]['headless'], scenario)
         self.assertIn('all', validation.GRAPHICAL)
+        self.assertEqual(['controller-popups', 'menu-preview', 'water-surface'],
+                         [case for case in validation.SHARDED_GRAPHICAL if case not in validation.TOURS])
 
     def test_graphical_report_requires_positive_renderer_adapter_and_capture_evidence(self):
         settings = desktop.TARGETS['windows-x64']

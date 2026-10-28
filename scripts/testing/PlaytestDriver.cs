@@ -93,9 +93,10 @@ public partial class PlaytestDriver : Node
 
     private async Task KeyPress(Key key,bool alt=false)
     {
-        Godot.Input.ParseInputEvent(new InputEventKey {Keycode=key,PhysicalKeycode=key,AltPressed=alt,Pressed=true});
+        int InputWindow(){int popup=DisplayServer.WindowGetActivePopup();return popup>=0?popup:GetWindow().GetWindowId();}
+        Godot.Input.ParseInputEvent(new InputEventKey {WindowId=InputWindow(),Keycode=key,PhysicalKeycode=key,AltPressed=alt,Pressed=true});
         await Frames(1);
-        Godot.Input.ParseInputEvent(new InputEventKey {Keycode=key,PhysicalKeycode=key,AltPressed=alt,Pressed=false});
+        Godot.Input.ParseInputEvent(new InputEventKey {WindowId=InputWindow(),Keycode=key,PhysicalKeycode=key,AltPressed=alt,Pressed=false});
         await Frames(3);
     }
     private async Task ResizeWindow(Vector2I size)
@@ -264,6 +265,22 @@ public partial class PlaytestDriver : Node
         if(!passed)throw new InvalidOperationException("Assertion failed: "+description);
     }
     private void Event(string type,object data) => _trace.WriteLine(JsonSerializer.Serialize(new {frame=_frame,type,data}));
+    private Image CapturePixels()
+    {
+        bool nativePopup=OS.GetName()=="Linux"&&DisplayServer.GetName()=="X11"&&
+            AuditDescendants(_root).OfType<OptionButton>().Any(button=>button.GetPopup() is {Visible:true} popup&&!popup.IsEmbedded());
+        if(!nativePopup)return GetViewport().GetTexture().GetImage();
+        // Separate native windows are absent from the main viewport texture.
+        // Retain actual displayed pixels, cropped to this app's client area.
+        var window=GetWindow();int screen=window.CurrentScreen;
+        using var desktop=DisplayServer.ScreenGetImage(screen);
+        if(desktop is null||desktop.IsEmpty())throw new IOException("Native popup screen capture is unavailable");
+        var area=new Rect2I(DisplayServer.WindowGetPosition(window.GetWindowId())-DisplayServer.ScreenGetPosition(screen),window.Size);
+        if(area.Position.X<0||area.Position.Y<0||area.End.X>desktop.GetWidth()||area.End.Y>desktop.GetHeight())
+            throw new IOException("Native popup capture requires the complete app client inside its screen");
+        Event("native-popup-capture",new {source="actual screen pixels cropped to owned client",size=area.Size.ToString()});
+        return desktop.GetRegion(area);
+    }
     private async Task Capture(string label,int settleFrames=2)
     {
         if(_headless) { Event("screenshot-disabled",new {label,reason="headless display"});return; }
@@ -280,7 +297,7 @@ public partial class PlaytestDriver : Node
         }
         else await fence;
         var path=Path.Combine(_output,label+".png");
-        using var pixels=GetViewport().GetTexture().GetImage();
+        using var pixels=CapturePixels();
         if(pixels.IsEmpty())throw new IOException("Renderer returned an empty capture");
         var colors=new HashSet<int>();float low=1,high=0;
         for(int y=0;y<pixels.GetHeight();y+=Math.Max(1,pixels.GetHeight()/18))

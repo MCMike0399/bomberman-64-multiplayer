@@ -48,6 +48,27 @@ backend's canonical IDs. Nintendo confirms with printed A and backs with B.
 
 ## Input path and fairness
 
+On Linux/X11, roster role menus use `PopupMenu.ForceNative`: the official
+4.7.2 release runtime leaves embedded popup parent-focus/lifetime subscriptions
+behind after closing. A stock three-item OptionButton reproduces the same
+errors without game or test-driver logic; the editor does not. Native windows
+retain Godot's painted menu and avoid that broken embedded path. Keep the
+roster theme and input bindings unchanged when maintaining this workaround.
+A native popup window does not stop pad/action events from also reaching the
+root window. Without a guard, the A press that selects a role also activates the
+parent's focused Back button. `GameRoot._Input` therefore consumes pad and
+action events while a native role popup is open and on its closing frame.
+Keyboard events target the popup window itself. Windows and Mac keep embedded
+popups. A native Windows WARP witness on 2026-10-28 passed `controller-popups`
+twice with zero engine errors on the unchanged build, so only Linux/X11 needs
+this path.
+`controller-popups` asserts that closing each picker restores its parent's
+signal-connection counts. Native delivery runs this short journey before the
+complete graphical tour, with the same zero-error policy. Native popup captures
+read actual X11 screen pixels and save only the app's client rectangle, since
+the separate popup window is absent from the main viewport texture. Wayland
+and XWayland screen capture need separate evidence.
+
 - [ControllerHub](../../scripts/input_devices/ControllerHub.cs) discovers devices,
   publishes native input, tracks active prompt family/keyboard seat, guards focus,
   and combines held state with bomb/remote/stop press edges through `Read`.

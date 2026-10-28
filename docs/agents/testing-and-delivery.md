@@ -759,6 +759,17 @@ in receipts; the four-leaf package smoke is insufficient for promotion.
 real fixture processes. Keep that separate from actual game updates and
 physical/GPU evidence. See [desktop clients](../desktop-clients.md).
 
+Hosted Windows/Linux runners render in software, so the complete graphical
+suite is split across runners (2026-10-28). `all` is 21 contiguous `tour-NN`
+catalog suites. Mac runs `all` in one process; Windows/Linux run each tour in a
+fresh process via `verify-desktop.py --cases … --part …`. The `--merge`
+step must see every part on identical archive, server and download bytes.
+Change tour boundaries only in `assets/testing/scenarios.json` and runner
+grouping only in `desktop_validation.SOFTWARE_PARTS`; contracts reject gaps,
+repeats or reordering. A leaf that needs a predecessor's state belongs inside
+the same tour. To reproduce a failed part locally, run its tour with
+`run.py --scenario tour-NN`.
+
 Keep long-running platform QA independent of Mac stable releases: use the
 separate worktree, private exact-SHA drafts, owned matching server and pinned
 diagnostic updater baseline described in [independent platform QA](../desktop-clients.md#independent-platform-qa).

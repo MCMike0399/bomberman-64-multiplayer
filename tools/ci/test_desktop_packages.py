@@ -64,7 +64,7 @@ def write_desktop(directory, revision=SHA, release=None):
             'archiveSha256': desktop.digest(directory / item['archive']), 'os': settings['os'],
             'suite': 'headless-regression', 'cases': cases}))
         graphical = []
-        for scenario in validation.GRAPHICAL:
+        for scenario in validation.SHARDED_GRAPHICAL:
             graphical.append(add_display_restart({'passed': True, 'platform': settings['os'], 'release': dict(release, revision=revision),
                               'scenario': scenario, 'catalogSha256': validation.catalog_digest(),
                               'completedScenarios': validation.expanded(scenario, validation.catalog()),
@@ -182,15 +182,71 @@ class DesktopPackageTests(unittest.TestCase):
         for field, value in [('passed', False), ('parentExited', False), ('exitCode', 1), ('timeout', 180),
                              ('runtimeErrors', ['ERROR: fixture']), ('summary', {})]:
             broken = copy.deepcopy(original)
-            broken['cases'][0]['displayRestart'][field] = value
+            next(case for case in broken['cases'] if 'displayRestart' in case)['displayRestart'][field] = value
             path.write_text(json.dumps(broken))
             with self.subTest(field=field), self.assertRaisesRegex(RuntimeError, 'fresh-display'):
                 desktop.inspect(self.root, SHA, RELEASE, targets=[self.target])
         broken = copy.deepcopy(original)
-        del broken['cases'][0]['displayRestart']
+        del next(case for case in broken['cases'] if 'displayRestart' in case)['displayRestart']
         path.write_text(json.dumps(broken))
         with self.assertRaisesRegex(RuntimeError, 'fresh-display'):
             desktop.inspect(self.root, SHA, RELEASE, targets=[self.target])
+
+    def test_complete_tour_cannot_omit_the_controller_popup_preflight(self):
+        path=self.root/self.item['graphical']
+        report=json.loads(path.read_text())
+        report['cases']=[case for case in report['cases'] if case['scenario']!='controller-popups']
+        path.write_text(json.dumps(report))
+        with self.assertRaisesRegex(RuntimeError,'missing required'):
+            desktop.inspect(self.root,SHA,RELEASE,targets=[self.target])
+
+    def test_software_tours_must_cover_the_complete_all_suite_in_order(self):
+        # Fresh-process tours replace one serial all-process only when their
+        # leaves are exactly the catalog's all-suite, contiguous and ordered.
+        catalog = validation.catalog()
+        self.assertEqual(validation.expanded('all', catalog),
+                         [leaf for tour in validation.TOURS for leaf in validation.expanded(tour, catalog)])
+        self.assertEqual(validation.SHARDED_GRAPHICAL[1:-2], validation.TOURS)
+        path=self.root/self.item['graphical']
+        original=json.loads(path.read_text())
+        for mutate in (lambda cases: cases.pop(5), lambda cases: cases.insert(3, cases.pop(4)),
+                       lambda cases: cases[2].update(completedScenarios=cases[2]['completedScenarios'][:-1])):
+            report=json.loads(json.dumps(original));mutate(report['cases'])
+            path.write_text(json.dumps(report))
+            with self.subTest(mutate=mutate), self.assertRaises(RuntimeError):
+                desktop.inspect(self.root,SHA,RELEASE,targets=[self.target])
+
+    def test_each_software_runner_plan_owns_every_graphical_case_exactly_once(self):
+        for target in ('windows-x64', 'linux-x64'):
+            plan = validation.software_plan([target])
+            owned = [case for part in plan for case in part['cases'].split(',')]
+            self.assertEqual(sorted(validation.SHARDED_GRAPHICAL), sorted(owned), target)
+            self.assertEqual(len(plan), len({part['part'] for part in plan}))
+            self.assertEqual({desktop.TARGETS[target]['os']}, {'Windows' if part['runner'].startswith('windows') else 'Linux' for part in plan})
+        self.assertLessEqual(len(validation.software_plan()), 30)
+
+    def test_graphical_parts_merge_only_when_complete_and_bound_to_identical_bytes(self):
+        settings=desktop.TARGETS[self.target]
+        complete=json.loads((self.root/self.item['graphical']).read_text())
+        def parts(groups):
+            result=[]
+            for index, names in enumerate(groups):
+                part={key: value for key, value in complete.items() if key not in ('cases','suite')}
+                part.update(suite='graphical-part', part='p'+str(index), cases=[case for case in complete['cases'] if case['scenario'] in names])
+                result.append(part)
+            return result
+        names=[case['scenario'] for case in complete['cases']]
+        merged=validation.merge_parts(parts([names[:1],names[1:9],names[9:]]),settings,SHA,RELEASE)
+        self.assertEqual(names,[case['scenario'] for case in merged['cases']])
+        for broken in (parts([names[:1],names[2:]]), parts([names[:3],names[2:]]), parts([])):
+            with self.assertRaises(RuntimeError):
+                validation.merge_parts(broken,settings,SHA,RELEASE)
+        different=parts([names[:4],names[4:]]);different[1]['downloadSha256']='0'*64
+        with self.assertRaisesRegex(RuntimeError,'different bytes'):
+            validation.merge_parts(different,settings,SHA,RELEASE)
+        unlabeled=parts([names[:4],names[4:]]);del unlabeled[0]['part']
+        with self.assertRaises(RuntimeError):
+            validation.merge_parts(unlabeled,settings,SHA,RELEASE)
 
     def test_full_suite_receipts_must_bind_the_actual_download_and_server(self):
         for key in ('smoke','graphical'):
