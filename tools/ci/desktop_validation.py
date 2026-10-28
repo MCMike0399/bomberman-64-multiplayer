@@ -20,6 +20,15 @@ def catalog_digest():
     return hashlib.sha256((ROOT / 'assets/testing/scenarios.json').read_bytes()).hexdigest()
 
 
+def software_renderer(report):
+    # Godot D3D12 reports WARP as IntegratedGpu on the hosted Windows image.
+    # Match the observed renderer exactly; an arbitrary integrated GPU does
+    # not qualify for the software-only time allowance.
+    return (report.get('adapterType') == 'Cpu' or
+            report.get('platform') == 'Windows' and report.get('renderingDriver') == 'd3d12' and
+            report.get('adapter') == 'Microsoft Basic Render Driver')
+
+
 def inspect_report(report, scenario, settings, revision, release, graphical):
     if (report.get('passed') is not True or report.get('platform') != settings['os'] or
             report.get('release') != dict(release, revision=revision) or
@@ -50,8 +59,8 @@ def inspect_receipt(receipt, settings, revision, release):
         raise RuntimeError('Desktop regression is missing required gameplay/multiplayer cases')
     for case in cases:
         inspect_report(case, case['scenario'], settings, revision, release, graphical)
-    if receipt.get('softwareRendererBudget') and (not graphical or any(case.get('adapterType')!='Cpu' for case in cases)):
-        raise RuntimeError('Software-renderer time allowance requires actual CPU-device receipts')
+    if receipt.get('softwareRendererBudget') and (not graphical or any(not software_renderer(case) for case in cases)):
+        raise RuntimeError('Software-renderer time allowance requires actual CPU-device or Windows WARP receipts')
     return receipt
 
 

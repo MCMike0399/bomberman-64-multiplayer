@@ -45,7 +45,7 @@ jobs:
         include:
           - target: windows-x64
             runner: windows-2025
-            timeout: 60
+            timeout: 210
           - target: linux-x64
             runner: ubuntu-24.04
             timeout: 210
@@ -111,7 +111,7 @@ jobs:
             python tools/packaging/linux-desktop.py -- python tools/packaging/verify-desktop.py --target "$TARGET" --graphical --software-renderer
           else
             python tools/packaging/startup-desktop.py --target "$TARGET"
-            python tools/packaging/verify-desktop.py --target "$TARGET" --graphical
+            python tools/packaging/verify-desktop.py --target "$TARGET" --graphical --software-renderer
           fi
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
@@ -137,6 +137,8 @@ jobs:
             artifacts/*-download.json
             artifacts/*-regression-details/**/summary.json
             artifacts/*-regression-details/**/runner-summary.json
+            artifacts/*-regression-details/**/graphics-preparation.json
+            artifacts/*-regression-details/**/progress.json
             artifacts/*-regression-details/**/peer-capacity-diagnostics.json
             artifacts/*-regression-details/**/display-restart.json
             artifacts/*-regression-details/**/junit.xml
@@ -182,6 +184,7 @@ jobs:
             artifacts/Blast-Circuit-macos-arm64-regression-details/**/summary.json
             artifacts/Blast-Circuit-macos-arm64-regression-details/**/runner-summary.json
             artifacts/Blast-Circuit-macos-arm64-regression-details/**/progress.json
+            artifacts/Blast-Circuit-macos-arm64-regression-details/**/graphics-preparation.json
             artifacts/*-regression-details/**/peer-capacity-diagnostics.json
             artifacts/*-regression-details/**/display-restart.json
             artifacts/Blast-Circuit-macos-arm64-regression-details/**/runtime.log

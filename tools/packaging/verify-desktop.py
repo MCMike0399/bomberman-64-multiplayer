@@ -36,7 +36,7 @@ def main():
     parser.add_argument('--directory', type=Path, default=ROOT / 'artifacts')
     parser.add_argument('--graphical', action='store_true', help='Run every graphical gameplay/UI/network journey on an owned desktop')
     parser.add_argument('--disposable-desktop', action='store_true', help='Confirm this Windows VM/profile is reserved for installer tests')
-    parser.add_argument('--software-renderer', action='store_true', help='Allow a bounded two-hour all-suite on a verified CPU renderer; provides no native GPU performance evidence')
+    parser.add_argument('--software-renderer', action='store_true', help='Allow a bounded two-hour all-suite on a verified CPU or Windows WARP renderer; provides no native GPU performance evidence')
     args = parser.parse_args()
     if args.software_renderer and not args.graphical:
         parser.error('--software-renderer requires --graphical')

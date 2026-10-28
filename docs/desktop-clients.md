@@ -145,9 +145,14 @@ The full headless suite also exercises an eight-player direct-peer room. Native
 rendering receipts identify the adapter, including software/paravirtual adapters;
 those runs establish functional rendering rather than physical GPU throughput.
 CPU-device graphics preparation has a bounded 180-second QA allowance; hardware
-devices retain 20 seconds. The explicit software-renderer full-suite runner
-allows two hours for `all` and rejects receipts whose actual adapter type is
-not CPU. The retained Linux failure drew only 14 preparation frames in the
+devices retain 20 seconds. Windows D3D12 also recognizes the exact
+`Microsoft Basic Render Driver` name: the retained native run reported this
+[WARP software adapter](https://learn.microsoft.com/en-us/windows/win32/direct3ddxgi/d3d10-graphics-programming-guide-dxgi)
+as `IntegratedGpu` and drew only 15 preparation frames before the 20-second
+deadline. Other integrated GPUs retain the hardware allowance. The explicit
+software-renderer full-suite runner allows two hours for `all` and rejects
+receipts identifying neither a CPU device nor that exact Windows/D3D12 WARP
+adapter. The retained Linux failure drew only 14 preparation frames in the
 ordinary 20-second budget. These allowances change test scheduling, not game
 graphics or loading behavior, and cannot certify native GPU responsiveness.
 The disposable Linux desktop supplies X11 and a PulseAudio null sink. Physical

@@ -359,15 +359,22 @@ public partial class PlaytestDriver
         {
             await KeyPress(Key.Right);
             var warmup=System.Diagnostics.Stopwatch.StartNew();
-            // Hosted Vulkan can be a CPU device: the retained llvmpipe witness
-            // rendered only 14 preparation frames in 20 seconds. This is a
+            // Retained llvmpipe and WARP runs rendered only 14-15 preparation
+            // frames in 20 seconds. Godot reports Windows WARP as IntegratedGpu,
+            // so also recognize that exact D3D12 software adapter. This is a
             // correctness allowance, not a native GPU responsiveness result.
-            double budget=RenderingServer.GetVideoAdapterType()==RenderingDevice.DeviceType.Cpu?180:20;
+            bool software=RenderingServer.GetVideoAdapterType()==RenderingDevice.DeviceType.Cpu||
+                OS.GetName()=="Windows"&&RenderingServer.GetCurrentRenderingDriverName()=="d3d12"&&
+                RenderingServer.GetVideoAdapterName()=="Microsoft Basic Render Driver";
+            double budget=software?180:20;
             ulong firstFrame=Engine.GetProcessFrames();
             while(_root.GraphicsPreparing&&warmup.Elapsed.TotalSeconds<budget)await Frames(1);
-            Event("graphics-preparation",new {preset=GraphicsQuality.ToWire(preset),seconds=warmup.Elapsed.TotalSeconds,
+            var preparation=new {preset=GraphicsQuality.ToWire(preset),seconds=warmup.Elapsed.TotalSeconds,
                 frames=Engine.GetProcessFrames()-firstFrame,budget,finished=!_root.GraphicsPreparing,
-                adapter=RenderingServer.GetVideoAdapterName(),adapterType=RenderingServer.GetVideoAdapterType().ToString()});
+                software,adapter=RenderingServer.GetVideoAdapterName(),adapterType=RenderingServer.GetVideoAdapterType().ToString()};
+            _graphicsPreparations.Add(preparation);
+            File.WriteAllText(Path.Combine(_output,"graphics-preparation.json"),JsonSerializer.Serialize(_graphicsPreparations));
+            Event("graphics-preparation",preparation);
             Check(!_root.GraphicsPreparing,"graphics preparation finishes before returning control");
             dial.GrabFocus();
         }

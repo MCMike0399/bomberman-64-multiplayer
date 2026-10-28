@@ -24,6 +24,7 @@ public partial class PlaytestDriver : Node
     private int _frame, _lastSnapshot = -1, _captureFallbacks;
     private readonly List<object> _checks = [];
     private readonly List<string> _screenshots = [];
+    private readonly List<object> _graphicsPreparations = [];
     private readonly Dictionary<int, PlayerInput> _inputs = [];
     private readonly Stopwatch _clock = new();
     private bool _headless, _windowedRequested;

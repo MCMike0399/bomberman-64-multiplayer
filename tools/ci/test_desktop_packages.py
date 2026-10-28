@@ -155,6 +155,26 @@ class DesktopPackageTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError,'CPU-device'):
             desktop.inspect(self.root,SHA,RELEASE,targets=[self.target])
 
+    def test_windows_warp_is_software_even_when_reported_as_integrated(self):
+        # Retained native 3c180fd: D3D12 Microsoft software rasterizer was
+        # reported as IntegratedGpu, so the ordinary GPU budget was selected.
+        path = self.root / self.item['graphical']
+        report = json.loads(path.read_text())
+        report['softwareRendererBudget'] = True
+        for case in report['cases']:
+            case.update(platform='Windows', renderingDriver='d3d12',
+                        adapter='Microsoft Basic Render Driver', adapterType='IntegratedGpu')
+        path.write_text(json.dumps(report))
+        desktop.inspect(self.root, SHA, RELEASE, targets=[self.target])
+        for changes in ({'adapter': 'Intel Iris Xe'}, {'adapter': 'Microsoft Basic Display Adapter'},
+                        {'renderingDriver': 'vulkan'}, {'platform': 'Linux'}):
+            with self.subTest(changes=changes):
+                broken = json.loads(json.dumps(report))
+                broken['cases'][0].update(changes)
+                path.write_text(json.dumps(broken))
+                with self.assertRaises(RuntimeError):
+                    desktop.inspect(self.root, SHA, RELEASE, targets=[self.target])
+
     def test_complete_graphical_pass_cannot_omit_or_substitute_the_fresh_display_witness(self):
         import copy
         path = self.root / self.item['graphical']
