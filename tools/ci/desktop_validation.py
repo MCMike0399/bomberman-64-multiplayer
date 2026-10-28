@@ -26,6 +26,8 @@ SOFTWARE_PARTS = {
     'linux-x64': ('ubuntu-24.04', (('controller-popups', *TOURS[:4]), TOURS[4:9], TOURS[9:14],
                                    (*TOURS[14:18], 'water-surface'), (*TOURS[18:], 'menu-preview'))),
 }
+# Peer host lease for the owned server during software-rendered graphical parts.
+SOFTWARE_PEER_HOST_LEASE = 120
 STARTUP = tuple('-'.join((p, d, 'menu')) for p in ('low', 'medium', 'high') for d in ('fullscreen', 'windowed')) + tuple(p + '-fullscreen-gameplay' for p in ('low', 'medium', 'high'))
 MAC_ARTIFACT = 'Blast-Circuit-macos-arm64-regression'
 MAC_RECEIPT = MAC_ARTIFACT + '.json'
@@ -78,6 +80,8 @@ def inspect_receipt(receipt, settings, revision, release):
         inspect_report(case, case['scenario'], settings, revision, release, graphical)
     if receipt.get('softwareRendererBudget') and (not graphical or any(not software_renderer(case) for case in cases)):
         raise RuntimeError('Software-renderer time allowance requires actual CPU-device or Windows WARP receipts')
+    if (receipt.get('peerHostLeaseSeconds') or 6) not in (6, SOFTWARE_PEER_HOST_LEASE if receipt.get('softwareRendererBudget') else 6):
+        raise RuntimeError('A lengthened peer host lease is allowed only for verified software-renderer receipts')
     return receipt
 
 
@@ -90,7 +94,7 @@ def software_plan(targets=None):
 
 def merge_parts(parts, settings, revision, release):
     """Join per-runner graphical parts only when every part tested identical bytes."""
-    identity = ('target', 'revision', 'release', 'archiveSha256', 'serverSha256', 'downloadSha256', 'os', 'softwareRendererBudget')
+    identity = ('target', 'revision', 'release', 'archiveSha256', 'serverSha256', 'downloadSha256', 'os', 'softwareRendererBudget', 'peerHostLeaseSeconds')
     if not parts:
         raise RuntimeError('No graphical regression parts to merge')
     cases = {}

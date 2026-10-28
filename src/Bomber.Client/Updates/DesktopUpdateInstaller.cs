@@ -139,12 +139,13 @@ public static class DesktopUpdateInstaller
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
         timeout.CancelAfter(TimeSpan.FromSeconds(10));
         string ready = Path.Combine(update.Stage, "ready");
-        while (!File.Exists(ready))
+        string? token;
+        while ((token = DesktopUpdateTransaction.ReadyToken(ready, update.Token)) is null)
         {
             if (process.HasExited) throw new IOException("Update helper could not acquire the installation lock.");
             await Task.Delay(50, timeout.Token);
         }
-        if ((await File.ReadAllTextAsync(ready, timeout.Token)).Trim() != update.Token)
+        if (token != update.Token)
             throw new InvalidDataException("Update helper readiness does not match this transaction.");
     }
 }

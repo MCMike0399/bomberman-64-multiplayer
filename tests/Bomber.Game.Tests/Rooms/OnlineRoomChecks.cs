@@ -55,6 +55,22 @@ internal static class OnlineRoomChecks
         Check(Status().GetProperty("leaderId").GetString() == "host" && Status().GetProperty("phase").GetString() == "lobby", "stalled authority lease elects oldest eligible connected peer");
         Send(second, "peer.heartbeat", new {epoch});
         Check(Status().GetProperty("leaderId").GetString() == "host", "stale heartbeat cannot reverse election");
+        {
+            // Owned software-renderer QA servers may lengthen, never shorten, the lease.
+            var slow = new Context(); var slowRoom = new PeerRoomSession(new("slow", "blast-peer", slow.Settings, 64), lease: PeerHostLease.From(60));
+            var slowHost = slow.Add("host", 0); var slowGuest = slow.Add("guest", 1);
+            slowRoom.OnPlayerJoined(slow, slowHost); slowRoom.OnPlayerJoined(slow, slowGuest);
+            foreach (var p in new[] { slowHost, slowGuest }) slowRoom.OnMessage(slow, p, new("peer.hello", JsonSerializer.SerializeToElement(new { version = OnlineProtocol.Revision }), null, slow.Now));
+            slowRoom.OnMessage(slow, slowHost, new("party.start", JsonSerializer.SerializeToElement(new { }), null, slow.Now));
+            JsonElement SlowStatus() => slow.Frames.Last(f => f.Type == "party.status").Data;
+            slow.Tick = 210; slowRoom.OnTick(slow);
+            Check(SlowStatus().GetProperty("leaderId").GetString() == "host" && SlowStatus().GetProperty("phase").GetString() == "playing", "a 60-second QA lease keeps a host silent for 7 seconds");
+            slow.Tick = 1860; slowRoom.OnTick(slow);
+            Check(SlowStatus().GetProperty("leaderId").GetString() == "guest", "a 60-second QA lease still elects a new host after 62 seconds of silence");
+            bool rejected = false;
+            try { PeerHostLease.From(5); } catch (ArgumentOutOfRangeException) { rejected = true; }
+            Check(rejected && PeerHostLease.From(null) == PeerHostLease.Production && PeerHostLease.Production.Silence == TimeSpan.FromSeconds(6), "configuration cannot shorten the six-second production lease");
+        }
         var publicRoom = new PartySession(new("random","blast-lobby",c.Settings,64),2);
         var alone = new Context(); var solo = alone.Add("solo",0); publicRoom.OnPlayerJoined(alone,solo);
         alone.State = LobbyState.Running; publicRoom.OnMatchStarted(alone);

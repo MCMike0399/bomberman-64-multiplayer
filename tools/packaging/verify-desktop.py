@@ -102,7 +102,11 @@ def main():
         suite = qa.Suite('desktop', output, 'unused', desktop='shared')
         server = extracted / 'Blast-Circuit-server-dotnet10' / 'Bomber.Server.dll'
         failures = []
-        with suite.server(dll=server) as origin:
+        # Owned server only: on verified software renderers a peer host can draw
+        # one frame per second, beyond the production six-second lease. Headless
+        # native gates and Mac keep the production lease.
+        lease = validation.SOFTWARE_PEER_HOST_LEASE if args.software_renderer else None
+        with suite.server(dll=server, peer_host_lease=lease) as origin:
             for scenario in [case for case in validation.SHARDED_GRAPHICAL if case in owned] if args.graphical else validation.HEADLESS:
                 # Keep running this runner's remaining cases after a failure so one
                 # native run reports every failing case; the receipt still fails.
@@ -144,7 +148,7 @@ def main():
                    'serverSha256': desktop.digest(directory / 'Blast-Circuit-server-dotnet10.zip'),
                    'os': settings['os'], 'suite': 'graphical-regression' if args.graphical else 'headless-regression',
                    'downloadSha256': desktop.digest(directory / downloads.FILES[args.target]),
-                   'cases': cases, 'softwareRendererBudget': args.software_renderer,
+                   'cases': cases, 'softwareRendererBudget': args.software_renderer, 'peerHostLeaseSeconds': lease or 6,
                    'limits': 'Physical devices, native GPU performance and mixed-OS Internet play require separate evidence.'}
         if args.part:
             receipt.update(suite='graphical-part', part=args.part)

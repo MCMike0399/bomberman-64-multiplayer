@@ -275,6 +275,16 @@ public partial class PlaytestDriver : Node
     // predicate still fails; this is not native GPU responsiveness evidence.
     private static bool Waiting(Stopwatch clock,double seconds,ulong firstFrame)=>clock.Elapsed.TotalSeconds<seconds||
         SoftwareRenderer&&Engine.GetProcessFrames()-firstFrame<(ulong)(seconds*30);
+    // A real-time server samples held buttons in wall time. On a software
+    // renderer one frame can last seconds, so "press for N frames" becomes a
+    // long hold (a held A charges a throw instead of placing a bomb). Send the
+    // press edge now and release it after a bounded wall-clock interval.
+    private async Task NetworkTap(NetworkSession connection,PlayerInput press,int milliseconds=100)
+    {
+        Input(0,default);connection.SendInput(0,press);
+        await Task.Run(async()=>{await Task.Delay(milliseconds).ConfigureAwait(false);connection.SendInput(0,default);});
+        await Frames(1);
+    }
     private sealed class FrameSubscription(SceneTree tree,Action pump):IDisposable
     {
         private bool _active=Subscribe(tree,pump);

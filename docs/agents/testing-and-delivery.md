@@ -625,6 +625,17 @@ yield engine frames between guest polls. All eight clients share one engine
 thread in QA; batching their setup can otherwise starve the real host's
 heartbeat and trigger the production six-second takeover policy. Keep that
 policy intact rather than weakening it to accommodate the fixture.
+Production and every hardware or headless gate keep six seconds. By user
+decision on 2026-10-28, the owned QA server for verified software-renderer
+graphical parts only uses `--Blast:PeerHostLeaseSeconds=120`. On WARP, frames
+of about 1 s, plus arena loads, made a 6-second peer host fail over 95 times.
+`PeerHostLease.From` rejects values below six. Receipts record the lease, and
+validation rejects a lengthened lease on any non-software receipt.
+Online test robots that press a button for N frames turn a tap into a
+multi-second hold on software renderers, and a held A charges a throw. Use
+`NetworkTap`: it sends the press edge immediately and releases it 100 ms
+later in wall time. On llvmpipe, `post-match` played six drawn rounds before
+this fix and now ends in 6 frames, as on Mac.
 
 For the combined v0.28 release, `stage-fidelity` is the focused fresh-process suite for all reconstructed arenas, explosion presentation and tutorial. The complete `all` suite and package gate remain the release regression. [Combined receipts](../stages-release-028.md).
 

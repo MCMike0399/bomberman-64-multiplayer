@@ -248,6 +248,22 @@ class DesktopPackageTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             validation.merge_parts(unlabeled,settings,SHA,RELEASE)
 
+    def test_lengthened_peer_host_lease_requires_a_software_renderer_receipt(self):
+        path=self.root/self.item['graphical']
+        report=json.loads(path.read_text())
+        report['peerHostLeaseSeconds']=validation.SOFTWARE_PEER_HOST_LEASE
+        path.write_text(json.dumps(report))
+        with self.assertRaisesRegex(RuntimeError,'peer host lease'):
+            desktop.inspect(self.root,SHA,RELEASE,targets=[self.target])
+        report['softwareRendererBudget']=True
+        for case in report['cases']:case['adapterType']='Cpu'
+        path.write_text(json.dumps(report))
+        desktop.inspect(self.root,SHA,RELEASE,targets=[self.target])
+        report['peerHostLeaseSeconds']=30
+        path.write_text(json.dumps(report))
+        with self.assertRaisesRegex(RuntimeError,'peer host lease'):
+            desktop.inspect(self.root,SHA,RELEASE,targets=[self.target])
+
     def test_full_suite_receipts_must_bind_the_actual_download_and_server(self):
         for key in ('smoke','graphical'):
             path=self.root/self.item[key];original=path.read_text()

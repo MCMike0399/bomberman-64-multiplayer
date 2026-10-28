@@ -12,6 +12,8 @@ await using var app = BurbujaApplication.CreateApp(new WebApplicationOptions
 {
     DefaultLandingRoute = "/game",
     ConfigureBuilder = builder => {
+        // Owned QA servers may lengthen the peer host lease; production keeps six seconds.
+        builder.Services.AddSingleton(Bomber.Game.Online.Rooms.PeerHostLease.From(builder.Configuration.GetValue<double?>("Blast:PeerHostLeaseSeconds")));
         builder.Services.AddSingleton<IRealtimeGame, BomberRealtimeGame>();
         builder.Services.AddSingleton<IRealtimeGame, PublicLobbyGame>();
         builder.Services.AddSingleton<IRealtimeGame, PeerRoomGame>();

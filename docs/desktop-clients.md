@@ -197,6 +197,13 @@ scene: its reflection on/off probe differed by 0 pixels even with depth of
 field disabled. The game is unchanged. On verified software renderers only, the
 probe compares reflection on/off with MSAA temporarily disabled. Real Linux GPU drivers still need separate evidence.
 
+Desktop updates publish the helper's `ready` marker atomically. Native run
+40681932218 caught the old game reading that marker between its creation and
+its write, which rejected a valid Linux update. The game now treats a missing,
+empty or partial token as not ready yet and still rejects any different
+complete token. The reader ships in this release, so it also tolerates
+non-atomic helpers.
+
 The disposable Linux desktop supplies X11 and a PulseAudio null sink. Physical
 speakers, controllers, native performance and Wayland remain separate evidence.
 The disposable Windows fixture selects a real supported 32-bit display mode and

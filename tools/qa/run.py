@@ -144,9 +144,11 @@ class Suite:
         self.require('build-' + name, ['dotnet', 'build', project, '-c', configuration, '--nologo', '-m:1'])
 
     @contextlib.contextmanager
-    def server(self, dll=None, simulation_capacity=None):
+    def server(self, dll=None, simulation_capacity=None, peer_host_lease=None):
         if simulation_capacity is not None and (type(simulation_capacity) is not int or not 0 <= simulation_capacity <= 32):
             raise ValueError('simulation capacity must be an integer from 0 to 32')
+        if peer_host_lease is not None and (type(peer_host_lease) is not int or not 6 <= peer_host_lease <= 600):
+            raise ValueError('peer host lease must be an integer from 6 to 600 seconds')
         self._server_count += 1
         log_path = self.output / ('server.log' if self._server_count == 1 else f'server-{self._server_count}.log')
         process = None
@@ -160,6 +162,9 @@ class Suite:
                 record['assembly'] = str(executable)
                 overrides = [] if simulation_capacity is None else [f'--Realtime:Resources:simulation={simulation_capacity}']
                 record['simulationCapacityOverride'] = simulation_capacity
+                if peer_host_lease is not None:
+                    overrides.append(f'--Blast:PeerHostLeaseSeconds={peer_host_lease}')
+                record['peerHostLeaseSeconds'] = peer_host_lease
                 process = subprocess.Popen(['dotnet', str(executable), *overrides,
                                             '--urls', 'http://127.0.0.1:0'], cwd=ROOT, stdout=log,
                                            stderr=subprocess.STDOUT, start_new_session=os.name == 'posix')

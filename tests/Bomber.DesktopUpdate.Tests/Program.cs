@@ -45,6 +45,25 @@ if (args.Contains("--") || args.Any(a => a.StartsWith("--update-token=")))
 int checks = 0;
 void Check(bool value, string description)
 { if (!value) throw new Exception(description); checks++; }
+{
+    // Retained native 3b963a5: the game read the helper's ready marker between
+    // its creation and write, then rejected a valid update.
+    string ready = Path.Combine(Path.GetTempPath(), "blast-ready-" + Guid.NewGuid().ToString("N"));
+    const string expected = "transaction-token-0123456789";
+    try
+    {
+        Check(DesktopUpdateTransaction.ReadyToken(ready, expected) is null, "A missing ready marker is not ready");
+        File.WriteAllText(ready, "");
+        Check(DesktopUpdateTransaction.ReadyToken(ready, expected) is null, "A created but unwritten ready marker is not ready");
+        File.WriteAllText(ready, expected[..9]);
+        Check(DesktopUpdateTransaction.ReadyToken(ready, expected) is null, "A partially written ready token is not ready");
+        File.WriteAllText(ready, expected + "\n");
+        Check(DesktopUpdateTransaction.ReadyToken(ready, expected) == expected, "A complete ready token is accepted");
+        File.WriteAllText(ready, "other-transaction");
+        Check(DesktopUpdateTransaction.ReadyToken(ready, expected) == "other-transaction", "A different complete token is returned for rejection");
+    }
+    finally { File.Delete(ready); }
+}
 using (var self = Process.GetCurrentProcess())
 {
     string token = DesktopProcessIdentity.StartToken(self);

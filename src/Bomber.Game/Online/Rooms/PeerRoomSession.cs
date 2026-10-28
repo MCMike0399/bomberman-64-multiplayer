@@ -5,7 +5,7 @@ using Bomber.Game.Matches;
 namespace Bomber.Game.Online.Rooms;
 
 /// <summary>Authenticated membership, host leases and bounded signalling/relay. Never simulates the game.</summary>
-public sealed class PeerRoomSession(GameSessionOptions options, bool stableRoster = false) : GameSession
+public sealed class PeerRoomSession(GameSessionOptions options, bool stableRoster = false, PeerHostLease? lease = null) : GameSession
 {
     internal static int RelayByteLimit(int recipients) => Math.Clamp(recipients, 1, 7) * 2 * 1024 * 1024;
     private readonly Dictionary<string, RealtimePlayer> _members = [];
@@ -141,7 +141,7 @@ public sealed class PeerRoomSession(GameSessionOptions options, bool stableRoste
     {
         foreach (var pending in _handshakes.Where(p=>c.IsConnected(p.Key)&&!_ready.Contains(p.Key)&&c.Now-p.Value>TimeSpan.FromSeconds(10)).Select(p=>p.Key).ToArray())
         { _handshakes.Remove(pending); c.Kick(pending,OnlineProtocol.UpdateMessage); }
-        if (_host is not null && _ready.Contains(_host) && c.Now - _lease > TimeSpan.FromSeconds(6))
+        if (_host is not null && _ready.Contains(_host) && c.Now - _lease > (lease ?? PeerHostLease.Production).Silence)
         {
             if (_host is not null) _expiredHosts.Add(_host);
             Reset("Host stopped responding. A new host is taking over; the interrupted match was discarded.");

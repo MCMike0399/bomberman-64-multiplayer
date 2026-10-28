@@ -25,7 +25,10 @@ public static class DesktopUpdateTransaction
         using var transaction = new FileStream(lockPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 1, FileOptions.DeleteOnClose);
         if (!(request.AppImage ? File.Exists(next) : Directory.Exists(next)))
             throw new InvalidDataException("Staged replacement is missing.");
-        await File.WriteAllTextAsync(Path.Combine(stage, "ready"), request.Token, ct);
+        // Publish readiness atomically; the waiting game polls for this file.
+        string readyTemporary = Path.Combine(stage, ".ready.tmp");
+        await File.WriteAllTextAsync(readyTemporary, request.Token, ct);
+        File.Move(readyTemporary, Path.Combine(stage, "ready"), overwrite: true);
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
         deadline.CancelAfter(TimeSpan.FromSeconds(60));
         try
@@ -146,5 +149,18 @@ public static class DesktopUpdateTransaction
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         File.WriteAllText(path + ".tmp", result + "\n");
         File.Move(path + ".tmp", path, overwrite: true);
+    }
+
+    /// <summary>The helper's complete readiness token, or null while it is not ready.</summary>
+    /// <remarks>Helpers from older releases create the marker before writing it. A
+    /// missing, unreadable, empty or partial token is therefore not ready yet;
+    /// any other complete token is returned so the caller can reject it.</remarks>
+    public static string? ReadyToken(string path, string expected)
+    {
+        string text;
+        try { text = File.ReadAllText(path).Trim(); }
+        catch (IOException) { return null; }
+        catch (UnauthorizedAccessException) { return null; }
+        return text.Length == 0 || text != expected && expected.StartsWith(text, StringComparison.Ordinal) ? null : text;
     }
 }
