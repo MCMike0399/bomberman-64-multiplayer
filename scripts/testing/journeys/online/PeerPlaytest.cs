@@ -33,9 +33,13 @@ public partial class PlaytestDriver
         var states=new Dictionary<string,JsonElement>();
         // Real clients advance every engine frame. Pump these fixture peers the
         // same way, including between waits; a fixture that becomes host would
-        // otherwise miss heartbeats while slow frames render.
+        // otherwise miss heartbeats while slow frames render. Uncapped headless
+        // frames ran ~7,500/s, so never pump faster than a 30 FPS client.
+        var pumped=Stopwatch.StartNew();
         void Pump()
         {
+            if(pumped.Elapsed.TotalSeconds<1d/30)return;
+            pumped.Restart();
             foreach(var peer in peers)
             {
                 peer.Advance(1d/30);

@@ -137,7 +137,10 @@ public partial class PlaytestDriver
             {
                 var world=center+new Vector3(0,-.53f,.8f)*radius;
                 Check(world.Y<LightingArena.WaterHeight-.15f,"shore probe samples below the animated sea surface");
-                var pixel=camera.UnprojectPosition(world)*new Vector2(image.GetWidth(),image.GetHeight())/GetViewport().GetVisibleRect().Size;
+                // Retained Mac captures put this column's waterline at rows 629-633 by
+                // wave phase. Sample 6 pixels lower, still inside the submerged half of
+                // the fireball, so waves cannot reach the patch and missing depth does.
+                var pixel=camera.UnprojectPosition(world)*new Vector2(image.GetWidth(),image.GetHeight())/GetViewport().GetVisibleRect().Size+new Vector2(0,6);
                 Event("shore-water-probe-target",new{center=center.ToString(),radius,world=world.ToString(),pixel=pixel.ToString(),water=LightingArena.WaterHeight});
                 Check(pixel.X>=2&&pixel.X<image.GetWidth()-2&&pixel.Y>=2&&pixel.Y<image.GetHeight()-2,"submerged fire probe stays inside the captured inspection view");
                 int fire=0;
@@ -147,10 +150,8 @@ public partial class PlaytestDriver
                     if(color.R>.35f&&color.R>color.G*1.4f&&color.R>color.B*1.6f)fire++;
                 }
                 Event("shore-water-probe",new{center=center.ToString(),radius,world=world.ToString(),pixel=pixel.ToString(),water=LightingArena.WaterHeight,fire});
-                // Waves and MSAA move the intersection through this patch: retained
-                // Mac captures put the edge at rows 629-633 by wave phase (3 rows).
-                // Missing depth fills the entire 5x5 patch (25) with fire instead.
-                Check(fire<=15,"water occludes submerged fire beyond the moving shoreline edge");
+                // MSAA may still soften one row. Missing depth fills the 5x5 patch with fire.
+                Check(fire<=5,"water occludes submerged fire beyond the moving shoreline edge");
             }
         }
         finally{camera.Transform=pose;Input(0,default);_root.Back();await Frames(3);}

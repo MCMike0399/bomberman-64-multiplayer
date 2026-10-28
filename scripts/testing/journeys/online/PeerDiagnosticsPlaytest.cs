@@ -14,7 +14,7 @@ public partial class PlaytestDriver
     {
         const BindingFlags flags=BindingFlags.Instance|BindingFlags.NonPublic;
         var peer=typeof(NetworkSession).GetField("_peer",flags)?.GetValue(session);
-        if(peer is null)return new {transport=session.PeerTransport,links=Array.Empty<object>()};
+        if(peer is null)return new {transport=session.PeerTransport,status=session.Status,player=session.PlayerId,links=Array.Empty<object>()};
         var links=(IDictionary?)peer.GetType().GetField("_links",flags)?.GetValue(peer);
         var seen=peer.GetType().GetField("_directSeen",flags)?.GetValue(peer) as Dictionary<string,long>;
         var result=new List<object>();
@@ -30,6 +30,6 @@ public partial class PlaytestDriver
                 connection=connection?.GetConnectionState().ToString(),
                 signaling=connection?.GetSignalingState().ToString(),reliable=reliable?.GetReadyState().ToString(),snapshots=snapshots?.GetReadyState().ToString()});
         }
-        return new {transport=session.PeerTransport,party=session.Party,links=result};
+        return new {transport=session.PeerTransport,status=session.Status,player=session.PlayerId,party=session.Party,links=result};
     }
 }
