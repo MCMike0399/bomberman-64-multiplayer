@@ -1,0 +1,20 @@
+{
+  "run": "20261028T213733.335997Z-wall-death",
+  "baseRevision": "37bf975daaff04fff8ffad9771605a96183ee5ab",
+  "passed": true,
+  "assertions": 32,
+  "screenshots": 13,
+  "runtimeErrors": 0,
+  "runtimeWarnings": [],
+  "sourceSha256": {
+    "scripts/arena/ArenaView.Presentation.cs": "30de0cedd41365e06dfb09cc0f2c22aabd3474351f4c38eb2cda8c55ae6f5323",
+    "scripts/testing/journeys/rendering/WallDeathPlaytest.cs": "83115d21e72182b4437c09d91794ec6ee21f40b600054c5e7294b16eee6cf719"
+  },
+  "images": {
+    "wall-death-blizzard-battle-battle.png": "5d0c1ec8127b6ee612b6dd85a11973a17922ebde4eeadbefaaaf9f738d106a06",
+    "wall-death-blizzard-battle-flat.png": "12485144635d2c198f0ec10734ec6d35e1b31d7a8546c78ce4457eaa5cf2132f",
+    "wall-death-blizzard-battle-puff.png": "131d4be00698ad3ad9e19e6f3f676413b9fe4da5ffed514b4f7ce20184b517d5",
+    "wall-death-greedy-trap-flat.png": "89933a7b2897aba6bd22a2e00b9842506c0566e0ce47b12172588c3bca3701b6",
+    "wall-death-top-rules-flat.png": "ecd1d09468be9098ad22378dde66b348d92c05c085cbcba717bddba20bf248c2"
+  }
+}

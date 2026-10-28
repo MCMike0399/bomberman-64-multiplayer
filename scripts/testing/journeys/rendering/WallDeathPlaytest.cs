@@ -17,18 +17,19 @@ public partial class PlaytestDriver
         var camera=new Camera3D {Fov=34,Near=.05f,Far=100};_root.AddChild(camera);
         try
         {
-            foreach(string stage in new[]{BlastStages.GreedyTrap,BlastStages.TopRules})
+            foreach(string stage in new[]{BlastStages.BlizzardBattle,BlastStages.GreedyTrap,BlastStages.TopRules})
             {
                 _root.StartLocal(new SessionSettings(Stage:stage,Bots:0,RoundSeconds:60,Ghosts:false),4);
                 await WaitState(s=>s.GetProperty("phase").GetInt32() is 1 or 2,"wall death starts real battle: "+stage,180);
-                await WaitState(s=>!s.GetProperty("players")[0].GetProperty("alive").GetBoolean(),"real closure eliminates idle player: "+stage,2400);
+                await WaitState(s=>s.GetProperty("players").EnumerateArray().Any(p=>!p.GetProperty("alive").GetBoolean()),"real closure eliminates idle player: "+stage,2400);
                 var effects=AuditDescendants(LightingArena).OfType<CrushEffect>().ToArray();
                 Check(effects.Length>=2,"both closing sides spawn crush stand-ins: "+stage);
-                Check(State.GetProperty("events").EnumerateArray().Any(e=>e.GetProperty("kind").GetString()=="death"&&e.GetProperty("reason").GetString()=="columns"),"authority identifies closing columns as death cause: "+stage);
-                Check(effects.Any(e=>e.Position.X<9.5f)&&effects.Any(e=>e.Position.X>9.5f),"both left and right walls retain a visible victim: "+stage);
+                Check(State.GetProperty("events").EnumerateArray().Any(e=>e.GetProperty("kind").GetString()=="death"&&e.GetProperty("reason").GetString()==(stage==BlastStages.BlizzardBattle?"avalanche":"columns")),"authority identifies closing columns as death cause: "+stage);
+                Check(stage==BlastStages.BlizzardBattle||effects.Any(e=>e.Position.X<9.5f)&&effects.Any(e=>e.Position.X>9.5f),"both left and right walls retain a visible victim: "+stage);
                 Check(!AuditDescendants(LightingArena).OfType<BurnoutEffect>().Any(),"wall deaths never spawn burning victims: "+stage);
                 if(effects.Length==0)continue;
                 var effect=effects.OrderBy(e=>e.Position.X).First();
+                bool left=effect.Position.X<9.5f;
                 await Capture("wall-death-"+stage+"-battle",0);
                 // Pause only the presentation stand-in, retaining real authority and arena geometry.
                 foreach(var e in effects)e.ProcessMode=ProcessModeEnum.Disabled;
@@ -42,7 +43,7 @@ public partial class PlaytestDriver
                 await At(.12f,"squeeze");await At(.65f,"flat");
                 Check(effect.Puppet.SquintEyes&&!effect.Puppet.Charred,"crush reuses squeezed eyes with original suit: "+stage);
                 Check(effect.PaperScale.Z<.15f,"crush becomes paper-flat: "+stage);
-                Check(effect.Position.X>State.GetProperty("closedLeft").GetInt32(),"stand-in clears opaque wall face: "+stage);
+                Check(left?effect.Position.X>State.GetProperty("closedLeft").GetInt32():effect.Position.X<19-State.GetProperty("closedRight").GetInt32(),"stand-in clears opaque wall face: "+stage);
                 await At(CrushEffect.PuffAt+.2f,"puff");
                 foreach(var e in effects)e.ProcessMode=ProcessModeEnum.Inherit;
                 battle.MakeCurrent();
