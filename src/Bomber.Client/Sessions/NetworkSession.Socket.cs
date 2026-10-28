@@ -147,7 +147,7 @@ public sealed partial class NetworkSession
                 if ((party.Hosting == "peer" || party.Adaptive) && Interlocked.Exchange(ref _peerHelloSent, 1) == 0)
                     QueuePeer("peer.hello", new { version = OnlineProtocol.Revision });
                 if (Party?.Phase != party.Phase || Party?.Match != party.Match) ReleaseInputs();
-                Volatile.Write(ref _party, party);_partyReady.TrySetResult();
+                Volatile.Write(ref _party, party);Volatile.Write(ref _partyReceivedAt, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());_partyReady.TrySetResult();
             }
             _wireMessages.Add(message);
             if (_wireMessages.Overflowed)

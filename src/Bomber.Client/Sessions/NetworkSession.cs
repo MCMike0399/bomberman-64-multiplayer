@@ -54,6 +54,10 @@ public sealed partial class NetworkSession : ISession
     public void ReleaseInputs() { lock (_inputGate) { _input = default; _buttons.Clear(); } }
     public int LocalPlayerCount => 1;
     public string Status => Volatile.Read(ref _status);
+    private long _partyReceivedAt;
+    /// <summary>Local UTC milliseconds when the socket received the latest party status,
+    /// independent of engine frame timing.</summary>
+    public long PartyReceivedAtUnixMs => Volatile.Read(ref _partyReceivedAt);
     private readonly System.Collections.Concurrent.ConcurrentQueue<string> _connectionEvents = new();
     /// <summary>The last 64 connection transitions: generation, close status/reason,
     /// reconnects and queue overflows. Bounded; for support and QA diagnostics.</summary>

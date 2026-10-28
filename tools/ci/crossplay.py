@@ -29,19 +29,52 @@ def clean_environment():
     return environment
 
 
-def github(*args):
-    return subprocess.check_output(['gh', *map(str, args)], text=True, timeout=60)
+def github(*args, attempts=5, pause=time.sleep):
+    # Read-only calls only. Retry bounded transient transport/API failures
+    # (run 40733955187 lost a barrier to one TLS handshake timeout).
+    for attempt in range(attempts):
+        try:
+            return subprocess.check_output(['gh', *map(str, args)], text=True, timeout=60)
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+            if attempt == attempts - 1: raise
+            pause(min(30, 2 ** (attempt + 1)))
 
 
-def wait_artifacts(names, timeout):
+def run_jobs():
+    repository, run_id = os.environ['GITHUB_REPOSITORY'], os.environ['GITHUB_RUN_ID']
+    return json.loads(github('api', f'repos/{repository}/actions/runs/{run_id}/jobs?per_page=100'))['jobs']
+
+
+def job_states(suffixes, jobs):
+    # Reusable-workflow jobs carry the caller prefix: match their name suffix.
+    return {suffix: next((job for job in jobs if job['name'].endswith(suffix)), None) for suffix in suffixes}
+
+
+def wait_jobs(suffixes, timeout, now=time.monotonic, pause=time.sleep, jobs=run_jobs):
+    """Hold until every peer client job is actually running; fail fast if one ends."""
+    deadline = now() + timeout
+    while True:
+        states = job_states(suffixes, jobs())
+        ended = [suffix for suffix, job in states.items() if job and job['status'] == 'completed']
+        if ended: raise RuntimeError('Crossplay peer job ended before the match: ' + ', '.join(ended))
+        if all(job and job['status'] == 'in_progress' for job in states.values()): return
+        if now() > deadline: raise RuntimeError('Crossplay peer runners did not all start: ' + ', '.join(suffixes))
+        pause(10)
+
+
+def wait_artifacts(names, timeout, alive=(), cap=0, now=time.monotonic, pause=time.sleep, jobs=run_jobs):
     if not names: raise ValueError('An explicit artifact barrier is required')
     repository, run_id = os.environ['GITHUB_REPOSITORY'], os.environ['GITHUB_RUN_ID']
-    deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
+    started = now(); deadline = started + timeout
+    while True:
         assets = json.loads(github('api', f'repos/{repository}/actions/runs/{run_id}/artifacts?per_page=100'))['artifacts']
         if set(names).issubset({item['name'] for item in assets if not item['expired']}): return
-        time.sleep(5)
-    raise RuntimeError('Timed out waiting for three-platform artifacts: ' + ', '.join(names))
+        if now() > deadline:
+            # Extend only while every producing job is still alive, up to a hard cap.
+            states = job_states(alive, jobs()) if alive else {}
+            if not (alive and now() - started < cap and all(job and job['status'] != 'completed' for job in states.values())):
+                raise RuntimeError('Timed out waiting for three-platform artifacts: ' + ', '.join(names))
+        pause(5)
 
 
 def read_json(url):
@@ -179,11 +212,13 @@ def server_serve(directory, output):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('operation', choices=('validate-run', 'wait', 'server-start', 'server-serve', 'server-stop', 'aggregate'))
+    parser.add_argument('operation', choices=('validate-run', 'wait', 'wait-jobs', 'server-start', 'server-serve', 'server-stop', 'aggregate'))
     parser.add_argument('--directory', type=Path, default=ROOT / 'artifacts')
     parser.add_argument('--output', type=Path, default=ROOT / 'artifacts/crossplay-server')
     parser.add_argument('--names', nargs='+', default=[])
     parser.add_argument('--timeout', type=int, default=900)
+    parser.add_argument('--jobs', nargs='+', default=[], help='Job-name suffixes that must stay alive (wait) or be running (wait-jobs)')
+    parser.add_argument('--cap', type=int, default=0, help='Hard ceiling in seconds for liveness-extended waits')
     parser.add_argument('--run-id')
     args = parser.parse_args(); directory = args.directory.resolve(); output = args.output.resolve()
     if args.operation == 'validate-run':
@@ -191,7 +226,8 @@ def main():
         run = json.loads(github('run', 'view', args.run_id, '--json', 'headSha,conclusion'))
         if run != {'conclusion': 'success', 'headSha': os.environ['CANDIDATE_SHA']}:
             raise RuntimeError('Three-platform test input does not match a successful native candidate run')
-    elif args.operation == 'wait': wait_artifacts(args.names, args.timeout)
+    elif args.operation == 'wait': wait_artifacts(args.names, args.timeout, args.jobs, args.cap)
+    elif args.operation == 'wait-jobs': wait_jobs(args.jobs, args.timeout)
     elif args.operation == 'server-start':
         process = launch([sys.executable, str(Path(__file__).resolve()), 'server-serve', '--directory', str(directory), '--output', str(output)], output)
         deadline = time.monotonic() + 150

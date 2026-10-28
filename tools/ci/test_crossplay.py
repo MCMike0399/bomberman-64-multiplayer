@@ -3,7 +3,9 @@ import copy
 import json
 from pathlib import Path
 import tempfile
+import subprocess
 import unittest
+from unittest.mock import patch
 
 import crossplay
 import desktop_packages as desktop
@@ -81,3 +83,45 @@ class CrossplayTests(unittest.TestCase):
 
 
 if __name__ == '__main__': unittest.main()
+
+
+class CrossplayRendezvousTests(unittest.TestCase):
+    def test_transient_api_failures_are_retried_but_persistent_failures_still_fail(self):
+        calls = []
+        def flaky(*args, **kwargs):
+            calls.append(args)
+            if len(calls) == 1: raise subprocess.CalledProcessError(1, args[0])
+            return '{"ok": true}'
+        with patch.object(crossplay.subprocess, 'check_output', side_effect=flaky):
+            self.assertEqual('{"ok": true}', crossplay.github('api', 'x', pause=lambda _: None))
+        self.assertEqual(2, len(calls))
+        with patch.object(crossplay.subprocess, 'check_output', side_effect=subprocess.TimeoutExpired('gh', 60)):
+            with self.assertRaises(subprocess.TimeoutExpired):
+                crossplay.github('api', 'x', pause=lambda _: None)
+
+    def test_clients_start_only_when_every_peer_runner_is_live(self):
+        def job(name, status, conclusion=None): return {'name': 'Diagnostic cross-platform Quick Play / ' + name, 'status': status, 'conclusion': conclusion}
+        names = ['Client windows-x64', 'Client linux-x64', 'Client macos-arm64']
+        sequence = iter([[job(n, 'queued' if 'macos' in n else 'in_progress') for n in names],
+                         [job(n, 'in_progress') for n in names]])
+        clock = iter(range(0, 1000, 10))
+        crossplay.wait_jobs(names, 1800, now=lambda: next(clock), pause=lambda _: None, jobs=lambda: next(sequence))
+        ended = [job(n, 'completed', 'cancelled') if 'macos' in n else job(n, 'in_progress') for n in names]
+        with self.assertRaisesRegex(RuntimeError, 'ended before the match'):
+            crossplay.wait_jobs(names, 1800, now=lambda: 0, pause=lambda _: None, jobs=lambda: ended)
+        queued = [job(n, 'queued') for n in names]
+        times = iter([0, 2000])
+        with self.assertRaisesRegex(RuntimeError, 'did not all start'):
+            crossplay.wait_jobs(names, 1800, now=lambda: next(times), pause=lambda _: None, jobs=lambda: queued)
+
+    def test_artifact_wait_extends_only_while_producers_live_and_never_past_its_cap(self):
+        environment = {'GITHUB_REPOSITORY': 'o/r', 'GITHUB_RUN_ID': '1'}
+        alive = [{'name': 'X / Client macos-arm64', 'status': 'in_progress'}]
+        dead = [{'name': 'X / Client macos-arm64', 'status': 'completed', 'conclusion': 'failure'}]
+        empty = '{"artifacts": []}'
+        with patch.dict(crossplay.os.environ, environment), patch.object(crossplay, 'github', return_value=empty):
+            for jobs, cap, message in ((dead, 5000, 'Timed out'), (alive, 1500, 'Timed out')):
+                times = iter([0, 1200, 1200, 1600, 1600, 1600])
+                with self.subTest(cap=cap), self.assertRaisesRegex(RuntimeError, message):
+                    crossplay.wait_artifacts(['crossplay-macos-arm64'], 1000, ['Client macos-arm64'], cap,
+                                             now=lambda: next(times), pause=lambda _: None, jobs=lambda: jobs)

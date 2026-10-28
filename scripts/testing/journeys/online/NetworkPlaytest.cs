@@ -220,7 +220,12 @@ public partial class PlaytestDriver
         await Capture("quick-play-three-players-countdown");
         await Task.Delay(1100);liveThird.Dispose();await third.DisposeAsync();
         await LobbyUntil(()=>first.Party?.StartAt>changed);
-        Check(first.Party!.StartAt-DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()>55000,"three-to-two departure shows a fresh full minute");
+        // The server resets to exactly one minute on its clock. Measure at socket
+        // receipt (frame-independent) and separately record receipt-to-check delay;
+        // slow frames previously consumed the 5 s allowance before this check.
+        long received=first.PartyReceivedAtUnixMs,remaining=first.Party!.StartAt!.Value-received;
+        Event("quick-play-reset-timing",new{remainingAtReceiptMs=remaining,receiptToCheckMs=DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()-received});
+        Check(remaining>55000&&remaining<=60500,"three-to-two departure shows a fresh full minute");
         liveSecond.Dispose();await second.DisposeAsync();
         await LobbyUntil(()=>first.Party?.StartAt is null);
         Check(VisibleText(_root).Contains("Waiting for a second player")&&!VisibleText(_root).Contains("Battle begins in "),"below two players removes the visible countdown immediately");
