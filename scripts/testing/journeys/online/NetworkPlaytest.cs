@@ -220,12 +220,15 @@ public partial class PlaytestDriver
         await Capture("quick-play-three-players-countdown");
         await Task.Delay(1100);liveThird.Dispose();await third.DisposeAsync();
         await LobbyUntil(()=>first.Party?.StartAt>changed);
-        // The server resets to exactly one minute on its clock. Measure at socket
-        // receipt (frame-independent) and separately record receipt-to-check delay;
-        // slow frames previously consumed the 5 s allowance before this check.
-        long received=first.PartyReceivedAtUnixMs,remaining=first.Party!.StartAt!.Value-received;
-        Event("quick-play-reset-timing",new{remainingAtReceiptMs=remaining,receiptToCheckMs=DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()-received});
-        Check(remaining>55000&&remaining<=60500,"three-to-two departure shows a fresh full minute");
+        // Exact 60 s reset and no early start are proven on the server clock in
+        // PublicMatchmakingChecks. Here, prove the reset deadline reaches this client
+        // coherently: its first socket receipt (frame-independent) still had a fresh
+        // minute (transit + local/server clock offset only) and is still the room's
+        // current deadline. Receipt-to-check delay is recorded separately.
+        var reset=first.DeadlineObserved;long nowMs=DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        Event("quick-play-reset-timing",new{deadline=reset?.StartAt,sequence=reset?.Sequence,remainingAtReceiptMs=reset?.StartAt-reset?.ReceivedAtUnixMs,receiptToCheckMs=nowMs-reset?.ReceivedAtUnixMs});
+        Check(reset is {StartAt:{} deadline}&&deadline==first.Party!.StartAt&&deadline-reset.ReceivedAtUnixMs>55000&&deadline-reset.ReceivedAtUnixMs<=60500,
+            "three-to-two departure shows a fresh full minute");
         liveSecond.Dispose();await second.DisposeAsync();
         await LobbyUntil(()=>first.Party?.StartAt is null);
         Check(VisibleText(_root).Contains("Waiting for a second player")&&!VisibleText(_root).Contains("Battle begins in "),"below two players removes the visible countdown immediately");

@@ -54,10 +54,12 @@ public sealed partial class NetworkSession : ISession
     public void ReleaseInputs() { lock (_inputGate) { _input = default; _buttons.Clear(); } }
     public int LocalPlayerCount => 1;
     public string Status => Volatile.Read(ref _status);
-    private long _partyReceivedAt;
-    /// <summary>Local UTC milliseconds when the socket received the latest party status,
-    /// independent of engine frame timing.</summary>
-    public long PartyReceivedAtUnixMs => Volatile.Read(ref _partyReceivedAt);
+    /// <summary>The first socket receipt of the current room deadline, published as one
+    /// immutable observation. Later statuses with the same deadline do not replace it.</summary>
+    public sealed record DeadlineObservation(long? StartAt, long ReceivedAtUnixMs, long Sequence);
+    private DeadlineObservation? _deadlineObservation;
+    private long _partySequence;
+    public DeadlineObservation? DeadlineObserved => Volatile.Read(ref _deadlineObservation);
     private readonly System.Collections.Concurrent.ConcurrentQueue<string> _connectionEvents = new();
     /// <summary>The last 64 connection transitions: generation, close status/reason,
     /// reconnects and queue overflows. Bounded; for support and QA diagnostics.</summary>

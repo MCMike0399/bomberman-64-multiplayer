@@ -29,20 +29,50 @@ def clean_environment():
     return environment
 
 
-def github(*args, attempts=5, pause=time.sleep):
-    # Read-only calls only. Retry bounded transient transport/API failures
-    # (run 40733955187 lost a barrier to one TLS handshake timeout).
+# One nested lifetime contract (seconds). crossplay.yml and its contract test
+# must keep every wait inside its enclosing bound.
+PEER_START_SECONDS = 1800      # clients wait for every peer runner to start
+SERVER_LIFETIME_SECONDS = 4800 # staging server/tunnel self-stop
+ARTIFACT_CAP_SECONDS = SERVER_LIFETIME_SECONDS - 300  # server-side wait ends before the server
+CLIENT_SETUP_SECONDS = 600     # checkout, downloads, display/audio fixture, origin
+CLIENT_READINESS_SECONDS = 300
+CLIENT_READY_BARRIER_SECONDS = 300
+CLIENT_ACTIONS_SECONDS = 300
+CLIENT_FINAL_BARRIER_SECONDS = 120
+CLIENT_FINISH_SECONDS = 600
+CLIENT_MATCH_SECONDS = (CLIENT_READINESS_SECONDS + CLIENT_READY_BARRIER_SECONDS +
+                        CLIENT_ACTIONS_SECONDS + CLIENT_FINAL_BARRIER_SECONDS + CLIENT_FINISH_SECONDS)
+CLIENT_PROCESS_SECONDS = CLIENT_MATCH_SECONDS + 60
+PERMANENT_GITHUB_ERRORS = ('HTTP 401', 'HTTP 404', 'Bad credentials', 'Resource not accessible', 'Not Found')
+RATE_LIMITED_GITHUB = ('HTTP 429', 'rate limit')
+
+
+def github(*args, attempts=5, pause=time.sleep, deadline=None, now=time.monotonic, run=subprocess.run):
+    # Read-only calls only. Retry bounded transient transport failures (run
+    # 40733955187 lost a barrier to one TLS handshake timeout); stop on permanent
+    # auth/configuration errors; back off longer when rate-limited; never past deadline.
     for attempt in range(attempts):
+        remaining = None if deadline is None else deadline - now()
+        if remaining is not None and remaining <= 0: raise TimeoutError('GitHub API call exceeded its enclosing deadline')
         try:
-            return subprocess.check_output(['gh', *map(str, args)], text=True, timeout=60)
-        except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+            result = run(['gh', *map(str, args)], text=True, capture_output=True, timeout=min(60, remaining or 60))
+        except subprocess.TimeoutExpired:
             if attempt == attempts - 1: raise
-            pause(min(30, 2 ** (attempt + 1)))
+            wait = min(30, 2 ** (attempt + 1))
+            pause(wait if deadline is None else max(0, min(wait, deadline - now())))
+            continue
+        if result.returncode == 0: return result.stdout
+        error = result.stderr or ''
+        if attempt == attempts - 1 or any(text in error for text in PERMANENT_GITHUB_ERRORS):
+            raise subprocess.CalledProcessError(result.returncode, result.args, result.stdout, error)
+        wait = 60 if any(text in error for text in RATE_LIMITED_GITHUB) else min(30, 2 ** (attempt + 1))
+        pause(wait if deadline is None else max(0, min(wait, deadline - now())))
 
 
-def run_jobs():
+def run_jobs(deadline=None, now=time.monotonic):
     repository, run_id = os.environ['GITHUB_REPOSITORY'], os.environ['GITHUB_RUN_ID']
-    return json.loads(github('api', f'repos/{repository}/actions/runs/{run_id}/jobs?per_page=100'))['jobs']
+    return json.loads(github('api', f'repos/{repository}/actions/runs/{run_id}/jobs?per_page=100',
+                             deadline=deadline, now=now))['jobs']
 
 
 def job_states(suffixes, jobs):
@@ -50,11 +80,11 @@ def job_states(suffixes, jobs):
     return {suffix: next((job for job in jobs if job['name'].endswith(suffix)), None) for suffix in suffixes}
 
 
-def wait_jobs(suffixes, timeout, now=time.monotonic, pause=time.sleep, jobs=run_jobs):
+def wait_jobs(suffixes, timeout, now=time.monotonic, pause=time.sleep, jobs=None):
     """Hold until every peer client job is actually running; fail fast if one ends."""
     deadline = now() + timeout
     while True:
-        states = job_states(suffixes, jobs())
+        states = job_states(suffixes, jobs() if jobs else run_jobs(deadline=deadline, now=now))
         ended = [suffix for suffix, job in states.items() if job and job['status'] == 'completed']
         if ended: raise RuntimeError('Crossplay peer job ended before the match: ' + ', '.join(ended))
         if all(job and job['status'] == 'in_progress' for job in states.values()): return
@@ -62,18 +92,26 @@ def wait_jobs(suffixes, timeout, now=time.monotonic, pause=time.sleep, jobs=run_
         pause(10)
 
 
-def wait_artifacts(names, timeout, alive=(), cap=0, now=time.monotonic, pause=time.sleep, jobs=run_jobs):
+def wait_artifacts(names, timeout, alive=(), cap=0, now=time.monotonic, pause=time.sleep, jobs=None):
+    """Wait for artifacts. With producers (alive[i] makes names[i]), a missing
+    artifact whose producer has ended fails promptly, and the deadline extends up
+    to cap only while every still-missing artifact's producer is alive."""
     if not names: raise ValueError('An explicit artifact barrier is required')
+    if alive and len(alive) != len(names): raise ValueError('Each artifact needs exactly one producing job')
     repository, run_id = os.environ['GITHUB_REPOSITORY'], os.environ['GITHUB_RUN_ID']
-    started = now(); deadline = started + timeout
+    started = now(); deadline = started + timeout; hard = started + max(timeout, cap)
     while True:
-        assets = json.loads(github('api', f'repos/{repository}/actions/runs/{run_id}/artifacts?per_page=100'))['artifacts']
-        if set(names).issubset({item['name'] for item in assets if not item['expired']}): return
-        if now() > deadline:
-            # Extend only while every producing job is still alive, up to a hard cap.
-            states = job_states(alive, jobs()) if alive else {}
-            if not (alive and now() - started < cap and all(job and job['status'] != 'completed' for job in states.values())):
-                raise RuntimeError('Timed out waiting for three-platform artifacts: ' + ', '.join(names))
+        assets = json.loads(github('api', f'repos/{repository}/actions/runs/{run_id}/artifacts?per_page=100', deadline=hard, now=now))['artifacts']
+        present = {item['name'] for item in assets if not item['expired']}
+        missing = [name for name in names if name not in present]
+        if not missing: return
+        if alive:
+            producers = dict(zip(names, alive))
+            states = job_states([producers[name] for name in missing], jobs() if jobs else run_jobs(deadline=hard, now=now))
+            dead = [suffix for suffix, job in states.items() if not job or job['status'] == 'completed']
+            if dead: raise RuntimeError('Artifact producer ended without its artifact: ' + ', '.join(dead))
+        if now() > (hard if alive else deadline):
+            raise RuntimeError('Timed out waiting for three-platform artifacts: ' + ', '.join(missing))
         pause(5)
 
 
@@ -200,7 +238,7 @@ def server_serve(directory, output):
         if not origin: raise RuntimeError('Disposable HTTPS staging origin did not become ready')
         (output / 'origin.json').write_text(json.dumps({'schemaVersion': 1, 'origin': origin, 'revision': metadata['revision'],
             'release': metadata['release'], 'serverArchiveSha256': digest(directory / 'Blast-Circuit-server-dotnet10.zip')}, indent=2) + '\n')
-        while not (output / 'stop').exists() and time.monotonic() - started < 1200:
+        while not (output / 'stop').exists() and time.monotonic() - started < SERVER_LIFETIME_SECONDS:
             if server.poll() is not None or tunnel.poll() is not None: raise RuntimeError('Owned staging service stopped during crossplay')
             time.sleep(.2)
     finally:
@@ -218,7 +256,7 @@ def main():
     parser.add_argument('--names', nargs='+', default=[])
     parser.add_argument('--timeout', type=int, default=900)
     parser.add_argument('--jobs', nargs='+', default=[], help='Job-name suffixes that must stay alive (wait) or be running (wait-jobs)')
-    parser.add_argument('--cap', type=int, default=0, help='Hard ceiling in seconds for liveness-extended waits')
+    parser.add_argument('--cap', type=int, default=0, help='Hard ceiling in seconds for liveness-extended waits (at most ARTIFACT_CAP_SECONDS)')
     parser.add_argument('--run-id')
     args = parser.parse_args(); directory = args.directory.resolve(); output = args.output.resolve()
     if args.operation == 'validate-run':
@@ -226,8 +264,8 @@ def main():
         run = json.loads(github('run', 'view', args.run_id, '--json', 'headSha,conclusion'))
         if run != {'conclusion': 'success', 'headSha': os.environ['CANDIDATE_SHA']}:
             raise RuntimeError('Three-platform test input does not match a successful native candidate run')
-    elif args.operation == 'wait': wait_artifacts(args.names, args.timeout, args.jobs, args.cap)
-    elif args.operation == 'wait-jobs': wait_jobs(args.jobs, args.timeout)
+    elif args.operation == 'wait': wait_artifacts(args.names, args.timeout, args.jobs, min(args.cap, ARTIFACT_CAP_SECONDS))
+    elif args.operation == 'wait-jobs': wait_jobs(args.jobs, min(args.timeout, PEER_START_SECONDS))
     elif args.operation == 'server-start':
         process = launch([sys.executable, str(Path(__file__).resolve()), 'server-serve', '--directory', str(directory), '--output', str(output)], output)
         deadline = time.monotonic() + 150

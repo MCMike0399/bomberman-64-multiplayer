@@ -1132,6 +1132,16 @@
       "manual": false
     },
     {
+      "id": "peer-link-recovery",
+      "method": "PeerLinkRecovery",
+      "domains": [
+        "network"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
       "id": "top-rules",
       "method": "TopRulesTour",
       "domains": [

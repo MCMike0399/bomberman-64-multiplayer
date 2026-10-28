@@ -88,16 +88,15 @@ if __name__ == '__main__': unittest.main()
 class CrossplayRendezvousTests(unittest.TestCase):
     def test_transient_api_failures_are_retried_but_persistent_failures_still_fail(self):
         calls = []
-        def flaky(*args, **kwargs):
+        def flaky(args, **kwargs):
             calls.append(args)
-            if len(calls) == 1: raise subprocess.CalledProcessError(1, args[0])
-            return '{"ok": true}'
-        with patch.object(crossplay.subprocess, 'check_output', side_effect=flaky):
-            self.assertEqual('{"ok": true}', crossplay.github('api', 'x', pause=lambda _: None))
+            if len(calls) == 1: return subprocess.CompletedProcess(args, 1, '', 'net/http: TLS handshake timeout')
+            return subprocess.CompletedProcess(args, 0, '{"ok": true}', '')
+        self.assertEqual('{"ok": true}', crossplay.github('api', 'x', pause=lambda _: None, run=flaky))
         self.assertEqual(2, len(calls))
-        with patch.object(crossplay.subprocess, 'check_output', side_effect=subprocess.TimeoutExpired('gh', 60)):
-            with self.assertRaises(subprocess.TimeoutExpired):
-                crossplay.github('api', 'x', pause=lambda _: None)
+        def hung(args, **kwargs): raise subprocess.TimeoutExpired('gh', 60)
+        with self.assertRaises(subprocess.TimeoutExpired):
+            crossplay.github('api', 'x', pause=lambda _: None, run=hung)
 
     def test_clients_start_only_when_every_peer_runner_is_live(self):
         def job(name, status, conclusion=None): return {'name': 'Diagnostic cross-platform Quick Play / ' + name, 'status': status, 'conclusion': conclusion}
@@ -114,14 +113,68 @@ class CrossplayRendezvousTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'did not all start'):
             crossplay.wait_jobs(names, 1800, now=lambda: next(times), pause=lambda _: None, jobs=lambda: queued)
 
-    def test_artifact_wait_extends_only_while_producers_live_and_never_past_its_cap(self):
+    def test_artifact_wait_tracks_only_missing_artifacts_producers(self):
         environment = {'GITHUB_REPOSITORY': 'o/r', 'GITHUB_RUN_ID': '1'}
-        alive = [{'name': 'X / Client macos-arm64', 'status': 'in_progress'}]
-        dead = [{'name': 'X / Client macos-arm64', 'status': 'completed', 'conclusion': 'failure'}]
-        empty = '{"artifacts": []}'
-        with patch.dict(crossplay.os.environ, environment), patch.object(crossplay, 'github', return_value=empty):
-            for jobs, cap, message in ((dead, 5000, 'Timed out'), (alive, 1500, 'Timed out')):
-                times = iter([0, 1200, 1200, 1600, 1600, 1600])
-                with self.subTest(cap=cap), self.assertRaisesRegex(RuntimeError, message):
-                    crossplay.wait_artifacts(['crossplay-macos-arm64'], 1000, ['Client macos-arm64'], cap,
-                                             now=lambda: next(times), pause=lambda _: None, jobs=lambda: jobs)
+        names = ['crossplay-windows-x64', 'crossplay-linux-x64', 'crossplay-macos-arm64']
+        producers = ['Client windows-x64', 'Client linux-x64', 'Client macos-arm64']
+        def artifacts(*present): return json.dumps({'artifacts': [{'name': n, 'expired': False} for n in present]})
+        def jobs(**status): return [{'name': 'X / Client ' + t, 'status': s, 'conclusion': 'success' if s == 'completed' else None} for t, s in status.items()]
+        finished_ok = jobs(**{'windows-x64': 'completed', 'linux-x64': 'in_progress', 'macos-arm64': 'in_progress'})
+        with patch.dict(crossplay.os.environ, environment):
+            # A finished producer whose artifact exists never blocks the others.
+            replies = iter([artifacts(names[0]), artifacts(*names)])
+            with patch.object(crossplay, 'github', side_effect=lambda *a, **k: next(replies)):
+                crossplay.wait_artifacts(names, 10, producers, 3900, now=lambda: 0, pause=lambda _: None, jobs=lambda: finished_ok)
+            # A missing artifact whose producer ended fails promptly, before any deadline.
+            dead = jobs(**{'windows-x64': 'completed', 'linux-x64': 'completed', 'macos-arm64': 'in_progress'})
+            with patch.object(crossplay, 'github', return_value=artifacts(names[0])):
+                with self.assertRaisesRegex(RuntimeError, 'ended without its artifact: Client linux-x64'):
+                    crossplay.wait_artifacts(names, 10, producers, 3900, now=lambda: 0, pause=lambda _: None, jobs=lambda: dead)
+            # Live producers extend past the base timeout only up to the cap.
+            times = iter([0, 500, 500, 4000, 4000])
+            with patch.object(crossplay, 'github', return_value=artifacts(names[0])):
+                with self.assertRaisesRegex(RuntimeError, 'Timed out'):
+                    crossplay.wait_artifacts(names, 10, producers, 3900, now=lambda: next(times), pause=lambda _: None, jobs=lambda: finished_ok)
+
+    def test_permanent_github_errors_are_not_retried_and_retries_respect_the_deadline(self):
+        calls = []
+        def failing(args, **kwargs):
+            calls.append(args); return subprocess.CompletedProcess(args, 1, '', 'HTTP 401: Bad credentials')
+        with self.assertRaises(subprocess.CalledProcessError):
+            crossplay.github('api', 'x', pause=lambda _: None, run=failing)
+        self.assertEqual(1, len(calls))
+        with self.assertRaises(TimeoutError):
+            crossplay.github('api', 'x', deadline=5, now=lambda: 10, run=failing)
+        clock = [0]; delays = []
+        def timeout(args, **kwargs):
+            clock[0] += kwargs['timeout']
+            raise subprocess.TimeoutExpired(args, kwargs['timeout'])
+        def pause(seconds):
+            delays.append(seconds); clock[0] += seconds
+        with self.assertRaises(TimeoutError):
+            crossplay.github('api', 'x', deadline=1, now=lambda: clock[0], pause=pause, run=timeout)
+        self.assertEqual(1, clock[0])
+        self.assertEqual([0], delays)
+
+
+class CrossplayLifetimeContractTests(unittest.TestCase):
+    def test_every_nested_crossplay_wait_fits_inside_its_enclosing_lifetime(self):
+        import re
+        text = (crossplay.ROOT / '.github/workflows/crossplay.yml').read_text()
+        def minutes(job):
+            section = text[text.index('\n  ' + job + ':'):]
+            return int(re.search(r'timeout-minutes: (\d+)', section).group(1)) * 60
+        self.assertGreaterEqual(minutes('clients'), crossplay.CLIENT_SETUP_SECONDS + crossplay.PEER_START_SECONDS + crossplay.CLIENT_PROCESS_SECONDS)
+        self.assertGreaterEqual(minutes('server'), crossplay.SERVER_LIFETIME_SECONDS + 300)
+        self.assertGreaterEqual(crossplay.SERVER_LIFETIME_SECONDS, crossplay.PEER_START_SECONDS + crossplay.CLIENT_MATCH_SECONDS + 300)
+        cap = int(re.search(r'--cap (\d+)', text).group(1))
+        self.assertLessEqual(cap, crossplay.ARTIFACT_CAP_SECONDS)
+        self.assertGreaterEqual(cap, crossplay.CLIENT_SETUP_SECONDS + crossplay.PEER_START_SECONDS + crossplay.CLIENT_PROCESS_SECONDS)
+        runtime = (crossplay.ROOT / 'tools/ci/crossplay_runtime.py').read_text()
+        self.assertIn('process.wait(timeout=crossplay.CLIENT_PROCESS_SECONDS)', runtime)
+        self.assertGreater(crossplay.CLIENT_PROCESS_SECONDS, crossplay.CLIENT_MATCH_SECONDS)
+        self.assertIn('--names crossplay-ready-windows-x64 crossplay-ready-linux-x64 crossplay-ready-macos-arm64 --timeout ' + str(crossplay.CLIENT_READY_BARRIER_SECONDS), text)
+        self.assertIn('--names crossplay-actions-windows-x64 crossplay-actions-linux-x64 crossplay-actions-macos-arm64 --timeout ' + str(crossplay.CLIENT_FINAL_BARRIER_SECONDS), text)
+        self.assertLess(crossplay.ARTIFACT_CAP_SECONDS, crossplay.SERVER_LIFETIME_SECONDS)
+        gate = int(re.search(r'wait-jobs .*--timeout (\d+)', text).group(1))
+        self.assertLessEqual(gate, crossplay.PEER_START_SECONDS)

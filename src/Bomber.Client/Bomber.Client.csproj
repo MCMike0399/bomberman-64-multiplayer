@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup><ProjectReference Include="../Bomber.Game/Bomber.Game.csproj" /></ItemGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="Bomber.Client.Tests" />
     <EmbeddedResource Include="Updates/UpdatePublicKey.txt" LogicalName="BlastCircuit.UpdatePublicKey" />
     <EmbeddedResource Include="Updates/install-update.sh" LogicalName="BlastCircuit.UpdateInstaller" />
   </ItemGroup>

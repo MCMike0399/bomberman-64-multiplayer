@@ -13,6 +13,7 @@ public sealed class GodotPeerLink(bool useStun = true) : IPeerLink
     private string? _remoteOffer;
     private bool _remoteDescriptionSet;
     private readonly Queue<(string Media,int Index,string Candidate)> _pendingIce=[];
+    public bool Failed => _peer?.GetConnectionState() is WebRtcPeerConnection.ConnectionState.Failed or WebRtcPeerConnection.ConnectionState.Closed;
     public bool Connected => _peer?.GetConnectionState() == WebRtcPeerConnection.ConnectionState.Connected &&
         _channel?.GetReadyState() == WebRtcDataChannel.ChannelState.Open && _states?.GetReadyState() == WebRtcDataChannel.ChannelState.Open;
     public event Action<JsonElement>? Signal;

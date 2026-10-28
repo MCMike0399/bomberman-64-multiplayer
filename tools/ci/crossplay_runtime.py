@@ -80,7 +80,7 @@ def serve(directory, target, output, origin_path):
         if target == 'linux-x64': environment.pop('APPIMAGE_EXTRACT_AND_RUN', None)
         with (output / 'runtime.log').open('w') as log:
             process = subprocess.Popen(command, cwd=output, env=environment, stdout=log, stderr=subprocess.STDOUT)
-            result['exitCode'] = process.wait(timeout=900)
+            result['exitCode'] = process.wait(timeout=crossplay.CLIENT_PROCESS_SECONDS)
     except BaseException as error:
         result['error'] = str(error)
         raise
@@ -112,7 +112,7 @@ def main():
                    '--output', str(output), '--origin', str(args.origin.resolve())]
         if args.target == 'linux-x64': command = [sys.executable, str(ROOT / 'tools/packaging/linux-desktop.py'), '--', *command]
         process = crossplay.launch(command, output)
-        started = time.monotonic(); deadline = started + 300
+        started = time.monotonic(); deadline = started + crossplay.CLIENT_READINESS_SECONDS
         try:
             while not (output / 'crossplay-ready.json').exists():
                 if process.poll() is not None or (output / 'exit.json').exists() or time.monotonic() > deadline:
@@ -122,7 +122,7 @@ def main():
     elif args.operation == 'serve': serve(directory, args.target, output, args.origin.resolve())
     elif args.operation == 'release':
         (output / 'release').touch()
-        started = time.monotonic(); deadline = started + 300
+        started = time.monotonic(); deadline = started + crossplay.CLIENT_ACTIONS_SECONDS
         try:
             while not (output / 'crossplay-actions.json').exists():
                 if (output / 'exit.json').exists() or time.monotonic() > deadline:
@@ -135,7 +135,7 @@ def main():
         try:
             if not (output / 'crossplay-actions.json').exists(): raise RuntimeError('Final barrier requires an action witness from this client')
             (output / 'finish').touch()
-            deadline = time.monotonic() + 600
+            deadline = time.monotonic() + crossplay.CLIENT_FINISH_SECONDS
             while not (output / 'exit.json').exists():
                 if time.monotonic() > deadline: raise RuntimeError('Mixed-platform game exceeded its bounded deadline')
                 time.sleep(.2)

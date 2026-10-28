@@ -149,6 +149,7 @@ public partial class PlaytestDriver
     {
         private readonly GodotPeerLink _inner=new(useStun);
         public bool Connected=>_inner.Connected;
+        public bool Failed=>_inner.Failed;
         public event Action<JsonElement>? Signal;
         public event Action<byte[]>? Received;
         public void Start(bool offer)

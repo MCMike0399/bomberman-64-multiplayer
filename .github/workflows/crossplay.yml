@@ -25,7 +25,7 @@ jobs:
     name: Staged crossplay server
     runs-on: ubuntu-24.04
     # Covers clients waiting for a queued peer runner (up to 30 min) plus the match.
-    timeout-minutes: 75
+    timeout-minutes: 85
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -49,7 +49,7 @@ jobs:
       - name: Keep staging alive until every native client finishes
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python3 tools/ci/crossplay.py wait --names crossplay-windows-x64 crossplay-linux-x64 crossplay-macos-arm64 --timeout 1000 --jobs "Client windows-x64" "Client linux-x64" "Client macos-arm64" --cap 4200
+        run: python3 tools/ci/crossplay.py wait --names crossplay-windows-x64 crossplay-linux-x64 crossplay-macos-arm64 --timeout 1000 --jobs "Client windows-x64" "Client linux-x64" "Client macos-arm64" --cap 4500
       - name: Stop only this job's server and tunnel
         if: always()
         run: python3 tools/ci/crossplay.py server-stop
@@ -76,7 +76,7 @@ jobs:
           - target: macos-arm64
             runner: macos-15
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 60
+    timeout-minutes: 70
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -165,8 +165,16 @@ jobs:
             artifacts/crossplay-${{ matrix.target }}/launcher.log
             artifacts/crossplay-${{ matrix.target }}/phases.json
             artifacts/crossplay-${{ matrix.target }}/trace.jsonl
-            artifacts/windows-audio/*.json
             artifacts/crossplay-${{ matrix.target }}/*.png
+          retention-days: 14
+          if-no-files-found: warn
+      # Separate root: mixing windows-audio into crossplay-<target> nested the
+      # receipt one directory deeper and broke parity aggregation (run 40737870206).
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always() && runner.os == 'Windows'
+        with:
+          name: crossplay-audio-${{ matrix.target }}
+          path: artifacts/windows-audio/*.json
           retention-days: 14
           if-no-files-found: warn
 

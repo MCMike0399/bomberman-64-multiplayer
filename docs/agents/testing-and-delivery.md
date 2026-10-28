@@ -809,6 +809,30 @@ CI artifacts. Candidate crossplay starts once exact downloads and the Mac
 archive exist; trusted main still waits for every smoke job. It records
 per-phase timings for budget decisions.
 
+Research proposals for parity and delivery (not qualification receipts) are in
+[rendering parity research](../desktop-rendering-parity-research.md) and
+[delivery research](../desktop-parity-delivery-research.md). Current decisions:
+
+- Crossplay lifetimes are one nested contract (`crossplay.PEER_START_SECONDS`,
+  `SERVER_LIFETIME_SECONDS`, `ARTIFACT_CAP_SECONDS`), enforced by a test that
+  parses `crossplay.yml`. Artifact waits track only producers of still-missing
+  artifacts. A missing artifact whose producer ended fails promptly.
+- `NetworkSession.DeadlineObserved` is the first socket receipt of the current
+  room deadline, published as one immutable record. The exact 60 s reset and
+  no-early-start rules are proven on the server clock in
+  `PublicMatchmakingChecks`. The native journey proves client propagation.
+- `peer-link-recovery` (diagnostic leaf, in no release suite) terminally closes
+  one native WebRTC connection mid-match. It checks relay continuity and direct
+  recovery as separate predicates. `PeerRoomClient` lets the pair's original
+  offerer replace a terminally failed link with a fresh link. Recovery uses
+  bounded backoff (5 attempts per epoch) and a link-attempt generation, kept
+  separate from the authority epoch, that rejects stale SDP/ICE. New-attempt
+  ICE reaches a fresh answerer even before SDP; replaced-link callbacks are
+  ignored. Attempts reset when the coordinator reports a new member connection.
+  Healthy,
+  transiently disconnected and relay paths are left alone. Pinned
+  webrtc-native cannot re-offer a closed peer.
+
 Keep long-running platform QA independent of Mac stable releases: use the
 separate worktree, private exact-SHA drafts, owned matching server and pinned
 diagnostic updater baseline described in [independent platform QA](../desktop-clients.md#independent-platform-qa).
