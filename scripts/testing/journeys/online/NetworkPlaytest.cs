@@ -25,6 +25,10 @@ public partial class PlaytestDriver
         await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"online map fixture reaches fight",900);
         Check(State.GetProperty("players").EnumerateArray().All(p=>p.GetProperty("bombs").GetInt32()==2&&p.GetProperty("fire").GetInt32()==1),"online players start with zero collected upgrades");
         Input(0,new PlayerInput(0,0,A:true));await Frames(4);Input(0,default);
+        await Until(()=>_root.LatestState is {} finish&&finish.GetProperty("phase").GetInt32()==3,"online match publishes its arena finish before results");
+        Check(_root.ScreenName=="Match"&&guest.Party?.Phase=="playing","online guest remains in the battle during the finish announcement");
+        Check(VisibleText(_root).Contains("Game!",StringComparison.Ordinal)&&VisibleText(_root).Contains("Map selection owner wins the match!",StringComparison.Ordinal),"online guest sees the authoritative winner announcement");
+        await Frames(12);await Capture("online-match-finish-announcement");
         await Until(()=>_root.ScreenName=="Results","ordinary bomb completes the online match");
         await Capture("online-post-match-results");
         await Until(()=>_root.ScreenName=="Setup"&&guest.Party?.Phase=="lobby","online results automatically return to map selection");

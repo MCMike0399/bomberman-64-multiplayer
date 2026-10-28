@@ -28,12 +28,12 @@ public partial class BattleHud : Control
         _leftTeam=new HBoxContainer {AnchorLeft=.5f,AnchorRight=.5f,OffsetLeft=-720,OffsetRight=-120,OffsetTop=10,OffsetBottom=110,Alignment=BoxContainer.AlignmentMode.End,MouseFilter=MouseFilterEnum.Ignore};
         _rightTeam=new HBoxContainer {AnchorLeft=.5f,AnchorRight=.5f,OffsetLeft=120,OffsetRight=720,OffsetTop=10,OffsetBottom=110,Alignment=BoxContainer.AlignmentMode.Begin,MouseFilter=MouseFilterEnum.Ignore};
         foreach(var team in new[]{_leftTeam,_rightTeam}){team.AddThemeConstantOverride("separation",8);AddChild(team);}
-        _phase=new Label {AnchorLeft=.1f,AnchorRight=.9f,OffsetTop=150,OffsetBottom=240,HorizontalAlignment=HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Center};
+        _phase=new Label {Name="RoundAnnouncement",AnchorLeft=.1f,AnchorRight=.9f,OffsetTop=150,OffsetBottom=240,HorizontalAlignment=HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Center};
         _phase.AddThemeFontOverride("font",ArcadeTheme.Display);_phase.AddThemeFontSizeOverride("font_size",60);_phase.AddThemeColorOverride("font_color",ArcadeTheme.Gold);
         _phase.AddThemeColorOverride("font_outline_color",ArcadeTheme.Ink);_phase.AddThemeConstantOverride("outline_size",14);
         _phase.AddThemeColorOverride("font_shadow_color",ArcadeTheme.Ink);_phase.AddThemeConstantOverride("shadow_outline_size",14);_phase.AddThemeConstantOverride("shadow_offset_y",7);_phase.AddThemeConstantOverride("shadow_offset_x",0);
         AddChild(_phase);
-        _phaseDetail=new Label {AnchorLeft=.1f,AnchorRight=.9f,OffsetTop=236,OffsetBottom=272,HorizontalAlignment=HorizontalAlignment.Center};
+        _phaseDetail=new Label {Name="RoundAnnouncementDetail",AnchorLeft=.1f,AnchorRight=.9f,OffsetTop=236,OffsetBottom=272,HorizontalAlignment=HorizontalAlignment.Center,ClipText=true,TextOverrunBehavior=TextServer.OverrunBehavior.TrimEllipsis};
         _phaseDetail.AddThemeFontSizeOverride("font_size",24);_phaseDetail.AddThemeConstantOverride("outline_size",7);_phaseDetail.AddThemeColorOverride("font_outline_color",ArcadeTheme.Ink);AddChild(_phaseDetail);
         _hint=new PanelContainer {AnchorLeft=.5f,AnchorRight=.5f,AnchorTop=1,AnchorBottom=1,OffsetLeft=-560,OffsetRight=560,OffsetTop=-116,OffsetBottom=-76,GrowHorizontal=GrowDirection.Both,MouseFilter=MouseFilterEnum.Ignore};
         var hintStyle=ArcadeTheme.Panel(new Color(ArcadeTheme.Night,.86f),new Color("394a8f"),2,20,0);hintStyle.ContentMarginLeft=hintStyle.ContentMarginRight=20;hintStyle.ContentMarginTop=5;hintStyle.ContentMarginBottom=7;
@@ -96,10 +96,19 @@ public partial class BattleHud : Control
         bool avalanche=state.TryGetProperty("hurryMode",out var snowMode)&&snowMode.GetString()=="avalanche";
         _clock.Caption=Practice?"Practice":phase==2&&flood?(waterDelay>0?$"Flood in {waterDelay}":"Water rising"):phase==2&&meteors?"Fireballs falling":phase==2&&avalanche?"Avalanche closing":"Round "+round;
         _clock.QueueRedraw();
-        string banner=phase switch{0=>"Get Ready!",2 when _hurryAge<3=>"Hurry Up!",3=>"Round Over",_=>""};
+        // Accepted outcome, rather than score order: the leader may have lost this round.
+        var ending=state.GetProperty("events").EnumerateArray().LastOrDefault(e=>e.GetProperty("round").GetInt32()==round&&e.GetProperty("kind").GetString()=="round-over");
+        string? winnerId=ending.ValueKind==JsonValueKind.Object?ending.GetProperty("playerId").GetString():null;
+        string? reason=ending.ValueKind==JsonValueKind.Object?ending.GetProperty("reason").GetString():null;
+        var winner=players.FirstOrDefault(p=>p.GetProperty("id").GetString()==winnerId);
+        string banner=phase switch{0=>"Get Ready!",2 when _hurryAge<3=>"Hurry Up!",3 when reason=="time_up"=>"Time's Up!",3 when winnerId is null=>"Draw!",3=>"Game!",_=>""};
         _phase.Text=banner;_phase.AddThemeColorOverride("font_color",phase==2?ArcadeTheme.Red:ArcadeTheme.Gold);
         _phaseDetail.Text=phase==2&&_hurryAge<3&&flood?"Get to high ground":phase==2&&_hurryAge<3&&avalanche?"Move away from the side walls":"";
-        _recovery.Text=Hint(state,players);_hint.Visible=_recovery.Text.Length>0;
+        if(phase==3)
+            _phaseDetail.Text=winner.ValueKind==JsonValueKind.Object
+                ? $"{PlayerNames.Display(winner.GetProperty("name").GetString(),winner.GetProperty("slot").GetInt32())} wins the {(winner.GetProperty("wins").GetInt32()>=_winsTarget?"match":"round")}!"
+                : reason=="time_up"?"Draw · No point awarded":"No survivors · No point awarded";
+        _recovery.Text=phase==3?"":Hint(state,players);_hint.Visible=_recovery.Text.Length>0;
     }
     private static string Hint(JsonElement state,JsonElement[] players)
     {

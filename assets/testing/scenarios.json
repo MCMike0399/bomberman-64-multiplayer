@@ -2,6 +2,18 @@
   "schemaVersion": 1,
   "scenarios": [
     {
+      "id": "round-ending",
+      "method": "RoundEnding",
+      "domains": [
+        "gameplay",
+        "ui",
+        "audio"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
       "id": "blast-hitbox",
       "method": "BlastHitbox",
       "domains": [
@@ -634,6 +646,7 @@
         "hurry-water",
         "ai-play",
         "combat",
+        "round-ending",
         "results",
         "post-match",
         "network",
@@ -697,7 +710,8 @@
         "rock-garden",
         "blizzard-battle",
         "greedy-trap",
-        "stage-scenery"
+        "stage-scenery",
+        "round-ending"
       ],
       "domains": [
         "ai",

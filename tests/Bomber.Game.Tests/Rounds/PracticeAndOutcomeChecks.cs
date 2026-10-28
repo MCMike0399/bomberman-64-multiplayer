@@ -36,7 +36,7 @@ internal static class PracticeAndOutcomeChecks
             var arena=FlatArena([(1,3),(7,3)]);for(var z=0;z<9;z++)arena.Cells[0,z]=CellDef.Water;
             var match=new LocalMatch(new MatchOptions {HumanPlayers=1,BotPlayers=1,Wins=1},arena);Fight(match);
             string? ended=null;match.Message+=json=>{using var doc=JsonDocument.Parse(json);if(doc.RootElement.GetProperty("t").GetString()=="sys.ended")ended=json;};
-            match.SetInput(0,new PlayerInput(-1,0));Step(match,20);
+            match.SetInput(0,new PlayerInput(-1,0));Step(match,120);
             Assert(match.IsEnded&&match.Result?.Reason=="bot_won","Water elimination did not produce the bot match win.");
             Assert(match.Result!.Winners.Count==0,"Bot victory invented a human winner.");
             Assert(ended is not null,"No match end envelope was emitted.");

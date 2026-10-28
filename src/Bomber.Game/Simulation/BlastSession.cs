@@ -80,6 +80,7 @@ public sealed partial class BlastSession : GameSession
     // ─── match-end guard ─────────────────────────────────────────────────────
 
     private bool _matchEndScheduled;
+    private MatchResult? _pendingMatchResult;
     private bool _waterfallStarted;
 
     // Per-session ID counters — deterministic given the same sequence of events.
@@ -258,6 +259,8 @@ public sealed partial class BlastSession : GameSession
                     AdvanceRound(context);
                 break;
         }
+
+        if (_matchEndScheduled) return;
 
         // Broadcast at 15 Hz (every other tick).
         if (_tickCount % 2 == 0)

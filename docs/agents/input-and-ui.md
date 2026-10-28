@@ -5,6 +5,24 @@ controller prompts, throw previews or shared UI primitives. It records decisions
 that source alone cannot explain. Source and the current README remain the
 lookup for exact values; older iteration documents retain historical evidence.
 
+## Round and match announcements (2026-10-28 source work)
+
+The arena stays visible during the authority's three-second Over phase, including
+the match-winning round. The HUD shows **Game!** and the accepted winner's name,
+distinguishing a round win from a match win; simultaneous elimination shows
+**Draw!**, and clock expiry shows **Time's Up!** with the draw/no-point detail.
+Draws use an original descending cue instead of the victory fanfare. Winner poses,
+the frozen battlefield and updated score remain visible before Results or the
+next Ready phase. Final results are captured at elimination and emitted after
+the interval by the shared local/server/peer authority.
+
+The [original-game research](../round-ending-research.md) separates the verified
+announcer wording/arena hold from our visible Game banner, names, timing and
+synthesized sound. `round-ending` covers actual bombs, simultaneous deaths,
+timeout, input freeze, next-round cleanup and final Results. `post-match`
+additionally checks the on-arena announcement on a real network guest before
+the same-room map-selection flow. See the [verification](../round-ending.md).
+
 ## Current controls and compatibility
 
 The main menu now includes Tutorial. [Tutorial navigation](../tutorial.md) owns device-aware lesson copy, saved stars, explicit retry/next, pause actions and returning to lessons. Keep Practice available for battle arenas.

@@ -73,7 +73,7 @@ public partial class ArenaView
                 case "hurry":_audio.Hurry();break;
                 case "waterfall":_audio.Splash();CountEffect("water-rise");break;
                 case "round-over":
-                    _audio.RoundWin();
+                    if(player is null)_audio.RoundDraw();else _audio.RoundWin();
                     if(player!=null&&_entities.TryGetValue("p:"+player,out var winner)&&winner is BomberModel bomber)bomber.React("victory");break;
             }
         }
