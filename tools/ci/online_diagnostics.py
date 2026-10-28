@@ -63,6 +63,8 @@ def main():
               'results': results}
     (output / 'online-diagnostic.json').write_text(json.dumps(redact(report), indent=2) + '\n')
     print(json.dumps(redact(report), indent=2))
+    return 0 if all(result['exitCode'] == 0 and result['passed'] is True and (result['assertions'] or 0) > 0
+                    for result in results) else 1
 
 
-if __name__ == '__main__': main()
+if __name__ == '__main__': raise SystemExit(main())

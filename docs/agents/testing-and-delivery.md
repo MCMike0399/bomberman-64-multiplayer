@@ -832,6 +832,11 @@ Research proposals for parity and delivery (not qualification receipts) are in
   Healthy,
   transiently disconnected and relay paths are left alone. Pinned
   webrtc-native cannot re-offer a closed peer.
+  Focused Windows diagnostics include this leaf alongside `network` and
+  `peer-rooms`. The runner retains every case and exits unsuccessfully if any
+  child fails, lacks positive completion or reports no assertions; a later pass
+  cannot hide an earlier failure. Diagnostic runner and frozen payload revisions
+  are recorded separately.
 
 Keep long-running platform QA independent of Mac stable releases: use the
 separate worktree, private exact-SHA drafts, owned matching server and pinned
