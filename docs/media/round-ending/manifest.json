@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-10-28",
+  "baseRevision": "7d090eb71122ad8a56c4c473a67b60e8096bbfd0",
+  "dirtyWorktree": true,
+  "catalogSha256": "89198de7b70fb325b03fd817f0e1837401c03228f597ac8924712161e7ea2397",
+  "renderer": "Metal 4.0 - Forward+ - Using Device #0: Apple - Apple Paravirtual device (Apple5)",
+  "desktop": "isolated macOS guest, 1280x800 window",
+  "physicalDeviceCoverage": false,
+  "nativeHostGpuCoverage": false,
+  "runs": {
+    "round-ending": {
+      "path": "artifacts/round-ending/graphical/20261028T184230.074308Z-round-ending",
+      "assertions": 30,
+      "runtimeErrors": 0,
+      "warnings": []
+    },
+    "post-match": {
+      "path": "artifacts/round-ending/network-graphical/20261028T184357.404304Z-post-match",
+      "assertions": 40,
+      "runtimeErrors": 0,
+      "warnings": []
+    }
+  },
+  "files": [
+    {
+      "file": "finish-match-results.png",
+      "sha256": "e0879d9c6b4ce00a2e9854518ee7ffd209406c6f6b1bb8412f01c9201105533a",
+      "sourceRun": "round-ending"
+    },
+    {
+      "file": "finish-match-win.png",
+      "sha256": "f9290dc2cc2fcdc9d66608c962392924d5d6679d8a27e6967ce35669ab7b5af6",
+      "sourceRun": "round-ending"
+    },
+    {
+      "file": "finish-no-survivors-draw.png",
+      "sha256": "edfef49e4e89e62ca3e7ecf9a76ca81b1773341e7f74166d11151d037cdc0510",
+      "sourceRun": "round-ending"
+    },
+    {
+      "file": "finish-round-win.png",
+      "sha256": "4cb6f676e02490d33b5c00a607d375e7f7918bc7861f3b35e7a3c770ba89ef4c",
+      "sourceRun": "round-ending"
+    },
+    {
+      "file": "finish-time-up-draw.png",
+      "sha256": "de0eecf96fc0ace85a0acc36a22791e2db3f79771ba9662de2bd1923909d05c6",
+      "sourceRun": "round-ending"
+    },
+    {
+      "file": "online-match-finish-announcement.png",
+      "sha256": "423b89f2b3d73d936cad8a8e5954ecef7555e0d7986d42edfaea3f82dfe48f71",
+      "sourceRun": "post-match"
+    }
+  ],
+  "sourceFilesSha256": {
+    "scripts/ui/hud/BattleHud.cs": "c468e985cbe0b1d0cc505e899daf5db066f245fd35d2e15046f9d4eeb8482332",
+    "scripts/arena/ArenaView.Presentation.cs": "00f9ed655ed623532014d025a9d30d3cea7b9a1ac3cc410ae09a9af8c9be61c1",
+    "scripts/audio/SoundSynth.cs": "c02bd6a91ced66c9778c898bca01db330e672bc9d8bbb121d546e916b1e109d7",
+    "scripts/audio/BattleAudio.cs": "f6cea508232d9baee3797a2f4fc268854173fd7a30f2a238d687d7b23398654e",
+    "src/Bomber.Game/Simulation/BlastSession.cs": "039273459f34bd4dd974ce2598fc09e37879a1b22099186d2a9617a3a99845f3",
+    "src/Bomber.Game/Simulation/BlastSession/Rounds/BlastSession.Rounds.cs": "4f0a35b559b987b7e05c620909a4f90c81701379ec17e562c2685550e448c98d",
+    "scripts/testing/journeys/matches/RoundEndingPlaytest.cs": "208a9d532b7e448280c24bb5ea7631f47066b463ead28f2de847de06d7e64855",
+    "scripts/testing/journeys/online/NetworkPlaytest.cs": "981001175fa8b1b6445c2024a2a8168ba9812c7f74b1b2c31bf30c33919e1b1e"
+  }
+}

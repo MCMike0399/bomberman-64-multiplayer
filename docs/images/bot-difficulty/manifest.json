@@ -1,0 +1,12 @@
+{
+  "date": "2026-10-28",
+  "renderer": "Godot 4.7.2 Metal Forward+ in isolated macOS QA VM",
+  "baseline": "7d090eb71122ad8a56c4c473a67b60e8096bbfd0",
+  "runs": {
+    "before": "20261028T184754.869931Z-roster",
+    "fixed": "20261028T185053.951911Z-roster",
+    "network": "20261028T185153.284477Z-network",
+    "setup": "20261028T185305.488909Z-setup"
+  },
+  "notes": "Unedited real viewport captures. Baseline roster regression fails when decorative icons cannot receive focus; fixed roster passes 31 assertions. Shared level applies to all local bots. Online network journey passes 95 assertions, including accepted Hard difficulty on host and peer; uses an owned loopback server. Focused setup passes 105 assertions. Broader menu-ux stopped at the Settings footer layout assertion after three completed journeys; it is not a complete-suite pass."
+}

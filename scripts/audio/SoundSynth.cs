@@ -42,6 +42,7 @@ public static class SoundSynth
         Add("round-ready", .35, (t,n,l) => (.6*Sequence(t,.16,392,523)+.14*Note(t,1046))*Decay(t,6));
         Add("fight", .29, (t,n,l) => (.5*Note(t,784)+.25*Note(t,988)+.18*Note(t,1175))*Decay(t,9)+.08*n*Decay(t,60));
         Add("round-win", .72, (t,n,l) => (.6*Sequence(t,.16,523,659,784,1046)+.16*Note(t,523))*Decay(t,3));
+        Add("round-draw", .65, (t,n,l) => (.55*Sequence(t,.2,440,392,330)+.15*Note(t,220))*Decay(t,4));
         Add("menu-confirm", .105, (t,n,l) => .7*Chirp(t,720,2900)*Decay(t,28));
         Add("menu-back", .105, (t,n,l) => .7*Chirp(t,650,-2800)*Decay(t,28));
         return new System.Collections.ObjectModel.ReadOnlyDictionary<string,SynthClip>(clips);
