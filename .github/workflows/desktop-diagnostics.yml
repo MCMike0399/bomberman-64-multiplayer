@@ -177,7 +177,10 @@ jobs:
         run: gh release download "qa-desktop-$PAYLOAD" --dir artifacts -p 'Blast-Circuit-windows-x64.zip*' -p 'Blast-Circuit-windows-x64-metadata.json' -p 'Blast-Circuit-server-dotnet10.zip*' -p 'server-build-metadata.json'
       - run: ./tools/packaging/windows-test-desktop.ps1
       - run: python tools/packaging/package-download.py --target windows-x64
-      - run: python tools/ci/online_diagnostics.py windows-x64 network peer-rooms peer-link-recovery
+      - name: Run the explicitly selected focused journeys
+        env:
+          BLAST_DIAGNOSTIC_SCENARIOS: ${{ vars.BLAST_DIAGNOSTIC_SCENARIOS || '["network","peer-rooms","peer-link-recovery"]' }}
+        run: python tools/ci/online_diagnostics.py windows-x64
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:

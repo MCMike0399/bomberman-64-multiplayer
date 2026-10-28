@@ -13,7 +13,7 @@ import online_diagnostics as diagnostic
 
 
 class OnlineDiagnosticExitTests(unittest.TestCase):
-    def run_diagnostic(self, outcomes):
+    def run_diagnostic(self, outcomes, json_selection=False):
         class Suite:
             def __init__(self, *args, **kwargs): pass
             def server(self, **kwargs): return nullcontext('http://owned-fixture.invalid')
@@ -43,7 +43,8 @@ class OnlineDiagnosticExitTests(unittest.TestCase):
             with patch.object(diagnostic, 'ROOT', root), patch.object(diagnostic, 'load', side_effect=load), \
                  patch.object(diagnostic.desktop, 'inspect_archive'), patch.object(diagnostic, 'inspect_server'), \
                  patch.object(diagnostic.subprocess, 'run', side_effect=run), \
-                 patch.object(diagnostic.sys, 'argv', ['online_diagnostics.py', 'windows-x64', *outcomes]), \
+                 patch.object(diagnostic.sys, 'argv', ['online_diagnostics.py', 'windows-x64', *([] if json_selection else outcomes)]), \
+                 patch.dict(diagnostic.os.environ, {'BLAST_DIAGNOSTIC_SCENARIOS': json.dumps(list(outcomes))}), \
                  redirect_stdout(io.StringIO()):
                 code = diagnostic.main()
             report = json.loads((artifacts / 'online-diagnostics/online-diagnostic.json').read_text())
@@ -57,6 +58,9 @@ class OnlineDiagnosticExitTests(unittest.TestCase):
         for outcome in [(1, True, 20), (0, False, 20), (0, None, None), (0, True, 0)]:
             with self.subTest(outcome=outcome):
                 self.assertEqual(1, self.run_diagnostic({'incomplete': outcome}))
+
+    def test_explicit_json_selection_runs_only_the_requested_unsolved_case(self):
+        self.assertEqual(0, self.run_diagnostic({'peer-link-recovery': (0, True, 9)}, json_selection=True))
 
     def test_every_completed_journey_succeeds(self):
         self.assertEqual(0, self.run_diagnostic({'first': (0, True, 20), 'last': (0, True, 6)}))

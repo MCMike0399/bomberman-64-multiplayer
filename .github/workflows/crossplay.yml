@@ -161,6 +161,7 @@ jobs:
             artifacts/crossplay-${{ matrix.target }}/crossplay-receipt.json
             artifacts/crossplay-${{ matrix.target }}/crossplay.json
             artifacts/crossplay-${{ matrix.target }}/crossplay-progress.json
+            artifacts/crossplay-${{ matrix.target }}/crossplay-failure.json
             artifacts/crossplay-${{ matrix.target }}/summary.json
             artifacts/crossplay-${{ matrix.target }}/runtime.log
             artifacts/crossplay-${{ matrix.target }}/launcher.log

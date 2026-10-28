@@ -9,10 +9,44 @@ namespace BlastCircuit.Testing;
 /// <summary>One real packaged client per OS, synchronized by the external runner after renderer startup.</summary>
 public partial class PlaytestDriver
 {
+    private string _crossplayStage="initial";
+    private long? _crossplayDeadline;
+    private readonly List<object> _crossplayTimeline=[];
+    private object CrossplayObservation()=>new
+    {
+        stage=_crossplayStage,localUtcMs=DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),monotonic=Stopwatch.GetTimestamp(),
+        frame=Engine.GetProcessFrames(),drawn=Engine.GetFramesDrawn(),captureFallbacks=_captureFallbacks,deadline=_crossplayDeadline,
+        screen=_root.ScreenName,
+        socket=_root.ActiveSession is NetworkSession connection?new{player=connection.PlayerId,lobby=connection.LobbyId,
+            generation=connection.ConnectionGeneration,status=connection.Status,party=connection.Party,
+            deadline=connection.DeadlineObserved,events=connection.ConnectionEvents}:null,
+        renderedParty=_root.LatestParty,authority=_root.LatestState,firstAuthorityTime=_root.FirstNetworkStateServerTime,
+        authorityTick=typeof(BlastCircuit.Arena.ArenaView).GetField("_snapshotTick",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic)?.GetValue(LightingArena)
+    };
+    private void CrossplayMark(string stage)
+    {
+        _crossplayStage=stage;var observation=CrossplayObservation();Event("crossplay-transition",observation);
+        if(_crossplayTimeline.Count<32)_crossplayTimeline.Add(observation);
+    }
     private async Task CrossPlatformQuickPlay()
     {
         Check(!_headless, "three-platform Quick Play uses the real platform renderer");
+        _crossplayStage="initial";_crossplayDeadline=null;_crossplayTimeline.Clear();
         try{await CrossPlatformQuickPlayCore();}
+        catch(Exception error)
+        {
+            // Snapshot before Back/disposal clears the party and authority. A
+            // screenshot failure must not replace the original failing predicate.
+            try
+            {
+                var observation=CrossplayObservation();Event("crossplay-precleanup-failure",observation);
+                File.WriteAllText(Path.Combine(_output,"crossplay-failure.json"),JsonSerializer.Serialize(new{
+                    error=error.ToString(),observation,timeline=_crossplayTimeline},new JsonSerializerOptions{WriteIndented=true}));
+                await Capture("crossplay-precleanup-failure",0);
+            }
+            catch(Exception diagnostic){Event("crossplay-diagnostic-failure",new{error=diagnostic.ToString()});}
+            throw;
+        }
         finally{Input(0,default);_root.Back();await Frames(4);}
     }
     private async Task CrossPlatformQuickPlayCore()
@@ -23,12 +57,13 @@ public partial class PlaytestDriver
         File.WriteAllText(Path.Combine(_output, "crossplay-ready.json"), JsonSerializer.Serialize(new { role, platform = OS.GetName() }));
         await Until(() => File.Exists(barrier), "all three rendered clients are ready", 300);
 
+        CrossplayMark("renderers-ready");
         string name = "QA " + role;
         await _root.StartOnlineAsync(new Uri(_server), name, new SessionSettings(Bots: 0), NetworkMode.QuickPlay);
         var session = (NetworkSession)_root.ActiveSession!;
         await Until(() => Roster().Length == 3 && PartyDeadline() is not null, "three operating systems join one public lobby", 60);
         string lobby = session.LobbyId!;
-        long initial = PartyDeadline()!.Value;
+        long initial = PartyDeadline()!.Value;CrossplayMark("initial-cohort");
         string oldWindows = LobbyStatus.Parse(_root.LatestParty!.Value).Players.Single(p => p.Name == "QA windows-x64" && p.Connected).Id;
         Check(session.Party is { PublicRoom: true, CanStart: false }, "public matchmaking grants no start permission");
         Check(!NamedButton("StartRoom").Visible && !NamedButton("EditRoomSettings").Visible, "public controls are absent on this platform");
@@ -48,21 +83,31 @@ public partial class PlaytestDriver
             "departure and rejoin produce a fresh common minute", 45);
         long deadline = PartyDeadline()!.Value;
         var roster = Roster();
-        Check(deadline - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() > 45000, "changed roster receives a fresh full-minute countdown");
+        _crossplayDeadline=deadline;CrossplayMark("reset-cohort");
+        Check(session.DeadlineObserved?.StartAt==deadline,"changed roster deadline reaches the socket and renderer coherently");
         await Capture("crossplay-roster-reset");
-        while (session.Party?.Phase == "lobby")
+        var transition=Stopwatch.StartNew();string? previousPhase=null;
+        while(true)
         {
-            if (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() < deadline - 250 && _root.LatestState is not null)
-                Check(false, "authority does not start gameplay before the public countdown deadline");
-            await Frames(1); await Task.Delay(50);
-            if (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() > deadline + 20000) throw new TimeoutException("Public countdown never started a match");
+            string? phase=session.Party?.Phase;
+            if(phase!=previousPhase){CrossplayMark("party-phase:"+(phase??"missing"));previousPhase=phase;}
+            if(_root.FirstNetworkStateServerTime is {} first&&first<deadline)
+                Check(false,"authoritative gameplay never precedes its own server deadline");
+            if(phase=="playing")break;
+            if(phase is not ("lobby" or "starting"))throw new InvalidOperationException("Unexpected public countdown phase: "+phase);
+            if(transition.Elapsed.TotalSeconds>120)throw new TimeoutException("Public countdown never entered playing");
+            await Frames(1);await Task.Delay(50);
         }
-        Check(true, "authority holds gameplay for the real public countdown");
-        Check(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() >= deadline - 250, "the first playing transition does not precede the public deadline");
+        Check(true,"public countdown explicitly reaches playing");
+        CrossplayMark("playing");
+        // Exact reset-to-60s/no-early policy is checked on the server clock by
+        // PublicMatchmakingChecks. Native propagation uses the same server's
+        // first gameplay timestamp below, never a localUTC +/-250ms assumption.
         await Until(() => _root.LatestState is { } state && state.GetProperty("phase").GetInt32() == 1,
             "public match automatically reaches fight after one real minute", 30);
         Check(State.GetProperty("serverTime").GetInt64() >= deadline, "automatic match starts after the shared authority deadline");
         Check(_root.FirstNetworkStateServerTime >= deadline, "the first received authoritative gameplay state does not precede the deadline");
+        CrossplayMark("fight");
         Check(session.Party?.Hosting == "cluster", "three different operating systems share the staged server authority");
         var players = State.GetProperty("players").EnumerateArray().Select(p => p.GetProperty("id").GetString()!).Order().ToArray();
         Check(players.SequenceEqual(roster), "all three platform identities become the actual match actors");
@@ -81,12 +126,12 @@ public partial class PlaytestDriver
         var carry=new PlayerInput(0,0,B:true);
         await NetworkPulse(session,new PlayerInput(0,0,A:true,B:true),carry);
         await ObserveUntil(()=>bombOwners.Contains(session.PlayerId!),15);
-        Check(true,"a healthy local actor owns and carries an accepted bomb");
+        Check(true,"a healthy local actor owns and carries an accepted bomb");CrossplayMark("local-bomb");
         var direction=directions[session.PlayerId!];
         long movementSequence=await NetworkPulse(session,new PlayerInput(direction.X,direction.Y,B:true),carry);
         await ObserveUntil(()=>moved.Contains(session.PlayerId!)&&State.GetProperty("players").EnumerateArray()
             .Single(p=>p.GetProperty("id").GetString()==session.PlayerId).GetProperty("ack").GetInt64()>movementSequence,15);
-        Check(true,"ordinary local movement is accepted by the shared authority without leaving supported ground");
+        Check(true,"ordinary local movement is accepted by the shared authority without leaving supported ground");CrossplayMark("local-movement");
         await ObserveUntil(() => players.All(bombOwners.Contains) && players.All(moved.Contains), 20);
         Check(true, "every platform observes movement and accepted bombs from all three players");
         Check(State.GetProperty("players").EnumerateArray().All(HealthyNetworkActor)&&players.All(id=>
@@ -94,7 +139,7 @@ public partial class PlaytestDriver
             "all three healthy actors retain their own carried bombs through the action barrier");
         Check(_root.SnapshotCount - firstSnapshots > 4 && State.GetProperty("serverTime").GetInt64() - firstTime > 5000,
             "all clients observe advancing authoritative gameplay");
-        await Capture("crossplay-three-os-gameplay");
+        CrossplayMark("cohort-actions");await Capture("crossplay-three-os-gameplay");
         bool lateExcluded = false;
         if (role == "linux-x64")
         {
@@ -115,7 +160,7 @@ public partial class PlaytestDriver
             hosting = session.Party?.Hosting,
             driver = RenderingServer.GetCurrentRenderingDriverName(), method = RenderingServer.GetCurrentRenderingMethod(), adapter = RenderingServer.GetVideoAdapterName()
         }, new JsonSerializerOptions { WriteIndented = true }));
-        RecordProgress();
+        CrossplayMark("finished");RecordProgress();
 
         string[] Roster() => _root.LatestParty is { } raw
             ? LobbyStatus.Parse(raw).Players.Where(p => p.Connected).Select(p => p.Id).Order().ToArray() : [];

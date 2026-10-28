@@ -1640,6 +1640,16 @@
       "headless": false,
       "timeout": 1500,
       "manual": false
+    },
+    {
+      "id": "authority-replay",
+      "method": "AuthorityReplay",
+      "domains": [
+        "gameplay"
+      ],
+      "headless": true,
+      "timeout": 60,
+      "manual": false
     }
   ]
 }

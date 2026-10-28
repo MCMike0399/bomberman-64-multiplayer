@@ -67,10 +67,11 @@ public partial class PlaytestDriver
                             {
                                 // A clean patch must not be achieved by removing High's mirror.
                                 // Compare stationary columns with the reflection branch alone disabled.
-                                // The mirror marches the resolved MSAA depth texture. Mesa llvmpipe's
-                                // resolved depth is unusable (its depth of field also blurs in-focus
-                                // pixels; hardware Metal and MoltenVK do not), so the march never hits.
-                                // On verified software renderers only, compare both images without MSAA.
+                                // The mirror uses resolved MSAA depth. The observed llvmpipe
+                                // configuration loses the mirror and in-focus sharpness with MSAA;
+                                // the raw-sample/resolve/reconstruction fault is not localized yet.
+                                // This software-only MSAA-off contrast is diagnostic effect evidence,
+                                // never qualification for the unchanged production High+2xMSAA image.
                                 var viewport=GetViewport();var msaa=viewport.Msaa3D;bool software=SoftwareRenderer;
                                 if(software)
                                 {

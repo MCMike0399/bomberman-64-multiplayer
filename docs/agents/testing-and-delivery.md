@@ -826,6 +826,13 @@ CI artifacts. Candidate crossplay starts once exact downloads and the Mac
 archive exist; trusted main still waits for every smoke job. It records
 per-phase timings for budget decisions.
 
+The diagnostic `authority-replay` leaf executes the shipped `LocalMatch` at
+exact ticks and writes complete ordered observable messages plus separate math/RNG
+canaries. It does not serialize all private authority state. Native replay
+installs actual downloads and checks two fresh-process repetitions and then
+cross-target outputs, binding loaded MVID/file hashes to the archived modules.
+[Corpus, schema, limits and commands](../packaged-authority-replay.md).
+
 Research proposals for parity and delivery (not qualification receipts) are in
 [rendering parity research](../desktop-rendering-parity-research.md) and
 [delivery research](../desktop-parity-delivery-research.md). Current decisions:
@@ -853,8 +860,15 @@ Research proposals for parity and delivery (not qualification receipts) are in
   recovered real scene. Its deliberate fault remains outside release suites;
   functional assertions and generic zero-error/graphical verdicts are separate.
   A native SCTP error without timing correlation is not a clean qualification.
-  Focused Windows diagnostics include this leaf alongside `network` and
-  `peer-rooms`. The runner retains every case and exits unsuccessfully if any
+  Focused Windows diagnostics select a JSON list through
+  `BLAST_DIAGNOSTIC_SCENARIOS` (default: `network`, `peer-rooms`, and the close
+  leaf); select only an unresolved case once earlier predicates have native proof.
+  The post-capture check records both endpoints before judging them, requires
+  unchanged open native channels/attempts and the same match, then permits normal
+  polling to refresh the existing two-second direct-health measurement. It never
+  increases that policy. A headless-only `BLAST_QA_RECOVERY_CAPTURE_STALL_MS`
+  control adds a declared stall (at most five seconds) to distinguish stale health
+  from another terminal close; it is diagnostic evidence, not graphical qualification. The runner retains every case and exits unsuccessfully if any
   child fails, lacks positive completion or reports no assertions; a later pass
   cannot hide an earlier failure. Diagnostic runner and frozen payload revisions
   are recorded separately.

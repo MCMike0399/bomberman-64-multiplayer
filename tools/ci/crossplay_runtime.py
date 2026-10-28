@@ -19,7 +19,7 @@ import desktop_packages as desktop
 import download_formats as downloads
 
 ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / 'tools/playtest'))
+sys.path.append(str(ROOT / 'tools/playtest'))
 from contracts import validate_summary
 
 SYSTEMS = {'windows-x64': ('Windows', 'Windows', 'd3d12'), 'linux-x64': ('Linux', 'Linux', 'vulkan'),

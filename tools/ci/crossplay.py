@@ -156,10 +156,10 @@ def stop_child(process):
         except subprocess.TimeoutExpired: process.kill(); process.wait()
 
 
-def launch(command, output):
+def launch(command, output, cwd=None):
     output.mkdir(parents=True, exist_ok=True)
     with (output / 'launcher.log').open('w') as log:
-        process = subprocess.Popen(command, cwd=ROOT, env=clean_environment(), stdout=log,
+        process = subprocess.Popen(command, cwd=ROOT if cwd is None else cwd, env=clean_environment(), stdout=log,
                                    stderr=subprocess.STDOUT, start_new_session=os.name == 'posix')
     (output / 'launcher.json').write_text(json.dumps({'pid': process.pid, 'marker': str(output)}))
     return process

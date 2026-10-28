@@ -1,0 +1,147 @@
+{
+  "schemaVersion": 1,
+  "id": "authority-observable-v1",
+  "cases": [
+    {
+      "id": "temple-movement-carry-throw-edges",
+      "lastTick": 360,
+      "requireBomb": true,
+      "options": {
+        "stage": "sunken-temple",
+        "humanPlayers": 2,
+        "botPlayers": 0,
+        "seed": 64,
+        "wins": 5,
+        "roundSeconds": 120,
+        "ghosts": true
+      },
+      "inputs": [
+        {
+          "tick": 65,
+          "slot": 0,
+          "input": {
+            "b": true
+          }
+        },
+        {
+          "tick": 66,
+          "slot": 0,
+          "input": {
+            "a": true,
+            "b": true
+          }
+        },
+        {
+          "tick": 67,
+          "slot": 0,
+          "input": {
+            "b": true
+          }
+        },
+        {
+          "tick": 70,
+          "slot": 0,
+          "input": {
+            "x": -1,
+            "b": true
+          }
+        },
+        {
+          "tick": 73,
+          "slot": 0,
+          "input": {
+            "b": true
+          }
+        },
+        {
+          "tick": 85,
+          "slot": 0,
+          "input": {
+            "a": true,
+            "b": true
+          }
+        },
+        {
+          "tick": 86,
+          "slot": 0,
+          "input": {
+            "b": true
+          }
+        },
+        {
+          "tick": 95,
+          "slot": 0,
+          "input": {
+            "b": true,
+            "aim": true,
+            "tx": 8,
+            "tz": 12
+          }
+        },
+        {
+          "tick": 115,
+          "slot": 0,
+          "input": {
+            "b": true
+          }
+        },
+        {
+          "tick": 120,
+          "slot": 0,
+          "input": {}
+        },
+        {
+          "tick": 160,
+          "slot": 0,
+          "input": {
+            "x": 1
+          }
+        },
+        {
+          "tick": 245,
+          "slot": 0,
+          "input": {}
+        },
+        {
+          "tick": 250,
+          "slot": 0,
+          "input": {
+            "x": -1
+          }
+        },
+        {
+          "tick": 320,
+          "slot": 1,
+          "input": {
+            "a": true
+          }
+        },
+        {
+          "tick": 320,
+          "slot": 1,
+          "input": {}
+        },
+        {
+          "tick": 330,
+          "slot": 0,
+          "input": {}
+        }
+      ]
+    },
+    {
+      "id": "blizzard-ai-rng-math",
+      "lastTick": 480,
+      "requireBomb": true,
+      "options": {
+        "stage": "blizzard-battle",
+        "humanPlayers": 1,
+        "botPlayers": 3,
+        "seed": 17017,
+        "wins": 5,
+        "roundSeconds": 60,
+        "ghosts": true
+      },
+      "inputs": []
+    }
+  ]
+}

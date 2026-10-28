@@ -6,7 +6,8 @@ from pathlib import Path
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / 'tools/playtest'))
+# Preserve the caller's module priority (CI and playtest both have test_contracts).
+sys.path.append(str(ROOT / 'tools/playtest'))
 from contracts import catalog, expanded
 
 HEADLESS = ('core-headless', 'peer-ice-order', 'peer-rooms', 'peer-capacity', 'adaptive-rooms', 'greedy-trap-network', 'adaptive-slow-poll')

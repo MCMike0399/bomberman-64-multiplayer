@@ -1,0 +1,113 @@
+name: Packaged authority replay diagnostics
+
+on:
+  push:
+    branches: [qa/three-platform-release]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  native:
+    name: Native replay ${{ matrix.target }}
+    if: vars.BLAST_REPLAY_RUNNER_SHA == github.sha
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: windows-x64
+            runner: windows-2025
+          - target: linux-x64
+            runner: ubuntu-24.04
+          - target: macos-arm64
+            runner: macos-15
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Download only this exact private client payload
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PAYLOAD: ${{ vars.BLAST_REPLAY_SHA }}
+          TARGET: ${{ matrix.target }}
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os, re, subprocess
+          sha, target = os.environ['PAYLOAD'], os.environ['TARGET']
+          assert re.fullmatch('[0-9a-f]{40}', sha)
+          patterns = ['Blast-Circuit-' + target + '.zip*']
+          if target == 'macos-arm64':
+              patterns += ['build-metadata.json', 'Blast-Circuit-macos-arm64.dmg*', 'Blast-Circuit-macos-arm64-download.json']
+          else:
+              patterns += ['Blast-Circuit-' + target + '-metadata.json']
+          command = ['gh', 'release', 'download', 'qa-desktop-' + sha, '--dir', 'artifacts']
+          for pattern in patterns: command += ['-p', pattern]
+          subprocess.run(command, check=True, timeout=300)
+          PY
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y fuse3 squashfs-tools
+      - name: Build the real player download from the frozen client archive
+        if: runner.os != 'macOS'
+        env:
+          TARGET: ${{ matrix.target }}
+        shell: bash
+        run: python tools/packaging/package-download.py --target "$TARGET"
+      - name: Install and execute two fresh-process headless authority replays
+        env:
+          TARGET: ${{ matrix.target }}
+          PAYLOAD: ${{ vars.BLAST_REPLAY_SHA }}
+        shell: bash
+        run: python tools/ci/authority_replay.py run --target "$TARGET" --output "artifacts/authority-replay-$TARGET" --expected-revision "$PAYLOAD"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: authority-replay-${{ matrix.target }}
+          path: |
+            artifacts/authority-replay-${{ matrix.target }}/authority-replay-native.json
+            artifacts/authority-replay-${{ matrix.target }}/run-*/*.json
+            artifacts/authority-replay-${{ matrix.target }}/run-*/*.jsonl.gz
+            artifacts/authority-replay-${{ matrix.target }}/run-*/*.log
+            artifacts/authority-replay-${{ matrix.target }}/same-package-repeat/report.json
+          retention-days: 14
+          if-no-files-found: error
+
+  compare:
+    name: Cross-platform observable replay
+    needs: native
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: authority-replay-macos-arm64
+          path: artifacts/replay-cohort/macos-arm64
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: authority-replay-windows-x64
+          path: artifacts/replay-cohort/windows-x64
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: authority-replay-linux-x64
+          path: artifacts/replay-cohort/linux-x64
+      - run: python3 tools/ci/authority_replay.py aggregate --directory artifacts/replay-cohort
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: authority-replay-comparison
+          path: |
+            artifacts/replay-cohort/authority-replay-comparison.json
+            artifacts/replay-cohort/mac-vs-*/report.json
+          retention-days: 14
+          if-no-files-found: error

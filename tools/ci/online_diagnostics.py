@@ -3,6 +3,7 @@
 import importlib.util
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -22,7 +23,11 @@ def load(name, path):
 
 def main():
     target, scenarios = sys.argv[1], sys.argv[2:]
-    if target not in desktop.TARGETS or not scenarios: raise ValueError('Usage: online_diagnostics.py TARGET SCENARIO...')
+    if not scenarios:
+        scenarios = json.loads(os.environ.get('BLAST_DIAGNOSTIC_SCENARIOS', '["network","peer-rooms","peer-link-recovery"]'))
+    if (target not in desktop.TARGETS or type(scenarios) is not list or not scenarios or
+            any(type(case) is not str or not re.fullmatch('[a-z0-9]+(?:-[a-z0-9]+)*', case) for case in scenarios)):
+        raise ValueError('Usage: online_diagnostics.py TARGET SCENARIO... (or an explicit JSON scenario list)')
     directory = ROOT / 'artifacts'; item = desktop.names(target); settings = desktop.TARGETS[target]
     metadata = json.loads((directory / item['metadata']).read_text())
     desktop.inspect_archive(directory, target, metadata['revision'], metadata['release'])

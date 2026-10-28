@@ -157,11 +157,16 @@ not PNG compression bytes. Keep an SDR viewport baseline and test OS/display HDR
 presentation separately if supported/claimed. Identical viewport data cannot
 prove identical physical display color management. [ViewportTexture][G3].
 
-The project's High DOF uses jitter, and the pinned `bokeh_dof.cpp` generates a
-`Math::randf()` jitter seed per invocation. Freezing just the game seed and water
-clock will not necessarily freeze this. Debanding is spatial in the inspected
-tone-map path; do not automatically describe it as temporal noise. Establish
-repeatability for each effect instead. [Bokeh DOF, lines 109–128][E8], [E7].
+The project's High DOF keeps its jitter flag enabled, and the pinned CPU path
+consumes a `Math::randf()` seed per invocation. The subsequent shape-specific
+review establishes that production **Low/Circle does not read that seed or the
+jitter flag**; directional Box/Hexagon branches do. CPU consumption alone therefore
+does not establish stochastic production sampling or justify blocking the first
+High/Circle/2×MSAA fixture on reseeding. Keep the original flag and shape while
+measuring repeats. SSIL history, shader TIME, cosmetic clocks and draw ordering
+remain independent inputs; a seed or pre-draw signal cannot stand in for those
+controls. Debanding is spatial in the inspected tone-map path. [Bokeh CPU][E8],
+[E7], [shape, scheduling and effect-guard correction](godot-dof-jitter-research.md).
 
 ## Proposed visual comparison protocol
 
@@ -196,9 +201,10 @@ reported as evidence that a real gameplay action succeeded.
    weather, animation and particle clocks from a fixture time. Reset/replay
    temporal histories identically, especially High SSIL. Record frame index and
    every render invocation. For DOF, first measure repeated production captures;
-   then use a QA-only no-jitter control to isolate depth. That control cannot
-   replace the production-jitter acceptance witness. A future deterministic
-   jitter hook would require its own engine feasibility review.
+   then use a QA-only DOF-off control to verify effect presence and isolate depth.
+   Keep original Circle/Low, jitter-on and 2×MSAA for acceptance. The tagged Circle
+   branch ignores jitter seed/flag, so a no-jitter contrast is not a meaningful
+   positive effect control for this shape. See the shape-specific correction above.
 5. **Warm and fence.** Use a defined scene/load/draw sequence that covers the
    relevant pipelines, then await post-draw and read back the designated target.
    Verify repeats rather than declaring an arbitrary number of warmup frames
@@ -235,7 +241,7 @@ Use the existing geometry/materials wherever possible.
 
 | Fixture | Why it distinguishes a failure | Required feature witnesses |
 | --- | --- | --- |
-| Depth calibration scene | Flat near/in-focus/far planes, a thin silhouette and a transparent water strip separate MSAA depth, focus and reconstruction. | Per-sample/resolved depth, sharp in-focus ROI, blurred near/far ROI, no-MSAA and no-jitter diagnostic controls. |
+| Depth calibration scene | Flat near/in-focus/far planes, a thin silhouette and a transparent water strip separate MSAA depth, focus and reconstruction. | Per-sample/resolved depth, sharp in-focus ROI, blurred near/far ROI, no-MSAA and DOF-off diagnostic controls; original Circle/jitter-on acceptance. |
 | Up & Down water at Midday/Night | Reuses the existing clocked column-reflection witness and adds upper-deck depth discontinuities. | Reflection on/off, unchanged 2× MSAA acceptance capture, shoreline foam, above/below-water blast occlusion. |
 | Sunken Temple battle at grazing light | Combines terraced geometry, treads, toy highlights, readable contact shadows, arena focus and far scenery. | Stair separation, stable silhouette/material detail, unchanged character proportions, DOF background separation. |
 | Blizzard plus a compact material/pose sheet | Stresses snow/ice premium noise, accepted weather, clearcoat, all pickup families, normal/red blasts and ghost/burnout transparency. | Freeze weather/pose/event ages; identify each effect and fine-detail ROI; short synchronized motion samples. |
