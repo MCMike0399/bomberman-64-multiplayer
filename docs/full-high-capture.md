@@ -184,3 +184,18 @@ own complete data; a missing stage fails collection. The initial missing-stage
 prototype was rejected because mutating a returned compositor-array property did
 not register the new effects; explicit setter publication resolves that fixture
 bug. The original two-process Linux receipt remains unchanged.
+
+The staged Linux run (`40783739068`) finds the same zero raw/resolved depth before
+opaque, after opaque and after transparent. Every retained buffer hash matches
+the original zero-depth buffer; adding earlier observers did not correct it.
+The MSAA-off control remains correct. This narrows the remaining split to depth
+production/preservation versus multisample depth fetch/view interpretation.
+
+A fourth diagnostic process clears independently owned2xMSAA depth and color
+attachments to `.75`, then reads both samples using the same compute sampler and
+records complete buffers. These attachments are not scene inputs and cannot fix
+or qualify the game. This separates a generic multisample-fetch problem, a depth
+fetch/storage problem and a failure specific to the scene's depth path. On M5,
+both samples of both clear attachments are exactly`.75` across all98304 pixels.
+Scene observations are saved before the custom clears. A wrong clear readback is
+retained explicitly rather than converted into a successful depth verdict.

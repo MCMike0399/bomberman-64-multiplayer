@@ -31,3 +31,12 @@ class DepthProbeTests(unittest.TestCase):
         self.metadata['engine']['hash'] = 'wrong'
         (self.path/'depth-resources.json').write_text(json.dumps(self.metadata))
         with self.assertRaisesRegex(ValueError, 'pinned release'): depth_probe.inspect(self.path)
+
+    def test_clear_attachment_summary_preserves_failed_sampling(self):
+        self.metadata.pop('planes'); self.metadata['customAttachment'] = 'depth'; self.metadata['expectedRawClear'] = .75
+        (self.path/'depth-resources.json').write_text(json.dumps(self.metadata))
+        (self.path/'depth-samples.bin').write_bytes(struct.pack('<4f', 0,0,0,1)*384*256)
+        report = depth_probe.inspect(self.path)
+        self.assertEqual(report['bufferSummary']['nonzeroRaw0Raw1Resolved'], [0,0,0])
+        self.assertEqual(report['metadata']['expectedRawClear'], .75)
+        self.assertEqual(report['planeCenters'], [])

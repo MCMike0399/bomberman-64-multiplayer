@@ -7,9 +7,26 @@ class DepthEffect extends CompositorEffect:
     var armed := false
     var multisampled := true
     var stage_label := "post-transparent"
+    var clear_attachments := false
     func _init():
         effect_callback_type = EFFECT_CALLBACK_TYPE_POST_TRANSPARENT
         access_resolved_depth = false # Observe existing resource; do not force an extra resolve.
+    func sample_texture(rd: RenderingDevice, shader: RID, pipeline: RID, sampler: RID, raw: RID, resolved: RID, size: Vector2i) -> PackedByteArray:
+        var output := rd.storage_buffer_create(size.x * size.y * 16)
+        var raw_uniform := RDUniform.new(); raw_uniform.uniform_type = RenderingDevice.UNIFORM_TYPE_SAMPLER_WITH_TEXTURE; raw_uniform.binding = 0
+        raw_uniform.add_id(sampler); raw_uniform.add_id(raw)
+        var resolved_uniform := RDUniform.new(); resolved_uniform.uniform_type = RenderingDevice.UNIFORM_TYPE_SAMPLER_WITH_TEXTURE; resolved_uniform.binding = 1
+        resolved_uniform.add_id(sampler); resolved_uniform.add_id(resolved)
+        var out_uniform := RDUniform.new(); out_uniform.uniform_type = RenderingDevice.UNIFORM_TYPE_STORAGE_BUFFER; out_uniform.binding = 2; out_uniform.add_id(output)
+        var uniform_set := rd.uniform_set_create([raw_uniform,resolved_uniform,out_uniform],shader,0)
+        var list := rd.compute_list_begin()
+        rd.compute_list_bind_compute_pipeline(list,pipeline)
+        rd.compute_list_bind_uniform_set(list,uniform_set,0)
+        rd.compute_list_dispatch(list,ceili(size.x/8.0),ceili(size.y/8.0),1)
+        rd.compute_list_end()
+        var bytes := rd.buffer_get_data(output)
+        rd.free_rid(uniform_set);rd.free_rid(output)
+        return bytes
     func _render_callback(_kind: int, data: RenderData):
         calls += 1
         if not armed or captured:
@@ -40,19 +57,7 @@ result.values[p.y*s.x+p.x]=vec4(texelFetch(raw_depth,p,0).r,texelFetch(raw_depth
         var sampler_state := RDSamplerState.new()
         var sampler := rd.sampler_create(sampler_state)
         var size := buffers.get_internal_size()
-        var output := rd.storage_buffer_create(size.x * size.y * 16)
-        var raw_uniform := RDUniform.new(); raw_uniform.uniform_type = RenderingDevice.UNIFORM_TYPE_SAMPLER_WITH_TEXTURE; raw_uniform.binding = 0
-        raw_uniform.add_id(sampler); raw_uniform.add_id(ms)
-        var resolved_uniform := RDUniform.new(); resolved_uniform.uniform_type = RenderingDevice.UNIFORM_TYPE_SAMPLER_WITH_TEXTURE; resolved_uniform.binding = 1
-        resolved_uniform.add_id(sampler); resolved_uniform.add_id(resolved)
-        var out_uniform := RDUniform.new(); out_uniform.uniform_type = RenderingDevice.UNIFORM_TYPE_STORAGE_BUFFER; out_uniform.binding = 2; out_uniform.add_id(output)
-        var uniform_set := rd.uniform_set_create([raw_uniform,resolved_uniform,out_uniform],shader,0)
-        var list := rd.compute_list_begin()
-        rd.compute_list_bind_compute_pipeline(list,pipeline)
-        rd.compute_list_bind_uniform_set(list,uniform_set,0)
-        rd.compute_list_dispatch(list,ceili(size.x/8.0),ceili(size.y/8.0),1)
-        rd.compute_list_end()
-        var bytes := rd.buffer_get_data(output)
+        var bytes := sample_texture(rd,shader,pipeline,sampler,ms,resolved,size)
         var file := FileAccess.open(output_dir + "/depth-samples.bin",FileAccess.WRITE); file.store_buffer(bytes); file.close()
         var metadata := {"diagnosticOnly":true,"width":size.x,"height":size.y,"calls":calls,"accessResolvedDepth":false,
             "rawFormat":rd.texture_get_format(ms).format,"rawSamples":rd.texture_get_format(ms).samples,
@@ -64,7 +69,26 @@ result.values[p.y*s.x+p.x]=vec4(texelFetch(raw_depth,p,0).r,texelFetch(raw_depth
             "stage":stage_label+"; no explicit resolve request",
             "engine":Engine.get_version_info(),"bytes":bytes.size(),"driver":RenderingServer.get_current_rendering_driver_name(),"device":RenderingServer.get_video_adapter_name()}
         file=FileAccess.open(output_dir + "/depth-resources.json",FileAccess.WRITE); file.store_string(JSON.stringify(metadata,"  ")); file.close()
-        for rid in [uniform_set,output,sampler,pipeline,shader]: rd.free_rid(rid)
+        if clear_attachments:
+            for kind in ["depth","color"]:
+                var format:=RDTextureFormat.new();format.width=size.x;format.height=size.y
+                format.texture_type=RenderingDevice.TEXTURE_TYPE_2D;format.samples=RenderingDevice.TEXTURE_SAMPLES_2
+                format.format=rd.texture_get_format(ms).format if kind=="depth" else RenderingDevice.DATA_FORMAT_R32_SFLOAT
+                format.usage_bits=RenderingDevice.TEXTURE_USAGE_SAMPLING_BIT | (RenderingDevice.TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT if kind=="depth" else RenderingDevice.TEXTURE_USAGE_COLOR_ATTACHMENT_BIT)
+                var texture:=rd.texture_create(format,RDTextureView.new())
+                var framebuffer:=rd.framebuffer_create([texture])
+                rd.draw_list_begin(framebuffer,RenderingDevice.DRAW_CLEAR_DEPTH|RenderingDevice.DRAW_CLEAR_STENCIL if kind=="depth" else RenderingDevice.DRAW_CLEAR_COLOR_0,[] if kind=="depth" else [Color(.75,.75,.75,1)],.75,0)
+                rd.draw_list_end()
+                var clear_bytes:=sample_texture(rd,shader,pipeline,sampler,texture,resolved,size)
+                var path:String=output_dir+"/clear-"+kind;DirAccess.make_dir_recursive_absolute(path)
+                file=FileAccess.open(path+"/depth-samples.bin",FileAccess.WRITE);file.store_buffer(clear_bytes);file.close()
+                var description:=metadata.duplicate(true)
+                for key in ["camera","planes","dof","ssao","ssil"]:description.erase(key)
+                description["customAttachment"]=kind;description["expectedRawClear"]=.75;description["resolvedSource"]="unchanged scene texture; not the custom clear"
+                description["rawFormat"]=format.format;description["rawSamples"]=format.samples
+                file=FileAccess.open(path+"/depth-resources.json",FileAccess.WRITE);file.store_string(JSON.stringify(description,"  "));file.close()
+                rd.free_rid(framebuffer);rd.free_rid(texture)
+        for rid in [sampler,pipeline,shader]: rd.free_rid(rid)
 
 var effect: DepthEffect
 var extra_effects: Array[DepthEffect]=[]
@@ -79,7 +103,7 @@ func run():
     var environment:=WorldEnvironment.new();environment.environment=Environment.new()
     environment.environment.background_mode=Environment.BG_COLOR;environment.environment.background_color=Color.BLACK
     environment.environment.ssao_enabled=true;environment.environment.ssil_enabled=true
-    effect=DepthEffect.new();effect.output_dir=output_dir;effect.multisampled=root.msaa_3d==Viewport.MSAA_2X
+    effect=DepthEffect.new();effect.output_dir=output_dir;effect.multisampled=root.msaa_3d==Viewport.MSAA_2X;effect.clear_attachments=OS.get_cmdline_user_args().has("--clear-attachments")
     environment.compositor=Compositor.new();environment.compositor.compositor_effects=[effect];scene.add_child(environment)
     if OS.get_cmdline_user_args().has("--stage-history"):
         for stage in [["pre-opaque",CompositorEffect.EFFECT_CALLBACK_TYPE_PRE_OPAQUE],["post-opaque",CompositorEffect.EFFECT_CALLBACK_TYPE_POST_OPAQUE]]:

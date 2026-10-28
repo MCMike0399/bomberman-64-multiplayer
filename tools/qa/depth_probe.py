@@ -23,18 +23,22 @@ def inspect(directory):
         raise ValueError('Unexpected depth probe dimensions or evidence scope')
     if len(data) != 384 * 256 * 16 or metadata.get('bytes') != len(data):
         raise ValueError('Depth buffer is truncated or has an unexpected layout')
+    minimum = [1., 1., 1.]; maximum = [0., 0., 0.]; nonzero = [0, 0, 0]
     for sample0, sample1, resolved, sentinel in struct.iter_unpack('<4f', data):
         if sentinel != 1 or not all(math.isfinite(v) and 0 <= v <= 1 for v in (sample0, sample1, resolved)):
             raise ValueError('Depth compute output is incomplete or invalid')
+        for i, value in enumerate((sample0, sample1, resolved)):
+            minimum[i] = min(minimum[i], value); maximum[i] = max(maximum[i], value); nonzero[i] += value != 0
     result = []
-    for plane in metadata['planes']:
+    for plane in metadata.get('planes', []):
         x, y = plane['pixel']; sample = struct.unpack_from('<4f', data, (y * 384 + x) * 16)[:3]
         expected = (100 - plane['worldDepth']) / (100 - .1)
         result.append({'pixel': [x, y], 'worldDepth': plane['worldDepth'], 'expectedReverseOrthoDepth': expected,
                        'rawSample0': sample[0], 'rawSample1': sample[1], 'resolved': sample[2],
                        'resolvedMinusSample0': sample[2] - sample[0],
                        'reconstructedWorldDepth': 100 - sample[2] * (100 - .1)})
-    return {'metadata': metadata, 'samplesSha256': hashlib.sha256(data).hexdigest(), 'planeCenters': result}
+    return {'metadata': metadata, 'samplesSha256': hashlib.sha256(data).hexdigest(), 'planeCenters': result,
+            'bufferSummary': {'minimumRaw0Raw1Resolved': minimum, 'maximumRaw0Raw1Resolved': maximum, 'nonzeroRaw0Raw1Resolved': nonzero}}
 
 
 def run(godot, output, driver):
@@ -44,7 +48,7 @@ def run(godot, output, driver):
     report = {'diagnosticOnly': True, 'claim': 'Pinned-editor resource localization; not the shipped game, pixel parity, or release approval.',
               'collected': False, 'engineExecutableSha256': engine_sha, 'cases': []}
     try:
-        for label, args in [('msaa-2x', []), ('msaa-off-control', ['--no-msaa']), ('msaa-2x-stage-history', ['--stage-history'])]:
+        for label, args in [('msaa-2x', []), ('msaa-off-control', ['--no-msaa']), ('msaa-2x-stage-history', ['--stage-history']), ('msaa-2x-clear-attachments', ['--clear-attachments'])]:
             case = output / label; case.mkdir()
             command = [str(godot), '--path', str(ROOT / 'tools/qa/depth_probe'), '--script', 'probe.gd', '--windowed',
                        '--rendering-method', 'forward_plus', '--rendering-driver', driver, '--audio-driver', 'Dummy', '--', str(case), *args]
@@ -58,6 +62,8 @@ def run(godot, output, driver):
                 raise ValueError('Depth probe used an unexpected sample count')
             if '--stage-history' in args:
                 evidence['stageHistory'] = {stage: inspect(case / stage) for stage in ('pre-opaque', 'post-opaque')}
+            if '--clear-attachments' in args:
+                evidence['customClears'] = {kind: inspect(case / ('clear-' + kind)) for kind in ('depth', 'color')}
             report['cases'].append({'name': label, **evidence})
         report['collected'] = True
     except (OSError, ValueError, RuntimeError, KeyError, subprocess.SubprocessError) as error:
