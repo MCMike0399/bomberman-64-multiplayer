@@ -1,0 +1,28 @@
+name: Linux depth resource diagnostic
+on:
+  push:
+    branches: [qa/three-platform-release]
+permissions:
+  contents: read
+jobs:
+  depth:
+    name: Raw and resolved Linux depth (diagnostic only)
+    if: vars.BLAST_DEPTH_RUNNER_SHA == github.sha
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - run: sudo apt-get update && sudo apt-get install -y xvfb openbox pulseaudio mesa-vulkan-drivers
+      - name: Download the checksum-pinned official 4.7.2 editor
+        run: python3 tools/ci/install_godot.py --destination artifacts/depth-engine
+      - name: Read existing multisample and resolved depth without requesting an extra resolve
+        run: python3 tools/packaging/linux-desktop.py -- python3 tools/qa/depth_probe.py --godot "$GODOT" --driver vulkan --output artifacts/linux-depth-resources
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: linux-depth-resources
+          path: artifacts/linux-depth-resources/
+          if-no-files-found: error
+          retention-days: 14

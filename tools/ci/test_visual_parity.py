@@ -1,5 +1,8 @@
 """Feature-negative controls must preserve focus and reveal the intended effect."""
+from pathlib import Path
+import tempfile
 import unittest
+from unittest import mock
 
 import visual_parity
 
@@ -27,3 +30,28 @@ class VisualControlTests(unittest.TestCase):
         self.assertFalse(visual_parity.effect_control_valid(report, 'dof', 3))
         self.assertFalse(visual_parity.effect_control_valid(self.report(), 'dof', 0))
         self.assertFalse(visual_parity.effect_control_valid(self.report(), 'unknown', 3))
+
+
+class VisualCollectionTests(unittest.TestCase):
+    def test_failed_dof_retains_mirror_and_baseline_results(self):
+        report = {'comparisons': [], 'errors': []}
+        controls = [VisualControlTests().report(focus=1), VisualControlTests().report(far=0, water=0)]
+        with tempfile.TemporaryDirectory() as temp, \
+             mock.patch.object(visual_parity, 'pair', return_value=({}, 0)), \
+             mock.patch.object(visual_parity.pixels, 'compare', side_effect=[(r, 3) for r in controls]):
+            visual_parity.compare_captures(Path(temp), 'run-0', report)
+        self.assertEqual(len(report['comparisons']), 4)
+        self.assertEqual(len(report['errors']), 2)
+        self.assertIn('dof', report['errors'][0])
+        self.assertIn('mirror', report['errors'][1])
+
+    def test_baseline_difference_is_failed_without_discarding_controls(self):
+        report = {'comparisons': [], 'errors': []}
+        controls = [VisualControlTests().report(), VisualControlTests().report(far=0, water=10)]
+        with tempfile.TemporaryDirectory() as temp, \
+             mock.patch.object(visual_parity, 'pair', side_effect=[({}, 0), ({}, 1)]), \
+             mock.patch.object(visual_parity.pixels, 'compare', side_effect=[(r, 3) for r in controls]):
+            visual_parity.compare_captures(Path(temp), 'run-0', report)
+        self.assertEqual(len(report['comparisons']), 4)
+        self.assertEqual(len(report['errors']), 1)
+        self.assertIn('fresh-target', report['errors'][0])

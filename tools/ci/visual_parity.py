@@ -20,8 +20,10 @@ import download_formats
 ROOT = Path(__file__).resolve().parents[2]
 SPEC = importlib.util.spec_from_file_location('pixel_comparer', ROOT / 'tools/qa/compare_visual_parity.py')
 pixels = importlib.util.module_from_spec(SPEC); SPEC.loader.exec_module(pixels)
+# Interior distant village: the old broad rectangle included reflected water.
+# Whole-image differences remain reported independently of these feature controls.
 ROIS = [dict(name='focused-stone', x=365, y=580, width=80, height=60),
-        dict(name='far-scenery', x=200, y=0, width=800, height=110),
+        dict(name='far-scenery', x=440, y=0, width=280, height=24),
         dict(name='water', x=950, y=300, width=300, height=460)]
 
 
@@ -41,6 +43,22 @@ def effect_control_valid(report, name, exit_code):
     if name == 'mirror':
         return regions['water']['differingPixels'] > 0 and regions['far-scenery']['exactEqual'] is True
     return False
+
+
+def compare_captures(case, label, report):
+    """Retain every bounded comparison even when an earlier feature is broken."""
+    for name, right in [('same-draw', 'parity-base-a-1.png'), ('fresh-target', 'parity-base-b-0.png')]:
+        _, exit_code = pair(case / 'parity-base-a-0.png', case / right, case / name)
+        report['comparisons'].append({'name': f'{label}/{name}', 'exitCode': exit_code})
+        if exit_code != 0:
+            report['errors'].append(f'{label}: Controlled full High baseline does not repeat: {name}')
+    rois = case / 'control-rois.json'; rois.write_text(json.dumps(ROIS))
+    for name, right in [('dof', 'parity-dof-off-0.png'), ('mirror', 'parity-reflection-off-0.png')]:
+        control, exit_code = pixels.compare(case / 'parity-base-a-0.png', case / right, case / ('control-' + name),
+                                           rois=rois, diagnostic_only=True)
+        valid = effect_control_valid(control, name, exit_code)
+        report['comparisons'].append({'name': f'{label}/control-{name}', 'passed': valid})
+        if not valid: report['errors'].append(f'{label}: Original High effect control failed: {name}')
 
 
 def run(target, directory, output, expected):
@@ -89,21 +107,11 @@ def run(target, directory, output, expected):
                 raise RuntimeError('Full High fixture failed native renderer/evidence checks')
             if summary.get('renderingDriver') != crossplay_runtime.SYSTEMS[target][2] or summary.get('renderingMethod') != 'forward_plus':
                 raise RuntimeError('Full High fixture used an unexpected renderer')
-            for name, right in [('same-draw', 'parity-base-a-1.png'), ('fresh-target', 'parity-base-b-0.png')]:
-                result, exit_code = pair(case / 'parity-base-a-0.png', case / right, case / name)
-                report['comparisons'].append({'name': f'run-{index}/{name}', 'exitCode': exit_code})
-                if exit_code != 0: raise RuntimeError('Controlled full High baseline does not repeat: ' + name)
-            # Controls remain explicitly diagnostic; they cannot replace High.
-            rois = case / 'control-rois.json'; rois.write_text(json.dumps(ROIS))
-            for name, right in [('dof', 'parity-dof-off-0.png'), ('mirror', 'parity-reflection-off-0.png')]:
-                control, exit_code = pixels.compare(case / 'parity-base-a-0.png', case / right, case / ('control-' + name),
-                                                   rois=rois, diagnostic_only=True)
-                valid = effect_control_valid(control, name, exit_code)
-                report['comparisons'].append({'name': f'run-{index}/control-{name}', 'passed': valid})
-                if not valid: raise RuntimeError('Original High effect control failed: ' + name)
+            compare_captures(case, f'run-{index}', report)
         repeated, code = pair(output / 'run-0/parity-base-a-0.png', output / 'run-1/parity-base-a-0.png', output / 'fresh-process')
-        if code != 0: raise RuntimeError('Controlled full High differs across fresh processes')
-        report['passed'] = True
+        report['comparisons'].append({'name': 'fresh-process', 'exitCode': code})
+        if code != 0: report['errors'].append('Controlled full High differs across fresh processes')
+        report['passed'] = not report['errors']
     except (OSError, ValueError, RuntimeError, KeyError, TypeError, subprocess.SubprocessError) as error:
         report['errors'].append(str(error))
     finally:

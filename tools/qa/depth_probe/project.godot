@@ -1,0 +1,11 @@
+config_version=5
+[application]
+config/name="Depth sample diagnostic"
+[display]
+window/size/viewport_width=384
+window/size/viewport_height=256
+window/size/window_width_override=768
+window/size/window_height_override=512
+window/size/mode=0
+[rendering]
+renderer/rendering_method="forward_plus"

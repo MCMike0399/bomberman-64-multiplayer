@@ -108,3 +108,61 @@ inventories; DOF/reflection controls visibly change their intended regions.
 Those source diagnostics remain unqualified until actual package provenance is
 bound and native/environment-specific results are inspected. Native target
 hardware gaps and unresolved High/Mesa behavior stay explicit.
+
+## First frozen-package measurement (3da1eac, 2026-10-28)
+
+Two fresh processes of the actual Mac package on the M5 produce manifest-checked
+exact same-draw, fresh-target and fresh-process comparisons. Both feature controls
+pass. This qualifies those compared files/configuration, not other platforms or
+physical displays. The hosted run `40781067089` retains these distinct failures:
+
+- Hosted Mac: exact same-draw/fresh-target; the original far rectangle accidentally
+  included water bordering the island. Reflection removal changed87 water pixels
+  there. The interior village rectangle `(440,0,280,24)` has2616 DOF-control changes
+  and zero reflection-control changes; focused stone remains exact, water changes6759.
+- Linux llvmpipe: exact same-draw/fresh-target; DOF removal changes4600 focused-stone
+  pixels and reflection removal changes **zero** water pixels. The interior-village
+  correction preserves both failures. Blur and missing reflections remain unresolved.
+- Windows software D3D12: same-draw exact; fresh-target differs at **two pixels**,
+  maximum channel delta2, despite matching measured inputs. Feature controls pass
+  on retained images. No tolerance converts the repeat failure into a pass.
+
+All three application processes complete9 assertions with zero engine errors or
+warnings. The first collector stopped after its first failed comparison; the
+revised collector retains all valid comparisons and the second fresh process while
+preserving a failed verdict. These are new measurements, not edits to old receipts.
+Cross-OS acceptance comparison is still ineligible: inventories differ in six
+ArrayMesh fields between Mac/Linux (two attribute buffers, four vertex buffers).
+Actual bytes remain retained; scene-generation differences cannot be hidden by
+matching labels, rounded hashes or a raw-image diagnostic.
+
+### Bounded Linux depth localization
+
+[The standalone probe](../tools/qa/depth_probe.py) uses the checksum-pinned official
+4.7.2 editor and three orthographic textured planes at camera depths5/10/20. A
+post-transparent compositor reads existing raw depth samples0/1 and resolved depth
+into a float32 storage buffer. It leaves `access_resolved_depth=false`, requests no
+additional resolve and runs on the rendering callback thread. Actual formats,
+sample enums, API/device/engine identity, complete buffer hash, plane samples and
+reconstructed depth are recorded. The full buffer and images remain available.
+
+The two fixed processes use2xMSAA and an explicitly defective MSAA-off control.
+Both retain Circle/Low/jitterON, DOF and SSAO/SSIL. This is **resource localization
+in a separate scene/editor**, not the shipped game's full High qualification.
+Its exit0 proves clean complete collection, even if depth is wrong. Numerical
+sample discrepancies remain visible. A synthetic half-depth regression verifies
+that collection cannot conceal a resolve error. Truncated/unwritten output fails.
+The frozen export rejects external path overrides, so it is not falsely described
+as executing this standalone script. The actual-package fixture remains separate.
+
+Run locally on an announced owned windowed desktop:
+
+```sh
+python3 tools/qa/depth_probe.py --godot /path/to/pinned/Godot \
+  --driver metal --output artifacts/qa/depth-new
+```
+
+The Linux-only `depth-diagnostics.yml` runs only on the isolated QA branch and exact
+`BLAST_DEPTH_RUNNER_SHA`. Its purpose is to distinguish raw samples, resolved depth
+and later focus reconstruction before selecting a driver/engine remedy; no preset,
+shader or production engine change follows from a subsystem's name alone.
