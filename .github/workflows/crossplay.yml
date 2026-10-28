@@ -82,7 +82,9 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         if: matrix.target != 'macos-arm64'
         with:
-          name: ${{ inputs.mode == 'candidate' && format('candidate-{0}', matrix.target) || format('Blast-Circuit-{0}-smoke', matrix.target) }}
+          # Candidate mode uses the prepared exact player download (EXE/AppImage)
+          # directly, so the mixed-OS match need not wait for every graphical tour.
+          name: ${{ inputs.mode == 'candidate' && format('download-{0}', matrix.target) || format('Blast-Circuit-{0}-smoke', matrix.target) }}
           path: artifacts
       - if: runner.os == 'macOS'
         run: python3 tools/packaging/macos-test-display.py
@@ -148,6 +150,8 @@ jobs:
             artifacts/crossplay-${{ matrix.target }}/summary.json
             artifacts/crossplay-${{ matrix.target }}/runtime.log
             artifacts/crossplay-${{ matrix.target }}/launcher.log
+            artifacts/crossplay-${{ matrix.target }}/phases.json
+            artifacts/crossplay-${{ matrix.target }}/trace.jsonl
             artifacts/windows-audio/*.json
             artifacts/crossplay-${{ matrix.target }}/*.png
           retention-days: 14

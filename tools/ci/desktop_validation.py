@@ -54,7 +54,7 @@ def inspect_report(report, scenario, settings, revision, release, graphical):
             type(report.get('assertions')) is not int or report['assertions'] <= 0 or
             not isinstance(report.get('checks'), list) or len(report['checks']) != report['assertions'] or
             any(check.get('passed') is not True for check in report['checks']) or
-            report.get('runtimeErrors') != [] or
+            report.get('runtimeErrors') != [] or report.get('frameStallMs', 0) != 0 or
             report.get('screenshotMode') != ('graphical' if graphical else 'disabled-headless')):
         raise RuntimeError('Incomplete or mismatched exported gameplay evidence: ' + scenario)
     if graphical and (report.get('renderingDriver') != settings['driver'] or

@@ -54,6 +54,15 @@ public sealed partial class NetworkSession : ISession
     public void ReleaseInputs() { lock (_inputGate) { _input = default; _buttons.Clear(); } }
     public int LocalPlayerCount => 1;
     public string Status => Volatile.Read(ref _status);
+    private readonly System.Collections.Concurrent.ConcurrentQueue<string> _connectionEvents = new();
+    /// <summary>The last 64 connection transitions: generation, close status/reason,
+    /// reconnects and queue overflows. Bounded; for support and QA diagnostics.</summary>
+    public IReadOnlyList<string> ConnectionEvents => _connectionEvents.ToArray();
+    private void NoteConnection(string text)
+    {
+        _connectionEvents.Enqueue($"{DateTimeOffset.UtcNow:HH:mm:ss.fff} g{ConnectionGeneration} {text}");
+        while (_connectionEvents.Count > 64) _connectionEvents.TryDequeue(out _);
+    }
     public bool IsEnded => Status.StartsWith("Ended", StringComparison.Ordinal) || Status.StartsWith("Error:", StringComparison.Ordinal);
     public string? JoinCode { get; private set; }
     public string? PlayerId { get; private set; }
@@ -138,6 +147,7 @@ public sealed partial class NetworkSession : ISession
 
     private void Fail(string reason)
     {
+        NoteConnection("failed: " + reason);
         Volatile.Write(ref _status, "Error: " + reason);
         _messages.Add(JsonSerializer.SerializeToElement(new { t = "sys.error", d = new { code = "connection_lost", message = reason } }));
     }

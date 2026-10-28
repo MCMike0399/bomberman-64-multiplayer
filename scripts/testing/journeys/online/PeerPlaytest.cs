@@ -31,23 +31,11 @@ public partial class PlaytestDriver
         await using var third=await NetworkSession.ConnectAsync(new Uri(_server),"Peer third",new SessionSettings(Bots:0),NetworkMode.JoinCode,host.JoinCode,peerFactory:()=>new GodotPeerLink(useStun:!new Uri(_server).IsLoopback));
         var peers=new[]{second,third};
         var states=new Dictionary<string,JsonElement>();
-        // Real clients advance every engine frame. Pump these fixture peers the
-        // same way, including between waits; a fixture that becomes host would
-        // otherwise miss heartbeats while slow frames render. Uncapped headless
-        // frames ran ~7,500/s, so never pump faster than a 30 FPS client.
-        var pumped=Stopwatch.StartNew();
-        void Pump()
-        {
-            if(pumped.Elapsed.TotalSeconds<1d/30)return;
-            pumped.Restart();
-            foreach(var peer in peers)
-            {
-                peer.Advance(1d/30);
-                foreach(var message in peer.DrainMessages())
-                    if(message.GetProperty("t").GetString()=="state")states[peer.PlayerId!]=message.GetProperty("d").Clone();
-            }
-        }
-        using var pump=new FrameSubscription(GetTree(),Pump);
+        // Real clients advance every engine frame, including between waits; a
+        // fixture that becomes host must keep renewing its lease.
+        void Record(NetworkSession peer,JsonElement message){if(message.GetProperty("t").GetString()=="state")states[peer.PlayerId!]=message.GetProperty("d").Clone();}
+        using var liveSecond=KeepFixtureLive(second,m=>Record(second,m));
+        using var liveThird=KeepFixtureLive(third,m=>Record(third,m));
         await Until(()=>host.Party?.CanStart==true&&peers.All(p=>p.Party?.CanStart==true)&&NamedButton("StartRoom").IsVisibleInTree()&&!NamedButton("StartRoom").Disabled,"three peers join lobby and the rendered start control is ready");
         await ActivateNamed("StartRoom");
         await Until(()=>host.PeerTransport=="Direct P2P"&&peers.All(p=>p.PeerTransport=="Direct P2P")&&_root.LatestState is {} s&&s.GetProperty("phase").GetInt32()==1,"actual encrypted WebRTC channels connect");
@@ -73,14 +61,14 @@ public partial class PlaytestDriver
         Check(second.LobbyId==third.LobbyId,"host takeover keeps the room identity");
         Event("peer-transport",new {second=second.PeerTransport,third=third.PeerTransport,epoch=second.Party!.Epoch});
         await Capture("peer-host-takeover-complete");
-        pump.Dispose();await second.DisposeAsync();await third.DisposeAsync();
+        liveSecond.Dispose();liveThird.Dispose();await second.DisposeAsync();await third.DisposeAsync();
         await PeerFullRoom();
 
         async Task Until(Func<bool> predicate,string description)
         {
             var clock=Stopwatch.StartNew();ulong startFrame=Godot.Engine.GetProcessFrames();
             while(!predicate()&&Waiting(clock,20,startFrame))await Frames(1);
-            if(!predicate())File.WriteAllText(Path.Combine(_output,"peer-room-diagnostics.json"),JsonSerializer.Serialize(new{description,host=PeerDiagnostics(host),peers=peers.Select(PeerDiagnostics)},new JsonSerializerOptions{WriteIndented=true}));
+            if(!predicate())File.WriteAllText(Path.Combine(_output,"peer-room-diagnostics.json"),JsonSerializer.Serialize(new{description,host=PeerDiagnostics(host),peers=peers.Select(PeerDiagnostics),cadence=new{second=liveSecond.Cadence,third=liveThird.Cadence}},new JsonSerializerOptions{WriteIndented=true}));
             Check(predicate(),description);
         }
     }
@@ -91,6 +79,18 @@ public partial class PlaytestDriver
         var host=(NetworkSession)_root.ActiveSession!;
         var guests=new List<NetworkSession>();var states=new Dictionary<string,JsonElement>();
         var rosters=new Dictionary<string,int>();
+        void Record(NetworkSession peer,JsonElement m)
+        {
+            string? type=m.GetProperty("t").GetString();
+            if(type=="state")states[peer.PlayerId!]=m.GetProperty("d").Clone();
+            if(type=="party.status")rosters[peer.PlayerId!]=m.GetProperty("d").GetProperty("players").EnumerateArray().Count(p=>p.GetProperty("connected").GetBoolean());
+        }
+        // Hardware staggers seven guests one per frame so their native polls cannot
+        // delay the real host's six-second lease. With ~1 s software or stalled
+        // frames that stagger polls each guest every ~7 s and WebRTC never leaves
+        // the relay; there each guest gets its own per-frame owner (QA lease applies).
+        bool slowFrames=SoftwareRenderer||_frameStallMs>0;
+        var live=new List<FixtureLive>();
         try
         {
             for(int i=1;i<8;i++)
@@ -99,10 +99,12 @@ public partial class PlaytestDriver
                 while(!joining.IsCompleted)
                 {
                     host.Advance(1d/30);
-                    foreach(var peer in guests)peer.Advance(1d/30);
+                    if(!slowFrames)foreach(var peer in guests)peer.Advance(1d/30);
                     await Frames(1);await Task.Delay(16);
                 }
-                guests.Add(await joining);await Frames(1);
+                var joined=await joining;guests.Add(joined);
+                if(slowFrames)live.Add(KeepFixtureLive(joined,m=>Record(joined,m)));
+                await Frames(1);
             }
             // CanStart means the two-human minimum, not that every pending
             // socket has joined. Wait for all eight in each accepted roster.
@@ -115,22 +117,18 @@ public partial class PlaytestDriver
             await Until(()=>states.Values.All(s=>s.GetProperty("bombs").GetArrayLength()>=2),"host and remote bomb actions reach all eight direct players");
             Input(0,default);guests[0].ReleaseInputs();await Capture("peer-eight-players");
         }
-        finally{foreach(var peer in guests)await peer.DisposeAsync();_root.Back();}
+        finally{foreach(var owner in live)owner.Dispose();foreach(var peer in guests)await peer.DisposeAsync();_root.Back();}
         async Task Until(Func<bool> predicate,string description)
         {
             var clock=Stopwatch.StartNew();ulong startFrame=Godot.Engine.GetProcessFrames();
             while(!predicate()&&Waiting(clock,20,startFrame))
             {
+                if(slowFrames){await Frames(1);continue;}
                 host.Advance(1d/30);
                 foreach(var peer in guests)
                 {
                     peer.Advance(1d/30);
-                    foreach(var m in peer.DrainMessages())
-                    {
-                        string? type=m.GetProperty("t").GetString();
-                        if(type=="state")states[peer.PlayerId!]=m.GetProperty("d").Clone();
-                        if(type=="party.status")rosters[peer.PlayerId!]=m.GetProperty("d").GetProperty("players").EnumerateArray().Count(p=>p.GetProperty("connected").GetBoolean());
-                    }
+                    foreach(var m in peer.DrainMessages())Record(peer,m);
                     // These seven clients share the engine thread in QA. Give
                     // the real host a frame between native connection polls.
                     await Frames(1);
@@ -141,7 +139,7 @@ public partial class PlaytestDriver
             {
                 var diagnostic=new{description,host=host.PeerTransport,hostStatus=host.Status,hostParty=host.Party,guests=guests.Select(p=>new{p.PlayerId,p.PeerTransport,p.DirectPacketsSent,p.DirectPacketsReceived,p.Status,notice=p.Party?.Notice,members=rosters.GetValueOrDefault(p.PlayerId!),phase=p.Party?.Phase,epoch=p.Party?.Epoch,state=states.TryGetValue(p.PlayerId!,out var state)?state.GetProperty("players").GetArrayLength():0,statePhase=states.TryGetValue(p.PlayerId!,out var phaseState)?phaseState.GetProperty("phase").GetInt32():-1,serverTime=states.TryGetValue(p.PlayerId!,out var timedState)?timedState.GetProperty("serverTime").GetInt64():-1})};
                 Event("peer-capacity-failure",diagnostic);
-                File.WriteAllText(Path.Combine(_output,"peer-capacity-diagnostics.json"),JsonSerializer.Serialize(new{room=diagnostic,host=PeerDiagnostics(host),guests=guests.Select(PeerDiagnostics)},new JsonSerializerOptions{WriteIndented=true}));
+                File.WriteAllText(Path.Combine(_output,"peer-capacity-diagnostics.json"),JsonSerializer.Serialize(new{room=diagnostic,slowFrames,cadence=live.Select(owner=>owner.Cadence),host=PeerDiagnostics(host),guests=guests.Select(PeerDiagnostics)},new JsonSerializerOptions{WriteIndented=true}));
             }
             Check(predicate(),description);
         }

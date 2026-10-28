@@ -191,11 +191,15 @@ whole 3D scene (about 45% of Mac's edge sharpness), while Low/Medium matched.
 A minimal engine scene with the game's depth-of-field settings isolates the
 cause: on llvmpipe, 2x MSAA halves in-focus sharpness (0.127 to 0.059), while
 the same scene on Apple M5 hardware is unaffected under both Metal and
-Vulkan (MoltenVK) (0.127 either way). This is a Mesa software-driver defect in MSAA depth resolve. The High water
-mirror marches that same resolved depth, so on llvmpipe it never finds the
-scene: its reflection on/off probe differed by 0 pixels even with depth of
-field disabled. The game is unchanged. On verified software renderers only, the
-probe compares reflection on/off with MSAA temporarily disabled. Real Linux GPU drivers still need separate evidence.
+Vulkan (MoltenVK) (0.127 either way). This is an observed limitation of llvmpipe with MSAA on; the evidence points
+at its resolved depth, but the exact driver cause is unconfirmed. The High
+water mirror marches that same resolved depth. On llvmpipe its reflection
+on/off probe differed by 0 pixels even with depth of field disabled, and by
+666 with MSAA off (Mac 663). The game is unchanged. On verified software
+renderers only, the probe compares reflection on/off with MSAA temporarily
+disabled, which validates that narrower path rather than the shipped MSAA one.
+MoltenVK on Apple hardware is not a test of Linux GPU drivers. No physical
+Linux or Windows GPU has been tested, and that coverage remains missing.
 
 Desktop updates publish the helper's `ready` marker atomically. Native run
 40681932218 caught the old game reading that marker between its creation and

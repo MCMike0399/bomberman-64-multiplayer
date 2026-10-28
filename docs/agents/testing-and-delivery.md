@@ -783,15 +783,31 @@ the same tour. To reproduce a failed part locally, run its tour with
 fails, so a single run reports every failure. Use `PlaytestDriver.Waiting`
 for new "wait until" loops; it gives verified software renderers
 frame-equivalent time. Fixed-duration measurements must stay wall-clock.
-Fixture `NetworkSession`s have no game loop. A long-lived fixture must be
-drained (`DrainEachFrame`) or pumped every engine frame (`FrameSubscription`),
-as GameRoot does for the player's session. Otherwise a slow software-rendered
+Fixture `NetworkSession`s have no game loop. Give each long-lived fixture
+exactly one owner, `KeepFixtureLive`, which advances and drains it like a
+30 FPS client on the engine thread (Godot peer polling must stay there). It
+never runs faster in uncapped headless frames, and it is scope-bound
+(`using`). Hand messages a test needs to its callback rather than calling
+`DrainMessages` alongside it. The owner records its cadence for diagnostics. Otherwise a slow software-rendered
 journey overflows its 128-message control queue or misses the 6-second peer
 host lease. Both failures appeared on WARP/llvmpipe on 2026-10-28. On verified
 software renderers only, `peer-rooms` first warms its Top Rules arena, because
 a cold first load in a fresh process stalled past that lease. Every leaf
 appends Godot's video/static memory to `leaf-memory.json` for cross-platform
 comparison.
+
+Diagnose slow-frame failures locally before spending a native run:
+`run.py --frame-stall-ms N` blocks the engine thread N ms per frame. Headless,
+with an owned server, it reproduces software-renderer frame times in
+minutes. Summaries record the stall, and release validation rejects any
+receipt with one. The server writes `Bomber.PeerRoom` transitions (membership
+changes, elections, lease expiry with measured silence, handshake kicks,
+byte-budget drops). `NetworkSession.ConnectionEvents` keeps each client's
+last 64 transitions with generation and the server's close code/reason. Peer
+and network failure diagnostics, and the owned server logs, are uploaded with
+CI artifacts. Candidate crossplay starts once exact downloads and the Mac
+archive exist; trusted main still waits for every smoke job. It records
+per-phase timings for budget decisions.
 
 Keep long-running platform QA independent of Mac stable releases: use the
 separate worktree, private exact-SHA drafts, owned matching server and pinned

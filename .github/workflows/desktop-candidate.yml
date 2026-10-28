@@ -177,6 +177,9 @@ jobs:
             artifacts/*-regression-details/**/runner-summary.json
             artifacts/*-regression-details/**/progress.json
             artifacts/*-regression-details/**/peer-capacity-diagnostics.json
+            artifacts/*-regression-details/**/peer-room-diagnostics.json
+            artifacts/*-regression-details/**/network-diagnostics.json
+            artifacts/*-regression-details/server*.log
             artifacts/*-regression-details/**/junit.xml
             artifacts/*-regression-details/**/runtime.log
           retention-days: 14
@@ -237,7 +240,9 @@ jobs:
             artifacts/*-regression-details/**/progress.json
             artifacts/*-regression-details/**/display-restart.json
             artifacts/*-regression-details/**/peer-room-diagnostics.json
+            artifacts/*-regression-details/**/network-diagnostics.json
             artifacts/*-regression-details/**/leaf-memory.json
+            artifacts/*-regression-details/server*.log
             artifacts/*-regression-details/**/junit.xml
             artifacts/*-regression-details/**/runtime.log
             artifacts/*-regression-details/**/*.png
@@ -308,7 +313,9 @@ jobs:
             artifacts/*-regression-details/**/peer-capacity-diagnostics.json
             artifacts/*-regression-details/**/display-restart.json
             artifacts/*-regression-details/**/peer-room-diagnostics.json
+            artifacts/*-regression-details/**/network-diagnostics.json
             artifacts/*-regression-details/**/leaf-memory.json
+            artifacts/*-regression-details/server*.log
             artifacts/*-regression-details/**/junit.xml
             artifacts/*-regression-details/**/runtime.log
             artifacts/*-regression-details/**/*.png
@@ -357,7 +364,9 @@ jobs:
             artifacts/*-regression-details/**/peer-capacity-diagnostics.json
             artifacts/*-regression-details/**/display-restart.json
             artifacts/*-regression-details/**/peer-room-diagnostics.json
+            artifacts/*-regression-details/**/network-diagnostics.json
             artifacts/*-regression-details/**/leaf-memory.json
+            artifacts/*-regression-details/server*.log
             artifacts/Blast-Circuit-macos-arm64-regression-details/**/runtime.log
             artifacts/Blast-Circuit-macos-arm64-regression-details/**/*.png
             artifacts/candidate-mac-update/summary.json
@@ -366,7 +375,9 @@ jobs:
 
   crossplay:
     name: Cross-platform Quick Play
-    needs: [qualify, mac-regression]
+    # Exercise the mixed-OS boundary as soon as exact downloads and the Mac
+    # archive exist. Trusted main still gates crossplay on every smoke job.
+    needs: [prepare, mac-regression]
     permissions:
       contents: read
       actions: read

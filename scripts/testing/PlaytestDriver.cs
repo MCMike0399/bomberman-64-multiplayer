@@ -30,6 +30,10 @@ public partial class PlaytestDriver : Node
     private bool _headless, _windowedRequested;
     private bool _displayRestartRequested;
     private bool _slowMovementFeedback;
+    // QA-only: block the engine thread each frame to reproduce software-renderer
+    // frame times headlessly. Recorded in the summary; release receipts reject it.
+    private int _frameStallMs;
+    public override void _Process(double delta){if(_frameStallMs>0)System.Threading.Thread.Sleep(_frameStallMs);}
 
     public static bool TryAttach(GameRoot root)
     {
@@ -48,6 +52,7 @@ public partial class PlaytestDriver : Node
         _scenario=Arg("--playtest","all");
         _output=Path.GetFullPath(Arg("--playtest-output",ProjectSettings.GlobalizePath("res://artifacts/playtest")));
         _server=Arg("--playtest-server",_server);
+        _frameStallMs=Math.Clamp(int.TryParse(Arg("--playtest-frame-stall-ms","0"),out int stall)?stall:0,0,5000);
         Directory.CreateDirectory(_output);
         _trace=new StreamWriter(Path.Combine(_output,"trace.jsonl")) { AutoFlush=true };
         _headless=DisplayServer.GetName()=="headless";
@@ -76,7 +81,7 @@ public partial class PlaytestDriver : Node
         finally
         {
             var summary=new { schemaVersion=1,catalogSha256=_catalogHash,completedScenarios=_completedScenarios,scenario=_scenario,passed=failure==null,frames=_frame,seconds=_clock.Elapsed.TotalSeconds,
-                assertions=_checks.Count,checks=_checks,screenshots=_screenshots,captureFallbacks=_captureFallbacks,screenshotMode=_headless?"disabled-headless":"graphical",
+                assertions=_checks.Count,checks=_checks,frameStallMs=_frameStallMs,screenshots=_screenshots,captureFallbacks=_captureFallbacks,screenshotMode=_headless?"disabled-headless":"graphical",
                 failure=failure?.ToString(),screen=_root.ScreenName,snapshots=_root.SnapshotCount,finalState=_root.LatestState,
                 platform=OS.GetName(),renderingDriver=RenderingServer.GetCurrentRenderingDriverName(),
                 renderingMethod=RenderingServer.GetCurrentRenderingMethod(),adapter=RenderingServer.GetVideoAdapterName(),
@@ -279,21 +284,40 @@ public partial class PlaytestDriver : Node
     // renderer one frame can last seconds, so "press for N frames" becomes a
     // long hold (a held A charges a throw instead of placing a bomb). Send the
     // press edge now and release it after a bounded wall-clock interval.
-    private async Task NetworkTap(NetworkSession connection,PlayerInput press,int milliseconds=100)
+    private async Task NetworkTap(NetworkSession connection,PlayerInput press,PlayerInput hold=default,int milliseconds=100)
     {
-        Input(0,default);connection.SendInput(0,press);
-        await Task.Run(async()=>{await Task.Delay(milliseconds).ConfigureAwait(false);connection.SendInput(0,default);});
+        Input(0,hold);connection.SendInput(0,press);
+        await Task.Run(async()=>{await Task.Delay(milliseconds).ConfigureAwait(false);connection.SendInput(0,hold);});
         await Frames(1);
     }
-    private sealed class FrameSubscription(SceneTree tree,Action pump):IDisposable
+    // The single owner of a game-loop-free fixture session: advance and drain it
+    // like a 30 FPS client on the engine thread (Godot peer polling stays there),
+    // never faster in uncapped headless frames. Messages go to onMessage; others
+    // are consumed as GameRoot would. Cadence is kept for peer diagnostics.
+    private sealed class FixtureLive:IDisposable
     {
-        private bool _active=Subscribe(tree,pump);
-        private static bool Subscribe(SceneTree tree,Action pump){tree.ProcessFrame+=pump;return true;}
-        public void Dispose(){if(_active){tree.ProcessFrame-=pump;_active=false;}}
+        private readonly SceneTree _tree;
+        private readonly NetworkSession _session;
+        private readonly Action<JsonElement>? _onMessage;
+        private readonly Stopwatch _paced=Stopwatch.StartNew(),_life=Stopwatch.StartNew();
+        private bool _started,_active=true;
+        private int _pumps;
+        private double _maxGap;
+        public FixtureLive(SceneTree tree,NetworkSession session,Action<JsonElement>? onMessage)
+        {_tree=tree;_session=session;_onMessage=onMessage;_tree.ProcessFrame+=Pump;}
+        private void Pump()
+        {
+            double gap=_paced.Elapsed.TotalSeconds;
+            if(_started&&gap<1d/30)return;
+            if(_started)_maxGap=Math.Max(_maxGap,gap);
+            _started=true;_paced.Restart();_pumps++;
+            _session.Advance(1d/30);
+            foreach(var message in _session.DrainMessages())_onMessage?.Invoke(message);
+        }
+        public object Cadence=>new{pumps=_pumps,maxGapSeconds=Math.Round(_maxGap,3),aliveSeconds=Math.Round(_life.Elapsed.TotalSeconds,1)};
+        public void Dispose(){if(_active){_tree.ProcessFrame-=Pump;_active=false;}}
     }
-    // Discards a fixture session's queued messages every engine frame; tests
-    // still read its socket-published Party state.
-    private IDisposable DrainEachFrame(NetworkSession session)=>new FrameSubscription(GetTree(),()=>session.DrainMessages());
+    private FixtureLive KeepFixtureLive(NetworkSession session,Action<JsonElement>? onMessage=null)=>new(GetTree(),session,onMessage);
     private void Event(string type,object data) => _trace.WriteLine(JsonSerializer.Serialize(new {frame=_frame,type,data}));
     private Image CapturePixels()
     {

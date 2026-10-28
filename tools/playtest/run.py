@@ -118,11 +118,14 @@ def main():
     parser.add_argument('--server', default='http://127.0.0.1:18496')
     parser.add_argument('--start-server', action='store_true', help='Start local server if unreachable; stop only the process this runner owns')
     parser.add_argument('--build', action='store_true', help='Build Godot and server projects first')
+    parser.add_argument('--frame-stall-ms', type=int, default=0, help='QA diagnostic: block the engine thread this long each frame (0-5000); never release evidence')
     parser.add_argument('--timeout', type=float, help='Override the catalog timeout (full suites default to 600 seconds)')
     parser.add_argument('--output', type=Path, default=ROOT / 'artifacts' / 'playtest')
     args = parser.parse_args()
     if not re.fullmatch(r'[1-9][0-9]{2,3}x[1-9][0-9]{2,3}', args.benchmark_resolution) or any(int(n) > 7680 for n in args.benchmark_resolution.split('x')):
         parser.error('--benchmark-resolution must be WIDTHxHEIGHT, between 100 and 7680 pixels per dimension')
+    if not 0 <= args.frame_stall_ms <= 5000:
+        parser.error('--frame-stall-ms must be between 0 and 5000')
     if not 10 <= args.benchmark_seconds <= 120:
         parser.error('--benchmark-seconds must be between 10 and 120')
     if args.list:
@@ -237,6 +240,8 @@ def main():
             if args.gpu_profile:
                 command.append('--gpu-profile')
             command += ['--', '--playtest=' + args.scenario, '--playtest-output=' + str(folder), '--playtest-server=' + args.server]
+            if args.frame_stall_ms:
+                command.append(f'--playtest-frame-stall-ms={args.frame_stall_ms}')
             if windowed:
                 command.append('--display-windowed')
             if args.script:

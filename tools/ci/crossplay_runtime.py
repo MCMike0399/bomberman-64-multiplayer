@@ -89,6 +89,14 @@ def serve(directory, target, output, origin_path):
         (output / 'exit.json').write_text(json.dumps(result) + '\n')
 
 
+def phase(output, name, started):
+    # Bounded per-phase wall timings for budget decisions; never a pass criterion.
+    path = output / 'phases.json'
+    phases = json.loads(path.read_text()) if path.exists() else {}
+    phases[name] = round(time.monotonic() - started, 1)
+    path.write_text(json.dumps(phases, indent=2) + '\n')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('operation', choices=('start', 'serve', 'release', 'finish', 'stop'))
@@ -104,19 +112,23 @@ def main():
                    '--output', str(output), '--origin', str(args.origin.resolve())]
         if args.target == 'linux-x64': command = [sys.executable, str(ROOT / 'tools/packaging/linux-desktop.py'), '--', *command]
         process = crossplay.launch(command, output)
-        deadline = time.monotonic() + 300
-        while not (output / 'crossplay-ready.json').exists():
-            if process.poll() is not None or (output / 'exit.json').exists() or time.monotonic() > deadline:
-                raise RuntimeError('Rendered crossplay client failed before readiness; inspect retained logs')
-            time.sleep(.2)
+        started = time.monotonic(); deadline = started + 300
+        try:
+            while not (output / 'crossplay-ready.json').exists():
+                if process.poll() is not None or (output / 'exit.json').exists() or time.monotonic() > deadline:
+                    raise RuntimeError('Rendered crossplay client failed before readiness; inspect retained logs')
+                time.sleep(.2)
+        finally: phase(output, 'readiness', started)
     elif args.operation == 'serve': serve(directory, args.target, output, args.origin.resolve())
     elif args.operation == 'release':
         (output / 'release').touch()
-        deadline = time.monotonic() + 300
-        while not (output / 'crossplay-actions.json').exists():
-            if (output / 'exit.json').exists() or time.monotonic() > deadline:
-                raise RuntimeError('Mixed-platform game did not complete its action witness')
-            time.sleep(.2)
+        started = time.monotonic(); deadline = started + 300
+        try:
+            while not (output / 'crossplay-actions.json').exists():
+                if (output / 'exit.json').exists() or time.monotonic() > deadline:
+                    raise RuntimeError('Mixed-platform game did not complete its action witness')
+                time.sleep(.2)
+        finally: phase(output, 'actions', started)
     elif args.operation == 'stop': crossplay.stop_launcher(output)
     else:
         receipt = {'schemaVersion': 1, 'passed': False, 'target': args.target}

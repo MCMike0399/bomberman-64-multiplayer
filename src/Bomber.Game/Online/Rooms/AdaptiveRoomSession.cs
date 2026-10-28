@@ -30,7 +30,7 @@ public sealed class AdaptiveRoomSession : GameSession
     private DateTimeOffset _retryAt;
     private int PeerEpoch => _peerStatus?["epoch"]?.GetValue<int>() ?? 0;
 
-    public AdaptiveRoomSession(GameSessionOptions options, bool publicRoom = false, PeerHostLease? lease = null)
+    public AdaptiveRoomSession(GameSessionOptions options, bool publicRoom = false, PeerHostLease? lease = null, PeerRoomTrace? trace = null)
     {
         if (!RoomRules.TryUpdate(new MatchOptions().ToSettings(), JsonSerializer.SerializeToElement(options.Settings), out var validated))
             throw new ArgumentException("Invalid room settings.", nameof(options));
@@ -39,7 +39,7 @@ public sealed class AdaptiveRoomSession : GameSession
         _policy = publicRoom ? "auto" : options.Settings.GetValueOrDefault("hosting", "auto");
         if (_policy is not ("auto" or "server" or "peer")) throw new ArgumentException("Unknown hosting preference.");
         _server = new PartySession(options, publicRoom ? 2 : 1);
-        _peer = new PeerRoomSession(options, stableRoster: true, lease);
+        _peer = new PeerRoomSession(options, stableRoster: true, lease, trace);
     }
     public override int? MinPlayersToStart => 1;
     public override bool AcceptsNewPlayers => _public ? _active is null && _phase == "lobby" : _active != "peer" || _phase != "playing";

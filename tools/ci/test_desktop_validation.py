@@ -47,6 +47,16 @@ class DesktopValidationTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, 'multiplayer'):
                 validation.inspect_receipt(missing_network, settings, SHA, RELEASE)
 
+    def test_frame_stall_diagnostics_never_qualify_a_receipt(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            write_desktop(directory)
+            settings = desktop.TARGETS['windows-x64']
+            receipt = json.loads((directory / desktop.names('windows-x64')['smoke']).read_text())
+            receipt['cases'][0]['frameStallMs'] = 800
+            with self.assertRaises(RuntimeError):
+                validation.inspect_receipt(receipt, settings, SHA, RELEASE)
+
     def test_headless_suite_can_only_include_headless_capable_journeys(self):
         scenarios = validation.catalog()
         for scenario in validation.HEADLESS:
