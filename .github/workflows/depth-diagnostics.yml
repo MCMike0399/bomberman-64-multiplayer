@@ -14,7 +14,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
-      - run: sudo apt-get update && sudo apt-get install -y xvfb openbox pulseaudio mesa-vulkan-drivers
+      - run: sudo apt-get update && sudo apt-get install -y xvfb openbox pulseaudio mesa-vulkan-drivers vulkan-tools
       - name: Download the checksum-pinned official 4.7.2 editor
         run: python3 tools/ci/install_godot.py --destination artifacts/depth-engine
       - name: Read existing multisample and resolved depth without requesting an extra resolve

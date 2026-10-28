@@ -98,12 +98,14 @@ func _initialize():
     DirAccess.make_dir_recursive_absolute(output_dir)
     call_deferred("run")
 func run():
-    root.size=Vector2i(384,256);root.msaa_3d=Viewport.MSAA_DISABLED if OS.get_cmdline_user_args().has("--no-msaa") else Viewport.MSAA_2X
+    root.size=Vector2i(384,256);root.msaa_3d=Viewport.MSAA_2X
+    if OS.get_cmdline_user_args().has("--no-msaa"):root.msaa_3d=Viewport.MSAA_DISABLED
+    elif OS.get_cmdline_user_args().has("--msaa-4x"):root.msaa_3d=Viewport.MSAA_4X
     var scene:=Node3D.new();root.add_child(scene)
     var environment:=WorldEnvironment.new();environment.environment=Environment.new()
     environment.environment.background_mode=Environment.BG_COLOR;environment.environment.background_color=Color.BLACK
     environment.environment.ssao_enabled=true;environment.environment.ssil_enabled=true
-    effect=DepthEffect.new();effect.output_dir=output_dir;effect.multisampled=root.msaa_3d==Viewport.MSAA_2X;effect.clear_attachments=OS.get_cmdline_user_args().has("--clear-attachments")
+    effect=DepthEffect.new();effect.output_dir=output_dir;effect.multisampled=root.msaa_3d!=Viewport.MSAA_DISABLED;effect.clear_attachments=OS.get_cmdline_user_args().has("--clear-attachments")
     environment.compositor=Compositor.new();environment.compositor.compositor_effects=[effect];scene.add_child(environment)
     if OS.get_cmdline_user_args().has("--stage-history"):
         for stage in [["pre-opaque",CompositorEffect.EFFECT_CALLBACK_TYPE_PRE_OPAQUE],["post-opaque",CompositorEffect.EFFECT_CALLBACK_TYPE_POST_OPAQUE]]:

@@ -6,6 +6,7 @@ import json
 import math
 from pathlib import Path
 import re
+import shutil
 import struct
 import subprocess
 
@@ -48,7 +49,13 @@ def run(godot, output, driver):
     report = {'diagnosticOnly': True, 'claim': 'Pinned-editor resource localization; not the shipped game, pixel parity, or release approval.',
               'collected': False, 'engineExecutableSha256': engine_sha, 'cases': []}
     try:
-        for label, args in [('msaa-2x', []), ('msaa-off-control', ['--no-msaa']), ('msaa-2x-stage-history', ['--stage-history']), ('msaa-2x-clear-attachments', ['--clear-attachments'])]:
+        if driver == 'vulkan' and shutil.which('vulkaninfo'):
+            caps = subprocess.run(['vulkaninfo'], capture_output=True, text=True, timeout=30)
+            (output / 'vulkaninfo.txt').write_text(caps.stdout)
+            (output / 'vulkaninfo-stderr.txt').write_text(caps.stderr)
+            report['vulkaninfoExitCode'] = caps.returncode
+            if caps.returncode: raise RuntimeError('Vulkan capability inventory failed')
+        for label, args in [('msaa-2x', []), ('msaa-off-control', ['--no-msaa']), ('msaa-2x-stage-history', ['--stage-history']), ('msaa-2x-clear-attachments', ['--clear-attachments']), ('msaa-4x-control', ['--msaa-4x'])]:
             case = output / label; case.mkdir()
             command = [str(godot), '--path', str(ROOT / 'tools/qa/depth_probe'), '--script', 'probe.gd', '--windowed',
                        '--rendering-method', 'forward_plus', '--rendering-driver', driver, '--audio-driver', 'Dummy', '--', str(case), *args]
@@ -58,7 +65,7 @@ def run(godot, output, driver):
             if process.returncode or re.search(r'(^|\n)(ERROR:|SCRIPT ERROR:|FATAL:)', raw):
                 raise RuntimeError('Depth probe did not complete cleanly: ' + label)
             evidence = inspect(case)
-            if evidence['metadata']['rawSamples'] != (0 if '--no-msaa' in args else 1):
+            if evidence['metadata']['rawSamples'] != (0 if '--no-msaa' in args else 2 if '--msaa-4x' in args else 1):
                 raise ValueError('Depth probe used an unexpected sample count')
             if '--stage-history' in args:
                 evidence['stageHistory'] = {stage: inspect(case / stage) for stage in ('pre-opaque', 'post-opaque')}

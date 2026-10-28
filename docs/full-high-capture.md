@@ -199,3 +199,17 @@ fetch/storage problem and a failure specific to the scene's depth path. On M5,
 both samples of both clear attachments are exactly`.75` across all98304 pixels.
 Scene observations are saved before the custom clears. A wrong clear readback is
 retained explicitly rather than converted into a successful depth verdict.
+
+The independent clear run (`40784541653`) also reads zero from **both depth and
+color**2xMSAA attachments on Linux. Both clear attachments read exactly`.75` on
+M5. This rules out a fault unique to the scene's depth-writing shader; generic
+multisample resource/sample interpretation remains implicated.
+
+The next capability control records native`vulkaninfo` and a separately labeled
+4xMSAA process. Pinned Godot's Vulkan driver
+[falls back to a lower supported sample count](https://github.com/godotengine/godot/blob/4.7.2-stable/drivers/vulkan/rendering_device_driver_vulkan.cpp#L2219-L2236).
+If a device advertises1x/4x but not2x, the requested2x resource can therefore become
+single-sampled in the backend while the higher renderer path still plans
+multisample reads. This is a falsifiable explanation, pending the actual runner
+capabilities and4x result. The4x process is diagnostic and cannot replace the
+required original High2x witness or qualify an unsupported physical driver.
