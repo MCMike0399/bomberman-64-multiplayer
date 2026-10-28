@@ -113,6 +113,9 @@ public partial class PlaytestDriver
         Check(_root.ScreenName=="Setup"&&host.LobbyId==roomIdentity,"advanced Back preserves existing room identity");
         var rules=_root.FindChildren("*","",true,false).OfType<BlastCircuit.UI.ArcadeRuleDial>().First(d=>d.Caption=="Wins to victory");
         rules.GrabFocus();CtlKey(Key.Right,true);await Frames(1);CtlKey(Key.Right,false);await Frames(2);
+        NamedButton("CPUlevel").GrabFocus();await KeyPress(Key.Right);
+        Check(AuditDescendants(_root).OfType<BlastCircuit.UI.Menu.ArcadeMenu>().Single().OnlineSettings.BotDifficulty=="hard","online owner selects Hard CPU difficulty");
+        await Capture("network-difficulty-hard");
         await Capture("network-room-rules");
         await ActivateNamed("LaunchMatch");
         for(int i=0;i<180&&host.Party?.Settings?.GetValueOrDefault("wins")!="3";i++){await Frames(1);await Task.Delay(16);}
@@ -120,6 +123,7 @@ public partial class PlaytestDriver
         for(int i=0;i<180&&peer.Party?.Settings?.GetValueOrDefault("wins")!="3";i++){await Frames(1);await Task.Delay(16);}
         Check(peer.Party?.Settings?.GetValueOrDefault("wins")=="3","room guest receives the leader's saved rules");
         Check(peer.Party?.Settings?.GetValueOrDefault("drop-percent")=="45"&&peer.Party.Settings.GetValueOrDefault("disabled-items")=="slow","advanced room settings reach the peer");
+        Check(host.Party?.Settings?.GetValueOrDefault("bot-difficulty")=="hard"&&peer.Party?.Settings?.GetValueOrDefault("bot-difficulty")=="hard","real server and peer retain selected Hard CPU difficulty");
         CtlButton(0,JoyButton.Start,true);await Frames(1);CtlButton(0,JoyButton.Start,false);await Frames(2);
         Check(NamedButton("StartRoom").HasFocus()&&_root.ScreenName=="Lobby","Start focuses Start game without starting it");
         await ActivateNamed("StartRoom");

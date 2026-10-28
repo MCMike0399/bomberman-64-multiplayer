@@ -458,3 +458,11 @@ updates both values and toggles. Status text and remaining seconds appear in the
 player HUD; pickups blink for their final three seconds. `advanced-settings`
 exercises native navigation, toggles, ordinary pickups, size restoration and
 authoritative/rendered expiration.
+
+## Roster CPU level (2026-10-28)
+
+CPU-seat bomb pips are focusable buttons that cycle Easy → Medium → Hard for
+all local bots. The name appears below the pips; human/off seats cannot activate
+them. This edits the same shared difficulty as Match Setup → CPU level. The
+`roster` journey checks focus, activation, mouse cycling and setup persistence;
+`network` checks owner editing and accepted server/peer difficulty in a real room.
