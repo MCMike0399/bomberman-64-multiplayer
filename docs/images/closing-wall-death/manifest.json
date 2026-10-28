@@ -1,0 +1,43 @@
+{
+  "capturedOn": "2026-10-28",
+  "preset": "Medium (QA default)",
+  "display": "isolated macOS VM, Metal Forward+, 1280x800 captures",
+  "baseline": {
+    "revision": "7d090eb71122ad8a56c4c473a67b60e8096bbfd0",
+    "run": "20261028T183316.426885Z-greedy-trap",
+    "assertions": 198,
+    "screenshots": 20
+  },
+  "after": {
+    "baseRevision": "7d090eb71122ad8a56c4c473a67b60e8096bbfd0",
+    "run": "20261028T183738.665399Z-wall-death-regression",
+    "sourceSha256": {
+      "assets/testing/scenarios.json": "94b6152d4710c6c2e4be65009dd4b189c5a62a8d3a73cd3f3cb64a8fda5790d0",
+      "scripts/arena/ArenaView.Presentation.cs": "a02753c7bdbcb83c1dbcb8d5251a505842c369b8122f040832dfe2a209d19da7",
+      "scripts/arena/effects/CrushEffect.cs": "66dde113dd78783597b6d39750ca9a78f3562be929dc3fb1f3ec21675a013d49",
+      "scripts/arena/effects/EffectWarmup.cs": "ff2118a293711ab6e0570040862a2ab1940009f23e24e8bde3c72900d72a8c56",
+      "scripts/arena/models/BomberModel.Crush.cs": "5de4b707d1b7eecfefd4d7491de5d2dfb6ed4a04ce001476a4d2d5141fccda09",
+      "scripts/testing/journeys/rendering/WallDeathPlaytest.cs": "37c51fd3835024157c72a6ea586ca8fc8caceef73cf05de18347553f3da9b969"
+    },
+    "passed": true,
+    "assertions": 368,
+    "screenshots": 45,
+    "runtimeErrors": 0,
+    "runtimeWarnings": [],
+    "scenarios": [
+      "first-use-rendering",
+      "wall-death",
+      "greedy-trap",
+      "mishap-feel"
+    ]
+  },
+  "images": {
+    "after-greedy-trap-battle.png": "c9c6b997df9744857f95bc25d799ddeee74d4c27b5a1d87794036d833b2119d2",
+    "after-greedy-trap-flat.png": "2dec9b26dd32d23a8b03c11490149a4e6d9c499e977bec84d20117cd10d57639",
+    "after-greedy-trap-puff.png": "5e84112ea6742cd49a7324e36d1a59dfc00e92f2c598c31e89e414624e122e71",
+    "after-greedy-trap-squeeze.png": "c080731be365961b1c12a3b333bed6852c607907d30b50571d5699f83c32bc0f",
+    "after-pose-strip.png": "8790b4cfa47fbf729aa6e897d7dc2773ab4512a87d19743e389c0964b5a44d28",
+    "after-top-rules-battle.png": "9ffbc355e69eb68391d99d61665dab54c3e565a1d39b584778276afb681436b7",
+    "before-wall-death.png": "89c8066b619450320cf84b3e232a6f473f0ed12d5fac9be29d9b76934139bf0f"
+  }
+}

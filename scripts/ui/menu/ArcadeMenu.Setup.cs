@@ -41,7 +41,7 @@ public partial class ArcadeMenu
     private void BuildRoster()
     {
         var screen=Screen("Roster");var panel=new PanelContainer {Position=new(64,54),Size=new(1312,746)};panel.AddThemeStyleboxOverride("panel",ArcadeTheme.Panel(new Color(0,0,0,0),ArcadeTheme.Ink,0,0,12));screen.AddChild(panel);
-        _localPlayers=new RosterSelection();panel.AddChild(_localPlayers);_localPlayers.LivePose=_background.Pose;_localPlayers.LineupChanged+=(slot)=>_background.ConfigureRoster(_localPlayers.Roster,slot);_localPlayers.ContinueRequested+=()=>Navigation?.Invoke("Setup");_localPlayers.BackRequested+=()=>BackRequested?.Invoke();
+        _localPlayers=new RosterSelection();panel.AddChild(_localPlayers);_localPlayers.DifficultyChanged+=level=>_difficulty.Select(level-1);_localPlayers.LivePose=_background.Pose;_localPlayers.LineupChanged+=(slot)=>_background.ConfigureRoster(_localPlayers.Roster,slot);_localPlayers.ContinueRequested+=()=>Navigation?.Invoke("Setup");_localPlayers.BackRequested+=()=>BackRequested?.Invoke();
         RegisterNavigation("Roster",[(Control)screen.FindChild("RosterBack",true,false)],[(Control)screen.FindChild("RosterContinue",true,false)],_localPlayers.FocusColumns);
     }
 

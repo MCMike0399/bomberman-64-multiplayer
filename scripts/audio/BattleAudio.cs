@@ -38,6 +38,7 @@ public partial class BattleAudio : Node
     public void RoundReady()=>Play("round-ready");
     public void Fight()=>Play("fight");
     public void RoundWin()=>Play("round-win");
+    public void RoundDraw()=>Play("round-draw");
     public void MenuConfirm()=>Play("menu-confirm");
     public void MenuBack()=>Play("menu-back");
     public void StopAll(){foreach(var voice in _voices)if(voice is not null)voice.Stop();}

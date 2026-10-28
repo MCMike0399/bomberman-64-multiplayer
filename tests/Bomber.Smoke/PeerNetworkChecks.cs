@@ -60,6 +60,10 @@ internal static class PeerNetworkChecks
         Check(second.IsLeader && !third.IsLeader,"new host runs a fresh two-peer match");
         await Until(()=>states[second.PlayerId!].GetProperty("phase").GetInt32()==1);
         second.SendInput(0,new PlayerInput(0,0,A:true));await Pump(100);second.ReleaseInputs();
+        await Until(()=>states[third.PlayerId!].GetProperty("phase").GetInt32()==3);
+        Check(third.Party?.Phase=="playing"&&!results.ContainsKey(third.PlayerId!),"peer guest receives the final arena announcement before results");
+        await Pump(1500);
+        Check(third.Party?.Phase=="playing"&&states[third.PlayerId!].GetProperty("phase").GetInt32()==3&&!results.ContainsKey(third.PlayerId!),"peer finish remains visible before result delivery");
         await Until(()=>third.Party?.Phase=="results"&&results.ContainsKey(third.PlayerId!));
         Check(results[third.PlayerId!].GetProperty("winners").EnumerateArray().Any(p=>p.GetString()==third.PlayerId),"peer result comes from an actual bomb elimination");
         await Until(()=>third.Party?.Phase=="lobby"&&second.Party?.Phase=="lobby");
