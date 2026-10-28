@@ -61,6 +61,13 @@ public partial class ArenaView
                         pos.Y=WaterHeight;
                     }
                     if(water)_effects.AddChild(new ExitEffect(_art,true){Position=pos+Vector3.Up*.12f});
+                    else if(reason=="columns")
+                    {
+                        int width=_terrain!.Width;bool left=pos.X<width/2f;
+                        var look=player!=null&&_lastLooks.TryGetValue("p:"+player,out var crushed)?crushed:(Suit:Colors[0],Facing:0f);
+                        _effects.AddChild(new CrushEffect(_art,look.Suit,left,()=>left?_closedLeftView+_closureFront:width-_closedRightView-_closureFront){Position=pos});
+                        CountEffect("crush");
+                    }
                     else
                     {
                         // Blasts leave a charred, flailing stand-in; the real actor is already gone or ghosted.

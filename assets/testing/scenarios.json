@@ -645,7 +645,8 @@
         "rock-garden",
         "blizzard-battle",
         "greedy-trap",
-        "stage-scenery"
+        "stage-scenery",
+        "wall-death"
       ],
       "domains": [
         "ai",
@@ -1266,7 +1267,8 @@
         "asset-audit",
         "pickup-showcase",
         "greedy-canal",
-        "mishap-feel"
+        "mishap-feel",
+        "wall-death"
       ],
       "domains": [
         "ai",
@@ -1282,6 +1284,37 @@
       ],
       "headless": false,
       "timeout": 1500,
+      "manual": false
+    },
+    {
+      "id": "wall-death",
+      "method": "WallDeath",
+      "domains": [
+        "animation",
+        "models",
+        "rendering"
+      ],
+      "headless": true,
+      "timeout": 240,
+      "manual": false
+    },
+    {
+      "id": "wall-death-regression",
+      "steps": [
+        "first-use-rendering",
+        "wall-death",
+        "greedy-trap",
+        "mishap-feel"
+      ],
+      "domains": [
+        "animation",
+        "models",
+        "rendering",
+        "gameplay",
+        "performance"
+      ],
+      "headless": false,
+      "timeout": 900,
       "manual": false
     }
   ]
