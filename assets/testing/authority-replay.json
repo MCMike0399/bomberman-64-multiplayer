@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "id": "authority-observable-v1",
+  "id": "authority-observable-v2",
   "cases": [
     {
       "id": "temple-movement-carry-throw-edges",
@@ -142,6 +142,259 @@
         "ghosts": true
       },
       "inputs": []
+    },
+    {
+      "id": "top-rules-lower-early-late-kick",
+      "lastTick": 320,
+      "requireBomb": true,
+      "options": {
+        "advanced": {
+          "dropPercent": 40,
+          "blockPercent": 100,
+          "itemSeconds": 20,
+          "maxFire": 5,
+          "maxBombs": 5,
+          "effectSeconds": 10,
+          "disabledItems": ""
+        },
+        "humanPlayers": 1,
+        "botPlayers": 0,
+        "stage": "top-rules",
+        "wins": 2,
+        "roundSeconds": 120,
+        "suddenDeath": true,
+        "ghosts": true,
+        "botDifficulty": "normal",
+        "playerAppearances": [],
+        "practice": true,
+        "tutorialLesson": null,
+        "seed": 64
+      },
+      "inputs": [
+        {
+          "tick": 65,
+          "slot": 0,
+          "input": {
+            "x": 0,
+            "z": -1,
+            "a": false,
+            "b": false
+          }
+        },
+        {
+          "tick": 71,
+          "slot": 0,
+          "input": {
+            "x": 0,
+            "z": 0,
+            "a": false,
+            "b": false
+          }
+        },
+        {
+          "tick": 73,
+          "slot": 0,
+          "input": {
+            "x": -1,
+            "z": -0.3333334,
+            "a": false,
+            "b": false
+          }
+        },
+        {
+          "tick": 75,
+          "slot": 0,
+          "input": {
+            "x": -1,
+            "z": -0.0333333,
+            "a": false,
+            "b": false
+          }
+        },
+        {
+          "tick": 77,
+          "slot": 0,
+          "input": {
+            "x": -1,
+            "z": 0,
+            "a": false,
+            "b": false
+          }
+        },
+        {
+          "tick": 93,
+          "slot": 0,
+          "input": {
+            "x": 0,
+            "z": 0,
+            "a": false,
+            "b": false
+          }
+        },
+        {
+          "tick": 95,
+          "slot": 0,
+          "input": {
+            "x": -0.0666666,
+            "z": 1,
+            "a": false,
+            "b": false
+          }
+        },
+        {
+          "tick": 97,
+          "slot": 0,
+          "input": {
+            "x": 0,
+            "z": 1,
+            "a": false,
+            "b": false
+          }
+        },
+        {
+          "tick": 127,
+          "slot": 0,
+          "input": {
+            "x": 0,
+            "z": 0.7000001,
+            "a": false,
+            "b": false
+          }
+        },
+        {
+          "tick": 129,
+          "slot": 0,
+          "input": {
+            "x": 0,
+            "z": 0,
+            "a": false,
+            "b": false
+          }
+        },
+        {
+          "tick": 131,
+          "slot": 0,
+          "input": {
+            "x": 1,
+            "z": 0,
+            "a": false,
+            "b": false
+          }
+        },
+        {
+          "tick": 151,
+          "slot": 0,
+          "input": {
+            "x": 0,
+            "z": 0,
+            "a": false,
+            "b": false
+          }
+        },
+        {
+          "tick": 153,
+          "slot": 0,
+          "input": {
+            "x": 1,
+            "z": 0,
+            "a": false,
+            "b": false
+          }
+        },
+        {
+          "tick": 154,
+          "slot": 0,
+          "input": {
+            "x": 0,
+            "z": 0,
+            "a": true,
+            "b": false
+          }
+        },
+        {
+          "tick": 156,
+          "slot": 0,
+          "input": {
+            "x": 0,
+            "z": 0,
+            "a": false,
+            "b": false
+          }
+        },
+        {
+          "tick": 158,
+          "slot": 0,
+          "input": {
+            "x": 0,
+            "z": 0,
+            "a": true,
+            "b": false
+          }
+        },
+        {
+          "tick": 160,
+          "slot": 0,
+          "input": {
+            "x": 0,
+            "z": 0,
+            "a": false,
+            "b": false
+          }
+        },
+        {
+          "tick": 241,
+          "slot": 0,
+          "input": {
+            "x": 0,
+            "z": 0,
+            "a": true,
+            "b": false
+          }
+        },
+        {
+          "tick": 243,
+          "slot": 0,
+          "input": {
+            "x": 0,
+            "z": 0,
+            "a": false,
+            "b": false
+          }
+        },
+        {
+          "tick": 307,
+          "slot": 0,
+          "input": {
+            "x": 0,
+            "z": 0,
+            "a": true,
+            "b": false
+          }
+        },
+        {
+          "tick": 309,
+          "slot": 0,
+          "input": {
+            "x": 0,
+            "z": 0,
+            "a": false,
+            "b": false
+          }
+        }
+      ],
+      "requiredKickHop": {
+        "ownerId": "local-0",
+        "earlyBombId": "b1",
+        "lateBombId": "b2",
+        "lowerFromTick": 152,
+        "earlyDropTick": 154,
+        "earlyWindupTick": 158,
+        "earlyKickTick": 162,
+        "lateDropTick": 241,
+        "lateWindupTick": 307,
+        "lateKickTick": 311,
+        "lateBlastTick": 316
+      }
     }
   ]
 }

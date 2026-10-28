@@ -67,6 +67,8 @@ public partial class PlaytestDriver
                     if(tick<=2||tick<previous||tick>lastTick||slot<0||slot>=options.HumanPlayers)throw new InvalidDataException("Invalid ordered replay intent: "+id);
                     previous=tick;
                 }
+                bool requireKickHop=item.TryGetProperty("requiredKickHop",out var kickPlan);
+                var kickStates=new Dictionary<long,JsonElement>();var kickEvents=new Dictionary<long,JsonElement>();
                 var match=new LocalMatch(options);var messages=new List<JsonElement>();
                 match.StructuredMessage+=message=>messages.Add(message);
                 var inputs=new PlayerInput[options.HumanPlayers];int next=0,snapshots=0,bombs=0;bool moved=false;
@@ -95,6 +97,11 @@ public partial class PlaytestDriver
                     foreach(var message in messages.Where(m=>m.GetProperty("t").GetString()=="state"))
                     {
                         snapshots++;var state=message.GetProperty("d");bombs+=state.GetProperty("bombs").GetArrayLength();
+                        if(requireKickHop)
+                        {
+                            kickStates.Add(message.GetProperty("k").GetInt64(),state.Clone());
+                            foreach(var entry in state.GetProperty("events").EnumerateArray())kickEvents.TryAdd(entry.GetProperty("seq").GetInt64(),entry.Clone());
+                        }
                         foreach(var actor in state.GetProperty("players").EnumerateArray())
                             if(initial.TryGetValue(actor.GetProperty("id").GetString()!,out var start)&&
                                 Math.Abs(actor.GetProperty("x").GetSingle()-start.Item1)+Math.Abs(actor.GetProperty("z").GetSingle()-start.Item2)>.12f)moved=true;
@@ -109,8 +116,9 @@ public partial class PlaytestDriver
                 Check(next==changes.Length&&snapshots>0,"every replay input and expected observable stream completed: "+id);
                 Check(moved,"replay includes actual actor displacement: "+id);
                 if(item.GetProperty("requireBomb").GetBoolean())Check(bombs>0,"replay includes an actual authoritative bomb: "+id);
-                Write(new{kind="case-end",id,lastTick=match.TickNumber,snapshots,bombObservations=bombs,moved});
-                evidence.Add(new{id,lastTick=match.TickNumber,snapshots,bombObservations=bombs,moved});
+                object? kickHopCoverage=requireKickHop?ReplayKickHopCoverage(kickPlan,kickStates,kickEvents):null;
+                Write(new{kind="case-end",id,lastTick=match.TickNumber,snapshots,bombObservations=bombs,moved,kickHopCoverage});
+                evidence.Add(new{id,lastTick=match.TickNumber,snapshots,bombObservations=bombs,moved,kickHopCoverage});
             }
             Write(new{kind="complete",caseCount=cases.Length,totalTicks,dataRecords,dataSha256=Convert.ToHexString(digest.GetHashAndReset()).ToLowerInvariant()},false);
         }
@@ -119,6 +127,32 @@ public partial class PlaytestDriver
             file=Path.GetFileName(path),sha256=ReplayHash(File.ReadAllBytes(path)),cases=evidence,totalTicks,dataRecords},new JsonSerializerOptions{WriteIndented=true}));
         Event("authority-replay-complete",new{cases=cases.Length,totalTicks,dataRecords});
         return Task.CompletedTask;
+    }
+    private object ReplayKickHopCoverage(JsonElement plan,IReadOnlyDictionary<long,JsonElement> states,IReadOnlyDictionary<long,JsonElement> events)
+    {
+        string owner=plan.GetProperty("ownerId").GetString()!,early=plan.GetProperty("earlyBombId").GetString()!,late=plan.GetProperty("lateBombId").GetString()!;
+        JsonElement? Event(string kind,string bomb,string tickKey)=>events.Values.Where(e=>e.GetProperty("kind").GetString()==kind&&
+            e.GetProperty("entityId").GetString()==bomb&&e.GetProperty("playerId").GetString()==owner&&
+            e.GetProperty("tick").GetInt32()==plan.GetProperty(tickKey).GetInt32()).Select(e=>(JsonElement?)e).SingleOrDefault();
+        Check(Event("bomb-drop",early,"earlyDropTick") is not null&&Event("kick-windup",early,"earlyWindupTick") is not null&&
+            Event("kick",early,"earlyKickTick") is not null,"fixed public lower-floor replay accepts the early drop/windup/kick");
+        var samples=states.SelectMany(pair=>pair.Value.GetProperty("bombs").EnumerateArray().Select(b=>new{tick=pair.Key,bomb=b})).ToArray();
+        var raised=samples.Where(s=>s.bomb.GetProperty("id").GetString()==early&&s.bomb.GetProperty("ownerId").GetString()==owner&&
+            s.bomb.GetProperty("state").GetInt32()==1&&s.bomb.GetProperty("y").GetSingle()>0).ToArray();
+        Check(raised.Length>0,"the same early bomb has a positive authoritative rolling hop");
+        long lastRaised=raised.Max(s=>s.tick);
+        Check(samples.Any(s=>s.tick>lastRaised&&s.bomb.GetProperty("id").GetString()==early&&s.bomb.GetProperty("ownerId").GetString()==owner&&
+            s.bomb.GetProperty("state").GetInt32()==1&&s.bomb.GetProperty("y").GetSingle()==0),"the same early bomb returns to the lower floor while still rolling");
+        Check(Event("bomb-drop",late,"lateDropTick") is not null&&Event("kick-windup",late,"lateWindupTick") is not null&&
+            Event("kick",late,"lateKickTick") is not null,"fixed public lower-floor replay accepts the late drop/windup/kick");
+        var blast=Event("blast",late,"lateBlastTick");
+        Check(blast is {} value&&value.GetProperty("y").GetSingle()>0,"the same late bomb explodes during its positive authoritative kick hop");
+        var lower=states.Where(pair=>pair.Key>=plan.GetProperty("lowerFromTick").GetInt64()).ToArray();
+        Check(lower.Length>0&&lower.All(pair=>pair.Value.GetProperty("players").EnumerateArray().Any(p=>p.GetProperty("id").GetString()==owner&&
+            p.GetProperty("alive").GetBoolean()&&!p.GetProperty("ghost").GetBoolean()&&!p.GetProperty("falling").GetBoolean()&&p.GetProperty("y").GetSingle()==0)),
+            "the owned actor remains alive and on the lower floor throughout both kick witnesses");
+        return new{scope="Observable quantized hop samples and unrounded event fields; not private floats, threshold proximity or a PRNG checkpoint",
+            owner,early,late,raisedSnapshotTicks=raised.Select(s=>s.tick).ToArray(),lastRaised,lateBlast=blast,lowerFloorSnapshots=lower.Length};
     }
     private static string ReplayHash(byte[] bytes)=>Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
     private static string ReplayAssemblyHash(Assembly assembly)

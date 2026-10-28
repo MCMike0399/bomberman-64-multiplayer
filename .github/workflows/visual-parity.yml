@@ -53,7 +53,7 @@ jobs:
           subprocess.run(command, check=True, timeout=300)
           PY
       - if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y fuse3 squashfs-tools xvfb openbox pulseaudio mesa-vulkan-drivers
+        run: sudo apt-get update && sudo apt-get install -y fuse3 squashfs-tools xvfb openbox pulseaudio mesa-vulkan-drivers vulkan-tools
       - if: runner.os == 'Windows'
         run: ./tools/packaging/windows-test-desktop.ps1
       - if: runner.os == 'macOS'
@@ -90,6 +90,7 @@ jobs:
           path: |
             artifacts/visual-parity-${{ matrix.target }}/visual-parity-native.json
             artifacts/visual-parity-${{ matrix.target }}/provenance.json
+            artifacts/visual-parity-${{ matrix.target }}/vulkaninfo*.txt
             artifacts/visual-parity-${{ matrix.target }}/run-*/*.json
             artifacts/visual-parity-${{ matrix.target }}/run-*/*.png
             artifacts/visual-parity-${{ matrix.target }}/run-*/*.bin

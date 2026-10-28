@@ -34,6 +34,24 @@ def pair(left, right, output, controlled=True):
         diagnostic_only=not controlled)
 
 
+def vulkan_msaa_support(text, requested=2):
+    """Inspect one selected device; do not infer support from a maximum sample count."""
+    names = re.findall(r'^\s*deviceName\s*=\s*(.+)$', text, re.MULTILINE)
+    if len(names) != 1: raise ValueError('Expected one unambiguous Vulkan device inventory')
+    counts = {}
+    for key in ('framebufferColorSampleCounts', 'framebufferDepthSampleCounts', 'sampledImageColorSampleCounts', 'sampledImageDepthSampleCounts'):
+        matches = re.findall(r'^\s*' + key + r': count = (\d+)\n((?:[ \t]+SAMPLE_COUNT_\d+_BIT\n)+)', text, re.MULTILINE)
+        if len(matches) != 1: raise ValueError('Missing/ambiguous Vulkan sample support: ' + key)
+        count, flags = matches[0]; values = [int(v) for v in re.findall(r'SAMPLE_COUNT_(\d+)_BIT', flags)]
+        if len(values) != int(count) or len(set(values)) != len(values) or 1 not in values:
+            raise ValueError('Malformed Vulkan sample support: ' + key)
+        counts[key] = values
+    common = set.intersection(*(set(values) for values in counts.values()))
+    return {'deviceName': names[0], 'requestedSamples': requested, 'counts': counts,
+            'supportsRequired': requested in common,
+            'fallbackFromPinnedDriverPolicy': max(v for v in set(counts['framebufferColorSampleCounts']) & set(counts['framebufferDepthSampleCounts']) if v <= requested)}
+
+
 def effect_control_valid(report, name, exit_code):
     if exit_code != 3 or report.get('encodingCompatible') is not True: return False
     regions = {row['rectangle']['name']: row for row in report.get('rois', [])}
@@ -71,6 +89,14 @@ def run(target, directory, output, expected):
               'release': data['release'], 'runs': [], 'comparisons': [], 'errors': []}
     executable = None
     try:
+        if target == 'linux-x64':
+            capabilities = subprocess.run(['vulkaninfo'], capture_output=True, text=True, timeout=30, check=True)
+            (output / 'vulkaninfo.txt').write_text(capabilities.stdout)
+            (output / 'vulkaninfo-stderr.txt').write_text(capabilities.stderr)
+            report['vulkanMsaaSupport'] = vulkan_msaa_support(capabilities.stdout)
+            report['vulkaninfoSha256'] = desktop.digest(output / 'vulkaninfo.txt')
+            if not report['vulkanMsaaSupport']['supportsRequired']:
+                raise RuntimeError('Native Vulkan device does not support required 2xMSAA; original High cannot be qualified on this device')
         executable = crossplay_runtime.install(directory, target, output)
         inventory = authority_replay.assembly_inventory(directory, target)
         archive = directory / ('Blast-Circuit-macos-arm64.zip' if target == 'macos-arm64' else desktop.names(target)['archive'])

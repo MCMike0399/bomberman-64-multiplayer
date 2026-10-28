@@ -16,6 +16,24 @@ independent math/RNG canaries. Together they execute 836 ticks after the
 constructor's two priming ticks. Expanding this corpus should target a measured
 gap rather than replace a missing native gameplay witness with more fixtures.
 
+The current `authority-observable-v2` corpus adds the fixed public Top Rules
+lower-floor route and early/late kicks:1154 driven ticks/1160 data records across
+three cases. Its21 input changes were materialized once on Mac against the actual
+3da authority assembly, then replayed without feedback. Positive checks require
+the same owned early bomb's drop/windup/kick, a rolling hop followed by lower-floor
+rolling, and the same late bomb's positive-height blast during its hop. The actor
+must remain alive/non-ghost/non-falling on the lower floor. Events accumulate by
+sequence as snapshots arrive; the final snapshot's retention window cannot erase
+an earlier failed action. No private state, seed search or custom stage is used.
+
+Removing the late tick307 press causes the actual source journey to fail its
+late drop/windup/kick coverage assertion. Restoring it passes20checks in two fresh
+source processes with exact observable/canary output equality and zero engine
+errors/warnings. These new source receipts are not native package qualification;
+the earlier native19c840-record equality remains scoped to its original corpus.
+Raw event height exercises the product's kick-hop math, without claiming raw
+private operands, a close collision margin or universal math identity.
+
 Every tick delivers the listed input changes in file order, including multiple
 edges for one slot. Unchanged slots then receive their held intent in slot order.
 The output records the actual calls and ordered `StructuredMessage` emissions,

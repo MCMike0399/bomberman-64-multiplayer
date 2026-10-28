@@ -213,3 +213,25 @@ single-sampled in the backend while the higher renderer path still plans
 multisample reads. This is a falsifiable explanation, pending the actual runner
 capabilities and4x result. The4x process is diagnostic and cannot replace the
 required original High2x witness or qualify an unsupported physical driver.
+
+The capability run (`40785407814`) confirms the prediction: Mesa25.2.8/LLVM20.1.2
+advertises **only1x and4x** for framebuffer color/depth and sampled color/depth.
+The4x control restores the correct raw and resolved values at all three planes.
+Together with the pinned driver's downward fallback, this explains why requesting
+2x on this hosted CPU renderer does not produce a valid original2x fixture. The
+recorded RD texture-format sample enum describes the requested resource; it does
+not prove the backend honored that count. Prior Linux manifests bind declared
+viewport settings, not a supported effective2x device, and never qualify High.
+
+The native Linux collector now retains the device's capability inventory and
+fails before qualification on unsupported or ambiguous devices. A maximum of4x
+is not proof that2x exists; attachment and sampled-image support are all checked.
+The test does not silently choose4x,1x or a different preset. Actual Linux2x
+qualification requires a device that supports2x. WARP/physical Windows repeat
+coverage and physical Linux driver/performance coverage remain separate gaps.
+
+[The six-mesh source analysis](mesh-input-parity-research.md) maps cross-platform
+input drift to the Bomber's two procedural builders. It preserves raw UV,
+position and tangent differences and four additional Windows fields. It proposes
+observation before upload and after native packing; no geometry baking, rounding
+or shipped-art change is adopted by that research packet.

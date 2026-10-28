@@ -55,3 +55,25 @@ class VisualCollectionTests(unittest.TestCase):
         self.assertEqual(len(report['comparisons']), 4)
         self.assertEqual(len(report['errors']), 1)
         self.assertIn('fresh-target', report['errors'][0])
+
+
+class VulkanSampleSupportTests(unittest.TestCase):
+    def inventory(self, color=(1,4), depth=(1,4)):
+        result = 'deviceName = test GPU\n'
+        for key, values in [('framebufferColorSampleCounts',color),('framebufferDepthSampleCounts',depth),
+                            ('sampledImageColorSampleCounts',color),('sampledImageDepthSampleCounts',depth)]:
+            result += f'\t{key}: count = {len(values)}\n' + ''.join(f'\t\tSAMPLE_COUNT_{v}_BIT\n' for v in values)
+        return result
+
+    def test_four_sample_maximum_does_not_imply_two_sample_support(self):
+        report = visual_parity.vulkan_msaa_support(self.inventory())
+        self.assertFalse(report['supportsRequired'])
+        self.assertEqual(report['fallbackFromPinnedDriverPolicy'], 1)
+
+    def test_required_sample_must_work_for_both_attachments_and_fetches(self):
+        self.assertTrue(visual_parity.vulkan_msaa_support(self.inventory((1,2,4),(1,2,4)))['supportsRequired'])
+        self.assertFalse(visual_parity.vulkan_msaa_support(self.inventory((1,2,4),(1,4)))['supportsRequired'])
+
+    def test_ambiguous_or_truncated_capabilities_fail(self):
+        for text in ['', self.inventory() + self.inventory(), self.inventory().replace('count = 2','count = 3',1)]:
+            with self.assertRaises(ValueError): visual_parity.vulkan_msaa_support(text)
