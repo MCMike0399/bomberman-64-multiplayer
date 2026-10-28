@@ -21,8 +21,13 @@ edges for one slot. Unchanged slots then receive their held intent in slot order
 The output records the actual calls and ordered `StructuredMessage` emissions,
 including the real snapshot tick and ticks with no new snapshot. Object keys are
 sorted ordinally; array, input and message/event order is preserved. Numbers keep
-their serializer spelling and precision. There is no position rounding or
-omission of inconvenient game fields.
+their serializer spelling and precision. The comparer adds no rounding and
+omits no inconvenient game fields. The PRODUCT snapshot already quantizes player/
+bomb x/z to two decimals, y to three and fuse to two; exact replay equality is
+therefore equality of that observable wire stream, not proof of raw private float
+bits. Events retain their supplied floats. [Source-only bounded trace candidates](authority-replay-recipe-candidates.md)
+identify actual operand/decision seams for targeted follow-up without a general
+physics or PRNG rewrite.
 
 The constructor runs before an event subscription is possible. Its retained
 initial stage and snapshot are included; other constructor emissions are not
@@ -33,7 +38,11 @@ unobserved details are equal.
 
 The `MathF` bit probes and separate `System.Random(seed)` canary are explicitly
 independent of the authority's RNG. They help classify runtime differences;
-they do not expose or reset the authority PRNG. The comparer reports canary
+they do not expose or reset the authority PRNG. The bot placement Sin/Cos
+uses a static32-direction table; it is not a random-angle draw. Blocked steering
+has a separate slot/direction-angle fallback, and Blizzard wind uses hash-based
+diagonals. Independent canary equality is not a count or checkpoint of those
+actual authority paths. The comparer reports canary
 and observable-state differences separately. Do not respond to an isolated
 canary difference with a fixed-point or PRNG rewrite without establishing its
 consequence for the actual game.
