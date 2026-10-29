@@ -47,3 +47,17 @@ class RendererPolicyTests(unittest.TestCase):
             desktop_update_gates.inspect(report,'windows-x64',SHA,RELEASE,desktop.digest(root/item['archive']))
 
 if __name__=='__main__':unittest.main()
+
+class PackagedGuardEvidenceTests(unittest.TestCase):
+    def test_crash_recovery_cannot_be_omitted_or_silently_relabelled(self):
+        import copy
+        import desktop_validation as validation
+        with tempfile.TemporaryDirectory()as name:
+            root=Path(name);write_desktop(root);item=desktop.names('windows-x64')
+            report=json.loads((root/item['startup_guard']).read_text());digest=desktop.digest(root/item['archive'])
+            validation.inspect_startup_guard(report,SHA,digest)
+            for key,value in [('expectedCrashObserved',False),('pendingMarkers',[]),('exitCode',0)]:
+                broken=copy.deepcopy(report);broken['runs'][0][key]=value
+                with self.assertRaises(RuntimeError):validation.inspect_startup_guard(broken,SHA,digest)
+            broken=copy.deepcopy(report);broken['runs'][1]['renderer']['fallbackReason']=None
+            with self.assertRaises(RuntimeError):validation.inspect_startup_guard(broken,SHA,digest)

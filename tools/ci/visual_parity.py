@@ -116,7 +116,7 @@ def run(target, directory, output, expected, inputs_only=False, expected_adapter
         executable = crossplay_runtime.install(directory, target, output)
         inventory = authority_replay.assembly_inventory(directory, target)
         archive = directory / ('Blast-Circuit-macos-arm64.zip' if target == 'macos-arm64' else desktop.names(target)['archive'])
-        engine_name = 'Blast Circuit' if target == 'macos-arm64' else desktop.TARGETS[target]['executable']
+        engine_name = 'Blast Circuit' if target == 'macos-arm64' else desktop.TARGETS[target].get('engine_executable',desktop.TARGETS[target]['executable'])
         with zipfile.ZipFile(archive) as bundle:
             engines = [entry for entry in bundle.infolist() if Path(entry.filename).name == engine_name]
             if len(engines) != 1: raise RuntimeError('Player archive lacks unique engine executable')

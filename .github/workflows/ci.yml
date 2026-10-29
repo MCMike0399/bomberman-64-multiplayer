@@ -478,6 +478,7 @@ jobs:
             python tools/packaging/linux-desktop.py -- python tools/packaging/startup-desktop.py --target "$TARGET"
           else
             python tools/packaging/verify-desktop-update.py --target "$TARGET"
+            python tools/ci/startup_guard.py --expected-revision "$GITHUB_SHA" --output artifacts/windows-startup-guard
             python tools/packaging/startup-desktop.py --target "$TARGET"
           fi
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -486,7 +487,8 @@ jobs:
           name: Blast-Circuit-${{ matrix.target }}-native
           path: |
             artifacts/Blast-Circuit-${{ matrix.target }}-smoke.json
-            artifacts/Blast-Circuit-${{ matrix.target }}-startup.json
+            artifacts/Blast-Circuit-${{ matrix.target }}-startup*.json
+            artifacts/windows-startup-guard/
             artifacts/windows-audio/*.json
             artifacts/*-startup-details/**/runtime.log
             artifacts/*-startup-details/**/*.png

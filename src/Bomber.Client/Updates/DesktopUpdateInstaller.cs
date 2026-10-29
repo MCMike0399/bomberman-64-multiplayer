@@ -133,7 +133,7 @@ public static class DesktopUpdateInstaller
             if (zip.Entries.Count > 10000 || size > 1024L * 1024 * 1024)
                 throw new InvalidDataException("Windows update archive expands beyond its limit.");
         }
-        foreach (string name in new[] { "BlastCircuit.exe", "BlastCircuit.pck", "release.json", "updater/BlastUpdater.exe" })
+        foreach (string name in new[] { "BlastCircuit.exe", "BlastCircuit.Player.exe", "BlastCircuit.Player.pck", "release.json", "updater/BlastUpdater.exe" })
             if (zip.GetEntry("Blast-Circuit-windows-x64/" + name) is null)
                 throw new InvalidDataException("Windows update archive is incomplete.");
     }

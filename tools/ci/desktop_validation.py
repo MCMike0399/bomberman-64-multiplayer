@@ -146,3 +146,16 @@ def inspect_mac(receipt, revision, release, archive_sha, download_sha, server_sh
 
 if __name__ == '__main__':
     print(json.dumps({'include': software_plan(sys.argv[1:] or None)}))
+
+
+def inspect_startup_guard(receipt,revision,archive_sha):
+    runs=receipt.get('runs',[])
+    if receipt.get('schemaVersion')!=1 or receipt.get('passed')is not True or receipt.get('graphicsQualified')is not False or receipt.get('source')!=revision or receipt.get('archiveSha256')!=archive_sha or receipt.get('errors')!=[] or len(runs)!=3:
+        raise RuntimeError('Packaged startup crash/recovery evidence is missing or mismatched')
+    if runs[0].get('index')!=0 or not isinstance(runs[0].get('exitCode'),int) or runs[0]['exitCode']==0 or runs[0].get('expectedCrashObserved')is not True or not runs[0].get('pendingMarkers'):
+        raise RuntimeError('Actual first-frame crash and pending marker were not demonstrated')
+    for index,run in enumerate(runs[1:],1):
+        renderer=run.get('renderer',{});shutdown=run.get('shutdown',{})
+        if run.get('index')!=index or run.get('exitCode')!=0 or run.get('runtimeErrors')!=[] or not report_matches('windows-x64',renderer,'driver') or renderer.get('driver')!='d3d12' or renderer.get('fallbackReason')!='previous-vulkan-startup-incomplete' or renderer.get('sourceRevision')!=revision or renderer.get('method')!='forward_plus' or shutdown.get('savedStateFlushed')is not True or shutdown.get('drain',{}).get('completed')is not True:
+            raise RuntimeError('Actual recovered/remembered DirectX startup is incomplete')
+    return receipt

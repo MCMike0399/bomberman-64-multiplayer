@@ -153,6 +153,7 @@ jobs:
           if [ "$TARGET" = linux-x64 ]; then
             python tools/packaging/linux-desktop.py -- python tools/packaging/startup-desktop.py --target "$TARGET"
           else
+            python tools/ci/startup_guard.py --expected-revision "${{ github.event.pull_request.head.sha }}" --output artifacts/windows-startup-guard
             python tools/packaging/startup-desktop.py --target "$TARGET"
           fi
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -161,7 +162,8 @@ jobs:
           name: native-${{ matrix.target }}
           path: |
             artifacts/*-smoke.json
-            artifacts/*-startup.json
+            artifacts/*-startup*.json
+            artifacts/windows-startup-guard/
             artifacts/windows-audio/*.json
             artifacts/*-startup-details/**/runtime.log
             artifacts/*-startup-details/**/*.png

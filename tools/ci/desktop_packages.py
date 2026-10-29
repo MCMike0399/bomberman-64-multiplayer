@@ -25,14 +25,14 @@ def names(target):
     return {'artifact': stem, 'archive': stem + '.zip', 'metadata': stem + '-metadata.json',
             'smoke_artifact': stem + '-smoke', 'smoke': stem + '-smoke.json', 'root': stem,
             'updater_test': stem + '-updater-tests.json', 'graphical': stem + '-graphical.json',
-            'startup': stem + '-startup.json'}
+            'startup': stem + '-startup.json','startup_guard':stem+'-startup-guard.json'}
 
 
 def asset_names(target):
     item = names(target)
     from download_formats import names as download_names
     return (item['archive'], item['archive'] + '.sha256', item['metadata'], item['smoke'], item['graphical'],
-            item['startup'], item['updater_test'], *download_names(target))
+            item['startup'], item['updater_test'], *([item['startup_guard']]if target=='windows-x64'else[]), *download_names(target))
 
 
 def artifacts(targets=None):
@@ -134,6 +134,7 @@ def inspect(directory, revision, release, targets=None):
                 raise RuntimeError('Complete desktop regression used different download/server bytes: ' + target)
         startup = json.loads((directory / item['startup']).read_text())
         desktop_validation.inspect_startup(startup, target, revision, release, digest(directory / item['archive']))
+        if target=='windows-x64':desktop_validation.inspect_startup_guard(json.loads((directory/item['startup_guard']).read_text()),revision,digest(directory/item['archive']))
         desktop_update_gates.inspect(json.loads((directory / item['updater_test']).read_text()), target,
                                      revision, release, digest(directory / item['archive']))
     if targets is None:

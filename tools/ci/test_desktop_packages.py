@@ -76,6 +76,12 @@ def write_desktop(directory, revision=SHA, release=None):
         (directory / item['startup']).write_text(json.dumps({'schemaVersion': 1, 'passed': True, 'target': target, 'revision': revision,
             'release': release, 'archiveSha256': desktop.digest(directory / item['archive']),
             'cases': [{'id': name, 'passed': True, 'adapter': 'Fixture GPU', 'driver':settings['driver'],'requestedDriver':settings['driver'],'fallbackReason':None,'method':'forward_plus', 'seconds': 4, 'snapshots': 10, 'kind': name.rsplit('-', 1)[1]} for name in validation.STARTUP]}))
+        if target=='windows-x64':
+            recovered={'driver':'d3d12','requestedDriver':'vulkan','fallbackReason':'previous-vulkan-startup-incomplete','sourceRevision':revision,'method':'forward_plus'}
+            guard={'schemaVersion':1,'passed':True,'graphicsQualified':False,'source':revision,'archiveSha256':desktop.digest(directory/item['archive']),'errors':[],
+                   'runs':[{'index':0,'exitCode':23,'expectedCrashObserved':True,'pendingMarkers':[{'driver':'vulkan'}]},
+                           *[{'index':i,'exitCode':0,'runtimeErrors':[],'renderer':recovered,'shutdown':{'savedStateFlushed':True,'drain':{'completed':True}}}for i in (1,2)]]}
+            (directory/item['startup_guard']).write_text(json.dumps(guard))
         (directory / download_formats.FILES[target]).write_bytes(b'MZ fixture installer' if target == 'windows-x64' else b'\x7fELF' + b'\x00'*4 + b'AI\x02 fixture AppImage')
         download_formats.record(directory, target, revision, release, item['archive'])
         for key in ('smoke','graphical'):
