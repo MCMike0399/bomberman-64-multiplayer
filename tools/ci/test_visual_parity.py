@@ -8,6 +8,13 @@ import visual_parity
 
 
 class VisualControlTests(unittest.TestCase):
+    def test_local_mac_requires_explicit_host_scope_and_adapter(self):
+        with mock.patch.dict('os.environ', {}, clear=True), mock.patch.object(visual_parity.platform,'system',return_value='Darwin'), mock.patch.object(visual_parity.platform,'machine',return_value='arm64'):
+            with self.assertRaisesRegex(RuntimeError,'explicitly selected'):
+                visual_parity.run('macos-arm64',Path('/unused'),Path('/unused-output'),'a'*40)
+            with self.assertRaisesRegex(RuntimeError,'explicit expected hardware'):
+                visual_parity.run('macos-arm64',Path('/unused'),Path('/unused-output'),'a'*40,local_mac=True)
+
     def report(self, focus=0, far=10, water=0):
         return {'encodingCompatible': True, 'rois': [
             {'rectangle': {'name': name}, 'differingPixels': count, 'exactEqual': count == 0}

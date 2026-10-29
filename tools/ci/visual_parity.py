@@ -86,13 +86,19 @@ def compare_captures(case, label, report):
         if not valid: report['errors'].append(f'{label}: Original High effect control failed: {name}')
 
 
-def run(target, directory, output, expected, inputs_only=False, expected_adapter=None):
-    if os.environ.get('GITHUB_ACTIONS') != 'true' or platform.system() != crossplay_runtime.SYSTEMS[target][0]:
-        raise RuntimeError('Visual installer qualification requires its disposable native CI OS')
+def run(target, directory, output, expected, inputs_only=False, expected_adapter=None, local_mac=False):
+    native_ci = os.environ.get('GITHUB_ACTIONS') == 'true'
+    local_scope = local_mac and target == 'macos-arm64' and platform.system() == 'Darwin' and platform.machine().lower() == 'arm64'
+    if platform.system() != crossplay_runtime.SYSTEMS[target][0] or not (native_ci or local_scope):
+        raise RuntimeError('Use the disposable native CI OS or explicitly selected local Apple Silicon Mac')
+    if local_scope and not expected_adapter:
+        raise RuntimeError('Local Mac evidence requires an explicit expected hardware adapter')
+    if not inputs_only:
+        from PIL import Image  # Fail before installation if the comparison environment is missing.
     output.mkdir(parents=True, exist_ok=False)
     data = crossplay_runtime.metadata(directory, target)
     if data['revision'] != expected: raise RuntimeError('Visual payload differs from requested source')
-    report = {'schemaVersion': 1, 'graphicsQualified': False, 'mode': 'mesh-inputs-diagnostic' if inputs_only else 'diagnostic-only', 'passed': False, 'target': target, 'revision': expected,
+    report = {'schemaVersion': 1, 'graphicsQualified': False, 'nativeCI': native_ci, 'executionHost': 'local-mac' if local_scope else 'native-ci', 'mode': 'mesh-inputs-diagnostic' if inputs_only else 'diagnostic-only', 'passed': False, 'target': target, 'revision': expected,
               'release': data['release'], 'runs': [], 'comparisons': [], 'errors': []}
     executable = None
     try:
@@ -175,11 +181,12 @@ def main():
     parser.add_argument('--directory', type=Path, default=ROOT / 'artifacts')
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--expected-revision', required=True)
+    parser.add_argument('--local-mac', action='store_true', help='Explicit packaged local Apple Silicon measurement, recorded separately from CI; requires --expected-adapter')
     parser.add_argument('--inputs-only', action='store_true', help='Collect builder input diagnostics only; no High/feature/image qualification')
     parser.add_argument('--expected-adapter', help='Require this initialized hardware adapter; reject software fallback')
     args = parser.parse_args()
     if not re.fullmatch('[0-9a-f]{40}', args.expected_revision): parser.error('Expected an exact source SHA')
-    return run(args.target, args.directory.resolve(), args.output.resolve(), args.expected_revision, args.inputs_only, args.expected_adapter)
+    return run(args.target, args.directory.resolve(), args.output.resolve(), args.expected_revision, args.inputs_only, args.expected_adapter, args.local_mac)
 
 
 if __name__ == '__main__': sys.exit(main())
