@@ -15,6 +15,20 @@ SPEC.loader.exec_module(startup)
 
 
 class StartupProcessTests(unittest.TestCase):
+    def test_timeout_diagnostics_observe_live_child_and_cannot_bypass_cleanup(self):
+        observed = []
+        def failed_snapshot(process):
+            self.assertIsNone(process.poll())
+            observed.append(process)
+            raise RuntimeError('Diagnostic collector failed')
+        with tempfile.TemporaryDirectory() as temporary:
+            folder = Path(temporary)
+            with (folder / 'runtime.log').open('w') as log, self.assertRaisesRegex(RuntimeError, 'collector failed'):
+                startup.run_startup([sys.executable, '-c', 'import time;time.sleep(30)'], folder,
+                                    os.environ.copy(), log, timeout=.1, on_timeout=failed_snapshot)
+        self.assertEqual(1, len(observed))
+        self.assertIsNotNone(observed[0].poll(), 'A failed collector must still reap the owned process')
+
     @unittest.skipUnless(os.name == 'posix', 'POSIX AppImage descendant lifetime')
     def test_timeout_reaps_the_game_descendant_before_display_teardown(self):
         with tempfile.TemporaryDirectory() as temporary:

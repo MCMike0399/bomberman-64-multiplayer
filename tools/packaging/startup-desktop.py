@@ -18,11 +18,16 @@ sys.path.insert(0, str(ROOT / 'tools/ci'))
 import desktop_packages as desktop
 
 
-def run_startup(command, cwd, environment, log, timeout=240):
+def run_startup(command, cwd, environment, log, timeout=240, on_timeout=None):
     process = subprocess.Popen(command, cwd=cwd, env=environment, stdout=log,
                                stderr=subprocess.STDOUT, start_new_session=os.name == 'posix')
     try:
-        return subprocess.CompletedProcess(command, process.wait(timeout=timeout))
+        try:
+            return subprocess.CompletedProcess(command, process.wait(timeout=timeout))
+        except subprocess.TimeoutExpired:
+            if on_timeout is not None:
+                on_timeout(process)
+            raise
     finally:
         if process.poll() is None:
             # AppImage extraction has a launcher and a game child. Stop this

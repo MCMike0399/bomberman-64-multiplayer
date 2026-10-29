@@ -64,7 +64,12 @@ Linux's installed AppImage passed both fresh High processes (15 assertions each,
 no runtime errors or warnings), exact same-draw/target/process comparisons,
 DOF/mirror controls and shipped replay. The campaign then timed out at the
 first saved startup. A separate saved-startup attempt passed the four Low/Medium
-menu cases and stalled at High fullscreen. Focused Low windowed/extraction and
+menu cases and timed out at High fullscreen. Its retained PNG and `SMOKE_OK`
+show that the smoke completed. Subsequent exact-ELF disassembly maps the sampled
+main PC `0x42bfa9` to the first wait in `WorkerThreadPool::exit_languages_threads`,
+called during `Main::cleanup`. This localizes that Linux sample to shutdown,
+before scripting-language detachment; no heap/runlevel counters were retained
+to establish why the barrier failed. Focused Low windowed/extraction and
 fullscreen/FUSE/extraction controls passed, so neither fullscreen nor extraction
 alone explains the failure. The original failed receipt remains failed.
 
@@ -73,7 +78,12 @@ no runtime errors or warnings), same-draw equality and DOF/mirror controls.
 Fresh targets differed at 11 and 13 pixels; fresh processes differed at 9 pixels,
 all by at most one channel value. Their measured resource inventories were
 identical. Exact repeatability therefore remains failed on hardware, separately
-from the existing cross-platform mesh-input differences. A saved Low fullscreen
+from the existing cross-platform mesh-input differences. Retained raw cross-process
+controls also differ: DOF-off at 10 pixels and reflection-off at 6 pixels, each
+with matching measured inventories and maximum channel delta 1. These offline
+diagnostics remain unqualified (exit 3); neither effect is necessary for the
+observed repeat variance, and disabling either is not an acceptance fix.
+A saved Low fullscreen
 startup printed its successful capture marker but did not exit within 240 seconds.
 Later update and complete-native phases were not reached.
 
@@ -83,3 +93,13 @@ previous surviving descendant and passes with the correction. This prevents
 secondary X11 teardown errors from obscuring the original failure; it does not
 fix or waive a native startup/exit hang. The two failed hardware job verdicts,
 whole-image differences and raw native evidence remain mandatory diagnostics.
+
+`startup-lifecycle.yml` is a separately armed, exact-runner-SHA diagnostic on
+free native Windows/Linux runners. It reuses frozen archives and the original
+native download containers: headless smoke, native Low/High fullscreen smoke,
+and an explicit early-engine-quit control. Every case retains its verdict even
+when another fails. Timeouts collect live Linux thread stacks or a bounded
+Windows thread minidump before process-tree cleanup. The game/dump helper does
+not inherit CI/provider/signing credentials. Headless and early-quit outcomes
+are narrowly labeled controls; none of these receipts qualifies GPU graphics or
+substitutes for the full saved-settings release matrix.
