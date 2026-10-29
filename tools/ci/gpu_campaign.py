@@ -1,10 +1,55 @@
 #!/usr/bin/env python3
 """Bounded GPU collection in two stages; raw technical verdicts remain separate."""
-import argparse,datetime,hashlib,json,os,platform,subprocess,sys,time
+import argparse,datetime,hashlib,json,os,platform,re,subprocess,sys,time
 from pathlib import Path
 import crossplay_runtime,download_formats
+import visual_parity
 
 ROOT=Path(__file__).resolve().parents[2]
+
+OTHER_STAGES=('sunken-temple','rock-garden','top-rules','blizzard-battle','greedy-trap','circuit-garden')
+
+def collect_stage_captures(directory,output,target,revision,provenance,expiry):
+    """Retain the other six original-High scenes; core owns Up & Down's effect controls."""
+    output.mkdir(exist_ok=False)
+    report={'source':revision,'scope':'Original High all-stage images and strict repeats; cross-GPU/effect review remains separate',
+            'collectionComplete':False,'repeatsExact':False,'runs':[],'comparisons':[],'errors':[]}
+    executable=None
+    try:
+        if expiry-time.time()<23*60:raise RuntimeError('Insufficient fixed-lifetime stage-capture headroom')
+        executable=crossplay_runtime.install(directory,target,output)
+        for stage in OTHER_STAGES:
+            for index in range(2):
+                if expiry-time.time()<23*60:raise RuntimeError('Stage collection partial at fixed cleanup boundary')
+                case=output/stage/f'run-{index}';case.mkdir(parents=True)
+                command=[str(executable),'--rendering-driver','vulkan','--windowed','--max-fps','30','--fixed-fps','30','--disable-vsync','--',
+                         '--display-windowed','--playtest=visual-parity','--playtest-output='+str(case),'--parity-stage='+stage,
+                         '--parity-provenance='+str(provenance)]
+                row={'stage':stage,'index':index,'command':command,'passed':False};report['runs'].append(row)
+                with (case/'runtime.log').open('w')as log:
+                    result=subprocess.run(command,cwd=case,stdout=log,stderr=subprocess.STDOUT,timeout=180)
+                summary=json.loads((case/'summary.json').read_text());text=(case/'runtime.log').read_text(errors='replace')
+                errors=crossplay_runtime.validate_summary(summary,case,'visual-parity',False)
+                device=json.loads((case/'visual-parity-observations.json').read_text())
+                runtime_errors=[s for s in text.splitlines()if re.search(r'(^|\s)(ERROR:|SCRIPT ERROR:|Unhandled exception|FATAL:)',s)]
+                row.update(exitCode=result.returncode,assertions=summary.get('assertions'),device=device,validationErrors=errors,
+                           runtimeErrors=runtime_errors,runtimeWarnings=[s for s in text.splitlines()if 'WARNING:'in s])
+                row['passed']=not(result.returncode or errors or runtime_errors)and summary['release']['revision']==revision and device['driver']=='vulkan'and visual_parity.hardware_adapter_matches(device,'T4')
+                if not row['passed']:raise RuntimeError('Stage capture execution/device failed: '+stage)
+                for name,right in [('same-draw','parity-base-a-1.png'),('fresh-target','parity-base-b-0.png')]:
+                    _,code=visual_parity.pair(case/'parity-base-a-0.png',case/right,case/name)
+                    report['comparisons'].append({'stage':stage,'index':index,'name':name,'exitCode':code})
+            _,code=visual_parity.pair(output/stage/'run-0/parity-base-a-0.png',output/stage/'run-1/parity-base-a-0.png',output/stage/'fresh-process')
+            report['comparisons'].append({'stage':stage,'name':'fresh-process','exitCode':code})
+        report['collectionComplete']=True
+        report['repeatsExact']=all(row['exitCode']==0 for row in report['comparisons'])
+    except (OSError,ValueError,RuntimeError,KeyError,TypeError,subprocess.SubprocessError)as error:report['errors'].append(str(error))
+    finally:
+        if target=='windows-x64'and executable is not None and(executable.parent/'unins000.exe').is_file():
+            try:subprocess.run([str(executable.parent/'unins000.exe'),'/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART'],check=True,timeout=120)
+            except subprocess.SubprocessError as error:report['collectionComplete']=False;report['errors'].append('Owned uninstall failed: '+str(error))
+        (output/'stage-captures.json').write_text(json.dumps(report,indent=2)+'\n')
+    return report
 
 def run(args):
     target=args.target;output=ROOT/'artifacts'/('gpu-campaign-'+target+'-'+args.phase);output.mkdir(exist_ok=False)
@@ -47,7 +92,9 @@ def run(args):
                 health=[]
                 for driver in drivers:
                     destination=output/('health-'+driver)
-                    step('game-health-'+driver,[sys.executable,'tools/ci/gpu_health.py','--expected-revision',args.expected_revision,'--driver',driver,'--output',str(destination)],240)
+                    command=[sys.executable,'tools/ci/gpu_health.py','--expected-revision',args.expected_revision,'--driver',driver,'--output',str(destination)]
+                    if driver=='vulkan':command+=['--default-driver']
+                    step('game-health-'+driver,command,240)
                     health.append(json.loads((destination/'gpu-health.json').read_text()))
                 # D3D12 reports 'NVIDIA Tesla T4'; Vulkan reports 'Tesla T4'.
                 # Both game receipts are bound to this one-GPU instance and exact executable.
@@ -63,6 +110,11 @@ def run(args):
                 if len(high['runs'])!=2 or any(r['exitCode']or r['validationErrors']or r['runtimeErrors']for r in high['runs']):
                     raise RuntimeError('Original High capture execution failed; raw repeat verdict is separate')
                 technical.append(high['passed'])
+            stages=collect_stage_captures(ROOT/'artifacts',output/'all-stages',target,args.expected_revision,
+                                          output/'high-vulkan/provenance.json',expiry)
+            report['allStages']=stages
+            if not stages['collectionComplete']:raise RuntimeError('All-stage captures are incomplete; retain partial evidence')
+            technical.append(stages['repeatsExact'])
             report['collectionComplete']=True;report['passed']=all(technical)
             report['technicalVerdict']='pass'if report['passed']else'failed strict repeat/control; complete raw captures retained'
             files=[{'path':str(p.relative_to(output)),'sha256':hashlib.sha256(p.read_bytes()).hexdigest()}for p in sorted(output.rglob('*'))if p.is_file()and p.suffix in('.png','.json','.bin','.gz','.log')]

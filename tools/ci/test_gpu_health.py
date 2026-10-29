@@ -12,7 +12,7 @@ import gpu_health
 class GameHealthContractTests(unittest.TestCase):
     """Exercise the guest command/stage contract without allocating a GPU."""
 
-    def exercise(self, driver, *, exit_code=0, write_health=True):
+    def exercise(self, driver, *, exit_code=0, write_health=True, default_driver=False):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             output = root / 'output'
@@ -32,6 +32,10 @@ class GameHealthContractTests(unittest.TestCase):
                 calls.append(command)
                 if command[0].endswith('unins000.exe'):
                     return types.SimpleNamespace(returncode=0)
+                if default_driver:
+                    self.assertNotIn('--rendering-driver',command[:command.index('--')])
+                else:
+                    self.assertEqual(command[1:3],['--rendering-driver',driver])
                 # This is the shipped updater's flag, not the former helper typo.
                 parser = argparse.ArgumentParser()
                 parser.add_argument('--update-token', required=True)
@@ -52,10 +56,11 @@ class GameHealthContractTests(unittest.TestCase):
                     patch.object(gpu_health.crossplay_runtime, 'install', side_effect=install), \
                     patch.object(gpu_health.subprocess, 'run', side_effect=launch):
                 if write_health:
-                    code = gpu_health.run(root, output, 'frozen-source', driver)
+                    code = gpu_health.run(root, output, 'frozen-source', driver, default_driver)
                     report = json.loads((output / 'gpu-health.json').read_text())
                     self.assertEqual(code, 0 if exit_code == 0 else 1)
                     self.assertEqual(report['passed'], exit_code == 0)
+                    self.assertEqual(report['driverOverride'],None if default_driver else driver)
                 else:
                     with self.assertRaises(FileNotFoundError):
                         gpu_health.run(root, output, 'frozen-source', driver)
@@ -71,6 +76,9 @@ class GameHealthContractTests(unittest.TestCase):
 
     def test_failed_game_exit_is_not_a_pass_and_still_cleans_owned_stage(self):
         self.exercise('d3d12', exit_code=1)
+
+    def test_vulkan_default_is_observed_without_an_api_override(self):
+        self.exercise('vulkan',default_driver=True)
 
     def test_missing_health_preserves_failure_and_still_cleans_owned_stage(self):
         self.exercise('vulkan', write_health=False)

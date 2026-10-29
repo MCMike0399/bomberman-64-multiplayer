@@ -9,7 +9,7 @@ import crossplay_runtime
 import desktop_packages as desktop
 
 
-def run(directory, output, revision, driver):
+def run(directory, output, revision, driver, default_driver=False):
     output.mkdir(parents=True,exist_ok=False)
     data=crossplay_runtime.metadata(directory,'windows-x64')
     if data['revision']!=revision: raise ValueError('Wrong frozen payload')
@@ -19,7 +19,7 @@ def run(directory, output, revision, driver):
         token=uuid.uuid4().hex;stage=executable.parent.parent/('.blast-update-'+token);stage.mkdir()
         preferences=output/'preferences.cfg'
         preferences.write_text('[player]\nautomaticUpdates=false\n[video]\ngraphicsPreset="high"\nfullscreen=false\n')
-        command=[str(executable),'--rendering-driver',driver,'--windowed','--','--display-windowed',
+        command=[str(executable),*([] if default_driver else ['--rendering-driver',driver]),'--windowed','--','--display-windowed',
                  '--smoke-menu','--smoke-seconds=4','--smoke-preferences='+str(preferences),
                  '--smoke-output='+str(output),'--update-token='+token]
         with (output/'runtime.log').open('w') as log:
@@ -33,6 +33,7 @@ def run(directory, output, revision, driver):
                 'ERROR:' not in text and 'GODOT_SMOKE_OK' in text)
         report={'scope':'Diagnostic actual-game API/device health; no production API selection',
                 'passed':passed,'source':revision,'driver':driver,'health':health,'shutdown':shutdown,
+                'driverOverride':None if default_driver else driver,
                 'executableSha256':desktop.digest(executable),'command':command,'exitCode':result.returncode}
         (output/'gpu-health.json').write_text(json.dumps(report,indent=2)+'\n')
         return 0 if passed else 1
@@ -46,4 +47,5 @@ if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--directory',type=Path,default=Path('artifacts'));parser.add_argument('--output',type=Path,required=True)
     parser.add_argument('--expected-revision',required=True);parser.add_argument('--driver',choices=('d3d12','vulkan'),required=True)
-    args=parser.parse_args();raise SystemExit(run(args.directory.resolve(),args.output.resolve(),args.expected_revision,args.driver))
+    parser.add_argument('--default-driver',action='store_true',help='Observe the selected default without an engine API override')
+    args=parser.parse_args();raise SystemExit(run(args.directory.resolve(),args.output.resolve(),args.expected_revision,args.driver,args.default_driver))
