@@ -751,6 +751,15 @@ host leases and qualification budgets remain unchanged.
 
 ## Small visual glitch regression
 
+The reticle Results lifecycle must observe the finish announcement before
+expecting navigation. Authority phase `Over` keeps the game on Match for the
+ordinary three-second hold; it does not mean Results has opened. The reticle
+journey checks the survivor's carried bomb during that hold, waits for actual
+Results, then retains the carried-snapshot and hidden-overlay assertions.
+Use `run.py --scenario reticle` for the focused reproduction and `tour-13` for
+its native delivery context. This fixture correction changes no game timing,
+authority, input or rendering behavior.
+
 `visual-glitches` uses ordinary practice movement, placement and charged throws
 for Up & Down rear-ring effects and Temple stairs/shoreline. It is included in
 `all` and `stage-fidelity`. Pixel probes normalize logical camera coordinates to
