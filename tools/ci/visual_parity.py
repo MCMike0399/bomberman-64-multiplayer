@@ -86,7 +86,10 @@ def compare_captures(case, label, report):
         if not valid: report['errors'].append(f'{label}: Original High effect control failed: {name}')
 
 
-def run(target, directory, output, expected, inputs_only=False, expected_adapter=None, local_mac=False):
+def run(target, directory, output, expected, inputs_only=False, expected_adapter=None, local_mac=False, driver_override=None):
+    if driver_override and (target != 'windows-x64' or driver_override not in ('d3d12','vulkan')):
+        raise ValueError('Only the explicitly diagnostic Windows API comparison may override the driver')
+    actual_driver = driver_override or crossplay_runtime.SYSTEMS[target][2]
     native_ci = os.environ.get('GITHUB_ACTIONS') == 'true'
     local_scope = local_mac and target == 'macos-arm64' and platform.system() == 'Darwin' and platform.machine().lower() == 'arm64'
     if platform.system() != crossplay_runtime.SYSTEMS[target][0] or not (native_ci or local_scope):
@@ -98,7 +101,7 @@ def run(target, directory, output, expected, inputs_only=False, expected_adapter
     output.mkdir(parents=True, exist_ok=False)
     data = crossplay_runtime.metadata(directory, target)
     if data['revision'] != expected: raise RuntimeError('Visual payload differs from requested source')
-    report = {'schemaVersion': 1, 'graphicsQualified': False, 'nativeCI': native_ci, 'executionHost': 'local-mac' if local_scope else 'native-ci', 'mode': 'mesh-inputs-diagnostic' if inputs_only else 'diagnostic-only', 'passed': False, 'target': target, 'revision': expected,
+    report = {'schemaVersion': 1, 'graphicsQualified': False, 'nativeCI': native_ci, 'executionHost': 'local-mac' if local_scope else 'native-ci', 'requestedDriver': actual_driver, 'diagnosticDriverOverride': driver_override, 'mode': 'mesh-inputs-diagnostic' if inputs_only else 'diagnostic-only', 'passed': False, 'target': target, 'revision': expected,
               'release': data['release'], 'runs': [], 'comparisons': [], 'errors': []}
     executable = None
     try:
@@ -127,7 +130,7 @@ def run(target, directory, output, expected, inputs_only=False, expected_adapter
         os.environ.pop('APPIMAGE_EXTRACT_AND_RUN', None)
         for index in range(1 if inputs_only else 2):
             case = output / f'run-{index}'
-            command = [str(executable), '--rendering-driver', crossplay_runtime.SYSTEMS[target][2], '--windowed', '--max-fps', '30',
+            command = [str(executable), '--rendering-driver', actual_driver, '--windowed', '--max-fps', '30',
                        '--fixed-fps', '30', '--disable-vsync', '--', '--display-windowed', '--playtest=' + ('visual-inputs' if inputs_only else 'visual-parity'),
                        '--playtest-output=' + str(case)]
             if inputs_only:
@@ -147,7 +150,7 @@ def run(target, directory, output, expected, inputs_only=False, expected_adapter
                                    'runtimeErrors': runtime_errors, 'runtimeWarnings': [line for line in text.splitlines() if 'WARNING:' in line]})
             if code or errors or runtime_errors or summary.get('release') != dict(data['release'], revision=expected):
                 raise RuntimeError('Full High fixture failed native renderer/evidence checks')
-            if not inputs_only and (summary.get('renderingDriver') != crossplay_runtime.SYSTEMS[target][2] or summary.get('renderingMethod') != 'forward_plus'):
+            if not inputs_only and (summary.get('renderingDriver') != actual_driver or summary.get('renderingMethod') != 'forward_plus'):
                 raise RuntimeError('Full High fixture used an unexpected renderer')
             device = json.loads((case / 'visual-parity-observations.json').read_text())
             report['runs'][-1]['device'] = {key: device[key] for key in ('driver', 'adapter', 'deviceType', 'engine')}
@@ -181,12 +184,13 @@ def main():
     parser.add_argument('--directory', type=Path, default=ROOT / 'artifacts')
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--expected-revision', required=True)
+    parser.add_argument('--diagnostic-windows-driver', choices=('d3d12','vulkan'), help='Diagnostic only; product API default is unchanged')
     parser.add_argument('--local-mac', action='store_true', help='Explicit packaged local Apple Silicon measurement, recorded separately from CI; requires --expected-adapter')
     parser.add_argument('--inputs-only', action='store_true', help='Collect builder input diagnostics only; no High/feature/image qualification')
     parser.add_argument('--expected-adapter', help='Require this initialized hardware adapter; reject software fallback')
     args = parser.parse_args()
     if not re.fullmatch('[0-9a-f]{40}', args.expected_revision): parser.error('Expected an exact source SHA')
-    return run(args.target, args.directory.resolve(), args.output.resolve(), args.expected_revision, args.inputs_only, args.expected_adapter, args.local_mac)
+    return run(args.target, args.directory.resolve(), args.output.resolve(), args.expected_revision, args.inputs_only, args.expected_adapter, args.local_mac, args.diagnostic_windows_driver)
 
 
 if __name__ == '__main__': sys.exit(main())
