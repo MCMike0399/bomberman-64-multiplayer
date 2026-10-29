@@ -20,6 +20,7 @@ jobs:
       PAYLOAD: ${{ vars.BLAST_GPU_PAYLOAD_SHA }}
       GPU_EXPIRY: ${{ vars.BLAST_GPU_EXPIRY_UTC }}
       GPU_PHASE: ${{ vars.BLAST_GPU_PHASE }}
+      GPU_SKIP_BISECTION: ${{ vars.BLAST_GPU_SKIP_BISECTION }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -82,6 +83,7 @@ jobs:
           executable=environment/('Scripts/python.exe'if os.name=='nt'else'bin/python')
           subprocess.run([str(executable),'-m','pip','install','Pillow==13.0.0'],check=True)
           command=[str(executable),'tools/ci/gpu_campaign.py','--target',os.environ['TARGET'],'--expected-revision',os.environ['PAYLOAD'],'--phase',os.environ['GPU_PHASE'],'--expiry',os.environ['GPU_EXPIRY'],'--godot',os.environ['GODOT']]
+          if os.environ.get('GPU_SKIP_BISECTION')=='true':command+=['--skip-bisection']
           if os.environ['TARGET']=='linux-x64':command=[str(executable),'tools/packaging/linux-desktop.py','--',*command]
           subprocess.run(command,check=True)
           PY

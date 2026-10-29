@@ -68,9 +68,11 @@ def run(args):
             files=[{'path':str(p.relative_to(output)),'sha256':hashlib.sha256(p.read_bytes()).hexdigest()}for p in sorted(output.rglob('*'))if p.is_file()and p.suffix in('.png','.json','.bin','.gz','.log')]
             (output/'core-capture-files.json').write_text(json.dumps({'source':args.expected_revision,'files':files},indent=2)+'\n')
         else:
-            if target=='windows-x64':
+            if target=='windows-x64' and not args.skip_bisection:
                 for control in ('ssil','ssao','glow','shadows','msaa'):
                     step('bisect-'+control,[sys.executable,'tools/ci/frozen_effect_control.py','--target',target,'--expected-revision',args.expected_revision,'--driver','d3d12','--control',control,'--output',str(output/('bisect-'+control))],600,diagnostic=True)
+            if target=='windows-x64' and args.skip_bisection:
+                report['bisectionNotRunReason']='User-directed: Vulkan repeats exactly; use remaining time for tours, no product API change'
             step('actual-package-replay',[sys.executable,'tools/ci/authority_replay.py','run','--target',target,'--expected-revision',args.expected_revision,'--output',str(output/'replay')],300,diagnostic=True)
             if target=='linux-x64':step('saved-startups',[sys.executable,'tools/packaging/startup-desktop.py','--target',target],600,diagnostic=True)
             # Tours are last. A headroom failure is explicit partial coverage, never a pass.
@@ -85,4 +87,5 @@ if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--target',choices=('windows-x64','linux-x64'),required=True)
     parser.add_argument('--expected-revision',required=True);parser.add_argument('--expiry',required=True);parser.add_argument('--godot',type=Path,required=True)
     parser.add_argument('--phase',choices=('core','remaining'),required=True)
+    parser.add_argument('--skip-bisection',action='store_true')
     raise SystemExit(run(parser.parse_args()))
