@@ -27,23 +27,29 @@ public partial class ApplicationShutdown : Node
     public void RequestQuit(int exitCode=0)
     {
         if(!_attempted)Prepare();
-        if(!_saved){_attempted=false;return;}
-        if(_saved)GetTree().Quit(_drain?.Completed==true?exitCode:1);
+        GetTree().Quit(_saved&&_drain?.Completed==true?exitCode:1);
     }
     private void Prepare()
     {
         _attempted=true;string? error=null;
+        try{_saved=_save?.Invoke()??true;}
+        catch(Exception failure){error=failure.Message;}
+        if(!_saved)
+        {
+            error??="Saved state could not be flushed";
+            GD.PushError("BLAST_SHUTDOWN_SAVE_FAILED: "+error);
+        }
+        // A failed preferences write must never make the application unclosable.
+        // Keep draining and exit unsuccessfully; QA retains the save failure.
         try
         {
-            _saved=_save?.Invoke()??true;
-            if(!_saved)throw new IOException("Saved state could not be flushed; shutdown drain refused");
             _cancelledDraws=EffectWarmup.CancelPending();
             RenderingServer.RenderLoopEnabled=false;
             RenderingServer.ForceSync();
             _drain=ShutdownDrain.Run(TimeSpan.FromSeconds(15));
             if(!_drain.Completed)GD.PushError("BLAST_SHUTDOWN_DRAIN_FAILED: "+_drain.Detail);
         }
-        catch(Exception failure){error=failure.Message;GD.PushError("BLAST_SHUTDOWN_DRAIN_FAILED: "+error);}
+        catch(Exception failure){error=error is null?failure.Message:error+"; "+failure.Message;GD.PushError("BLAST_SHUTDOWN_DRAIN_FAILED: "+failure.Message);}
         finally
         {
             try

@@ -174,6 +174,20 @@ public partial class GameRoot : Node3D
             if(args.Contains("--smoke-tier")){settings=settings with { Stage="up-and-down"};_capture="tiers";}
             StartLocal(settings);
         }
+        string? nativeQuit=args.FirstOrDefault(a=>a.StartsWith("--qa-mac-native-quit="))?.Split('=',2)[1];
+        if(nativeQuit is not null)
+        {
+            try
+            {
+                await ToSignal(GetTree().CreateTimer(2),SceneTreeTimer.SignalName.Timeout);
+                if(_smokeOutput is null)throw new InvalidOperationException("Native quit control requires an owned smoke output");
+                using var image=GetViewport().GetTexture().GetImage();
+                if(image.SavePng(Path.Combine(_smokeOutput,"before-native-quit.png"))!=Error.Ok)throw new IOException("Native quit capture failed");
+                BlastCircuit.Testing.MacQuitControl.Invoke(nativeQuit);
+            }
+            catch(Exception error){GD.PushError(error.ToString());RequestQuit(1);}
+            return;
+        }
         BlastCircuit.Testing.PlaytestDriver.TryAttach(this);
     }
 

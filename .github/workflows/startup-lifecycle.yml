@@ -107,6 +107,8 @@ jobs:
           name: startup-lifecycle-${{ matrix.target }}
           path: |
             artifacts/startup-lifecycle-${{ matrix.target }}/startup-lifecycle.json
+            artifacts/startup-lifecycle-${{ matrix.target }}/save-failure-control/
+            artifacts/startup-lifecycle-${{ matrix.target }}/save-failure-control.log
             artifacts/startup-lifecycle-${{ matrix.target }}/*/runtime.log
             artifacts/startup-lifecycle-${{ matrix.target }}/*/godot.log
             artifacts/startup-lifecycle-${{ matrix.target }}/*/preferences.cfg

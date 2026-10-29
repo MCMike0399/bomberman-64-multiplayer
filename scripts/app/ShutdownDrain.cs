@@ -7,10 +7,16 @@ public static class ShutdownDrain
 {
     public sealed record Result(bool Completed,int Workers,int LowPrioritySlots,int StartedFences,double Milliseconds,string Detail);
 
+    internal static bool MatchesEnginePolicy(int major,int minor,int patch,string hash)=>
+        major==4&&minor==7&&patch==2&&hash.StartsWith("ed1daf0bf",StringComparison.Ordinal);
+
     // Godot4.7.2 uses the desktop processor count when max_threads is negative.
     // Its low-priority slots are clamped to [1, initial_threads-1], then truncated.
     public static Result Run(TimeSpan budget)
     {
+        var engine=Engine.GetVersionInfo();
+        if(!MatchesEnginePolicy(engine["major"].AsInt32(),engine["minor"].AsInt32(),engine["patch"].AsInt32(),engine["hash"].AsString()))
+            throw new InvalidOperationException("BLAST_SHUTDOWN_ENGINE_POLICY_UNVERIFIED: review worker-pool policy for this engine before updating the pin");
         int workers=ProjectSettings.GetSetting("threading/worker_pool/max_threads",-1).AsInt32();
         if(workers<0)workers=OS.GetProcessorCount();
         float ratio=ProjectSettings.GetSetting("threading/worker_pool/low_priority_thread_ratio",.3).AsSingle();

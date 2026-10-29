@@ -22,6 +22,7 @@ class StartupLifecycleTests(unittest.TestCase):
             with self.subTest(shutdown=shutdown):
                 self.assertFalse(diagnostic.inspect_case(record, '', Path('/missing'), shutdown))
         self.assertFalse(diagnostic.inspect_case(record, 'BLAST_SHUTDOWN_WATCHDOG_FIRED\n', Path('/missing'), VALID_SHUTDOWN))
+        self.assertFalse(diagnostic.inspect_case(record, 'BLAST_SHUTDOWN_SAVE_FAILED\n', Path('/missing'), VALID_SHUTDOWN))
 
     def test_success_marker_without_exit_still_fails(self):
         record = {'timedOut': True, 'exitCode': None, 'earlyQuit': False, 'preset': 'low', 'headless': False}

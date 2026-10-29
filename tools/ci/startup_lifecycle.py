@@ -109,7 +109,7 @@ def inspect_case(record, text, capture, shutdown):
     errors = [s for s in text.splitlines() if re.search(r'(^|\s)(ERROR:|SCRIPT ERROR:|Unhandled exception|FATAL:)', s)]
     record.update(runtimeErrors=errors, runtimeWarnings=[s for s in text.splitlines() if re.search(r'(^|\s)WARNING:', s)],
                   smokeLines=[s for s in text.splitlines() if s.startswith('GODOT_SMOKE_')])
-    if ('BLAST_SHUTDOWN_WATCHDOG_FIRED' in text or not isinstance(shutdown, dict) or
+    if ('BLAST_SHUTDOWN_WATCHDOG_FIRED' in text or 'BLAST_SHUTDOWN_SAVE_FAILED' in text or not isinstance(shutdown, dict) or
             shutdown.get('schemaVersion') != 1 or shutdown.get('savedStateFlushed') is not True or
             shutdown.get('watchdogEnabled') is not False or shutdown.get('watchdogFired') is not False or
             not isinstance(shutdown.get('drain'), dict) or shutdown['drain'].get('completed') is not True or
@@ -185,7 +185,15 @@ def run(target, directory, output, revision, selected=None):
                                 record['shutdown'].get('sourceRevision') == revision)
             print(json.dumps(record), flush=True)
             (output / 'startup-lifecycle.json').write_text(json.dumps(report, indent=2) + '\n')
-        report['passed'] = bool(report['cases']) and all(x['passed'] for x in report['cases'])
+        # Expected failure is a separate regression control, never a clean startup case.
+        with (output / 'save-failure-control.log').open('w') as log:
+            saved = subprocess.run([sys.executable, str(ROOT / 'tools/qa/shutdown_save_probe.py'),
+                                    '--executable', str(executable), '--output', str(output / 'save-failure-control')],
+                                   env=game_environment(), stdout=log, stderr=subprocess.STDOUT, timeout=45)
+        report['saveFailureControl'] = json.loads((output / 'save-failure-control/save-failure-probe.json').read_text())
+        report['passed'] = (bool(report['cases']) and all(x['passed'] for x in report['cases']) and saved.returncode == 0 and
+                            report['saveFailureControl'].get('passed') is True and
+                            report['saveFailureControl'].get('shutdown', {}).get('sourceRevision') == revision)
     finally:
         if target == 'windows-x64' and executable is not None and (executable.parent / 'unins000.exe').is_file():
             try:

@@ -42,7 +42,8 @@ def run(engine, output):
         marker = 'BLAST_POOL_PROBE quit mode=' + mode + ' jobs=32'
         drains = [json.loads(line.split('BLAST_DRAIN_RESULT ', 1)[1]) for line in text.splitlines() if line.startswith('BLAST_DRAIN_RESULT ')]
         passed = marker in text and not errors and (timed if mode == 'low-pending' else not timed and code == 0 and
-            len(drains) == 1 and drains[0]['Completed'] and 'BLAST_PRIOR_TASKS_COMPLETE 32' in text)
+            len(drains) == 1 and drains[0]['Completed'] and 'BLAST_PRIOR_TASKS_COMPLETE 32' in text and
+            'BLAST_SHUTDOWN_ENGINE_POLICY_GUARD_OK' in text)
         record = {'mode': mode, 'expectedHang': mode == 'low-pending', 'exitCode': code, 'timedOut': timed,
                   'passed': passed, 'seconds': time.monotonic() - start, 'errors': errors, 'drain': drains}
         report['cases'].append(record); print(json.dumps(record), flush=True)
