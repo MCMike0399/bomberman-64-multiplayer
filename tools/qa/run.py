@@ -309,6 +309,7 @@ def ensure_controller_backend(suite):
 def execute(suite, app=None):
     if suite.profile == 'public':
         suite.step('public-boundaries', [sys.executable, 'tools/ci/public_checks.py'])
+        suite.step('canonical-bomber-geometry', [sys.executable, 'tools/ci/bomber_mesh_library.py'])
         for folder in ('ci', 'cluster', 'networking', 'packaging', 'party', 'playtest', 'qa'):
             suite.step(folder + '-contracts', [sys.executable, '-m', 'unittest', 'discover', '-s', 'tools/' + folder, '-p', 'test_*.py'])
         suite.build('tests/Bomber.Release.Probe')

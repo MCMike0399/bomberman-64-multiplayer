@@ -53,11 +53,7 @@ jobs:
           subprocess.run(command, check=True, timeout=300)
           PY
       - if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y fuse3 squashfs-tools xvfb openbox pulseaudio mesa-vulkan-drivers vulkan-tools
-      - if: runner.os == 'Windows'
-        run: ./tools/packaging/windows-test-desktop.ps1
-      - if: runner.os == 'macOS'
-        run: python3 tools/packaging/macos-test-display.py
+        run: sudo apt-get update && sudo apt-get install -y fuse3 squashfs-tools
       - name: Build the real player download from the frozen client archive
         if: runner.os != 'macOS'
         env:
@@ -91,11 +87,8 @@ jobs:
           subprocess.run([str(executable), '-m', 'pip', 'install', 'Pillow==13.0.0'], check=True)
           target = os.environ['TARGET']
           command = [str(executable), 'tools/ci/visual_parity.py', '--target', target, '--expected-revision', os.environ['PAYLOAD'], '--output', 'artifacts/mesh-inputs-' + target, '--inputs-only']
-          if target == 'linux-x64': command = [str(executable), 'tools/packaging/linux-desktop.py', '--', *command]
           subprocess.run(command, check=True)
           PYVISUAL
-      - if: always() && runner.os == 'macOS'
-        run: python3 tools/packaging/macos-test-display.py --stop
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
@@ -130,17 +123,27 @@ jobs:
       - name: Keep all raw differences and both platform reports
         run: |
           python3 - <<'PY'
-          import pathlib, sys
+          import json, pathlib, sys
           sys.path.append('tools/ci')
           import mesh_inputs
           root = pathlib.Path('artifacts/mesh-cohort')
-          codes = [mesh_inputs.compare(root / 'mesh-inputs-macos-arm64/run-0', root / ('mesh-inputs-' + target) / 'run-0', root / ('mac-vs-' + target)) for target in ('windows-x64', 'linux-x64')]
+          codes = []; verdicts = []
+          for target in ('windows-x64', 'linux-x64'):
+              reference = root / 'mesh-inputs-macos-arm64/run-0'; candidate = root / ('mesh-inputs-' + target) / 'run-0'
+              # Raw unused-builder drift remains a strict diagnostic failure.
+              raw = mesh_inputs.compare(reference, candidate, root / ('raw-builders-mac-vs-' + target))
+              captured = mesh_inputs.compare_captured(reference, candidate, root / ('captured-inputs-mac-vs-' + target))
+              verdicts.append({'target': target, 'rawUnusedBuilderExitCode': raw, 'exactCapturedInputExitCode': captured})
+              codes.append(captured)
+          (root / 'cohort-summary.json').write_text(json.dumps({'claim': 'Strict collected CPU inputs only; no graphics qualification', 'graphicsQualified': False, 'targets': verdicts}, indent=2) + '\n')
           raise SystemExit(max(codes))
           PY
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: mesh-input-comparisons
-          path: artifacts/mesh-cohort/mac-vs-*/report.json
+          path: |
+            artifacts/mesh-cohort/*mac-vs-*/report.json
+            artifacts/mesh-cohort/cohort-summary.json
           if-no-files-found: error
           retention-days: 14

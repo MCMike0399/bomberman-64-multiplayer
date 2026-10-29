@@ -1,0 +1,176 @@
+{
+  "schemaVersion": 1,
+  "producer": {
+    "sourceRevision": "4f5c6d8c1036946370cbec5c11b8708c1880ebc9",
+    "platform": "macOS",
+    "engine": "ed1daf0bf001b61586d9930840f2f1394092c079"
+  },
+  "sourceFiles": {
+    "scripts/arena/models/BomberModel.cs": "86ff86dd328ec181c9e348ae9d1c2bf674adceb0ef9b46321990ace25666e0ce",
+    "scripts/arena/models/BomberModel.Mishaps.cs": "63a4349d7180f5332b8b33bbc67148eee9dc9d4f3d40d67f6f0b60d32477bb0b",
+    "scripts/arena/models/BomberMeshLibrary.cs": "35336275bc2891f2e0e25260cd0f265f9d292ede52a985940519f3a0453fbf37"
+  },
+  "librarySha256": "624cc1bfc0b35f05120a84ff7b081fafdf60e0c47d3b6d1d7b01a830c78b441b",
+  "meshes": [
+    {
+      "key": "eye-left",
+      "index": 0,
+      "packedSurfaceSha256": "51095639def3c5b2387b0dbf75ca25a5a041ee5bee25a25223666119185934c4"
+    },
+    {
+      "key": "eye-right",
+      "index": 1,
+      "packedSurfaceSha256": "22ad21653c5ab0a7785890998f13fc5c3471ece7503b1a263bf378b69a7cd384"
+    },
+    {
+      "key": "face",
+      "index": 2,
+      "packedSurfaceSha256": "e6897b0afe6a0ad9941f00fad30e8ae6f5e695a2952628a052cb27c1363d5f4d"
+    },
+    {
+      "key": "face-rim",
+      "index": 3,
+      "packedSurfaceSha256": "6cd4b74be1241e19a0acf23240465ac8c8671e3b4bdfa784d38a79a5caac162d"
+    },
+    {
+      "key": "helmet",
+      "index": 4,
+      "packedSurfaceSha256": "26d25199d5bbbb9875f1a19bbf9156ec3b9d437f2a38a4d99f8edd5905a8b03e"
+    },
+    {
+      "key": "spiral-left-00",
+      "index": 5,
+      "packedSurfaceSha256": "524eb8a4b44cf6c3e5618c475515b0ba7764780d91dc9d6510630f792b91170e"
+    },
+    {
+      "key": "spiral-left-01",
+      "index": 6,
+      "packedSurfaceSha256": "76bad3435d2e4cbda2efcc27576323116461fa27f69d822cca6ee12d3c702c27"
+    },
+    {
+      "key": "spiral-left-02",
+      "index": 7,
+      "packedSurfaceSha256": "77e1116268cda341a0558aaa310552f3eff35e3c79320901e322127c99e40c96"
+    },
+    {
+      "key": "spiral-left-03",
+      "index": 8,
+      "packedSurfaceSha256": "1a9c50f082982f049dc5b6558783103f3d8d1ad0fd611e04b694b1f397fec50c"
+    },
+    {
+      "key": "spiral-left-04",
+      "index": 9,
+      "packedSurfaceSha256": "4551bb36e7b823e5d7a75f95a8b00b29e6ced37c183677522a7152241edf09f4"
+    },
+    {
+      "key": "spiral-left-05",
+      "index": 10,
+      "packedSurfaceSha256": "4265bde45abde05f0517159c8eeb049fe0ef846804e262813ecd5fab20b7e821"
+    },
+    {
+      "key": "spiral-left-06",
+      "index": 11,
+      "packedSurfaceSha256": "21010571c69c642f20435265d1de0f321f624aa15f8ea04a641ae880a2712f6a"
+    },
+    {
+      "key": "spiral-left-07",
+      "index": 12,
+      "packedSurfaceSha256": "475fba7fd6136aee82f35624aeada3572fa6d4e57ffc37d6c20888192ac07e16"
+    },
+    {
+      "key": "spiral-left-08",
+      "index": 13,
+      "packedSurfaceSha256": "e65e0dce7b9e62b5f421ee92111ae14916e0857ced9d1293a4041533b3df423d"
+    },
+    {
+      "key": "spiral-left-09",
+      "index": 14,
+      "packedSurfaceSha256": "06baa20b89c52b191c47e4ae202fa2bd3766a3ee9d934af22c7ee9e38bcf82ab"
+    },
+    {
+      "key": "spiral-left-10",
+      "index": 15,
+      "packedSurfaceSha256": "dc246afbfb0befe395a3ce2c1b55c757d8cca329578043bc75fca731d36c5881"
+    },
+    {
+      "key": "spiral-left-11",
+      "index": 16,
+      "packedSurfaceSha256": "2994f6e9b1cae0f3c3093c9a9ee0809cd2c433a7117493621bcc4854c1bc983b"
+    },
+    {
+      "key": "spiral-right-00",
+      "index": 17,
+      "packedSurfaceSha256": "d59fa01a1550e148e37d3d8c381913206e3215ec53e7519f45f845de81829048"
+    },
+    {
+      "key": "spiral-right-01",
+      "index": 18,
+      "packedSurfaceSha256": "f1308962b582dfdc9e92a0873c4ff9905f0bd13b46b330de515662b7cb75104d"
+    },
+    {
+      "key": "spiral-right-02",
+      "index": 19,
+      "packedSurfaceSha256": "92d8602d5f258dd5d321ff4314a78712a118cba7fa31ac79e61ddff5b4d4d26a"
+    },
+    {
+      "key": "spiral-right-03",
+      "index": 20,
+      "packedSurfaceSha256": "34e51ae440da4caa53e81ba73caad01e083f3c822620ff3114b21abedc6832ce"
+    },
+    {
+      "key": "spiral-right-04",
+      "index": 21,
+      "packedSurfaceSha256": "b42cfd4f260a3945ec0dae9eff49684cb78230678624f6849f9186635d7d9082"
+    },
+    {
+      "key": "spiral-right-05",
+      "index": 22,
+      "packedSurfaceSha256": "185d4874731e8f336a5aa54be9f1cc8ac5e1e8ce0c6af1a0f0d26eff756f08b2"
+    },
+    {
+      "key": "spiral-right-06",
+      "index": 23,
+      "packedSurfaceSha256": "e038f04aaea7b94f63c4b7ad729c086ea43c845f1bc8bb42c5b46e3ca7c64356"
+    },
+    {
+      "key": "spiral-right-07",
+      "index": 24,
+      "packedSurfaceSha256": "8e4aa993b5c1fc08bc1a8bfa1e7b059563ec28284cafa1d21eefb2cbbebdc428"
+    },
+    {
+      "key": "spiral-right-08",
+      "index": 25,
+      "packedSurfaceSha256": "72370446270d67b239efd24f10d0c0d8203184d7e4e7b229e4743e9c12385ef0"
+    },
+    {
+      "key": "spiral-right-09",
+      "index": 26,
+      "packedSurfaceSha256": "dd43e218e24b4f907ca0c9dd96c35981a0f6c975849f31eae4c087e115c61a5b"
+    },
+    {
+      "key": "spiral-right-10",
+      "index": 27,
+      "packedSurfaceSha256": "8ce56ff3d8e9f9bdced7c86b0ccb42d66acd85cd172109dc7d480ddc0b7a1d8b"
+    },
+    {
+      "key": "spiral-right-11",
+      "index": 28,
+      "packedSurfaceSha256": "97a68bb8d54929bb6859347fee0adf8d6fa927ba13f17fdf29e5bf8c47f93b2b"
+    },
+    {
+      "key": "squint-left",
+      "index": 29,
+      "packedSurfaceSha256": "a0b905b61e42bc6e43f460c68c149629b0b9ef2ad125af4290faa7af89d396eb"
+    },
+    {
+      "key": "squint-right",
+      "index": 30,
+      "packedSurfaceSha256": "151d64a183783a16a3bf1f384a91799e7f26eafdee9df267aed9b1b1812c9727"
+    },
+    {
+      "key": "torso",
+      "index": 31,
+      "packedSurfaceSha256": "1b16bea446e319918258c6bf1cfc8a039cec2c3c5e0539446b345b6eda49e7e1"
+    }
+  ]
+}

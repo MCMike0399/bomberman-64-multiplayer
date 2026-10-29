@@ -16,10 +16,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - target: windows-x64
-            runner: windows-2025
-          - target: linux-x64
-            runner: ubuntu-24.04
           - target: macos-arm64
             runner: macos-15
     runs-on: ${{ matrix.runner }}

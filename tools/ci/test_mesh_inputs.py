@@ -56,9 +56,39 @@ class MeshInputTests(unittest.TestCase):
         rows,blob,meshes=self.fixture(self.root/'a');rows.pop();self.save(self.root/'a',rows,blob,meshes)
         with self.assertRaisesRegex(ValueError,'Incomplete mesh trace'):mesh_inputs.load(self.root/'a')
 
+    def canonical_fixture(self, path, bit='3f000000', payload=b'actual-scene-inputs'):
+        rows, blob, meshes = self.fixture(path, bit=bit)
+        for mesh in meshes: mesh['canonicalSha256'] = mesh['cachedSha256']
+        self.save(path, rows, blob, meshes)
+        summary = json.loads((path/'mesh-inputs-summary.json').read_text())
+        summary['meshSource'] = 'canonical-mac-resource'
+        (path/'mesh-inputs-summary.json').write_text(json.dumps(summary))
+        (path/'parity-base-a-inventory.bin').write_bytes(payload)
+        inventory = {'binary':'parity-base-a-inventory.bin','unsupported':[],
+                     'nodes':[{'data':{'offset':0,'length':len(payload),'sha256':hashlib.sha256(payload).hexdigest()}}]}
+        (path/'parity-base-a-inventory.json').write_text(json.dumps(inventory))
+
+    def test_unused_builder_drift_stays_red_while_actual_canonical_inputs_match(self):
+        self.canonical_fixture(self.root/'a'); self.canonical_fixture(self.root/'b',bit='3f000001')
+        self.assertEqual(mesh_inputs.compare(self.root/'a',self.root/'b',self.root/'raw'),1)
+        self.assertEqual(mesh_inputs.compare_captured(self.root/'a',self.root/'b',self.root/'captured'),0)
+
+    def test_any_actual_scene_input_difference_remains_failure(self):
+        self.canonical_fixture(self.root/'a'); self.canonical_fixture(self.root/'b',payload=b'actual-scene-inputt')
+        self.assertEqual(mesh_inputs.compare_captured(self.root/'a',self.root/'b',self.root/'captured'),1)
+
+    def test_corrupt_inventory_or_unbound_canonical_mesh_cannot_pass(self):
+        self.canonical_fixture(self.root/'a'); self.canonical_fixture(self.root/'b')
+        (self.root/'b/parity-base-a-inventory.bin').write_bytes(b'corrupt')
+        with self.assertRaises(ValueError): mesh_inputs.compare_captured(self.root/'a',self.root/'b',self.root/'bad')
+        summary=json.loads((self.root/'a/mesh-inputs-summary.json').read_text())
+        summary['meshes'][0]['canonicalSha256']='0'*64
+        (self.root/'a/mesh-inputs-summary.json').write_text(json.dumps(summary))
+        with self.assertRaises(ValueError): mesh_inputs.load(self.root/'a')
+
     def test_cached_mismatch_cannot_be_hidden_by_true_flag(self):
         rows,blob,meshes=self.fixture(self.root/'a');meshes[0]['cachedSha256']='f'*64;self.save(self.root/'a',rows,blob,meshes)
-        with self.assertRaisesRegex(ValueError,'changed captured'):mesh_inputs.load(self.root/'a')
+        with self.assertRaisesRegex(ValueError,'builder/captured equality'):mesh_inputs.load(self.root/'a')
 
     def test_different_source_is_incompatible(self):
         self.fixture(self.root/'a');self.fixture(self.root/'b',source='b'*40)

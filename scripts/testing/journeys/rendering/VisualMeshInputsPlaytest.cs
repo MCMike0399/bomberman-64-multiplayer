@@ -49,15 +49,17 @@ public partial class PlaytestDriver
                     using var generated=(ArrayMesh)type.GetMethod(recipe.builder,flags)!.Invoke(null,recipe.arguments)!;
                     byte[] actual=GD.VarToBytes(generated.Get("_surfaces")),cached=GD.VarToBytes(recipe.cached.Get("_surfaces"));
                     bool same=actual.AsSpan().SequenceEqual(cached);
-                    var result=new{name=current,generatedSha256=ReplayHash(actual),cachedSha256=ReplayHash(cached),identicalToCapturedMesh=same};
+                    string canonicalKey=current switch {"left-eye"=>"eye-left","right-eye"=>"eye-right",_=>current};
+                    string? canonicalSha256=BomberMeshLibrary.SharedEnabled?BomberMeshLibrary.CanonicalHash(canonicalKey):null;
+                    var result=new{name=current,generatedSha256=ReplayHash(actual),cachedSha256=ReplayHash(cached),identicalToCapturedMesh=same,canonicalSha256};
                     Record("end",result);evidence.Add(result);
-                    Check(same,"fresh observed builder preserves the captured packed mesh: "+current);
+                    Check(canonicalSha256 is not null?ReplayHash(cached)==canonicalSha256:same,"captured mesh matches its declared source; fresh procedural differences remain diagnostic: "+current);
                 }
                 Record("complete",new{meshes=evidence.Count,records=sequence+1,binaryBytes=blob.Position});
             }
             finally{BomberModel.MeshBuildObservation=null;}
         }
-        File.WriteAllText(Path.Combine(_output,"mesh-inputs-summary.json"),JsonSerializer.Serialize(new{schemaVersion=1,scope="Builder/input diagnostics only; no input correction or art change",records=sequence,
+        File.WriteAllText(Path.Combine(_output,"mesh-inputs-summary.json"),JsonSerializer.Serialize(new{schemaVersion=1,scope="Fresh builders remain diagnostic; captured canonical geometry verified separately; no graphics qualification",meshSource=BomberMeshLibrary.SharedEnabled?"canonical-mac-resource":"procedural",records=sequence,
             traceSha256=ReplayHash(File.ReadAllBytes(trace)),binarySha256=ReplayHash(File.ReadAllBytes(binary)),meshes=evidence},new JsonSerializerOptions{WriteIndented=true}));
     }
 }

@@ -1668,6 +1668,14 @@
       "manual": false
     },
     {
+      "id": "visual-inputs",
+      "method": "VisualInputs",
+      "domains": ["rendering"],
+      "headless": true,
+      "timeout": 60,
+      "manual": false
+    },
+    {
       "id": "visual-parity",
       "method": "VisualParity",
       "domains": [

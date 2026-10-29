@@ -121,7 +121,7 @@ public partial class BomberModel : Node3D
         _upperBody.Position=new(0,.37f,0);_upperParts.Position=new(0,-.37f,0);
         _body.AddChild(_upperBody);_upperBody.AddChild(_upperParts);
         // The suit is a compact pear: tucked shoulders over a slightly fuller waist.
-        var torso=new MeshInstance3D {Name="Torso",Mesh=_torsoMesh??=CreateHelmet(false),MaterialOverride=art.Toy(TorsoColor(color),.46f),
+        var torso=new MeshInstance3D {Name="Torso",Mesh=_torsoMesh??=BomberMeshLibrary.Get("torso",()=>CreateHelmet(false)),MaterialOverride=art.Toy(TorsoColor(color),.46f),
             Position=new(0,.53f,0),Scale=new(.395f/.854f,.38f/.79f,.37f/.73f),Rotation=new(0,0,Mathf.Pi)};
         _upperParts.AddChild(torso);_torsoParts.Add(torso);
         _torsoParts.Add(Sphere(_upperParts,new(0,.722f,0),new(.16f,.065f,.16f),art.Toy(TorsoColor(color),.46f)));
@@ -130,14 +130,14 @@ public partial class BomberModel : Node3D
         RoundedBox(_upperParts,new(0,.41f,.227f),new(.066f,.06f,.012f),dark,.2f);
         // A softly rounded helmet sits over a slimmer suit; the shallow face remains easy to read.
         _head.Position=new(0,HeadCenter,0);_upperParts.AddChild(_head);
-        var helmet=new MeshInstance3D {Name="HelmetShell",Mesh=_helmetMesh??=CreateHelmet(),MaterialOverride=suit};
+        var helmet=new MeshInstance3D {Name="HelmetShell",Mesh=_helmetMesh??=BomberMeshLibrary.Get("helmet",()=>CreateHelmet()),MaterialOverride=suit};
         _head.AddChild(helmet);_suitParts.Add(helmet);
-        _head.AddChild(new MeshInstance3D {Name="FaceRim",Mesh=_faceRimMesh??=CreateCurvedFacePatch(.646f,.466f,0,FaceCenterY,.009f),MaterialOverride=art.Toy(new("8b755c"),.8f),Position=new(0,FaceCenterY,0)});
-        _head.AddChild(new MeshInstance3D {Name="FaceSurface",Mesh=_faceMesh??=CreateCurvedFacePatch(.634f,.454f,0,FaceCenterY,.016f),MaterialOverride=face,Position=new(0,FaceCenterY,0)});
+        _head.AddChild(new MeshInstance3D {Name="FaceRim",Mesh=_faceRimMesh??=BomberMeshLibrary.Get("face-rim",()=>CreateCurvedFacePatch(.646f,.466f,0,FaceCenterY,.009f)),MaterialOverride=art.Toy(new("8b755c"),.8f),Position=new(0,FaceCenterY,0)});
+        _head.AddChild(new MeshInstance3D {Name="FaceSurface",Mesh=_faceMesh??=BomberMeshLibrary.Get("face",()=>CreateCurvedFacePatch(.634f,.454f,0,FaceCenterY,.016f)),MaterialOverride=face,Position=new(0,FaceCenterY,0)});
         foreach(float x in new[]{-.134f,.134f})
         {
             // Keep two simple eyes laid against the faceplate's moderate curvature.
-            if(!EyeMeshes.TryGetValue(x,out var eyeMesh))EyeMeshes[x]=eyeMesh=CreateCurvedFacePatch(.036f,.193f,x,EyeCenterY,.022f,.8f,false);
+            if(!EyeMeshes.TryGetValue(x,out var eyeMesh))EyeMeshes[x]=eyeMesh=BomberMeshLibrary.Get("eye-"+BomberMeshLibrary.Side(x),()=>CreateCurvedFacePatch(.036f,.193f,x,EyeCenterY,.022f,.8f,false));
             var eye=new MeshInstance3D {Mesh=eyeMesh,MaterialOverride=dark,Position=new(x,EyeCenterY,0)};
             _head.AddChild(eye);_eyes.Add(eye);
         }
@@ -399,7 +399,7 @@ public partial class BomberModel : Node3D
         _antennaPitch.Step(headPitch-acceleration*.07f,13,.16f,dt);_antennaRoll.Step(headRoll,13,.16f,dt);
         float headHeight=_body.Position.Y+headLag*.6f;
         _antennaBob.Step(headHeight,18,.15f,dt);
-        _antenna.Rotation=new(SoftLimit((_antennaPitch.Value-headPitch)*2.6f,.5f),0,SoftLimit((_antennaRoll.Value-headRoll)*2.6f,.5f));
+        _antenna.Basis=BomberPresentationMath.AntennaBasis((_antennaPitch.Value-headPitch)*2.6f,(_antennaRoll.Value-headRoll)*2.6f);
         float jiggle=Mathf.Clamp(_antennaBob.Value-headHeight,-.03f,.03f);
         _antennaBall.Position=new(0,.116f+jiggle*.7f,0);
         _antennaBall.Scale=new Vector3(.225f,.225f,.225f)*new Vector3(1-jiggle*1.5f,1+jiggle*3,1-jiggle*1.5f);
@@ -412,8 +412,6 @@ public partial class BomberModel : Node3D
         Scale=Vector3.One*(_ghost?.85f:1.12f*StatusScale);
         if(_ghost&&_ghostFade>0){_ghostFade=Mathf.MoveToward(_ghostFade,0,dt/1.6f);SetGhostOpacity(_body,GhostTransparency(_ghostFade));}
     }
-    /// <summary>Eases toward a limit instead of stopping dead against it.</summary>
-    private static float SoftLimit(float value,float limit)=>limit*(float)Math.Tanh(value/limit);
     private static float Bounce(float beat)
     {
         // -1 just after heel strike, +1 late in push-off: a slightly slower rise than fall.

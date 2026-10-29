@@ -96,7 +96,7 @@ def run(target, directory, output, expected, inputs_only=False, expected_adapter
               'release': data['release'], 'runs': [], 'comparisons': [], 'errors': []}
     executable = None
     try:
-        if target == 'linux-x64':
+        if target == 'linux-x64' and not inputs_only:
             capabilities = subprocess.run(['vulkaninfo'], capture_output=True, text=True, timeout=30, check=True)
             (output / 'vulkaninfo.txt').write_text(capabilities.stdout)
             (output / 'vulkaninfo-stderr.txt').write_text(capabilities.stderr)
@@ -122,9 +122,11 @@ def run(target, directory, output, expected, inputs_only=False, expected_adapter
         for index in range(1 if inputs_only else 2):
             case = output / f'run-{index}'
             command = [str(executable), '--rendering-driver', crossplay_runtime.SYSTEMS[target][2], '--windowed', '--max-fps', '30',
-                       '--fixed-fps', '30', '--disable-vsync', '--', '--display-windowed', '--playtest=visual-parity',
+                       '--fixed-fps', '30', '--disable-vsync', '--', '--display-windowed', '--playtest=' + ('visual-inputs' if inputs_only else 'visual-parity'),
                        '--playtest-output=' + str(case)]
-            if not inputs_only: command += ['--parity-provenance=' + str(provenance_file)]
+            if inputs_only:
+                command.insert(1, '--headless')
+            else: command += ['--parity-provenance=' + str(provenance_file)]
             process = crossplay.launch(command, case, cwd=case)
             try: code = process.wait(timeout=900)
             except subprocess.TimeoutExpired:
@@ -132,14 +134,14 @@ def run(target, directory, output, expected, inputs_only=False, expected_adapter
             finally: crossplay.stop_child(process)
             (case / 'launcher.log').rename(case / 'runtime.log')
             summary = json.loads((case / 'summary.json').read_text())
-            errors = crossplay_runtime.validate_summary(summary, case, 'visual-parity', False)
+            errors = crossplay_runtime.validate_summary(summary, case, 'visual-inputs' if inputs_only else 'visual-parity', inputs_only)
             text = (case / 'runtime.log').read_text(errors='replace')
             runtime_errors = [line for line in text.splitlines() if re.search(r'(^|\s)(ERROR:|SCRIPT ERROR:|Unhandled exception|FATAL:)', line)]
             report['runs'].append({'index': index, 'exitCode': code, 'assertions': summary.get('assertions'), 'validationErrors': errors,
                                    'runtimeErrors': runtime_errors, 'runtimeWarnings': [line for line in text.splitlines() if 'WARNING:' in line]})
             if code or errors or runtime_errors or summary.get('release') != dict(data['release'], revision=expected):
                 raise RuntimeError('Full High fixture failed native renderer/evidence checks')
-            if summary.get('renderingDriver') != crossplay_runtime.SYSTEMS[target][2] or summary.get('renderingMethod') != 'forward_plus':
+            if not inputs_only and (summary.get('renderingDriver') != crossplay_runtime.SYSTEMS[target][2] or summary.get('renderingMethod') != 'forward_plus'):
                 raise RuntimeError('Full High fixture used an unexpected renderer')
             device = json.loads((case / 'visual-parity-observations.json').read_text())
             report['runs'][-1]['device'] = {key: device[key] for key in ('driver', 'adapter', 'deviceType', 'engine')}

@@ -21,17 +21,18 @@ public partial class PlaytestDriver
         using var bytes=new MemoryStream();using(var writer=new Utf8JsonWriter(bytes))ReplayCanonical(writer,JsonSerializer.SerializeToElement(value));
         return ReplayHash(bytes.ToArray());
     }
-    private async Task VisualParity()
+    private Task VisualParity()=>CaptureVisualParity(false);
+    private Task VisualInputs()=>CaptureVisualParity(true);
+    private async Task CaptureVisualParity(bool inputsOnly)
     {
-        Check(!_headless,"full-quality visual parity requires an actual renderer");
+        Check(inputsOnly||!_headless,"images require an actual renderer; input-only mode never qualifies graphics");
         var original=GraphicsQuality.Current;var priorRootProcess=_root.IsProcessing();
         var previousViews=AuditDescendants(_root).OfType<SubViewport>().ToDictionary(v=>v,v=>v.RenderTargetUpdateMode);
         var existingArena=LightingArena;bool arenaVisible=existingArena.Visible;
         var records=new List<object>();
         try
         {
-            await WindowMode(Window.ModeEnum.Windowed,"visual fixture owns a windowed QA surface");
-            await ResizeWindow(new(1280,800));
+            if(!inputsOnly){await WindowMode(Window.ModeEnum.Windowed,"visual fixture owns a windowed QA surface");await ResizeWindow(new(1280,800));}
             foreach(var view in previousViews.Keys)view.RenderTargetUpdateMode=SubViewport.UpdateMode.Disabled;
             _root.SetProcess(false);existingArena.Visible=false;
             GraphicsQuality.Apply(GraphicsPreset.High,GetViewport());
@@ -45,7 +46,7 @@ public partial class PlaytestDriver
             GraphicsQuality.Apply(original,GetViewport());
         }
         File.WriteAllText(Path.Combine(_output,"visual-parity-observations.json"),JsonSerializer.Serialize(new{
-            schemaVersion=1,qualification="Measured inputs; package manifests only when archive/module/executable provenance binds; external repeat/control validation required",
+            schemaVersion=1,graphicsQualified=false,inputsOnly,qualification="Measured inputs; package manifests only when archive/module/executable provenance binds; external repeat/control validation required",
             limitations=new[]{"Renderer globals described by deterministic ApplyHigh policy because stock getters are unavailable","Target API/OS provenance is recorded; physical target GPU/performance scope remains separate","No arbitrary-driver or physical-display equality claim"},
             driver=RenderingServer.GetCurrentRenderingDriverName(),adapter=RenderingServer.GetVideoAdapterName(),
             deviceType=RenderingServer.GetVideoAdapterType().ToString(),engine=Engine.GetVersionInfo()["string"].AsString(),records
@@ -103,8 +104,9 @@ public partial class PlaytestDriver
                 if(label=="dof-off")attributes.DofBlurNearEnabled=attributes.DofBlurFarEnabled=false;
                 if(label=="reflection-off")foreach(var shader in shaders.Keys)
                     if(shader.Code.Contains("#define SCENE_REFLECTIONS",StringComparison.Ordinal))shader.Code=shader.Code.Replace("#define SCENE_REFLECTIONS","",StringComparison.Ordinal);
-                for(int ordinal=1;ordinal<=16;ordinal++)await Draw(ordinal);
-                if(label!="warmup")
+                if(!inputsOnly)for(int ordinal=1;ordinal<=16;ordinal++)await Draw(ordinal);
+                else foreach(var spatial in AuditDescendants(arena).Prepend(arena).OfType<Node3D>())spatial.ForceUpdateTransform();
+                if(!inputsOnly&&label!="warmup")
                 {
                     // Both readbacks use the same disabled target; no extra draw.
                     for(int readback=0;readback<(label=="base-a"?2:1);readback++)
@@ -131,13 +133,13 @@ public partial class PlaytestDriver
                         source="Unmodified GraphicsQuality.Apply(High) called before this recipe; global settings have no stock getters"},
                     environmentAndCameraStorage=inventoryIdentity};
                 string settingsSha256=VisualDescriptionHash(settingsDescription);
-                var conditions=new{sceneId="full-up-down-high-v1",assetsSha256,stateId=VisualDescriptionHash(new{authority=match.StateMessage,inventory=inventoryIdentity}),
+                var conditions=new{sceneId="full-up-down-high-v2",assetsSha256,stateId=VisualDescriptionHash(new{authority=match.StateMessage,inventory=inventoryIdentity}),
                     tick=match.TickNumber,width=1280,height=800,
                     render=new{preset="High",msaaSamples=2,dof=attributes.DofBlurNearEnabled&&attributes.DofBlurFarEnabled,settingsSha256},
                     cameraSha256=VisualDescriptionHash(cameraDescription),shaderTimeSeconds=4d,animationTimeSeconds=118d/30,
-                    temporal=new{historyId="new-OwnWorld3D-SubViewport/renderbuffers;fixed-118-steps;16-zero-step-explicit-draws-v1",warmupFrames=16,
+                    temporal=new{historyId=inputsOnly?"INPUTS-ONLY: no renderer history or image measured":"new-OwnWorld3D-SubViewport/renderbuffers;fixed-118-steps;16-zero-step-explicit-draws-v1",warmupFrames=inputsOnly?0:16,
                         jitterId="Circle/Low/jitter-flag-on;tagged-Circle-ignores-seed;no-reseed;seed-unobserved"},
-                    capture=new{surface="SubViewport-LDR-post-Filmic/raw-RGBA8-or-RGB8;transformflush/sync/once/draw0/sync/readback/disable;no-fallback",
+                    capture=new{surface=inputsOnly?"NONE: input-only CPU collection":"SubViewport-LDR-post-Filmic/raw-RGBA8-or-RGB8;transformflush/sync/once/draw0/sync/readback/disable;no-fallback",
                         colorContract="Raw8bit-LDR-post-production-Filmic;stored-alpha;no-extra-conversion-v1"}};
                 var recipe=new{stage="up-and-down",seed=64,tick=match.TickNumber,presentationSteps=118,stepSeconds=1d/30,
                     shaderTimeSeconds=4,lighting="Night",preset="High",msaaSamples=2,scale=viewport.Scaling3DScale,

@@ -88,6 +88,13 @@ public partial class GameRoot : Node3D
     public override async void _Ready()
     {
         var args=OS.GetCmdlineUserArgs();
+        if(args.Contains("--generate-bomber-meshes"))
+        {
+            SetProcess(false);SetPhysicsProcess(false);SetProcessInput(false);SetProcessUnhandledInput(false);
+            try {BlastCircuit.Arena.Models.BomberMeshLibrary.Generate();RequestQuit();}
+            catch(Exception error){GD.PushError(error.ToString());RequestQuit(1);}
+            return;
+        }
         _uiAudio=new BlastCircuit.Audio.BattleAudio();AddChild(_uiAudio);
         _arena=new ArenaView();AddChild(_arena);_arena.Visible=false;
         var layer=new CanvasLayer();AddChild(layer);

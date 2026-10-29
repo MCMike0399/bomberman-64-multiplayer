@@ -55,9 +55,15 @@ def load(directory):
         require(counts == Counter(HELMET if index < 2 else PATCH), 'Incomplete builder calls/stages: ' + name)
         end = records[position]; position += 1; result = end['payload']
         require(end['kind'] == 'end' and end['mesh'] == name and result == summary['meshes'][index], 'Mesh completion differs')
-        require(result['identicalToCapturedMesh'] is True and result['generatedSha256'] == result['cachedSha256'] == packed, 'Observed builder changed captured mesh')
+        require(result['generatedSha256'] == packed, 'Generated mesh differs from observed packed segment')
+        require(result['identicalToCapturedMesh'] is (result['generatedSha256'] == result['cachedSha256']), 'Dishonest builder/captured equality')
+        if summary.get('meshSource') == 'canonical-mac-resource':
+            require(isinstance(result.get('canonicalSha256'), str) and len(result['canonicalSha256']) == 64 and
+                    result['cachedSha256'] == result['canonicalSha256'], 'Captured mesh differs from canonical Mac resource')
+        else:
+            require(result['identicalToCapturedMesh'] is True, 'Observed builder changed captured procedural mesh')
     require(position == len(records)-1 and cursor == len(blob), 'Extra mesh data or missing segment')
-    return {'header': records[0]['payload'], 'managed': managed, 'stages': stages}
+    return {'header': records[0]['payload'], 'managed': managed, 'stages': stages, 'capturedMeshes': summary['meshes'], 'meshSource': summary.get('meshSource', 'procedural')}
 
 
 def difference(a, b, path='$'):
@@ -96,6 +102,57 @@ def compare(reference, candidate, output):
               'referenceProvenance': a['header']['provenance'], 'candidateProvenance': b['header']['provenance']}
     (output / 'report.json').write_text(json.dumps(report, indent=2)+'\n')
     return 0 if report['equalInputs'] else 1
+
+
+def inventory(directory):
+    """Validate every retained storage segment; never remove differing fields."""
+    path = directory / 'parity-base-a-inventory.json'
+    description = json.loads(path.read_text())
+    require(description.get('unsupported') == [], 'Inventory contains unsupported inputs')
+    require(description.get('binary') == 'parity-base-a-inventory.bin', 'Unexpected inventory binary locator')
+    blob = (directory / description['binary']).read_bytes()
+    segments = []
+
+    def visit(value):
+        if isinstance(value, dict):
+            if set(value) == {'offset', 'length', 'sha256'}:
+                start, size = value['offset'], value['length']
+                require(type(start) is int and type(size) is int and start >= 0 and size >= 0 and start + size <= len(blob), 'Invalid inventory segment')
+                require(hashlib.sha256(blob[start:start+size]).hexdigest() == value['sha256'], 'Inventory segment hash differs')
+                if size: segments.append((start, start+size))
+            else:
+                for child in value.values(): visit(child)
+        elif isinstance(value, list):
+            for child in value: visit(child)
+
+    visit(description)
+    cursor = 0
+    for start, end in sorted(segments):
+        require(start == cursor, 'Inventory has overlapping or unclassified bytes')
+        cursor = end
+    require(cursor == len(blob), 'Inventory binary has an unclassified tail')
+    return description, blob
+
+
+def compare_captured(reference, candidate, output):
+    """Strict actual scene inputs; fresh unused builders retain their own verdict."""
+    output.mkdir(parents=True, exist_ok=False)
+    a, b = load(reference), load(candidate)
+    require(a['header']['shared'] == b['header']['shared'], 'Incompatible source/engine/recipe')
+    require(a['meshSource'] == b['meshSource'] == 'canonical-mac-resource', 'Expected canonical geometry in both packages')
+    x, xb = inventory(reference); y, yb = inventory(candidate)
+    delta = difference(x, y)
+    captured = lambda data: [{key: mesh[key] for key in ('name', 'cachedSha256', 'canonicalSha256')} for mesh in data['capturedMeshes']]
+    mesh_delta = difference(captured(a), captured(b))
+    equal = delta is None and xb == yb and mesh_delta is None
+    report = {'claim': 'Exact collected CPU scene/storage inputs only; no GPU/image or release approval',
+              'graphicsQualified': False, 'exactCapturedInputs': equal, 'firstInventoryDifference': delta,
+              'firstCapturedMeshDifference': mesh_delta, 'binaryEqual': xb == yb,
+              'referenceInventorySha256': hashlib.sha256(xb).hexdigest(),
+              'candidateInventorySha256': hashlib.sha256(yb).hexdigest(),
+              'referenceProvenance': a['header']['provenance'], 'candidateProvenance': b['header']['provenance']}
+    (output / 'report.json').write_text(json.dumps(report, indent=2) + '\n')
+    return 0 if equal else 1
 
 
 if __name__ == '__main__':
