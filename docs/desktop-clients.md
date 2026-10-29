@@ -18,6 +18,13 @@ renderer displays a reduced-graphics notice and reports a distinct state;
 it cannot satisfy the full-quality graphics gates. Linux packages enable
 invariant globalization so startup does not require a system ICU installation.
 
+The v0.45 candidate currently uses L for keyboard P1 precision aim on Windows;
+Mac and Linux also accept Shift. This avoids the Windows Sticky Keys shortcut
+but is a known binding difference for the final sign-off pack. Authority rules
+and the precision-aim action are shared. Restoring Shift would need a separately
+verified focus-scoped accessibility-hotkey guard; changing Mac bindings needs
+the user's decision. Neither is silently included in the frozen candidate.
+
 ## Downloads and signed updates
 
 The requested player downloads are a per-user Windows installer
@@ -77,6 +84,10 @@ publication. Earlier candidate evidence remains attached to its original SHA.
 Build with .NET 10, the pinned private dependency and official matching Godot
 .NET export templates. Portable clients can cross-export; installers and tests
 run on their actual target systems.
+
+AppImage construction uses the versioned `appimagetool` 1.9.1 asset with its
+verified SHA-256, rather than a replaceable continuous tool download. The
+separately pinned type-2 runtime and its source notice remain unchanged.
 
 ```sh
 python3 tools/packaging/package-desktop.py --target windows-x64 --godot /path/to/godot
