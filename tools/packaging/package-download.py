@@ -97,11 +97,11 @@ def main():
             for notice in (ROOT / 'docs/licenses').glob('AppImage-*.txt'):
                 shutil.copy2(notice, runtime_notices / notice.name)
             (runtime_notices / 'AppImage-RUNTIME-SOURCE.txt').write_text('Unmodified AppImage type-2 runtime, SHA-256 617aa77314d57c8b8e4fae9c3f0b35af7b30d5529cb69e98f64f92510ed98a46.\nSource and rebuild instructions: https://github.com/AppImage/type2-runtime/tree/fedfad51acc2860b2916a1eef32ba4a500ff31ef\nUse appimagetool --runtime-file to replace or relink the runtime.\n')
-            # Hash pins deliberately fail if upstream replaces a continuous asset.
-            # Update only after reviewing the new upstream runtime/tool release.
+            # Use a versioned build tool, with an independently checked asset digest.
+            # The separately pinned shipped runtime remains unchanged.
             pinned = (
-                ('https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage',
-                 '95cbe7cce9717fce90c484e34052ee7c7f1d7635b33c12525b4776826a7d29b6', 'appimagetool.AppImage'),
+                ('https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage',
+                 'ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0', 'appimagetool.AppImage'),
                 ('https://github.com/AppImage/type2-runtime/releases/download/continuous/runtime-x86_64',
                  '617aa77314d57c8b8e4fae9c3f0b35af7b30d5529cb69e98f64f92510ed98a46', 'runtime-x86_64'))
             for url, digest, filename in pinned:
