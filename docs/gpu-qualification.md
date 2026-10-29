@@ -185,3 +185,36 @@ regional protected inventory, offering and G/VT quota before allocation. The sam
 combined $25 budget, three-hour/four-instance limit, ownership/TTL safeguards and
 complete per-ID cleanup apply across regions. If unavailable, report the gap and
 proceed with the authorized NVIDIA scope; do not silently choose another type.
+
+## Before the next paid allocation
+
+Replay prior campaign failures locally before launch, using recorded response
+shapes and the actual command builders. A fresh helper-only mock does not replace
+the complete arming and registration path. The preflight must cover:
+
+- Linux SDK installation into a runner-owned prefix, rather than `/usr/share/dotnet`.
+- AWS IAM response wrappers, immutable role/profile identities and enrichment of
+  missing logical resource names without replacing recorded physical identities.
+- The game's actual health CLI contract (`--update-token`), its owned staging
+  directory, and cleanup of both success and failure paths.
+- Actual device naming across APIs: D3D12 and Vulkan can include different vendor
+  prefixes for the same GPU. Retain both game receipts, driver/session information
+  and package hashes; do not infer a second device from the prefix alone.
+- Exact runner, payload, phase and target wiring through ephemeral registration,
+  including the interactive Windows user and removal of registrations afterwards.
+- A fixed cleanup start time, independent termination targets, failure-artifact
+  export and ownership-checked deletion after interrupted provisioning or tests.
+
+These checks prepare a bounded campaign. They do not grant another allocation,
+qualify a renderer, or permit extending its fixed expiry. A collector finishing
+successfully must still expose failed or incomplete technical results.
+
+Run the health command/staging regression locally with
+`python3 -m unittest discover -s tools/ci -p test_gpu_health.py`. It covers both
+API commands, a failed game exit, missing health output and protection of another
+owner's staging directory. It does not execute a graphics driver or installer.
+
+The authorized personal Macintosh baseline reports **Apple M5 Pro**, while
+DiveMac reports **Apple M5**. Keep that same-generation comparison separate from
+the hosted Apple Paravirtual comparison; neither establishes another GPU vendor's
+coverage.
