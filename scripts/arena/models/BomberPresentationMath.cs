@@ -4,10 +4,22 @@ namespace BlastCircuit.Arena.Models;
 /// <summary>Fixed arithmetic for the antenna's presentation-only soft limit and basis.</summary>
 internal static class BomberPresentationMath
 {
+    internal static float IdleWave(float angle)
+    {
+        if(!float.IsFinite(angle))return float.NaN;
+        const double tau=6.283185307179586476925286766559;
+        const double pi=3.1415926535897932384626433832795;
+        double x=angle;
+        x-=Math.Floor(x/tau+.5)*tau;
+        if(x>pi/2)x=pi-x;
+        else if(x< -pi/2)x= -pi-x;
+        return SinCosReduced(x).sin;
+    }
+
     internal static Basis AntennaBasis(float pitch,float roll)
     {
         float x=.5f*Tanh(pitch/.5f),z=.5f*Tanh(roll/.5f);
-        var (sx,cx)=SinCosLimited(x);var (sz,cz)=SinCosLimited(z);
+        var (sx,cx)=SinCosReduced(x);var (sz,cz)=SinCosReduced(z);
         // Godot's default YXZ order, with yaw zero. Supplying columns directly
         // avoids passing identical angles back through platform-native sinf/cosf.
         return new(new(cz,cx*sz,sx*sz),new(-sz,cx*cz,sx*cz),new(0,-sx,cx));
@@ -27,10 +39,10 @@ internal static class BomberPresentationMath
         return value<0?-result:result;
     }
 
-    private static (float sin,float cos) SinCosLimited(float angle)
+    private static (float sin,float cos) SinCosReduced(double angle)
     {
-        // The soft limit bounds this input to [-.5,.5]. Fixed double-precision
-        // Taylor arithmetic, rounded once, requires no operating-system libm.
+        // Idle waves are reduced to [-pi/2,pi/2]; the antenna is within [-.5,.5].
+        // Fixed double arithmetic rounded once requires no platform sin/cos.
         double x=angle,square=x*x,sine=x,cosine=1,sineTerm=x,cosineTerm=1;
         for(int n=1;n<=9;n++)
         {

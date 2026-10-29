@@ -29,7 +29,8 @@ records the loaded authoring assembly; the manifest's source-file hashes bind
 the actual builder contents, including an uncommitted authoring change. It is
 not a final release qualification receipt.
 
-The narrow antenna correction uses fixed arithmetic for its soft limit and YXZ
+The narrow antenna correction uses common managed sine arithmetic for the two
+idle waves feeding its springs, plus fixed arithmetic for its soft limit and YXZ
 basis. It only writes the antenna node's visual basis during presentation.
 Authority and networking assemblies do not reference either model class; no
 input, player position, collision, tick, mechanics or network message changes.
@@ -58,3 +59,8 @@ matches for both the packed geometry and antenna correction. Raw reports live
 under `artifacts/qa/mesh-shared-prototype/`. They are local source measurements,
 not cross-platform parity or release approval. Native package inputs, matched
 Mac-to-Mac measurements, feature controls and user visual sign-off remain required.
+
+The controlled fixture retains actual idle-wave and antenna-target samples in
+`pose-wave-*.json`. Native sine evaluations are recorded as diagnostic canaries;
+they do not feed the corrected idle waves. This adds no production observer work
+when the callback is absent.

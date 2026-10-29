@@ -73,6 +73,7 @@ public partial class BomberModel : Node3D
     public float WalkHipSlide=>Mathf.Max(Mathf.Abs(_leftLeg.Position.Z),Mathf.Abs(_rightLeg.Position.Z));
     public float WalkLegTuck=>Mathf.Max(_leftLeg.Position.Y,_rightLeg.Position.Y)-.37f;
     public Vector3 AntennaRotation=>_antenna.Rotation;
+    internal static Action<object>? PoseWaveObservation;
     private bool _kickWinding;
     private float _kickWindupRemaining;
     public float KickPose=>_kickWinding?-(1-Mathf.Clamp(_kickWindupRemaining/(4f/30f),0,1)):_kickPulse;
@@ -329,8 +330,8 @@ public partial class BomberModel : Node3D
         var leftStep=FootStride(_walkPhase);var rightStep=FootStride(Mathf.PosMod(_walkPhase+.5f,1));
         float walk=(rightStep.Reach-leftStep.Reach)*.5f*_speed;
         float idle=(1-_speed)*(1-_carryBlend)*(1-death);
-        float breath=Mathf.Sin(_time*2.35f)*idle;
-        float sway=Mathf.Sin(_time*1.2f)*idle;
+        float breath=BomberPresentationMath.IdleWave(_time*2.35f)*idle;
+        float sway=BomberPresentationMath.IdleWave(_time*1.2f)*idle;
         _downBlend=Mathf.MoveToward(_downBlend,(_stunned||_heldVictim||_airborne)&&!_ghost?1:0,dt*8);
         float action=Mathf.Max(Mathf.Abs(kick)*2,Mathf.Max(drop,Mathf.Max(toss,Mathf.Max(lift,Mathf.Max(death,Mathf.Max(victory,pump))))));
         float freeStride=_speed*(1-_carryBlend*.45f)*(1-_downBlend)*(1-Mathf.Clamp(action,0,1));
@@ -399,6 +400,12 @@ public partial class BomberModel : Node3D
         _antennaPitch.Step(headPitch-acceleration*.07f,13,.16f,dt);_antennaRoll.Step(headRoll,13,.16f,dt);
         float headHeight=_body.Position.Y+headLag*.6f;
         _antennaBob.Step(headHeight,18,.15f,dt);
+        PoseWaveObservation?.Invoke(new{
+            timeBits=BitConverter.SingleToUInt32Bits(_time).ToString("x8"),
+            nativeBreathBits=BitConverter.SingleToUInt32Bits(Mathf.Sin(_time*2.35f)*idle).ToString("x8"),breathBits=BitConverter.SingleToUInt32Bits(breath).ToString("x8"),
+            nativeSwayBits=BitConverter.SingleToUInt32Bits(Mathf.Sin(_time*1.2f)*idle).ToString("x8"),swayBits=BitConverter.SingleToUInt32Bits(sway).ToString("x8"),
+            headPitchBits=BitConverter.SingleToUInt32Bits(headPitch).ToString("x8"),headRollBits=BitConverter.SingleToUInt32Bits(headRoll).ToString("x8"),
+            rollSpringBits=BitConverter.SingleToUInt32Bits(_antennaRoll.Value).ToString("x8"),rollVelocityBits=BitConverter.SingleToUInt32Bits(_antennaRoll.Velocity).ToString("x8")});
         _antenna.Basis=BomberPresentationMath.AntennaBasis((_antennaPitch.Value-headPitch)*2.6f,(_antennaRoll.Value-headRoll)*2.6f);
         float jiggle=Mathf.Clamp(_antennaBob.Value-headHeight,-.03f,.03f);
         _antennaBall.Position=new(0,.116f+jiggle*.7f,0);

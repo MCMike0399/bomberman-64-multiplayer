@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
   "producer": {
-    "sourceRevision": "4f5c6d8c1036946370cbec5c11b8708c1880ebc9",
+    "sourceRevision": "6e8d127cfd43c47e9799db66b36388c4f8342b2a",
     "platform": "macOS",
     "engine": "ed1daf0bf001b61586d9930840f2f1394092c079"
   },
   "sourceFiles": {
-    "scripts/arena/models/BomberModel.cs": "86ff86dd328ec181c9e348ae9d1c2bf674adceb0ef9b46321990ace25666e0ce",
+    "scripts/arena/models/BomberModel.cs": "aa3d46aae0708ee59f9ae6bef7133a5232ea02bc0c3dafdbb86f7b15cb6b7faf",
     "scripts/arena/models/BomberModel.Mishaps.cs": "63a4349d7180f5332b8b33bbc67148eee9dc9d4f3d40d67f6f0b60d32477bb0b",
     "scripts/arena/models/BomberMeshLibrary.cs": "35336275bc2891f2e0e25260cd0f265f9d292ede52a985940519f3a0453fbf37"
   },
-  "librarySha256": "624cc1bfc0b35f05120a84ff7b081fafdf60e0c47d3b6d1d7b01a830c78b441b",
+  "librarySha256": "794f816b7a2dda304e672eaf473360b046fc8c74903cae6fab0aa29c48a0b8ff",
   "meshes": [
     {
       "key": "eye-left",

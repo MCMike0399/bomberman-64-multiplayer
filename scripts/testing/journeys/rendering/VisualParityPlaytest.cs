@@ -7,6 +7,7 @@ using Bomber.Game.Online;
 using System.Text.RegularExpressions;
 using Bomber.Game.Matches;
 using BlastCircuit.Arena;
+using BlastCircuit.Arena.Models;
 using BlastCircuit.Rendering;
 using Godot;
 
@@ -64,7 +65,9 @@ public partial class PlaytestDriver
             var displayed=new TextureRect{Texture=viewport.GetTexture(),ExpandMode=TextureRect.ExpandModeEnum.IgnoreSize,StretchMode=TextureRect.StretchModeEnum.KeepAspectCentered};
             overlay.AddChild(displayed);displayed.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
             var shaders=new Dictionary<Shader,string>();
-            var draws=new List<object>();
+            var draws=new List<object>();var poseWaves=new List<object>();
+            if(BomberModel.PoseWaveObservation is not null)throw new InvalidOperationException("Pose observer already owned");
+            BomberModel.PoseWaveObservation=poseWaves.Add;
             try
             {
                 var match=new LocalMatch(new MatchOptions{Stage="up-and-down",HumanPlayers=1,BotPlayers=0,Practice=true,Seed=64});
@@ -179,6 +182,9 @@ public partial class PlaytestDriver
             }
             finally
             {
+                BomberModel.PoseWaveObservation=null;
+                File.WriteAllText(Path.Combine(_output,"pose-wave-"+label+".json"),JsonSerializer.Serialize(new{sourceRevision=OnlineProtocol.SourceRevision,
+                    scope="Actual presentation inputs; native wave evaluations are retained diagnostic canaries only",samples=poseWaves}));
                 viewport.RenderTargetUpdateMode=SubViewport.UpdateMode.Disabled;
                 foreach(var (shader,code) in shaders)shader.Code=code;
                 overlay.Free();viewport.Free();

@@ -161,3 +161,27 @@ a cause from idle threads. Linux GDB stops target threads; Windows observations
 are explicitly non-atomic. No engine change or product shutdown fix is claimed
 from the collector's source/mock checks. A selected early-quit rerun gathers the
 missing state without repeating the already-completed smoke cases.
+
+
+## Baseline refinement — user decision 2026-10-29
+
+A single maximum channel delta is not an acceptance threshold. Compare complete
+whole-image delta histograms and percentiles against the tighter of the measured
+hosted-Mac and authorized physical Macintosh baselines. Keep all pixels and raw
+heatmaps. Their spatial pattern class must also match: shading-precision texture
+variation cannot excuse missing or shifted geometry. Feature negative controls
+and the user's final visual approval remain mandatory.
+
+Record actual adapters and chips: the hosted baseline reports Apple Paravirtual
+device (Apple5), which is not evidence of a bare M1. Sin-based procedural noise
+in water/caustic and stone shaders is a source lead for its structured variation,
+not a proved cause from images alone. Do not change shaders for this campaign.
+A precision-robust hash would change Mac pixels and belongs in the sign-off pack
+as an optional user-decided improvement.
+
+The user authorized checking AMD G4ad in `us-west-2` if unavailable in `us-east-1`.
+Every command must specify the Sancus profile and the actual region. Verify STS,
+regional protected inventory, offering and G/VT quota before allocation. The same
+combined $25 budget, three-hour/four-instance limit, ownership/TTL safeguards and
+complete per-ID cleanup apply across regions. If unavailable, report the gap and
+proceed with the authorized NVIDIA scope; do not silently choose another type.
