@@ -64,6 +64,19 @@ jobs:
           TARGET: ${{ matrix.target }}
         shell: bash
         run: python tools/packaging/package-download.py --target "$TARGET"
+      - name: Retain the exact tested native download containers
+        if: runner.os != 'macOS'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: mesh-tested-download-${{ matrix.target }}
+          path: |
+            artifacts/Blast-Circuit-${{ matrix.target }}-Setup.exe
+            artifacts/Blast-Circuit-${{ matrix.target }}-Setup.exe.sha256
+            artifacts/Blast-Circuit-${{ matrix.target }}.AppImage
+            artifacts/Blast-Circuit-${{ matrix.target }}.AppImage.sha256
+            artifacts/Blast-Circuit-${{ matrix.target }}-download.json
+          if-no-files-found: error
+          retention-days: 14
       - name: Observe procedural mesh inputs; explicitly no graphics qualification
         env:
           TARGET: ${{ matrix.target }}
