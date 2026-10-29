@@ -31,7 +31,7 @@ def add_display_restart(report):
     return report
 
 
-def write_desktop(directory, revision=SHA, release=None):
+def write_desktop(directory, revision=SHA, release=None, linux_invariant=True):
     release = release or RELEASE
     if not (directory / 'Blast-Circuit-server-dotnet10.zip').exists():
         (directory / 'Blast-Circuit-server-dotnet10.zip').write_bytes(b'fixture server')
@@ -42,7 +42,7 @@ def write_desktop(directory, revision=SHA, release=None):
             settings.get('pck','BlastCircuit.pck'), 'Notices/Blast-Circuit-MIT.txt', 'Notices/WebRTC-SOURCE.txt', 'Notices/DotNet-LICENSE.TXT')}
         if 'engine_executable'in settings:files[settings['engine_executable']]=b'fixture engine'
         files['release.json'] = json.dumps({'revision': revision, 'release': release, 'target': target}).encode()
-        files['data/Bomberman64Multiplayer.runtimeconfig.json'] = b'{"runtimeOptions":{"includedFrameworks":[{"name":"Microsoft.NETCore.App","version":"10.0.0"}]}}'
+        files['data/Bomberman64Multiplayer.runtimeconfig.json'] = json.dumps({"runtimeOptions":{"includedFrameworks":[{"name":"Microsoft.NETCore.App","version":"10.0.0"}], "configProperties":{"System.Globalization.Invariant":target == "linux-x64" and linux_invariant}}}).encode()
         if target == 'windows-x64':
             files['installed-files.txt'] = ('\n'.join(sorted(set(files) | {'installed-files.txt'})) + '\n').encode()
         with zipfile.ZipFile(directory / item['archive'], 'w') as bundle:
@@ -281,6 +281,11 @@ class DesktopPackageTests(unittest.TestCase):
                 with self.subTest(key=key,field=field),self.assertRaisesRegex(RuntimeError,'different download/server'):
                     desktop.inspect(self.root,SHA,RELEASE,targets=[self.target])
             path.write_text(original)
+
+    def test_linux_requires_baked_invariant_globalization(self):
+        write_desktop(self.root, linux_invariant=False)
+        with self.assertRaisesRegex(RuntimeError, "invariant globalization"):
+            desktop.inspect_archive(self.root, "linux-x64", SHA, RELEASE)
 
     def test_linux_executable_permission_is_part_of_the_archive_contract(self):
         target = 'linux-x64'

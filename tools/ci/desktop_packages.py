@@ -98,9 +98,12 @@ def inspect_archive(directory, target, revision, release):
         if identity != {'revision': revision, 'release': release, 'target': target}:
             raise RuntimeError('Archived desktop identity mismatch')
         config = next(name for name in seen if name.endswith('/Bomberman64Multiplayer.runtimeconfig.json') or name == 'Bomberman64Multiplayer.runtimeconfig.json')
-        if not json.loads(bundle.read(item['root'] + '/' + config)).get('runtimeOptions', {}).get('includedFrameworks'):
+        runtime_options = json.loads(bundle.read(item['root'] + '/' + config)).get('runtimeOptions', {})
+        if not runtime_options.get('includedFrameworks'):
             raise RuntimeError('Desktop export must include the .NET runtime')
         if target.startswith('linux-'):
+            if runtime_options.get('configProperties', {}).get('System.Globalization.Invariant') is not True:
+                raise RuntimeError('Linux export must enable invariant globalization without system ICU')
             executable = bundle.getinfo(item['root'] + '/' + settings['executable'])
             if not executable.external_attr >> 16 & stat.S_IXUSR:
                 raise RuntimeError('Linux executable permission is missing')

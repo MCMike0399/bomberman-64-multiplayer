@@ -1,8 +1,22 @@
 # Desktop clients
 
-Windows x64 uses Direct3D 12 and Linux x64 uses Vulkan, with Godot Forward+.
+Windows x64 and Linux x64 default to Vulkan, with Godot Forward+.
 Apple Silicon retains Metal. Gameplay and online release identity share the
 same source and `Release.props`.
+
+Windows can fall back to Direct3D 12 when Vulkan initialization returns an
+error. Its small launcher writes a durable marker before starting the engine;
+an incomplete Vulkan startup selects and remembers Direct3D 12 on the next
+launch. Settings offers Auto, Vulkan and DirectX 12 for the next launch, and
+the installer includes a DirectX 12 shortcut. The game records the requested
+and actual driver plus the fallback reason. Promotion rejects an unexplained
+driver change. The public launcher is `BlastCircuit.exe`; the engine payload
+is `BlastCircuit.Player.exe` with `BlastCircuit.Player.pck`.
+
+Automatic OpenGL fallback is disabled. An explicitly selected Compatibility
+renderer displays a reduced-graphics notice and reports a distinct state;
+it cannot satisfy the full-quality graphics gates. Linux packages enable
+invariant globalization so startup does not require a system ICU installation.
 
 ## Downloads and signed updates
 
@@ -22,6 +36,12 @@ missing response restores and relaunches the previous payload. Desktop cold
 rendering gets a bounded 180-second health window. The Mac transaction stays
 unchanged. P-256 signatures, bounded downloads and SHA-256 authenticate update
 payloads. Preferences remain outside the installation.
+
+Installation or file-move failures relaunch the previous game and remain
+retryable. Only an explicit replacement launch or health failure quarantines
+that version. Online menus provide a manual latest-release download link.
+The Windows updater waits for the verified launcher parent, which in turn
+waits for its engine child, before replacing the installation directory.
 
 ZIPs remain available as portable runtimes and updater/archive inputs. Online
 clients must match the server's exact version/build. Enabled packages, native
