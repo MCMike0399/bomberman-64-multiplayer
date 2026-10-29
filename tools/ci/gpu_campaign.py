@@ -49,7 +49,9 @@ def run(args):
                     destination=output/('health-'+driver)
                     step('game-health-'+driver,[sys.executable,'tools/ci/gpu_health.py','--expected-revision',args.expected_revision,'--driver',driver,'--output',str(destination)],240)
                     health.append(json.loads((destination/'gpu-health.json').read_text()))
-                if len({row['health']['adapter']for row in health})!=1:raise ValueError('Windows API control used different devices')
+                # D3D12 reports 'NVIDIA Tesla T4'; Vulkan reports 'Tesla T4'.
+                # Both game receipts are bound to this one-GPU instance and exact executable.
+                if any('t4' not in row['health']['adapter'].lower()for row in health):raise ValueError('Windows API control did not use the selected T4')
                 report['actualGameHealth']=health
             technical=[]
             for driver in drivers:
