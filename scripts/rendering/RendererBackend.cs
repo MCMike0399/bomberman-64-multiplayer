@@ -10,6 +10,11 @@ public static class RendererBackend
 
     public static string EngineRequestedDriver()
     {
+        // Godot consumes engine switches before publishing GetCmdlineArgs().
+        // Keep the selected engine API separate from the user's original intent:
+        // a recovered launch selects D3D12 while its original intent remains Vulkan.
+        string? selected=WindowsLaunchGuard.Argument(OS.GetCmdlineUserArgs(),"--launcher-engine-driver");
+        if(OS.GetName()=="Windows"&&selected is "vulkan" or "d3d12")return selected;
         string platform = OS.GetName() switch { "Windows" => "windows", "macOS" => "macos", _ => "linuxbsd" };
         string key = "rendering/rendering_device/driver." + platform;
         string requested = ProjectSettings.HasSetting(key) ? ProjectSettings.GetSetting(key).AsString() :

@@ -23,6 +23,7 @@ def run(directory,output,revision):
             finally:crossplay.stop_child(process)
             (case/'launcher.log').rename(case/'runtime.log');text=(case/'runtime.log').read_text(errors='replace');errors=[s for s in text.splitlines()if re.search(r'(^|\s)(ERROR:|SCRIPT ERROR:|FATAL:|Unhandled exception)',s)]
             row={'index':index,'command':command,'exitCode':code,'runtimeErrors':errors,'runtimeWarnings':[s for s in text.splitlines()if 'WARNING:'in s]}
+            report['runs'].append(row) # Preserve the failing stage before reading/asserting its evidence.
             if index==0:
                 row['expectedCrashObserved']='BLAST_QA_FIRST_FRAME_CRASH'in text
                 row['pendingMarkers']=[json.loads(p.read_text())for p in state.glob('boot-*.json')]
@@ -32,7 +33,6 @@ def run(directory,output,revision):
                 renderer=json.loads((case/'renderer-selection.json').read_text());shutdown=json.loads((case/'shutdown.json').read_text());row.update(renderer=renderer,shutdown=shutdown)
                 if code or errors or not report_matches('windows-x64',renderer,'driver') or renderer.get('driver')!='d3d12' or renderer.get('fallbackReason')!='previous-vulkan-startup-incomplete' or renderer.get('sourceRevision')!=revision or renderer.get('method')!='forward_plus' or not shutdown.get('savedStateFlushed')or not shutdown.get('drain',{}).get('completed')or not(case/'menu.png').is_file()or 'GODOT_SMOKE_OK'not in text:
                     raise RuntimeError('Recovered/remembered actual DirectX startup failed')
-            report['runs'].append(row)
         report['passed']=True
     except (OSError,ValueError,RuntimeError,KeyError,subprocess.SubprocessError)as e:report['errors'].append(str(e))
     finally:

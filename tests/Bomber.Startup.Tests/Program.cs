@@ -7,6 +7,7 @@ if(args.Contains("--fixture"))
     int driverIndex=Array.IndexOf(args,"--rendering-driver");string driver=args[driverIndex+1];
     string? marker=args.FirstOrDefault(a=>a.StartsWith("--launcher-marker="))?[18..];
     File.AppendAllText(output,driver+" marker="+(marker is not null&&File.Exists(marker))+"\n");
+    if(WindowsLaunchGuard.Argument(args,"--launcher-engine-driver")!=driver)return 25;
     if(args.Contains("--fixture-healthy"))
     {
         // The parent records the child identity just after Process.Start.

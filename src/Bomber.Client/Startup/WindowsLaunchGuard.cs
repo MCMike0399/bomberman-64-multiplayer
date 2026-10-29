@@ -72,7 +72,7 @@ public sealed class WindowsLaunchGuard(string stateDirectory)
         start.ArgumentList.Add("--rendering-driver");start.ArgumentList.Add(selected);
         foreach(string arg in before)start.ArgumentList.Add(arg);
         start.ArgumentList.Add("--");foreach(string arg in user)start.ArgumentList.Add(arg);
-        foreach(string arg in new[]{"--launcher-state-dir="+_directory,"--launcher-parent-pid="+self.Id,"--launcher-parent-identity="+selfIdentity,"--launcher-requested-driver="+requested})start.ArgumentList.Add(arg);
+        foreach(string arg in new[]{"--launcher-state-dir="+_directory,"--launcher-parent-pid="+self.Id,"--launcher-parent-identity="+selfIdentity,"--launcher-engine-driver="+selected,"--launcher-requested-driver="+requested})start.ArgumentList.Add(arg);
         if(reason is not null)start.ArgumentList.Add("--launcher-fallback-reason="+reason);
         if(guarded)foreach(string arg in new[]{"--launcher-marker="+markerPath,"--launcher-ready="+readyPath,"--launcher-token="+token})start.ArgumentList.Add(arg);
         using var child=Process.Start(start)??throw new IOException("Engine did not start.");
