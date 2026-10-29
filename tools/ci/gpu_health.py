@@ -21,7 +21,7 @@ def run(directory, output, revision, driver):
         preferences.write_text('[player]\nautomaticUpdates=false\n[video]\ngraphicsPreset="high"\nfullscreen=false\n')
         command=[str(executable),'--rendering-driver',driver,'--windowed','--','--display-windowed',
                  '--smoke-menu','--smoke-seconds=4','--smoke-preferences='+str(preferences),
-                 '--smoke-output='+str(output),'--updated-token='+token]
+                 '--smoke-output='+str(output),'--update-token='+token]
         with (output/'runtime.log').open('w') as log:
             result=subprocess.run(command,stdout=log,stderr=subprocess.STDOUT,timeout=180)
         health=json.loads((stage/'health.json').read_text())
