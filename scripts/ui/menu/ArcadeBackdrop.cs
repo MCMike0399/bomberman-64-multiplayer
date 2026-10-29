@@ -189,8 +189,11 @@ public partial class ArcadeBackdrop : RenderSurface
         }
         finally
         {
-            if(selected.Length>0)SelectArena(selected);
-            _arenaMount.Visible=visible;
+            if(!EffectWarmup.Stopping&&GodotObject.IsInstanceValid(this)&&IsInsideTree())
+            {
+                if(selected.Length>0)SelectArena(selected);
+                _arenaMount.Visible=visible;
+            }
         }
     }
 

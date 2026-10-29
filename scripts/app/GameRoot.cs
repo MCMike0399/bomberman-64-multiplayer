@@ -125,13 +125,20 @@ public partial class GameRoot : Node3D
             if(output is not null&&Path.IsPathFullyQualified(output))_smokeOutput=output;
         }
         _preferences=PlayerPreferences.Load(PreferencesPath);_menu.ConfigurePreferences(_preferences);_menu.TutorialProgress(_preferences.CompletedTutorials);ApplyPreferences();
+        var savedPreferences=_preferences;string savedPath=PreferencesPath;
+        ApplicationShutdown.Current.ConfigureSave(()=>
+        {
+            if(savedPreferences.Save(savedPath)!=Error.Ok)return false;
+            using var file=new FileStream(ProjectSettings.GlobalizePath(savedPath),FileMode.Open,System.IO.FileAccess.Write,FileShare.Read);
+            file.Flush(true);return true;
+        },PreferencesPath.StartsWith("user://qa-")?ProjectSettings.GlobalizePath(PreferencesPath):null);
         DisplayModeController.Current.Configure(_preferences.Fullscreen,_preferences.Resolution,startup:true);
         DisplayModeController.Current.Changed+=SaveDisplayShortcut;
         _menu.IdentityChanged+=SavePreferences;
         _arena.PlayerFeedback+=PlayerFeedback;
         _updater=new BlastCircuit.Updates.GameUpdater();AddChild(_updater);
         _menu.CheckUpdatesRequested+=()=>{_ = _updater.Check();};
-        _menu.InstallUpdateRequested+=async ()=>{if(_session==null&&!_connecting&&await _updater.Install())GetTree().Quit();};
+        _menu.InstallUpdateRequested+=async ()=>{if(_session==null&&!_connecting&&await _updater.Install())RequestQuit();};
         bool coldEffects=args.Any(a=>a.StartsWith("--playtest="))&&args.Contains("--playtest-cold-effects");
         _skipGraphicsPreparation=DisplayServer.GetName()=="headless"||coldEffects;
         if(!_skipGraphicsPreparation)
@@ -146,11 +153,13 @@ public partial class GameRoot : Node3D
                 await _arena.PrepareEffects();
                 await _menu.PrepareArenas();
             }
+            catch(OperationCanceledException)when(EffectWarmup.Stopping){return;}
             finally
             {
                 GraphicsWarmupMilliseconds=warmupClock.Elapsed.TotalMilliseconds;
                 _preparingGraphics=false;
-                loading.QueueFree();ScreenName="Modes";_menu.Visible=true;_menu.ShowScreen("Modes");
+                if(GodotObject.IsInstanceValid(loading))loading.QueueFree();
+                if(GodotObject.IsInstanceValid(this)&&IsInsideTree()){ScreenName="Modes";_menu.Visible=true;_menu.ShowScreen("Modes");}
             }
         }
         _smoke=args.Any(a=>a.StartsWith("--smoke"));
@@ -333,7 +342,7 @@ public partial class GameRoot : Node3D
                     captured=DirAccess.MakeDirRecursiveAbsolute(folder)==Error.Ok
                         &&GetViewport().GetTexture().GetImage().SavePng(System.IO.Path.Combine(folder,_capture+".png"))==Error.Ok;
                 }
-                bool passed=captured&&(_capture is "menu" or "roster"||SnapshotCount>0);GD.Print($"{(passed?"GODOT_SMOKE_OK":"GODOT_SMOKE_FAILED")} {_capture} snapshots={SnapshotCount} {SmokeSettings()}");GetTree().Quit(passed?0:1);return;
+                bool passed=captured&&(_capture is "menu" or "roster"||SnapshotCount>0);GD.Print($"{(passed?"GODOT_SMOKE_OK":"GODOT_SMOKE_FAILED")} {_capture} snapshots={SnapshotCount} {SmokeSettings()}");RequestQuit(passed?0:1);return;
             }
         }
         UpdateMatchCursor();
@@ -398,5 +407,6 @@ public partial class GameRoot : Node3D
         if(session.IsEnded&&session.Status.StartsWith("Error",StringComparison.Ordinal)&&ScreenName!="Results")
         {ScreenName="Results";_hud.Visible=false;_menu.Visible=true;_menu.ShowResults(LatestState,JsonSerializer.SerializeToElement(new {reason=session.Status}));}
     }
-    public override void _ExitTree(){DisplayModeController.Current.Changed-=SaveDisplayShortcut;CancelConnection();ReleaseSession();if(PreferencesPath.StartsWith("user://qa-"))DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(PreferencesPath));}
+    public void RequestQuit(int exitCode=0)=>ApplicationShutdown.Current.RequestQuit(exitCode);
+    public override void _ExitTree(){DisplayModeController.Current.Changed-=SaveDisplayShortcut;CancelConnection();ReleaseSession();}
 }

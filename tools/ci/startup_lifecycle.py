@@ -105,10 +105,16 @@ def collect_stack(process, folder, image):
     return {'kind': 'gdb live thread stacks', 'pid': process.pid, 'file': 'native-stack.log'}
 
 
-def inspect_case(record, text, capture):
+def inspect_case(record, text, capture, shutdown):
     errors = [s for s in text.splitlines() if re.search(r'(^|\s)(ERROR:|SCRIPT ERROR:|Unhandled exception|FATAL:)', s)]
     record.update(runtimeErrors=errors, runtimeWarnings=[s for s in text.splitlines() if re.search(r'(^|\s)WARNING:', s)],
                   smokeLines=[s for s in text.splitlines() if s.startswith('GODOT_SMOKE_')])
+    if ('BLAST_SHUTDOWN_WATCHDOG_FIRED' in text or not isinstance(shutdown, dict) or
+            shutdown.get('schemaVersion') != 1 or shutdown.get('savedStateFlushed') is not True or
+            shutdown.get('watchdogEnabled') is not False or shutdown.get('watchdogFired') is not False or
+            not isinstance(shutdown.get('drain'), dict) or shutdown['drain'].get('completed') is not True or
+            shutdown.get('error') is not None):
+        return False
     if record['timedOut'] or record['exitCode'] != 0 or errors: return False
     if record['earlyQuit']: return True  # Only the engine's early-shutdown path; no successful-startup claim.
     matches = re.findall(r'^GODOT_SMOKE_OK menu snapshots=0 graphics=(\S+) window=(\S+) size=(\d+)x(\d+) adapter=(.*)$', text, re.M)
@@ -172,7 +178,11 @@ def run(target, directory, output, revision, selected=None):
             engine_log = folder / 'godot.log'
             record['engineLogSmokeLines'] = [s for s in engine_log.read_text(errors='replace').splitlines()
                                              if 'GODOT_SMOKE_' in s] if engine_log.exists() else []
-            record['passed'] = inspect_case(record, text, folder / 'menu.png')
+            shutdown_path = folder / 'shutdown.json'
+            try: record['shutdown'] = json.loads(shutdown_path.read_text())
+            except (OSError, ValueError) as error: record['shutdownReadError'] = str(error)
+            record['passed'] = (inspect_case(record, text, folder / 'menu.png', record.get('shutdown')) and
+                                record['shutdown'].get('sourceRevision') == revision)
             print(json.dumps(record), flush=True)
             (output / 'startup-lifecycle.json').write_text(json.dumps(report, indent=2) + '\n')
         report['passed'] = bool(report['cases']) and all(x['passed'] for x in report['cases'])

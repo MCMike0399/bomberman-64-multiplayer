@@ -10,6 +10,7 @@ config/icon="res://icon.svg"
 
 DisplayMode="*res://scripts/app/DisplayModeController.cs"
 Controllers="*res://scripts/input_devices/ControllerHub.cs"
+Shutdown="*res://scripts/app/ApplicationShutdown.cs"
 
 [display]
 window/size/mode=0

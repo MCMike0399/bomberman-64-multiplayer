@@ -6,23 +6,43 @@ namespace BlastCircuit.Arena.Effects;
 /// <summary>Render the production effect variants before the player can enter a match.</summary>
 public static class EffectWarmup
 {
+    private static readonly CancellationTokenSource StopPreparation=new();
+    private static readonly HashSet<Action> PendingDraws=[];
+    public static bool Stopping=>StopPreparation.IsCancellationRequested;
+    public static int CancelPending()
+    {
+        int count=PendingDraws.Count;
+        foreach(var callback in PendingDraws)RenderingServer.FramePostDraw-=callback;
+        PendingDraws.Clear();StopPreparation.Cancel();
+        return count;
+    }
     public static async Task Draw(Node owner)
     {
-        async Task Fence()=>await owner.ToSignal(RenderingServer.Singleton,RenderingServer.SignalName.FramePostDraw);
-        var frame=Fence();
-        if(await Task.WhenAny(frame,Task.Delay(500))!=frame)
+        StopPreparation.Token.ThrowIfCancellationRequested();
+        var fence=new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        void Completed()=>fence.TrySetResult();
+        PendingDraws.Add(Completed);RenderingServer.FramePostDraw+=Completed;
+        try
         {
-            // A background/new macOS window can stop issuing draw callbacks.
-            // Exercise the real renderer without depending on desktop activation.
-            if(!GodotObject.IsInstanceValid(owner)||!owner.IsInsideTree())return;
-            RenderingServer.ForceDraw(false,0);
-            RenderingServer.ForceSync();
-            return;
+            var frame=fence.Task;
+            if(await Task.WhenAny(frame,Task.Delay(500,StopPreparation.Token))!=frame)
+            {
+                StopPreparation.Token.ThrowIfCancellationRequested();
+                // A background/new macOS window can stop issuing draw callbacks.
+                // Exercise the real renderer without depending on desktop activation.
+                if(!GodotObject.IsInstanceValid(owner)||!owner.IsInsideTree())return;
+                RenderingServer.ForceDraw(false,0);
+                RenderingServer.ForceSync();
+                return;
+            }
+            StopPreparation.Token.ThrowIfCancellationRequested();
+            await frame;
         }
-        await frame;
+        finally {if(PendingDraws.Remove(Completed))RenderingServer.FramePostDraw-=Completed;}
     }
     public static async Task Run(Node owner,ArtMaterials art,Godot.Environment environment,DirectionalLight3D key,DirectionalLight3D fill)
     {
+        StopPreparation.Token.ThrowIfCancellationRequested();
         if(DisplayServer.GetName()=="headless")return;
         // Match the live format. Godot invalidates surface caches when MSAA
         // changes, so warm again after a preset change instead of mixing formats.
@@ -71,6 +91,10 @@ public static class EffectWarmup
             using var pixels=viewport.GetTexture().GetImage();
             if(pixels.IsEmpty())throw new InvalidOperationException("Effect warmup viewport did not render.");
         }
-        finally {owner.RemoveChild(viewport);viewport.QueueFree();}
+        finally
+        {
+            if(GodotObject.IsInstanceValid(owner)&&GodotObject.IsInstanceValid(viewport))
+            {if(viewport.GetParent()==owner)owner.RemoveChild(viewport);viewport.QueueFree();}
+        }
     }
 }

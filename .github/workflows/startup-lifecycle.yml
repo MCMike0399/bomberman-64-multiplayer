@@ -18,7 +18,7 @@ jobs:
           - target: linux-x64
             runner: ubuntu-24.04
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 35
+    timeout-minutes: 55
     permissions:
       contents: write
       actions: read
@@ -26,31 +26,51 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: 10.0.400
       - name: Download exact frozen archive and metadata
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           TARGET: ${{ matrix.target }}
           PAYLOAD: ${{ vars.BLAST_STARTUP_PAYLOAD_SHA }}
+          UPDATES: ${{ vars.BLAST_STARTUP_UPDATES }}
         shell: bash
         run: |
           python - <<'PY'
           import os,re,subprocess
           sha,target=os.environ['PAYLOAD'],os.environ['TARGET']
           assert re.fullmatch('[0-9a-f]{40}',sha)
-          subprocess.run(['gh','release','download','qa-desktop-'+sha,'--dir','artifacts',
-                          '-p','Blast-Circuit-'+target+'.zip*','-p','Blast-Circuit-'+target+'-metadata.json'],check=True,timeout=300)
+          command=['gh','release','download','qa-desktop-'+sha,'--dir','artifacts',
+                   '-p','Blast-Circuit-'+target+'.zip*','-p','Blast-Circuit-'+target+'-metadata.json']
+          if os.environ['UPDATES']=='true':command+=['-p','Blast-Circuit-'+target+'-update-fixture.zip*']
+          subprocess.run(command,check=True,timeout=300)
           PY
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        if: vars.BLAST_STARTUP_DOWNLOAD_RUN_ID != ''
         with:
           name: mesh-tested-download-${{ matrix.target }}
           run-id: ${{ vars.BLAST_STARTUP_DOWNLOAD_RUN_ID }}
           github-token: ${{ github.token }}
           path: artifacts
       - if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y fuse3 xvfb openbox pulseaudio mesa-vulkan-drivers gdb
+        run: sudo apt-get update && sudo apt-get install -y fuse3 squashfs-tools xvfb openbox pulseaudio mesa-vulkan-drivers gdb
       - if: runner.os == 'Windows'
         run: ./tools/packaging/windows-test-desktop.ps1
+      - name: Construct this candidate's actual native download when no retained container is selected
+        if: vars.BLAST_STARTUP_DOWNLOAD_RUN_ID == ''
+        env:
+          TARGET: ${{ matrix.target }}
+        shell: bash
+        run: python tools/packaging/package-download.py --target "$TARGET"
+      - name: Install the pinned SDK for the native queue regression
+        run: python tools/ci/install_godot.py --destination artifacts/shutdown-sdk
+      - name: Require the SDK low-priority queue red/green without a watchdog
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+        run: python tools/qa/shutdown_probe.py --godot "$GODOT" --output "artifacts/shutdown-sdk-${TARGET}"
       - name: Compare exit boundaries and retain live stacks before killing timed-out processes
         env:
           TARGET: ${{ matrix.target }}
@@ -64,6 +84,21 @@ jobs:
                    '--expected-revision',os.environ['PAYLOAD'],'--output','artifacts/startup-lifecycle-'+os.environ['TARGET']]
           for case in json.loads(os.environ.get('CASES') or '[]'):command+=['--case',case]
           if os.environ['TARGET']=='linux-x64':command=[sys.executable,'tools/packaging/linux-desktop.py','--',*command]
+          subprocess.run(command,check=True)
+          PY
+      - name: Re-check actual running-app updater handoff and rollback
+        if: always() && vars.BLAST_STARTUP_UPDATES == 'true'
+        env:
+          TARGET: ${{ matrix.target }}
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os,subprocess,sys
+          target=os.environ['TARGET']
+          subprocess.run([sys.executable,'tools/packaging/package-update-fixture.py','--target',target,'--unpack'],check=True)
+          if target=='linux-x64':subprocess.run([sys.executable,'tools/packaging/package-download.py','--target',target,'--directory','artifacts/update-fixture'],check=True)
+          command=[sys.executable,'tools/packaging/verify-desktop-update.py','--target',target]
+          if target=='linux-x64':command=[sys.executable,'tools/packaging/linux-desktop.py','--',*command]
           subprocess.run(command,check=True)
           PY
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -80,5 +115,9 @@ jobs:
             artifacts/startup-lifecycle-${{ matrix.target }}/*/native.dmp
             artifacts/startup-lifecycle-${{ matrix.target }}/*/dump-collector.log
             artifacts/startup-lifecycle-${{ matrix.target }}/*/native-pool-state.json
+            artifacts/startup-lifecycle-${{ matrix.target }}/*/shutdown.json
+            artifacts/shutdown-sdk-${{ matrix.target }}/
+            artifacts/*-updater-test.json
+            artifacts/*-updater-details/
           retention-days: 14
           if-no-files-found: warn

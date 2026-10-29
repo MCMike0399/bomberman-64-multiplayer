@@ -92,7 +92,7 @@ public partial class PlaytestDriver : Node
             File.WriteAllText(Path.Combine(_output,"summary.json"),JsonSerializer.Serialize(summary,new JsonSerializerOptions { WriteIndented=true }));
             _trace.Dispose();
             GD.Print($"PLAYTEST_{(failure==null?"PASS":"FAIL")} scenario={_scenario} frames={_frame} assertions={_checks.Count} screenshots={_screenshots.Count} output={_output}");
-            _root.GetTree().Quit(failure==null?0:1);
+            _root.RequestQuit(failure==null?0:1);
         }
     }
 
