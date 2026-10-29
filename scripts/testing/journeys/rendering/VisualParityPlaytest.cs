@@ -27,6 +27,10 @@ public partial class PlaytestDriver
     private async Task CaptureVisualParity(bool inputsOnly)
     {
         Check(inputsOnly||!_headless,"images require an actual renderer; input-only mode never qualifies graphics");
+        string Option(string name,string fallback)=>OS.GetCmdlineUserArgs().FirstOrDefault(value=>value.StartsWith(name+"=",StringComparison.Ordinal)) is {} value?value[(name.Length+1)..]:fallback;
+        string stage = Option("--parity-stage", "up-and-down"), noise = Option("--parity-noise", "integer");
+        if (stage is not ("sunken-temple" or "rock-garden" or "up-and-down" or "top-rules" or "blizzard-battle" or "greedy-trap" or "circuit-garden") || noise is not ("legacy" or "integer"))
+            throw new ArgumentException("Unknown controlled visual experiment.");
         var original=GraphicsQuality.Current;var priorRootProcess=_root.IsProcessing();
         var previousViews=AuditDescendants(_root).OfType<SubViewport>().ToDictionary(v=>v,v=>v.RenderTargetUpdateMode);
         var existingArena=LightingArena;bool arenaVisible=existingArena.Visible;
@@ -47,7 +51,7 @@ public partial class PlaytestDriver
             GraphicsQuality.Apply(original,GetViewport());
         }
         File.WriteAllText(Path.Combine(_output,"visual-parity-observations.json"),JsonSerializer.Serialize(new{
-            schemaVersion=1,graphicsQualified=false,inputsOnly,qualification="Measured inputs; package manifests only when archive/module/executable provenance binds; external repeat/control validation required",
+            schemaVersion=1,graphicsQualified=false,inputsOnly,experimentStage=stage,noisePolicy=noise,qualification="Measured inputs; package manifests only when archive/module/executable provenance binds; external repeat/control validation required",
             limitations=new[]{"Renderer globals described by deterministic ApplyHigh policy because stock getters are unavailable","Target API/OS provenance is recorded; physical target GPU/performance scope remains separate","No arbitrary-driver or physical-display equality claim"},
             driver=RenderingServer.GetCurrentRenderingDriverName(),adapter=RenderingServer.GetVideoAdapterName(),
             deviceType=RenderingServer.GetVideoAdapterType().ToString(),engine=Engine.GetVersionInfo()["string"].AsString(),records
@@ -70,7 +74,7 @@ public partial class PlaytestDriver
             BomberModel.PoseWaveObservation=poseWaves.Add;
             try
             {
-                var match=new LocalMatch(new MatchOptions{Stage="up-and-down",HumanPlayers=1,BotPlayers=0,Practice=true,Seed=64});
+                var match=new LocalMatch(new MatchOptions{Stage=stage,HumanPlayers=1,BotPlayers=0,Practice=true,Seed=64});
                 arena.Stage(match.StageMessage!.Value.GetProperty("d"));arena.SetBattleActive(true);
                 arena.SetTimeOfDay(StageTime.Night);
                 void FreezeProcessing()
@@ -96,6 +100,10 @@ public partial class PlaytestDriver
                 {
                     var shader=material.Shader;if(shaders.ContainsKey(shader))continue;
                     shaders[shader]=shader.Code;
+                    if(noise=="integer"&&shader.Code.Contains(ArtMaterials.LegacyNoiseHash,StringComparison.Ordinal))
+                        shader.Code=ArtMaterials.IntegerNoiseForExperiment(shader.Code);
+                    if(noise=="legacy"&&shader.Code.Contains(ArtMaterials.IntegerNoiseHash,StringComparison.Ordinal))
+                        shader.Code=ArtMaterials.LegacyNoiseForExperiment(shader.Code);
                     if(Regex.IsMatch(shader.Code,@"\bTIME\b"))
                         shader.Code=Regex.Replace(shader.Code,@"\bTIME\b","parity_fixture_time").Replace("shader_type spatial;","shader_type spatial;\nuniform float parity_fixture_time=4.0;",StringComparison.Ordinal);
                 }
@@ -136,7 +144,7 @@ public partial class PlaytestDriver
                         source="Unmodified GraphicsQuality.Apply(High) called before this recipe; global settings have no stock getters"},
                     environmentAndCameraStorage=inventoryIdentity};
                 string settingsSha256=VisualDescriptionHash(settingsDescription);
-                var conditions=new{sceneId="full-up-down-high-v2",assetsSha256,stateId=VisualDescriptionHash(new{authority=match.StateMessage,inventory=inventoryIdentity}),
+                var conditions=new{sceneId=stage=="up-and-down"?"full-up-down-high-v2":$"full-{stage}-high-v2",assetsSha256,stateId=VisualDescriptionHash(new{authority=match.StateMessage,inventory=inventoryIdentity}),
                     tick=match.TickNumber,width=1280,height=800,
                     render=new{preset="High",msaaSamples=2,dof=attributes.DofBlurNearEnabled&&attributes.DofBlurFarEnabled,settingsSha256},
                     cameraSha256=VisualDescriptionHash(cameraDescription),shaderTimeSeconds=4d,animationTimeSeconds=118d/30,
