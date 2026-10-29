@@ -315,6 +315,8 @@ def main():
         if not args.headless and args.desktop == 'isolated' and not re.match(r'^Metal .*Forward\+', result['renderer'] or ''):
             receipt_errors.append('Isolated guest did not use the project\'s Metal Forward+ renderer; inspect runtime.log')
         result['errors'].extend(receipt_errors)
+        for field in ('renderingDriver','requestedDriver','fallbackReason','renderingMethod','adapter'):
+            if field in summary:result[field]=summary[field]
         result['assertions'] = summary['assertions']
         result['screenshots'] = len(summary['screenshots'])
         result['passed'] = result['exitCode'] == 0 and summary['passed'] and summary['assertions'] > 0 and not runtime_errors and not receipt_errors

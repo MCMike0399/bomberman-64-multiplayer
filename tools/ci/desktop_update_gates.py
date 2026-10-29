@@ -3,6 +3,7 @@ import math
 import hashlib
 import json
 import zipfile
+from desktop_rendering import report_matches
 
 
 def inspect(receipt, target, revision, release, archive_sha):
@@ -27,11 +28,11 @@ def inspect(receipt, target, revision, release, archive_sha):
                 target == 'windows-x64' and case.get('uninstallVerified') is not True):
             raise RuntimeError('Incomplete actual desktop updater transaction evidence')
     health = cases[0].get('health', {})
-    if (health.get('version') != future['version'] or health.get('driver') != ('d3d12' if target == 'windows-x64' else 'vulkan') or
+    if (health.get('version') != future['version'] or not report_matches(target,health,'driver') or
             health.get('method') != 'forward_plus' or not health.get('adapter') or cases[1].get('restoredGameplay') is not True):
         raise RuntimeError('Actual desktop updater is missing renderer/rollback gameplay evidence')
     high=cases[2].get('health',{})
-    if (high.get('version')!=future['version'] or high.get('driver')!=health.get('driver') or
+    if (high.get('version')!=future['version'] or not report_matches(target,high,'driver') or high.get('driver')!=health.get('driver') or
             high.get('method')!='forward_plus' or not high.get('adapter') or high.get('graphics')!='high' or high.get('window')!='fullscreen'):
         raise RuntimeError('Actual desktop updater is missing saved High/fullscreen relaunch evidence')
     return receipt

@@ -103,7 +103,7 @@ foreach (var testCase in new[] { (Name:"successful-install",Interrupt:false,High
         string receipt = Path.Combine(history, "last-update.txt");
         while (!File.Exists(receipt)) await Task.Delay(100, timeout.Token);
         string expected = interrupt ? "failed " + version + " launch-rollback" : "installed " + version;
-        if ((await File.ReadAllTextAsync(receipt, timeout.Token)).Trim() != expected) throw new Exception("Incorrect updater outcome.");
+        if ((await File.ReadAllTextAsync(receipt, timeout.Token)).Trim() != (interrupt?expected+" health":expected)) throw new Exception("Incorrect updater outcome.");
         while (File.Exists(Path.Combine(runtimeFolder, ".blast-update-lock"))) await Task.Delay(100, timeout.Token);
         if (!interrupt)
         {
@@ -111,7 +111,7 @@ foreach (var testCase in new[] { (Name:"successful-install",Interrupt:false,High
             var report = health.RootElement;
             healthReport = report.Clone();
             if (report.GetProperty("version").GetString() != version ||
-                report.GetProperty("driver").GetString() != (image ? "vulkan" : "d3d12") ||
+                !(report.GetProperty("driver").GetString()=="vulkan"||!image&&Bomber.Client.Startup.WindowsLaunchGuard.RendererEvidenceAllowed(report.GetProperty("driver").GetString(),report.TryGetProperty("requestedDriver",out var requested)?requested.GetString():null,report.TryGetProperty("fallbackReason",out var fallback)?fallback.GetString():null)) ||
                 report.GetProperty("method").GetString() != "forward_plus" || string.IsNullOrWhiteSpace(report.GetProperty("adapter").GetString()))
                 throw new Exception("Updated game did not use the intended platform renderer.");
             if(testCase.High&&(report.GetProperty("graphics").GetString()!="high"||report.GetProperty("window").GetString()!="fullscreen"))

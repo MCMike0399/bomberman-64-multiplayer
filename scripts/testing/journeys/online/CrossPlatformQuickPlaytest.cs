@@ -183,6 +183,7 @@ public partial class PlaytestDriver
             committedState.GetProperty("phase").GetInt32()==1&&committedState.GetProperty("round").GetInt32()==observedRound&&
             committedState.GetProperty("players").EnumerateArray().Select(p=>p.GetProperty("id").GetString()).Order().SequenceEqual(roster),
             "completed witness remains in the same active match, round and cohort");
+        var backend=BlastCircuit.Rendering.RendererBackend.Observe();
         var committed=CommitCrossplayWitness(()=>new {
             passed = true, role, platform = OS.GetName(), lobbyId = lobby, roster, initialDeadline = initial,
             deadline, resetObserved = deadline > initial + 2000, moved = moved.Order().ToArray(), bombOwners = bombOwners.Order().ToArray(),
@@ -190,7 +191,7 @@ public partial class PlaytestDriver
             lastServerTime = lastTime, lateExcluded,hosting=committedParty.Hosting,match=committedParty.Match,epoch=committedParty.Epoch,
             round=committedState.GetProperty("round").GetInt32(),authority=committedState,
             captures=_screenshots.Select(path=>new{file=Path.GetFileName(path),sha256=ReplayHash(File.ReadAllBytes(path))}).ToArray(),
-            driver = RenderingServer.GetCurrentRenderingDriverName(), method = RenderingServer.GetCurrentRenderingMethod(), adapter = RenderingServer.GetVideoAdapterName()
+            driver = backend.Driver, requestedDriver=backend.RequestedDriver, fallbackReason=backend.FallbackReason, method = RenderingServer.GetCurrentRenderingMethod(), adapter = RenderingServer.GetVideoAdapterName()
         });
         File.WriteAllText(Path.Combine(_output,"crossplay-committed.json"),committed.GetRawText());
         File.WriteAllText(Path.Combine(_output,"crossplay-actions.json"),committed.GetRawText());

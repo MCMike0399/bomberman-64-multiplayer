@@ -39,6 +39,7 @@ public static class DesktopUpdateTransaction
         }
         catch (ArgumentException) { /* The original game has already exited. */ }
         bool replaced = false;
+        string failureKind = "install";
         Process? launched = null;
         try
         {
@@ -56,7 +57,9 @@ public static class DesktopUpdateTransaction
             await Move(target, previous, request.AppImage, ct);
             replaced = true;
             await Move(next, target, request.AppImage, ct);
+            failureKind = "launch";
             launched = Launch(target, request.AppImage, request.Windowed, request.Token);
+            failureKind = "health";
             string healthy = Path.Combine(stage, "healthy");
             var clock = Stopwatch.StartNew();
             while (clock.Elapsed < TimeSpan.FromSeconds(180))
@@ -65,6 +68,7 @@ public static class DesktopUpdateTransaction
                 if (launched.HasExited) throw new IOException("Updated game exited before reporting health.");
                 if (File.Exists(healthy) && (await File.ReadAllTextAsync(healthy, ct)).Trim() == request.Version)
                 {
+                    failureKind = "finalize";
                     WriteHistory(request.History, "installed " + request.Version);
                     if (OperatingSystem.IsWindows())
                     {
@@ -95,21 +99,35 @@ public static class DesktopUpdateTransaction
             // Release the terminated image's process handle before renaming its
             // installation. Windows may retain image resources while it is open.
             launched?.Dispose(); launched = null;
+            string restoreTarget=target;
             if (replaced)
             {
-                if (request.AppImage ? File.Exists(target) : Directory.Exists(target))
-                    await Move(target, next, request.AppImage, CancellationToken.None);
-                await Move(previous, target, request.AppImage, CancellationToken.None);
-                using var restored = Launch(target, request.AppImage, request.Windowed, null);
-                DesktopProcessIdentity.WriteMarker(Path.Combine(stage, "restoredpid"), restored);
-                WriteHistory(request.History, "failed " + request.Version + " launch-rollback");
+                try
+                {
+                    if (request.AppImage ? File.Exists(target) : Directory.Exists(target))
+                        await Move(target, next, request.AppImage, CancellationToken.None);
+                    await Move(previous, target, request.AppImage, CancellationToken.None);
+                }
+                catch(Exception recoveryError)when(recoveryError is IOException or UnauthorizedAccessException)
+                {
+                    if(!(request.AppImage?File.Exists(previous):Directory.Exists(previous)))throw;
+                    // Keep the preserved old payload playable even if an AV lock
+                    // prevents restoring its directory. Never delete unrelated files.
+                    restoreTarget=previous;Console.Error.WriteLine("BLAST_UPDATE_RECOVERY_RUNNING_PREVIOUS");
+                }
             }
+            // The player already exited after readiness. Even a first rename
+            // failure must reopen the still-installed previous game.
+            using var restored = Launch(restoreTarget, request.AppImage, request.Windowed, null,restoreTarget!=target);
+            DesktopProcessIdentity.WriteMarker(Path.Combine(stage, "restoredpid"), restored);
+            bool quarantine=failureKind is "launch" or "health";
+            WriteHistory(request.History, quarantine?"failed "+request.Version+" launch-rollback "+failureKind:"retry "+request.Version+" install-rollback");
             throw;
         }
         finally { launched?.Dispose(); }
     }
 
-    private static Process Launch(string target, bool appImage, bool windowed, string? token)
+    private static Process Launch(string target, bool appImage, bool windowed, string? token,bool recovery=false)
     {
         var start = new ProcessStartInfo(appImage ? target : Path.Combine(target, "BlastCircuit.exe"))
         { UseShellExecute = false, WorkingDirectory = Path.GetDirectoryName(target)! };
@@ -119,6 +137,7 @@ public static class DesktopUpdateTransaction
         start.ArgumentList.Add("--");
         if (windowed) start.ArgumentList.Add("--display-windowed");
         if (token is not null) start.ArgumentList.Add("--update-token=" + token);
+        if(recovery)start.ArgumentList.Add("--update-recovery");
         return Process.Start(start) ?? throw new IOException("Could not launch installed game.");
     }
 

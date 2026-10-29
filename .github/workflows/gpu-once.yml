@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(vars.BLAST_GPU_MATRIX || '[{"target":"windows-x64","os":"Windows","driver":"d3d12"},{"target":"linux-x64","os":"Linux","driver":"vulkan"}]') }}
+        include: ${{ fromJSON(vars.BLAST_GPU_MATRIX || '[{"target":"windows-x64","os":"Windows","driver":"vulkan"},{"target":"linux-x64","os":"Linux","driver":"vulkan"}]') }}
     runs-on: [self-hosted, '${{ matrix.os }}', X64, '${{ vars.BLAST_GPU_RUN_ID }}']
     timeout-minutes: 115
     env:

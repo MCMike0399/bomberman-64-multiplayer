@@ -15,6 +15,7 @@ import time
 import zipfile
 
 import crossplay
+from desktop_rendering import DRIVERS, report_matches
 import desktop_packages as desktop
 import download_formats as downloads
 
@@ -22,7 +23,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.append(str(ROOT / 'tools/playtest'))
 from contracts import validate_summary
 
-SYSTEMS = {'windows-x64': ('Windows', 'Windows', 'd3d12'), 'linux-x64': ('Linux', 'Linux', 'vulkan'),
+SYSTEMS = {'windows-x64': ('Windows', 'Windows', DRIVERS['windows-x64']), 'linux-x64': ('Linux', 'Linux', 'vulkan'),
            'macos-arm64': ('Darwin', 'macOS', 'metal')}
 
 
@@ -147,7 +148,7 @@ def main():
             data = metadata(directory, args.target)
             if (status != {'exitCode': 0, 'error': None} or errors or runtime_errors or
                     report.get('release') != dict(data['release'], revision=data['revision']) or
-                    report.get('platform') != SYSTEMS[args.target][1] or report.get('renderingDriver') != SYSTEMS[args.target][2] or
+                    report.get('platform') != SYSTEMS[args.target][1] or not report_matches(args.target,report) or
                     report.get('renderingMethod') != 'forward_plus' or not report.get('adapter')):
                 raise RuntimeError('Mixed-platform gameplay/renderer evidence failed: ' + ', '.join(errors))
             if (output / 'crossplay-committed.json').exists():

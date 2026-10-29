@@ -13,6 +13,7 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools/ci'))
 import desktop_packages as desktop
+from desktop_rendering import report_matches
 
 
 def main():
@@ -51,7 +52,7 @@ def main():
         expected = dict(metadata['release'], revision=metadata['revision'])
         if report.get('platform') != settings['os'] or report.get('release') != expected:
             raise RuntimeError('Exported executable release/platform differs from archive metadata')
-        if args.graphical and (report.get('renderingDriver') != settings['driver'] or
+        if args.graphical and (not report_matches(args.target,report) or
                                report.get('renderingMethod') != 'forward_plus' or not report.get('adapter') or not report.get('screenshots') or
                                any(word in report.get('adapter', '').lower() for word in ('software', 'llvmpipe', 'swiftshader', 'basic render', 'warp'))):
             raise RuntimeError('Graphical smoke did not use the intended native GPU renderer')

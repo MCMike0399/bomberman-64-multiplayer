@@ -4,6 +4,7 @@ import json
 import math
 from pathlib import Path
 import sys
+from desktop_rendering import report_matches, target_for_os
 
 ROOT = Path(__file__).resolve().parents[2]
 # Preserve the caller's module priority (CI and playtest both have test_contracts).
@@ -58,7 +59,7 @@ def inspect_report(report, scenario, settings, revision, release, graphical):
             report.get('runtimeErrors') != [] or report.get('frameStallMs', 0) != 0 or
             report.get('screenshotMode') != ('graphical' if graphical else 'disabled-headless')):
         raise RuntimeError('Incomplete or mismatched exported gameplay evidence: ' + scenario)
-    if graphical and (report.get('renderingDriver') != settings['driver'] or
+    if graphical and (not report_matches(target_for_os(settings['os']),report) or
                        report.get('renderingMethod') != 'forward_plus' or
                        not report.get('adapter') or not report.get('screenshots')):
         raise RuntimeError('Missing intended renderer/adapter/captures: ' + scenario)
@@ -125,7 +126,7 @@ def inspect_startup(receipt, target, revision, release, archive_sha):
         raise RuntimeError('Desktop startup matrix is missing or mismatched')
     for case in cases:
         seconds = case.get('seconds')
-        if (case.get('passed') is not True or not case.get('adapter') or not isinstance(seconds, (int, float)) or
+        if (case.get('passed') is not True or not case.get('adapter') or not report_matches(target,case,'driver') or case.get('method')!='forward_plus' or not isinstance(seconds, (int, float)) or
                 not math.isfinite(seconds) or seconds <= 0 or case.get('kind') == 'gameplay' and case.get('snapshots', 0) <= 0):
             raise RuntimeError('Desktop startup case is incomplete')
 

@@ -152,7 +152,7 @@ foreach (bool failedLaunch in new[] { false, true })
         if (sharing is not null) await sharing;
         Check(File.Exists(Path.Combine(target, "old-marker")) == failedLaunch, "Installed bytes must match success or rollback");
         Check(File.ReadAllText(Path.Combine(target, "unins000.dat")) == "installed uninstall data", "Installed uninstall data must survive update and rollback");
-        Check(File.ReadAllText(request.History).Trim() == (failedLaunch ? "failed 99.0.0 launch-rollback" : "installed 99.0.0"), "History must report actual outcome");
+        Check(File.ReadAllText(request.History).Trim() == (failedLaunch ? "failed 99.0.0 launch-rollback health" : "installed 99.0.0"), "History must report actual outcome");
         if (failedLaunch)
         {
             using var restored = DesktopProcessIdentity.OpenMarker(Path.Combine(stage, "restoredpid"));
@@ -196,6 +196,49 @@ foreach (bool failedLaunch in new[] { false, true })
         }
     }
 }
+// Installation I/O failures happen after the old process has exited.
+// Exercise actual filesystem/process boundaries, without mocking internals.
+foreach(bool missingNext in new[]{false,true})
+{
+    string root=Path.Combine(Path.GetTempPath(),"blast-first-move-failure-"+Guid.NewGuid().ToString("N"));
+    string token=Guid.NewGuid().ToString("N"),target=Path.Combine(root,"Installed game with spaces"),stage=Path.Combine(root,".blast-update-"+token);
+    CopyFixture(target);CopyFixture(Path.Combine(stage,"next"));if(!missingNext)Directory.CreateDirectory(Path.Combine(stage,"previous"));
+    File.WriteAllText(Path.Combine(target,"old-marker"),"old");
+    try
+    {
+        var start=new ProcessStartInfo(Path.Combine(target,"BlastCircuit.exe")){UseShellExecute=false};start.ArgumentList.Add("--fixture");
+        using var old=Process.Start(start)!;
+        var request=new DesktopUpdateRequest(target,stage,"99.0.0",token,Path.Combine(root,"history/result.txt"),old.Id,old.StartTime.ToUniversalTime().Ticks,true,false,DesktopProcessIdentity.StartToken(old));
+        string path=Path.Combine(stage,"request.json");File.WriteAllText(path,JsonSerializer.Serialize(request));
+        using var deadline=new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        var update=DesktopUpdateTransaction.Run(path,deadline.Token);
+        while(!File.Exists(Path.Combine(stage,"ready")))await Task.Delay(10,deadline.Token);
+        if(missingNext)Directory.Delete(Path.Combine(stage,"next"),true);
+        try {await update;Check(false,"Injected install I/O failure must be reported");}
+        catch(IOException){checks++;}
+        Check(File.Exists(Path.Combine(target,"old-marker")),"Rename failure preserves the previous game payload");
+        Check(File.Exists(Path.Combine(stage,"restoredpid")),"Rename failure relaunches the previous game instead of leaving the player with no window");
+        using var restored=DesktopProcessIdentity.OpenMarker(Path.Combine(stage,"restoredpid"));
+        Check(!restored.HasExited,"Relaunched previous game is alive after installation I/O failure");
+        while(Directory.GetFiles(root,"fixture-pid-*").Length<2)await Task.Delay(10,deadline.Token);
+        Check(File.ReadAllText(request.History).StartsWith("retry 99.0.0 ",StringComparison.Ordinal),
+            "Installation I/O failure must remain retryable, not quarantine the release as a launch failure");
+    }
+    finally
+    {
+        foreach(string marker in Directory.GetFiles(root,"fixture-pid-*"))
+        {
+            try {using var child=DesktopProcessIdentity.OpenMarker(marker);if(!child.HasExited){child.Kill(true);await child.WaitForExitAsync();}}
+            catch(ArgumentException){}catch(IOException){}
+        }
+        Directory.Delete(root,true);
+    }
+}
+Check(DesktopUpdateHistory.QuarantinedVersion("retry 99.0.0 install-rollback") is null,"Transient installation failure is retried");
+Check(DesktopUpdateHistory.QuarantinedVersion("failed 99.0.0 launch-rollback") is null,"Ambiguous old desktop failure is retried");
+Check(DesktopUpdateHistory.QuarantinedVersion("failed 99.0.0 launch-rollback health")=="99.0.0","Explicit unhealthy release is quarantined");
+Check(DesktopUpdateHistory.QuarantinedVersion("failed 99.0.0 launch-rollback launch")=="99.0.0","Explicit launch failure is quarantined");
+Check(DesktopUpdateHistory.QuarantinedVersion("failed 99.0.0 launch-rollback",legacyMac:true)=="99.0.0","Existing Mac rollback policy is preserved");
 Console.WriteLine($"PASS {checks} desktop updater handoff, replacement and rollback checks");
 return 0;
 

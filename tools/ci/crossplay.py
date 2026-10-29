@@ -13,6 +13,7 @@ import sys
 import time
 import urllib.request
 import zipfile
+from desktop_rendering import report_matches
 
 ROOT = Path(__file__).resolve().parents[2]
 TARGETS = ('windows-x64', 'linux-x64', 'macos-arm64')
@@ -135,7 +136,7 @@ def inspect_summary(receipt, revision, release, directory=None):
                 set(state.get('moved', [])) != expected or set(state.get('bombOwners', [])) != expected or state.get('resetObserved') is not True or
                 state.get('hosting') != 'cluster' or state.get('firstGameplayServerTime', 0) < receipt['deadline'] or
                 state.get('snapshots', 0) <= 4 or state.get('lastServerTime', 0) - state.get('firstServerTime', 0) < 5000 or
-                state.get('driver') != {'windows-x64': 'd3d12', 'linux-x64': 'vulkan', 'macos-arm64': 'metal'}[target] or
+                not report_matches(target,state,'driver') or
                 state.get('method') != 'forward_plus' or not state.get('adapter')):
             raise RuntimeError('Incomplete three-platform gameplay or renderer witness: ' + target)
         if directory is not None:

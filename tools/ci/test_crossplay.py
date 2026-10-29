@@ -26,7 +26,7 @@ def write_crossplay(directory, revision=SHA, release=None):
             'crossplay': {'passed': True, 'role': target, 'lobbyId': 'shared-public-lobby', 'deadline': deadline, 'roster': roster,
                 'resetObserved': True, 'moved': roster, 'bombOwners': roster, 'hosting': 'cluster', 'snapshots': 80,
                 'firstGameplayServerTime': deadline, 'firstServerTime': deadline + 3000, 'lastServerTime': deadline + 23000,
-                'lateExcluded': target == 'linux-x64', 'driver': {'windows-x64': 'd3d12', 'linux-x64': 'vulkan', 'macos-arm64': 'metal'}[target],
+                'lateExcluded': target == 'linux-x64', 'driver': {'windows-x64': 'vulkan', 'linux-x64': 'vulkan', 'macos-arm64': 'metal'}[target],
                 'method': 'forward_plus', 'adapter': 'Fixture GPU'}})
     (directory / crossplay.RECEIPT).write_text(json.dumps({'schemaVersion': 1, 'passed': True, 'revision': revision, 'release': release,
         'targets': crossplay.TARGETS, 'lobbyId': 'shared-public-lobby', 'deadline': deadline, 'roster': roster, 'reports': reports}))

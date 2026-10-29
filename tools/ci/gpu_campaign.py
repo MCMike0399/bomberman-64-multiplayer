@@ -27,7 +27,7 @@ def run(args):
         report['download']=download_formats.inspect(ROOT/'artifacts',target,data['revision'],data['release'])
         if args.phase=='core':
             report['capabilityPassed']=False
-            drivers=['d3d12','vulkan']if target=='windows-x64'else['vulkan']
+            drivers=['vulkan','d3d12']if target=='windows-x64'else['vulkan']
             for driver in drivers:
                 depth=output/('depth-'+driver)
                 step('small-resource-'+driver,[sys.executable,'tools/qa/depth_probe.py','--godot',str(args.godot),'--driver',driver,'--output',str(depth)],180)

@@ -16,6 +16,7 @@ import time
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools/ci'))
 import desktop_packages as desktop
+from desktop_rendering import report_matches
 
 
 def run_startup(command, cwd, environment, log, timeout=240, on_timeout=None):
@@ -86,7 +87,11 @@ def main():
             capture = folder / (kind + '.png')
             if not capture.is_file() or capture.stat().st_size < 1024 or capture.read_bytes()[:8] != b'\x89PNG\r\n\x1a\n':
                 raise RuntimeError('Saved startup did not capture its rendered viewport: ' + name)
+            renderer=json.loads((folder/'renderer-selection.json').read_text())
+            if renderer.get('sourceRevision')!=metadata['revision'] or not report_matches(args.target,renderer,'driver') or renderer.get('method')!='forward_plus':
+                raise RuntimeError('Startup selected an unrecorded or unsupported renderer: '+name)
             cases.append({'id': name, 'passed': True, 'preset': preset, 'display': display, 'kind': kind,
+                          'driver':renderer['driver'],'requestedDriver':renderer['requestedDriver'],'fallbackReason':renderer.get('fallbackReason'),'method':renderer['method'],
                           'adapter': smoke[0][6], 'snapshots': int(smoke[0][1]), 'seconds': time.monotonic() - started})
             print('PASS saved ' + name, flush=True)
     (directory / (item['root'] + '-startup.json')).write_text(json.dumps({'schemaVersion': 1, 'passed': True,

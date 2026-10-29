@@ -4,15 +4,16 @@ import json
 from pathlib import Path, PurePosixPath
 import stat
 import zipfile
+from desktop_rendering import DRIVERS
 import desktop_validation
 import desktop_update_gates
 
 TARGETS = {
-    'windows-x64': {'preset': 'Windows DirectX 12', 'os': 'Windows', 'driver': 'd3d12',
-                    'executable': 'BlastCircuit.exe', 'runtime': 'coreclr.dll',
+    'windows-x64': {'preset': 'Windows Vulkan', 'os': 'Windows', 'driver': DRIVERS['windows-x64'],
+                    'executable': 'BlastCircuit.exe', 'engine_executable':'BlastCircuit.Player.exe','pck':'BlastCircuit.Player.pck', 'runtime': 'coreclr.dll',
                     'webrtc': 'libwebrtc_native.windows.template_release.x86_64.dll',
                     'runner': 'windows-2025'},
-    'linux-x64': {'preset': 'Linux Vulkan', 'os': 'Linux', 'driver': 'vulkan',
+    'linux-x64': {'preset': 'Linux Vulkan', 'os': 'Linux', 'driver': DRIVERS['linux-x64'],
                   'executable': 'BlastCircuit.x86_64', 'runtime': 'libcoreclr.so',
                   'webrtc': 'libwebrtc_native.linux.template_release.x86_64.so',
                   'runner': 'ubuntu-24.04'},
@@ -85,7 +86,8 @@ def inspect_archive(directory, target, revision, release):
         basenames = {PurePosixPath(name).name for name in seen}
         required = {settings['executable'], settings['runtime'], settings['webrtc'],
                     'Bomberman64Multiplayer.dll', 'Bomberman64Multiplayer.runtimeconfig.json',
-                    'BlastCircuit.pck', 'release.json', 'Blast-Circuit-MIT.txt', 'WebRTC-SOURCE.txt', 'DotNet-LICENSE.TXT'}
+                    settings.get('pck','BlastCircuit.pck'), 'release.json', 'Blast-Circuit-MIT.txt', 'WebRTC-SOURCE.txt', 'DotNet-LICENSE.TXT'}
+        if settings.get('engine_executable'):required.add(settings['engine_executable'])
         if not required.issubset(basenames):
             raise RuntimeError('Desktop runtime is incomplete: ' + ', '.join(sorted(required - basenames)))
         if target == 'windows-x64':

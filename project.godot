@@ -31,6 +31,9 @@ textures/default_filters/use_nearest_mipmap_filter=false
 textures/vram_compression/import_etc2_astc=true
 
 rendering_device/driver.macos="metal"
-rendering_device/driver.windows="d3d12"
+rendering_device/driver.windows="vulkan"
 rendering_device/driver.linuxbsd="vulkan"
+rendering_device/fallback_to_d3d12=true
+rendering_device/fallback_to_vulkan=true
+rendering_device/fallback_to_opengl3=false
 anti_aliasing/quality/msaa_3d=1

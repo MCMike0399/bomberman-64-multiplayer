@@ -1,4 +1,5 @@
 using Godot;
+using Bomber.Client.Startup;
 using Bomber.Client.Sessions;
 using Bomber.Game.Matches;
 using System.Text.Json;
@@ -88,6 +89,7 @@ public partial class GameRoot : Node3D
     public override async void _Ready()
     {
         var args=OS.GetCmdlineUserArgs();
+        _crashVulkanFirstFrame=OperatingSystem.IsWindows()&&args.Contains("--qa-vulkan-first-frame-crash");
         if(args.Contains("--generate-bomber-meshes"))
         {
             SetProcess(false);SetPhysicsProcess(false);SetProcessInput(false);SetProcessUnhandledInput(false);
@@ -194,6 +196,14 @@ public partial class GameRoot : Node3D
             }
             catch(Exception error){GD.PushError(error.ToString());RequestQuit(1);}
             return;
+        }
+        if(RendererBackend.State=="compatibility-reduced")
+        {
+            var compatibilityLayer=new CanvasLayer {Layer=1000};AddChild(compatibilityLayer);
+            var notice=new Label {Name="CompatibilityNotice",Text="Compatibility renderer: reduced graphics",HorizontalAlignment=HorizontalAlignment.Center,MouseFilter=Control.MouseFilterEnum.Ignore};
+            compatibilityLayer.AddChild(notice);notice.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.TopWide);notice.OffsetTop=8;notice.OffsetBottom=44;
+            notice.AddThemeFontSizeOverride("font_size",22);notice.AddThemeColorOverride("font_color",new Color("ffdb72"));
+            notice.AddThemeColorOverride("font_outline_color",new Color("141426"));notice.AddThemeConstantOverride("outline_size",5);
         }
         BlastCircuit.Testing.PlaytestDriver.TryAttach(this);
     }
@@ -326,6 +336,7 @@ public partial class GameRoot : Node3D
         if(offset is {} stick)return input with {AimTarget=stick,AimRelative=true};
         return hub.MouseAimActive(seat,true)?input with {AimTarget=_arena.ArenaPoint(GetViewport().GetMousePosition())}:input;
     }
+    private bool _launcherHealthyReported,_crashVulkanFirstFrame;
     private bool _matchCursor;
     /// <summary>In matches the pointer is a crosshair while the mouse is in use and hides when idle,
     /// so keyboard and controller players are not left with an arrow over the arena.</summary>
@@ -349,6 +360,16 @@ public partial class GameRoot : Node3D
     }
     public override void _Process(double delta)
     {
+        if(_crashVulkanFirstFrame&&RendererBackend.EngineRequestedDriver()=="vulkan")
+        {
+            Console.WriteLine("BLAST_QA_FIRST_FRAME_CRASH");Console.Out.Flush();
+            System.Diagnostics.Process.GetCurrentProcess().Kill();return;
+        }
+        if(!_launcherHealthyReported&&!_preparingGraphics&&ScreenName!="Loading"&&Engine.GetFramesDrawn()>2)
+        {
+            var backend=RendererBackend.Observe();
+            _launcherHealthyReported=WindowsLaunchGuard.ReportHealthy(OS.GetCmdlineUserArgs(),backend.Driver,backend.FallbackReason);
+        }
         _updater.Tick(delta,_preferences.AutomaticUpdates,_session==null&&!_connecting);
         _menu.UpdateStatus(_updater.Version,_updater.Status,_updater.Busy,_updater.UpdateReady,_session==null&&!_connecting);
         if(_smoke)
@@ -362,6 +383,15 @@ public partial class GameRoot : Node3D
                     string folder=_smokeOutput??ProjectSettings.GlobalizePath(OS.HasFeature("editor")?"res://artifacts":"user://captures");
                     captured=DirAccess.MakeDirRecursiveAbsolute(folder)==Error.Ok
                         &&GetViewport().GetTexture().GetImage().SavePng(System.IO.Path.Combine(folder,_capture+".png"))==Error.Ok;
+                }
+                if(_smokeOutput is not null)
+                {
+                    Directory.CreateDirectory(_smokeOutput);
+                    var backend=RendererBackend.Observe();
+                    File.WriteAllText(Path.Combine(_smokeOutput,"renderer-selection.json"),JsonSerializer.Serialize(new {
+                        driver=backend.Driver,requestedDriver=backend.RequestedDriver,fallbackReason=backend.FallbackReason,
+                        method=RenderingServer.GetCurrentRenderingMethod(),rendererState=RendererBackend.State,adapter=RenderingServer.GetVideoAdapterName(),
+                        sourceRevision=Bomber.Game.Online.OnlineProtocol.SourceRevision}));
                 }
                 bool passed=captured&&(_capture is "menu" or "roster"||SnapshotCount>0);GD.Print($"{(passed?"GODOT_SMOKE_OK":"GODOT_SMOKE_FAILED")} {_capture} snapshots={SnapshotCount} {SmokeSettings()}");RequestQuit(passed?0:1);return;
             }

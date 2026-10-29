@@ -34,7 +34,7 @@ public static class DesktopUpdateInstaller
 
     public static string? InstalledTarget(string executable)
     {
-        if (OperatingSystem.IsWindows() && Path.GetFileName(executable) == "BlastCircuit.exe")
+        if (OperatingSystem.IsWindows() && Path.GetFileName(executable) is "BlastCircuit.exe" or "BlastCircuit.Player.exe")
         {
             string directory = Path.GetDirectoryName(Path.GetFullPath(executable))!;
             return File.Exists(Path.Combine(directory, "release.json")) ? directory : null;
@@ -42,6 +42,21 @@ public static class DesktopUpdateInstaller
         if (OperatingSystem.IsLinux() && Environment.GetEnvironmentVariable("APPIMAGE") is { Length: > 0 } image)
             return File.Exists(image) ? Path.GetFullPath(image) : null;
         return null;
+    }
+
+    public static void CheckWriteAccess(string target,bool appImage)
+    {
+        string parent=Path.GetDirectoryName(Path.GetFullPath(target))!;
+        string probe=Path.Combine(parent,".blast-write-probe-"+Guid.NewGuid().ToString("N"));
+        try
+        {
+            using var file=new FileStream(probe,FileMode.CreateNew,FileAccess.Write,FileShare.None,1,FileOptions.DeleteOnClose);
+            file.WriteByte(0);file.Flush(true);
+        }
+        catch(Exception error)when(error is IOException or UnauthorizedAccessException)
+        {
+            throw new IOException(appImage?"This AppImage cannot update in this folder. Move it into a folder you own, then try again.":"This installation cannot be updated here. Check the folder's write permissions or reinstall the latest release.",error);
+        }
     }
 
     public static async Task<PreparedUpdate> Prepare(UpdateService service, UpdateRelease release, string target,
@@ -54,6 +69,7 @@ public static class DesktopUpdateInstaller
         if ((!image && !OperatingSystem.IsWindows()) ||
             (image ? new FileInfo(target).LinkTarget : new DirectoryInfo(target).LinkTarget) is not null)
             throw new InvalidOperationException("Update requires a writable installed Windows game or Linux AppImage.");
+        CheckWriteAccess(target,image);
         string token = Guid.NewGuid().ToString("N");
         string stage = Path.Combine(Path.GetDirectoryName(target)!, ".blast-update-" + token);
         Directory.CreateDirectory(stage);

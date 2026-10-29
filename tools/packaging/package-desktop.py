@@ -67,10 +67,14 @@ def main():
     with tempfile.TemporaryDirectory(prefix='blast-desktop-') as temporary:
         published = Path(temporary) / item['root']
         published.mkdir()
-        run([args.godot, '--headless', '--path', ROOT, '--export-release', settings['preset'], published / settings['executable']])
+        run([args.godot, '--headless', '--path', ROOT, '--export-release', settings['preset'], published / settings.get('engine_executable',settings['executable'])])
         run(['dotnet', 'publish', ROOT / 'src/Bomber.Updater/Bomber.Updater.csproj', '-c', 'Release',
              '-r', 'win-x64' if args.target == 'windows-x64' else 'linux-x64', '--nologo', '-m:1',
              '-o', published / 'updater'])
+        if args.target=='windows-x64':
+            launcher=Path(temporary)/'launcher'
+            run(['dotnet','publish',ROOT/'src/Bomber.DesktopLauncher/Bomber.DesktopLauncher.csproj','-c','Release','-r','win-x64','--nologo','-m:1','-o',launcher])
+            shutil.copy2(launcher/'BlastCircuit.exe',published/'BlastCircuit.exe')
         (published / 'release.json').write_text(json.dumps({'revision': revision, 'release': release, 'target': args.target}, indent=2) + '\n')
         notices(published / 'Notices', args.target, published)
         (published / 'README.txt').write_text(

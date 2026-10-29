@@ -39,7 +39,8 @@ def write_desktop(directory, revision=SHA, release=None):
         item = desktop.names(target)
         files = {name: b'fixture runtime' for name in (
             settings['executable'], settings['runtime'], settings['webrtc'], 'Bomberman64Multiplayer.dll',
-            'BlastCircuit.pck', 'Notices/Blast-Circuit-MIT.txt', 'Notices/WebRTC-SOURCE.txt', 'Notices/DotNet-LICENSE.TXT')}
+            settings.get('pck','BlastCircuit.pck'), 'Notices/Blast-Circuit-MIT.txt', 'Notices/WebRTC-SOURCE.txt', 'Notices/DotNet-LICENSE.TXT')}
+        if 'engine_executable'in settings:files[settings['engine_executable']]=b'fixture engine'
         files['release.json'] = json.dumps({'revision': revision, 'release': release, 'target': target}).encode()
         files['data/Bomberman64Multiplayer.runtimeconfig.json'] = b'{"runtimeOptions":{"includedFrameworks":[{"name":"Microsoft.NETCore.App","version":"10.0.0"}]}}'
         if target == 'windows-x64':
@@ -74,7 +75,7 @@ def write_desktop(directory, revision=SHA, release=None):
             'release': release, 'archiveSha256': desktop.digest(directory / item['archive']), 'suite': 'graphical-regression', 'cases': graphical}))
         (directory / item['startup']).write_text(json.dumps({'schemaVersion': 1, 'passed': True, 'target': target, 'revision': revision,
             'release': release, 'archiveSha256': desktop.digest(directory / item['archive']),
-            'cases': [{'id': name, 'passed': True, 'adapter': 'Fixture GPU', 'seconds': 4, 'snapshots': 10, 'kind': name.rsplit('-', 1)[1]} for name in validation.STARTUP]}))
+            'cases': [{'id': name, 'passed': True, 'adapter': 'Fixture GPU', 'driver':settings['driver'],'requestedDriver':settings['driver'],'fallbackReason':None,'method':'forward_plus', 'seconds': 4, 'snapshots': 10, 'kind': name.rsplit('-', 1)[1]} for name in validation.STARTUP]}))
         (directory / download_formats.FILES[target]).write_bytes(b'MZ fixture installer' if target == 'windows-x64' else b'\x7fELF' + b'\x00'*4 + b'AI\x02 fixture AppImage')
         download_formats.record(directory, target, revision, release, item['archive'])
         for key in ('smoke','graphical'):
@@ -162,8 +163,10 @@ class DesktopPackageTests(unittest.TestCase):
         report = json.loads(path.read_text())
         report['softwareRendererBudget'] = True
         for case in report['cases']:
-            case.update(platform='Windows', renderingDriver='d3d12',
+            case.update(platform='Windows', renderingDriver='d3d12',requestedDriver='vulkan',fallbackReason='vulkan-initialization-unavailable',
                         adapter='Microsoft Basic Render Driver', adapterType='IntegratedGpu')
+            if 'displayRestart'in case:
+                case['displayRestart']['summary'].update(renderingDriver='d3d12',requestedDriver='vulkan',fallbackReason='vulkan-initialization-unavailable')
         path.write_text(json.dumps(report))
         desktop.inspect(self.root, SHA, RELEASE, targets=[self.target])
         for changes in ({'adapter': 'Intel Iris Xe'}, {'adapter': 'Microsoft Basic Display Adapter'},

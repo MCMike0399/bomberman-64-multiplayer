@@ -1,4 +1,6 @@
 using Godot;
+using Bomber.Client.Startup;
+using BlastCircuit.Rendering;
 using Bomber.Client.Updates;
 using Bomber.Game.Online;
 namespace BlastCircuit.Updates;
@@ -10,6 +12,7 @@ public partial class GameUpdater : Node
     private readonly UpdateService _service = new();
     private string? _bundle, _healthPath;
     private bool _desktop;
+    private bool _recovery;
     private PreparedUpdate? _ready;
     private string _historyDirectory="",_failedVersion="";
     private bool _busy,_checked,_initialized,_installing;
@@ -24,6 +27,7 @@ public partial class GameUpdater : Node
         try
         {
             _desktop=!OperatingSystem.IsMacOS();
+            _recovery=OS.GetCmdlineUserArgs().Contains("--update-recovery");
             _bundle=_desktop?DesktopUpdateInstaller.InstalledTarget(OS.GetExecutablePath()):MacUpdateInstaller.BundleForExecutable(OS.GetExecutablePath());
             if(_bundle==null)return;
             _historyDirectory=Path.Combine(OS.GetUserDataDir(),"updates");Directory.CreateDirectory(_historyDirectory);
@@ -47,9 +51,12 @@ public partial class GameUpdater : Node
             string history=Path.Combine(_historyDirectory,"last-update.txt");
             if(File.Exists(history))
             {
-                var parts=File.ReadAllText(history).Trim().Split(' ');
-                if(parts.Length>=2&&parts[0]=="failed"){_failedVersion=parts[1];Status=$"The previous app was restored after v{_failedVersion} could not be installed.";}
+                string result=File.ReadAllText(history).Trim();
+                string? failed=DesktopUpdateHistory.QuarantinedVersion(result,legacyMac:!_desktop);
+                if(failed is not null){_failedVersion=failed;Status=$"The previous app was restored after v{_failedVersion} could not start safely.";}
+                else if(result.StartsWith("retry ",StringComparison.Ordinal))Status="The previous game was restored. The update can be retried.";
             }
+            if(_recovery)Status="The previous game is running from its recovery copy. Install the latest release to restore the normal location.";
             _initialized=true;
         }
         catch(Exception error){Status="Updates unavailable: "+error.Message;}
@@ -59,15 +66,16 @@ public partial class GameUpdater : Node
         _uptime+=delta;
         if(_healthPath!=null&&_initialized&&_uptime>=3&&Engine.GetFramesDrawn()>2)
         {
+            var backend=RendererBackend.Observe();
             File.WriteAllText(Path.Combine(Path.GetDirectoryName(_healthPath)!,"health.json"),System.Text.Json.JsonSerializer.Serialize(new {
-                version=Version,platform=OS.GetName(),driver=RenderingServer.GetCurrentRenderingDriverName(),
-                method=RenderingServer.GetCurrentRenderingMethod(),adapter=RenderingServer.GetVideoAdapterName(),
+                version=Version,platform=OS.GetName(),driver=backend.Driver,requestedDriver=backend.RequestedDriver,fallbackReason=backend.FallbackReason,
+                method=RenderingServer.GetCurrentRenderingMethod(),rendererState=RendererBackend.State,adapter=RenderingServer.GetVideoAdapterName(),
                 graphics=GetParent() is BlastCircuit.App.GameRoot root?root.AppliedGraphicsPreset:"unknown",
                 window=GetWindow().Mode.ToString().ToLowerInvariant()}));
             File.WriteAllText(_healthPath,Version);_healthPath=null;
             GD.Print("BLAST_UPDATE_HEALTHY "+Version);
         }
-        if(_initialized&&automatic&&idle&&!_checked&&_uptime>=5&&!_busy&&!UpdateReady)
+        if(_initialized&&!_recovery&&automatic&&idle&&!_checked&&_uptime>=5&&!_busy&&!UpdateReady)
         {_checked=true;_ = Check();}
     }
     public async Task Check()
@@ -96,7 +104,13 @@ public partial class GameUpdater : Node
         try
         {
             bool windowed=OS.GetCmdlineUserArgs().Contains("--display-windowed");
-            if(_desktop)await DesktopUpdateInstaller.Schedule(ready,(int)OS.GetProcessId(),_stop.Token,windowed);
+            if(_desktop)
+            {
+                int pid=(int)OS.GetProcessId();
+                if(OperatingSystem.IsWindows()&&_bundle is not null)
+                    pid=WindowsLaunchGuard.VerifiedLauncherPid(OS.GetCmdlineUserArgs(),Path.Combine(_bundle,"BlastCircuit.exe"))??pid;
+                await DesktopUpdateInstaller.Schedule(ready,pid,_stop.Token,windowed);
+            }
             else await MacUpdateInstaller.Schedule(ready,(int)OS.GetProcessId(),_stop.Token,windowed);
             _installing=true;return true;
         }

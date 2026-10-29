@@ -80,10 +80,11 @@ public partial class PlaytestDriver : Node
         }
         finally
         {
+            var backend=RendererBackend.Observe();
             var summary=new { schemaVersion=1,catalogSha256=_catalogHash,completedScenarios=_completedScenarios,scenario=_scenario,passed=failure==null,frames=_frame,seconds=_clock.Elapsed.TotalSeconds,
                 assertions=_checks.Count,checks=_checks,frameStallMs=_frameStallMs,screenshots=_screenshots,captureFallbacks=_captureFallbacks,screenshotMode=_headless?"disabled-headless":"graphical",
                 failure=failure?.ToString(),screen=_root.ScreenName,snapshots=_root.SnapshotCount,finalState=_root.LatestState,
-                platform=OS.GetName(),renderingDriver=RenderingServer.GetCurrentRenderingDriverName(),
+                platform=OS.GetName(),renderingDriver=backend.Driver,requestedDriver=backend.RequestedDriver,fallbackReason=backend.FallbackReason,
                 renderingMethod=RenderingServer.GetCurrentRenderingMethod(),adapter=RenderingServer.GetVideoAdapterName(),
                 adapterType=RenderingServer.GetVideoAdapterType().ToString(),
                 displayRestartRequested=_displayRestartRequested,displayRestoration=args.Contains("--playtest-restore-display"),

@@ -71,11 +71,11 @@ class DesktopValidationTests(unittest.TestCase):
                   'scenario': 'all', 'catalogSha256': validation.catalog_digest(),
                   'completedScenarios': validation.expanded('all', validation.catalog()),
                   'assertions': 200, 'checks': [{'passed': True}] * 200, 'runtimeErrors': [], 'screenshotMode': 'graphical',
-                  'renderingDriver': 'd3d12', 'renderingMethod': 'forward_plus',
+                  'renderingDriver': 'vulkan', 'renderingMethod': 'forward_plus',
                   'adapter': 'Target GPU', 'screenshots': ['capture.png']}
         add_display_restart(report)
         validation.inspect_report(report, 'all', settings, SHA, RELEASE, True)
-        for field, value in (('renderingDriver', 'vulkan'), ('adapter', ''), ('screenshots', [])):
+        for field, value in (('renderingDriver', 'opengl3'), ('adapter', ''), ('screenshots', [])):
             with self.subTest(field=field), self.assertRaises(RuntimeError):
                 validation.inspect_report(dict(report, **{field: value}), 'all', settings, SHA, RELEASE, True)
 

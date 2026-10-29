@@ -23,6 +23,7 @@ Source: "{#GameDirectory}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubd
 
 [Icons]
 Name: "{group}\Blast Circuit"; Filename: "{app}\BlastCircuit.exe"; WorkingDir: "{app}"
+Name: "{group}\Blast Circuit (DirectX 12)"; Filename: "{app}\BlastCircuit.exe"; Parameters: "--rendering-driver d3d12"; WorkingDir: "{app}"
 
 [Run]
 Filename: "{app}\BlastCircuit.exe"; Description: "Play Blast Circuit"; Flags: nowait postinstall skipifsilent
