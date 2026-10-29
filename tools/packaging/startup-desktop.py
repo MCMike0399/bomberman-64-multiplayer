@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import platform
 import re
+import signal
 import subprocess
 import sys
 import tempfile
@@ -15,6 +16,23 @@ import time
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools/ci'))
 import desktop_packages as desktop
+
+
+def run_startup(command, cwd, environment, log, timeout=240):
+    process = subprocess.Popen(command, cwd=cwd, env=environment, stdout=log,
+                               stderr=subprocess.STDOUT, start_new_session=os.name == 'posix')
+    try:
+        return subprocess.CompletedProcess(command, process.wait(timeout=timeout))
+    finally:
+        if process.poll() is None:
+            # AppImage extraction has a launcher and a game child. Stop this
+            # owned tree before the caller destroys its X11/audio resources.
+            if os.name == 'posix':
+                try: os.killpg(process.pid, signal.SIGKILL)
+                except ProcessLookupError: pass
+            else:
+                subprocess.run(['taskkill', '/PID', str(process.pid), '/T', '/F'], capture_output=True, timeout=15)
+            process.wait(timeout=10)
 
 
 def main():
@@ -53,7 +71,7 @@ def main():
             if args.target == 'linux-x64': environment['APPIMAGE_EXTRACT_AND_RUN'] = '1'
             started = time.monotonic()
             with (folder / 'runtime.log').open('w') as log:
-                result = subprocess.run(command, cwd=temporary, env=environment, stdout=log, stderr=subprocess.STDOUT, timeout=240)
+                result = run_startup(command, temporary, environment, log)
             text = (folder / 'runtime.log').read_text(errors='replace')
             smoke = re.findall(r'^GODOT_SMOKE_OK (\S+) snapshots=(\d+) graphics=(\S+) window=(\S+) size=(\d+)x(\d+) adapter=(.+)$', text, re.MULTILINE)
             if (result.returncode != 0 or len(smoke) != 1 or re.search(r'(^|\s)(ERROR:|SCRIPT ERROR:|Unhandled exception|FATAL:)', text) or

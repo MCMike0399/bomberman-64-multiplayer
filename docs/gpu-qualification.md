@@ -50,3 +50,36 @@ automatic recurring spend or an impossible free-software2x gate mislabeled green
 Final promotion still requires then-current main integration, an unused release
 identity, trusted exact-byte/latest-stable gates and protected publication/fleet
 verification. Old-byte diagnostic receipts are not final-source qualification.
+
+## Diagnostic T4 results — 2026-10-29 UTC
+
+Run `40810215205`, runner `2ce8c8276425750366c321dae8b3db761c92bfba`,
+tested the frozen diagnostic batch above. Both actual hardware devices passed
+the original 2× known-depth and attachment-clear controls. Linux used NVIDIA
+595.112.07/Vulkan; Windows used 596.86/WDDM/D3D12 in interactive session 1.
+This closes the unsupported free Linux runner's depth investigation; it does
+not establish equal output across APIs or all physical drivers.
+
+Linux's installed AppImage passed both fresh High processes (15 assertions each,
+no runtime errors or warnings), exact same-draw/target/process comparisons,
+DOF/mirror controls and shipped replay. The campaign then timed out at the
+first saved startup. A separate saved-startup attempt passed the four Low/Medium
+menu cases and stalled at High fullscreen. Focused Low windowed/extraction and
+fullscreen/FUSE/extraction controls passed, so neither fullscreen nor extraction
+alone explains the failure. The original failed receipt remains failed.
+
+Windows's installed EXE passed both fresh High processes (15 assertions each,
+no runtime errors or warnings), same-draw equality and DOF/mirror controls.
+Fresh targets differed at 11 and 13 pixels; fresh processes differed at 9 pixels,
+all by at most one channel value. Their measured resource inventories were
+identical. Exact repeatability therefore remains failed on hardware, separately
+from the existing cross-platform mesh-input differences. A saved Low fullscreen
+startup printed its successful capture marker but did not exit within 240 seconds.
+Later update and complete-native phases were not reached.
+
+Startup timeout cleanup now kills the owned launcher/game process tree before
+destroying its desktop. A retained real-process regression demonstrated the
+previous surviving descendant and passes with the correction. This prevents
+secondary X11 teardown errors from obscuring the original failure; it does not
+fix or waive a native startup/exit hang. The two failed hardware job verdicts,
+whole-image differences and raw native evidence remain mandatory diagnostics.
