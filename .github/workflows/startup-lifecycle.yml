@@ -64,6 +64,12 @@ jobs:
           TARGET: ${{ matrix.target }}
         shell: bash
         run: python tools/packaging/package-download.py --target "$TARGET"
+      - name: Prove installed Windows first-frame crash recovery and remembered renderer
+        if: runner.os == 'Windows'
+        env:
+          PAYLOAD: ${{ vars.BLAST_STARTUP_PAYLOAD_SHA }}
+        shell: bash
+        run: python tools/ci/startup_guard.py --expected-revision "$PAYLOAD" --output artifacts/windows-startup-guard
       - name: Install the pinned SDK for the native queue regression
         run: python tools/ci/install_godot.py --destination artifacts/shutdown-sdk
       - name: Require the SDK low-priority queue red/green without a watchdog
@@ -106,6 +112,8 @@ jobs:
         with:
           name: startup-lifecycle-${{ matrix.target }}
           path: |
+            artifacts/Blast-Circuit-windows-x64-startup-guard.json
+            artifacts/windows-startup-guard/
             artifacts/startup-lifecycle-${{ matrix.target }}/startup-lifecycle.json
             artifacts/startup-lifecycle-${{ matrix.target }}/save-failure-control/
             artifacts/startup-lifecycle-${{ matrix.target }}/save-failure-control.log
