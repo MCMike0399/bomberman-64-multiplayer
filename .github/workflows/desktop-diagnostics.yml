@@ -251,8 +251,17 @@ jobs:
           path: artifacts
       - if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y squashfs-tools fuse3
+      - name: Reuse the exact input-verified candidate download
+        if: vars.BLAST_CANDIDATE_DOWNLOAD_RUN_ID != ''
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: mesh-tested-download-${{ matrix.target }}
+          run-id: ${{ vars.BLAST_CANDIDATE_DOWNLOAD_RUN_ID }}
+          github-token: ${{ github.token }}
+          path: artifacts
       - env:
           TARGET: ${{ matrix.target }}
+        if: vars.BLAST_CANDIDATE_DOWNLOAD_RUN_ID == ''
         shell: bash
         run: python tools/packaging/package-download.py --target "$TARGET"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

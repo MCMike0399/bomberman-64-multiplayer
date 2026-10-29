@@ -55,11 +55,19 @@ jobs:
       - if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y fuse3 squashfs-tools
       - name: Build the real player download from the frozen client archive
-        if: runner.os != 'macOS'
+        if: runner.os != 'macOS' && vars.BLAST_CANDIDATE_DOWNLOAD_RUN_ID == ''
         env:
           TARGET: ${{ matrix.target }}
         shell: bash
         run: python tools/packaging/package-download.py --target "$TARGET"
+      - name: Reuse the exact input-verified candidate download
+        if: runner.os != 'macOS' && vars.BLAST_CANDIDATE_DOWNLOAD_RUN_ID != ''
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: mesh-tested-download-${{ matrix.target }}
+          run-id: ${{ vars.BLAST_CANDIDATE_DOWNLOAD_RUN_ID }}
+          github-token: ${{ github.token }}
+          path: artifacts
       - name: Install and execute two fresh-process headless authority replays
         env:
           TARGET: ${{ matrix.target }}
