@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
+    <InvariantGlobalization Condition="'$(RuntimeIdentifier)' == 'linux-x64'">true</InvariantGlobalization>
     <AssemblyName>BlastUpdater</AssemblyName>
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>

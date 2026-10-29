@@ -97,7 +97,7 @@ Bomb and flame counters start at **0 upgrades**: two active bombs and base blast
 | Bomb / kick / pump | J or left click | N or Enter | A | A or B | Cross |
 | Hold carry / release throw | K or right click | M or Numpad 1 | LB or X | L or Y | L1 or Square |
 | Point the throw while carrying | Mouse / trackpad | — | Right stick | Right stick | Right stick |
-| Precision aim while carrying | L or Shift | Ctrl | RT | ZR | R2 |
+| Precision aim while carrying | L (Shift alias on Mac/Linux) | Ctrl | RT | ZR | R2 |
 | Remote detonation | I or R | Comma or Backspace | B | X | Circle |
 | Stop kicked bombs | O | Period or Numpad 3 | RB | R | R1 |
 | Game menu | Esc | Esc | Menu | + | Options |
@@ -134,7 +134,32 @@ Choose your download from the [GitHub release page](https://github.com/MCMike039
 
 **Settings → Game updates** checks for signed GitHub releases automatically. When an update is ready, leave your room and choose **Restart to update**. A failed launch restores the previous app. [Update details](docs/automatic-updates.md).
 
-Windows uses Direct3D 12, Linux uses Vulkan and Mac uses Metal. The Mac app opts into Game Mode for eligible fullscreen play; macOS controls activation. Mac signing remains ad-hoc, without notarization; Windows executables are not Authenticode signed. Release signatures authenticate the downloads. [Desktop requirements and verification](docs/desktop-clients.md) · [Mac packaging](docs/macos-app.md).
+Windows uses Vulkan with DirectX 12 startup recovery/fallback, Linux uses Vulkan and Mac uses Metal. Windows Settings offers Auto, Vulkan and DirectX 12 for the next launch; a DirectX 12 Start-menu shortcut is also available. The Mac app opts into Game Mode for eligible fullscreen play; macOS controls activation. Mac signing remains ad-hoc, without notarization; Windows executables are not Authenticode signed. Release signatures authenticate the downloads. [Desktop requirements and verification](docs/desktop-clients.md) · [Mac packaging](docs/macos-app.md).
+
+### Linux launch help
+
+After downloading, allow execution in your file manager (Properties → Executable as program), or run:
+
+```sh
+chmod +x Blast-Circuit-linux-x64.AppImage
+./Blast-Circuit-linux-x64.AppImage
+```
+
+If launching from the file manager produces no window, run it in a terminal to see the runtime message. If FUSE is unavailable, use the built-in extraction path:
+
+```sh
+./Blast-Circuit-linux-x64.AppImage --appimage-extract-and-run
+```
+
+Install the FUSE package appropriate to your distribution/runtime if you prefer mounting. Keep the AppImage in a folder you own so signed updates can replace it. The Linux client and updater use invariant .NET globalization and do not require a system ICU installation; ordinary native OS/GPU dependencies still apply.
+
+### Windows network permission
+
+Windows may ask to allow Blast Circuit through the firewall for direct peer connections. Allow only networks you trust; server relay remains available when direct connections are blocked. A standard user may need an administrator to change firewall rules.
+
+If an earlier denial blocks direct connections, open Windows Defender Firewall with Advanced Security → Inbound Rules. Find the **Block** rules for your Blast Circuit installation and ask an administrator to remove those specific rules, then retry and allow trusted networks. Do not disable the firewall or remove unrelated rules.
+
+Switch 2 Pro over USB uses the bundled macOS adapter and is supported on macOS only. Windows/Linux still support other mapped gamepads. Windows uses **L** for keyboard precision aim so normal play does not require the five-Shift accessibility shortcut.
 
 ## Build from source
 

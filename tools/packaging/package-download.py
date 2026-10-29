@@ -90,7 +90,7 @@ def main():
             shutil.move(str(temporary / item['root']), payload)
             (appdir / 'AppRun').write_text('#!/bin/sh\nset -eu\nAPP_ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)\nexec "$APP_ROOT/usr/lib/blast-circuit/BlastCircuit.x86_64" "$@"\n')
             (appdir / 'AppRun').chmod(0o755)
-            (appdir / 'blast-circuit.desktop').write_text('[Desktop Entry]\nType=Application\nName=Blast Circuit\nExec=BlastCircuit\nIcon=blast-circuit\nCategories=Game;ArcadeGame;\nTerminal=false\n')
+            (appdir / 'blast-circuit.desktop').write_text('[Desktop Entry]\nType=Application\nName=Blast Circuit\nExec=BlastCircuit\nIcon=blast-circuit\nCategories=Game;ArcadeGame;\nStartupWMClass=Blast Circuit\nTerminal=false\n')
             shutil.copy2(ROOT / 'icon.svg', appdir / 'blast-circuit.svg')
             runtime_notices = appdir / 'usr/share/doc/blast-circuit'
             runtime_notices.mkdir(parents=True)

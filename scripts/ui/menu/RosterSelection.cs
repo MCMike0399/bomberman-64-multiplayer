@@ -28,7 +28,7 @@ public partial class RosterSelection : VBoxContainer
         :Roster.Binding(slot,ControllerHub.Current.PlayableCount);
     public override void _Ready()
     {
-        _nativePopups=OS.GetName()=="Linux"&&DisplayServer.GetName()=="X11";
+        _nativePopups=OS.GetName()=="Linux";
         AddThemeConstantOverride("separation",10);
         var header=ArcadeTheme.Row(this,20);ArcadeTheme.Heading(header,"Player Select",40).SizeFlagsHorizontal=SizeFlags.ExpandFill;
         ArcadeTheme.Quiet(ArcadeTheme.Button(header,"Back",()=>BackRequested?.Invoke())).Name="RosterBack";
@@ -46,7 +46,7 @@ public partial class RosterSelection : VBoxContainer
             // Opening after pointer/gamepad navigation must still establish a usable item focus.
             var popup=role.GetPopup();
             // The 4.7.2 Linux release template leaves embedded-popup parent
-            // subscriptions behind on close. A native X11 window keeps the
+            // subscriptions behind on close. A native Linux window keeps the
             // same Godot-painted menu without that broken subscription path.
             if(_nativePopups)
             {
