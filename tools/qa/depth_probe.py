@@ -65,6 +65,8 @@ def run(godot, output, driver):
             if process.returncode or re.search(r'(^|\n)(ERROR:|SCRIPT ERROR:|FATAL:)', raw):
                 raise RuntimeError('Depth probe did not complete cleanly: ' + label)
             evidence = inspect(case)
+            if evidence['metadata']['driver'] != driver:
+                raise RuntimeError('Depth diagnostic fell back to a different rendering driver')
             if evidence['metadata']['rawSamples'] != (0 if '--no-msaa' in args else 2 if '--msaa-4x' in args else 1):
                 raise ValueError('Depth probe used an unexpected sample count')
             if '--stage-history' in args:
@@ -84,6 +86,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--godot', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
-    parser.add_argument('--driver', choices=('metal', 'vulkan'), required=True)
+    parser.add_argument('--driver', choices=('metal', 'vulkan', 'd3d12'), required=True)
     options = parser.parse_args()
     raise SystemExit(run(options.godot.resolve(), options.output.resolve(), options.driver))

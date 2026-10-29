@@ -77,3 +77,10 @@ class VulkanSampleSupportTests(unittest.TestCase):
     def test_ambiguous_or_truncated_capabilities_fail(self):
         for text in ['', self.inventory() + self.inventory(), self.inventory().replace('count = 2','count = 3',1)]:
             with self.assertRaises(ValueError): visual_parity.vulkan_msaa_support(text)
+
+
+class HardwareAdapterTests(unittest.TestCase):
+    def test_initialized_adapter_must_be_the_requested_hardware(self):
+        self.assertTrue(visual_parity.hardware_adapter_matches({'adapter':'NVIDIA T4','deviceType':'DiscreteGpu'},'NVIDIA'))
+        for adapter,kind in [('Microsoft Basic Render Driver','IntegratedGpu'),('NVIDIA WARP','IntegratedGpu'),('NVIDIA shim','Cpu'),('llvmpipe','Cpu'),('AMD device','DiscreteGpu')]:
+            self.assertFalse(visual_parity.hardware_adapter_matches({'adapter':adapter,'deviceType':kind},'NVIDIA'))

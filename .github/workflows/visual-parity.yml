@@ -94,6 +94,7 @@ jobs:
             artifacts/visual-parity-${{ matrix.target }}/run-*/*.json
             artifacts/visual-parity-${{ matrix.target }}/run-*/*.png
             artifacts/visual-parity-${{ matrix.target }}/run-*/*.bin
+            artifacts/visual-parity-${{ matrix.target }}/run-*/*.jsonl.gz
             artifacts/visual-parity-${{ matrix.target }}/run-*/*.log
             artifacts/visual-parity-${{ matrix.target }}/run-*/*/report.json
             artifacts/visual-parity-${{ matrix.target }}/fresh-process/report.json

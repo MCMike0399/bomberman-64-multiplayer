@@ -235,3 +235,44 @@ input drift to the Bomber's two procedural builders. It preserves raw UV,
 position and tangent differences and four additional Windows fields. It proposes
 observation before upload and after native packing; no geometry baking, rounding
 or shipped-art change is adopted by that research packet.
+
+## Observing the actual procedural builders
+
+The fixture now records fresh calls to only`CreateHelmet` and
+`CreateCurvedFacePatch` after its image captures finish. An optional owner-thread
+observer is disabled in normal play. It records the actual evaluated float32 bits
+for helmet points/normals/Atan2/quotient/UVs, patch Outline intermediates and points,
+and every ordered vertex submitted to SurfaceTool. It retains Variant arrays
+before/after normal generation and indexing, plus final committed surface bytes.
+No later recomputation is presented as an original operand.
+
+Six fresh diagnostic meshes must match the corresponding cached captured mesh
+byte-for-byte. This distinguishes real regeneration from reuse of static caches.
+`mesh-inputs.jsonl.gz` contains110410 ordered observations;`mesh-inputs.bin` retains22
+binary stages with offsets/lengths/hashes. The summary binds complete files and
+six cached/generated hashes. Header provenance binds source, engine, loaded entry
+MVID/hash, renderer, device and runtime. It is input evidence, not a hidden physics
+state or graphics qualification certificate.
+
+The source M5 trial completes15 assertions with zero errors/warnings. Its complete
+11MB captured input blob and baseline PNG are **exactly identical** to the retained
+original3da M5 package. Two fresh source processes also have exactly equal managed
+observations and all binary stages. These are measured source receipts; they do
+not qualify new exported packages or erase older inter-platform differences.
+
+[The trace validator/comparer](../tools/ci/mesh_inputs.py) enforces complete call
+counts/stages per builder, ordered six-mesh boundaries, contiguous binary segments,
+file/segment hashes, completion and actual generated/cached equality. Seven
+negative/control tests cover raw-float differences, missing calls despite a new
+footer/hash, segment corruption, truncation, false cached-equality flags and
+incompatible source identity. Packed bytes remain opaque bytes when locating a
+stage difference; normal/tangent words are not guessed to be floats.
+
+The separate`mesh-inputs.yml` jobs use the real installed candidate packages and
+explicit`--inputs-only` collection. Their report mode is`mesh-inputs-diagnostic`,
+`graphicsQualified` stays false, no acceptance PNG manifests are emitted, and no
+feature/pixel repeat gate is claimed. Linux capabilities remain recorded, including
+unsupported2x. This diagnostic can locate CPU/native mesh packing without falsely
+passing the original High gate. The ordinary High collector still rejects unsupported
+2x before qualification. Both comparison reports preserve the first actual managed
+observation difference and every differing binary stage; no rounding or fitting.

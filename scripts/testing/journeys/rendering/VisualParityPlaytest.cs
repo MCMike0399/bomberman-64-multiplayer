@@ -51,6 +51,8 @@ public partial class PlaytestDriver
             deviceType=RenderingServer.GetVideoAdapterType().ToString(),engine=Engine.GetVersionInfo()["string"].AsString(),records
         },new JsonSerializerOptions{WriteIndented=true}));
 
+        CaptureMeshInputs();
+
         async Task Trial(string label)
         {
             var viewport=new SubViewport{Name="FullHighFixture",Size=new(1280,800),OwnWorld3D=true,TransparentBg=false,
@@ -97,7 +99,7 @@ public partial class PlaytestDriver
                 var attributes=(CameraAttributesPractical)camera.Attributes;
                 var environment=AuditDescendants(arena).OfType<WorldEnvironment>().Single().Environment;
                 Check(viewport.Msaa3D==Viewport.Msaa.Msaa2X&&GraphicsQuality.Current==GraphicsPreset.High&&environment.SsilEnabled&&
-                    attributes.DofBlurFarEnabled&&attributes.DofBlurNearEnabled,"fresh fixture retains production High, 2xMSAA, SSIL and near/far DOF: "+label);
+                    attributes.DofBlurFarEnabled&&attributes.DofBlurNearEnabled,"fresh fixture requests High, 2xMSAA, SSIL and near/far DOF: "+label);
                 if(label=="dof-off")attributes.DofBlurNearEnabled=attributes.DofBlurFarEnabled=false;
                 if(label=="reflection-off")foreach(var shader in shaders.Keys)
                     if(shader.Code.Contains("#define SCENE_REFLECTIONS",StringComparison.Ordinal))shader.Code=shader.Code.Replace("#define SCENE_REFLECTIONS","",StringComparison.Ordinal);

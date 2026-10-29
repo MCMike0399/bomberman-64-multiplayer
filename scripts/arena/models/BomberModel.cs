@@ -7,6 +7,13 @@ namespace BlastCircuit.Arena.Models;
 /// <summary>Articulated original mesh character, animated from authoritative movement and action state.</summary>
 public partial class BomberModel : Node3D
 {
+    // Optional owner-thread observation; normal play does not allocate trace data.
+    internal static Action<string,object>? MeshBuildObservation;
+    private static string MeshBits(float value)=>BitConverter.SingleToInt32Bits(value).ToString("x8",System.Globalization.CultureInfo.InvariantCulture);
+    private static string[] MeshBits(Vector2 value)=>[MeshBits(value.X),MeshBits(value.Y)];
+    private static string[] MeshBits(Vector3 value)=>[MeshBits(value.X),MeshBits(value.Y),MeshBits(value.Z)];
+    private static void ObserveSurface(string stage,SurfaceTool surface)=>MeshBuildObservation?.Invoke(stage,GD.VarToBytes(surface.CommitToArrays()));
+
     private readonly Node3D _body=new(),_leftArm=new(),_rightArm=new(),_leftLeg=new(),_rightLeg=new();
     private readonly Node3D _upperBody=new(),_upperParts=new();
     private Node3D _stars=new();
@@ -177,6 +184,7 @@ public partial class BomberModel : Node3D
         // A distinct faceplate with moderate cheek curvature. Its rounded return
         // bridges back into the helmet, preserving the original front outline.
         const int rings=12,segments=64;
+        MeshBuildObservation?.Invoke("patch/parameters",new{width=MeshBits(width),height=MeshBits(height),centerX=MeshBits(centerX),centerY=MeshBits(centerY),offset=MeshBits(offset),roundness=MeshBits(roundness),seatToShell});
         var surface=new SurfaceTool();surface.Begin(Mesh.PrimitiveType.Triangles);
         Vector2 Outline(float phi)
         {
@@ -184,26 +192,34 @@ public partial class BomberModel : Node3D
             var radial=new Vector2(Mathf.Cos(phi),Mathf.Sin(phi));
             var square=radial/Mathf.Max(Mathf.Abs(radial.X),Mathf.Abs(radial.Y))*.5f;
             var inner=square.Clamp(Vector2.One*-flat,Vector2.One*flat);
-            return (inner+(square-inner).Normalized()*corner)*2;
+            var normalized=(square-inner).Normalized();var result=(inner+normalized*corner)*2;
+            MeshBuildObservation?.Invoke("patch/outline",new{phi=MeshBits(phi),corner=MeshBits(corner),flat=MeshBits(flat),radial=MeshBits(radial),square=MeshBits(square),inner=MeshBits(inner),normalized=MeshBits(normalized),result=MeshBits(result)});
+            return result;
         }
         Vector3 Point(float radius,int segment,float depth,float shellBlend=0)
         {
-            var outline=Outline(Mathf.Tau*segment/segments);
+            float phi=Mathf.Tau*segment/segments;var outline=Outline(phi);
             float x=width*.5f*radius*outline.X,y=height*.5f*radius*outline.Y;
             float hemisphere=FaceHemisphereZ(centerX+x,centerY+y);
             // Lift the perimeter slightly while following the continuous spherical front.
             float faceRadiusSquared=Mathf.Pow((centerX+x)/.317f,2)+Mathf.Pow((centerY+y-FaceCenterY)/.227f,2);
             float front=hemisphere+depth+.03f*faceRadiusSquared;
             float rear=seatToShell?hemisphere-.005f:front;
-            return new(x,y,Mathf.Lerp(front,rear,shellBlend));
+            var result=new Vector3(x,y,Mathf.Lerp(front,rear,shellBlend));
+            MeshBuildObservation?.Invoke("patch/point",new{radius=MeshBits(radius),segment,depth=MeshBits(depth),shellBlend=MeshBits(shellBlend),phi=MeshBits(phi),outline=MeshBits(outline),hemisphere=MeshBits(hemisphere),faceRadiusSquared=MeshBits(faceRadiusSquared),front=MeshBits(front),rear=MeshBits(rear),result=MeshBits(result)});
+            return result;
+        }
+        void Vertex(Vector3 value)
+        {
+            MeshBuildObservation?.Invoke("patch/vertex",new{position=MeshBits(value)});surface.AddVertex(value);
         }
         void Triangle(Vector3 a,Vector3 b,Vector3 c,bool front)
         {
             var normal=(b-a).Cross(c-a);
             // Godot uses clockwise front faces. Caps are oriented by the hemisphere;
             // the lip is ordered explicitly around its outward perimeter.
-            if(front&&normal.Z>0||!front&&normal.Z<0){surface.AddVertex(a);surface.AddVertex(c);surface.AddVertex(b);}
-            else {surface.AddVertex(a);surface.AddVertex(b);surface.AddVertex(c);}
+            if(front&&normal.Z>0||!front&&normal.Z<0){Vertex(a);Vertex(c);Vertex(b);}
+            else {Vertex(a);Vertex(b);Vertex(c);}
         }
         void Cap(float maxRadius,float depth,bool front,float shellBlend=0)
         {
@@ -222,18 +238,21 @@ public partial class BomberModel : Node3D
             var a=Point(profiles[ring].Radius,segment,profiles[ring].Depth,profiles[ring].ShellBlend);var b=Point(profiles[ring+1].Radius,segment,profiles[ring+1].Depth,profiles[ring+1].ShellBlend);
             var c=Point(profiles[ring+1].Radius,segment+1,profiles[ring+1].Depth,profiles[ring+1].ShellBlend);var d=Point(profiles[ring].Radius,segment+1,profiles[ring].Depth,profiles[ring].ShellBlend);
             // Clockwise outward orientation around the closed return.
-            surface.AddVertex(a);surface.AddVertex(c);surface.AddVertex(b);
-            surface.AddVertex(a);surface.AddVertex(d);surface.AddVertex(c);
+            Vertex(a);Vertex(c);Vertex(b);
+            Vertex(a);Vertex(d);Vertex(c);
         }
         Cap(.985f,offset-.012f,false,1);
         // Generate the authored normals before deduplicating complete vertices.
-        surface.GenerateNormals();surface.Index();return surface.Commit();
+        ObserveSurface("patch/pre-normal",surface);surface.GenerateNormals();ObserveSurface("patch/post-normal",surface);
+        surface.Index();ObserveSurface("patch/indexed",surface);var mesh=surface.Commit();
+        MeshBuildObservation?.Invoke("patch/packed",GD.VarToBytes(mesh.Get("_surfaces")));return mesh;
     }
     private static ArrayMesh CreateHelmet(bool extendedBack=true)
     {
         // An uninterrupted near-sphere makes every head angle softly round.
         // Its slight forward center balances the face without a heavy rear cranium.
         const int rings=24,segments=40;
+        MeshBuildObservation?.Invoke("helmet/parameters",new{extendedBack});
         // The torso keeps its established pear proportions; only the helmet is retuned.
         float halfHeight=extendedBack?HelmetHalfHeight:.395f,taper=extendedBack?0:.075f;
         var surface=new SurfaceTool();surface.Begin(Mesh.PrimitiveType.Triangles);
@@ -242,13 +261,16 @@ public partial class BomberModel : Node3D
             float theta=Mathf.Pi*ring/rings,phi=Mathf.Tau*segment/segments;
             float y=Mathf.Cos(theta),radius=Mathf.Sin(theta)*(1+taper*y);
             float z=(extendedBack?HelmetForward:0)+(extendedBack?HelmetDepth:.365f)*radius*Mathf.Sin(phi);
-            return new(.427f*radius*Mathf.Cos(phi),halfHeight*y,z);
+            var result=new Vector3(.427f*radius*Mathf.Cos(phi),halfHeight*y,z);
+            MeshBuildObservation?.Invoke("helmet/point",new{ring,segment,theta=MeshBits(theta),phi=MeshBits(phi),y=MeshBits(y),radius=MeshBits(radius),result=MeshBits(result)});
+            return result;
         }
         void Vertex(Vector3 p)
         {
             float normalZ=extendedBack?(p.Z-HelmetForward)/(HelmetDepth*HelmetDepth):p.Z/(.365f*.365f);
-            surface.SetNormal(new Vector3(p.X/(.427f*.427f),p.Y/(halfHeight*halfHeight)-2*taper,normalZ).Normalized());
-            surface.SetUV(new(.5f+Mathf.Atan2(p.Z,p.X)/Mathf.Tau,.5f-p.Y/(halfHeight*2)));
+            var normal=new Vector3(p.X/(.427f*.427f),p.Y/(halfHeight*halfHeight)-2*taper,normalZ).Normalized();surface.SetNormal(normal);
+            float angle=Mathf.Atan2(p.Z,p.X),quotient=angle/Mathf.Tau;var uv=new Vector2(.5f+quotient,.5f-p.Y/(halfHeight*2));surface.SetUV(uv);
+            MeshBuildObservation?.Invoke("helmet/vertex",new{position=MeshBits(p),normal=MeshBits(normal),angle=MeshBits(angle),quotient=MeshBits(quotient),uv=MeshBits(uv)});
             surface.AddVertex(p);
         }
         void Triangle(Vector3 a,Vector3 b,Vector3 c)
@@ -263,7 +285,8 @@ public partial class BomberModel : Node3D
             if(ring<rings-1)Triangle(a,b,c);
             if(ring>0)Triangle(a,c,d);
         }
-        surface.Index();return surface.Commit();
+        ObserveSurface("helmet/pre-index",surface);surface.Index();ObserveSurface("helmet/indexed",surface);var mesh=surface.Commit();
+        MeshBuildObservation?.Invoke("helmet/packed",GD.VarToBytes(mesh.Get("_surfaces")));return mesh;
     }
     public void Pose(bool carrying,bool stunned,bool ghost,bool liftingPlayer=false)
     {

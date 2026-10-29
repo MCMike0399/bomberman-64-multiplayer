@@ -16,6 +16,7 @@ import crossplay
 import crossplay_runtime
 import desktop_packages as desktop
 import download_formats
+import mesh_inputs
 
 ROOT = Path(__file__).resolve().parents[2]
 SPEC = importlib.util.spec_from_file_location('pixel_comparer', ROOT / 'tools/qa/compare_visual_parity.py')
@@ -32,6 +33,12 @@ def pair(left, right, output, controlled=True):
         reference_manifest=left.with_suffix('.manifest.json') if controlled else None,
         candidate_manifest=right.with_suffix('.manifest.json') if controlled else None,
         diagnostic_only=not controlled)
+
+
+def hardware_adapter_matches(device, expected):
+    name = device['adapter'].casefold()
+    return expected.casefold() in name and device['deviceType'] != 'Cpu' and not any(
+        software in name for software in ('llvmpipe', 'lavapipe', 'swiftshader', 'basic render', 'warp'))
 
 
 def vulkan_msaa_support(text, requested=2):
@@ -79,13 +86,13 @@ def compare_captures(case, label, report):
         if not valid: report['errors'].append(f'{label}: Original High effect control failed: {name}')
 
 
-def run(target, directory, output, expected):
+def run(target, directory, output, expected, inputs_only=False, expected_adapter=None):
     if os.environ.get('GITHUB_ACTIONS') != 'true' or platform.system() != crossplay_runtime.SYSTEMS[target][0]:
         raise RuntimeError('Visual installer qualification requires its disposable native CI OS')
     output.mkdir(parents=True, exist_ok=False)
     data = crossplay_runtime.metadata(directory, target)
     if data['revision'] != expected: raise RuntimeError('Visual payload differs from requested source')
-    report = {'schemaVersion': 1, 'mode': 'diagnostic-only', 'passed': False, 'target': target, 'revision': expected,
+    report = {'schemaVersion': 1, 'graphicsQualified': False, 'mode': 'mesh-inputs-diagnostic' if inputs_only else 'diagnostic-only', 'passed': False, 'target': target, 'revision': expected,
               'release': data['release'], 'runs': [], 'comparisons': [], 'errors': []}
     executable = None
     try:
@@ -95,7 +102,7 @@ def run(target, directory, output, expected):
             (output / 'vulkaninfo-stderr.txt').write_text(capabilities.stderr)
             report['vulkanMsaaSupport'] = vulkan_msaa_support(capabilities.stdout)
             report['vulkaninfoSha256'] = desktop.digest(output / 'vulkaninfo.txt')
-            if not report['vulkanMsaaSupport']['supportsRequired']:
+            if not report['vulkanMsaaSupport']['supportsRequired'] and not inputs_only:
                 raise RuntimeError('Native Vulkan device does not support required 2xMSAA; original High cannot be qualified on this device')
         executable = crossplay_runtime.install(directory, target, output)
         inventory = authority_replay.assembly_inventory(directory, target)
@@ -112,11 +119,12 @@ def run(target, directory, output, expected):
         provenance_file = output / 'provenance.json'; provenance_file.write_text(json.dumps(provenance))
         report.update(archiveSha256=desktop.digest(archive), downloadSha256=desktop.digest(directory / download_formats.FILES[target]))
         os.environ.pop('APPIMAGE_EXTRACT_AND_RUN', None)
-        for index in range(2):
+        for index in range(1 if inputs_only else 2):
             case = output / f'run-{index}'
             command = [str(executable), '--rendering-driver', crossplay_runtime.SYSTEMS[target][2], '--windowed', '--max-fps', '30',
                        '--fixed-fps', '30', '--disable-vsync', '--', '--display-windowed', '--playtest=visual-parity',
-                       '--playtest-output=' + str(case), '--parity-provenance=' + str(provenance_file)]
+                       '--playtest-output=' + str(case)]
+            if not inputs_only: command += ['--parity-provenance=' + str(provenance_file)]
             process = crossplay.launch(command, case, cwd=case)
             try: code = process.wait(timeout=900)
             except subprocess.TimeoutExpired:
@@ -133,10 +141,19 @@ def run(target, directory, output, expected):
                 raise RuntimeError('Full High fixture failed native renderer/evidence checks')
             if summary.get('renderingDriver') != crossplay_runtime.SYSTEMS[target][2] or summary.get('renderingMethod') != 'forward_plus':
                 raise RuntimeError('Full High fixture used an unexpected renderer')
-            compare_captures(case, f'run-{index}', report)
-        repeated, code = pair(output / 'run-0/parity-base-a-0.png', output / 'run-1/parity-base-a-0.png', output / 'fresh-process')
-        report['comparisons'].append({'name': 'fresh-process', 'exitCode': code})
-        if code != 0: report['errors'].append('Controlled full High differs across fresh processes')
+            device = json.loads((case / 'visual-parity-observations.json').read_text())
+            report['runs'][-1]['device'] = {key: device[key] for key in ('driver', 'adapter', 'deviceType', 'engine')}
+            if expected_adapter and not hardware_adapter_matches(device, expected_adapter):
+                raise RuntimeError('Initialized renderer is not the explicitly selected hardware adapter')
+            observed = mesh_inputs.load(case)
+            if observed['header']['shared']['sourceIdentity'] != expected or observed['header']['provenance']['entryAssemblySha256'] not in inventory['Bomberman64Multiplayer.dll']:
+                raise RuntimeError('Mesh observations do not bind the archived executing module/source')
+            report['runs'][-1]['meshInputsValidated'] = True
+            if not inputs_only: compare_captures(case, f'run-{index}', report)
+        if not inputs_only:
+            repeated, code = pair(output / 'run-0/parity-base-a-0.png', output / 'run-1/parity-base-a-0.png', output / 'fresh-process')
+            report['comparisons'].append({'name': 'fresh-process', 'exitCode': code})
+            if code != 0: report['errors'].append('Controlled full High differs across fresh processes')
         report['passed'] = not report['errors']
     except (OSError, ValueError, RuntimeError, KeyError, TypeError, subprocess.SubprocessError) as error:
         report['errors'].append(str(error))
@@ -145,7 +162,7 @@ def run(target, directory, output, expected):
             try: subprocess.run([str(executable.parent / 'unins000.exe'), '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART'], check=True, timeout=120)
             except subprocess.SubprocessError as error:
                 report['passed'] = False; report['errors'].append('Owned uninstall failed: ' + str(error))
-        (output / 'visual-parity-native.json').write_text(json.dumps(report, indent=2) + '\n')
+        (output / ('mesh-inputs-native.json' if inputs_only else 'visual-parity-native.json')).write_text(json.dumps(report, indent=2) + '\n')
     print(json.dumps({'target': target, 'passed': report['passed'], 'errors': report['errors']}))
     return 0 if report['passed'] else 1
 
@@ -156,9 +173,11 @@ def main():
     parser.add_argument('--directory', type=Path, default=ROOT / 'artifacts')
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--expected-revision', required=True)
+    parser.add_argument('--inputs-only', action='store_true', help='Collect builder input diagnostics only; no High/feature/image qualification')
+    parser.add_argument('--expected-adapter', help='Require this initialized hardware adapter; reject software fallback')
     args = parser.parse_args()
     if not re.fullmatch('[0-9a-f]{40}', args.expected_revision): parser.error('Expected an exact source SHA')
-    return run(args.target, args.directory.resolve(), args.output.resolve(), args.expected_revision)
+    return run(args.target, args.directory.resolve(), args.output.resolve(), args.expected_revision, args.inputs_only, args.expected_adapter)
 
 
 if __name__ == '__main__': sys.exit(main())
