@@ -49,6 +49,11 @@ readies and pumps without reaching across to A. Both held state and sub-frame
 taps use the alias; B remains menu Back, X remains remote, and A still works.
 
 Space has no gameplay action. F11 or Alt+Enter toggles fullscreen and saves the selected mode.
+Windows keeps the same L/Shift precision-aim binding. Its launcher owns a
+focus-scoped accessibility shortcut guard: only HOTKEYACTIVE/CONFIRMHOTKEY
+are cleared, only when the corresponding feature is off, without profile
+writes. Focus loss and engine exit restore the saved flags. Already enabled
+Sticky/Filter/Toggle Keys and unrelated flags/timings are preserved.
 F3 toggles the device-local performance bar and saves the same choice as
 Settings → Performance metrics. Repeated key-down events do not toggle it again.
 Keep both held-state sampling and short-press detection consistent when changing

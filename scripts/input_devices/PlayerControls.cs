@@ -11,7 +11,7 @@ public static class PlayerControls
         if(seat==0)return new(Axis(Key.A,Key.D),Axis(Key.W,Key.S),
             Input.IsPhysicalKeyPressed(Key.J)||Input.IsMouseButtonPressed(MouseButton.Left),
             Input.IsPhysicalKeyPressed(Key.K)||Input.IsMouseButtonPressed(MouseButton.Right),
-            Down(Key.I,Key.R),Input.IsPhysicalKeyPressed(Key.L)||(OS.GetName()!="Windows"&&Input.IsPhysicalKeyPressed(Key.Shift)),Input.IsPhysicalKeyPressed(Key.O));
+            Down(Key.I,Key.R),Down(Key.L,Key.Shift),Input.IsPhysicalKeyPressed(Key.O));
         if(seat==1)return new(Axis(Key.Left,Key.Right),Axis(Key.Up,Key.Down),
             Down(Key.N,Key.Enter,Key.Kp0),Down(Key.M,Key.Kp1),Down(Key.Comma,Key.Backspace,Key.Kp2),Input.IsPhysicalKeyPressed(Key.Ctrl),Down(Key.Period,Key.Kp3));
         return default;

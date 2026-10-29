@@ -45,7 +45,16 @@ try
     Check(File.ReadAllLines(output)[4].StartsWith("vulkan ",StringComparison.Ordinal),"Healthy startup retains Vulkan on next launch");
     Check(await guard.RunAsync(engine,["--headless",..childArgs],deadline.Token)==23,"Headless child exit is preserved");
     Check(File.ReadAllLines(output)[5]=="vulkan marker=False","Headless execution does not create a graphical startup crash marker");
+    bool restored=false;
+    Check(await guard.RunAsync(engine,["--headless",..childArgs],deadline.Token,_=>new EngineScope(()=>restored=true))==23,"The owned engine may fail after creating its lifetime guard");
+    Check(restored,"Launcher-owned state is restored after an abnormal engine exit");
+    WindowsHotkeyChecks.Run(Check,args);
     Console.WriteLine($"PASS {checks} crash-safe renderer startup checks");
 }
 finally{Directory.Delete(root,true);}
 return 0;
+
+sealed class EngineScope(Action restore):IDisposable
+{
+    public void Dispose()=>restore();
+}

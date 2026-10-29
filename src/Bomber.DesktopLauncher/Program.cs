@@ -5,7 +5,7 @@ try
 {
     string folder=WindowsLaunchGuard.Argument(args,"--launcher-state-dir")??WindowsLaunchGuard.DefaultDirectory;
     string engine=Path.Combine(AppContext.BaseDirectory,"BlastCircuit.Player.exe");
-    return await new WindowsLaunchGuard(folder).RunAsync(engine,args,CancellationToken.None);
+    return await new WindowsLaunchGuard(folder).RunAsync(engine,args,CancellationToken.None,child=>WindowsAccessibilityHotkeys.Track(child.Id));
 }
 catch(Exception error)
 {

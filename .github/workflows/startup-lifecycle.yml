@@ -70,6 +70,9 @@ jobs:
           PAYLOAD: ${{ vars.BLAST_STARTUP_PAYLOAD_SHA }}
         shell: bash
         run: python tools/ci/startup_guard.py --expected-revision "$PAYLOAD" --output artifacts/windows-startup-guard
+      - name: Verify actual Windows accessibility values restore after focus loss and exit
+        if: always() && runner.os == 'Windows'
+        run: dotnet run --project tests/Bomber.Startup.Tests -- --hotkey-receipt=artifacts/windows-accessibility-hotkeys.json
       - name: Install the pinned SDK for the native queue regression
         run: python tools/ci/install_godot.py --destination artifacts/shutdown-sdk
       - name: Require the SDK low-priority queue red/green without a watchdog
@@ -112,6 +115,7 @@ jobs:
         with:
           name: startup-lifecycle-${{ matrix.target }}
           path: |
+            artifacts/windows-accessibility-hotkeys.json
             artifacts/Blast-Circuit-windows-x64-startup-guard.json
             artifacts/windows-startup-guard/
             artifacts/startup-lifecycle-${{ matrix.target }}/startup-lifecycle.json

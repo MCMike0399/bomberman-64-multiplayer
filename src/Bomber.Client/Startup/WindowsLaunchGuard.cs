@@ -33,7 +33,7 @@ public sealed class WindowsLaunchGuard(string stateDirectory)
         driver=="d3d12"&&(requested=="vulkan"&&reason is VulkanUnavailable or PreviousVulkanFailure||requested=="d3d12"&&reason=="directx12-explicit-choice");
     public static string? Argument(IEnumerable<string> args,string name)=>args.FirstOrDefault(a=>a.StartsWith(name+"=",StringComparison.Ordinal)) is {} value?value[(name.Length+1)..]:null;
 
-    public async Task<int> RunAsync(string engine,IReadOnlyList<string> arguments,CancellationToken ct)
+    public async Task<int> RunAsync(string engine,IReadOnlyList<string> arguments,CancellationToken ct,Func<Process,IDisposable>? engineLifetime=null)
     {
         engine=Path.GetFullPath(engine);if(!File.Exists(engine))throw new FileNotFoundException("The installed game is missing.",engine);
         Directory.CreateDirectory(_directory);
@@ -76,11 +76,12 @@ public sealed class WindowsLaunchGuard(string stateDirectory)
         if(reason is not null)start.ArgumentList.Add("--launcher-fallback-reason="+reason);
         if(guarded)foreach(string arg in new[]{"--launcher-marker="+markerPath,"--launcher-ready="+readyPath,"--launcher-token="+token})start.ArgumentList.Add(arg);
         using var child=Process.Start(start)??throw new IOException("Engine did not start.");
-        if(guarded)Atomic(markerPath,marker with{EnginePid=child.Id,EngineIdentity=DesktopProcessIdentity.StartToken(child)});
         Task output=child.StandardOutput.BaseStream.CopyToAsync(Console.OpenStandardOutput(),ct),error=child.StandardError.BaseStream.CopyToAsync(Console.OpenStandardError(),ct);
         bool healthy=false;
         try
         {
+            using var lifetime=engineLifetime?.Invoke(child);
+            if(guarded)Atomic(markerPath,marker with{EnginePid=child.Id,EngineIdentity=DesktopProcessIdentity.StartToken(child)});
             var exited=child.WaitForExitAsync(ct);
             while(!exited.IsCompleted)
             {

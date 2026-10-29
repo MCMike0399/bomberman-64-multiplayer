@@ -18,12 +18,13 @@ renderer displays a reduced-graphics notice and reports a distinct state;
 it cannot satisfy the full-quality graphics gates. Linux packages enable
 invariant globalization so startup does not require a system ICU installation.
 
-The v0.45 candidate currently uses L for keyboard P1 precision aim on Windows;
-Mac and Linux also accept Shift. This avoids the Windows Sticky Keys shortcut
-but is a known binding difference for the final sign-off pack. Authority rules
-and the precision-aim action are shared. Restoring Shift would need a separately
-verified focus-scoped accessibility-hotkey guard; changing Mac bindings needs
-the user's decision. Neither is silently included in the frozen candidate.
+Keyboard P1 precision aim accepts L or Shift on every OS. The Windows launcher
+temporarily clears only the shortcut/confirmation flags of disabled Sticky,
+Filter and Toggle Keys while the engine window is focused. Enabled features
+and unrelated settings are preserved. Focus loss and engine exit restore the
+saved flags, including an abnormal engine exit; the surviving launcher owns
+restoration. SystemParametersInfo calls use zero update flags and do not write
+the system profile. A Windows-native control records the before/after values.
 
 ## Downloads and signed updates
 

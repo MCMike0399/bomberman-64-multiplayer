@@ -97,7 +97,7 @@ Bomb and flame counters start at **0 upgrades**: two active bombs and base blast
 | Bomb / kick / pump | J or left click | N or Enter | A | A or B | Cross |
 | Hold carry / release throw | K or right click | M or Numpad 1 | LB or X | L or Y | L1 or Square |
 | Point the throw while carrying | Mouse / trackpad | — | Right stick | Right stick | Right stick |
-| Precision aim while carrying | L (Shift alias on Mac/Linux) | Ctrl | RT | ZR | R2 |
+| Precision aim while carrying | L / Shift | Ctrl | RT | ZR | R2 |
 | Remote detonation | I or R | Comma or Backspace | B | X | Circle |
 | Stop kicked bombs | O | Period or Numpad 3 | RB | R | R1 |
 | Game menu | Esc | Esc | Menu | + | Options |
@@ -159,7 +159,7 @@ Windows may ask to allow Blast Circuit through the firewall for direct peer conn
 
 If an earlier denial blocks direct connections, open Windows Defender Firewall with Advanced Security → Inbound Rules. Find the **Block** rules for your Blast Circuit installation and ask an administrator to remove those specific rules, then retry and allow trusted networks. Do not disable the firewall or remove unrelated rules.
 
-Switch 2 Pro over USB uses the bundled macOS adapter and is supported on macOS only. Windows/Linux still support other mapped gamepads. Windows uses **L** for keyboard precision aim so normal play does not require the five-Shift accessibility shortcut.
+Switch 2 Pro over USB uses the bundled macOS adapter and is supported on macOS only. Windows/Linux still support other mapped gamepads. **L or Shift** provides keyboard precision aim on every OS. Windows temporarily prevents accessibility shortcut popups while the game is focused and restores those shortcuts on focus loss or exit. Accessibility features that are already enabled remain enabled.
 
 ## Build from source
 

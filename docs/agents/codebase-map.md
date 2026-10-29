@@ -47,6 +47,7 @@ flowchart LR
 | --- | --- | --- |
 | `src/Bomber.Game` | Rules and authority (folders below): match hosts/options, online registration and rooms, tutorial course, simulation | Godot, transport, rendering |
 | `src/Bomber.Client` | Engine-facing sessions, peer transport, input policies, signed updates (folders below) | Godot types |
+| `src/Bomber.DesktopLauncher` | Windows pre-engine startup/recovery and focus-scoped accessibility shortcut lifetime | Authority rules or graphics presets |
 | `src/Bomber.Server` | Independent ASP.NET host registering the `blast` game | Game rules |
 | `src/Bomber.Cluster` | Optional pressure-aware placement plugin with `plugin.json` | Game rules |
 | `scripts/` | Screens, rendering, audio, devices, harness | Authority decisions |
