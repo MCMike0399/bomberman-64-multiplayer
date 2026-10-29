@@ -1,4 +1,33 @@
-# One-time native GPU qualification
+# Native GPU qualification
+
+## Current user acceptance and budget — 2026-10-29
+
+Render inputs must be bit-identical across OSs: meshes, textures, shaders,
+presets and controlled game state. Keep the strict decoded-pixel comparator and
+all raw residuals. Same-device repeats must be exact where the driver permits;
+otherwise characterize the residual. Cross-GPU differences must be no larger
+in kind or size than the measured hosted-Mac versus DiveMac reference on the
+same frozen scenes. Record the actual adapters and configurations; do not infer
+untested physical hardware from a runner label. The envelope comes from those
+measurements, never a chosen tolerance, alignment or mask. Feature negative
+controls must prove every effect present at unchanged production quality.
+The user reviews side-by-side images and heatmaps and explicitly signs off
+before publication. This replaces the earlier cross-vendor exact-output bar;
+historical strict-comparison verdicts and files remain unchanged.
+
+The renewed authorization is at most $25 total across GPU campaigns, at most
+three hours and four g4dn/g4ad Windows/Linux instances per campaign. Check the
+shared G/VT vCPU quota before AMD use. Estimate before each launch and retain
+resource lifetimes, costs and complete cleanup receipts afterwards. Carry prior
+campaign spend in the running ledger and obtain approval before exceeding the
+total. Exact account/profile/region, protected existing resources, ownership-safe
+cleanup and independent TTL requirements below remain mandatory. The earlier
+one-time authorization is superseded; its completed campaigns remain closed.
+
+Hosted WARP/llvmpipe runs cover functional/headless, installation, updates,
+startup/exit and networking. They do not qualify graphics or full graphical
+tours. Use the local Mac GPU and explicitly authorized NVIDIA/AMD GPU campaigns
+for those checks; hosted Mac provides the measured Mac-to-Mac baseline.
 
 GPU use is an explicitly authorized, bounded campaign rather than a standing
 release runner. `gpu-once.yml` is off by default: only the isolated QA branch,
@@ -13,7 +42,7 @@ store. Every AWS call uses the explicitly selected profile and region. Existing
 resources are references and protected inventory, never campaign cleanup targets.
 The operator records each created ID and verifies ownership before deletion.
 
-The current diagnostic batch is `d9ad65c301eafeb252b3b50bd1d54ac4c46bcc63`, not
+The historical diagnostic batch is `d9ad65c301eafeb252b3b50bd1d54ac4c46bcc63`, not
 final main-integrated release bytes. Its native 1,154-tick replay has exact
 observable equality across three OSs; independent math canaries differ and remain
 reported. Its native builder traces identify actual pre-upload arithmetic drift.
@@ -44,10 +73,10 @@ reverting unrelated changes. No finish claim precedes that final receipt.
 
 Fast Mac/per-change and free native runtime checks remain useful between campaigns.
 Renderer, engine, shader/preset, procedural geometry or GPU binding changes require
-affected-path GPU evidence to be reconsidered. A later paid campaign requires its
-own available resources and authorization; this one-time approval must not become
-automatic recurring spend or an impossible free-software2x gate mislabeled green.
-Final promotion still requires then-current main integration, an unused release
+affected-path GPU evidence to be reconsidered. Campaigns must remain within the
+current user's explicit total budget and per-campaign scope. Main is integrated
+into the QA branch now; a small final re-merge may be needed before promotion.
+Final promotion still requires the integrated source, an unused release
 identity, trusted exact-byte/latest-stable gates and protected publication/fleet
 verification. Old-byte diagnostic receipts are not final-source qualification.
 

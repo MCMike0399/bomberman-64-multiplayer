@@ -787,8 +787,14 @@ in receipts; the four-leaf package smoke is insufficient for promotion.
 real fixture processes. Keep that separate from actual game updates and
 physical/GPU evidence. See [desktop clients](../desktop-clients.md).
 
-Hosted Windows/Linux runners render in software, so the complete graphical
-suite is split across runners (2026-10-28). `all` is 21 contiguous `tour-NN`
+Current three-platform strategy (user decision 2026-10-29): hosted Windows WARP
+and Linux llvmpipe are functional/headless, installer/updater, startup/exit and
+network test surfaces only. Graphics and complete graphical tours use real
+GPUs. Preserve production quality and use the measured Mac-to-Mac residual
+envelope and user visual sign-off in [GPU qualification](../gpu-qualification.md).
+
+The historical software-runner split is retained as an ordering/partition
+contract; it is not graphics qualification. `all` is 21 contiguous `tour-NN`
 catalog suites. Mac runs `all` in one process; Windows/Linux run each tour in a
 fresh process via `verify-desktop.py --cases … --part …`. The `--merge`
 step must see every part on identical archive, server and download bytes.

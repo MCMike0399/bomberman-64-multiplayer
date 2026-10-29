@@ -19,7 +19,7 @@ identities reserve no stable version; select the next available identity when
 integrating the completed platform work. Stable publication still requires the
 latest published updater baseline and exact current-main artifacts.
 
-**v0.43.0/build 53/schema 6** is delivered. The [delivery receipt](verification.md#v0430-delivered)
+**v0.44.1/build 55/schema 6** is delivered. The [delivery receipt](verification.md#v0441-delivered)
 records the exact CI artifacts, production rollout and signed update. Earlier clients advertise numeric `3`, `4` or branch-specific stage tokens and are rejected by the
 new server before identity creation, queue/room admission or WebSocket upgrade.
 Authenticated leave/cancel and operator endpoints preserve their existing policy.

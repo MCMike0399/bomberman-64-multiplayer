@@ -28,6 +28,11 @@ internal static class PartyNetworkChecks
         await Start(host);
         await State(host,s=>s.GetProperty("phase").GetInt32()==1);
         host.SendInput(0,new PlayerInput(0,0,A:true));await Task.Delay(100);host.SendInput(0,default);
+        var finish=await State(peer,s=>s.GetProperty("phase").GetInt32()==3);
+        if(peer.Party?.Phase!="playing"||finish.GetProperty("players").EnumerateArray().Single(p=>p.GetProperty("id").GetString()==peer.PlayerId).GetProperty("wins").GetInt32()!=1)
+            throw new Exception("Server skipped the final arena announcement or winning point.");
+        await Task.Delay(1500);
+        if(peer.Party?.Phase!="playing")throw new Exception("Server results interrupted the three-second finish announcement.");
         await Until(()=>peer.Party?.Phase=="results","real match produces party results");
         if(host.IsEnded||peer.IsEnded)throw new Exception("Party transport ended with match.");
         await Until(()=>host.Party?.Phase=="lobby"&&peer.Party?.Phase=="lobby","both peers return to lobby");

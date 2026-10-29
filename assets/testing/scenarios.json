@@ -856,6 +856,7 @@
       "id": "tour-17",
       "steps": [
         "combat",
+        "round-ending",
         "results",
         "post-match",
         "network"
@@ -926,11 +927,14 @@
     {
       "id": "tour-21",
       "steps": [
-        "stage-scenery"
+        "stage-scenery",
+        "wall-death"
       ],
       "domains": [
         "rendering",
-        "ui"
+        "ui",
+        "animation",
+        "models"
       ],
       "headless": true,
       "timeout": 480,
@@ -1011,7 +1015,8 @@
         "rock-garden",
         "blizzard-battle",
         "greedy-trap",
-        "stage-scenery"
+        "stage-scenery",
+        "round-ending"
       ],
       "domains": [
         "ai",
@@ -1623,7 +1628,8 @@
         "asset-audit",
         "pickup-showcase",
         "greedy-canal",
-        "mishap-feel"
+        "mishap-feel",
+        "wall-death"
       ],
       "domains": [
         "ai",
@@ -1669,6 +1675,49 @@
       ],
       "headless": false,
       "timeout": 240,
+      "manual": false
+    },
+    {
+      "id": "round-ending",
+      "method": "RoundEnding",
+      "domains": [
+        "gameplay",
+        "ui",
+        "audio"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "wall-death",
+      "method": "WallDeath",
+      "domains": [
+        "animation",
+        "models",
+        "rendering"
+      ],
+      "headless": true,
+      "timeout": 240,
+      "manual": false
+    },
+    {
+      "id": "wall-death-regression",
+      "steps": [
+        "first-use-rendering",
+        "wall-death",
+        "greedy-trap",
+        "mishap-feel"
+      ],
+      "domains": [
+        "animation",
+        "models",
+        "rendering",
+        "gameplay",
+        "performance"
+      ],
+      "headless": false,
+      "timeout": 900,
       "manual": false
     }
   ]

@@ -8,6 +8,7 @@ public partial class RosterSelection : VBoxContainer
 {
     public LocalRoster Roster {get;}=new();
     public event Action? ContinueRequested;
+    public event Action<int>? DifficultyChanged;
     public event Action? BackRequested;
     public event Action<int>? LineupChanged;
     private readonly List<(PanelContainer Panel,OptionButton Role,Button Appearance,Label Title,Label Binding,Control Preview)> _cards=[];
@@ -56,7 +57,9 @@ public partial class RosterSelection : VBoxContainer
             var appearance=new Button {Name=$"Slot{slot}Appearance",CustomMinimumSize=new(0,38),SizeFlagsHorizontal=SizeFlags.ExpandFill,Alignment=HorizontalAlignment.Center};
             ArcadeTheme.Quiet(appearance);appearance.AddThemeFontOverride("font",ArcadeTheme.Body);appearance.AddThemeFontSizeOverride("font_size",15);appearance.AddThemeConstantOverride("outline_size",4);appearance.AddThemeConstantOverride("h_separation",7);row.AddChild(appearance);
             appearance.TooltipText="Change suit colour";
-            var pips=new DifficultyPips {CustomMinimumSize=new(0,22)};column.AddChild(pips);_difficultyPips.Add(pips);
+            var pips=new DifficultyPips {Name=$"Slot{slot}Difficulty",CustomMinimumSize=new(0,44),TooltipText="Change CPU level for all bots"};column.AddChild(pips);_difficultyPips.Add(pips);
+            pips.Pressed+=()=>{BotDifficulty=BotDifficulty%3+1;DifficultyChanged?.Invoke(BotDifficulty);Select(slot);Refresh();};
+            pips.FocusEntered+=()=>Select(slot);
             var binding=ArcadeTheme.Text(column,"",12,ArcadeTheme.Muted);binding.HorizontalAlignment=HorizontalAlignment.Center;
             _cards.Add((panel,role,appearance,title,binding,preview));
             role.ItemSelected+=value=>{if(!_updating){var current=Roster.Slots[slot];Roster.Set(slot,(RosterRole)value,current.Appearance);Select(slot);Refresh();}};
@@ -101,6 +104,7 @@ public partial class RosterSelection : VBoxContainer
             var slot=Roster.Slots[i];var card=_cards[i];card.Role.Select((int)slot.Role);
             card.Title.Text=slot.Role switch {RosterRole.Human=>$"P{++human}",RosterRole.Cpu=>$"CPU {++cpu}",_=>$"P{i+1}"};
             _difficultyPips[i].Level=slot.Role==RosterRole.Cpu?BotDifficulty:0;
+            _difficultyPips[i].Disabled=slot.Role!=RosterRole.Cpu;
             StyleRole(card.Role,slot.Role);
             card.Appearance.Text=ArcadeTheme.Word(AppearanceNames[slot.Appearance]);card.Appearance.Icon=ArcadeIcons.Swatch(ArcadeTheme.Players[slot.Appearance],18);
             card.Binding.Text=SeatHint(slot.Role==RosterRole.Human?ControllerHub.Current.BindingLabel(human-1,Roster.Humans):Roster.Binding(i,pads));
@@ -140,7 +144,7 @@ public partial class RosterSelection : VBoxContainer
     };
     public bool HasOpenPopup=>_cards.Any(c=>c.Role.GetPopup().Visible);
     public bool OwnsPopupInput=>_nativePopups&&(HasOpenPopup||_popupClosedFrame==Engine.GetProcessFrames());
-    public Control[][] FocusColumns=>_cards.Select(c=>new Control[]{c.Role,c.Appearance}).ToArray();
+    public Control[][] FocusColumns=>_cards.Select((c,i)=>new Control[]{c.Role,c.Appearance,_difficultyPips[i]}).ToArray();
 }
 
 

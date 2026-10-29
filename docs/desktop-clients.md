@@ -44,10 +44,11 @@ updates in their disposable guest; normal players retain the stable update feed.
 Mac releases therefore do not change this QA input or its staged server.
 
 The branch's v0.44.0/build54 identity is internal test data and reserves no public
-version. Do not repeatedly merge or rebase onto advancing Mac releases during
-qualification. When the platform work is ready, integrate current `main` once,
-choose the next available public version and build, and rebuild and verify the
-combined source. Final trusted gates must use those exact bytes and test updating
+version. The 2026-10-29 user strategy integrates current `main` into this QA branch
+now, preserving the independent stable branch. Avoid repeatedly chasing later
+Mac releases; do one small final re-merge if needed. Keep the internal test
+identity until selecting the next available public version and build for
+publication, then rebuild and verify the combined source. Final trusted gates must use those exact bytes and test updating
 from the actual latest stable release before matching-server deployment and
 publication. Earlier candidate evidence remains attached to its original SHA.
 

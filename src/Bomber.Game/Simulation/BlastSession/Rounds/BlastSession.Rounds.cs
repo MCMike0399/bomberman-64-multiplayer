@@ -218,20 +218,25 @@ public sealed partial class BlastSession
         // Check match win.
         if (winnerId is not null && _players.TryGetValue(winnerId, out var w) && w.Wins >= _winsTarget)
         {
-            _matchEndScheduled = true;
             var details = BuildScoreboard(reason);
-            BroadcastState(context); // Flush the final accepted actions before the match-end envelope.
-            if (w.IsBot)
-                context.EndMatch(new MatchResult("bot_won", [], details));
-            else
-                context.EndMatch(new MatchResult("won", [winnerId], details));
+            // Capture the accepted outcome now, but keep the final round's frozen
+            // arena visible for the same announcement interval as every other round.
+            _pendingMatchResult = w.IsBot
+                ? new MatchResult("bot_won", [], details)
+                : new MatchResult("won", [winnerId], details);
         }
+        BroadcastState(context); // Deliver the finish and winning point immediately, even on an odd tick.
     }
 
     private void AdvanceRound(ISessionContext context)
     {
-        if (_matchEndScheduled)
+        if (_pendingMatchResult is {} result)
+        {
+            _matchEndScheduled = true;
+            BroadcastState(context);
+            context.EndMatch(result);
             return;
+        }
         StartRound(context, _roundNum + 1);
     }
 

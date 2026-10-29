@@ -2,7 +2,7 @@ using BlastCircuit.Audio;
 using System.Security.Cryptography;
 
 var clips=SoundSynth.GenerateAll();
-Assert(clips.Count==19,"Missing designed cue variants.");
+Assert(clips.Count==20,"Missing designed cue variants.");
 Assert(ReferenceEquals(clips,SoundSynth.GenerateAll()),"PCM is rebuilt per event.");
 foreach(var (name,clip) in clips)
 {

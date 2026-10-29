@@ -3,7 +3,7 @@
 The user resumed gameplay work on 2026-10-23 for controller ergonomics, aiming
 and knockdown/blast separation (iteration19). The first eighteen iterations
 remain historical evidence. Iteration20 then rebuilt the walk. Recorded
-release baseline: **v0.43.0/build 53**, published with independently verified Mac
+release baseline: **v0.44.1/build 55**, published with independently verified Mac
 and server archives (see [verification](../verification.md)). Previous runtime baseline: **v0.18.0**, commit
 `316a330d7d895a92f98c1a60be7d571ec445a8a3`. Later documentation commits may follow.
 Verify the live branch, source, tools and installed version before relying on
@@ -48,6 +48,16 @@ update the current guide rather than silently reviving old behavior.
 | [Latest verification](../verification.md) | Exact observed results and limitations, with earlier iterations below |
 
 ## Current decisions that supersede earlier experiments
+
+- v0.44.1 fixes Blizzard avalanche deaths selecting the burned animation; all
+  moving-wall battle arenas use the crush effect. Trusted gates, production
+  rollout and anonymous asset verification passed.
+  [Delivery receipt](../verification.md#v0441-delivered).
+
+- v0.44 delivers closing-wall crush animation, round/match announcements before
+  Results and interactive CPU difficulty (#66–#69). Hosted Mac startup/update,
+  production rollout and anonymous asset verification passed.
+  [Delivery receipt](../verification.md#v0440-delivered).
 
 - v0.43 delivers Quick Play fixes, closer Pyramid framing, active-blast damage,
   randomized denser cover, post-match arena selection, base-loadout counters,

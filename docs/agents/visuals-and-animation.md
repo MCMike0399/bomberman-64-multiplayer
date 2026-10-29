@@ -160,6 +160,26 @@ remote snipe) and a fixed pose/burnout sheet for screenshots. Its numeric checks
 are mechanics; whether the gag is funny is the user's call. Matched before/after
 captures and hashes: [knockout-grab-death](../images/knockout-grab-death/manifest.json).
 
+## Closing-wall death (2026-10-28 source work)
+
+A `columns` or `avalanche` elimination now uses [CrushEffect](../../scripts/arena/effects/CrushEffect.cs)
+and [BomberModel.Crush](../../scripts/arena/models/BomberModel.Crush.cs): the held
+mishap's squeezed eyes, splayed fixed limbs and antenna wobble, a paper-flat
+squash that turns toward the camera, and a dust puff. The suit keeps its color.
+Only the cosmetic stand-in follows the rendered wall face so the solid Greedy
+Trap/Top Rules wall cannot swallow the entire gag. Authority, collision, blast
+burnout and water exits remain unchanged. Blizzard avalanches use the same crush
+stand-in as closing stone walls, following their rendered snow front.
+
+[Footage research](../closing-wall-death-research.md) distinguishes inspected
+boundary exits from our authored flatten pose and timing. `wall-death` drives
+real idle players into closing walls in Blizzard Battle, Greedy Trap and Top Rules, checks
+cause routing and cleanup, and captures battle views, inspection beats and an
+explicitly staged pose strip. `wall-death-regression` combines effect warmup,
+wall deaths, Greedy Trap gameplay and the existing mishap showcase.
+[Avalanche routing fix and three-map captures](../images/avalanche-crush-fix/README.md).
+Agent inspection is not user approval of the art.
+
 ## Rejected experiments: do not repeat them blindly
 
 | Failure | Why it passed superficial checks | Better check / retained lesson |

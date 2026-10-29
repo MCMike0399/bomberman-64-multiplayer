@@ -55,6 +55,9 @@ public static class EffectWarmup
             // Zap flash first, then (after the advance below) flames on soot and the closing smoke puff.
             var flames=new BurnoutEffect(art,ArtMaterials.PlayerColors[0],0);Add(flames,new(-2,0,8));
             var smoke=new BurnoutEffect(art,ArtMaterials.PlayerColors[0],0);Add(smoke,new(2,0,8));
+            var crush=new CrushEffect(art,ArtMaterials.PlayerColors[0],true);Add(crush,new(6,0,8));
+            var dust=new CrushEffect(art,ArtMaterials.PlayerColors[0],false);Add(dust,new(-6,0,8));
+            dust._Process(CrushEffect.PuffAt+.2f);
             var actor=new BomberModel(art,ArtMaterials.PlayerColors[0],"");actor.ShowName(false);actor.Pose(false,true,false);
             Add(actor,new(6,0,4));
             for(int i=0;i<6;i++)ArtGeometry.Box(world,new(-5+i*2,.4f,6),Vector3.One*(.12f+i*.008f),art.Color(new("d5b472")),.02f);

@@ -1,3 +1,74 @@
+# v0.44.1 delivered
+
+Published **2026-10-28 22:46:05 UTC**: [v0.44.1 / signed update](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.44.1).
+[PR #71](https://github.com/MCMike0399/bomberman-64-multiplayer/pull/71)
+fixes Blizzard Battle moving-wall deaths falling through to the burned animation:
+`avalanche` and `columns` now share the existing crush effect. Blizzard Battle,
+Greedy Trap and Top Rules retain focused [screenshots and provenance](images/avalanche-crush-fix/README.md).
+Identity: **v0.44.1/build 55/schema 6**, source
+`b5479a437ff89a7f751c9bc05338f97985bc2682`, token `6/0.44.1/55`.
+
+- Focused source headless checks passed (31 assertions); rebuilt export on the
+  isolated macOS Metal desktop passed 32 assertions with 13 screenshots and no
+  runtime errors/warnings. Agent-inspected art is not user approval.
+- Local public and full managed/network profiles and workflow lint passed.
+  [Trusted Verification 40780597731](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40780597731)
+  passed public, managed/network, headless, package and both archived-client gates.
+  All nine preset/display startup cases passed; update from v0.44.0 passed install,
+  deliberate failed-launch rollback and saved High/fullscreen on attempt one.
+  The optional full Metal journey lane was skipped.
+- [Rollout and public verification 40782111597](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40782111597)
+  passed. Public, primary and fallback all verified the exact identity and real
+  connections/room placement without deferral. Anonymous verification checked all
+  ten assets, both P-256 signatures, latest stable, tag/source identity and byte
+  equality with CI archives. Retained artifacts: `deployment-receipt`,
+  `published-release-receipt`, `release-gate-startup`, `release-gate-update`.
+  No local app installation or physical-controller certification was performed.
+
+Archive SHA-256:
+
+- Mac: `38fc9887454a8fa030314076020656fa99cbe29742c167651d46a4dfb7d88642`
+- Server: `05daf41cb91dec8fd747d88088f2f41370991a2148052d7c4acf78fe88468058`
+
+# v0.44.0 delivered
+
+Published **2026-10-28 19:38:21 UTC**: [v0.44.0 / signed update](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.44.0).
+[Release PR #69](https://github.com/MCMike0399/bomberman-64-multiplayer/pull/69)
+merges #66 (closing-wall crush), #67 (round/match announcements before Results)
+and #68 (interactive CPU difficulty). Identity: **v0.44.0/build 54/schema 6**,
+source `532847a602b16bb20cf9628500e70a92acd1948d`, token `6/0.44.0/54`.
+Windows/Linux #52/#53/#57 remain separate.
+
+- Combined local public QA and workflow lint passed. Managed QA passed 4,012
+  game, 377 client, 98 AI, 20 audio and 23 cluster checks, 72 AI soaks,
+  78 release connection checks, complete network smoke, nine forced-relay
+  checks and 36 fleet checks. An initial local dependency-symlink NuGet path
+  conflict was resolved with an isolated checkout of the unchanged pinned kernel.
+- Each original PR retains its focused exported Metal evidence and screenshots:
+  [wall deaths](images/closing-wall-death/README.md),
+  [round endings](round-ending.md), and
+  [difficulty captures](images/bot-difficulty/manifest.json). Selected captures
+  were inspected during integration; no new full graphical sweep, native GPU
+  benchmark, physical-controller certification or user art approval is claimed.
+- [Trusted Verification 40750984226](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40750984226)
+  passed public, managed/network, headless, Apple Silicon package and both
+  archived-app gates on GitHub-hosted macOS. All nine preset/display startup
+  cases passed on Apple Paravirtual Metal. Update from v0.43.0 passed install,
+  deliberate failed-launch rollback and saved High/fullscreen on attempt one.
+  The optional full Metal journey lane was skipped.
+- [Production rollout and public verification 40754890793](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/40754890793)
+  passed. Public, primary and fallback all verified the exact identity, real
+  connection and room placement without deferral. Anonymous verification checked
+  all ten assets, both P-256 signatures, latest stable, tag/source identity and
+  byte equality with the trusted CI archives. Retained Actions artifacts:
+  `deployment-receipt`, `published-release-receipt`, `release-gate-startup`
+  and `release-gate-update`. No local app installation was performed.
+
+Archive SHA-256:
+
+- Mac: `8814819b8993ec4a9e1d6238c170fe8aa2dcf7bfa951e0ba5fc2e7e5d8acd53e`
+- Server: `101ed11b4127675e0c0021dd52a11956de49b37c636e3d7659df3f9430e17565`
+
 # v0.43.0 delivered
 
 Published **2026-10-27 20:43:54 UTC**: [v0.43.0 / signed update](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.43.0).
