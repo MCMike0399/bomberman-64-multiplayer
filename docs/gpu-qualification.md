@@ -204,6 +204,15 @@ the complete arming and registration path. The preflight must cover:
   including the interactive Windows user and removal of registrations afterwards.
 - A fixed cleanup start time, independent termination targets, failure-artifact
   export and ownership-checked deletion after interrupted provisioning or tests.
+- Controller interruption recovery against the same recorded stack and request
+  intent, without a new allocation or deadline extension. Verify complete artifact
+  transfers against the original archive digest before treating them as retained.
+- Missing protected inventory rows: report previously terminated records that are
+  no longer returned separately from unexplained missing active records. Never
+  invent unchanged fields or let this reporting gap skip owned-resource cleanup.
+- Ephemeral runner IDs: record them before agents disappear. Reconcile late
+  discoveries from exact owned job/runner identities transparently; an empty
+  current runner list does not replace the creation journal.
 
 These checks prepare a bounded campaign. They do not grant another allocation,
 qualify a renderer, or permit extending its fixed expiry. A collector finishing
@@ -218,3 +227,40 @@ The authorized personal Macintosh baseline reports **Apple M5 Pro**, while
 DiveMac reports **Apple M5**. Keep that same-generation comparison separate from
 the hosted Apple Paravirtual comparison; neither establishes another GPU vendor's
 coverage.
+
+## Integrated diagnostic results — source 5f655b0
+
+The original High fixture on actual T4 hardware passed its 2x depth/attachment
+controls under Windows D3D12 and Vulkan and Linux Vulkan. Actual complete scene
+inventories match the M5 reference exactly under all three target/API cases.
+Windows Vulkan and Linux Vulkan repeat exactly and have identical decoded pixels
+across their three original-High captures. Their two effect-off images are also
+identical, remaining diagnostic controls. Windows D3D12 still fails strict output
+repeats. No product API default or shader has changed.
+
+The physical M5 Pro and M5 use the same Apple GPU generation. On frozen 6078864
+their inputs and all five PNGs match exactly. Current 5f M5 PNGs preserve those
+bytes; its documented antenna calibration inventory change remains separately
+recorded. Original manifests are unchanged. The separate hosted 5f reference
+reports Apple Paravirtual: the full-High comparison changes 85.6494% of pixels,
+with maximum channel delta 107. NVIDIA Vulkan versus M5 changes 86.6098%, maximum
+120. P95 RGB deviations are 6/10/12 and P99 are 12/14/16 for both hosted-Mac and
+NVIDIA Vulkan pairs, but their complete histogram tails differ. The tighter
+physical reference is zero, so the current cross-family visual gate fails.
+Coarse water tiles are visible on NVIDIA. Procedural sine-based noise remains a
+source lead, not a runtime-proven explanation or an adopted fix.
+
+Native remaining runs 40945957589 (Linux) and 40947097036 (Windows) completed their
+collection with failed technical verdicts. Each graphical suite passed 23/24
+cases, completing 60/63 `all` leaves; `reticle`, `precision-aim` and `kick-physics`
+remain incomplete for those bytes. The shared reticle fixture expected Results
+immediately at Over, before the existing finish announcement. QA-only 9bf6e5c
+waits for the actual navigation and retains the carried-bomb/overlay checks;
+the focused rebuilt M5 test has red/green evidence and 41 assertions with no
+errors. Final compiled native validation remains required.
+
+Linux's nine saved startups and both platforms' fresh-process packaged replays
+passed. Their 1,154-tick observable streams match; independent math canaries
+differ and remain reported. This is bounded observable evidence, not hidden-state
+equivalence or final release approval. Raw controls, complete residuals and the
+owned cleanup receipt are retained under `artifacts/qa/gpu-campaign1-5f655b0/`.
