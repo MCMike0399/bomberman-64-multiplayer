@@ -39,5 +39,14 @@ class StartupLifecycleTests(unittest.TestCase):
         with patch.dict(os.environ, environment, clear=True):
             self.assertEqual({'PATH': '/bin', 'VK_DRIVER_FILES': '/icd.json'}, diagnostic.game_environment())
 
+    def test_actual_native_headless_footer_has_no_graphics_adapter(self):
+        record = {'timedOut': False, 'exitCode': 0, 'earlyQuit': False, 'preset': 'low', 'headless': True}
+        text = 'GODOT_SMOKE_OK menu snapshots=0 graphics=low window=minimized size=64x64 adapter=\n'
+        self.assertTrue(diagnostic.inspect_case(record, text, Path('/missing')))
+        record.update(headless=False)
+        with tempfile.TemporaryDirectory() as temporary:
+            capture = Path(temporary) / 'menu.png'; capture.write_bytes(b'\x89PNG\r\n\x1a\n' + b'x' * 2048)
+            self.assertFalse(diagnostic.inspect_case(record, text.replace('minimized size=64x64', 'fullscreen size=1920x1080'), capture))
+
 
 if __name__ == '__main__': unittest.main()

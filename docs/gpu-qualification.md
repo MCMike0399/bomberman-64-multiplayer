@@ -103,3 +103,32 @@ Windows thread minidump before process-tree cleanup. The game/dump helper does
 not inherit CI/provider/signing credentials. Headless and early-quit outcomes
 are narrowly labeled controls; none of these receipts qualifies GPU graphics or
 substitutes for the full saved-settings release matrix.
+
+### Frozen shutdown controls — runner 837fa45
+
+Run `40875730614` reused D9 unchanged. Both native Low/High fullscreen smoke
+cases captured and exited zero on hosted Windows WARP and Linux llvmpipe, with
+no runtime errors or warnings. Both headless smoke cases also exited zero; the
+diagnostic parser incorrectly rejected their empty headless adapter field. The
+retained native footer now has a red/green parser regression, while graphical
+cases still require a nonempty adapter. Original receipts remain unchanged.
+
+Both early-engine-quit controls exceeded 240 seconds. The Windows thread dump
+and exact-template machine code establish this frame chain: the saved return
+at RVA `0x3018e65` is the first condition-variable wait in
+`WorkerThreadPool::exit_languages_threads`; its 72-byte frame unwinds to the
+`Main::cleanup` caller at RVA `0x6b862`. This early-quit result shares the Linux
+T4 sample's barrier, but does not establish every normal T4 shutdown's cause.
+The early control records both its initial `--windowed` engine flag and saved
+fullscreen preference; its effective mode at the hang was not measured.
+
+The first Linux thread sample lacked executable-backed unwinding because root
+GDB could not read the user's FUSE-mounted executable. The collector now supplies
+the metadata/checksum-bound archive ELF explicitly. Additional read-only pool
+observations are interpreted only for the two exact 4.7.2 template hashes in
+`startup_lifecycle_state.py`; unknown templates refuse interpretation. They retain
+runlevel/counters, queue heads and bounded task/worker fields, rather than guessing
+a cause from idle threads. Linux GDB stops target threads; Windows observations
+are explicitly non-atomic. No engine change or product shutdown fix is claimed
+from the collector's source/mock checks. A selected early-quit rerun gathers the
+missing state without repeating the already-completed smoke cases.

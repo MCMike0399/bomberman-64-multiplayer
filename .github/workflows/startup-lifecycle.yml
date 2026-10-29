@@ -55,12 +55,14 @@ jobs:
         env:
           TARGET: ${{ matrix.target }}
           PAYLOAD: ${{ vars.BLAST_STARTUP_PAYLOAD_SHA }}
+          CASES: ${{ vars.BLAST_STARTUP_CASES }}
         shell: bash
         run: |
           python - <<'PY'
-          import os,subprocess,sys
+          import json,os,subprocess,sys
           command=[sys.executable,'tools/ci/startup_lifecycle.py','--target',os.environ['TARGET'],
                    '--expected-revision',os.environ['PAYLOAD'],'--output','artifacts/startup-lifecycle-'+os.environ['TARGET']]
+          for case in json.loads(os.environ.get('CASES') or '[]'):command+=['--case',case]
           if os.environ['TARGET']=='linux-x64':command=[sys.executable,'tools/packaging/linux-desktop.py','--',*command]
           subprocess.run(command,check=True)
           PY
@@ -77,5 +79,6 @@ jobs:
             artifacts/startup-lifecycle-${{ matrix.target }}/*/native-stack.log
             artifacts/startup-lifecycle-${{ matrix.target }}/*/native.dmp
             artifacts/startup-lifecycle-${{ matrix.target }}/*/dump-collector.log
+            artifacts/startup-lifecycle-${{ matrix.target }}/*/native-pool-state.json
           retention-days: 14
           if-no-files-found: warn
