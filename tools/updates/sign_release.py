@@ -18,6 +18,8 @@ import desktop_packages
 import download_formats
 import crossplay
 import desktop_validation
+import release_gpu_policy
+import gpu_release_gates
 
 
 def sign_bytes(path, key, trusted):
@@ -59,8 +61,15 @@ def sign(archive, key, output, server=None):
         # Preserve verification of historical Mac-only releases and the existing updater format.
         if desktop_packages.present(output):
             targets = desktop_packages.present_targets(output)
-            desktop_packages.inspect(output, metadata['revision'], metadata['release'], targets=targets)
-            assets += [output / name for target in targets for name in desktop_packages.asset_names(target)]
+            policy=release_gpu_policy.read(output)
+            desktop_packages.inspect(output, metadata['revision'], metadata['release'], targets=targets,
+                                     include_graphics=policy is None or policy['requiresGpu'])
+            if policy:
+                assets.append(output/release_gpu_policy.RECEIPT)
+                if policy['requiresGpu']:
+                    gpu_release_gates.inspect_all(output,metadata['revision'],fingerprint=policy['renderFingerprint'],targets=targets)
+                    assets.append(output/gpu_release_gates.CLEANUP_RECEIPT)
+            assets += [output / name for target in targets for name in release_gpu_policy.asset_names(target,policy)]
             for target in targets:
                 download_formats.inspect(output, target, metadata['revision'], metadata['release'])
                 update_archive = output / (desktop_packages.names(target)['archive'] if target == 'windows-x64' else download_formats.FILES[target])

@@ -15,11 +15,49 @@ import verify_published
 import desktop_packages
 import crossplay
 import desktop_validation
-from test_promotion import RELEASE, SHA, write_package, write_server
+import release_gpu_policy as graphics_policy
+import gpu_release_gates
+from test_promotion import RELEASE, SHA, FINGERPRINT, write_package, write_server
+from test_promotion_gpu import write_gpu_files
 from test_release_signing import signer
 
 
 class PublishedReleaseTests(unittest.TestCase):
+    def test_new_major_policy_and_gpu_files_are_bound_by_real_signature(self):
+        with tempfile.TemporaryDirectory()as temporary:
+            root=Path(temporary);assets,trusted=self.signed_release(root)
+            decision=graphics_policy.decide('0.14.9',RELEASE['version'],FINGERPRINT,FINGERPRINT)
+            decision.update(schemaVersion=1,source=SHA,verificationRunId='12',gpuRunId='22')
+            (assets/graphics_policy.RECEIPT).write_text(json.dumps(decision))
+            write_gpu_files(assets)
+            with patch.object(signer,'ROOT',root),contextlib.redirect_stdout(io.StringIO()):
+                signer.sign(assets/verify_published.ARCHIVE,root/'fixture.pem',assets,assets/verify_published.SERVER_ARCHIVE)
+            with patch.object(verify_published,'PUBLIC_KEY',trusted):
+                delivery=verify_published.verify_assets(assets,RELEASE['version'])
+                self.assertIn(graphics_policy.RECEIPT,delivery['assets'])
+                for target in desktop_packages.TARGETS:self.assertIn(gpu_release_gates.receipt_name(target),delivery['assets'])
+                path=assets/gpu_release_gates.receipt_name('windows-x64')
+                path.write_text(path.read_text().replace('NVIDIA Tesla T4','Microsoft WARP'))
+                with self.assertRaisesRegex(RuntimeError,'signed hash/size'):
+                    verify_published.verify_assets(assets,RELEASE['version'])
+
+    def test_patch_signed_inventory_does_not_need_gpu_or_graphical_files(self):
+        with tempfile.TemporaryDirectory()as temporary:
+            root=Path(temporary);assets,trusted=self.signed_release(root)
+            decision=graphics_policy.decide('0.14.9',RELEASE['version'],'old',FINGERPRINT,
+                                           {'version':RELEASE['version'],'kind':'patch'})
+            decision.update(schemaVersion=1,source=SHA,verificationRunId='12',gpuRunId=None)
+            (assets/graphics_policy.RECEIPT).write_text(json.dumps(decision))
+            for target in desktop_packages.TARGETS:(assets/desktop_packages.names(target)['graphical']).unlink()
+            with patch.object(signer,'ROOT',root),contextlib.redirect_stdout(io.StringIO()):
+                signer.sign(assets/verify_published.ARCHIVE,root/'fixture.pem',assets,assets/verify_published.SERVER_ARCHIVE)
+            with patch.object(verify_published,'PUBLIC_KEY',trusted):
+                delivery=verify_published.verify_assets(assets,RELEASE['version'])
+                self.assertIn(graphics_policy.RECEIPT,delivery['assets'])
+                self.assertIn('minor bump',graphics_policy.read(assets)['warning'])
+                for target in desktop_packages.TARGETS:
+                    self.assertNotIn(gpu_release_gates.receipt_name(target),delivery['assets'])
+
     def test_historical_windows_only_release_remains_verifiable_after_linux_is_added(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

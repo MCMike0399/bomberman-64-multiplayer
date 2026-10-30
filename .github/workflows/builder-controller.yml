@@ -1,0 +1,56 @@
+name: Scoped builder controller
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: Free OIDC assume-role and empty audit
+    if: github.repository == 'MCMike0399/bomberman-64-multiplayer' && github.ref == 'refs/heads/main'
+    environment: gpu-qualification
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Assume only the scoped builder role
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: arn:aws:iam::524329886851:role/sancus-builder-ci
+          aws-region: us-east-1
+          allowed-account-ids: '524329886851'
+          role-duration-seconds: 900
+          role-session-name: sancus-builder-audit-${{ github.run_id }}
+      - name: Prove identity and discover only owned leftovers without mutation
+        run: |
+          set -euo pipefail
+          umask 077
+          credential_dir=$(mktemp -d "$RUNNER_TEMP/builder-audit.XXXXXX")
+          trap 'rm -rf "$credential_dir"' EXIT
+          export AWS_SHARED_CREDENTIALS_FILE="$credential_dir/credentials"
+          export AWS_CONFIG_FILE="$credential_dir/config"
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          # Short-lived OIDC session only; never log or upload these files.
+          rows=['[sancus]']
+          for key,source in [('aws_access_key_id','AWS_ACCESS_KEY_ID'),('aws_secret_access_key','AWS_SECRET_ACCESS_KEY'),('aws_session_token','AWS_SESSION_TOKEN')]:
+              rows.append(key+'='+os.environ[source])
+          Path(os.environ['AWS_SHARED_CREDENTIALS_FILE']).write_text('\n'.join(rows)+'\n')
+          Path(os.environ['AWS_CONFIG_FILE']).write_text('[profile sancus]\nregion=us-east-1\n')
+          PY
+          python3 tools/ci/builder_audit.py --output artifacts/builder-oidc-audit.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: builder-oidc-audit
+          path: artifacts/builder-oidc-audit.json
+          if-no-files-found: warn
+          retention-days: 30

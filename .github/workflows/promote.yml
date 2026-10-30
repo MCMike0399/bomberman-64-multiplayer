@@ -9,6 +9,9 @@ on:
       version:
         type: string
         required: true
+      gpu_run_id:
+        type: string
+        default: ''
       publish:
         type: boolean
         default: false
@@ -21,6 +24,10 @@ on:
         required: false
   workflow_dispatch:
     inputs:
+      gpu_run_id:
+        description: Exact-main physical-GPU qualification run (required for major/minor releases)
+        type: string
+        default: ''
       run_id:
         description: Successful main Verification run ID
         type: string
@@ -89,6 +96,8 @@ jobs:
           BLAST_RELEASE_SERVER_URLS: ${{ secrets.BLAST_RELEASE_SERVER_URLS }}
           BLAST_RELEASE_PLACEMENTS: ${{ secrets.BLAST_RELEASE_PLACEMENTS }}
           BLAST_UPDATE_SIGNING_KEY: ${{ secrets.BLAST_UPDATE_SIGNING_KEY }}
+          BLAST_GPU_QUALIFICATION_RUN_ID: ${{ inputs.gpu_run_id }}
+          BLAST_RELEASE_KIND_OVERRIDE: ${{ vars.BLAST_RELEASE_KIND_OVERRIDE }}
         run: |
           set -euo pipefail
           umask 077
@@ -128,6 +137,8 @@ jobs:
           VERSION: ${{ inputs.version }}
           EXPECTED_SHA: ${{ needs.validate.outputs.revision }}
           BLAST_UPDATE_SIGNING_KEY: ${{ secrets.BLAST_UPDATE_SIGNING_KEY }}
+          BLAST_GPU_QUALIFICATION_RUN_ID: ${{ inputs.gpu_run_id }}
+          BLAST_RELEASE_KIND_OVERRIDE: ${{ vars.BLAST_RELEASE_KIND_OVERRIDE }}
         run: |
           set -euo pipefail
           umask 077
