@@ -179,6 +179,8 @@ jobs:
         if: success() && !cancelled() && inputs.mode == 'qualify'
         env:
           GH_TOKEN: ${{ github.token }}
+        # Platform backstop: phase grant (launch) plus two minutes; SIGINT then always-cleanup (probe 41112729113).
+        timeout-minutes: 22
         run: python3 tools/ci/builder_profile.py -- python3 tools/ci/builder_phase.py --state artifacts/builder-state launch
       - name: Retain the armed exact-ID state before game execution
         id: armed_upload
@@ -194,6 +196,8 @@ jobs:
           retention-days: 90
       - name: Collect both immutable High checkpoints first
         if: success() && !cancelled() && inputs.mode == 'qualify'
+        # Platform backstop: phase grant (core) plus two minutes; SIGINT then always-cleanup (probe 41112729113).
+        timeout-minutes: 92
         run: python3 tools/ci/builder_profile.py -- python3 tools/ci/builder_phase.py --state artifacts/builder-state core
       - name: Retain core evidence before acknowledging long tours
         if: success() && !cancelled() && inputs.mode == 'qualify'
@@ -206,9 +210,13 @@ jobs:
           retention-days: 90
       - name: Acknowledge durable core evidence
         if: success() && !cancelled() && inputs.mode == 'qualify'
+        # Platform backstop: phase grant (acknowledge) plus two minutes; SIGINT then always-cleanup (probe 41112729113).
+        timeout-minutes: 4
         run: python3 tools/ci/builder_profile.py -- python3 tools/ci/builder_phase.py --state artifacts/builder-state acknowledge
       - name: Collect the remaining exact-byte machine evidence
         if: success() && !cancelled() && inputs.mode == 'qualify'
+        # Platform backstop: phase grant (final) plus two minutes; SIGINT then always-cleanup (probe 41112729113).
+        timeout-minutes: 92
         run: python3 tools/ci/builder_profile.py -- python3 tools/ci/builder_phase.py --state artifacts/builder-state final
       - name: Recover missing deletion authority from the durable state
         if: always() && inputs.mode == 'qualify' && steps.intent_upload.outputs.artifact-id != '' && (hashFiles('artifacts/builder-state/plan.json') == '' || hashFiles('artifacts/builder-state/creation-manifest.jsonl') == '')
