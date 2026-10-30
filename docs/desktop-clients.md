@@ -18,6 +18,12 @@ renderer displays a reduced-graphics notice and reports a distinct state;
 it cannot satisfy the full-quality graphics gates. Linux packages enable
 invariant globalization so startup does not require a system ICU installation.
 
+Hosted Windows functional checks explicitly use the supported Direct3D 12 API
+on WARP and record that choice. They do not qualify Vulkan or full-quality
+graphics. The separate injected default-Vulkan startup/crash/recovery control
+retains its initialization diagnostics; no engine errors are filtered out.
+The shipping Vulkan default and full High graphics require actual GPU evidence.
+
 Keyboard P1 precision aim accepts L or Shift on every OS. The Windows launcher
 temporarily clears only the shortcut/confirmation flags of disabled Sticky,
 Filter and Toggle Keys while the engine window is focused. Enabled features

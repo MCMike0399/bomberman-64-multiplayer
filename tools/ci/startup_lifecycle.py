@@ -16,6 +16,7 @@ import zipfile
 import crossplay_runtime
 import desktop_packages as desktop
 import download_formats
+from desktop_rendering import execution_driver
 import startup_lifecycle_state as native_state
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -154,7 +155,7 @@ def run(target, directory, output, revision, selected=None):
             folder = output / name; folder.mkdir()
             pref = folder / 'preferences.cfg'
             pref.write_text('[player]\nautomaticUpdates=false\n[video]\ngraphicsPreset="' + preset + '"\nfullscreen=true\nresolution=Vector2i(0, 0)\n')
-            command = [str(executable), '--verbose', '--rendering-driver', crossplay_runtime.SYSTEMS[target][2],
+            command = [str(executable), '--verbose', '--rendering-driver', execution_driver(target),
                        '--log-file', str(folder / 'godot.log')]
             if headless: command += ['--headless']
             if early: command += ['--quit-after', '2', '--windowed']

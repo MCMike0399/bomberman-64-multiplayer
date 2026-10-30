@@ -115,6 +115,7 @@ jobs:
       - name: Install the real download and warm its actual renderer
         env:
           TARGET: ${{ matrix.target }}
+          BLAST_QA_WINDOWS_DRIVER: ${{ runner.os == 'Windows' && runner.environment == 'github-hosted' && 'd3d12' || '' }}
         shell: bash
         run: python tools/ci/crossplay_runtime.py start --target "$TARGET" --output "artifacts/crossplay-$TARGET"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

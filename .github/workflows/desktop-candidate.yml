@@ -100,6 +100,8 @@ jobs:
           - target: linux-x64
             runner: ubuntu-24.04
     runs-on: ${{ matrix.runner }}
+    env:
+      BLAST_QA_WINDOWS_DRIVER: ${{ matrix.target == 'windows-x64' && 'd3d12' || '' }}
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4

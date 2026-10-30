@@ -15,7 +15,7 @@ import time
 import zipfile
 
 import crossplay
-from desktop_rendering import DRIVERS, report_matches
+from desktop_rendering import DRIVERS, execution_driver, report_matches
 import desktop_packages as desktop
 import download_formats as downloads
 
@@ -74,7 +74,7 @@ def serve(directory, target, output, origin_path):
     result = {'exitCode': None, 'error': None}
     try:
         executable = install(directory, target, output)
-        command = [str(executable), '--rendering-driver', SYSTEMS[target][2], '--windowed', '--max-fps', '30', '--fixed-fps', '30', '--disable-vsync', '--',
+        command = [str(executable), '--rendering-driver', execution_driver(target), '--windowed', '--max-fps', '30', '--fixed-fps', '30', '--disable-vsync', '--',
                    '--display-windowed', '--playtest=cross-platform-quick-play', '--playtest-output=' + str(output),
                    '--playtest-server=' + origin['origin'], '--crossplay-role=' + target, '--crossplay-release=' + str(output / 'release')]
         environment = crossplay.clean_environment()

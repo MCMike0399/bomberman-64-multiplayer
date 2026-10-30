@@ -1,6 +1,17 @@
 """Primary APIs and the one explicitly evidenced Windows initialization fallback."""
+import os
+
 DRIVERS={'windows-x64':'vulkan','linux-x64':'vulkan','macos-arm64':'metal'}
 WINDOWS_FALLBACK_REASON='vulkan-initialization-unavailable'
+
+
+def execution_driver(target):
+    """Explicit supported API for disposable functional CI; never a product default."""
+    override=os.environ.get('BLAST_QA_WINDOWS_DRIVER')
+    if not override:return DRIVERS[target]
+    if target!='windows-x64' or override!='d3d12' or os.environ.get('GITHUB_ACTIONS')!='true':
+        raise ValueError('Windows functional API override is restricted to explicit native CI')
+    return override
 
 
 def driver_matches(target,actual,requested=None,fallback_reason=None):

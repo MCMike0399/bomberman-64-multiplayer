@@ -1,14 +1,29 @@
 from pathlib import Path
+import os
 import json
 import tempfile
 import unittest
+from unittest.mock import patch
 import desktop_packages as desktop
 import crossplay_runtime
+import desktop_rendering
 from test_desktop_packages import write_desktop, SHA, RELEASE
 
 ROOT=Path(__file__).resolve().parents[2]
 
 class RendererPolicyTests(unittest.TestCase):
+    def test_explicit_functional_api_never_changes_product_or_hardware_defaults(self):
+        with patch.dict(os.environ,{'GITHUB_ACTIONS':'true','BLAST_QA_WINDOWS_DRIVER':'d3d12'}):
+            self.assertEqual(desktop_rendering.execution_driver('windows-x64'),'d3d12')
+            self.assertEqual(desktop.TARGETS['windows-x64']['driver'],'vulkan')
+        with patch.dict(os.environ,{'GITHUB_ACTIONS':'true','BLAST_QA_WINDOWS_DRIVER':''}):
+            self.assertEqual(desktop_rendering.execution_driver('windows-x64'),'vulkan')
+
+    def test_functional_override_cannot_select_compatibility_or_escape_its_os_scope(self):
+        for target,driver,ci in [('windows-x64','opengl3','true'),('linux-x64','d3d12','true'),('windows-x64','d3d12','false')]:
+            with self.subTest(target=target,driver=driver,ci=ci),patch.dict(os.environ,{'GITHUB_ACTIONS':ci,'BLAST_QA_WINDOWS_DRIVER':driver}),self.assertRaises(ValueError):
+                desktop_rendering.execution_driver(target)
+
     def test_windows_default_and_consumer_contract_are_vulkan(self):
         self.assertIn('rendering_device/driver.windows="vulkan"',(ROOT/'project.godot').read_text())
         self.assertEqual(desktop.TARGETS['windows-x64']['driver'],'vulkan')

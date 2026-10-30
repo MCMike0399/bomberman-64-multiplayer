@@ -16,7 +16,7 @@ import time
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools/ci'))
 import desktop_packages as desktop
-from desktop_rendering import report_matches
+from desktop_rendering import execution_driver, report_matches
 
 
 def run_startup(command, cwd, environment, log, timeout=240, on_timeout=None):
@@ -70,7 +70,7 @@ def main():
             preferences = folder / 'preferences.cfg'
             preferences.write_text('[player]\nautomaticUpdates=false\n[video]\n' +
                 'graphicsPreset="' + preset + '"\nfullscreen=' + ('true' if display == 'fullscreen' else 'false') + '\nresolution=Vector2i(0, 0)\n')
-            command = [str(executable), '--rendering-driver', settings['driver'], '--',
+            command = [str(executable), '--rendering-driver', execution_driver(args.target), '--',
                        '--smoke-menu' if kind == 'menu' else '--smoke', '--smoke-seconds=4',
                        '--smoke-preferences=' + str(preferences), '--smoke-output=' + str(folder)]
             environment = os.environ.copy()
