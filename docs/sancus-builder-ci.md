@@ -303,3 +303,39 @@ list them honestly rather than claiming to delete them.
 
 Estimates are not invoices or an enforced dollar cutoff. Update the ledger
 after each campaign and retain its timing, evidence and cleanup receipts.
+
+
+## Paid approval sequencing
+
+`SANCUS_BUILDER_PAID_HOLD` affects paid qualification selection only; it never
+changes release-kind classification or promotion's required GPU receipts.
+Missing or any value other than the exact string `false` holds paid selection
+before the protected environment job can queue. Audit and rehearsal stay free.
+During the initial rehearsal/review boundary the variable is `true`. The workflow
+is temporarily disabled as an additional operational hold until this selector is
+on main; re-enable it with the variable still true for the free rehearsals.
+Do not use `BLAST_RELEASE_KIND_OVERRIDE` to bypass this hold or the major gate.
+
+Before a paid approval is requested, the selector publishes the exact source,
+Verification run, both instance types/AMIs, fixed expiry, count, conservative
+estimate and remaining cumulative budget in its step summary and the
+`builder-approval-plan` artifact. The paid job name includes the cost ceiling and
+source; the environment deployment URL opens the run summary. Free jobs are
+explicitly labelled FREE/no allocation. The reviewed hourly ceilings are
+$0.526 Linux and $0.710 Windows for two us-east-1 g4dn.xlarge instances. The
+three-hour estimate including storage/IPv4/transfer/termination allowance is
+$5.29. This is a ceiling estimate, not a live quote or invoice: preparation reads
+live prices and refuses above either hourly ceiling or the disclosed estimate.
+
+The fixed deadline is never moved after approval. Approval must leave at least
+100 minutes for the campaign plus 20 minutes for cleanup. The approved job
+checks this before preparation, and the allocation boundary checks it again
+after staging. It also checks the approved job's hold value before creation intent and
+CreateStack, using GitHub's variable context without a standing admin token. A
+late approval, changed source/run/AMI/budget, or held job
+cannot allocate resources. Cleanup does not depend on the paid hold.
+
+Only after free rehearsals/observed cancellation and timeout outcomes are
+reviewed, and the exact-artifact campaign plan is approved, set the paid hold to
+`false`. The existing required environment reviewer still approves each paid
+run. Restore normal automatic major selection only at that reviewed boundary.

@@ -182,3 +182,27 @@ class PhaseWiring(unittest.TestCase):
 
 
 if __name__=='__main__':unittest.main()
+
+
+class PaidApprovalAllocationBoundary(unittest.TestCase):
+    setUp = PhaseWiring.setUp
+    def test_late_environment_approval_never_submits_creation(self):
+        import os
+        self.session.operator=False
+        self.session.plan['fixedCampaignExpiryUtc']=(datetime.datetime.now(datetime.timezone.utc)+datetime.timedelta(minutes=30)).isoformat()
+        spending={'budgetUsd':25,'closedEstimateUsd':4.80}
+        self.session.plan['approvalPlan']=controller.builder_approval.build(self.plan['payloadSource'],self.plan['verificationRunId'],self.session.plan['fixedCampaignExpiryUtc'],spending)
+        row=journal.append(controller.campaign.JOURNAL,self.session.plan,'INTENT','AWS::CloudFormation::Stack',self.plan['runId'],{})
+        (self.root/'intent-published.json').write_text(json.dumps({'intentSha256':journal.canonical_hash(row),'controllerRunId':'fixture-run'}))
+        with patch.dict(os.environ,{'GITHUB_RUN_ID':'fixture-run','SANCUS_BUILDER_PAID_HOLD':'false'}),patch.object(controller,'verify_context'),patch.object(controller.builder_approval,'ledger',return_value=spending),patch.object(controller.campaign,'submit_intent')as submit:
+            with self.assertRaisesRegex(ValueError,'Late approval'):self.session.launch()
+            submit.assert_not_called()
+
+    def test_held_job_never_submits_creation(self):
+        import os
+        self.session.operator=False
+        row=journal.append(controller.campaign.JOURNAL,self.plan,'INTENT','AWS::CloudFormation::Stack',self.plan['runId'],{})
+        (self.root/'intent-published.json').write_text(json.dumps({'intentSha256':journal.canonical_hash(row),'controllerRunId':'fixture-run'}))
+        with patch.dict(os.environ,{'GITHUB_RUN_ID':'fixture-run','SANCUS_BUILDER_PAID_HOLD':'true'}),patch.object(controller,'verify_context'),patch.object(controller.campaign,'submit_intent')as submit:
+            with self.assertRaisesRegex(ValueError,'hold'):self.session.launch()
+            submit.assert_not_called()

@@ -12,7 +12,8 @@ class HostedCleanupPlacement(unittest.TestCase):
 
     def test_cleanup_reassumption_and_audit_are_always_in_the_campaign_job(self):
         campaign=self.source.split('  campaign:',1)[1].split('  report:',1)[0]
-        self.assertIn('environment: gpu-qualification',campaign)
+        self.assertIn('name: gpu-qualification',campaign)
+        self.assertIn('actions/runs/{1}#summary',campaign)
         for name in ('Re-assume fresh credentials immediately before cleanup','Record the real cleanup credential deadline',
                      'Always perform owned cleanup and its audit in this same job'):
             block=self.block(name);self.assertIn('if: always()',block)
@@ -43,3 +44,12 @@ class HostedCleanupPlacement(unittest.TestCase):
         positions=[self.source.index(name)for name in names]
         self.assertEqual(positions,sorted(positions))
         self.assertIn('if: always()',self.block(names[1]))
+
+    def test_plan_is_disclosed_before_the_protected_paid_job(self):
+        trigger=(ROOT/'.github/workflows/gpu-qualification.yml').read_text()
+        self.assertLess(trigger.index('Retain the paid plan before any approval prompt'),trigger.index('  controlled:'))
+        self.assertIn('approval-plan: ${{ needs.select.outputs.approval-plan }}',trigger)
+        self.assertIn('SANCUS_BUILDER_PAID_HOLD: ${{ vars.SANCUS_BUILDER_PAID_HOLD }}',trigger)
+        self.assertIn('PAID up to ${0}',self.source)
+        self.assertIn('FREE rehearsal - no allocation',self.source)
+        self.assertLess(self.source.index('Refuse held, changed or late paid approvals'),self.source.index('Assume the scoped role for preparation'))
