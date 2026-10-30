@@ -211,13 +211,19 @@ def stage_draft(repository, run_id, version, revision, directory, existing_draft
                      f'Verification: https://github.com/{repository}/actions/runs/{run_id}\n\n'
                      'Managed, network, headless and export checks passed. The archived app also passed saved-settings startup on every '
                      'graphics preset/display mode and an actual signed update from the latest published release. '
-                     'Complete archived Metal/D3D12/Vulkan journeys and shared three-platform Quick Play passed. '
+                     'Complete archived native-OS journeys and shared three-platform Quick Play passed. '
                      'Ad-hoc signature; Apple notarization and physical controller validation are not claimed.\n')
     with notes.open('a') as stream:
         for target, settings in desktop_packages.TARGETS.items():
             stream.write(f'\n{target}: self-contained client using {settings["driver"]}; complete native-OS gameplay, multiplayer, graphical/startup and actual updater gates passed. '
                          'Signed automatic updates are supported from installed Windows folders and Linux AppImages. '
                          'Native GPU visuals/performance and physical controller support require separate hardware validation.\n')
+        stream.write('\nWindows defaults to Vulkan, with DirectX 12 startup recovery and a DirectX 12 Start-menu shortcut. '
+                     'Windows executables are not Authenticode signed; the signed delivery inventory authenticates updates.\n'
+                     '\nSwitch 2 Pro over USB is supported on macOS only. Other mapped gamepads remain supported on Windows/Linux; '
+                     'physical controller validation is not claimed.\n'
+                     '\nMovement keys use current-state polling on every platform: a tap entirely between render polls during a long hitch can be missed. '
+                     'Queued button edges are handled separately.\n')
     names = [ARCHIVE, ARCHIVE + '.sha256', SERVER_ARCHIVE, SERVER_ARCHIVE + '.sha256',
              'server-build-metadata.json', 'build-metadata.json']
     names += [name for target in desktop_packages.TARGETS for name in desktop_packages.asset_names(target)]
