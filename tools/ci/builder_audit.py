@@ -17,9 +17,9 @@ def expected_standing(arn):
         f'arn:aws:cloudformation:{names.REGION}:{names.ACCOUNT}:stack/{names.IDENTITY_STACK}/')
 
 
-def audit(aws):
+def audit(aws,require_scoped_role=True):
     caller=aws('sts','get-caller-identity')
-    if caller.get('Account')!=names.ACCOUNT or not caller.get('Arn','').startswith(
+    if caller.get('Account')!=names.ACCOUNT or require_scoped_role and not caller.get('Arn','').startswith(
             f'arn:aws:sts::{names.ACCOUNT}:assumed-role/{names.CI_ROLE}/'):
         raise RuntimeError('Empty audit requires the actual scoped builder assumed role')
     checked={};errors=[]

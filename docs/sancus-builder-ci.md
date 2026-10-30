@@ -19,9 +19,47 @@ only the read-only reusable controller; it cannot launch instances. Paid
 orchestration and automatic major-release queuing are a subsequent boundary.
 Policy simulation is not GPU qualification.
 
-The [proposed per-run S3 staging update](sancus-builder-staging.md) supports the
-SSM execution strategy without placing a GitHub token in AWS. It needs its own
-permission review before the standing identity is updated or any bucket created.
+The [per-run S3 staging update](sancus-builder-staging.md) is deployed and read
+back against the reviewed policy hashes. It supports SSM execution without
+placing a GitHub token in AWS. The second free OIDC audit still needs the user's
+environment approval. No paid run or staging bucket has been created by this
+controller work.
+
+### SSM controller implementation boundary
+
+The source modules under `tools/ci/builder_*` now contain the journal, exact
+creation-intent recovery, immutable source payload preparation, per-run template,
+SSM dispatch, result retention and cleanup stages. These are preparation work;
+the paid workflow remains disabled until guest bootstrap, the complete dry run
+and the reviewed campaign plan are ready. Unit tests do not qualify graphics or
+prove live cleanup.
+
+SSM dispatch uses a fixed installed dispatcher and a data-only descriptor bound
+to the source, instance, target and deadline. A lost SendCommand response leaves
+an unresolved durable intent; reconciliation never blindly sends a second
+command. Windows graphics must run in the disposable standard user's interactive
+session, not SSM's LocalSystem session. No GitHub runner is registered on AWS.
+
+The current CloudFormation `AWS::Scheduler::Schedule` resource schema does not
+accept `ActionAfterCompletion`, although the Scheduler API supports it. The
+controller therefore sets `DELETE` through UpdateSchedule and reads both exact
+targets back before writing readiness. The corresponding permission delta is
+limited to the existing dated run-schedule ARN clause. It is **not deployed**;
+it requires simulation, Access Analyzer and review before an identity update.
+The original S3-v2 identity generator remains unchanged.
+
+The cleanup-only entry point never provisions or retries a game test:
+
+```sh
+python3 tools/ci/builder_supervisor.py --state /absolute/path/to/owned-campaign-state
+```
+
+Its state must retain the exact creation journal, plan and protected baseline.
+Evidence collection errors do not bypass deletion ownership checks or prevent
+later independently authorized cleanup stages. Missing creation responses remain
+unresolved until exact-intent reconciliation succeeds. Stopped instances and
+DELETE_FAILED stacks are never clean. Final checks cover recorded physical IDs
+and the discovery audit; unknown ownership is reported rather than deleted.
 
 ## Promotion and fingerprint
 

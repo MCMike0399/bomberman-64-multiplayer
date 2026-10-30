@@ -32,7 +32,7 @@ register('cloudformation:CreateStack cloudformation:DescribeStacks cloudformatio
          'cloudformation:DeleteStack','stack')
 register('scheduler:CreateScheduleGroup scheduler:GetScheduleGroup scheduler:DeleteScheduleGroup '
          'scheduler:ListTagsForResource','schedule-group')
-register('scheduler:CreateSchedule scheduler:GetSchedule scheduler:DeleteSchedule','schedule')
+register('scheduler:CreateSchedule scheduler:GetSchedule scheduler:DeleteSchedule scheduler:UpdateSchedule','schedule')
 register('ssm:SendCommand','document instance')
 register('ssm:GetDocument ssm:DescribeDocument','document')
 register(' '.join(builder_staging.BUCKET_ACTIONS),'bucket')

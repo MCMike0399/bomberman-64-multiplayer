@@ -49,7 +49,7 @@ def list_owned(aws):
         seen.add(token)
 
 
-def provision_new(aws,run,create_owned_stack):
+def require_unused_name(aws,run):
     client=Objects(aws,run)
     if any(row['Name']==client.bucket for row in list_owned(aws)):
         raise BucketCollision('Never reuse a pre-existing staging bucket')
@@ -59,6 +59,11 @@ def provision_new(aws,run,create_owned_stack):
         if error.code not in ('404','NoSuchBucket','NotFound'):
             raise BucketCollision('Staging name is occupied or ownership is unverified')from error
     else:raise BucketCollision('Staging name already exists')
+    return client
+
+
+def provision_new(aws,run,create_owned_stack):
+    client=require_unused_name(aws,run)
     # CreateBucket does not support ExpectedBucketOwner. The owned CFN stack
     # creates it under the verified account; no upload occurs until post-checks.
     try:create_owned_stack()
