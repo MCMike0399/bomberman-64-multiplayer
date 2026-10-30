@@ -15,6 +15,14 @@ def condition(text,job):
 
 
 class FunctionalWorkflowTrust(unittest.TestCase):
+    def test_download_containers_do_not_race_the_server_publisher(self):
+        text=WORKFLOW.read_text()
+        download=re.search(r'^  desktop-download:\n(.*?)(?=^  [a-zA-Z0-9_-]+:)',text,re.M|re.S)[1]
+        self.assertNotIn('name: Blast-Circuit-server-dotnet10',download)
+        native=re.search(r'^  desktop-native:\n(.*?)(?=^  [a-zA-Z0-9_-]+:)',text,re.M|re.S)[1]
+        self.assertIn('needs: [desktop-download, managed]',native)
+        self.assertIn('name: Blast-Circuit-server-dotnet10',native)
+
     def test_all_private_functional_builds_allow_only_main_or_same_repo_prs(self):
         text=WORKFLOW.read_text()
         expected="""needs.public.outputs.runtime == 'true' && vars.KERNEL_CI_ENABLED == 'true' &&
