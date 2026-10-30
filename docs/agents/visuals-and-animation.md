@@ -776,3 +776,19 @@ reproduced that identical residual region in reflection-off; both template
 repeats were exact in that bounded check. This is retained as pre-existing
 same-device nondeterminism, without masking or changing the strict comparator.
 It does not establish cross-OS equality or final exported graphics qualification.
+
+The accompanying seven-stage presentation-math prototype targets only producing
+sites identified by the native field census: cardinal relief bases; palm trunk
+angles/bases; Rock Garden rock and drifting-leaf bases; pennant and fire-pickup
+motion; Blizzard snow X drift; and Rock Garden camera projection/fit/depth cues.
+`PresentationMath` uses a fixed managed series and direct YXZ basis columns, so
+identical angles are not sent back through native sin/cos. Explicit local scales
+preserve each prop's proportions. Rock Garden uses a fixed equivalent camera
+basis and one managed projection order; fog and DOF are still derived from the
+playable bounds. Other stage camera fits retain their existing path.
+
+These edits are presentation-only. The authority assemblies, terrain layout,
+collision, physics, input protocol, presets and shaders are unchanged. M5
+before/after captures and any raw residuals require visual review before adopting
+this prototype; only the subsequent single native seven-stage re-measure can
+establish cross-OS input equality.

@@ -277,7 +277,7 @@ public partial class TempleStageView : Node3D
     }
     private void Relief(Vector3 point,int dx,int dz)
     {
-        var root=new Node3D {Position=point,Rotation=new Vector3(0,Mathf.Atan2(dx,dz),0)};AddChild(root);
+        var root=new Node3D {Position=point,Basis=PresentationMath.Relief(dx,dz)};AddChild(root);
         var dark=_art.Color(new("745321"));var light=_art.Color(new("d4ad55"));
         Box(root,new(0,.3f,.012f),new(.99f,.065f,.03f),light);
         Box(root,new(0,-.3f,.012f),new(.99f,.065f,.03f),light);

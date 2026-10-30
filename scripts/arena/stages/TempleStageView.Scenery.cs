@@ -146,7 +146,7 @@ public partial class TempleStageView
 
     private MeshInstance3D Rock(Node3D parent,Vector3 position,Vector3 scale,Material material,int variant,float yaw=0)
     {
-        var rock=new MeshInstance3D{Name="Rock",Mesh=SceneryRock(variant%4),MaterialOverride=material,Position=position,Scale=scale,Rotation=new(0,yaw,0)};
+        var rock=new MeshInstance3D{Name="Rock",Mesh=SceneryRock(variant%4),MaterialOverride=material,Position=position,Basis=PresentationMath.Rotation(new(0,yaw,0),scale)};
         parent.AddChild(rock);return rock;
     }
 
@@ -163,7 +163,7 @@ public partial class TempleStageView
         {
             float t=(i+.5f)/segments;
             var trunk=Taper(sway,new(lean*t*t*height,t*height,0),.15f-.04f*t,.13f-.04f*t,height/segments*1.12f,i%2==0?bark:ring,10);
-            trunk.Rotation=new(0,0,-Mathf.Atan(2*lean*t));
+            trunk.Basis=PresentationMath.Rotation(new(0,0,-PresentationMath.Atan(2*lean*t)));
         }
         var crown=new Node3D{Name="Crown",Position=new(lean*height,height,0)};sway.AddChild(crown);
         for(int f=0;f<8;f++)
@@ -435,7 +435,7 @@ public partial class TempleStageView
         Sphere(parent,position+new Vector3(0,pole+.04f,0),Vector3.One*.09f,_art.Color(new("e2b64f"),.35f));
         var hinge=new Node3D{Name="Pennant",Position=position+new Vector3(0,pole-.08f,0)};parent.AddChild(hinge);
         Plate(hinge,Vector3.Zero,[new(0,0),new(.95f,-.17f),new(0,-.36f)],.02f,Cloth(color));
-        _sceneryMotion.Add(t=>hinge.Rotation=new(0,.6f+Mathf.Sin(t*1.7f+phase)*.35f+Mathf.Sin(t*4.3f+phase)*.08f,0));
+        _sceneryMotion.Add(t=>hinge.Basis=PresentationMath.Rotation(new(0,.6f+PresentationMath.Sin(t*1.7f+phase)*.35f+PresentationMath.Sin(t*4.3f+phase)*.08f,0)));
     }
 
     private void Cloud(Node3D parent,Vector3 position,float scale,float drift,float span,float phase)
