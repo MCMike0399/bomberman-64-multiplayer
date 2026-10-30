@@ -41,7 +41,7 @@ def validate_aws_names(template):
     This is an additional fail-closed check on our generated templates, not an
     ownership proof or authorization to delete discovered resources.
     """
-    properties={'RoleName','ManagedPolicyName','InstanceProfileName','GroupName','Name'}
+    properties={'RoleName','ManagedPolicyName','InstanceProfileName','GroupName','Name','BucketName'}
     for resource in template.get('Resources',{}).values():
         data=resource.get('Properties',{})
         for key in properties & data.keys():

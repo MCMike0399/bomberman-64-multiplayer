@@ -19,6 +19,10 @@ only the read-only reusable controller; it cannot launch instances. Paid
 orchestration and automatic major-release queuing are a subsequent boundary.
 Policy simulation is not GPU qualification.
 
+The [proposed per-run S3 staging update](sancus-builder-staging.md) supports the
+SSM execution strategy without placing a GitHub token in AWS. It needs its own
+permission review before the standing identity is updated or any bucket created.
+
 ## Promotion and fingerprint
 
 Promotion and deployment derive the release kind from the latest published
