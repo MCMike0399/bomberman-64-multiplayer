@@ -3,6 +3,12 @@
   "perRunCapUsd": 20,
   "preCiEstimateUsd": 4.8,
   "closedEstimateUsd": 4.8,
-  "recordedRuns": [],
+  "recordedRuns": [
+    {
+      "workflowRunId": "41136197647",
+      "estimateUsd": 0.0,
+      "receipt": "Campaign 2 attempt 1 (3ed682b): stack sancus-builder-20261030-3ed682b-7cfe69232929b174 rolled back at launch (scheduler:TagResource AccessDenied); no instances; cleanup-receipt cost.estimateUsd 0.0, allCreatedResourcesGone true; outcome report passed, zero leftovers; operator audit 2026-10-30T22:31Z 18/18 absent."
+    }
+  ],
   "scope": "Conservative closed-campaign estimates. preCiEstimateUsd covers the campaigns before CI/OIDC orchestration. After every paid CI run, a reviewed PR appends {workflowRunId, estimateUsd, receipt} from its cost receipt and raises closedEstimateUsd by the same amount; until then the selector refuses another paid run. Estimates are not invoices."
 }

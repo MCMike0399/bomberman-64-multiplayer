@@ -8,6 +8,7 @@ import subprocess
 
 JOB_TIMEOUT_SECONDS=210*60
 CAMPAIGN_SECONDS=160*60
+SMOKE_TIMEOUT_SECONDS=30*60
 
 
 def select(jobs,runner):
@@ -21,7 +22,8 @@ def select(jobs,runner):
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--output',type=Path,required=True)
     parser.add_argument('--timeout-seconds',type=int,default=JOB_TIMEOUT_SECONDS);args=parser.parse_args()
-    if args.timeout_seconds not in (180,JOB_TIMEOUT_SECONDS):raise SystemExit('Unknown reviewed hosted timeout')
+    # 180: free hard-timeout probe; 1800: FREE permissions smoke; otherwise the paid envelope.
+    if args.timeout_seconds not in (180,SMOKE_TIMEOUT_SECONDS,JOB_TIMEOUT_SECONDS):raise SystemExit('Unknown reviewed hosted timeout')
     run=os.environ['GITHUB_RUN_ID']
     if not run.isdigit():raise SystemExit('Actual workflow run required')
     data=json.loads(subprocess.check_output(['gh','api',f'repos/MCMike0399/bomberman-64-multiplayer/actions/runs/{run}/jobs?filter=latest&per_page=100'],text=True,timeout=90))

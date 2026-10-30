@@ -22,16 +22,17 @@ register('ec2:TerminateInstances','instance')
 register('ec2:DeleteSecurityGroup','security-group')
 register('ec2:DeleteVolume','volume')
 register('ec2:DeleteNetworkInterface','network-interface')
-register('iam:CreateRole iam:TagRole iam:GetRole iam:ListRoleTags iam:ListRolePolicies iam:GetRolePolicy '
-         'iam:PutRolePolicy iam:DeleteRolePolicy iam:DeleteRole iam:PassRole','role')
+register('iam:CreateRole iam:TagRole iam:GetRole iam:GetRole* iam:ListRoleTags iam:ListRolePolicies iam:GetRolePolicy '
+         'iam:PutRolePolicy iam:DeleteRolePolicy iam:DeleteRole iam:PassRole iam:ListAttachedRolePolicies','role')
+register('iam:GetPolicy','policy')
 register('iam:CreateInstanceProfile iam:GetInstanceProfile iam:AddRoleToInstanceProfile '
          'iam:RemoveRoleFromInstanceProfile iam:DeleteInstanceProfile iam:TagInstanceProfile '
          'iam:ListInstanceProfileTags','instance-profile')
-register('cloudformation:CreateStack cloudformation:DescribeStacks cloudformation:DescribeStackResources '
+register('cloudformation:CreateStack cloudformation:Describe* cloudformation:DescribeStacks cloudformation:DescribeStackResources '
          'cloudformation:ListStackResources cloudformation:DescribeStackEvents cloudformation:GetTemplate '
          'cloudformation:DeleteStack','stack')
 register('scheduler:CreateScheduleGroup scheduler:GetScheduleGroup scheduler:DeleteScheduleGroup '
-         'scheduler:ListTagsForResource','schedule-group')
+         'scheduler:ListTagsForResource scheduler:TagResource','schedule-group')
 register('scheduler:CreateSchedule scheduler:GetSchedule scheduler:DeleteSchedule scheduler:UpdateSchedule','schedule')
 register('ssm:SendCommand','document instance')
 register('ssm:GetDocument ssm:DescribeDocument','document')

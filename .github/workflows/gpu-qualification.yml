@@ -4,12 +4,12 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: Free audit/rehearsal or a guarded paid qualification
+        description: Free audit/rehearsal/permissions-smoke or a guarded paid qualification
         type: choice
-        options: [audit, rehearse, qualify]
+        options: [audit, rehearse, permissions-smoke, qualify]
         default: audit
       verification-run-id:
-        description: Exact successful current-main Verification (rehearsal/qualification)
+        description: Exact successful current-main Verification (rehearsal/qualification; not permissions-smoke)
         type: string
       fixed-expiry:
         description: Fixed UTC deadline; empty selects one deadline before approval, never extended

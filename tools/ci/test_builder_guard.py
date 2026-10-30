@@ -72,6 +72,28 @@ class FailClosedOnCleanup(unittest.TestCase):
         self.assertIn('still running', reason)
 
 
+class PermissionsSmokeHistory(unittest.TestCase):
+    def test_smoke_outcome_is_the_latest_builder_outcome_and_never_a_paid_attempt(self):
+        runs = [{'id': 9, 'status': 'completed'}, {'id': 8, 'status': 'completed'}]
+        table = {9: [{'name': 'builder-smoke-intent-9-1'}, {'name': 'builder-smoke-9-1'}, {'name': 'builder-state-9-1-final'},
+                     {'name': 'builder-outcome-9-1'}],
+                 8: [{'name': 'builder-intent-8-1'}, {'name': 'builder-outcome-8-1'}]}
+        reads = []
+        unclean = {**CLEAN, 'passed': False}
+        def read(identity, name):
+            reads.append((identity, name)); return unclean if identity == 9 else CLEAN
+        self.assertIn('not a verified zero-leftover', guard.outcome_refusal(runs, table.get, read))
+        self.assertEqual(reads, [(9, 'builder-outcome-9-1')])
+        self.assertIsNone(guard.outcome_refusal(runs, table.get, lambda identity, name: CLEAN))
+        # Only builder-intent-* counts as paid allocation needing a ledger receipt.
+        self.assertIsNone(guard.spend_refusal(runs[:1], {'recordedRuns': []}, 99, table.get))
+
+    def test_smoke_without_an_outcome_report_refuses(self):
+        runs = [{'id': 9, 'status': 'completed'}]
+        reason = guard.outcome_refusal(runs, {9: [{'name': 'builder-smoke-intent-9-1'}]}.get, lambda *args: CLEAN)
+        self.assertIn('no independent outcome report', reason)
+
+
 class FailClosedOnSpend(unittest.TestCase):
     def test_unrecorded_paid_intent_refuses_and_recorded_or_current_runs_do_not(self):
         runs = [{'id': 3}, {'id': 2}, {'id': 1}]
