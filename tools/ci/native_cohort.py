@@ -12,7 +12,7 @@ def aggregate(directory,output):
     directory=Path(directory);output=Path(output);output.mkdir(parents=True,exist_ok=False)
     for target in ('macos-arm64','windows-x64','linux-x64'):
         source=directory/('native-contracts-'+target)/'replay'
-        shutil.copytree(source,output/'replay'/target)
+        shutil.copytree(source,output/'replay'/target,ignore=shutil.ignore_patterns('installed'))
     replay=authority_replay.aggregate(output/'replay',observable_required=True)
     inputs=[]
     reference=directory/'native-contracts-macos-arm64/inputs/run-0'

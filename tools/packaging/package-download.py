@@ -11,6 +11,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import urllib.request
 import zipfile
 
@@ -18,6 +19,28 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools/ci'))
 import desktop_packages as desktop
 import download_formats as downloads
+
+
+
+def create_dmg(staging, destination):
+    # Hosted DiskImages can transiently report EBUSY. Never overwrite or reuse
+    # the partial image; every bounded attempt owns a fresh temporary output.
+    with tempfile.TemporaryDirectory(prefix='blast-dmg-output-',dir=destination.parent) as temporary:
+        for attempt in range(2):
+            candidate=Path(temporary)/f'attempt-{attempt}.dmg'
+            command=['hdiutil','create','-volname','Blast Circuit','-srcfolder',str(staging),
+                     '-format','UDZO',str(candidate)]
+            result=subprocess.run(command,capture_output=True,text=True,timeout=300)
+            if result.stdout:print(result.stdout,end='')
+            if result.stderr:print(result.stderr,end='',file=sys.stderr)
+            if result.returncode==0:
+                candidate.replace(destination)
+                return
+            if attempt==0 and 'Resource busy' in result.stderr:
+                print('DMG_CREATE_RETRY_RESOURCE_BUSY: one fresh-output retry')
+                time.sleep(2)
+                continue
+            raise subprocess.CalledProcessError(result.returncode,command,result.stdout,result.stderr)
 
 
 def main():
@@ -37,8 +60,7 @@ def main():
             staging.mkdir()
             subprocess.run(['ditto', '-x', '-k', str(directory / 'Blast-Circuit-macos-arm64.zip'), str(staging)], check=True)
             (staging / 'Applications').symlink_to('/Applications')
-            subprocess.run(['hdiutil', 'create', '-volname', 'Blast Circuit', '-srcfolder', str(staging),
-                            '-format', 'UDZO', '-ov', str(directory / name)], check=True, timeout=300)
+            create_dmg(staging,directory/name)
         subprocess.run(['hdiutil', 'verify', str(directory / name)], check=True, timeout=120)
         with tempfile.TemporaryDirectory(prefix='blast-dmg-inspect-') as temporary:
             mount = Path(temporary) / 'volume'

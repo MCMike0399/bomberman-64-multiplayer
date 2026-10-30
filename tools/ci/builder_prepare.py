@@ -7,6 +7,7 @@ from pathlib import Path
 import re
 import subprocess
 
+import builder_approval
 import builder_assets
 import builder_bootstrap
 import builder_campaign as campaign
@@ -48,9 +49,7 @@ def verify_spend_history(ledger):
 
 
 def estimate(rates):
-    # Conservative full three-hour compute, both encrypted roots, two public
-    # IPv4 addresses and transfer/request/termination-latency headroom.
-    return round(3*sum(rates.values())+155*.08*3/730+2*.005*3+1.50,2)
+    return builder_approval.estimate(rates)
 
 
 def price_rates(aws,state):
@@ -119,6 +118,10 @@ def prepare(state,verification_run,fixed_expiry):
           'instances':[{'os':system,'type':'g4dn.xlarge','ami':ami,'rootGb':size}for system,ami,size in (
               ('Linux',builder_identity.AMIS[0],75),('Windows',builder_identity.AMIS[1],80))],
           'references':{'vpc':os.environ.get('SANCUS_BUILDER_VPC_ID',''),'subnet':os.environ.get('SANCUS_BUILDER_SUBNET_ID','')}}
+    spending=builder_approval.ledger()
+    if os.environ.get('MODE')=='qualify':
+        builder_approval.require_unheld(os.environ.get('SANCUS_BUILDER_PAID_HOLD'))
+        plan['approvalPlan']=builder_approval.validate(json.loads(os.environ.get('BUILDER_APPROVAL_PLAN','{}')),source,verification_run,expiry,spending)
     for key,prefix in [('vpc','vpc'),('subnet','subnet')]:
         if not re.fullmatch(prefix+r'-[0-9a-f]+',plan['references'][key]):raise ValueError('Approved existing network reference is missing: '+key)
     builder_timing.envelope(plan);builder_timing.check_credentials(1800)
@@ -134,6 +137,7 @@ def prepare(state,verification_run,fixed_expiry):
     plan['hourlyRatesUsd']=price_rates(aws,state);plan['estimatedCampaignUsd']=estimate(plan['hourlyRatesUsd'])
     if plan['estimatedCampaignUsd']>8 or plan['estimatedCampaignUsd']+plan['priorEstimateUsd']>min(25,plan['budgetUsd']):
         raise ValueError('Reviewed run/cumulative spend cap exceeded before allocation')
+    if os.environ.get('MODE')=='qualify':builder_approval.validate_prepared(plan['approvalPlan'],plan,spending)
     snapshot=protected(aws);protected_path=state/'protected-instances.json'
     protected_path.write_text(json.dumps(snapshot,indent=2)+'\n');plan['references']['protectedInstancesSha256']=desktop_packages.digest(protected_path)
     plan['release']=release_identity.check_exports();plan['renderFingerprint']=render_fingerprint.calculate()['sha256']

@@ -12,6 +12,7 @@ import uuid
 
 import builder_arming as arming
 import builder_audit
+import builder_approval
 import builder_campaign as campaign
 import builder_cleanup as cleanup
 import builder_journal as journal
@@ -65,8 +66,16 @@ class Controller:
 
     def save(self):write(self.root/'controller.json',self.data)
 
+    def check_paid_approval(self):
+        if self.operator:return  # Operator fallback has no hosted approval prompt.
+        # GitHub supplies the repository variable to the approved job. No
+        # standing administrator token or extra Variables API scope is needed.
+        builder_approval.require_unheld(os.environ.get('SANCUS_BUILDER_PAID_HOLD'))
+        return builder_approval.validate_prepared(self.plan.get('approvalPlan',{}),self.plan,builder_approval.ledger())
+
     def intent(self):
         verify_context(self.plan,Path(__file__).resolve().parents[2],self.operator)
+        self.check_paid_approval()
         arming.verify_prepared(self.plan)
         result=preflight.inspect(self.plan,self.api);write(self.root/'preflight.json',result)
         if not result['passed']:raise ValueError('Noncreating preflight failed; no allocation allowed')
@@ -100,6 +109,7 @@ class Controller:
             published=json.loads((self.root/'intent-published.json').read_text())
             if published['intentSha256']!=journal.canonical_hash(intents[0])or published['controllerRunId']!=os.environ.get('GITHUB_RUN_ID'):
                 raise ValueError('Durable creation intent differs from the approved hosted run')
+        self.check_paid_approval()
         sid=campaign.submit_intent(self.plan)
         campaign.wait_stack(self.plan,sid,'create',min(time.time()+900,self.stop),
                             observe=lambda:campaign.sync(self.plan,best_effort=True))

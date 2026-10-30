@@ -78,12 +78,21 @@ public partial class PlaytestDriver
         await _root.StartOnlineAsync(new Uri(_server),"Eight-peer host",new SessionSettings(Bots:0),NetworkMode.CreatePeer);
         var host=(NetworkSession)_root.ActiveSession!;
         var guests=new List<NetworkSession>();var states=new Dictionary<string,JsonElement>();
-        var rosters=new Dictionary<string,int>();
+        var rosters=new Dictionary<string,int>();var actorIndices=new Dictionary<string,int>();
+        var observations=new List<object>();object? firstFailureSnapshot=null;int failedCheckpoints=0;string? actionPlayer=null;
+        bool forceRelayFirst=Godot.OS.GetEnvironment("BLAST_QA_CAPACITY_FORCE_RELAY")=="true";
+        int[] joinOrder=Godot.OS.GetEnvironment("BLAST_QA_PEER_JOIN_ORDER")=="reverse"?[7,6,5,4,3,2,1]:[1,2,3,4,5,6,7];
         void Record(NetworkSession peer,JsonElement m)
         {
             string? type=m.GetProperty("t").GetString();
             if(type=="state")states[peer.PlayerId!]=m.GetProperty("d").Clone();
             if(type=="party.status")rosters[peer.PlayerId!]=m.GetProperty("d").GetProperty("players").EnumerateArray().Count(p=>p.GetProperty("connected").GetBoolean());
+        }
+        int? ActorSlot(NetworkSession peer)
+        {
+            if(!states.TryGetValue(peer.PlayerId!,out var state))return null;
+            var player=state.GetProperty("players").EnumerateArray().FirstOrDefault(p=>p.GetProperty("id").GetString()==peer.PlayerId);
+            return player.ValueKind==JsonValueKind.Object?player.GetProperty("slot").GetInt32():null;
         }
         // Hardware staggers seven guests one per frame so their native polls cannot
         // delay the real host's six-second lease. With ~1 s software or stalled
@@ -93,16 +102,17 @@ public partial class PlaytestDriver
         var live=new List<FixtureLive>();
         try
         {
-            for(int i=1;i<8;i++)
+            foreach(int i in joinOrder)
             {
-                var joining=NetworkSession.ConnectAsync(new Uri(_server),$"Peer {i+1}",new SessionSettings(Bots:0),NetworkMode.JoinCode,host.JoinCode,peerFactory:()=>new GodotPeerLink(useStun:!new Uri(_server).IsLoopback));
+                bool forceThis=forceRelayFirst&&guests.Count==0;
+                var joining=NetworkSession.ConnectAsync(new Uri(_server),$"Peer {i+1}",new SessionSettings(Bots:0),NetworkMode.JoinCode,host.JoinCode,peerFactory:()=>forceThis?(IPeerLink)new FaultablePeerLink(()=>true,useStun:!new Uri(_server).IsLoopback):new GodotPeerLink(useStun:!new Uri(_server).IsLoopback));
                 while(!joining.IsCompleted)
                 {
                     host.Advance(1d/30);
                     if(!slowFrames)foreach(var peer in guests)peer.Advance(1d/30);
                     await Frames(1);await Task.Delay(16);
                 }
-                var joined=await joining;guests.Add(joined);
+                var joined=await joining;guests.Add(joined);actorIndices[joined.PlayerId!]=i;
                 if(slowFrames)live.Add(KeepFixtureLive(joined,m=>Record(joined,m)));
                 await Frames(1);
             }
@@ -111,11 +121,21 @@ public partial class PlaytestDriver
             await Until(()=>host.IsLeader&&host.Party?.CanStart==true&&guests.All(p=>p.Party?.CanStart==true&&
                 rosters.GetValueOrDefault(p.PlayerId!)==8&&p.Party.Epoch==host.Party.Epoch),"eight compatible peers converge on the complete roster before start");
             var authorityClock=Stopwatch.StartNew();host.RequestStart();
-            await Until(()=>host.PeerTransport=="Direct P2P"&&guests.All(p=>p.PeerTransport=="Direct P2P"&&states.TryGetValue(p.PlayerId!,out var state)&&state.GetProperty("players").GetArrayLength()==8&&state.GetProperty("phase").GetInt32()==1),"eight direct peers receive complete authoritative fight snapshots");
+            Exception? directFailure=null;
+            try
+            {await Until(()=>host.PeerTransport=="Direct P2P"&&guests.All(p=>p.PeerTransport=="Direct P2P"&&states.TryGetValue(p.PlayerId!,out var state)&&state.GetProperty("players").GetArrayLength()==8&&state.GetProperty("phase").GetInt32()==1),"eight direct peers receive complete authoritative fight snapshots");}
+            catch(InvalidOperationException error){directFailure=error;} // Keep the failed check; collect fallback evidence before rethrowing.
+            Check(guests.All(p=>states.TryGetValue(p.PlayerId!,out var state)&&state.GetProperty("players").GetArrayLength()==8&&state.GetProperty("phase").GetInt32()==1),"all eight actors retain authoritative fight snapshots through their current routes");
             Check(_root.LatestState!.Value.GetProperty("serverTime").GetInt64()<=authorityClock.ElapsedMilliseconds+300,"peer authority cannot accelerate with headless/render frame speed");
-            Input(0,new PlayerInput(0,0,A:true));guests[0].SendInput(0,new PlayerInput(0,0,A:true));
-            await Until(()=>states.Values.All(s=>s.GetProperty("bombs").GetArrayLength()>=2),"host and remote bomb actions reach all eight direct players");
-            Input(0,default);guests[0].ReleaseInputs();await Capture("peer-eight-players");
+            var actionGuest=guests.FirstOrDefault(p=>p.PeerTransport!="Direct P2P")??guests[0];actionPlayer=actionGuest.PlayerId;
+            try
+            {
+                Input(0,new PlayerInput(0,0,A:true));actionGuest.SendInput(0,new PlayerInput(0,0,A:true));
+                await Until(()=>states.Values.All(s=>s.GetProperty("bombs").EnumerateArray().Any(b=>b.GetProperty("ownerId").GetString()==host.PlayerId)&&s.GetProperty("bombs").EnumerateArray().Any(b=>b.GetProperty("ownerId").GetString()==actionPlayer)),"host and selected remote bomb owners reach all eight players");
+                await Capture("peer-eight-players");
+            }
+            finally{Input(0,default);actionGuest.ReleaseInputs();}
+            if(directFailure is not null)System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(directFailure).Throw();
         }
         finally{foreach(var owner in live)owner.Dispose();foreach(var peer in guests)await peer.DisposeAsync();_root.Back();}
         async Task Until(Func<bool> predicate,string description)
@@ -135,13 +155,23 @@ public partial class PlaytestDriver
                 }
                 await Task.Delay(16);
             }
-            if(!predicate())
-            {
-                var diagnostic=new{description,host=host.PeerTransport,hostStatus=host.Status,hostParty=host.Party,guests=guests.Select(p=>new{p.PlayerId,p.PeerTransport,p.DirectPacketsSent,p.DirectPacketsReceived,p.Status,notice=p.Party?.Notice,members=rosters.GetValueOrDefault(p.PlayerId!),phase=p.Party?.Phase,epoch=p.Party?.Epoch,state=states.TryGetValue(p.PlayerId!,out var state)?state.GetProperty("players").GetArrayLength():0,statePhase=states.TryGetValue(p.PlayerId!,out var phaseState)?phaseState.GetProperty("phase").GetInt32():-1,serverTime=states.TryGetValue(p.PlayerId!,out var timedState)?timedState.GetProperty("serverTime").GetInt64():-1})};
-                Event("peer-capacity-failure",diagnostic);
-                File.WriteAllText(Path.Combine(_output,"peer-capacity-diagnostics.json"),JsonSerializer.Serialize(new{room=diagnostic,slowFrames,cadence=live.Select(owner=>owner.Cadence),host=PeerDiagnostics(host),guests=guests.Select(PeerDiagnostics)},new JsonSerializerOptions{WriteIndented=true}));
-            }
-            Check(predicate(),description);
+            long checkpointUtc=DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();bool passed=predicate();
+            var diagnostic=new{description,passed,actionPlayer,host=host.PeerTransport,hostStatus=host.Status,hostParty=host.Party,
+                guests=guests.Select((p,index)=>new{p.PlayerId,actorIndex=actorIndices[p.PlayerId!],joinOrdinal=index+1,slot=ActorSlot(p),
+                    p.PeerTransport,p.DirectPacketsSent,p.DirectPacketsReceived,p.Status,notice=p.Party?.Notice,
+                    members=rosters.GetValueOrDefault(p.PlayerId!),phase=p.Party?.Phase,epoch=p.Party?.Epoch,
+                    state=states.TryGetValue(p.PlayerId!,out var state)?state.GetProperty("players").GetArrayLength():0,
+                    statePhase=states.TryGetValue(p.PlayerId!,out var phaseState)?phaseState.GetProperty("phase").GetInt32():-1,
+                    serverTime=states.TryGetValue(p.PlayerId!,out var timedState)?timedState.GetProperty("serverTime").GetInt64():-1}).ToArray()};
+            var hostInfo=PeerDiagnostics(host);var guestInfo=guests.Select(PeerDiagnostics).ToArray();var cadence=live.Select(owner=>owner.Cadence).ToArray();
+            var observation=new{checkpointUtcUnixMs=checkpointUtc,capturedUtcUnixMs=DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),room=diagnostic,host=hostInfo,guests=guestInfo,cadence};
+            observations.Add(observation);
+            if(!passed){failedCheckpoints++;firstFailureSnapshot??=observation;}
+            Event("peer-capacity-observation",diagnostic);
+            File.WriteAllText(Path.Combine(_output,"peer-capacity-diagnostics.json"),JsonSerializer.Serialize(new{room=diagnostic,slowFrames,
+                joinOrder,forceRelayFirst,orderScope="Logical actor labels; each process creates new guest identities and ephemeral ports.",cadence,
+                host=hostInfo,guests=guestInfo,failedCheckpoints,firstFailure=firstFailureSnapshot,history=observations.ToArray()},new JsonSerializerOptions{WriteIndented=true}));
+            Check(passed,description);
         }
     }
 

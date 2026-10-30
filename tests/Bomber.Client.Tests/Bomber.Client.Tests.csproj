@@ -2,4 +2,5 @@
   <PropertyGroup><OutputType>Exe</OutputType></PropertyGroup>
   <ItemGroup><ProjectReference Include="../../src/Bomber.Client/Bomber.Client.csproj" /></ItemGroup>
   <ItemGroup><Compile Include="../../scripts/testing/ObservedInputNudge.cs" Link="ObservedInputNudge.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="../../scripts/testing/FeedbackSteering.cs" Link="FeedbackSteering.cs" /></ItemGroup>
 </Project>

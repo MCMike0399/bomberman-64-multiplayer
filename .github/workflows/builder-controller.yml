@@ -12,6 +12,9 @@ on:
       fixed-expiry:
         type: string
         default: ''
+      approval-plan:
+        type: string
+        default: '{}'
       rehearsal-fault:
         type: string
         default: none
@@ -69,9 +72,11 @@ jobs:
           retention-days: 30
 
   campaign:
-    name: ${{ inputs.mode == 'rehearse' && 'Free hosted rehearsal' || 'Approved GPU campaign' }}
+    name: ${{ inputs.mode == 'qualify' && format('PAID up to ${0} - source {1}', fromJSON(inputs.approval-plan).estimatedCampaignUsd, fromJSON(inputs.approval-plan).source) || 'FREE rehearsal - no allocation' }}
     if: always() && inputs.mode != 'audit' && github.repository == 'MCMike0399/bomberman-64-multiplayer' && github.ref == 'refs/heads/main'
-    environment: gpu-qualification
+    environment:
+      name: gpu-qualification
+      url: ${{ format('https://github.com/{0}/actions/runs/{1}#summary', github.repository, github.run_id) }}
     runs-on: ubuntu-24.04
     timeout-minutes: ${{ inputs.mode == 'rehearse' && inputs.rehearsal-fault == 'job-timeout' && 3 || 210 }}
     permissions:
@@ -80,6 +85,8 @@ jobs:
       id-token: write
     env:
       MODE: ${{ inputs.mode }}
+      BUILDER_APPROVAL_PLAN: ${{ inputs.approval-plan }}
+      SANCUS_BUILDER_PAID_HOLD: ${{ vars.SANCUS_BUILDER_PAID_HOLD }}
       VERIFICATION_RUN: ${{ inputs.verification-run-id }}
       FIXED_EXPIRY: ${{ inputs.fixed-expiry }}
       REHEARSAL_FAULT: ${{ inputs.rehearsal-fault }}
@@ -90,6 +97,16 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
+      - name: Refuse held, changed or late paid approvals before preparation
+        if: success() && inputs.mode == 'qualify'
+        run: |
+          python3 - <<'PY'
+          import json,os,sys
+          sys.path.insert(0,'tools/ci')
+          import builder_approval
+          builder_approval.require_unheld(os.environ.get('SANCUS_BUILDER_PAID_HOLD'))
+          builder_approval.validate(json.loads(os.environ['BUILDER_APPROVAL_PLAN']),os.environ['GITHUB_SHA'],os.environ['VERIFICATION_RUN'],os.environ['FIXED_EXPIRY'],builder_approval.ledger())
+          PY
       - name: Fence every rehearsal AWS CLI call to read-only operations
         if: success() && !cancelled() && inputs.mode == 'rehearse'
         run: python3 tools/ci/builder_dry_aws.py --install "$RUNNER_TEMP/builder-readonly-cli"

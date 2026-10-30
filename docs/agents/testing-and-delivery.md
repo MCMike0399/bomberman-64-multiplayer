@@ -936,3 +936,64 @@ separate worktree, private exact-SHA drafts, owned matching server and pinned
 diagnostic updater baseline described in [independent platform QA](../desktop-clients.md#independent-platform-qa).
 Integrate current main and select the final public identity when ready; stable
 publication still tests the actual latest release and rejects diagnostic receipts.
+
+### Native artifact and DiskImages lifetimes
+
+Replay/input artifacts retain receipts, replay streams, inventories and captures,
+while excluding their disposable `replay/installed` and `inputs/installed`
+payloads. Windows uninstall can remove its own executable after the parent
+process returns; uploading that changing directory races file enumeration. The
+original package artifacts already preserve those bytes. Offline aggregation
+also skips legacy installed directories so it cannot recreate redundant Mac app
+bundles. Keep the QA evidence, including raw binary inventories.
+
+Mac DMG creation retries once only for the observed DiskImages `Resource busy`
+error, using a fresh owned temporary output on the destination filesystem. Other
+errors and timeouts remain fatal. A successful image still requires `hdiutil
+verify` and the existing mounted payload comparison against the source ZIP.
+Never detach unrelated images or restart system services to make packaging pass.
+
+### Greedy peer movement feedback
+
+The Greedy network journey keeps its deliberate delayed server-observer case.
+Its peer-hosted leg uses damped synthetic steering near the one-cell middle
+landing: high-gain feedback from an older snapshot can overshoot during the
+peer's existing five-tick catch-up and fall into the basin. The deterministic
+client check first establishes the real upper landing, then compares old and
+bounded steering under delayed observation through the unchanged `LocalMatch`.
+The original controller misses the middle floor; bounded steering reaches it.
+Normal player input, authority timing/collision, journey destinations, tolerances
+and deadlines are unchanged. The QA flag is scoped to the peer leg and restored
+in `finally`; source headless evidence does not replace exported native checks.
+
+### Native early-ICE proof on hosts with multiple interfaces
+
+`peer-ice-order` waits for host-only gathering to complete and drains the queued
+native callbacks before reordering the batch. The first candidate is insufficient
+to describe every interface. Every real gathered candidate precedes remote SDP;
+the fixture checks that the SDP contains no embedded candidates and that no later
+signal substitutes for the early batch. Connection and actual data delivery keep
+their existing five-second predicates. The adapter exposes only a read-only
+internal gathering-state observation; production signalling behavior is unchanged.
+Signal counts, gathering/connection flags and the failing stage are written before
+link disposal and retained in native CI. Use those observations to distinguish
+incomplete fixture signalling from an actual native connection failure.
+
+### Eight-peer native signalling observations
+
+Playtest-only link observations retain SDP fingerprints, candidate endpoints,
+produced/received/applied/error counts, gathering state and monotonic timing
+from link creation. These are API observations; they do not expose the selected
+ICE pair or the exact instant of a native transition. No raw SDP is retained.
+Normal launches do not enable this collection. Capacity receipts freeze each
+checkpoint and preserve the first failure before teardown.
+
+The original all-eight-direct predicate and twenty-second bound remain required.
+After a failure, the fixture may collect authoritative snapshots and bomb-owner
+witnesses through relay, but it rethrows the original failure. A successful
+reverse-order observation cannot clear it. The optional Windows second process
+is armed only when `BLAST_QA_PEER_ROTATION_SHA` matches the exact CI source SHA.
+It reverses logical guest labels, creating new identities and ephemeral ports;
+it is not an identity-preserving port experiment. Clear that one-shot variable
+after the run. If complete signalling still leaves a native link Connecting,
+retain the evidence and request a release decision rather than growing timeouts.

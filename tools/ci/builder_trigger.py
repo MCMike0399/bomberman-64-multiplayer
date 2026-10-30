@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import subprocess
 
+import builder_approval
 import release_gpu_policy
 import release_identity
 
@@ -44,11 +45,19 @@ if __name__=='__main__':
             try:policy=release_gpu_policy.derive(REPOSITORY,release_identity.check_exports()['version'],gh)
             except ValueError as error:approved=False;reason=str(error)
             else:approved=policy['requiresGpu'];reason='Major/minor qualification'if approved else'Patch uses free functional/package gates'
+    if mode=='qualify' and os.environ.get('SANCUS_BUILDER_PAID_HOLD')!='false':
+        approved=False;reason='Paid qualification hold: rehearsal and plan review must finish first'
     expiry=os.environ.get('FIXED_EXPIRY','')or(datetime.datetime.now(datetime.timezone.utc)+datetime.timedelta(minutes=160)).isoformat()
     parsed=datetime.datetime.fromisoformat(expiry)
     if parsed.tzinfo is None:raise SystemExit('Fixed expiry must have a UTC offset')
-    outputs={'run':str(approved).lower(),'mode':mode,'source':source,'verification-run-id':run_id,'fixed-expiry':parsed.astimezone(datetime.timezone.utc).isoformat()}
+    approval={}
+    if approved and mode=='qualify':
+        approval=builder_approval.build(source,run_id,parsed.astimezone(datetime.timezone.utc).isoformat(),builder_approval.ledger())
+        builder_approval.validate(approval,source,run_id,approval['fixedCampaignExpiryUtc'],builder_approval.ledger())
+        path=Path('artifacts/builder-approval-plan.json');path.parent.mkdir(parents=True,exist_ok=True);path.write_text(json.dumps(approval,indent=2)+'\n')
+    outputs={'approval-plan':json.dumps(approval,separators=(',',':')),'run':str(approved).lower(),'mode':mode,'source':source,'verification-run-id':run_id,'fixed-expiry':parsed.astimezone(datetime.timezone.utc).isoformat()}
     with Path(os.environ['GITHUB_OUTPUT']).open('a')as output:
         for key,value in outputs.items():output.write(key+'='+value+'\n')
     with Path(os.environ['GITHUB_STEP_SUMMARY']).open('a')as summary:
+        if approval:summary.write(builder_approval.summary(approval))
         summary.write(f'Builder selection: {reason}. Source `{source}`. Mode `{mode}`. Fixed expiry `{outputs["fixed-expiry"]}`.\n')
