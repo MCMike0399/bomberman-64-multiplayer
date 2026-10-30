@@ -27,3 +27,14 @@ class PolicySimulation(unittest.TestCase):
 
 
 if __name__=='__main__':unittest.main()
+
+
+class PermissionAuditCases(unittest.TestCase):
+    def test_every_audited_permission_has_positive_and_negative_simulations(self):
+        import builder_policy_simulation as simulation
+        rows=simulation.permission_audit_cases()
+        for action in ('scheduler:TagResource','scheduler:GetSchedule','iam:GetPolicy','ec2:AuthorizeSecurityGroupIngress',
+                       'iam:ListAttachedRolePolicies','s3:TagResource'):
+            outcomes={expected for _,name,_,_,expected in rows if name==action}
+            self.assertEqual(outcomes,{True,False},action)
+        self.assertIn(('no-ssm-secrets','ssm:GetParameter'),[(row[0],row[1])for row in rows])

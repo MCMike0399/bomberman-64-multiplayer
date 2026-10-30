@@ -8,8 +8,12 @@ BUCKET_ACTIONS=(
     's3:CreateBucket','s3:DeleteBucket','s3:PutBucketPublicAccessBlock',
     's3:PutEncryptionConfiguration','s3:PutLifecycleConfiguration','s3:PutBucketPolicy',
     's3:DeleteBucketPolicy','s3:PutBucketTagging','s3:PutBucketOwnershipControls',
-    's3:GetBucket*','s3:GetEncryptionConfiguration','s3:GetLifecycleConfiguration',
+    # Read-only bucket configuration on the owned bucket. CloudFormation's
+    # AWS::S3::Bucket read handler also reads accelerate, analytics,
+    # intelligent-tiering, inventory, metrics and replication configuration.
+    's3:GetBucket*','s3:Get*Configuration',
     's3:ListBucket','s3:ListBucketVersions','s3:ListBucketMultipartUploads',
+    's3:ListTagsForResource','s3:TagResource',
 )
 OBJECT_ACTIONS=('s3:GetObject','s3:PutObject','s3:DeleteObject','s3:DeleteObjectVersion',
                 's3:AbortMultipartUpload','s3:ListMultipartUploadParts')

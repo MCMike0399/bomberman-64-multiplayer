@@ -82,6 +82,36 @@ def controller_cases():
     ]
 
 
+def permission_audit_cases():
+    """2026-10-30 campaign-2 launch audit (CloudTrail + CloudFormation handler schemas)."""
+    run=names.run_id('20261030','09e454b','1234abcd');other='sancus-runner-Watchdog'
+    region,account=names.REGION,names.ACCOUNT
+    group=lambda name:f'arn:aws:scheduler:{region}:{account}:schedule-group/{name}'
+    sg=f'arn:aws:ec2:{region}:{account}:security-group/sg-00000000000000000'
+    role=lambda name:f'arn:aws:iam::{account}:role/{name}'
+    bucket='arn:aws:s3:::'+builder_staging.bucket_name(run)
+    tag={'aws:RequestTag/'+names.RUN_TAG:run};owned={'aws:ResourceTag/'+names.RUN_TAG:run};acct={'s3:ResourceAccount':account}
+    return [
+        ('owned-group-tag-on-create','scheduler:TagResource',group(run+'-expiry-group'),tag,True),
+        ('untagged-group-tag','scheduler:TagResource',group(run+'-expiry-group'),{},False),
+        ('foreign-group-tag','scheduler:TagResource',group('default'),tag,False),
+        ('default-group-name-precheck','scheduler:GetSchedule',f'arn:aws:scheduler:{region}:{account}:schedule/default/{run}-linux-expiry',{},True),
+        ('default-group-foreign-read','scheduler:GetSchedule',f'arn:aws:scheduler:{region}:{account}:schedule/default/{other}',{},False),
+        ('read-own-boundary','iam:GetPolicy',f'arn:aws:iam::{account}:policy/{names.BOUNDARY}',{},True),
+        ('read-other-policy','iam:GetPolicy',f'arn:aws:iam::{account}:policy/AdministratorAccess',{},False),
+        ('account-summary','iam:GetAccountSummary','*',{},True),
+        ('owned-sg-ingress','ec2:AuthorizeSecurityGroupIngress',sg,owned,True),
+        ('untagged-sg-ingress','ec2:AuthorizeSecurityGroupIngress',sg,{},False),
+        ('owned-role-attached-list','iam:ListAttachedRolePolicies',role(names.resource_name(run,'agent')),{},True),
+        ('controller-role-attached-list','iam:ListAttachedRolePolicies',role(names.CI_ROLE),{},False),
+        ('owned-bucket-replication-read','s3:GetReplicationConfiguration',bucket,acct,True),
+        ('owned-bucket-tag-resource','s3:TagResource',bucket,acct,True),
+        ('unrelated-bucket-tag-resource','s3:TagResource','arn:aws:s3:::unrelated-protected-artifacts',acct,False),
+        ('no-ssm-secrets','ssm:GetParameter',f'arn:aws:ssm:{region}:{account}:parameter/any',{},False),
+        ('no-attach-managed-policy','iam:AttachRolePolicy',role(names.resource_name(run,'agent')),{},False),
+    ]
+
+
 def run(output,protected_file,staging=False,controller=False):
     staging=staging or controller
     output.mkdir(parents=True,exist_ok=False)
@@ -101,7 +131,7 @@ def run(output,protected_file,staging=False,controller=False):
     (output/'identity-template.json').write_text(json.dumps(template,indent=2)+'\n')
     results=[]
     simulations=[('controller',policy,cases(protected[0]['id'],staging))]
-    if controller:simulations[0][2].extend(controller_cases())
+    if controller:simulations[0][2].extend(controller_cases()+permission_audit_cases())
     if staging:
         # Synthetic AllowAll is ONLY simulator input, never attached to a role.
         # It tests the ceiling independently of the controller's narrower inline policy.

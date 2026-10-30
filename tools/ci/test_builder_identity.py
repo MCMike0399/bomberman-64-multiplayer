@@ -26,16 +26,11 @@ class BuilderIdentity(unittest.TestCase):
         self.assertEqual(len(resources),2)
 
     def test_managed_boundary_fits_iam_and_has_identical_permissions(self):
+        import builder_policy_compact as compact
         boundary=identity.boundary()
         self.assertLessEqual(len(json.dumps(boundary,separators=(',',':'))),6144)
-        def permissions(data):
-            expanded=[]
-            for row in data['Statement']:
-                base={key:value for key,value in row.items()if key not in ('Sid','Action')}
-                actions=row['Action']if isinstance(row['Action'],list)else[row['Action']]
-                expanded.extend(json.dumps({**base,'Action':action},sort_keys=True)for action in actions)
-            return sorted(expanded)
-        self.assertEqual(permissions(boundary),permissions(identity.policy()))
+        pairs=lambda data:set().union(*(compact.api_pairs(row)for row in data['Statement']))
+        self.assertEqual(pairs(boundary),pairs(identity.policy()))
 
     def test_only_owned_role_and_boundary_exist_provider_is_reference(self):
         resources=identity.template()['Resources']
@@ -82,15 +77,26 @@ class BuilderIdentity(unittest.TestCase):
     def test_audit_reads_are_retained_and_no_log_creation_is_granted(self):
         actions={action for row in identity.policy()['Statement']for action in
                  (row['Action']if isinstance(row['Action'],list)else[row['Action']])}
-        self.assertIn('logs:DescribeLogGroups',actions)
-        self.assertIn('scheduler:ListSchedules',actions)
+        import fnmatch
+        granted=lambda action:any(fnmatch.fnmatchcase(action,pattern)for pattern in actions)
+        for read in ('logs:DescribeLogGroups','scheduler:ListSchedules','scheduler:ListScheduleGroups','ssm:ListCommands',
+                     'ssm:ListCommandInvocations','ssm:DescribeInstanceInformation','cloudformation:DescribeStacks','iam:GetRolePolicy'):
+            self.assertTrue(granted(read),read)
         self.assertFalse({'logs:CreateLogGroup','logs:CreateLogStream','logs:PutLogEvents'}&actions)
+        # Wildcards are read-only patterns only, and never reach SSM parameters (secrets).
+        for pattern in (action for action in actions if '*'in action):
+            self.assertRegex(pattern.split(':',1)[1],r'^(Describe|List|Get)')
+        for secret in ('ssm:GetParameter','ssm:GetParameters','ssm:GetParametersByPath','ssm:GetSecretValue'):
+            self.assertFalse(granted(secret),secret)
 
     def test_child_roles_cannot_edit_or_pass_standing_identity(self):
         statements=identity.policy()['Statement']
         for row in statements:
             actions=row['Action']if isinstance(row['Action'],list)else[row['Action']]
-            if any(action.startswith('iam:')and action not in ('iam:ListRoles','iam:ListInstanceProfiles')for action in actions):
+            # Read-only exceptions: account-wide listings/quota, and reading the boundary itself.
+            if row['Sid']=='ReadOwnBoundary':
+                self.assertEqual((actions,row['Resource']),(['iam:GetPolicy'],'arn:aws:iam::524329886851:policy/sancus-builder-boundary'));continue
+            if any(action.startswith('iam:')and action not in ('iam:ListRoles','iam:ListInstanceProfiles','iam:GetAccountSummary')for action in actions):
                 resources=row['Resource']if isinstance(row['Resource'],list)else[row['Resource']]
                 self.assertTrue(all(names.RUN_GLOB in resource for resource in resources))
             self.assertNotIn('iam:PutRolePermissionsBoundary',actions)

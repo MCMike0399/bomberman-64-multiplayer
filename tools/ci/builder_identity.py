@@ -29,16 +29,18 @@ def policy(*,staging=False):
         if condition:row['Condition']=condition
         statement.append(row)
 
+    # Read-only SSM/scheduler Describe*/List* wildcards keep the boundary inside
+    # IAM's 6,144-character managed-policy limit (2026-10-30 permission audit).
     allow('AuditOnly',['ec2:Describe*','cloudformation:ListStacks','tag:GetResources',
-          'servicequotas:GetServiceQuota','pricing:GetProducts','ssm:DescribeInstanceInformation',
-          'ssm:ListCommands','ssm:ListCommandInvocations','ssm:GetCommandInvocation',
-          'iam:ListRoles','iam:ListInstanceProfiles','scheduler:ListScheduleGroups',
-          'scheduler:ListSchedules','logs:DescribeLogGroups','s3:ListAllMyBuckets',
-          'ssm:DescribeParameters','ssm:ListDocuments'],'*')
+          'servicequotas:GetServiceQuota','pricing:GetProducts','ssm:Describe*','ssm:List*',
+          'ssm:GetCommandInvocation','iam:ListRoles','iam:ListInstanceProfiles','scheduler:List*',
+          'logs:DescribeLogGroups','s3:ListAllMyBuckets',
+          # CloudFormation's IAM handlers read account quotas before CreateRole (CloudTrail 2026-10-30).
+          'iam:GetAccountSummary'],'*')
     stacks=arn('cloudformation','stack/'+run+'/*')
     allow('CreateOwnedStacks','cloudformation:CreateStack',stacks,requested)
-    allow('InspectOwnedStacks',['cloudformation:DescribeStacks','cloudformation:DescribeStackResources',
-          'cloudformation:ListStackResources','cloudformation:DescribeStackEvents','cloudformation:GetTemplate'],stacks)
+    allow('InspectOwnedStacks',['cloudformation:Describe*','cloudformation:ListStackResources',
+          'cloudformation:GetTemplate'],stacks)
     allow('DeleteOwnedStacks','cloudformation:DeleteStack',stacks,tagged)
     allow('LaunchTaggedSmallInstances','ec2:RunInstances',arn('ec2','instance/*'),
           {'StringLike':{'aws:RequestTag/'+names.RUN_TAG:run},
@@ -55,6 +57,8 @@ def policy(*,staging=False):
     allow('TerminateOnlyOwnedInstances','ec2:TerminateInstances',arn('ec2','instance/*'),tagged)
     allow('CreateOwnedSecurityGroup','ec2:CreateSecurityGroup',arn('ec2','security-group/*'),requested)
     allow('ReferenceVpcForSecurityGroup','ec2:CreateSecurityGroup',arn('ec2','vpc/*'))
+    # The template's SecurityGroupIngress is applied after CreateSecurityGroup.
+    allow('AuthorizeOwnedSecurityGroupIngress','ec2:AuthorizeSecurityGroupIngress',arn('ec2','security-group/*'),tagged)
     allow('DeleteOnlyOwnedNetworkStorage',['ec2:DeleteSecurityGroup','ec2:DeleteVolume','ec2:DeleteNetworkInterface'],
           [arn('ec2',kind+'/*')for kind in ('security-group','volume','network-interface')],tagged)
     roles=iam('role/'+run)
@@ -62,10 +66,12 @@ def policy(*,staging=False):
           {'StringLike':{'aws:RequestTag/'+names.RUN_TAG:run},
            'ArnEquals':{'iam:PermissionsBoundary':iam('policy/'+names.BOUNDARY)}})
     allow('TagOwnedRoleAtCreation','iam:TagRole',roles,requested)
-    allow('ManageOwnedRole',['iam:GetRole','iam:ListRoleTags','iam:ListRolePolicies','iam:GetRolePolicy',
+    allow('ManageOwnedRole',['iam:GetRole*','iam:ListRoleTags','iam:ListRolePolicies','iam:ListAttachedRolePolicies',
           'iam:PutRolePolicy','iam:DeleteRolePolicy','iam:DeleteRole'],roles)
     # No Put/DeleteRolePermissionsBoundary, trust updates, managed-policy edits,
     # TagRole, or access to the standing CI role. Children cannot escape this cap.
+    # CloudFormation reads the named permissions boundary before CreateRole.
+    allow('ReadOwnBoundary','iam:GetPolicy',iam('policy/'+names.BOUNDARY))
     allow('PassOnlyOwnedRole','iam:PassRole',roles,
           {'StringEquals':{'iam:PassedToService':['ec2.amazonaws.com','scheduler.amazonaws.com']}})
     allow('ManageOwnedProfile',['iam:CreateInstanceProfile','iam:GetInstanceProfile',
@@ -74,11 +80,14 @@ def policy(*,staging=False):
           iam('instance-profile/'+run))
     groups=arn('scheduler','schedule-group/'+run)
     schedules=arn('scheduler','schedule/'+run+'/'+run)
-    allow('CreateOwnedScheduleGroup','scheduler:CreateScheduleGroup',groups,requested)
+    # Tag-on-create requires scheduler:TagResource (campaign 2 launch, run 41136197647).
+    allow('CreateOwnedScheduleGroup',['scheduler:CreateScheduleGroup','scheduler:TagResource'],groups,requested)
     allow('ManageOwnedScheduleGroup',['scheduler:GetScheduleGroup','scheduler:DeleteScheduleGroup',
           'scheduler:ListTagsForResource'],groups)
     allow('ManageOwnedSchedule',['scheduler:CreateSchedule','scheduler:GetSchedule',
           'scheduler:DeleteSchedule'],schedules)
+    # CloudFormation's Schedule pre-create check reads the name in the default group.
+    allow('PrecheckOwnedScheduleNames','scheduler:GetSchedule',arn('scheduler','schedule/default/'+run))
     allow('ExecuteOnlyOwnedGuests','ssm:SendCommand',arn('ec2','instance/*'),tagged)
     allow('OnlyStandardCommandDocuments','ssm:SendCommand',[
           f'arn:aws:ssm:{region}::document/AWS-RunShellScript',
@@ -113,9 +122,9 @@ def boundary(*,staging=False):
     for row in groups.values():
         if len(row['Action'])==1:row['Action']=row['Action'][0]
     data={'Version':'2012-10-17','Statement':list(groups.values())}
-    if staging:
-        import builder_policy_compact
-        data=builder_policy_compact.compact(policy(staging=True))
+    # Both variants use the equivalence-checked compaction (it refuses any widening).
+    import builder_policy_compact
+    data=builder_policy_compact.compact(policy(staging=staging))
     if len(json.dumps(data,separators=(',',':')))>6144:
         raise ValueError('Builder boundary exceeds the IAM managed-policy size limit')
     return data
