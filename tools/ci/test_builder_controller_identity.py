@@ -13,7 +13,11 @@ class ScheduleCleanupDelta(unittest.TestCase):
         clause=next(row for row in expected['Statement']if row['Sid']=='ManageOwnedSchedule')
         clause['Action'].append('scheduler:UpdateSchedule')
         self.assertEqual(after,expected)
-        self.assertEqual(clause['Resource'],'arn:aws:scheduler:us-east-1:524329886851:schedule/sancus-builder-20??????-*/sancus-builder-20??????-*')
+        # Reviewer-approved 2026-10-30: any schedule name inside an owned run group (group delete
+        # authorizes DeleteSchedule on schedule/<group>/*). Still pinned to owned groups only.
+        self.assertEqual(clause['Resource'],'arn:aws:scheduler:us-east-1:524329886851:schedule/sancus-builder-20??????-*/*')
+        precheck=next(row for row in after['Statement']if row['Sid']=='PrecheckOwnedScheduleNames')
+        self.assertEqual((precheck['Action'],precheck['Resource']),('scheduler:GetSchedule','arn:aws:scheduler:us-east-1:524329886851:schedule/default/sancus-builder-20??????-*'))
 
     def test_boundary_fits_and_standing_identity_and_trust_are_unchanged(self):
         before=builder_identity.template(staging=True);after=controller.template()

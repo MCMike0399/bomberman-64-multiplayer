@@ -79,7 +79,9 @@ def policy(*,staging=False):
           'iam:DeleteInstanceProfile','iam:TagInstanceProfile','iam:ListInstanceProfileTags'],
           iam('instance-profile/'+run))
     groups=arn('scheduler','schedule-group/'+run)
-    schedules=arn('scheduler','schedule/'+run+'/'+run)
+    # Any schedule name inside an owned group: deleting a group authorizes
+    # scheduler:DeleteSchedule on the literal schedule/<group>/* (smoke 41145680861).
+    schedules=arn('scheduler','schedule/'+run+'/*')
     # Tag-on-create requires scheduler:TagResource (campaign 2 launch, run 41136197647).
     allow('CreateOwnedScheduleGroup',['scheduler:CreateScheduleGroup','scheduler:TagResource'],groups,requested)
     allow('ManageOwnedScheduleGroup',['scheduler:GetScheduleGroup','scheduler:DeleteScheduleGroup',

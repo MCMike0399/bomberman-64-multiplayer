@@ -39,3 +39,10 @@ class PermissionAuditCases(unittest.TestCase):
             outcomes={expected for _,name,_,_,expected in rows if name==action}
             self.assertEqual(outcomes,{True,False},action)
         self.assertIn(('no-ssm-secrets','ssm:GetParameter'),[(row[0],row[1])for row in rows])
+        self.assertIn(('owned-group-delete-wildcard',True),[(row[0],row[4])for row in rows])
+        names={(row[0],row[4])for row in rows}
+        for allowed in ('owned-group-delete-wildcard','owned-group-any-name-create','owned-group-any-name-delete'):
+            self.assertIn((allowed,True),names)
+        for scope in ('default-group','default-named','foreign-group','foreign-named'):
+            for verb in ('createschedule','updateschedule','deleteschedule'):
+                self.assertIn((f'{scope}-{verb}-denied',False),names)

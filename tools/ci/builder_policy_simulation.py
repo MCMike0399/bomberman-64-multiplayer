@@ -95,6 +95,12 @@ def permission_audit_cases():
         ('owned-group-tag-on-create','scheduler:TagResource',group(run+'-expiry-group'),tag,True),
         ('untagged-group-tag','scheduler:TagResource',group(run+'-expiry-group'),{},False),
         ('foreign-group-tag','scheduler:TagResource',group('default'),tag,False),
+        ('owned-group-delete-wildcard','scheduler:DeleteSchedule',f'arn:aws:scheduler:{region}:{account}:schedule/{run}-expiry-group/*',{},True),
+        ('owned-group-any-name-create','scheduler:CreateSchedule',f'arn:aws:scheduler:{region}:{account}:schedule/{run}-expiry-group/any-name',{},True),
+        ('owned-group-any-name-delete','scheduler:DeleteSchedule',f'arn:aws:scheduler:{region}:{account}:schedule/{run}-expiry-group/any-name',{},True),
+        *[(f'{scope}-{verb.lower()}-denied','scheduler:'+verb,f'arn:aws:scheduler:{region}:{account}:schedule/{group_name}',{},False)
+          for scope,group_name in (('default-group','default/*'),('default-named','default/'+run+'-linux-expiry'),('foreign-group','other-group/*'),('foreign-named','other-group/'+run+'-linux-expiry'))
+          for verb in ('CreateSchedule','UpdateSchedule','DeleteSchedule')],
         ('default-group-name-precheck','scheduler:GetSchedule',f'arn:aws:scheduler:{region}:{account}:schedule/default/{run}-linux-expiry',{},True),
         ('default-group-foreign-read','scheduler:GetSchedule',f'arn:aws:scheduler:{region}:{account}:schedule/default/{other}',{},False),
         ('read-own-boundary','iam:GetPolicy',f'arn:aws:iam::{account}:policy/{names.BOUNDARY}',{},True),
