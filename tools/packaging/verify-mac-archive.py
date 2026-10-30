@@ -20,6 +20,7 @@ from promote_release import inspect_package, inspect_server
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--directory', type=Path, default=ROOT / 'artifacts')
+    parser.add_argument('--functional-only',action='store_true',help='Installed headless/native network journeys only; never graphical qualification')
     args = parser.parse_args()
     if platform.system() != 'Darwin' or platform.machine().lower() != 'arm64':
         raise RuntimeError('Complete Mac archive verification requires the Apple Silicon test desktop')
@@ -42,7 +43,7 @@ def main():
         verifier.extract(directory / 'Blast-Circuit-server-dotnet10.zip', output)
         suite = qa.Suite('mac-archive', output, 'unused', desktop='shared')
         with suite.server(dll=output / 'Blast-Circuit-server-dotnet10/Bomber.Server.dll') as origin:
-            for scenario in (*validation.HEADLESS, *validation.GRAPHICAL):
+            for scenario in (validation.HEADLESS if args.functional_only else (*validation.HEADLESS,*validation.GRAPHICAL)):
                 previous = set(output.iterdir())
                 graphical = scenario in validation.GRAPHICAL
                 command = [sys.executable, str(ROOT / 'tools/playtest/run.py'), '--app', str(app),
@@ -62,13 +63,18 @@ def main():
                 if 'displayRestart' in runner: report['displayRestart'] = runner['displayRestart']
                 validation.inspect_report(report, scenario, settings, revision, release, graphical)
                 cases.append(report)
-        (directory / 'Blast-Circuit-macos-arm64-regression.json').write_text(json.dumps({'schemaVersion': 1, 'passed': True,
+        receipt={'schemaVersion': 1, 'passed': True,
             'revision': revision, 'release': release, 'archiveSha256': desktop.digest(directory / 'Blast-Circuit-macos-arm64.zip'),
             'downloadSha256': desktop.digest(directory / 'Blast-Circuit-macos-arm64.dmg'),
-            'serverSha256': desktop.digest(directory / 'Blast-Circuit-server-dotnet10.zip'), 'cases': cases}, indent=2) + '\n')
+            'serverSha256': desktop.digest(directory / 'Blast-Circuit-server-dotnet10.zip'), 'cases': cases,
+            'scope':'functional-regression'if args.functional_only else'complete-regression',
+            'graphicsQualified':False if args.functional_only else None}
+        validation.inspect_mac(receipt,revision,release,receipt['archiveSha256'],receipt['downloadSha256'],
+                               receipt['serverSha256'],require_graphics=not args.functional_only)
+        (directory / 'Blast-Circuit-macos-arm64-regression.json').write_text(json.dumps(receipt,indent=2)+'\n')
     finally:
         if (output / 'installed').exists(): shutil.rmtree(output / 'installed')
-    print('PASS full DMG-installed Mac gameplay, multiplayer and graphical regression')
+    print('PASS DMG-installed Mac functional regression'if args.functional_only else'PASS full DMG-installed Mac gameplay, multiplayer and graphical regression')
 
 
 if __name__ == '__main__': main()

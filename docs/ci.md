@@ -9,10 +9,10 @@ The canonical entry point is `python3 tools/qa/run.py --profile PROFILE`. CI cal
 | Profile/job | Environment | Evidence and boundary |
 | --- | --- | --- |
 | `public` | Every PR and main push, hosted Ubuntu | Python syntax, tracked private-file boundary, Markdown link/anchor resolution, tool contract tests (`tools/{ci,cluster,packaging,party,playtest,qa}`), deterministic PCM tests. No kernel credentials. Proven documentation-only pushes stop here; manual dispatch and unknown history run all enabled lanes. |
-| `managed` | Trusted main, hosted Ubuntu | Managed gameplay/client/AI/audio checks, portable Release server publish, and real HTTP/WebSocket smoke against the exact staged server delivery. Produces the server ZIP. |
-| `headless` | Trusted main, hosted Ubuntu, Godot .NET | Resource import/build and simulation scenarios. No screenshot/rendering claim. |
+| `managed` | Main and same-repository runtime PRs, hosted Ubuntu | Managed gameplay/client/AI/audio checks, portable Release server publish, and real HTTP/WebSocket smoke against the exact staged server delivery. Produces the server ZIP. |
+| `headless` | Main and same-repository runtime PRs, hosted Ubuntu, Godot .NET | Resource import/build and simulation scenarios. No screenshot/rendering claim. |
 | `graphical` | Trusted main, isolated macOS ARM64 Metal runner | Windowed real Godot journeys and actual viewport captures. No physical-controller claim. |
-| `package` | Trusted main, hosted macOS ARM64, beside managed/headless | Self-contained Apple Silicon export, bundle/signature checks and exported-app headless smoke. Artifact is ad-hoc signed. |
+| `package` | Main and same-repository runtime PRs, hosted macOS ARM64, beside managed/headless | Self-contained Apple Silicon export, bundle/signature checks and exported-app headless smoke. Artifact is ad-hoc signed. |
 | Release gates | Trusted main after `package`, two parallel hosted macOS ARM64 VMs | The archived app on paravirtual Metal: saved-settings startup for every preset/display mode, and an actual signed update from the latest published release. Required for deployment/publication; see [release gates](releases.md#release-gates). |
 
 ## Enabling trusted builds
@@ -33,7 +33,21 @@ The pinned dependency revision is `8c861a941c6619b8719ad5658ba6bd921cf47ff5`, ma
 
 The bootstrap step supplies the ephemeral workflow token as `GITHUB_METADATA_TOKEN` only for the HTTPS [metadata request](https://docs.github.com/en/rest/meta/meta#get-github-meta-information), avoiding the [shared IP quota for anonymous API requests](https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api); this needs no additional configured secret and the token is excluded from private Git subprocesses.
 
-These jobs accept only main pushes and manual dispatches of main. There is no `pull_request_target` workflow, and no private dependency checkout for any PR, including same-repository PRs. To run full verification for a contribution before merging, review it and run the canonical profiles in an authorized isolated checkout. Do not change the trusted workflow to fetch arbitrary PR refs with private credentials. Protect main and review changes to workflow/tooling before merging.
+The user-approved functional lane accepts main pushes/manual dispatches of main
+and **same-repository PRs only**. The public event's head repository must exactly
+equal this repository; fork PRs get public contracts only. This trusts collaborators
+who can create branches here with the pinned private dependency during hosted
+builds. Never enable `pull_request_target`, fetch an arbitrary fork ref with
+credentials, or put private source/key files in artifacts or caches. Protect main
+and review workflow/tool changes. The self-hosted Metal job and Mac release
+startup/update gates remain main-only.
+
+Same-repository runtime PRs build managed/network and headless suites, all three
+packages, Windows/Linux native headless/startup/renderer-recovery/updater cases,
+installed Mac functional journeys and the real three-OS staged match. PR Mac
+receipts explicitly omit graphical qualification; the complete Mac graphical
+tour remains on main. Replay and captured-input automation are a separate
+remaining delivery boundary; skipped jobs are never counted as evidence.
 
 ## Graphical runner requirements
 

@@ -375,8 +375,9 @@ deployment is rechecked without reapplying it. Preserve the archived startup/upd
 gates and record actual hosted timings before claiming delivery-time gains.
 
 Read [CI](../ci.md) for trusted-job configuration and artifact validation. Public
-PR checks use no private dependency credentials; private builds run only on
-trusted main. Keep both bootstrap tools aligned with the checked-in dependency
+Fork PR checks use no private dependency credentials. Private functional builds
+run on trusted main and user-authorized same-repository PRs; self-hosted graphics
+remains main-only. Keep both bootstrap tools aligned with the checked-in dependency
 pin; a historical unavailable SHA is not a reason to restore upstream history
 or rotate credentials. Keep private source/origins and secrets out of tracked
 files, logs, caches and uploaded artifacts. Upload only allowlisted reports and
@@ -421,6 +422,21 @@ features. Quick Play's map-selection controls stay disabled even for a lone publ
 room owner after its countdown cancels; the private-host editor remains available.
 
 ## Automatic updater checks
+
+Shutdown owns three separate boundaries: saved state, managed resource finalizers
+and the pinned native low-priority worker queue. `ApplicationShutdown` stops new
+warmup/render work, flushes saves, runs the bounded dedicated CLR finalizer waiter
+while native Godot is alive, syncs cleanup and then runs the FIFO worker fences.
+No watchdog turns a failed shutdown into success. Schema-2 shutdown receipts require
+both drains; schema-1 historical receipts remain readable. A save-failure control
+must exit 1, not merely any nonzero code that could hide a native crash.
+
+`tools/qa/shutdown_probe.py --resources-only` retains a deliberate pending-resource
+native failure and a fenced SDK control. This is distinct from the original
+low-priority pending/fenced pair. Neither SDK pair substitutes for actual game,
+Low/High, updater/rollback or Mac quit-path evidence. A headless gameplay pass
+followed by a native abort remains a failed gate. Named game `runtime.log` files
+can be staged explicitly for diagnosis; arbitrary build/bootstrap logs stay out.
 
 Read [automatic updates](../automatic-updates.md) before changing release signing,
 downloads or installation. The client signature key is public; the signing secret

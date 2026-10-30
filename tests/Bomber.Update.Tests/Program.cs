@@ -24,7 +24,9 @@ var warmup=Stopwatch.StartNew();
 await Tool("/usr/bin/ditto",source,target);
 try
 {
-    string log=await Tool(Path.Combine(target,"Contents/MacOS/Blast Circuit"),"--windowed","--","--display-windowed","--smoke","--smoke-seconds=1");
+    string warmupOutput=Path.Combine(output,"warmup");Directory.CreateDirectory(warmupOutput);
+    string log=await Tool(Path.Combine(target,"Contents/MacOS/Blast Circuit"),"--windowed","--","--display-windowed","--smoke","--smoke-seconds=1",
+        "--smoke-output="+warmupOutput,"--smoke-preferences="+Path.Combine(warmupOutput,"preferences.cfg"));
     if(!log.Contains("GODOT_SMOKE_OK"))throw new Exception("Candidate did not complete renderer warmup at the install path.");
 }
 finally{Directory.Delete(target,true);}
@@ -107,7 +109,10 @@ async Task RunCase(string name,string archive,bool success,bool highStartup=fals
         if(requireOldShutdown&&(oldShutdown is not {} shutdown||
             !shutdown.GetProperty("savedStateFlushed").GetBoolean()||!shutdown.GetProperty("drain").GetProperty("completed").GetBoolean()||
             shutdown.GetProperty("watchdogEnabled").GetBoolean()||shutdown.GetProperty("watchdogFired").GetBoolean()||
-            shutdown.GetProperty("error").ValueKind!=JsonValueKind.Null||oldLog.Contains("ERROR:")))
+            shutdown.GetProperty("error").ValueKind!=JsonValueKind.Null||oldLog.Contains("ERROR:")||
+            oldLog.Contains("BLAST_SHUTDOWN_FINALIZERS_FAILED")||
+            (shutdown.GetProperty("schemaVersion").GetInt32()==2&&(!shutdown.TryGetProperty("managedFinalizers",out var finalizers)||
+                !finalizers.TryGetProperty("completed",out var completed)||completed.ValueKind!=JsonValueKind.True))))
             throw new Exception("Current-source Mac updater handoff did not save, drain and exit cleanly");
         string receipt=Path.Combine(history,"last-update.txt");
         while(!File.Exists(receipt))await Task.Delay(250,timeout.Token);

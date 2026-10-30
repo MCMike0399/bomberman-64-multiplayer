@@ -78,7 +78,7 @@ qualification of later release bytes. Raw receipts are retained under
 ## Save-failure and Mac regression controls
 
 `python3 tools/qa/shutdown_save_probe.py --executable PATH --source-project --output NEW_DIRECTORY`
-creates a read-only preferences file and requires a nonzero natural process exit,
+creates a read-only preferences file and requires natural process exit 1,
 the distinct save marker, completed drain and no watchdog. Omit `--source-project`
 when testing a packaged executable. Its success means the expected failure was
 handled correctly; it is never a clean product QA receipt.
@@ -92,3 +92,52 @@ exit naturally with its save/drain receipt. The updater fixture can additionally
 require the current old process's shutdown receipt with
 `BLAST_UPDATE_REQUIRE_OLD_SHUTDOWN=1`; leave this off for historical published
 apps that predate the receipt contract.
+
+## Managed resource finalizers — separate teardown boundary
+
+PR #74's source headless run `40998681677` passed all 1,953 gameplay assertions,
+saved preferences and completed the worker fences, then aborted in native C#
+binding cleanup (`script_bindings.is_empty`) with unsafe-resource-reference
+errors. This is later than the previously localized worker-pool barrier.
+
+A small official-SDK control on the M5 host queues 20,000 transient material
+wrappers while retaining 1,000 resources. Quitting with pending finalizers
+reproduces a native mutex abort on .NET 10.0.11; waiting for finalizers exits zero.
+The signature differs from the Linux assertion, so this is related resource
+lifetime evidence, not an identical Linux reproduction. The tracked SDK's
+`--resources-only` control links the actual game helper. Its deliberate failed
+control is explicitly not a clean game exit.
+
+`ManagedFinalizerDrain` collects and waits on a dedicated background thread, with
+a five-second bound and no Godot calls on that waiter. Rendering cleanup and the
+unchanged FIFO worker fence follow it. A failed waiter logs
+`BLAST_SHUTDOWN_FINALIZERS_FAILED` and makes RequestQuit exit 1. Schema-2 receipts
+require both drains, while historical schema-1 receipts remain readable. Runtime
+QA rejects the marker even without an `ERROR:` prefix or with a nominally good
+receipt. No watchdog hides either failure.
+
+Local normal-case timings were about 9 ms for the M5 source headless Core
+(3,907 finalizers at collection), and 12 ms for isolated Mac Metal smoke
+(733; actual Apple Paravirtual adapter). Both exited zero without runtime errors.
+The read-only-preferences control exited exactly 1, with both drains complete.
+These observations are not packaged Windows/Linux proof; native CI remains
+required. The subsequent exact CI Mac DMG package from PR #74 passed AppKit red
+button and Command-Q quits on DiveMac, with finalizer times about 15 and 14 ms.
+Current-runtime update/relaunch and failed-launch rollback also passed, with
+old-process finalizer times about 6 and 10 ms. The update test uses a synthetic
+older plist identity while preserving the current managed assembly bytes; it is
+not a substitute for the main gate's actual latest-public updater baseline.
+All owned temporary app bundles were removed after these controls.
+
+## Historical Linux exit 127 remains unassigned
+
+The retained `6094a71` Linux `tour-15` observation completed all 122 assertions,
+then returned 127. Its runner has zero classified errors/warnings and the raw
+runtime log contains only the Godot/Vulkan/llvmpipe startup header. There is no
+native stack, finalizer signature or shutdown receipt for that observation.
+
+Its sequence is compatible with a teardown failure, but the retained evidence
+does **not** establish the pending-finalizer cause. Exit 127 is not the observed
+native-abort signature by itself. Keep it unassigned; the new fence does not
+retroactively qualify or explain that failed receipt. This classification used
+only the retained summaries/log, without new runs or a retry waiver.

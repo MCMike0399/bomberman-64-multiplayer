@@ -58,13 +58,16 @@ jobs:
             echo 'Public checks run without the private dependency on every PR.'
             echo "Trusted private build enabled: ${PRIVATE_ENABLED:-false}."
             echo "Metal graphical runner enabled: ${GRAPHICAL_ENABLED:-false}."
-            echo 'Private builds and graphical checks never execute PR code. See docs/ci.md for setup and coverage limits.'
+            echo 'Private functional builds run only for same-repository PRs or main. Fork PRs and self-hosted graphical PR jobs remain excluded.'
           } >> "$GITHUB_STEP_SUMMARY"
 
   managed:
     name: Trusted managed and network
     needs: public
-    if: needs.public.outputs.runtime == 'true' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.KERNEL_CI_ENABLED == 'true'
+    if: >-
+      needs.public.outputs.runtime == 'true' && vars.KERNEL_CI_ENABLED == 'true' &&
+      ((github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) ||
+       (github.event_name != 'pull_request' && github.ref == 'refs/heads/main'))
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -104,7 +107,10 @@ jobs:
   headless:
     name: Trusted Godot headless
     needs: public
-    if: needs.public.outputs.runtime == 'true' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.KERNEL_CI_ENABLED == 'true'
+    if: >-
+      needs.public.outputs.runtime == 'true' && vars.KERNEL_CI_ENABLED == 'true' &&
+      ((github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) ||
+       (github.event_name != 'pull_request' && github.ref == 'refs/heads/main'))
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -124,7 +130,7 @@ jobs:
       - run: python3 tools/ci/install_godot.py --destination "$RUNNER_TEMP/godot"
       - run: python3 tools/qa/run.py --profile headless
       - if: always()
-        run: python3 tools/ci/stage_reports.py
+        run: python3 tools/ci/stage_reports.py --include-runtime-logs
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
@@ -170,7 +176,10 @@ jobs:
     name: Trusted Apple Silicon package
     # Runs beside managed/headless; promotion still requires every trusted job to pass.
     needs: public
-    if: needs.public.outputs.runtime == 'true' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.KERNEL_CI_ENABLED == 'true'
+    if: >-
+      needs.public.outputs.runtime == 'true' && vars.KERNEL_CI_ENABLED == 'true' &&
+      ((github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) ||
+       (github.event_name != 'pull_request' && github.ref == 'refs/heads/main'))
     runs-on: macos-15
     timeout-minutes: 25
     steps:
@@ -306,7 +315,10 @@ jobs:
   windows-package:
     name: Trusted windows-x64 package
     needs: public
-    if: needs.public.outputs.runtime == 'true' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.KERNEL_CI_ENABLED == 'true'
+    if: >-
+      needs.public.outputs.runtime == 'true' && vars.KERNEL_CI_ENABLED == 'true' &&
+      ((github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) ||
+       (github.event_name != 'pull_request' && github.ref == 'refs/heads/main'))
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
@@ -341,7 +353,10 @@ jobs:
   linux-package:
     name: Trusted linux-x64 package
     needs: public
-    if: needs.public.outputs.runtime == 'true' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.KERNEL_CI_ENABLED == 'true'
+    if: >-
+      needs.public.outputs.runtime == 'true' && vars.KERNEL_CI_ENABLED == 'true' &&
+      ((github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) ||
+       (github.event_name != 'pull_request' && github.ref == 'refs/heads/main'))
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
@@ -396,10 +411,6 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: Blast-Circuit-${{ matrix.target }}
-          path: artifacts
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: Blast-Circuit-server-dotnet10
           path: artifacts
       - if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y squashfs-tools fuse3
@@ -608,7 +619,14 @@ jobs:
           name: Blast-Circuit-server-dotnet10
           path: artifacts
       - run: python3 tools/packaging/macos-test-display.py
-      - run: python3 tools/packaging/verify-mac-archive.py
+      - name: Verify installed Mac functional journeys; full graphical tour stays main-only
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        shell: bash
+        run: |
+          args=()
+          if [ "$EVENT_NAME" = pull_request ]; then args+=(--functional-only); fi
+          python3 tools/packaging/verify-mac-archive.py "${args[@]}"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
