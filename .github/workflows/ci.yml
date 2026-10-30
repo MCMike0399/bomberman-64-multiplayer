@@ -130,7 +130,7 @@ jobs:
       - run: python3 tools/ci/install_godot.py --destination "$RUNNER_TEMP/godot"
       - run: python3 tools/qa/run.py --profile headless
       - if: always()
-        run: python3 tools/ci/stage_reports.py
+        run: python3 tools/ci/stage_reports.py --include-runtime-logs
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:

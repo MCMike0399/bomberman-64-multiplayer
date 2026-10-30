@@ -12,6 +12,15 @@ VALID_SHUTDOWN = {"schemaVersion": 1, "savedStateFlushed": True, "watchdogEnable
 
 
 class StartupLifecycleTests(unittest.TestCase):
+    def test_current_shutdown_requires_managed_finalizers_while_legacy_remains_readable(self):
+        record={'timedOut':False,'exitCode':0,'earlyQuit':True,'preset':'low','headless':True}
+        self.assertTrue(diagnostic.inspect_case(record,'',Path('/missing'),VALID_SHUTDOWN))
+        for value in (None,{}, {'completed':False}):
+            current=dict(VALID_SHUTDOWN,schemaVersion=2,managedFinalizers=value)
+            with self.subTest(value=value):self.assertFalse(diagnostic.inspect_case(record,'',Path('/missing'),current))
+        current=dict(VALID_SHUTDOWN,schemaVersion=2,managedFinalizers={'completed':True})
+        self.assertTrue(diagnostic.inspect_case(record,'',Path('/missing'),current))
+
     def test_forced_exit_or_missing_flush_drain_proof_never_counts_as_clean_exit(self):
         record = {'timedOut': False, 'exitCode': 0, 'earlyQuit': True, 'preset': 'low', 'headless': False}
         invalid = [None, {}, dict(VALID_SHUTDOWN, savedStateFlushed=False),

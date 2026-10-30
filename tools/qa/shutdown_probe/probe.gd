@@ -3,6 +3,12 @@ extends SceneTree
 func _initialize():
  var args = OS.get_cmdline_user_args()
  var mode = args[0] if not args.is_empty() else "low-pending"
+ if mode.begins_with("resource-"):
+  var resources=load("res://ProbeResources.cs").new()
+  resources.Prepare(mode=="resource-fenced")
+  print("BLAST_RESOURCE_PROBE quit mode=",mode," objects=21000")
+  quit(0)
+  return
  var drainer = load("res://ProbeDrain.cs").new()
  var jobs = []
  for index in range(32):

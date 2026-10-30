@@ -54,6 +54,13 @@ class PublicationBoundaryTests(unittest.TestCase):
                 staging.main()
             self.assertEqual({'summary.json', 'junit.xml', 'capture.png'}, {item.name for item in destination.iterdir()})
 
+    def test_runtime_log_opt_in_never_includes_build_or_bootstrap_logs(self):
+        with tempfile.TemporaryDirectory()as temporary:
+            root=Path(temporary);source=root/'qa';source.mkdir();destination=root/'upload'
+            for name in ('runtime.log','build.log','bootstrap.log','private.cs'):(source/name).write_text('example')
+            with patch.object(sys,'argv',['stage','--source',str(source),'--destination',str(destination),'--include-runtime-logs']),contextlib.redirect_stdout(io.StringIO()):staging.main()
+            self.assertEqual({row.name for row in destination.iterdir()},{'runtime.log'})
+
     def test_installer_rejects_checksum_mismatch_before_extraction(self):
         with tempfile.TemporaryDirectory() as temporary:
             destination = Path(temporary) / 'editor'

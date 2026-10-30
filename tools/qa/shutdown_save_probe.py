@@ -40,10 +40,12 @@ def run(executable, output, source_project=False):
     text = (output / 'runtime.log').read_text(errors='replace')
     receipt_path = output / 'shutdown.json'
     shutdown = json.loads(receipt_path.read_text()) if receipt_path.is_file() else None
-    passed = (not timed_out and code != 0 and 'BLAST_SHUTDOWN_SAVE_FAILED' in text and
+    passed = (not timed_out and code == 1 and 'BLAST_SHUTDOWN_SAVE_FAILED' in text and
               isinstance(shutdown, dict) and shutdown.get('savedStateFlushed') is False and
               shutdown.get('drain', {}).get('completed') is True and
               shutdown.get('watchdogEnabled') is False and shutdown.get('watchdogFired') is False)
+    if isinstance(shutdown,dict)and shutdown.get('schemaVersion')==2:
+        passed=passed and isinstance(shutdown.get('managedFinalizers'),dict)and shutdown['managedFinalizers'].get('completed')is True
     report = {'scope': 'Expected save-failure regression, not a clean product QA pass',
               'passed': passed, 'command': command, 'exitCode': code, 'timedOut': timed_out,
               'seconds': time.monotonic() - started, 'shutdown': shutdown}

@@ -111,11 +111,12 @@ def inspect_case(record, text, capture, shutdown):
     record.update(runtimeErrors=errors, runtimeWarnings=[s for s in text.splitlines() if re.search(r'(^|\s)WARNING:', s)],
                   smokeLines=[s for s in text.splitlines() if s.startswith('GODOT_SMOKE_')])
     if ('BLAST_SHUTDOWN_WATCHDOG_FIRED' in text or 'BLAST_SHUTDOWN_SAVE_FAILED' in text or not isinstance(shutdown, dict) or
-            shutdown.get('schemaVersion') != 1 or shutdown.get('savedStateFlushed') is not True or
+            shutdown.get('schemaVersion') not in (1,2) or shutdown.get('savedStateFlushed') is not True or
             shutdown.get('watchdogEnabled') is not False or shutdown.get('watchdogFired') is not False or
             not isinstance(shutdown.get('drain'), dict) or shutdown['drain'].get('completed') is not True or
             shutdown.get('error') is not None):
         return False
+    if shutdown.get('schemaVersion')==2 and(not isinstance(shutdown.get('managedFinalizers'),dict)or shutdown['managedFinalizers'].get('completed')is not True):return False
     if record['timedOut'] or record['exitCode'] != 0 or errors: return False
     if record['earlyQuit']: return True  # Only the engine's early-shutdown path; no successful-startup claim.
     matches = re.findall(r'^GODOT_SMOKE_OK menu snapshots=0 graphics=(\S+) window=(\S+) size=(\d+)x(\d+) adapter=(.*)$', text, re.M)

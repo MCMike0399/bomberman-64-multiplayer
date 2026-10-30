@@ -423,6 +423,21 @@ room owner after its countdown cancels; the private-host editor remains availabl
 
 ## Automatic updater checks
 
+Shutdown owns three separate boundaries: saved state, managed resource finalizers
+and the pinned native low-priority worker queue. `ApplicationShutdown` stops new
+warmup/render work, flushes saves, runs the bounded dedicated CLR finalizer waiter
+while native Godot is alive, syncs cleanup and then runs the FIFO worker fences.
+No watchdog turns a failed shutdown into success. Schema-2 shutdown receipts require
+both drains; schema-1 historical receipts remain readable. A save-failure control
+must exit 1, not merely any nonzero code that could hide a native crash.
+
+`tools/qa/shutdown_probe.py --resources-only` retains a deliberate pending-resource
+native failure and a fenced SDK control. This is distinct from the original
+low-priority pending/fenced pair. Neither SDK pair substitutes for actual game,
+Low/High, updater/rollback or Mac quit-path evidence. A headless gameplay pass
+followed by a native abort remains a failed gate. Named game `runtime.log` files
+can be staged explicitly for diagnosis; arbitrary build/bootstrap logs stay out.
+
 Read [automatic updates](../automatic-updates.md) before changing release signing,
 downloads or installation. The client signature key is public; the signing secret
 stays outside Git. Release fixtures must never be published. Test both successful

@@ -15,3 +15,11 @@ hang; the harness kills that owned failed control after eight seconds. The fixed
 control inserts the game's FIFO low-priority fences, asserts every original task
 is complete before reclaiming it, and must exit zero without engine errors.
 This is scheduling evidence, not graphical or final packaged-game qualification.
+
+The distinct resource-finalizer pair uses `--resources-only`. Its pending control
+deliberately collects 20,000 unrooted material wrappers while keeping 1,000 native
+resources alive, then quits without waiting for finalizers. It must retain the
+known native lifetime failure. The fenced control links the actual bounded
+`ManagedFinalizerDrain.cs` and must exit zero without engine errors. Its expected
+failed control is never a clean product exit, and this SDK pair does not replace
+the actual game's headless or installed lifecycle gates.
