@@ -792,3 +792,14 @@ collision, physics, input protocol, presets and shaders are unchanged. M5
 before/after captures and any raw residuals require visual review before adopting
 this prototype; only the subsequent single native seven-stage re-measure can
 establish cross-OS input equality.
+
+User visual approval was granted on 2026-10-30 for this seven-stage Mac prototype
+before the single native input re-measure. Six representative M5 scene frames
+are exact to the original reference. Rock Garden changes 9,543 of 1,024,000
+pixels (0.93%; maximum channel delta 104), with the common-fit camera origin
+moving from `(9.5, 17.816912, 30.589216)` to
+`(9.5, 17.816927, 30.589235)`. Full frames, heatmaps and all five trial controls
+are retained. This approval adopts the Mac reference for input verification;
+it does not approve publication, establish native cross-OS input equality or
+qualify final GPU output. Any residual after the single native fix measurement
+must be reported for a decision rather than followed by another fix loop.
