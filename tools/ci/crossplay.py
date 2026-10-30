@@ -46,27 +46,40 @@ CLIENT_MATCH_SECONDS = (CLIENT_READINESS_SECONDS + CLIENT_READY_BARRIER_SECONDS 
 CLIENT_PROCESS_SECONDS = CLIENT_MATCH_SECONDS + 60
 PERMANENT_GITHUB_ERRORS = ('HTTP 401', 'HTTP 404', 'Bad credentials', 'Resource not accessible', 'Not Found')
 RATE_LIMITED_GITHUB = ('HTTP 429', 'rate limit')
+CLIENT_GITHUB_ERROR = re.compile(r'HTTP 4\d\d')
+# Server-side or transport failures: GitHub outages (run 41095133025 lost its
+# server to 502s during an Actions incident) outlast five quick attempts.
+SERVER_GITHUB_ERROR = re.compile(r'HTTP 5\d\d|TLS handshake timeout|connection reset|connection refused|i/o timeout|unexpected EOF', re.I)
+SERVER_ERROR_RETRY_SECONDS = 300
 
 
-def github(*args, attempts=5, pause=time.sleep, deadline=None, now=time.monotonic, run=subprocess.run):
-    # Read-only calls only. Retry bounded transient transport failures (run
-    # 40733955187 lost a barrier to one TLS handshake timeout); stop on permanent
-    # auth/configuration errors; back off longer when rate-limited; never past deadline.
-    for attempt in range(attempts):
+def github(*args, attempts=5, pause=time.sleep, deadline=None, now=time.monotonic, run=subprocess.run, log=sys.stderr):
+    # Read-only calls only. Retry bounded transient failures: 5xx/transport errors
+    # back off for up to SERVER_ERROR_RETRY_SECONDS, other failures `attempts`
+    # times. 4xx (except rate limits) is permanent. Never past deadline.
+    attempt = 0; outage = 0
+    while True:
         remaining = None if deadline is None else deadline - now()
         if remaining is not None and remaining <= 0: raise TimeoutError('GitHub API call exceeded its enclosing deadline')
         try:
             result = run(['gh', *map(str, args)], text=True, capture_output=True, timeout=min(60, remaining or 60))
         except subprocess.TimeoutExpired:
-            if attempt == attempts - 1: raise
-            wait = min(30, 2 ** (attempt + 1))
+            attempt += 1
+            if attempt >= attempts: raise
+            wait = min(30, 2 ** attempt)
             pause(wait if deadline is None else max(0, min(wait, deadline - now())))
             continue
         if result.returncode == 0: return result.stdout
         error = result.stderr or ''
-        if attempt == attempts - 1 or any(text in error for text in PERMANENT_GITHUB_ERRORS):
+        print(f'gh {" ".join(map(str, args[:2]))} failed (exit {result.returncode}): {error.strip() or "no stderr"}', file=log, flush=True)
+        attempt += 1
+        limited = any(text in error for text in RATE_LIMITED_GITHUB)
+        server = not limited and SERVER_GITHUB_ERROR.search(error) is not None
+        permanent = any(text in error for text in PERMANENT_GITHUB_ERRORS) or (not limited and CLIENT_GITHUB_ERROR.search(error) is not None)
+        if permanent or (outage >= SERVER_ERROR_RETRY_SECONDS if server else attempt >= attempts):
             raise subprocess.CalledProcessError(result.returncode, result.args, result.stdout, error)
-        wait = 60 if any(text in error for text in RATE_LIMITED_GITHUB) else min(30, 2 ** (attempt + 1))
+        wait = 60 if limited else min(60, 2 ** min(attempt, 6), SERVER_ERROR_RETRY_SECONDS - outage) if server else min(30, 2 ** attempt)
+        if server: outage += wait
         pause(wait if deadline is None else max(0, min(wait, deadline - now())))
 
 

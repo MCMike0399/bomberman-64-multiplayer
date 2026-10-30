@@ -169,6 +169,53 @@ class CrossplayRendezvousTests(unittest.TestCase):
         self.assertEqual(1, clock[0])
         self.assertEqual([0], delays)
 
+    def test_server_errors_back_off_for_a_bounded_outage_and_log_stderr(self):
+        import io
+        calls = []; delays = []; log = io.StringIO()
+        def outage(args, **kwargs):
+            calls.append(args); return subprocess.CompletedProcess(args, 1, '', 'HTTP 502: Server Error (https://api.github.com/x)')
+        with self.assertRaises(subprocess.CalledProcessError) as raised:
+            crossplay.github('api', 'x', pause=delays.append, run=outage, log=log)
+        # Outlasts the five quick attempts but stops at the outage budget.
+        self.assertEqual(crossplay.SERVER_ERROR_RETRY_SECONDS, sum(delays))
+        self.assertGreater(len(calls), 5)
+        self.assertIn('HTTP 502', raised.exception.stderr)
+        self.assertIn('gh api x failed (exit 1): HTTP 502: Server Error', log.getvalue())
+        # Recovery within the outage returns the result.
+        replies = iter(['HTTP 503: Service Unavailable'] * 7 + [None])
+        def recovers(args, **kwargs):
+            error = next(replies)
+            return subprocess.CompletedProcess(args, 1, '', error) if error else subprocess.CompletedProcess(args, 0, '{"ok": true}', '')
+        self.assertEqual('{"ok": true}', crossplay.github('api', 'x', pause=lambda _: None, run=recovers, log=io.StringIO()))
+        # The enclosing deadline still bounds an outage.
+        clock = [0]; waits = []
+        def pause(seconds): waits.append(seconds); clock[0] += seconds
+        with self.assertRaises(TimeoutError):
+            crossplay.github('api', 'x', deadline=20, now=lambda: clock[0], pause=pause, run=outage, log=io.StringIO())
+        self.assertEqual(20, clock[0])
+
+    def test_client_errors_stay_fatal_and_unknown_errors_keep_five_attempts(self):
+        import io
+        for error in ('HTTP 403: Forbidden', 'HTTP 422: Unprocessable Entity'):
+            calls = []
+            def failing(args, **kwargs):
+                calls.append(args); return subprocess.CompletedProcess(args, 1, '', error)
+            with self.assertRaises(subprocess.CalledProcessError):
+                crossplay.github('api', 'x', pause=lambda _: None, run=failing, log=io.StringIO())
+            self.assertEqual(1, len(calls), error)
+        calls = []; delays = []
+        def limited(args, **kwargs):
+            calls.append(args); return subprocess.CompletedProcess(args, 1, '', 'HTTP 403: API rate limit exceeded')
+        with self.assertRaises(subprocess.CalledProcessError):
+            crossplay.github('api', 'x', pause=delays.append, run=limited, log=io.StringIO())
+        self.assertEqual((5, [60] * 4), (len(calls), delays))
+        calls = []
+        def unknown(args, **kwargs):
+            calls.append(args); return subprocess.CompletedProcess(args, 1, '', 'something odd')
+        with self.assertRaises(subprocess.CalledProcessError):
+            crossplay.github('api', 'x', pause=lambda _: None, run=unknown, log=io.StringIO())
+        self.assertEqual(5, len(calls))
+
 
 class CrossplayLifetimeContractTests(unittest.TestCase):
     def test_every_nested_crossplay_wait_fits_inside_its_enclosing_lifetime(self):
