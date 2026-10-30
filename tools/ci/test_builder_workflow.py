@@ -54,6 +54,26 @@ class HostedCleanupPlacement(unittest.TestCase):
         self.assertIn('FREE rehearsal - no allocation',self.source)
         self.assertLess(self.source.index('Refuse held, changed or late paid approvals'),self.source.index('Assume the scoped role for preparation'))
 
+    def test_every_instance_holding_step_has_a_platform_timeout_near_its_phase_grant(self):
+        # A GitHub run cancel did not signal the running step (probes 41109335883/41111011040),
+        # while a timeout delivered SIGINT and always-cleanup ran (41112729113). Each step that
+        # runs while instances exist therefore needs its own platform-enforced bound.
+        import re
+        import builder_timing
+        steps = self.source.split('      - name: ')
+        phases = {}
+        for step in steps:
+            found = re.search(r'builder_phase\.py --state artifacts/builder-state ([a-z-]+)', step)
+            if found and found.group(1) in ('launch', 'core', 'acknowledge', 'final'):
+                limit = re.search(r'\n\s+timeout-minutes: (\d+)\n', step)
+                self.assertIsNotNone(limit, found.group(1))
+                phases[found.group(1)] = int(limit.group(1))
+        self.assertEqual(set(phases), {'launch', 'core', 'acknowledge', 'final'})
+        for phase, minutes in phases.items():
+            grant = builder_timing.PHASE_SECONDS[phase] / 60
+            self.assertGreaterEqual(minutes, grant, phase)
+            self.assertLessEqual(minutes, grant + 2, phase)
+
     def test_native_contract_upload_never_races_owned_uninstaller_files(self):
         source=(ROOT/'.github/workflows/ci.yml').read_text().split('  native-contracts:',1)[1].split('  native-cohort:',1)[0]
         root='artifacts/native-contracts/${{ matrix.target }}'
