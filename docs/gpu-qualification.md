@@ -13,16 +13,20 @@ same frozen scenes. Record the actual adapters and configurations; do not infer
 untested physical hardware from a runner label. The envelope comes from those
 measurements, never a chosen tolerance, alignment or mask. Feature negative
 controls must prove every effect present at unchanged production quality.
-The user reviews side-by-side images and heatmaps and explicitly signs off
-before publication. This replaces the earlier cross-vendor exact-output bar;
+Visual sign-off before publication is delegated by the user (2026-10-30
+evening) to the release reviewer. The reviewer judges side-by-side Mac /
+Windows (Vulkan) / Linux images per stage and trial, heatmaps and delta
+histograms against the hosted-macOS-vs-M5 envelope, with the D3D12 fallback
+shown separately. The reviewer escalates only genuine judgement calls. This replaces the earlier cross-vendor exact-output bar;
 historical strict-comparison verdicts and files remain unchanged.
 
-The current authorization (raised by the user on 2026-10-30) is at most $50 total
-and $10 estimated per run across GPU campaigns, at most
+The current authorization (user, 2026-10-30 evening) is at most $200 total
+and $20 estimated per run across GPU campaigns, with no per-run approval click
+([machine safeguards](sancus-builder-ci.md#user-decision-2026-10-30-evening-machine-safeguards-replace-the-click)), at most
 three hours and four g4dn/g4ad Windows/Linux instances per campaign. Check the
 shared G/VT vCPU quota before AMD use. Estimate before each launch and retain
 resource lifetimes, costs and complete cleanup receipts afterwards. Carry prior
-campaign spend in the running ledger and obtain approval before exceeding the
+campaign spend in the running ledger and ask the user before exceeding the
 total. Exact account/profile/region, protected existing resources, ownership-safe
 cleanup and independent TTL requirements below remain mandatory. The earlier
 one-time authorization is superseded; its completed campaigns remain closed.
@@ -185,7 +189,7 @@ as an optional user-decided improvement.
 The user authorized checking AMD G4ad in `us-west-2` if unavailable in `us-east-1`.
 Every command must specify the Sancus profile and the actual region. Verify STS,
 regional protected inventory, offering and G/VT quota before allocation. The same
-combined budget (raised to $50 on 2026-10-30), three-hour/four-instance limit, ownership/TTL safeguards and
+combined budget ($200, 2026-10-30 evening), three-hour/four-instance limit, ownership/TTL safeguards and
 complete per-ID cleanup apply across regions. If unavailable, report the gap and
 proceed with the authorized NVIDIA scope; do not silently choose another type.
 

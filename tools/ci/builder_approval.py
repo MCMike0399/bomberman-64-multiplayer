@@ -1,4 +1,4 @@
-"""Disclose and bind the bounded paid plan before the environment approval."""
+"""Disclose and bind the bounded paid plan; machine guards replace the human approval click."""
 import datetime
 import json
 import math
@@ -13,6 +13,9 @@ ROOT = Path(__file__).resolve().parents[2]
 RATE_CEILINGS = {'Linux': .526, 'Windows': .710}
 MINIMUM_CAMPAIGN_SECONDS = 6000
 CLEANUP_SECONDS = 1200
+# User decision 2026-10-30: $20 per run, $200 cumulative; ask before exceeding $200.
+PER_RUN_CAP_USD = 20
+CUMULATIVE_CAP_USD = 200
 
 
 def require_unheld(value):
@@ -25,8 +28,15 @@ def estimate(rates):
     return round(3 * sum(rates.values()) + 155 * .08 * 3 / 730 + 2 * .005 * 3 + 1.50, 2)
 
 
-def ledger():
-    return json.loads((ROOT / 'docs/sancus-builder-spend.json').read_text())
+def ledger(path=None):
+    data = json.loads((path or ROOT / 'docs/sancus-builder-spend.json').read_text())
+    runs = data.get('recordedRuns')
+    if type(runs) is not list or any(type(row.get('estimateUsd')) not in (int, float) or not math.isfinite(row['estimateUsd']) or
+                                     row['estimateUsd'] < 0 or not str(row.get('workflowRunId', '')).isdigit() for row in runs):
+        raise ValueError('Every recorded paid run needs its workflow run ID and cost receipt estimate')
+    if round(data['preCiEstimateUsd'] + sum(row['estimateUsd'] for row in runs), 2) != data['closedEstimateUsd']:
+        raise ValueError('Ledger total differs from the pre-CI estimate plus recorded run receipts')
+    return data
 
 
 def build(source, verification_run, expiry, spending):
@@ -36,10 +46,10 @@ def build(source, verification_run, expiry, spending):
     if deadline.tzinfo is None:
         raise ValueError('Approval expiry requires an explicit UTC offset')
     prior = spending['closedEstimateUsd']; budget = spending['budgetUsd']
-    if any(type(value) not in (int, float) or not math.isfinite(value) for value in (prior, budget)) or not 0 <= prior <= budget <= 50:
+    if any(type(value) not in (int, float) or not math.isfinite(value) for value in (prior, budget)) or not 0 <= prior <= budget <= CUMULATIVE_CAP_USD:
         raise ValueError('Invalid cumulative budget')
     cost = estimate(RATE_CEILINGS)
-    if cost > 10 or prior + cost > budget:
+    if cost > PER_RUN_CAP_USD or prior + cost > budget:
         raise ValueError('Paid approval exceeds the per-run or cumulative cap')
     return {'schemaVersion': 1, 'source': source, 'verificationRunId': str(verification_run),
             'account': names.ACCOUNT, 'region': names.REGION, 'fixedCampaignExpiryUtc': expiry,
@@ -77,14 +87,14 @@ def validate_prepared(approval, plan, spending, now=None):
 
 
 def summary(approval):
-    lines = ['## PAID GPU campaign approval plan',
+    lines = ['## PAID GPU campaign plan',
              f"Source: `{approval['source']}`. Verification: `{approval['verificationRunId']}`.",
              f"Account `{approval['account']}`, region `{approval['region']}`. Instance count: {len(approval['instances'])}."]
     for item in approval['instances']:
         lines.append(f"- {item['os']}: `{item['type']}`, AMI `{item['ami']}`, encrypted root {item['rootGb']} GiB.")
     lines += [f"Fixed expiry: `{approval['fixedCampaignExpiryUtc']}`; never extended after approval.",
-              f"Conservative estimate: **${approval['estimatedCampaignUsd']:.2f}** (refuse above $10). Prior spending: ${approval['priorEstimateUsd']:.2f} / ${approval['budgetUsd']:.2f}.",
+              f"Conservative estimate: **${approval['estimatedCampaignUsd']:.2f}** (refuse above ${PER_RUN_CAP_USD}). Prior spending: ${approval['priorEstimateUsd']:.2f} / ${approval['budgetUsd']:.2f}.",
               f"Remaining before: ${approval['remainingBudgetBeforeUsd']:.2f}; after this reservation: ${approval['remainingBudgetAfterUsd']:.2f}.",
-              'Approval needs at least 100 minutes for the campaign plus 20 minutes for cleanup remaining. Live prices and all bindings are checked again before creation.',
+              'Selected without a human click only after the dedupe, zero-leftover outcome and recorded-spend guards passed. At least 100 minutes for the campaign plus 20 minutes for cleanup must remain; live prices and all bindings are checked again before creation.',
               approval['estimateScope']]
     return '\n'.join(lines) + '\n'

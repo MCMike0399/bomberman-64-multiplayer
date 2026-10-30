@@ -47,7 +47,7 @@ class HostedCleanupPlacement(unittest.TestCase):
 
     def test_plan_is_disclosed_before_the_protected_paid_job(self):
         trigger=(ROOT/'.github/workflows/gpu-qualification.yml').read_text()
-        self.assertLess(trigger.index('Retain the paid plan before any approval prompt'),trigger.index('  controlled:'))
+        self.assertLess(trigger.index('Retain the paid plan and its qualification key before allocation'),trigger.index('  controlled:'))
         self.assertIn('approval-plan: ${{ needs.select.outputs.approval-plan }}',trigger)
         self.assertIn('SANCUS_BUILDER_PAID_HOLD: ${{ vars.SANCUS_BUILDER_PAID_HOLD }}',trigger)
         self.assertIn('PAID up to ${0}',self.source)
