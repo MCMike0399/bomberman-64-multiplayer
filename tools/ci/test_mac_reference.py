@@ -71,3 +71,32 @@ class MacReferencePayload(unittest.TestCase):
                 with self.assertRaises(ValueError):mac_reference.prepare('123',Path(directory)/'artifacts','a'*40,event='workflow_dispatch',ref='refs/heads/main',repository=mac_reference.REPOSITORY,gh=gh)
 
 if __name__=='__main__':unittest.main()
+
+
+class PinnedReferenceAndTrackedDirectory(unittest.TestCase):
+    def test_tracked_gdignore_directory_is_accepted_and_other_content_refused(self):
+        import tempfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as root:
+            directory = Path(root) / 'artifacts'; directory.mkdir(); (directory / '.gdignore').write_text('')
+            mac_reference.prepare_directory(directory)
+            (directory / 'stale.zip').write_text('x')
+            with self.assertRaises(ValueError): mac_reference.prepare_directory(directory)
+            mac_reference.prepare_directory(Path(root) / 'fresh')
+
+    def test_pin_requires_the_exact_run_artifact_and_source(self):
+        import json
+        source = 'b' * 40
+        run = {'id': 7, 'head_repository': {'full_name': mac_reference.REPOSITORY}, 'head_sha': source, 'head_branch': 'main',
+               'path': '.github/workflows/ci.yml', 'event': 'push', 'status': 'completed', 'conclusion': 'success'}
+        def gh(*args):
+            if args[1].endswith('/runs/7'): return json.dumps(run)
+            if 'artifacts' in args[1]: return json.dumps([{'artifacts': [{'name': mac_reference.ARTIFACT, 'id': 99, 'expired': False}]}])
+            raise AssertionError(args)
+        pin = {'source': source, 'artifactId': '98', 'archiveSha256': 'c' * 64}
+        with self.assertRaisesRegex(ValueError, 'artifact ID differs'):
+            mac_reference.prepare('7', '/nonexistent', 'a' * 40, event='push', ref='refs/heads/x', repository='r', gh=gh, pin=pin)
+        with self.assertRaisesRegex(ValueError, 'Pinned Verification'):
+            mac_reference.prepare('7', '/nonexistent', 'a' * 40, event='push', ref='refs/heads/x', repository='r', gh=gh, pin={**pin, 'source': 'd' * 40})
+        with self.assertRaisesRegex(ValueError, 'restricted'):
+            mac_reference.prepare('7', '/nonexistent', 'a' * 40, event='push', ref='refs/heads/x', repository='r', gh=gh)
