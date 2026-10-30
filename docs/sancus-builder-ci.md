@@ -250,7 +250,8 @@ expiry plus the 20-minute cleanup allowance fits before the job timeout and its
 15-minute margin. Ordinary phases have earlier bounded subprocess deadlines.
 
 The always path requests termination of exact journaled instances before slow
-evidence work. It retains the request/cancel timestamps, then recovers available
+evidence work. Request timing is journaled before the API call; the first request
+and observed cancel-to-request interval are preserved across cleanup retries. It retains the request/cancel timestamps, then recovers available
 immutable evidence and uploads the local bytes. Only afterwards does it empty the
 bucket, delete the stack and verify every type/ID. Cleanup's internal ordering also
 stops journaled writers before evidence work; it does not wait on unrelated IAM/S3

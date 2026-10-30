@@ -33,3 +33,13 @@ class HostedCleanupPlacement(unittest.TestCase):
     def test_intent_and_core_uploads_precede_the_operations_they_authorize(self):
         self.assertLess(self.source.index('Durably retain the intent'),self.source.index('Launch and arm'))
         self.assertLess(self.source.index('Retain core evidence before'),self.source.index('Acknowledge durable'))
+
+    def test_cancel_path_terminates_before_slow_evidence_and_purges_afterward(self):
+        names=('Re-assume fresh credentials immediately before cleanup',
+               'Request owned instance termination before slow evidence work',
+               'Retain available immutable evidence after stopping writers',
+               'Preserve all available game evidence before teardown',
+               'Always perform owned cleanup and its audit in this same job')
+        positions=[self.source.index(name)for name in names]
+        self.assertEqual(positions,sorted(positions))
+        self.assertIn('if: always()',self.block(names[1]))
