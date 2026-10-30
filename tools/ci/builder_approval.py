@@ -36,10 +36,10 @@ def build(source, verification_run, expiry, spending):
     if deadline.tzinfo is None:
         raise ValueError('Approval expiry requires an explicit UTC offset')
     prior = spending['closedEstimateUsd']; budget = spending['budgetUsd']
-    if any(type(value) not in (int, float) or not math.isfinite(value) for value in (prior, budget)) or not 0 <= prior <= budget <= 25:
+    if any(type(value) not in (int, float) or not math.isfinite(value) for value in (prior, budget)) or not 0 <= prior <= budget <= 50:
         raise ValueError('Invalid cumulative budget')
     cost = estimate(RATE_CEILINGS)
-    if cost > 8 or prior + cost > budget:
+    if cost > 10 or prior + cost > budget:
         raise ValueError('Paid approval exceeds the per-run or cumulative cap')
     return {'schemaVersion': 1, 'source': source, 'verificationRunId': str(verification_run),
             'account': names.ACCOUNT, 'region': names.REGION, 'fixedCampaignExpiryUtc': expiry,
@@ -83,7 +83,7 @@ def summary(approval):
     for item in approval['instances']:
         lines.append(f"- {item['os']}: `{item['type']}`, AMI `{item['ami']}`, encrypted root {item['rootGb']} GiB.")
     lines += [f"Fixed expiry: `{approval['fixedCampaignExpiryUtc']}`; never extended after approval.",
-              f"Conservative estimate: **${approval['estimatedCampaignUsd']:.2f}** (refuse above $8). Prior spending: ${approval['priorEstimateUsd']:.2f} / ${approval['budgetUsd']:.2f}.",
+              f"Conservative estimate: **${approval['estimatedCampaignUsd']:.2f}** (refuse above $10). Prior spending: ${approval['priorEstimateUsd']:.2f} / ${approval['budgetUsd']:.2f}.",
               f"Remaining before: ${approval['remainingBudgetBeforeUsd']:.2f}; after this reservation: ${approval['remainingBudgetAfterUsd']:.2f}.",
               'Approval needs at least 100 minutes for the campaign plus 20 minutes for cleanup remaining. Live prices and all bindings are checked again before creation.',
               approval['estimateScope']]

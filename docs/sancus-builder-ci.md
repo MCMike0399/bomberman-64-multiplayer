@@ -283,9 +283,9 @@ cleanup test. The probe creates no AWS resources.
 ## Campaign completion and cost
 
 Each campaign has a unique owned stack, a fixed expiry of at most three hours,
-at most four instances, and an estimated cost of at most $8. Current allowed
+at most four instances, and an estimated cost of at most $10. Current allowed
 capacity is `g4dn.xlarge`. Concurrency is one. Estimate before launch, include
-prior spending, and request a decision before exceeding the cumulative $25 cap.
+prior spending, and request a decision before exceeding the cumulative $50 cap.
 The standing identity is the only intended persistent AWS footprint.
 
 Every result must include an exact-ID/type audit, tagged-resource discovery,
@@ -299,7 +299,7 @@ list them honestly rather than claiming to delete them.
 | --- | ---: |
 | Closed campaigns before the CI/OIDC follow-up | $4.80 |
 | New CI/OIDC campaigns launched | $0.00 |
-| Total / authorized cumulative cap | **$4.80 / $25.00** |
+| Total / authorized cumulative cap | **$4.80 / $50.00** |
 
 Estimates are not invoices or an enforced dollar cutoff. Update the ledger
 after each campaign and retain its timing, evidence and cleanup receipts.
@@ -339,3 +339,12 @@ Only after free rehearsals/observed cancellation and timeout outcomes are
 reviewed, and the exact-artifact campaign plan is approved, set the paid hold to
 `false`. The existing required environment reviewer still approves each paid
 run. Restore normal automatic major selection only at that reviewed boundary.
+
+### User budget decision, 2026-10-30
+
+The user raised the cumulative GPU authorization from $25 to $50 and the per-run
+estimate ceiling from $8 to $10, including future sessions. Ask before exceeding
+$50 cumulative. Three-hour/four-instance limits, each run's approval click,
+reviewed paid hold, ownership-safe cleanup and receipts are unchanged. Historical
+plans and receipts retain the amounts authorized at their time; spending remains
+$4.80, not an invoice. This decision authorizes no immediate allocation.

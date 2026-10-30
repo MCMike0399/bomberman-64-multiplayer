@@ -17,7 +17,8 @@ The user reviews side-by-side images and heatmaps and explicitly signs off
 before publication. This replaces the earlier cross-vendor exact-output bar;
 historical strict-comparison verdicts and files remain unchanged.
 
-The renewed authorization is at most $25 total across GPU campaigns, at most
+The current authorization (raised by the user on 2026-10-30) is at most $50 total
+and $10 estimated per run across GPU campaigns, at most
 three hours and four g4dn/g4ad Windows/Linux instances per campaign. Check the
 shared G/VT vCPU quota before AMD use. Estimate before each launch and retain
 resource lifetimes, costs and complete cleanup receipts afterwards. Carry prior
@@ -184,7 +185,7 @@ as an optional user-decided improvement.
 The user authorized checking AMD G4ad in `us-west-2` if unavailable in `us-east-1`.
 Every command must specify the Sancus profile and the actual region. Verify STS,
 regional protected inventory, offering and G/VT quota before allocation. The same
-combined $25 budget, three-hour/four-instance limit, ownership/TTL safeguards and
+combined budget (raised to $50 on 2026-10-30), three-hour/four-instance limit, ownership/TTL safeguards and
 complete per-ID cleanup apply across regions. If unavailable, report the gap and
 proceed with the authorized NVIDIA scope; do not silently choose another type.
 

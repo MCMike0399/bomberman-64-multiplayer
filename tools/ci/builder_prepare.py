@@ -135,7 +135,7 @@ def prepare(state,verification_run,fixed_expiry):
     if os.environ.get('MODE')=='qualify':verify_spend_history(ledger)
     plan.update(budgetUsd=ledger['budgetUsd'],priorEstimateUsd=ledger['closedEstimateUsd'])
     plan['hourlyRatesUsd']=price_rates(aws,state);plan['estimatedCampaignUsd']=estimate(plan['hourlyRatesUsd'])
-    if plan['estimatedCampaignUsd']>8 or plan['estimatedCampaignUsd']+plan['priorEstimateUsd']>min(25,plan['budgetUsd']):
+    if plan['estimatedCampaignUsd']>10 or plan['estimatedCampaignUsd']+plan['priorEstimateUsd']>min(50,plan['budgetUsd']):
         raise ValueError('Reviewed run/cumulative spend cap exceeded before allocation')
     if os.environ.get('MODE')=='qualify':builder_approval.validate_prepared(plan['approvalPlan'],plan,spending)
     snapshot=protected(aws);protected_path=state/'protected-instances.json'
