@@ -141,3 +141,19 @@ truncation and negative zero. The first source diagnostic produced 179 and 239
 snapshots; bomb observations count occurrences across snapshots, not unique bombs.
 Two fresh source processes matched exactly, including loaded module identities;
 that is a narrow source receipt, not a native exported-package result.
+
+## Free verification policy
+
+Same-repository runtime PRs and main now execute the actual downloaded packages
+on all three OSs, twice per replay, plus the captured-input inventory. The cohort
+requires exact observable gameplay records and exact captured CPU inputs. These
+headless jobs make no graphics qualification claim.
+
+The independent math canaries remain in every raw stream and comparison. The
+strict comparer still reports a failed exact comparison when a canary differs.
+The explicit `--observable-required` verification policy classifies a canary-only
+difference as a visible warning while requiring compatible inputs and exact
+observable equality. Actual observable differences or incompatible provenance
+always fail. Same-platform fresh-process repeats remain strict. This preserves
+the reviewed distinction between independent libm probes and actual gameplay;
+it adds no rounding or tolerance, and does not claim hidden-state equivalence.
