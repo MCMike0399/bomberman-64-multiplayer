@@ -7,6 +7,8 @@ from pathlib import Path
 import platform
 import stat
 import tempfile
+import time
+import urllib.error
 import urllib.request
 import zipfile
 
@@ -25,7 +27,17 @@ def extract(asset, destination, archives=None):
     with tempfile.TemporaryDirectory(prefix='blast-godot-') as temporary:
         archive = Path(temporary) / name
         if archives is None:
-            urllib.request.urlretrieve(url, archive)
+            for attempt in range(3):
+                try:
+                    urllib.request.urlretrieve(url, archive)
+                    break
+                except urllib.error.URLError as error:
+                    # Retry transport interruptions only. HTTP, certificate and
+                    # checksum failures retain their original fatal behavior.
+                    if not isinstance(error.reason, (ConnectionError, TimeoutError)) or attempt == 2:
+                        raise
+                    archive.unlink(missing_ok=True)
+                    time.sleep(attempt + 1)
         else:
             import shutil
             shutil.copyfile(Path(archives)/name,archive)
