@@ -375,8 +375,9 @@ deployment is rechecked without reapplying it. Preserve the archived startup/upd
 gates and record actual hosted timings before claiming delivery-time gains.
 
 Read [CI](../ci.md) for trusted-job configuration and artifact validation. Public
-PR checks use no private dependency credentials; private builds run only on
-trusted main. Keep both bootstrap tools aligned with the checked-in dependency
+Fork PR checks use no private dependency credentials. Private functional builds
+run on trusted main and user-authorized same-repository PRs; self-hosted graphics
+remains main-only. Keep both bootstrap tools aligned with the checked-in dependency
 pin; a historical unavailable SHA is not a reason to restore upstream history
 or rotate credentials. Keep private source/origins and secrets out of tracked
 files, logs, caches and uploaded artifacts. Upload only allowlisted reports and

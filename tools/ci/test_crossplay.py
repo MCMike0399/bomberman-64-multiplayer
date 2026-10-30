@@ -75,6 +75,19 @@ class CrossplayTests(unittest.TestCase):
                 validation.inspect_mac(receipt, SHA, RELEASE, desktop.digest(root / 'Blast-Circuit-macos-arm64.zip'),
                     desktop.digest(root / download_formats.FILES['macos-arm64']), desktop.digest(root / 'Blast-Circuit-server-dotnet10.zip'))
 
+    def test_mac_functional_pr_receipt_cannot_replace_release_graphics(self):
+        with tempfile.TemporaryDirectory()as temporary:
+            root=Path(temporary);write_desktop(root)
+            for name in ('Blast-Circuit-macos-arm64.zip',download_formats.FILES['macos-arm64']):(root/name).write_bytes(b'Mac fixture')
+            write_crossplay(root)
+            receipt=json.loads((root/validation.MAC_RECEIPT).read_text())
+            receipt.update(scope='functional-regression',graphicsQualified=False)
+            receipt['cases']=receipt['cases'][:len(validation.HEADLESS)]
+            args=(receipt,SHA,RELEASE,desktop.digest(root/'Blast-Circuit-macos-arm64.zip'),
+                  desktop.digest(root/download_formats.FILES['macos-arm64']),desktop.digest(root/'Blast-Circuit-server-dotnet10.zip'))
+            validation.inspect_mac(*args,require_graphics=False)
+            with self.assertRaises(RuntimeError):validation.inspect_mac(*args)
+
     def test_game_process_environment_excludes_ci_credentials(self):
         from unittest.mock import patch
         with patch.dict(crossplay.os.environ, {'GH_TOKEN': 'fixture', 'ACTIONS_RUNTIME_TOKEN': 'fixture', 'GITHUB_TOKEN': 'fixture'}):

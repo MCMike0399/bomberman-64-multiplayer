@@ -131,11 +131,14 @@ def inspect_startup(receipt, target, revision, release, archive_sha):
             raise RuntimeError('Desktop startup case is incomplete')
 
 
-def inspect_mac(receipt, revision, release, archive_sha, download_sha, server_sha):
+def inspect_mac(receipt, revision, release, archive_sha, download_sha, server_sha,*,require_graphics=True):
     cases = receipt.get('cases', [])
+    expected=list((*HEADLESS,*GRAPHICAL))
+    if not require_graphics and receipt.get('scope')=='functional-regression'and receipt.get('graphicsQualified')is False:
+        expected=list(HEADLESS)
     if (receipt.get('schemaVersion') != 1 or receipt.get('passed') is not True or receipt.get('revision') != revision or
             receipt.get('release') != release or receipt.get('archiveSha256') != archive_sha or receipt.get('downloadSha256') != download_sha or
-            [case.get('scenario') for case in cases] != list((*HEADLESS, *GRAPHICAL))):
+            [case.get('scenario') for case in cases] != expected):
         raise RuntimeError('Complete Mac archive regression is missing or mismatched')
     if receipt.get('serverSha256') != server_sha:
         raise RuntimeError('Complete Mac archive regression used different server bytes')
