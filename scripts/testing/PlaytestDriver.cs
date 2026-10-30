@@ -29,7 +29,7 @@ public partial class PlaytestDriver : Node
     private readonly Stopwatch _clock = new();
     private bool _headless, _windowedRequested;
     private bool _displayRestartRequested;
-    private bool _slowMovementFeedback;
+    private bool _slowMovementFeedback,_delayedPeerFeedback;
     // QA-only: block the engine thread each frame to reproduce software-renderer
     // frame times headlessly. Recorded in the summary; release receipts reject it.
     private int _frameStallMs;
@@ -243,7 +243,7 @@ public partial class PlaytestDriver : Node
                 }
                 await Frames(3);Check(true,$"walk to {x},{z}");return;
             }
-            Input(0,new PlayerInput(Math.Clamp(dx*4,-1,1),Math.Clamp(dz*4,-1,1)));
+            Input(0,FeedbackSteering.Toward(dx,dz,network&&_delayedPeerFeedback));
             if(_root.ActiveSession is NetworkSession connection&&connection.Party?.Hosting is not ("peer" or "auto"))
             {
                 // An observer controls a real-time server from delayed snapshots.

@@ -241,6 +241,7 @@ public partial class PlaytestDriver
             // Keep a delayed-observer regression on the narrow server-backed
             // route. This is deliberate controller lag, not simulated physics.
             _slowMovementFeedback=mode==NetworkMode.CreatePrivate;
+            _delayedPeerFeedback=mode==NetworkMode.CreatePeer;
             var clock=System.Diagnostics.Stopwatch.StartNew();
             while(host.Party?.CanStart!=true&&clock.Elapsed.TotalSeconds<20)
             {peer.Advance(1d/30);await Frames(1);await Task.Delay(16);}
@@ -268,7 +269,7 @@ public partial class PlaytestDriver
             Check(stageSeen&&bottomSeen&&bombSeen,mode+" second client receives the real stage, lower player and lower bomb");
             await Capture("greedy-trap-network-"+mode.ToString().ToLowerInvariant());_root.Back();await Frames(3);
             }
-            finally{_slowMovementFeedback=false;GetTree().ProcessFrame-=pump;}
+            finally{_slowMovementFeedback=false;_delayedPeerFeedback=false;GetTree().ProcessFrame-=pump;}
         }
     }
 }

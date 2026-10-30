@@ -952,3 +952,16 @@ error, using a fresh owned temporary output on the destination filesystem. Other
 errors and timeouts remain fatal. A successful image still requires `hdiutil
 verify` and the existing mounted payload comparison against the source ZIP.
 Never detach unrelated images or restart system services to make packaging pass.
+
+### Greedy peer movement feedback
+
+The Greedy network journey keeps its deliberate delayed server-observer case.
+Its peer-hosted leg uses damped synthetic steering near the one-cell middle
+landing: high-gain feedback from an older snapshot can overshoot during the
+peer's existing five-tick catch-up and fall into the basin. The deterministic
+client check first establishes the real upper landing, then compares old and
+bounded steering under delayed observation through the unchanged `LocalMatch`.
+The original controller misses the middle floor; bounded steering reaches it.
+Normal player input, authority timing/collision, journey destinations, tolerances
+and deadlines are unchanged. The QA flag is scoped to the peer leg and restored
+in `finally`; source headless evidence does not replace exported native checks.
