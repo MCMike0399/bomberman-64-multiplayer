@@ -9,20 +9,21 @@ ROOT=Path(__file__).resolve().parents[2]
 
 OTHER_STAGES=('sunken-temple','rock-garden','top-rules','blizzard-battle','greedy-trap','circuit-garden')
 
-def collect_stage_captures(directory,output,target,revision,provenance,expiry):
+def collect_stage_captures(directory,output,target,revision,provenance,expiry,driver='vulkan',expected_adapter='T4',processes=2):
     """Retain the other six original-High scenes; core owns Up & Down's effect controls."""
     output.mkdir(exist_ok=False)
-    report={'source':revision,'scope':'Original High all-stage images and strict repeats; cross-GPU/effect review remains separate',
+    if processes not in (1,2):raise ValueError('Stage collection supports one or two explicitly recorded processes')
+    report={'source':revision,'driver':driver,'expectedAdapter':expected_adapter,'processesPerStage':processes,'freshProcessCoverage':processes==2,'scope':'Original High all-stage images and strict repeats; cross-GPU/effect review remains separate',
             'collectionComplete':False,'repeatsExact':False,'runs':[],'comparisons':[],'errors':[]}
     executable=None
     try:
         if expiry-time.time()<23*60:raise RuntimeError('Insufficient fixed-lifetime stage-capture headroom')
         executable=crossplay_runtime.install(directory,target,output)
         for stage in OTHER_STAGES:
-            for index in range(2):
+            for index in range(processes):
                 if expiry-time.time()<23*60:raise RuntimeError('Stage collection partial at fixed cleanup boundary')
                 case=output/stage/f'run-{index}';case.mkdir(parents=True)
-                command=[str(executable),'--rendering-driver','vulkan','--windowed','--max-fps','30','--fixed-fps','30','--disable-vsync','--',
+                command=[str(executable),'--rendering-driver',driver,'--windowed','--max-fps','30','--fixed-fps','30','--disable-vsync','--',
                          '--display-windowed','--playtest=visual-parity','--playtest-output='+str(case),'--parity-stage='+stage,
                          '--parity-provenance='+str(provenance)]
                 row={'stage':stage,'index':index,'command':command,'passed':False};report['runs'].append(row)
@@ -34,13 +35,14 @@ def collect_stage_captures(directory,output,target,revision,provenance,expiry):
                 runtime_errors=[s for s in text.splitlines()if re.search(r'(^|\s)(ERROR:|SCRIPT ERROR:|Unhandled exception|FATAL:)',s)]
                 row.update(exitCode=result.returncode,assertions=summary.get('assertions'),device=device,validationErrors=errors,
                            runtimeErrors=runtime_errors,runtimeWarnings=[s for s in text.splitlines()if 'WARNING:'in s])
-                row['passed']=not(result.returncode or errors or runtime_errors)and summary['release']['revision']==revision and device['driver']=='vulkan'and visual_parity.hardware_adapter_matches(device,'T4')
+                row['passed']=not(result.returncode or errors or runtime_errors)and summary['release']['revision']==revision and device['driver']==driver and visual_parity.hardware_adapter_matches(device,expected_adapter)
                 if not row['passed']:raise RuntimeError('Stage capture execution/device failed: '+stage)
                 for name,right in [('same-draw','parity-base-a-1.png'),('fresh-target','parity-base-b-0.png')]:
                     _,code=visual_parity.pair(case/'parity-base-a-0.png',case/right,case/name)
                     report['comparisons'].append({'stage':stage,'index':index,'name':name,'exitCode':code})
-            _,code=visual_parity.pair(output/stage/'run-0/parity-base-a-0.png',output/stage/'run-1/parity-base-a-0.png',output/stage/'fresh-process')
-            report['comparisons'].append({'stage':stage,'name':'fresh-process','exitCode':code})
+            if processes==2:
+                _,code=visual_parity.pair(output/stage/'run-0/parity-base-a-0.png',output/stage/'run-1/parity-base-a-0.png',output/stage/'fresh-process')
+                report['comparisons'].append({'stage':stage,'name':'fresh-process','exitCode':code})
         report['collectionComplete']=True
         report['repeatsExact']=all(row['exitCode']==0 for row in report['comparisons'])
     except (OSError,ValueError,RuntimeError,KeyError,TypeError,subprocess.SubprocessError)as error:report['errors'].append(str(error))
