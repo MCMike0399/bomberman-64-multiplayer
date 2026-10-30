@@ -46,6 +46,8 @@ def run(executable, output, source_project=False):
               shutdown.get('watchdogEnabled') is False and shutdown.get('watchdogFired') is False)
     if isinstance(shutdown,dict)and shutdown.get('schemaVersion')==2:
         passed=passed and isinstance(shutdown.get('managedFinalizers'),dict)and shutdown['managedFinalizers'].get('completed')is True
+    if any(marker in text for marker in ('BLAST_SHUTDOWN_FINALIZERS_FAILED','BLAST_SHUTDOWN_DRAIN_FAILED','BLAST_SHUTDOWN_WATCHDOG_FIRED')):
+        passed=False
     report = {'scope': 'Expected save-failure regression, not a clean product QA pass',
               'passed': passed, 'command': command, 'exitCode': code, 'timedOut': timed_out,
               'seconds': time.monotonic() - started, 'shutdown': shutdown}

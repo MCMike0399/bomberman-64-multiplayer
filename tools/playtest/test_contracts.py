@@ -13,6 +13,13 @@ import xml.etree.ElementTree as ET
 from contracts import catalog, expanded, validate_summary, validate_benchmark, junit, ROOT, CATALOG
 
 class PlaytestContracts(unittest.TestCase):
+    def test_shutdown_failure_markers_are_errors_without_an_engine_prefix(self):
+        from contracts import runtime_error_lines
+        for marker in ('BLAST_SHUTDOWN_FINALIZERS_FAILED','BLAST_SHUTDOWN_DRAIN_FAILED',
+                       'BLAST_SHUTDOWN_SAVE_FAILED','BLAST_SHUTDOWN_WATCHDOG_FIRED'):
+            with self.subTest(marker=marker):self.assertEqual(runtime_error_lines('normal\n'+marker+'\n'),[marker])
+        self.assertEqual(runtime_error_lines('BLAST_RESOURCE_PROBE quit\n'),[])
+
     def test_native_benchmark_cannot_use_fixed_step_vm_or_recording(self):
         from run import engine_timing_args, native_benchmark_error
         self.assertNotIn('--fixed-fps', engine_timing_args('graphics-benchmark'))

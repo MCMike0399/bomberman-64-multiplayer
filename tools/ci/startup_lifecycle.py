@@ -110,7 +110,8 @@ def inspect_case(record, text, capture, shutdown):
     errors = [s for s in text.splitlines() if re.search(r'(^|\s)(ERROR:|SCRIPT ERROR:|Unhandled exception|FATAL:)', s)]
     record.update(runtimeErrors=errors, runtimeWarnings=[s for s in text.splitlines() if re.search(r'(^|\s)WARNING:', s)],
                   smokeLines=[s for s in text.splitlines() if s.startswith('GODOT_SMOKE_')])
-    if ('BLAST_SHUTDOWN_WATCHDOG_FIRED' in text or 'BLAST_SHUTDOWN_SAVE_FAILED' in text or not isinstance(shutdown, dict) or
+    if (any(marker in text for marker in ('BLAST_SHUTDOWN_WATCHDOG_FIRED','BLAST_SHUTDOWN_SAVE_FAILED',
+                                         'BLAST_SHUTDOWN_DRAIN_FAILED','BLAST_SHUTDOWN_FINALIZERS_FAILED'))or not isinstance(shutdown, dict) or
             shutdown.get('schemaVersion') not in (1,2) or shutdown.get('savedStateFlushed') is not True or
             shutdown.get('watchdogEnabled') is not False or shutdown.get('watchdogFired') is not False or
             not isinstance(shutdown.get('drain'), dict) or shutdown['drain'].get('completed') is not True or

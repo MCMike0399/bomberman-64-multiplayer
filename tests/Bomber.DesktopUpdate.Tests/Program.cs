@@ -183,17 +183,7 @@ foreach (bool failedLaunch in new[] { false, true })
             catch (ArgumentException) { }
             catch (IOException) { }
         }
-        // A terminated Windows image may still be mapped briefly after WaitForExit.
-        // Require actual removal, but allow the owned fixture's image to unload.
-        var cleanup = Stopwatch.StartNew();
-        while (Directory.Exists(root))
-        {
-            try { Directory.Delete(root, true); }
-            catch (Exception error) when (OperatingSystem.IsWindows() &&
-                error is IOException or UnauthorizedAccessException &&
-                (error.HResult & 0xffff) is 5 or 32 or 33 && cleanup.Elapsed < TimeSpan.FromSeconds(5))
-            { await Task.Delay(100); }
-        }
+        await RemoveOwnedFixture(root);
     }
 }
 // Installation I/O failures happen after the old process has exited.
@@ -231,7 +221,7 @@ foreach(bool missingNext in new[]{false,true})
             try {using var child=DesktopProcessIdentity.OpenMarker(marker);if(!child.HasExited){child.Kill(true);await child.WaitForExitAsync();}}
             catch(ArgumentException){}catch(IOException){}
         }
-        Directory.Delete(root,true);
+        await RemoveOwnedFixture(root);
     }
 }
 Check(DesktopUpdateHistory.QuarantinedVersion("retry 99.0.0 install-rollback") is null,"Transient installation failure is retried");
@@ -256,6 +246,21 @@ void MarkStarted()
     string root = Path.GetDirectoryName(Path.GetDirectoryName(Environment.ProcessPath!))!;
     using var process = Process.GetCurrentProcess();
     DesktopProcessIdentity.WriteMarker(Path.Combine(root, "fixture-pid-" + Environment.ProcessId), process);
+}
+
+// Both transaction paths must wait for owned, already-terminated Windows images
+// to unmap. This is fixture cleanup, not a production updater retry policy.
+static async Task RemoveOwnedFixture(string root)
+{
+    var cleanup=Stopwatch.StartNew();
+    while(Directory.Exists(root))
+    {
+        try{Directory.Delete(root,true);}
+        catch(Exception error)when(OperatingSystem.IsWindows()&&
+            error is IOException or UnauthorizedAccessException&&
+            (error.HResult&0xffff)is 5 or 32 or 33&&cleanup.Elapsed<TimeSpan.FromSeconds(5))
+        {await Task.Delay(100);}
+    }
 }
 
 static class DirectoryHandle

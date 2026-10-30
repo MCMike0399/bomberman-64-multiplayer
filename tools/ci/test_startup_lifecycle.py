@@ -32,6 +32,9 @@ class StartupLifecycleTests(unittest.TestCase):
                 self.assertFalse(diagnostic.inspect_case(record, '', Path('/missing'), shutdown))
         self.assertFalse(diagnostic.inspect_case(record, 'BLAST_SHUTDOWN_WATCHDOG_FIRED\n', Path('/missing'), VALID_SHUTDOWN))
         self.assertFalse(diagnostic.inspect_case(record, 'BLAST_SHUTDOWN_SAVE_FAILED\n', Path('/missing'), VALID_SHUTDOWN))
+        current=dict(VALID_SHUTDOWN,schemaVersion=2,managedFinalizers={'completed':True})
+        for marker in ('BLAST_SHUTDOWN_FINALIZERS_FAILED','BLAST_SHUTDOWN_DRAIN_FAILED'):
+            with self.subTest(marker=marker):self.assertFalse(diagnostic.inspect_case(record,marker+'\n',Path('/missing'),current))
 
     def test_success_marker_without_exit_still_fails(self):
         record = {'timedOut': True, 'exitCode': None, 'earlyQuit': False, 'preset': 'low', 'headless': False}
