@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: Free audit/rehearsal or a reviewed paid qualification
+        description: Free audit/rehearsal or a guarded paid qualification
         type: choice
         options: [audit, rehearse, qualify]
         default: audit
@@ -19,6 +19,9 @@ on:
         type: choice
         options: [none, cancel, job-timeout]
         default: none
+      diagnosed-failure-run:
+        description: Paid retry only; the exact earlier failed qualification run already diagnosed
+        type: string
   workflow_run:
     workflows: [Verification]
     branches: [main]
@@ -54,14 +57,17 @@ jobs:
           FIXED_EXPIRY: ${{ inputs.fixed-expiry }}
           SANCUS_BUILDER_PAID_HOLD: ${{ vars.SANCUS_BUILDER_PAID_HOLD }}
           BLAST_RELEASE_KIND_OVERRIDE: ${{ vars.BLAST_RELEASE_KIND_OVERRIDE }}
+          DIAGNOSED_FAILURE_RUN: ${{ inputs.diagnosed-failure-run }}
         run: python3 tools/ci/builder_trigger.py
 
-      - name: Retain the paid plan before any approval prompt
+      - name: Retain the paid plan and its qualification key before allocation
         if: steps.select.outputs.run == 'true' && steps.select.outputs.mode == 'qualify'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: builder-approval-plan
-          path: artifacts/builder-approval-plan.json
+          path: |
+            artifacts/builder-approval-plan.json
+            artifacts/builder-qualification-key.json
           if-no-files-found: error
           retention-days: 90
 

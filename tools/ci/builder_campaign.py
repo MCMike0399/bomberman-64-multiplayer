@@ -2,6 +2,7 @@
 """One exact owned CloudFormation campaign. Preparation is read-only; launch is explicit."""
 import argparse,datetime,json,subprocess,uuid,time,threading,os
 from pathlib import Path
+import builder_approval
 import builder_journal as safety
 import builder_namespace as names
 import builder_s3
@@ -223,7 +224,7 @@ def creation_spec(plan):
     arming.configure(ROOT)
     arming.verify_prepared(plan)
     builder_s3.require_unused_name(lambda *args:aws(plan,*args),plan['runId'])
-    if plan['estimatedCampaignUsd']>10 or plan['priorEstimateUsd']+plan['estimatedCampaignUsd']>min(50,plan['budgetUsd']):
+    if plan['estimatedCampaignUsd']>builder_approval.PER_RUN_CAP_USD or plan['priorEstimateUsd']+plan['estimatedCampaignUsd']>min(builder_approval.CUMULATIVE_CAP_USD,plan['budgetUsd']):
         raise ValueError('Campaign estimate exceeds authorized run/cumulative budget')
     template=json.loads((ROOT/'template.json').read_text());expiry=datetime.datetime.fromisoformat(plan['fixedCampaignExpiryUtc'])
     if expiry.tzinfo is None:raise ValueError('An explicit UTC-aware campaign expiry is required')

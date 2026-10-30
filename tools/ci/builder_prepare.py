@@ -131,11 +131,11 @@ def prepare(state,verification_run,fixed_expiry):
     observation=builder_preflight.inspect(plan,aws)
     (state/'prepare-preflight.json').write_text(json.dumps(observation,indent=2)+'\n')
     if not observation['passed']:raise ValueError('Resolve prior leftovers/capability inputs before any new campaign')
-    ledger=json.loads((ROOT/'docs/sancus-builder-spend.json').read_text())
+    ledger=builder_approval.ledger()
     if os.environ.get('MODE')=='qualify':verify_spend_history(ledger)
     plan.update(budgetUsd=ledger['budgetUsd'],priorEstimateUsd=ledger['closedEstimateUsd'])
     plan['hourlyRatesUsd']=price_rates(aws,state);plan['estimatedCampaignUsd']=estimate(plan['hourlyRatesUsd'])
-    if plan['estimatedCampaignUsd']>10 or plan['estimatedCampaignUsd']+plan['priorEstimateUsd']>min(50,plan['budgetUsd']):
+    if plan['estimatedCampaignUsd']>builder_approval.PER_RUN_CAP_USD or plan['estimatedCampaignUsd']+plan['priorEstimateUsd']>min(builder_approval.CUMULATIVE_CAP_USD,plan['budgetUsd']):
         raise ValueError('Reviewed run/cumulative spend cap exceeded before allocation')
     if os.environ.get('MODE')=='qualify':builder_approval.validate_prepared(plan['approvalPlan'],plan,spending)
     snapshot=protected(aws);protected_path=state/'protected-instances.json'

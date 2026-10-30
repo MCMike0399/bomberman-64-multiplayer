@@ -1,6 +1,8 @@
 {
-  "budgetUsd": 50,
+  "budgetUsd": 200,
+  "perRunCapUsd": 20,
+  "preCiEstimateUsd": 4.8,
   "closedEstimateUsd": 4.8,
   "recordedRuns": [],
-  "scope": "Conservative closed-campaign estimates before CI/OIDC orchestration. No CI paid campaign has launched. Update after each closed run; estimates are not invoices."
+  "scope": "Conservative closed-campaign estimates. preCiEstimateUsd covers the campaigns before CI/OIDC orchestration. After every paid CI run, a reviewed PR appends {workflowRunId, estimateUsd, receipt} from its cost receipt and raises closedEstimateUsd by the same amount; until then the selector refuses another paid run. Estimates are not invoices."
 }

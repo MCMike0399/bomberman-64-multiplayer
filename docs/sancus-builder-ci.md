@@ -10,9 +10,10 @@ Visual approval remains separate from machine receipts.
 ## Deployment status
 
 The approved standing role and boundary were created on 2026-10-30. The existing
-OIDC provider remains external. GitHub settings readback confirms the user as
+OIDC provider remains external. GitHub settings readback confirmed the user as
 required reviewer, a main-only branch policy and immutable customized subject
-claims. The reusable workflow, campaign controller and exhaustive cleanup audit
+claims; the reviewer rule is removed by the
+[2026-10-30 evening decision](#user-decision-2026-10-30-evening-machine-safeguards-replace-the-click). The reusable workflow, campaign controller and exhaustive cleanup audit
 are still under preparation. Live OIDC assumption and a free audit must pass
 before any paid campaign. The initial `gpu-qualification.yml` dispatch invokes
 only the read-only reusable controller; it cannot launch instances. Paid
@@ -202,8 +203,9 @@ immutable owner/repository IDs, STS audience and exact reusable workflow
 `.github/workflows/builder-controller.yml@refs/heads/main`. Repository OIDC
 customization requires `repo`, `context` and `job_workflow_ref` claims. Preserve
 the immutable subject format; name recycling must not authorize another repo.
-The environment's main-only branch policy additionally restricts the caller,
-and the user is its required reviewer before any paid job can run.
+The environment's main-only branch policy additionally restricts the caller.
+The environment must stay (the subject is bound to it) but has no required
+reviewer; `builder_environment.py` readback refuses any reviewer or wait rule.
 See [GitHub's reusable-workflow OIDC guidance](https://docs.github.com/en/actions/how-tos/secure-your-work/security-harden-deployments/oidc-with-reusable-workflows).
 
 RunInstances is limited to reviewed exact AMI IDs, `g4dn.xlarge`, required
@@ -283,9 +285,9 @@ cleanup test. The probe creates no AWS resources.
 ## Campaign completion and cost
 
 Each campaign has a unique owned stack, a fixed expiry of at most three hours,
-at most four instances, and an estimated cost of at most $10. Current allowed
+at most four instances, and an estimated cost of at most $20. Current allowed
 capacity is `g4dn.xlarge`. Concurrency is one. Estimate before launch, include
-prior spending, and request a decision before exceeding the cumulative $50 cap.
+prior spending, and ask the user before exceeding the cumulative $200 cap.
 The standing identity is the only intended persistent AWS footprint.
 
 Every result must include an exact-ID/type audit, tagged-resource discovery,
@@ -299,10 +301,13 @@ list them honestly rather than claiming to delete them.
 | --- | ---: |
 | Closed campaigns before the CI/OIDC follow-up | $4.80 |
 | New CI/OIDC campaigns launched | $0.00 |
-| Total / authorized cumulative cap | **$4.80 / $50.00** |
+| Total / authorized cumulative cap | **$4.80 / $200.00** |
 
-Estimates are not invoices or an enforced dollar cutoff. Update the ledger
-after each campaign and retain its timing, evidence and cleanup receipts.
+Estimates are not invoices. `docs/sancus-builder-spend.json` is the enforced
+ledger: after each paid run a reviewed PR appends its workflow run ID and
+cost-receipt estimate and raises `closedEstimateUsd` by the same amount. Until
+then the selector refuses another paid run. Retain timing, evidence and cleanup
+receipts.
 
 
 ## Paid approval sequencing
@@ -335,12 +340,55 @@ CreateStack, using GitHub's variable context without a standing admin token. A
 late approval, changed source/run/AMI/budget, or held job
 cannot allocate resources. Cleanup does not depend on the paid hold.
 
-Only after free rehearsals/observed cancellation and timeout outcomes are
-reviewed, and the exact-artifact campaign plan is approved, set the paid hold to
-`false`. The existing required environment reviewer still approves each paid
-run. Restore normal automatic major selection only at that reviewed boundary.
+Only after free rehearsals/observed cancellation and timeout outcomes show
+cleanup and audit working on the platform, the release owner sets the paid hold
+to `false`. No human approves individual paid runs (see below).
 
-### User budget decision, 2026-10-30
+### User decision, 2026-10-30 evening: machine safeguards replace the click
+
+Supersedes the $50/$10 limits and the per-run approval click below. The release
+owner dispatches paid qualification without a human click. Hard rule: every run
+removes everything it created (instances, volumes, security groups, stacks,
+buckets and objects, schedules and roles), with zero leftovers. Budget is $20
+estimated per run and $200 cumulative; ask the user before exceeding $200.
+Three-hour/four-instance limits, `sancus-builder-*` names, the
+`sancus-builder:run` tag key (never `sancus:*`), protected resources and explicit
+`--profile sancus --region us-east-1` are unchanged.
+
+`builder_trigger.py` selects a paid run only after `builder_guard.py` passes:
+
+- **Once per (version, render fingerprint).** The plan artifact carries
+  `builder-qualification-key.json`. A passing qualification for the key is
+  never repeated. An automatic trigger never retries a failed, cancelled or
+  running attempt. An operator dispatch after diagnosis must name the latest
+  failed run as `diagnosed-failure-run`.
+- **Zero leftovers.** The most recent builder run must have an independent
+  `builder-outcome` report that passed with verified cleanup, no leftovers, no
+  errors and no operator cleanup. A missing, expired or unclean report refuses.
+  The next-run preflight sweep is unchanged.
+- **Recorded spend.** Every earlier `builder-intent` run must have its cost
+  receipt recorded in the ledger. The ledger total must equal the pre-CI
+  estimate plus its recorded runs.
+
+If a cleanup audit is ever unclean, stop paid runs, set
+`SANCUS_BUILDER_PAID_HOLD=true`, and report. `builder_environment.py --apply
+--remove-reviewer` removes only the reviewer rule and reads the result back.
+
+**TTL gap.** The expiry schedules terminate instances only. If the runner is
+lost, the stack (roles, security group, schedule group and bucket policy) and
+the bucket remain until the next preflight or an operator cleanup. Instances are
+the only billed resources. Bucket objects already expire by lifecycle rule.
+The other leftovers cost nothing, and the zero-leftover guard blocks further
+paid runs until they are gone.
+
+A scheduled `cloudformation:deleteStack` backstop is feasible, but it is not
+cheap or safe here. The scheduler role would need delete authority over IAM
+roles, security groups, schedules and the bucket, or a stack service role
+holding that authority. That widens the boundary of the standing identity. A
+non-empty bucket would also leave the stack `DELETE_FAILED`. It is proposed as
+a separately reviewed change, not part of this one.
+
+### User budget decision, 2026-10-30 (superseded the same evening)
 
 The user raised the cumulative GPU authorization from $25 to $50 and the per-run
 estimate ceiling from $8 to $10, including future sessions. Ask before exceeding
