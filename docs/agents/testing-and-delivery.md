@@ -1034,3 +1034,24 @@ requires review, and cannot replace executing the full core suite. Missing
 closure, meteor or results geometry must fail normal runtime tests before a
 three-OS input measurement is launched; authoring-mode passes do not qualify
 normal consumers. See [the mesh production contract](../mesh-producers.md).
+
+### JSON transport encoding and exact scene comparison
+
+The seven-stage measurement of 2026-10-30 collected identical parsed scene
+inventories and packed buffers on all three OSes. Its original aggregate was
+red because Windows indented JSON used CRLF and Mac/Linux used LF: the recipe
+included the raw inventory-file digest, which was incorrectly compared as a
+render value. Both original failed receipts and the authorized offline
+re-evaluation are retained, bound to their actual payload/runner identities.
+
+Every raw JSON and binary file must still match its own recorded checksum
+before comparison. The comparison view treats only the validated raw JSON file
+digest as transport provenance. It compares every parsed graph key/value,
+ordered list and exact packed buffer for all five trials; map key order is
+immaterial. Real float differences, including one ULP, are not normalized.
+No render field is excluded and no tolerance is introduced. QA JSON writers
+explicitly emit LF so future raw inventory bytes match as well.
+
+A corrected offline result is evidence for those retained payload bytes, not
+permission to rewrite a failed workflow's status or qualify another source.
+PR CI and trusted-main verification must each pass on their own artifacts.

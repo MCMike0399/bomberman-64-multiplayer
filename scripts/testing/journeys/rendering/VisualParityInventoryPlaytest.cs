@@ -98,7 +98,7 @@ public partial class PlaytestDriver
         var inventory=new{encoding="Godot Variant bytes; actual packed mesh surfaces and storage properties/resource graph; local instance IDs/names are locators only and excluded",
             binary=Path.GetFileName(blob.Name),nodes,resources,unsupported=unsupported.Distinct().Order().ToArray()};
         using(var file=File.Create(Path.Combine(_output,$"parity-{label}-inventory.json")))
-            JsonSerializer.Serialize(file,inventory,new JsonSerializerOptions{WriteIndented=true});
+            JsonSerializer.Serialize(file,inventory,new JsonSerializerOptions{WriteIndented=true,NewLine="\n"});
         return inventory;
     }
 }

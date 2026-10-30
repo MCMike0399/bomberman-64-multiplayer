@@ -55,7 +55,7 @@ public partial class PlaytestDriver
             limitations=new[]{"Renderer globals described by deterministic ApplyHigh policy because stock getters are unavailable","Target API/OS provenance is recorded; physical target GPU/performance scope remains separate","No arbitrary-driver or physical-display equality claim"},
             driver=RenderingServer.GetCurrentRenderingDriverName(),adapter=RenderingServer.GetVideoAdapterName(),
             deviceType=RenderingServer.GetVideoAdapterType().ToString(),engine=Engine.GetVersionInfo()["string"].AsString(),records
-        },new JsonSerializerOptions{WriteIndented=true}));
+        },new JsonSerializerOptions{WriteIndented=true,NewLine="\n"}));
 
         CaptureMeshInputs();
 
@@ -166,8 +166,8 @@ public partial class PlaytestDriver
                         jitter="Production Circle/Low, flag on; tagged Circle does not consume seed; no reseed",draws},
                     capture="SubViewport post-tonemap GetImage; flush Node3D transforms/sync/once/zero-step draw/sync/readback/disable; no unplanned target or fallback draws"};
                 records.Add(new{label,recipe});
-                File.WriteAllText(Path.Combine(_output,$"parity-{label}-recipe.json"),JsonSerializer.Serialize(recipe,new JsonSerializerOptions{WriteIndented=true}));
-                File.WriteAllText(Path.Combine(_output,$"parity-{label}-conditions.json"),JsonSerializer.Serialize(conditions,new JsonSerializerOptions{WriteIndented=true}));
+                File.WriteAllText(Path.Combine(_output,$"parity-{label}-recipe.json"),JsonSerializer.Serialize(recipe,new JsonSerializerOptions{WriteIndented=true,NewLine="\n"}));
+                File.WriteAllText(Path.Combine(_output,$"parity-{label}-conditions.json"),JsonSerializer.Serialize(conditions,new JsonSerializerOptions{WriteIndented=true,NewLine="\n"}));
                 string? provenancePath=OS.GetCmdlineUserArgs().FirstOrDefault(arg=>arg.StartsWith("--parity-provenance=",StringComparison.Ordinal))?.Split('=',2)[1];
                 if(provenancePath is not null&&label is "base-a" or "base-b")
                 {
@@ -187,7 +187,7 @@ public partial class PlaytestDriver
                     for(int readback=0;readback<(label=="base-a"?2:1);readback++)
                     {
                         string png=Path.Combine(_output,$"parity-{label}-{readback}.png");
-                        File.WriteAllText(Path.ChangeExtension(png,".manifest.json"),JsonSerializer.Serialize(new{schemaVersion=1,pngSha256=ReplayHash(File.ReadAllBytes(png)),conditions,provenance},new JsonSerializerOptions{WriteIndented=true}));
+                        File.WriteAllText(Path.ChangeExtension(png,".manifest.json"),JsonSerializer.Serialize(new{schemaVersion=1,pngSha256=ReplayHash(File.ReadAllBytes(png)),conditions,provenance},new JsonSerializerOptions{WriteIndented=true,NewLine="\n"}));
                     }
                 }
             }

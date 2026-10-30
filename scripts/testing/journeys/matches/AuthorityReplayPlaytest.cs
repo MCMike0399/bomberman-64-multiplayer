@@ -124,7 +124,7 @@ public partial class PlaytestDriver
         }
         File.WriteAllText(Path.Combine(_output,"authority-replay-receipt.json"),JsonSerializer.Serialize(new{
             schemaVersion=1,scope="Observable replay only; runtime/package binding is validated externally.",source=OnlineProtocol.SourceRevision,
-            file=Path.GetFileName(path),sha256=ReplayHash(File.ReadAllBytes(path)),cases=evidence,totalTicks,dataRecords},new JsonSerializerOptions{WriteIndented=true}));
+            file=Path.GetFileName(path),sha256=ReplayHash(File.ReadAllBytes(path)),cases=evidence,totalTicks,dataRecords},new JsonSerializerOptions{WriteIndented=true,NewLine="\n"}));
         Event("authority-replay-complete",new{cases=cases.Length,totalTicks,dataRecords});
         return Task.CompletedTask;
     }

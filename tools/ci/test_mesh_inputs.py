@@ -68,6 +68,11 @@ class MeshInputTests(unittest.TestCase):
                      'nodes':[{'data':{'offset':0,'length':len(payload),'sha256':hashlib.sha256(payload).hexdigest()}}],
                      'resources':[{'id':0,'type':'ArrayMesh','properties':[]}]}
         (path/'parity-base-a-inventory.json').write_text(json.dumps(inventory))
+        for label in ('warmup','base-b','dof-off','reflection-off'):
+            (path/('parity-'+label+'-inventory.bin')).write_bytes(payload)
+            copy=dict(inventory,binary='parity-'+label+'-inventory.bin')
+            (path/('parity-'+label+'-inventory.json')).write_text(json.dumps(copy))
+
 
     def test_unused_builder_drift_stays_red_while_actual_canonical_inputs_match(self):
         self.canonical_fixture(self.root/'a'); self.canonical_fixture(self.root/'b',bit='3f000001')

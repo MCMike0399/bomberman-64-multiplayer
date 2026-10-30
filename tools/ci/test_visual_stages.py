@@ -32,7 +32,7 @@ def scene_files(folder, stage, identity):
         binary_path = folder / ('parity-' + label + '-inventory.bin')
         if not inventory_path.exists():
             payload = stage.encode(); binary_path.write_bytes(payload)
-            inventory_path.write_text(json.dumps({'binary': binary_path.name, 'unsupported': [], 'nodes': [
+            inventory_path.write_text(json.dumps({'binary': binary_path.name, 'unsupported': [], 'resources':[{'id':0,'type':'ArrayMesh','properties':[]}], 'nodes': [
                 {'data': {'offset': 0, 'length': len(payload), 'sha256': hashlib.sha256(payload).hexdigest()}}]}))
         binding = {'json': inventory_path.name, 'jsonSha256': hashlib.sha256(inventory_path.read_bytes()).hexdigest(),
                    'binary': binary_path.name, 'binarySha256': hashlib.sha256(binary_path.read_bytes()).hexdigest()}

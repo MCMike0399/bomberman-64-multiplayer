@@ -41,7 +41,7 @@ public partial class PlaytestDriver
         finally
         {
             System.IO.File.WriteAllText(System.IO.Path.Combine(_output,"peer-ice-order-diagnostics.json"),
-                JsonSerializer.Serialize(Diagnostics(),new JsonSerializerOptions{WriteIndented=true}));
+                JsonSerializer.Serialize(Diagnostics(),new JsonSerializerOptions{WriteIndented=true,NewLine="\n"}));
         }
         static bool Ice(JsonElement signal)=>signal.GetProperty("kind").GetString()=="ice";
         static bool Sdp(JsonElement signal)=>signal.GetProperty("kind").GetString()=="sdp";

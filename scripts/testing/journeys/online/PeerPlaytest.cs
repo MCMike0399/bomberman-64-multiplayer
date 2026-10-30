@@ -68,7 +68,7 @@ public partial class PlaytestDriver
         {
             var clock=Stopwatch.StartNew();ulong startFrame=Godot.Engine.GetProcessFrames();
             while(!predicate()&&Waiting(clock,20,startFrame))await Frames(1);
-            if(!predicate())File.WriteAllText(Path.Combine(_output,"peer-room-diagnostics.json"),JsonSerializer.Serialize(new{description,host=PeerDiagnostics(host),peers=peers.Select(PeerDiagnostics),cadence=new{second=liveSecond.Cadence,third=liveThird.Cadence}},new JsonSerializerOptions{WriteIndented=true}));
+            if(!predicate())File.WriteAllText(Path.Combine(_output,"peer-room-diagnostics.json"),JsonSerializer.Serialize(new{description,host=PeerDiagnostics(host),peers=peers.Select(PeerDiagnostics),cadence=new{second=liveSecond.Cadence,third=liveThird.Cadence}},new JsonSerializerOptions{WriteIndented=true,NewLine="\n"}));
             Check(predicate(),description);
         }
     }
@@ -170,7 +170,7 @@ public partial class PlaytestDriver
             Event("peer-capacity-observation",diagnostic);
             File.WriteAllText(Path.Combine(_output,"peer-capacity-diagnostics.json"),JsonSerializer.Serialize(new{room=diagnostic,slowFrames,
                 joinOrder,forceRelayFirst,orderScope="Logical actor labels; each process creates new guest identities and ephemeral ports.",cadence,
-                host=hostInfo,guests=guestInfo,failedCheckpoints,firstFailure=firstFailureSnapshot,history=observations.ToArray()},new JsonSerializerOptions{WriteIndented=true}));
+                host=hostInfo,guests=guestInfo,failedCheckpoints,firstFailure=firstFailureSnapshot,history=observations.ToArray()},new JsonSerializerOptions{WriteIndented=true,NewLine="\n"}));
             Check(passed,description);
         }
     }
