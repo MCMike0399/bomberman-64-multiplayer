@@ -34,6 +34,9 @@ class DisposableBootstrap(unittest.TestCase):
         self.assertNotIn('Invoke-WebRequest',initial)
         self.assertIn("$request.ExpectedBucketOwner='524329886851'",initial)
         self.assertIn("$request.Key='payload/bootstrap-awscli.msi'",initial)
+        self.assertLess(bootstrap.WINDOWS_SETUP.index('AudioEndpointBuilder'),bootstrap.WINDOWS_SETUP.index('New-LocalUser'))
+        self.assertIn('b950e39f01af1d04ea623c8f6d8eb9b6ea5c477c637295fabf20631c85116bfb',bootstrap.WINDOWS_SETUP)
+        self.assertLess(bootstrap.WINDOWS_DISPATCH.index('Move-Item'),bootstrap.WINDOWS_DISPATCH.index('Start-ScheduledTask'))
 
     def test_linux_dispatches_as_standard_user_and_scripts_parse(self):
         self.assertIn('runuser -u ubuntu',bootstrap.LINUX_DISPATCH)

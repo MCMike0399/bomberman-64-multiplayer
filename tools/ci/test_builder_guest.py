@@ -47,7 +47,7 @@ class GuestProtocol(unittest.TestCase):
             self.assertEqual({row['path']for row in manifest['files']},{'failed/case/runtime.log','failed/case/capture.png'})
             self.assertEqual(manifest['state'],'failed');self.assertEqual(manifest['gameVerdict'],'not-inferred')
             self.assertTrue(all('gpu'not in row['objectKey'].lower()and'blast'not in row['objectKey'].lower()for row in manifest['files']))
-            builder_transfer.validate_results(manifest,{'runId':self.task['runId'],'payloadSource':self.task['source']},'linux-x64')
+            builder_transfer.validate_results(manifest,{**self.task,'payloadSource':self.task['source']},'linux-x64')
             self.assertEqual(calls[-1][1][1],'results/linux-x64/manifest.json')
 
     def test_later_progress_cannot_overwrite_the_committed_core_checkpoint(self):

@@ -63,6 +63,7 @@ def acknowledge_core(client,plan,target,core_manifest_sha,retention,destination)
 def validate_results(manifest,plan,target,max_bytes=8*1024**3):
     if target not in ('windows-x64','linux-x64'):raise ValueError('Unknown result target')
     if (manifest.get('schemaVersion')!=1 or manifest.get('runId')!=plan['runId']or
+            manifest.get('account')!=plan['account']or manifest.get('region')!=plan['region']or
             manifest.get('source')!=plan['payloadSource']or manifest.get('target')!=target):
         raise ValueError('Result manifest campaign/source/target differs')
     rows=manifest.get('files')

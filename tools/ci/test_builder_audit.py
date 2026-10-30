@@ -8,7 +8,7 @@ def empty(service,operation,*arguments):
     if service=='sts':return {'Account':names.ACCOUNT,'Arn':f'arn:aws:sts::{names.ACCOUNT}:assumed-role/{names.CI_ROLE}/test'}
     return {key:[]for key in ('StackSummaries','Reservations','Volumes','NetworkInterfaces','SecurityGroups','Addresses',
             'Snapshots','Images','Roles','InstanceProfiles','Schedules','ScheduleGroups','logGroups','Buckets',
-            'Parameters','DocumentIdentifiers','ResourceTagMappingList')}
+            'Parameters','DocumentIdentifiers','ResourceTagMappingList','KeyPairs')}
 
 
 class EmptyAudit(unittest.TestCase):

@@ -79,6 +79,51 @@ journals before invoking cleanup; unknown or ambiguous ownership blocks a new
 launch. Its matching step alone never authorizes deletion. The hosted coordinator
 and complete workflow rehearsal remain the next integration boundary.
 
+`builder_controller.py` now exposes separate intent, launch, core, acknowledgement,
+final collection and cleanup phases. Hosted execution requires the exact
+successful current-main Verification and a clean source checkout. The creation
+intent is uploaded durably before submission; a response loss reconciles that
+same token. Instance children are recorded during provisioning. SSM dispatch and
+termination both verify the exact recorded stack member.
+
+Windows publishes readiness from its standard user's logon task, then waits for
+an atomically published descriptor. Both OS wrappers retain early worker errors,
+even if source unpacking fails before the normal game reporter starts. A zero
+worker exit without the required receipt still fails collection.
+
+The finalizer checks each created physical ID, the complete type audit and the
+protected comparison before binding cleanup to the original GPU and graphical
+receipt hashes. Its fresh hosted job checks repository variables separately.
+AWS key pairs are included in discovery even though this controller creates none.
+CloudFormation DELETE_COMPLETE history is retained as an AWS-managed record.
+
+`builder_rehearse.py` runs mocked phase/receipt wiring and live noncreating
+preflight under an AWS CLI mutation fence. Development/operator runs identify
+that scope explicitly; current-main prepared-input and assumed-role verification
+remain required for the hosted rehearsal. Rehearsal never creates native game or
+GPU qualification evidence. Asset preparation and the workflow phase wiring are
+still pending, so this source checkpoint cannot launch a paid job automatically.
+
+The Windows desktop helper now has an owned-SSM verification mode. It validates
+live task provenance without inventing a GitHub Actions environment, and checks
+the ordinary user's display and WASAPI endpoint. Privileged audio service/driver
+setup happens in the disposable system bootstrap before the standard-user logon.
+The reviewed virtual-audio package is a staged, checksum-pinned QA dependency.
+
+Development rehearsal is runnable without allocating machines:
+
+```sh
+python3 tools/ci/builder_rehearse.py --state /absolute/path/to/draft-state \
+  --output /absolute/path/to/new-rehearsal-output --operator
+```
+
+The hosted form also requires `--require-prepared`, validated frozen inputs and
+the actual scoped assumed role. Reports preserve the real caller, source-file
+hashes and dirty-tree state; an operator draft run is not that hosted proof.
+The current reusable workflow still performs audit only. Asset preparation,
+workflow integration and the prepared current-main rehearsal are unfinished;
+there is no automatic paid launch at this checkpoint.
+
 The cleanup-only entry point never provisions or retries a game test:
 
 ```sh

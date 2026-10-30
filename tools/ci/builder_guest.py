@@ -17,7 +17,7 @@ import builder_payload
 import builder_s3
 import native_execution
 
-ROLES={'source','artifact','godot','pillow','dotnet','python','git','pwsh','driver'}
+ROLES={'source','artifact','godot','pillow','dotnet','python','git','pwsh','driver','audio'}
 EVIDENCE_SUFFIXES={'.json','.jsonl','.gz','.png','.bin','.log','.txt','.csv','.xml','.md','.dmp','.res'}
 
 
@@ -158,7 +158,8 @@ def run(args):
     try:
         if target=='windows-x64':
             # This script only prepares the disposable user's display/audio.
-            step('desktop',['pwsh','-NoProfile','-File','tools/packaging/windows-test-desktop.ps1'],90)
+            step('desktop',['pwsh','-NoProfile','-File','tools/packaging/windows-test-desktop.ps1',
+                            '-OwnedSsm','-VerifyOnly','-ExpectedRevision',descriptor['source']],90)
             command=['pwsh','-NoProfile','-Command',
                 "$ErrorActionPreference='Stop'; $p=[Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent(); "
                 "@{sessionId=[Diagnostics.Process]::GetCurrentProcess().SessionId; user=$env:USERNAME; "

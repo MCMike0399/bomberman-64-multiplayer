@@ -71,7 +71,7 @@ class NativeDispatch(unittest.TestCase):
     def test_windows_only_fixed_dispatcher_receives_encoded_data(self):
         descriptor=ssm.task(self.plan,self.instance,'windows-x64','b'*64)
         command=ssm.commands('Windows',descriptor)[0]
-        self.assertTrue(command.startswith('& C:\\sancus-builder\\bin\\dispatch.ps1 -Descriptor '))
+        self.assertTrue(command.startswith(r'& C:\sancus-builder\bin\dispatch.ps1 -Descriptor '))
         self.assertEqual(json.loads(base64.b64decode(command.split()[-1])),descriptor)
 
 

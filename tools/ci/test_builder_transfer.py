@@ -13,6 +13,7 @@ class ResultRetention(unittest.TestCase):
                    'account':'524329886851','region':'us-east-1'}
         self.data=b'raw failed scenario evidence\n'
         self.manifest={'schemaVersion':1,'runId':self.plan['runId'],'source':'a'*40,'target':'linux-x64','state':'failed',
+                       'account':self.plan['account'],'region':self.plan['region'],
                        'files':[{'path':'failed/core/runtime.log','objectKey':'results/linux-x64/failed/object-000000.bin',
                                  'size':len(self.data),'sha256':hashlib.sha256(self.data).hexdigest()}]}
 

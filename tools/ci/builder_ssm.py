@@ -36,7 +36,7 @@ def commands(osname,descriptor):
     """
     encoded=base64.b64encode(json.dumps(descriptor,sort_keys=True).encode()).decode()
     if osname=='Linux':return ['/opt/sancus-builder/bin/dispatch '+encoded]
-    if osname=='Windows':return ['& C:\\sancus-builder\\bin\\dispatch.ps1 -Descriptor '+encoded]
+    if osname=='Windows':return [r'& C:\sancus-builder\bin\dispatch.ps1 -Descriptor '+encoded]
     raise ValueError('Unknown operating system')
 
 

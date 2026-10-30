@@ -9,7 +9,7 @@ import builder_namespace as names
 import builder_staging
 
 
-MODULES=('builder_guest.py','builder_payload.py','builder_s3.py','builder_staging.py',
+MODULES=('builder_guest.py','builder_guest_ready.py','builder_guest_exit.py','builder_payload.py','builder_s3.py','builder_staging.py',
          'builder_namespace.py','native_execution.py')
 
 LINUX_SETUP=r'''#!/bin/bash
@@ -53,6 +53,7 @@ test -n "$icd"
 printf '%s' "$icd" > "$root/nvidia-icd.txt"
 chown -R ubuntu:ubuntu "$root"
 printf 'bootstrap-ready; desktop and hardware NOT YET QUALIFIED\n' > "$root/bootstrap.status"
+runuser -u ubuntu -- env AWS_CONFIG_FILE="$root/aws-config" "$root/venv/bin/python" "$root/bin/builder_guest_ready.py" --manifest "$root/manifest.json" --target linux-x64 --output "$root/bootstrap-ready.json"
 '''
 
 LINUX_DISPATCH=r'''#!/bin/bash
@@ -68,7 +69,10 @@ export DOTNET_ROOT="$root/dotnet"
 export DOTNET_CLI_HOME="$root/dotnet-home"
 export VK_DRIVER_FILES="$(cat "$root/nvidia-icd.txt")"
 export PATH="$root/dotnet:$root/venv/bin:$PATH"
-runuser -u ubuntu -- env AWS_CONFIG_FILE="$root/aws-config" DOTNET_ROOT="$root/dotnet" DOTNET_CLI_HOME="$root/dotnet-home" VK_DRIVER_FILES="$VK_DRIVER_FILES" PATH="$root/dotnet:$root/venv/bin:/usr/local/bin:/usr/bin:/bin" "$root/venv/bin/python" "$root/bin/builder_guest.py" --task "$root/task.json" --manifest "$root/manifest.json" --cache "$root/cache" --work "$root/work" > "$root/worker.log" 2>&1
+worker_status=0
+runuser -u ubuntu -- env AWS_CONFIG_FILE="$root/aws-config" DOTNET_ROOT="$root/dotnet" DOTNET_CLI_HOME="$root/dotnet-home" VK_DRIVER_FILES="$VK_DRIVER_FILES" PATH="$root/dotnet:$root/venv/bin:/usr/local/bin:/usr/bin:/bin" "$root/venv/bin/python" "$root/bin/builder_guest.py" --task "$root/task.json" --manifest "$root/manifest.json" --cache "$root/cache" --work "$root/work" > "$root/worker.log" 2>&1 || worker_status=$?
+"$root/venv/bin/python" "$root/bin/builder_guest_exit.py" --manifest "$root/manifest.json" --target linux-x64 --code "$worker_status" --log "$root/worker.log" --output "$root/worker-exit.json"
+exit "$worker_status"
 '''
 
 WINDOWS_SETUP=r'''$ErrorActionPreference='Stop'
@@ -105,6 +109,22 @@ $driver=InputFile 'driver'
 $signature=Get-AuthenticodeSignature $driver
 if($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'NVIDIA'){throw 'NVIDIA driver signature invalid'}
 Install $driver '-s -noreboot'
+foreach($name in @('AudioEndpointBuilder','Audiosrv')){
+ if((Get-Service $name).StartType -eq 'Disabled'){Set-Service -Name $name -StartupType Manual}
+ Start-Service -Name $name
+}
+$audio=InputFile 'audio'
+if((Get-FileHash -Algorithm SHA256 $audio).Hash.ToLowerInvariant() -ne 'b950e39f01af1d04ea623c8f6d8eb9b6ea5c477c637295fabf20631c85116bfb'){throw 'Reviewed virtual-audio archive differs'}
+Expand-Archive $audio "$root\audio"
+$installer="$root\audio\VBCABLE_Setup_x64.exe"
+$catalog="$root\audio\vbaudio_cable64_win10.cat"
+$setupSignature=Get-AuthenticodeSignature $installer
+$catalogSignature=Get-AuthenticodeSignature $catalog
+if($setupSignature.Status -ne 'Valid' -or $setupSignature.SignerCertificate.Subject -notmatch 'BUREL VINCENT' -or $catalogSignature.Status -ne 'Valid' -or $catalogSignature.SignerCertificate.Subject -notmatch 'Microsoft Windows Hardware Compatibility Publisher'){throw 'Pinned virtual-audio signatures invalid'}
+$audioInstall=Start-Process $installer -ArgumentList '-i','-h' -WorkingDirectory "$root\audio" -PassThru
+if(-not $audioInstall.WaitForExit(90000)){$audioInstall.Kill($true);throw 'Owned audio installation exceeded 90 seconds'}
+# Exit alone is not audio proof. The standard-user helper requires an actual
+# WASAPI render endpoint after the driver reboot.
 & "$root\Python\python.exe" -m venv "$root\venv"
 if($LASTEXITCODE -ne 0){throw 'Owned Python venv failed'}
 & "$root\venv\Scripts\python.exe" -m pip install --no-index --find-links "$root\cache" Pillow==13.0.0
@@ -119,7 +139,8 @@ $logon='HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon'
 $password=$null
 $action=New-ScheduledTaskAction -Execute 'C:\Program Files\PowerShell\7\pwsh.exe' -Argument '-NoProfile -File C:\sancus-builder\bin\worker.ps1'
 $principal=New-ScheduledTaskPrincipal -UserId "$env:COMPUTERNAME\BlastQa" -LogonType Interactive -RunLevel Limited
-Register-ScheduledTask -TaskName sancus-builder-run -Action $action -Principal $principal | Out-Null
+$trigger=New-ScheduledTaskTrigger -AtLogOn -User "$env:COMPUTERNAME\BlastQa"
+Register-ScheduledTask -TaskName sancus-builder-run -Action $action -Principal $principal -Trigger $trigger | Out-Null
 Set-Content "$root\bootstrap.status" 'driver installed; rebooting into owned standard-user desktop; NOT graphics qualification'
 Restart-Computer -Force
 '''
@@ -130,8 +151,9 @@ $root='C:\sancus-builder'
 if(Test-Path "$root\task.json"){throw 'Existing task: never blindly dispatch twice'}
 if(-not(Test-Path "$root\bootstrap.status")){throw 'Bootstrap not ready'}
 $bytes=[Convert]::FromBase64String($Descriptor)
-$file=[IO.File]::Open("$root\task.json",[IO.FileMode]::CreateNew)
+$file=[IO.File]::Open("$root\task.pending",[IO.FileMode]::CreateNew)
 try{$file.Write($bytes,0,$bytes.Length)}finally{$file.Dispose()}
+Move-Item "$root\task.pending" "$root\task.json"
 Start-ScheduledTask -TaskName sancus-builder-run
 '''
 
@@ -141,8 +163,19 @@ $env:AWS_CONFIG_FILE="$root\aws-config"
 $env:DOTNET_ROOT="$root\dotnet"
 $env:DOTNET_CLI_HOME="$root\dotnet-home"
 $env:PATH="$root\venv\Scripts;$root\dotnet;C:\Program Files\Git\cmd;C:\Program Files\PowerShell\7;C:\Program Files\Amazon\AWSCLIV2;$env:PATH"
-& "$root\venv\Scripts\python.exe" "$root\bin\builder_guest.py" --task "$root\task.json" --manifest "$root\manifest.json" --cache "$root\cache" --work "$root\work" *> "$root\worker.log"
-exit $LASTEXITCODE
+& "$root\venv\Scripts\python.exe" "$root\bin\builder_guest_ready.py" --manifest "$root\manifest.json" --target windows-x64 --output "$root\bootstrap-ready.json" *> "$root\readiness.log"
+if($LASTEXITCODE -ne 0){throw 'Standard-user bootstrap readiness failed'}
+$taskDeadline=[DateTime]::UtcNow.AddMinutes(15)
+while(-not(Test-Path "$root\task.json")){
+ if([DateTime]::UtcNow -ge $taskDeadline){throw 'No owned task arrived in the bounded window'}
+ Start-Sleep -Seconds 2
+}
+try{
+ & "$root\venv\Scripts\python.exe" "$root\bin\builder_guest.py" --task "$root\task.json" --manifest "$root\manifest.json" --cache "$root\cache" --work "$root\work" *> "$root\worker.log"
+ $workerStatus=$LASTEXITCODE
+}catch{$workerStatus=1;$_ | Out-File -Append "$root\worker.log"}
+& "$root\venv\Scripts\python.exe" "$root\bin\builder_guest_exit.py" --manifest "$root\manifest.json" --target windows-x64 --code $workerStatus --log "$root\worker.log" --output "$root\worker-exit.json"
+exit $workerStatus
 '''
 
 
@@ -209,7 +242,7 @@ $request.ExpectedBucketOwner='524329886851'
 $bootstrapDeadline=[DateTime]::UtcNow.AddMinutes(5)
 while([DateTime]::UtcNow -lt $bootstrapDeadline){
  try{
-  $response=$client.GetObjectAsync($request).GetAwaiter().GetResult()
+  $response=$client.GetObjectAsync($request,[Threading.CancellationToken]::None).GetAwaiter().GetResult()
   $file=[IO.File]::Create("$root\aws.msi")
   try{$response.ResponseStream.CopyTo($file)}finally{$file.Dispose();$response.Dispose()}
   break

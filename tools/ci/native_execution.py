@@ -43,3 +43,12 @@ def context(revision,target,root):
                 'source':actual,'expiresAtUtc':task['expiresAtUtc']}
     if os.environ.get('GITHUB_ACTIONS')=='true':return {'kind':'github-actions'}
     raise RuntimeError('Use an explicit disposable native CI or owned SSM execution context')
+
+
+if __name__=='__main__':
+    import argparse
+    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--revision',required=True)
+    parser.add_argument('--target',required=True);parser.add_argument('--require-ssm',action='store_true')
+    args=parser.parse_args();result=context(args.revision,args.target,Path(__file__).resolve().parents[2])
+    if args.require_ssm and result['kind']!='aws-ssm-interactive-desktop':raise SystemExit('Actual owned SSM context required')
+    print(json.dumps(result))

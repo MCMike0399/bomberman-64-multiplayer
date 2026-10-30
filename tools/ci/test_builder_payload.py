@@ -3,6 +3,7 @@ import subprocess
 import tempfile
 import unittest
 import zipfile
+from unittest.mock import patch
 
 import builder_payload as payload
 
@@ -14,13 +15,14 @@ class FrozenPayload(unittest.TestCase):
             def git(*args):return subprocess.check_output(['git',*args],cwd=repo)
             git('init','--quiet');git('config','user.email','fixture@example.invalid');git('config','user.name','Fixture')
             (repo/'public.txt').write_text('old');git('add','.');git('commit','--quiet','-m','old')
-            (repo/'public.txt').write_text('current');git('commit','--quiet','-am','current')
+            (repo/'public.txt').write_text('current\n');git('commit','--quiet','-am','current')
             revision=git('rev-parse','HEAD').decode().strip()
             (repo/'ignored-private-note.txt').write_text('MUST NOT TRANSFER')
             git('config','http.extraheader','Secret local header')
             bundle=root/'source.zip';payload.source_bundle(repo,revision,bundle)
-            out=root/'guest';payload.unpack_source(bundle,out,revision)
-            self.assertEqual((out/'public.txt').read_text(),'current')
+            out=root/'guest';global_config=root/'global.gitconfig';global_config.write_text('[core]\n autocrlf = true\n')
+            with patch.dict(payload.os.environ,{'GIT_CONFIG_GLOBAL':str(global_config)}):payload.unpack_source(bundle,out,revision)
+            self.assertEqual((out/'public.txt').read_bytes(),b'current\n')
             self.assertFalse((out/'ignored-private-note.txt').exists())
             self.assertNotIn('Secret local header',(out/'.git/config').read_text())
             self.assertEqual(subprocess.check_output(['git','rev-list','--count','HEAD'],cwd=out,text=True).strip(),'1')

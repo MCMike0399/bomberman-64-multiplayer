@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """One exact owned CloudFormation campaign. Preparation is read-only; launch is explicit."""
-import argparse,datetime,json,subprocess,uuid,time,threading
+import argparse,datetime,json,subprocess,uuid,time,threading,os
 from pathlib import Path
 import builder_journal as safety
 import builder_namespace as names
@@ -20,7 +20,7 @@ def configure(state):
 def aws(plan,service,operation,*args,missing=()):
     if (plan.get('profile'),plan.get('region'),plan.get('account'))!=('sancus',names.REGION,names.ACCOUNT):
         raise ValueError('Explicit sancus/us-east-1 account binding required')
-    if plan.get('dryRun')and not operation.startswith(('describe-','list-','get-','head-','simulate-')):
+    if (plan.get('dryRun')or os.environ.get('BUILDER_DRY_RUN')=='true')and not operation.startswith(('describe-','list-','get-','head-','simulate-')):
         raise ValueError('Dry run refuses every mutating AWS operation')
     command=['aws','--profile',plan['profile'],'--region',plan['region'],'--cli-connect-timeout','8','--cli-read-timeout','25',service,operation,*args,'--output','json']
     result=subprocess.run(command,capture_output=True,text=True,timeout=100)
@@ -89,7 +89,7 @@ def reconcile(plan):
     return safety.append(JOURNAL,plan,'CREATED','AWS::CloudFormation::Stack',arn,{**details,'reconciled':True})
 
 
-def wait_stack(plan,sid,goal,deadline):
+def wait_stack(plan,sid,goal,deadline,observe=None):
     """Observe the same stack until its bounded deadline; never relaunch on timeout."""
     event=threading.Event()
     while time.time()<deadline:
@@ -103,6 +103,7 @@ def wait_stack(plan,sid,goal,deadline):
             if goal=='delete':return 'absent'
             raise RuntimeError('Provisioning stack disappeared')
         state=response['Stacks'][0]['StackStatus']
+        if observe is not None:observe()
         if state==('CREATE_COMPLETE'if goal=='create'else 'DELETE_COMPLETE'):return state
         if state.endswith('_FAILED')or goal=='create'and state.startswith('ROLLBACK'):
             raise RuntimeError('Stack terminal state: '+state)
@@ -204,14 +205,13 @@ def sync(plan,best_effort=False):
                 eni=interface['NetworkInterfaceId']
                 if eni in protected(plan):raise ValueError('Protected ENI referenced by new instance')
                 record_created(plan,'implicit:ENI',eni,{'deleteOnTermination':interface['Attachment']['DeleteOnTermination']},physical)
-            safety.append(JOURNAL,plan,'STATUS',kind,physical,{'state':instance['State']['Name'],'launchTime':instance['LaunchTime'],'publicIp':instance.get('PublicIpAddress'),'inventoryGap':False},sid)
+            observed=any('Ebs'in item for item in instance.get('BlockDeviceMappings',[]))and bool(instance.get('NetworkInterfaces'))
+            previously_known=any(r['event']=='STATUS'and r['id']==physical and r['details'].get('inventoryGap')is False for r in rows(plan))
+            safety.append(JOURNAL,plan,'STATUS',kind,physical,{'state':instance['State']['Name'],'launchTime':instance['LaunchTime'],'publicIp':instance.get('PublicIpAddress'),'inventoryGap':not(observed or previously_known)},sid)
     return response['StackResourceSummaries']
 
-def launch(plan):
+def creation_spec(plan):
     actor(plan)
-    if any(r['event']=='INTENT'and r['type']=='AWS::CloudFormation::Stack'for r in rows(plan)):
-        reconcile(plan)
-        raise ValueError('Existing exact intent reconciled; resume it, never create a fresh request')
     import builder_arming as arming
     arming.configure(ROOT)
     arming.verify_prepared(plan)
@@ -219,11 +219,32 @@ def launch(plan):
     if plan['estimatedCampaignUsd']>8 or plan['priorEstimateUsd']+plan['estimatedCampaignUsd']>min(25,plan['budgetUsd']):
         raise ValueError('Campaign estimate exceeds authorized run/cumulative budget')
     template=json.loads((ROOT/'template.json').read_text());expiry=datetime.datetime.fromisoformat(plan['fixedCampaignExpiryUtc'])
+    if expiry.tzinfo is None:raise ValueError('An explicit UTC-aware campaign expiry is required')
     if expiry.timestamp()-time.time()<plan.get('minimumLaunchHeadroomSeconds',7200):raise ValueError('Insufficient approved fixed-window headroom; no launch')
     if expiry.timestamp()-time.time()>3*3600:raise ValueError('Lifetime exceeds the authorized three-hour maximum')
+    expiry=expiry.astimezone(datetime.timezone.utc)
     params={'RunId':plan['runId'],'VpcId':plan['references']['vpc'],'SubnetId':plan['references']['subnet'],'ExpiresAt':expiry.strftime('%Y-%m-%dT%H:%M:%S')}
-    token=str(uuid.uuid4());details={'templateSha256':safety.canonical_hash(template),'parameters':params,'requestToken':token,'expiresAtUtc':expiry.isoformat()}
-    safety.append(JOURNAL,plan,'INTENT','AWS::CloudFormation::Stack',plan['runId'],details)
+    return {'templateSha256':safety.canonical_hash(template),'parameters':params,'expiresAtUtc':expiry.isoformat()}
+
+
+def prepare_intent(plan):
+    if any(r['event']=='INTENT'and r['type']=='AWS::CloudFormation::Stack'for r in rows(plan)):
+        reconcile(plan)
+        raise ValueError('Existing exact intent reconciled; resume it, never create a fresh request')
+    details={**creation_spec(plan),'requestToken':str(uuid.uuid4())}
+    return safety.append(JOURNAL,plan,'INTENT','AWS::CloudFormation::Stack',plan['runId'],details)
+
+
+def submit_intent(plan):
+    intents=[r for r in rows(plan)if r['event']=='INTENT'and r['type']=='AWS::CloudFormation::Stack']
+    if len(intents)!=1:raise ValueError('One persisted exact creation intent required')
+    if any(r['event']=='STATUS'and r['type']=='creation-submission'for r in rows(plan)):
+        reconcile(plan)
+        raise ValueError('Creation was submitted or is uncertain; reconcile, never resend')
+    details=intents[0]['details'];current=creation_spec(plan)
+    if any(details.get(key)!=value for key,value in current.items()):raise ValueError('Published creation intent changed')
+    params=details['parameters'];token=details['requestToken']
+    safety.append(JOURNAL,plan,'STATUS','creation-submission',plan['runId'],{'requestToken':token,'state':'SUBMITTED_OR_UNCERTAIN'})
     tags=[{'Key':names.RUN_TAG,'Value':plan['runId']},{'Key':names.TAG_PREFIX+'source','Value':plan['payloadSource']}]
     try:
         result=aws(plan,'cloudformation','create-stack','--stack-name',plan['runId'],'--template-body','file://'+str((ROOT/'template.json').resolve()),'--parameters',json.dumps([{'ParameterKey':k,'ParameterValue':v}for k,v in params.items()]),'--tags',json.dumps(tags),'--capabilities','CAPABILITY_NAMED_IAM','--timeout-in-minutes','15','--on-failure','DELETE','--client-request-token',token)
@@ -231,7 +252,15 @@ def launch(plan):
         reconcile(plan)
         raise
     safety.append(JOURNAL,plan,'CREATED','AWS::CloudFormation::Stack',result['StackId'],details)
-    print('Created exact stack:',result['StackId'],'expiryUTC',expiry.isoformat())
+    print('Created exact stack:',result['StackId'],'expiryUTC',details['expiresAtUtc'])
+    return result['StackId']
+
+
+def launch(plan):
+    # Operator fallback has a durable local journal. Hosted orchestration uses
+    # prepare_intent, uploads it to GitHub, then calls submit_intent separately.
+    prepare_intent(plan)
+    return submit_intent(plan)
 
 def authorize(plan):
     identity=actor(plan);entry=stack_entry(plan);sid=entry['id']

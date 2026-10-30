@@ -49,6 +49,7 @@ def unpack_source(bundle,destination,revision):
         if set(archive.namelist())!={'source.pack','revision.txt'}or archive.read('revision.txt').decode().strip()!=revision:
             raise ValueError('Source snapshot identity/contents differ')
         subprocess.run(['git','init','--quiet',str(destination)],check=True)
+        subprocess.run(['git','config','core.autocrlf','false'],cwd=destination,check=True)
         subprocess.run(['git','index-pack','--stdin'],cwd=destination,input=archive.read('source.pack'),check=True,capture_output=True)
     (destination/'.git/shallow').write_text(revision+'\n')
     subprocess.run(['git','update-ref','refs/heads/main',revision],cwd=destination,check=True)

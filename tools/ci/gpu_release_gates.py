@@ -10,7 +10,7 @@ import builder_namespace
 
 SOFTWARE=('warp','basic render','llvmpipe','lavapipe','swiftshader','paravirtual','software')
 CLEANUP_RECEIPT='Sancus-builder-cleanup.json'
-CLEANUP_TYPES={'CFN','EC2','EBS','ENI','SG','EIP','IAM','Scheduler','Logs','S3','SSM','AMI','Snapshots'}
+CLEANUP_TYPES={'CFN','EC2','EBS','ENI','SG','EIP','IAM','Scheduler','Logs','S3','SSM','AMI','Snapshots','KeyPairs'}
 
 
 def receipt_name(target):return 'Blast-Circuit-'+target+'-gpu.json'
@@ -90,6 +90,18 @@ def inspect_all(directory,revision,*,fingerprint=None,targets=None):
                 desktop_packages.digest(directory/'Blast-Circuit-server-dotnet10.zip'),fingerprint)
 
 
+def inspect_graphical(graph,target,revision,release,archive,download,server):
+    import desktop_packages,desktop_validation
+    desktop_validation.inspect_receipt(graph,desktop_packages.TARGETS[target],revision,release)
+    expected={'passed':True,'suite':'graphical-regression','target':target,'revision':revision,'release':release,
+              'archiveSha256':archive,'downloadSha256':download,'serverSha256':server}
+    if any(graph.get(key)!=value for key,value in expected.items()):
+        raise RuntimeError('GPU graphical wrapper differs from the exact source/download/server identity')
+    if any(not physical({'adapter':case.get('adapter'),'deviceType':case.get('adapterType')})for case in graph.get('cases',[])):
+        raise RuntimeError('Graphical tour did not run on physical hardware')
+    return graph
+
+
 def stage(directory,target,revision,verification_run):
     import desktop_packages,download_formats,render_fingerprint,release_identity,desktop_validation
     core=directory/('gpu-campaign-'+target+'-core')
@@ -98,19 +110,11 @@ def stage(directory,target,revision,verification_run):
     fingerprint=render_fingerprint.calculate()
     graphical=directory/('Blast-Circuit-'+target+'-graphical.json')
     graph=json.loads(graphical.read_text())
-    desktop_validation.inspect_receipt(graph,desktop_packages.TARGETS[target],revision,release_identity.check_exports())
     item=desktop_packages.names(target)
-    expected={'passed':True,'suite':'graphical-regression','target':target,'revision':revision,
-              'release':release_identity.check_exports(),
-              'archiveSha256':desktop_packages.digest(directory/item['archive']),
-              'downloadSha256':desktop_packages.digest(directory/download_formats.FILES[target]),
-              'serverSha256':desktop_packages.digest(directory/'Blast-Circuit-server-dotnet10.zip')}
-    if any(graph.get(key)!=value for key,value in expected.items()):
-        raise RuntimeError('GPU graphical wrapper differs from the exact source/download/server identity')
+    inspect_graphical(graph,target,revision,release_identity.check_exports(),desktop_packages.digest(directory/item['archive']),
+                      desktop_packages.digest(directory/download_formats.FILES[target]),desktop_packages.digest(directory/'Blast-Circuit-server-dotnet10.zip'))
     if not report.get('capabilityPassed')or report.get('source')!=revision or report.get('target')!=target:
         raise RuntimeError('Original 2x resource capability evidence is missing')
-    if any(not physical({'adapter':case.get('adapter'),'deviceType':case.get('adapterType')})for case in graph.get('cases',[])):
-        raise RuntimeError('Graphical tour did not run on physical hardware')
     output=directory/('gpu-release-'+target);output.mkdir(exist_ok=False)
     data={'schemaVersion':1,'target':target,'source':revision,'verificationRunId':str(verification_run),
           'archiveSha256':desktop_packages.digest(directory/item['archive']),
