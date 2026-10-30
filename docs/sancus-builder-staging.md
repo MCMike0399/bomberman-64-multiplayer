@@ -1,9 +1,9 @@
 # Per-run Sancus builder staging
 
-This is a proposed identity update for the SSM controller. It is not applied by
-the generators or simulations. The default identity generator still reproduces
-the reviewed, deployed identity without staging permissions. Use `--staging`
-to generate the proposal, and review it before any CloudFormation update.
+The reviewed identity update was applied on 2026-10-30, with exact template and
+role/boundary readback. The default generator preserves the historical initial
+identity; use `--staging` for the current deployed profile. Generators and
+simulations never apply changes. The paid SSM controller is not enabled yet.
 
 ## Storage and guest access
 
@@ -13,6 +13,16 @@ all four Block Public Access settings enabled, BucketOwnerEnforced ownership,
 SSE-S3/AES256 default encryption and a policy denying non-TLS requests. Objects
 expire after one day; incomplete multipart uploads are also aborted after one
 day. These lifecycle rules are crash safety, **not** proof of completed cleanup.
+
+New runs use a system-random 64-bit nonce and seven source characters, leaving
+room for the account suffix within S3's 63-character name limit. Existing or
+foreign names abort before provisioning/upload and are never reused. Direct
+bucket/object calls pin `ExpectedBucketOwner`; the account-wide ListBuckets and
+CreateBucket APIs do not accept that parameter. Those use verified STS identity,
+complete pre-creation absence checks and post-creation owner/nonce checks.
+CloudFormation owns bucket creation/configuration; ownership is confirmed before
+the controller transfers any bytes. See the [CreateBucket API](https://docs.aws.amazon.com/AmazonS3/latest/API/API_CreateBucket.html)
+and [ListBuckets API](https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListBuckets.html).
 
 The controller may configure, transfer, enumerate and delete only the dated
 `sancus-builder-20??????-*` bucket/object namespace. It also has cleanup rights

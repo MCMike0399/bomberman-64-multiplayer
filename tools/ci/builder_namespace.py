@@ -1,5 +1,6 @@
 """AWS ownership namespace, intentionally disjoint from sancus-runner and historical runs."""
 import re
+import secrets
 
 PREFIX='sancus-builder-'
 TAG_PREFIX='sancus-builder:'
@@ -11,15 +12,22 @@ BOUNDARY=PREFIX+'boundary'
 OIDC_PROVIDER='arn:aws:iam::524329886851:oidc-provider/token.actions.githubusercontent.com'
 ACCOUNT='524329886851'
 REGION='us-east-1'
-RUN_PATTERN=r'sancus-builder-20[0-9]{6}-[0-9a-f]{7,12}-[0-9a-f]{8}'
+RUN_PATTERN=r'sancus-builder-20[0-9]{6}-[0-9a-f]{7,12}-(?:[0-9a-f]{8}|[0-9a-f]{16})'
 # IAM glob syntax, deliberately excludes the standing CI role and boundary.
 RUN_GLOB=PREFIX+'20??????-*'
 
 
 def run_id(day,sha,nonce):
-    if not re.fullmatch(r'20[0-9]{6}',day)or not re.fullmatch(r'[0-9a-f]{7,12}',sha)or not re.fullmatch(r'[0-9a-f]{8}',nonce):
+    if not re.fullmatch(r'20[0-9]{6}',day)or not re.fullmatch(r'[0-9a-f]{7,12}',sha)or not re.fullmatch(r'(?:[0-9a-f]{8}|[0-9a-f]{16})',nonce):
         raise ValueError('Expected date, short source SHA and unique hexadecimal nonce')
     return PREFIX+day+'-'+sha+'-'+nonce
+
+
+def new_run_id(day,revision):
+    if not re.fullmatch(r'[0-9a-f]{40}',revision):raise ValueError('Expected full source revision')
+    # Seven source characters leave room for 64 random nonce bits, the account
+    # suffix in a <=63-character bucket name and <=64-character child roles.
+    return run_id(day,revision[:7],secrets.token_hex(8))
 
 
 def resource_name(run,suffix):
