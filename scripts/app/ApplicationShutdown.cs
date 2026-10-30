@@ -15,6 +15,7 @@ public partial class ApplicationShutdown : Node
     private bool _attempted,_saved;
     private int _cancelledDraws;
     private ShutdownDrain.Result? _drain;
+    private ManagedFinalizerDrain.Result? _finalizers;
     public override void _Ready()
     {
         Current=this;GetTree().AutoAcceptQuit=false;_window=GetWindow();_window.CloseRequested+=CloseRequested;
@@ -27,7 +28,7 @@ public partial class ApplicationShutdown : Node
     public void RequestQuit(int exitCode=0)
     {
         if(!_attempted)Prepare();
-        GetTree().Quit(_saved&&_drain?.Completed==true?exitCode:1);
+        GetTree().Quit(_saved&&_finalizers?.Completed==true&&_drain?.Completed==true?exitCode:1);
     }
     private void Prepare()
     {
@@ -46,6 +47,11 @@ public partial class ApplicationShutdown : Node
             _cancelledDraws=EffectWarmup.CancelPending();
             RenderingServer.RenderLoopEnabled=false;
             RenderingServer.ForceSync();
+            _finalizers=ManagedFinalizerDrain.Run(TimeSpan.FromSeconds(5));
+            if(!_finalizers.Completed)GD.PushError("BLAST_SHUTDOWN_FINALIZERS_FAILED: "+_finalizers.Detail);
+            // Resource destructors may enqueue render/worker cleanup. Drain that
+            // work after finalizers, before the engine detaches C# bindings.
+            RenderingServer.ForceSync();
             _drain=ShutdownDrain.Run(TimeSpan.FromSeconds(15));
             if(!_drain.Completed)GD.PushError("BLAST_SHUTDOWN_DRAIN_FAILED: "+_drain.Detail);
         }
@@ -55,8 +61,8 @@ public partial class ApplicationShutdown : Node
             try
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(_report)!);
-                File.WriteAllText(_report,JsonSerializer.Serialize(new {schemaVersion=1,sourceRevision=OnlineProtocol.SourceRevision,savedStateFlushed=_saved,
-                    watchdogEnabled=false,watchdogFired=false,cancelledPreparationCallbacks=_cancelledDraws,drain=_drain,error},
+                File.WriteAllText(_report,JsonSerializer.Serialize(new {schemaVersion=2,sourceRevision=OnlineProtocol.SourceRevision,savedStateFlushed=_saved,
+                    watchdogEnabled=false,watchdogFired=false,cancelledPreparationCallbacks=_cancelledDraws,managedFinalizers=_finalizers,drain=_drain,error},
                     new JsonSerializerOptions{WriteIndented=true,PropertyNamingPolicy=JsonNamingPolicy.CamelCase})+"\n");
             }
             catch(Exception failure){GD.PushError("BLAST_SHUTDOWN_REPORT_FAILED: "+failure.Message);}

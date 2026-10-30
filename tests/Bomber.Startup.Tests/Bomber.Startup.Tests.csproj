@@ -4,5 +4,6 @@
     <Compile Include="../../src/Bomber.Client/Startup/WindowsLaunchGuard.cs" Link="WindowsLaunchGuard.cs" />
     <Compile Include="../../src/Bomber.Client/Updates/DesktopProcessIdentity.cs" Link="DesktopProcessIdentity.cs" />
     <Compile Include="../../src/Bomber.DesktopLauncher/WindowsAccessibilityHotkeys.cs" Link="WindowsAccessibilityHotkeys.cs" />
+    <Compile Include="../../scripts/app/ManagedFinalizerDrain.cs" Link="ManagedFinalizerDrain.cs" />
   </ItemGroup>
 </Project>

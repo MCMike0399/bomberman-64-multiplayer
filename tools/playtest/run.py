@@ -16,7 +16,7 @@ import hashlib
 import signal
 import tempfile
 import contextlib
-from contracts import catalog, expanded, validate_summary, validate_benchmark, junit
+from contracts import catalog, expanded, validate_summary, validate_benchmark, junit, runtime_error_lines
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -278,7 +278,7 @@ def main():
         if not summary_path.exists():
             raise RuntimeError('Godot did not write summary.json; inspect runtime.log for compile/launch errors')
         runtime_text = (folder / 'runtime.log').read_text(errors='replace')
-        runtime_errors = [line for line in runtime_text.splitlines() if re.search(r'(^|\s)(ERROR:|SCRIPT ERROR:|Unhandled exception|Unhandled Exception|FATAL:)', line)]
+        runtime_errors = runtime_error_lines(runtime_text)
         result['runtimeErrorCount'] = len(runtime_errors)
         runtime_errors = list(dict.fromkeys(runtime_errors))
         result['runtimeErrors'] = runtime_errors

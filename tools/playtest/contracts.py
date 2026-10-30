@@ -4,12 +4,21 @@ import hashlib
 import binascii
 import zlib
 import math
+import re
 from pathlib import Path
 import struct
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[2]
 CATALOG = ROOT / 'assets/testing/scenarios.json'
+
+
+def runtime_error_lines(text):
+    markers=('BLAST_SHUTDOWN_FINALIZERS_FAILED','BLAST_SHUTDOWN_DRAIN_FAILED',
+             'BLAST_SHUTDOWN_SAVE_FAILED','BLAST_SHUTDOWN_REPORT_FAILED','BLAST_SHUTDOWN_WATCHDOG_FIRED')
+    return [line for line in text.splitlines()if
+            re.search(r'(^|\s)(ERROR:|SCRIPT ERROR:|Unhandled exception|Unhandled Exception|FATAL:)',line)
+            or any(marker in line for marker in markers)]
 
 
 def catalog(path=CATALOG):

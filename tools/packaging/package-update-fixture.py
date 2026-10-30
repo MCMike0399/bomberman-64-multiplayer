@@ -3,6 +3,7 @@
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import signal
 import subprocess
@@ -44,7 +45,7 @@ def add_windows_files(output):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--target', choices=desktop_packages.TARGETS, required=True)
-    parser.add_argument('--godot', default='godot')
+    parser.add_argument('--godot', default=os.environ.get('GODOT','godot'))
     parser.add_argument('--unpack', action='store_true', help='Inspect and unpack the prebuilt fixture without any private build')
     args = parser.parse_args()
     if args.unpack:

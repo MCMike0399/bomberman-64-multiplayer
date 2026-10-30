@@ -12,6 +12,15 @@ VALID_SHUTDOWN = {"schemaVersion": 1, "savedStateFlushed": True, "watchdogEnable
 
 
 class StartupLifecycleTests(unittest.TestCase):
+    def test_current_shutdown_requires_managed_finalizers_while_legacy_remains_readable(self):
+        record={'timedOut':False,'exitCode':0,'earlyQuit':True,'preset':'low','headless':True}
+        self.assertTrue(diagnostic.inspect_case(record,'',Path('/missing'),VALID_SHUTDOWN))
+        for value in (None,{}, {'completed':False}):
+            current=dict(VALID_SHUTDOWN,schemaVersion=2,managedFinalizers=value)
+            with self.subTest(value=value):self.assertFalse(diagnostic.inspect_case(record,'',Path('/missing'),current))
+        current=dict(VALID_SHUTDOWN,schemaVersion=2,managedFinalizers={'completed':True})
+        self.assertTrue(diagnostic.inspect_case(record,'',Path('/missing'),current))
+
     def test_forced_exit_or_missing_flush_drain_proof_never_counts_as_clean_exit(self):
         record = {'timedOut': False, 'exitCode': 0, 'earlyQuit': True, 'preset': 'low', 'headless': False}
         invalid = [None, {}, dict(VALID_SHUTDOWN, savedStateFlushed=False),
@@ -23,6 +32,9 @@ class StartupLifecycleTests(unittest.TestCase):
                 self.assertFalse(diagnostic.inspect_case(record, '', Path('/missing'), shutdown))
         self.assertFalse(diagnostic.inspect_case(record, 'BLAST_SHUTDOWN_WATCHDOG_FIRED\n', Path('/missing'), VALID_SHUTDOWN))
         self.assertFalse(diagnostic.inspect_case(record, 'BLAST_SHUTDOWN_SAVE_FAILED\n', Path('/missing'), VALID_SHUTDOWN))
+        current=dict(VALID_SHUTDOWN,schemaVersion=2,managedFinalizers={'completed':True})
+        for marker in ('BLAST_SHUTDOWN_FINALIZERS_FAILED','BLAST_SHUTDOWN_DRAIN_FAILED'):
+            with self.subTest(marker=marker):self.assertFalse(diagnostic.inspect_case(record,marker+'\n',Path('/missing'),current))
 
     def test_success_marker_without_exit_still_fails(self):
         record = {'timedOut': True, 'exitCode': None, 'earlyQuit': False, 'preset': 'low', 'headless': False}

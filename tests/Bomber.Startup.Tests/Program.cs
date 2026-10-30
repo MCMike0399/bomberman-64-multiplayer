@@ -49,6 +49,7 @@ try
     Check(await guard.RunAsync(engine,["--headless",..childArgs],deadline.Token,_=>new EngineScope(()=>restored=true))==23,"The owned engine may fail after creating its lifetime guard");
     Check(restored,"Launcher-owned state is restored after an abnormal engine exit");
     WindowsHotkeyChecks.Run(Check,args);
+    FinalizerDrainChecks.Run(Check);
     Console.WriteLine($"PASS {checks} crash-safe renderer startup checks");
 }
 finally{Directory.Delete(root,true);}

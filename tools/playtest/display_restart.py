@@ -7,6 +7,7 @@ import re
 import signal
 import subprocess
 import time
+from contracts import runtime_error_lines
 
 
 def inspect(receipt, parent):
@@ -56,8 +57,7 @@ def run(folder, command, parent, parent_process, cwd=None, environment=None):
                                        stderr=subprocess.STDOUT, start_new_session=os.name == 'posix')
             receipt['exitCode'] = process.wait(timeout=90)
         text = (output / 'runtime.log').read_text(errors='replace')
-        receipt['runtimeErrors'] = [line for line in text.splitlines() if re.search(
-            r'(^|\s)(ERROR:|SCRIPT ERROR:|Unhandled exception|Unhandled Exception|FATAL:)', line)]
+        receipt['runtimeErrors'] = runtime_error_lines(text)
         receipt['summary'] = json.loads((output / 'summary.json').read_text())
         receipt['passed'] = True
         try:
