@@ -71,3 +71,15 @@ class MacReferencePayload(unittest.TestCase):
                 with self.assertRaises(ValueError):mac_reference.prepare('123',Path(directory)/'artifacts','a'*40,event='workflow_dispatch',ref='refs/heads/main',repository=mac_reference.REPOSITORY,gh=gh)
 
 if __name__=='__main__':unittest.main()
+
+
+class TrackedArtifactsDirectory(unittest.TestCase):
+    def test_tracked_gdignore_directory_is_accepted_and_other_content_refused(self):
+        import tempfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as root:
+            directory = Path(root) / 'artifacts'; directory.mkdir(); (directory / '.gdignore').write_text('')
+            mac_reference.prepare_directory(directory)
+            (directory / 'stale.zip').write_text('x')
+            with self.assertRaises(ValueError): mac_reference.prepare_directory(directory)
+            mac_reference.prepare_directory(Path(root) / 'fresh')

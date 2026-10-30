@@ -33,7 +33,8 @@ class PermissionAuditCases(unittest.TestCase):
     def test_every_audited_permission_has_positive_and_negative_simulations(self):
         import builder_policy_simulation as simulation
         rows=simulation.permission_audit_cases()
-        for action in ('scheduler:TagResource','scheduler:GetSchedule','iam:GetPolicy','ec2:AuthorizeSecurityGroupIngress',
+        self.assertIn(('owned-sg-ingress-never','ec2:AuthorizeSecurityGroupIngress',False),[(row[0],row[1],row[4])for row in rows])
+        for action in ('scheduler:TagResource','scheduler:GetSchedule','iam:GetPolicy',
                        'iam:ListAttachedRolePolicies','s3:TagResource'):
             outcomes={expected for _,name,_,_,expected in rows if name==action}
             self.assertEqual(outcomes,{True,False},action)

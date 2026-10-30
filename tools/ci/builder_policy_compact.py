@@ -22,7 +22,6 @@ register('ec2:TerminateInstances','instance')
 register('ec2:DeleteSecurityGroup','security-group')
 register('ec2:DeleteVolume','volume')
 register('ec2:DeleteNetworkInterface','network-interface')
-register('ec2:AuthorizeSecurityGroupIngress','security-group')
 register('iam:CreateRole iam:TagRole iam:GetRole iam:GetRole* iam:ListRoleTags iam:ListRolePolicies iam:GetRolePolicy '
          'iam:PutRolePolicy iam:DeleteRolePolicy iam:DeleteRole iam:PassRole iam:ListAttachedRolePolicies','role')
 register('iam:GetPolicy','policy')

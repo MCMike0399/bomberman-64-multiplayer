@@ -17,7 +17,7 @@ def build(plan,bootstrap):
         'ExpiryGroup':{'Type':'AWS::Scheduler::ScheduleGroup','Properties':{'Name':group,'Tags':tags}},
         'QaSecurityGroup':{'Type':'AWS::EC2::SecurityGroup','Properties':{
             'GroupName':names.resource_name(run,'sg'),'GroupDescription':'Owned expiring builder; no ingress',
-            'VpcId':ref('VpcId'),'SecurityGroupIngress':[],'Tags':tags}},
+            'VpcId':ref('VpcId'),'Tags':tags}},
         'AgentRole':{'Type':'AWS::IAM::Role','DependsOn':['StagingBucketPolicy'],'Properties':{
             'RoleName':names.resource_name(run,'agent'),'PermissionsBoundary':boundary,'Tags':tags,
             'AssumeRolePolicyDocument':{'Version':'2012-10-17','Statement':[{

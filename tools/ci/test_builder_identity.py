@@ -74,6 +74,16 @@ class BuilderIdentity(unittest.TestCase):
         self.assertEqual(statements['TerminateOnlyOwnedInstances']['Condition']['StringLike'],
                          {'aws:ResourceTag/sancus-builder:run':'sancus-builder-20??????-*'})
 
+    def test_security_group_has_no_ingress_rules_or_ingress_permission(self):
+        import fnmatch
+        actions={action for row in identity.policy(staging=True)['Statement']for action in
+                 (row['Action']if isinstance(row['Action'],list)else[row['Action']])}
+        for forbidden in ('ec2:AuthorizeSecurityGroupIngress','ec2:ModifySecurityGroupRules','ec2:UpdateSecurityGroupRuleDescriptionsIngress'):
+            self.assertFalse(any(fnmatch.fnmatchcase(forbidden,pattern)for pattern in actions),forbidden)
+        import builder_template
+        source=open(builder_template.__file__).read()
+        self.assertNotIn('SecurityGroupIngress',source)
+
     def test_audit_reads_are_retained_and_no_log_creation_is_granted(self):
         actions={action for row in identity.policy()['Statement']for action in
                  (row['Action']if isinstance(row['Action'],list)else[row['Action']])}

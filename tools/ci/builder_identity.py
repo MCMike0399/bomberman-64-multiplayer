@@ -57,8 +57,8 @@ def policy(*,staging=False):
     allow('TerminateOnlyOwnedInstances','ec2:TerminateInstances',arn('ec2','instance/*'),tagged)
     allow('CreateOwnedSecurityGroup','ec2:CreateSecurityGroup',arn('ec2','security-group/*'),requested)
     allow('ReferenceVpcForSecurityGroup','ec2:CreateSecurityGroup',arn('ec2','vpc/*'))
-    # The template's SecurityGroupIngress is applied after CreateSecurityGroup.
-    allow('AuthorizeOwnedSecurityGroupIngress','ec2:AuthorizeSecurityGroupIngress',arn('ec2','security-group/*'),tagged)
+    # No ingress grant: a new security group has no inbound rules, and EC2 has no
+    # condition key that could limit an ingress rule's source (reviewer, 2026-10-30).
     allow('DeleteOnlyOwnedNetworkStorage',['ec2:DeleteSecurityGroup','ec2:DeleteVolume','ec2:DeleteNetworkInterface'],
           [arn('ec2',kind+'/*')for kind in ('security-group','volume','network-interface')],tagged)
     roles=iam('role/'+run)

@@ -388,6 +388,38 @@ holding that authority. That widens the boundary of the standing identity. A
 non-empty bucket would also leave the stack `DELETE_FAILED`. It is proposed as
 a separately reviewed change, not part of this one.
 
+### Campaign-2 launch permission audit, 2026-10-30
+
+Campaign 2 (run 41136197647, source 3ed682b) rolled back at launch. It created no
+instances, cost $0.00 and left nothing behind. CloudTrail showed that
+CloudFormation calls the services using the builder role's credentials. So every
+handler call made for the template's resources needs a grant in both the role
+policy and the boundary.
+
+The audit used CloudTrail and simulation:
+
+- **Observed:** CloudTrail recorded four denials during the 22:12Z attempt.
+- **Simulated:** a curated, context-exact simulation covered every handler call
+  that the template's properties trigger, plus all direct controller, cleanup and
+  audit calls. It found the remaining gaps:
+  - `scheduler:TagResource` (tag-on-create of the owned group);
+  - `scheduler:GetSchedule` on `schedule/default/<run>*` (the handler's name pre-check);
+  - `iam:GetPolicy` on the boundary ARN only, and `iam:GetAccountSummary`;
+  - `iam:ListAttachedRolePolicies` on owned roles;
+  - the S3 bucket read and tag handler calls on the owned bucket.
+
+The security group no longer declares `SecurityGroupIngress`. A new group has no
+inbound rules, and ingress permission is never granted, because EC2 cannot
+condition a rule's source.
+
+To stay within IAM's 6,144-character managed-policy limit, the policy replaces
+some explicit action lists with read-only `Describe*`/`List*`/`Get*` wildcards.
+Tests reject any non-read wildcard and any SSM parameter read.
+
+The free `permissions-smoke` mode proves the permissions in real AWS before any
+paid launch. Evidence is retained by the owner under
+`artifacts/qa/permission-audit-20261030/`.
+
 ### User budget decision, 2026-10-30 (superseded the same evening)
 
 The user raised the cumulative GPU authorization from $25 to $50 and the per-run

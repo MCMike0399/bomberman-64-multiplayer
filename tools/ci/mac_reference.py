@@ -29,6 +29,14 @@ def validate_payload(directory,source):
     return {'source':source,'target':'macos-arm64','archiveSha256':digest,'downloadSha256':download['sha256']}
 
 
+def prepare_directory(directory):
+    # artifacts/.gdignore is tracked, so a fresh checkout already has artifacts/
+    # (run 41136201037 failed here). Accept only that pristine state.
+    directory.mkdir(parents=True,exist_ok=True)
+    if sorted(item.name for item in directory.iterdir())not in ([],['.gdignore']):
+        raise ValueError('Mac reference directory must be empty apart from the tracked .gdignore')
+
+
 def prepare(run_id,directory,checkout,*,event,ref,repository,gh):
     if not dispatch_allowed(event,ref,repository):raise ValueError('Mac reference dispatch is restricted to this repository on main')
     if not re.fullmatch(r'[0-9]+',str(run_id)):raise ValueError('Exact Verification run ID is required')
@@ -37,7 +45,7 @@ def prepare(run_id,directory,checkout,*,event,ref,repository,gh):
     pages=json.loads(gh('api',f'repos/{REPOSITORY}/actions/runs/{run_id}/artifacts?per_page=100','--paginate','--slurp'))
     artifacts=[entry for page in pages for entry in page['artifacts']if entry['name']==ARTIFACT]
     if len(artifacts)!=1 or artifacts[0].get('expired'):raise ValueError('Missing, expired or ambiguous trusted Mac artifact')
-    directory=Path(directory);directory.mkdir(parents=True,exist_ok=False)
+    directory=Path(directory);prepare_directory(directory)
     gh('run','download',str(run_id),'--repo',REPOSITORY,'--name',ARTIFACT,'--dir',str(directory))
     report=validate_payload(directory,checkout)
     report.update(verificationRunId=str(run_id),artifactId=artifacts[0]['id'],
