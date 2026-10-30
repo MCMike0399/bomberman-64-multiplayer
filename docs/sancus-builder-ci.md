@@ -101,8 +101,9 @@ CloudFormation DELETE_COMPLETE history is retained as an AWS-managed record.
 preflight under an AWS CLI mutation fence. Development/operator runs identify
 that scope explicitly; current-main prepared-input and assumed-role verification
 remain required for the hosted rehearsal. Rehearsal never creates native game or
-GPU qualification evidence. Asset preparation and the workflow phase wiring are
-still pending, so this source checkpoint cannot launch a paid job automatically.
+GPU qualification evidence. Asset preparation and workflow phase wiring are implemented in the working
+branch. Prepared current-main rehearsal, hosted fault probes and source/main
+verification are still pending; this is not a launch-ready qualification receipt.
 
 The Windows desktop helper now has an owned-SSM verification mode. It validates
 live task provenance without inventing a GitHub Actions environment, and checks
@@ -120,9 +121,10 @@ python3 tools/ci/builder_rehearse.py --state /absolute/path/to/draft-state \
 The hosted form also requires `--require-prepared`, validated frozen inputs and
 the actual scoped assumed role. Reports preserve the real caller, source-file
 hashes and dirty-tree state; an operator draft run is not that hosted proof.
-The current reusable workflow still performs audit only. Asset preparation,
-workflow integration and the prepared current-main rehearsal are unfinished;
-there is no automatic paid launch at this checkpoint.
+The workflow on main still performs audit only. This branch implements artifact
+and tool preparation, major selection and hosted phase integration; prepared-input
+and hosted fault rehearsals plus the source PR/main proof remain unfinished. No
+paid run has been launched.
 
 The cleanup-only entry point never provisions or retries a game test:
 
@@ -238,6 +240,44 @@ aws cloudformation delete-stack --profile sancus --region us-east-1 \
 aws cloudformation wait stack-delete-complete --profile sancus --region us-east-1 \
   --stack-name sancus-builder-ci-identity
 ```
+
+## Cancellation, timeout and recovery boundary
+
+The hosted campaign keeps cleanup in an `if: always()` step in the same approved
+job. It re-assumes a fresh one-hour OIDC session before requesting termination. Each
+phase checks its real credential expiration; allocation also checks that the fixed
+expiry plus the 20-minute cleanup allowance fits before the job timeout and its
+15-minute margin. Ordinary phases have earlier bounded subprocess deadlines.
+
+The always path requests termination of exact journaled instances before slow
+evidence work. It retains the request/cancel timestamps, then recovers available
+immutable evidence and uploads the local bytes. Only afterwards does it empty the
+bucket, delete the stack and verify every type/ID. Cleanup's internal ordering also
+stops journaled writers before evidence work; it does not wait on unrelated IAM/S3
+metadata merely to terminate a recorded instance. Cancellation signals are
+forwarded through the temporary credential wrapper. A free probe records step
+entry and explicitly does not invent a real EC2 termination request.
+
+The EventBridge TTL is **compute termination only**. It does not empty/delete the
+bucket or remove the stack, security group, IAM role/profile or schedule group.
+A lost runner or hard job termination can prevent always steps from executing.
+GitHub documents a five-minute force-termination limit during cancellation;
+[the cancellation reference](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-cancellation)
+is a platform limit, not a zero-leftover guarantee.
+
+Such a run stays red. An independent reporting job lists recorded IDs as
+unverified leftovers if a final cleanup audit is missing. Durable intent/state
+artifacts support the next preflight recovery or the identity-checked DiveMac
+cleanup command. Promotion and a new paid run remain blocked until recovery and
+cost closure are verified. No new cleanup resources or boundary permissions are
+introduced by this backstop. A future full-stack TTL extension requires separate
+review; a DeleteStack call alone cannot empty the populated staging bucket.
+
+Free hosted rehearsal includes a controlled phase cancellation/timeout and an
+actual short job-timeout probe. Mocked signal handling is recorded separately
+from observed GitHub behavior. If the hard-timeout probe cannot execute cleanup,
+its missing receipt is reported as unverified; it is never called a passing
+cleanup test. The probe creates no AWS resources.
 
 ## Campaign completion and cost
 

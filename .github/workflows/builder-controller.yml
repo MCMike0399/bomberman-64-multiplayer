@@ -2,6 +2,19 @@ name: Scoped builder controller
 
 on:
   workflow_call:
+    inputs:
+      mode:
+        type: string
+        default: audit
+      verification-run-id:
+        type: string
+        default: ''
+      fixed-expiry:
+        type: string
+        default: ''
+      rehearsal-fault:
+        type: string
+        default: none
 
 permissions:
   contents: read
@@ -9,7 +22,7 @@ permissions:
 jobs:
   audit:
     name: Free OIDC assume-role and empty audit
-    if: github.repository == 'MCMike0399/bomberman-64-multiplayer' && github.ref == 'refs/heads/main'
+    if: inputs.mode == 'audit' && github.repository == 'MCMike0399/bomberman-64-multiplayer' && github.ref == 'refs/heads/main'
     environment: gpu-qualification
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -54,3 +67,283 @@ jobs:
           path: artifacts/builder-oidc-audit.json
           if-no-files-found: warn
           retention-days: 30
+
+  campaign:
+    name: ${{ inputs.mode == 'rehearse' && 'Free hosted rehearsal' || 'Approved GPU campaign' }}
+    if: always() && inputs.mode != 'audit' && github.repository == 'MCMike0399/bomberman-64-multiplayer' && github.ref == 'refs/heads/main'
+    environment: gpu-qualification
+    runs-on: ubuntu-24.04
+    timeout-minutes: ${{ inputs.mode == 'rehearse' && inputs.rehearsal-fault == 'job-timeout' && 3 || 210 }}
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    env:
+      MODE: ${{ inputs.mode }}
+      VERIFICATION_RUN: ${{ inputs.verification-run-id }}
+      FIXED_EXPIRY: ${{ inputs.fixed-expiry }}
+      REHEARSAL_FAULT: ${{ inputs.rehearsal-fault }}
+      BUILDER_DRY_RUN: ${{ inputs.mode == 'rehearse' && 'true' || 'false' }}
+      SANCUS_BUILDER_VPC_ID: ${{ vars.SANCUS_BUILDER_VPC_ID }}
+      SANCUS_BUILDER_SUBNET_ID: ${{ vars.SANCUS_BUILDER_SUBNET_ID }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Fence every rehearsal AWS CLI call to read-only operations
+        if: success() && !cancelled() && inputs.mode == 'rehearse'
+        run: python3 tools/ci/builder_dry_aws.py --install "$RUNNER_TEMP/builder-readonly-cli"
+      - name: Record the actual hosted job clock
+        if: success() && !cancelled()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/ci/builder_job.py --output artifacts/builder-state/job-clock.json --timeout-seconds "${{ inputs.mode == 'rehearse' && inputs.rehearsal-fault == 'job-timeout' && 180 || 12600 }}"
+      - name: Assume the scoped role for preparation and collection
+        id: assume
+        if: success() && !cancelled()
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: arn:aws:iam::524329886851:role/sancus-builder-ci
+          aws-region: us-east-1
+          allowed-account-ids: '524329886851'
+          role-duration-seconds: 10800
+          role-session-name: sancus-builder-campaign-${{ github.run_id }}
+          output-credentials: true
+          retry-max-attempts: 3
+          action-timeout-s: 90
+      - name: Record actual preparation credential expiration
+        if: success() && !cancelled()
+        env:
+          BUILDER_NEW_EXPIRATION: ${{ steps.assume.outputs.aws-expiration }}
+        run: python3 tools/ci/builder_timing.py
+      - name: Prepare exact trusted artifacts before allocation
+        timeout-minutes: 30
+        if: success() && !cancelled() && inputs.rehearsal-fault == 'none'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 tools/ci/builder_timing.py --check-seconds 1800
+          python3 tools/ci/builder_profile.py -- python3 tools/ci/builder_prepare.py --state artifacts/builder-state --verification-run "$VERIFICATION_RUN" --fixed-expiry "$FIXED_EXPIRY"
+      - name: Noncreating prepared-input and phase rehearsal
+        timeout-minutes: 10
+        if: success() && !cancelled() && inputs.rehearsal-fault == 'none'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 tools/ci/builder_timing.py --check-seconds 600
+          python3 tools/ci/builder_profile.py -- python3 tools/ci/builder_rehearse.py --state artifacts/builder-state --output artifacts/builder-rehearsal --require-prepared
+      - name: Free cancellation or hard-job-timeout probe
+        if: success() && !cancelled() && inputs.mode == 'rehearse' && inputs.rehearsal-fault != 'none'
+        run: exec python3 tools/ci/builder_cancel_probe.py --state artifacts/builder-state
+      - name: Persist the exact creation intent without allocating
+        if: success() && !cancelled() && inputs.mode == 'qualify'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/ci/builder_profile.py -- python3 tools/ci/builder_phase.py --state artifacts/builder-state intent
+      - name: Durably retain the intent before any allocation
+        id: intent_upload
+        if: success() && !cancelled() && inputs.mode == 'qualify'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: builder-intent-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            artifacts/builder-state/*.json
+            artifacts/builder-state/*.jsonl
+          if-no-files-found: error
+          retention-days: 90
+      - name: Bind the successful intent upload
+        if: success() && !cancelled() && inputs.mode == 'qualify'
+        env:
+          INTENT_ARTIFACT_ID: ${{ steps.intent_upload.outputs.artifact-id }}
+          INTENT_ARTIFACT_DIGEST: ${{ steps.intent_upload.outputs.artifact-digest }}
+        run: python3 tools/ci/builder_profile.py -- python3 tools/ci/builder_phase.py --state artifacts/builder-state intent-published --artifact-id "$INTENT_ARTIFACT_ID" --artifact-digest "$INTENT_ARTIFACT_DIGEST"
+      - name: Launch and arm only the reviewed owned stack
+        id: launch
+        if: success() && !cancelled() && inputs.mode == 'qualify'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/ci/builder_profile.py -- python3 tools/ci/builder_phase.py --state artifacts/builder-state launch
+      - name: Retain the armed exact-ID state before game execution
+        id: armed_upload
+        if: success() && !cancelled() && inputs.mode == 'qualify'
+        timeout-minutes: 2
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: builder-armed-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            artifacts/builder-state/*.json
+            artifacts/builder-state/*.jsonl
+          if-no-files-found: error
+          retention-days: 90
+      - name: Collect both immutable High checkpoints first
+        if: success() && !cancelled() && inputs.mode == 'qualify'
+        run: python3 tools/ci/builder_profile.py -- python3 tools/ci/builder_phase.py --state artifacts/builder-state core
+      - name: Retain core evidence before acknowledging long tours
+        if: success() && !cancelled() && inputs.mode == 'qualify'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: builder-core-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/builder-state/evidence/
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 90
+      - name: Acknowledge durable core evidence
+        if: success() && !cancelled() && inputs.mode == 'qualify'
+        run: python3 tools/ci/builder_profile.py -- python3 tools/ci/builder_phase.py --state artifacts/builder-state acknowledge
+      - name: Collect the remaining exact-byte machine evidence
+        if: success() && !cancelled() && inputs.mode == 'qualify'
+        run: python3 tools/ci/builder_profile.py -- python3 tools/ci/builder_phase.py --state artifacts/builder-state final
+      - name: Recover missing deletion authority from the durable state
+        if: always() && inputs.mode == 'qualify' && steps.intent_upload.outputs.artifact-id != '' && (hashFiles('artifacts/builder-state/plan.json') == '' || hashFiles('artifacts/builder-state/creation-manifest.jsonl') == '')
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: ${{ steps.armed_upload.outputs.artifact-id != '' && format('builder-armed-{0}-{1}', github.run_id, github.run_attempt) || format('builder-intent-{0}-{1}', github.run_id, github.run_attempt) }}
+          path: ${{ runner.temp }}/builder-known-state
+      - name: Restore missing files without replacing newer identity records
+        if: always() && inputs.mode == 'qualify' && steps.intent_upload.outputs.artifact-id != '' && (hashFiles('artifacts/builder-state/plan.json') == '' || hashFiles('artifacts/builder-state/creation-manifest.jsonl') == '')
+        run: python3 tools/ci/builder_restore.py --state artifacts/builder-state --backup "$RUNNER_TEMP/builder-known-state"
+      - name: Re-assume fresh credentials immediately before cleanup
+        id: cleanup_auth
+        if: always()
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: arn:aws:iam::524329886851:role/sancus-builder-ci
+          aws-region: us-east-1
+          allowed-account-ids: '524329886851'
+          role-duration-seconds: 3600
+          role-session-name: sancus-builder-cleanup-${{ github.run_id }}
+          output-credentials: true
+          use-existing-credentials: false
+          retry-max-attempts: 3
+          action-timeout-s: 90
+      - name: Record the real cleanup credential deadline
+        if: always()
+        env:
+          BUILDER_NEW_EXPIRATION: ${{ steps.cleanup_auth.outputs.aws-expiration || steps.assume.outputs.aws-expiration }}
+        run: python3 tools/ci/builder_timing.py
+      - name: Request owned instance termination before slow evidence work
+        if: always()
+        env:
+          BUILDER_LAUNCH_OUTCOME: ${{ steps.launch.outcome }}
+        run: |
+          if [ "$MODE" = qualify ] && [ -f artifacts/builder-state/plan.json ]; then
+            python3 tools/ci/builder_profile.py -- python3 tools/ci/builder_phase.py --state artifacts/builder-state terminate
+          else
+            python3 tools/ci/builder_cancel_probe.py --state artifacts/builder-state --mark-termination
+          fi
+      - name: Durably retain termination timing and exact resource IDs
+        timeout-minutes: 2
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: builder-stopped-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            artifacts/builder-state/*.json
+            artifacts/builder-state/*.jsonl
+          if-no-files-found: warn
+          retention-days: 90
+      - name: Retain available immutable evidence after stopping writers
+        if: always() && inputs.mode == 'qualify'
+        run: python3 tools/ci/builder_profile.py -- python3 tools/ci/builder_phase.py --state artifacts/builder-state retain
+      - name: Preserve all available game evidence before teardown
+        timeout-minutes: 10
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: builder-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            artifacts/builder-state/evidence/
+            artifacts/builder-state/observations/
+            artifacts/builder-state/phase-*.log
+          compression-level: 0
+          if-no-files-found: warn
+          retention-days: 90
+      - name: Always perform owned cleanup and its audit in this same job
+        timeout-minutes: 25
+        if: always()
+        env:
+          BUILDER_LAUNCH_OUTCOME: ${{ steps.launch.outcome }}
+        run: |
+          if [ "$MODE" = qualify ] && [ -f artifacts/builder-state/plan.json ]; then
+            python3 tools/ci/builder_profile.py -- python3 tools/ci/builder_phase.py --state artifacts/builder-state cleanup
+          else
+            python3 tools/ci/builder_timing.py --check-seconds 300
+            python3 tools/ci/builder_profile.py -- python3 tools/ci/builder_audit.py --output artifacts/builder-state/cleanup-audit-only.json
+          fi
+      - name: Retain final resource states even when a phase failed
+        timeout-minutes: 10
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: builder-state-${{ github.run_id }}-${{ github.run_attempt }}-final
+          path: |
+            artifacts/builder-state/*.json
+            artifacts/builder-state/*.jsonl
+            artifacts/builder-state/phase-*.log
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Retain the distinct noncreating rehearsal record
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: builder-rehearsal-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/builder-rehearsal/
+          if-no-files-found: warn
+          retention-days: 90
+
+  report:
+    name: Independent resource-outcome report
+    needs: campaign
+    if: always() && inputs.mode != 'audit'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        if: always()
+        with:
+          pattern: builder-*-${{ github.run_id }}-${{ github.run_attempt }}*
+          path: artifacts/builder-recovery
+      - name: Missing cleanup or unresolved creation stays red
+        if: always()
+        run: python3 tools/ci/builder_report.py --artifacts artifacts/builder-recovery --output artifacts/builder-outcome.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: builder-outcome-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/builder-outcome.json
+          if-no-files-found: warn
+          retention-days: 90
+      - name: Join the original retained bytes for finalization
+        if: success() && inputs.mode == 'qualify' && needs.campaign.result == 'success'
+        run: python3 tools/ci/builder_join.py --artifacts artifacts/builder-recovery --output artifacts/builder-bound-state
+      - name: Bind the fresh variable context and verified cleanup to GPU receipts
+        if: success() && inputs.mode == 'qualify' && needs.campaign.result == 'success'
+        env:
+          BUILDER_FINAL_VARIABLES: ${{ toJSON(vars) }}
+        run: python3 tools/ci/builder_finalize.py --state artifacts/builder-bound-state --output artifacts/builder-qualified
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: success() && inputs.mode == 'qualify' && needs.campaign.result == 'success'
+        with:
+          name: release-gate-gpu-windows-x64
+          path: |
+            artifacts/builder-qualified/Blast-Circuit-windows-x64-gpu.json
+            artifacts/builder-qualified/Blast-Circuit-windows-x64-graphical.json
+            artifacts/builder-qualified/Sancus-builder-cleanup.json
+          if-no-files-found: error
+          retention-days: 90
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: success() && inputs.mode == 'qualify' && needs.campaign.result == 'success'
+        with:
+          name: release-gate-gpu-linux-x64
+          path: |
+            artifacts/builder-qualified/Blast-Circuit-linux-x64-gpu.json
+            artifacts/builder-qualified/Blast-Circuit-linux-x64-graphical.json
+            artifacts/builder-qualified/Sancus-builder-cleanup.json
+          if-no-files-found: error
+          retention-days: 90

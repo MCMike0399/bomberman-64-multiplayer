@@ -160,5 +160,25 @@ class PhaseWiring(unittest.TestCase):
         with patch.object(self.session,'api',return_value={'Account':names.ACCOUNT,'Arn':f'arn:aws:iam::{names.ACCOUNT}:user/operator'}):
             with self.assertRaisesRegex(ValueError,'scoped builder role'):self.session.check_actor()
 
+    def test_skipped_allocation_step_still_runs_actual_namespace_audit(self):
+        context={'controllerRunId':'123','controllerRunAttempt':'1','controllerJobId':'campaign'}
+        self.session.plan.update(context)
+        environment={'GITHUB_RUN_ID':'123','GITHUB_RUN_ATTEMPT':'1','GITHUB_JOB':'campaign','BUILDER_LAUNCH_OUTCOME':'skipped'}
+        audit={'passed':True,'checked':{'CFN':{'state':'absent'}},'leftovers':[],'errors':[]}
+        with (patch.dict(controller.os.environ,environment),patch.object(controller.builder_audit,'audit',return_value=audit)as observed,
+              patch.object(controller.supervisor,'cleanup_owned')as paid_cleanup):
+            result=self.session.cleanup()
+        observed.assert_called_once();paid_cleanup.assert_not_called()
+        self.assertTrue(result['cleanupComplete']);self.assertFalse(result['allocationAttempted'])
+
+    def test_recovered_intent_is_never_treated_as_a_never_submitted_request(self):
+        self.session.plan.update(controllerRunId='123',controllerRunAttempt='1',controllerJobId='campaign')
+        (self.root/'state-restored.json').write_text('{}')
+        environment={'GITHUB_RUN_ID':'123','GITHUB_RUN_ATTEMPT':'1','GITHUB_JOB':'campaign','BUILDER_LAUNCH_OUTCOME':'failure'}
+        with (patch.dict(controller.os.environ,environment),patch.object(controller.supervisor,'cleanup_owned',return_value={'cleanupComplete':False})as recovery,
+              patch.object(controller.builder_audit,'audit')as shortcut):
+            self.session.cleanup()
+        recovery.assert_called_once();shortcut.assert_not_called()
+
 
 if __name__=='__main__':unittest.main()

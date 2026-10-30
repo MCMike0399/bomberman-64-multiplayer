@@ -73,6 +73,13 @@ def reconcile(plan):
     intent=intents[0];details=intent['details']
     response=aws(plan,'cloudformation','describe-stacks','--stack-name',intent['id'],missing=('does not exist',))
     if response is None:
+        # OnFailure=DELETE can finish before a lost CreateStack response is
+        # recovered. Deleted stacks require their exact ARN, not just the name.
+        history=aws(plan,'cloudformation','list-stacks')
+        candidates=[row for row in (history or{}).get('StackSummaries',[])if row.get('StackName')==intent['id']]
+        if len(candidates)>1:raise ValueError('Ambiguous exact-name stack history; do not adopt or retry')
+        if candidates:response=aws(plan,'cloudformation','describe-stacks','--stack-name',candidates[0]['StackId'])
+    if response is None:
         safety.append(JOURNAL,plan,'STATUS','creation-reconciliation',intent['id'],{'state':'EXACT_REQUEST_STACK_NOT_OBSERVED','requestToken':details['requestToken']})
         return None
     stack=response['Stacks'][0];arn=stack['StackId'];parts=arn.split(':',5)
@@ -277,6 +284,36 @@ def authorize(plan):
                 record_created(plan,row['ResourceType'],row['PhysicalResourceId'],{**item,'cfnStackId':sid},sid)
                 unique[(row['ResourceType'],row['PhysicalResourceId'])]=item['uniqueId']
     return safety.authorize_stack_deletion(plan,rows(plan),identity,stack,template,parameters,[(m['ResourceType'],m['PhysicalResourceId'])for m in members if m.get('PhysicalResourceId')],protected(plan),unique)
+
+
+def authorize_instance(plan,identity):
+    """Instance termination does not wait on unrelated IAM/S3 metadata reads."""
+    actor(plan);entry=stack_entry(plan);sid=entry['id']
+    expected=f"arn:aws:cloudformation:{plan['region']}:{plan['account']}:stack/{plan['runId']}/"
+    if not sid.startswith(expected):raise ValueError('Termination stack ARN account/region/namespace differs')
+    owned=safety.effective_created(rows(plan)).get(('AWS::EC2::Instance',identity))
+    if not owned or owned['parent']!=sid or identity in protected(plan):raise ValueError('Termination ID is not an exact owned child')
+    response=aws(plan,'ec2','describe-instances','--instance-ids',identity,missing=('InvalidInstanceID.NotFound',))
+    if response is None:return 'absent'
+    instance=response['Reservations'][0]['Instances'][0]
+    if instance['State']['Name']=='terminated':return 'terminated'
+    stack=aws(plan,'cloudformation','describe-stacks','--stack-name',sid)['Stacks'][0]
+    tags={row['Key']:row['Value']for row in stack.get('Tags',[])}
+    parameters={row['ParameterKey']:row['ParameterValue']for row in stack.get('Parameters',[])}
+    original=aws(plan,'cloudformation','get-template','--stack-name',sid,'--template-stage','Original')['TemplateBody']
+    if (stack['StackId']!=sid or tags.get(names.RUN_TAG)!=plan['runId']or
+            parameters!=entry['details']['parameters']or safety.canonical_hash(original)!=entry['details']['templateSha256']):
+        raise ValueError('Termination stack provenance changed')
+    members=aws(plan,'cloudformation','list-stack-resources','--stack-name',sid)['StackResourceSummaries']
+    if not any(row.get('PhysicalResourceId')==identity and row['ResourceType']=='AWS::EC2::Instance'and
+               row['LogicalResourceId']==owned['details'].get('logicalId')for row in members):
+        raise ValueError('Termination target is no longer the recorded stack member')
+    instance_tags={row['Key']:row['Value']for row in instance.get('Tags',[])}
+    if instance_tags.get(names.RUN_TAG)!=plan['runId']:raise ValueError('Termination ownership tag changed')
+    children={row['Ebs']['VolumeId']for row in instance.get('BlockDeviceMappings',[])if'Ebs'in row}
+    children.update(row['NetworkInterfaceId']for row in instance.get('NetworkInterfaces',[]))
+    if children&protected(plan):raise ValueError('Unexpected protected attachment on the owned instance')
+    return instance['State']['Name']
 
 def delete(plan):
     # Evidence failures cannot block independently ownership-authorized cleanup.

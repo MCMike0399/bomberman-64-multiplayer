@@ -70,6 +70,10 @@ def bind(state,variables,output):
         item=controller['targets'][target]
         if item['state']!='finished':raise ValueError('Target did not complete its actual workload')
         files={row['path']:row for row in item['retention']['files']}
+        for relative,row in files.items():
+            path=(state/'evidence'/target/'finished'/relative).resolve()
+            if not path.is_relative_to(state)or hashlib.sha256(path.read_bytes()).hexdigest()!=row['sha256']:
+                raise ValueError('An original retained game file changed before final binding')
         def retained(relative):
             row=files['finished/'+relative]
             # Resolve only the coordinator's fixed retained layout. Original

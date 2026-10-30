@@ -27,7 +27,7 @@ def run(state,output,require_prepared=False,operator=False):
     if require_prepared:
         builder_controller.verify_context(plan,ROOT,operator)
         builder_arming.verify_prepared(plan)
-    actual=shutil.which('aws')
+    actual=os.environ.get('BUILDER_REAL_AWS')or shutil.which('aws')
     if not actual:raise ValueError('AWS CLI must exist before rehearsal')
     with tempfile.TemporaryDirectory(prefix='builder-readonly-')as temporary:
         guard=Path(temporary)/'aws';source=Path(__file__).with_name('builder_dry_aws.py')

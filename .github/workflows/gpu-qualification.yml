@@ -1,19 +1,69 @@
-name: Builder OIDC proof
+name: Release GPU qualification
 
 on:
   workflow_dispatch:
+    inputs:
+      mode:
+        description: Free audit/rehearsal or a reviewed paid qualification
+        type: choice
+        options: [audit, rehearse, qualify]
+        default: audit
+      verification-run-id:
+        description: Exact successful current-main Verification (rehearsal/qualification)
+        type: string
+      fixed-expiry:
+        description: Fixed UTC deadline; empty selects one deadline before approval, never extended
+        type: string
+      rehearsal-fault:
+        description: Free probe only; cancel probe is cancelled by the operator after it starts
+        type: choice
+        options: [none, cancel, job-timeout]
+        default: none
+  workflow_run:
+    workflows: [Verification]
+    branches: [main]
+    types: [completed]
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: sancus-builder-controller
   cancel-in-progress: false
 
 jobs:
-  audit:
-    if: github.ref == 'refs/heads/main'
+  select:
+    if: github.repository == 'MCMike0399/bomberman-64-multiplayer' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    outputs:
+      run: ${{ steps.select.outputs.run }}
+      mode: ${{ steps.select.outputs.mode }}
+      verification-run-id: ${{ steps.select.outputs.verification-run-id }}
+      fixed-expiry: ${{ steps.select.outputs.fixed-expiry }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - id: select
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED_MODE: ${{ github.event_name == 'workflow_run' && 'qualify' || inputs.mode }}
+          VERIFICATION_RUN: ${{ github.event.workflow_run.id || inputs.verification-run-id }}
+          FIXED_EXPIRY: ${{ inputs.fixed-expiry }}
+          BLAST_RELEASE_KIND_OVERRIDE: ${{ vars.BLAST_RELEASE_KIND_OVERRIDE }}
+        run: python3 tools/ci/builder_trigger.py
+
+  controlled:
+    needs: select
+    if: needs.select.outputs.run == 'true'
     permissions:
       contents: read
+      actions: read
       id-token: write
     uses: ./.github/workflows/builder-controller.yml
+    with:
+      mode: ${{ needs.select.outputs.mode }}
+      verification-run-id: ${{ needs.select.outputs.verification-run-id }}
+      fixed-expiry: ${{ needs.select.outputs.fixed-expiry }}
+      rehearsal-fault: ${{ inputs.rehearsal-fault || 'none' }}

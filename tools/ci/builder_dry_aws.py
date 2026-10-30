@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import shutil
 
 import builder_namespace as names
 
@@ -25,7 +26,21 @@ def validate(arguments):
     return arguments
 
 
+def install(directory):
+    actual=os.environ.get('BUILDER_REAL_AWS')or shutil.which('aws')
+    if not actual:raise ValueError('Actual AWS CLI missing')
+    directory=Path(directory);directory.mkdir(parents=True,exist_ok=False)
+    script=Path(__file__).resolve();guard=directory/'aws'
+    guard.write_text('#!'+sys.executable+'\nimport runpy,sys\nsys.path.insert(0,'+repr(str(script.parent))+')\nrunpy.run_path('+repr(str(script))+',run_name="__main__")\n')
+    guard.chmod(0o700)
+    with open(os.environ['GITHUB_ENV'],'a')as stream:stream.write('BUILDER_REAL_AWS='+str(Path(actual).resolve())+'\n')
+    with open(os.environ['GITHUB_PATH'],'a')as stream:stream.write(str(directory.resolve())+'\n')
+    return guard
+
+
 if __name__=='__main__':
+    if sys.argv[1:2]==['--install']:
+        install(sys.argv[2]);raise SystemExit(0)
     try:arguments=validate(sys.argv[1:])
     except ValueError as error:raise SystemExit(str(error))
     original=Path(os.environ['BUILDER_REAL_AWS']).resolve()

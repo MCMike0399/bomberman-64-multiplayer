@@ -1,0 +1,43 @@
+import datetime
+import json
+import unittest
+
+import builder_timing as timing
+
+
+class CredentialEnvelope(unittest.TestCase):
+    def setUp(self):
+        self.started=datetime.datetime(2026,10,30,tzinfo=datetime.timezone.utc);self.now=self.started.timestamp()
+        self.plan={'fixedCampaignExpiryUtc':(self.started+datetime.timedelta(minutes=160)).isoformat(),
+                   'timing':{'jobStartedAtUtc':self.started.isoformat(),'jobTimeoutSeconds':210*60,
+                             'jobMarginSeconds':900,'cleanupBudgetSeconds':1200}}
+    def expiry(self,minutes):return(self.started+datetime.timedelta(minutes=minutes)).isoformat()
+
+    def test_fixed_expiry_plus_cleanup_fits_the_actual_job_deadline(self):
+        timing.envelope(self.plan)
+        with self.assertRaisesRegex(ValueError,'does not fit'):
+            timing.envelope({**self.plan,'fixedCampaignExpiryUtc':self.expiry(190)})
+
+    def test_each_phase_refuses_insufficient_remaining_session_time(self):
+        for phase in timing.PHASE_SECONDS:
+            if phase in ('terminate','retain','cleanup'):continue
+            with self.subTest(phase=phase),self.assertRaisesRegex(ValueError,'Credential lifetime'):
+                timing.grant(self.plan,phase,now=self.now,expiration=self.expiry(1))
+
+    def test_actual_action_date_output_can_be_json_quoted(self):
+        result=timing.grant(self.plan,'launch',now=self.now,expiration=json.dumps(self.expiry(180)))
+        self.assertEqual(result['budgetSeconds'],1200)
+
+    def test_fresh_short_cleanup_session_has_full_headroom(self):
+        result=timing.grant(self.plan,'cleanup',now=self.now+160*60,expiration=self.expiry(220))
+        self.assertEqual(result['budgetSeconds'],1200);self.assertFalse(result['cleanupCredentialShortfall'])
+
+    def test_late_failure_never_skips_available_ownership_checked_cleanup(self):
+        bad={**self.plan,'fixedCampaignExpiryUtc':self.expiry(200)}
+        result=timing.grant(bad,'cleanup',now=self.now+211*60,expiration=self.expiry(271))
+        self.assertEqual(result['budgetSeconds'],1200);self.assertIsNotNone(result['planEnvelopeError'])
+
+    def test_missing_or_expired_session_is_not_invented(self):
+        for expiration in ('',self.expiry(-1)):
+            with self.subTest(expiration=expiration),self.assertRaises(ValueError):
+                timing.grant(self.plan,'cleanup',now=self.now,expiration=expiration)

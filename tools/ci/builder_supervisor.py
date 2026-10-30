@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import threading
 import time
+import datetime
 
 import builder_campaign as campaign
 import builder_cleanup as cleanup
@@ -33,6 +34,41 @@ def wait_terminated(plan,identities,deadline):
         else:raise TimeoutError('Owned instance has not terminated: '+identity)
 
 
+def request_termination(plan):
+    entered=datetime.datetime.now(datetime.timezone.utc).isoformat();requests=[];errors=[];observation_errors=[]
+    previous_path=campaign.ROOT/'termination-requests.json'
+    try:previous=json.loads(previous_path.read_text())if previous_path.exists()else{}
+    except (OSError,ValueError)as error:previous={};observation_errors.append(str(error))
+    marker=campaign.ROOT/'cancellation.json'
+    try:cancellation=json.loads(marker.read_text())if marker.exists()else{}
+    except (OSError,ValueError)as error:cancellation={};observation_errors.append(str(error))
+    try:cancelled_at=datetime.datetime.fromisoformat(cancellation['signalObservedAtUtc'])if cancellation.get('signalObservedAtUtc')else None
+    except ValueError as error:cancelled_at=None;observation_errors.append(str(error))
+    for row in journal.effective_created(campaign.rows(plan)).values():
+        if row['type']!='AWS::EC2::Instance':continue
+        identity=row['id']
+        try:
+            state=campaign.authorize_instance(plan,identity)
+            if state not in ('absent','terminated','shutting-down'):
+                requested=datetime.datetime.now(datetime.timezone.utc)
+                detail={'terminationRequestedAtUtc':requested.isoformat()}
+                if cancelled_at is not None and cancelled_at.tzinfo is not None:
+                    detail['cancelToTerminationRequestSeconds']=(requested-cancelled_at).total_seconds()
+                journal.append(campaign.JOURNAL,plan,'INTENT','terminate-exact-instance',identity,detail,row['parent'])
+                campaign.aws(plan,'ec2','terminate-instances','--instance-ids',identity)
+                journal.append(campaign.JOURNAL,plan,'STATUS','AWS::EC2::Instance',identity,detail,row['parent'])
+                requests.append({'id':identity,**detail})
+        except Exception as error:errors.append({'id':identity,'error':str(error)})
+    result={'phaseEnteredAtUtc':previous.get('phaseEnteredAtUtc',entered),'lastPhaseEnteredAtUtc':entered,
+            'terminationRequests':previous.get('terminationRequests',[])+requests,'errors':errors,
+            'observationErrors':observation_errors,
+            'scope':'Requests only; actual termination and full resource audit still required.'}
+    pending=campaign.ROOT/'termination-requests.pending';pending.write_text(json.dumps(result,indent=2)+'\n')
+    pending.replace(campaign.ROOT/'termination-requests.json')
+    if errors:raise RuntimeError('Some exact-instance termination requests failed; inspect termination-requests.json')
+    return result
+
+
 def cleanup_owned(plan,deadline,retain_evidence):
     """Evidence errors never prevent independently ownership-authorized cleanup.
 
@@ -54,8 +90,10 @@ def cleanup_owned(plan,deadline,retain_evidence):
         return result
     if len(entries)!=1:raise ValueError('Ambiguous created stacks; no mutation authorized')
     sid=entries[0]['id']
+    # Stop already-journaled compute before potentially slow inventory/evidence.
+    stage('terminate-journaled-instances-first',lambda:request_termination(plan))
     stage('synchronize-exact-children',lambda:campaign.sync(plan,best_effort=True))
-    stage('retain-evidence',retain_evidence)
+    stage('terminate-newly-discovered-instances',lambda:request_termination(plan))
 
     def instances():
         return [row['id']for row in journal.effective_created(campaign.rows(plan)).values()
@@ -63,15 +101,11 @@ def cleanup_owned(plan,deadline,retain_evidence):
 
     def stop_writers():
         # Authorize immediately before mutation, never from stale prefix matches.
-        authorized=campaign.authorize(plan)
         ids=instances()
-        if authorized is None:
-            wait_terminated(plan,ids,deadline)
-            return
-        if ids:campaign.aws(plan,'ec2','terminate-instances','--instance-ids',*ids)
         wait_terminated(plan,ids,deadline)
 
     stage('terminate-owned-writers',stop_writers)
+    stage('retain-evidence',retain_evidence)
 
     def purge():
         client=builder_s3.Objects(lambda *args:campaign.aws(plan,*args),plan['runId'])

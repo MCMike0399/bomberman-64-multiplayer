@@ -8,8 +8,10 @@ from pathlib import Path
 import subprocess
 import threading
 import time
+import uuid
 
 import builder_arming as arming
+import builder_audit
 import builder_campaign as campaign
 import builder_cleanup as cleanup
 import builder_journal as journal
@@ -19,6 +21,7 @@ import builder_s3
 import builder_ssm
 import builder_supervisor as supervisor
 import builder_transfer as transfer
+import builder_timing
 
 TARGETS={'linux-x64':'Linux','windows-x64':'Windows'}
 
@@ -156,9 +159,15 @@ class Controller:
         if manifest.get('instanceId')!=self.data['targets'][target]['instanceId']:raise ValueError('Result producer instance differs')
         state=manifest['state'];destination=self.root/'evidence'/target/state
         if destination.exists():
-            prior=json.loads((destination/'retention.json').read_text())
-            if prior['manifestSha256']!=journal.canonical_hash(manifest):raise ValueError('A committed checkpoint changed')
-            return prior
+            prior_path=destination/'retention.json'
+            if prior_path.exists():
+                prior=json.loads(prior_path.read_text())
+                if prior['manifestSha256']!=journal.canonical_hash(manifest):raise ValueError('A committed checkpoint changed')
+                valid=all(Path(item['localPath']).is_file()and transfer.sha256(item['localPath'])==item['sha256']for item in prior['files'])
+                if valid:return prior
+            # Preserve interrupted/corrupt local bytes, then download the exact
+            # same immutable checkpoint again. This never reruns a game case.
+            destination.rename(destination.with_name(destination.name+'-partial-'+uuid.uuid4().hex[:8]))
         receipt=transfer.retain_results(self.client,self.plan,target,manifest,destination)
         receipt['manifestSha256']=journal.canonical_hash(manifest)
         receipt['rawManifestSha256']=hashlib.sha256((self.root/'observations'/target/'manifest.json').read_bytes()).hexdigest()
@@ -245,6 +254,11 @@ class Controller:
             row['state']='running-remaining';self.save()
 
     def retain_evidence(self):
+        for target,row in self.data['targets'].items():
+            for item in row.get('retention',{}).get('files',[]):
+                path=Path(item['localPath']).resolve()
+                if not path.is_relative_to(self.root)or transfer.sha256(path)!=item['sha256']:
+                    raise ValueError('Original retained game evidence changed before cleanup')
         files=[]
         for path in sorted(self.root.rglob('*')):
             if not path.is_file()or path.is_symlink()or path.name=='evidence-retained.json':continue
@@ -265,8 +279,36 @@ class Controller:
         write(self.root/'evidence-retained.json',receipt)
         return receipt
 
-    def cleanup(self):
-        result=supervisor.cleanup_owned(self.plan,time.time()+1200,self.retain_evidence)
+    def retain_available(self):
+        """One bounded post-termination collection; never rerun the workload."""
+        for target,row in self.data['targets'].items():
+            try:
+                manifest=self.read_object('results/'+target+'/manifest.json',self.root/'observations'/target/'manifest.json')
+                if manifest is not None:
+                    row['retention']=self.retain(target,manifest);row['state']=manifest['state'];self.save()
+                else:
+                    try:self.check_worker_exit(target)
+                    except RuntimeError as error:self.data['errors'].append({'target':target,'scope':'worker-outcome','error':str(error)});self.save()
+            except Exception as error:
+                self.data['errors'].append({'target':target,'scope':'available-evidence','error':str(error)});self.save()
+        return self.retain_evidence()
+
+    def cleanup(self,budget_seconds=1200):
+        # Authoritative hosted step outcome can prove that this new run never
+        # entered allocation. Absence of a recovered local marker cannot.
+        same_job=all(self.plan.get(key)and self.plan[key]==os.environ.get(variable)for key,variable in (
+            ('controllerRunId','GITHUB_RUN_ID'),('controllerRunAttempt','GITHUB_RUN_ATTEMPT'),('controllerJobId','GITHUB_JOB')))
+        rows=campaign.rows(self.plan);outcome=os.environ.get('BUILDER_LAUNCH_OUTCOME')
+        never_submitted=not any(row['event']=='STATUS'and row['type']=='creation-submission'for row in rows)
+        locally_proven=(never_submitted and not(self.root/'state-restored.json').exists()and outcome in ('failure','cancelled'))
+        if (same_job and(outcome=='skipped'or locally_proven)and
+                not any(row['event']=='CREATED'and row['type']=='AWS::CloudFormation::Stack'for row in rows)):
+            audit=builder_audit.audit(self.api)
+            result={'cleanupComplete':audit['passed'],'evidenceComplete':False,'allocationAttempted':False,
+                    'scope':'Actual hosted allocation step was skipped; fresh namespace discovery is separate from paid-game qualification.',
+                    'checked':audit['checked'],'leftovers':audit['leftovers'],'errors':audit['errors']}
+            write(self.root/'cleanup-controller.json',result);self.data['cleanup']=result;self.save();return result
+        result=supervisor.cleanup_owned(self.plan,time.time()+budget_seconds,self.retain_evidence)
         self.data['cleanup']=result;self.save()
         return result
 
@@ -274,20 +316,23 @@ class Controller:
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--state',type=Path,required=True)
     parser.add_argument('--operator',action='store_true');parser.add_argument('--artifact-id');parser.add_argument('--artifact-digest')
-    parser.add_argument('phase',choices=('intent','intent-published','launch','core','acknowledge','final','cleanup'))
+    parser.add_argument('phase',choices=('intent','intent-published','launch','core','acknowledge','final','terminate','retain','cleanup'))
     args=parser.parse_args();controller=Controller(args.state,args.operator)
+    grant=builder_timing.grant(controller.plan,args.phase,args.operator)
+    controller.data['phaseTiming']=grant;controller.save()
     try:
         if args.phase=='intent':controller.intent()
         elif args.phase=='intent-published':controller.publish_intent(args.artifact_id,args.artifact_digest)
         elif args.phase=='launch':controller.launch()
         elif args.phase in ('core','final'):controller.collect(args.phase)
         elif args.phase=='acknowledge':controller.acknowledge()
+        elif args.phase=='terminate':supervisor.request_termination(controller.plan)
+        elif args.phase=='retain':controller.retain_available()
         elif args.phase=='cleanup':
-            if not controller.cleanup()['cleanupComplete']:raise RuntimeError('Owned cleanup remains incomplete')
+            if not controller.cleanup(grant['budgetSeconds'])['cleanupComplete']:raise RuntimeError('Owned cleanup remains incomplete')
     except BaseException as error:
         controller.data['errors'].append({'phase':args.phase,'error':str(error)});controller.save()
-        if args.phase=='launch':
-            try:controller.cleanup()
-            except BaseException as cleanup_error:
-                controller.data['errors'].append({'phase':'cleanup','error':str(cleanup_error)});controller.save()
+        # Hosted cleanup is a separate always step after fresh OIDC assumption,
+        # including intent/core/ack/final failures. Never spend expired credentials
+        # trying an implicit launch-only cleanup here.
         raise
