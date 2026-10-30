@@ -712,7 +712,10 @@ jobs:
         if: always()
         with:
           name: native-contracts-${{ matrix.target }}
-          path: artifacts/native-contracts/${{ matrix.target }}/
+          path: |
+            artifacts/native-contracts/${{ matrix.target }}/
+            !artifacts/native-contracts/${{ matrix.target }}/replay/installed/**
+            !artifacts/native-contracts/${{ matrix.target }}/inputs/installed/**
           if-no-files-found: error
           retention-days: 14
 

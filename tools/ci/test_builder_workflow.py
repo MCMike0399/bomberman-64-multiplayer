@@ -53,3 +53,10 @@ class HostedCleanupPlacement(unittest.TestCase):
         self.assertIn('PAID up to ${0}',self.source)
         self.assertIn('FREE rehearsal - no allocation',self.source)
         self.assertLess(self.source.index('Refuse held, changed or late paid approvals'),self.source.index('Assume the scoped role for preparation'))
+
+    def test_native_contract_upload_never_races_owned_uninstaller_files(self):
+        source=(ROOT/'.github/workflows/ci.yml').read_text().split('  native-contracts:',1)[1].split('  native-cohort:',1)[0]
+        root='artifacts/native-contracts/${{ matrix.target }}'
+        for phase in ('replay','inputs'):
+            self.assertIn('!'+root+'/'+phase+'/installed/**',source)
+        self.assertIn(root+'/',source)

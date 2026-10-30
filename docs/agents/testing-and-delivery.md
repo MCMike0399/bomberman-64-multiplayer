@@ -936,3 +936,19 @@ separate worktree, private exact-SHA drafts, owned matching server and pinned
 diagnostic updater baseline described in [independent platform QA](../desktop-clients.md#independent-platform-qa).
 Integrate current main and select the final public identity when ready; stable
 publication still tests the actual latest release and rejects diagnostic receipts.
+
+### Native artifact and DiskImages lifetimes
+
+Replay/input artifacts retain receipts, replay streams, inventories and captures,
+while excluding their disposable `replay/installed` and `inputs/installed`
+payloads. Windows uninstall can remove its own executable after the parent
+process returns; uploading that changing directory races file enumeration. The
+original package artifacts already preserve those bytes. Offline aggregation
+also skips legacy installed directories so it cannot recreate redundant Mac app
+bundles. Keep the QA evidence, including raw binary inventories.
+
+Mac DMG creation retries once only for the observed DiskImages `Resource busy`
+error, using a fresh owned temporary output on the destination filesystem. Other
+errors and timeouts remain fatal. A successful image still requires `hdiutil
+verify` and the existing mounted payload comparison against the source ZIP.
+Never detach unrelated images or restart system services to make packaging pass.
