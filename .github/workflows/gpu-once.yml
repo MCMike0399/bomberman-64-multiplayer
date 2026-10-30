@@ -1,5 +1,19 @@
 name: Authorized one-time GPU qualification
 on:
+  workflow_dispatch:
+    inputs:
+      verification-run-id:
+        description: Successful current-main Verification artifact run
+        type: string
+        required: true
+      campaign-id:
+        description: Exact owned disposable runner label
+        type: string
+        required: true
+      expires-at:
+        description: Fixed owned campaign expiry in UTC
+        type: string
+        required: true
   push:
     branches: [qa/three-platform-release]
 permissions:
@@ -8,18 +22,20 @@ permissions:
 jobs:
   native:
     name: One-time T4 ${{ matrix.target }} / ${{ vars.BLAST_GPU_PHASE }}
-    if: vars.BLAST_GPU_RUNNER_SHA == github.sha && vars.BLAST_GPU_RUN_ID != ''
+    if: (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || (vars.BLAST_GPU_RUNNER_SHA == github.sha && vars.BLAST_GPU_RUN_ID != '')
     strategy:
       fail-fast: false
       matrix:
         include: ${{ fromJSON(vars.BLAST_GPU_MATRIX || '[{"target":"windows-x64","os":"Windows","driver":"vulkan"},{"target":"linux-x64","os":"Linux","driver":"vulkan"}]') }}
-    runs-on: [self-hosted, '${{ matrix.os }}', X64, '${{ vars.BLAST_GPU_RUN_ID }}']
+    runs-on: [self-hosted, '${{ matrix.os }}', X64, '${{ inputs.campaign-id || vars.BLAST_GPU_RUN_ID }}']
     timeout-minutes: 115
     env:
       TARGET: ${{ matrix.target }}
-      PAYLOAD: ${{ vars.BLAST_GPU_PAYLOAD_SHA }}
-      GPU_EXPIRY: ${{ vars.BLAST_GPU_EXPIRY_UTC }}
-      GPU_PHASE: ${{ vars.BLAST_GPU_PHASE }}
+      PAYLOAD: ${{ github.event_name == 'workflow_dispatch' && github.sha || vars.BLAST_GPU_PAYLOAD_SHA }}
+      GPU_EXPIRY: ${{ inputs.expires-at || vars.BLAST_GPU_EXPIRY_UTC }}
+      GPU_PHASE: ${{ github.event_name == 'workflow_dispatch' && 'final' || vars.BLAST_GPU_PHASE }}
+      VERIFICATION_RUN: ${{ inputs.verification-run-id }}
+      BLAST_GPU_RUN_ID: ${{ inputs.campaign-id || vars.BLAST_GPU_RUN_ID }}
       GPU_SKIP_BISECTION: ${{ vars.BLAST_GPU_SKIP_BISECTION }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -35,6 +51,7 @@ jobs:
         with:
           dotnet-version: 10.0.400
       - name: Download only the selected immutable client and matching server
+        if: github.event_name != 'workflow_dispatch'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -49,11 +66,29 @@ jobs:
           subprocess.run(command,check=True,timeout=300)
           PY
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        if: github.event_name != 'workflow_dispatch'
         with:
           name: mesh-tested-download-${{ matrix.target }}
           run-id: ${{ vars.BLAST_GPU_DOWNLOAD_RUN_ID }}
           github-token: ${{ github.token }}
           path: artifacts
+      - name: Download exact trusted main artifacts without rebuilding containers
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          python - <<'PYMAIN'
+          import json,os,re,subprocess
+          run=os.environ['VERIFICATION_RUN'];assert re.fullmatch('[1-9][0-9]*',run)
+          info=json.loads(subprocess.check_output(['gh','api',f'repos/{os.environ["GITHUB_REPOSITORY"]}/actions/runs/{run}']))
+          assert info['head_repository']['full_name']==os.environ['GITHUB_REPOSITORY'] and info['event'] in ('push','workflow_dispatch')
+          assert info['head_sha']==os.environ['PAYLOAD'] and info['head_branch']=='main' and info['path']=='.github/workflows/ci.yml' and info['status']=='completed' and info['conclusion']=='success'
+          target=os.environ['TARGET']
+          for name in ['Blast-Circuit-'+target,'Blast-Circuit-'+target+'-download','Blast-Circuit-server-dotnet10']:
+              subprocess.run(['gh','run','download',run,'--name',name,'--dir','artifacts'],check=True)
+          PYMAIN
       - name: Prepare disposable display and actual audio endpoint
         if: runner.os == 'Windows'
         run: ./tools/packaging/windows-test-desktop.ps1
@@ -64,6 +99,8 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $session = [Diagnostics.Process]::GetCurrentProcess().SessionId
           if ($session -eq 0 -or $env:USERNAME -ne 'BlastQa') { throw 'GPU tests require the disposable interactive BlastQa session' }
+          $admin=([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+          if ($admin) { throw 'Final GPU tests require a standard user, not an elevated administrator' }
           $model = (& nvidia-smi --query-gpu=driver_model.current --format=csv,noheader) -join ' '
           if ($LASTEXITCODE -ne 0 -or $model -notmatch 'WDDM') { throw 'NVIDIA graphics-capable WDDM driver is not active' }
           New-Item -ItemType Directory -Force artifacts/windows-gpu-desktop | Out-Null
@@ -82,17 +119,47 @@ jobs:
           subprocess.run([sys.executable,'-m','venv',str(environment)],check=True)
           executable=environment/('Scripts/python.exe'if os.name=='nt'else'bin/python')
           subprocess.run([str(executable),'-m','pip','install','Pillow==13.0.0'],check=True)
-          command=[str(executable),'tools/ci/gpu_campaign.py','--target',os.environ['TARGET'],'--expected-revision',os.environ['PAYLOAD'],'--phase',os.environ['GPU_PHASE'],'--expiry',os.environ['GPU_EXPIRY'],'--godot',os.environ['GODOT']]
+          phase='core'if os.environ['GPU_PHASE']=='final'else os.environ['GPU_PHASE']
+          command=[str(executable),'tools/ci/gpu_campaign.py','--target',os.environ['TARGET'],'--expected-revision',os.environ['PAYLOAD'],'--phase',phase,'--expiry',os.environ['GPU_EXPIRY'],'--godot',os.environ['GODOT']]
           if os.environ.get('GPU_SKIP_BISECTION')=='true':command+=['--skip-bisection']
           if os.environ['TARGET']=='linux-x64':command=[str(executable),'tools/packaging/linux-desktop.py','--',*command]
           subprocess.run(command,check=True)
           PY
+      - name: Retain core captures before full tours
+        if: always() && github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: gpu-core-${{ matrix.target }}
+          path: artifacts/gpu-campaign-${{ matrix.target }}-core/
+          if-no-files-found: error
+      - name: Complete real-GPU tours and bind promotion receipts
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          python - <<'PYFINAL'
+          import os,pathlib,subprocess
+          root=pathlib.Path.cwd();python=root/'artifacts/gpu-venv'/('Scripts/python.exe'if os.name=='nt'else'bin/python')
+          target=os.environ['TARGET']
+          if target=='windows-x64':subprocess.run([str(python),'tools/ci/startup_guard.py','--expected-revision',os.environ['PAYLOAD'],'--output','artifacts/gpu-installed-startup-guard'],check=True)
+          command=[str(python),'tools/ci/gpu_campaign.py','--target',target,'--expected-revision',os.environ['PAYLOAD'],'--phase','remaining','--skip-bisection','--expiry',os.environ['GPU_EXPIRY'],'--godot',os.environ['GODOT']]
+          if target=='linux-x64':command=[str(python),'tools/packaging/linux-desktop.py','--',*command]
+          subprocess.run(command,check=True)
+          subprocess.run([str(python),'tools/ci/gpu_release_gates.py','--target',target,'--revision',os.environ['PAYLOAD'],'--verification-run',os.environ['VERIFICATION_RUN']],check=True)
+          PYFINAL
+      - name: Retain small exact-source qualification receipts
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-gate-gpu-${{ matrix.target }}
+          path: artifacts/gpu-release-${{ matrix.target }}/
+          if-no-files-found: error
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
-          name: one-time-gpu-${{ matrix.target }}-${{ vars.BLAST_GPU_PHASE }}
+          name: one-time-gpu-${{ matrix.target }}-${{ env.GPU_PHASE }}
           path: |
             artifacts/gpu-campaign-${{ matrix.target }}-${{ vars.BLAST_GPU_PHASE }}/
+            artifacts/gpu-campaign-${{ matrix.target }}-remaining/
             artifacts/*-startup*.json
             artifacts/*-startup-details/
             artifacts/*-update*.json

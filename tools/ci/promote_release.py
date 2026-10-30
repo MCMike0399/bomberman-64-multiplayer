@@ -17,6 +17,8 @@ import desktop_packages
 import download_formats
 import crossplay
 import desktop_validation
+import gpu_release_gates
+import release_gpu_policy
 from verify_deployment import targets_from_json, verify, verify_connections, placements_from_json
 
 ARTIFACT = 'Blast-Circuit-macos-arm64-ad-hoc'
@@ -199,7 +201,7 @@ def inspect_server(directory, revision, version, release=None):
 
 def stage_draft(repository, run_id, version, revision, directory, existing_draft, signed=True):
     """Upload already inspected/signed artifacts before changing the live fleet."""
-    desktop_packages.inspect(directory, revision, check_exports())
+    policy=release_gpu_policy.bind(directory,repository,version,revision,run_id,gh)
     for target in ('macos-arm64', *desktop_packages.TARGETS):
         download_formats.inspect(directory, target, revision, check_exports())
     notes = directory / 'release-notes.txt'
@@ -211,11 +213,15 @@ def stage_draft(repository, run_id, version, revision, directory, existing_draft
                      f'Verification: https://github.com/{repository}/actions/runs/{run_id}\n\n'
                      'Managed, network, headless and export checks passed. The archived app also passed saved-settings startup on every '
                      'graphics preset/display mode and an actual signed update from the latest published release. '
-                     'Complete archived native-OS journeys and shared three-platform Quick Play passed. '
+                     'Archived native-OS functional journeys and shared three-platform Quick Play passed. '
                      'Ad-hoc signature; Apple notarization and physical controller validation are not claimed.\n')
     with notes.open('a') as stream:
+        stream.write('\nGraphics qualification policy: '+policy['kind']+'. '+
+                     ('Exact-source physical-GPU High and graphical gates passed on the recorded configurations.'
+                      if policy['requiresGpu']else'Free functional/package gates required; no new paid GPU campaign required for this patch.')+'\n')
+        if policy['warning']:stream.write('\n'+policy['warning']+'\n')
         for target, settings in desktop_packages.TARGETS.items():
-            stream.write(f'\n{target}: self-contained client using {settings["driver"]}; complete native-OS gameplay, multiplayer, graphical/startup and actual updater gates passed. '
+            stream.write(f'\n{target}: self-contained client using {settings["driver"]}; native-OS gameplay, multiplayer, startup and actual updater gates passed. '
                          'Signed automatic updates are supported from installed Windows folders and Linux AppImages. '
                          'Native GPU visuals/performance and physical controller support require separate hardware validation.\n')
         stream.write('\nWindows defaults to Vulkan, with DirectX 12 startup recovery and a DirectX 12 Start-menu shortcut. '
@@ -226,7 +232,9 @@ def stage_draft(repository, run_id, version, revision, directory, existing_draft
                      'Queued button edges are handled separately.\n')
     names = [ARCHIVE, ARCHIVE + '.sha256', SERVER_ARCHIVE, SERVER_ARCHIVE + '.sha256',
              'server-build-metadata.json', 'build-metadata.json']
-    names += [name for target in desktop_packages.TARGETS for name in desktop_packages.asset_names(target)]
+    names += [name for target in desktop_packages.TARGETS for name in release_gpu_policy.asset_names(target,policy)]
+    names += [release_gpu_policy.RECEIPT]
+    if policy['requiresGpu']:names.append(gpu_release_gates.CLEANUP_RECEIPT)
     names += list(download_formats.names('macos-arm64'))
     names += [crossplay.RECEIPT, desktop_validation.MAC_RECEIPT]
     if signed:
@@ -254,6 +262,7 @@ def main(argv=None):
     parser.add_argument('--version', required=True)
     parser.add_argument('--repository', default=os.environ.get('GITHUB_REPOSITORY', ''))
     parser.add_argument('--expected-sha')
+    parser.add_argument('--gpu-run-id',default=os.environ.get('BLAST_GPU_QUALIFICATION_RUN_ID',''))
     parser.add_argument('--check-only', action='store_true')
     parser.add_argument('--signing-key', type=Path)
     parser.add_argument('--publish', action='store_true', help='Publish the verified signed release instead of creating a draft')
@@ -284,7 +293,7 @@ def main(argv=None):
         gh('run', 'download', args.run_id, '--repo', args.repository, '--name', SERVER_ARTIFACT, '--dir', str(directory))
         server = inspect_server(directory, revision, version)
         desktop_packages.download(args.repository, args.run_id, directory, gh)
-        desktop_packages.inspect(directory, revision, check_exports())
+        release_gpu_policy.bind(directory,args.repository,version,revision,args.run_id,gh,fetch=True,gpu_run_id=args.gpu_run_id)
         if args.signing_key:
             signer = Path(__file__).resolve().parents[1] / 'updates/sign_release.py'
             subprocess.run([sys.executable, str(signer), '--archive', str(archive), '--key', str(args.signing_key), '--output', str(directory), '--server', str(server)], check=True)

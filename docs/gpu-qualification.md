@@ -1,5 +1,7 @@
 # Native GPU qualification
 
+> Current policy (2026-10-30): [major-only qualification, plain Sancus builder namespace and OIDC approval](sancus-builder-ci.md) supersede the earlier controller and naming notes below. Historical results remain unchanged.
+
 ## Current user acceptance and budget — 2026-10-29
 
 Render inputs must be bit-identical across OSs: meshes, textures, shaders,

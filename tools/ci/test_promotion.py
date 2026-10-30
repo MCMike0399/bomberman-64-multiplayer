@@ -13,6 +13,7 @@ from unittest.mock import patch
 import zipfile
 import desktop_packages
 import desktop_validation
+import release_gpu_policy
 import crossplay
 import download_formats
 from test_desktop_packages import write_desktop
@@ -23,12 +24,14 @@ promotion = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(promotion)
 INSPECT_GATES = promotion.inspect_gates  # End-to-end tests below replace it; gate tests use the real check.
 SHA = 'a' * 40
+FINGERPRINT='f'*64
 REPO = 'example/game'
 RELEASE = {'version': '0.15.0', 'build': '10', 'protocolRevision': 4, 'admissionToken': '4/0.15.0/10'}
 UPDATE_CASES = ['successful-install', 'failed-launch-rollback', 'successful-install-high-fullscreen']
 
 
-def write_package(directory, version='0.15.0', revision=SHA):
+def write_package(directory, version=None, revision=SHA):
+    version=version or RELEASE['version']
     archive = directory / promotion.ARCHIVE
     with zipfile.ZipFile(archive, 'w') as output:
         output.writestr('Blast Circuit.app/Contents/Info.plist', plistlib.dumps({
@@ -37,7 +40,8 @@ def write_package(directory, version='0.15.0', revision=SHA):
             output.writestr('Blast Circuit.app/Contents/Frameworks/Controllers/' + name, 'fixture')
     digest = hashlib.sha256(archive.read_bytes()).hexdigest()
     (directory / (promotion.ARCHIVE + '.sha256')).write_text(digest + '  ' + promotion.ARCHIVE + '\n')
-    (directory / 'build-metadata.json').write_text(json.dumps({'revision': revision, 'version': version, 'release': RELEASE, 'features': {'switch2UsbBackend': True}}))
+    (directory / 'build-metadata.json').write_text(json.dumps({'revision': revision, 'version': version, 'release': RELEASE,
+        'renderFingerprint':FINGERPRINT,'features': {'switch2UsbBackend': True}}))
     write_desktop(directory, revision, RELEASE)
     (directory / download_formats.FILES["macos-arm64"]).write_bytes(b"fixture-dmg")
     download_formats.record(directory, "macos-arm64", revision, RELEASE, promotion.ARCHIVE)
@@ -68,7 +72,7 @@ def write_server(directory):
             output.writestr('Blast-Circuit-server-dotnet10/' + name, contents)
     digest = hashlib.sha256(archive.read_bytes()).hexdigest()
     (directory / (promotion.SERVER_ARCHIVE + '.sha256')).write_text(digest + '  ' + promotion.SERVER_ARCHIVE + '\n')
-    (directory / 'server-build-metadata.json').write_text(json.dumps({'revision': SHA, 'version': '0.15.0', 'release': RELEASE,
+    (directory / 'server-build-metadata.json').write_text(json.dumps({'revision': SHA, 'version': RELEASE['version'], 'release': RELEASE,
         'kind': 'framework-dependent-server', 'targetFramework': 'net10.0',
         'files': {name: hashlib.sha256(contents).hexdigest() for name, contents in files.items()}}))
     bind_server_receipts(directory)
@@ -101,6 +105,12 @@ class PromotionTests(unittest.TestCase):
         environment = patch.dict(os.environ, {}, clear=True)
         environment.start()
         self.addCleanup(environment.stop)
+        fingerprint=FINGERPRINT
+        # These tests cover unrelated publication boundaries using an explicit
+        # patch override fixture. Major GPU enforcement has its own integration tests.
+        graphics=patch.object(release_gpu_policy,'derive',return_value=release_gpu_policy.decide(
+            '0.14.9',RELEASE['version'],fingerprint,fingerprint,{'version':RELEASE['version'],'kind':'patch'}))
+        graphics.start();self.addCleanup(graphics.stop)
         main = patch.object(promotion, 'require_current_main')
         main.start()
         self.addCleanup(main.stop)

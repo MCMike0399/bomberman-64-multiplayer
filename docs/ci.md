@@ -1,5 +1,9 @@
 # Verification and delivery
 
+The user-approved [major-release graphics policy and Sancus builder ownership](sancus-builder-ci.md)
+describe the pending CI/OIDC follow-up, its approval boundary, namespace and
+cost/cleanup requirements. The existing publication hold remains in place.
+
 The canonical entry point is `python3 tools/qa/run.py --profile PROFILE`. CI calls the same commands used locally. Each profile writes receipts beneath `artifacts/qa`; gameplay evidence keeps the existing per-run playtest summaries and traces. A successful public PR check does not imply that private builds, Metal rendering or physical controllers were tested.
 
 | Profile/job | Environment | Evidence and boundary |

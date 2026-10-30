@@ -10,16 +10,26 @@ import unittest
 from unittest.mock import patch
 import zipfile
 import desktop_packages
+import release_gpu_policy
 
 import deploy_release
 import promote_release
 from deployment_state import Journal, locked
-from test_promotion import RELEASE, SHA, write_package, write_server, bind_server_receipts
+from test_promotion import RELEASE, SHA, FINGERPRINT, write_package, write_server, bind_server_receipts
 
 TARGETS = {'public': 'https://public.example', 'fallback': 'https://fallback.example'}
 
 
 class ReleaseCutoverTests(unittest.TestCase):
+    def test_major_without_gpu_cannot_sign_upload_or_drain(self):
+        major=release_gpu_policy.decide('0.14.9',RELEASE['version'],FINGERPRINT,FINGERPRINT)
+        with patch.object(release_gpu_policy,'derive',return_value=major),patch.dict(os.environ,{'BLAST_GPU_QUALIFICATION_RUN_ID':''}):
+            with self.assertRaisesRegex(RuntimeError,'explicit GPU qualification run ID'):
+                deploy_release.main(self.args)
+        self.assertNotIn('sign',self.events)
+        self.assertNotIn('stage',self.events)
+        self.assertNotIn('drain',self.events)
+
     def setUp(self):
         self.stack = ExitStack()
         self.addCleanup(self.stack.close)
@@ -30,6 +40,9 @@ class ReleaseCutoverTests(unittest.TestCase):
         self.events, self.assets = [], {}
         self.corrupt_upload = self.fail_publish = self.stale_fleet = False
         self.downloads = 0
+        fingerprint=FINGERPRINT
+        self.stack.enter_context(patch.object(release_gpu_policy,'derive',return_value=release_gpu_policy.decide(
+            '0.14.9',RELEASE['version'],fingerprint,fingerprint,{'version':RELEASE['version'],'kind':'patch'})))
         self.stack.enter_context(patch.dict(os.environ, {
             'BLAST_RELEASE_SERVER_URLS': json.dumps(TARGETS),
             'BLAST_RELEASE_PLACEMENTS': json.dumps({name: {'serverId': name, 'region': name} for name in TARGETS})}))

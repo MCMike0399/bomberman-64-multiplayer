@@ -28,10 +28,10 @@ def names(target):
             'startup': stem + '-startup.json','startup_guard':stem+'-startup-guard.json'}
 
 
-def asset_names(target):
+def asset_names(target,*,include_graphics=True):
     item = names(target)
     from download_formats import names as download_names
-    return (item['archive'], item['archive'] + '.sha256', item['metadata'], item['smoke'], item['graphical'],
+    return (item['archive'], item['archive'] + '.sha256', item['metadata'], item['smoke'], *([item['graphical']]if include_graphics else[]),
             item['startup'], item['updater_test'], *([item['startup_guard']]if target=='windows-x64'else[]), *download_names(target))
 
 
@@ -110,7 +110,7 @@ def inspect_archive(directory, target, revision, release):
     return metadata
 
 
-def inspect(directory, revision, release, targets=None):
+def inspect(directory, revision, release, targets=None, *, include_graphics=True):
     """Require a native-OS exported smoke, bound to these exact archive bytes."""
     from download_formats import FILES
     for target in (TARGETS if targets is None else targets):
@@ -124,14 +124,18 @@ def inspect(directory, revision, release, targets=None):
                 smoke.get('os') != settings['os']):
             raise RuntimeError('Desktop exported smoke is missing or mismatched: ' + target)
         desktop_validation.inspect_receipt(smoke, settings, revision, release)
-        graphical = json.loads((directory / item['graphical']).read_text())
-        if (graphical.get('passed') is not True or graphical.get('target') != target or
-                graphical.get('revision') != revision or graphical.get('release') != release or
-                graphical.get('archiveSha256') != digest(directory / item['archive']) or
-                graphical.get('suite') != 'graphical-regression' or smoke.get('suite') != 'headless-regression'):
-            raise RuntimeError('Full graphical desktop regression is missing or mismatched')
-        desktop_validation.inspect_receipt(graphical, settings, revision, release)
-        for report in (smoke,graphical):
+        if smoke.get('suite')!='headless-regression':raise RuntimeError('Headless desktop regression is missing or mismatched')
+        reports=[smoke]
+        if include_graphics:
+            graphical = json.loads((directory / item['graphical']).read_text())
+            if (graphical.get('passed') is not True or graphical.get('target') != target or
+                    graphical.get('revision') != revision or graphical.get('release') != release or
+                    graphical.get('archiveSha256') != digest(directory / item['archive']) or
+                    graphical.get('suite') != 'graphical-regression' or smoke.get('suite') != 'headless-regression'):
+                raise RuntimeError('Full graphical desktop regression is missing or mismatched')
+            desktop_validation.inspect_receipt(graphical, settings, revision, release)
+            reports.append(graphical)
+        for report in reports:
             if (report.get('downloadSha256') != digest(directory / FILES[target]) or
                     report.get('serverSha256') != digest(directory / 'Blast-Circuit-server-dotnet10.zip')):
                 raise RuntimeError('Complete desktop regression used different download/server bytes: ' + target)

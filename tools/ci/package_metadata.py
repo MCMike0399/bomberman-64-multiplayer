@@ -6,6 +6,7 @@ from pathlib import Path
 import plistlib
 import re
 from release_identity import check_exports
+import render_fingerprint
 
 
 def main():
@@ -22,12 +23,15 @@ def main():
         plist = plistlib.load(stream)
     if plist['CFBundleShortVersionString'] != release['version'] or plist['CFBundleVersion'] != release['build']:
         raise SystemExit('Built app differs from canonical release identity')
+    fingerprint=render_fingerprint.calculate()
     metadata = {'schemaVersion': 2, 'revision': revision, 'release': release,
+                'renderFingerprint':fingerprint['sha256'],
                 'version': plist['CFBundleShortVersionString'],
                 'bundleIdentifier': plist['CFBundleIdentifier'], 'architecture': 'arm64',
                 'signature': 'ad-hoc', 'graphicalValidation': 'separate-optional-job',
                 'features': {'switch2UsbBackend': True, 'controllerBackendFiles': list(required)}}
     Path('artifacts/build-metadata.json').write_text(json.dumps(metadata, indent=2) + '\n')
+    Path('artifacts/render-fingerprint.json').write_text(json.dumps(fingerprint,indent=2)+'\n')
 
 
 if __name__ == '__main__':

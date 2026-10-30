@@ -23,6 +23,8 @@ import desktop_packages
 import download_formats
 import crossplay
 import desktop_validation
+import release_gpu_policy
+import gpu_release_gates
 
 from promote_release import ARCHIVE, ARTIFACT, SERVER_ARCHIVE, SERVER_ARTIFACT, gh, inspect_gates, inspect_package, inspect_server
 
@@ -92,8 +94,11 @@ def verify_assets(directory, version):
     if delivery.get('schemaVersion') != 1 or release.get('version') != version or not re.fullmatch(r'[0-9a-f]{40}', revision):
         raise RuntimeError('Signed delivery manifest does not describe this version')
     expected = {ARCHIVE, SERVER_ARCHIVE, 'build-metadata.json', 'server-build-metadata.json', 'Blast-Circuit-update.json'}
+    policy=release_gpu_policy.read(directory)
+    if policy:expected.add(release_gpu_policy.RECEIPT)
+    if policy and policy['requiresGpu']:expected.add(gpu_release_gates.CLEANUP_RECEIPT)
     if desktop_packages.present(directory):
-        expected |= {name for target in desktop_packages.present_targets(directory) for name in desktop_packages.asset_names(target)}
+        expected |= {name for target in desktop_packages.present_targets(directory) for name in release_gpu_policy.asset_names(target,policy)}
         expected |= {'Blast-Circuit-' + target + '-update.json' for target in desktop_packages.present_targets(directory)}
     if 'macos-arm64' in download_formats.present(directory):
         expected |= set(download_formats.names('macos-arm64'))
@@ -108,7 +113,10 @@ def verify_assets(directory, version):
     inspect_package(directory, revision, version, release=release)
     inspect_server(directory, revision, version, release=release)
     if desktop_packages.present(directory):
-        desktop_packages.inspect(directory, revision, release, targets=desktop_packages.present_targets(directory))
+        desktop_packages.inspect(directory, revision, release, targets=desktop_packages.present_targets(directory),
+                                 include_graphics=policy is None or policy['requiresGpu'])
+        if policy and policy['requiresGpu']:
+            gpu_release_gates.inspect_all(directory,revision,fingerprint=policy['renderFingerprint'],targets=desktop_packages.present_targets(directory))
         for target in desktop_packages.present_targets(directory):
             download_formats.inspect(directory, target, revision, release)
             platform_manifest = directory / ('Blast-Circuit-' + target + '-update.json')
@@ -138,6 +146,7 @@ def compare_run_artifacts(repository, run_id, revision, directory):
     if run.get('head_sha') != revision or run.get('conclusion') != 'success':
         raise RuntimeError('Verification run does not match the published source revision')
     with tempfile.TemporaryDirectory(prefix='blast-published-ci-') as temporary:
+        policy=release_gpu_policy.read(directory)
         for artifact in (ARTIFACT, SERVER_ARTIFACT, *desktop_packages.artifacts(desktop_packages.present_targets(directory))):
             gh('run', 'download', str(run_id), '--repo', repository, '--name', artifact, '--dir', temporary)
         if (directory / crossplay.RECEIPT).exists():
@@ -145,7 +154,12 @@ def compare_run_artifacts(repository, run_id, revision, directory):
                 gh('run', 'download', str(run_id), '--repo', repository, '--name', artifact, '--dir', temporary)
         names = (ARCHIVE, ARCHIVE + '.sha256', 'build-metadata.json', SERVER_ARCHIVE, SERVER_ARCHIVE + '.sha256', 'server-build-metadata.json')
         if desktop_packages.present(directory):
-            names += tuple(name for target in desktop_packages.present_targets(directory) for name in desktop_packages.asset_names(target))
+            names += tuple(name for target in desktop_packages.present_targets(directory) for name in release_gpu_policy.asset_names(target,policy))
+        if policy:
+            if str(policy['verificationRunId'])!=str(run_id):raise RuntimeError('Published graphics policy names another Verification run')
+            if policy['requiresGpu']:
+                gpu_release_gates.download(repository,policy['gpuRunId'],revision,Path(temporary),gh)
+                names+=(gpu_release_gates.CLEANUP_RECEIPT,)
         if 'macos-arm64' in download_formats.present(directory):
             names += download_formats.names('macos-arm64')
         if (directory / crossplay.RECEIPT).exists(): names += (crossplay.RECEIPT, desktop_validation.MAC_RECEIPT)
@@ -163,8 +177,16 @@ def verify(repository, version, token=None, run_id=None, superseded=False, lates
     # A historical release may predate a target. Accept only complete target groups;
     # their inclusion is subsequently authenticated by the signed delivery inventory.
     expected_assets = set(ASSETS)
+    has_policy=release_gpu_policy.RECEIPT in published
+    if has_policy:expected_assets.add(release_gpu_policy.RECEIPT)
+    if has_policy and gpu_release_gates.CLEANUP_RECEIPT in published:expected_assets.add(gpu_release_gates.CLEANUP_RECEIPT)
     for target in desktop_packages.TARGETS:
-        group = set(desktop_packages.asset_names(target)) | {'Blast-Circuit-' + target + '-update.json', 'Blast-Circuit-' + target + '-update.json.sig'}
+        group = set(desktop_packages.asset_names(target,include_graphics=not has_policy)) | {'Blast-Circuit-' + target + '-update.json', 'Blast-Circuit-' + target + '-update.json.sig'}
+        # This is only the download allowlist. The signed, version-derived policy
+        # below determines whether graphics/GPU files are mandatory or forbidden.
+        if has_policy:
+            for optional in (desktop_packages.names(target)['graphical'],gpu_release_gates.receipt_name(target)):
+                if optional in published:group.add(optional)
         if group & set(published):
             expected_assets |= group
     if set(download_formats.names('macos-arm64')) & set(published):
