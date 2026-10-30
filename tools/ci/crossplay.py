@@ -106,17 +106,55 @@ def wait_jobs(suffixes, timeout, now=time.monotonic, pause=time.sleep, jobs=None
         pause(10)
 
 
-def wait_artifacts(names, timeout, alive=(), cap=0, now=time.monotonic, pause=time.sleep, jobs=None):
+def attempt_started():
+    """Start of this run attempt. Artifacts are run-scoped, so a rerun still sees
+    every earlier attempt's artifacts (run 41095133025 attempt 2 read stale ones)."""
+    repository, run_id = os.environ['GITHUB_REPOSITORY'], os.environ['GITHUB_RUN_ID']
+    attempt = os.environ.get('GITHUB_RUN_ATTEMPT', '1')
+    return json.loads(github('api', f'repos/{repository}/actions/runs/{run_id}/attempts/{attempt}'))['run_started_at']
+
+
+def fresh_artifacts(assets, since):
+    """Newest unexpired artifact per name created in this attempt (at or after since)."""
+    chosen = {}
+    for item in assets:
+        if item.get('expired') or (since is not None and item['created_at'] < since): continue
+        best = chosen.get(item['name'])
+        if best is None or (item['created_at'], item['id']) > (best['created_at'], best['id']): chosen[item['name']] = item
+    return chosen
+
+
+def download_artifact(name, destination, since, run=subprocess.run, attempts=3, pause=time.sleep):
+    """Download this attempt's artifact by exact ID, never by (possibly stale) name."""
+    repository, run_id = os.environ['GITHUB_REPOSITORY'], os.environ['GITHUB_RUN_ID']
+    assets = json.loads(github('api', f'repos/{repository}/actions/runs/{run_id}/artifacts?per_page=100'))['artifacts']
+    item = fresh_artifacts(assets, since).get(name)
+    if item is None: raise RuntimeError(f'No {name} artifact from this run attempt')
+    for attempt in range(attempts):
+        result = run(['gh', 'api', f'repos/{repository}/actions/artifacts/{item["id"]}/zip'], capture_output=True, timeout=120)
+        if result.returncode == 0: break
+        print(f'artifact {item["id"]} download failed: {result.stderr.decode(errors="replace").strip()}', file=sys.stderr, flush=True)
+        if attempt == attempts - 1: raise RuntimeError(f'Could not download {name} ({item["id"]})')
+        pause(2 ** (attempt + 1))
+    destination.mkdir(parents=True, exist_ok=True)
+    archive = destination / f'{name}.zip'; archive.write_bytes(result.stdout)
+    with zipfile.ZipFile(archive) as bundle: bundle.extractall(destination)
+    archive.unlink()
+    return item
+
+
+def wait_artifacts(names, timeout, alive=(), cap=0, now=time.monotonic, pause=time.sleep, jobs=None, since=None):
     """Wait for artifacts. With producers (alive[i] makes names[i]), a missing
     artifact whose producer has ended fails promptly, and the deadline extends up
-    to cap only while every still-missing artifact's producer is alive."""
+    to cap only while every still-missing artifact's producer is alive. With since,
+    only artifacts created in this run attempt count."""
     if not names: raise ValueError('An explicit artifact barrier is required')
     if alive and len(alive) != len(names): raise ValueError('Each artifact needs exactly one producing job')
     repository, run_id = os.environ['GITHUB_REPOSITORY'], os.environ['GITHUB_RUN_ID']
     started = now(); deadline = started + timeout; hard = started + max(timeout, cap)
     while True:
         assets = json.loads(github('api', f'repos/{repository}/actions/runs/{run_id}/artifacts?per_page=100', deadline=hard, now=now))['artifacts']
-        present = {item['name'] for item in assets if not item['expired']}
+        present = set(fresh_artifacts(assets, since))
         missing = [name for name in names if name not in present]
         if not missing: return
         if alive:
@@ -264,7 +302,7 @@ def server_serve(directory, output):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('operation', choices=('validate-run', 'wait', 'wait-jobs', 'server-start', 'server-serve', 'server-stop', 'aggregate'))
+    parser.add_argument('operation', choices=('validate-run', 'wait', 'download', 'wait-jobs', 'server-start', 'server-serve', 'server-stop', 'aggregate'))
     parser.add_argument('--directory', type=Path, default=ROOT / 'artifacts')
     parser.add_argument('--output', type=Path, default=ROOT / 'artifacts/crossplay-server')
     parser.add_argument('--names', nargs='+', default=[])
@@ -278,7 +316,10 @@ def main():
         run = json.loads(github('run', 'view', args.run_id, '--json', 'headSha,conclusion'))
         if run != {'conclusion': 'success', 'headSha': os.environ['CANDIDATE_SHA']}:
             raise RuntimeError('Three-platform test input does not match a successful native candidate run')
-    elif args.operation == 'wait': wait_artifacts(args.names, args.timeout, args.jobs, min(args.cap, ARTIFACT_CAP_SECONDS))
+    elif args.operation == 'wait': wait_artifacts(args.names, args.timeout, args.jobs, min(args.cap, ARTIFACT_CAP_SECONDS), since=attempt_started())
+    elif args.operation == 'download':
+        if len(args.names) != 1: raise RuntimeError('Download exactly one artifact')
+        download_artifact(args.names[0], directory, attempt_started())
     elif args.operation == 'wait-jobs': wait_jobs(args.jobs, min(args.timeout, PEER_START_SECONDS))
     elif args.operation == 'server-start':
         process = launch([sys.executable, str(Path(__file__).resolve()), 'server-serve', '--directory', str(directory), '--output', str(output)], output)

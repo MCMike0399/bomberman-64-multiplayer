@@ -42,21 +42,21 @@ jobs:
         run: python3 tools/ci/crossplay.py server-start
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: crossplay-origin
+          name: crossplay-origin-a${{ github.run_attempt }}
           path: artifacts/crossplay-server/origin.json
           retention-days: 2
           if-no-files-found: error
       - name: Keep staging alive until every native client finishes
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python3 tools/ci/crossplay.py wait --names crossplay-windows-x64 crossplay-linux-x64 crossplay-macos-arm64 --timeout 1000 --jobs "Client windows-x64" "Client linux-x64" "Client macos-arm64" --cap 4500
+        run: python3 tools/ci/crossplay.py wait --names crossplay-windows-x64-a${{ github.run_attempt }} crossplay-linux-x64-a${{ github.run_attempt }} crossplay-macos-arm64-a${{ github.run_attempt }} --timeout 1000 --jobs "Client windows-x64" "Client linux-x64" "Client macos-arm64" --cap 4500
       - name: Stop only this job's server and tunnel
         if: always()
         run: python3 tools/ci/crossplay.py server-stop
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
-          name: crossplay-server
+          name: crossplay-server-a${{ github.run_attempt }}
           path: |
             artifacts/crossplay-server/server-summary.json
             artifacts/crossplay-server/launcher.log
@@ -104,8 +104,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          python tools/ci/crossplay.py wait --names crossplay-origin --timeout 300
-          gh run download "$GITHUB_RUN_ID" --name crossplay-origin --dir artifacts/origin
+          python tools/ci/crossplay.py wait --names crossplay-origin-a${{ github.run_attempt }} --timeout 300
+          python tools/ci/crossplay.py download --names crossplay-origin-a${{ github.run_attempt }} --directory artifacts/origin
       - name: Hold until every peer client runner has started
         # Queue delay is not readiness: start each game only once all three
         # runners are live, so the in-game ready barrier measures rendering.
@@ -120,14 +120,14 @@ jobs:
         run: python tools/ci/crossplay_runtime.py start --target "$TARGET" --output "artifacts/crossplay-$TARGET"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: crossplay-ready-${{ matrix.target }}
+          name: crossplay-ready-${{ matrix.target }}-a${{ github.run_attempt }}
           path: artifacts/crossplay-${{ matrix.target }}/crossplay-ready.json
           retention-days: 2
           if-no-files-found: error
       - name: Release all three already-rendering clients together
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python tools/ci/crossplay.py wait --names crossplay-ready-windows-x64 crossplay-ready-linux-x64 crossplay-ready-macos-arm64 --timeout 300
+        run: python tools/ci/crossplay.py wait --names crossplay-ready-windows-x64-a${{ github.run_attempt }} crossplay-ready-linux-x64-a${{ github.run_attempt }} crossplay-ready-macos-arm64-a${{ github.run_attempt }} --timeout 300
       - name: Require shared countdown, real minute, match and accepted actions
         env:
           TARGET: ${{ matrix.target }}
@@ -135,7 +135,7 @@ jobs:
         run: python tools/ci/crossplay_runtime.py release --target "$TARGET" --output "artifacts/crossplay-$TARGET"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: crossplay-actions-${{ matrix.target }}
+          name: crossplay-actions-${{ matrix.target }}-a${{ github.run_attempt }}
           path: |
             artifacts/crossplay-${{ matrix.target }}/crossplay-actions.json
             artifacts/crossplay-${{ matrix.target }}/crossplay-three-os-countdown.png
@@ -146,7 +146,7 @@ jobs:
       - name: Hold every original participant until all action/admission witnesses finish
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python tools/ci/crossplay.py wait --names crossplay-actions-windows-x64 crossplay-actions-linux-x64 crossplay-actions-macos-arm64 --timeout 120
+        run: python tools/ci/crossplay.py wait --names crossplay-actions-windows-x64-a${{ github.run_attempt }} crossplay-actions-linux-x64-a${{ github.run_attempt }} crossplay-actions-macos-arm64-a${{ github.run_attempt }} --timeout 120
       - name: Finish and validate the rendered game receipt
         env:
           TARGET: ${{ matrix.target }}
@@ -161,7 +161,7 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
-          name: crossplay-${{ matrix.target }}
+          name: crossplay-${{ matrix.target }}-a${{ github.run_attempt }}
           path: |
             artifacts/crossplay-${{ matrix.target }}/crossplay-receipt.json
             artifacts/crossplay-${{ matrix.target }}/crossplay.json
@@ -181,7 +181,7 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always() && runner.os == 'Windows'
         with:
-          name: crossplay-audio-${{ matrix.target }}
+          name: crossplay-audio-${{ matrix.target }}-a${{ github.run_attempt }}
           path: artifacts/windows-audio/*.json
           retention-days: 14
           if-no-files-found: warn
@@ -198,15 +198,15 @@ jobs:
           persist-credentials: false
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          name: crossplay-windows-x64
+          name: crossplay-windows-x64-a${{ github.run_attempt }}
           path: artifacts/windows-x64
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          name: crossplay-linux-x64
+          name: crossplay-linux-x64-a${{ github.run_attempt }}
           path: artifacts/linux-x64
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          name: crossplay-macos-arm64
+          name: crossplay-macos-arm64-a${{ github.run_attempt }}
           path: artifacts/macos-arm64
       - run: python3 tools/ci/crossplay.py aggregate
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
