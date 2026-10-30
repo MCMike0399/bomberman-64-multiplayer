@@ -17,7 +17,7 @@ BASE = f'repos/{REPOSITORY}/actions/'
 KEY_FILE = 'builder-qualification-key.json'
 PLAN_ARTIFACT = 'builder-approval-plan'
 BUILDER_ARTIFACTS = ('builder-intent-', 'builder-armed-', 'builder-stopped-', 'builder-state-',
-                     'builder-evidence-', 'builder-rehearsal-', 'builder-outcome-')
+                     'builder-evidence-', 'builder-rehearsal-', 'builder-smoke-', 'builder-outcome-')
 
 
 def key(version, fingerprint):

@@ -23,6 +23,9 @@ def aws(plan,service,operation,*args,missing=()):
         raise ValueError('Explicit sancus/us-east-1 account binding required')
     if (plan.get('dryRun')or os.environ.get('BUILDER_DRY_RUN')=='true')and not operation.startswith(('describe-','list-','get-','head-','simulate-')):
         raise ValueError('Dry run refuses every mutating AWS operation')
+    if plan.get('permissionsSmoke')and(operation=='terminate-instances'or operation=='run-instances'and
+                                      ('--dry-run'not in args or'--no-dry-run'in args)):
+        raise ValueError('Permissions smoke never allocates or terminates instances; RunInstances requires --dry-run')
     command=['aws','--profile',plan['profile'],'--region',plan['region'],'--cli-connect-timeout','8','--cli-read-timeout','25',service,operation,*args,'--output','json']
     result=subprocess.run(command,capture_output=True,text=True,timeout=100)
     if result.returncode:
@@ -243,6 +246,11 @@ def prepare_intent(plan):
     return safety.append(JOURNAL,plan,'INTENT','AWS::CloudFormation::Stack',plan['runId'],details)
 
 
+def stack_tags(plan):
+    # CloudFormation propagates these stack-level tags to every taggable member.
+    return [{'Key':names.RUN_TAG,'Value':plan['runId']},{'Key':names.TAG_PREFIX+'source','Value':plan['payloadSource']}]
+
+
 def submit_intent(plan):
     intents=[r for r in rows(plan)if r['event']=='INTENT'and r['type']=='AWS::CloudFormation::Stack']
     if len(intents)!=1:raise ValueError('One persisted exact creation intent required')
@@ -253,7 +261,7 @@ def submit_intent(plan):
     if any(details.get(key)!=value for key,value in current.items()):raise ValueError('Published creation intent changed')
     params=details['parameters'];token=details['requestToken']
     safety.append(JOURNAL,plan,'STATUS','creation-submission',plan['runId'],{'requestToken':token,'state':'SUBMITTED_OR_UNCERTAIN'})
-    tags=[{'Key':names.RUN_TAG,'Value':plan['runId']},{'Key':names.TAG_PREFIX+'source','Value':plan['payloadSource']}]
+    tags=stack_tags(plan)
     try:
         result=aws(plan,'cloudformation','create-stack','--stack-name',plan['runId'],'--template-body','file://'+str((ROOT/'template.json').resolve()),'--parameters',json.dumps([{'ParameterKey':k,'ParameterValue':v}for k,v in params.items()]),'--tags',json.dumps(tags),'--capabilities','CAPABILITY_NAMED_IAM','--timeout-in-minutes','15','--on-failure','DELETE','--client-request-token',token)
     except BaseException:
