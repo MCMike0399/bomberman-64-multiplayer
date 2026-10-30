@@ -1055,3 +1055,21 @@ explicitly emit LF so future raw inventory bytes match as well.
 A corrected offline result is evidence for those retained payload bytes, not
 permission to rewrite a failed workflow's status or qualify another source.
 PR CI and trusted-main verification must each pass on their own artifacts.
+
+### Current trusted-main Mac reference capture
+
+After a complete successful main Verification, dispatch
+`visual-parity.yml` on `main` with `verification-run-id` set to that run. Its
+separate `trusted-macos-reference` job runs only on the hosted Mac and has
+`contents: read` / `actions: read`; it neither uses the legacy private-draft
+job's write permission nor creates Windows/Linux matrix legs. Those target
+references come from the reviewed real-GPU campaign.
+
+The preparation helper requires this repository's main-only manual event,
+checks current main against the checkout and the successful Verification, then
+downloads the unique unexpired Mac artifact from that exact run. Its recorded
+source must match checkout before capture; archive and DMG checksum bindings
+must also validate. Both original-High processes, all seven scene captures and
+raw controls retain their actual adapter and provenance. Hosted Apple
+Paravirtual is a cross-configuration Mac reference, not a physical M1 claim or
+Windows/Linux GPU qualification. The legacy push job is unchanged.

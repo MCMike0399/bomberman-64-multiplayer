@@ -1,6 +1,12 @@
 name: Full High visual parity diagnostics
 
 on:
+  workflow_dispatch:
+    inputs:
+      verification-run-id:
+        description: Successful Verification for this exact current-main source (Mac references only)
+        type: string
+        required: true
   push:
     branches: [qa/three-platform-release]
 
@@ -119,5 +125,88 @@ jobs:
             artifacts/visual-parity-${{ matrix.target }}/all-stages/*/run-*/*.log
             artifacts/visual-parity-${{ matrix.target }}/all-stages/*/run-*/*/report.json
             artifacts/visual-parity-${{ matrix.target }}/all-stages/*/fresh-process/report.json
+          retention-days: 14
+          if-no-files-found: error
+
+  trusted-macos-reference:
+    name: Free trusted-main Mac reference (Windows/Linux use the paid GPU campaign)
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: macos-15
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Verify and download the exact current-main Mac payload
+        id: payload
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERIFICATION_RUN: ${{ inputs.verification-run-id }}
+        run: python3 tools/ci/mac_reference.py --verification-run "$VERIFICATION_RUN" --directory artifacts
+      - name: Prepare the owned hosted Mac display
+        run: python3 tools/packaging/macos-test-display.py
+      - name: Capture original High twice with exact inventories and feature controls
+        env:
+          TARGET: macos-arm64
+          PAYLOAD: ${{ steps.payload.outputs.source }}
+        shell: bash
+        run: |
+          python - <<'PYVISUAL'
+          import os, pathlib, subprocess, sys
+          root = pathlib.Path.cwd(); environment = root / 'artifacts/parity-venv'
+          subprocess.run([sys.executable, '-m', 'venv', str(environment)], check=True)
+          executable = environment / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python')
+          subprocess.run([str(executable), '-m', 'pip', 'install', 'Pillow==13.0.0'], check=True)
+          target = os.environ['TARGET']
+          command = [str(executable), 'tools/ci/visual_parity.py', '--target', target, '--expected-revision', os.environ['PAYLOAD'], '--output', 'artifacts/visual-parity-' + target]
+          if target == 'linux-x64': command = [str(executable), 'tools/packaging/linux-desktop.py', '--', *command]
+          subprocess.run(command, check=True)
+          PYVISUAL
+      - name: Retain matching Mac baselines for the other six frozen stages
+        if: always() && runner.os == 'macOS'
+        env:
+          PAYLOAD: ${{ steps.payload.outputs.source }}
+        shell: bash
+        run: |
+          artifacts/parity-venv/bin/python - <<'PYSTAGES'
+          import json, os, pathlib, sys, time
+          root=pathlib.Path.cwd();sys.path.insert(0,str(root/'tools/ci'))
+          import gpu_campaign
+          base=root/'artifacts/visual-parity-macos-arm64'
+          core=json.loads((base/'visual-parity-native.json').read_text())
+          adapter=core['runs'][0]['device']['adapter']
+          result=gpu_campaign.collect_stage_captures(root/'artifacts',base/'all-stages','macos-arm64',os.environ['PAYLOAD'],
+              base/'provenance.json',time.time()+45*60,driver='metal',expected_adapter=adapter,processes=1)
+          print(json.dumps({'collectionComplete':result['collectionComplete'],'repeatsExact':result['repeatsExact'],'actualAdapter':adapter,'errors':result['errors']}))
+          raise SystemExit(0 if result['collectionComplete'] and result['repeatsExact'] else 1)
+          PYSTAGES
+      - if: always() && runner.os == 'macOS'
+        run: python3 tools/packaging/macos-test-display.py --stop
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: visual-parity-macos-arm64
+          path: |
+            artifacts/visual-parity-macos-arm64/visual-parity-native.json
+            artifacts/visual-parity-macos-arm64/provenance.json
+            artifacts/visual-parity-macos-arm64/vulkaninfo*.txt
+            artifacts/visual-parity-macos-arm64/run-*/*.json
+            artifacts/visual-parity-macos-arm64/run-*/*.png
+            artifacts/visual-parity-macos-arm64/run-*/*.bin
+            artifacts/visual-parity-macos-arm64/run-*/*.jsonl.gz
+            artifacts/visual-parity-macos-arm64/run-*/*.log
+            artifacts/visual-parity-macos-arm64/run-*/*/report.json
+            artifacts/visual-parity-macos-arm64/fresh-process/report.json
+            artifacts/visual-parity-macos-arm64/all-stages/stage-captures.json
+            artifacts/visual-parity-macos-arm64/all-stages/*/run-*/*.json
+            artifacts/visual-parity-macos-arm64/all-stages/*/run-*/*.bin
+            artifacts/visual-parity-macos-arm64/all-stages/*/run-*/*.png
+            artifacts/visual-parity-macos-arm64/all-stages/*/run-*/*.log
+            artifacts/visual-parity-macos-arm64/all-stages/*/run-*/*/report.json
+            artifacts/visual-parity-macos-arm64/all-stages/*/fresh-process/report.json
           retention-days: 14
           if-no-files-found: error
