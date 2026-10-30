@@ -169,6 +169,115 @@ class CrossplayRendezvousTests(unittest.TestCase):
         self.assertEqual(1, clock[0])
         self.assertEqual([0], delays)
 
+    def test_server_errors_back_off_for_a_bounded_outage_and_log_stderr(self):
+        import io
+        calls = []; delays = []; log = io.StringIO()
+        def outage(args, **kwargs):
+            calls.append(args); return subprocess.CompletedProcess(args, 1, '', 'HTTP 502: Server Error (https://api.github.com/x)')
+        with self.assertRaises(subprocess.CalledProcessError) as raised:
+            crossplay.github('api', 'x', pause=delays.append, run=outage, log=log)
+        # Outlasts the five quick attempts but stops at the outage budget.
+        self.assertEqual(crossplay.SERVER_ERROR_RETRY_SECONDS, sum(delays))
+        self.assertGreater(len(calls), 5)
+        self.assertIn('HTTP 502', raised.exception.stderr)
+        self.assertIn('gh api x failed (exit 1): HTTP 502: Server Error', log.getvalue())
+        # Recovery within the outage returns the result.
+        replies = iter(['HTTP 503: Service Unavailable'] * 7 + [None])
+        def recovers(args, **kwargs):
+            error = next(replies)
+            return subprocess.CompletedProcess(args, 1, '', error) if error else subprocess.CompletedProcess(args, 0, '{"ok": true}', '')
+        self.assertEqual('{"ok": true}', crossplay.github('api', 'x', pause=lambda _: None, run=recovers, log=io.StringIO()))
+        # The enclosing deadline still bounds an outage.
+        clock = [0]; waits = []
+        def pause(seconds): waits.append(seconds); clock[0] += seconds
+        with self.assertRaises(TimeoutError):
+            crossplay.github('api', 'x', deadline=20, now=lambda: clock[0], pause=pause, run=outage, log=io.StringIO())
+        self.assertEqual(20, clock[0])
+
+    def test_client_errors_stay_fatal_and_unknown_errors_keep_five_attempts(self):
+        import io
+        for error in ('HTTP 403: Forbidden', 'HTTP 422: Unprocessable Entity'):
+            calls = []
+            def failing(args, **kwargs):
+                calls.append(args); return subprocess.CompletedProcess(args, 1, '', error)
+            with self.assertRaises(subprocess.CalledProcessError):
+                crossplay.github('api', 'x', pause=lambda _: None, run=failing, log=io.StringIO())
+            self.assertEqual(1, len(calls), error)
+        calls = []; delays = []
+        def limited(args, **kwargs):
+            calls.append(args); return subprocess.CompletedProcess(args, 1, '', 'HTTP 403: API rate limit exceeded')
+        with self.assertRaises(subprocess.CalledProcessError):
+            crossplay.github('api', 'x', pause=delays.append, run=limited, log=io.StringIO())
+        self.assertEqual((5, [60] * 4), (len(calls), delays))
+        calls = []
+        def unknown(args, **kwargs):
+            calls.append(args); return subprocess.CompletedProcess(args, 1, '', 'something odd')
+        with self.assertRaises(subprocess.CalledProcessError):
+            crossplay.github('api', 'x', pause=lambda _: None, run=unknown, log=io.StringIO())
+        self.assertEqual(5, len(calls))
+
+
+class CrossplayRerunIsolationTests(unittest.TestCase):
+    """Run 41095133025 attempt 2: artifacts are run-scoped, so a rerun saw attempt 1's
+    client/origin/ready artifacts, stopped its server at once and used a dead tunnel."""
+    ENV = {'GITHUB_REPOSITORY': 'o/r', 'GITHUB_RUN_ID': '1', 'GITHUB_RUN_ATTEMPT': '2'}
+    SINCE = '2026-10-30T18:32:00Z'
+
+    @staticmethod
+    def artifact(identity, name, created): return {'id': identity, 'name': name, 'created_at': created, 'expired': False}
+
+    def test_stale_prior_attempt_artifacts_never_satisfy_a_barrier(self):
+        names = ['crossplay-windows-x64', 'crossplay-linux-x64', 'crossplay-macos-arm64']
+        stale = [self.artifact(10 + i, name, '2026-10-30T18:02:00Z') for i, name in enumerate(names)]
+        replies = iter([stale, stale + [self.artifact(30, names[0], '2026-10-30T18:35:00Z')]])
+        times = iter([0, 0, 2000])
+        with patch.dict(crossplay.os.environ, self.ENV):
+            with patch.object(crossplay, 'github', side_effect=lambda *a, **k: json.dumps({'artifacts': next(replies)})):
+                with self.assertRaisesRegex(RuntimeError, 'Timed out waiting.*crossplay-linux-x64'):
+                    crossplay.wait_artifacts(names, 10, now=lambda: next(times), pause=lambda _: None, since=self.SINCE)
+            fresh = [self.artifact(40 + i, name, '2026-10-30T18:40:00Z') for i, name in enumerate(names)]
+            with patch.object(crossplay, 'github', return_value=json.dumps({'artifacts': stale + fresh})):
+                crossplay.wait_artifacts(names, 10, now=lambda: 0, pause=lambda _: None, since=self.SINCE)
+
+    def test_download_selects_this_attempts_artifact_by_id_never_a_stale_name(self):
+        import io, tempfile, zipfile
+        stale = self.artifact(99999, 'crossplay-origin', '2026-10-30T17:50:32Z')
+        current = self.artifact(12345, 'crossplay-origin', '2026-10-30T18:33:28Z')
+        older_same_attempt = self.artifact(12000, 'crossplay-origin', '2026-10-30T18:33:00Z')
+        self.assertEqual(crossplay.fresh_artifacts([stale, current, older_same_attempt], self.SINCE)['crossplay-origin']['id'], 12345)
+        self.assertEqual(crossplay.fresh_artifacts([stale], self.SINCE), {})
+        payload = io.BytesIO()
+        with zipfile.ZipFile(payload, 'w') as bundle: bundle.writestr('origin.json', '{"origin": "https://fresh"}')
+        requested = []
+        def run(command, **kwargs):
+            requested.append(command[-1]); return subprocess.CompletedProcess(command, 0, payload.getvalue(), b'')
+        with tempfile.TemporaryDirectory() as directory, patch.dict(crossplay.os.environ, self.ENV):
+            with patch.object(crossplay, 'github', return_value=json.dumps({'artifacts': [stale, current]})):
+                crossplay.download_artifact('crossplay-origin', Path(directory), self.SINCE, run=run)
+                self.assertEqual(json.loads((Path(directory) / 'origin.json').read_text()), {'origin': 'https://fresh'})
+            self.assertEqual(requested, ['repos/o/r/actions/artifacts/12345/zip'])
+            with patch.object(crossplay, 'github', return_value=json.dumps({'artifacts': [stale]})):
+                with self.assertRaisesRegex(RuntimeError, 'No crossplay-origin artifact from this run attempt'):
+                    crossplay.download_artifact('crossplay-origin', Path(directory), self.SINCE, run=run)
+
+    def test_attempt_start_comes_from_this_attempt(self):
+        with patch.dict(crossplay.os.environ, self.ENV), patch.object(crossplay, 'github', return_value=json.dumps({'run_started_at': self.SINCE})) as api:
+            self.assertEqual(crossplay.attempt_started(), self.SINCE)
+        self.assertEqual(api.call_args.args, ('api', 'repos/o/r/actions/runs/1/attempts/2'))
+
+    def test_every_crossplay_barrier_artifact_is_attempt_scoped_and_downloaded_by_id(self):
+        import re
+        text = (crossplay.ROOT / '.github/workflows/crossplay.yml').read_text()
+        names = re.findall(r'^\s+name: (crossplay-.+)$', text, re.MULTILINE)
+        self.assertGreaterEqual(len(names), 9)
+        self.assertEqual([], [name for name in names if not name.endswith('-a${{ github.run_attempt }}')])
+        for listed in re.findall(r'--names ([^\n]+?) --(?:timeout|directory)', text):
+            parts = [part.strip() for part in listed.split('-a${{ github.run_attempt }}')]
+            self.assertEqual('', parts[-1], listed)
+            self.assertTrue(all(part.startswith('crossplay-') and ' ' not in part for part in parts[:-1]), listed)
+        self.assertNotIn('gh run download', text)
+        self.assertIn('crossplay.py download --names crossplay-origin-a${{ github.run_attempt }}', text)
+
 
 class CrossplayLifetimeContractTests(unittest.TestCase):
     def test_every_nested_crossplay_wait_fits_inside_its_enclosing_lifetime(self):
@@ -186,8 +295,8 @@ class CrossplayLifetimeContractTests(unittest.TestCase):
         runtime = (crossplay.ROOT / 'tools/ci/crossplay_runtime.py').read_text()
         self.assertIn('process.wait(timeout=crossplay.CLIENT_PROCESS_SECONDS)', runtime)
         self.assertGreater(crossplay.CLIENT_PROCESS_SECONDS, crossplay.CLIENT_MATCH_SECONDS)
-        self.assertIn('--names crossplay-ready-windows-x64 crossplay-ready-linux-x64 crossplay-ready-macos-arm64 --timeout ' + str(crossplay.CLIENT_READY_BARRIER_SECONDS), text)
-        self.assertIn('--names crossplay-actions-windows-x64 crossplay-actions-linux-x64 crossplay-actions-macos-arm64 --timeout ' + str(crossplay.CLIENT_FINAL_BARRIER_SECONDS), text)
+        self.assertIn('--names crossplay-ready-windows-x64-a${{ github.run_attempt }} crossplay-ready-linux-x64-a${{ github.run_attempt }} crossplay-ready-macos-arm64-a${{ github.run_attempt }} --timeout ' + str(crossplay.CLIENT_READY_BARRIER_SECONDS), text)
+        self.assertIn('--names crossplay-actions-windows-x64-a${{ github.run_attempt }} crossplay-actions-linux-x64-a${{ github.run_attempt }} crossplay-actions-macos-arm64-a${{ github.run_attempt }} --timeout ' + str(crossplay.CLIENT_FINAL_BARRIER_SECONDS), text)
         self.assertLess(crossplay.ARTIFACT_CAP_SECONDS, crossplay.SERVER_LIFETIME_SECONDS)
         gate = int(re.search(r'wait-jobs .*--timeout (\d+)', text).group(1))
         self.assertLessEqual(gate, crossplay.PEER_START_SECONDS)
