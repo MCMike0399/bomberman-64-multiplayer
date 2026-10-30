@@ -997,3 +997,25 @@ It reverses logical guest labels, creating new identities and ephemeral ports;
 it is not an identity-preserving port experiment. Clear that one-shot variable
 after the run. If complete signalling still leaves a native link Connecting,
 retain the evidence and request a release decision rather than growing timeouts.
+
+### Seven-stage native input measurement
+
+The free native package lane runs `visual_parity.py --inputs-only --stage ID`
+for each of the seven controlled stages, in a separate process and output folder.
+It retains the original High recipe without drawing or claiming GPU qualification.
+Inventories include actual packed mesh surface buffers, texture bytes, stored resource and
+node properties, shader/material parameters, camera, preset and authority inputs.
+Primitive parameters alone cannot establish equality of generated vertex data.
+
+The aggregate requires all three native stage collections, bound to the same
+source/archive/download identities as that target's replay. Every stage must
+match the Mac reference exactly. Missing files, failed execution, mismatched
+scene identities or differing inputs remain red; other stages still receive
+reports. Fresh unused builder diagnostics keep their own results. Raw data is
+never rounded or masked. A green input gate does not qualify images, effects or
+hardware. Run one measurement pass before choosing any math/geometry correction.
+
+Recipes bind external inventory JSON/binary files by hash instead of embedding
+multiple full copies of each resource graph in memory. The raw files remain
+complete; all five trial bindings are validated and compared. This avoids a
+combined-report allocation spike without increasing the fixture deadline.

@@ -65,7 +65,8 @@ class MeshInputTests(unittest.TestCase):
         (path/'mesh-inputs-summary.json').write_text(json.dumps(summary))
         (path/'parity-base-a-inventory.bin').write_bytes(payload)
         inventory = {'binary':'parity-base-a-inventory.bin','unsupported':[],
-                     'nodes':[{'data':{'offset':0,'length':len(payload),'sha256':hashlib.sha256(payload).hexdigest()}}]}
+                     'nodes':[{'data':{'offset':0,'length':len(payload),'sha256':hashlib.sha256(payload).hexdigest()}}],
+                     'resources':[{'id':0,'type':'ArrayMesh','properties':[]}]}
         (path/'parity-base-a-inventory.json').write_text(json.dumps(inventory))
 
     def test_unused_builder_drift_stays_red_while_actual_canonical_inputs_match(self):
@@ -93,3 +94,12 @@ class MeshInputTests(unittest.TestCase):
     def test_different_source_is_incompatible(self):
         self.fixture(self.root/'a');self.fixture(self.root/'b',source='b'*40)
         with self.assertRaisesRegex(ValueError,'Incompatible'):mesh_inputs.compare(self.root/'a',self.root/'b',self.root/'out')
+
+    def test_matching_empty_inventories_are_not_complete_scene_inputs(self):
+        for name in ('a', 'b'):
+            folder = self.root / name; self.canonical_fixture(folder)
+            (folder / 'parity-base-a-inventory.bin').write_bytes(b'')
+            (folder / 'parity-base-a-inventory.json').write_text(json.dumps(
+                {'binary': 'parity-base-a-inventory.bin', 'unsupported': [], 'nodes': [], 'resources': []}))
+        with self.assertRaisesRegex(ValueError, 'Empty/incomplete scene inventory'):
+            mesh_inputs.compare_captured(self.root/'a', self.root/'b', self.root/'out')

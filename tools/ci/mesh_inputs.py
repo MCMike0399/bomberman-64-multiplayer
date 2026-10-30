@@ -8,6 +8,9 @@ import json
 from pathlib import Path
 import struct
 
+STAGES = ('sunken-temple', 'rock-garden', 'up-and-down', 'top-rules',
+          'blizzard-battle', 'greedy-trap', 'circuit-garden')
+
 NAMES = ('torso', 'helmet', 'face-rim', 'face', 'left-eye', 'right-eye')
 HELMET = {'helmet/parameters': 1, 'helmet/point': 3840, 'helmet/vertex': 5520,
           'helmet/pre-index': 1, 'helmet/indexed': 1, 'helmet/packed': 1}
@@ -104,10 +107,49 @@ def compare(reference, candidate, output):
     return 0 if report['equalInputs'] else 1
 
 
+def scene(directory, stage):
+    """Validate the actual selected scene and every retained recipe identity."""
+    require(stage in STAGES, 'Unknown controlled stage')
+    identity = 'full-up-down-high-v2' if stage == 'up-and-down' else 'full-' + stage + '-high-v2'
+    try:
+        observed = json.loads((directory / 'visual-parity-observations.json').read_text())
+        require(isinstance(observed, dict), 'Invalid scene observation')
+        require(observed.get('experimentStage') == stage and observed.get('noisePolicy') == 'integer',
+                'Selected scene/noise differs from the requested stage: ' + stage)
+        labels = ('warmup', 'base-a', 'base-b', 'dof-off', 'reflection-off')
+        records = observed.get('records', [])
+        require(isinstance(records, list) and all(isinstance(row, dict) for row in records) and
+                [row.get('label') for row in records] == list(labels), 'Missing/reordered scene recipe')
+        baseline = None; bindings = []
+        for row in records:
+            recipe = json.loads((directory / ('parity-' + row['label'] + '-recipe.json')).read_text())
+            require(isinstance(recipe, dict) and isinstance(recipe.get('conditions'), dict), 'Invalid scene recipe')
+            for key in ('authority', 'camera', 'settings', 'shaders', 'resourceInventory'):
+                require(recipe.get(key) and isinstance(recipe[key], (dict, list)), 'Missing scene input: ' + key)
+            require(recipe.get('preset') == 'High' and recipe.get('msaaSamples') == 2, 'Scene recipe is not original High/2x')
+            require(recipe == row.get('recipe'), 'Recipe file differs from retained observation')
+            require(recipe.get('stage') == recipe.get('conditions', {}).get('sceneId') == identity and
+                    recipe.get('stageId') == stage, 'Recipe stage differs from conditions/selected stage')
+            binding = recipe.get('resourceInventory', {})
+            label = row['label']
+            require(binding.get('json') == 'parity-' + label + '-inventory.json' and
+                    binding.get('binary') == 'parity-' + label + '-inventory.bin', 'Unbound inventory file locator')
+            for key in ('json', 'binary'):
+                require(hashlib.sha256((directory / binding[key]).read_bytes()).hexdigest() == binding.get(key + 'Sha256'),
+                        'Scene inventory file hash differs: ' + label)
+            bindings.append({'label': label, 'inventory': binding, 'conditions': recipe['conditions']})
+            if label == 'base-a': baseline = recipe
+        return dict(baseline, trialInventoryBindings=bindings)
+    except (OSError, KeyError, TypeError) as error:
+        raise ValueError('Missing/invalid scene evidence for ' + stage + ': ' + str(error)) from error
+
+
 def inventory(directory):
     """Validate every retained storage segment; never remove differing fields."""
     path = directory / 'parity-base-a-inventory.json'
     description = json.loads(path.read_text())
+    require(isinstance(description.get('nodes'), list) and description['nodes'] and
+            isinstance(description.get('resources'), list) and description['resources'], 'Empty/incomplete scene inventory')
     require(description.get('unsupported') == [], 'Inventory contains unsupported inputs')
     require(description.get('binary') == 'parity-base-a-inventory.bin', 'Unexpected inventory binary locator')
     blob = (directory / description['binary']).read_bytes()
@@ -134,19 +176,23 @@ def inventory(directory):
     return description, blob
 
 
-def compare_captured(reference, candidate, output):
+def compare_captured(reference, candidate, output, stage=None, expected_revision=None):
     """Strict actual scene inputs; fresh unused builders retain their own verdict."""
     output.mkdir(parents=True, exist_ok=False)
     a, b = load(reference), load(candidate)
     require(a['header']['shared'] == b['header']['shared'], 'Incompatible source/engine/recipe')
     require(a['meshSource'] == b['meshSource'] == 'canonical-mac-resource', 'Expected canonical geometry in both packages')
+    if expected_revision is not None:
+        require(a['header']['shared']['sourceIdentity'] == b['header']['shared']['sourceIdentity'] == expected_revision,
+                'Collected source differs from native receipt')
+    scene_delta = difference(scene(reference, stage), scene(candidate, stage)) if stage is not None else None
     x, xb = inventory(reference); y, yb = inventory(candidate)
     delta = difference(x, y)
     captured = lambda data: [{key: mesh[key] for key in ('name', 'cachedSha256', 'canonicalSha256')} for mesh in data['capturedMeshes']]
     mesh_delta = difference(captured(a), captured(b))
-    equal = delta is None and xb == yb and mesh_delta is None
+    equal = delta is None and xb == yb and mesh_delta is None and scene_delta is None
     report = {'claim': 'Exact collected CPU scene/storage inputs only; no GPU/image or release approval',
-              'graphicsQualified': False, 'exactCapturedInputs': equal, 'firstInventoryDifference': delta,
+              'graphicsQualified': False, 'stage': stage, 'exactCapturedInputs': equal, 'firstSceneDifference': scene_delta, 'firstInventoryDifference': delta,
               'firstCapturedMeshDifference': mesh_delta, 'binaryEqual': xb == yb,
               'referenceInventorySha256': hashlib.sha256(xb).hexdigest(),
               'candidateInventorySha256': hashlib.sha256(yb).hexdigest(),

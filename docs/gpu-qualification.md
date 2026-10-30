@@ -266,3 +266,48 @@ passed. Their 1,154-tick observable streams match; independent math canaries
 differ and remain reported. This is bounded observable evidence, not hidden-state
 equivalence or final release approval. Raw controls, complete residuals and the
 owned cleanup receipt are retained under `artifacts/qa/gpu-campaign1-5f655b0/`.
+
+## 2026-10-30: seven-stage measurement and recipe-label correction
+
+The previous free consumed-input comparison covered the controlled Up & Down
+scene. That receipt is not evidence for the other six stages. The expanded free
+lane records all seven separately on Windows, Linux and Mac and requires every
+native inventory to exist and match exactly. The campaign plan must cite that
+run before additional-stage GPU images count toward sign-off. This collection
+also retains generated packed mesh surface buffers, not only primitive parameters.
+No shader, geometry, palette, quality or authority change is part of measurement.
+
+Before this correction, `VisualParityPlaytest` wrote a constant `recipe.stage`
+value of `up-and-down`, including when another level was selected. The selected
+`conditions.sceneId`, `observations.experimentStage` and actual match stage were
+correct. The retained `artifacts/qa/noise-stage-study/` legacy/integer captures
+contain 60 affected `parity-*-recipe.json` files: five trials in each noise mode
+for Sunken Temple, Rock Garden, Top Rules, Blizzard Battle, Greedy Trap and Circuit
+Garden. All 70 checked recipe files, including Up & Down, retain correct primary
+scene identities. Original recipes, manifests, images and their hashes remain
+unchanged; this note does not retroactively qualify them.
+
+New recipes use `recipe.stage == recipe.conditions.sceneId` for the controlled
+scene identity and retain the actual level identifier in `recipe.stageId`, matching
+`observations.experimentStage`. The collector checks every trial's identity and
+file/observation consistency. The aggregate compares the full baseline recipe,
+authority inputs and lossless resource inventory. Missing or unequal stage data
+is never treated as not applicable, and a collector exit alone is not a release
+or visual-approval verdict.
+
+The packed mesh observation uses Godot's
+[`RenderingServer.mesh_get_surface`](https://github.com/godotengine/godot/blob/4.7.2-stable/servers/rendering/rendering_server.cpp#L1854),
+the server data also read by
+[`ArrayMesh` storage](https://github.com/godotengine/godot/blob/4.7.2-stable/scene/resources/mesh.cpp#L1398).
+Material RIDs must match the actual surface material resource before being
+represented by its resource binding; unbound data is unsupported and fails.
+Original packed bytes, generated primitive buffers and the existing decoded
+geometry digest remain retained. This does not change the production meshes.
+
+The expanded recorder uses hash-bound file references for raw inventories rather
+than duplicating full graphs in recipes, settings and the combined observation
+report. All JSON/binary files remain retained and validated, including all five
+trial bindings. A source control timed out with the duplicated report; after
+this recording change it exited cleanly in 11.9 seconds. All ten raw inventory
+JSON/binary hashes were unchanged across those controls. That is a local recorder
+control, not the required native three-OS seven-stage measurement.

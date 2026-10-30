@@ -142,9 +142,9 @@ public partial class PlaytestDriver
                     policy=new{preset=GraphicsQuality.Current.ToString(),GraphicsQuality.ShaderDetail,GraphicsQuality.ShaderPremium,
                         shadowAtlas=4096,shadowFilter="SoftMedium",ssao="Medium/half",ssil="Low/half",dof="Low/Circle/jitter-flag-on",
                         source="Unmodified GraphicsQuality.Apply(High) called before this recipe; global settings have no stock getters"},
-                    environmentAndCameraStorage=inventoryIdentity};
+                    environmentAndCameraStorage=new{inventoryIdentitySha256=assetsSha256}};
                 string settingsSha256=VisualDescriptionHash(settingsDescription);
-                var conditions=new{sceneId=stage=="up-and-down"?"full-up-down-high-v2":$"full-{stage}-high-v2",assetsSha256,stateId=VisualDescriptionHash(new{authority=match.StateMessage,inventory=inventoryIdentity}),
+                var conditions=new{sceneId=stage=="up-and-down"?"full-up-down-high-v2":$"full-{stage}-high-v2",assetsSha256,stateId=VisualDescriptionHash(new{authority=match.StateMessage,inventoryIdentitySha256=assetsSha256}),
                     tick=match.TickNumber,width=1280,height=800,
                     render=new{preset="High",msaaSamples=2,dof=attributes.DofBlurNearEnabled&&attributes.DofBlurFarEnabled,settingsSha256},
                     cameraSha256=VisualDescriptionHash(cameraDescription),shaderTimeSeconds=4d,animationTimeSeconds=118d/30,
@@ -152,12 +152,15 @@ public partial class PlaytestDriver
                         jitterId="Circle/Low/jitter-flag-on;tagged-Circle-ignores-seed;no-reseed;seed-unobserved"},
                     capture=new{surface=inputsOnly?"NONE: input-only CPU collection":"SubViewport-LDR-post-Filmic/raw-RGBA8-or-RGB8;transformflush/sync/once/draw0/sync/readback/disable;no-fallback",
                         colorContract="Raw8bit-LDR-post-production-Filmic;stored-alpha;no-extra-conversion-v1"}};
-                var recipe=new{stage="up-and-down",seed=64,tick=match.TickNumber,presentationSteps=118,stepSeconds=1d/30,
+                var recipe=new{stage=conditions.sceneId,stageId=stage,seed=64,tick=match.TickNumber,presentationSteps=118,stepSeconds=1d/30,
                     shaderTimeSeconds=4,lighting="Night",preset="High",msaaSamples=2,scale=viewport.Scaling3DScale,
                     ssil=environment.SsilEnabled,dofNear=attributes.DofBlurNearEnabled,dofFar=attributes.DofBlurFarEnabled,
                     dofAmount=attributes.DofBlurAmount,dofNearDistance=attributes.DofBlurNearDistance,dofFarDistance=attributes.DofBlurFarDistance,
                     camera=cameraDescription,settings=settingsDescription,conditions,
-                    geometry=TriangleStreamFingerprint(arena),resourceInventory=inventory,authority=match.StateMessage,
+                    geometry=TriangleStreamFingerprint(arena),resourceInventory=new{
+                        json=$"parity-{label}-inventory.json",jsonSha256=ReplayHash(File.ReadAllBytes(Path.Combine(_output,$"parity-{label}-inventory.json"))),
+                        binary=$"parity-{label}-inventory.bin",binarySha256=ReplayHash(File.ReadAllBytes(Path.Combine(_output,$"parity-{label}-inventory.bin"))),
+                        identitySha256=assetsSha256},authority=match.StateMessage,
                     shaders=shaders.Select(pair=>new{original=ReplayHash(Encoding.UTF8.GetBytes(pair.Value)),active=ReplayHash(Encoding.UTF8.GetBytes(pair.Key.Code))}).ToArray(),
                     temporal=new{reset="New SubViewport/OwnWorld3D/ArenaView and render buffers per trial",warmupDraws=16,
                         jitter="Production Circle/Low, flag on; tagged Circle does not consume seed; no reseed",draws},

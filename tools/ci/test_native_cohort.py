@@ -15,9 +15,9 @@ class RetainedEvidenceBoundary(unittest.TestCase):
                 (replay/'installed/Blast Circuit.app').mkdir(parents=True)
                 (replay/'installed/Blast Circuit.app/payload').write_bytes(b'redundant install')
                 (replay/'actual-records.jsonl').write_text('original replay records')
-            with patch.object(native_cohort.authority_replay,'aggregate',return_value=0),patch.object(native_cohort.mesh_inputs,'compare',return_value=0),patch.object(native_cohort.mesh_inputs,'compare_captured',return_value=0):
+            with patch.object(native_cohort.authority_replay,'aggregate',return_value=0):
                 result=native_cohort.aggregate(root/'source',root/'output')
-            self.assertTrue(result['passed'])
+            self.assertFalse(result['passed'])  # Replay files alone cannot supply the seven scene inventories.
             for target in ('macos-arm64','windows-x64','linux-x64'):
                 replay=root/'output/replay'/target
                 self.assertFalse((replay/'installed').exists())
