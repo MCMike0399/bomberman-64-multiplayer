@@ -186,10 +186,10 @@ public partial class TempleStageView : Node3D
         _masonry=_art.Masonry();_bedrock=_art.Bedrock();var wall=_masonry;var cap=_art.Color(new("e8cc82"));
         _garden=data.GetProperty("id").GetString()=="rock-garden";
         if(_garden){BuildRockGarden();return;}
-        _water=new MeshInstance3D {Mesh=new PlaneMesh {Size=new Vector2(160,160),SubdivideWidth=180,SubdivideDepth=180},MaterialOverride=_art.Water(),Position=new Vector3(Width/2f,-.53f,Depth/2f),CastShadow=GeometryInstance3D.ShadowCastingSetting.Off};AddChild(_water);
+        _water=new MeshInstance3D {Mesh=PrimitiveTemplates.Get("PlaneMesh",("size",new Vector2(160,160)),("subdivide_width",180),("subdivide_depth",180)),MaterialOverride=_art.Water(),Position=new Vector3(Width/2f,-.53f,Depth/2f),CastShadow=GeometryInstance3D.ShadowCastingSetting.Off};AddChild(_water);
         // Never visible (the water shader keeps open sea opaque above it). It gives depth of
         // field and the shoreline depth reconstruction a real surface instead of the sky.
-        AddChild(new MeshInstance3D {Name="Seabed",Mesh=new BoxMesh {Size=new Vector3(160,.05f,160)},MaterialOverride=_art.Color(new("0f3a46"),.95f),
+        AddChild(new MeshInstance3D {Name="Seabed",Mesh=PrimitiveTemplates.Get("BoxMesh",("size",new Vector3(160,.05f,160))),MaterialOverride=_art.Color(new("0f3a46"),.95f),
             Position=new Vector3(Width/2f,SeabedHeight,Depth/2f),CastShadow=GeometryInstance3D.ShadowCastingSetting.Off});
         if(Layout.Id==BlastStages.UpAndDown&&cells.Cast<CellDef>().Any(c=>c.Below!=null)){BuildUpAndDown();return;}
         bool temple=Layout.Id==BlastStages.SunkenTemple;

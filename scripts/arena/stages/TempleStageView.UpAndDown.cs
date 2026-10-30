@@ -1,3 +1,4 @@
+using BlastCircuit.Rendering;
 using Godot;
 using Bomber.Game.Simulation.Rules;
 using Bomber.Game.Simulation.Stages;
@@ -146,7 +147,7 @@ public partial class TempleStageView
         if(Layout.Id!=BlastStages.UpAndDown)return;
         // An opaque circular sea belongs to the round stand. Screen refraction
         // here would sample the unrelated menu theatre outside the miniature.
-        _water.Mesh=new CylinderMesh {TopRadius=radius,BottomRadius=radius,Height=.02f,RadialSegments=96};
+        _water.Mesh=PrimitiveTemplates.Get("CylinderMesh",("top_radius",radius),("bottom_radius",radius),("height",.02f),("radial_segments",96));
         _water.MaterialOverride=_art.Color(new("246c80"),.55f);
         Trim(this);
         void Trim(Node parent)

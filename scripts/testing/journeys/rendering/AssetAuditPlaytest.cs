@@ -68,7 +68,7 @@ public partial class PlaytestDriver
             var pickupIcon=pickup.GetNode<Node3D>("Icon");
             var plate=pickup.GetChildren().OfType<MeshInstance3D>().Single();
             Check(pickup.Scale.IsEqualApprox(Vector3.One*1.20f)&&plate.Scale.IsEqualApprox(Vector3.One)&&plate.Position.IsEqualApprox(new(0,-.3f,0))&&
-                plate.Mesh is CylinderMesh cylinder&&Mathf.IsEqualApprox(cylinder.TopRadius,.3f)&&Mathf.IsEqualApprox(cylinder.Height,.05f),
+                PrimitiveTemplates.Is(plate.Mesh,"CylinderMesh")&&Mathf.IsEqualApprox(PrimitiveTemplates.Parameter(plate.Mesh,"top_radius").AsSingle(),.3f)&&Mathf.IsEqualApprox(PrimitiveTemplates.Parameter(plate.Mesh,"height").AsSingle(),.05f),
                 "pickup plate retains original geometry and root scale: "+kind);
             Check(pickupIcon.Scale.IsEqualApprox(Vector3.One*1.30f),"pickup actual icon subtree is thirty percent larger: "+kind);
             // Evaluate the low point of the ordinary bob using real generated mesh bounds.

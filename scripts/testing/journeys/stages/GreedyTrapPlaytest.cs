@@ -141,7 +141,7 @@ public partial class PlaytestDriver
             var terrain=AuditDescendants(LightingArena).OfType<TempleStageView>().Single();
             var materials=AuditDescendants(terrain).OfType<MeshInstance3D>().Select(n=>n.MaterialOverride).OfType<ShaderMaterial>().Distinct().ToArray();
             Check(materials.Count(m=>m.Shader.Code.Contains("uniform int surface_style"))==6&&materials.All(m=>m.GetShaderParameter("quality_detail").AsSingle()==(preset==GraphicsPreset.Low?0:1)),"arena and exterior textures follow "+preset);
-            Check(!terrain.GetChildren().OfType<MeshInstance3D>().Any(n=>n.Mesh is PlaneMesh),"turquoise pit has no water plane at "+preset);
+            Check(!terrain.GetChildren().OfType<MeshInstance3D>().Any(n=>PrimitiveTemplates.Is(n.Mesh,"PlaneMesh")),"turquoise pit has no water plane at "+preset);
             var moat=terrain.GetNode<MeshInstance3D>("GreedyExterior/GreedyReservoirWater");
             Check(((ShaderMaterial)moat.MaterialOverride).Shader==ArtMaterials.WaterShaderFor(preset),"decorative reservoir follows the shared water quality policy at "+preset);
             Check(Math.Abs(moat.Position.Y-TempleStageView.GreedyMoatHeight)<.001f,"exterior reservoir stays below the safe chamber floor");

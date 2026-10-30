@@ -1,3 +1,4 @@
+using BlastCircuit.Rendering;
 using Godot;
 using Bomber.Client.Sessions;
 using BlastCircuit.UI.Menu;
@@ -37,7 +38,7 @@ public partial class PlaytestDriver
         var displayMeshes=AuditDescendants(upAndDown).OfType<MeshInstance3D>().Where(m=>m.IsVisibleInTree()&&m.Mesh!=null).ToArray();
         var belowStand=displayMeshes.Where(m=>((upAndDown.GetParent<Node3D>().GlobalTransform.AffineInverse()*m.GlobalTransform)*m.Mesh.GetAabb()).Position.Y<-.312f).ToArray();
         Check(belowStand.Length==0,"Up & Down miniature foundations stop above the display stand");
-        Check(displayMeshes.Any(m=>m.Mesh is CylinderMesh {RadialSegments:96} sea&&Mathf.IsEqualApprox(sea.TopRadius*upAndDown.Scale.X,4.45f)),
+        Check(displayMeshes.Any(m=>PrimitiveTemplates.Is(m.Mesh,"CylinderMesh")&&PrimitiveTemplates.Parameter(m.Mesh,"radial_segments").AsInt32()==96&&Mathf.IsEqualApprox(PrimitiveTemplates.Parameter(m.Mesh,"top_radius").AsSingle()*upAndDown.Scale.X,4.45f)),
             "Up & Down miniature sea fits the circular stand without square water corners");
         if(!_headless)
         {

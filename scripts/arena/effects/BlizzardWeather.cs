@@ -17,7 +17,7 @@ public partial class BlizzardWeather : Node3D
     private int _visibleCount=-1;
     public override void _Ready()
     {
-        var mesh=new SphereMesh{Radius=1,Height=2,RadialSegments=8,Rings=3};
+        var mesh=PrimitiveTemplates.Get("SphereMesh",("radius",1),("height",2),("radial_segments",8),("rings",3));
         _flakes=new MultiMesh{TransformFormat=MultiMesh.TransformFormatEnum.Transform3D,Mesh=mesh,InstanceCount=_positions.Length};
         var snow=new StandardMaterial3D{AlbedoColor=new Color("e7f4ff"),Roughness=.88f,ShadingMode=BaseMaterial3D.ShadingModeEnum.Unshaded};
         AddChild(new MultiMeshInstance3D{Name="SnowFlurries",Multimesh=_flakes,MaterialOverride=snow,CastShadow=GeometryInstance3D.ShadowCastingSetting.Off});

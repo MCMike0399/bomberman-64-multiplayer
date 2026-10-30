@@ -1,3 +1,4 @@
+using BlastCircuit.Rendering;
 using Godot;
 using Bomber.Game.Simulation.Rules;
 using static BlastCircuit.Rendering.ArtGeometry;
@@ -24,7 +25,7 @@ public partial class BombThrowPreview : Node3D
     public BombThrowPreview()
     {
         for(int i=0;i<_dots.Length;i++)_dots[i]=Sphere(this,Vector3.Zero,Vector3.One*.105f,_material);
-        _target=new(){Mesh=new TorusMesh{InnerRadius=.31f,OuterRadius=.39f,Rings=32,RingSegments=6},MaterialOverride=_material};AddChild(_target);
+        _target=new(){Mesh=PrimitiveTemplates.Get("TorusMesh",("inner_radius",.31f),("outer_radius",.39f),("rings",32),("ring_segments",6)),MaterialOverride=_material};AddChild(_target);
         Box(_target,Vector3.Zero,new(.18f,.014f,.035f),_material);
         Box(_target,Vector3.Zero,new(.035f,.014f,.18f),_material);
         var overlay=new CanvasLayer{Layer=2};AddChild(overlay);overlay.AddChild(_reticle);

@@ -741,3 +741,38 @@ Packaged Bomber geometry uses Mac-authored packed resources while Mac SDK
 authoring retains the procedural builders. Regenerate explicitly after builder
 edits; public QA checks staleness. The antenna correction remains presentation
 only. See [authoring and verification](../bomber-shared-geometry.md).
+
+### Portable primitive surfaces (seven-stage input qualification)
+
+`PrimitiveTemplates` replaces engine-generated primitive meshes with hash-pinned
+Mac-authored packed `ArrayMesh` resources. Calls preserve the original property
+setter order. Unknown parameter sets fail explicitly; they never fall back to
+platform-native geometry. Menu resizing requests another immutable resource
+instead of changing shared primitive parameters. The original shape parameters
+remain accessible for gameplay-independent visual checks.
+
+To author new parameter sets, use the pinned Mac SDK with
+`BLAST_PRIMITIVE_CAPTURE_DIR` pointing to an ignored output directory. Exercise
+the actual scene/effect/menu paths, then run
+`python3 tools/dev/import-primitive-templates.py CAPTURE_DIRECTORY`.
+The capture boundary is Mac/editor/4.7.2 only; exported games cannot generate
+primitives. Every saved resource is reloaded and compared against the original
+packed RenderingServer surfaces before it enters the capture manifest. Review
+new requests and regenerate reference captures before committing assets.
+
+The public static gate rejects primitive construction and concrete-type mutation
+outside that boundary. The native consumed-input inventory also rejects live
+`PrimitiveMesh` resources, including ones introduced by dynamically loaded
+scenes. This is a presentation change; it does not modify authority terrain,
+collision, movement, networking or the High preset. A passing inventory does not
+establish output-image equality or user visual approval.
+
+The 2026-10-30 template-only M5 proof retained all 35 original High PNGs and
+all 35 loaded-template PNGs. The first comparison was exact for 33 images;
+Greedy Trap's two remaining images differed by the same 51-pixel speck in a
+20×20 region, maximum channel delta 29. The approved discriminator used two
+fresh original-code processes and two template processes. The original code
+reproduced that identical residual region in reflection-off; both template
+repeats were exact in that bounded check. This is retained as pre-existing
+same-device nondeterminism, without masking or changing the strict comparator.
+It does not establish cross-OS equality or final exported graphics qualification.

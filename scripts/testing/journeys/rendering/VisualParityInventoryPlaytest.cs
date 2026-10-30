@@ -37,6 +37,7 @@ public partial class PlaytestDriver
                 if(ids.TryGetValue(resource.GetInstanceId(),out int seen))return new{reference=seen};
                 int id=resources.Count;ids.Add(resource.GetInstanceId(),id);
                 var record=new Dictionary<string,object?>{{"id",id},{"type",resource.GetClass()},{"path",resource.ResourcePath}};resources.Add(record);
+                if(resource is PrimitiveMesh)unsupported.Add("runtime primitive mesh: "+resource.GetClass());
                 if(resource is Texture2D texture)
                 {
                     using var image=texture.GetImage();

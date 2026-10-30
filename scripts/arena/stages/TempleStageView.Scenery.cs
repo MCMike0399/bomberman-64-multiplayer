@@ -90,7 +90,7 @@ public partial class TempleStageView
     {
         string key=$"taper:{bottom}:{top}:{height}:{sides}";
         if(!SceneryMeshes.TryGetValue(key,out var mesh))
-            SceneryMeshes[key]=mesh=new CylinderMesh{BottomRadius=bottom,TopRadius=top,Height=height,RadialSegments=sides,Rings=1};
+            SceneryMeshes[key]=mesh=PrimitiveTemplates.Get("CylinderMesh",("bottom_radius",bottom),("top_radius",top),("height",height),("radial_segments",sides),("rings",1));
         var node=new MeshInstance3D{Mesh=mesh,Position=position,MaterialOverride=material};parent.AddChild(node);return node;
     }
 
@@ -98,7 +98,7 @@ public partial class TempleStageView
     private static MeshInstance3D Bead(Node parent,Vector3 position,Vector3 scale,Material material)
     {
         if(!SceneryMeshes.TryGetValue("bead",out var mesh))
-            SceneryMeshes["bead"]=mesh=new SphereMesh{Radius=.5f,Height=1,RadialSegments=10,Rings=5};
+            SceneryMeshes["bead"]=mesh=PrimitiveTemplates.Get("SphereMesh",("radius",.5f),("height",1),("radial_segments",10),("rings",5));
         var node=new MeshInstance3D{Mesh=mesh,Position=position,Scale=scale,MaterialOverride=material};parent.AddChild(node);return node;
     }
 
@@ -463,7 +463,7 @@ public partial class TempleStageView
     {
         var random=new Random(seed);
         var multimesh=new MultiMesh{TransformFormat=MultiMesh.TransformFormatEnum.Transform3D,UseColors=true,
-            Mesh=new SphereMesh{Radius=.5f,Height=1,RadialSegments=6,Rings=3},InstanceCount=count};
+            Mesh=PrimitiveTemplates.Get("SphereMesh",("radius",.5f),("height",1),("radial_segments",6),("rings",3)),InstanceCount=count};
         for(int i=0;i<count;i++)
         {
             float size=.08f+(float)random.NextDouble()*(.1f+(i%17==0?.18f:0));

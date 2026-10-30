@@ -32,7 +32,7 @@ public partial class TempleStageView
         Box(_greedyExterior,new(cx,-.59f,cz),new(Width+1.45f,.10f,Depth+1.45f),coping,.04f);
         Box(_greedyExterior,new(cx,-2.55f,cz),new(160,.3f,160),bed).Name="GreedyReservoirBed";
         _greedyMoat=new MeshInstance3D{Name="GreedyReservoirWater",
-            Mesh=new PlaneMesh{Size=new(160,160),SubdivideWidth=160,SubdivideDepth=160},
+            Mesh=PrimitiveTemplates.Get("PlaneMesh",("size",new Vector2(160,160)),("subdivide_width",160),("subdivide_depth",160)),
             MaterialOverride=_art.Water(),Position=new(cx,GreedyMoatHeight,cz),
             CastShadow=GeometryInstance3D.ShadowCastingSetting.Off};
         _greedyExterior.AddChild(_greedyMoat);
@@ -70,7 +70,7 @@ public partial class TempleStageView
             }
         }
 
-        var roof=new CylinderMesh{TopRadius=0,BottomRadius=1.85f,Height=1.35f,RadialSegments=4};
+        var roof=PrimitiveTemplates.Get("CylinderMesh",("top_radius",0),("bottom_radius",1.85f),("height",1.35f),("radial_segments",4));
         foreach(var (x,z) in new[]{(-6.4f,1.5f),(Width+6.4f,2.5f),(-6.4f,Depth-3),(Width+6.4f,Depth-2)})
         {
             var tower=new Node3D{Position=new(x,-.62f,z)};_greedyExterior.AddChild(tower);
@@ -109,7 +109,7 @@ public partial class TempleStageView
         Box(_greedyExterior,new(-4.55f,-.40f,wheelZ),new(.42f,.44f,.48f),quay,.035f).Name="GreedyWheelPedestal";
         var shaft=Cylinder(_greedyExterior,new(-4.1f,-.25f,wheelZ),.12f,1.25f,rim);
         shaft.Name="GreedyWheelShaft";shaft.RotationDegrees=new(0,0,90);
-        var wheelRim=new TorusMesh{InnerRadius=.91f,OuterRadius=1.06f,Rings=32,RingSegments=8};
+        var wheelRim=PrimitiveTemplates.Get("TorusMesh",("inner_radius",.91f),("outer_radius",1.06f),("rings",32),("ring_segments",8));
         foreach(float zz in new[]{-.22f,.22f})
             _greedyWaterwheel.AddChild(new MeshInstance3D{Mesh=wheelRim,MaterialOverride=rim,Position=new(0,0,zz),RotationDegrees=new(90,0,0)});
         for(int i=0;i<8;i++)

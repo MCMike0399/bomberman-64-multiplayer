@@ -1,3 +1,4 @@
+using BlastCircuit.Rendering;
 using Godot;
 namespace BlastCircuit.Rendering;
 
@@ -7,13 +8,13 @@ public static class ArtGeometry
     public static MeshInstance3D Box(Node parent,Vector3 position,Vector3 size,Material material,float bevel=0)
     {
         string key=$"box:{size}:{bevel}";
-        if(!Meshes.TryGetValue(key,out var mesh))Meshes[key]=mesh=bevel>0?BeveledBox(size,bevel):new BoxMesh {Size=size};
+        if(!Meshes.TryGetValue(key,out var mesh))Meshes[key]=mesh=bevel>0?BeveledBox(size,bevel):PrimitiveTemplates.Get("BoxMesh",("size",size));
         return Add(parent,position,mesh,material);
     }
     public static MeshInstance3D Sphere(Node parent,Vector3 position,Vector3 scale,Material material)
     {
         const string key="sphere";
-        if(!Meshes.TryGetValue(key,out var mesh))Meshes[key]=mesh=new SphereMesh {Radius=.5f,Height=1,RadialSegments=32,Rings=16};
+        if(!Meshes.TryGetValue(key,out var mesh))Meshes[key]=mesh=PrimitiveTemplates.Get("SphereMesh",("radius",.5f),("height",1),("radial_segments",32),("rings",16));
         var node=Add(parent,position,mesh,material);node.Scale=scale;return node;
     }
     /// <summary>Smooth rounded cuboid with independent proportions, shared between roster and arena.</summary>
@@ -53,14 +54,14 @@ public static class ArtGeometry
     public static MeshInstance3D Cylinder(Node parent,Vector3 position,float radius,float height,Material material)
     {
         string key=$"cylinder:{radius}:{height}";
-        if(!Meshes.TryGetValue(key,out var mesh))Meshes[key]=mesh=new CylinderMesh {TopRadius=radius,BottomRadius=radius,Height=height,RadialSegments=24};
+        if(!Meshes.TryGetValue(key,out var mesh))Meshes[key]=mesh=PrimitiveTemplates.Get("CylinderMesh",("top_radius",radius),("bottom_radius",radius),("height",height),("radial_segments",24));
         return Add(parent,position,mesh,material);
     }
     /// <summary>Upright cone whose base lies half its height below the position.</summary>
     public static MeshInstance3D Cone(Node parent,Vector3 position,float radius,float height,Material material)
     {
         string key=$"cone:{radius}:{height}";
-        if(!Meshes.TryGetValue(key,out var mesh))Meshes[key]=mesh=new CylinderMesh {TopRadius=0,BottomRadius=radius,Height=height,RadialSegments=24};
+        if(!Meshes.TryGetValue(key,out var mesh))Meshes[key]=mesh=PrimitiveTemplates.Get("CylinderMesh",("top_radius",0),("bottom_radius",radius),("height",height),("radial_segments",24));
         return Add(parent,position,mesh,material);
     }
     private static MeshInstance3D Add(Node parent,Vector3 position,Mesh mesh,Material material)
