@@ -39,6 +39,7 @@ public partial class PlaytestDriver : Node
     {
         var args = OS.GetCmdlineUserArgs();
         if (!args.Any(a => a.StartsWith("--playtest="))) return false;
+        GodotPeerLink.CaptureSignalDiagnostics=true;
         var driver = new PlaytestDriver { _root = root };
         root.AddChild(driver);
         return true;

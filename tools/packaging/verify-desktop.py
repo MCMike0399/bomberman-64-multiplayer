@@ -30,6 +30,24 @@ def extract(archive, destination):
                 path.chmod(stat.S_IMODE(entry.external_attr >> 16))
 
 
+
+def rotated_peer_probe(executable, output, origin, failures, validate):
+    """One additional observation; the caller's original failures stay latched."""
+    output.mkdir(parents=True,exist_ok=True)
+    command=[sys.executable,str(ROOT/'tools/playtest/run.py'),'--executable',str(executable),
+             '--scenario','peer-capacity','--output',str(output),'--desktop','shared','--server',origin,'--headless']
+    before=len(failures);record={'scope':'Reverse logical labels on the same executable/server, new process/guest identities/ports.',
+                                'passed':False,'originalFailureCount':before,'command':command}
+    try:
+        subprocess.run(command,cwd=ROOT,env={**os.environ,'BLAST_QA_PEER_JOIN_ORDER':'reverse'},check=True,timeout=300)
+        validate(output,True);record['passed']=True
+    except (OSError,ValueError,KeyError,TypeError,RuntimeError,subprocess.SubprocessError)as error:
+        record['error']=str(error);failures.append('peer-capacity-rotation: '+str(error))
+    record['remainingFailureCount']=len(failures)
+    (output/'rotation-runner.json').write_text(json.dumps(record,indent=2)+'\n')
+    return record
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--target', choices=desktop.TARGETS, required=True)
@@ -123,6 +141,7 @@ def main():
                     timeout = (12600 if heavy else 5400) if args.software_renderer else 1500
                     if args.software_renderer:command += ['--timeout',str(timeout)]
                     environment = os.environ.copy()
+                    environment['BLAST_QA_PEER_JOIN_ORDER']='normal'
                     if args.target == 'linux-x64':
                         # Modern AppImage runtime supports extraction on CI without a FUSE mount.
                         environment['APPIMAGE_EXTRACT_AND_RUN'] = '1'
@@ -141,6 +160,8 @@ def main():
                     cases.append(report)
                 except (RuntimeError, subprocess.SubprocessError) as error:
                     failures.append(scenario + ': ' + str(error))
+            if not args.graphical and args.target=='windows-x64'and os.environ.get('BLAST_QA_PEER_ROTATION')=='true':
+                rotated_peer_probe(executable,directory/(item['root']+'-peer-rotation-details'),origin,failures,qa.validate_playtest)
             if failures:
                 raise RuntimeError('Exported regression failed: ' + '; '.join(failures))
         receipt = {'schemaVersion': 2, 'passed': True, 'target': args.target, 'revision': revision,

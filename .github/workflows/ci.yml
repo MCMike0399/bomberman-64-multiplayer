@@ -446,6 +446,7 @@ jobs:
             runner: ubuntu-24.04
     runs-on: ${{ matrix.runner }}
     env:
+      BLAST_QA_PEER_ROTATION: ${{ matrix.target == 'windows-x64' && vars.BLAST_QA_PEER_ROTATION_SHA == (github.event.pull_request.head.sha || github.sha) && 'true' || '' }}
       BLAST_QA_WINDOWS_DRIVER: ${{ matrix.target == 'windows-x64' && 'd3d12' || '' }}
     timeout-minutes: 120
     steps:
@@ -514,6 +515,10 @@ jobs:
             artifacts/*-updater-details/**/helper-error.txt
             artifacts/*-updater-details/**/setup.log
             artifacts/*-updater-details/**/health.json
+            artifacts/*-peer-rotation-details/**/summary.json
+            artifacts/*-peer-rotation-details/**/runner-summary.json
+            artifacts/*-peer-rotation-details/**/peer-capacity-diagnostics.json
+            artifacts/*-peer-rotation-details/rotation-runner.json
             artifacts/*-regression-details/**/summary.json
             artifacts/*-regression-details/**/runner-summary.json
             artifacts/*-regression-details/**/progress.json

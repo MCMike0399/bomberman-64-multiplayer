@@ -978,3 +978,22 @@ internal gathering-state observation; production signalling behavior is unchange
 Signal counts, gathering/connection flags and the failing stage are written before
 link disposal and retained in native CI. Use those observations to distinguish
 incomplete fixture signalling from an actual native connection failure.
+
+### Eight-peer native signalling observations
+
+Playtest-only link observations retain SDP fingerprints, candidate endpoints,
+produced/received/applied/error counts, gathering state and monotonic timing
+from link creation. These are API observations; they do not expose the selected
+ICE pair or the exact instant of a native transition. No raw SDP is retained.
+Normal launches do not enable this collection. Capacity receipts freeze each
+checkpoint and preserve the first failure before teardown.
+
+The original all-eight-direct predicate and twenty-second bound remain required.
+After a failure, the fixture may collect authoritative snapshots and bomb-owner
+witnesses through relay, but it rethrows the original failure. A successful
+reverse-order observation cannot clear it. The optional Windows second process
+is armed only when `BLAST_QA_PEER_ROTATION_SHA` matches the exact CI source SHA.
+It reverses logical guest labels, creating new identities and ephemeral ports;
+it is not an identity-preserving port experiment. Clear that one-shot variable
+after the run. If complete signalling still leaves a native link Connecting,
+retain the evidence and request a release decision rather than growing timeouts.

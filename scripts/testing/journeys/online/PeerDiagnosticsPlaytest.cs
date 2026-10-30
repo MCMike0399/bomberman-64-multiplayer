@@ -122,6 +122,7 @@ public partial class PlaytestDriver
             result.Add(new{id,connected=((IPeerLink)link).Connected,failed=((IPeerLink)link).Failed,
                 linkGeneration=generations?.GetValueOrDefault(id)??0,remoteGeneration=remoteGenerations?.GetValueOrDefault(id)??0,
                 seenSeconds=seen?.TryGetValue(id,out long timestamp)==true?(double?)Stopwatch.GetElapsedTime(timestamp).TotalSeconds:null,
+                signalObservation=native is GodotPeerLink adapter?adapter.SignalDiagnostics:null,
                 connection=connection?.GetConnectionState().ToString(),
                 signaling=connection?.GetSignalingState().ToString(),reliable=reliable?.GetReadyState().ToString(),snapshots=snapshots?.GetReadyState().ToString()});
         }
