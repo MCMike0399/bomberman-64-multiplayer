@@ -13,6 +13,7 @@ import release_identity
 import render_fingerprint
 
 REPOSITORY='MCMike0399/bomberman-64-multiplayer'
+MODES=('audit','rehearse','permissions-smoke','qualify')
 REQUIRED_ARTIFACTS={'Blast-Circuit-server-dotnet10','Blast-Circuit-macos-arm64-ad-hoc','Blast-Circuit-macos-arm64-regression',
                     'managed-receipts','headless-receipts','release-gate-startup','release-gate-update','release-gate-crossplay','native-contract-comparison',
                     *(f'Blast-Circuit-{target}'+suffix for target in ('windows-x64','linux-x64')for suffix in ('','-download','-native','-smoke'))}
@@ -24,6 +25,15 @@ def eligible(run,source):
             run.get('event')in ('push','workflow_dispatch')and run.get('status')=='completed'and run.get('conclusion')=='success')
 
 
+def free_selection(mode,checkout,source):
+    """Audit and permissions-smoke need no Verification run and ignore the paid hold."""
+    if mode=='permissions-smoke':
+        # No instance boots, so no prepared GPU payload is needed; the smoke still
+        # exercises the real current-main template and controller code.
+        return (True,'FREE permissions smoke (no instances, dry-run launches)')if checkout==source else(False,'Superseded permissions-smoke checkout')
+    return True,'Explicit free audit'
+
+
 def complete_artifacts(artifacts):
     names={row['name']for row in artifacts if not row.get('expired')}
     return REQUIRED_ARTIFACTS<=names
@@ -32,11 +42,11 @@ def complete_artifacts(artifacts):
 if __name__=='__main__':
     def gh(*args):return subprocess.check_output(['gh',*args],text=True,timeout=120)
     mode=os.environ.get('REQUESTED_MODE','audit');run_id=os.environ.get('VERIFICATION_RUN','')
-    if mode not in ('audit','rehearse','qualify'):raise SystemExit('Unknown builder mode')
+    if mode not in MODES:raise SystemExit('Unknown builder mode')
     source=gh('api',f'repos/{REPOSITORY}/git/ref/heads/main');source=json.loads(source)['object']['sha']
     checkout=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
-    approved=True;reason='Explicit free audit'
-    if mode!='audit':
+    approved,reason=free_selection(mode,checkout,source)
+    if mode not in ('audit','permissions-smoke'):
         if not run_id.isdigit():raise SystemExit('An exact successful Verification run is required')
         run=json.loads(gh('api',f'repos/{REPOSITORY}/actions/runs/{run_id}'))
         approved=checkout==source and eligible(run,source);reason='Current-main Verification'if approved else'Superseded or untrusted Verification'

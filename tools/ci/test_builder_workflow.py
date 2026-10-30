@@ -74,6 +74,60 @@ class HostedCleanupPlacement(unittest.TestCase):
             self.assertGreaterEqual(minutes, grant, phase)
             self.assertLessEqual(minutes, grant + 2, phase)
 
+    def test_permissions_smoke_is_a_dispatchable_free_mode_in_the_protected_campaign_job(self):
+        trigger=(ROOT/'.github/workflows/gpu-qualification.yml').read_text()
+        self.assertIn('options: [audit, rehearse, permissions-smoke, qualify]',trigger)
+        campaign=self.source.split('  campaign:',1)[1].split('  report:',1)[0]
+        self.assertIn("inputs.mode != 'audit'",campaign.split('runs-on:',1)[0])
+        self.assertIn('name: gpu-qualification',campaign)
+        self.assertIn("inputs.mode == 'permissions-smoke' && 30 ||",campaign)
+        self.assertIn("inputs.mode == 'permissions-smoke' && 1800 ||",campaign)
+        self.assertIn('FREE permissions smoke - dry-run launches, no instances',campaign)
+        # Same OIDC assumption step as rehearse; no separate credential path.
+        self.assertEqual(campaign.count('role-to-assume: arn:aws:iam::524329886851:role/sancus-builder-ci'),2)
+
+    def test_permissions_smoke_steps_are_fenced_bounded_and_never_paid(self):
+        smoke_steps=('Fence every permissions-smoke AWS CLI call','Prepare the FREE permissions smoke',
+                     'Durably retain the smoke intent','Create the instance-free stack')
+        for name in smoke_steps:
+            with self.subTest(name=name):
+                block=self.block(name)
+                self.assertIn("success() && !cancelled() && inputs.mode == 'permissions-smoke'",block)
+                if name!=smoke_steps[0]:self.assertRegex(block,r'timeout-minutes: (2|5|12)\n')
+        self.assertIn('--smoke',self.block(smoke_steps[0]))
+        self.assertIn('builder_smoke.py --state artifacts/builder-state prepare',self.block(smoke_steps[1]))
+        self.assertIn('name: builder-smoke-intent-${{ github.run_id }}-${{ github.run_attempt }}',self.block(smoke_steps[2]))
+        self.assertIn('builder_smoke.py --state artifacts/builder-state run',self.block(smoke_steps[3]))
+        positions=[self.source.index(name)for name in (*smoke_steps,'Re-assume fresh credentials immediately before cleanup',
+                                                         'Always perform owned cleanup and its audit in this same job')]
+        self.assertEqual(positions,sorted(positions))
+        for name in ('Refuse held, changed or late paid approvals','Persist the exact creation intent without allocating',
+                     'Durably retain the intent before any allocation','Launch and arm only the reviewed owned stack'):
+            with self.subTest(paid=name):self.assertIn("inputs.mode == 'qualify'",self.block(name))
+        for name in ('Prepare exact trusted artifacts before allocation','Noncreating prepared-input and phase rehearsal'):
+            with self.subTest(skipped=name):self.assertIn("inputs.mode != 'permissions-smoke'",self.block(name))
+        self.assertNotIn('builder-intent-',''.join(self.block(name)for name in smoke_steps))
+
+    def test_permissions_smoke_uses_the_paid_exact_id_cleanup_and_the_outcome_report(self):
+        for name in ('Request owned instance termination before slow evidence work','Always perform owned cleanup and its audit in this same job'):
+            with self.subTest(name=name):
+                block=self.block(name)
+                self.assertIn('if: always()',block)
+                self.assertIn('[ "$MODE" = permissions-smoke ]',block)
+                self.assertIn("inputs.mode == 'permissions-smoke' && steps.smoke.outcome || steps.launch.outcome",block)
+        self.assertIn('builder_phase.py --state artifacts/builder-state cleanup',self.block('Always perform owned cleanup and its audit in this same job'))
+        record=self.block('Retain the distinct permissions-smoke record')
+        self.assertIn("always() && inputs.mode == 'permissions-smoke'",record)
+        self.assertIn('name: builder-smoke-${{ github.run_id }}-${{ github.run_attempt }}',record)
+        report=self.source.split('  report:',1)[1]
+        self.assertIn("if: always() && inputs.mode != 'audit'",report)
+        self.assertIn('pattern: builder-*-${{ github.run_id }}-${{ github.run_attempt }}*',report)
+        self.assertIn('name: builder-outcome-${{ github.run_id }}-${{ github.run_attempt }}',report)
+        import builder_guard
+        for artifact in ('builder-smoke-intent-1-1','builder-smoke-1-1','builder-outcome-1-1'):
+            self.assertTrue(artifact.startswith(builder_guard.BUILDER_ARTIFACTS))
+            self.assertFalse(artifact.startswith(('builder-intent-',builder_guard.PLAN_ARTIFACT)))
+
     def test_native_contract_upload_never_races_owned_uninstaller_files(self):
         source=(ROOT/'.github/workflows/ci.yml').read_text().split('  native-contracts:',1)[1].split('  native-cohort:',1)[0]
         root='artifacts/native-contracts/${{ matrix.target }}'

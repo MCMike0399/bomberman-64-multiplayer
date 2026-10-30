@@ -20,7 +20,7 @@ class CurrentMainOnly(unittest.TestCase):
         self.assertTrue(trigger.complete_artifacts(rows))
         rows[0]['expired']=True;self.assertFalse(trigger.complete_artifacts(rows))
 
-    def selected(self, mode, hold, refusal=None, event='workflow_dispatch'):
+    def selected(self, mode, hold, refusal=None, event='workflow_dispatch', verification='123'):
         import contextlib, json, os, runpy, tempfile
         from pathlib import Path
         from unittest.mock import patch
@@ -32,7 +32,7 @@ class CurrentMainOnly(unittest.TestCase):
                 if '/artifacts?' in command[2]:return json.dumps([{'artifacts':[{'name':n}for n in trigger.REQUIRED_ARTIFACTS]}])
                 if '/actions/runs/' in command[2]:return json.dumps(self.run)
                 raise AssertionError(command)
-            env={'REQUESTED_MODE':mode,'VERIFICATION_RUN':'123','SANCUS_BUILDER_PAID_HOLD':hold,'GITHUB_EVENT_NAME':event,'GITHUB_RUN_ID':'999',
+            env={'REQUESTED_MODE':mode,'VERIFICATION_RUN':verification,'SANCUS_BUILDER_PAID_HOLD':hold,'GITHUB_EVENT_NAME':event,'GITHUB_RUN_ID':'999',
                  'GITHUB_OUTPUT':str(root/'outputs'),'GITHUB_STEP_SUMMARY':str(root/'summary')}
             with contextlib.chdir(root),patch.dict(os.environ,env),patch.object(trigger.subprocess,'check_output',side_effect=output),patch.object(trigger.release_gpu_policy,'derive',return_value={'requiresGpu':True}),\
                  patch.object(trigger.release_identity,'check_exports',return_value={'version':'0.45.0'}),\
@@ -53,6 +53,19 @@ class CurrentMainOnly(unittest.TestCase):
                 output,_=self.selected(mode,'true')
                 self.assertIn('run=true',output)
                 self.assertIn('approval-plan={}',output)
+
+    def test_permissions_smoke_is_free_under_the_hold_without_verification_or_paid_guards(self):
+        for hold in ('true','false',''):
+            with self.subTest(hold=hold):
+                output,summary=self.selected('permissions-smoke',hold,refusal='must not be consulted',verification='')
+                self.assertIn('run=true',output);self.assertIn('mode=permissions-smoke',output)
+                self.assertIn('approval-plan={}',output);self.assertIsNone(self.key)
+                self.assertIn('FREE permissions smoke',summary)
+        self.assertEqual(self.guarded,[])
+
+    def test_permissions_smoke_refuses_a_superseded_checkout(self):
+        self.assertEqual(trigger.free_selection('permissions-smoke','b'*40,'a'*40)[0],False)
+        self.assertEqual(trigger.free_selection('permissions-smoke','a'*40,'a'*40)[0],True)
 
     def test_unheld_selector_discloses_bound_plan_before_approval(self):
         import json

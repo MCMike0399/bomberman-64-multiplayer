@@ -282,6 +282,33 @@ from observed GitHub behavior. If the hard-timeout probe cannot execute cleanup,
 its missing receipt is reported as unverified; it is never called a passing
 cleanup test. The probe creates no AWS resources.
 
+### FREE permissions smoke
+
+`gpu-qualification.yml` mode `permissions-smoke` proves the scoped role's real
+campaign permissions without allocating compute. It runs in the same protected
+`gpu-qualification` campaign job and OIDC assumption as rehearsal, needs no
+Verification run and ignores `SANCUS_BUILDER_PAID_HOLD`:
+
+```sh
+gh workflow run gpu-qualification.yml --ref main -f mode=permissions-smoke
+```
+
+`tools/ci/builder_smoke.py` builds the real template, then removes exactly the
+two instances. The expiry role and both schedules keep their real names, tags
+and boundary but target never-issued dummy instance IDs, and the schedules are
+DISABLED. The paid intent/CreateStack path creates the security group, staging
+bucket and policy, roles, instance profile and schedules. The smoke applies the
+real `UpdateSchedule` auto-delete and stages one object. It then calls
+`ec2 run-instances --dry-run` with each real instance's launch request.
+`DryRunOperation` passes; `UnauthorizedOperation` or any other error fails.
+An AWS CLI fence and the campaign wrapper refuse non-dry-run launches and every
+termination. The paid exact-ID cleanup, type audit and independent
+`builder-outcome` report follow. The job is limited to 30 minutes.
+
+Artifacts are `builder-smoke-*`, never `builder-intent-*` or
+`builder-approval-plan`, so no ledger receipt is required. Its outcome still
+counts as the latest builder outcome for the zero-leftover paid guard.
+
 ## Campaign completion and cost
 
 Each campaign has a unique owned stack, a fixed expiry of at most three hours,

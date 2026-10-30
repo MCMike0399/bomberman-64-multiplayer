@@ -72,13 +72,13 @@ jobs:
           retention-days: 30
 
   campaign:
-    name: ${{ inputs.mode == 'qualify' && format('PAID up to ${0} - source {1}', fromJSON(inputs.approval-plan).estimatedCampaignUsd, fromJSON(inputs.approval-plan).source) || 'FREE rehearsal - no allocation' }}
+    name: ${{ inputs.mode == 'qualify' && format('PAID up to ${0} - source {1}', fromJSON(inputs.approval-plan).estimatedCampaignUsd, fromJSON(inputs.approval-plan).source) || inputs.mode == 'permissions-smoke' && 'FREE permissions smoke - dry-run launches, no instances' || 'FREE rehearsal - no allocation' }}
     if: always() && inputs.mode != 'audit' && github.repository == 'MCMike0399/bomberman-64-multiplayer' && github.ref == 'refs/heads/main'
     environment:
       name: gpu-qualification
       url: ${{ format('https://github.com/{0}/actions/runs/{1}#summary', github.repository, github.run_id) }}
     runs-on: ubuntu-24.04
-    timeout-minutes: ${{ inputs.mode == 'rehearse' && inputs.rehearsal-fault == 'job-timeout' && 3 || 210 }}
+    timeout-minutes: ${{ inputs.mode == 'permissions-smoke' && 30 || inputs.mode == 'rehearse' && inputs.rehearsal-fault == 'job-timeout' && 3 || 210 }}
     permissions:
       contents: read
       actions: read
@@ -110,11 +110,14 @@ jobs:
       - name: Fence every rehearsal AWS CLI call to read-only operations
         if: success() && !cancelled() && inputs.mode == 'rehearse'
         run: python3 tools/ci/builder_dry_aws.py --install "$RUNNER_TEMP/builder-readonly-cli"
+      - name: Fence every permissions-smoke AWS CLI call to dry-run launches and owned stack/staging calls
+        if: success() && !cancelled() && inputs.mode == 'permissions-smoke'
+        run: python3 tools/ci/builder_dry_aws.py --install "$RUNNER_TEMP/builder-smoke-cli" --smoke
       - name: Record the actual hosted job clock
         if: success() && !cancelled()
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python3 tools/ci/builder_job.py --output artifacts/builder-state/job-clock.json --timeout-seconds "${{ inputs.mode == 'rehearse' && inputs.rehearsal-fault == 'job-timeout' && 180 || 12600 }}"
+        run: python3 tools/ci/builder_job.py --output artifacts/builder-state/job-clock.json --timeout-seconds "${{ inputs.mode == 'permissions-smoke' && 1800 || inputs.mode == 'rehearse' && inputs.rehearsal-fault == 'job-timeout' && 180 || 12600 }}"
       - name: Assume the scoped role for preparation and collection
         id: assume
         if: success() && !cancelled()
@@ -135,7 +138,7 @@ jobs:
         run: python3 tools/ci/builder_timing.py
       - name: Prepare exact trusted artifacts before allocation
         timeout-minutes: 30
-        if: success() && !cancelled() && inputs.rehearsal-fault == 'none'
+        if: success() && !cancelled() && inputs.mode != 'permissions-smoke' && inputs.rehearsal-fault == 'none'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -143,7 +146,7 @@ jobs:
           python3 tools/ci/builder_profile.py -- python3 tools/ci/builder_prepare.py --state artifacts/builder-state --verification-run "$VERIFICATION_RUN" --fixed-expiry "$FIXED_EXPIRY"
       - name: Noncreating prepared-input and phase rehearsal
         timeout-minutes: 10
-        if: success() && !cancelled() && inputs.rehearsal-fault == 'none'
+        if: success() && !cancelled() && inputs.mode != 'permissions-smoke' && inputs.rehearsal-fault == 'none'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -152,6 +155,33 @@ jobs:
       - name: Free cancellation or hard-job-timeout probe
         if: success() && !cancelled() && inputs.mode == 'rehearse' && inputs.rehearsal-fault != 'none'
         run: exec python3 tools/ci/builder_cancel_probe.py --state artifacts/builder-state
+      - name: Prepare the FREE permissions smoke and its exact creation intent
+        timeout-minutes: 5
+        if: success() && !cancelled() && inputs.mode == 'permissions-smoke'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 tools/ci/builder_timing.py --check-seconds 1200
+          python3 tools/ci/builder_profile.py -- python3 tools/ci/builder_smoke.py --state artifacts/builder-state prepare
+      - name: Durably retain the smoke intent before creating the instance-free stack
+        id: smoke_intent_upload
+        if: success() && !cancelled() && inputs.mode == 'permissions-smoke'
+        timeout-minutes: 2
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: builder-smoke-intent-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            artifacts/builder-state/*.json
+            artifacts/builder-state/*.jsonl
+          if-no-files-found: error
+          retention-days: 90
+      - name: Create the instance-free stack, verify it and dry-run both launches
+        id: smoke
+        if: success() && !cancelled() && inputs.mode == 'permissions-smoke'
+        timeout-minutes: 12
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/ci/builder_profile.py -- python3 tools/ci/builder_smoke.py --state artifacts/builder-state run
       - name: Persist the exact creation intent without allocating
         if: success() && !cancelled() && inputs.mode == 'qualify'
         env:
@@ -249,9 +279,9 @@ jobs:
       - name: Request owned instance termination before slow evidence work
         if: always()
         env:
-          BUILDER_LAUNCH_OUTCOME: ${{ steps.launch.outcome }}
+          BUILDER_LAUNCH_OUTCOME: ${{ inputs.mode == 'permissions-smoke' && steps.smoke.outcome || steps.launch.outcome }}
         run: |
-          if [ "$MODE" = qualify ] && [ -f artifacts/builder-state/plan.json ]; then
+          if { [ "$MODE" = qualify ] || [ "$MODE" = permissions-smoke ]; } && [ -f artifacts/builder-state/plan.json ]; then
             python3 tools/ci/builder_profile.py -- python3 tools/ci/builder_phase.py --state artifacts/builder-state terminate
           else
             python3 tools/ci/builder_cancel_probe.py --state artifacts/builder-state --mark-termination
@@ -287,9 +317,9 @@ jobs:
         timeout-minutes: 25
         if: always()
         env:
-          BUILDER_LAUNCH_OUTCOME: ${{ steps.launch.outcome }}
+          BUILDER_LAUNCH_OUTCOME: ${{ inputs.mode == 'permissions-smoke' && steps.smoke.outcome || steps.launch.outcome }}
         run: |
-          if [ "$MODE" = qualify ] && [ -f artifacts/builder-state/plan.json ]; then
+          if { [ "$MODE" = qualify ] || [ "$MODE" = permissions-smoke ]; } && [ -f artifacts/builder-state/plan.json ]; then
             python3 tools/ci/builder_profile.py -- python3 tools/ci/builder_phase.py --state artifacts/builder-state cleanup
           else
             python3 tools/ci/builder_timing.py --check-seconds 300
@@ -305,6 +335,20 @@ jobs:
             artifacts/builder-state/*.json
             artifacts/builder-state/*.jsonl
             artifacts/builder-state/phase-*.log
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Retain the distinct permissions-smoke record
+        if: always() && inputs.mode == 'permissions-smoke'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: builder-smoke-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            artifacts/builder-state/permissions-smoke.json
+            artifacts/builder-state/smoke-preflight.json
+            artifacts/builder-state/cleanup-receipt.json
+            artifacts/builder-state/cleanup-controller.json
+            artifacts/builder-state/cleanup-audit-only.json
           if-no-files-found: warn
           retention-days: 90
 
