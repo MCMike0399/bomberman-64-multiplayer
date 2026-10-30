@@ -174,7 +174,7 @@ public partial class TempleStageView
         }
         var nut=_art.Color(new("6b4a2b"),.6f);
         for(int n=0;n<3;n++)Bead(crown,new(Mathf.Cos(n*2.1f)*.13f,-.13f,Mathf.Sin(n*2.1f)*.13f),Vector3.One*.17f,nut);
-        _sceneryMotion.Add(t=>sway.Rotation=new(Mathf.Sin(t*.8f+phase)*.025f,0,Mathf.Sin(t*1.05f+phase)*.04f));
+        _sceneryMotion.Add(t=>sway.Basis=PresentationMath.Rotation(new(PresentationMath.Sin(t*.8f+phase)*.025f,0,PresentationMath.Sin(t*1.05f+phase)*.04f)));
         return root;
     }
 
@@ -192,7 +192,7 @@ public partial class TempleStageView
             float a=i*Mathf.Tau/7;
             Bead(canopy,new(Mathf.Cos(a)*.65f,.2f+(i%3)*.18f,Mathf.Sin(a)*.65f),new(.42f,.28f,.38f),WindPaint(leaves.Lightened(.08f)));
         }
-        if(_garden)_sceneryMotion.Add(t=>canopy.Rotation=new(Mathf.Sin(t*.9f+position.X*.63f+position.Z*.37f)*.055f,0,Mathf.Sin(t*1.3f+phase)*.065f));
+        if(_garden)_sceneryMotion.Add(t=>canopy.Basis=PresentationMath.Rotation(new(PresentationMath.Sin(t*.9f+position.X*.63f+position.Z*.37f)*.055f,0,PresentationMath.Sin(t*1.3f+phase)*.065f)));
         else _sceneryMotion.Add(t=>canopy.Rotation=new(Mathf.Sin(t*.7f+phase)*.03f,0,Mathf.Sin(t*.9f+phase)*.035f));
         return root;
     }
