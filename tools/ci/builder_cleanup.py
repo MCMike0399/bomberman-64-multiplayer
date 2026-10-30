@@ -6,6 +6,8 @@ import builder_journal as safety
 import builder_namespace as names
 import builder_s3
 import builder_audit
+import builder_cost
+import datetime
 ROOT=None
 
 def configure(root):
@@ -100,6 +102,10 @@ def final(plan,stage_errors=None):
              'typeAudit':audit['checked'],'nonResourceRecords':audit['nonResourceRecords'],'standingIdentity':audit['expectedStandingIdentity'],'cleanupStageErrors':stage_errors or [],'retainedEvidenceValidated':evidence_error is None,'evidenceComplete':evidence_error is None and retained.get('scope')=='game-results','testVerdict':retained.get('verdict','incomplete'),'testEvidenceScope':retained.get('scope','missing'),'evidenceError':evidence_error,'allCreatedResourcesGone':not left,'resources':output,'leftovers':left,'protectedObservedChanges':changes,
              'protectedRequestedInstances':len(baseline),'protectedComparedInstances':compared,'protectedUnavailable':unavailable,'protectedComparisonComplete':not unavailable,
              'protectedFieldsChecked':['state','instanceType','vpc','subnet','securityGroups','blockDeviceMappings','networkInterfaceIds'],'protectedNotModifiedByController':'All mutation operations constrained to this exact new stack; no protected ID was used as a deletion target.'}
+    observed=datetime.datetime.now(datetime.timezone.utc).isoformat()
+    receipt['observedAtUtc']=observed
+    byte_count=sum(Path(item['path']).stat().st_size for item in retained.get('files',[])if Path(item['path']).is_file())
+    receipt['cost']=builder_cost.calculate(plan,rows,output,observed,byte_count)
     (ROOT/'cleanup-receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')
     if left:raise RuntimeError('Owned resources remain; cleanup is NOT complete')
     safety.append(campaign.JOURNAL,plan,'CLEANUP_COMPLETE','campaign',plan['runId'],{'receiptSha256':hashlib.sha256((ROOT/'cleanup-receipt.json').read_bytes()).hexdigest()})

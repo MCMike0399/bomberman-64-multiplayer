@@ -24,6 +24,7 @@ def cleanup_receipt(raw,plan,variables,created_rows):
             raw.get('protectedRequestedInstances',0)!=raw.get('protectedComparedInstances',-1)):
         raise ValueError('Protected inventory comparison requires review; it is not silently waived')
     if any(key.startswith('BLAST_GPU_')for key in variables):raise ValueError('Repository GPU variables are still armed or retained')
+    if raw.get('cost',{}).get('complete')is not True:raise ValueError('Elapsed resource/cost estimate is incomplete')
     if any(row.get('event')=='CREATED'and row.get('type')=='GitHub::Runner'for row in created_rows):
         raise ValueError('This hosted controller must not create runner registrations')
     owned=[row for row in created_rows if row.get('event')=='CREATED']
@@ -52,6 +53,7 @@ def cleanup_receipt(raw,plan,variables,created_rows):
             'gpuVariablesDisarmed':True,'variableScope':'Fresh finalization-job repository/organization variable context; no campaign variable writes.',
             'standingIdentity':raw['standingIdentity'],'nonResourceRecords':raw['nonResourceRecords'],
             'stackArn':stack,'resources':raw['resources'],'protectedObservedChanges':raw['protectedObservedChanges'],
+            'cost':raw['cost'],
             'rawCleanupSha256':hashlib.sha256(json.dumps(raw,sort_keys=True,separators=(',',':')).encode()).hexdigest()}
 
 

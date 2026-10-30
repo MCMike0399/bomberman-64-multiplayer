@@ -29,7 +29,10 @@ def wait_terminated(plan,identities,deadline):
             if result is None:break
             values=[item for row in result.get('Reservations',[])for item in row.get('Instances',[])]
             if len(values)!=1:raise ValueError('Exact termination inventory is ambiguous')
-            if values[0]['State']['Name']=='terminated':break
+            if values[0]['State']['Name']=='terminated':
+                journal.append(campaign.JOURNAL,plan,'STATUS','AWS::EC2::Instance',identity,
+                               {'terminatedObservedAtUtc':datetime.datetime.now(datetime.timezone.utc).isoformat()})
+                break
             wait.wait(min(5,max(0,deadline-time.time())))
         else:raise TimeoutError('Owned instance has not terminated: '+identity)
 

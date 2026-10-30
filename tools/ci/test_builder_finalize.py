@@ -12,6 +12,7 @@ class CleanupBinding(unittest.TestCase):
     def setUp(self):
         self.plan={'account':'524329886851','region':'us-east-1','runId':'sancus-builder-20261030-120b573-1234567890abcdef','payloadSource':'a'*40}
         self.raw={**self.plan,'allCreatedResourcesGone':True,'leftovers':[],'cleanupStageErrors':[],
+                  'cost':{'complete':True,'estimateUsd':.25,'invoice':False},
                   'retainedEvidenceValidated':True,'evidenceComplete':True,'testVerdict':'pass',
                   'protectedComparisonComplete':True,'protectedObservedChanges':[],
                   'protectedRequestedInstances':9,'protectedComparedInstances':9,'protectedFieldsChecked':['state','securityGroups','blockDeviceMappings'],
