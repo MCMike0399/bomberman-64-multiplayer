@@ -29,7 +29,7 @@ rows=builder_guest.validate_inputs(manifest,descriptor)
 (root/'inputs.tsv').write_text(''.join('\t'.join(str(row[key])for key in ('fileName','objectKey','sha256','size'))+'\n'for row in rows))
 PY
 while IFS=$'\t' read -r file key sha size; do
- aws --profile sancus --region us-east-1 s3api get-object --bucket '__BUCKET__' --expected-bucket-owner 524329886851 --key "$key" "$root/cache/$file" >/dev/null
+ aws --profile sancus --region us-east-1 --cli-connect-timeout 8 --cli-read-timeout 25 s3api get-object --bucket '__BUCKET__' --expected-bucket-owner 524329886851 --key "$key" "$root/cache/$file" >/dev/null
  test "$(stat -c %s "$root/cache/$file")" = "$size"
  printf '%s  %s\n' "$sha" "$root/cache/$file" | sha256sum -c -
 done < "$root/inputs.tsv"
@@ -84,7 +84,7 @@ foreach($row in $rows){
  if($names.ContainsKey($row.fileName.ToLowerInvariant())){throw 'Repeated input name'}
  $names[$row.fileName.ToLowerInvariant()]=$true
  $file=Join-Path "$root\cache" $row.fileName
- & $aws --profile sancus --region us-east-1 s3api get-object --bucket '__BUCKET__' --expected-bucket-owner 524329886851 --key $row.objectKey $file | Out-Null
+ & $aws --profile sancus --region us-east-1 --cli-connect-timeout 8 --cli-read-timeout 25 s3api get-object --bucket '__BUCKET__' --expected-bucket-owner 524329886851 --key $row.objectKey $file | Out-Null
  if($LASTEXITCODE -ne 0 -or (Get-Item $file).Length -ne $row.size -or (Get-FileHash -Algorithm SHA256 $file).Hash.ToLowerInvariant() -ne $row.sha256){throw 'Frozen bootstrap input differs'}
 }
 function InputFile($role){
@@ -177,12 +177,13 @@ apt-get update
 apt-get install -y awscli git unzip python3 python3-venv fuse3 squashfs-tools xvfb openbox pulseaudio vulkan-tools libxkbcommon0 libxcursor1 libxinerama1 libxi6 libxrandr2 libpulse0
 printf '[profile sancus]\nregion=us-east-1\n' > "$root/aws-config"
 export AWS_CONFIG_FILE="$root/aws-config"
-for attempt in $(seq 1 60); do
- if aws --profile sancus --region us-east-1 s3api get-object --bucket '__BUCKET__' --expected-bucket-owner 524329886851 --key payload/bootstrap.zip "$root/bootstrap.zip" >/dev/null; then break; fi
+bootstrap_deadline=$((SECONDS+300))
+while ((SECONDS < bootstrap_deadline)); do
+ if aws --profile sancus --region us-east-1 --cli-connect-timeout 8 --cli-read-timeout 25 s3api get-object --bucket '__BUCKET__' --expected-bucket-owner 524329886851 --key payload/bootstrap.zip "$root/bootstrap.zip" >/dev/null; then break; fi
  sleep 5
 done
 printf '%s  %s\n' '__HELPER_SHA__' "$root/bootstrap.zip" | sha256sum -c -
-aws --profile sancus --region us-east-1 s3api get-object --bucket '__BUCKET__' --expected-bucket-owner 524329886851 --key payload/manifest.json "$root/manifest.json" >/dev/null
+aws --profile sancus --region us-east-1 --cli-connect-timeout 8 --cli-read-timeout 25 s3api get-object --bucket '__BUCKET__' --expected-bucket-owner 524329886851 --key payload/manifest.json "$root/manifest.json" >/dev/null
 printf '%s  %s\n' '__MANIFEST_SHA__' "$root/manifest.json" | sha256sum -c -
 unzip -q "$root/bootstrap.zip" -d "$root/bin"
 chmod 700 "$root/bin/dispatch"
@@ -199,11 +200,14 @@ foreach($module in @('AWS.Tools.S3','AWSPowerShell.NetCore','AWSPowerShell')){
 }
 $config=[Amazon.S3.AmazonS3Config]::new()
 $config.RegionEndpoint=[Amazon.RegionEndpoint]::USEast1
+$config.Timeout=[TimeSpan]::FromSeconds(25)
+$config.MaxErrorRetry=1
 $client=[Amazon.S3.AmazonS3Client]::new($config)
 $request=[Amazon.S3.Model.GetObjectRequest]::new()
 $request.BucketName='__BUCKET__';$request.Key='payload/bootstrap-awscli.msi'
 $request.ExpectedBucketOwner='524329886851'
-for($attempt=0;$attempt -lt 60;$attempt++){
+$bootstrapDeadline=[DateTime]::UtcNow.AddMinutes(5)
+while([DateTime]::UtcNow -lt $bootstrapDeadline){
  try{
   $response=$client.GetObjectAsync($request).GetAwaiter().GetResult()
   $file=[IO.File]::Create("$root\aws.msi")
@@ -221,12 +225,13 @@ if($install.ExitCode -notin 0,3010){throw 'AWS CLI bootstrap failed'}
 Set-Content "$root\aws-config" "[profile sancus]`nregion=us-east-1`n"
 $env:AWS_CONFIG_FILE="$root\aws-config"
 $aws='C:\Program Files\Amazon\AWSCLIV2\aws.exe'
-for($attempt=0;$attempt -lt 60;$attempt++){
- & $aws --profile sancus --region us-east-1 s3api get-object --bucket '__BUCKET__' --expected-bucket-owner 524329886851 --key payload/bootstrap.zip "$root\bootstrap.zip" | Out-Null
+$bootstrapDeadline=[DateTime]::UtcNow.AddMinutes(5)
+while([DateTime]::UtcNow -lt $bootstrapDeadline){
+ & $aws --profile sancus --region us-east-1 --cli-connect-timeout 8 --cli-read-timeout 25 s3api get-object --bucket '__BUCKET__' --expected-bucket-owner 524329886851 --key payload/bootstrap.zip "$root\bootstrap.zip" | Out-Null
  if($LASTEXITCODE -eq 0){break};Start-Sleep -Seconds 5
 }
 if((Get-FileHash -Algorithm SHA256 "$root\bootstrap.zip").Hash.ToLowerInvariant() -ne '__HELPER_SHA__'){throw 'Bootstrap bundle differs'}
-& $aws --profile sancus --region us-east-1 s3api get-object --bucket '__BUCKET__' --expected-bucket-owner 524329886851 --key payload/manifest.json "$root\manifest.json" | Out-Null
+& $aws --profile sancus --region us-east-1 --cli-connect-timeout 8 --cli-read-timeout 25 s3api get-object --bucket '__BUCKET__' --expected-bucket-owner 524329886851 --key payload/manifest.json "$root\manifest.json" | Out-Null
 if($LASTEXITCODE -ne 0 -or (Get-FileHash -Algorithm SHA256 "$root\manifest.json").Hash.ToLowerInvariant() -ne '__MANIFEST_SHA__'){throw 'Frozen input manifest differs'}
 Expand-Archive "$root\bootstrap.zip" "$root\bin"
 & "$root\bin\setup.ps1"
