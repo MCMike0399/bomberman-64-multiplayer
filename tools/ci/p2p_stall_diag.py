@@ -89,7 +89,7 @@ def launch(executable, scenario, folder, origin, verbose, timeout):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--variant', choices=('baseline', 'verbose', 'novswitch'), required=True)
+    parser.add_argument('--variant', choices=('baseline', 'verbose', 'novswitch', 'novswitch-verbose'), required=True)
     parser.add_argument('--shard', default='0')
     parser.add_argument('--ice', type=int, default=40)
     parser.add_argument('--capacity', type=int, default=4)
@@ -108,7 +108,7 @@ def main():
     meta['releaseDllPresent'] = release_dll.exists()
     with zipfile.ZipFile(server_zip) as bundle: bundle.extractall(work)
 
-    if args.variant == 'verbose':
+    if 'verbose' in args.variant:
         # Same hash-pinned webrtc-native 1.2.2-stable archive; its template_debug build compiles DEBUG_ENABLED,
         # which raises rtc::InitLogger to Debug (incl. libjuice) and routes it through print_verbose.
         subprocess.run([sys.executable, str(ROOT / 'tools/networking/bootstrap_webrtc.py')], check=True, timeout=180)
@@ -118,7 +118,7 @@ def main():
         meta['swappedDebugDll'] = str(debug[0])
 
     (out / 'network-before.txt').write_text(ps(NETWORK))
-    if args.variant == 'novswitch':
+    if 'novswitch' in args.variant:
         meta['disable'] = ps(r"Get-NetAdapter -IncludeHidden | Where-Object { $_.Name -like 'vEthernet*' -or $_.InterfaceDescription -like 'Hyper-V Virtual Ethernet*' } | "
                              r"ForEach-Object { $_.Name; Disable-NetAdapter -InputObject $_ -Confirm:$false }; Start-Sleep 3")
         (out / 'network-after-disable.txt').write_text(ps(NETWORK))
@@ -141,7 +141,7 @@ def main():
     results = []; kept = {'peer-ice-order': 0, 'peer-capacity': 0}
     for index, scenario in enumerate(plan):
         folder = out / 'runs' / f'{index:03d}-{scenario}'
-        started, seconds, code, passed = launch(executable, scenario, folder, meta['origin'], args.variant == 'verbose',
+        started, seconds, code, passed = launch(executable, scenario, folder, meta['origin'], 'verbose' in args.variant,
                                                 60 if scenario == 'peer-ice-order' else 180)
         row = {'index': index, 'scenario': scenario, 'passed': passed, 'exit': code, 'seconds': round(seconds, 1)}
         diag = folder / ('peer-ice-order-diagnostics.json' if scenario == 'peer-ice-order' else 'peer-capacity-diagnostics.json')
@@ -151,7 +151,7 @@ def main():
                        leftConnectMs=connect_ms(d['leftObservation']), rightConnectMs=connect_ms(d['rightObservation']),
                        leftStates=d['leftObservation'].get('states'), rightStates=d['rightObservation'].get('states'))
         log_text = (folder / 'runtime.log').read_text(errors='replace')
-        if args.variant == 'verbose':
+        if 'verbose' in args.variant:
             row['nativeLog'] = [line for line in log_text.splitlines() if JUICE.search(line)][:600]
         row['warnings'] = [line for line in log_text.splitlines() if 'WARNING' in line or 'ERROR' in line][:40]
         if not passed:

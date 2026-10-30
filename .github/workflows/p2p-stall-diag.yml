@@ -18,10 +18,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        variant: [baseline, verbose, novswitch]
-        shard: ['1', '2', '3']
+        variant: [verbose, novswitch-verbose]
+        shard: ['4', '5', '6', '7', '8', '9']
     runs-on: windows-2025
-    timeout-minutes: 30
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -45,7 +45,7 @@ jobs:
         env:
           VARIANT: ${{ matrix.variant }}
           SHARD: ${{ matrix.shard }}
-        run: python tools/ci/p2p_stall_diag.py --variant $env:VARIANT --shard $env:SHARD --ice 40 --capacity 4
+        run: python tools/ci/p2p_stall_diag.py --variant $env:VARIANT --shard $env:SHARD --ice 150 --capacity 2 --keep-passes 1
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
