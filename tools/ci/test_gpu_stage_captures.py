@@ -20,7 +20,9 @@ class StageCaptureContracts(unittest.TestCase):
             def launch(command,**kwargs):
                 commands.append(command)
                 if command[0].endswith('unins000.exe'):return types.SimpleNamespace(returncode=0)
-                self.assertEqual(command[1:3],['--rendering-driver',driver])
+                if target=='windows-x64' and driver=='vulkan':
+                    self.assertNotIn('--rendering-driver',command)
+                else:self.assertEqual(command[1:3],['--rendering-driver',driver])
                 self.assertNotIn('--headless',command)
                 stage=next(arg.split('=',1)[1]for arg in command if arg.startswith('--parity-stage='))
                 self.assertIn(stage,gpu_campaign.OTHER_STAGES)
@@ -60,6 +62,19 @@ class StageCaptureContracts(unittest.TestCase):
         self.assertFalse(result['freshProcessCoverage'])
         self.assertEqual(result['expectedAdapter'],'Apple Paravirtual device')
         self.assertEqual(len(result['runs']),6)
+
+    def test_forced_directx_fallback_lane_stays_explicit(self):
+        result=self.exercise(driver='d3d12')
+        self.assertTrue(result['collectionComplete'])
+        self.assertTrue(all(r['launchPath']=='explicit-api' for r in result['runs']))
+
+    def test_primary_windows_lane_records_default_launcher_path(self):
+        result=self.exercise()
+        self.assertTrue(all(r['launchPath']=='ordinary-launcher-default' for r in result['runs']))
+
+    def test_input_and_diagnostic_api_controls_stay_explicit(self):
+        for options in ({'inputs_only':True},{'diagnostic':True}):
+            self.assertEqual(gpu_campaign.visual_parity.renderer_arguments('windows-x64','vulkan',**options),['--rendering-driver','vulkan'])
 
     def test_cleanup_headroom_prevents_installation(self):
         with tempfile.TemporaryDirectory() as temporary,patch.object(gpu_campaign.crossplay_runtime,'install')as install:

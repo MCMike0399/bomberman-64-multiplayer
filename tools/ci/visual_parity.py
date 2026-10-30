@@ -87,6 +87,14 @@ def compare_captures(case, label, report):
         if not valid: report['errors'].append(f'{label}: Original High effect control failed: {name}')
 
 
+def renderer_arguments(target, driver, *, diagnostic=False, inputs_only=False):
+    # Installed Windows primary graphics evidence must exercise the ordinary
+    # launcher/guard preference path, then verify the actual Vulkan receipt.
+    if target == 'windows-x64' and driver == 'vulkan' and not diagnostic and not inputs_only:
+        return []
+    return ['--rendering-driver', driver]
+
+
 def run(target, directory, output, expected, inputs_only=False, expected_adapter=None, local_mac=False, driver_override=None, stage='up-and-down'):
     if stage not in mesh_inputs.STAGES: raise ValueError('Unknown controlled stage')
     if driver_override and (target != 'windows-x64' or driver_override not in ('d3d12','vulkan')):
@@ -106,7 +114,7 @@ def run(target, directory, output, expected, inputs_only=False, expected_adapter
     output.mkdir(parents=True, exist_ok=False)
     data = crossplay_runtime.metadata(directory, target)
     if data['revision'] != expected: raise RuntimeError('Visual payload differs from requested source')
-    report = {'schemaVersion': 1, 'graphicsQualified': False, 'nativeCI': native_ci, 'executionHost': 'local-mac' if local_scope else 'native-ci', 'requestedDriver': actual_driver, 'diagnosticDriverOverride': driver_override, 'mode': 'mesh-inputs-diagnostic' if inputs_only else 'diagnostic-only', 'stage': stage, 'passed': False, 'target': target, 'revision': expected,
+    report = {'schemaVersion': 1, 'graphicsQualified': False, 'nativeCI': native_ci, 'executionHost': 'local-mac' if local_scope else 'native-ci', 'requestedDriver': actual_driver, 'diagnosticDriverOverride': driver_override, 'launchPath': 'ordinary-launcher-default' if target == 'windows-x64' and not inputs_only and not driver_override else 'explicit-api', 'mode': 'mesh-inputs-diagnostic' if inputs_only else 'diagnostic-only', 'stage': stage, 'passed': False, 'target': target, 'revision': expected,
               'release': data['release'], 'runs': [], 'comparisons': [], 'errors': []}
     report['executionContext']=execution;report['executionHost']=execution['kind']
     executable = None
@@ -136,7 +144,7 @@ def run(target, directory, output, expected, inputs_only=False, expected_adapter
         os.environ.pop('APPIMAGE_EXTRACT_AND_RUN', None)
         for index in range(1 if inputs_only else 2):
             case = output / f'run-{index}'
-            command = [str(executable), '--rendering-driver', actual_driver, '--windowed', '--max-fps', '30',
+            command = [str(executable), *renderer_arguments(target, actual_driver, diagnostic=bool(driver_override), inputs_only=inputs_only), '--windowed', '--max-fps', '30',
                        '--fixed-fps', '30', '--disable-vsync', '--', '--display-windowed', '--playtest=' + ('visual-inputs' if inputs_only else 'visual-parity'),
                        '--playtest-output=' + str(case), '--parity-stage=' + stage]
             if inputs_only:

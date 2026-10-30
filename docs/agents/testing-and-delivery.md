@@ -1019,3 +1019,10 @@ Recipes bind external inventory JSON/binary files by hash instead of embedding
 multiple full copies of each resource graph in memory. The raw files remain
 complete; all five trial bindings are validated and compared. This avoids a
 combined-report allocation spike without increasing the fixture deadline.
+
+The Windows GPU campaign's primary High captures and graphical tours exercise
+the installed launcher with no `--rendering-driver` override. The receipt still
+requires actual Vulkan; a remembered or automatic Direct3D 12 selection cannot
+silently qualify that lane. Forced Direct3D 12 and injected-crash recovery are
+separate labelled controls. Input-only headless collections may still choose an
+explicit API, and do not establish the default graphical launch path.
