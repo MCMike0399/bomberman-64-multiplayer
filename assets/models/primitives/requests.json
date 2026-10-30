@@ -119,6 +119,30 @@
       ],
       "sha256": "51f3db488100ed505ff14ff87110309df2ea5799f0e06c14d687b12bbd217408"
     },
+    "06b7f5442e12813fa71e6a2e5239fc841dc818bc3b49cb4b3c27afd5bba3ee2e": {
+      "type": "CylinderMesh",
+      "source": "scripts/ui/menu/ArcadeBackdrop.cs",
+      "line": 279,
+      "properties": [
+        {
+          "name": "top_radius",
+          "variantBytes": "AwAAAKRwPT4="
+        },
+        {
+          "name": "bottom_radius",
+          "variantBytes": "AwAAAKRwPT4="
+        },
+        {
+          "name": "height",
+          "variantBytes": "AwAAAI/CdTw="
+        },
+        {
+          "name": "radial_segments",
+          "variantBytes": "AgAAADAAAAA="
+        }
+      ],
+      "sha256": "b0b4c89fb71d5c5a52f3340fabf88a6dcf9f3e589206b04818e860126b50ab3b"
+    },
     "073037753131ac7f1563caa17d654fa89893413cefbcfae05474799eebe8fb04": {
       "type": "BoxMesh",
       "properties": [
@@ -766,6 +790,30 @@
         }
       ],
       "sha256": "ad5d6550d55f66d394257f2af39c6bf36c57f5376bd24290072fd4e0cb97e737"
+    },
+    "1888f463cdd26f54ea9f88f9f0176267d4b63cfd570b9ebeea94aa39390409c6": {
+      "type": "CylinderMesh",
+      "source": "scripts/ui/menu/ArcadeBackdrop.cs",
+      "line": 279,
+      "properties": [
+        {
+          "name": "top_radius",
+          "variantBytes": "AwAAAFyPgj4="
+        },
+        {
+          "name": "bottom_radius",
+          "variantBytes": "AwAAAFyPgj4="
+        },
+        {
+          "name": "height",
+          "variantBytes": "AwAAAFyPwj0="
+        },
+        {
+          "name": "radial_segments",
+          "variantBytes": "AgAAADAAAAA="
+        }
+      ],
+      "sha256": "72789f30057f8cd7930d564bf24e8207583f26a8918bca870eab3c0ee3ac3d3c"
     },
     "1ab13fa1f971ed8b141ed6adcd5a28600f8d16b9e6107d57bfb618f1955922d0": {
       "type": "BoxMesh",
@@ -3103,6 +3151,18 @@
       ],
       "sha256": "495c8893cda4ad5d9365ac75a0091c6a5a62c3da908e639fb979ff96616371f7"
     },
+    "710d4ebe3bf09e5242a5bfe79646e5af99f6de5246201ab95ef0e0f57955d70d": {
+      "type": "BoxMesh",
+      "source": "scripts/ui/menu/ArcadeBackdrop.cs",
+      "line": 251,
+      "properties": [
+        {
+          "name": "size",
+          "variantBytes": "CQAAAHsULj5xPYo+KVwPPQ=="
+        }
+      ],
+      "sha256": "713b745bbe24d43c89733b3b51c1f846714d3526985d0016ef2928c226cd0ffd"
+    },
     "71455a8d1f06a6a3c06de80fe7290646c2a55e1be671cd45bc0b0f90503feb51": {
       "type": "CylinderMesh",
       "properties": [
@@ -3348,6 +3408,18 @@
         }
       ],
       "sha256": "be1dca701221785ec6d3933f168c46c1623359012f4db8baed3df8bd363803f8"
+    },
+    "78bc91fc8f0060db3d9805e8c42f6984883e70cbbe0fd336af611f22bbb8c19d": {
+      "type": "BoxMesh",
+      "source": "scripts/rendering/ArtGeometry.cs",
+      "line": 11,
+      "properties": [
+        {
+          "name": "size",
+          "variantBytes": "CQAAAAAAgD/heqhAAABwQQ=="
+        }
+      ],
+      "sha256": "f3635ab61b88ee4240ac5e34482a2c7cdc0dfcfc34ad734c38403d03f4681b84"
     },
     "7908f393ffdd9a06249e4a0ecd57b30d25cc3c31649c1b3b026389eaa855a956": {
       "type": "CylinderMesh",
@@ -4696,6 +4768,30 @@
         }
       ],
       "sha256": "71f74ef8ea671862140f839349efbfdb5b958019176180cbe35b9c20715bf403"
+    },
+    "a42f8321b37fc7387cd590455f16bd23ba04b493fceb2b222ed3dd6f6d75737d": {
+      "type": "CylinderMesh",
+      "source": "scripts/ui/menu/ArcadeBackdrop.cs",
+      "line": 279,
+      "properties": [
+        {
+          "name": "top_radius",
+          "variantBytes": "AwAAAIXrUT4="
+        },
+        {
+          "name": "bottom_radius",
+          "variantBytes": "AwAAAIXrUT4="
+        },
+        {
+          "name": "height",
+          "variantBytes": "AwAAAI/CdTw="
+        },
+        {
+          "name": "radial_segments",
+          "variantBytes": "AgAAADAAAAA="
+        }
+      ],
+      "sha256": "06c9c339b5c42d275b308970c75f518b69bf77c387f5253c94ad24261794ae75"
     },
     "a4b1df8f1705a6724cdcf706aa67df99440c220f62cff630593042917d77d44b": {
       "type": "BoxMesh",
@@ -6285,6 +6381,30 @@
       ],
       "sha256": "17eef7418a22722082996827c353317974b9604ce48b1bdb275095dbef04f0cc"
     },
+    "ea2afb98ad360bdec08fb5b594efe5c57b167bc10b84559da10d9555069bd220": {
+      "type": "TorusMesh",
+      "source": "scripts/arena/effects/MeteorView.cs",
+      "line": 15,
+      "properties": [
+        {
+          "name": "inner_radius",
+          "variantBytes": "AwAAALkeBUA="
+        },
+        {
+          "name": "outer_radius",
+          "variantBytes": "AwAAAM3MDEA="
+        },
+        {
+          "name": "rings",
+          "variantBytes": "AgAAABgAAAA="
+        },
+        {
+          "name": "ring_segments",
+          "variantBytes": "AgAAAAgAAAA="
+        }
+      ],
+      "sha256": "3e900c7a8cf4b2c8d916e13e08ccab09577d50c73d2d1ad48d0081123694a18b"
+    },
     "ea4d8fc71229f80ea3172efda295dfe71a70cd5e8bf596ebdfc3777d112a4294": {
       "type": "SphereMesh",
       "properties": [
@@ -6392,6 +6512,30 @@
         }
       ],
       "sha256": "846bfcf6982eb0bff4a8ffa24b92f9bfc2fe8506b00a9aa1d3ed10597acfa838"
+    },
+    "ee980e0cea6255545584e31aea2f9f34154ae96a843af609666bba9bcbba148c": {
+      "type": "CylinderMesh",
+      "source": "scripts/rendering/ArtGeometry.cs",
+      "line": 57,
+      "properties": [
+        {
+          "name": "top_radius",
+          "variantBytes": "AwAAAGZmJj8="
+        },
+        {
+          "name": "bottom_radius",
+          "variantBytes": "AwAAAGZmJj8="
+        },
+        {
+          "name": "height",
+          "variantBytes": "AwAAAI/CdTw="
+        },
+        {
+          "name": "radial_segments",
+          "variantBytes": "AgAAABgAAAA="
+        }
+      ],
+      "sha256": "57aae8b122e47f2816d9b76177b916cc107f305b077214de0a671b175654275e"
     },
     "ef27019bdb4473bc58cf69e26f009a3b13f21724eb062bd886b854f768448ea6": {
       "type": "CylinderMesh",

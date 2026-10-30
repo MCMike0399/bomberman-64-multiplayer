@@ -32,12 +32,8 @@ internal static class PrimitiveTemplates
         {
             if(!Cache.TryGetValue(key,out var template))
             {
-                _hashes??=JsonSerializer.Deserialize<Dictionary<string,string>>(Godot.FileAccess.GetFileAsString(Root+"hashes.json"))
-                    ??throw new InvalidDataException("Missing primitive template manifest");
-                if(!_hashes.TryGetValue(key,out string? hash))throw new InvalidDataException("Uncaptured primitive request: "+type+" "+key);
-                string path=Root+key+".res";
-                if(Hash(Godot.FileAccess.GetFileAsBytes(path))!=hash)throw new InvalidDataException("Primitive template hash differs: "+key);
-                template=ResourceLoader.Load<ArrayMesh>(path)??throw new InvalidDataException("Primitive template did not load: "+key);
+                template=type=="BoxMesh"&&properties.Length==1&&properties[0].Name=="size"
+                    ?PortableBox(properties[0].Value.AsVector3()):LoadTemplate(key);
                 Cache.Add(key,template);
             }
             // Preserve original constructor ownership and draw ordering. Existing
@@ -60,13 +56,61 @@ internal static class PrimitiveTemplates
         if(index<0)properties.Add((name,value));else properties[index]=(name,value);
         return Get(request.Type,properties.ToArray());
     }
+    private const string UnitBoxKey="3004f732507bff6f87580dd415ba2714a687c125795c6919319e691c426c469f";
+    private static ArrayMesh? _boxSeed;
+    private static ArrayMesh LoadTemplate(string key,bool isolated=false)
+    {
+        _hashes??=JsonSerializer.Deserialize<Dictionary<string,string>>(Godot.FileAccess.GetFileAsString(Root+"hashes.json"))
+            ??throw new InvalidDataException("Missing primitive template manifest");
+        if(!_hashes.TryGetValue(key,out string? hash))throw new InvalidDataException("Uncaptured primitive request: "+key);
+        string path=Root+key+".res";
+        if(Hash(Godot.FileAccess.GetFileAsBytes(path))!=hash)throw new InvalidDataException("Primitive template hash differs: "+key);
+        return ResourceLoader.Load<ArrayMesh>(path,"",isolated?ResourceLoader.CacheMode.Ignore:ResourceLoader.CacheMode.Reuse)??throw new InvalidDataException("Primitive template did not load: "+key);
+    }
+    private static ArrayMesh PortableBox(Vector3 size)
+    {
+        if(!size.IsFinite()||size.X<=0||size.Y<=0||size.Z<=0)throw new ArgumentOutOfRangeException(nameof(size));
+        _boxSeed??=LoadTemplate(UnitBoxKey);
+        var surface=RenderingServer.MeshGetSurface(_boxSeed.GetRid(),0);
+        var format=(RenderingServer.ArrayFormat)surface["format"].AsUInt64();int count=surface["vertex_count"].AsInt32();
+        int stride=checked((int)RenderingServer.MeshSurfaceGetFormatVertexStride(format,count));
+        int offset=checked((int)RenderingServer.MeshSurfaceGetFormatOffset(format,count,(int)Mesh.ArrayType.Vertex));
+        if(stride!=12||offset!=0||(format&RenderingServer.ArrayFormat.FlagCompressAttributes)!=0)
+            throw new InvalidDataException("Portable box requires the pinned uncompressed XYZ seed");
+        byte[] vertices=surface["vertex_data"].AsByteArray();
+        for(int vertex=0;vertex<count;vertex++)for(int axis=0;axis<3;axis++)
+        {
+            var value=vertices.AsSpan(vertex*stride+axis*4,4);
+            float coordinate=System.Buffers.Binary.BinaryPrimitives.ReadSingleLittleEndian(value);
+            System.Buffers.Binary.BinaryPrimitives.WriteSingleLittleEndian(value,coordinate*size[axis]);
+        }
+        surface["vertex_data"]=vertices;surface["aabb"]=new Aabb(-size*.5f,size);
+        var mesh=new ArrayMesh();mesh.Set("_surfaces",new Godot.Collections.Array {surface});return mesh;
+    }
+    internal static int VerifyPortableBoxes()
+    {
+        using var manifest=JsonDocument.Parse(Godot.FileAccess.GetFileAsString(Root+"requests.json"));int count=0;
+        foreach(var entry in manifest.RootElement.GetProperty("requests").EnumerateObject())
+        {
+            if(entry.Value.GetProperty("type").GetString()!="BoxMesh")continue;
+            var property=entry.Value.GetProperty("properties")[0];
+            var size=GD.BytesToVar(Convert.FromBase64String(property.GetProperty("variantBytes").GetString()!)).AsVector3();
+            using var expected=LoadTemplate(entry.Name,true);using var actual=PortableBox(size);
+            if(!GD.VarToBytes(RenderingServer.MeshGetSurface(expected.GetRid(),0)).AsSpan().SequenceEqual(GD.VarToBytes(RenderingServer.MeshGetSurface(actual.GetRid(),0))))
+                throw new InvalidDataException("Portable box differs from original Mac packed data: "+entry.Name);
+            count++;
+        }
+        return count;
+    }
     private static void CaptureMesh(string key,string type,(StringName Name,Variant Value)[] properties,PrimitiveMesh original)
     {
         Directory.CreateDirectory(Capture);
+        if(original.GetSurfaceCount()!=1)throw new InvalidDataException("Primitive authoring requires a populated original surface");
         var surfaces=new Godot.Collections.Array();
         for(int i=0;i<original.GetSurfaceCount();i++)
         {
             var packed=RenderingServer.MeshGetSurface(original.GetRid(),i);
+            if(!packed.ContainsKey("vertex_count")||packed["vertex_count"].AsInt32()<=0)throw new InvalidDataException("Primitive authoring received no original vertices");
             if(packed.ContainsKey("material")||packed.ContainsKey("lods")||packed.ContainsKey("blend_shape_data"))
                 throw new InvalidDataException("Unexpected primitive material/LOD/blend data");
             surfaces.Add(packed);

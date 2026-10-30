@@ -1026,3 +1026,11 @@ requires actual Vulkan; a remembered or automatic Direct3D 12 selection cannot
 silently qualify that lane. Forced Direct3D 12 and injected-crash recovery are
 separate labelled controls. Input-only headless collections may still choose an
 explicit API, and do not establish the default graphical launch path.
+
+
+The public [mesh producer census](../../tools/ci/mesh_producers.py) checks the
+committed source inventory and parameter domains. Regenerating that inventory
+requires review, and cannot replace executing the full core suite. Missing
+closure, meteor or results geometry must fail normal runtime tests before a
+three-OS input measurement is launched; authoring-mode passes do not qualify
+normal consumers. See [the mesh production contract](../mesh-producers.md).

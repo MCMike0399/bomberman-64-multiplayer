@@ -746,8 +746,9 @@ only. See [authoring and verification](../bomber-shared-geometry.md).
 
 `PrimitiveTemplates` replaces engine-generated primitive meshes with hash-pinned
 Mac-authored packed `ArrayMesh` resources. Calls preserve the original property
-setter order. Unknown parameter sets fail explicitly; they never fall back to
-platform-native geometry. Menu resizing requests another immutable resource
+setter order. Unknown finite-domain parameter sets fail explicitly; they never
+fall back to platform-native geometry. Variable box dimensions use the portable
+C# packed-unit-box generator, checked against every original Mac box reference. Menu resizing requests another immutable resource
 instead of changing shared primitive parameters. The original shape parameters
 remain accessible for gameplay-independent visual checks.
 
@@ -803,3 +804,9 @@ are retained. This approval adopts the Mac reference for input verification;
 it does not approve publication, establish native cross-OS input equality or
 qualify final GPU output. Any residual after the single native fix measurement
 must be reported for a decision rather than followed by another fix loop.
+
+The [mesh production contract](../mesh-producers.md) records every construction,
+upload, duplication and geometry-helper source entry and the finite template
+tuples. New entries or changed producing-source bounds fail the public gate
+until reviewed. Normal headless and packaged functional lanes exercise the
+actual end-of-round closure and meteor paths with templates enforced.

@@ -7,6 +7,7 @@ import subprocess
 import doc_links
 import source_layout
 import primitive_templates
+import mesh_producers
 from release_identity import check_exports
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -30,6 +31,7 @@ def main():
     # C# namespaces, file names and folder sizes follow docs/agents/codebase-map.md.
     failures.extend(source_layout.check(ROOT))
     failures.extend(primitive_templates.check(ROOT))
+    failures.extend(mesh_producers.check(ROOT))
     for failure in failures:
         print(failure)
     if failures:

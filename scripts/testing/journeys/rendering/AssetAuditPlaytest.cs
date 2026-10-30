@@ -12,6 +12,7 @@ public partial class PlaytestDriver
 {
     private async Task AssetAudit()
     {
+        Check(PrimitiveTemplates.VerifyPortableBoxes()>0,"portable boxes match every original Mac packed reference");
         if(!_headless)AuditSnowUpload();
         Check(!AuditResourcePresent("res://assets/fonts/asset-audit-missing.ttf"),"asset audit detects a missing bundled resource without accepting a fallback");
         using var empty=new ArrayMesh();
