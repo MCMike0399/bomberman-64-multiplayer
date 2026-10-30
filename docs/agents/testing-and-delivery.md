@@ -965,3 +965,16 @@ The original controller misses the middle floor; bounded steering reaches it.
 Normal player input, authority timing/collision, journey destinations, tolerances
 and deadlines are unchanged. The QA flag is scoped to the peer leg and restored
 in `finally`; source headless evidence does not replace exported native checks.
+
+### Native early-ICE proof on hosts with multiple interfaces
+
+`peer-ice-order` waits for host-only gathering to complete and drains the queued
+native callbacks before reordering the batch. The first candidate is insufficient
+to describe every interface. Every real gathered candidate precedes remote SDP;
+the fixture checks that the SDP contains no embedded candidates and that no later
+signal substitutes for the early batch. Connection and actual data delivery keep
+their existing five-second predicates. The adapter exposes only a read-only
+internal gathering-state observation; production signalling behavior is unchanged.
+Signal counts, gathering/connection flags and the failing stage are written before
+link disposal and retained in native CI. Use those observations to distinguish
+incomplete fixture signalling from an actual native connection failure.

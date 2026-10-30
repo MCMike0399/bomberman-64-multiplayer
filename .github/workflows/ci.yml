@@ -519,6 +519,7 @@ jobs:
             artifacts/*-regression-details/**/progress.json
             artifacts/*-regression-details/**/peer-capacity-diagnostics.json
             artifacts/*-regression-details/**/peer-room-diagnostics.json
+            artifacts/*-regression-details/**/peer-ice-order-diagnostics.json
             artifacts/*-regression-details/**/network-diagnostics.json
             artifacts/*-regression-details/server*.log
             artifacts/*-regression-details/**/junit.xml
@@ -589,6 +590,7 @@ jobs:
             artifacts/*-regression-details/**/peer-capacity-diagnostics.json
             artifacts/*-regression-details/**/display-restart.json
             artifacts/*-regression-details/**/peer-room-diagnostics.json
+            artifacts/*-regression-details/**/peer-ice-order-diagnostics.json
             artifacts/*-regression-details/**/network-diagnostics.json
             artifacts/*-regression-details/**/leaf-memory.json
             artifacts/*-regression-details/server*.log
@@ -640,6 +642,7 @@ jobs:
             artifacts/*-regression-details/**/peer-capacity-diagnostics.json
             artifacts/*-regression-details/**/display-restart.json
             artifacts/*-regression-details/**/peer-room-diagnostics.json
+            artifacts/*-regression-details/**/peer-ice-order-diagnostics.json
             artifacts/*-regression-details/**/network-diagnostics.json
             artifacts/*-regression-details/**/leaf-memory.json
             artifacts/*-regression-details/server*.log
