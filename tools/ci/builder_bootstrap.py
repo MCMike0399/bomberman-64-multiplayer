@@ -68,7 +68,7 @@ export DOTNET_ROOT="$root/dotnet"
 export DOTNET_CLI_HOME="$root/dotnet-home"
 export VK_DRIVER_FILES="$(cat "$root/nvidia-icd.txt")"
 export PATH="$root/dotnet:$root/venv/bin:$PATH"
-runuser -u ubuntu -- "$root/venv/bin/python" "$root/bin/builder_guest.py" --task "$root/task.json" --manifest "$root/manifest.json" --cache "$root/cache" --work "$root/work" > "$root/worker.log" 2>&1
+runuser -u ubuntu -- env AWS_CONFIG_FILE="$root/aws-config" DOTNET_ROOT="$root/dotnet" DOTNET_CLI_HOME="$root/dotnet-home" VK_DRIVER_FILES="$VK_DRIVER_FILES" PATH="$root/dotnet:$root/venv/bin:/usr/local/bin:/usr/bin:/bin" "$root/venv/bin/python" "$root/bin/builder_guest.py" --task "$root/task.json" --manifest "$root/manifest.json" --cache "$root/cache" --work "$root/work" > "$root/worker.log" 2>&1
 '''
 
 WINDOWS_SETUP=r'''$ErrorActionPreference='Stop'
