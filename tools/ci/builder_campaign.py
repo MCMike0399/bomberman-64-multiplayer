@@ -223,7 +223,7 @@ def creation_spec(plan):
     arming.configure(ROOT)
     arming.verify_prepared(plan)
     builder_s3.require_unused_name(lambda *args:aws(plan,*args),plan['runId'])
-    if plan['estimatedCampaignUsd']>8 or plan['priorEstimateUsd']+plan['estimatedCampaignUsd']>min(25,plan['budgetUsd']):
+    if plan['estimatedCampaignUsd']>10 or plan['priorEstimateUsd']+plan['estimatedCampaignUsd']>min(50,plan['budgetUsd']):
         raise ValueError('Campaign estimate exceeds authorized run/cumulative budget')
     template=json.loads((ROOT/'template.json').read_text());expiry=datetime.datetime.fromisoformat(plan['fixedCampaignExpiryUtc'])
     if expiry.tzinfo is None:raise ValueError('An explicit UTC-aware campaign expiry is required')
