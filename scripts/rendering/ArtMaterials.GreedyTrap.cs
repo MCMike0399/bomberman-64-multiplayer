@@ -24,7 +24,7 @@ uniform float quality_premium=0.0;
 uniform float compression=0.0;
 varying vec3 world;
 varying vec3 world_normal;
-float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+""" + "\n" + IntegerNoiseHash + "\n" + """
 vec2 hash2(vec2 p){return vec2(hash(p),hash(p+vec2(43.7,17.2)));}
 float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1)),f.x),f.y);}
 void vertex(){world=(MODEL_MATRIX*vec4(VERTEX,1)).xyz;world_normal=normalize(MODEL_NORMAL_MATRIX*NORMAL);}

@@ -1,0 +1,267 @@
+# Desktop clients
+
+Windows x64 and Linux x64 default to Vulkan, with Godot Forward+.
+Apple Silicon retains Metal. Gameplay and online release identity share the
+same source and `Release.props`.
+
+Windows can fall back to Direct3D 12 when Vulkan initialization returns an
+error. Its small launcher writes a durable marker before starting the engine;
+an incomplete Vulkan startup selects and remembers Direct3D 12 on the next
+launch. Settings offers Auto, Vulkan and DirectX 12 for the next launch, and
+the installer includes a DirectX 12 shortcut. The game records the requested
+and actual driver plus the fallback reason. Promotion rejects an unexplained
+driver change. The public launcher is `BlastCircuit.exe`; the engine payload
+is `BlastCircuit.Player.exe` with `BlastCircuit.Player.pck`.
+
+Automatic OpenGL fallback is disabled. An explicitly selected Compatibility
+renderer displays a reduced-graphics notice and reports a distinct state;
+it cannot satisfy the full-quality graphics gates. Linux packages enable
+invariant globalization so startup does not require a system ICU installation.
+
+Hosted Windows functional checks explicitly use the supported Direct3D 12 API
+on WARP and record that choice. They do not qualify Vulkan or full-quality
+graphics. The separate injected default-Vulkan startup/crash/recovery control
+retains its initialization diagnostics; no engine errors are filtered out.
+The shipping Vulkan default and full High graphics require actual GPU evidence.
+
+Keyboard P1 precision aim accepts L or Shift on every OS. The Windows launcher
+temporarily clears only the shortcut/confirmation flags of disabled Sticky,
+Filter and Toggle Keys while the engine window is focused. Enabled features
+and unrelated settings are preserved. Focus loss and engine exit restore the
+saved flags, including an abnormal engine exit; the surviving launcher owns
+restoration. SystemParametersInfo calls use zero update flags and do not write
+the system profile. A Windows-native control records the before/after values.
+
+## Downloads and signed updates
+
+The requested player downloads are a per-user Windows installer
+`Blast-Circuit-windows-x64-Setup.exe`, Linux `Blast-Circuit-linux-x64.AppImage`
+and macOS `Blast-Circuit-macos-arm64.dmg`.
+Windows installs without administrator privileges. Each client includes its
+.NET runtime, PCK, native networking library and notices. Windows executables
+are not Authenticode signed; the signed delivery inventory authenticates the
+installer. The DMG retains the existing ad-hoc Mac signature.
+
+Settings enables automatic signed update checks on installed releases. Windows
+replaces the complete installed folder after the old game exits. Linux replaces
+the original AppImage outside its temporary mount. A detached helper launches
+the replacement and requires a matching health token; launch failure or a
+missing response restores and relaunches the previous payload. Desktop cold
+rendering gets a bounded 180-second health window. The Mac transaction stays
+unchanged. P-256 signatures, bounded downloads and SHA-256 authenticate update
+payloads. Preferences remain outside the installation.
+
+Installation or file-move failures relaunch the previous game and remain
+retryable. Only an explicit replacement launch or health failure quarantines
+that version. Online menus provide a manual latest-release download link.
+The Windows updater waits for the verified launcher parent, which in turn
+waits for its engine child, before replacing the installation directory.
+
+ZIPs remain available as portable runtimes and updater/archive inputs. Online
+clients must match the server's exact version/build. Enabled packages, native
+regression receipts, player downloads and signed platform update manifests are
+published together. These paths remain source work until the exact candidate
+passes target-OS validation.
+
+## Independent platform QA
+
+Mac stable releases can continue on `main` while platform delivery is validated
+on its separate branch and worktree. Keep candidate archives in private
+`qa-desktop-<full-source-SHA>` drafts and run them against the harness-owned,
+matching server. Do not deploy these candidates to maintained workers or install
+them over the developer's stable Mac app.
+
+The candidate workflow pins its signed Mac updater baseline to v0.43.0 instead
+of following latest. Its receipt declares an explicit diagnostic baseline, which
+cannot satisfy the stable publication gate. Candidate tests disable background
+updates in their disposable guest; normal players retain the stable update feed.
+Mac releases therefore do not change this QA input or its staged server.
+
+The branch's v0.44.0/build54 identity is internal test data and reserves no public
+version. The 2026-10-29 user strategy integrates current `main` into this QA branch
+now, preserving the independent stable branch. Avoid repeatedly chasing later
+Mac releases; do one small final re-merge if needed. Keep the internal test
+identity until selecting the next available public version and build for
+publication, then rebuild and verify the combined source. Final trusted gates must use those exact bytes and test updating
+from the actual latest stable release before matching-server deployment and
+publication. Earlier candidate evidence remains attached to its original SHA.
+
+## Build and verify
+
+Build with .NET 10, the pinned private dependency and official matching Godot
+.NET export templates. Portable clients can cross-export; installers and tests
+run on their actual target systems.
+
+AppImage construction uses the versioned `appimagetool` 1.9.1 asset with its
+verified SHA-256, rather than a replaceable continuous tool download. The
+separately pinned type-2 runtime and its source notice remain unchanged.
+
+```sh
+python3 tools/packaging/package-desktop.py --target windows-x64 --godot /path/to/godot
+python3 tools/packaging/package-download.py --target windows-x64
+python3 tools/packaging/verify-desktop.py --target windows-x64 --disposable-desktop
+python3 tools/packaging/verify-desktop.py --target windows-x64 --graphical --disposable-desktop
+```
+
+The regression tool requires the matching archived server and metadata beside
+the client archive. It installs the real Windows EXE into a path containing
+spaces and compares every installed payload hash before testing. Linux runs the actual AppImage. Only the harness's own server starts, on a fresh
+Kestrel-selected loopback port.
+
+Headless regression covers the complete core suite, direct/relay peer rooms,
+adaptive rooms, Greedy Trap server gameplay and slow polling. Graphical mode
+runs the `controller-popups` preflight, every `all` tour, and the additional
+menu-preview and water journeys. Every case retains
+exact leaf order, catalog hash, compiled release/platform, assertions, captures
+and runtime errors. Promotion rejects package-smoke-only receipts. CI retains
+failure summaries, JUnit, runtime logs and failure captures.
+Windows regression refuses a personal desktop by default because the production
+AppId owns per-user installer registration and shortcuts. Use a disposable VM or
+profile (`--disposable-desktop` outside CI); the runner uninstalls its fixture in
+cleanup before removing the temporary payload.
+
+The opt-in `desktop-validation` PR label runs native hosted tests of separately
+prepared exact-SHA draft candidate assets, without private build credentials.
+Private builds still run only on trusted main. The independent
+`tests/Bomber.DesktopUpdate.Tests` process fixtures exercise helper handoff,
+replacement, uninstall preservation and launch rollback. Actual exported-game
+transactions are also mandatory through `verify-desktop-update.py`. They use a
+synthetic newer fixture identity, verify healthy renderer relaunch (including
+saved High/fullscreen settings) and deliberate
+pre-health rollback, compare complete inventories, and uninstall after Windows
+updates. These tests require disposable Windows/Linux desktops or profiles.
+The Windows payload carries an exact `installed-files.txt` inventory. Its
+preserved uninstaller reads the current inventory so files and directories added
+by later updates are removed too. It deletes listed files and empty directories
+inside the installation, rejecting outside paths and reparse parents, while
+preserving unrelated files. Newer update fixtures add both a root file and a new
+directory; actual game-update tests require complete removal after uninstall.
+Windows transactions allow up to ten seconds per atomic rename for native
+access/sharing/lock violations (5/32/33), including rollback after process termination.
+Persistent permission denial still fails at that bound; no permissions change.
+Other I/O failures are immediate. The native helper regression first proves a
+real directory handle blocks renaming, then holds it across replacement and
+rollback; the diagnostic lane compares the retained old transaction with the fix.
+Updater parent/child markers use an exact kernel birth identity. Linux compares
+the boot ID and `/proc/PID/stat` field22 start counter, avoiding wall-clock
+`Process.StartTime` estimates that can differ across runtimes. Windows retains
+its kernel creation timestamp, and the existing Mac shell marker is unchanged.
+Both handoff and cleanup reject a reused PID without controlling that process.
+`startup-desktop.py` covers all nine saved preset/display launches using separate
+preference files and captures. Ordinary player preferences are not rewritten.
+Promotion compares complete regression receipts with the exact player-download
+and archived-server hashes, including Mac and mixed-platform evidence.
+
+## Evidence limits
+
+Headless execution establishes packaged gameplay and loopback multiplayer.
+D3D12/Vulkan visuals, native performance, physical pad hotplug/rumble,
+X11/Wayland behavior and mixed-OS Internet play require their own evidence.
+Run the full native renderer suite and inspect captures before claiming visual
+parity. The SDL/libusb Switch 2 USB backend remains Mac-only; observe individual
+Windows/Linux physical pads before claiming their support. Linux x64 initially
+targets Ubuntu 24.04; ARM64 and other distributions need separate validation.
+
+
+## One three-platform release witness
+
+The release also requires complete DMG-installed Mac regression and
+`cross-platform-quick-play`. The latter launches one actual installed Windows
+client, Linux AppImage and DMG-installed Mac client against the same isolated
+packaged server. An ephemeral HTTPS test tunnel exposes only that disposable
+server; maintained workers and player rooms are not used for this pre-release
+journey. The tunnel executable is hash-pinned and stops with its runner.
+
+An Actions artifact barrier waits for all three real renderers before joining.
+Windows leaves and rejoins; every client must observe its replacement identity
+and the same fresh one-minute deadline. All three then observe the same server
+match, accepted movement and carried bombs from every participant. A late
+stranger must get another waiting room. A second barrier keeps original players
+connected until every witness finishes. Complete source/release, driver, capture,
+shared roster and player-download hash evidence is signed into
+`Blast-Circuit-crossplay.json`. Independent per-OS passes cannot replace it.
+
+The full headless suite also exercises an eight-player direct-peer room. Native
+rendering receipts identify the adapter, including software/paravirtual adapters;
+those runs establish functional rendering rather than physical GPU throughput.
+CPU-device graphics preparation has a bounded 180-second QA allowance; hardware
+devices retain 20 seconds. Windows D3D12 also recognizes the exact
+`Microsoft Basic Render Driver` name: the retained native run reported this
+[WARP software adapter](https://learn.microsoft.com/en-us/windows/win32/direct3ddxgi/d3d10-graphics-programming-guide-dxgi)
+as `IntegratedGpu` and drew only 15 preparation frames before the 20-second
+deadline. Other integrated GPUs retain the hardware allowance. The explicit
+software-renderer runner allows 3.5 hours for each tour and `menu-preview`,
+1.5 hours for other cases, and rejects
+receipts identifying neither a CPU device nor that exact Windows/D3D12 WARP
+adapter. The retained Linux failure drew only 14 preparation frames in the
+ordinary 20-second budget. These allowances change test scheduling, not game
+graphics or loading behavior, and cannot certify native GPU responsiveness.
+The retained 2026-10-28 Linux run reached 25,230 frames and 3,643 assertions
+in 7,179 seconds, still advancing through `aim-inputs` when the old two-hour
+suite limit terminated it. The matching successful Mac tour needed 58,692
+frames; extrapolating the observed Linux rate gives roughly 4 hours 40 minutes.
+The retained Windows WARP run in the same CI run was far slower. It needed
+about 90 minutes for `graphics-settings` alone and about 5 minutes per stage
+load, completing 5 of 61 leaves in 7,128 seconds. A serial WARP tour would need
+roughly 20 hours, beyond any hosted job limit.
+
+The catalog therefore composes `all` from 21 contiguous `tour-NN` suites.
+Mac still runs `all` in one process, which also covers cross-leaf sequencing.
+Windows and Linux run each tour in a fresh process on separate runners.
+`desktop_validation.SOFTWARE_PARTS` assigns 22 Windows runners and
+5 Linux runners. Each player download is built once per target and shared by
+every part, so all parts test identical installer/AppImage bytes. The final
+`Exported <target> smoke` job merges the part receipts. Promotion requires that
+job to succeed. The merge rejects a missing or repeated case, mismatched
+source/release, or different archive, server or download hashes. It also
+requires the tours' completed leaves to equal the catalog's `all` order
+exactly. Every journey, capture, assertion and zero-error check is unchanged;
+only scheduling moves across runners.
+
+Some journeys wait for network or preparation events with wall-clock
+deadlines. On WARP those waits saw as few as 4 frames in 20 seconds. The
+driver's `Waiting` helper keeps hardware deadlines, but on a verified software
+renderer also allows the frames a 30 FPS machine would draw in that time.
+A wedged predicate still fails.
+
+The 2026-10-28 run compared same-label captures with Mac. Windows WARP High
+matched Mac sharpness within 1%. Linux llvmpipe High was blurred across the
+whole 3D scene (about 45% of Mac's edge sharpness), while Low/Medium matched.
+A minimal engine scene with the game's depth-of-field settings isolates the
+cause: on llvmpipe, 2x MSAA halves in-focus sharpness (0.127 to 0.059), while
+the same scene on Apple M5 hardware is unaffected under both Metal and
+Vulkan (MoltenVK) (0.127 either way). This is an observed limitation of llvmpipe with MSAA on; the evidence points
+at its resolved depth, but the exact driver cause is unconfirmed. The High
+water mirror marches that same resolved depth. On llvmpipe its reflection
+on/off probe differed by 0 pixels even with depth of field disabled, and by
+666 with MSAA off (Mac 663). The game is unchanged. On verified software
+renderers only, the probe compares reflection on/off with MSAA temporarily
+disabled, which validates that narrower path rather than the shipped MSAA one.
+MoltenVK on Apple hardware is not a test of Linux GPU drivers. No physical
+Linux or Windows GPU has been tested, and that coverage remains missing.
+
+Desktop updates publish the helper's `ready` marker atomically. Native run
+40681932218 caught the old game reading that marker between its creation and
+its write, which rejected a valid Linux update. The game now treats a missing,
+empty or partial token as not ready yet and still rejects any different
+complete token. The reader ships in this release, so it also tolerates
+non-atomic helpers.
+
+The disposable Linux desktop supplies X11 and a PulseAudio null sink. Physical
+speakers, controllers, native performance and Wayland remain separate evidence.
+The disposable Windows fixture selects a real supported 32-bit display mode and
+requires enough actual desktop work area for the unchanged 1600×1000 window
+test, including the game's existing 48×80 decoration allowance. Its taskbar is
+hidden within the disposable desktop when needed; no pixels beyond the selected
+OS mode are invented. It also requires a usable WASAPI endpoint.
+When no endpoint exists, it downloads the hash-pinned basic
+[VB-CABLE 45](https://vb-audio.com/Cable/) driver from its vendor and requires
+ordinary Windows signature validation of its installer and Microsoft hardware
+catalog. No trust-store changes, test-signing mode or dummy backend override
+are used. This donationware is a CI prerequisite only, subject to its
+[vendor terms](https://vb-audio.com/Services/licensing.htm); it is not shipped in
+the game downloads. The fixture fails if its real endpoint or display is absent.
+Saved-display process restoration runs sequentially after the main graphical
+process exits. Its unchanged 90-second child deadline, real persisted settings,
+independent capture/check receipt and zero-error requirement remain release gates.
+This avoids resident parent/child renderer contention without changing game graphics.

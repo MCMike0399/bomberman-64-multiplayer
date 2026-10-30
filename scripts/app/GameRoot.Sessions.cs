@@ -87,7 +87,7 @@ public partial class GameRoot
     private void Begin(ISession session,bool online)
     {
         _uiAudio.MenuConfirm();
-        ReleaseSession();_arena.ResetMatch();_session=session;LatestStage=null;LatestState=null;_result=null;_lobby=null;SnapshotCount=0;_injected.Clear();_hud.Reset();_hud.Practice=_practice;_menu.ResetLobby();_partyMatch=-1;_networkGeneration=0;
+        ReleaseSession();_arena.ResetMatch();_session=session;LatestStage=null;LatestState=null;LatestParty=null;FirstNetworkStateServerTime=null;_result=null;_lobby=null;SnapshotCount=0;_injected.Clear();_hud.Reset();_hud.Practice=_practice;_menu.ResetLobby();_partyMatch=-1;_networkGeneration=0;
         ControllerHub.Current.BeginMatch(session.LocalPlayerCount);
         ApplyStageLighting();
         if(online)
@@ -103,8 +103,12 @@ public partial class GameRoot
 
     public void InjectInput(int seat,PlayerInput? input)
     {
-        if(input is { } value)_injected[seat]=value;else _injected.Remove(seat);
+        if(input is { } value)_injected[seat]=()=>value;else _injected.Remove(seat);
     }
+
+    // QA providers may expire a synthetic hold before a stalled frame republishes it.
+    // Real device sampling remains in PlayerControls.
+    public void InjectInputProvider(int seat,Func<PlayerInput> input)=>_injected[seat]=input;
 
     private void ContinueAfterResults()
     {

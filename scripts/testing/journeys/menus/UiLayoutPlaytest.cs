@@ -50,7 +50,7 @@ public partial class PlaytestDriver
         }
         _root.Navigate("Modes");await Frames(3);
     }
-    /// <summary>Every visible control lies inside the nearest card/panel that frames it, and single-line fields show all their text.</summary>
+    /// <summary>Every painted control lies inside its card (respecting real scroll clipping), and single-line fields show all their text.</summary>
     private void AuditCards(string page)
     {
         int audited=0;var problems=new List<string>();
@@ -59,7 +59,9 @@ public partial class PlaytestDriver
             var card=Ancestors(control).OfType<PanelContainer>().FirstOrDefault();
             if(card==null)continue;
             audited++;
-            if(!card.GetGlobalRect().Grow(1).Encloses(control.GetGlobalRect()))problems.Add($"{control.GetPath()} {control.GetGlobalRect()} outside {card.GetGlobalRect()}");
+            var painted=control.GetGlobalRect();
+            foreach(var scroll in Ancestors(control).OfType<ScrollContainer>())painted=painted.Intersection(scroll.GetGlobalRect());
+            if(painted.HasArea()&&!card.GetGlobalRect().Grow(1).Encloses(painted))problems.Add($"{control.GetPath()} {painted} outside {card.GetGlobalRect()}");
             if(control is LineEdit field)
             {
                 var font=field.GetThemeFont("font");int size=field.GetThemeFontSize("font_size");var style=field.GetThemeStylebox("normal");

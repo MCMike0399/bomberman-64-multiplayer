@@ -1,0 +1,123 @@
+name: Full High visual parity diagnostics
+
+on:
+  push:
+    branches: [qa/three-platform-release]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  native:
+    name: Full High ${{ matrix.target }}
+    if: vars.BLAST_VISUAL_RUNNER_SHA == github.sha
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: macos-arm64
+            runner: macos-15
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Download only this exact private client payload
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PAYLOAD: ${{ vars.BLAST_VISUAL_SHA }}
+          TARGET: ${{ matrix.target }}
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os, re, subprocess
+          sha, target = os.environ['PAYLOAD'], os.environ['TARGET']
+          assert re.fullmatch('[0-9a-f]{40}', sha)
+          patterns = ['Blast-Circuit-' + target + '.zip*']
+          if target == 'macos-arm64':
+              patterns += ['build-metadata.json', 'Blast-Circuit-macos-arm64.dmg*', 'Blast-Circuit-macos-arm64-download.json']
+          else:
+              patterns += ['Blast-Circuit-' + target + '-metadata.json']
+          command = ['gh', 'release', 'download', 'qa-desktop-' + sha, '--dir', 'artifacts']
+          for pattern in patterns: command += ['-p', pattern]
+          subprocess.run(command, check=True, timeout=300)
+          PY
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y fuse3 squashfs-tools xvfb openbox pulseaudio mesa-vulkan-drivers vulkan-tools
+      - if: runner.os == 'Windows'
+        run: ./tools/packaging/windows-test-desktop.ps1
+      - if: runner.os == 'macOS'
+        run: python3 tools/packaging/macos-test-display.py
+      - name: Build the real player download from the frozen client archive
+        if: runner.os != 'macOS'
+        env:
+          TARGET: ${{ matrix.target }}
+        shell: bash
+        run: python tools/packaging/package-download.py --target "$TARGET"
+      - name: Capture original High twice with exact inventories and feature controls
+        env:
+          TARGET: ${{ matrix.target }}
+          PAYLOAD: ${{ vars.BLAST_VISUAL_SHA }}
+        shell: bash
+        run: |
+          python - <<'PYVISUAL'
+          import os, pathlib, subprocess, sys
+          root = pathlib.Path.cwd(); environment = root / 'artifacts/parity-venv'
+          subprocess.run([sys.executable, '-m', 'venv', str(environment)], check=True)
+          executable = environment / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python')
+          subprocess.run([str(executable), '-m', 'pip', 'install', 'Pillow==13.0.0'], check=True)
+          target = os.environ['TARGET']
+          command = [str(executable), 'tools/ci/visual_parity.py', '--target', target, '--expected-revision', os.environ['PAYLOAD'], '--output', 'artifacts/visual-parity-' + target]
+          if target == 'linux-x64': command = [str(executable), 'tools/packaging/linux-desktop.py', '--', *command]
+          subprocess.run(command, check=True)
+          PYVISUAL
+      - name: Retain matching Mac baselines for the other six frozen stages
+        if: always() && runner.os == 'macOS'
+        env:
+          PAYLOAD: ${{ vars.BLAST_VISUAL_SHA }}
+        shell: bash
+        run: |
+          artifacts/parity-venv/bin/python - <<'PYSTAGES'
+          import json, os, pathlib, sys, time
+          root=pathlib.Path.cwd();sys.path.insert(0,str(root/'tools/ci'))
+          import gpu_campaign
+          base=root/'artifacts/visual-parity-macos-arm64'
+          core=json.loads((base/'visual-parity-native.json').read_text())
+          adapter=core['runs'][0]['device']['adapter']
+          result=gpu_campaign.collect_stage_captures(root/'artifacts',base/'all-stages','macos-arm64',os.environ['PAYLOAD'],
+              base/'provenance.json',time.time()+45*60,driver='metal',expected_adapter=adapter,processes=1)
+          print(json.dumps({'collectionComplete':result['collectionComplete'],'repeatsExact':result['repeatsExact'],'actualAdapter':adapter,'errors':result['errors']}))
+          raise SystemExit(0 if result['collectionComplete'] and result['repeatsExact'] else 1)
+          PYSTAGES
+      - if: always() && runner.os == 'macOS'
+        run: python3 tools/packaging/macos-test-display.py --stop
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: visual-parity-${{ matrix.target }}
+          path: |
+            artifacts/visual-parity-${{ matrix.target }}/visual-parity-native.json
+            artifacts/visual-parity-${{ matrix.target }}/provenance.json
+            artifacts/visual-parity-${{ matrix.target }}/vulkaninfo*.txt
+            artifacts/visual-parity-${{ matrix.target }}/run-*/*.json
+            artifacts/visual-parity-${{ matrix.target }}/run-*/*.png
+            artifacts/visual-parity-${{ matrix.target }}/run-*/*.bin
+            artifacts/visual-parity-${{ matrix.target }}/run-*/*.jsonl.gz
+            artifacts/visual-parity-${{ matrix.target }}/run-*/*.log
+            artifacts/visual-parity-${{ matrix.target }}/run-*/*/report.json
+            artifacts/visual-parity-${{ matrix.target }}/fresh-process/report.json
+            artifacts/visual-parity-${{ matrix.target }}/all-stages/stage-captures.json
+            artifacts/visual-parity-${{ matrix.target }}/all-stages/*/run-*/*.json
+            artifacts/visual-parity-${{ matrix.target }}/all-stages/*/run-*/*.bin
+            artifacts/visual-parity-${{ matrix.target }}/all-stages/*/run-*/*.png
+            artifacts/visual-parity-${{ matrix.target }}/all-stages/*/run-*/*.log
+            artifacts/visual-parity-${{ matrix.target }}/all-stages/*/run-*/*/report.json
+            artifacts/visual-parity-${{ matrix.target }}/all-stages/*/fresh-process/report.json
+          retention-days: 14
+          if-no-files-found: error

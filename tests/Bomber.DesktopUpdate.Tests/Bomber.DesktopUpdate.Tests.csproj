@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType></PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../src/Bomber.Client/Updates/DesktopUpdateHistory.cs" Link="DesktopUpdateHistory.cs" />
+    <Compile Include="../../src/Bomber.Client/Updates/DesktopProcessIdentity.cs" Link="DesktopProcessIdentity.cs" />
+    <Compile Include="../../src/Bomber.Client/Updates/DesktopUpdateRequest.cs" Link="DesktopUpdateRequest.cs" />
+    <Compile Include="../../src/Bomber.Client/Updates/DesktopUpdateTransaction.cs" Link="DesktopUpdateTransaction.cs" />
+  </ItemGroup>
+</Project>

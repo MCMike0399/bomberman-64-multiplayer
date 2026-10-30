@@ -100,8 +100,8 @@ public partial class PlaytestDriver
         }
         async Task Until(Func<bool> ready, string description)
         {
-            var clock = Stopwatch.StartNew();
-            while (!ready() && clock.Elapsed.TotalSeconds < 30)
+            var clock = Stopwatch.StartNew(); ulong startFrame = Godot.Engine.GetProcessFrames();
+            while (!ready() && Waiting(clock, 30, startFrame))
             {
                 await Frames(1); await Task.Delay(10);
             }
@@ -116,6 +116,7 @@ public partial class PlaytestDriver
         private readonly GodotPeerLink _inner = new(useStun);
         private int _states;
         public bool Connected => _inner.Connected;
+        public bool Failed => _inner.Failed;
         public bool DisposableSnapshots => _inner.DisposableSnapshots;
         public event Action<JsonElement>? Signal;
         public event Action<byte[]>? Received;

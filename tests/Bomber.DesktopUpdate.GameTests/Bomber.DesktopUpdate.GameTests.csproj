@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType></PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../src/Bomber.Client/Startup/WindowsLaunchGuard.cs" Link="Startup/WindowsLaunchGuard.cs" />
+    <Compile Include="../../src/Bomber.Client/Updates/*.cs" Link="Updates/%(Filename)%(Extension)" />
+    <EmbeddedResource Include="../../src/Bomber.Client/Updates/UpdatePublicKey.txt" LogicalName="BlastCircuit.UpdatePublicKey" />
+  </ItemGroup>
+</Project>

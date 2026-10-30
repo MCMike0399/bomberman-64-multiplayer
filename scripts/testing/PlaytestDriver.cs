@@ -1,6 +1,7 @@
 using Godot;
 using Bomber.Client.Sessions;
 using Bomber.Game.Matches;
+using Bomber.Game.Online;
 using System.Diagnostics;
 using System.Text.Json;
 using BlastCircuit.App;
@@ -23,9 +24,16 @@ public partial class PlaytestDriver : Node
     private int _frame, _lastSnapshot = -1, _captureFallbacks;
     private readonly List<object> _checks = [];
     private readonly List<string> _screenshots = [];
+    private readonly List<object> _graphicsPreparations = [];
     private readonly Dictionary<int, PlayerInput> _inputs = [];
     private readonly Stopwatch _clock = new();
     private bool _headless, _windowedRequested;
+    private bool _displayRestartRequested;
+    private bool _slowMovementFeedback;
+    // QA-only: block the engine thread each frame to reproduce software-renderer
+    // frame times headlessly. Recorded in the summary; release receipts reject it.
+    private int _frameStallMs;
+    public override void _Process(double delta){if(_frameStallMs>0)System.Threading.Thread.Sleep(_frameStallMs);}
 
     public static bool TryAttach(GameRoot root)
     {
@@ -44,6 +52,7 @@ public partial class PlaytestDriver : Node
         _scenario=Arg("--playtest","all");
         _output=Path.GetFullPath(Arg("--playtest-output",ProjectSettings.GlobalizePath("res://artifacts/playtest")));
         _server=Arg("--playtest-server",_server);
+        _frameStallMs=Math.Clamp(int.TryParse(Arg("--playtest-frame-stall-ms","0"),out int stall)?stall:0,0,5000);
         Directory.CreateDirectory(_output);
         _trace=new StreamWriter(Path.Combine(_output,"trace.jsonl")) { AutoFlush=true };
         _headless=DisplayServer.GetName()=="headless";
@@ -71,21 +80,29 @@ public partial class PlaytestDriver : Node
         }
         finally
         {
+            var backend=RendererBackend.Observe();
             var summary=new { schemaVersion=1,catalogSha256=_catalogHash,completedScenarios=_completedScenarios,scenario=_scenario,passed=failure==null,frames=_frame,seconds=_clock.Elapsed.TotalSeconds,
-                assertions=_checks.Count,checks=_checks,screenshots=_screenshots,captureFallbacks=_captureFallbacks,screenshotMode=_headless?"disabled-headless":"graphical",
-                failure=failure?.ToString(),screen=_root.ScreenName,snapshots=_root.SnapshotCount,finalState=_root.LatestState };
+                assertions=_checks.Count,checks=_checks,frameStallMs=_frameStallMs,screenshots=_screenshots,captureFallbacks=_captureFallbacks,screenshotMode=_headless?"disabled-headless":"graphical",
+                failure=failure?.ToString(),screen=_root.ScreenName,snapshots=_root.SnapshotCount,finalState=_root.LatestState,
+                platform=OS.GetName(),renderingDriver=backend.Driver,requestedDriver=backend.RequestedDriver,fallbackReason=backend.FallbackReason,
+                renderingMethod=RenderingServer.GetCurrentRenderingMethod(),adapter=RenderingServer.GetVideoAdapterName(),
+                adapterType=RenderingServer.GetVideoAdapterType().ToString(),
+                displayRestartRequested=_displayRestartRequested,displayRestoration=args.Contains("--playtest-restore-display"),
+                release=new {version=OnlineProtocol.ReleaseVersion,build=OnlineProtocol.ReleaseBuild,
+                    protocolRevision=OnlineProtocol.Revision,admissionToken=OnlineProtocol.WireRevision,revision=OnlineProtocol.SourceRevision} };
             File.WriteAllText(Path.Combine(_output,"summary.json"),JsonSerializer.Serialize(summary,new JsonSerializerOptions { WriteIndented=true }));
             _trace.Dispose();
             GD.Print($"PLAYTEST_{(failure==null?"PASS":"FAIL")} scenario={_scenario} frames={_frame} assertions={_checks.Count} screenshots={_screenshots.Count} output={_output}");
-            _root.GetTree().Quit(failure==null?0:1);
+            _root.RequestQuit(failure==null?0:1);
         }
     }
 
     private async Task KeyPress(Key key,bool alt=false)
     {
-        Godot.Input.ParseInputEvent(new InputEventKey {Keycode=key,PhysicalKeycode=key,AltPressed=alt,Pressed=true});
+        int InputWindow(){int popup=DisplayServer.WindowGetActivePopup();return popup>=0?popup:GetWindow().GetWindowId();}
+        Godot.Input.ParseInputEvent(new InputEventKey {WindowId=InputWindow(),Keycode=key,PhysicalKeycode=key,AltPressed=alt,Pressed=true});
         await Frames(1);
-        Godot.Input.ParseInputEvent(new InputEventKey {Keycode=key,PhysicalKeycode=key,AltPressed=alt,Pressed=false});
+        Godot.Input.ParseInputEvent(new InputEventKey {WindowId=InputWindow(),Keycode=key,PhysicalKeycode=key,AltPressed=alt,Pressed=false});
         await Frames(3);
     }
     private async Task ResizeWindow(Vector2I size)
@@ -213,6 +230,7 @@ public partial class PlaytestDriver : Node
         for(var i=0;i<maxFrames;i++)
         {
             var dx=x-Player.GetProperty("x").GetSingle();var dz=z-Player.GetProperty("z").GetSingle();
+            if(network&&_slowMovementFeedback)System.Threading.Thread.Sleep(180);
             if(MathF.Sqrt(dx*dx+dz*dz)<tolerance)
             {
                 Input(0,default);
@@ -226,6 +244,22 @@ public partial class PlaytestDriver : Node
                 await Frames(3);Check(true,$"walk to {x},{z}");return;
             }
             Input(0,new PlayerInput(Math.Clamp(dx*4,-1,1),Math.Clamp(dz*4,-1,1)));
+            if(_root.ActiveSession is NetworkSession connection&&connection.Party?.Hosting is not ("peer" or "auto"))
+            {
+                // An observer controls a real-time server from delayed snapshots.
+                // Bound the ordinary key press independently of a stalled engine
+                // frame, then observe fresh snapshots after release before steering.
+                var release=Task.Run(async()=>
+                {
+                    await Task.Delay(50).ConfigureAwait(false);
+                    connection.SendInput(0,default);
+                });
+                try {await Frames(1);await release;}
+                finally {Input(0,default);}
+                int stoppedAt=_root.SnapshotCount;
+                await WaitState(_=>_root.SnapshotCount>=stoppedAt+3,"network control pulse settles after release",120);
+                continue;
+            }
             await Frames(1);
             if(_root.ActiveSession is NetworkSession)await Task.Delay(16);
         }
@@ -236,7 +270,158 @@ public partial class PlaytestDriver : Node
         _checks.Add(new { description,passed,frame=_frame }); Event("assert",new {description,passed});
         if(!passed)throw new InvalidOperationException("Assertion failed: "+description);
     }
+    // Verified software rasterizers: Mesa's CPU device, or Windows WARP, which
+    // Godot's D3D12 driver reports as IntegratedGpu under this exact name.
+    private static bool SoftwareRenderer=>RenderingServer.GetVideoAdapterType()==RenderingDevice.DeviceType.Cpu||
+        OS.GetName()=="Windows"&&RenderingServer.GetCurrentRenderingDriverName()=="d3d12"&&
+        RenderingServer.GetVideoAdapterName()=="Microsoft Basic Render Driver";
+    // Deadline for "wait until" loops. Hardware keeps the wall-clock deadline.
+    // Hosted WARP can draw about one frame per second, so a software renderer
+    // also gets the frames a 30 FPS machine would draw in that time. A wedged
+    // predicate still fails; this is not native GPU responsiveness evidence.
+    private static bool Waiting(Stopwatch clock,double seconds,ulong firstFrame)=>clock.Elapsed.TotalSeconds<seconds||
+        SoftwareRenderer&&Engine.GetProcessFrames()-firstFrame<(ulong)(seconds*30);
+    // A real-time server samples held buttons in wall time. On a software
+    // renderer one frame can last seconds, so "press for N frames" becomes a
+    // long hold (a held A charges a throw instead of placing a bomb). Send the
+    // press edge now and release it after a bounded wall-clock interval.
+    private async Task NetworkTap(NetworkSession connection,PlayerInput press,PlayerInput hold=default,int milliseconds=100)
+    {
+        Input(0,hold);connection.SendInput(0,press);
+        await Task.Run(async()=>{await Task.Delay(milliseconds).ConfigureAwait(false);connection.SendInput(0,hold);});
+        await Frames(1);
+    }
+    private async Task<long> NetworkPulse(NetworkSession connection,PlayerInput press,PlayerInput hold=default,int milliseconds=100)
+    {
+        if(milliseconds is <1 or >1000)throw new ArgumentOutOfRangeException(nameof(milliseconds));
+        if(!ReferenceEquals(_root.ActiveSession,connection))throw new InvalidOperationException("Input pulse requires its owned active session");
+        int generation=connection.ConnectionGeneration;
+        long allocatedAtStart=connection.InputSequence;
+        Input(0,hold);
+        long started=Stopwatch.GetTimestamp(),expires=started+(long)(Stopwatch.Frequency*milliseconds/1000d);
+        // The engine thread checks the same expiry before republishing. A late
+        // frame must never resurrect movement after the socket worker released it.
+        _root.InjectInputProvider(0,()=>Stopwatch.GetTimestamp()<expires?press:hold);
+        connection.SendInput(0,press);
+        async Task<double> Release()
+        {
+            await Task.Delay(milliseconds).ConfigureAwait(false);
+            if(connection.ConnectionGeneration==generation)connection.SendInput(0,hold); // thread-safe; no engine calls here
+            return Stopwatch.GetElapsedTime(started).TotalMilliseconds;
+        }
+        var released=Release();
+        long sequence;
+        try
+        {
+            double actual=await released;sequence=connection.InputSequence;
+            await Frames(1);
+            Event("network-input-pulse",new{requestedMs=milliseconds,releasedMs=actual,resumedMs=Stopwatch.GetElapsedTime(started).TotalMilliseconds,
+                allocatedAtStart,sequence,x=press.X,z=press.Z,primary=press.A,carry=press.B,holdCarry=hold.B});
+        }
+        finally
+        {
+            await released;
+            if(ReferenceEquals(_root.ActiveSession,connection)&&connection.ConnectionGeneration==generation)Input(0,hold);
+        }
+        if(!ReferenceEquals(_root.ActiveSession,connection)||connection.ConnectionGeneration!=generation)
+            throw new InvalidOperationException("Input pulse session changed before its observation");
+        return sequence;
+    }
+    private async Task<long> NetworkNudge(NetworkSession connection,PlayerInput press,PlayerInput hold=default)
+    {
+        if(!ReferenceEquals(_root.ActiveSession,connection)||connection.Party?.Hosting is "peer" or "auto")
+            throw new InvalidOperationException("Observed nudge requires its owned server-hosted session");
+        int generation=connection.ConnectionGeneration;
+        long started=Stopwatch.GetTimestamp();
+        // Ordinary speed is 4.5 cells/s. Reserve .25 of the verified corridor
+        // for scheduling/network jitter, then reject any final spatial overrun.
+        long corridorTicks=(long)(Stopwatch.Frequency*(NetworkNudgeDistance-.25d)/4.5d);
+        var gate=new ObservedInputNudge(press,generation,connection.LatestInputSend?.TotalSentSamples??0,
+            started,Stopwatch.Frequency*5,corridorTicks);
+        Input(0,hold);
+        _root.InjectInputProvider(0,()=>gate.Pressed(connection.LatestInputSend,Stopwatch.GetTimestamp(),connection.ConnectionGeneration)?press:hold);
+        connection.SendInput(0,press);
+        var completion=new TaskCompletionSource<long>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var observer=new Thread(()=>
+        {
+            try
+            {
+                // No engine calls and no dependency on a rendered frame or the
+                // thread-pool timer that may itself be delayed by a hitch.
+                while(gate.Pressed(connection.LatestInputSend,Stopwatch.GetTimestamp(),connection.ConnectionGeneration))Thread.Sleep(1);
+                if(connection.ConnectionGeneration==generation)connection.SendInput(0,hold);
+                completion.TrySetResult(connection.InputSequence);
+            }
+            catch(Exception error)
+            {
+                gate.Cancel(Stopwatch.GetTimestamp());
+                if(connection.ConnectionGeneration==generation)connection.SendInput(0,hold);
+                completion.TrySetException(error);
+            }
+        }){IsBackground=true,Name="QA observed movement"};
+        try
+        {
+            observer.Start();long sequence=await completion.Task;await Frames(1);
+            var decision=gate.Decision!;
+            Event("network-input-nudge",new{decision.Reason,decision.Delivered,
+                decisionMs=Stopwatch.GetElapsedTime(started,decision.Timestamp).TotalMilliseconds,
+                resumedMs=Stopwatch.GetElapsedTime(started).TotalMilliseconds,corridor=NetworkNudgeDistance,
+                sequence,observation=decision.Observation,x=press.X,z=press.Z,holdCarry=hold.B});
+            if(!decision.Delivered)throw new InvalidOperationException("Nudge delivery was not observed inside its corridor budget: "+decision.Reason);
+            return sequence;
+        }
+        finally
+        {
+            gate.Cancel(Stopwatch.GetTimestamp());
+            if(observer.IsAlive&&!observer.Join(1000))throw new TimeoutException("QA nudge observer did not stop");
+            if(ReferenceEquals(_root.ActiveSession,connection)&&connection.ConnectionGeneration==generation)Input(0,hold);
+        }
+    }
+    // The single owner of a game-loop-free fixture session: advance and drain it
+    // like a 30 FPS client on the engine thread (Godot peer polling stays there),
+    // never faster in uncapped headless frames. Messages go to onMessage; others
+    // are consumed as GameRoot would. Cadence is kept for peer diagnostics.
+    private sealed class FixtureLive:IDisposable
+    {
+        private readonly SceneTree _tree;
+        private readonly NetworkSession _session;
+        private readonly Action<JsonElement>? _onMessage;
+        private readonly Stopwatch _paced=Stopwatch.StartNew(),_life=Stopwatch.StartNew();
+        private bool _started,_active=true;
+        private int _pumps;
+        private double _maxGap;
+        public FixtureLive(SceneTree tree,NetworkSession session,Action<JsonElement>? onMessage)
+        {_tree=tree;_session=session;_onMessage=onMessage;_tree.ProcessFrame+=Pump;}
+        private void Pump()
+        {
+            double gap=_paced.Elapsed.TotalSeconds;
+            if(_started&&gap<1d/30)return;
+            if(_started)_maxGap=Math.Max(_maxGap,gap);
+            _started=true;_paced.Restart();_pumps++;
+            _session.Advance(1d/30);
+            foreach(var message in _session.DrainMessages())_onMessage?.Invoke(message);
+        }
+        public object Cadence=>new{pumps=_pumps,maxGapSeconds=Math.Round(_maxGap,3),aliveSeconds=Math.Round(_life.Elapsed.TotalSeconds,1)};
+        public void Dispose(){if(_active){_tree.ProcessFrame-=Pump;_active=false;}}
+    }
+    private FixtureLive KeepFixtureLive(NetworkSession session,Action<JsonElement>? onMessage=null)=>new(GetTree(),session,onMessage);
     private void Event(string type,object data) => _trace.WriteLine(JsonSerializer.Serialize(new {frame=_frame,type,data}));
+    private Image CapturePixels()
+    {
+        bool nativePopup=OS.GetName()=="Linux"&&DisplayServer.GetName()=="X11"&&
+            AuditDescendants(_root).OfType<OptionButton>().Any(button=>button.GetPopup() is {Visible:true} popup&&!popup.IsEmbedded());
+        if(!nativePopup)return GetViewport().GetTexture().GetImage();
+        // Separate native windows are absent from the main viewport texture.
+        // Retain actual displayed pixels, cropped to this app's client area.
+        var window=GetWindow();int screen=window.CurrentScreen;
+        using var desktop=DisplayServer.ScreenGetImage(screen);
+        if(desktop is null||desktop.IsEmpty())throw new IOException("Native popup screen capture is unavailable");
+        var area=new Rect2I(DisplayServer.WindowGetPosition(window.GetWindowId())-DisplayServer.ScreenGetPosition(screen),window.Size);
+        if(area.Position.X<0||area.Position.Y<0||area.End.X>desktop.GetWidth()||area.End.Y>desktop.GetHeight())
+            throw new IOException("Native popup capture requires the complete app client inside its screen");
+        Event("native-popup-capture",new {source="actual screen pixels cropped to owned client",size=area.Size.ToString()});
+        return desktop.GetRegion(area);
+    }
     private async Task Capture(string label,int settleFrames=2)
     {
         if(_headless) { Event("screenshot-disabled",new {label,reason="headless display"});return; }
@@ -253,7 +438,7 @@ public partial class PlaytestDriver : Node
         }
         else await fence;
         var path=Path.Combine(_output,label+".png");
-        using var pixels=GetViewport().GetTexture().GetImage();
+        using var pixels=CapturePixels();
         if(pixels.IsEmpty())throw new IOException("Renderer returned an empty capture");
         var colors=new HashSet<int>();float low=1,high=0;
         for(int y=0;y<pixels.GetHeight();y+=Math.Max(1,pixels.GetHeight()/18))

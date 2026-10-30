@@ -1,0 +1,138 @@
+extends SceneTree
+# Diagnostic only: does not qualify the product or alter any production preset.
+class DepthEffect extends CompositorEffect:
+    var output_dir: String
+    var captured := false
+    var calls := 0
+    var armed := false
+    var multisampled := true
+    var stage_label := "post-transparent"
+    var clear_attachments := false
+    func _init():
+        effect_callback_type = EFFECT_CALLBACK_TYPE_POST_TRANSPARENT
+        access_resolved_depth = false # Observe existing resource; do not force an extra resolve.
+    func sample_texture(rd: RenderingDevice, shader: RID, pipeline: RID, sampler: RID, raw: RID, resolved: RID, size: Vector2i) -> PackedByteArray:
+        var output := rd.storage_buffer_create(size.x * size.y * 16)
+        var raw_uniform := RDUniform.new(); raw_uniform.uniform_type = RenderingDevice.UNIFORM_TYPE_SAMPLER_WITH_TEXTURE; raw_uniform.binding = 0
+        raw_uniform.add_id(sampler); raw_uniform.add_id(raw)
+        var resolved_uniform := RDUniform.new(); resolved_uniform.uniform_type = RenderingDevice.UNIFORM_TYPE_SAMPLER_WITH_TEXTURE; resolved_uniform.binding = 1
+        resolved_uniform.add_id(sampler); resolved_uniform.add_id(resolved)
+        var out_uniform := RDUniform.new(); out_uniform.uniform_type = RenderingDevice.UNIFORM_TYPE_STORAGE_BUFFER; out_uniform.binding = 2; out_uniform.add_id(output)
+        var uniform_set := rd.uniform_set_create([raw_uniform,resolved_uniform,out_uniform],shader,0)
+        var list := rd.compute_list_begin()
+        rd.compute_list_bind_compute_pipeline(list,pipeline)
+        rd.compute_list_bind_uniform_set(list,uniform_set,0)
+        rd.compute_list_dispatch(list,ceili(size.x/8.0),ceili(size.y/8.0),1)
+        rd.compute_list_end()
+        var bytes := rd.buffer_get_data(output)
+        rd.free_rid(uniform_set);rd.free_rid(output)
+        return bytes
+    func _render_callback(_kind: int, data: RenderData):
+        calls += 1
+        if not armed or captured:
+            return
+        var buffers := data.get_render_scene_buffers() as RenderSceneBuffersRD
+        var rd := RenderingServer.get_rendering_device()
+        var ms := buffers.get_depth_layer(0, multisampled)
+        var resolved := buffers.get_depth_layer(0, false)
+        if not ms.is_valid() or not resolved.is_valid():
+            return
+        captured = true
+        var source := RDShaderSource.new()
+        source.source_compute = """#version 450
+layout(local_size_x=8,local_size_y=8,local_size_z=1) in;
+layout(set=0,binding=0) uniform sampler2DMS raw_depth;
+layout(set=0,binding=1) uniform sampler2D resolved_depth;
+layout(set=0,binding=2,std430) buffer Output { vec4 values[]; } result;
+void main(){ivec2 p=ivec2(gl_GlobalInvocationID.xy);ivec2 s=textureSize(resolved_depth,0);if(any(greaterThanEqual(p,s)))return;
+result.values[p.y*s.x+p.x]=vec4(texelFetch(raw_depth,p,0).r,texelFetch(raw_depth,p,1).r,texelFetch(resolved_depth,p,0).r,1.0);}
+"""
+        if not multisampled:
+            source.source_compute = source.source_compute.replace("sampler2DMS raw_depth", "sampler2D raw_depth").replace("texelFetch(raw_depth,p,1)", "texelFetch(raw_depth,p,0)")
+        var spirv := rd.shader_compile_spirv_from_source(source)
+        if not spirv.get_stage_compile_error(RenderingDevice.SHADER_STAGE_COMPUTE).is_empty():
+            push_error(spirv.get_stage_compile_error(RenderingDevice.SHADER_STAGE_COMPUTE)); return
+        var shader := rd.shader_create_from_spirv(spirv)
+        var pipeline := rd.compute_pipeline_create(shader)
+        var sampler_state := RDSamplerState.new()
+        var sampler := rd.sampler_create(sampler_state)
+        var size := buffers.get_internal_size()
+        var bytes := sample_texture(rd,shader,pipeline,sampler,ms,resolved,size)
+        var file := FileAccess.open(output_dir + "/depth-samples.bin",FileAccess.WRITE); file.store_buffer(bytes); file.close()
+        var metadata := {"diagnosticOnly":true,"width":size.x,"height":size.y,"calls":calls,"accessResolvedDepth":false,
+            "rawFormat":rd.texture_get_format(ms).format,"rawSamples":rd.texture_get_format(ms).samples,
+            "resolvedFormat":rd.texture_get_format(resolved).format,"resolvedSamples":rd.texture_get_format(resolved).samples,
+            "layout":"little-endian float32 sample0,sample1,resolved,one per pixel; row-major",
+            "planes":[{"pixel":[115,128],"worldDepth":5.0},{"pixel":[192,128],"worldDepth":10.0},{"pixel":[269,128],"worldDepth":20.0}],
+            "camera":{"projection":"orthographic","near":0.1,"far":100.0,"size":10.0},
+            "ssao":true,"ssil":true,"dof":"Circle/Low/jitterOn/amount0.075/near7.5transition2/far12transition10",
+            "stage":stage_label+"; no explicit resolve request",
+            "engine":Engine.get_version_info(),"bytes":bytes.size(),"driver":RenderingServer.get_current_rendering_driver_name(),"device":RenderingServer.get_video_adapter_name()}
+        file=FileAccess.open(output_dir + "/depth-resources.json",FileAccess.WRITE); file.store_string(JSON.stringify(metadata,"  ")); file.close()
+        if clear_attachments:
+            for kind in ["depth","color"]:
+                var format:=RDTextureFormat.new();format.width=size.x;format.height=size.y
+                format.texture_type=RenderingDevice.TEXTURE_TYPE_2D;format.samples=RenderingDevice.TEXTURE_SAMPLES_2
+                format.format=rd.texture_get_format(ms).format if kind=="depth" else RenderingDevice.DATA_FORMAT_R32_SFLOAT
+                format.usage_bits=RenderingDevice.TEXTURE_USAGE_SAMPLING_BIT | (RenderingDevice.TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT if kind=="depth" else RenderingDevice.TEXTURE_USAGE_COLOR_ATTACHMENT_BIT)
+                var texture:=rd.texture_create(format,RDTextureView.new())
+                var framebuffer:=rd.framebuffer_create([texture])
+                rd.draw_list_begin(framebuffer,RenderingDevice.DRAW_CLEAR_DEPTH|RenderingDevice.DRAW_CLEAR_STENCIL if kind=="depth" else RenderingDevice.DRAW_CLEAR_COLOR_0,[] if kind=="depth" else [Color(.75,.75,.75,1)],.75,0)
+                rd.draw_list_end()
+                var clear_bytes:=sample_texture(rd,shader,pipeline,sampler,texture,resolved,size)
+                var path:String=output_dir+"/clear-"+kind;DirAccess.make_dir_recursive_absolute(path)
+                file=FileAccess.open(path+"/depth-samples.bin",FileAccess.WRITE);file.store_buffer(clear_bytes);file.close()
+                var description:=metadata.duplicate(true)
+                for key in ["camera","planes","dof","ssao","ssil"]:description.erase(key)
+                description["customAttachment"]=kind;description["expectedRawClear"]=.75;description["resolvedSource"]="unchanged scene texture; not the custom clear"
+                description["rawFormat"]=format.format;description["rawSamples"]=format.samples
+                file=FileAccess.open(path+"/depth-resources.json",FileAccess.WRITE);file.store_string(JSON.stringify(description,"  "));file.close()
+                rd.free_rid(framebuffer);rd.free_rid(texture)
+        for rid in [sampler,pipeline,shader]: rd.free_rid(rid)
+
+var effect: DepthEffect
+var extra_effects: Array[DepthEffect]=[]
+var output_dir: String
+func _initialize():
+    output_dir=OS.get_cmdline_user_args()[0]
+    DirAccess.make_dir_recursive_absolute(output_dir)
+    call_deferred("run")
+func run():
+    root.size=Vector2i(384,256);root.msaa_3d=Viewport.MSAA_2X
+    if OS.get_cmdline_user_args().has("--no-msaa"):root.msaa_3d=Viewport.MSAA_DISABLED
+    elif OS.get_cmdline_user_args().has("--msaa-4x"):root.msaa_3d=Viewport.MSAA_4X
+    var scene:=Node3D.new();root.add_child(scene)
+    var environment:=WorldEnvironment.new();environment.environment=Environment.new()
+    environment.environment.background_mode=Environment.BG_COLOR;environment.environment.background_color=Color.BLACK
+    environment.environment.ssao_enabled=true;environment.environment.ssil_enabled=true
+    effect=DepthEffect.new();effect.output_dir=output_dir;effect.multisampled=root.msaa_3d!=Viewport.MSAA_DISABLED;effect.clear_attachments=OS.get_cmdline_user_args().has("--clear-attachments")
+    environment.compositor=Compositor.new();environment.compositor.compositor_effects=[effect];scene.add_child(environment)
+    if OS.get_cmdline_user_args().has("--stage-history"):
+        for stage in [["pre-opaque",CompositorEffect.EFFECT_CALLBACK_TYPE_PRE_OPAQUE],["post-opaque",CompositorEffect.EFFECT_CALLBACK_TYPE_POST_OPAQUE]]:
+            var observer:=DepthEffect.new();observer.stage_label=stage[0];observer.effect_callback_type=stage[1]
+            observer.output_dir=output_dir+"/"+stage[0];DirAccess.make_dir_recursive_absolute(observer.output_dir)
+            extra_effects.append(observer)
+        environment.compositor.compositor_effects=[extra_effects[0],extra_effects[1],effect]
+    var camera:=Camera3D.new();camera.projection=Camera3D.PROJECTION_ORTHOGONAL;camera.size=10;camera.near=.1;camera.far=100
+    var attributes:=CameraAttributesPractical.new();attributes.dof_blur_amount=.075
+    attributes.dof_blur_near_enabled=true;attributes.dof_blur_near_distance=7.5;attributes.dof_blur_near_transition=2
+    attributes.dof_blur_far_enabled=true;attributes.dof_blur_far_distance=12;attributes.dof_blur_far_transition=10
+    camera.attributes=attributes;scene.add_child(camera);camera.current=true
+    RenderingServer.camera_attributes_set_dof_blur_quality(RenderingServer.DOF_BLUR_QUALITY_LOW,true)
+    RenderingServer.camera_attributes_set_dof_blur_bokeh_shape(RenderingServer.DOF_BOKEH_CIRCLE)
+    var shader:=Shader.new();shader.code="shader_type spatial; render_mode unshaded; void fragment(){ ALBEDO=vec3(mod(floor(UV.x*32.0)+floor(UV.y*32.0),2.0)); }"
+    for i in 3:
+        var mesh:=MeshInstance3D.new();mesh.mesh=QuadMesh.new();mesh.mesh.size=Vector2(2.5,5)
+        mesh.material_override=ShaderMaterial.new();mesh.material_override.shader=shader;scene.add_child(mesh)
+        mesh.position=Vector3((i-1)*3,0,-[5,10,20][i])
+    create_timer(60).timeout.connect(func(): quit(3))
+    for i in 24: await process_frame
+    effect.armed=true
+    for observer in extra_effects: observer.armed=true
+    var deadline:=Time.get_ticks_msec()+20000
+    while not FileAccess.file_exists(output_dir+"/depth-resources.json") and Time.get_ticks_msec()<deadline:await process_frame
+    await RenderingServer.frame_post_draw
+    root.get_texture().get_image().save_png(output_dir+"/scene.png")
+    print("DEPTH_PROBE ", FileAccess.file_exists(output_dir+"/depth-resources.json"))
+    root.remove_child(scene);scene.free();effect=null;extra_effects.clear()
+    quit(0 if FileAccess.file_exists(output_dir+"/depth-resources.json") else 1)

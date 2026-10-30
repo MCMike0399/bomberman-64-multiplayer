@@ -11,6 +11,23 @@ internal static class UpdateChecks
         int checks=0;
         void Check(bool ok,string text){if(!ok)throw new Exception("Update: "+text);checks++;}
         void Reject(Action action,string text){try{action();}catch(Exception e)when(e is InvalidDataException or CryptographicException or FormatException or InvalidOperationException){checks++;return;}throw new Exception("Update should reject "+text);}
+        string writeRoot=Path.Combine(Path.GetTempPath(),"blast-location-test-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(writeRoot);
+        try
+        {
+            DesktopUpdateInstaller.CheckWriteAccess(Path.Combine(writeRoot,"game.AppImage"),true);
+            Check(Directory.GetFiles(writeRoot).Length==0,"write-location precheck cleans its owned probe");
+            if(!OperatingSystem.IsWindows())
+            {
+                File.SetUnixFileMode(writeRoot,UnixFileMode.UserRead|UnixFileMode.UserExecute);
+                try
+                {
+                    try{DesktopUpdateInstaller.CheckWriteAccess(Path.Combine(writeRoot,"game.AppImage"),true);Check(false,"read-only update folder must be rejected");}
+                    catch(IOException error){Check(error.Message.Contains("folder you own",StringComparison.Ordinal),"read-only AppImage folder gives an actionable move instruction");}
+                }
+                finally{File.SetUnixFileMode(writeRoot,UnixFileMode.UserRead|UnixFileMode.UserWrite|UnixFileMode.UserExecute);}
+            }
+        }
+        finally{Directory.Delete(writeRoot,true);}
         using var key=ECDsa.Create(ECCurve.NamedCurves.nistP256);
         string publicKey=Convert.ToBase64String(key.ExportSubjectPublicKeyInfo());
         byte[] data="verified game payload"u8.ToArray();

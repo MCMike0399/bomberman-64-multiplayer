@@ -1,5 +1,8 @@
 using Godot;
+using Bomber.Client.Startup;
+using BlastCircuit.Rendering;
 using Bomber.Client.Updates;
+using Bomber.Game.Online;
 namespace BlastCircuit.Updates;
 
 /// <summary>Checks in the background and offers a verified update only at a safe menu boundary.</summary>
@@ -8,36 +11,52 @@ public partial class GameUpdater : Node
     private readonly CancellationTokenSource _stop = new();
     private readonly UpdateService _service = new();
     private string? _bundle, _healthPath;
+    private bool _desktop;
+    private bool _recovery;
     private PreparedUpdate? _ready;
     private string _historyDirectory="",_failedVersion="";
     private bool _busy,_checked,_initialized,_installing;
     private double _uptime;
     public string Version {get;private set;}="Development build";
-    public string Status {get;private set;}="Updates are available in the installed Mac app.";
+    public string Status {get;private set;}="Updates are available in installed releases.";
     public bool UpdateReady=>_ready!=null;
     public bool Busy=>_busy;
     public override async void _Ready()
     {
-        if(!OperatingSystem.IsMacOS()||OS.HasFeature("editor")||OS.GetCmdlineUserArgs().Any(a=>a.StartsWith("--playtest=")))return;
+        if(OS.HasFeature("editor")||OS.GetCmdlineUserArgs().Any(a=>a.StartsWith("--playtest=")))return;
         try
         {
-            _bundle=MacUpdateInstaller.BundleForExecutable(OS.GetExecutablePath());if(_bundle==null)return;
+            _desktop=!OperatingSystem.IsMacOS();
+            _recovery=OS.GetCmdlineUserArgs().Contains("--update-recovery");
+            _bundle=_desktop?DesktopUpdateInstaller.InstalledTarget(OS.GetExecutablePath()):MacUpdateInstaller.BundleForExecutable(OS.GetExecutablePath());
+            if(_bundle==null)return;
             _historyDirectory=Path.Combine(OS.GetUserDataDir(),"updates");Directory.CreateDirectory(_historyDirectory);
             var tokenArg=OS.GetCmdlineUserArgs().FirstOrDefault(a=>a.StartsWith("--update-token="));
             if(tokenArg is not null&&Guid.TryParseExact(tokenArg.Split('=')[1],"N",out var token))
             {
                 string stage=Path.Combine(Path.GetDirectoryName(_bundle)!,".blast-update-"+token.ToString("N"));
                 if(Directory.Exists(stage)&&new DirectoryInfo(stage).LinkTarget is null)
-                { _healthPath=Path.Combine(stage,"healthy");File.WriteAllText(Path.Combine(stage,"newpid"),OS.GetProcessId().ToString()); }
+                {
+                    _healthPath=Path.Combine(stage,"healthy");
+                    using var process=System.Diagnostics.Process.GetCurrentProcess();
+                    // Keep the Mac shell updater's legacy PID format unchanged.
+                    string marker=Path.Combine(stage,"newpid");
+                    if(_desktop)DesktopProcessIdentity.WriteMarker(marker,process);
+                    else {File.WriteAllText(marker+".tmp",process.Id.ToString());File.Move(marker+".tmp",marker,true);}
+                }
             }
-            Version=await MacUpdateInstaller.PlistValue(_bundle,"CFBundleShortVersionString",_stop.Token);
+            Version=_desktop?OnlineProtocol.ReleaseVersion:await MacUpdateInstaller.PlistValue(_bundle,"CFBundleShortVersionString",_stop.Token);
+            if(_desktop)DesktopUpdateInstaller.CleanupCompleted(_bundle,Version);
             Status="Updates are verified before installation.";
             string history=Path.Combine(_historyDirectory,"last-update.txt");
             if(File.Exists(history))
             {
-                var parts=File.ReadAllText(history).Trim().Split(' ');
-                if(parts.Length>=2&&parts[0]=="failed"){_failedVersion=parts[1];Status=$"The previous app was restored after v{_failedVersion} could not be installed.";}
+                string result=File.ReadAllText(history).Trim();
+                string? failed=DesktopUpdateHistory.QuarantinedVersion(result,legacyMac:!_desktop);
+                if(failed is not null){_failedVersion=failed;Status=$"The previous app was restored after v{_failedVersion} could not start safely.";}
+                else if(result.StartsWith("retry ",StringComparison.Ordinal))Status="The previous game was restored. The update can be retried.";
             }
+            if(_recovery)Status="The previous game is running from its recovery copy. Install the latest release to restore the normal location.";
             _initialized=true;
         }
         catch(Exception error){Status="Updates unavailable: "+error.Message;}
@@ -47,10 +66,16 @@ public partial class GameUpdater : Node
         _uptime+=delta;
         if(_healthPath!=null&&_initialized&&_uptime>=3&&Engine.GetFramesDrawn()>2)
         {
+            var backend=RendererBackend.Observe();
+            File.WriteAllText(Path.Combine(Path.GetDirectoryName(_healthPath)!,"health.json"),System.Text.Json.JsonSerializer.Serialize(new {
+                version=Version,platform=OS.GetName(),driver=backend.Driver,requestedDriver=backend.RequestedDriver,fallbackReason=backend.FallbackReason,
+                method=RenderingServer.GetCurrentRenderingMethod(),rendererState=RendererBackend.State,adapter=RenderingServer.GetVideoAdapterName(),
+                graphics=GetParent() is BlastCircuit.App.GameRoot root?root.AppliedGraphicsPreset:"unknown",
+                window=GetWindow().Mode.ToString().ToLowerInvariant()}));
             File.WriteAllText(_healthPath,Version);_healthPath=null;
             GD.Print("BLAST_UPDATE_HEALTHY "+Version);
         }
-        if(_initialized&&automatic&&idle&&!_checked&&_uptime>=5&&!_busy&&!UpdateReady)
+        if(_initialized&&!_recovery&&automatic&&idle&&!_checked&&_uptime>=5&&!_busy&&!UpdateReady)
         {_checked=true;_ = Check();}
     }
     public async Task Check()
@@ -63,7 +88,9 @@ public partial class GameUpdater : Node
             if(release==null){Status="You have the latest published version.";return;}
             if(release.Version==_failedVersion){Status=$"v{_failedVersion} was rolled back. Waiting for a newer release.";return;}
             Status=$"Downloading and verifying v{release.Version}…";
-            _ready=await MacUpdateInstaller.Prepare(_service,release,_bundle,_historyDirectory,_stop.Token);
+            _ready=_desktop
+                ?await DesktopUpdateInstaller.Prepare(_service,release,_bundle,Version,OS.GetExecutablePath(),_historyDirectory,_stop.Token)
+                :await MacUpdateInstaller.Prepare(_service,release,_bundle,_historyDirectory,_stop.Token);
             Status=$"v{release.Version} is ready. Restart to update.";
         }
         catch(OperationCanceledException){Status="Update check cancelled.";}
@@ -76,7 +103,15 @@ public partial class GameUpdater : Node
         _busy=true;Status="Restarting to install the update…";
         try
         {
-            await MacUpdateInstaller.Schedule(ready,(int)OS.GetProcessId(),_stop.Token,OS.GetCmdlineUserArgs().Contains("--display-windowed"));
+            bool windowed=OS.GetCmdlineUserArgs().Contains("--display-windowed");
+            if(_desktop)
+            {
+                int pid=(int)OS.GetProcessId();
+                if(OperatingSystem.IsWindows()&&_bundle is not null)
+                    pid=WindowsLaunchGuard.VerifiedLauncherPid(OS.GetCmdlineUserArgs(),Path.Combine(_bundle,"BlastCircuit.exe"))??pid;
+                await DesktopUpdateInstaller.Schedule(ready,pid,_stop.Token,windowed);
+            }
+            else await MacUpdateInstaller.Schedule(ready,(int)OS.GetProcessId(),_stop.Token,windowed);
             _installing=true;return true;
         }
         catch(Exception error){_busy=false;Status="Could not restart: "+error.Message;return false;}

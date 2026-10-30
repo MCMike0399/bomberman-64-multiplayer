@@ -734,3 +734,10 @@ column per `BlastStages.HurryColumnSeconds`, while the client paces the leading 
 across the next column from the last accepted closure. It reaches the column as the
 column becomes lethal. Translucent walls are one slab per side; stone, snow and
 Greedy crushers slide in. Do not reintroduce per-column pops. Inspect actual captures; shape/aspect/lifetime tests are supporting evidence, not aesthetic approval.
+
+## Shared platform presentation inputs
+
+Packaged Bomber geometry uses Mac-authored packed resources while Mac SDK
+authoring retains the procedural builders. Regenerate explicitly after builder
+edits; public QA checks staleness. The antenna correction remains presentation
+only. See [authoring and verification](../bomber-shared-geometry.md).

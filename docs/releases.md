@@ -7,6 +7,18 @@ server assemblies embed these values. `X-Blast-Protocol` is the exact token
 release tokens, even when the schema revision stays the same. Increase the schema
 revision for incompatible peer messages as well. Local play is unaffected.
 
+Enabled [desktop clients](desktop-clients.md) are packaged and tested on their
+target OS from the same trusted run. Native regression, saved startup, signed
+updater transactions and the EXE/AppImage/DMG downloads are required before
+promotion or host changes. The Mac updater format and public key are preserved.
+
+Long-running platform work uses an [independent QA track](desktop-clients.md#independent-platform-qa)
+with private exact-source drafts, a pinned diagnostic updater baseline and owned
+staged servers. Mac stable releases may advance on `main` independently. Test
+identities reserve no stable version; select the next available identity when
+integrating the completed platform work. Stable publication still requires the
+latest published updater baseline and exact current-main artifacts.
+
 **v0.44.1/build 55/schema 6** is delivered. The [delivery receipt](verification.md#v0441-delivered)
 records the exact CI artifacts, production rollout and signed update. Earlier clients advertise numeric `3`, `4` or branch-specific stage tokens and are rejected by the
 new server before identity creation, queue/room admission or WebSocket upgrade.
@@ -404,3 +416,25 @@ release workflows. Fork workflows require approval from all outside contributors
 The [delivery receipt](verification.md#v0310-delivered) supersedes the earlier
 source-only setup audit above. Installed scripts, private host configuration and
 recovery logs remain in operator storage.
+
+
+## Desktop client release gates
+
+Windows/Linux delivery source adds required native archived-game regression jobs.
+Promotion requires complete core and graphical journey coverage, the nine saved
+startup cases, actual game updater install/rollback receipts, and player-facing
+EXE/AppImage/DMG downloads bound to the original portable archive. The native
+job's updater fixture has a deliberately newer test-only identity and is never
+published. Failed jobs retain allowlisted logs, receipts and captures. Missing,
+stale, partial, wrong-platform or runtime-error evidence blocks delivery.
+The existing Mac startup/update, monotonic identity, fleet rollout and anonymous
+post-publication checks remain required. Read [desktop clients](desktop-clients.md)
+for exact commands and remaining hardware/device evidence boundaries.
+
+
+The integrated release additionally requires complete Mac archive regression and
+`release-gate-crossplay`: all three packaged OS clients share one staged public
+lobby, observe a roster reset and actual minute, then witness the same accepted
+movement and bombs. Its signed receipt binds player-download hashes and exact
+release/source identity. Independent per-platform or helper-only passes do not
+qualify. [Workflow and evidence boundary](ci.md#three-platform-archived-delivery).

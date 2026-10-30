@@ -1,4 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><OutputType>Exe</OutputType></PropertyGroup>
-  <ItemGroup><ProjectReference Include="../../src/Bomber.Client/Bomber.Client.csproj" /></ItemGroup>
+  <ItemGroup>
+    <Compile Include="../../src/Bomber.Client/Updates/*.cs" Link="Updates/%(Filename)%(Extension)" />
+    <EmbeddedResource Include="../../src/Bomber.Client/Updates/UpdatePublicKey.txt" LogicalName="BlastCircuit.UpdatePublicKey" />
+    <EmbeddedResource Include="../../src/Bomber.Client/Updates/install-update.sh" LogicalName="BlastCircuit.UpdateInstaller" />
+  </ItemGroup>
 </Project>

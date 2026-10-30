@@ -6,6 +6,7 @@ using Bomber.Client.Updates;
 
 if(!OperatingSystem.IsMacOS()||args.Length is <3 or >4)throw new ArgumentException("Run on macOS: <new app> <previous app> <fresh output directory> [--high-fullscreen]");
 bool highFullscreen=args.Length==4&&args[3]=="--high-fullscreen";
+bool requireOldShutdown=Environment.GetEnvironmentVariable("BLAST_UPDATE_REQUIRE_OLD_SHUTDOWN")=="1";
 if(args.Length==4&&!highFullscreen)throw new ArgumentException("Unknown fixture option.");
 if(highFullscreen&&!(await Tool("/usr/sbin/sysctl","-n","hw.model")).Trim().StartsWith("VirtualMac",StringComparison.Ordinal))
     throw new InvalidOperationException("The saved High/fullscreen fixture requires an isolated macOS VM; it changes guest preferences.");
@@ -75,6 +76,10 @@ async Task RunCase(string name,string archive,bool success,bool highStartup=fals
         // compilation on a slow CI GPU must not decide the handoff. The relaunch always renders.
         foreach(var arg in highStartup?new[]{"--windowed","--","--display-windowed","--smoke","--smoke-seconds=4"}:new[]{"--headless","--","--smoke","--smoke-seconds=4"})
             launch.ArgumentList.Add(arg);
+        string oldShutdownFolder=Path.Combine(folder,"old-shutdown");Directory.CreateDirectory(oldShutdownFolder);
+        launch.ArgumentList.Add("--smoke-output="+oldShutdownFolder);
+        // Per-case preferences keep current-source handoff checks out of personal settings.
+        launch.ArgumentList.Add("--smoke-preferences="+Path.Combine(oldShutdownFolder,"preferences.cfg"));
         using var old=Process.Start(launch)!;
         var stdout=old.StandardOutput.ReadToEndAsync();var stderr=old.StandardError.ReadToEndAsync();
         if(highStartup)
@@ -96,6 +101,14 @@ async Task RunCase(string name,string archive,bool success,bool highStartup=fals
         await old.WaitForExitAsync(timeout.Token);
         var oldLog=await stdout;File.WriteAllText(Path.Combine(folder,"old-launch.log"),oldLog+await stderr);
         if(old.ExitCode!=0||!oldLog.Contains("GODOT_SMOKE_OK"))throw new Exception("Old app did not complete real gameplay before update.");
+        JsonElement? oldShutdown=null;
+        string shutdownPath=Path.Combine(oldShutdownFolder,"shutdown.json");
+        if(File.Exists(shutdownPath))oldShutdown=JsonSerializer.Deserialize<JsonElement>(File.ReadAllText(shutdownPath));
+        if(requireOldShutdown&&(oldShutdown is not {} shutdown||
+            !shutdown.GetProperty("savedStateFlushed").GetBoolean()||!shutdown.GetProperty("drain").GetProperty("completed").GetBoolean()||
+            shutdown.GetProperty("watchdogEnabled").GetBoolean()||shutdown.GetProperty("watchdogFired").GetBoolean()||
+            shutdown.GetProperty("error").ValueKind!=JsonValueKind.Null||oldLog.Contains("ERROR:")))
+            throw new Exception("Current-source Mac updater handoff did not save, drain and exit cleanly");
         string receipt=Path.Combine(history,"last-update.txt");
         while(!File.Exists(receipt))await Task.Delay(250,timeout.Token);
         string result=File.ReadAllText(receipt).Trim();
@@ -110,7 +123,7 @@ async Task RunCase(string name,string archive,bool success,bool highStartup=fals
         await Task.Delay(2500,timeout.Token);
         var active=await OwnedPids(target);
         if(active.Length!=1)throw new Exception("Expected exactly one running installed app after helper exit.");
-        results.Add(new{name,result,installedVersion=success?version:oldVersion,running=true,savedHighFullscreen=highStartup,seconds=elapsed.Elapsed.TotalSeconds});
+        results.Add(new{name,result,installedVersion=success?version:oldVersion,running=true,savedHighFullscreen=highStartup,oldShutdown,seconds=elapsed.Elapsed.TotalSeconds});
         Console.WriteLine("PASS "+name+": "+result);
     }
     finally

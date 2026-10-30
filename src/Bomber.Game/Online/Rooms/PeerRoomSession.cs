@@ -5,14 +5,19 @@ using Bomber.Game.Matches;
 namespace Bomber.Game.Online.Rooms;
 
 /// <summary>Authenticated membership, host leases and bounded signalling/relay. Never simulates the game.</summary>
-public sealed class PeerRoomSession(GameSessionOptions options, bool stableRoster = false) : GameSession
+public sealed class PeerRoomSession(GameSessionOptions options, bool stableRoster = false, PeerHostLease? lease = null, PeerRoomTrace? trace = null) : GameSession
 {
     internal static int RelayByteLimit(int recipients) => Math.Clamp(recipients, 1, 7) * 2 * 1024 * 1024;
     private readonly Dictionary<string, RealtimePlayer> _members = [];
     private readonly Dictionary<string, long> _order = [];
     private readonly Dictionary<string, int> _appearances = [];
     private readonly HashSet<string> _expiredHosts = [];
+    private readonly Dictionary<string, long> _budgetNotices = [];
+    private void Trace(string text) => (trace ?? PeerRoomTrace.None).Write($"peer-room {options.LobbyId} epoch={_epoch} phase={_phase} host={_host ?? "-"} {text}");
     private readonly HashSet<string> _ready = [];
+    // A transport disconnect and its later grace-expiry removal describe one
+    // loss. The latter must not cancel a match already started by the survivors.
+    private readonly HashSet<string> _disconnected = [];
     private readonly HashSet<string> _incompatible = [];
     private readonly Dictionary<string, DateTimeOffset> _handshakes = [];
     private readonly Dictionary<string, (long Window, int Bytes)> _budgets = [];
@@ -36,7 +41,7 @@ public sealed class PeerRoomSession(GameSessionOptions options, bool stableRoste
     {
         if (stableRoster && _phase == "playing")
         { c.Kick(p.PlayerId, "This match has started. Join again when the room returns to its lobby."); return; }
-        _members[p.PlayerId] = p; _order.TryAdd(p.PlayerId, ++_serial);
+        _members[p.PlayerId] = p; _disconnected.Remove(p.PlayerId); _order.TryAdd(p.PlayerId, ++_serial);
         _handshakes[p.PlayerId] = c.Now;
         // A changed roster starts a new epoch; existing rounds cannot admit uninitialised peers.
         if (_phase == "playing") Reset("A player joined. Start a fresh match when everyone is ready.");
@@ -44,20 +49,28 @@ public sealed class PeerRoomSession(GameSessionOptions options, bool stableRoste
     }
     public override void OnPlayerLeft(ISessionContext c, RealtimePlayer p, LeaveReason reason)
     {
-        _members.Remove(p.PlayerId); _order.Remove(p.PlayerId); _appearances.Remove(p.PlayerId);
+        if (!_members.Remove(p.PlayerId)) return;
+        bool affectsMatch = !_disconnected.Remove(p.PlayerId);
+        _order.Remove(p.PlayerId); _appearances.Remove(p.PlayerId);
         _expiredHosts.Remove(p.PlayerId); _budgets.Remove(p.PlayerId);
         _ready.Remove(p.PlayerId); _handshakes.Remove(p.PlayerId); _incompatible.Remove(p.PlayerId);
-        Changed(c, p.PlayerId, false);
+        Changed(c, p.PlayerId, false, affectsMatch);
     }
     public override void OnPlayerConnectionChanged(ISessionContext c, RealtimePlayer p, bool connected)
     {
-        if (connected) { _expiredHosts.Remove(p.PlayerId); _handshakes[p.PlayerId] = c.Now; }
-        else _ready.Remove(p.PlayerId);
-        Changed(c, p.PlayerId, connected);
+        if (!_members.ContainsKey(p.PlayerId)) return;
+        bool changed = connected ? _disconnected.Remove(p.PlayerId) : _disconnected.Add(p.PlayerId);
+        if (changed)
+        {
+            if (connected) { _expiredHosts.Remove(p.PlayerId); _handshakes[p.PlayerId] = c.Now; }
+            else _ready.Remove(p.PlayerId);
+        }
+        Changed(c, p.PlayerId, connected, changed);
     }
-    private void Changed(ISessionContext c, string id, bool connected)
+    private void Changed(ISessionContext c, string id, bool connected, bool affectsMatch)
     {
-        if (_phase == "playing" && (!stableRoster || id == _host)) Reset(connected
+        Trace($"member player={id} connected={connected}");
+        if (affectsMatch && _phase == "playing" && (!stableRoster || id == _host)) Reset(connected
             ? "A player reconnected. The interrupted match was discarded; start again with the restored roster."
             : id == _host ? "Host left. A new host is taking over; the interrupted match was discarded."
             : "A player disconnected. The interrupted match was discarded.");
@@ -67,7 +80,7 @@ public sealed class PeerRoomSession(GameSessionOptions options, bool stableRoste
     {
         if (_host is not null && _members.ContainsKey(_host) && c.IsConnected(_host) && !_expiredHosts.Contains(_host)) return;
         var next = _members.Keys.Where(id => c.IsConnected(id) && !_expiredHosts.Contains(id)).OrderBy(id => _order[id]).FirstOrDefault();
-        if (next != _host) { _host = next; _epoch++; }
+        if (next != _host) { Trace($"elect next={next ?? "-"}"); _host = next; _epoch++; }
         _lease = c.Now;
     }
     private void Reset(string notice) { _phase = "lobby"; _epoch++; _notice = notice; }
@@ -86,7 +99,11 @@ public sealed class PeerRoomSession(GameSessionOptions options, bool stableRoste
         // starved seven receivers for half of every second on large stages.
         int limit = p.PlayerId == _host ? RelayByteLimit(_members.Keys.Count(id => id != p.PlayerId && c.IsConnected(id))) : 64 * 1024;
         _budgets[p.PlayerId] = (window, Math.Min(total, limit + 1));
-        if (total > limit) return;
+        if (total > limit)
+        {
+            if (_budgetNotices.GetValueOrDefault(p.PlayerId) != window) { _budgetNotices[p.PlayerId] = window; Trace($"budget-drop player={p.PlayerId} type={message.Type} bytes={total} limit={limit}"); }
+            return;
+        }
         if (message.Type == "peer.hello")
         {
             if (d.TryGetProperty("version",out var version) && version.ValueKind==JsonValueKind.Number && version.TryGetInt32(out int v) && v==OnlineProtocol.Revision)
@@ -140,9 +157,10 @@ public sealed class PeerRoomSession(GameSessionOptions options, bool stableRoste
     public override void OnTick(ISessionContext c)
     {
         foreach (var pending in _handshakes.Where(p=>c.IsConnected(p.Key)&&!_ready.Contains(p.Key)&&c.Now-p.Value>TimeSpan.FromSeconds(10)).Select(p=>p.Key).ToArray())
-        { _handshakes.Remove(pending); c.Kick(pending,OnlineProtocol.UpdateMessage); }
-        if (_host is not null && _ready.Contains(_host) && c.Now - _lease > TimeSpan.FromSeconds(6))
+        { _handshakes.Remove(pending); Trace($"handshake-kick player={pending}"); c.Kick(pending,OnlineProtocol.UpdateMessage); }
+        if (_host is not null && _ready.Contains(_host) && c.Now - _lease > (lease ?? PeerHostLease.Production).Silence)
         {
+            Trace($"lease-expired silence={(c.Now - _lease).TotalSeconds:F1}s limit={(lease ?? PeerHostLease.Production).Silence.TotalSeconds:F0}s");
             if (_host is not null) _expiredHosts.Add(_host);
             Reset("Host stopped responding. A new host is taking over; the interrupted match was discarded.");
             Elect(c); Publish(c);

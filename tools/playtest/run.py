@@ -113,14 +113,19 @@ def main():
     display.add_argument('--fullscreen', action='store_true', help='Explicitly test fullscreen; normal QA stays windowed')
     parser.add_argument('--godot', default=os.environ.get('GODOT', '/Applications/Godot_mono.app/Contents/MacOS/Godot'))
     parser.add_argument('--app', type=Path, help='Test an exported macOS .app independently of the source project')
+    parser.add_argument('--executable', type=Path, help='Test an exported Windows/Linux executable independently of the source project')
+    parser.add_argument('--rendering-driver', choices=('d3d12', 'vulkan', 'metal'), help='Require a rendering driver for a graphical exported-client check')
     parser.add_argument('--server', default='http://127.0.0.1:18496')
     parser.add_argument('--start-server', action='store_true', help='Start local server if unreachable; stop only the process this runner owns')
     parser.add_argument('--build', action='store_true', help='Build Godot and server projects first')
+    parser.add_argument('--frame-stall-ms', type=int, default=0, help='QA diagnostic: block the engine thread this long each frame (0-5000); never release evidence')
     parser.add_argument('--timeout', type=float, help='Override the catalog timeout (full suites default to 600 seconds)')
     parser.add_argument('--output', type=Path, default=ROOT / 'artifacts' / 'playtest')
     args = parser.parse_args()
     if not re.fullmatch(r'[1-9][0-9]{2,3}x[1-9][0-9]{2,3}', args.benchmark_resolution) or any(int(n) > 7680 for n in args.benchmark_resolution.split('x')):
         parser.error('--benchmark-resolution must be WIDTHxHEIGHT, between 100 and 7680 pixels per dimension')
+    if not 0 <= args.frame_stall_ms <= 5000:
+        parser.error('--frame-stall-ms must be between 0 and 5000')
     if not 10 <= args.benchmark_seconds <= 120:
         parser.error('--benchmark-seconds must be between 10 and 120')
     if args.list:
@@ -204,7 +209,13 @@ def main():
                     if owned_server.poll() is not None or time.monotonic() > deadline:
                         raise RuntimeError('Server startup failed; inspect server.log')
                     time.sleep(.1)
-            if args.app:
+            if args.app and args.executable:
+                raise RuntimeError('Choose --app or --executable')
+            if args.executable:
+                if not args.executable.is_file():
+                    raise RuntimeError('Exported executable does not exist')
+                command = [str(args.executable.resolve())]
+            elif args.app:
                 import plistlib
                 app = args.app.resolve()
                 with (app / 'Contents/Info.plist').open('rb') as plist:
@@ -215,7 +226,9 @@ def main():
                     (folder / 'tested-app-files.json').write_text(json.dumps(inventory(app), indent=2) + '\n')
             else:
                 command = [args.godot, '--path', str(ROOT)]
-            result['runtimeSource'] = 'app-bundle' if args.app else 'source-project'
+            result['runtimeSource'] = 'exported-executable' if args.executable else 'app-bundle' if args.app else 'source-project'
+            if args.rendering_driver:
+                command += ['--rendering-driver', args.rendering_driver]
             command += engine_timing_args(args.scenario)
             result['timingMode'] = 'realtime-uncapped' if args.scenario == 'graphics-benchmark' else 'fixed-step-30'
             if args.record:
@@ -227,6 +240,8 @@ def main():
             if args.gpu_profile:
                 command.append('--gpu-profile')
             command += ['--', '--playtest=' + args.scenario, '--playtest-output=' + str(folder), '--playtest-server=' + args.server]
+            if args.frame_stall_ms:
+                command.append(f'--playtest-frame-stall-ms={args.frame_stall_ms}')
             if windowed:
                 command.append('--display-windowed')
             if args.script:
@@ -247,11 +262,16 @@ def main():
                 runtime_env = os.environ.copy()
                 if args.metal_hud:
                     runtime_env.update(MTL_HUD_ENABLED='1', MTL_HUD_LOG_ENABLED='1', MTL_HUD_OPACITY='0')
-                runtime = subprocess.Popen(command, cwd=folder if args.app else ROOT, stdout=log, stderr=subprocess.STDOUT, start_new_session=True, env=runtime_env)
+                runtime = subprocess.Popen(command, cwd=folder if args.app or args.executable else ROOT, stdout=log, stderr=subprocess.STDOUT, start_new_session=os.name == 'posix', env=runtime_env)
                 from metal_metrics import MetalHudCapture
                 with MetalHudCapture(folder, runtime.pid) if args.metal_hud else contextlib.nullcontext():
                     runtime.wait(timeout=args.timeout)
             result['exitCode'] = runtime.returncode
+            if runtime.returncode == 0:
+                from display_restart import run as restore_display
+                parent_summary = json.loads((folder / 'summary.json').read_text())
+                restore_display(folder, command, parent_summary, runtime,
+                                cwd=folder if args.app or args.executable else ROOT, environment=runtime_env)
             if args.scenario == 'graphics-benchmark':
                 result['powerAfter'] = native_power_evidence()
         summary_path = folder / 'summary.json'
@@ -273,6 +293,16 @@ def main():
             result['benchmark'] = json.loads(benchmark_path.read_text()) if benchmark_path.is_file() else {}
         summary = json.loads(summary_path.read_text())
         receipt_errors = validate_summary(summary, folder, args.scenario, args.headless)
+        if not args.headless and 'display-settings' in expanded(args.scenario, scenarios):
+            from display_restart import inspect as inspect_display_restart
+            restart_path = folder / 'display-restart.json'
+            restart = json.loads(restart_path.read_text()) if restart_path.is_file() else {}
+            try:
+                inspect_display_restart(restart, summary)
+                receipt_errors.extend(validate_summary(restart['summary'], folder / 'restart', 'display-settings', False))
+                result['displayRestart'] = restart
+            except (RuntimeError, KeyError) as error:
+                receipt_errors.append(str(error))
         if args.scenario == 'graphics-benchmark':
             receipt_errors.extend(validate_benchmark(result['benchmark'], stage=args.benchmark_stage,
                 presets=('Low', 'Medium', 'High') if args.benchmark_preset == 'all' else (args.benchmark_preset.title(),),
@@ -285,6 +315,8 @@ def main():
         if not args.headless and args.desktop == 'isolated' and not re.match(r'^Metal .*Forward\+', result['renderer'] or ''):
             receipt_errors.append('Isolated guest did not use the project\'s Metal Forward+ renderer; inspect runtime.log')
         result['errors'].extend(receipt_errors)
+        for field in ('renderingDriver','requestedDriver','fallbackReason','renderingMethod','adapter'):
+            if field in summary:result[field]=summary[field]
         result['assertions'] = summary['assertions']
         result['screenshots'] = len(summary['screenshots'])
         result['passed'] = result['exitCode'] == 0 and summary['passed'] and summary['assertions'] > 0 and not runtime_errors and not receipt_errors

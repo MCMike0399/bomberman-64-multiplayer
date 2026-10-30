@@ -58,7 +58,7 @@ uniform vec4 light_paint : source_color;
 uniform bool moon=false;
 uniform float ambient_clock=0.0;
 varying vec3 sphere_normal;
-float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+""" + "\n" + IntegerNoiseHash + "\n" + """
 void vertex(){sphere_normal=normalize(MODEL_NORMAL_MATRIX*NORMAL);}
 void fragment(){
  vec2 p=UV+vec2(ambient_clock*.003,0.0);

@@ -1,0 +1,105 @@
+name: Authorized one-time GPU qualification
+on:
+  push:
+    branches: [qa/three-platform-release]
+permissions:
+  contents: write
+  actions: read
+jobs:
+  native:
+    name: One-time T4 ${{ matrix.target }} / ${{ vars.BLAST_GPU_PHASE }}
+    if: vars.BLAST_GPU_RUNNER_SHA == github.sha && vars.BLAST_GPU_RUN_ID != ''
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(vars.BLAST_GPU_MATRIX || '[{"target":"windows-x64","os":"Windows","driver":"vulkan"},{"target":"linux-x64","os":"Linux","driver":"vulkan"}]') }}
+    runs-on: [self-hosted, '${{ matrix.os }}', X64, '${{ vars.BLAST_GPU_RUN_ID }}']
+    timeout-minutes: 115
+    env:
+      TARGET: ${{ matrix.target }}
+      PAYLOAD: ${{ vars.BLAST_GPU_PAYLOAD_SHA }}
+      GPU_EXPIRY: ${{ vars.BLAST_GPU_EXPIRY_UTC }}
+      GPU_PHASE: ${{ vars.BLAST_GPU_PHASE }}
+      GPU_SKIP_BISECTION: ${{ vars.BLAST_GPU_SKIP_BISECTION }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        env:
+          DOTNET_INSTALL_DIR: ${{ runner.temp }}/dotnet
+        with:
+          dotnet-version: 10.0.400
+      - name: Download only the selected immutable client and matching server
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os,re,subprocess
+          sha,target=os.environ['PAYLOAD'],os.environ['TARGET'];assert re.fullmatch('[0-9a-f]{40}',sha)
+          command=['gh','release','download','qa-desktop-'+sha,'--dir','artifacts']
+          for pattern in ['Blast-Circuit-'+target+'.zip*','Blast-Circuit-'+target+'-metadata.json','Blast-Circuit-'+target+'-update-fixture.zip*','Blast-Circuit-server-dotnet10.zip*','server-build-metadata.json']:
+              command+=['-p',pattern]
+          subprocess.run(command,check=True,timeout=300)
+          PY
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: mesh-tested-download-${{ matrix.target }}
+          run-id: ${{ vars.BLAST_GPU_DOWNLOAD_RUN_ID }}
+          github-token: ${{ github.token }}
+          path: artifacts
+      - name: Prepare disposable display and actual audio endpoint
+        if: runner.os == 'Windows'
+        run: ./tools/packaging/windows-test-desktop.ps1
+      - name: Verify an interactive Windows session and WDDM graphics driver
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $session = [Diagnostics.Process]::GetCurrentProcess().SessionId
+          if ($session -eq 0 -or $env:USERNAME -ne 'BlastQa') { throw 'GPU tests require the disposable interactive BlastQa session' }
+          $model = (& nvidia-smi --query-gpu=driver_model.current --format=csv,noheader) -join ' '
+          if ($LASTEXITCODE -ne 0 -or $model -notmatch 'WDDM') { throw 'NVIDIA graphics-capable WDDM driver is not active' }
+          New-Item -ItemType Directory -Force artifacts/windows-gpu-desktop | Out-Null
+          @{ user=$env:USERNAME; sessionId=$session; driverModel=$model; os=(Get-CimInstance Win32_OperatingSystem | Select-Object Caption,Version,BuildNumber); adapters=@(Get-CimInstance Win32_VideoController | Select-Object Name,DriverVersion,Status,CurrentHorizontalResolution,CurrentVerticalResolution) } | ConvertTo-Json -Depth 5 | Set-Content artifacts/windows-gpu-desktop/session.json
+      - name: Install checksum-pinned engine for the small resource control
+        shell: bash
+        run: python tools/ci/install_godot.py --destination artifacts/gpu-engine
+      - name: Verify selected hardware, original 2x resources and real package High
+        env:
+          EXPECTED_ADAPTER: T4
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os,pathlib,subprocess,sys
+          root=pathlib.Path.cwd();environment=root/'artifacts/gpu-venv'
+          subprocess.run([sys.executable,'-m','venv',str(environment)],check=True)
+          executable=environment/('Scripts/python.exe'if os.name=='nt'else'bin/python')
+          subprocess.run([str(executable),'-m','pip','install','Pillow==13.0.0'],check=True)
+          command=[str(executable),'tools/ci/gpu_campaign.py','--target',os.environ['TARGET'],'--expected-revision',os.environ['PAYLOAD'],'--phase',os.environ['GPU_PHASE'],'--expiry',os.environ['GPU_EXPIRY'],'--godot',os.environ['GODOT']]
+          if os.environ.get('GPU_SKIP_BISECTION')=='true':command+=['--skip-bisection']
+          if os.environ['TARGET']=='linux-x64':command=[str(executable),'tools/packaging/linux-desktop.py','--',*command]
+          subprocess.run(command,check=True)
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: one-time-gpu-${{ matrix.target }}-${{ vars.BLAST_GPU_PHASE }}
+          path: |
+            artifacts/gpu-campaign-${{ matrix.target }}-${{ vars.BLAST_GPU_PHASE }}/
+            artifacts/*-startup*.json
+            artifacts/*-startup-details/
+            artifacts/*-update*.json
+            artifacts/*-update-details/
+            artifacts/*-regression.json
+            artifacts/*-regression-details/
+            artifacts/windows-audio/*.json
+            artifacts/windows-gpu-desktop/
+          retention-days: 14
+          if-no-files-found: error

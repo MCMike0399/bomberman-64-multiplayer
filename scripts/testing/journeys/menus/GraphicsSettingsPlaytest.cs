@@ -122,37 +122,21 @@ public partial class PlaytestDriver
         await Capture("display-settings-automatic");await KeyPress(Key.Escape);
     }
 
-    private async Task VerifyDisplayRestart()
+    private Task VerifyDisplayRestart()
     {
         string id=Guid.NewGuid().ToString("N");
         string path=ProjectSettings.GlobalizePath($"user://qa-preferences-{id}.cfg");
         File.Copy(ProjectSettings.GlobalizePath(_root.PreferencesPath),path);
         string output=Path.Combine(_output,"restart");Directory.CreateDirectory(output);
-        var info=new System.Diagnostics.ProcessStartInfo(OS.GetExecutablePath()) {UseShellExecute=false,RedirectStandardOutput=true,RedirectStandardError=true};
-        if(OS.HasFeature("editor")){info.ArgumentList.Add("--path");info.ArgumentList.Add(ProjectSettings.GlobalizePath("res://"));}
-        foreach(var arg in new[]{"--windowed","--max-fps","30","--","--playtest=display-settings","--playtest-restore-display","--playtest-preferences="+id,"--playtest-output="+output})info.ArgumentList.Add(arg);
-        Event("display-restart-launch",new {executable=info.FileName,args=info.ArgumentList.ToArray()});
-        using var process=System.Diagnostics.Process.Start(info)??throw new InvalidOperationException("Could not launch persistence witness");
-        // A fresh exported process can spend tens of seconds in cold Metal startup.
-        var stdout=process.StandardOutput.ReadToEndAsync();var stderr=process.StandardError.ReadToEndAsync();
-        try
-        {
-            var wall=System.Diagnostics.Stopwatch.StartNew();
-            while(!process.HasExited&&wall.Elapsed.TotalSeconds<90){await Frames(1);await Task.Delay(25);}
-            if(!process.HasExited){process.Kill(entireProcessTree:true);throw new TimeoutException("Fresh display process did not finish");}
-            File.WriteAllText(Path.Combine(output,"runtime.log"),await stdout+await stderr);
-            Check(process.ExitCode==0,"fresh executable restores persisted settings and exits successfully");
-            using var summary=JsonDocument.Parse(File.ReadAllText(Path.Combine(output,"summary.json")));
-            Check(summary.RootElement.GetProperty("passed").GetBoolean()&&summary.RootElement.GetProperty("assertions").GetInt32()>0,"fresh process retains its own successful graphical receipt");
-        }
-        finally
-        {
-            if(!process.HasExited)process.Kill(entireProcessTree:true);
-            await process.WaitForExitAsync();
-            File.WriteAllText(Path.Combine(output,"runtime.log"),await stdout+await stderr);
-            if(File.Exists(path))File.Delete(path);
-            GetWindow().GrabFocus();await Frames(10);
-        }
+        // The external runner launches the exact executable after this process
+        // exits, so only one game owns the renderer. It requires the child's
+        // complete restoration receipt, with the same 90-second deadline.
+        string hash=Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(path))).ToLowerInvariant();
+        File.WriteAllText(Path.Combine(output,"request.json"),JsonSerializer.Serialize(new {fixtureId=id,preferencesPath=path,preferencesSha256=hash}));
+        _displayRestartRequested=true;
+        Check(File.Exists(path),"saved display choices are retained for the next executable process");
+        Event("display-restart-request",new {fixtureId=id,preferencesSha256=hash});
+        return Task.CompletedTask;
     }
 
     private string SettingsText()=>string.Join("\n",AuditDescendants(_root).OfType<Label>().Where(label=>label.IsVisibleInTree()).Select(label=>label.Text));
@@ -375,7 +359,19 @@ public partial class PlaytestDriver
         {
             await KeyPress(Key.Right);
             var warmup=System.Diagnostics.Stopwatch.StartNew();
-            while(_root.GraphicsPreparing&&warmup.Elapsed.TotalSeconds<20)await Frames(1);
+            // Retained llvmpipe and WARP runs rendered only 14-15 preparation
+            // frames in 20 seconds; WARP once needed 182 seconds for 28 frames.
+            // Software renderers get frame-equivalent time (see Waiting).
+            bool software=SoftwareRenderer;
+            double budget=20;
+            ulong firstFrame=Engine.GetProcessFrames();
+            while(_root.GraphicsPreparing&&Waiting(warmup,budget,firstFrame))await Frames(1);
+            var preparation=new {preset=GraphicsQuality.ToWire(preset),seconds=warmup.Elapsed.TotalSeconds,
+                frames=Engine.GetProcessFrames()-firstFrame,budget,finished=!_root.GraphicsPreparing,
+                software,adapter=RenderingServer.GetVideoAdapterName(),adapterType=RenderingServer.GetVideoAdapterType().ToString()};
+            _graphicsPreparations.Add(preparation);
+            File.WriteAllText(Path.Combine(_output,"graphics-preparation.json"),JsonSerializer.Serialize(_graphicsPreparations));
+            Event("graphics-preparation",preparation);
             Check(!_root.GraphicsPreparing,"graphics preparation finishes before returning control");
             dial.GrabFocus();
         }

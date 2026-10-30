@@ -12,6 +12,7 @@ import zipfile
 
 VERSION = '4.7.2'
 HASHES = {
+    'mono_win64.zip': '79229fd112b0c9cbeab82363a4ef7be18ea70f1caf86bf912789335b136fbe7e01db0053a33461438c5da1c680c17bbb10040bd09bedc51221cd4423d0367757',
     'mono_linux_x86_64.zip': '1855960b27ee3ef5e66e5e228cced69d55637b24334a7411162687dcd077d8f9f645348cdb8eae984bec8135d49ed855a1e3a16476786b8bce60774fd8402d13',
     'mono_macos.universal.zip': '0862c53d7158c7a67f745e2e46f90b68cf5343cbe8b95d6d4333c469e42ca104af9c121d1746a50e5d221a99d09d82ef7016495f8e0d09255842884ed0502795',
     'mono_export_templates.tpz': 'bb5c41d72370ed743660361f6228006f808ab04ca33abdc545d740b044f3fe057f32ae8cb7873a1bc86ddcd82ae683b9f6dfdfe4179852f2c0f1acde2ff6bd5a',
@@ -54,8 +55,12 @@ def main():
         asset = 'mono_linux_x86_64.zip'
         executable = args.destination / f'Godot_v{VERSION}-stable_mono_linux_x86_64/Godot_v{VERSION}-stable_mono_linux.x86_64'
         templates = Path.home() / '.local/share/godot/export_templates' / f'{VERSION}.stable.mono'
+    elif system == 'Windows' and platform.machine().lower() in ('amd64', 'x86_64'):
+        asset = 'mono_win64.zip'
+        executable = args.destination / f'Godot_v{VERSION}-stable_mono_win64/Godot_v{VERSION}-stable_mono_win64_console.exe'
+        templates = Path(os.environ['APPDATA']) / 'Godot/export_templates' / f'{VERSION}.stable.mono'
     else:
-        parser.error('Supported CI hosts: Linux x86_64 and macOS')
+        parser.error('Supported CI hosts: Linux/Windows x86_64 and macOS')
     extract(asset, args.destination)
     if not executable.is_file():
         raise RuntimeError('Godot archive layout changed')

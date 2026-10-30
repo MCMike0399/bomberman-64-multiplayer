@@ -1,4 +1,5 @@
 using Godot;
+using Bomber.Client.Startup;
 using BlastCircuit.App;
 using BlastCircuit.Arena;
 using BlastCircuit.Rendering;
@@ -12,7 +13,9 @@ public partial class ArcadeMenu
         var screen=Screen("Settings");var box=Card(screen,new(150,65),new(1140,740));
         ArcadeTheme.Heading(box,"Settings",42);
         Copy(box,"Your preferences are saved on this device.",18);
-        var columns=ArcadeTheme.Row(box,40);
+        var scroll=new ScrollContainer {Name="SettingsScroll",SizeFlagsVertical=SizeFlags.ExpandFill,
+            HorizontalScrollMode=ScrollContainer.ScrollMode.Disabled,FollowFocus=true};box.AddChild(scroll);
+        var columns=ArcadeTheme.Row(scroll,40);columns.SizeFlagsHorizontal=SizeFlags.ExpandFill;
         var player=ArcadeTheme.Column(columns,14);player.CustomMinimumSize=new(500,440);
         var updates=ArcadeTheme.Column(columns,6);updates.CustomMinimumSize=new(500,440);
         _volumeLabel=ArcadeTheme.Text(player,"Sound volume: 80%",22);
@@ -36,6 +39,22 @@ public partial class ArcadeMenu
             {Graphics=(GraphicsPreset)(((int)Graphics+direction+3)%3);_graphicsDescription.Text=GraphicsQuality.Description(Graphics);SettingsChanged?.Invoke();}};
         updates.AddChild(graphics);
         _graphicsDescription=Copy(updates,GraphicsQuality.Description(Graphics),16);
+        if(OperatingSystem.IsWindows())
+        {
+            string folder=WindowsLaunchGuard.Argument(OS.GetCmdlineUserArgs(),"--launcher-state-dir")??Path.Combine(OS.GetUserDataDir(),"startup");
+            var launch=new WindowsLaunchGuard(folder);string[] choices=["auto","vulkan","d3d12"],labels=["Auto","Vulkan","DirectX 12"];
+            string selected=launch.ReadPreference().Renderer;
+            var rendererHint=Copy(updates,"Renderer changes apply the next time you open the game.",16);
+            var renderer=new ArcadeRuleDial {Name="RendererChoice",Caption="Renderer",ValueWidth=190,
+                ReadValue=()=>labels[Array.IndexOf(choices,selected)],ChangeValue=direction=>
+                {
+                    string next=choices[(Array.IndexOf(choices,selected)+direction+choices.Length)%choices.Length];
+                    try {launch.SelectRenderer(next);selected=next;rendererHint.Text="Saved. Reopen the game to use this renderer.";}
+                    catch(IOException){rendererHint.Text="Could not save the renderer choice. Check this folder's write permissions.";}
+                    catch(UnauthorizedAccessException){rendererHint.Text="Could not save the renderer choice. Check this folder's write permissions.";}
+                }};
+            updates.AddChild(renderer);
+        }
         var mode=new ArcadeRuleDial {Name="DisplayMode",Caption="Display mode",ValueWidth=160,
             ReadValue=()=>Fullscreen?"Fullscreen":"Windowed",
             ChangeValue=_=>{Fullscreen=!Fullscreen;SettingsChanged?.Invoke();}};

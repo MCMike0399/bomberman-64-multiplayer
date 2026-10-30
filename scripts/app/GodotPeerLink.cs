@@ -11,6 +11,9 @@ public sealed class GodotPeerLink(bool useStun = true) : IPeerLink
     private WebRtcDataChannel? _channel;
     private WebRtcDataChannel? _states;
     private string? _remoteOffer;
+    private bool _remoteDescriptionSet;
+    private readonly Queue<(string Media,int Index,string Candidate)> _pendingIce=[];
+    public bool Failed => _peer?.GetConnectionState() is WebRtcPeerConnection.ConnectionState.Failed or WebRtcPeerConnection.ConnectionState.Closed;
     public bool Connected => _peer?.GetConnectionState() == WebRtcPeerConnection.ConnectionState.Connected &&
         _channel?.GetReadyState() == WebRtcDataChannel.ChannelState.Open && _states?.GetReadyState() == WebRtcDataChannel.ChannelState.Open;
     public event Action<JsonElement>? Signal;
@@ -52,10 +55,21 @@ public sealed class GodotPeerLink(bool useStun = true) : IPeerLink
                     if (_remoteOffer is not null) { Dispose(); Start(false); }
                     _remoteOffer = sdp;
                 }
-                if (type is "offer" or "answer") _peer?.SetRemoteDescription(type, sdp);
+                if ((type is "offer" or "answer") && _peer?.SetRemoteDescription(type, sdp) == Error.Ok)
+                {
+                    _remoteDescriptionSet=true;
+                    while(_pendingIce.TryDequeue(out var pending))_peer.AddIceCandidate(pending.Media,pending.Index,pending.Candidate);
+                }
             }
             else if (signal.GetProperty("kind").GetString() == "ice")
-                _peer.AddIceCandidate(signal.GetProperty("media").GetString()!, signal.GetProperty("index").GetInt32(), signal.GetProperty("candidate").GetString()!);
+            {
+                string? media=signal.GetProperty("media").GetString();
+                int index=signal.GetProperty("index").GetInt32();
+                string? candidate=signal.GetProperty("candidate").GetString();
+                if(media is null||candidate is null||media.Length>256||candidate.Length>4096)return;
+                if(_remoteDescriptionSet)_peer.AddIceCandidate(media,index,candidate);
+                else if(_pendingIce.Count<128)_pendingIce.Enqueue((media,index,candidate));
+            }
         }
         catch (Exception ex) when (ex is JsonException or InvalidOperationException or KeyNotFoundException or FormatException or OverflowException) { }
     }
@@ -81,5 +95,6 @@ public sealed class GodotPeerLink(bool useStun = true) : IPeerLink
         _states?.Close(); _states?.Dispose(); _states = null;
         _peer?.Close(); _peer?.Dispose(); _peer = null;
         _remoteOffer = null;
+        _remoteDescriptionSet=false;_pendingIce.Clear();
     }
 }

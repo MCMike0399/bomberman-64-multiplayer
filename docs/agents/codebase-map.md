@@ -13,7 +13,7 @@ The repository root is the Godot project root (`res://`). Folders that contain a
 | Path | Contents | Godot |
 | --- | --- | --- |
 | `Release.props` | Canonical version/build/protocol identity; shared assembly metadata | Root |
-| `project.godot`, `export_presets.cfg`, `icon.svg` | Engine settings, autoloads, the `macOS Metal` export preset (version/build synchronized from `Release.props`) | Root |
+| `project.godot`, `export_presets.cfg`, `icon.svg` | Engine settings, autoloads, Mac Metal, Windows Vulkan with Direct3D 12 fallback and Linux Vulkan export presets (identity synchronized from `Release.props`) | Root |
 | `Bomberman64Multiplayer.csproj`, `.sln` | Godot C# project; compiles `scripts/**/*.cs` and references `Bomber.Client` | Root |
 | `Directory.Build.props` | Shared `net10.0`, nullable and implicit-using defaults for every project here | — |
 | `scenes/` | `main.tscn`, the only scene; menus, arenas and models are built in code | Imported |
@@ -27,6 +27,11 @@ The repository root is the Godot project root (`res://`). Folders that contain a
 | `native/`, `artifacts/`, `burbuja-kernel/` | Local SDL build, outputs, pinned external kernel (all Git-ignored) | Ignored |
 
 ## Assemblies and dependency direction
+
+[Desktop client packaging](../desktop-clients.md) uses
+`tools/packaging/package-desktop.py`, `smoke-desktop.py` and the artifact contracts
+in `tools/ci/desktop_packages.py`. Add platforms through that registry; keep game
+rules and rendering presets shared.
 
 ```mermaid
 flowchart LR
@@ -42,6 +47,7 @@ flowchart LR
 | --- | --- | --- |
 | `src/Bomber.Game` | Rules and authority (folders below): match hosts/options, online registration and rooms, tutorial course, simulation | Godot, transport, rendering |
 | `src/Bomber.Client` | Engine-facing sessions, peer transport, input policies, signed updates (folders below) | Godot types |
+| `src/Bomber.DesktopLauncher` | Windows pre-engine startup/recovery and focus-scoped accessibility shortcut lifetime | Authority rules or graphics presets |
 | `src/Bomber.Server` | Independent ASP.NET host registering the `blast` game | Game rules |
 | `src/Bomber.Cluster` | Optional pressure-aware placement plugin with `plugin.json` | Game rules |
 | `scripts/` | Screens, rendering, audio, devices, harness | Authority decisions |
@@ -243,3 +249,10 @@ Older notes and receipts may cite pre-restructure paths:
 | `tools/package-macos.py`, `tools/cleanup-macos-builds.py` | `tools/packaging/` |
 | `tools/party-relay.sh`, `tools/prepare-party-server.py` | `tools/party/` |
 | `docs/iteration*.md` and early research notes | `docs/history/` |
+
+The desktop updater's detached process is `src/Bomber.Updater`; it links shared
+request/transaction files from `Bomber.Client/Updates` without a private kernel
+dependency. Process fixtures live in `tests/Bomber.DesktopUpdate.Tests`.
+Player downloads use `tools/packaging/package-download.py` and
+`windows-installer.iss`; portable ZIPs remain the inventoried runtime source
+and Windows updater payload.

@@ -1,4 +1,5 @@
 using Godot;
+using Bomber.Client.Startup;
 using Bomber.Client.Sessions;
 using Bomber.Game.Matches;
 using System.Text.Json;
@@ -24,9 +25,10 @@ public partial class GameRoot : Node3D
     private BlastCircuit.Audio.BattleAudio _uiAudio=null!;
     private ISession? _session;
     private CancellationTokenSource? _connectCancel;
-    private readonly Dictionary<int,PlayerInput> _injected=[];
+    private readonly Dictionary<int,Func<PlayerInput>> _injected=[];
     private bool _connecting,_practice,_setupForHost,_smoke,_editingRoom;
     private string _capture="gameplay";
+    private string? _smokeOutput;
     private double _elapsed,_smokeDuration=8;
     private SessionSettings _lastSettings=new();
     private int _lastHumans=1;
@@ -52,6 +54,7 @@ public partial class GameRoot : Node3D
     private BlastCircuit.Updates.GameUpdater _updater=null!;
     public string PreferencesPath {get;private set;}="user://preferences.cfg";
     public PlayerPreferences Preferences=>_preferences;
+    internal string AppliedGraphicsPreset=>_appliedGraphics is {} preset?GraphicsQuality.ToWire(preset):"none";
     public double GraphicsWarmupMilliseconds {get;private set;}
     public string ScreenName
     {
@@ -67,6 +70,8 @@ public partial class GameRoot : Node3D
     }
     public int SnapshotCount { get; private set; }
     public JsonElement? LatestState { get; private set; }
+    public JsonElement? LatestParty { get; private set; }
+    public long? FirstNetworkStateServerTime { get; private set; }
     public JsonElement? LatestStage { get; private set; }
     public ISession? ActiveSession=>_session;
     public IReadOnlyList<BlastCircuit.Arena.Effects.ThrowPreviewState> ThrowPreviews=>_arena.ThrowPreviews;
@@ -84,6 +89,14 @@ public partial class GameRoot : Node3D
     public override async void _Ready()
     {
         var args=OS.GetCmdlineUserArgs();
+        _crashVulkanFirstFrame=OperatingSystem.IsWindows()&&args.Contains("--qa-vulkan-first-frame-crash");
+        if(args.Contains("--generate-bomber-meshes"))
+        {
+            SetProcess(false);SetPhysicsProcess(false);SetProcessInput(false);SetProcessUnhandledInput(false);
+            try {BlastCircuit.Arena.Models.BomberMeshLibrary.Generate();RequestQuit();}
+            catch(Exception error){GD.PushError(error.ToString());RequestQuit(1);}
+            return;
+        }
         _uiAudio=new BlastCircuit.Audio.BattleAudio();AddChild(_uiAudio);
         _arena=new ArenaView();AddChild(_arena);_arena.Visible=false;
         var layer=new CanvasLayer();AddChild(layer);
@@ -113,14 +126,28 @@ public partial class GameRoot : Node3D
             var id=args.FirstOrDefault(a=>a.StartsWith("--playtest-preferences="))?.Split('=',2)[1];
             if(Guid.TryParseExact(id,"N",out var fixture))PreferencesPath=$"user://qa-preferences-{fixture:N}.cfg";
         }
+        if(args.Any(a=>a is "--smoke" or "--smoke-menu"))
+        {
+            string? fixture=args.FirstOrDefault(a=>a.StartsWith("--smoke-preferences="))?.Split('=',2)[1];
+            string? output=args.FirstOrDefault(a=>a.StartsWith("--smoke-output="))?.Split('=',2)[1];
+            if(fixture is not null&&Path.IsPathFullyQualified(fixture))PreferencesPath=fixture;
+            if(output is not null&&Path.IsPathFullyQualified(output))_smokeOutput=output;
+        }
         _preferences=PlayerPreferences.Load(PreferencesPath);_menu.ConfigurePreferences(_preferences);_menu.TutorialProgress(_preferences.CompletedTutorials);ApplyPreferences();
+        var savedPreferences=_preferences;string savedPath=PreferencesPath;
+        ApplicationShutdown.Current.ConfigureSave(()=>
+        {
+            if(savedPreferences.Save(savedPath)!=Error.Ok)return false;
+            using var file=new FileStream(ProjectSettings.GlobalizePath(savedPath),FileMode.Open,System.IO.FileAccess.Write,FileShare.Read);
+            file.Flush(true);return true;
+        },PreferencesPath.StartsWith("user://qa-")?ProjectSettings.GlobalizePath(PreferencesPath):null);
         DisplayModeController.Current.Configure(_preferences.Fullscreen,_preferences.Resolution,startup:true);
         DisplayModeController.Current.Changed+=SaveDisplayShortcut;
         _menu.IdentityChanged+=SavePreferences;
         _arena.PlayerFeedback+=PlayerFeedback;
         _updater=new BlastCircuit.Updates.GameUpdater();AddChild(_updater);
         _menu.CheckUpdatesRequested+=()=>{_ = _updater.Check();};
-        _menu.InstallUpdateRequested+=async ()=>{if(_session==null&&!_connecting&&await _updater.Install())GetTree().Quit();};
+        _menu.InstallUpdateRequested+=async ()=>{if(_session==null&&!_connecting&&await _updater.Install())RequestQuit();};
         bool coldEffects=args.Any(a=>a.StartsWith("--playtest="))&&args.Contains("--playtest-cold-effects");
         _skipGraphicsPreparation=DisplayServer.GetName()=="headless"||coldEffects;
         if(!_skipGraphicsPreparation)
@@ -135,11 +162,13 @@ public partial class GameRoot : Node3D
                 await _arena.PrepareEffects();
                 await _menu.PrepareArenas();
             }
+            catch(OperationCanceledException)when(EffectWarmup.Stopping){return;}
             finally
             {
                 GraphicsWarmupMilliseconds=warmupClock.Elapsed.TotalMilliseconds;
                 _preparingGraphics=false;
-                loading.QueueFree();ScreenName="Modes";_menu.Visible=true;_menu.ShowScreen("Modes");
+                if(GodotObject.IsInstanceValid(loading))loading.QueueFree();
+                if(GodotObject.IsInstanceValid(this)&&IsInsideTree()){ScreenName="Modes";_menu.Visible=true;_menu.ShowScreen("Modes");}
             }
         }
         _smoke=args.Any(a=>a.StartsWith("--smoke"));
@@ -153,6 +182,28 @@ public partial class GameRoot : Node3D
             var settings=new SessionSettings();
             if(args.Contains("--smoke-tier")){settings=settings with { Stage="up-and-down"};_capture="tiers";}
             StartLocal(settings);
+        }
+        string? nativeQuit=args.FirstOrDefault(a=>a.StartsWith("--qa-mac-native-quit="))?.Split('=',2)[1];
+        if(nativeQuit is not null)
+        {
+            try
+            {
+                await ToSignal(GetTree().CreateTimer(2),SceneTreeTimer.SignalName.Timeout);
+                if(_smokeOutput is null)throw new InvalidOperationException("Native quit control requires an owned smoke output");
+                using var image=GetViewport().GetTexture().GetImage();
+                if(image.SavePng(Path.Combine(_smokeOutput,"before-native-quit.png"))!=Error.Ok)throw new IOException("Native quit capture failed");
+                BlastCircuit.Testing.MacQuitControl.Invoke(nativeQuit);
+            }
+            catch(Exception error){GD.PushError(error.ToString());RequestQuit(1);}
+            return;
+        }
+        if(RendererBackend.State=="compatibility-reduced")
+        {
+            var compatibilityLayer=new CanvasLayer {Layer=1000};AddChild(compatibilityLayer);
+            var notice=new Label {Name="CompatibilityNotice",Text="Compatibility renderer: reduced graphics",HorizontalAlignment=HorizontalAlignment.Center,MouseFilter=Control.MouseFilterEnum.Ignore};
+            compatibilityLayer.AddChild(notice);notice.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.TopWide);notice.OffsetTop=8;notice.OffsetBottom=44;
+            notice.AddThemeFontSizeOverride("font_size",22);notice.AddThemeColorOverride("font_color",new Color("ffdb72"));
+            notice.AddThemeColorOverride("font_outline_color",new Color("141426"));notice.AddThemeConstantOverride("outline_size",5);
         }
         BlastCircuit.Testing.PlaytestDriver.TryAttach(this);
     }
@@ -218,6 +269,10 @@ public partial class GameRoot : Node3D
     }
     public override void _Input(InputEvent @event)
     {
+        // Non-window controller events can reach a native popup and its
+        // parent. The popup owns menu navigation, including its closing event.
+        if(_menu.OwnsPopupInput&&(@event is InputEventJoypadButton or InputEventJoypadMotion or InputEventAction))
+        {GetViewport().SetInputAsHandled();return;}
         if(@event is InputEventKey {Pressed:true,Echo:false,Keycode:Key.F3,AltPressed:false,CtrlPressed:false,MetaPressed:false,ShiftPressed:false})
         {
             _menu.ConfigurePerformanceMetrics(!_preferences.PerformanceMetrics);SavePreferences();
@@ -281,6 +336,7 @@ public partial class GameRoot : Node3D
         if(offset is {} stick)return input with {AimTarget=stick,AimRelative=true};
         return hub.MouseAimActive(seat,true)?input with {AimTarget=_arena.ArenaPoint(GetViewport().GetMousePosition())}:input;
     }
+    private bool _launcherHealthyReported,_crashVulkanFirstFrame;
     private bool _matchCursor;
     /// <summary>In matches the pointer is a crosshair while the mouse is in use and hides when idle,
     /// so keyboard and controller players are not left with an arrow over the arena.</summary>
@@ -304,6 +360,16 @@ public partial class GameRoot : Node3D
     }
     public override void _Process(double delta)
     {
+        if(_crashVulkanFirstFrame&&RendererBackend.EngineRequestedDriver()=="vulkan")
+        {
+            Console.WriteLine("BLAST_QA_FIRST_FRAME_CRASH");Console.Out.Flush();
+            System.Diagnostics.Process.GetCurrentProcess().Kill();return;
+        }
+        if(!_launcherHealthyReported&&!_preparingGraphics&&ScreenName!="Loading"&&Engine.GetFramesDrawn()>2)
+        {
+            var backend=RendererBackend.Observe();
+            _launcherHealthyReported=WindowsLaunchGuard.ReportHealthy(OS.GetCmdlineUserArgs(),backend.Driver,backend.FallbackReason);
+        }
         _updater.Tick(delta,_preferences.AutomaticUpdates,_session==null&&!_connecting);
         _menu.UpdateStatus(_updater.Version,_updater.Status,_updater.Busy,_updater.UpdateReady,_session==null&&!_connecting);
         if(_smoke)
@@ -314,11 +380,20 @@ public partial class GameRoot : Node3D
                 bool captured=true;
                 if(DisplayServer.GetName()!="headless")
                 {
-                    string folder=ProjectSettings.GlobalizePath(OS.HasFeature("editor")?"res://artifacts":"user://captures");
+                    string folder=_smokeOutput??ProjectSettings.GlobalizePath(OS.HasFeature("editor")?"res://artifacts":"user://captures");
                     captured=DirAccess.MakeDirRecursiveAbsolute(folder)==Error.Ok
                         &&GetViewport().GetTexture().GetImage().SavePng(System.IO.Path.Combine(folder,_capture+".png"))==Error.Ok;
                 }
-                bool passed=captured&&(_capture is "menu" or "roster"||SnapshotCount>0);GD.Print($"{(passed?"GODOT_SMOKE_OK":"GODOT_SMOKE_FAILED")} {_capture} snapshots={SnapshotCount} {SmokeSettings()}");GetTree().Quit(passed?0:1);return;
+                if(_smokeOutput is not null)
+                {
+                    Directory.CreateDirectory(_smokeOutput);
+                    var backend=RendererBackend.Observe();
+                    File.WriteAllText(Path.Combine(_smokeOutput,"renderer-selection.json"),JsonSerializer.Serialize(new {
+                        driver=backend.Driver,requestedDriver=backend.RequestedDriver,fallbackReason=backend.FallbackReason,
+                        method=RenderingServer.GetCurrentRenderingMethod(),rendererState=RendererBackend.State,adapter=RenderingServer.GetVideoAdapterName(),
+                        sourceRevision=Bomber.Game.Online.OnlineProtocol.SourceRevision}));
+                }
+                bool passed=captured&&(_capture is "menu" or "roster"||SnapshotCount>0);GD.Print($"{(passed?"GODOT_SMOKE_OK":"GODOT_SMOKE_FAILED")} {_capture} snapshots={SnapshotCount} {SmokeSettings()}");RequestQuit(passed?0:1);return;
             }
         }
         UpdateMatchCursor();
@@ -328,7 +403,7 @@ public partial class GameRoot : Node3D
         if(ScreenName=="Match" && !(_tutorialLessonId is not null && _tutorialHud.Finished))for(int i=0;i<session.LocalPlayerCount;i++)
         {
             var playerId=session is NetworkSession network?network.PlayerId:$"local-{i}";
-            var input=_injected.TryGetValue(i,out var injected)?injected:WithPointer(PlayerControls.Read(i,session.LocalPlayerCount),i,playerId);
+            var input=_injected.TryGetValue(i,out var injected)?injected():WithPointer(PlayerControls.Read(i,session.LocalPlayerCount),i,playerId);
             session.SendInput(i,input);
             if(playerId!=null)_arena.SetLocalInput(playerId,input);
         }
@@ -340,10 +415,13 @@ public partial class GameRoot : Node3D
             {
                 case "stage":LatestStage=data.Clone();_arena.Stage(data);_hud.Stage(data);break;
                 case "state":
+                    if(session is NetworkSession&&FirstNetworkStateServerTime is null&&data.TryGetProperty("serverTime",out var firstTime))
+                        FirstNetworkStateServerTime=firstTime.GetInt64();
                     LatestState=data.Clone();SnapshotCount++;ApplyStageLighting();_arena.State(data,envelope.TryGetProperty("k",out var stateTick)&&stateTick.ValueKind==JsonValueKind.Number?stateTick.GetInt64():-1);_hud.State(data);TutorialState(data);
                     if(ScreenName=="Lobby")EnterMatch();
                     break;
                 case "party.status":
+                    LatestParty=data.Clone();
                     var party=PartyStatus.Parse(data);_menu.ShowParty(data,(session as NetworkSession)?.PlayerId);
                     if(party.Phase=="playing"&&party.Match!=_partyMatch)
                     {
@@ -380,5 +458,6 @@ public partial class GameRoot : Node3D
         if(session.IsEnded&&session.Status.StartsWith("Error",StringComparison.Ordinal)&&ScreenName!="Results")
         {ScreenName="Results";_hud.Visible=false;_menu.Visible=true;_menu.ShowResults(LatestState,JsonSerializer.SerializeToElement(new {reason=session.Status}));}
     }
-    public override void _ExitTree(){DisplayModeController.Current.Changed-=SaveDisplayShortcut;CancelConnection();ReleaseSession();if(PreferencesPath.StartsWith("user://qa-"))DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(PreferencesPath));}
+    public void RequestQuit(int exitCode=0)=>ApplicationShutdown.Current.RequestQuit(exitCode);
+    public override void _ExitTree(){DisplayModeController.Current.Changed-=SaveDisplayShortcut;CancelConnection();ReleaseSession();}
 }

@@ -1,0 +1,4 @@
+<Project Sdk="Godot.NET.Sdk/4.7.2">
+  <PropertyGroup><TargetFramework>net10.0</TargetFramework><EnableDynamicLoading>true</EnableDynamicLoading><EnableDefaultCompileItems>false</EnableDefaultCompileItems></PropertyGroup>
+  <ItemGroup><Compile Include="ProbeDrain.cs"/><Compile Include="../../../scripts/app/ShutdownDrain.cs" Link="ShutdownDrain.cs"/></ItemGroup>
+</Project>

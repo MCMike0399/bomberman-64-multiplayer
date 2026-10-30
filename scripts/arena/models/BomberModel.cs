@@ -7,6 +7,13 @@ namespace BlastCircuit.Arena.Models;
 /// <summary>Articulated original mesh character, animated from authoritative movement and action state.</summary>
 public partial class BomberModel : Node3D
 {
+    // Optional owner-thread observation; normal play does not allocate trace data.
+    internal static Action<string,object>? MeshBuildObservation;
+    private static string MeshBits(float value)=>BitConverter.SingleToInt32Bits(value).ToString("x8",System.Globalization.CultureInfo.InvariantCulture);
+    private static string[] MeshBits(Vector2 value)=>[MeshBits(value.X),MeshBits(value.Y)];
+    private static string[] MeshBits(Vector3 value)=>[MeshBits(value.X),MeshBits(value.Y),MeshBits(value.Z)];
+    private static void ObserveSurface(string stage,SurfaceTool surface)=>MeshBuildObservation?.Invoke(stage,GD.VarToBytes(surface.CommitToArrays()));
+
     private readonly Node3D _body=new(),_leftArm=new(),_rightArm=new(),_leftLeg=new(),_rightLeg=new();
     private readonly Node3D _upperBody=new(),_upperParts=new();
     private Node3D _stars=new();
@@ -66,6 +73,7 @@ public partial class BomberModel : Node3D
     public float WalkHipSlide=>Mathf.Max(Mathf.Abs(_leftLeg.Position.Z),Mathf.Abs(_rightLeg.Position.Z));
     public float WalkLegTuck=>Mathf.Max(_leftLeg.Position.Y,_rightLeg.Position.Y)-.37f;
     public Vector3 AntennaRotation=>_antenna.Rotation;
+    internal static Action<object>? PoseWaveObservation;
     private bool _kickWinding;
     private float _kickWindupRemaining;
     public float KickPose=>_kickWinding?-(1-Mathf.Clamp(_kickWindupRemaining/(4f/30f),0,1)):_kickPulse;
@@ -114,7 +122,7 @@ public partial class BomberModel : Node3D
         _upperBody.Position=new(0,.37f,0);_upperParts.Position=new(0,-.37f,0);
         _body.AddChild(_upperBody);_upperBody.AddChild(_upperParts);
         // The suit is a compact pear: tucked shoulders over a slightly fuller waist.
-        var torso=new MeshInstance3D {Name="Torso",Mesh=_torsoMesh??=CreateHelmet(false),MaterialOverride=art.Toy(TorsoColor(color),.46f),
+        var torso=new MeshInstance3D {Name="Torso",Mesh=_torsoMesh??=BomberMeshLibrary.Get("torso",()=>CreateHelmet(false)),MaterialOverride=art.Toy(TorsoColor(color),.46f),
             Position=new(0,.53f,0),Scale=new(.395f/.854f,.38f/.79f,.37f/.73f),Rotation=new(0,0,Mathf.Pi)};
         _upperParts.AddChild(torso);_torsoParts.Add(torso);
         _torsoParts.Add(Sphere(_upperParts,new(0,.722f,0),new(.16f,.065f,.16f),art.Toy(TorsoColor(color),.46f)));
@@ -123,14 +131,14 @@ public partial class BomberModel : Node3D
         RoundedBox(_upperParts,new(0,.41f,.227f),new(.066f,.06f,.012f),dark,.2f);
         // A softly rounded helmet sits over a slimmer suit; the shallow face remains easy to read.
         _head.Position=new(0,HeadCenter,0);_upperParts.AddChild(_head);
-        var helmet=new MeshInstance3D {Name="HelmetShell",Mesh=_helmetMesh??=CreateHelmet(),MaterialOverride=suit};
+        var helmet=new MeshInstance3D {Name="HelmetShell",Mesh=_helmetMesh??=BomberMeshLibrary.Get("helmet",()=>CreateHelmet()),MaterialOverride=suit};
         _head.AddChild(helmet);_suitParts.Add(helmet);
-        _head.AddChild(new MeshInstance3D {Name="FaceRim",Mesh=_faceRimMesh??=CreateCurvedFacePatch(.646f,.466f,0,FaceCenterY,.009f),MaterialOverride=art.Toy(new("8b755c"),.8f),Position=new(0,FaceCenterY,0)});
-        _head.AddChild(new MeshInstance3D {Name="FaceSurface",Mesh=_faceMesh??=CreateCurvedFacePatch(.634f,.454f,0,FaceCenterY,.016f),MaterialOverride=face,Position=new(0,FaceCenterY,0)});
+        _head.AddChild(new MeshInstance3D {Name="FaceRim",Mesh=_faceRimMesh??=BomberMeshLibrary.Get("face-rim",()=>CreateCurvedFacePatch(.646f,.466f,0,FaceCenterY,.009f)),MaterialOverride=art.Toy(new("8b755c"),.8f),Position=new(0,FaceCenterY,0)});
+        _head.AddChild(new MeshInstance3D {Name="FaceSurface",Mesh=_faceMesh??=BomberMeshLibrary.Get("face",()=>CreateCurvedFacePatch(.634f,.454f,0,FaceCenterY,.016f)),MaterialOverride=face,Position=new(0,FaceCenterY,0)});
         foreach(float x in new[]{-.134f,.134f})
         {
             // Keep two simple eyes laid against the faceplate's moderate curvature.
-            if(!EyeMeshes.TryGetValue(x,out var eyeMesh))EyeMeshes[x]=eyeMesh=CreateCurvedFacePatch(.036f,.193f,x,EyeCenterY,.022f,.8f,false);
+            if(!EyeMeshes.TryGetValue(x,out var eyeMesh))EyeMeshes[x]=eyeMesh=BomberMeshLibrary.Get("eye-"+BomberMeshLibrary.Side(x),()=>CreateCurvedFacePatch(.036f,.193f,x,EyeCenterY,.022f,.8f,false));
             var eye=new MeshInstance3D {Mesh=eyeMesh,MaterialOverride=dark,Position=new(x,EyeCenterY,0)};
             _head.AddChild(eye);_eyes.Add(eye);
         }
@@ -177,6 +185,7 @@ public partial class BomberModel : Node3D
         // A distinct faceplate with moderate cheek curvature. Its rounded return
         // bridges back into the helmet, preserving the original front outline.
         const int rings=12,segments=64;
+        MeshBuildObservation?.Invoke("patch/parameters",new{width=MeshBits(width),height=MeshBits(height),centerX=MeshBits(centerX),centerY=MeshBits(centerY),offset=MeshBits(offset),roundness=MeshBits(roundness),seatToShell});
         var surface=new SurfaceTool();surface.Begin(Mesh.PrimitiveType.Triangles);
         Vector2 Outline(float phi)
         {
@@ -184,26 +193,34 @@ public partial class BomberModel : Node3D
             var radial=new Vector2(Mathf.Cos(phi),Mathf.Sin(phi));
             var square=radial/Mathf.Max(Mathf.Abs(radial.X),Mathf.Abs(radial.Y))*.5f;
             var inner=square.Clamp(Vector2.One*-flat,Vector2.One*flat);
-            return (inner+(square-inner).Normalized()*corner)*2;
+            var normalized=(square-inner).Normalized();var result=(inner+normalized*corner)*2;
+            MeshBuildObservation?.Invoke("patch/outline",new{phi=MeshBits(phi),corner=MeshBits(corner),flat=MeshBits(flat),radial=MeshBits(radial),square=MeshBits(square),inner=MeshBits(inner),normalized=MeshBits(normalized),result=MeshBits(result)});
+            return result;
         }
         Vector3 Point(float radius,int segment,float depth,float shellBlend=0)
         {
-            var outline=Outline(Mathf.Tau*segment/segments);
+            float phi=Mathf.Tau*segment/segments;var outline=Outline(phi);
             float x=width*.5f*radius*outline.X,y=height*.5f*radius*outline.Y;
             float hemisphere=FaceHemisphereZ(centerX+x,centerY+y);
             // Lift the perimeter slightly while following the continuous spherical front.
             float faceRadiusSquared=Mathf.Pow((centerX+x)/.317f,2)+Mathf.Pow((centerY+y-FaceCenterY)/.227f,2);
             float front=hemisphere+depth+.03f*faceRadiusSquared;
             float rear=seatToShell?hemisphere-.005f:front;
-            return new(x,y,Mathf.Lerp(front,rear,shellBlend));
+            var result=new Vector3(x,y,Mathf.Lerp(front,rear,shellBlend));
+            MeshBuildObservation?.Invoke("patch/point",new{radius=MeshBits(radius),segment,depth=MeshBits(depth),shellBlend=MeshBits(shellBlend),phi=MeshBits(phi),outline=MeshBits(outline),hemisphere=MeshBits(hemisphere),faceRadiusSquared=MeshBits(faceRadiusSquared),front=MeshBits(front),rear=MeshBits(rear),result=MeshBits(result)});
+            return result;
+        }
+        void Vertex(Vector3 value)
+        {
+            MeshBuildObservation?.Invoke("patch/vertex",new{position=MeshBits(value)});surface.AddVertex(value);
         }
         void Triangle(Vector3 a,Vector3 b,Vector3 c,bool front)
         {
             var normal=(b-a).Cross(c-a);
             // Godot uses clockwise front faces. Caps are oriented by the hemisphere;
             // the lip is ordered explicitly around its outward perimeter.
-            if(front&&normal.Z>0||!front&&normal.Z<0){surface.AddVertex(a);surface.AddVertex(c);surface.AddVertex(b);}
-            else {surface.AddVertex(a);surface.AddVertex(b);surface.AddVertex(c);}
+            if(front&&normal.Z>0||!front&&normal.Z<0){Vertex(a);Vertex(c);Vertex(b);}
+            else {Vertex(a);Vertex(b);Vertex(c);}
         }
         void Cap(float maxRadius,float depth,bool front,float shellBlend=0)
         {
@@ -222,18 +239,21 @@ public partial class BomberModel : Node3D
             var a=Point(profiles[ring].Radius,segment,profiles[ring].Depth,profiles[ring].ShellBlend);var b=Point(profiles[ring+1].Radius,segment,profiles[ring+1].Depth,profiles[ring+1].ShellBlend);
             var c=Point(profiles[ring+1].Radius,segment+1,profiles[ring+1].Depth,profiles[ring+1].ShellBlend);var d=Point(profiles[ring].Radius,segment+1,profiles[ring].Depth,profiles[ring].ShellBlend);
             // Clockwise outward orientation around the closed return.
-            surface.AddVertex(a);surface.AddVertex(c);surface.AddVertex(b);
-            surface.AddVertex(a);surface.AddVertex(d);surface.AddVertex(c);
+            Vertex(a);Vertex(c);Vertex(b);
+            Vertex(a);Vertex(d);Vertex(c);
         }
         Cap(.985f,offset-.012f,false,1);
         // Generate the authored normals before deduplicating complete vertices.
-        surface.GenerateNormals();surface.Index();return surface.Commit();
+        ObserveSurface("patch/pre-normal",surface);surface.GenerateNormals();ObserveSurface("patch/post-normal",surface);
+        surface.Index();ObserveSurface("patch/indexed",surface);var mesh=surface.Commit();
+        MeshBuildObservation?.Invoke("patch/packed",GD.VarToBytes(mesh.Get("_surfaces")));return mesh;
     }
     private static ArrayMesh CreateHelmet(bool extendedBack=true)
     {
         // An uninterrupted near-sphere makes every head angle softly round.
         // Its slight forward center balances the face without a heavy rear cranium.
         const int rings=24,segments=40;
+        MeshBuildObservation?.Invoke("helmet/parameters",new{extendedBack});
         // The torso keeps its established pear proportions; only the helmet is retuned.
         float halfHeight=extendedBack?HelmetHalfHeight:.395f,taper=extendedBack?0:.075f;
         var surface=new SurfaceTool();surface.Begin(Mesh.PrimitiveType.Triangles);
@@ -242,13 +262,16 @@ public partial class BomberModel : Node3D
             float theta=Mathf.Pi*ring/rings,phi=Mathf.Tau*segment/segments;
             float y=Mathf.Cos(theta),radius=Mathf.Sin(theta)*(1+taper*y);
             float z=(extendedBack?HelmetForward:0)+(extendedBack?HelmetDepth:.365f)*radius*Mathf.Sin(phi);
-            return new(.427f*radius*Mathf.Cos(phi),halfHeight*y,z);
+            var result=new Vector3(.427f*radius*Mathf.Cos(phi),halfHeight*y,z);
+            MeshBuildObservation?.Invoke("helmet/point",new{ring,segment,theta=MeshBits(theta),phi=MeshBits(phi),y=MeshBits(y),radius=MeshBits(radius),result=MeshBits(result)});
+            return result;
         }
         void Vertex(Vector3 p)
         {
             float normalZ=extendedBack?(p.Z-HelmetForward)/(HelmetDepth*HelmetDepth):p.Z/(.365f*.365f);
-            surface.SetNormal(new Vector3(p.X/(.427f*.427f),p.Y/(halfHeight*halfHeight)-2*taper,normalZ).Normalized());
-            surface.SetUV(new(.5f+Mathf.Atan2(p.Z,p.X)/Mathf.Tau,.5f-p.Y/(halfHeight*2)));
+            var normal=new Vector3(p.X/(.427f*.427f),p.Y/(halfHeight*halfHeight)-2*taper,normalZ).Normalized();surface.SetNormal(normal);
+            float angle=Mathf.Atan2(p.Z,p.X),quotient=angle/Mathf.Tau;var uv=new Vector2(.5f+quotient,.5f-p.Y/(halfHeight*2));surface.SetUV(uv);
+            MeshBuildObservation?.Invoke("helmet/vertex",new{position=MeshBits(p),normal=MeshBits(normal),angle=MeshBits(angle),quotient=MeshBits(quotient),uv=MeshBits(uv)});
             surface.AddVertex(p);
         }
         void Triangle(Vector3 a,Vector3 b,Vector3 c)
@@ -263,7 +286,8 @@ public partial class BomberModel : Node3D
             if(ring<rings-1)Triangle(a,b,c);
             if(ring>0)Triangle(a,c,d);
         }
-        surface.Index();return surface.Commit();
+        ObserveSurface("helmet/pre-index",surface);surface.Index();ObserveSurface("helmet/indexed",surface);var mesh=surface.Commit();
+        MeshBuildObservation?.Invoke("helmet/packed",GD.VarToBytes(mesh.Get("_surfaces")));return mesh;
     }
     public void Pose(bool carrying,bool stunned,bool ghost,bool liftingPlayer=false)
     {
@@ -306,8 +330,8 @@ public partial class BomberModel : Node3D
         var leftStep=FootStride(_walkPhase);var rightStep=FootStride(Mathf.PosMod(_walkPhase+.5f,1));
         float walk=(rightStep.Reach-leftStep.Reach)*.5f*_speed;
         float idle=(1-_speed)*(1-_carryBlend)*(1-death);
-        float breath=Mathf.Sin(_time*2.35f)*idle;
-        float sway=Mathf.Sin(_time*1.2f)*idle;
+        float breath=BomberPresentationMath.IdleWave(_time*2.35f)*idle;
+        float sway=BomberPresentationMath.IdleWave(_time*1.2f)*idle;
         _downBlend=Mathf.MoveToward(_downBlend,(_stunned||_heldVictim||_airborne)&&!_ghost?1:0,dt*8);
         float action=Mathf.Max(Mathf.Abs(kick)*2,Mathf.Max(drop,Mathf.Max(toss,Mathf.Max(lift,Mathf.Max(death,Mathf.Max(victory,pump))))));
         float freeStride=_speed*(1-_carryBlend*.45f)*(1-_downBlend)*(1-Mathf.Clamp(action,0,1));
@@ -376,7 +400,13 @@ public partial class BomberModel : Node3D
         _antennaPitch.Step(headPitch-acceleration*.07f,13,.16f,dt);_antennaRoll.Step(headRoll,13,.16f,dt);
         float headHeight=_body.Position.Y+headLag*.6f;
         _antennaBob.Step(headHeight,18,.15f,dt);
-        _antenna.Rotation=new(SoftLimit((_antennaPitch.Value-headPitch)*2.6f,.5f),0,SoftLimit((_antennaRoll.Value-headRoll)*2.6f,.5f));
+        PoseWaveObservation?.Invoke(new{
+            timeBits=BitConverter.SingleToUInt32Bits(_time).ToString("x8"),
+            nativeBreathBits=BitConverter.SingleToUInt32Bits(Mathf.Sin(_time*2.35f)*idle).ToString("x8"),breathBits=BitConverter.SingleToUInt32Bits(breath).ToString("x8"),
+            nativeSwayBits=BitConverter.SingleToUInt32Bits(Mathf.Sin(_time*1.2f)*idle).ToString("x8"),swayBits=BitConverter.SingleToUInt32Bits(sway).ToString("x8"),
+            headPitchBits=BitConverter.SingleToUInt32Bits(headPitch).ToString("x8"),headRollBits=BitConverter.SingleToUInt32Bits(headRoll).ToString("x8"),
+            rollSpringBits=BitConverter.SingleToUInt32Bits(_antennaRoll.Value).ToString("x8"),rollVelocityBits=BitConverter.SingleToUInt32Bits(_antennaRoll.Velocity).ToString("x8")});
+        _antenna.Basis=BomberPresentationMath.AntennaBasis((_antennaPitch.Value-headPitch)*2.6f,(_antennaRoll.Value-headRoll)*2.6f);
         float jiggle=Mathf.Clamp(_antennaBob.Value-headHeight,-.03f,.03f);
         _antennaBall.Position=new(0,.116f+jiggle*.7f,0);
         _antennaBall.Scale=new Vector3(.225f,.225f,.225f)*new Vector3(1-jiggle*1.5f,1+jiggle*3,1-jiggle*1.5f);
@@ -389,8 +419,6 @@ public partial class BomberModel : Node3D
         Scale=Vector3.One*(_ghost?.85f:1.12f*StatusScale);
         if(_ghost&&_ghostFade>0){_ghostFade=Mathf.MoveToward(_ghostFade,0,dt/1.6f);SetGhostOpacity(_body,GhostTransparency(_ghostFade));}
     }
-    /// <summary>Eases toward a limit instead of stopping dead against it.</summary>
-    private static float SoftLimit(float value,float limit)=>limit*(float)Math.Tanh(value/limit);
     private static float Bounce(float beat)
     {
         // -1 just after heel strike, +1 late in push-off: a slightly slower rise than fall.

@@ -27,6 +27,8 @@ FOOTERS = {
     'network-smoke': r'^ALL NETWORK SMOKE CHECKS PASSED(?: \([^\r\n]+\))?$',
     'adaptive-network': r'^PASS (?P<count>\d+) adaptive network checks$',
     'fleet-network': r'^PASS (?P<count>\d+) real fleet infrastructure checks$',
+    'Bomber.Startup.Tests': r'^PASS (?P<count>\d+) crash-safe renderer startup checks$',
+    'Bomber.DesktopUpdate.Tests': r'^PASS (?P<count>\d+) desktop updater handoff, replacement and rollback checks$',
     'release-probe': r'^PASS (?P<count>\d+) release connection and cleanup checks$',
     'ai-soak': r'^PASS (?P<count>\d+) gameplay soak scenarios; [^\r\n]+$',
 }
@@ -143,9 +145,11 @@ class Suite:
         self.require('build-' + name, ['dotnet', 'build', project, '-c', configuration, '--nologo', '-m:1'])
 
     @contextlib.contextmanager
-    def server(self, dll=None, simulation_capacity=None):
+    def server(self, dll=None, simulation_capacity=None, peer_host_lease=None):
         if simulation_capacity is not None and (type(simulation_capacity) is not int or not 0 <= simulation_capacity <= 32):
             raise ValueError('simulation capacity must be an integer from 0 to 32')
+        if peer_host_lease is not None and (type(peer_host_lease) is not int or not 6 <= peer_host_lease <= 600):
+            raise ValueError('peer host lease must be an integer from 6 to 600 seconds')
         self._server_count += 1
         log_path = self.output / ('server.log' if self._server_count == 1 else f'server-{self._server_count}.log')
         process = None
@@ -159,6 +163,9 @@ class Suite:
                 record['assembly'] = str(executable)
                 overrides = [] if simulation_capacity is None else [f'--Realtime:Resources:simulation={simulation_capacity}']
                 record['simulationCapacityOverride'] = simulation_capacity
+                if peer_host_lease is not None:
+                    overrides.append(f'--Blast:PeerHostLeaseSeconds={peer_host_lease}')
+                record['peerHostLeaseSeconds'] = peer_host_lease
                 process = subprocess.Popen(['dotnet', str(executable), *overrides,
                                             '--urls', 'http://127.0.0.1:0'], cwd=ROOT, stdout=log,
                                            stderr=subprocess.STDOUT, start_new_session=os.name == 'posix')
@@ -303,14 +310,21 @@ def ensure_controller_backend(suite):
 def execute(suite, app=None):
     if suite.profile == 'public':
         suite.step('public-boundaries', [sys.executable, 'tools/ci/public_checks.py'])
+        suite.step('canonical-bomber-geometry', [sys.executable, 'tools/ci/bomber_mesh_library.py'])
         for folder in ('ci', 'cluster', 'networking', 'packaging', 'party', 'playtest', 'qa'):
             suite.step(folder + '-contracts', [sys.executable, '-m', 'unittest', 'discover', '-s', 'tools/' + folder, '-p', 'test_*.py'])
         suite.build('tests/Bomber.Release.Probe')
         suite.build('tests/Bomber.Audio.Tests')
         suite.step('audio', ['dotnet', 'run', '--no-build', '--project', 'tests/Bomber.Audio.Tests'], footer=FOOTERS['Bomber.Audio.Tests'])
+        suite.build('tests/Bomber.Update.Tests')
+        suite.build('tests/Bomber.DesktopUpdate.GameTests')
+        suite.build('tests/Bomber.Startup.Tests')
+        suite.step('startup-guard', ['dotnet','run','--no-build','--project','tests/Bomber.Startup.Tests'],footer=FOOTERS['Bomber.Startup.Tests'])
+        suite.build('tests/Bomber.DesktopUpdate.Tests')
+        suite.step('desktop-update', ['dotnet', 'run', '--no-build', '--project', 'tests/Bomber.DesktopUpdate.Tests'], footer=FOOTERS['Bomber.DesktopUpdate.Tests'])
         return
     if suite.profile == 'managed':
-        projects = ['Bomber.Game.Tests', 'Bomber.Client.Tests', 'Bomber.Ai.Tests', 'Bomber.Audio.Tests', 'Bomber.Cluster.Tests', 'Bomber.Smoke']
+        projects = ['Bomber.Game.Tests', 'Bomber.Client.Tests', 'Bomber.Ai.Tests', 'Bomber.Audio.Tests', 'Bomber.Cluster.Tests', 'Bomber.Startup.Tests', 'Bomber.DesktopUpdate.Tests', 'Bomber.Smoke']
         for project in projects:
             suite.build('tests/' + project)
         suite.build('tests/Bomber.Release.Probe')

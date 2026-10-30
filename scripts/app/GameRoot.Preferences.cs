@@ -76,15 +76,19 @@ public partial class GameRoot
             _preparingGraphics=true;_menu.Visible=false;ControllerHub.Current.MenuNavigationEnabled=false;
             var loading=PreparationOverlay("Applying graphics...");
             try {await EffectWarmup.Draw(this);await _arena.PrepareEffects();await _menu.PrepareArenas();}
+            catch(OperationCanceledException)when(EffectWarmup.Stopping){}
             finally
             {
-                loading.QueueFree();_preparingGraphics=false;
-                if(ScreenName==screen)_menu.Visible=menuVisible;
-                ControllerHub.Current.MenuNavigationEnabled=ScreenName is not ("Match" or "Controls");
-                if(_menu.Visible)
+                if(GodotObject.IsInstanceValid(loading))loading.QueueFree();_preparingGraphics=false;
+                if(!EffectWarmup.Stopping&&GodotObject.IsInstanceValid(this)&&IsInsideTree())
                 {
-                    if(GodotObject.IsInstanceValid(focus)&&focus.IsVisibleInTree())focus.GrabFocus();
-                    else _menu.FocusStart();
+                    if(ScreenName==screen)_menu.Visible=menuVisible;
+                    ControllerHub.Current.MenuNavigationEnabled=ScreenName is not ("Match" or "Controls");
+                    if(_menu.Visible)
+                    {
+                        if(GodotObject.IsInstanceValid(focus)&&focus.IsVisibleInTree())focus.GrabFocus();
+                        else _menu.FocusStart();
+                    }
                 }
             }
         }

@@ -96,6 +96,11 @@ public partial class PlaytestDriver
         // the winner and Results transition; no snapshots or screen state are forged.
         Input(1,new Bomber.Game.Matches.PlayerInput(0,0,A:true));await Frames(2);Input(1,default);
         await WaitState(s=>s.GetProperty("phase").GetInt32()==3,"ordinary opponent bomb ends the duel while survivor still carries",150);
+        Check(_root.ScreenName=="Match"&&Player.GetProperty("carrying").GetString()=="bomb",
+            "finish announcement keeps the actual survivor and carried-bomb snapshot in the arena");
+        // Over now includes the ordinary three-second finish announcement.
+        // Observe the real navigation before asserting its overlay cleanup.
+        for(int frame=0;frame<150&&_root.ScreenName!="Results";frame++)await Frames(1);
         Check(_root.ScreenName=="Results"&&Player.GetProperty("carrying").GetString()=="bomb",
             "actual match-end navigation retains the survivor's carried-bomb snapshot");
         Check(_root.ThrowPreviews.Count==0&&(!GodotObject.IsInstanceValid(held)||!held.EndpointMarkerVisible),

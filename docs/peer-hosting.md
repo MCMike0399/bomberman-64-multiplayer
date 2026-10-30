@@ -119,3 +119,17 @@ Peer hello uses the same revision. A mixed peer roster cannot start, and
 incompatible clients receive an update notice. Lower terrain cells are validated
 as one bounded optional layer, including fractional ramps and authored wall
 heights; a third layer or malformed lower cell is rejected before rendering.
+
+
+## Native signalling order regression
+
+The desktop verification pass found that the native extension rejects ICE
+candidates before a remote SDP has been installed. `GodotPeerLink` now retains
+a bounded 128-candidate queue until the remote description succeeds, validates
+candidate/media lengths and clears pending candidates on disposal. This changes
+transport preparation only; gameplay rules and rendering are unchanged.
+`peer-ice-order` reproduces the old failure with actual native connections by
+delivering candidates first, then requires a real data packet after connection.
+It is required in archived regression on each OS. Capacity/recovery tests retain
+their Direct P2P assertions and bounded native-state diagnostics; a valid relay
+match and a healthy direct path remain separate witnesses.

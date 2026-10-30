@@ -49,6 +49,11 @@ readies and pumps without reaching across to A. Both held state and sub-frame
 taps use the alias; B remains menu Back, X remains remote, and A still works.
 
 Space has no gameplay action. F11 or Alt+Enter toggles fullscreen and saves the selected mode.
+Windows keeps the same L/Shift precision-aim binding. Its launcher owns a
+focus-scoped accessibility shortcut guard: only HOTKEYACTIVE/CONFIRMHOTKEY
+are cleared, only when the corresponding feature is off, without profile
+writes. Focus loss and engine exit restore the saved flags. Already enabled
+Sticky/Filter/Toggle Keys and unrelated flags/timings are preserved.
 F3 toggles the device-local performance bar and saves the same choice as
 Settings → Performance metrics. Repeated key-down events do not toggle it again.
 Keep both held-state sampling and short-press detection consistent when changing
@@ -56,6 +61,12 @@ bindings: [PlayerControls](../../scripts/input_devices/PlayerControls.cs) owns k
 `BombKey` and `RemoteKey`; [ControllerProfile](../../scripts/input_devices/ControllerProfile.cs)
 owns family semantics and prompt labels. Update the README, controller panel,
 HUD hints and native tests together.
+
+Movement axes sample the current physical-key state. A movement tap whose
+press and release both occur between render polls can disappear during a long
+frame hitch. This is existing shared behavior on all platforms, distinct from
+queued button-edge handling. The pinned-engine synthetic down/up control
+confirms the next state poll is released; it is not physical-keyboard QA.
 
 The positional action table in early controller research is historical; use
 the current table above and `ControllerProfile` for product actions.
@@ -65,6 +76,27 @@ north/printed X. Translate actions through `ControllerProfile`, preserving the
 backend's canonical IDs. Nintendo confirms with printed A and backs with B.
 
 ## Input path and fairness
+
+On Linux/X11, roster role menus use `PopupMenu.ForceNative`: the official
+4.7.2 release runtime leaves embedded popup parent-focus/lifetime subscriptions
+behind after closing. A stock three-item OptionButton reproduces the same
+errors without game or test-driver logic; the editor does not. Native windows
+retain Godot's painted menu and avoid that broken embedded path. Keep the
+roster theme and input bindings unchanged when maintaining this workaround.
+A native popup window does not stop pad/action events from also reaching the
+root window. Without a guard, the A press that selects a role also activates the
+parent's focused Back button. `GameRoot._Input` therefore consumes pad and
+action events while a native role popup is open and on its closing frame.
+Keyboard events target the popup window itself. Windows and Mac keep embedded
+popups. A native Windows WARP witness on 2026-10-28 passed `controller-popups`
+twice with zero engine errors on the unchanged build, so only Linux/X11 needs
+this path.
+`controller-popups` asserts that closing each picker restores its parent's
+signal-connection counts. Native delivery runs this short journey before the
+complete graphical tour, with the same zero-error policy. Native popup captures
+read actual X11 screen pixels and save only the app's client rectangle, since
+the separate popup window is absent from the main viewport texture. Wayland
+and XWayland screen capture need separate evidence.
 
 - [ControllerHub](../../scripts/input_devices/ControllerHub.cs) discovers devices,
   publishes native input, tracks active prompt family/keyboard seat, guards focus,

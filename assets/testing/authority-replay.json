@@ -1,0 +1,400 @@
+{
+  "schemaVersion": 1,
+  "id": "authority-observable-v2",
+  "cases": [
+    {
+      "id": "temple-movement-carry-throw-edges",
+      "lastTick": 360,
+      "requireBomb": true,
+      "options": {
+        "stage": "sunken-temple",
+        "humanPlayers": 2,
+        "botPlayers": 0,
+        "seed": 64,
+        "wins": 5,
+        "roundSeconds": 120,
+        "ghosts": true
+      },
+      "inputs": [
+        {
+          "tick": 65,
+          "slot": 0,
+          "input": {
+            "b": true
+          }
+        },
+        {
+          "tick": 66,
+          "slot": 0,
+          "input": {
+            "a": true,
+            "b": true
+          }
+        },
+        {
+          "tick": 67,
+          "slot": 0,
+          "input": {
+            "b": true
+          }
+        },
+        {
+          "tick": 70,
+          "slot": 0,
+          "input": {
+            "x": -1,
+            "b": true
+          }
+        },
+        {
+          "tick": 73,
+          "slot": 0,
+          "input": {
+            "b": true
+          }
+        },
+        {
+          "tick": 85,
+          "slot": 0,
+          "input": {
+            "a": true,
+            "b": true
+          }
+        },
+        {
+          "tick": 86,
+          "slot": 0,
+          "input": {
+            "b": true
+          }
+        },
+        {
+          "tick": 95,
+          "slot": 0,
+          "input": {
+            "b": true,
+            "aim": true,
+            "tx": 8,
+            "tz": 12
+          }
+        },
+        {
+          "tick": 115,
+          "slot": 0,
+          "input": {
+            "b": true
+          }
+        },
+        {
+          "tick": 120,
+          "slot": 0,
+          "input": {}
+        },
+        {
+          "tick": 160,
+          "slot": 0,
+          "input": {
+            "x": 1
+          }
+        },
+        {
+          "tick": 245,
+          "slot": 0,
+          "input": {}
+        },
+        {
+          "tick": 250,
+          "slot": 0,
+          "input": {
+            "x": -1
+          }
+        },
+        {
+          "tick": 320,
+          "slot": 1,
+          "input": {
+            "a": true
+          }
+        },
+        {
+          "tick": 320,
+          "slot": 1,
+          "input": {}
+        },
+        {
+          "tick": 330,
+          "slot": 0,
+          "input": {}
+        }
+      ]
+    },
+    {
+      "id": "blizzard-ai-rng-math",
+      "lastTick": 480,
+      "requireBomb": true,
+      "options": {
+        "stage": "blizzard-battle",
+        "humanPlayers": 1,
+        "botPlayers": 3,
+        "seed": 17017,
+        "wins": 5,
+        "roundSeconds": 60,
+        "ghosts": true
+      },
+      "inputs": []
+    },
+    {
+      "id": "top-rules-lower-early-late-kick",
+      "lastTick": 320,
+      "requireBomb": true,
+      "options": {
+        "advanced": {
+          "dropPercent": 40,
+          "blockPercent": 100,
+          "itemSeconds": 20,
+          "maxFire": 5,
+          "maxBombs": 5,
+          "effectSeconds": 10,
+          "disabledItems": ""
+        },
+        "humanPlayers": 1,
+        "botPlayers": 0,
+        "stage": "top-rules",
+        "wins": 2,
+        "roundSeconds": 120,
+        "suddenDeath": true,
+        "ghosts": true,
+        "botDifficulty": "normal",
+        "playerAppearances": [],
+        "practice": true,
+        "tutorialLesson": null,
+        "seed": 64
+      },
+      "inputs": [
+        {
+          "tick": 65,
+          "slot": 0,
+          "input": {
+            "x": 0,
+            "z": -1,
+            "a": false,
+            "b": false
+          }
+        },
+        {
+          "tick": 71,
+          "slot": 0,
+          "input": {
+            "x": 0,
+            "z": 0,
+            "a": false,
+            "b": false
+          }
+        },
+        {
+          "tick": 73,
+          "slot": 0,
+          "input": {
+            "x": -1,
+            "z": -0.3333334,
+            "a": false,
+            "b": false
+          }
+        },
+        {
+          "tick": 75,
+          "slot": 0,
+          "input": {
+            "x": -1,
+            "z": -0.0333333,
+            "a": false,
+            "b": false
+          }
+        },
+        {
+          "tick": 77,
+          "slot": 0,
+          "input": {
+            "x": -1,
+            "z": 0,
+            "a": false,
+            "b": false
+          }
+        },
+        {
+          "tick": 93,
+          "slot": 0,
+          "input": {
+            "x": 0,
+            "z": 0,
+            "a": false,
+            "b": false
+          }
+        },
+        {
+          "tick": 95,
+          "slot": 0,
+          "input": {
+            "x": -0.0666666,
+            "z": 1,
+            "a": false,
+            "b": false
+          }
+        },
+        {
+          "tick": 97,
+          "slot": 0,
+          "input": {
+            "x": 0,
+            "z": 1,
+            "a": false,
+            "b": false
+          }
+        },
+        {
+          "tick": 127,
+          "slot": 0,
+          "input": {
+            "x": 0,
+            "z": 0.7000001,
+            "a": false,
+            "b": false
+          }
+        },
+        {
+          "tick": 129,
+          "slot": 0,
+          "input": {
+            "x": 0,
+            "z": 0,
+            "a": false,
+            "b": false
+          }
+        },
+        {
+          "tick": 131,
+          "slot": 0,
+          "input": {
+            "x": 1,
+            "z": 0,
+            "a": false,
+            "b": false
+          }
+        },
+        {
+          "tick": 151,
+          "slot": 0,
+          "input": {
+            "x": 0,
+            "z": 0,
+            "a": false,
+            "b": false
+          }
+        },
+        {
+          "tick": 153,
+          "slot": 0,
+          "input": {
+            "x": 1,
+            "z": 0,
+            "a": false,
+            "b": false
+          }
+        },
+        {
+          "tick": 154,
+          "slot": 0,
+          "input": {
+            "x": 0,
+            "z": 0,
+            "a": true,
+            "b": false
+          }
+        },
+        {
+          "tick": 156,
+          "slot": 0,
+          "input": {
+            "x": 0,
+            "z": 0,
+            "a": false,
+            "b": false
+          }
+        },
+        {
+          "tick": 158,
+          "slot": 0,
+          "input": {
+            "x": 0,
+            "z": 0,
+            "a": true,
+            "b": false
+          }
+        },
+        {
+          "tick": 160,
+          "slot": 0,
+          "input": {
+            "x": 0,
+            "z": 0,
+            "a": false,
+            "b": false
+          }
+        },
+        {
+          "tick": 241,
+          "slot": 0,
+          "input": {
+            "x": 0,
+            "z": 0,
+            "a": true,
+            "b": false
+          }
+        },
+        {
+          "tick": 243,
+          "slot": 0,
+          "input": {
+            "x": 0,
+            "z": 0,
+            "a": false,
+            "b": false
+          }
+        },
+        {
+          "tick": 307,
+          "slot": 0,
+          "input": {
+            "x": 0,
+            "z": 0,
+            "a": true,
+            "b": false
+          }
+        },
+        {
+          "tick": 309,
+          "slot": 0,
+          "input": {
+            "x": 0,
+            "z": 0,
+            "a": false,
+            "b": false
+          }
+        }
+      ],
+      "requiredKickHop": {
+        "ownerId": "local-0",
+        "earlyBombId": "b1",
+        "lateBombId": "b2",
+        "lowerFromTick": 152,
+        "earlyDropTick": 154,
+        "earlyWindupTick": 158,
+        "earlyKickTick": 162,
+        "lateDropTick": 241,
+        "lateWindupTick": 307,
+        "lateKickTick": 311,
+        "lateBlastTick": 316
+      }
+    }
+  ]
+}

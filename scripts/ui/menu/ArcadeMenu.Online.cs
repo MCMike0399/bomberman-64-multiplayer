@@ -18,6 +18,11 @@ public partial class ArcadeMenu
         var screen=Screen("Online");var box=Card(screen,new(74,62),new(1292,724));
         var header=ArcadeTheme.Row(box);ArcadeTheme.Heading(header,"Online Battle",40).SizeFlagsHorizontal=SizeFlags.ExpandFill;
         var back=ArcadeTheme.Quiet(ArcadeTheme.Button(header,"Back",()=>BackRequested?.Invoke()));back.Name="OnlineBack";back.SizeFlagsVertical=SizeFlags.ShrinkCenter;back.CustomMinimumSize=new(120,48);
+        if(OperatingSystem.IsWindows())
+        {
+            var firewall=Copy(box,"Windows may ask for network access. Allow networks you trust for direct peer connections. Administrator approval may be needed; server relay remains available when direct connections are blocked. See the README firewall help to remove an old block rule.",15);
+            firewall.Name="WindowsNetworkNotice";
+        }
         var columns=ArcadeTheme.Row(box,36);columns.SizeFlagsVertical=SizeFlags.ExpandFill;
         var identity=ArcadeTheme.Column(columns,8);identity.CustomMinimumSize=new(330,0);
         Section(identity,"Your bomber");
@@ -55,6 +60,8 @@ public partial class ArcadeMenu
         _onlineButtons.Add(ArcadeTheme.Button(join,"Play online",()=>OnlineRequested?.Invoke(NetworkMode.QuickPlay)));
         _onlineButtons[2].Name="PlayOnline";
         Hint(join,"Casual matches may use a player host. Direct peers share connection addresses. Private Server only rooms keep authority on the cluster.",15);
+        var download=ArcadeTheme.Quiet(ArcadeTheme.Button(join,"Get latest release",()=>OS.ShellOpen("https://github.com/MCMike0399/bomberman-64-multiplayer/releases/latest")));
+        download.Name="ManualDownload";
         var status=Copy(box,"Choose a room or find other players.",15);status.Name="OnlineNotice";status.AddThemeColorOverride("font_color",ArcadeTheme.Gold);
         var cancel=ArcadeTheme.Button(box,"Cancel connection",()=>BackRequested?.Invoke());cancel.Name="CancelConnect";cancel.Visible=false;cancel.SizeFlagsHorizontal=SizeFlags.ShrinkBegin;
         RegisterNavigation("Online",[back],[cancel],Choices(identity),Choices(host),Choices(join));
@@ -131,9 +138,19 @@ public partial class ArcadeMenu
         }
     }
 
+    private bool _partyRefreshQueued;
     public void ShowParty(JsonElement data,string? localPlayer)
     {
         _party=data.Clone();_localPlayer=localPlayer;_countdown=null;
+        // Each rebuild recreates every member's 3D preview viewport. Several
+        // statuses can arrive in one slow frame; render only the latest, once.
+        if(_partyRefreshQueued)return;
+        _partyRefreshQueued=true;Callable.From(RefreshParty).CallDeferred();
+    }
+    private void RefreshParty()
+    {
+        _partyRefreshQueued=false;
+        if(_party is not {} data)return;
         var lobby=JsonSerializer.SerializeToElement(new {state="open",players=data.GetProperty("players")});
         ShowLobby(lobby,_roomCode,"Connected");
     }

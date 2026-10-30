@@ -28,6 +28,8 @@ public partial class PlaytestDriver
             Check(bar.MouseFilter==Control.MouseFilterEnum.Ignore&&bar.FocusMode==Control.FocusModeEnum.None,"overlay passes pointer input and takes no focus");
             await Capture("metrics-settings");
             Check(NamedButton("SettingsBack").GetGlobalRect().End.Y<GetViewport().GetVisibleRect().End.Y-60,"Settings Back stays above the input footer");
+            var scroll=_root.FindChild("SettingsScroll",true,false) as ScrollContainer??throw new InvalidOperationException("Missing settings scroll region");
+            Check(scroll.GetGlobalRect().End.Y<NamedButton("SettingsBack").GetGlobalRect().Position.Y,"settings controls scroll above the fixed Back action");
             // Repeated key-down events must not toggle repeatedly while holding the shortcut.
             Godot.Input.ParseInputEvent(new InputEventKey {Keycode=Key.F3,Pressed=true,Echo=true});await Frames(2);
             Check(bar.Visible,"F3 key repeat does not toggle metrics");

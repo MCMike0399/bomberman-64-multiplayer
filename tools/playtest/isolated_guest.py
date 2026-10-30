@@ -80,6 +80,9 @@ def main():
             (output / 'guest-command.json').write_text(json.dumps(command, indent=2) + '\n')
             game = subprocess.Popen(command, cwd=temporary, start_new_session=True)
             code = game.wait(timeout=request['timeout'])
+            if code == 0:
+                from display_restart import run as restore_display
+                restore_display(output, command, json.loads((output / 'summary.json').read_text()), game, cwd=temporary)
             if server and server.poll() is not None:
                 raise RuntimeError('Guest server exited during the game trial')
             return code

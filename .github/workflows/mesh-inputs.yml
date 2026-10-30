@@ -1,0 +1,149 @@
+name: Native mesh input diagnostics
+
+on:
+  push:
+    branches: [qa/three-platform-release]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  native:
+    name: Mesh inputs ${{ matrix.target }}
+    if: vars.BLAST_MESH_RUNNER_SHA == github.sha
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: windows-x64
+            runner: windows-2025
+          - target: linux-x64
+            runner: ubuntu-24.04
+          - target: macos-arm64
+            runner: macos-15
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Download only this exact private client payload
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PAYLOAD: ${{ vars.BLAST_MESH_SHA }}
+          TARGET: ${{ matrix.target }}
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os, re, subprocess
+          sha, target = os.environ['PAYLOAD'], os.environ['TARGET']
+          assert re.fullmatch('[0-9a-f]{40}', sha)
+          patterns = ['Blast-Circuit-' + target + '.zip*']
+          if target == 'macos-arm64':
+              patterns += ['build-metadata.json', 'Blast-Circuit-macos-arm64.dmg*', 'Blast-Circuit-macos-arm64-download.json']
+          else:
+              patterns += ['Blast-Circuit-' + target + '-metadata.json']
+          command = ['gh', 'release', 'download', 'qa-desktop-' + sha, '--dir', 'artifacts']
+          for pattern in patterns: command += ['-p', pattern]
+          subprocess.run(command, check=True, timeout=300)
+          PY
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y fuse3 squashfs-tools
+      - name: Build the real player download from the frozen client archive
+        if: runner.os != 'macOS'
+        env:
+          TARGET: ${{ matrix.target }}
+        shell: bash
+        run: python tools/packaging/package-download.py --target "$TARGET"
+      - name: Retain the exact tested native download containers
+        if: runner.os != 'macOS'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: mesh-tested-download-${{ matrix.target }}
+          path: |
+            artifacts/Blast-Circuit-${{ matrix.target }}-Setup.exe
+            artifacts/Blast-Circuit-${{ matrix.target }}-Setup.exe.sha256
+            artifacts/Blast-Circuit-${{ matrix.target }}.AppImage
+            artifacts/Blast-Circuit-${{ matrix.target }}.AppImage.sha256
+            artifacts/Blast-Circuit-${{ matrix.target }}-download.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: Observe procedural mesh inputs; explicitly no graphics qualification
+        env:
+          TARGET: ${{ matrix.target }}
+          PAYLOAD: ${{ vars.BLAST_MESH_SHA }}
+        shell: bash
+        run: |
+          python - <<'PYVISUAL'
+          import os, pathlib, subprocess, sys
+          root = pathlib.Path.cwd(); environment = root / 'artifacts/parity-venv'
+          subprocess.run([sys.executable, '-m', 'venv', str(environment)], check=True)
+          executable = environment / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python')
+          subprocess.run([str(executable), '-m', 'pip', 'install', 'Pillow==13.0.0'], check=True)
+          target = os.environ['TARGET']
+          command = [str(executable), 'tools/ci/visual_parity.py', '--target', target, '--expected-revision', os.environ['PAYLOAD'], '--output', 'artifacts/mesh-inputs-' + target, '--inputs-only']
+          subprocess.run(command, check=True)
+          PYVISUAL
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: mesh-inputs-${{ matrix.target }}
+          path: |
+            artifacts/mesh-inputs-${{ matrix.target }}/mesh-inputs-native.json
+            artifacts/mesh-inputs-${{ matrix.target }}/provenance.json
+            artifacts/mesh-inputs-${{ matrix.target }}/vulkaninfo*.txt
+            artifacts/mesh-inputs-${{ matrix.target }}/run-*/*.json
+            artifacts/mesh-inputs-${{ matrix.target }}/run-*/*.png
+            artifacts/mesh-inputs-${{ matrix.target }}/run-*/*.bin
+            artifacts/mesh-inputs-${{ matrix.target }}/run-*/*.jsonl.gz
+            artifacts/mesh-inputs-${{ matrix.target }}/run-*/*.log
+            artifacts/mesh-inputs-${{ matrix.target }}/run-*/*/report.json
+            artifacts/mesh-inputs-${{ matrix.target }}/fresh-process/report.json
+          retention-days: 14
+          if-no-files-found: error
+
+  compare:
+    name: Compare actual builder inputs
+    needs: native
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: mesh-inputs-*
+          path: artifacts/mesh-cohort
+      - name: Keep all raw differences and both platform reports
+        run: |
+          python3 - <<'PY'
+          import json, pathlib, sys
+          sys.path.append('tools/ci')
+          import mesh_inputs
+          root = pathlib.Path('artifacts/mesh-cohort')
+          codes = []; verdicts = []
+          for target in ('windows-x64', 'linux-x64'):
+              reference = root / 'mesh-inputs-macos-arm64/run-0'; candidate = root / ('mesh-inputs-' + target) / 'run-0'
+              # Raw unused-builder drift remains a strict diagnostic failure.
+              raw = mesh_inputs.compare(reference, candidate, root / ('raw-builders-mac-vs-' + target))
+              captured = mesh_inputs.compare_captured(reference, candidate, root / ('captured-inputs-mac-vs-' + target))
+              verdicts.append({'target': target, 'rawUnusedBuilderExitCode': raw, 'exactCapturedInputExitCode': captured})
+              codes.append(captured)
+          (root / 'cohort-summary.json').write_text(json.dumps({'claim': 'Strict collected CPU inputs only; no graphics qualification', 'graphicsQualified': False, 'targets': verdicts}, indent=2) + '\n')
+          raise SystemExit(max(codes))
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: mesh-input-comparisons
+          path: |
+            artifacts/mesh-cohort/*mac-vs-*/report.json
+            artifacts/mesh-cohort/cohort-summary.json
+          if-no-files-found: error
+          retention-days: 14

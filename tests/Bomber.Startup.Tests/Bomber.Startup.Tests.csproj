@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType></PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../src/Bomber.Client/Startup/WindowsLaunchGuard.cs" Link="WindowsLaunchGuard.cs" />
+    <Compile Include="../../src/Bomber.Client/Updates/DesktopProcessIdentity.cs" Link="DesktopProcessIdentity.cs" />
+    <Compile Include="../../src/Bomber.DesktopLauncher/WindowsAccessibilityHotkeys.cs" Link="WindowsAccessibilityHotkeys.cs" />
+  </ItemGroup>
+</Project>

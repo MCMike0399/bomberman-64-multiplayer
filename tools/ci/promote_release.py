@@ -13,6 +13,10 @@ import zipfile
 import sys
 from release_identity import check_exports
 import release_gates
+import desktop_packages
+import download_formats
+import crossplay
+import desktop_validation
 from verify_deployment import targets_from_json, verify, verify_connections, placements_from_json
 
 ARTIFACT = 'Blast-Circuit-macos-arm64-ad-hoc'
@@ -40,11 +44,12 @@ def inspect_run(repository, run_id):
     jobs = json.loads(gh('api', f'repos/{repository}/actions/runs/{run_id}/jobs?per_page=100'))['jobs']
     required = {'Public contracts and audio', 'Trusted managed and network', 'Trusted Godot headless', 'Trusted Apple Silicon package',
                 release_gates.STARTUP_JOB, release_gates.UPDATE_JOB}
+    required |= desktop_packages.jobs()
     passed = {item['name'] for item in jobs if item.get('conclusion') == 'success'}
     if not required.issubset(passed):
         raise RuntimeError('Required verification/package jobs did not all pass')
     artifacts = json.loads(gh('api', f'repos/{repository}/actions/runs/{run_id}/artifacts?per_page=100'))['artifacts']
-    for name in (ARTIFACT, SERVER_ARTIFACT, release_gates.STARTUP_ARTIFACT, release_gates.UPDATE_ARTIFACT):
+    for name in (ARTIFACT, SERVER_ARTIFACT, release_gates.STARTUP_ARTIFACT, release_gates.UPDATE_ARTIFACT, *desktop_packages.artifacts()):
         candidates = [item for item in artifacts if item['name'] == name and not item.get('expired')]
         if len(candidates) != 1:
             raise RuntimeError('Expected exactly one unexpired tested artifact: ' + name)
@@ -194,18 +199,41 @@ def inspect_server(directory, revision, version, release=None):
 
 def stage_draft(repository, run_id, version, revision, directory, existing_draft, signed=True):
     """Upload already inspected/signed artifacts before changing the live fleet."""
+    desktop_packages.inspect(directory, revision, check_exports())
+    for target in ('macos-arm64', *desktop_packages.TARGETS):
+        download_formats.inspect(directory, target, revision, check_exports())
     notes = directory / 'release-notes.txt'
-    notes.write_text(f'Apple Silicon client and portable .NET 10 server from {revision}.\n\n'
+    downloads = [('Windows installer', download_formats.FILES['windows-x64']), ('Mac disk image', download_formats.FILES['macos-arm64'])]
+    if 'linux-x64' in desktop_packages.TARGETS:
+        downloads.insert(1, ('Linux AppImage', download_formats.FILES['linux-x64']))
+    links = ' · '.join(f'[{label}](https://github.com/{repository}/releases/download/v{version}/{name})' for label, name in downloads)
+    notes.write_text(f'{links}\n\nClient and matching portable .NET 10 server from {revision}.\n\n'
                      f'Verification: https://github.com/{repository}/actions/runs/{run_id}\n\n'
                      'Managed, network, headless and export checks passed. The archived app also passed saved-settings startup on every '
                      'graphics preset/display mode and an actual signed update from the latest published release. '
-                     'The full Metal journey suite is a separate optional lane. '
+                     'Complete archived native-OS journeys and shared three-platform Quick Play passed. '
                      'Ad-hoc signature; Apple notarization and physical controller validation are not claimed.\n')
+    with notes.open('a') as stream:
+        for target, settings in desktop_packages.TARGETS.items():
+            stream.write(f'\n{target}: self-contained client using {settings["driver"]}; complete native-OS gameplay, multiplayer, graphical/startup and actual updater gates passed. '
+                         'Signed automatic updates are supported from installed Windows folders and Linux AppImages. '
+                         'Native GPU visuals/performance and physical controller support require separate hardware validation.\n')
+        stream.write('\nWindows defaults to Vulkan, with DirectX 12 startup recovery and a DirectX 12 Start-menu shortcut. '
+                     'Windows executables are not Authenticode signed; the signed delivery inventory authenticates updates.\n'
+                     '\nSwitch 2 Pro over USB is supported on macOS only. Other mapped gamepads remain supported on Windows/Linux; '
+                     'physical controller validation is not claimed.\n'
+                     '\nMovement keys use current-state polling on every platform: a tap entirely between render polls during a long hitch can be missed. '
+                     'Queued button edges are handled separately.\n')
     names = [ARCHIVE, ARCHIVE + '.sha256', SERVER_ARCHIVE, SERVER_ARCHIVE + '.sha256',
              'server-build-metadata.json', 'build-metadata.json']
+    names += [name for target in desktop_packages.TARGETS for name in desktop_packages.asset_names(target)]
+    names += list(download_formats.names('macos-arm64'))
+    names += [crossplay.RECEIPT, desktop_validation.MAC_RECEIPT]
     if signed:
         names += ['Blast-Circuit-update.json', 'Blast-Circuit-update.json.sig',
                   'Blast-Circuit-release.json', 'Blast-Circuit-release.json.sig']
+        names += [name for target in desktop_packages.TARGETS for name in
+                  ('Blast-Circuit-' + target + '-update.json', 'Blast-Circuit-' + target + '-update.json.sig')]
     assets = [str(directory / name) for name in names]
     if existing_draft:
         gh('release', 'upload', 'v' + version, *assets, '--repo', repository, '--clobber')
@@ -255,6 +283,8 @@ def main(argv=None):
         inspect_gates(args.repository, args.run_id, version)
         gh('run', 'download', args.run_id, '--repo', args.repository, '--name', SERVER_ARTIFACT, '--dir', str(directory))
         server = inspect_server(directory, revision, version)
+        desktop_packages.download(args.repository, args.run_id, directory, gh)
+        desktop_packages.inspect(directory, revision, check_exports())
         if args.signing_key:
             signer = Path(__file__).resolve().parents[1] / 'updates/sign_release.py'
             subprocess.run([sys.executable, str(signer), '--archive', str(archive), '--key', str(args.signing_key), '--output', str(directory), '--server', str(server)], check=True)

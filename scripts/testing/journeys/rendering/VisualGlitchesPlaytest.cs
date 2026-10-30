@@ -109,6 +109,18 @@ public partial class PlaytestDriver
     private async Task ShorelineBlast()
     {
         await SelectGraphics(GraphicsPreset.Medium);
+        await ShoreProbe(occluded:true);
+        // Negative control: the same probe must see the pre-fix defect. Remove only
+        // the sea's depth writes (the retained before-waterline variant) before a
+        // second identical detonation, then restore the shipped shader.
+        var water=ArtMaterials.WaterShaderFor(GraphicsPreset.Medium);var shipped=water.Code;
+        Check(shipped.Contains(", depth_draw_always;"),"shoreline control can isolate the sea's depth writes");
+        water.Code=shipped.Replace(", depth_draw_always;",";",StringComparison.Ordinal);
+        try{await ShoreProbe(occluded:false);}
+        finally{water.Code=shipped;await Frames(3);}
+    }
+    private async Task ShoreProbe(bool occluded)
+    {
         _root.StartLocal(new SessionSettings(Stage:"sunken-temple",Bots:0){Advanced=new AdvancedRules{DisabledItems="fire,bomb,remote,red,bounce,heart,focus,tiny,big,haste,slow"}},1,practice:true);
         await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"shoreline effect practice starts",150);
         await MoveTo(8.5f,25.5f,350);
@@ -131,13 +143,16 @@ public partial class PlaytestDriver
             var center=new Vector3(hazard.GetProperty("x").GetSingle(),hazard.GetProperty("y").GetSingle()*TempleStageView.HeightScale+.3f,hazard.GetProperty("z").GetSingle());
             float radius=hazard.GetProperty("r").GetSingle();
             Check(radius>2&&Math.Abs(hazard.GetProperty("y").GetSingle())<.01f,"charged shoreline fireball intersects the sea below the low court");
-            await Frames(7);await Capture("shore-blast-waterline-inspection",0);
+            await Frames(7);await Capture(occluded?"shore-blast-waterline-inspection":"shore-blast-waterline-control",0);
             if(!_headless)
             using(var image=Image.LoadFromFile(_screenshots[^1]))
             {
                 var world=center+new Vector3(0,-.53f,.8f)*radius;
                 Check(world.Y<LightingArena.WaterHeight-.15f,"shore probe samples below the animated sea surface");
-                var pixel=camera.UnprojectPosition(world)*new Vector2(image.GetWidth(),image.GetHeight())/GetViewport().GetVisibleRect().Size;
+                // Retained Mac captures put this column's waterline at rows 629-633 by
+                // wave phase. Sample 6 pixels lower, still inside the submerged half of
+                // the fireball, so waves cannot reach the patch and missing depth does.
+                var pixel=camera.UnprojectPosition(world)*new Vector2(image.GetWidth(),image.GetHeight())/GetViewport().GetVisibleRect().Size+new Vector2(0,6);
                 Event("shore-water-probe-target",new{center=center.ToString(),radius,world=world.ToString(),pixel=pixel.ToString(),water=LightingArena.WaterHeight});
                 Check(pixel.X>=2&&pixel.X<image.GetWidth()-2&&pixel.Y>=2&&pixel.Y<image.GetHeight()-2,"submerged fire probe stays inside the captured inspection view");
                 int fire=0;
@@ -146,10 +161,10 @@ public partial class PlaytestDriver
                     var color=image.GetPixel(x,y);
                     if(color.R>.35f&&color.R>color.G*1.4f&&color.R>color.B*1.6f)fire++;
                 }
-                Event("shore-water-probe",new{center=center.ToString(),radius,world=world.ToString(),pixel=pixel.ToString(),water=LightingArena.WaterHeight,fire});
-                // Waves and MSAA can move the intersection through one five-pixel
-                // row. Missing depth fills the entire 5x5 patch with fire instead.
-                Check(fire<=5,"water occludes submerged fire beyond the moving shoreline edge");
+                Event("shore-water-probe",new{occluded,center=center.ToString(),radius,world=world.ToString(),pixel=pixel.ToString(),water=LightingArena.WaterHeight,fire});
+                // MSAA may still soften one row. Missing depth fills the 5x5 patch with fire.
+                if(occluded)Check(fire<=5,"water occludes submerged fire beyond the moving shoreline edge");
+                else Check(fire>=20,"shoreline probe detects submerged fire when the sea's depth writes are removed");
             }
         }
         finally{camera.Transform=pose;Input(0,default);_root.Back();await Frames(3);}

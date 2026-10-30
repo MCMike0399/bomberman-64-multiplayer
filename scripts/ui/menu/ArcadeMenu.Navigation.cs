@@ -7,6 +7,7 @@ public partial class ArcadeMenu
     private sealed record FocusLayout(Control[] Header,Control[] Footer,Control[][] Columns);
 
     public bool HasOpenPopup=>_screen=="Roster"&&_localPlayers.HasOpenPopup;
+    public bool OwnsPopupInput=>_screen=="Roster"&&_localPlayers.OwnsPopupInput;
 
     private static bool CanFocus(Control? control)=>control is not null&&GodotObject.IsInstanceValid(control)
         &&control.IsVisibleInTree()&&control.FocusMode==FocusModeEnum.All&&control is not BaseButton {Disabled:true};

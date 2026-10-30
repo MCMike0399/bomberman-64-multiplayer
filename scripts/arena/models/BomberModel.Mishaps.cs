@@ -33,13 +33,13 @@ public partial class BomberModel
         foreach(float x in new[]{-.134f,.134f})
         {
             for(int frame=0;frame<SpiralFrames;frame++)
-                if(!SpiralMeshes.ContainsKey((x,frame)))SpiralMeshes[(x,frame)]=CreateFaceStroke(x,SpiralPoints(x,frame),.0105f);
+                if(!SpiralMeshes.ContainsKey((x,frame)))SpiralMeshes[(x,frame)]=BomberMeshLibrary.Get(BomberMeshLibrary.SpiralKey(x,frame),()=>CreateFaceStroke(x,SpiralPoints(x,frame),.0105f));
             var spiral=new MeshInstance3D {Name="DizzyEye",Mesh=SpiralMeshes[(x,0)],MaterialOverride=dark,Position=new(x,EyeCenterY,0),Visible=false};
             _head.AddChild(spiral);_spiralEyes.Add(spiral);
             // > < squeezed eyes: the left eye points toward the nose, the right mirrors it.
             float side=x<0?1:-1;
             if(!SquintMeshes.TryGetValue(x,out var squint))
-                SquintMeshes[x]=squint=CreateFaceStroke(x,[new(-.046f*side,.052f),new(.036f*side,0),new(-.046f*side,-.052f)],.014f);
+                SquintMeshes[x]=squint=BomberMeshLibrary.Get("squint-"+BomberMeshLibrary.Side(x),()=>CreateFaceStroke(x,[new(-.046f*side,.052f),new(.036f*side,0),new(-.046f*side,-.052f)],.014f));
             var squeezed=new MeshInstance3D {Name="SquintEye",Mesh=squint,MaterialOverride=dark,Position=new(x,EyeCenterY,0),Visible=false};
             _head.AddChild(squeezed);_squintEyes.Add(squeezed);
         }

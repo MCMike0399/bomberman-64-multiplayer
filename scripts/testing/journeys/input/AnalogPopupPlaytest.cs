@@ -40,7 +40,11 @@ public partial class PlaytestDriver
             }
             foreach(var (target,expected) in new[]{(1,"human"),(2,"cpu")})
             {
+                var parent=GetWindow();
+                int focusConnections=parent.GetSignalConnectionList(Window.SignalName.FocusEntered).Count;
+                int lifetimeConnections=parent.GetSignalConnectionList(Node.SignalName.TreeExited).Count;
                 role.GrabFocus();await Frames(1);await Confirm();
+                Event("role-popup-focus",new {expected,screen=_root.ScreenName,owner=GetViewport().GuiGetFocusOwner()?.Name.ToString(),roleFocus=role.HasFocus(),rolePressed=role.ButtonPressed,window=GetWindow().HasFocus(),application=hub.HasApplicationFocus,popup=role.GetPopup().Visible,popupFocus=role.GetPopup().HasFocus()});
                 var popup=role.GetPopup();openPopup=popup;
                 Check(popup.Visible,"Switch printed A opens actual role PopupMenu for "+expected);
                 await PopupReady(popup,"Switch role "+expected);
@@ -51,7 +55,12 @@ public partial class PlaytestDriver
                 await Capture("analog-role-popup-"+expected);await Confirm();
                 Check(!popup.Visible,"Switch printed A accepts and closes role popup: "+expected);
                 Check(Roster.GetProperty("slots")[1].GetProperty("role").GetString()==expected,"native stick and printed A update actual roster role: "+expected);
+                Check(_root.ScreenName=="Roster","popup selection does not activate parent navigation: "+expected);
+                Check(parent.GetSignalConnectionList(Window.SignalName.FocusEntered).Count==focusConnections&&
+                    parent.GetSignalConnectionList(Node.SignalName.TreeExited).Count==lifetimeConnections,
+                    "closing role popup releases parent focus and lifetime connections: "+expected);
                 openPopup=null;
+                Event("role-popup-closed-focus",new {expected,screen=_root.ScreenName,owner=GetViewport().GuiGetFocusOwner()?.Name.ToString(),roleFocus=role.HasFocus(),rolePressed=role.ButtonPressed,window=GetWindow().HasFocus(),application=hub.HasApplicationFocus});
             }
             _root.Navigate("Setup");await Frames(4);await ControllerFocusReady();
             var state=_root.FindChild("SetupSettings",true,false)??throw new InvalidOperationException("Setup state missing.");

@@ -34,6 +34,12 @@ public sealed partial class NetworkSession : ISession
     private PlayerInput _input;
     private readonly Queue<(bool A, bool B, bool R, bool Aim, bool Stop)> _buttons = new();
     private long _sequence;
+    /// <summary>Latest allocated outgoing input sequence; an authority ack at or
+    /// beyond it establishes that a diagnostic observation is fresh.</summary>
+    public long InputSequence => Volatile.Read(ref _sequence);
+    private InputSendObservation? _inputSendObservation;
+    /// <summary>Latest captured/successfully-sent input progress, published as one immutable value.</summary>
+    public InputSendObservation? LatestInputSend=>Volatile.Read(ref _inputSendObservation);
     private int _disposed;
     private int _appearance;
     private int _appearancePending, _startPending;
@@ -54,6 +60,21 @@ public sealed partial class NetworkSession : ISession
     public void ReleaseInputs() { lock (_inputGate) { _input = default; _buttons.Clear(); } }
     public int LocalPlayerCount => 1;
     public string Status => Volatile.Read(ref _status);
+    /// <summary>The first socket receipt of the current room deadline, published as one
+    /// immutable observation. Later statuses with the same deadline do not replace it.</summary>
+    public sealed record DeadlineObservation(long? StartAt, long ReceivedAtUnixMs, long Sequence);
+    private DeadlineObservation? _deadlineObservation;
+    private long _partySequence;
+    public DeadlineObservation? DeadlineObserved => Volatile.Read(ref _deadlineObservation);
+    private readonly System.Collections.Concurrent.ConcurrentQueue<string> _connectionEvents = new();
+    /// <summary>The last 64 connection transitions: generation, close status/reason,
+    /// reconnects and queue overflows. Bounded; for support and QA diagnostics.</summary>
+    public IReadOnlyList<string> ConnectionEvents => _connectionEvents.ToArray();
+    private void NoteConnection(string text)
+    {
+        _connectionEvents.Enqueue($"{DateTimeOffset.UtcNow:HH:mm:ss.fff} g{ConnectionGeneration} {text}");
+        while (_connectionEvents.Count > 64) _connectionEvents.TryDequeue(out _);
+    }
     public bool IsEnded => Status.StartsWith("Ended", StringComparison.Ordinal) || Status.StartsWith("Error:", StringComparison.Ordinal);
     public string? JoinCode { get; private set; }
     public string? PlayerId { get; private set; }
@@ -138,6 +159,7 @@ public sealed partial class NetworkSession : ISession
 
     private void Fail(string reason)
     {
+        NoteConnection("failed: " + reason);
         Volatile.Write(ref _status, "Error: " + reason);
         _messages.Add(JsonSerializer.SerializeToElement(new { t = "sys.error", d = new { code = "connection_lost", message = reason } }));
     }

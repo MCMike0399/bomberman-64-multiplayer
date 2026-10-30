@@ -17,6 +17,10 @@ public partial class PlaytestDriver
         await Results();
         var settings=new SessionSettings(Bots:0,Wins:1,Ghosts:false){Hosting="server"};
         await using var owner=await NetworkSession.ConnectAsync(new Uri(_server),"Map selection owner",settings,NetworkMode.CreatePrivate);
+        // This fixture owner has no game loop. Keep it live like a client; a ~15
+        // minute software-rendered match otherwise overflowed its control queue
+        // and handed the room to the guest.
+        using var liveOwner=KeepFixtureLive(owner);
         await _root.StartOnlineAsync(new Uri(_server),"Map selection guest",settings,NetworkMode.JoinCode,owner.JoinCode,appearance:5);
         var guest=(NetworkSession)_root.ActiveSession!;
         string? code=guest.JoinCode,lobby=guest.LobbyId;
@@ -24,7 +28,7 @@ public partial class PlaytestDriver
         owner.RequestStart();
         await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"online map fixture reaches fight",900);
         Check(State.GetProperty("players").EnumerateArray().All(p=>p.GetProperty("bombs").GetInt32()==2&&p.GetProperty("fire").GetInt32()==1),"online players start with zero collected upgrades");
-        Input(0,new PlayerInput(0,0,A:true));await Frames(4);Input(0,default);
+        await NetworkTap(guest,new PlayerInput(0,0,A:true));
         await Until(()=>_root.LatestState is {} finish&&finish.GetProperty("phase").GetInt32()==3,"online match publishes its arena finish before results");
         Check(_root.ScreenName=="Match"&&guest.Party?.Phase=="playing","online guest remains in the battle during the finish announcement");
         Check(VisibleText(_root).Contains("Game!",StringComparison.Ordinal)&&VisibleText(_root).Contains("Map selection owner wins the match!",StringComparison.Ordinal),"online guest sees the authoritative winner announcement");
@@ -38,8 +42,10 @@ public partial class PlaytestDriver
         owner.SetRoomSettings(settings with{Stage="rock-garden"});
         await Until(()=>guest.Party?.Settings?.GetValueOrDefault("stage")=="rock-garden","guest receives the owner's selected arena");
         var menu=_root.FindChildren("*","",true,false).OfType<BlastCircuit.UI.Menu.ArcadeMenu>().Single();
-        Check(menu.OnlineSettings.Stage=="rock-garden","guest map preview follows accepted room settings");
-        await owner.DisposeAsync();
+        // Party is published by the socket worker before GameRoot drains that
+        // message on the next engine frame. Require the actual menu state too.
+        await Until(()=>menu.OnlineSettings.Stage=="rock-garden","guest map preview follows accepted room settings");
+        liveOwner.Dispose();await owner.DisposeAsync();
         await Until(()=>guest.IsLeader&&!NamedButton("StageSelector").Disabled,"room ownership transfer enables map selection for the new host");
         Check(NamedButton("LaunchMatch").Disabled,"host cannot start without another human or CPU");
         NamedButton("CPUrivals").GrabFocus();await KeyPress(Key.Right);
@@ -52,8 +58,8 @@ public partial class PlaytestDriver
 
         async Task Until(Func<bool> predicate,string description)
         {
-            var clock=System.Diagnostics.Stopwatch.StartNew();
-            while(!predicate()&&clock.Elapsed.TotalSeconds<45){await Frames(1);await Task.Delay(16);}
+            var clock=System.Diagnostics.Stopwatch.StartNew();ulong startFrame=Godot.Engine.GetProcessFrames();
+            while(!predicate()&&Waiting(clock,45,startFrame)){await Frames(1);await Task.Delay(16);}
             Check(predicate(),description);
         }
     }
@@ -75,6 +81,11 @@ public partial class PlaytestDriver
         Check(!string.IsNullOrWhiteSpace(host.JoinCode),"network host exposes join code");
         await using var peer=await NetworkSession.ConnectAsync(new Uri(_server),"Harness peer",new SessionSettings(Bots:0),NetworkMode.JoinCode,host.JoinCode,appearance:6);
         Check(peer.LobbyId==host.LobbyId,"second product client joins same kernel lobby");
+        // One owner keeps this fixture live for its whole lifetime, including the
+        // long software-rendered lobby and later settings/Quick Play steps. The
+        // movement check consumes the state snapshots it collects.
+        var peerStates=new Queue<JsonElement>();bool collectPeerStates=false;
+        using var livePeer=KeepFixtureLive(peer,message=>{if(collectPeerStates&&message.GetProperty("t").GetString()=="state")peerStates.Enqueue(message.GetProperty("d").Clone());});
         bool fullLobby=false;
         for(var i=0;i<180 && !fullLobby;i++)
         {
@@ -131,7 +142,13 @@ public partial class PlaytestDriver
         CtlButton(0,JoyButton.Start,true);await Frames(1);CtlButton(0,JoyButton.Start,false);await Frames(2);
         Check(NamedButton("StartRoom").HasFocus()&&_root.ScreenName=="Lobby","Start focuses Start game without starting it");
         await ActivateNamed("StartRoom");
-        await WaitState(s=>s.GetProperty("phase").GetInt32()==1 && s.GetProperty("players").GetArrayLength()==2,"engine receives two-human authoritative fight",900);
+        try{await WaitState(s=>s.GetProperty("phase").GetInt32()==1 && s.GetProperty("players").GetArrayLength()==2,"engine receives two-human authoritative fight",900);}
+        catch(InvalidOperationException)
+        {
+            File.WriteAllText(Path.Combine(_output,"network-diagnostics.json"),JsonSerializer.Serialize(new{host=PeerDiagnostics(host),peer=PeerDiagnostics(peer),cadence=livePeer.Cadence,
+                latest=_root.LatestState is {} latest?new{phase=latest.GetProperty("phase").GetInt32(),players=latest.GetProperty("players").GetArrayLength()}:null},new JsonSerializerOptions{WriteIndented=true}));
+            throw;
+        }
         await WaitState(s=>s.GetProperty("players").EnumerateArray().Any(p=>p.GetProperty("id").GetString()==host.PlayerId&&p.GetProperty("appearance").GetInt32()==4)&&s.GetProperty("players").EnumerateArray().Any(p=>p.GetProperty("id").GetString()==peer.PlayerId&&p.GetProperty("appearance").GetInt32()==6),"network authority reflects both chosen appearances",180);
         Check(State.GetProperty("hurryMode").GetString()=="water","network server supplies temple-specific water sudden death");
         Check(State.TryGetProperty("waterLevel",out var networkWater)&&networkWater.ValueKind==JsonValueKind.Number,"network server publishes authoritative water height");
@@ -142,19 +159,21 @@ public partial class PlaytestDriver
         Check(_root.FindChildren("*","",true,false).OfType<BlastCircuit.UI.Hud.PlayerToken>().Any(t=>t.Tag=="Harness host"),"HUD uses the same chosen name");
         int bombCueBefore=_root.BattleAudio.Counts.GetValueOrDefault("bomb");
         var before=Player.GetProperty("z").GetSingle();
-        Input(0,new PlayerInput(0,-1,A:true));
+        // Walk while tapping A: a held A charges a throw once software frames
+        // stretch the hold, so the bomb press is a bounded wall-clock edge.
+        peerStates.Clear();collectPeerStates=true;
+        await NetworkTap(host,new PlayerInput(0,-1,A:true),new PlayerInput(0,-1));
         bool observed=false;
         for(var i=0;i<150 && !observed;i++)
         {
             await Frames(1);await Task.Delay(16);
-            foreach(var message in peer.DrainMessages())
-                if(message.GetProperty("t").GetString()=="state")
-                {
-                    var d=message.GetProperty("d");
-                    Check(d.GetProperty("stageLighting").GetString()==serverLighting,"both network clients receive the same round lighting");
-                    observed=d.GetProperty("players").EnumerateArray().Any(p=>p.GetProperty("id").GetString()==host.PlayerId && Math.Abs(p.GetProperty("z").GetSingle()-before)>.15);
-                }
+            while(peerStates.TryDequeue(out var d))
+            {
+                Check(d.GetProperty("stageLighting").GetString()==serverLighting,"both network clients receive the same round lighting");
+                observed|=d.GetProperty("players").EnumerateArray().Any(p=>p.GetProperty("id").GetString()==host.PlayerId && Math.Abs(p.GetProperty("z").GetSingle()-before)>.15);
+            }
         }
+        collectPeerStates=false;peerStates.Clear();
         Check(observed,"injected engine movement observed by second network client");
         Input(0,default); await Frames(4);
         Check(_root.BattleAudio.Counts.GetValueOrDefault("bomb")==bombCueBefore+1,"network bomb event plays once across repeated snapshots");
@@ -188,27 +207,44 @@ public partial class PlaytestDriver
         Check(!NamedButton("StartRoom").Visible&&!NamedButton("EditRoomSettings").Visible,"anonymous public owner has no manual-start or rule-edit controls");
         Check(VisibleText(_root).Contains("Shared rules")&&!VisibleText(_root).Contains("Room owner:"),"public lobby explains shared rules without presenting an anonymous owner as an operator");
         await Capture("quick-play-waiting-alone");
+        // Open personal Settings while alone. Start the real minute only once
+        // the expensive page transition has completed, then test the return
+        // before captures consume that minute on a software renderer.
+        await ActivateNamed("LobbySettings");
+        Check(_root.ScreenName=="Settings"&&ReferenceEquals(first,_root.ActiveSession),"personal settings keep the lone Quick Play session");
         await using var second=await NetworkSession.ConnectAsync(new Uri(_server),"Quick Play second",new SessionSettings(Bots:0),NetworkMode.QuickPlay);
+        using var liveSecond=KeepFixtureLive(second);
         await LobbyUntil(()=>first.Party?.StartAt is not null);
+        var observed=first.DeadlineObserved;
         long initial=first.Party!.StartAt!.Value;
+        Check(observed?.StartAt==initial,"the first public deadline is coherently received while Settings is open");
+        await KeyPress(Key.Escape);
+        Check(_root.ScreenName=="Lobby"&&ReferenceEquals(first,_root.ActiveSession)&&first.Party?.StartAt==initial,
+            "personal settings return to the same public countdown without resetting it");
         Check(second.LobbyId==first.LobbyId,"graphical Quick Play joins the same real matchmade lobby");
         Check(VisibleText(_root).Contains("Battle begins in "),"public lobby renders the authoritative countdown");
         string before=VisibleText(_root);
         await Task.Delay(1200);await Frames(3);
         Check(VisibleText(_root)!=before&&_root.ScreenName=="Lobby"&&_root.LatestState is null,"visible countdown advances while gameplay remains stopped");
         await Capture("quick-play-two-players-countdown");
-        await ActivateNamed("LobbySettings");await KeyPress(Key.Escape);await Frames(3);
-        Check(_root.ScreenName=="Lobby"&&ReferenceEquals(first,_root.ActiveSession)&&first.Party?.StartAt==initial,
-            "personal settings return to the same public countdown without resetting it");
         await using var third=await NetworkSession.ConnectAsync(new Uri(_server),"Quick Play third",new SessionSettings(Bots:0),NetworkMode.QuickPlay);
+        using var liveThird=KeepFixtureLive(third);
         await LobbyUntil(()=>first.Party?.StartAt>initial);
         long changed=first.Party!.StartAt!.Value;
         Check(VisibleText(_root).Contains("Quick Play third")&&VisibleText(_root).Contains("Player changes restart"),"late arrival appears alongside the countdown-reset explanation");
         await Capture("quick-play-three-players-countdown");
-        await Task.Delay(1100);await third.DisposeAsync();
+        await Task.Delay(1100);liveThird.Dispose();await third.DisposeAsync();
         await LobbyUntil(()=>first.Party?.StartAt>changed);
-        Check(first.Party!.StartAt-DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()>55000,"three-to-two departure shows a fresh full minute");
-        await second.DisposeAsync();
+        // Exact 60 s reset and no early start are proven on the server clock in
+        // PublicMatchmakingChecks. Here, prove the reset deadline reaches this client
+        // coherently: its first socket receipt (frame-independent) still had a fresh
+        // minute (transit + local/server clock offset only) and is still the room's
+        // current deadline. Receipt-to-check delay is recorded separately.
+        var reset=first.DeadlineObserved;long nowMs=DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        Event("quick-play-reset-timing",new{deadline=reset?.StartAt,sequence=reset?.Sequence,remainingAtReceiptMs=reset?.StartAt-reset?.ReceivedAtUnixMs,receiptToCheckMs=nowMs-reset?.ReceivedAtUnixMs});
+        Check(reset is {StartAt:{} deadline}&&deadline==first.Party!.StartAt&&deadline-reset.ReceivedAtUnixMs>55000&&deadline-reset.ReceivedAtUnixMs<=60500,
+            "three-to-two departure shows a fresh full minute");
+        liveSecond.Dispose();await second.DisposeAsync();
         await LobbyUntil(()=>first.Party?.StartAt is null);
         Check(VisibleText(_root).Contains("Waiting for a second player")&&!VisibleText(_root).Contains("Battle begins in "),"below two players removes the visible countdown immediately");
         Check(!NamedButton("StartRoom").Visible&&!NamedButton("EditRoomSettings").Visible,"roster changes never restore public owner powers");
@@ -222,8 +258,8 @@ public partial class PlaytestDriver
 
         async Task LobbyUntil(Func<bool> condition)
         {
-            var elapsed=System.Diagnostics.Stopwatch.StartNew();
-            while(elapsed.Elapsed.TotalSeconds<15)
+            var elapsed=System.Diagnostics.Stopwatch.StartNew();ulong startFrame=Godot.Engine.GetProcessFrames();
+            while(Waiting(elapsed,15,startFrame))
             {
                 await Frames(1);await Task.Delay(16);
                 if(condition()){await Frames(2);return;}

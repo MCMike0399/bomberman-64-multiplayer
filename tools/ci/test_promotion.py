@@ -11,6 +11,12 @@ import tempfile
 import unittest
 from unittest.mock import patch
 import zipfile
+import desktop_packages
+import desktop_validation
+import crossplay
+import download_formats
+from test_desktop_packages import write_desktop
+from test_crossplay import write_crossplay
 
 SPEC = importlib.util.spec_from_file_location('promotion', Path(__file__).with_name('promote_release.py'))
 promotion = importlib.util.module_from_spec(SPEC)
@@ -32,6 +38,10 @@ def write_package(directory, version='0.15.0', revision=SHA):
     digest = hashlib.sha256(archive.read_bytes()).hexdigest()
     (directory / (promotion.ARCHIVE + '.sha256')).write_text(digest + '  ' + promotion.ARCHIVE + '\n')
     (directory / 'build-metadata.json').write_text(json.dumps({'revision': revision, 'version': version, 'release': RELEASE, 'features': {'switch2UsbBackend': True}}))
+    write_desktop(directory, revision, RELEASE)
+    (directory / download_formats.FILES["macos-arm64"]).write_bytes(b"fixture-dmg")
+    download_formats.record(directory, "macos-arm64", revision, RELEASE, promotion.ARCHIVE)
+    write_crossplay(directory, revision, RELEASE)
 
 
 def write_gate(directory, name, version='0.15.0', build='10', **changes):
@@ -61,6 +71,26 @@ def write_server(directory):
     (directory / 'server-build-metadata.json').write_text(json.dumps({'revision': SHA, 'version': '0.15.0', 'release': RELEASE,
         'kind': 'framework-dependent-server', 'targetFramework': 'net10.0',
         'files': {name: hashlib.sha256(contents).hexdigest() for name, contents in files.items()}}))
+    bind_server_receipts(directory)
+
+
+def bind_server_receipts(directory):
+    server_sha=desktop_packages.digest(directory/promotion.SERVER_ARCHIVE)
+    for target in desktop_packages.TARGETS:
+        for key in ('smoke','graphical'):
+            path=directory/desktop_packages.names(target)[key]
+            if path.exists():
+                report=json.loads(path.read_text());report['serverSha256']=server_sha
+                path.write_text(json.dumps(report))
+    path=directory/desktop_validation.MAC_RECEIPT
+    if path.exists():
+        report=json.loads(path.read_text());report['serverSha256']=server_sha
+        path.write_text(json.dumps(report))
+    path=directory/crossplay.RECEIPT
+    if path.exists():
+        report=json.loads(path.read_text())
+        for client in report['reports']:client['serverArchiveSha256']=server_sha
+        path.write_text(json.dumps(report))
 
 
 class PromotionTests(unittest.TestCase):
@@ -221,7 +251,7 @@ class PromotionTests(unittest.TestCase):
                 return '[]'
             if arguments[:2] == ('run', 'download'):
                 name = arguments[arguments.index('--name') + 1]
-                self.assertIn(name, (promotion.ARTIFACT, promotion.SERVER_ARTIFACT))
+                self.assertIn(name, (promotion.ARTIFACT, promotion.SERVER_ARTIFACT, *desktop_packages.artifacts()))
                 destination = Path(arguments[arguments.index('--dir') + 1])
                 write_package(destination) if name == promotion.ARTIFACT else write_server(destination)
             return ''

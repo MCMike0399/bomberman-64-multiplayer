@@ -259,6 +259,11 @@ Actual fullscreen launch likewise does not establish OS Game Mode activation.
 
 ## Deliver and keep one installed app
 
+Windows Vulkan (with recorded Direct3D 12 fallback) and Linux Vulkan exports use the shared [desktop packaging and verification
+contract](../desktop-clients.md). Their trusted package and target-OS exported
+smoke are required for publication. Headless receipts do not establish GPU or
+physical-controller coverage; installed desktop releases use signed automatic updates.
+
 Use the package branch only when shipping changed runtime/assets, not for docs.
 Check toolchain/backend requirements in [macOS packaging](../macos-app.md).
 
@@ -392,6 +397,21 @@ For v0.27 connection changes, include the `peer-rooms` journey and the
 WebRTC extension is a hash-pinned build dependency, installed before import/export.
 
 ## Battle polish integration regression (2026-10-27)
+
+Post-match network checks await the guest menu's accepted arena separately from
+`NetworkSession.Party`: the socket worker publishes that transport snapshot
+before the engine frame drains it into presentation. An immediate menu assertion
+after the transport acknowledgment races the normal UI update. Preserve the
+same expected arena and bounded wait; do not force menu callbacks or state.
+
+The native walking robot uses bounded ordinary movement pulses for a remote
+server, releases each pulse through the thread-safe input queue independently
+of an engine-frame stall, then observes fresh snapshots after release before steering
+again. Local/peer authority still runs on its owning polling thread. Greedy Trap's
+server tour deliberately delays feedback by 180 ms; the retained old controller
+overshot a landing while the pulsed controller keeps the original half-cell
+settle bound and real stair/basin checks. This tests controller lag, not changed
+physics or measured Internet tolerance.
 
 `battle-polish-regression` combines first-use rendering, all randomized-cover stage
 journeys, camera framing, active-blast hits, local/online post-match map selection,
@@ -605,6 +625,40 @@ yield engine frames between guest polls. All eight clients share one engine
 thread in QA; batching their setup can otherwise starve the real host's
 heartbeat and trigger the production six-second takeover policy. Keep that
 policy intact rather than weakening it to accommodate the fixture.
+Production and every hardware or headless gate keep six seconds. By user
+decision on 2026-10-28, the owned QA server for verified software-renderer
+graphical parts only uses `--Blast:PeerHostLeaseSeconds=120`. On WARP, frames
+of about 1 s, plus arena loads, made a 6-second peer host fail over 95 times.
+`PeerHostLease.From` rejects values below six. Receipts record the lease, and
+validation rejects a lengthened lease on any non-software receipt.
+Online test robots that press a button for N frames turn a tap into a
+multi-second hold on software renderers, and a held A charges a throw. Use
+`NetworkTap`: it sends the press edge immediately and releases it 100 ms
+later in wall time.
+For crossplay movement use `NetworkNudge`: one owner controls the injected
+provider and socket intent until two matching socket input samples have actually
+been sent. `LatestInputSend` publishes immutable progress; capture/allocation
+alone never counts as a successful send. A dedicated QA observer releases input
+without engine calls or dependence on a rendered frame. The safety cutoff begins
+at the first captured movement sample and is derived from the verified 1.25-cell
+corridor; a final spatial check rejects overruns. An unsampled intent has a
+separate bounded wait and cannot claim delivery. The provider cannot resurrect
+released input on a late frame. Observe an authority acknowledgement beyond the
+release sequence before judging movement. This instrumentation does not change
+normal input queues, wire messages or send cadence. `network-input-pulse`
+is a diagnostic leaf outside release suites. The old frame controller moved
+4.23 cells for a short tap under a one-second stall. An earlier bounded-wall-time
+diagnostic moved 0.45 cells with a two-second stall; the observed-send controller
+moves 0.30 cells with a one-second stall and retains carry beyond a full fuse.
+Crossplay selects a short supported inward path from actual stage/cover/actor
+state, creates a carried bomb first, and only counts fresh healthy movement
+along that intent. It holds carry through the cohort barrier. Failure retains
+`crossplay-progress.json`; deliberate frame-stall receipts remain unqualified.
+Personal Quick Play Settings is opened while alone; the second client joins
+while it is open, so the unchanged real minute starts immediately before the
+return check instead of being consumed by screenshots. Starting a match while
+Settings is open is a separate phase transition, not evidence of a reset. On llvmpipe, `post-match` played six drawn rounds before
+this fix and now ends in 6 frames, as on Mac.
 
 For the combined v0.28 release, `stage-fidelity` is the focused fresh-process suite for all reconstructed arenas, explosion presentation and tutorial. The complete `all` suite and package gate remain the release regression. [Combined receipts](../stages-release-028.md).
 
@@ -657,9 +711,16 @@ v0.35.1/v0.36.0 pass all nine.
 
 `display-settings` is graphical-only and belongs to `all` and `menu-ux`. It checks
 native window sizes, actual fullscreen transitions, persistent shortcuts, 3D
-resolution scaling and paused local-session continuity. Its fresh-executable child
-uses a unique QA-only preference fixture and retains a separate `restart/`
-graphical receipt. This is process-startup evidence beyond in-process config
+resolution scaling and paused local-session continuity. It retains a unique
+QA-only preference fixture; after the parent game exits, the runner launches the
+same executable and requires a separate `restart/` graphical receipt within
+90 seconds. The child restores the saved choices through real controls and
+captures; it does not inherit a QA display override. Promotion requires this
+child's matching catalog, release, renderer, positive assertions and zero errors.
+The VM transport envelope includes the additional sequential leg while each
+game keeps its own deadline. Concurrent parent/child Metal startup stalled in
+native pipeline creation on hosted Mac; the identical child passed after parent
+exit. This is process-startup evidence beyond in-process config
 reloads; personal preferences remain untouched. Native host display checks use
 an explicitly announced `--desktop shared` run, separate from VM Metal evidence.
 
@@ -696,6 +757,15 @@ host leases and qualification budgets remain unchanged.
 
 ## Small visual glitch regression
 
+The reticle Results lifecycle must observe the finish announcement before
+expecting navigation. Authority phase `Over` keeps the game on Match for the
+ordinary three-second hold; it does not mean Results has opened. The reticle
+journey checks the survivor's carried bomb during that hold, waits for actual
+Results, then retains the carried-snapshot and hidden-overlay assertions.
+Use `run.py --scenario reticle` for the focused reproduction and `tour-13` for
+its native delivery context. This fixture correction changes no game timing,
+authority, input or rendering behavior.
+
 `visual-glitches` uses ordinary practice movement, placement and charged throws
 for Up & Down rear-ring effects and Temple stairs/shoreline. It is included in
 `all` and `stage-fidelity`. Pixel probes normalize logical camera coordinates to
@@ -703,8 +773,14 @@ actual capture pixels; headless mode only establishes gameplay/geometry checks.
 `shore-blast` is the tight standalone shoreline case. `visual-regression` runs
 fourteen affected rendering/stage journeys, keeping first-use preparation first.
 Inspect the actual before/after images separately from numeric checks. The
-complete graphical catalog has a 1500-second budget with the additional journey;
-per-case focus, readiness and render-preparation deadlines are unchanged.
+complete graphical catalog defaults to a 1500-second budget. Archived Mac
+verification allows 2400 seconds for the complete tour: the hosted Metal run on
+2026-10-28 reached journey 56/61 with 459 captures and no engine errors before
+the old overall cutoff. Its last capture was still advancing seconds before
+termination. This changes only the suite allowance; per-case focus, readiness
+and render-preparation deadlines are unchanged. Timeout remains a failure, and
+promotion still requires every leaf in order, positive assertions and zero
+engine errors. Candidate and trusted Mac jobs retain `progress.json` for diagnosis.
 
 Source verification on 2026-10-26: the rebuilt export passed the fourteen-journey
 visual regression with 1,758 assertions, 202 captures and zero runtime errors or
@@ -714,3 +790,133 @@ blast, Temple treads, shoreline occlusion, snow/ice and day/night flooding.
 [Image provenance and before/after files](../images/visual-glitches/manifest.json).
 The complete 55-journey attempt stopped at the existing fresh-display-process
 timeout after 474 checks, before the new journey; it is not a full-suite pass.
+
+## Windows/Linux archived regression
+
+The desktop delivery PRs add `tools/packaging/verify-desktop.py`: run complete
+packaged core/online journeys against an owned matching archived server, and
+use `--graphical` for the full renderer suite. Windows installs the actual EXE;
+Linux launches its AppImage. Exact catalog coverage and runtime errors survive
+in receipts; the four-leaf package smoke is insufficient for promotion.
+`tests/Bomber.DesktopUpdate.Tests` verifies helper handoff and rollback with
+real fixture processes. Keep that separate from actual game updates and
+physical/GPU evidence. See [desktop clients](../desktop-clients.md).
+
+Current three-platform strategy (user decision 2026-10-29): hosted Windows WARP
+and Linux llvmpipe are functional/headless, installer/updater, startup/exit and
+network test surfaces only. Graphics and complete graphical tours use real
+GPUs. Preserve production quality and use the measured Mac-to-Mac residual
+envelope and user visual sign-off in [GPU qualification](../gpu-qualification.md).
+
+The historical software-runner split is retained as an ordering/partition
+contract; it is not graphics qualification. `all` is 21 contiguous `tour-NN`
+catalog suites. Mac runs `all` in one process; Windows/Linux run each tour in a
+fresh process via `verify-desktop.py --cases … --part …`. The `--merge`
+step must see every part on identical archive, server and download bytes.
+Change tour boundaries only in `assets/testing/scenarios.json` and runner
+grouping only in `desktop_validation.SOFTWARE_PARTS`; contracts reject gaps,
+repeats or reordering. A leaf that needs a predecessor's state belongs inside
+the same tour. To reproduce a failed part locally, run its tour with
+`run.py --scenario tour-NN`. A part runs all of its cases even after one
+fails, so a single run reports every failure. Use `PlaytestDriver.Waiting`
+for new "wait until" loops; it gives verified software renderers
+frame-equivalent time. Fixed-duration measurements must stay wall-clock.
+Fixture `NetworkSession`s have no game loop. Give each long-lived fixture
+exactly one owner, `KeepFixtureLive`, which advances and drains it like a
+30 FPS client on the engine thread (Godot peer polling must stay there). It
+never runs faster in uncapped headless frames, and it is scope-bound
+(`using`). Hand messages a test needs to its callback rather than calling
+`DrainMessages` alongside it. The owner records its cadence for diagnostics. Otherwise a slow software-rendered
+journey overflows its 128-message control queue or misses the 6-second peer
+host lease. Both failures appeared on WARP/llvmpipe on 2026-10-28. On verified
+software renderers only, `peer-rooms` first warms its Top Rules arena, because
+a cold first load in a fresh process stalled past that lease. Every leaf
+appends Godot's video/static memory to `leaf-memory.json` for cross-platform
+comparison.
+
+Diagnose slow-frame failures locally before spending a native run:
+`run.py --frame-stall-ms N` blocks the engine thread N ms per frame. Headless,
+with an owned server, it reproduces software-renderer frame times in
+minutes. Summaries record the stall, and release validation rejects any
+receipt with one. The server writes `Bomber.PeerRoom` transitions (membership
+changes, elections, lease expiry with measured silence, handshake kicks,
+byte-budget drops). `NetworkSession.ConnectionEvents` keeps each client's
+last 64 transitions with generation and the server's close code/reason. Peer
+and network failure diagnostics, and the owned server logs, are uploaded with
+CI artifacts. Candidate crossplay starts once exact downloads and the Mac
+archive exist; trusted main still waits for every smoke job. It records
+per-phase timings for budget decisions.
+Crossplay commits one immutable witness (authority/match/round/actors/actions,
+server-time bounds, renderer and capture references) BEFORE publishing its action
+readiness artifact. The finish barrier permits cleanup once all observers committed
+their evidence; it does not promise simultaneous exits. Final serialization uses
+that frozen witness. A lobby transition during teardown cannot rewrite recorded
+cluster hosting; an actual auto-hosted witness is still rejected. The diagnostic
+`crossplay-witness-lifetime` regression mutates the source after commit.
+
+The `visual-parity` fixture uses the full production ArenaView at original
+High/native scale/2×MSAA/Circle-jitter-on/SSIL. It records fresh render-buffer
+history, explicit zero-step draws/readbacks, actual resource inventories and
+package-bound manifests. Same-draw/fresh-target/fresh-process equality and
+DOF/mirror negative controls are separate from gameplay and hardware claims.
+[Recipe, provenance and limits](../full-high-capture.md). A source image with
+matching pixels but no package provenance remains diagnostic, not qualification.
+
+The diagnostic `authority-replay` leaf executes the shipped `LocalMatch` at
+exact ticks and writes complete ordered observable messages plus separate math/RNG
+canaries. It does not serialize all private authority state. Native replay
+installs actual downloads and checks two fresh-process repetitions and then
+cross-target outputs, binding loaded MVID/file hashes to the archived modules.
+[Corpus, schema, limits and commands](../packaged-authority-replay.md).
+
+Research proposals for parity and delivery (not qualification receipts) are in
+[rendering parity research](../desktop-rendering-parity-research.md) and
+[delivery research](../desktop-parity-delivery-research.md). Current decisions:
+
+- Crossplay lifetimes are one nested contract (`crossplay.PEER_START_SECONDS`,
+  `SERVER_LIFETIME_SECONDS`, `ARTIFACT_CAP_SECONDS`), enforced by a test that
+  parses `crossplay.yml`. Artifact waits track only producers of still-missing
+  artifacts. A missing artifact whose producer ended fails promptly.
+- `NetworkSession.DeadlineObserved` is the first socket receipt of the current
+  room deadline, published as one immutable record. The exact 60 s reset and
+  no-early-start rules are proven on the server clock in
+  `PublicMatchmakingChecks`. The native journey proves client propagation.
+- `peer-link-recovery` (diagnostic leaf, in no release suite) terminally closes
+  one native WebRTC connection mid-match. It checks relay continuity and direct
+  recovery as separate predicates. `PeerRoomClient` lets the pair's original
+  offerer replace a terminally failed link with a fresh link. Recovery uses
+  bounded backoff (5 attempts per epoch) and a link-attempt generation, kept
+  separate from the authority epoch, that rejects stale SDP/ICE. New-attempt
+  ICE reaches a fresh answerer even before SDP; replaced-link callbacks are
+  ignored. Attempts reset when the coordinator reports a new member connection.
+  Healthy,
+  transiently disconnected and relay paths are left alone. Pinned
+  webrtc-native cannot re-offer a closed peer. The forced-close diagnostic emits
+  UTC/frame/injection markers into both runtime and trace logs and captures the
+  recovered real scene. Its deliberate fault remains outside release suites;
+  functional assertions and generic zero-error/graphical verdicts are separate.
+  A native SCTP error without timing correlation is not a clean qualification.
+  Focused Windows diagnostics select a JSON list through
+  `BLAST_DIAGNOSTIC_SCENARIOS` (default: `network`, `peer-rooms`, and the close
+  leaf); select only an unresolved case once earlier predicates have native proof.
+  The post-capture check records both endpoints before judging them, requires
+  unchanged open native channels/attempts and the same match, then permits normal
+  polling to refresh the existing two-second direct-health measurement. It never
+  increases that policy. A headless-only `BLAST_QA_RECOVERY_CAPTURE_STALL_MS`
+  control adds a declared stall (at most five seconds) to distinguish stale health
+  from another terminal close; it is diagnostic evidence, not graphical qualification. The runner retains every case and exits unsuccessfully if any
+  child fails, lacks positive completion or reports no assertions; a later pass
+  cannot hide an earlier failure. Diagnostic runner and frozen payload revisions
+  are recorded separately.
+  A merge-conflicted isolated PR cannot trigger `pull_request` workflows.
+  Focused diagnostics also accept a push on `qa/three-platform-release` only
+  when `BLAST_DIAGNOSTIC_RUNNER_SHA` equals that exact pushed SHA. Set frozen
+  payload variables separately, arm the runner SHA before pushing, and retain
+  both identities. Ordinary later pushes and main releases do not opt in.
+  This keeps Mac stable independent until planned final integration.
+
+Keep long-running platform QA independent of Mac stable releases: use the
+separate worktree, private exact-SHA drafts, owned matching server and pinned
+diagnostic updater baseline described in [independent platform QA](../desktop-clients.md#independent-platform-qa).
+Integrate current main and select the final public identity when ready; stable
+publication still tests the actual latest release and rejects diagnostic receipts.

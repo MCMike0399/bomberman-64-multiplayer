@@ -11,6 +11,17 @@ internal sealed class PeerRoomClient(string playerId, string lobbyId, Func<IPeer
     Action<string, object> sendControl, Action<JsonElement> emit, Func<byte[]> input, Func<double>? serverRtt = null) : IDisposable
 {
     private readonly Dictionary<string, IPeerLink> _links = [];
+    // Terminal native-link recovery, separate from the authority epoch. The pair's
+    // original offerer replaces a failed link with a fresh one (never re-offering a
+    // closed native peer); each attempt has a generation so replaced attempts'
+    // late SDP/ICE is ignored. Bounded per epoch; healthy links are never touched.
+    internal const int RecoveryAttempts = 5;
+    private static readonly double[] RecoveryBackoffSeconds = [0, 1, 2, 4, 8];
+    private readonly Dictionary<string, bool> _offers = [];
+    private readonly Dictionary<string, int> _generation = [], _remoteGeneration = [];
+    private readonly Dictionary<string, (int Attempts, long NextAt)> _recovery = [];
+    internal Func<long> Clock { get; set; } = Stopwatch.GetTimestamp;
+    internal int Recoveries { get; private set; }
     private readonly Dictionary<string, DateTimeOffset> _lastInput = [];
     private readonly Dictionary<string, long> _directSeen = [];
     private readonly Dictionary<string, ProbeWindow> _directQuality = [], _relayQuality = [];
@@ -62,7 +73,7 @@ internal sealed class PeerRoomClient(string playerId, string lobbyId, Func<IPeer
                     foreach (string id in previousMembers.Except(members)) _authority?.RemovePlayer(id);
                     if (party.Hosting == "auto" && party.HostingPolicy != "server")
                     {
-                        foreach (string id in connected.Where(id => id != playerId && previousConnections.GetValueOrDefault(id) != connections.GetValueOrDefault(id))) RemoveLink(id);
+                        foreach (string id in connected.Where(id => id != playerId && previousConnections.GetValueOrDefault(id) != connections.GetValueOrDefault(id))) ResetLink(id);
                         PrepareLinks(connected.Where(id => id != playerId), preflight: true);
                     }
                     else if (_authority is not null)
@@ -70,6 +81,7 @@ internal sealed class PeerRoomClient(string playerId, string lobbyId, Func<IPeer
                             (!previousConnected.Contains(id) || previousConnections.GetValueOrDefault(id) != connections.GetValueOrDefault(id))))
                         {
                             var p = roster.First(p => p.GetProperty("playerId").GetString() == id);
+                            ResetLink(id);
                             CreateLink(id, offer: true);
                             _authority.RestorePlayer(new RealtimePlayer(id, p.GetProperty("displayName").GetString()!, p.GetProperty("slot").GetInt32(), new Dictionary<string,string>()), p.GetProperty("appearance").GetInt32());
                             _players = _authority.Players.Select(p => p.PlayerId).ToArray();
@@ -78,6 +90,7 @@ internal sealed class PeerRoomClient(string playerId, string lobbyId, Func<IPeer
                 return true;
             }
             DisposeLinks(); _authority = null; _lastInput.Clear(); _directSeen.Clear(); _directQuality.Clear(); _relayQuality.Clear();
+            _offers.Clear(); _generation.Clear(); _remoteGeneration.Clear(); _recovery.Clear();
             _lastTick = -1; _epoch = party.Epoch; _mode = mode; _accumulator = _heartbeat = _probe = _report = 0;
             _stageReady = false; _pendingState = null; _qualitySamples = 0; _frameGap = 0;
             _lastAdvance = Stopwatch.GetTimestamp();
@@ -103,7 +116,7 @@ internal sealed class PeerRoomClient(string playerId, string lobbyId, Func<IPeer
         if (type == "peer.signal")
         {
             var signal = d.GetProperty("payload");
-            if (!RelayProbe(from, signal) && _links.TryGetValue(from, out var link)) link.AcceptSignal(signal);
+            if (!RelayProbe(from, signal) && _links.ContainsKey(from) && CurrentAttempt(from, signal) && _links.TryGetValue(from, out var link)) link.AcceptSignal(signal);
         }
         else Receive(from, _epoch, JsonSerializer.SerializeToUtf8Bytes(d.GetProperty("payload")));
         return true;
@@ -114,14 +127,39 @@ internal sealed class PeerRoomClient(string playerId, string lobbyId, Func<IPeer
         foreach (string target in targets)
             if (!_links.ContainsKey(target)) CreateLink(target, preflight ? string.CompareOrdinal(playerId, target) < 0 : playerId == _party?.AuthorityId);
     }
+    private bool CurrentAttempt(string from, JsonElement signal)
+    {
+        if (signal.ValueKind != JsonValueKind.Object || !signal.TryGetProperty("kind", out var kind) ||
+            kind.ValueKind != JsonValueKind.String || kind.GetString() is not ("sdp" or "ice")) return false;
+        int generation = 0;
+        if (signal.TryGetProperty("g", out var g) && (g.ValueKind != JsonValueKind.Number || !g.TryGetInt32(out generation))) return false;
+        if (generation < 0) return false;
+        if (_offers.GetValueOrDefault(from)) return generation == _generation.GetValueOrDefault(from);
+        int current = _remoteGeneration.GetValueOrDefault(from);
+        if (generation < current) return false;
+        if (generation > current)
+        {
+            _remoteGeneration[from] = generation;
+            // ICE can precede SDP. Reset before either reaches the adapter so it
+            // queues that ICE for the new attempt, not the closed connection.
+            CreateLink(from, offer: false);
+        }
+        return true;
+    }
     private void CreateLink(string target, bool offer)
     {
         RemoveLink(target);
         if (factory is null) return;
         var link = factory(); _links[target] = link;
         int epoch = _epoch;
-        link.Signal += signal => sendControl("peer.signal", new { epoch, to = target, payload = signal });
-        link.Received += packet => Receive(target, epoch, packet, direct: true);
+        _offers[target] = offer;
+        int generation = offer ? _generation.GetValueOrDefault(target) : _remoteGeneration.GetValueOrDefault(target);
+        bool Current() => !_disposed && epoch == _epoch && _links.TryGetValue(target, out var active) && ReferenceEquals(active, link);
+        link.Signal += signal =>
+        {
+            if (Current()) sendControl("peer.signal", new { epoch, to = target, payload = Stamp(signal, generation) });
+        };
+        link.Received += packet => { if (Current()) Receive(target, epoch, packet, direct: true); };
         link.Start(offer);
     }
 
@@ -134,6 +172,7 @@ internal sealed class PeerRoomClient(string playerId, string lobbyId, Func<IPeer
         _heartbeat += delta;
         if (_heartbeat >= 1) { _heartbeat = 0; sendControl("peer.heartbeat", new { epoch = _epoch }); }
         foreach (var link in _links.Values.ToArray()) link.Poll();
+        RecoverFailedLinks();
         _probe += delta; _report += delta;
         if (_probe >= .5)
         {
@@ -250,6 +289,37 @@ internal sealed class PeerRoomClient(string playerId, string lobbyId, Func<IPeer
             }
         }
         catch (Exception error) when (error is JsonException or InvalidOperationException or KeyNotFoundException or FormatException or OverflowException) { }
+    }
+    private static JsonElement Stamp(JsonElement signal, int generation)
+    {
+        if (signal.ValueKind != JsonValueKind.Object) return signal;
+        var copy = System.Text.Json.Nodes.JsonObject.Create(signal)!.DeepClone().AsObject();
+        copy["g"] = generation;
+        return JsonSerializer.SerializeToElement(copy);
+    }
+    private void RecoverFailedLinks()
+    {
+        long now = Clock();
+        foreach (var (target, link) in _links.ToArray())
+        {
+            if (link.Connected)
+            {
+                if (_recovery.TryGetValue(target, out var recovered)) _recovery[target] = (recovered.Attempts, 0);
+                continue;
+            }
+            if (!link.Failed || !_offers.GetValueOrDefault(target) || !_connected.Contains(target)) continue;
+            var state = _recovery.GetValueOrDefault(target);
+            if (state.Attempts >= RecoveryAttempts || now < state.NextAt) continue;
+            double delay = RecoveryBackoffSeconds[Math.Min(state.Attempts + 1, RecoveryBackoffSeconds.Length - 1)];
+            _recovery[target] = (state.Attempts + 1, now + (long)(delay * Stopwatch.Frequency));
+            _generation[target] = _generation.GetValueOrDefault(target) + 1;
+            Recoveries++;
+            CreateLink(target, offer: true);
+        }
+    }
+    private void ResetLink(string id)
+    {
+        RemoveLink(id); _offers.Remove(id); _generation.Remove(id); _remoteGeneration.Remove(id); _recovery.Remove(id);
     }
     private void RemoveLink(string id)
     { if (_links.Remove(id, out var link)) link.Dispose(); _directSeen.Remove(id); _directQuality.Remove(id); _relayQuality.Remove(id); }

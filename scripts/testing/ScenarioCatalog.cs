@@ -7,6 +7,7 @@ public partial class PlaytestDriver
 {
     private string _activeScenario="startup",_catalogHash="";
     private readonly List<string> _completedScenarios=[];
+    private readonly List<object> _leafMemory=[];
     private async Task RunRegisteredScenario(string name)
     {
         using var file=Godot.FileAccess.Open("res://assets/testing/scenarios.json",Godot.FileAccess.ModeFlags.Read)
@@ -32,6 +33,11 @@ public partial class PlaytestDriver
                 await task;
                 if(_checks.Count==before)throw new InvalidOperationException("Scenario produced no checks: "+id);
                 _completedScenarios.Add(id);Event("scenario-complete",new {id,frame=Engine.GetProcessFrames()});
+                // Per-leaf memory lets QA compare growth across renderers/platforms.
+                _leafMemory.Add(new {id,frame=Engine.GetProcessFrames(),seconds=_clock.Elapsed.TotalSeconds,
+                    videoMB=Performance.GetMonitor(Performance.Monitor.RenderVideoMemUsed)/1048576,
+                    staticMB=Performance.GetMonitor(Performance.Monitor.MemoryStatic)/1048576});
+                File.WriteAllText(Path.Combine(_output,"leaf-memory.json"),JsonSerializer.Serialize(_leafMemory));
             }
             stack.Remove(id);
         }

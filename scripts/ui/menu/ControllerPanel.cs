@@ -23,6 +23,11 @@ public partial class ControllerPanel : VBoxContainer
         Card(cards,"Gamepads",[("Move",["Stick","D-pad"]),("Bomb",["A","A/B","Cross"]),("Hold to carry",["LB","L","L1"]),("Point throw",["Right stick"]),("Precision aim",["RT","ZR","R2"]),("Detonate",["B","X","Circle"]),("Stop kick",["RB","R","R1"])],"Xbox, Switch and PlayStation, in that order. X, Y or Square also carries; the right shoulder stops your kicked bombs.");
         var notes=ArcadeTheme.Text(this,"Hold carry and tap bomb to ready or pump. On Switch, hold Y and tap B (A also works). While carrying, tilt the right stick or move the mouse to place the landing ring and keep walking. For fine nudges, hold aim and use the stick, D-pad or WASD. Release carry to throw.",16,ArcadeTheme.Muted);
         notes.AutowrapMode=TextServer.AutowrapMode.WordSmart;
+        if(!OperatingSystem.IsMacOS())
+        {
+            var usb=ArcadeTheme.Text(this,"Switch 2 Pro (USB): macOS only. Other mapped controllers remain available.",16,ArcadeTheme.Muted);
+            usb.Name="Switch2UsbSupport";usb.AutowrapMode=TextServer.AutowrapMode.WordSmart;
+        }
         UpdateStatus();
     }
     private static void Card(Node parent,string title,(string Action,string[] Keys)[] rows,string? footnote=null)

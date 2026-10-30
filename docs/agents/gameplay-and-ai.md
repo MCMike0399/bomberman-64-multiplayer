@@ -127,7 +127,16 @@ the original eight-second-start regression and the related lifecycle checks.
 
 [Peer hosting](../peer-hosting.md) owns the v0.27 connection and failure contract.
 `PublicLobbyGame` uses FIFO waiting-room admission and `PartySession` with a
-two-human start minimum. `PeerRoomSession` owns membership, election and epochs;
+two-human start minimum. `PeerRoomSession` owns membership, election and epochs.
+Kernel disconnect and
+reconnect-grace expiry are two notifications for the same seat loss: only the
+first connection transition affects a live match. Final removal still clears
+membership and publishes the roster, but cannot reset a new match already
+started by the survivors. Duplicate callbacks are idempotent; direct active
+host/guest departure keeps the ordinary/stable-roster policy. The deterministic
+`OnlineRoomChecks` grace-expiry regression retains old-fails/new-passes evidence;
+Windows native confirmation is still required for a shipping candidate.
+
 `PeerMatch` runs the unchanged `BlastSession` on the elected client. Do not
 confuse the cluster lobby host with the peer simulation host. When adding an
 arena, update `PeerFrameRules` stage IDs/dimension bounds alongside

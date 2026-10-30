@@ -35,7 +35,9 @@ public sealed partial class NetworkSession
             if (generation > 1) Interlocked.Exchange(ref _peerResetPending, 1);
             Interlocked.Exchange(ref _peerHelloSent, 0);
             Interlocked.Exchange(ref _sequence, 0);
+            Volatile.Write(ref _inputSendObservation,null);
             Volatile.Write(ref _status, "Connected");
+            NoteConnection("connected");
         }
         catch (WebSocketException) when (socket.HttpStatusCode == System.Net.HttpStatusCode.Conflict)
         { socket.Dispose(); throw new InvalidOperationException(OnlineProtocol.ServerUpdateMessage); }
@@ -74,6 +76,7 @@ public sealed partial class NetworkSession
             {
                 if (ct.IsCancellationRequested) return;
                 if (Status.StartsWith("Ended", StringComparison.Ordinal)) return;
+                NoteConnection($"interrupted: {ex.GetType().Name}: {ex.Message}");
                 if (++retries > 5) { Fail("Connection lost. Return to the menu to reconnect."); return; }
                 Volatile.Write(ref _status, $"Reconnecting ({retries}/5)");
                 ReleaseInputs(); Interlocked.Exchange(ref _startPending, 0);Interlocked.Exchange(ref _pendingRules,null);
@@ -90,6 +93,7 @@ public sealed partial class NetworkSession
                     catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
                     catch (Exception reconnectError) when (reconnectError is HttpRequestException or WebSocketException or JsonException or InvalidOperationException or OperationCanceledException)
                     {
+                        NoteConnection($"reconnect failed: {reconnectError.GetType().Name}: {reconnectError.Message}");
                         if (++retries > 5) { Fail(reconnectError.Message); return; }
                         Volatile.Write(ref _status, $"Reconnecting ({retries}/5)");
                     }
@@ -111,13 +115,14 @@ public sealed partial class NetworkSession
                 if (received.MessageType == WebSocketMessageType.Close)
                 {
                     var close = (int?)socket.CloseStatus;
+                    NoteConnection($"server closed {close}: {socket.CloseStatusDescription}");
                     if (close is 1000 or 4002 or 4003 or 4004 or 4005)
                     {
                         Volatile.Write(ref _status, $"Ended: {socket.CloseStatusDescription ?? "Lobby closed"}");
                         _messages.Add(JsonSerializer.SerializeToElement(new { t = "sys.closed", d = new { reason = Status } }));
                         return;
                     }
-                    throw new IOException("Server disconnected.");
+                    throw new IOException($"Server disconnected ({close}: {socket.CloseStatusDescription}).");
                 }
                 if (received.MessageType != WebSocketMessageType.Text || frame.Length + received.Count > 1024 * 1024)
                     throw new IOException("Server sent an unsupported or oversized frame.");
@@ -143,6 +148,9 @@ public sealed partial class NetworkSession
                 if ((party.Hosting == "peer" || party.Adaptive) && Interlocked.Exchange(ref _peerHelloSent, 1) == 0)
                     QueuePeer("peer.hello", new { version = OnlineProtocol.Revision });
                 if (Party?.Phase != party.Phase || Party?.Match != party.Match) ReleaseInputs();
+                long sequence = Interlocked.Increment(ref _partySequence);
+                if (Volatile.Read(ref _deadlineObservation)?.StartAt != party.StartAt)
+                    Volatile.Write(ref _deadlineObservation, new DeadlineObservation(party.StartAt, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), sequence));
                 Volatile.Write(ref _party, party);_partyReady.TrySetResult();
             }
             _wireMessages.Add(message);
@@ -158,6 +166,8 @@ public sealed partial class NetworkSession
     }
     private async Task SendLoopAsync(ClientWebSocket socket, CancellationToken ct)
     {
+        int generation=ConnectionGeneration;
+        var inputProgress=new InputSendTracker(generation);
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1d / 30));
         while (await timer.WaitForNextTickAsync(ct))
         {
@@ -185,8 +195,13 @@ public sealed partial class NetworkSession
                 input = _input;
                 if (_buttons.TryDequeue(out var buttons)) input = input with { A = buttons.A, B = buttons.B, R = buttons.R, Aim = buttons.Aim, Stop = buttons.Stop };
             }
-            var bytes = EncodeInput(input, Interlocked.Increment(ref _sequence));
+            long sequence=Interlocked.Increment(ref _sequence);
+            var sample=inputProgress.Capture(input,sequence,System.Diagnostics.Stopwatch.GetTimestamp());
+            if(generation==ConnectionGeneration)Volatile.Write(ref _inputSendObservation,sample);
+            var bytes = EncodeInput(input, sequence);
             await socket.SendAsync(bytes.AsMemory(), WebSocketMessageType.Text, true, ct);
+            var sent=inputProgress.Complete(sample);
+            if(generation==ConnectionGeneration)Volatile.Write(ref _inputSendObservation,sent);
         }
     }
 
