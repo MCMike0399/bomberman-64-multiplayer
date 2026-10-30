@@ -9,6 +9,7 @@ namespace BlastCircuit.Testing;
 
 public partial class PlaytestDriver
 {
+    private const float NetworkNudgeDistance=1.25f;
     // Diagnostic leaf: real server input, independent of render cadence.
     private async Task NetworkInputPulse()
     {
@@ -30,7 +31,7 @@ public partial class PlaytestDriver
             var direction=SafeNetworkNudge(player);
             long at=State.GetProperty("serverTime").GetInt64();
             var clock=Stopwatch.StartNew();
-            long pulseSequence=await NetworkPulse(host,new PlayerInput(direction.X,direction.Y));
+            long pulseSequence=await NetworkNudge(host,new PlayerInput(direction.X,direction.Y));
             var wait=Stopwatch.StartNew();
             while(State.GetProperty("players").EnumerateArray().Single(p=>p.GetProperty("id").GetString()==host.PlayerId).GetProperty("ack").GetInt64()<=pulseSequence&&wait.Elapsed.TotalSeconds<15){await Frames(1);await Task.Delay(16);}
             player=State.GetProperty("players").EnumerateArray().Single(p=>p.GetProperty("id").GetString()==host.PlayerId);
@@ -38,7 +39,7 @@ public partial class PlaytestDriver
             float distance=before.DistanceTo(new(player.GetProperty("x").GetSingle(),player.GetProperty("z").GetSingle()));
             Event("network-input-movement",new{distance,elapsedMs=clock.Elapsed.TotalMilliseconds,alive=HealthyNetworkActor(player),events=host.ConnectionEvents});
             Check(HealthyNetworkActor(player),"bounded input leaves the actor alive on its supported floor");
-            Check(distance>.12f&&distance<1,"one short movement pulse is accepted without a frame-length hold");
+            Check(distance>.12f&&distance<=NetworkNudgeDistance,"one short movement pulse is accepted within its verified clear corridor");
             await NetworkPulse(host,new PlayerInput(0,0,A:true,B:true),new PlayerInput(0,0,B:true));
             at=State.GetProperty("serverTime").GetInt64();wait.Restart();
             while(State.GetProperty("serverTime").GetInt64()<at+4000&&wait.Elapsed.TotalSeconds<15){await Frames(1);await Task.Delay(16);}
@@ -75,7 +76,7 @@ public partial class PlaytestDriver
         var inward=new Vector2(stage.Width*.5f,stage.Height*.5f)-origin;
         foreach(var direction in new[]{Vector2.Left,Vector2.Right,Vector2.Up,Vector2.Down}.OrderByDescending(d=>d.Dot(inward)))
             if(Enumerable.Range(0,26).All(i=>Clear(origin+direction*(i*.05f))))
-            {Event("network-input-path",new{id=player.GetProperty("id").GetString(),x=origin.X,z=origin.Y,dx=direction.X,dz=direction.Y,supportedDistance=1.25f});return direction;}
+            {Event("network-input-path",new{id=player.GetProperty("id").GetString(),x=origin.X,z=origin.Y,dx=direction.X,dz=direction.Y,supportedDistance=NetworkNudgeDistance});return direction;}
         throw new InvalidOperationException("No short supported clear nudge from the actual actor position");
     }
 }

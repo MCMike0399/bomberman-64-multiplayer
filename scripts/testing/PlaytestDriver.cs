@@ -296,6 +296,7 @@ public partial class PlaytestDriver : Node
         if(milliseconds is <1 or >1000)throw new ArgumentOutOfRangeException(nameof(milliseconds));
         if(!ReferenceEquals(_root.ActiveSession,connection))throw new InvalidOperationException("Input pulse requires its owned active session");
         int generation=connection.ConnectionGeneration;
+        long allocatedAtStart=connection.InputSequence;
         Input(0,hold);
         long started=Stopwatch.GetTimestamp(),expires=started+(long)(Stopwatch.Frequency*milliseconds/1000d);
         // The engine thread checks the same expiry before republishing. A late
@@ -315,7 +316,7 @@ public partial class PlaytestDriver : Node
             double actual=await released;sequence=connection.InputSequence;
             await Frames(1);
             Event("network-input-pulse",new{requestedMs=milliseconds,releasedMs=actual,resumedMs=Stopwatch.GetElapsedTime(started).TotalMilliseconds,
-                sequence,x=press.X,z=press.Z,primary=press.A,carry=press.B,holdCarry=hold.B});
+                allocatedAtStart,sequence,x=press.X,z=press.Z,primary=press.A,carry=press.B,holdCarry=hold.B});
         }
         finally
         {
@@ -325,6 +326,56 @@ public partial class PlaytestDriver : Node
         if(!ReferenceEquals(_root.ActiveSession,connection)||connection.ConnectionGeneration!=generation)
             throw new InvalidOperationException("Input pulse session changed before its observation");
         return sequence;
+    }
+    private async Task<long> NetworkNudge(NetworkSession connection,PlayerInput press,PlayerInput hold=default)
+    {
+        if(!ReferenceEquals(_root.ActiveSession,connection)||connection.Party?.Hosting is "peer" or "auto")
+            throw new InvalidOperationException("Observed nudge requires its owned server-hosted session");
+        int generation=connection.ConnectionGeneration;
+        long started=Stopwatch.GetTimestamp();
+        // Ordinary speed is 4.5 cells/s. Reserve .25 of the verified corridor
+        // for scheduling/network jitter, then reject any final spatial overrun.
+        long corridorTicks=(long)(Stopwatch.Frequency*(NetworkNudgeDistance-.25d)/4.5d);
+        var gate=new ObservedInputNudge(press,generation,connection.LatestInputSend?.TotalSentSamples??0,
+            started,Stopwatch.Frequency*5,corridorTicks);
+        Input(0,hold);
+        _root.InjectInputProvider(0,()=>gate.Pressed(connection.LatestInputSend,Stopwatch.GetTimestamp(),connection.ConnectionGeneration)?press:hold);
+        connection.SendInput(0,press);
+        var completion=new TaskCompletionSource<long>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var observer=new Thread(()=>
+        {
+            try
+            {
+                // No engine calls and no dependency on a rendered frame or the
+                // thread-pool timer that may itself be delayed by a hitch.
+                while(gate.Pressed(connection.LatestInputSend,Stopwatch.GetTimestamp(),connection.ConnectionGeneration))Thread.Sleep(1);
+                if(connection.ConnectionGeneration==generation)connection.SendInput(0,hold);
+                completion.TrySetResult(connection.InputSequence);
+            }
+            catch(Exception error)
+            {
+                gate.Cancel(Stopwatch.GetTimestamp());
+                if(connection.ConnectionGeneration==generation)connection.SendInput(0,hold);
+                completion.TrySetException(error);
+            }
+        }){IsBackground=true,Name="QA observed movement"};
+        try
+        {
+            observer.Start();long sequence=await completion.Task;await Frames(1);
+            var decision=gate.Decision!;
+            Event("network-input-nudge",new{decision.Reason,decision.Delivered,
+                decisionMs=Stopwatch.GetElapsedTime(started,decision.Timestamp).TotalMilliseconds,
+                resumedMs=Stopwatch.GetElapsedTime(started).TotalMilliseconds,corridor=NetworkNudgeDistance,
+                sequence,observation=decision.Observation,x=press.X,z=press.Z,holdCarry=hold.B});
+            if(!decision.Delivered)throw new InvalidOperationException("Nudge delivery was not observed inside its corridor budget: "+decision.Reason);
+            return sequence;
+        }
+        finally
+        {
+            gate.Cancel(Stopwatch.GetTimestamp());
+            if(observer.IsAlive&&!observer.Join(1000))throw new TimeoutException("QA nudge observer did not stop");
+            if(ReferenceEquals(_root.ActiveSession,connection)&&connection.ConnectionGeneration==generation)Input(0,hold);
+        }
     }
     // The single owner of a game-loop-free fixture session: advance and drain it
     // like a 30 FPS client on the engine thread (Godot peer polling stays there),

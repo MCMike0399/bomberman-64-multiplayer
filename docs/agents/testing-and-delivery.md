@@ -635,15 +635,21 @@ Online test robots that press a button for N frames turn a tap into a
 multi-second hold on software renderers, and a held A charges a throw. Use
 `NetworkTap`: it sends the press edge immediately and releases it 100 ms
 later in wall time.
-For crossplay movement use `NetworkPulse`: one owner controls the injected
-provider and socket intent. The provider checks a monotonic expiry before every
-frame publication; a worker releases transport input without engine calls. It
-records requested/release/resume times and the outgoing sequence. Observe an
-authority acknowledgement beyond that sequence before judging a pulse; after a
-long frame, a newer snapshot can still predate the command. `network-input-pulse`
+For crossplay movement use `NetworkNudge`: one owner controls the injected
+provider and socket intent until two matching socket input samples have actually
+been sent. `LatestInputSend` publishes immutable progress; capture/allocation
+alone never counts as a successful send. A dedicated QA observer releases input
+without engine calls or dependence on a rendered frame. The safety cutoff begins
+at the first captured movement sample and is derived from the verified 1.25-cell
+corridor; a final spatial check rejects overruns. An unsampled intent has a
+separate bounded wait and cannot claim delivery. The provider cannot resurrect
+released input on a late frame. Observe an authority acknowledgement beyond the
+release sequence before judging movement. This instrumentation does not change
+normal input queues, wire messages or send cadence. `network-input-pulse`
 is a diagnostic leaf outside release suites. The old frame controller moved
-4.23 cells for a short tap under a one-second stall; the bounded pulse moved
-0.45 cells with a two-second stall and retained carry beyond a full bomb fuse.
+4.23 cells for a short tap under a one-second stall. An earlier bounded-wall-time
+diagnostic moved 0.45 cells with a two-second stall; the observed-send controller
+moves 0.30 cells with a one-second stall and retains carry beyond a full fuse.
 Crossplay selects a short supported inward path from actual stage/cover/actor
 state, creates a carried bomb first, and only counts fresh healthy movement
 along that intent. It holds carry through the cohort barrier. Failure retains

@@ -153,7 +153,7 @@ public partial class PlaytestDriver
         await ObserveUntil(()=>bombOwners.Contains(session.PlayerId!),15);
         Check(true,"a healthy local actor owns and carries an accepted bomb");CrossplayMark("local-bomb");
         var direction=directions[session.PlayerId!];
-        long movementSequence=await NetworkPulse(session,new PlayerInput(direction.X,direction.Y,B:true),carry);
+        long movementSequence=await NetworkNudge(session,new PlayerInput(direction.X,direction.Y,B:true),carry);
         await ObserveUntil(()=>moved.Contains(session.PlayerId!)&&State.GetProperty("players").EnumerateArray()
             .Single(p=>p.GetProperty("id").GetString()==session.PlayerId).GetProperty("ack").GetInt64()>movementSequence,15);
         Check(true,"ordinary local movement is accepted by the shared authority without leaving supported ground");CrossplayMark("local-movement");
@@ -162,6 +162,9 @@ public partial class PlaytestDriver
         Check(State.GetProperty("players").EnumerateArray().All(HealthyNetworkActor)&&players.All(id=>
             State.GetProperty("bombs").EnumerateArray().Any(b=>b.GetProperty("ownerId").GetString()==id&&b.GetProperty("carrierId").GetString()==id)),
             "all three healthy actors retain their own carried bombs through the action barrier");
+        Check(State.GetProperty("players").EnumerateArray().All(p=>positions[p.GetProperty("id").GetString()!].DistanceTo(
+            new Vector2(p.GetProperty("x").GetSingle(),p.GetProperty("z").GetSingle()))<=NetworkNudgeDistance),
+            "every actor finishes its movement inside the prevalidated clear corridor");
         Check(_root.SnapshotCount - firstSnapshots > 4 && State.GetProperty("serverTime").GetInt64() - firstTime > 5000,
             "all clients observe advancing authoritative gameplay");
         CrossplayMark("cohort-actions");await Capture("crossplay-three-os-gameplay");
@@ -226,7 +229,7 @@ public partial class PlaytestDriver
                 var displacement=new Vector2(player.GetProperty("x").GetSingle(),player.GetProperty("z").GetSingle())-initialPosition;
                 var direction=directions[id];
                 if(state.GetProperty("serverTime").GetInt64()>=actionAt&&player.GetProperty("ack").GetInt64()>firstAcks[id]&&
-                    displacement.Dot(direction)>.12f&&displacement.Length()<1&&Math.Abs(displacement.Cross(direction))<.2f)
+                    displacement.Dot(direction)>.12f&&displacement.Length()<=NetworkNudgeDistance&&Math.Abs(displacement.Cross(direction))<.2f)
                     moved.Add(id);
             }
             foreach (var bomb in state.GetProperty("bombs").EnumerateArray())

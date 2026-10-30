@@ -35,6 +35,7 @@ public sealed partial class NetworkSession
             if (generation > 1) Interlocked.Exchange(ref _peerResetPending, 1);
             Interlocked.Exchange(ref _peerHelloSent, 0);
             Interlocked.Exchange(ref _sequence, 0);
+            Volatile.Write(ref _inputSendObservation,null);
             Volatile.Write(ref _status, "Connected");
             NoteConnection("connected");
         }
@@ -165,6 +166,8 @@ public sealed partial class NetworkSession
     }
     private async Task SendLoopAsync(ClientWebSocket socket, CancellationToken ct)
     {
+        int generation=ConnectionGeneration;
+        var inputProgress=new InputSendTracker(generation);
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1d / 30));
         while (await timer.WaitForNextTickAsync(ct))
         {
@@ -192,8 +195,13 @@ public sealed partial class NetworkSession
                 input = _input;
                 if (_buttons.TryDequeue(out var buttons)) input = input with { A = buttons.A, B = buttons.B, R = buttons.R, Aim = buttons.Aim, Stop = buttons.Stop };
             }
-            var bytes = EncodeInput(input, Interlocked.Increment(ref _sequence));
+            long sequence=Interlocked.Increment(ref _sequence);
+            var sample=inputProgress.Capture(input,sequence,System.Diagnostics.Stopwatch.GetTimestamp());
+            if(generation==ConnectionGeneration)Volatile.Write(ref _inputSendObservation,sample);
+            var bytes = EncodeInput(input, sequence);
             await socket.SendAsync(bytes.AsMemory(), WebSocketMessageType.Text, true, ct);
+            var sent=inputProgress.Complete(sample);
+            if(generation==ConnectionGeneration)Volatile.Write(ref _inputSendObservation,sent);
         }
     }
 

@@ -37,6 +37,9 @@ public sealed partial class NetworkSession : ISession
     /// <summary>Latest allocated outgoing input sequence; an authority ack at or
     /// beyond it establishes that a diagnostic observation is fresh.</summary>
     public long InputSequence => Volatile.Read(ref _sequence);
+    private InputSendObservation? _inputSendObservation;
+    /// <summary>Latest captured/successfully-sent input progress, published as one immutable value.</summary>
+    public InputSendObservation? LatestInputSend=>Volatile.Read(ref _inputSendObservation);
     private int _disposed;
     private int _appearance;
     private int _appearancePending, _startPending;

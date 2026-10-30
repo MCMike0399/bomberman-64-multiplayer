@@ -62,6 +62,12 @@ bindings: [PlayerControls](../../scripts/input_devices/PlayerControls.cs) owns k
 owns family semantics and prompt labels. Update the README, controller panel,
 HUD hints and native tests together.
 
+Movement axes sample the current physical-key state. A movement tap whose
+press and release both occur between render polls can disappear during a long
+frame hitch. This is existing shared behavior on all platforms, distinct from
+queued button-edge handling. The pinned-engine synthetic down/up control
+confirms the next state poll is released; it is not physical-keyboard QA.
+
 The positional action table in early controller research is historical; use
 the current table above and `ControllerProfile` for product actions.
 Godot `JoyButton` identifiers are canonical physical positions, not printed
