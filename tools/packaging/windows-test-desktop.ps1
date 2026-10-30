@@ -1,10 +1,17 @@
 # Disposable runner setup only. The game retains its ordinary WASAPI backend.
+param([switch]$OwnedSsm,[switch]$VerifyOnly,[string]$ExpectedRevision)
 $ErrorActionPreference = 'Stop'
-if (-not $IsWindows -or $env:GITHUB_ACTIONS -ne 'true') {
+if (-not $IsWindows -or ($env:GITHUB_ACTIONS -ne 'true' -and -not $OwnedSsm)) {
     throw 'Audio fixture setup requires the disposable Windows CI desktop'
 }
 $output = Join-Path $PSScriptRoot '../../artifacts/windows-audio'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
+if($OwnedSsm){
+    if(-not $VerifyOnly -or -not $ExpectedRevision){throw 'Owned standard-user setup requires verification-only mode and frozen source'}
+    $context=& python (Join-Path $PSScriptRoot '../ci/native_execution.py') --revision $ExpectedRevision --target windows-x64 --require-ssm
+    if($LASTEXITCODE -ne 0){throw 'Actual owned SSM context validation failed'}
+    $context | Set-Content -Encoding utf8 (Join-Path $output 'native-context.json')
+}
 Add-Type -TypeDefinition @'
 using System;
 using System.Collections.Generic;
@@ -104,6 +111,7 @@ $screenReady = $area[0] -ge 1648 -and $area[1] -ge 1080
 @{modes=$modes;attempts=$modeResults;workArea=$area;ready=$screenReady;
   width=[BlastAudioEndpoint]::GetSystemMetrics(0);height=[BlastAudioEndpoint]::GetSystemMetrics(1)} |
     ConvertTo-Json -Depth 5 | Set-Content -Encoding utf8 (Join-Path $output 'display.json')
+if(-not $VerifyOnly){
 foreach ($name in @('AudioEndpointBuilder', 'Audiosrv')) {
     if ((Get-Service $name).StartType -eq 'Disabled') { Set-Service -Name $name -StartupType Manual }
     Start-Service -Name $name
@@ -144,6 +152,7 @@ if ([BlastAudioEndpoint]::Probe() -ne 0) {
     }
     $driverExitCode = $driver.ExitCode
     Write-Output "Virtual audio installer exit: $driverExitCode; requiring a live WASAPI endpoint next"
+}
 }
 $clock = [System.Diagnostics.Stopwatch]::StartNew()
 do {

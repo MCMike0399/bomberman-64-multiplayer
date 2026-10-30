@@ -17,9 +17,9 @@ def expected_standing(arn):
         f'arn:aws:cloudformation:{names.REGION}:{names.ACCOUNT}:stack/{names.IDENTITY_STACK}/')
 
 
-def audit(aws):
+def audit(aws,require_scoped_role=True):
     caller=aws('sts','get-caller-identity')
-    if caller.get('Account')!=names.ACCOUNT or not caller.get('Arn','').startswith(
+    if caller.get('Account')!=names.ACCOUNT or require_scoped_role and not caller.get('Arn','').startswith(
             f'arn:aws:sts::{names.ACCOUNT}:assumed-role/{names.CI_ROLE}/'):
         raise RuntimeError('Empty audit requires the actual scoped builder assumed role')
     checked={};errors=[]
@@ -36,7 +36,8 @@ def audit(aws):
                          for row in reservation['Instances']if row['State']['Name']!='terminated'])
     for kind,command,key,id_key in (
             ('EBS','describe-volumes','Volumes','VolumeId'),('ENI','describe-network-interfaces','NetworkInterfaces','NetworkInterfaceId'),
-            ('SG','describe-security-groups','SecurityGroups','GroupId'),('EIP','describe-addresses','Addresses','AllocationId')):
+            ('SG','describe-security-groups','SecurityGroups','GroupId'),('EIP','describe-addresses','Addresses','AllocationId'),
+            ('KeyPairs','describe-key-pairs','KeyPairs','KeyPairId')):
         observe(kind,lambda command=command,key=key,id_key=id_key:[row[id_key]for row in aws('ec2',command,*tag_filter)[key]])
     observe('Snapshots',lambda:[row['SnapshotId']for row in aws('ec2','describe-snapshots','--owner-ids',names.ACCOUNT,*tag_filter)['Snapshots']])
     observe('AMI',lambda:[row['ImageId']for row in aws('ec2','describe-images','--owners',names.ACCOUNT,*tag_filter)['Images']])
@@ -58,8 +59,9 @@ def audit(aws):
             'checked':{kind:{'state':'unverified'if rows is None else'present'if rows else'absent','ids':rows}for kind,rows in checked.items()},
             'expectedStandingIdentity':{'stack':names.IDENTITY_STACK,'role':names.CI_ROLE,'boundary':names.BOUNDARY,'provider':'referenced existing provider'},
             'leftovers':leftovers,'errors':errors,'passed':not leftovers and not errors,
-            'nonResourceRecords':['CloudTrail events','SSM command history','billing data'],
-            'scope':'First live OIDC assume-role and empty discovery proof only; not a paid campaign cleanup receipt, protected-inventory comparison or game qualification.'}
+            'nonResourceRecords':['CloudTrail events','SSM command history','billing data','CloudFormation DELETE_COMPLETE stack history'],
+            'scope':('First live OIDC assume-role and empty discovery proof only; not a paid campaign cleanup receipt, protected-inventory comparison or game qualification.'
+                     if require_scoped_role else 'Read-only operator namespace discovery; not an OIDC assume-role proof or game qualification.')}
 
 
 if __name__=='__main__':

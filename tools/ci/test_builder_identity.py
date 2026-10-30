@@ -7,6 +7,24 @@ import builder_namespace as names
 
 
 class BuilderIdentity(unittest.TestCase):
+    def test_staging_boundary_fits_and_preserves_api_valid_permissions(self):
+        import builder_policy_compact as compact
+        policy=identity.policy(staging=True);boundary=identity.boundary(staging=True)
+        pairs=lambda data:set().union(*(compact.api_pairs(row)for row in data['Statement']))
+        self.assertEqual(pairs(policy),pairs(boundary))
+        self.assertLessEqual(len(json.dumps(boundary,separators=(',',':'))),6144)
+        def s3_rows(data):
+            result=[]
+            for row in data['Statement']:
+                actions=compact.sequence(row['Action'])
+                if any(action.startswith('s3:')for action in actions):
+                    result.append(json.dumps({'Effect':row['Effect'],'Action':actions,
+                        'Resource':compact.sequence(row['Resource']),'Condition':row.get('Condition',{})},sort_keys=True))
+            return sorted(result)
+        self.assertEqual(s3_rows(policy),s3_rows(boundary))
+        resources=identity.template(staging=True)['Resources']
+        self.assertEqual(len(resources),2)
+
     def test_managed_boundary_fits_iam_and_has_identical_permissions(self):
         boundary=identity.boundary()
         self.assertLessEqual(len(json.dumps(boundary,separators=(',',':'))),6144)

@@ -17,6 +17,7 @@ import crossplay_runtime
 import desktop_packages as desktop
 import download_formats
 import mesh_inputs
+import native_execution
 
 ROOT = Path(__file__).resolve().parents[2]
 SPEC = importlib.util.spec_from_file_location('pixel_comparer', ROOT / 'tools/qa/compare_visual_parity.py')
@@ -92,7 +93,10 @@ def run(target, directory, output, expected, inputs_only=False, expected_adapter
     actual_driver = driver_override or crossplay_runtime.SYSTEMS[target][2]
     native_ci = os.environ.get('GITHUB_ACTIONS') == 'true'
     local_scope = local_mac and target == 'macos-arm64' and platform.system() == 'Darwin' and platform.machine().lower() == 'arm64'
-    if platform.system() != crossplay_runtime.SYSTEMS[target][0] or not (native_ci or local_scope):
+    if not(local_scope or native_ci or os.environ.get('SANCUS_BUILDER_TASK')):
+        raise RuntimeError('Use the disposable native CI OS, owned SSM host or explicitly selected local Apple Silicon Mac')
+    execution={'kind':'local-mac'}if local_scope else native_execution.context(expected,target,ROOT)
+    if platform.system() != crossplay_runtime.SYSTEMS[target][0]:
         raise RuntimeError('Use the disposable native CI OS or explicitly selected local Apple Silicon Mac')
     if local_scope and not expected_adapter:
         raise RuntimeError('Local Mac evidence requires an explicit expected hardware adapter')
@@ -103,6 +107,7 @@ def run(target, directory, output, expected, inputs_only=False, expected_adapter
     if data['revision'] != expected: raise RuntimeError('Visual payload differs from requested source')
     report = {'schemaVersion': 1, 'graphicsQualified': False, 'nativeCI': native_ci, 'executionHost': 'local-mac' if local_scope else 'native-ci', 'requestedDriver': actual_driver, 'diagnosticDriverOverride': driver_override, 'mode': 'mesh-inputs-diagnostic' if inputs_only else 'diagnostic-only', 'passed': False, 'target': target, 'revision': expected,
               'release': data['release'], 'runs': [], 'comparisons': [], 'errors': []}
+    report['executionContext']=execution;report['executionHost']=execution['kind']
     executable = None
     try:
         if target == 'linux-x64' and not inputs_only:

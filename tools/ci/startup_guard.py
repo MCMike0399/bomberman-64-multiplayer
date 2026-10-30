@@ -2,14 +2,17 @@
 import argparse,json,os,re,subprocess,sys,time
 from pathlib import Path
 import crossplay,crossplay_runtime,desktop_packages as desktop
+import native_execution
 from desktop_rendering import report_matches
 
 
 def run(directory,output,revision):
-    if os.name!='nt' or os.environ.get('GITHUB_ACTIONS')!='true':raise RuntimeError('Use the owned native Windows CI profile')
+    if os.name!='nt':raise RuntimeError('Use the owned native Windows profile')
+    execution=native_execution.context(revision,'windows-x64',Path(__file__).resolve().parents[2])
     output.mkdir(parents=True,exist_ok=False);data=crossplay_runtime.metadata(directory,'windows-x64')
     if data['revision']!=revision:raise ValueError('Wrong packaged source')
     report={'schemaVersion':1,'scope':'Actual installer startup crash/recovery; functional only','graphicsQualified':False,'source':revision,'passed':False,'runs':[],'errors':[]}
+    report['executionContext']=execution
     executable=None
     try:
         executable=crossplay_runtime.install(directory,'windows-x64',output)

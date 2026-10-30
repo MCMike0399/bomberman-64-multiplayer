@@ -19,6 +19,126 @@ only the read-only reusable controller; it cannot launch instances. Paid
 orchestration and automatic major-release queuing are a subsequent boundary.
 Policy simulation is not GPU qualification.
 
+The [per-run S3 staging update](sancus-builder-staging.md) is deployed and read
+back against the reviewed policy hashes. It supports SSM execution without
+placing a GitHub token in AWS. The second free OIDC audit still needs the user's
+environment approval. No paid run or staging bucket has been created by this
+controller work.
+
+### SSM controller implementation boundary
+
+The source modules under `tools/ci/builder_*` now contain the journal, exact
+creation-intent recovery, immutable source payload preparation, per-run template,
+SSM dispatch, result retention and cleanup stages. These are preparation work;
+the paid workflow remains disabled until guest bootstrap, the complete dry run
+and the reviewed campaign plan are ready. Unit tests do not qualify graphics or
+prove live cleanup.
+
+SSM dispatch uses a fixed installed dispatcher and a data-only descriptor bound
+to the source, instance, target and deadline. A lost SendCommand response leaves
+an unresolved durable intent; reconciliation never blindly sends a second
+command. Windows graphics must run in the disposable standard user's interactive
+session, not SSM's LocalSystem session. No GitHub runner is registered on AWS.
+Native collectors record a distinct SSM execution context, checking the task's
+fixed expiry, source and target against the guest's live IMDS identity and exact
+Git snapshot. They do not set `GITHUB_ACTIONS` to impersonate a hosted runner.
+Official engine archives can be staged in advance and installed with the same
+checksum pins using `install_godot.py --archives` without a guest download.
+
+The current CloudFormation `AWS::Scheduler::Schedule` resource schema does not
+accept `ActionAfterCompletion`, although the Scheduler API supports it. The
+controller therefore sets `DELETE` through UpdateSchedule and reads both exact
+targets back before writing readiness. The corresponding permission delta is
+limited to the existing dated run-schedule ARN clause. It is reviewed and
+deployed: 74 simulations pass, the inline/boundary readback matches the reviewed
+hashes, and the standing role/policy identities are unchanged. The original S3-v2
+identity generator remains unchanged. Inline and boundary Access Analyzer
+findings are empty. The unchanged trust has two reviewed, accepted findings:
+CONFIRM_AUDIENCE_CLAIM_TYPE (plain StringEquals is correct) and
+SPECIFIC_GITHUB_REPO_AND_BRANCH_RECOMMENDED (the immutable custom subject already
+pins repository IDs, environment and the exact main workflow). These are retained
+with their rationale, rather than reported as zero findings.
+
+Guest bootstrap and dispatch live in `builder_bootstrap.py` and
+`builder_guest.py`. Windows uses the AWS SDK already supplied by its pinned AMI
+to fetch the checksum-pinned CLI installer from the run bucket. That first
+GetObject request also sets ExpectedBucketOwner; no GitHub credential or public
+artifact download is needed in the guest. Linux uses its package manager for OS
+dependencies. SDKs, engine archives, wheels, client/server files and the public
+source snapshot are all staged inputs.
+
+Core results use an immutable checkpoint prefix. The host must verify and retain
+that checkpoint before acknowledging it through the bucket; only then can the
+guest start the long tours. Later progress cannot overwrite the committed core
+files. Missing acknowledgement stops the next phase within a fixed bound and
+never extends the campaign expiry.
+
+`builder_preflight.py` performs noncreating account, namespace, network, quota and
+pinned-image checks. `builder_recovery.py` maps earlier findings to exact retained
+journals before invoking cleanup; unknown or ambiguous ownership blocks a new
+launch. Its matching step alone never authorizes deletion. The hosted coordinator
+and complete workflow rehearsal remain the next integration boundary.
+
+`builder_controller.py` now exposes separate intent, launch, core, acknowledgement,
+final collection and cleanup phases. Hosted execution requires the exact
+successful current-main Verification and a clean source checkout. The creation
+intent is uploaded durably before submission; a response loss reconciles that
+same token. Instance children are recorded during provisioning. SSM dispatch and
+termination both verify the exact recorded stack member.
+
+Windows publishes readiness from its standard user's logon task, then waits for
+an atomically published descriptor. Both OS wrappers retain early worker errors,
+even if source unpacking fails before the normal game reporter starts. A zero
+worker exit without the required receipt still fails collection.
+
+The finalizer checks each created physical ID, the complete type audit and the
+protected comparison before binding cleanup to the original GPU and graphical
+receipt hashes. Its fresh hosted job checks repository variables separately.
+AWS key pairs are included in discovery even though this controller creates none.
+CloudFormation DELETE_COMPLETE history is retained as an AWS-managed record.
+
+`builder_rehearse.py` runs mocked phase/receipt wiring and live noncreating
+preflight under an AWS CLI mutation fence. Development/operator runs identify
+that scope explicitly; current-main prepared-input and assumed-role verification
+remain required for the hosted rehearsal. Rehearsal never creates native game or
+GPU qualification evidence. Asset preparation and workflow phase wiring are implemented in the working
+branch. Prepared current-main rehearsal, hosted fault probes and source/main
+verification are still pending; this is not a launch-ready qualification receipt.
+
+The Windows desktop helper now has an owned-SSM verification mode. It validates
+live task provenance without inventing a GitHub Actions environment, and checks
+the ordinary user's display and WASAPI endpoint. Privileged audio service/driver
+setup happens in the disposable system bootstrap before the standard-user logon.
+The reviewed virtual-audio package is a staged, checksum-pinned QA dependency.
+
+Development rehearsal is runnable without allocating machines:
+
+```sh
+python3 tools/ci/builder_rehearse.py --state /absolute/path/to/draft-state \
+  --output /absolute/path/to/new-rehearsal-output --operator
+```
+
+The hosted form also requires `--require-prepared`, validated frozen inputs and
+the actual scoped assumed role. Reports preserve the real caller, source-file
+hashes and dirty-tree state; an operator draft run is not that hosted proof.
+The workflow on main still performs audit only. This branch implements artifact
+and tool preparation, major selection and hosted phase integration; prepared-input
+and hosted fault rehearsals plus the source PR/main proof remain unfinished. No
+paid run has been launched.
+
+The cleanup-only entry point never provisions or retries a game test:
+
+```sh
+python3 tools/ci/builder_supervisor.py --state /absolute/path/to/owned-campaign-state
+```
+
+Its state must retain the exact creation journal, plan and protected baseline.
+Evidence collection errors do not bypass deletion ownership checks or prevent
+later independently authorized cleanup stages. Missing creation responses remain
+unresolved until exact-intent reconciliation succeeds. Stopped instances and
+DELETE_FAILED stacks are never clean. Final checks cover recorded physical IDs
+and the discovery audit; unknown ownership is reported rather than deleted.
+
 ## Promotion and fingerprint
 
 Promotion and deployment derive the release kind from the latest published
@@ -120,6 +240,45 @@ aws cloudformation delete-stack --profile sancus --region us-east-1 \
 aws cloudformation wait stack-delete-complete --profile sancus --region us-east-1 \
   --stack-name sancus-builder-ci-identity
 ```
+
+## Cancellation, timeout and recovery boundary
+
+The hosted campaign keeps cleanup in an `if: always()` step in the same approved
+job. It re-assumes a fresh one-hour OIDC session before requesting termination. Each
+phase checks its real credential expiration; allocation also checks that the fixed
+expiry plus the 20-minute cleanup allowance fits before the job timeout and its
+15-minute margin. Ordinary phases have earlier bounded subprocess deadlines.
+
+The always path requests termination of exact journaled instances before slow
+evidence work. Request timing is journaled before the API call; the first request
+and observed cancel-to-request interval are preserved across cleanup retries. It retains the request/cancel timestamps, then recovers available
+immutable evidence and uploads the local bytes. Only afterwards does it empty the
+bucket, delete the stack and verify every type/ID. Cleanup's internal ordering also
+stops journaled writers before evidence work; it does not wait on unrelated IAM/S3
+metadata merely to terminate a recorded instance. Cancellation signals are
+forwarded through the temporary credential wrapper. A free probe records step
+entry and explicitly does not invent a real EC2 termination request.
+
+The EventBridge TTL is **compute termination only**. It does not empty/delete the
+bucket or remove the stack, security group, IAM role/profile or schedule group.
+A lost runner or hard job termination can prevent always steps from executing.
+GitHub documents a five-minute force-termination limit during cancellation;
+[the cancellation reference](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-cancellation)
+is a platform limit, not a zero-leftover guarantee.
+
+Such a run stays red. An independent reporting job lists recorded IDs as
+unverified leftovers if a final cleanup audit is missing. Durable intent/state
+artifacts support the next preflight recovery or the identity-checked DiveMac
+cleanup command. Promotion and a new paid run remain blocked until recovery and
+cost closure are verified. No new cleanup resources or boundary permissions are
+introduced by this backstop. A future full-stack TTL extension requires separate
+review; a DeleteStack call alone cannot empty the populated staging bucket.
+
+Free hosted rehearsal includes a controlled phase cancellation/timeout and an
+actual short job-timeout probe. Mocked signal handling is recorded separately
+from observed GitHub behavior. If the hard-timeout probe cannot execute cleanup,
+its missing receipt is reported as unverified; it is never called a passing
+cleanup test. The probe creates no AWS resources.
 
 ## Campaign completion and cost
 

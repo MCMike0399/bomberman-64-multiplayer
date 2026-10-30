@@ -15,7 +15,7 @@ OIDC_SUBJECT=('repo:MCMike0399@40257172/bomberman-64-multiplayer@1426399566:'
 AMIS=('ami-05414055cdd6e338f','ami-057fee592d97c84cb')
 
 
-def policy():
+def policy(*,staging=False):
     account,region=names.ACCOUNT,names.REGION
     arn=lambda service,resource:f'arn:aws:{service}:{region}:{account}:{resource}'
     iam=lambda resource:f'arn:aws:iam::{account}:{resource}'
@@ -94,14 +94,17 @@ def policy():
           f'arn:aws:ssm:{region}::document/AWS-RunPowerShellScript'])
     allow('OfficialWindowsDriver','s3:GetObject',
           'arn:aws:s3:::ec2-windows-nvidia-drivers/latest/596.86__grid_win10_win11_server2022_server2025_dch_64bit_international_aws_swl.exe')
+    if staging:
+        import builder_staging
+        statement.extend(builder_staging.controller_statements())
     return {'Version':'2012-10-17','Statement':statement}
 
 
-def boundary():
+def boundary(*,staging=False):
     # IAM's managed-policy limit is 6,144 non-whitespace characters. Statement
     # labels aid review but carry no semantics, so omit them from the boundary.
     groups={}
-    for row in policy()['Statement']:
+    for row in policy(staging=staging)['Statement']:
         base={key:value for key,value in row.items()if key not in ('Sid','Action')}
         key=json.dumps(base,sort_keys=True)
         actions=row['Action']if isinstance(row['Action'],list)else[row['Action']]
@@ -110,18 +113,21 @@ def boundary():
     for row in groups.values():
         if len(row['Action'])==1:row['Action']=row['Action'][0]
     data={'Version':'2012-10-17','Statement':list(groups.values())}
+    if staging:
+        import builder_policy_compact
+        data=builder_policy_compact.compact(policy(staging=True))
     if len(json.dumps(data,separators=(',',':')))>6144:
         raise ValueError('Builder boundary exceeds the IAM managed-policy size limit')
     return data
 
 
-def template():
-    permissions=policy()
+def template(*,staging=False):
+    permissions=policy(staging=staging)
     data={'AWSTemplateFormatVersion':'2010-09-09',
           'Description':'Scoped builder CI identity; existing OIDC provider remains external',
           'Resources':{
               'Boundary':{'Type':'AWS::IAM::ManagedPolicy','Properties':{
-                  'ManagedPolicyName':names.BOUNDARY,'PolicyDocument':boundary()}},
+                  'ManagedPolicyName':names.BOUNDARY,'PolicyDocument':boundary(staging=staging)}},
               'ControllerRole':{'Type':'AWS::IAM::Role','Properties':{
                   'RoleName':names.CI_ROLE,'MaxSessionDuration':10800,
                   'PermissionsBoundary':{'Ref':'Boundary'},
@@ -139,5 +145,6 @@ def template():
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output',type=Path,required=True)
+    parser.add_argument('--staging',action='store_true',help='Proposed owned S3 staging permissions; review before applying')
     args=parser.parse_args();args.output.parent.mkdir(parents=True,exist_ok=True)
-    args.output.write_text(json.dumps(template(),indent=2)+'\n')
+    args.output.write_text(json.dumps(template(staging=args.staging),indent=2)+'\n')

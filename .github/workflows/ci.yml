@@ -658,3 +658,81 @@ jobs:
     with:
       mode: verification
       revision: ${{ github.sha }}
+
+  native-contracts:
+    name: Packaged replay and captured inputs (${{ matrix.target }})
+    needs: [package, desktop-download]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: windows-x64
+            runner: windows-2025
+            runtime: Blast-Circuit-windows-x64
+          - target: linux-x64
+            runner: ubuntu-24.04
+            runtime: Blast-Circuit-linux-x64
+          - target: macos-arm64
+            runner: macos-15
+            runtime: Blast-Circuit-macos-arm64-ad-hoc
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: ${{ matrix.runtime }}
+          path: artifacts
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        if: runner.os != 'macOS'
+        with:
+          name: Blast-Circuit-${{ matrix.target }}-download
+          path: artifacts
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y fuse3 squashfs-tools
+      - name: Execute shipped replay and CPU-input inventory without graphics claims
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+          SOURCE: ${{ github.sha }}
+        run: |
+          python3 - <<'PY'
+          import os,pathlib,subprocess,sys
+          target=os.environ['TARGET'];root=pathlib.Path('artifacts/native-contracts')/target
+          commands=[
+              [sys.executable,'tools/ci/authority_replay.py','run','--target',target,'--expected-revision',os.environ['SOURCE'],'--output',str(root/'replay')],
+              [sys.executable,'tools/ci/visual_parity.py','--target',target,'--expected-revision',os.environ['SOURCE'],'--inputs-only','--output',str(root/'inputs')],
+          ]
+          codes=[subprocess.run(command).returncode for command in commands]
+          raise SystemExit(max(codes))
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: native-contracts-${{ matrix.target }}
+          path: artifacts/native-contracts/${{ matrix.target }}/
+          if-no-files-found: error
+          retention-days: 14
+
+  native-cohort:
+    name: Exact observable replay and captured-input equality
+    needs: native-contracts
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: native-contracts-*
+          path: artifacts/native-cohort
+      - run: python3 tools/ci/native_cohort.py --directory artifacts/native-cohort --output artifacts/native-contract-comparison
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: native-contract-comparison
+          path: artifacts/native-contract-comparison/
+          if-no-files-found: error
+          retention-days: 14

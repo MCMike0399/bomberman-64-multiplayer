@@ -15,6 +15,7 @@ import crossplay
 import crossplay_runtime
 import desktop_packages as desktop
 import download_formats
+import native_execution
 
 ROOT = Path(__file__).resolve().parents[2]
 validate_summary = crossplay_runtime.validate_summary
@@ -39,15 +40,14 @@ def assembly_inventory(directory, target):
 
 
 def run(target, directory, output, expected_revision):
-    if os.environ.get('GITHUB_ACTIONS') != 'true':
-        raise RuntimeError('Actual installer replay is restricted to disposable CI; use the playtest leaf for source diagnostics')
+    execution=native_execution.context(expected_revision,target,ROOT)
     if platform.system() != crossplay_runtime.SYSTEMS[target][0]:
         raise RuntimeError('Replay must execute on its actual target OS')
     output.mkdir(parents=True, exist_ok=False)
     metadata = crossplay_runtime.metadata(directory, target)
     if metadata['revision'] != expected_revision: raise RuntimeError('Downloaded payload differs from the explicitly requested source')
     report = {'schemaVersion': 1, 'mode': 'diagnostic-only', 'passed': False, 'target': target,
-              'revision': metadata['revision'], 'requestedRevision': expected_revision, 'release': metadata['release'],
+              'revision': metadata['revision'], 'requestedRevision': expected_revision, 'release': metadata['release'],'executionContext':execution,
               'serverScope': 'No server or renderer; exact LocalMatch ticks through shipped assemblies.', 'runs': [], 'errors': []}
     executable = None
     try:
@@ -112,7 +112,7 @@ def run(target, directory, output, expected_revision):
     return 0 if report['passed'] else 1
 
 
-def aggregate(directory):
+def aggregate(directory,observable_required=False):
     targets = ('macos-arm64', 'windows-x64', 'linux-x64')
     reports = [json.loads((directory / target / 'authority-replay-native.json').read_text()) for target in targets]
     if any(report.get('passed') is not True or report.get('target') != target for target, report in zip(targets, reports)):
@@ -152,13 +152,23 @@ def aggregate(directory):
         candidate = directory / target / reports[targets.index(target)]['runs'][0]['file']
         report, code = comparer.compare(reference, candidate, directory / ('mac-vs-' + target))
         comparisons.append({'target': target, 'exitCode': code, 'observableEqual': report['observableEqual'],
-                            'canaryEqual': report['canaryEqual'], 'report': 'mac-vs-' + target + '/report.json'})
+                            'canaryEqual': report['canaryEqual'],'compatibleInputs':report.get('compatibleInputs')is True,
+                            'report': 'mac-vs-' + target + '/report.json'})
     receipt = {'schemaVersion': 1, 'mode': 'diagnostic-only', 'revision': reports[0]['revision'], 'release': reports[0]['release'],
                'scope': 'Declared observable traces and separate canaries; not full private state or all possible matches.',
-               'passed': all(item['exitCode'] == 0 for item in comparisons), 'targets': list(targets), 'comparisons': comparisons, 'reports': reports}
+               'passed': all(comparison_passes(item,observable_required)for item in comparisons),
+               'observableRequired':observable_required,'rawExactEqual':all(item['exitCode']==0 for item in comparisons),
+               'targets': list(targets), 'comparisons': comparisons, 'reports': reports}
+    if observable_required and any(not item['canaryEqual']for item in comparisons):
+        print('WARNING: Independent math canaries differ. Raw exact comparison remains failed; observable gameplay records are checked separately.')
     (directory / 'authority-replay-comparison.json').write_text(json.dumps(receipt, indent=2) + '\n')
     print(json.dumps({'passed': receipt['passed'], 'comparisons': comparisons}))
     return 0 if receipt['passed'] else 1
+
+
+def comparison_passes(item,observable_required=False):
+    if not observable_required:return item['exitCode']==0
+    return item['exitCode']in(0,1)and item.get('compatibleInputs')is True and item['observableEqual']is True
 
 
 def main():
@@ -168,8 +178,9 @@ def main():
     parser.add_argument('--directory', type=Path, default=ROOT / 'artifacts')
     parser.add_argument('--output', type=Path)
     parser.add_argument('--expected-revision')
+    parser.add_argument('--observable-required',action='store_true',help='Require exact observable records; retain independent canaries as explicit diagnostics')
     args = parser.parse_args()
-    if args.operation == 'aggregate': return aggregate(args.directory.resolve())
+    if args.operation == 'aggregate': return aggregate(args.directory.resolve(),args.observable_required)
     if not args.target or not args.output or not re.fullmatch('[0-9a-f]{40}', args.expected_revision or ''):
         parser.error('run requires --target, --output and an exact --expected-revision')
     return run(args.target, args.directory.resolve(), args.output.resolve(), args.expected_revision)
