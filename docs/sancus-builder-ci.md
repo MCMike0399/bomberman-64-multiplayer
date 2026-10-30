@@ -39,6 +39,11 @@ to the source, instance, target and deadline. A lost SendCommand response leaves
 an unresolved durable intent; reconciliation never blindly sends a second
 command. Windows graphics must run in the disposable standard user's interactive
 session, not SSM's LocalSystem session. No GitHub runner is registered on AWS.
+Native collectors record a distinct SSM execution context, checking the task's
+fixed expiry, source and target against the guest's live IMDS identity and exact
+Git snapshot. They do not set `GITHUB_ACTIONS` to impersonate a hosted runner.
+Official engine archives can be staged in advance and installed with the same
+checksum pins using `install_godot.py --archives` without a guest download.
 
 The current CloudFormation `AWS::Scheduler::Schedule` resource schema does not
 accept `ActionAfterCompletion`, although the Scheduler API supports it. The

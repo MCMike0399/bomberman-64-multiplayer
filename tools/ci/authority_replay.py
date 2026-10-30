@@ -15,6 +15,7 @@ import crossplay
 import crossplay_runtime
 import desktop_packages as desktop
 import download_formats
+import native_execution
 
 ROOT = Path(__file__).resolve().parents[2]
 validate_summary = crossplay_runtime.validate_summary
@@ -39,15 +40,14 @@ def assembly_inventory(directory, target):
 
 
 def run(target, directory, output, expected_revision):
-    if os.environ.get('GITHUB_ACTIONS') != 'true':
-        raise RuntimeError('Actual installer replay is restricted to disposable CI; use the playtest leaf for source diagnostics')
+    execution=native_execution.context(expected_revision,target,ROOT)
     if platform.system() != crossplay_runtime.SYSTEMS[target][0]:
         raise RuntimeError('Replay must execute on its actual target OS')
     output.mkdir(parents=True, exist_ok=False)
     metadata = crossplay_runtime.metadata(directory, target)
     if metadata['revision'] != expected_revision: raise RuntimeError('Downloaded payload differs from the explicitly requested source')
     report = {'schemaVersion': 1, 'mode': 'diagnostic-only', 'passed': False, 'target': target,
-              'revision': metadata['revision'], 'requestedRevision': expected_revision, 'release': metadata['release'],
+              'revision': metadata['revision'], 'requestedRevision': expected_revision, 'release': metadata['release'],'executionContext':execution,
               'serverScope': 'No server or renderer; exact LocalMatch ticks through shipped assemblies.', 'runs': [], 'errors': []}
     executable = None
     try:

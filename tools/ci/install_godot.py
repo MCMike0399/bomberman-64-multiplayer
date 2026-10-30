@@ -19,12 +19,16 @@ HASHES = {
 }
 
 
-def extract(asset, destination):
+def extract(asset, destination, archives=None):
     name = f'Godot_v{VERSION}-stable_{asset}'
     url = f'https://github.com/godotengine/godot/releases/download/{VERSION}-stable/{name}'
     with tempfile.TemporaryDirectory(prefix='blast-godot-') as temporary:
         archive = Path(temporary) / name
-        urllib.request.urlretrieve(url, archive)
+        if archives is None:
+            urllib.request.urlretrieve(url, archive)
+        else:
+            import shutil
+            shutil.copyfile(Path(archives)/name,archive)
         with archive.open('rb') as stream:
             digest = hashlib.file_digest(stream, 'sha512').hexdigest()
         if digest != HASHES[asset]:
@@ -45,6 +49,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--destination', type=Path, required=True)
     parser.add_argument('--templates', action='store_true')
+    parser.add_argument('--archives',type=Path,help='Use already staged official archives; no network download')
     args = parser.parse_args()
     system = platform.system()
     if system == 'Darwin':
@@ -61,13 +66,13 @@ def main():
         templates = Path(os.environ['APPDATA']) / 'Godot/export_templates' / f'{VERSION}.stable.mono'
     else:
         parser.error('Supported CI hosts: Linux/Windows x86_64 and macOS')
-    extract(asset, args.destination)
+    extract(asset, args.destination, args.archives)
     if not executable.is_file():
         raise RuntimeError('Godot archive layout changed')
     if args.templates:
         with tempfile.TemporaryDirectory(prefix='blast-templates-') as temporary:
             unpacked = Path(temporary)
-            extract('mono_export_templates.tpz', unpacked)
+            extract('mono_export_templates.tpz', unpacked, args.archives)
             import shutil
             shutil.copytree(unpacked / 'templates', templates, dirs_exist_ok=True)
     if os.environ.get('GITHUB_ENV'):
