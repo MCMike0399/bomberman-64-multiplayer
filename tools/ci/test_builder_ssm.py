@@ -12,6 +12,7 @@ import builder_ssm as ssm
 class NativeDispatch(unittest.TestCase):
     def setUp(self):
         self.plan={'runId':'sancus-builder-20261030-8762d11-1234567890abcdef','payloadSource':'a'*40,
+                   'verificationRunId':'123456789',
                    'fixedCampaignExpiryUtc':'2026-10-30T15:00:00Z','account':names.ACCOUNT,'region':names.REGION,
                    'instances':[{'os':'Linux','ami':'ami-owned'}]}
         self.instance='i-1234567890abcdef0';self.calls=[];self.comment=None;self.lose=False

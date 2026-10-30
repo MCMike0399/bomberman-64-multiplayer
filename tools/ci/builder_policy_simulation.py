@@ -72,7 +72,18 @@ def decisions(result,action,resource):
     return exact[0]
 
 
-def run(output,protected_file,staging=False):
+def controller_cases():
+    run=names.run_id('20261030','09e454b','1234abcd')
+    prefix=f'arn:aws:scheduler:{names.REGION}:{names.ACCOUNT}:schedule/'
+    return [
+        ('owned-schedule-update','scheduler:UpdateSchedule',prefix+run+'-expiry-group/'+run+'-linux-expiry',{},True),
+        ('protected-schedule-update','scheduler:UpdateSchedule',prefix+'default/sancus-runner-Watchdog',{},False),
+        ('unscoped-schedule-update','scheduler:UpdateSchedule',prefix+'default/sancus-builder-ci',{},False),
+    ]
+
+
+def run(output,protected_file,staging=False,controller=False):
+    staging=staging or controller
     output.mkdir(parents=True,exist_ok=False)
     def aws(*arguments):
         return json.loads(subprocess.check_output(['aws','--profile','sancus','--region',names.REGION,
@@ -82,9 +93,15 @@ def run(output,protected_file,staging=False):
     protected=json.loads(protected_file.read_text())
     if not protected:raise RuntimeError('Protected inventory is empty')
     template=builder_identity.template(staging=staging);policy=builder_identity.policy(staging=staging)
+    boundary=builder_identity.boundary(staging=staging)
+    if controller:
+        import builder_controller_identity
+        template=builder_controller_identity.template();policy=builder_controller_identity.policy()
+        boundary=template['Resources']['Boundary']['Properties']['PolicyDocument']
     (output/'identity-template.json').write_text(json.dumps(template,indent=2)+'\n')
     results=[]
     simulations=[('controller',policy,cases(protected[0]['id'],staging))]
+    if controller:simulations[0][2].extend(controller_cases())
     if staging:
         # Synthetic AllowAll is ONLY simulator input, never attached to a role.
         # It tests the ceiling independently of the controller's narrower inline policy.
@@ -94,6 +111,7 @@ def run(output,protected_file,staging=False):
             'unreviewed-image','unencrypted-volume','pass-controller','edit-controller','create-unbounded-child',
             'owned-PutObject','unrelated-PutObject','foreign-owner-object','tagged-instance-cannot-bypass-launch-constraints')]
         simulations.append(('boundary-only',ceiling,critical))
+        if controller:critical.extend(controller_cases())
         run_name=names.run_id('20261030','09e454b','1234abcd')
         bucket='arn:aws:s3:::'+builder_staging.bucket_name(run_name)
         guest={'Version':'2012-10-17','Statement':builder_staging.guest_statements(run_name)}
@@ -107,7 +125,7 @@ def run(output,protected_file,staging=False):
     for scope,inline,rows in simulations:
       for name,action,resource,context,expected in rows:
         name=scope+'-'+name
-        request={'PolicyInputList':[json.dumps(inline)],'PermissionsBoundaryPolicyInputList':[json.dumps(builder_identity.boundary(staging=staging))],
+        request={'PolicyInputList':[json.dumps(inline)],'PermissionsBoundaryPolicyInputList':[json.dumps(boundary)],
                  'ActionNames':[action],'ResourceArns':[resource],
                  'ContextEntries':[{'ContextKeyName':key,'ContextKeyValues':[value],'ContextKeyType':'boolean'if key=='ec2:Encrypted'else'string'}for key,value in context.items()]}
         request_path=output/(name+'-request.json');request_path.write_text(json.dumps(request,indent=2)+'\n')
@@ -131,4 +149,5 @@ if __name__=='__main__':
     parser.add_argument('--output',type=Path,required=True)
     parser.add_argument('--protected-inventory',type=Path,required=True)
     parser.add_argument('--staging',action='store_true',help='Review proposed per-run staging and guest/ceiling policies')
-    args=parser.parse_args();print(json.dumps(run(args.output,args.protected_inventory,args.staging),indent=2))
+    parser.add_argument('--controller',action='store_true',help='Include the separately reviewed exact-schedule auto-delete API delta')
+    args=parser.parse_args();print(json.dumps(run(args.output,args.protected_inventory,args.staging,args.controller),indent=2))

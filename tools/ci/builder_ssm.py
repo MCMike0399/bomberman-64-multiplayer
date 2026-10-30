@@ -18,10 +18,12 @@ def task(plan,instance,target,payload_sha256):
     if not re.fullmatch(r'[0-9a-f]{40}',plan['payloadSource']):raise ValueError('Full source SHA required')
     if not re.fullmatch(r'[0-9a-f]{64}',payload_sha256):raise ValueError('Frozen manifest digest required')
     if not re.fullmatch(names.RUN_PATTERN,plan['runId']):raise ValueError('Invalid run namespace')
+    if not re.fullmatch(r'[1-9][0-9]*',str(plan.get('verificationRunId',''))):raise ValueError('Exact trusted Verification run required')
     expiry=datetime.datetime.fromisoformat(plan['fixedCampaignExpiryUtc'])
     if expiry.tzinfo is None:raise ValueError('UTC-aware fixed expiry required')
     return {'schemaVersion':1,'runId':plan['runId'],'account':names.ACCOUNT,'region':names.REGION,
             'instanceId':instance,'target':target,'source':plan['payloadSource'],
+            'verificationRunId':str(plan['verificationRunId']),
             'payloadManifestSha256':payload_sha256,'expiresAtUtc':expiry.isoformat(),
             'executionContext':'aws-ssm-interactive-desktop'}
 

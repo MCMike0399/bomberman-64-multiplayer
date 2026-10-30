@@ -1,4 +1,4 @@
-"""Unapplied controller delta; deployed S3-v2 identity is preserved verbatim."""
+"""Reviewed controller identity; the historical S3-v2 generator is preserved verbatim."""
 import json
 
 import builder_identity

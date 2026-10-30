@@ -49,9 +49,35 @@ The current CloudFormation `AWS::Scheduler::Schedule` resource schema does not
 accept `ActionAfterCompletion`, although the Scheduler API supports it. The
 controller therefore sets `DELETE` through UpdateSchedule and reads both exact
 targets back before writing readiness. The corresponding permission delta is
-limited to the existing dated run-schedule ARN clause. It is **not deployed**;
-it requires simulation, Access Analyzer and review before an identity update.
-The original S3-v2 identity generator remains unchanged.
+limited to the existing dated run-schedule ARN clause. It is reviewed and
+deployed: 74 simulations pass, the inline/boundary readback matches the reviewed
+hashes, and the standing role/policy identities are unchanged. The original S3-v2
+identity generator remains unchanged. Inline and boundary Access Analyzer
+findings are empty. The unchanged trust has two reviewed, accepted findings:
+CONFIRM_AUDIENCE_CLAIM_TYPE (plain StringEquals is correct) and
+SPECIFIC_GITHUB_REPO_AND_BRANCH_RECOMMENDED (the immutable custom subject already
+pins repository IDs, environment and the exact main workflow). These are retained
+with their rationale, rather than reported as zero findings.
+
+Guest bootstrap and dispatch live in `builder_bootstrap.py` and
+`builder_guest.py`. Windows uses the AWS SDK already supplied by its pinned AMI
+to fetch the checksum-pinned CLI installer from the run bucket. That first
+GetObject request also sets ExpectedBucketOwner; no GitHub credential or public
+artifact download is needed in the guest. Linux uses its package manager for OS
+dependencies. SDKs, engine archives, wheels, client/server files and the public
+source snapshot are all staged inputs.
+
+Core results use an immutable checkpoint prefix. The host must verify and retain
+that checkpoint before acknowledging it through the bucket; only then can the
+guest start the long tours. Later progress cannot overwrite the committed core
+files. Missing acknowledgement stops the next phase within a fixed bound and
+never extends the campaign expiry.
+
+`builder_preflight.py` performs noncreating account, namespace, network, quota and
+pinned-image checks. `builder_recovery.py` maps earlier findings to exact retained
+journals before invoking cleanup; unknown or ambiguous ownership blocks a new
+launch. Its matching step alone never authorizes deletion. The hosted coordinator
+and complete workflow rehearsal remain the next integration boundary.
 
 The cleanup-only entry point never provisions or retries a game test:
 

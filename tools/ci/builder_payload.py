@@ -73,3 +73,14 @@ def prepare_files(inputs,output):
         rows.append({**item,'objectKey':f'payload/input-{index:03d}.bin','size':len(data)})
     (output/'input-manifest.json').write_text(json.dumps({'files':rows,'credentialsRejected':True},indent=2)+'\n')
     return rows
+
+
+def public_manifest(plan,rows):
+    """The guest gets required byte identities, never operator-local paths."""
+    manifest={'schemaVersion':1,'runId':plan['runId'],'source':plan['payloadSource'],
+              'account':plan['account'],'region':plan['region'],
+              'files':[{key:row[key]for key in ('role','target','fileName','objectKey','size','sha256')}for row in rows]}
+    import builder_guest
+    for target in ('windows-x64','linux-x64'):
+        builder_guest.validate_inputs(manifest,{**manifest,'target':target})
+    return manifest

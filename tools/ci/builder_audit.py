@@ -59,7 +59,8 @@ def audit(aws,require_scoped_role=True):
             'expectedStandingIdentity':{'stack':names.IDENTITY_STACK,'role':names.CI_ROLE,'boundary':names.BOUNDARY,'provider':'referenced existing provider'},
             'leftovers':leftovers,'errors':errors,'passed':not leftovers and not errors,
             'nonResourceRecords':['CloudTrail events','SSM command history','billing data'],
-            'scope':'First live OIDC assume-role and empty discovery proof only; not a paid campaign cleanup receipt, protected-inventory comparison or game qualification.'}
+            'scope':('First live OIDC assume-role and empty discovery proof only; not a paid campaign cleanup receipt, protected-inventory comparison or game qualification.'
+                     if require_scoped_role else 'Read-only operator namespace discovery; not an OIDC assume-role proof or game qualification.')}
 
 
 if __name__=='__main__':

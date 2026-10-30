@@ -33,6 +33,33 @@ def upload_inputs(client,plan,journal_path,inputs):
         journal.append(journal_path,plan,'CREATED','S3::Object',key,{'sha256':item['sha256'],'size':item['size']},client.bucket)
 
 
+def publish_bootstrap(client,plan,journal_path,manifest,helper,aws_cli):
+    """The helper is the last readiness signal: all inputs/manifest precede it."""
+    if client.run!=plan['runId']:raise ValueError('Staging run differs')
+    for key,item in [('payload/bootstrap-awscli.msi',aws_cli),('payload/manifest.json',manifest),('payload/bootstrap.zip',helper)]:
+        path=Path(item['path'])
+        if sha256(path)!=item['sha256']:raise ValueError('Frozen bootstrap bytes changed')
+        journal.append(journal_path,plan,'INTENT','S3::Object',key,{'sha256':item['sha256']},client.bucket)
+        client.call('put-object','--key',key,'--body',str(path))
+        journal.append(journal_path,plan,'CREATED','S3::Object',key,{'sha256':item['sha256']},client.bucket)
+
+
+def acknowledge_core(client,plan,target,core_manifest_sha,retention,destination):
+    """Caller invokes after durable upload/DiveMac retention, before long tours."""
+    if (client.run!=plan['runId']or retention.get('runId')!=plan['runId']or
+            retention.get('source')!=plan['payloadSource']or retention.get('target')!=target or
+            retention.get('retained')is not True or not retention.get('files')or
+            not re.fullmatch(r'[0-9a-f]{64}',core_manifest_sha)):
+        raise ValueError('Core retention is incomplete or belongs to different bytes')
+    for item in retention['files']:
+        if sha256(item['localPath'])!=item['sha256']:raise ValueError('Retained core bytes changed before acknowledgement')
+    ack={'runId':plan['runId'],'source':plan['payloadSource'],'target':target,
+         'coreManifestSha256':core_manifest_sha,'retained':True}
+    destination=Path(destination);destination.write_text(json.dumps(ack,indent=2)+'\n')
+    client.call('put-object','--key','payload/core-retained-'+target+'.json','--body',str(destination))
+    return ack
+
+
 def validate_results(manifest,plan,target,max_bytes=8*1024**3):
     if target not in ('windows-x64','linux-x64'):raise ValueError('Unknown result target')
     if (manifest.get('schemaVersion')!=1 or manifest.get('runId')!=plan['runId']or
@@ -41,13 +68,16 @@ def validate_results(manifest,plan,target,max_bytes=8*1024**3):
     rows=manifest.get('files')
     if not isinstance(rows,list)or not rows or len(rows)>20000:raise ValueError('Invalid result inventory')
     keys=set();paths=set();total=0
+    state=manifest.get('state')
+    if state not in ('core-retained','finished','failed'):raise ValueError('Unknown retained checkpoint')
     for item in rows:
         path=item.get('path','');key=item.get('objectKey','');size=item.get('size')
         parts=PurePosixPath(path)
         if (not path or '\\'in path or parts.is_absolute()or any(value in ('','.','..')for value in path.split('/'))or
                 ':'in path or not re.fullmatch(r'[A-Za-z0-9_./ -]+',path)):
             raise ValueError('Unsafe result path')
-        if key!='results/'+target+'/'+path or key in keys or path.casefold()in paths:
+        if (not re.fullmatch('results/'+target+'/'+state+r'/object-[0-9]{6}\.bin',key)or
+                not path.startswith(state+'/')or key in keys or path.casefold()in paths):
             raise ValueError('Unexpected or duplicate result object')
         if type(size)is not int or size<0 or not re.fullmatch(r'[0-9a-f]{64}',item.get('sha256','')):
             raise ValueError('Invalid result size/digest')
