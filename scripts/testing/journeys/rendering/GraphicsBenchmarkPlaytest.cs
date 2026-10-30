@@ -93,7 +93,7 @@ public partial class PlaytestDriver
             diagnosticTweaks=tweaks,tweakMeasurements,
             limits="Windowed native hardware; diagnostics add CPU overhead. Root GPU timings cover the arena/UI, not independent menu surfaces. Unavailable GPU counters are null. Not a sustained thermal or other-platform benchmark."
         };
-        File.WriteAllText(Path.Combine(_output,"graphics-benchmark.json"),JsonSerializer.Serialize(receipt,new JsonSerializerOptions {WriteIndented=true}));
+        File.WriteAllText(Path.Combine(_output,"graphics-benchmark.json"),JsonSerializer.Serialize(receipt,new JsonSerializerOptions {WriteIndented=true,NewLine="\n"}));
     }
 
     /// <summary>Static practice captures at the benchmark resolution: base, each tweak, base again (animation floor).</summary>

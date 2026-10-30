@@ -23,10 +23,10 @@ def collect_stage_captures(directory,output,target,revision,provenance,expiry,dr
             for index in range(processes):
                 if expiry-time.time()<23*60:raise RuntimeError('Stage collection partial at fixed cleanup boundary')
                 case=output/stage/f'run-{index}';case.mkdir(parents=True)
-                command=[str(executable),'--rendering-driver',driver,'--windowed','--max-fps','30','--fixed-fps','30','--disable-vsync','--',
+                command=[str(executable),*visual_parity.renderer_arguments(target,driver),'--windowed','--max-fps','30','--fixed-fps','30','--disable-vsync','--',
                          '--display-windowed','--playtest=visual-parity','--playtest-output='+str(case),'--parity-stage='+stage,
                          '--parity-provenance='+str(provenance)]
-                row={'stage':stage,'index':index,'command':command,'passed':False};report['runs'].append(row)
+                row={'stage':stage,'index':index,'command':command,'launchPath':'ordinary-launcher-default'if target=='windows-x64'and driver=='vulkan'else'explicit-api','passed':False};report['runs'].append(row)
                 with (case/'runtime.log').open('w')as log:
                     result=subprocess.run(command,cwd=case,stdout=log,stderr=subprocess.STDOUT,timeout=180)
                 summary=json.loads((case/'summary.json').read_text());text=(case/'runtime.log').read_text(errors='replace')
@@ -106,7 +106,7 @@ def run(args):
             for driver in drivers:
                 destination=output/('high-'+driver)
                 command=[sys.executable,'tools/ci/visual_parity.py','--target',target,'--expected-revision',args.expected_revision,'--expected-adapter','T4','--output',str(destination)]
-                if target=='windows-x64':command+=['--diagnostic-windows-driver',driver]
+                if target=='windows-x64'and driver=='d3d12':command+=['--diagnostic-windows-driver',driver]
                 step('original-high-'+driver,command,900,diagnostic=True)
                 high=json.loads((destination/'visual-parity-native.json').read_text())
                 if len(high['runs'])!=2 or any(r['exitCode']or r['validationErrors']or r['runtimeErrors']for r in high['runs']):
@@ -130,7 +130,7 @@ def run(args):
             step('actual-package-replay',[sys.executable,'tools/ci/authority_replay.py','run','--target',target,'--expected-revision',args.expected_revision,'--output',str(output/'replay')],300,diagnostic=True)
             if target=='linux-x64':step('saved-startups',[sys.executable,'tools/packaging/startup-desktop.py','--target',target],600,diagnostic=True)
             # Tours are last. A headroom failure is explicit partial coverage, never a pass.
-            step('complete-native-graphical',[sys.executable,'tools/packaging/verify-desktop.py','--target',target,'--graphical','--disposable-desktop'],1800,diagnostic=True)
+            step('complete-native-graphical',[sys.executable,'tools/packaging/verify-desktop.py','--target',target,'--graphical','--disposable-desktop',*(['--default-renderer']if target=='windows-x64'else[])],1800,diagnostic=True)
             report['collectionComplete']=True;report['passed']=all(r['exitCode']==0 for r in report['steps'])
     except (OSError,ValueError,KeyError,RuntimeError,subprocess.SubprocessError)as error:report['errors'].append(str(error))
     finally:(output/'campaign-result.json').write_text(json.dumps(report,indent=2)+'\n')

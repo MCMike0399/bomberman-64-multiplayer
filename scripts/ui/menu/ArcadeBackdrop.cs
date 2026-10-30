@@ -58,7 +58,7 @@ public partial class ArcadeBackdrop : RenderSurface
         }
         foreach(var (radius,color) in new[]{(10.1f,"784e9c"),(9.7f,"b782b7"),(9.3f,"395ab2")})
         {
-            var rail=new MeshInstance3D {Mesh=new TorusMesh {InnerRadius=radius-.09f,OuterRadius=radius+.09f,Rings=64,RingSegments=12},MaterialOverride=Surface(color,.26f,.38f),Position=new(0,.5f,-5.8f),RotationDegrees=new(90,0,0)};rail.CastShadow=GeometryInstance3D.ShadowCastingSetting.Off;_cabinet.AddChild(rail);
+            var rail=new MeshInstance3D {Mesh=PrimitiveTemplates.Get("TorusMesh",("inner_radius",radius-.09f),("outer_radius",radius+.09f),("rings",64),("ring_segments",12)),MaterialOverride=Surface(color,.26f,.38f),Position=new(0,.5f,-5.8f),RotationDegrees=new(90,0,0)};rail.CastShadow=GeometryInstance3D.ShadowCastingSetting.Off;_cabinet.AddChild(rail);
         }
         // Floating bomb sculptures: low relief in the rear alcoves, never wallpaper.
         foreach(float x in new[]{-7.7f,7.7f})
@@ -110,7 +110,7 @@ public partial class ArcadeBackdrop : RenderSurface
         // The arch sits behind the winner rather than filling the view with a flat image.
         foreach(float radius in new[]{3.0f,3.22f})
         {
-            var arch=new MeshInstance3D {Mesh=new TorusMesh {InnerRadius=radius-.055f,OuterRadius=radius+.055f,Rings=72,RingSegments=12},MaterialOverride=gold,Position=new(-5.15f,2.55f,-2.9f),RotationDegrees=new(90,0,0)};_resultsStage.AddChild(arch);
+            var arch=new MeshInstance3D {Mesh=PrimitiveTemplates.Get("TorusMesh",("inner_radius",radius-.055f),("outer_radius",radius+.055f),("rings",72),("ring_segments",12)),MaterialOverride=gold,Position=new(-5.15f,2.55f,-2.9f),RotationDegrees=new(90,0,0)};_resultsStage.AddChild(arch);
         }
         for(int i=0;i<9;i++)
         {
@@ -218,13 +218,11 @@ public partial class ArcadeBackdrop : RenderSurface
             if(child is Node3D scenery&&child.Name=="GreedyExterior"){scenery.Visible=false;continue;}
             // The trimmed display plinth has no open sea, so it needs no seabed.
             if(child is MeshInstance3D seabed&&seabed.Name=="Seabed")seabed.Visible=false;
-            if(child is MeshInstance3D {Mesh:PlaneMesh plane} water){plane.Size=new(layout.Width+.8f,layout.Height+.8f);water.Position=new(layout.Width/2f,-.53f,layout.Height/2f);}
-            else if(child is MeshInstance3D {Mesh:BoxMesh grass} exterior&&(child.Name=="GardenExterior"||child.Name=="FrozenExterior"))
+            if(child is MeshInstance3D water&&PrimitiveTemplates.Is(water.Mesh,"PlaneMesh")){water.Mesh=PrimitiveTemplates.With(water.Mesh,"size",new Vector2(layout.Width+.8f,layout.Height+.8f));water.Position=new(layout.Width/2f,-.53f,layout.Height/2f);}
+            else if(child is MeshInstance3D exterior&&PrimitiveTemplates.Is(exterior.Mesh,"BoxMesh")&&(child.Name=="GardenExterior"||child.Name=="FrozenExterior"))
             {
                 // ArtGeometry caches meshes used by gameplay too; resize a private menu copy.
-                var displayGrass=(BoxMesh)grass.Duplicate();
-                displayGrass.Size=new(layout.Width+.8f,grass.Size.Y,layout.Height+.8f);
-                exterior.Mesh=displayGrass;
+                exterior.Mesh=PrimitiveTemplates.With(exterior.Mesh,"size",new Vector3(layout.Width+.8f,PrimitiveTemplates.Parameter(exterior.Mesh,"size").AsVector3().Y,layout.Height+.8f));
             }
             // Gameplay's deep sea foundation would project through the display plinth.
             else if(child is MeshInstance3D {Mesh:not null} terrain&&terrain.Mesh.GetAabb().Position.Y< -3.5f)terrain.Visible=false;
@@ -250,7 +248,7 @@ public partial class ArcadeBackdrop : RenderSurface
     }
     internal static StandardMaterial3D Surface(string color,float roughness=.4f,float metallic=0)=>new(){AlbedoColor=new Color(color),Roughness=roughness,Metallic=metallic};
     internal static MeshInstance3D Box(Node parent,Vector3 position,Vector3 size,Material material)
-    {var mesh=new MeshInstance3D {Position=position,Mesh=new BoxMesh {Size=size},MaterialOverride=material};parent.AddChild(mesh);return mesh;}
+    {var mesh=new MeshInstance3D {Position=position,Mesh=PrimitiveTemplates.Get("BoxMesh",("size",size)),MaterialOverride=material};parent.AddChild(mesh);return mesh;}
     internal static MeshInstance3D ChamferBox(Node parent,Vector3 position,Vector3 size,Material material,float bevel=.08f)
     {
         var builder=new SurfaceTool();builder.Begin(Mesh.PrimitiveType.Triangles);
@@ -276,9 +274,9 @@ public partial class ArcadeBackdrop : RenderSurface
         var mesh=new MeshInstance3D {Position=position,Mesh=builder.Commit(),MaterialOverride=material};parent.AddChild(mesh);return mesh;
     }
     internal static MeshInstance3D Sphere(Node parent,Vector3 position,Vector3 scale,Material material)
-    {var mesh=new MeshInstance3D {Position=position,Scale=scale,Mesh=new SphereMesh {Radius=.5f,Height=1,RadialSegments=32,Rings=16},MaterialOverride=material};parent.AddChild(mesh);return mesh;}
+    {var mesh=new MeshInstance3D {Position=position,Scale=scale,Mesh=PrimitiveTemplates.Get("SphereMesh",("radius",.5f),("height",1),("radial_segments",32),("rings",16)),MaterialOverride=material};parent.AddChild(mesh);return mesh;}
     internal static MeshInstance3D Cylinder(Node parent,Vector3 position,float radius,float height,Material material)
-    {var mesh=new MeshInstance3D {Position=position,Mesh=new CylinderMesh {TopRadius=radius,BottomRadius=radius,Height=height,RadialSegments=48},MaterialOverride=material};parent.AddChild(mesh);return mesh;}
+    {var mesh=new MeshInstance3D {Position=position,Mesh=PrimitiveTemplates.Get("CylinderMesh",("top_radius",radius),("bottom_radius",radius),("height",height),("radial_segments",48)),MaterialOverride=material};parent.AddChild(mesh);return mesh;}
     private void ApplyGraphics()
     {
         if(_graphicsRevision==GraphicsQuality.Revision)return;

@@ -29,6 +29,7 @@ public partial class PlaytestDriver
         using(var gzip=new GZipStream(file,CompressionLevel.Optimal))
         using(var lines=new StreamWriter(gzip,new UTF8Encoding(false)))
         {
+            lines.NewLine="\n";
             void Record(string kind,object payload)
             {
                 if(payload is byte[] bytes)
@@ -60,6 +61,6 @@ public partial class PlaytestDriver
             finally{BomberModel.MeshBuildObservation=null;}
         }
         File.WriteAllText(Path.Combine(_output,"mesh-inputs-summary.json"),JsonSerializer.Serialize(new{schemaVersion=1,scope="Fresh builders remain diagnostic; captured canonical geometry verified separately; no graphics qualification",meshSource=BomberMeshLibrary.SharedEnabled?"canonical-mac-resource":"procedural",records=sequence,
-            traceSha256=ReplayHash(File.ReadAllBytes(trace)),binarySha256=ReplayHash(File.ReadAllBytes(binary)),meshes=evidence},new JsonSerializerOptions{WriteIndented=true}));
+            traceSha256=ReplayHash(File.ReadAllBytes(trace)),binarySha256=ReplayHash(File.ReadAllBytes(binary)),meshes=evidence},new JsonSerializerOptions{WriteIndented=true,NewLine="\n"}));
     }
 }

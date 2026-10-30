@@ -87,7 +87,16 @@ def compare_captures(case, label, report):
         if not valid: report['errors'].append(f'{label}: Original High effect control failed: {name}')
 
 
-def run(target, directory, output, expected, inputs_only=False, expected_adapter=None, local_mac=False, driver_override=None):
+def renderer_arguments(target, driver, *, diagnostic=False, inputs_only=False):
+    # Installed Windows primary graphics evidence must exercise the ordinary
+    # launcher/guard preference path, then verify the actual Vulkan receipt.
+    if target == 'windows-x64' and driver == 'vulkan' and not diagnostic and not inputs_only:
+        return []
+    return ['--rendering-driver', driver]
+
+
+def run(target, directory, output, expected, inputs_only=False, expected_adapter=None, local_mac=False, driver_override=None, stage='up-and-down'):
+    if stage not in mesh_inputs.STAGES: raise ValueError('Unknown controlled stage')
     if driver_override and (target != 'windows-x64' or driver_override not in ('d3d12','vulkan')):
         raise ValueError('Only the explicitly diagnostic Windows API comparison may override the driver')
     actual_driver = driver_override or crossplay_runtime.SYSTEMS[target][2]
@@ -105,7 +114,7 @@ def run(target, directory, output, expected, inputs_only=False, expected_adapter
     output.mkdir(parents=True, exist_ok=False)
     data = crossplay_runtime.metadata(directory, target)
     if data['revision'] != expected: raise RuntimeError('Visual payload differs from requested source')
-    report = {'schemaVersion': 1, 'graphicsQualified': False, 'nativeCI': native_ci, 'executionHost': 'local-mac' if local_scope else 'native-ci', 'requestedDriver': actual_driver, 'diagnosticDriverOverride': driver_override, 'mode': 'mesh-inputs-diagnostic' if inputs_only else 'diagnostic-only', 'passed': False, 'target': target, 'revision': expected,
+    report = {'schemaVersion': 1, 'graphicsQualified': False, 'nativeCI': native_ci, 'executionHost': 'local-mac' if local_scope else 'native-ci', 'requestedDriver': actual_driver, 'diagnosticDriverOverride': driver_override, 'launchPath': 'ordinary-launcher-default' if target == 'windows-x64' and not inputs_only and not driver_override else 'explicit-api', 'mode': 'mesh-inputs-diagnostic' if inputs_only else 'diagnostic-only', 'stage': stage, 'passed': False, 'target': target, 'revision': expected,
               'release': data['release'], 'runs': [], 'comparisons': [], 'errors': []}
     report['executionContext']=execution;report['executionHost']=execution['kind']
     executable = None
@@ -135,9 +144,9 @@ def run(target, directory, output, expected, inputs_only=False, expected_adapter
         os.environ.pop('APPIMAGE_EXTRACT_AND_RUN', None)
         for index in range(1 if inputs_only else 2):
             case = output / f'run-{index}'
-            command = [str(executable), '--rendering-driver', actual_driver, '--windowed', '--max-fps', '30',
+            command = [str(executable), *renderer_arguments(target, actual_driver, diagnostic=bool(driver_override), inputs_only=inputs_only), '--windowed', '--max-fps', '30',
                        '--fixed-fps', '30', '--disable-vsync', '--', '--display-windowed', '--playtest=' + ('visual-inputs' if inputs_only else 'visual-parity'),
-                       '--playtest-output=' + str(case)]
+                       '--playtest-output=' + str(case), '--parity-stage=' + stage]
             if inputs_only:
                 command.insert(1, '--headless')
             else: command += ['--parity-provenance=' + str(provenance_file)]
@@ -161,6 +170,8 @@ def run(target, directory, output, expected, inputs_only=False, expected_adapter
             report['runs'][-1]['device'] = {key: device[key] for key in ('driver', 'adapter', 'deviceType', 'engine')}
             if expected_adapter and not hardware_adapter_matches(device, expected_adapter):
                 raise RuntimeError('Initialized renderer is not the explicitly selected hardware adapter')
+            mesh_inputs.scene(case, stage)
+            report['runs'][-1]['sceneMetadataValidated'] = True
             observed = mesh_inputs.load(case)
             if observed['header']['shared']['sourceIdentity'] != expected or observed['header']['provenance']['entryAssemblySha256'] not in inventory['Bomberman64Multiplayer.dll']:
                 raise RuntimeError('Mesh observations do not bind the archived executing module/source')
@@ -189,13 +200,14 @@ def main():
     parser.add_argument('--directory', type=Path, default=ROOT / 'artifacts')
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--expected-revision', required=True)
+    parser.add_argument('--stage', choices=mesh_inputs.STAGES, default='up-and-down')
     parser.add_argument('--diagnostic-windows-driver', choices=('d3d12','vulkan'), help='Diagnostic only; product API default is unchanged')
     parser.add_argument('--local-mac', action='store_true', help='Explicit packaged local Apple Silicon measurement, recorded separately from CI; requires --expected-adapter')
     parser.add_argument('--inputs-only', action='store_true', help='Collect builder input diagnostics only; no High/feature/image qualification')
     parser.add_argument('--expected-adapter', help='Require this initialized hardware adapter; reject software fallback')
     args = parser.parse_args()
     if not re.fullmatch('[0-9a-f]{40}', args.expected_revision): parser.error('Expected an exact source SHA')
-    return run(args.target, args.directory.resolve(), args.output.resolve(), args.expected_revision, args.inputs_only, args.expected_adapter, args.local_mac, args.diagnostic_windows_driver)
+    return run(args.target, args.directory.resolve(), args.output.resolve(), args.expected_revision, args.inputs_only, args.expected_adapter, args.local_mac, args.diagnostic_windows_driver, args.stage)
 
 
 if __name__ == '__main__': sys.exit(main())

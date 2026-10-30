@@ -1,3 +1,4 @@
+using BlastCircuit.Rendering;
 using Godot;
 using System.Text.Json;
 using BlastCircuit.Arena.Stages;
@@ -14,7 +15,7 @@ public partial class ArenaView
         var tutorial=state.GetProperty("tutorial");
         if(_tutorialTarget==null)
         {
-            _tutorialTarget=new MeshInstance3D {Name="TutorialTarget",Mesh=new TorusMesh {InnerRadius=.59f,OuterRadius=.69f,Rings=48,RingSegments=8},
+            _tutorialTarget=new MeshInstance3D {Name="TutorialTarget",Mesh=PrimitiveTemplates.Get("TorusMesh",("inner_radius",.59f),("outer_radius",.69f),("rings",48),("ring_segments",8)),
                 MaterialOverride=new StandardMaterial3D {AlbedoColor=new Color("ffd66d"),EmissionEnabled=true,Emission=new Color("a17222"),ShadingMode=BaseMaterial3D.ShadingModeEnum.Unshaded},CastShadow=GeometryInstance3D.ShadowCastingSetting.Off};
             AddChild(_tutorialTarget);
         }

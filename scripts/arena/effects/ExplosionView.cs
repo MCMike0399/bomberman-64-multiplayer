@@ -165,13 +165,13 @@ void fragment(){
  ALPHA=smoothstep(fade-.04,fade+.04,grain)*.82;
 }
 """};
-    private static readonly SphereMesh BodyMesh=new() {Radius=.5f,Height=1,RadialSegments=32,Rings=16};
-    private static readonly SphereMesh ShockMesh=new() {Radius=.5f,Height=1,RadialSegments=24,Rings=12};
-    private static readonly QuadMesh StarMesh=new() {Size=Vector2.One};
-    private static readonly PlaneMesh RingMesh=new() {Size=Vector2.One};
-    private static readonly CylinderMesh FlareMesh=new() {TopRadius=0,BottomRadius=.19f,Height=1,RadialSegments=3,Rings=1};
-    private static readonly SphereMesh SparkMesh=new() {Radius=.5f,Height=1,RadialSegments=4,Rings=2};
-    private static readonly SphereMesh PuffMesh=new() {Radius=.5f,Height=1,RadialSegments=8,Rings=4};
+    private static readonly Mesh BodyMesh=PrimitiveTemplates.Get("SphereMesh",("radius",.5f),("height",1),("radial_segments",32),("rings",16));
+    private static readonly Mesh ShockMesh=PrimitiveTemplates.Get("SphereMesh",("radius",.5f),("height",1),("radial_segments",24),("rings",12));
+    private static readonly Mesh StarMesh=PrimitiveTemplates.Get("QuadMesh",("size",Vector2.One));
+    private static readonly Mesh RingMesh=PrimitiveTemplates.Get("PlaneMesh",("size",Vector2.One));
+    private static readonly Mesh FlareMesh=PrimitiveTemplates.Get("CylinderMesh",("top_radius",0),("bottom_radius",.19f),("height",1),("radial_segments",3),("rings",1));
+    private static readonly Mesh SparkMesh=PrimitiveTemplates.Get("SphereMesh",("radius",.5f),("height",1),("radial_segments",4),("rings",2));
+    private static readonly Mesh PuffMesh=PrimitiveTemplates.Get("SphereMesh",("radius",.5f),("height",1),("radial_segments",8),("rings",4));
     private static int _serial;
     private readonly ShaderMaterial _fire,_boundary,_star,_streak,_sparkFire,_shockFire,_ring,_puffFire;
     private readonly ShaderMaterial[] _aged;

@@ -741,3 +741,72 @@ Packaged Bomber geometry uses Mac-authored packed resources while Mac SDK
 authoring retains the procedural builders. Regenerate explicitly after builder
 edits; public QA checks staleness. The antenna correction remains presentation
 only. See [authoring and verification](../bomber-shared-geometry.md).
+
+### Portable primitive surfaces (seven-stage input qualification)
+
+`PrimitiveTemplates` replaces engine-generated primitive meshes with hash-pinned
+Mac-authored packed `ArrayMesh` resources. Calls preserve the original property
+setter order. Unknown finite-domain parameter sets fail explicitly; they never
+fall back to platform-native geometry. Variable box dimensions use the portable
+C# packed-unit-box generator, checked against every original Mac box reference. Menu resizing requests another immutable resource
+instead of changing shared primitive parameters. The original shape parameters
+remain accessible for gameplay-independent visual checks.
+
+To author new parameter sets, use the pinned Mac SDK with
+`BLAST_PRIMITIVE_CAPTURE_DIR` pointing to an ignored output directory. Exercise
+the actual scene/effect/menu paths, then run
+`python3 tools/dev/import-primitive-templates.py CAPTURE_DIRECTORY`.
+The capture boundary is Mac/editor/4.7.2 only; exported games cannot generate
+primitives. Every saved resource is reloaded and compared against the original
+packed RenderingServer surfaces before it enters the capture manifest. Review
+new requests and regenerate reference captures before committing assets.
+
+The public static gate rejects primitive construction and concrete-type mutation
+outside that boundary. The native consumed-input inventory also rejects live
+`PrimitiveMesh` resources, including ones introduced by dynamically loaded
+scenes. This is a presentation change; it does not modify authority terrain,
+collision, movement, networking or the High preset. A passing inventory does not
+establish output-image equality or user visual approval.
+
+The 2026-10-30 template-only M5 proof retained all 35 original High PNGs and
+all 35 loaded-template PNGs. The first comparison was exact for 33 images;
+Greedy Trap's two remaining images differed by the same 51-pixel speck in a
+20×20 region, maximum channel delta 29. The approved discriminator used two
+fresh original-code processes and two template processes. The original code
+reproduced that identical residual region in reflection-off; both template
+repeats were exact in that bounded check. This is retained as pre-existing
+same-device nondeterminism, without masking or changing the strict comparator.
+It does not establish cross-OS equality or final exported graphics qualification.
+
+The accompanying seven-stage presentation-math prototype targets only producing
+sites identified by the native field census: cardinal relief bases; palm trunk
+angles/bases; Rock Garden rock and drifting-leaf bases; pennant and fire-pickup
+motion; Blizzard snow X drift; and Rock Garden camera projection/fit/depth cues.
+`PresentationMath` uses a fixed managed series and direct YXZ basis columns, so
+identical angles are not sent back through native sin/cos. Explicit local scales
+preserve each prop's proportions. Rock Garden uses a fixed equivalent camera
+basis and one managed projection order; fog and DOF are still derived from the
+playable bounds. Other stage camera fits retain their existing path.
+
+These edits are presentation-only. The authority assemblies, terrain layout,
+collision, physics, input protocol, presets and shaders are unchanged. M5
+before/after captures and any raw residuals require visual review before adopting
+this prototype; only the subsequent single native seven-stage re-measure can
+establish cross-OS input equality.
+
+User visual approval was granted on 2026-10-30 for this seven-stage Mac prototype
+before the single native input re-measure. Six representative M5 scene frames
+are exact to the original reference. Rock Garden changes 9,543 of 1,024,000
+pixels (0.93%; maximum channel delta 104), with the common-fit camera origin
+moving from `(9.5, 17.816912, 30.589216)` to
+`(9.5, 17.816927, 30.589235)`. Full frames, heatmaps and all five trial controls
+are retained. This approval adopts the Mac reference for input verification;
+it does not approve publication, establish native cross-OS input equality or
+qualify final GPU output. Any residual after the single native fix measurement
+must be reported for a decision rather than followed by another fix loop.
+
+The [mesh production contract](../mesh-producers.md) records every construction,
+upload, duplication and geometry-helper source entry and the finite template
+tuples. New entries or changed producing-source bounds fail the public gate
+until reviewed. Normal headless and packaged functional lanes exercise the
+actual end-of-round closure and meteor paths with templates enforced.

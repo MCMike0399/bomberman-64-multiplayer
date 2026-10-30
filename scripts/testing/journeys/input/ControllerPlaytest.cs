@@ -21,7 +21,7 @@ public partial class PlaytestDriver
             hubDevices=ControllerHub.Current.Devices.Select(d=>new {runtimeId=d.Device.RuntimeId,name=d.Device.Name,guid=d.Device.Guid,family=d.Family.ToString(),mapped=d.Mapped,backend=d.Backend}).ToArray(),
             backend=ControllerHub.Current.BackendStatus
         };
-        File.WriteAllText(Path.Combine(_output,"controller-inventory.json"),JsonSerializer.Serialize(inventory,new JsonSerializerOptions{WriteIndented=true}));
+        File.WriteAllText(Path.Combine(_output,"controller-inventory.json"),JsonSerializer.Serialize(inventory,new JsonSerializerOptions{WriteIndented=true,NewLine="\n"}));
         Event("controller-inventory",inventory);Check(true,"controller inventory captured without claiming physical button testing");
         _root.Navigate("Controls");await ControllerFrames(3);Check(_root.ScreenName=="Controls","real controller tester screen opens");await Capture("controller-inventory");_root.Back();await ControllerFrames(3);
     }
@@ -128,7 +128,7 @@ public partial class PlaytestDriver
             actions=observed.TryGetValue(d.Device.RuntimeId,out var actions)?actions.Order().ToArray():[],
             physicalInputObserved=observed.ContainsKey(d.Device.RuntimeId)
         }).ToArray()};
-        void Save()=>File.WriteAllText(Path.Combine(_output,"physical-input.json"),JsonSerializer.Serialize(Report(),new JsonSerializerOptions{WriteIndented=true}));
+        void Save()=>File.WriteAllText(Path.Combine(_output,"physical-input.json"),JsonSerializer.Serialize(Report(),new JsonSerializerOptions{WriteIndented=true,NewLine="\n"}));
         void Record(int id,string action,float value)
         {
             var device=ControllerHub.Current.Devices.FirstOrDefault(d=>d.Device.RuntimeId==id&&d.Backend!="Synthetic QA");

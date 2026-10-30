@@ -262,7 +262,7 @@ public partial class PlaytestDriver
                     Check(materials.Length>0&&materials.All(m=>m.GetShaderParameter("quality_detail").AsSingle()==(preset==GraphicsPreset.Low?0:1)),"live terrain shader detail follows preset on "+stage);
                     var premium=materials.Where(m=>m.Shader.Code.Contains("uniform float quality_premium")).ToArray();
                     Check(premium.Length>0&&premium.All(m=>m.GetShaderParameter("quality_premium").AsSingle()==(preset==GraphicsPreset.High?1:0)),"High-only stage embellishments follow preset on "+stage);
-                    var water=terrain.GetChildren().OfType<MeshInstance3D>().Where(n=>n.Mesh is PlaneMesh).ToArray();
+                    var water=terrain.GetChildren().OfType<MeshInstance3D>().Where(n=>PrimitiveTemplates.Is(n.Mesh,"PlaneMesh")).ToArray();
                     if(stage is "rock-garden" or "blizzard-battle")Check(water.Length==0,"garden preserves its dry grass setting at "+preset);
                     else if(stage is not ("top-rules" or "greedy-trap"))
                     {

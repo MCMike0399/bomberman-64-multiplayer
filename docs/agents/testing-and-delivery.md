@@ -997,3 +997,79 @@ It reverses logical guest labels, creating new identities and ephemeral ports;
 it is not an identity-preserving port experiment. Clear that one-shot variable
 after the run. If complete signalling still leaves a native link Connecting,
 retain the evidence and request a release decision rather than growing timeouts.
+
+### Seven-stage native input measurement
+
+The free native package lane runs `visual_parity.py --inputs-only --stage ID`
+for each of the seven controlled stages, in a separate process and output folder.
+It retains the original High recipe without drawing or claiming GPU qualification.
+Inventories include actual packed mesh surface buffers, texture bytes, stored resource and
+node properties, shader/material parameters, camera, preset and authority inputs.
+Primitive parameters alone cannot establish equality of generated vertex data.
+
+The aggregate requires all three native stage collections, bound to the same
+source/archive/download identities as that target's replay. Every stage must
+match the Mac reference exactly. Missing files, failed execution, mismatched
+scene identities or differing inputs remain red; other stages still receive
+reports. Fresh unused builder diagnostics keep their own results. Raw data is
+never rounded or masked. A green input gate does not qualify images, effects or
+hardware. Run one measurement pass before choosing any math/geometry correction.
+
+Recipes bind external inventory JSON/binary files by hash instead of embedding
+multiple full copies of each resource graph in memory. The raw files remain
+complete; all five trial bindings are validated and compared. This avoids a
+combined-report allocation spike without increasing the fixture deadline.
+
+The Windows GPU campaign's primary High captures and graphical tours exercise
+the installed launcher with no `--rendering-driver` override. The receipt still
+requires actual Vulkan; a remembered or automatic Direct3D 12 selection cannot
+silently qualify that lane. Forced Direct3D 12 and injected-crash recovery are
+separate labelled controls. Input-only headless collections may still choose an
+explicit API, and do not establish the default graphical launch path.
+
+
+The public [mesh producer census](../../tools/ci/mesh_producers.py) checks the
+committed source inventory and parameter domains. Regenerating that inventory
+requires review, and cannot replace executing the full core suite. Missing
+closure, meteor or results geometry must fail normal runtime tests before a
+three-OS input measurement is launched; authoring-mode passes do not qualify
+normal consumers. See [the mesh production contract](../mesh-producers.md).
+
+### JSON transport encoding and exact scene comparison
+
+The seven-stage measurement of 2026-10-30 collected identical parsed scene
+inventories and packed buffers on all three OSes. Its original aggregate was
+red because Windows indented JSON used CRLF and Mac/Linux used LF: the recipe
+included the raw inventory-file digest, which was incorrectly compared as a
+render value. Both original failed receipts and the authorized offline
+re-evaluation are retained, bound to their actual payload/runner identities.
+
+Every raw JSON and binary file must still match its own recorded checksum
+before comparison. The comparison view treats only the validated raw JSON file
+digest as transport provenance. It compares every parsed graph key/value,
+ordered list and exact packed buffer for all five trials; map key order is
+immaterial. Real float differences, including one ULP, are not normalized.
+No render field is excluded and no tolerance is introduced. QA JSON writers
+explicitly emit LF so future raw inventory bytes match as well.
+
+A corrected offline result is evidence for those retained payload bytes, not
+permission to rewrite a failed workflow's status or qualify another source.
+PR CI and trusted-main verification must each pass on their own artifacts.
+
+### Current trusted-main Mac reference capture
+
+After a complete successful main Verification, dispatch
+`visual-parity.yml` on `main` with `verification-run-id` set to that run. Its
+separate `trusted-macos-reference` job runs only on the hosted Mac and has
+`contents: read` / `actions: read`; it neither uses the legacy private-draft
+job's write permission nor creates Windows/Linux matrix legs. Those target
+references come from the reviewed real-GPU campaign.
+
+The preparation helper requires this repository's main-only manual event,
+checks current main against the checkout and the successful Verification, then
+downloads the unique unexpired Mac artifact from that exact run. Its recorded
+source must match checkout before capture; archive and DMG checksum bindings
+must also validate. Both original-High processes, all seven scene captures and
+raw controls retain their actual adapter and provenance. Hosted Apple
+Paravirtual is a cross-configuration Mac reference, not a physical M1 claim or
+Windows/Linux GPU qualification. The legacy push job is unchanged.

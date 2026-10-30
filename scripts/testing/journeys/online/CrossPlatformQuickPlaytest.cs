@@ -41,7 +41,7 @@ public partial class PlaytestDriver
             {
                 var observation=CrossplayObservation();Event("crossplay-precleanup-failure",observation);
                 File.WriteAllText(Path.Combine(_output,"crossplay-failure.json"),JsonSerializer.Serialize(new{
-                    error=error.ToString(),observation,timeline=_crossplayTimeline},new JsonSerializerOptions{WriteIndented=true}));
+                    error=error.ToString(),observation,timeline=_crossplayTimeline},new JsonSerializerOptions{WriteIndented=true,NewLine="\n"}));
                 await Capture("crossplay-precleanup-failure",0);
             }
             catch(Exception diagnostic){Event("crossplay-diagnostic-failure",new{error=diagnostic.ToString()});}
@@ -239,7 +239,7 @@ public partial class PlaytestDriver
         }
         void RecordProgress()=>File.WriteAllText(Path.Combine(_output,"crossplay-progress.json"),JsonSerializer.Serialize(new{
             role,deadline,observedRound,moved=moved.Order(),bombOwners=bombOwners.Order(),state=State,
-            connection=session.ConnectionEvents},new JsonSerializerOptions{WriteIndented=true}));
+            connection=session.ConnectionEvents},new JsonSerializerOptions{WriteIndented=true,NewLine="\n"}));
         async Task ObserveUntil(Func<bool> condition, double seconds)
         {
             var clock = Stopwatch.StartNew();

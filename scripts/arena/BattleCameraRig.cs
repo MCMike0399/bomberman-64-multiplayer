@@ -4,12 +4,12 @@ using BlastCircuit.Arena.Stages;
 namespace BlastCircuit.Arena;
 
 /// <summary>Fits playable terrain and standing characters into the space between the HUD and footer.</summary>
-public sealed class BattleCameraRig(Camera3D camera)
+public sealed partial class BattleCameraRig(Camera3D camera)
 {
     private readonly List<Vector3> _bounds=[];
     private Vector3 _center=new(10.5f,2,11.5f);
     private Vector2 _offset;
-    private bool _training, _castle, _blizzard, _pyramid;
+    private bool _training, _castle, _blizzard, _pyramid, _garden;
     /// <summary>View depth of the closest/farthest playable point; depth cues stay outside this range.</summary>
     public Vector2 PlayableDepth {get;private set;}=new(20,40);
     /// <summary>Radial camera distance for depth fog, which uses length(view position), not axial depth.</summary>
@@ -17,6 +17,7 @@ public sealed class BattleCameraRig(Camera3D camera)
     public void SetStage(JsonElement stage)
     {
         _bounds.Clear();
+        _garden=stage.GetProperty("id").GetString()=="rock-garden";
         _blizzard=stage.GetProperty("id").GetString()=="blizzard-battle";
         _castle=stage.GetProperty("id").GetString() is "top-rules" or "greedy-trap";
         _training=stage.GetProperty("id").GetString()=="circuit-garden";
@@ -56,19 +57,22 @@ public sealed class BattleCameraRig(Camera3D camera)
         // Centered frontal view keeps the broad stepped silhouette and visible vertical risers.
         bool Place(float distance)
         {
-            camera.Position=_center+direction*distance;camera.LookAt(_center);
+            camera.Position=_center+direction*distance;
+            if(_garden)camera.Basis=new(Vector3.Right,new(0,.8f,-.6f),new(0,.6f,.8f));
+            else camera.LookAt(_center);
             camera.HOffset=0;camera.VOffset=0;
             for(int pass=0;pass<5;pass++)
             {
+                Func<Vector3,Vector2> project=_garden?PortableProjection(viewport):camera.UnprojectPosition;
                 Vector2 min=new(float.MaxValue,float.MaxValue),max=new(float.MinValue,float.MinValue);
-                foreach(var point in _bounds){var screen=camera.UnprojectPosition(point)/viewport;min=min.Min(screen);max=max.Max(screen);}
+                foreach(var point in _bounds){var screen=project(point)/viewport;min=min.Min(screen);max=max.Max(screen);}
                 // Keep the full playable silhouette inside the HUD-safe band while using more
                 // of the available screen for the arena instead of the surrounding water.
                 var delta=(min+max)*.5f-new Vector2(.5f,_training?.445f:.5175f);
                 if(pass==4)return min.X>=.025f&&max.X<=.975f&&min.Y>=.145f&&max.Y<=(_training?.745f:.89f);
-                var origin=camera.UnprojectPosition(_center);
-                float pixelsX=(camera.UnprojectPosition(_center+camera.GlobalBasis.X)-origin).Length();
-                float pixelsY=(camera.UnprojectPosition(_center+camera.GlobalBasis.Y)-origin).Length();
+                var origin=project(_center);
+                float pixelsX=(project(_center+camera.GlobalBasis.X)-origin).Length();
+                float pixelsY=(project(_center+camera.GlobalBasis.Y)-origin).Length();
                 camera.HOffset+=delta.X*viewport.X/Mathf.Max(pixelsX,.01f);
                 camera.VOffset-=delta.Y*viewport.Y/Mathf.Max(pixelsY,.01f);
             }
@@ -84,6 +88,7 @@ public sealed class BattleCameraRig(Camera3D camera)
     public void MeasureDepth()
     {
         if(_bounds.Count==0)return;
+        if(_garden){MeasurePortableDepth();return;}
         float nearest=float.MaxValue,farthest=0,distance=0;
         var view=camera.GetCameraTransform().AffineInverse();
         foreach(var point in _bounds)

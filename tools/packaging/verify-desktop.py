@@ -58,7 +58,10 @@ def main():
     parser.add_argument('--cases', help='Comma-separated graphical cases this runner owns; writes a part receipt for --merge')
     parser.add_argument('--part', help='Unique label for this runner\'s part receipt')
     parser.add_argument('--merge', action='store_true', help='Combine every part receipt into the complete graphical receipt without running the game')
+    parser.add_argument('--default-renderer', action='store_true', help='Exercise the Windows launcher default; actual Vulkan remains required by the graphical receipt')
     args = parser.parse_args()
+    if args.default_renderer and (not args.graphical or args.target != 'windows-x64'):
+        parser.error('--default-renderer requires Windows graphical mode')
     if args.software_renderer and not args.graphical:
         parser.error('--software-renderer requires --graphical')
     if (args.cases or args.part or args.merge) and not args.graphical:
@@ -133,7 +136,9 @@ def main():
                     command = [sys.executable, str(ROOT / 'tools/playtest/run.py'), '--executable',
                                str(executable), '--scenario', scenario,
                                '--output', str(output), '--desktop', 'shared', '--server', origin]
-                    command += ['--rendering-driver', settings['driver']] if args.graphical else ['--headless']
+                    if args.graphical:
+                        if not args.default_renderer:command += ['--rendering-driver', settings['driver']]
+                    else:command += ['--headless']
                     # Software rendering is slow: retained WARP spent ~90 min in
                     # graphics-settings alone and ~5 min per stage load. Each tour
                     # gets its own process and a bounded allowance below the job limit.

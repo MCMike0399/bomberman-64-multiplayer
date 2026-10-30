@@ -708,11 +708,13 @@ jobs:
         run: |
           python3 - <<'PY'
           import os,pathlib,subprocess,sys
+          sys.path.insert(0,'tools/ci');import mesh_inputs
           target=os.environ['TARGET'];root=pathlib.Path('artifacts/native-contracts')/target
           commands=[
               [sys.executable,'tools/ci/authority_replay.py','run','--target',target,'--expected-revision',os.environ['SOURCE'],'--output',str(root/'replay')],
-              [sys.executable,'tools/ci/visual_parity.py','--target',target,'--expected-revision',os.environ['SOURCE'],'--inputs-only','--output',str(root/'inputs')],
           ]
+          commands += [[sys.executable,'tools/ci/visual_parity.py','--target',target,'--expected-revision',os.environ['SOURCE'],
+                        '--inputs-only','--stage',stage,'--output',str(root/'inputs'/stage)] for stage in mesh_inputs.STAGES]
           codes=[subprocess.run(command).returncode for command in commands]
           raise SystemExit(max(codes))
           PY
@@ -724,6 +726,7 @@ jobs:
             artifacts/native-contracts/${{ matrix.target }}/
             !artifacts/native-contracts/${{ matrix.target }}/replay/installed/**
             !artifacts/native-contracts/${{ matrix.target }}/inputs/installed/**
+            !artifacts/native-contracts/${{ matrix.target }}/inputs/**/installed/**
           if-no-files-found: error
           retention-days: 14
 

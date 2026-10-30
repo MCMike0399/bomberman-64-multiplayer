@@ -27,7 +27,7 @@ public partial class PlaytestDriver
             {
                 await SelectGraphics(preset);
                 var water=AuditDescendants(LightingArena).OfType<TempleStageView>().Single().GetChildren()
-                    .OfType<MeshInstance3D>().Single(m=>m.Mesh is PlaneMesh);
+                    .OfType<MeshInstance3D>().Single(m=>PrimitiveTemplates.Is(m.Mesh,"PlaneMesh"));
                 var material=(ShaderMaterial)water.MaterialOverride;
                 var shader=material.Shader;
                 Check(shader==ArtMaterials.WaterShaderFor(preset),"probe observes the active water shader: "+preset);

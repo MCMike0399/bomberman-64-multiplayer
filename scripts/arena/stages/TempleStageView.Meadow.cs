@@ -64,7 +64,7 @@ public partial class TempleStageView
                 float u=t*.55f+phase;
                 leaf.Position=new(right?Width+1.7f+Mathf.Sin(u*.6f)*.6f:-1.7f+Mathf.Sin(u*.6f)*.6f,
                     .4f+Mathf.PosMod(phase-t*.12f,1.8f),Mathf.PosMod(u*1.4f,Depth+5)-2.5f);
-                leaf.Rotation=new(u*1.6f,u*.9f,Mathf.Sin(u*2)*.6f);
+                leaf.Basis=PresentationMath.Rotation(new(u*1.6f,u*.9f,PresentationMath.Sin(u*2)*.6f),new(.16f,.025f,.08f));
             });
         }
     }

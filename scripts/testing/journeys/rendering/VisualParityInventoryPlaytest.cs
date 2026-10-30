@@ -37,6 +37,7 @@ public partial class PlaytestDriver
                 if(ids.TryGetValue(resource.GetInstanceId(),out int seen))return new{reference=seen};
                 int id=resources.Count;ids.Add(resource.GetInstanceId(),id);
                 var record=new Dictionary<string,object?>{{"id",id},{"type",resource.GetClass()},{"path",resource.ResourcePath}};resources.Add(record);
+                if(resource is PrimitiveMesh)unsupported.Add("runtime primitive mesh: "+resource.GetClass());
                 if(resource is Texture2D texture)
                 {
                     using var image=texture.GetImage();
@@ -44,6 +45,21 @@ public partial class PlaytestDriver
                     else record["image"]=new{width=image.GetWidth(),height=image.GetHeight(),format=image.GetFormat().ToString(),
                         mipmaps=image.GetMipmapCount(),compressed=image.IsCompressed(),data=Binary(image.GetData())};
                 }
+                // Retain actual packed submission data, including generated primitives.
+                // A decoded SurfaceGetArrays result is not the original packed bytes.
+                if(resource is Mesh mesh)
+                    record["packedSurfaces"]=Enumerable.Range(0,mesh.GetSurfaceCount()).Select(surface=>
+                    {
+                        var packed=RenderingServer.MeshGetSurface(mesh.GetRid(),surface);
+                        if(packed.ContainsKey("material"))
+                        {
+                            var material=mesh.SurfaceGetMaterial(surface);
+                            if(material is null||material.GetRid()!=packed["material"].AsRid())
+                                unsupported.Add("unbound packed mesh material");
+                            else packed["material"]=material;
+                        }
+                        return new{surface,data=Value(packed)};
+                    }).ToArray();
                 record["properties"]=Properties(resource);
                 return new{reference=id};
             }
@@ -79,9 +95,10 @@ public partial class PlaytestDriver
             var children=node.GetChildren();for(int i=0;i<children.Count;i++)Visit(children[i],path+"/"+i);
         }
         Visit(root,"0");
-        var inventory=new{encoding="Godot Variant bytes; actual storage properties/resource graph; local instance IDs/names are locators only and excluded",
+        var inventory=new{encoding="Godot Variant bytes; actual packed mesh surfaces and storage properties/resource graph; local instance IDs/names are locators only and excluded",
             binary=Path.GetFileName(blob.Name),nodes,resources,unsupported=unsupported.Distinct().Order().ToArray()};
-        File.WriteAllText(Path.Combine(_output,$"parity-{label}-inventory.json"),JsonSerializer.Serialize(inventory,new JsonSerializerOptions{WriteIndented=true}));
+        using(var file=File.Create(Path.Combine(_output,$"parity-{label}-inventory.json")))
+            JsonSerializer.Serialize(file,inventory,new JsonSerializerOptions{WriteIndented=true,NewLine="\n"});
         return inventory;
     }
 }

@@ -55,7 +55,7 @@ public partial class PlaytestDriver : Node
         _server=Arg("--playtest-server",_server);
         _frameStallMs=Math.Clamp(int.TryParse(Arg("--playtest-frame-stall-ms","0"),out int stall)?stall:0,0,5000);
         Directory.CreateDirectory(_output);
-        _trace=new StreamWriter(Path.Combine(_output,"trace.jsonl")) { AutoFlush=true };
+        _trace=new StreamWriter(Path.Combine(_output,"trace.jsonl")) { AutoFlush=true, NewLine="\n" };
         _headless=DisplayServer.GetName()=="headless";
         _windowedRequested=args.Contains("--display-windowed");
         _clock.Start();
@@ -91,7 +91,7 @@ public partial class PlaytestDriver : Node
                 displayRestartRequested=_displayRestartRequested,displayRestoration=args.Contains("--playtest-restore-display"),
                 release=new {version=OnlineProtocol.ReleaseVersion,build=OnlineProtocol.ReleaseBuild,
                     protocolRevision=OnlineProtocol.Revision,admissionToken=OnlineProtocol.WireRevision,revision=OnlineProtocol.SourceRevision} };
-            File.WriteAllText(Path.Combine(_output,"summary.json"),JsonSerializer.Serialize(summary,new JsonSerializerOptions { WriteIndented=true }));
+            File.WriteAllText(Path.Combine(_output,"summary.json"),JsonSerializer.Serialize(summary,new JsonSerializerOptions { WriteIndented=true,NewLine="\n" }));
             _trace.Dispose();
             GD.Print($"PLAYTEST_{(failure==null?"PASS":"FAIL")} scenario={_scenario} frames={_frame} assertions={_checks.Count} screenshots={_screenshots.Count} output={_output}");
             _root.RequestQuit(failure==null?0:1);

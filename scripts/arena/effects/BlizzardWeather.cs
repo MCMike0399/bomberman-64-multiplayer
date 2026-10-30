@@ -17,7 +17,7 @@ public partial class BlizzardWeather : Node3D
     private int _visibleCount=-1;
     public override void _Ready()
     {
-        var mesh=new SphereMesh{Radius=1,Height=2,RadialSegments=8,Rings=3};
+        var mesh=PrimitiveTemplates.Get("SphereMesh",("radius",1),("height",2),("radial_segments",8),("rings",3));
         _flakes=new MultiMesh{TransformFormat=MultiMesh.TransformFormatEnum.Transform3D,Mesh=mesh,InstanceCount=_positions.Length};
         var snow=new StandardMaterial3D{AlbedoColor=new Color("e7f4ff"),Roughness=.88f,ShadingMode=BaseMaterial3D.ShadingModeEnum.Unshaded};
         AddChild(new MultiMeshInstance3D{Name="SnowFlurries",Multimesh=_flakes,MaterialOverride=snow,CastShadow=GeometryInstance3D.ShadowCastingSetting.Off});
@@ -36,7 +36,7 @@ public partial class BlizzardWeather : Node3D
         for(int i=0;i<count;i++)
         {
             var p=_positions[i];
-            p+=new Vector3(Wind.X*1.8f+Mathf.Sin(Clock*.8f+i)*.22f,-.3f-i%5*.06f,Wind.Y*1.8f)*dt;
+            p+=new Vector3(Wind.X*1.8f+PresentationMath.Sin(Clock*.8f+i)*.22f,-.3f-i%5*.06f,Wind.Y*1.8f)*dt;
             p.X=Mathf.PosMod(p.X-.5f,Width-1)+.5f;p.Z=Mathf.PosMod(p.Z-.5f,Depth-1)+.5f;
             p.Y=Mathf.PosMod(p.Y-.18f,5)+.18f;_positions[i]=p;
             float size=i%19==0?.075f:.018f+i%4*.007f;

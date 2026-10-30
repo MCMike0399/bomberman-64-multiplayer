@@ -36,7 +36,7 @@ public partial class PlaytestDriver
             var a=PeerDiagnostics(host);var b=PeerDiagnostics(second);
             history.Add(new{stage,utcMs=DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),monotonic=Stopwatch.GetTimestamp(),frame=Engine.GetProcessFrames(),
                 screen=_root.ScreenName,syntheticCaptureStallMs=captureControlStall,host=a,second=b,cadence=live.Cadence,authority=latest});
-            File.WriteAllText(Path.Combine(_output,"peer-link-recovery.json"),JsonSerializer.Serialize(new{stage,host=a,second=b,history,cadence=live.Cadence},new JsonSerializerOptions{WriteIndented=true}));
+            File.WriteAllText(Path.Combine(_output,"peer-link-recovery.json"),JsonSerializer.Serialize(new{stage,host=a,second=b,history,cadence=live.Cadence},new JsonSerializerOptions{WriteIndented=true,NewLine="\n"}));
         }
         JsonElement Inspect(NetworkSession session)=>JsonSerializer.SerializeToElement(PeerDiagnostics(session));
         string Attempts(JsonElement data)=>string.Join(";",data.GetProperty("links").EnumerateArray().OrderBy(l=>l.GetProperty("id").GetString())

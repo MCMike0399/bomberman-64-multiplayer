@@ -15,7 +15,7 @@ public partial class ExitEffect : Node3D
         _water=water;
         if(water)
         {
-            _ring=new() {Mesh=new TorusMesh {InnerRadius=.9f,OuterRadius=1,Rings=40,RingSegments=8},MaterialOverride=art.Color(new Color(.82f,.98f,1,.7f),.8f,true)};AddChild(_ring);
+            _ring=new() {Mesh=PrimitiveTemplates.Get("TorusMesh",("inner_radius",.9f),("outer_radius",1),("rings",40),("ring_segments",8)),MaterialOverride=art.Color(new Color(.82f,.98f,1,.7f),.8f,true)};AddChild(_ring);
         }
         for(int i=0;i<(water?12:8);i++)
         {

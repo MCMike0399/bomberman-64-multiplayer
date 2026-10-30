@@ -12,7 +12,7 @@ public partial class MeteorView : Node3D
     private float _remaining;
     public MeteorView(ArtMaterials art)
     {
-        _warning=new MeshInstance3D{Mesh=new TorusMesh{InnerRadius=BlastStages.MeteorBlastRadius-.12f,OuterRadius=BlastStages.MeteorBlastRadius,Rings=24,RingSegments=8},
+        _warning=new MeshInstance3D{Mesh=PrimitiveTemplates.Get("TorusMesh",("inner_radius",BlastStages.MeteorBlastRadius-.12f),("outer_radius",BlastStages.MeteorBlastRadius),("rings",24),("ring_segments",8)),
             MaterialOverride=art.Color(new("ff922f"),.7f,true),Position=new(0,.035f,0),Scale=new(1,.15f,1)};
         AddChild(_warning);
         var shadow=art.Color(new Color(.13f,.07f,.025f,.45f));

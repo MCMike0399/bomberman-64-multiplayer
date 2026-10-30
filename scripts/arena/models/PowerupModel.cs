@@ -54,10 +54,10 @@ public partial class PowerupModel : Node3D
                 foreach(float side in new[]{-1f,1f})Eye(flame,new(side*.062f,.2f,.14f),new(.052f,.1f,.04f),eyeInk);
                 _animate=t=>
                 {
-                    flame.Scale=new(1+Mathf.Sin(t*9)*.03f,1+Mathf.Sin(t*7.3f)*.04f,1);
-                    crown.Rotation=new(0,0,Mathf.Sin(t*4.3f)*.08f);crown.Scale=new(1,1+Mathf.Sin(t*8.7f)*.06f,1);
-                    tip.Scale=new(1,1+Mathf.Sin(t*11)*.2f,1);tip.Rotation=new(0,0,Mathf.Sin(t*5.1f)*.18f);
-                    for(int i=0;i<2;i++)tongues[i].Scale=new(1,1+Mathf.Sin(t*13+i*2.2f)*.22f,1);
+                    flame.Scale=new(1+PresentationMath.Sin(t*9)*.03f,1+PresentationMath.Sin(t*7.3f)*.04f,1);
+                    crown.Basis=PresentationMath.Rotation(new(0,0,PresentationMath.Sin(t*4.3f)*.08f),new(1,1+PresentationMath.Sin(t*8.7f)*.06f,1));
+                    tip.Basis=PresentationMath.Rotation(new(0,0,PresentationMath.Sin(t*5.1f)*.18f),new(1,1+PresentationMath.Sin(t*11)*.2f,1));
+                    for(int i=0;i<2;i++)tongues[i].Scale=new(1,1+PresentationMath.Sin(t*13+i*2.2f)*.22f,1);
                 };
                 break;
             }

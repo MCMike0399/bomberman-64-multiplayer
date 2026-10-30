@@ -1,3 +1,4 @@
+using BlastCircuit.Rendering;
 using Godot;
 using static BlastCircuit.Rendering.ArtGeometry;
 namespace BlastCircuit.Arena.Stages;
@@ -11,7 +12,7 @@ public partial class TempleStageView
         var scenery=_scenery!;
         var nebula=_art.Nebula();_ambientMaterials.Add(nebula);
         nebula.SetShaderParameter("stage_center",new Vector2(Width/2f,Depth/2f));
-        scenery.AddChild(new MeshInstance3D{Name="Nebula",Mesh=new BoxMesh{Size=new(190,.05f,190)},
+        scenery.AddChild(new MeshInstance3D{Name="Nebula",Mesh=PrimitiveTemplates.Get("BoxMesh",("size",new Vector3(190,.05f,190))),
             MaterialOverride=nebula,Position=new(Width/2f,-49,Depth/2f),CastShadow=GeometryInstance3D.ShadowCastingSetting.Off});
 
         var giant=Prop(scenery,"RingedPlanet",new(-10,-8,1.5f),0,1);
@@ -22,7 +23,7 @@ public partial class TempleStageView
         // Solid thin annuli keep the toy-like ring silhouette stable without alpha overdraw.
         for(int i=0;i<3;i++)
         {
-            var ring=new MeshInstance3D{Mesh=new TorusMesh{InnerRadius=3.9f+i*.43f,OuterRadius=4.15f+i*.43f,Rings=64,RingSegments=8},
+            var ring=new MeshInstance3D{Mesh=PrimitiveTemplates.Get("TorusMesh",("inner_radius",3.9f+i*.43f),("outer_radius",4.15f+i*.43f),("rings",64),("ring_segments",8)),
                 Scale=new(1,.08f,1),MaterialOverride=Glow(new(i==1?"8979a4":"c6b6b1"),.6f),CastShadow=GeometryInstance3D.ShadowCastingSetting.Off};
             rings.AddChild(ring);
         }

@@ -146,7 +146,7 @@ public partial class PlaytestDriver
         catch(InvalidOperationException)
         {
             File.WriteAllText(Path.Combine(_output,"network-diagnostics.json"),JsonSerializer.Serialize(new{host=PeerDiagnostics(host),peer=PeerDiagnostics(peer),cadence=livePeer.Cadence,
-                latest=_root.LatestState is {} latest?new{phase=latest.GetProperty("phase").GetInt32(),players=latest.GetProperty("players").GetArrayLength()}:null},new JsonSerializerOptions{WriteIndented=true}));
+                latest=_root.LatestState is {} latest?new{phase=latest.GetProperty("phase").GetInt32(),players=latest.GetProperty("players").GetArrayLength()}:null},new JsonSerializerOptions{WriteIndented=true,NewLine="\n"}));
             throw;
         }
         await WaitState(s=>s.GetProperty("players").EnumerateArray().Any(p=>p.GetProperty("id").GetString()==host.PlayerId&&p.GetProperty("appearance").GetInt32()==4)&&s.GetProperty("players").EnumerateArray().Any(p=>p.GetProperty("id").GetString()==peer.PlayerId&&p.GetProperty("appearance").GetInt32()==6),"network authority reflects both chosen appearances",180);

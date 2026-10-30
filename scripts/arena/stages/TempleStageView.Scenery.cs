@@ -90,7 +90,7 @@ public partial class TempleStageView
     {
         string key=$"taper:{bottom}:{top}:{height}:{sides}";
         if(!SceneryMeshes.TryGetValue(key,out var mesh))
-            SceneryMeshes[key]=mesh=new CylinderMesh{BottomRadius=bottom,TopRadius=top,Height=height,RadialSegments=sides,Rings=1};
+            SceneryMeshes[key]=mesh=PrimitiveTemplates.Get("CylinderMesh",("bottom_radius",bottom),("top_radius",top),("height",height),("radial_segments",sides),("rings",1));
         var node=new MeshInstance3D{Mesh=mesh,Position=position,MaterialOverride=material};parent.AddChild(node);return node;
     }
 
@@ -98,7 +98,7 @@ public partial class TempleStageView
     private static MeshInstance3D Bead(Node parent,Vector3 position,Vector3 scale,Material material)
     {
         if(!SceneryMeshes.TryGetValue("bead",out var mesh))
-            SceneryMeshes["bead"]=mesh=new SphereMesh{Radius=.5f,Height=1,RadialSegments=10,Rings=5};
+            SceneryMeshes["bead"]=mesh=PrimitiveTemplates.Get("SphereMesh",("radius",.5f),("height",1),("radial_segments",10),("rings",5));
         var node=new MeshInstance3D{Mesh=mesh,Position=position,Scale=scale,MaterialOverride=material};parent.AddChild(node);return node;
     }
 
@@ -146,7 +146,7 @@ public partial class TempleStageView
 
     private MeshInstance3D Rock(Node3D parent,Vector3 position,Vector3 scale,Material material,int variant,float yaw=0)
     {
-        var rock=new MeshInstance3D{Name="Rock",Mesh=SceneryRock(variant%4),MaterialOverride=material,Position=position,Scale=scale,Rotation=new(0,yaw,0)};
+        var rock=new MeshInstance3D{Name="Rock",Mesh=SceneryRock(variant%4),MaterialOverride=material,Position=position,Basis=PresentationMath.Rotation(new(0,yaw,0),scale)};
         parent.AddChild(rock);return rock;
     }
 
@@ -163,7 +163,7 @@ public partial class TempleStageView
         {
             float t=(i+.5f)/segments;
             var trunk=Taper(sway,new(lean*t*t*height,t*height,0),.15f-.04f*t,.13f-.04f*t,height/segments*1.12f,i%2==0?bark:ring,10);
-            trunk.Rotation=new(0,0,-Mathf.Atan(2*lean*t));
+            trunk.Basis=PresentationMath.Rotation(new(0,0,-PresentationMath.Atan(2*lean*t)));
         }
         var crown=new Node3D{Name="Crown",Position=new(lean*height,height,0)};sway.AddChild(crown);
         for(int f=0;f<8;f++)
@@ -174,7 +174,7 @@ public partial class TempleStageView
         }
         var nut=_art.Color(new("6b4a2b"),.6f);
         for(int n=0;n<3;n++)Bead(crown,new(Mathf.Cos(n*2.1f)*.13f,-.13f,Mathf.Sin(n*2.1f)*.13f),Vector3.One*.17f,nut);
-        _sceneryMotion.Add(t=>sway.Rotation=new(Mathf.Sin(t*.8f+phase)*.025f,0,Mathf.Sin(t*1.05f+phase)*.04f));
+        _sceneryMotion.Add(t=>sway.Basis=PresentationMath.Rotation(new(PresentationMath.Sin(t*.8f+phase)*.025f,0,PresentationMath.Sin(t*1.05f+phase)*.04f)));
         return root;
     }
 
@@ -192,7 +192,7 @@ public partial class TempleStageView
             float a=i*Mathf.Tau/7;
             Bead(canopy,new(Mathf.Cos(a)*.65f,.2f+(i%3)*.18f,Mathf.Sin(a)*.65f),new(.42f,.28f,.38f),WindPaint(leaves.Lightened(.08f)));
         }
-        if(_garden)_sceneryMotion.Add(t=>canopy.Rotation=new(Mathf.Sin(t*.9f+position.X*.63f+position.Z*.37f)*.055f,0,Mathf.Sin(t*1.3f+phase)*.065f));
+        if(_garden)_sceneryMotion.Add(t=>canopy.Basis=PresentationMath.Rotation(new(PresentationMath.Sin(t*.9f+position.X*.63f+position.Z*.37f)*.055f,0,PresentationMath.Sin(t*1.3f+phase)*.065f)));
         else _sceneryMotion.Add(t=>canopy.Rotation=new(Mathf.Sin(t*.7f+phase)*.03f,0,Mathf.Sin(t*.9f+phase)*.035f));
         return root;
     }
@@ -435,7 +435,7 @@ public partial class TempleStageView
         Sphere(parent,position+new Vector3(0,pole+.04f,0),Vector3.One*.09f,_art.Color(new("e2b64f"),.35f));
         var hinge=new Node3D{Name="Pennant",Position=position+new Vector3(0,pole-.08f,0)};parent.AddChild(hinge);
         Plate(hinge,Vector3.Zero,[new(0,0),new(.95f,-.17f),new(0,-.36f)],.02f,Cloth(color));
-        _sceneryMotion.Add(t=>hinge.Rotation=new(0,.6f+Mathf.Sin(t*1.7f+phase)*.35f+Mathf.Sin(t*4.3f+phase)*.08f,0));
+        _sceneryMotion.Add(t=>hinge.Basis=PresentationMath.Rotation(new(0,.6f+PresentationMath.Sin(t*1.7f+phase)*.35f+PresentationMath.Sin(t*4.3f+phase)*.08f,0)));
     }
 
     private void Cloud(Node3D parent,Vector3 position,float scale,float drift,float span,float phase)
@@ -463,7 +463,7 @@ public partial class TempleStageView
     {
         var random=new Random(seed);
         var multimesh=new MultiMesh{TransformFormat=MultiMesh.TransformFormatEnum.Transform3D,UseColors=true,
-            Mesh=new SphereMesh{Radius=.5f,Height=1,RadialSegments=6,Rings=3},InstanceCount=count};
+            Mesh=PrimitiveTemplates.Get("SphereMesh",("radius",.5f),("height",1),("radial_segments",6),("rings",3)),InstanceCount=count};
         for(int i=0;i<count;i++)
         {
             float size=.08f+(float)random.NextDouble()*(.1f+(i%17==0?.18f:0));

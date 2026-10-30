@@ -13,9 +13,9 @@ public partial class BurnoutEffect : Node3D
 {
     public const float Duration=2.4f;
     private const int FlameCount=20,TrailCount=4,PuffCount=11;
-    private static readonly SphereMesh BlobMesh=new() {Radius=.5f,Height=1,RadialSegments=12,Rings=6};
+    private static readonly Mesh BlobMesh=PrimitiveTemplates.Get("SphereMesh",("radius",.5f),("height",1),("radial_segments",12),("rings",6));
     // A rounded base drawn up into a point: a toy candle-flame tongue rather than a flat disc.
-    private static readonly CylinderMesh TongueMesh=new() {TopRadius=0,BottomRadius=.5f,Height=1.1f,RadialSegments=10,Rings=3};
+    private static readonly Mesh TongueMesh=PrimitiveTemplates.Get("CylinderMesh",("top_radius",0),("bottom_radius",.5f),("height",1.1f),("radial_segments",10),("rings",3));
     private static StandardMaterial3D? _flameOuter,_flameCore,_aura,_trail;
     private readonly MeshInstance3D _auraShell;
     private readonly BomberModel _puppet;

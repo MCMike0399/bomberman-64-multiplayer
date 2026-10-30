@@ -61,7 +61,7 @@ public partial class TempleStageView
         {
             Box(this,new(x,4.05f,1.012f),new(1.2f,1.3f,.055f),ink,.05f);
             var hub=new Node3D{Name=$"GreedyFlywheel_{x}",Position=new(x,4.05f,1.075f)};AddChild(hub);_greedyGears.Add(hub);
-            var ring=new MeshInstance3D{Mesh=new TorusMesh{InnerRadius=.32f,OuterRadius=.42f,Rings=24,RingSegments=8},MaterialOverride=brass,RotationDegrees=new(90,0,0)};hub.AddChild(ring);
+            var ring=new MeshInstance3D{Mesh=PrimitiveTemplates.Get("TorusMesh",("inner_radius",.32f),("outer_radius",.42f),("rings",24),("ring_segments",8)),MaterialOverride=brass,RotationDegrees=new(90,0,0)};hub.AddChild(ring);
             for(int tooth=0;tooth<8;tooth++)
             {
                 float angle=tooth*Mathf.Tau/8;
