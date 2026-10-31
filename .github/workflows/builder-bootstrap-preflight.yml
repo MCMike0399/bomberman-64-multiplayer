@@ -1,0 +1,61 @@
+name: Builder bootstrap pre-flight
+
+# FREE: no AWS credentials, no OIDC, no paid allocation. Exercises the real
+# generated Linux user-data package/CLI section and the Windows virtual-audio
+# bootstrap gate on hosted runners before any paid GPU builder launch.
+on:
+  pull_request:
+    paths:
+      - tools/ci/builder_bootstrap.py
+      - tools/ci/builder_bootstrap_preflight.py
+      - tools/ci/builder_guest.py
+      - tools/packaging/windows-audio.ps1
+      - tools/packaging/windows-audio-preflight.ps1
+      - tools/packaging/windows-test-desktop.ps1
+      - .github/workflows/builder-bootstrap-preflight.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: builder-bootstrap-preflight-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    name: FREE Linux user-data packages and pinned AWS CLI (ubuntu:24.04, no AWS)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Run the generated section in ubuntu:24.04 with fault controls
+        run: python3 tools/ci/builder_bootstrap_preflight.py --output artifacts/bootstrap-preflight/linux
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: builder-bootstrap-preflight-linux
+          path: artifacts/bootstrap-preflight/linux
+          retention-days: 7
+          if-no-files-found: warn
+
+  windows:
+    name: FREE Windows virtual-audio gate (admin install; SYSTEM and standard-user checks)
+    runs-on: windows-2025
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Bootstrap audio section as the runner administrator (Windows PowerShell 5.1, like EC2 user-data)
+        shell: powershell
+        run: ./tools/packaging/windows-audio-preflight.ps1 -Output artifacts/bootstrap-preflight/windows
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: builder-bootstrap-preflight-windows
+          path: artifacts/bootstrap-preflight/windows
+          retention-days: 7
+          if-no-files-found: warn

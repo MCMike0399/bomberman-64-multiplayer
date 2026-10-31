@@ -67,9 +67,13 @@ def prepare_source(cache,work,manifest,descriptor):
     return rows
 
 
+# Exact owned CLI binaries; never a PATH lookup (Linux installs the pinned v2 bundle).
+AWS_CLI={'nt':r'C:\Program Files\Amazon\AWSCLIV2\aws.exe'}.get(os.name,'/opt/sancus-builder/aws-cli/bin/aws')
+
+
 def object_client(run):
     def aws(service,operation,*arguments):
-        command=['aws','--profile','sancus','--region',names.REGION,'--cli-connect-timeout','8',
+        command=[AWS_CLI,'--profile','sancus','--region',names.REGION,'--cli-connect-timeout','8',
                  '--cli-read-timeout','60',service,operation,*arguments,'--output','json']
         result=subprocess.run(command,capture_output=True,text=True,timeout=300)
         if result.returncode:

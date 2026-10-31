@@ -12,6 +12,8 @@ if($OwnedSsm){
     if($LASTEXITCODE -ne 0){throw 'Actual owned SSM context validation failed'}
     $context | Set-Content -Encoding utf8 (Join-Path $output 'native-context.json')
 }
+# The same virtual-audio gate the builder's SYSTEM bootstrap requires before readiness.
+. (Join-Path $PSScriptRoot 'windows-audio.ps1')
 Add-Type -TypeDefinition @'
 using System;
 using System.Collections.Generic;
@@ -160,6 +162,13 @@ do {
     if ($result -eq 0) { break }
     Start-Sleep -Milliseconds 200
 } while ($clock.Elapsed.TotalSeconds -lt 20)
+$audioGate = $null
+$audioGateError = $null
+if ($VerifyOnly) {
+    # Owned builders install VB-CABLE as SYSTEM; the standard user must observe
+    # Automatic+Running services and that exact endpoint as the default device.
+    try { $audioGate = Assert-BlastAudio -Seconds 20 } catch { $audioGateError = [string]$_; $audioGate = Get-BlastAudioState }
+}
 $report = @{
     beforeServices = $before
     beforeScreen = $beforeScreen
@@ -176,10 +185,13 @@ $report = @{
     screenWidth = [BlastAudioEndpoint]::GetSystemMetrics(0)
     screenHeight = [BlastAudioEndpoint]::GetSystemMetrics(1)
     hasDisplayResolutionCommand = [bool](Get-Command Set-DisplayResolution -ErrorAction SilentlyContinue)
-    passed = ($result -eq 0 -and $screenReady)
+    audioGate = $audioGate
+    audioGateError = $audioGateError
+    passed = ($result -eq 0 -and $screenReady -and -not $audioGateError)
 }
 $json = $report | ConvertTo-Json -Depth 5
 $json | Set-Content -Encoding utf8 -Path (Join-Path $output 'environment.json')
 Write-Output $json
 if ($result -ne 0) { throw 'Windows runner has no usable default WASAPI render endpoint after service setup' }
+if ($audioGateError) { throw $audioGateError }
 if (-not $screenReady) { throw 'Windows runner cannot fit the unchanged 1600x1000 client test window' }

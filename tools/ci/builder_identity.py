@@ -54,7 +54,8 @@ def policy(*,staging=False):
           arn('ec2',kind+'/*')for kind in ('instance','volume','network-interface','security-group')],
           {'StringEquals':{'ec2:CreateAction':['RunInstances','CreateSecurityGroup']},
            'StringLike':{'aws:RequestTag/'+names.RUN_TAG:run}})
-    allow('TerminateOnlyOwnedInstances','ec2:TerminateInstances',arn('ec2','instance/*'),tagged)
+    # GetConsoleOutput (read-only) lets the controller fail fast on a guest's bootstrap marker.
+    allow('TerminateOnlyOwnedInstances',['ec2:TerminateInstances','ec2:GetConsoleOutput'],arn('ec2','instance/*'),tagged)
     allow('CreateOwnedSecurityGroup','ec2:CreateSecurityGroup',arn('ec2','security-group/*'),requested)
     allow('ReferenceVpcForSecurityGroup','ec2:CreateSecurityGroup',arn('ec2','vpc/*'))
     # No ingress grant: a new security group has no inbound rules, and EC2 has no
@@ -79,7 +80,9 @@ def policy(*,staging=False):
           'iam:DeleteInstanceProfile','iam:TagInstanceProfile','iam:ListInstanceProfileTags'],
           iam('instance-profile/'+run))
     groups=arn('scheduler','schedule-group/'+run)
-    schedules=arn('scheduler','schedule/'+run+'/'+run)
+    # Any schedule name inside an owned group: deleting a group authorizes
+    # scheduler:DeleteSchedule on the literal schedule/<group>/* (smoke 41145680861).
+    schedules=arn('scheduler','schedule/'+run+'/*')
     # Tag-on-create requires scheduler:TagResource (campaign 2 launch, run 41136197647).
     allow('CreateOwnedScheduleGroup',['scheduler:CreateScheduleGroup','scheduler:TagResource'],groups,requested)
     allow('ManageOwnedScheduleGroup',['scheduler:GetScheduleGroup','scheduler:DeleteScheduleGroup',

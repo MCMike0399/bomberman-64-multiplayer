@@ -18,7 +18,7 @@ def register(actions,kinds):
 register('ec2:RunInstances','instance image subnet security-group network-interface volume')
 register('ec2:CreateSecurityGroup','security-group vpc')
 register('ec2:CreateTags','instance volume network-interface security-group')
-register('ec2:TerminateInstances','instance')
+register('ec2:TerminateInstances ec2:GetConsoleOutput','instance')
 register('ec2:DeleteSecurityGroup','security-group')
 register('ec2:DeleteVolume','volume')
 register('ec2:DeleteNetworkInterface','network-interface')

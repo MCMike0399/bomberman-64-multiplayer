@@ -125,7 +125,7 @@ def cleanup_owned(plan,deadline,retain_evidence):
     receipt=None
     def verify():
         nonlocal receipt
-        receipt=cleanup.final(plan,stage_errors=errors)
+        receipt=cleanup.final(plan,stage_errors=errors,deadline=deadline)
     stage('verify-every-owned-id-and-sweep',verify)
     result={'cleanupComplete':bool(receipt and receipt['allCreatedResourcesGone']),
             'state':'VERIFIED_GONE'if receipt and receipt['allCreatedResourcesGone']else'INCOMPLETE',

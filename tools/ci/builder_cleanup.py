@@ -8,7 +8,13 @@ import builder_s3
 import builder_audit
 import builder_cost
 import datetime
+import time
 ROOT=None
+# The tagging index lags authoritative deletion (campaign 2 attempt 2): retry the
+# read-only sweep inside the cleanup deadline before deciding.
+SWEEP_RETRY_SECONDS=600
+SWEEP_INTERVAL_SECONDS=30
+SWEEP_DEADLINE_MARGIN_SECONDS=60
 
 def configure(root):
     global ROOT
@@ -47,7 +53,21 @@ def protected_comparison(baseline,actual):
         if differences:changes.append({'id':before['id'],'differences':differences,'note':'Observed concurrent difference; never reverted'})
     return changes,unavailable,compared
 
-def final(plan,stage_errors=None):
+def sweep(aws,deadline=None,now=time.time,sleep=time.sleep):
+    """Read-only audit, retried while anything is unresolved and time remains."""
+    started=now();stop=started if deadline is None else min(started+SWEEP_RETRY_SECONDS,deadline-SWEEP_DEADLINE_MARGIN_SECONDS)
+    attempts=[]
+    while True:
+        result=builder_audit.audit(aws,require_scoped_role=False)
+        passed=not result['leftovers']and not result['errors']
+        attempts.append({'atUtc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'passed':passed,
+                         'leftovers':[row['id']for row in result['leftovers']],'errors':[row['type']for row in result['errors']]})
+        if passed or now()+SWEEP_INTERVAL_SECONDS>stop:break
+        sleep(SWEEP_INTERVAL_SECONDS)
+    result['sweepAttempts']=attempts
+    return result
+
+def final(plan,stage_errors=None,deadline=None):
     campaign.actor(plan);rows=safety.read_journal(campaign.JOURNAL,plan)
     try:retained=evidence(plan);evidence_error=None
     except Exception as error:evidence_error=str(error);retained={}
@@ -95,11 +115,11 @@ def final(plan,stage_errors=None):
     live=campaign.aws(plan,'ec2','describe-instances','--instance-ids',*ids)['Reservations']
     actual={x['InstanceId']:x for r in live for x in r['Instances']}
     changes,unavailable,compared=protected_comparison(baseline,actual)
-    audit=builder_audit.audit(lambda *args:campaign.aws(plan,*args),require_scoped_role=False)
+    audit=sweep(lambda *args:campaign.aws(plan,*args),deadline)
     left.extend(audit['leftovers'])
     for error in audit['errors']:left.append({'type':error['type'],'id':'audit','finalState':'UNVERIFIED'})
     receipt={'account':plan['account'],'region':plan['region'],'runId':plan['runId'],'payloadSource':plan['payloadSource'],
-             'typeAudit':audit['checked'],'nonResourceRecords':audit['nonResourceRecords'],'standingIdentity':audit['expectedStandingIdentity'],'cleanupStageErrors':stage_errors or [],'retainedEvidenceValidated':evidence_error is None,'evidenceComplete':evidence_error is None and retained.get('scope')=='game-results','testVerdict':retained.get('verdict','incomplete'),'testEvidenceScope':retained.get('scope','missing'),'evidenceError':evidence_error,'allCreatedResourcesGone':not left,'resources':output,'leftovers':left,'protectedObservedChanges':changes,
+             'typeAudit':audit['checked'],'taggedResources':audit.get('taggedResources',[]),'sweepAttempts':audit['sweepAttempts'],'nonResourceRecords':audit['nonResourceRecords'],'standingIdentity':audit['expectedStandingIdentity'],'cleanupStageErrors':stage_errors or [],'retainedEvidenceValidated':evidence_error is None,'evidenceComplete':evidence_error is None and retained.get('scope')=='game-results','testVerdict':retained.get('verdict','incomplete'),'testEvidenceScope':retained.get('scope','missing'),'evidenceError':evidence_error,'allCreatedResourcesGone':not left,'resources':output,'leftovers':left,'protectedObservedChanges':changes,
              'protectedRequestedInstances':len(baseline),'protectedComparedInstances':compared,'protectedUnavailable':unavailable,'protectedComparisonComplete':not unavailable,
              'protectedFieldsChecked':['state','instanceType','vpc','subnet','securityGroups','blockDeviceMappings','networkInterfaceIds'],'protectedNotModifiedByController':'All mutation operations constrained to this exact new stack; no protected ID was used as a deletion target.'}
     observed=datetime.datetime.now(datetime.timezone.utc).isoformat()

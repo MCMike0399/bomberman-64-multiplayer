@@ -11,6 +11,15 @@ import builder_staging
 
 MODULES=('builder_guest.py','builder_guest_ready.py','builder_guest_exit.py','builder_payload.py','builder_s3.py','builder_staging.py',
          'builder_namespace.py','native_execution.py')
+# Shared with windows-test-desktop.ps1 -VerifyOnly and the hosted pre-flight.
+WINDOWS_AUDIO=Path(__file__).resolve().parents[1]/'packaging/windows-audio.ps1'
+# Ubuntu 24.04 has no awscli apt package (campaign 2 attempt 2, run 41151908001).
+# The official versioned AWS CLI v2 bundle is pinned by digest and verified before unzip.
+LINUX_AWS_CLI={'url':'https://awscli.amazonaws.com/awscli-exe-linux-x86_64-2.38.5.zip',
+               'sha256':'5def7d1b7e55d892f9a381bb2cb2081a685712464be0d36d5d706af0ac48d0d3'}
+LINUX_AWS='/opt/sancus-builder/aws-cli/bin/aws'
+PACKAGES_BEGIN='# >>> sancus-builder:packages'
+PACKAGES_END='# <<< sancus-builder:packages'
 
 LINUX_SETUP=r'''#!/bin/bash
 set -euo pipefail
@@ -18,6 +27,8 @@ root=/opt/sancus-builder
 exec >> "$root/bootstrap.log" 2>&1
 export AWS_CONFIG_FILE="$root/aws-config"
 export AWS_EC2_METADATA_DISABLED=false
+aws=/opt/sancus-builder/aws-cli/bin/aws
+test -x "$aws"
 python3 - "$root" <<'PY'
 import json,sys
 from pathlib import Path
@@ -29,7 +40,7 @@ rows=builder_guest.validate_inputs(manifest,descriptor)
 (root/'inputs.tsv').write_text(''.join('\t'.join(str(row[key])for key in ('fileName','objectKey','sha256','size'))+'\n'for row in rows))
 PY
 while IFS=$'\t' read -r file key sha size; do
- aws --profile sancus --region us-east-1 --cli-connect-timeout 8 --cli-read-timeout 25 s3api get-object --bucket '__BUCKET__' --expected-bucket-owner 524329886851 --key "$key" "$root/cache/$file" >/dev/null
+ "$aws" --profile sancus --region us-east-1 --cli-connect-timeout 8 --cli-read-timeout 25 s3api get-object --bucket '__BUCKET__' --expected-bucket-owner 524329886851 --key "$key" "$root/cache/$file" >/dev/null
  test "$(stat -c %s "$root/cache/$file")" = "$size"
  printf '%s  %s\n' "$sha" "$root/cache/$file" | sha256sum -c -
 done < "$root/inputs.tsv"
@@ -52,6 +63,8 @@ done
 test -n "$icd"
 printf '%s' "$icd" > "$root/nvidia-icd.txt"
 chown -R ubuntu:ubuntu "$root"
+chown -R root:root "$root/aws-cli"
+chmod -R go-w "$root/aws-cli"
 printf 'bootstrap-ready; desktop and hardware NOT YET QUALIFIED\n' > "$root/bootstrap.status"
 runuser -u ubuntu -- env AWS_CONFIG_FILE="$root/aws-config" "$root/venv/bin/python" "$root/bin/builder_guest_ready.py" --manifest "$root/manifest.json" --target linux-x64 --output "$root/bootstrap-ready.json"
 '''
@@ -109,22 +122,15 @@ $driver=InputFile 'driver'
 $signature=Get-AuthenticodeSignature $driver
 if($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'NVIDIA'){throw 'NVIDIA driver signature invalid'}
 Install $driver '-s -noreboot'
-foreach($name in @('AudioEndpointBuilder','Audiosrv')){
- if((Get-Service $name).StartType -eq 'Disabled'){Set-Service -Name $name -StartupType Manual}
- Start-Service -Name $name
-}
-$audio=InputFile 'audio'
-if((Get-FileHash -Algorithm SHA256 $audio).Hash.ToLowerInvariant() -ne 'b950e39f01af1d04ea623c8f6d8eb9b6ea5c477c637295fabf20631c85116bfb'){throw 'Reviewed virtual-audio archive differs'}
-Expand-Archive $audio "$root\audio"
-$installer="$root\audio\VBCABLE_Setup_x64.exe"
-$catalog="$root\audio\vbaudio_cable64_win10.cat"
-$setupSignature=Get-AuthenticodeSignature $installer
-$catalogSignature=Get-AuthenticodeSignature $catalog
-if($setupSignature.Status -ne 'Valid' -or $setupSignature.SignerCertificate.Subject -notmatch 'BUREL VINCENT' -or $catalogSignature.Status -ne 'Valid' -or $catalogSignature.SignerCertificate.Subject -notmatch 'Microsoft Windows Hardware Compatibility Publisher'){throw 'Pinned virtual-audio signatures invalid'}
-$audioInstall=Start-Process $installer -ArgumentList '-i','-h' -WorkingDirectory "$root\audio" -PassThru
-if(-not $audioInstall.WaitForExit(90000)){$audioInstall.Kill($true);throw 'Owned audio installation exceeded 90 seconds'}
-# Exit alone is not audio proof. The standard-user helper requires an actual
-# WASAPI render endpoint after the driver reboot.
+# Shared with windows-test-desktop.ps1 -VerifyOnly: services Automatic (Manual
+# services stayed stopped after the reboot in run 41151908001), the reviewed
+# archive hash, both signatures, then the exact default-endpoint gate.
+. "$root\bin\windows-audio.ps1"
+if($BlastAudioArchiveSha256 -ne 'b950e39f01af1d04ea623c8f6d8eb9b6ea5c477c637295fabf20631c85116bfb'){throw 'Reviewed virtual-audio pin differs'}
+$audioInstall=Install-BlastAudio (InputFile 'audio') "$root\audio"
+$audioInstall | ConvertTo-Json | Set-Content "$root\audio-install.json"
+$audioGate=Assert-BlastAudio 90
+$audioGate | ConvertTo-Json -Depth 5 | Set-Content "$root\audio-gate-system.json"
 & "$root\Python\python.exe" -m venv "$root\venv"
 if($LASTEXITCODE -ne 0){throw 'Owned Python venv failed'}
 & "$root\venv\Scripts\python.exe" -m pip install --no-index --find-links "$root\cache" Pillow==13.0.0
@@ -142,6 +148,7 @@ $principal=New-ScheduledTaskPrincipal -UserId "$env:COMPUTERNAME\BlastQa" -Logon
 $trigger=New-ScheduledTaskTrigger -AtLogOn -User "$env:COMPUTERNAME\BlastQa"
 Register-ScheduledTask -TaskName sancus-builder-run -Action $action -Principal $principal -Trigger $trigger | Out-Null
 Set-Content "$root\bootstrap.status" 'driver installed; rebooting into owned standard-user desktop; NOT graphics qualification'
+if(-not(Write-BlastConsole @('SANCUS-BUILDER-BOOTSTRAP-SYSTEM-READY audio gate passed; rebooting into the standard-user desktop'))){Set-Content "$root\console-unavailable.txt" 'SYSTEM-READY marker not written'}
 Restart-Computer -Force
 '''
 
@@ -163,6 +170,8 @@ $env:AWS_CONFIG_FILE="$root\aws-config"
 $env:DOTNET_ROOT="$root\dotnet"
 $env:DOTNET_CLI_HOME="$root\dotnet-home"
 $env:PATH="$root\venv\Scripts;$root\dotnet;C:\Program Files\Git\cmd;C:\Program Files\PowerShell\7;C:\Program Files\Amazon\AWSCLIV2;$env:PATH"
+. "$root\bin\windows-audio.ps1"
+Assert-BlastAudio 120 | ConvertTo-Json -Depth 5 | Set-Content "$root\audio-gate-user.json"
 & "$root\venv\Scripts\python.exe" "$root\bin\builder_guest_ready.py" --manifest "$root\manifest.json" --target windows-x64 --output "$root\bootstrap-ready.json" *> "$root\readiness.log"
 if($LASTEXITCODE -ne 0){throw 'Standard-user bootstrap readiness failed'}
 $taskDeadline=[DateTime]::UtcNow.AddMinutes(15)
@@ -184,43 +193,71 @@ def bundle(run,output):
     if output.exists():raise FileExistsError('Never replace a frozen bootstrap bundle')
     with zipfile.ZipFile(output,'w',zipfile.ZIP_DEFLATED)as archive:
         for name in MODULES:archive.write(Path(__file__).parent/name,name)
+        archive.write(WINDOWS_AUDIO,'windows-audio.ps1')
         for name,text in {'setup.sh':LINUX_SETUP,'dispatch':LINUX_DISPATCH,'setup.ps1':WINDOWS_SETUP,
                           'dispatch.ps1':WINDOWS_DISPATCH,'worker.ps1':WINDOWS_WORKER}.items():
             archive.writestr(name,text.replace('__BUCKET__',bucket))
     return {'path':str(output),'sha256':hashlib.sha256(output.read_bytes()).hexdigest()}
 
 
-def userdata(plan,helper_sha,manifest_sha,aws_cli):
+def userdata(plan,helper_sha,manifest_sha,aws_cli,linux_cli=LINUX_AWS_CLI):
     """Windows uses its AMI's AWS SDK to fetch the CLI from the owned bucket.
 
     Even that first GetObject request includes ExpectedBucketOwner. The SDK uses
     the disposable instance role; no operator credentials or hand-written signer.
+    Linux installs the pinned official AWS CLI v2 bundle (digest checked before
+    unzip) into a root-owned directory and calls that exact binary.
     """
-    for sha in (helper_sha,manifest_sha,aws_cli['sha256']):
+    for sha in (helper_sha,manifest_sha,aws_cli['sha256'],linux_cli['sha256']):
         if not re.fullmatch(r'[0-9a-f]{64}',sha):raise ValueError('Pinned bootstrap digests required')
     if aws_cli['url']!='https://awscli.amazonaws.com/AWSCLIV2.msi':raise ValueError('Only the official AWS CLI bootstrap URL is allowed')
+    if not re.fullmatch(r'https://awscli\.amazonaws\.com/awscli-exe-linux-x86_64-2\.[0-9]+\.[0-9]+\.zip',linux_cli['url']):
+        raise ValueError('Only a versioned official AWS CLI v2 Linux bundle is allowed')
     bucket=builder_staging.bucket_name(plan['runId'])
     linux=r'''#!/bin/bash
-set -euo pipefail
+set -Eeuo pipefail
 root=/opt/sancus-builder
 mkdir -p "$root/bin" "$root/cache"
 exec >> "$root/bootstrap.log" 2>&1
+console(){
+ for tty in ${SANCUS_BUILDER_CONSOLE:-/dev/console /dev/ttyS0}; do
+  if test -w "$tty"; then
+   { printf '%s\n' "$1"; if test -n "${2:-}"; then tail -n 80 "$root/bootstrap.log" | sed "s/^/$2| /"; fi; } | timeout 20 tee -a "$tty" >/dev/null || true
+  fi
+ done
+}
+trap 'status=$?; trap - ERR; console "SANCUS-BUILDER-BOOTSTRAP-FAILED status=$status line=$LINENO command=$BASH_COMMAND" SANCUS-BUILDER-BOOTSTRAP-FAILED; exit "$status"' ERR
+__PACKAGES_BEGIN__
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
-apt-get install -y awscli git unzip python3 python3-venv fuse3 squashfs-tools xvfb openbox pulseaudio vulkan-tools libxkbcommon0 libxcursor1 libxinerama1 libxi6 libxrandr2 libpulse0
+apt-get install -y curl ca-certificates git unzip python3 python3-venv fuse3 squashfs-tools xvfb openbox pulseaudio vulkan-tools libxkbcommon0 libxcursor1 libxinerama1 libxi6 libxrandr2 libpulse0
+install -d -m 700 -o root -g root "$root/awscli-install"
+curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 --retry 5 --retry-delay 3 --connect-timeout 15 --max-time 300 -o "$root/awscli-install/awscliv2.zip" '__AWS_LINUX_URL__'
+printf '%s  %s\n' '__AWS_LINUX_SHA__' "$root/awscli-install/awscliv2.zip" | sha256sum -c -
+unzip -q "$root/awscli-install/awscliv2.zip" -d "$root/awscli-install"
+install -d -m 755 -o root -g root "$root/aws-cli"
+"$root/awscli-install/aws/install" --install-dir "$root/aws-cli/dist" --bin-dir "$root/aws-cli/bin"
+rm -rf "$root/awscli-install"
+chown -R root:root "$root/aws-cli"
+chmod -R go-w "$root/aws-cli"
+aws=/opt/sancus-builder/aws-cli/bin/aws
+"$aws" --version
+__PACKAGES_END__
 printf '[profile sancus]\nregion=us-east-1\n' > "$root/aws-config"
 export AWS_CONFIG_FILE="$root/aws-config"
 bootstrap_deadline=$((SECONDS+300))
 while ((SECONDS < bootstrap_deadline)); do
- if aws --profile sancus --region us-east-1 --cli-connect-timeout 8 --cli-read-timeout 25 s3api get-object --bucket '__BUCKET__' --expected-bucket-owner 524329886851 --key payload/bootstrap.zip "$root/bootstrap.zip" >/dev/null; then break; fi
+ if "$aws" --profile sancus --region us-east-1 --cli-connect-timeout 8 --cli-read-timeout 25 s3api get-object --bucket '__BUCKET__' --expected-bucket-owner 524329886851 --key payload/bootstrap.zip "$root/bootstrap.zip" >/dev/null; then break; fi
  sleep 5
 done
 printf '%s  %s\n' '__HELPER_SHA__' "$root/bootstrap.zip" | sha256sum -c -
-aws --profile sancus --region us-east-1 --cli-connect-timeout 8 --cli-read-timeout 25 s3api get-object --bucket '__BUCKET__' --expected-bucket-owner 524329886851 --key payload/manifest.json "$root/manifest.json" >/dev/null
+"$aws" --profile sancus --region us-east-1 --cli-connect-timeout 8 --cli-read-timeout 25 s3api get-object --bucket '__BUCKET__' --expected-bucket-owner 524329886851 --key payload/manifest.json "$root/manifest.json" >/dev/null
 printf '%s  %s\n' '__MANIFEST_SHA__' "$root/manifest.json" | sha256sum -c -
 unzip -q "$root/bootstrap.zip" -d "$root/bin"
 chmod 700 "$root/bin/dispatch"
 bash "$root/bin/setup.sh"
+test -s "$root/bootstrap-ready.json"
+console "SANCUS-BUILDER-BOOTSTRAP-READY linux-x64"
 '''
     windows=r'''<powershell>
 $ErrorActionPreference='Stop'
@@ -228,6 +265,15 @@ $ErrorActionPreference='Stop'
 $root='C:\sancus-builder'
 New-Item -ItemType Directory -Force "$root\bin","$root\cache" | Out-Null
 Start-Transcript "$root\bootstrap.log"
+# EC2 get-console-output survives termination: copy the transcript tail to COM1.
+trap {
+ $failure=[string]$_
+ try{Stop-Transcript|Out-Null}catch{}
+ $lines=@("SANCUS-BUILDER-BOOTSTRAP-FAILED $failure")+@(Get-Content "$root\bootstrap.log" -Tail 80 -ErrorAction SilentlyContinue|ForEach-Object{"SANCUS-BUILDER-BOOTSTRAP-FAILED| $_"})
+ try{$port=New-Object IO.Ports.SerialPort 'COM1',115200,'None',8,'One';$port.WriteTimeout=5000;$port.Open();try{foreach($line in $lines){$port.WriteLine($line)}}finally{$port.Close()}}
+ catch{Set-Content "$root\console-unavailable.txt" ([string]$_)}
+ break
+}
 foreach($module in @('AWS.Tools.S3','AWSPowerShell.NetCore','AWSPowerShell')){
  if(Get-Module -ListAvailable $module){Import-Module $module;break}
 }
@@ -270,9 +316,23 @@ Expand-Archive "$root\bootstrap.zip" "$root\bin"
 & "$root\bin\setup.ps1"
 </powershell>
 '''
-    replacements={'__BUCKET__':bucket,'__HELPER_SHA__':helper_sha,'__MANIFEST_SHA__':manifest_sha,'__AWS_SHA__':aws_cli['sha256']}
+    replacements={'__BUCKET__':bucket,'__HELPER_SHA__':helper_sha,'__MANIFEST_SHA__':manifest_sha,'__AWS_SHA__':aws_cli['sha256'],
+                  '__AWS_LINUX_URL__':linux_cli['url'],'__AWS_LINUX_SHA__':linux_cli['sha256'],
+                  '__PACKAGES_BEGIN__':PACKAGES_BEGIN,'__PACKAGES_END__':PACKAGES_END}
     def replace(text):
         for key,value in replacements.items():text=text.replace(key,value)
         if len(text.encode())>16384:raise ValueError('EC2 raw UserData exceeds its fixed size limit')
         return text
     return {'Linux':replace(linux),'Windows':replace(windows)}
+
+
+def linux_package_section(script):
+    """The user-data prologue through the package/AWS CLI install, for the free pre-flight."""
+    if script.count(PACKAGES_BEGIN)!=1 or script.count(PACKAGES_END)!=1:raise ValueError('Package section markers missing')
+    return script[:script.index(PACKAGES_END)+len(PACKAGES_END)]+'\n'
+
+
+def linux_packages(script):
+    lines=[line for line in script.splitlines()if line.startswith('apt-get install -y ')]
+    if len(lines)!=1:raise ValueError('Exactly one apt install line expected')
+    return lines[0].split()[3:]

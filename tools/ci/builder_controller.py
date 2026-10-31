@@ -25,6 +25,14 @@ import builder_transfer as transfer
 import builder_timing
 
 TARGETS={'linux-x64':'Linux','windows-x64':'Windows'}
+PING_SAMPLE_SECONDS=30
+PING_SAMPLE_LIMIT=40
+CONSOLE_SAMPLE_SECONDS=60
+BOOTSTRAP_FAILED_MARKER='SANCUS-BUILDER-BOOTSTRAP-FAILED'
+CONSOLE_MARKERS=('SANCUS-BUILDER-BOOTSTRAP-FAILED','SANCUS-BUILDER-BOOTSTRAP-READY','SANCUS-BUILDER-BOOTSTRAP-SYSTEM-READY')
+
+
+def utc_now():return datetime.datetime.now(datetime.timezone.utc).isoformat()
 
 
 def write(path,value):
@@ -55,7 +63,8 @@ class Controller:
         self.root=Path(state).resolve();campaign.configure(self.root);cleanup.configure(self.root);arming.configure(self.root)
         self.plan=json.loads(campaign.PLAN.read_text());self.operator=operator
         self.expiry=datetime.datetime.fromisoformat(self.plan['fixedCampaignExpiryUtc']).timestamp()
-        self.stop=self.expiry-20*60
+        self.stop=self.expiry-builder_timing.CONTROLLER_STOP_SECONDS
+        self.ping_sampled={};self.console_sampled={}
         self.api=lambda *args:campaign.aws(self.plan,*args)
         self.client=builder_s3.Objects(self.api,self.plan['runId'])
         path=self.root/'controller.json'
@@ -118,8 +127,9 @@ class Controller:
         transfer.upload_inputs(self.client,self.plan,campaign.JOURNAL,staging['inputs'])
         transfer.publish_bootstrap(self.client,self.plan,campaign.JOURNAL,staging['manifest'],staging['bootstrap'],staging['awsCli'])
         logical={row['details'].get('logicalId'):row['id']for row in journal.effective_created(campaign.rows(self.plan)).values()}
-        self.data['targets']={target:{'instanceId':logical[osname+'Instance'],'state':'booting'}for target,osname in TARGETS.items()}
-        self.data.update(phase='bootstrapping',bootstrapDeadline=min(time.time()+600,self.stop));self.save()
+        self.data['targets']={target:{'instanceId':logical[osname+'Instance'],'state':'booting','pingSamples':[]}for target,osname in TARGETS.items()}
+        self.data.update(phase='bootstrapping',bootstrapStartedAtUtc=utc_now(),
+                         bootstrapDeadline=min(time.time()+builder_timing.BOOTSTRAP_SECONDS,self.stop));self.save()
         return ready
 
     def read_object(self,key,path):
@@ -147,10 +157,55 @@ class Controller:
         self.api('ec2','terminate-instances','--instance-ids',identity)
         row['terminationRequested']=True;self.save()
 
+    def ping(self,target,force=False):
+        """Read-only SSM agent observation, retained as a bounded diagnostic series."""
+        row=self.data['targets'][target];now=time.time()
+        if not force and now-self.ping_sampled.get(target,0)<PING_SAMPLE_SECONDS:return None
+        self.ping_sampled[target]=now
+        sample={'atUtc':utc_now()}
+        try:
+            agents=self.api('ssm','describe-instance-information','--filters',json.dumps([{'Key':'InstanceIds','Values':[row['instanceId']]}]))['InstanceInformationList']
+            matching=[agent for agent in agents if agent.get('InstanceId')==row['instanceId']]
+            sample['pingStatus']=matching[0].get('PingStatus')if matching else'NotRegistered'
+        except Exception as error:
+            agents=None;sample['error']=str(error)[:300]
+        samples=row.setdefault('pingSamples',[]);samples.append(sample)
+        row['pingSampleCount']=row.get('pingSampleCount',0)+1
+        # Keep the first observation and the most recent ones; the count is exact.
+        if len(samples)>PING_SAMPLE_LIMIT:del samples[1:len(samples)-PING_SAMPLE_LIMIT+1]
+        self.save()
+        return agents
+
+    def console(self,target,force=False,label='latest'):
+        """Read-only guest console capture: retained as evidence, markers recorded per target."""
+        row=self.data['targets'][target];now=time.time()
+        if not force and now-self.console_sampled.get(target,0)<CONSOLE_SAMPLE_SECONDS:return None
+        self.console_sampled[target]=now
+        sample={'atUtc':utc_now(),'label':label}
+        try:
+            text=self.api('ec2','get-console-output','--instance-id',row['instanceId'],'--latest').get('Output')or''
+        except Exception as error:
+            sample['error']=str(error)[:300];row.setdefault('consoleSamples',[]).append(sample);self.save();return None
+        destination=self.root/'evidence'/target/'console';destination.mkdir(parents=True,exist_ok=True)
+        (destination/(label+'.txt')).write_text(text)
+        seen=[marker for marker in CONSOLE_MARKERS if marker in text]
+        sample.update(bytes=len(text.encode()),sha256=hashlib.sha256(text.encode()).hexdigest(),markers=seen)
+        row.setdefault('consoleSamples',[]).append(sample)
+        row['consoleMarkersSeen']=sorted(set(row.get('consoleMarkersSeen',[]))|set(seen))
+        if len(row['consoleSamples'])>PING_SAMPLE_LIMIT:del row['consoleSamples'][1:len(row['consoleSamples'])-PING_SAMPLE_LIMIT+1]
+        self.save()
+        return text
+
     def observe_bootstrap(self,target):
         row=self.data['targets'][target]
         receipt=self.read_object('results/'+target+'/bootstrap-ready.json',self.root/'observations'/target/'bootstrap-ready.json')
-        if receipt is None:return False
+        if receipt is None:
+            self.ping(target)  # Diagnostic only while waiting; errors are recorded, never fatal.
+            text=self.console(target)
+            if text is not None and BOOTSTRAP_FAILED_MARKER in text:
+                self.console(target,force=True,label='bootstrap-failed')
+                raise RuntimeError('Guest bootstrap reported failure on its console')
+            return False
         expected={'runId':self.plan['runId'],'source':self.plan['payloadSource'],'target':target,'instanceId':row['instanceId'],
                   'account':self.plan['account'],'region':self.plan['region'],
                   'payloadManifestSha256':self.plan['staging']['manifest']['sha256'],'ready':True,'hardwareQualified':False}
@@ -158,7 +213,9 @@ class Controller:
         if any(receipt.get(key)!=value for key,value in expected.items()):raise ValueError('Bootstrap receipt identity differs')
         if target=='windows-x64'and(type(receipt.get('sessionId'))is not int or receipt['sessionId']<=0):
             raise ValueError('Windows bootstrap did not observe an interactive session')
-        agents=self.api('ssm','describe-instance-information','--filters',json.dumps([{'Key':'InstanceIds','Values':[row['instanceId']]}]))['InstanceInformationList']
+        if 'readyAtUtc'not in row:row['readyAtUtc']=utc_now();self.save()
+        agents=self.ping(target,force=True)
+        if agents is None:return False
         if not any(agent['InstanceId']==row['instanceId']and agent['PingStatus']=='Online'for agent in agents):return False
         self.owned_target(target)
         row['commandId']=builder_ssm.dispatch(self.plan,campaign.JOURNAL,self.api,row['instanceId'],TARGETS[target],self.plan['staging']['manifest']['sha256'])
@@ -220,6 +277,8 @@ class Controller:
                     self.save()
                 except (ValueError,RuntimeError,TimeoutError)as error:
                     row.update(state='failed',error=str(error));self.data['errors'].append({'target':target,'phase':phase,'error':str(error)})
+                    try:self.console(target,force=True,label='failure')
+                    except Exception as console_error:self.data['errors'].append({'target':target,'error':str(console_error),'scope':'console'})
                     try:self.stop_target(target)
                     except Exception as cleanup_error:self.data['errors'].append({'target':target,'error':str(cleanup_error),'scope':'termination'})
                     self.save()

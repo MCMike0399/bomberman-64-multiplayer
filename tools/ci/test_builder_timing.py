@@ -37,6 +37,26 @@ class CredentialEnvelope(unittest.TestCase):
         result=timing.grant(bad,'cleanup',now=self.now+211*60,expiration=self.expiry(271))
         self.assertEqual(result['budgetSeconds'],1200);self.assertIsNotNone(result['planEnvelopeError'])
 
+    def test_bootstrap_window_fits_the_latest_permitted_launch(self):
+        # Latest CreateStack allowed by minimumLaunchHeadroomSeconds, then a full
+        # launch grant. The 900 s bootstrap deadline still precedes the
+        # controller stop, and the core grant covers bootstrap plus the guest's
+        # 2400 s core step with its own 20-minute expiry headroom.
+        expiry=self.started.timestamp()+160*60
+        submitted=expiry-timing.MINIMUM_LAUNCH_HEADROOM_SECONDS
+        launched=submitted+timing.PHASE_SECONDS['launch']
+        bootstrap_deadline=min(launched+timing.BOOTSTRAP_SECONDS,expiry-timing.CONTROLLER_STOP_SECONDS)
+        self.assertEqual(bootstrap_deadline,launched+900)
+        core=timing.grant(self.plan,'core',now=launched,expiration=self.expiry(400))['budgetSeconds']
+        self.assertEqual(core,4800)
+        self.assertGreaterEqual(core,timing.BOOTSTRAP_SECONDS+2400)
+        self.assertEqual(expiry-timing.CONTROLLER_STOP_SECONDS-bootstrap_deadline,3900)
+        self.assertGreaterEqual(expiry-bootstrap_deadline,20*60+2400)
+        # Nominal: launch starting at job start leaves the full 90-minute core grant.
+        self.assertEqual(timing.grant(self.plan,'core',now=self.now+timing.PHASE_SECONDS['launch'],
+                                      expiration=self.expiry(400))['budgetSeconds'],5400)
+        timing.envelope(self.plan)
+
     def test_missing_or_expired_session_is_not_invented(self):
         for expiration in ('',self.expiry(-1)):
             with self.subTest(expiration=expiration),self.assertRaises(ValueError):

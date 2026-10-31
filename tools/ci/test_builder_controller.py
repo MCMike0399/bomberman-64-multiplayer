@@ -79,6 +79,81 @@ class PhaseWiring(unittest.TestCase):
                 self.session.observe_bootstrap('windows-x64')
             dispatch.assert_not_called()
 
+    def test_console_failure_marker_fails_target_fast_and_retains_console(self):
+        console={'text':'cloud-init running'};calls=[]
+        def api(*args):
+            calls.append(args[:2])
+            if args[0]=='sts':return {'Account':names.ACCOUNT}
+            if args[:2]==('ec2','get-console-output'):return {'Output':console['text']}
+            return {'InstanceInformationList':[]}
+        self.session.api=api;clock=[1000.0]
+        with patch.object(controller.time,'time',side_effect=lambda:clock[0]):
+            self.assertFalse(self.session.observe_bootstrap('linux-x64'))
+            self.assertFalse(self.session.observe_bootstrap('linux-x64'))  # Rate-limited.
+            self.assertEqual(calls.count(('ec2','get-console-output')),1)
+            clock[0]+=controller.CONSOLE_SAMPLE_SECONDS
+            console['text']='x\nSANCUS-BUILDER-BOOTSTRAP-FAILED status=100 line=12\ntail'
+            with self.assertRaisesRegex(RuntimeError,'bootstrap reported failure'):
+                self.session.observe_bootstrap('linux-x64')
+        row=self.session.data['targets']['linux-x64']
+        self.assertIn('SANCUS-BUILDER-BOOTSTRAP-FAILED',row['consoleMarkersSeen'])
+        retained=(self.root/'evidence'/'linux-x64'/'console'/'bootstrap-failed.txt').read_text()
+        self.assertIn('status=100',retained)
+        self.assertEqual(row['consoleSamples'][-1]['sha256'],__import__('hashlib').sha256(retained.encode()).hexdigest())
+
+    def test_console_read_errors_are_recorded_never_fatal_and_markers_are_recorded(self):
+        outputs=iter([RuntimeError('ec2/get-console-output: AccessDenied'),{'Output':'SANCUS-BUILDER-BOOTSTRAP-SYSTEM-READY audio gate passed'}])
+        def api(*args):
+            if args[0]=='sts':return {'Account':names.ACCOUNT}
+            if args[:2]==('ec2','get-console-output'):
+                value=next(outputs)
+                if isinstance(value,Exception):raise value
+                return value
+            return {'InstanceInformationList':[]}
+        self.session.api=api;clock=[1000.0]
+        with patch.object(controller.time,'time',side_effect=lambda:clock[0]):
+            self.assertFalse(self.session.observe_bootstrap('windows-x64'))
+            clock[0]+=controller.CONSOLE_SAMPLE_SECONDS
+            self.assertFalse(self.session.observe_bootstrap('windows-x64'))
+        row=self.session.data['targets']['windows-x64']
+        self.assertIn('AccessDenied',row['consoleSamples'][0]['error'])
+        self.assertEqual(row['consoleMarkersSeen'],['SANCUS-BUILDER-BOOTSTRAP-SYSTEM-READY'])
+
+    def test_bootstrap_wait_retains_bounded_ping_samples_and_first_ready_time(self):
+        statuses=iter(['error','missing']+['ConnectionLost']*60)
+        def api(*args):
+            if args[0]=='sts':return {'Account':names.ACCOUNT}
+            if args[:2]==('ec2','get-console-output'):return {'Output':'booting'}
+            status=next(statuses,'Online')
+            if status=='error':raise RuntimeError('ssm/describe-instance-information: throttled')
+            if status=='missing':return {'InstanceInformationList':[]}
+            return {'InstanceInformationList':[{'InstanceId':self.ids['linux-x64'],'PingStatus':status}]}
+        self.session.api=api;clock=[1000.0]
+        with patch.object(controller.time,'time',side_effect=lambda:clock[0]):
+            for _ in range(controller.PING_SAMPLE_LIMIT+10):
+                self.assertFalse(self.session.observe_bootstrap('linux-x64'))
+                self.assertFalse(self.session.observe_bootstrap('linux-x64'))  # Rate-limited: no extra API call.
+                clock[0]+=controller.PING_SAMPLE_SECONDS
+            row=self.session.data['targets']['linux-x64']
+            self.assertEqual(row['pingSampleCount'],controller.PING_SAMPLE_LIMIT+10)
+            self.assertEqual(len(row['pingSamples']),controller.PING_SAMPLE_LIMIT)
+            self.assertIn('throttled',row['pingSamples'][0]['error'])  # First observation retained.
+            self.assertEqual(row['pingSamples'][-1]['pingStatus'],'ConnectionLost')
+            self.assertNotIn('readyAtUtc',row)
+            statuses=iter([]);self.ready('linux-x64')
+            with (patch.object(controller.builder_ssm,'dispatch',return_value='command-id')as dispatch,
+                  patch.object(self.session,'owned_target',return_value=self.ids['linux-x64'])):
+                self.assertTrue(self.session.observe_bootstrap('linux-x64'))
+            dispatch.assert_called_once()
+        saved=json.loads((self.root/'controller.json').read_text())['targets']['linux-x64']
+        self.assertTrue(saved['readyAtUtc'].endswith('+00:00'))
+        self.assertEqual(saved['pingSamples'][-1]['pingStatus'],'Online')
+        self.assertEqual(saved['pingSampleCount'],controller.PING_SAMPLE_LIMIT+11)
+
+    def test_bootstrap_deadline_uses_the_reviewed_window(self):
+        self.assertEqual(controller.builder_timing.BOOTSTRAP_SECONDS,900)
+        self.assertEqual(self.session.stop,self.session.expiry-20*60)
+
     def test_failed_target_is_retained_and_terminated_without_discarding_other_core(self):
         for target in self.ids:
             self.session.data['targets'][target]['state']='running-core'
