@@ -2,6 +2,7 @@
 import argparse
 import json
 from pathlib import Path
+import re
 import subprocess
 
 import builder_namespace as names
@@ -15,6 +16,65 @@ STANDING={
 def expected_standing(arn):
     return arn in STANDING or arn.startswith(
         f'arn:aws:cloudformation:{names.REGION}:{names.ACCOUNT}:stack/{names.IDENTITY_STACK}/')
+
+
+def error_code(error):
+    code=getattr(error,'code',None)
+    if code:return str(code)
+    match=re.search(r'An error occurred \(([^)]+)\)',str(error))
+    return match[1]if match else None
+
+
+def authoritative(aws,arn):
+    """Read-only describe of one tagging-index hit. The index lags deletion, so
+    only an authoritative terminated/NotFound/DELETE_COMPLETE answer resolves it.
+    Shutting-down, existing, unknown types and every other error stay leftovers."""
+    match=re.fullmatch(r'arn:aws:([a-z0-9-]+):([a-z0-9-]*):([0-9]*):(.+)',arn)
+    if not match:return {'kind':'unparsed','authoritative':'unknown resource ARN','resolved':False}
+    service,region,account,resource=match.groups()
+    if account not in ('',names.ACCOUNT)or region not in ('',names.REGION):
+        return {'kind':service,'authoritative':'outside the pinned account/region','resolved':False}
+    def read(kind,arguments,gone,present):
+        try:data=aws(*arguments)
+        except Exception as error:
+            code=error_code(error)
+            if code in gone or (kind=='CloudFormation'and code=='ValidationError'and'does not exist'in str(error)):
+                return {'kind':kind,'authoritative':code,'resolved':True}
+            return {'kind':kind,'authoritative':'describe-error','errorCode':code,'error':str(error)[:300],'resolved':False}
+        state,resolved=present(data)
+        return {'kind':kind,'authoritative':state,'resolved':resolved}
+    exists=lambda data:('PRESENT',False)
+    def instance(data):
+        states=[row['State']['Name']for reservation in data.get('Reservations',[])for row in reservation.get('Instances',[])]
+        if len(states)!=1:return 'AMBIGUOUS:'+','.join(states),False
+        return states[0],states[0]=='terminated'
+    def stack(data):
+        states=[row.get('StackStatus')for row in data.get('Stacks',[])]
+        if len(states)!=1:return 'AMBIGUOUS',False
+        return states[0],states[0]=='DELETE_COMPLETE'
+    kind,_,name=resource.partition('/')
+    if service=='ec2'and kind=='instance':
+        return read('EC2Instance',('ec2','describe-instances','--instance-ids',name),('InvalidInstanceID.NotFound',),instance)
+    if service=='ec2'and kind=='volume':
+        return read('EBS',('ec2','describe-volumes','--volume-ids',name),('InvalidVolume.NotFound',),exists)
+    if service=='ec2'and kind=='network-interface':
+        return read('ENI',('ec2','describe-network-interfaces','--network-interface-ids',name),('InvalidNetworkInterfaceID.NotFound',),exists)
+    if service=='ec2'and kind=='security-group':
+        return read('SG',('ec2','describe-security-groups','--group-ids',name),('InvalidGroup.NotFound',),exists)
+    if service=='s3'and not region and not account and '/'not in resource:
+        return read('S3Bucket',('s3api','head-bucket','--bucket',resource,'--expected-bucket-owner',names.ACCOUNT),('NoSuchBucket','404'),exists)
+    if service=='iam'and kind=='role':
+        return read('IAMRole',('iam','get-role','--role-name',name.rsplit('/',1)[-1]),('NoSuchEntity',),exists)
+    if service=='iam'and kind=='instance-profile':
+        return read('IAMProfile',('iam','get-instance-profile','--instance-profile-name',name.rsplit('/',1)[-1]),('NoSuchEntity',),exists)
+    if service=='scheduler'and kind=='schedule'and name.count('/')==1:
+        group,schedule=name.split('/')
+        return read('SchedulerSchedule',('scheduler','get-schedule','--group-name',group,'--name',schedule),('ResourceNotFoundException',),exists)
+    if service=='scheduler'and kind=='schedule-group'and name:
+        return read('SchedulerGroup',('scheduler','get-schedule-group','--name',name),('ResourceNotFoundException',),exists)
+    if service=='cloudformation'and kind=='stack':
+        return read('CloudFormation',('cloudformation','describe-stacks','--stack-name',arn),(),stack)
+    return {'kind':service+':'+kind,'authoritative':'unknown resource type','resolved':False}
 
 
 def audit(aws,require_scoped_role=True):
@@ -51,14 +111,20 @@ def audit(aws,require_scoped_role=True):
     observe('SSMParameters',lambda:own(aws('ssm','describe-parameters','--parameter-filters',
             'Key=Name,Option=BeginsWith,Values='+names.PREFIX).get('Parameters',[]),'Name'))
     observe('SSMDocuments',lambda:own(aws('ssm','list-documents','--filters','Key=Owner,Values=Self').get('DocumentIdentifiers',[]),'Name'))
-    observe('TaggedResources',lambda:[row['ResourceARN']for row in aws('resourcegroupstaggingapi','get-resources',
-            '--tag-filters','Key='+names.RUN_TAG).get('ResourceTagMappingList',[])if not expected_standing(row['ResourceARN'])])
+    tagged=[]
+    def tagging_index():
+        hits=[row['ResourceARN']for row in aws('resourcegroupstaggingapi','get-resources',
+              '--tag-filters','Key='+names.RUN_TAG).get('ResourceTagMappingList',[])if not expected_standing(row['ResourceARN'])]
+        # Both views per ID: the (lagging) tagging index and the authoritative read.
+        tagged.extend({'id':arn,'taggingIndex':'present',**authoritative(aws,arn)}for arn in hits)
+        return [row['id']for row in tagged if not row['resolved']]
+    observe('TaggedResources',tagging_index)
     leftovers=[{'type':kind,'id':item}for kind,rows in checked.items()if rows for item in rows]
     return {'schemaVersion':1,'account':names.ACCOUNT,'region':names.REGION,'caller':caller['Arn'],
             'readOnly':True,'resourcesCreated':[],'resourcesDeleted':[],
             'checked':{kind:{'state':'unverified'if rows is None else'present'if rows else'absent','ids':rows}for kind,rows in checked.items()},
             'expectedStandingIdentity':{'stack':names.IDENTITY_STACK,'role':names.CI_ROLE,'boundary':names.BOUNDARY,'provider':'referenced existing provider'},
-            'leftovers':leftovers,'errors':errors,'passed':not leftovers and not errors,
+            'taggedResources':tagged,'leftovers':leftovers,'errors':errors,'passed':not leftovers and not errors,
             'nonResourceRecords':['CloudTrail events','SSM command history','billing data','CloudFormation DELETE_COMPLETE stack history'],
             'scope':('First live OIDC assume-role and empty discovery proof only; not a paid campaign cleanup receipt, protected-inventory comparison or game qualification.'
                      if require_scoped_role else 'Read-only operator namespace discovery; not an OIDC assume-role proof or game qualification.')}

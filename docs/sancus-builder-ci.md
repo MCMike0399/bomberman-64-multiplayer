@@ -65,8 +65,10 @@ Guest bootstrap and dispatch live in `builder_bootstrap.py` and
 to fetch the checksum-pinned CLI installer from the run bucket. That first
 GetObject request also sets ExpectedBucketOwner; no GitHub credential or public
 artifact download is needed in the guest. Linux uses its package manager for OS
-dependencies. SDKs, engine archives, wheels, client/server files and the public
-source snapshot are all staged inputs.
+dependencies and installs the official versioned AWS CLI v2 bundle (Ubuntu 24.04
+has no `awscli` package); see [bootstrap fixes](#campaign-2-attempt-2-bootstrap-fixes-2026-10-30).
+SDKs, engine archives, wheels, client/server files and the public source
+snapshot are all staged inputs.
 
 Core results use an immutable checkpoint prefix. The host must verify and retain
 that checkpoint before acknowledging it through the bucket; only then can the
@@ -327,8 +329,8 @@ list them honestly rather than claiming to delete them.
 | Spending ledger | Conservative elapsed-cost estimate |
 | --- | ---: |
 | Closed campaigns before the CI/OIDC follow-up | $4.80 |
-| New CI/OIDC campaigns launched | $0.00 |
-| Total / authorized cumulative cap | **$4.80 / $200.00** |
+| CI/OIDC campaigns (41136197647 $0.00; 41151908001 $0.71) | $0.71 |
+| Total / authorized cumulative cap | **$5.51 / $200.00** |
 
 Estimates are not invoices. `docs/sancus-builder-spend.json` is the enforced
 ledger: after each paid run a reviewed PR appends its workflow run ID and
@@ -446,6 +448,48 @@ Tests reject any non-read wildcard and any SSM parameter read.
 The free `permissions-smoke` mode proves the permissions in real AWS before any
 paid launch. Evidence is retained by the owner under
 `artifacts/qa/permission-audit-20261030/`.
+
+### Campaign 2 attempt 2 bootstrap fixes, 2026-10-30
+
+Run 41151908001 (source 454da3d, $0.71) reached neither guest's readiness.
+Linux user-data failed in 18 s: Ubuntu 24.04 has no `awscli` apt package.
+Windows rebooted with `AudioEndpointBuilder`/`Audiosrv` Manual and stopped, so
+the standard user found no default WASAPI endpoint (0x80070490). Both instances
+terminated and cleanup completed; the final sweep was red only because the
+tagging index still listed the terminated instances and their volumes.
+
+- **Linux.** User-data installs `curl`/`ca-certificates`, downloads the pinned
+  `awscli-exe-linux-x86_64-2.38.5.zip`, verifies its SHA-256 before unzip and
+  installs it root-owned under `/opt/sancus-builder/aws-cli`. User-data, setup
+  and guest helpers call that exact binary. An ERR trap copies the last 80 log
+  lines to `/dev/console` and `/dev/ttyS0` with the `SANCUS-BUILDER-BOOTSTRAP-FAILED`
+  prefix, so `get-console-output` keeps the cause after termination. Success
+  prints `SANCUS-BUILDER-BOOTSTRAP-READY`.
+- **Windows.** `tools/packaging/windows-audio.ps1` is shared by the SYSTEM
+  bootstrap, the standard-user worker and `windows-test-desktop.ps1 -VerifyOnly`.
+  SYSTEM sets both audio services Automatic, keeps the archive hash and both
+  signature pins, installs VB-CABLE and, before the reboot, requires both
+  services Automatic and Running, the VB-CABLE driver and its render endpoint
+  as the default device. The standard user repeats the gate before readiness.
+  Failures write the transcript tail to COM1 (best effort; a busy port is
+  recorded in `console-unavailable.txt`).
+- **Controller.** The bootstrap window is 900 s (`builder_timing.BOOTSTRAP_SECONDS`).
+  `controller.json` records `readyAtUtc` and a bounded series of read-only SSM
+  `PingStatus` samples per target. At the latest permitted launch the deadline
+  still leaves 3,900 s before the controller stop, inside a 4,800 s core grant.
+- **Final sweep.** A tagging-index hit counts as gone only after an
+  authoritative read: terminated/NotFound instances, NotFound
+  volume/ENI/security group, NoSuchBucket/404, NoSuchEntity, scheduler
+  ResourceNotFound, or a DELETE_COMPLETE/absent stack. Shutting-down, existing,
+  unknown and every other error remain leftovers. The read-only sweep retries
+  for up to ten minutes within the cleanup deadline. The receipt keeps both
+  views per ID (`taggedResources`) and every attempt (`sweepAttempts`).
+- **Free pre-flight.** `builder-bootstrap-preflight.yml` runs on PRs touching the
+  bootstrap or audio helpers. Linux runs the generated package/CLI section in
+  `ubuntu:24.04` plus missing-package and digest-mismatch fault controls
+  (`builder_bootstrap_preflight.py`). Windows runs the shared install and gate as
+  the runner administrator, then the gate as LocalSystem and as a new standard
+  user. Neither job uses AWS.
 
 ### User budget decision, 2026-10-30 (superseded the same evening)
 

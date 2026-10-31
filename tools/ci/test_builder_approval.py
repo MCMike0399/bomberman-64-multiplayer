@@ -76,7 +76,9 @@ class DisclosedPaidPlan(unittest.TestCase):
         import json, tempfile
         from pathlib import Path
         data = approval.ledger()
-        self.assertEqual((data['budgetUsd'], data['perRunCapUsd'], data['closedEstimateUsd']), (200, 20, 4.8))
+        self.assertEqual((data['budgetUsd'], data['perRunCapUsd'], data['closedEstimateUsd']), (200, 20, 5.51))
+        self.assertEqual([(row['workflowRunId'], row['estimateUsd']) for row in data['recordedRuns']],
+                         [('41136197647', 0.0), ('41151908001', 0.71)])
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'ledger.json'
             for change in ({'closedEstimateUsd': 4.8, 'recordedRuns': [{'workflowRunId': '7', 'estimateUsd': 5.1}]},

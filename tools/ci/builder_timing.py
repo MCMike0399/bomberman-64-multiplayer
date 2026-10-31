@@ -7,6 +7,12 @@ import time
 CLEANUP_SECONDS=1200
 MARGIN_SECONDS=900
 CREDENTIAL_MARGIN_SECONDS=120
+# Owned guest bootstrap window, measured from the end of launch inside the core
+# grant (raised from 600 after campaign 2 attempt 2; Windows reboots once).
+BOOTSTRAP_SECONDS=900
+# Controller stops collecting this long before the fixed expiry (cleanup headroom).
+CONTROLLER_STOP_SECONDS=20*60
+MINIMUM_LAUNCH_HEADROOM_SECONDS=7200
 PHASE_SECONDS={'intent':300,'intent-published':60,'launch':1200,'core':5400,'acknowledge':120,'final':5400,'terminate':300,'retain':600,'cleanup':1200}
 
 

@@ -30,6 +30,51 @@ class CompletionChecks(unittest.TestCase):
  def test_deleted_stack_record_is_complete_when_children_gone(self):self.check('terminated',False,True,True)
  def test_deleted_stack_record_does_not_hide_volume(self):self.check('terminated',True,True,True)
  def test_delete_failed_is_never_complete(self):self.check('terminated',False,True)
+class TaggingIndexSweep(unittest.TestCase):
+ def result(self,leftovers):
+  return {'checked':{},'errors':[],'leftovers':[{'type':'TaggedResources','id':item}for item in leftovers],
+          'taggedResources':[{'id':item,'taggingIndex':'present','authoritative':'shutting-down','resolved':False}for item in leftovers]}
+ def run_sweep(self,results,deadline):
+  clock=[1000.0];sleeps=[]
+  def sleep(seconds):sleeps.append(seconds);clock[0]+=seconds
+  with mock.patch.object(cleanup_verify.builder_audit,'audit',side_effect=results)as audit:
+   value=cleanup_verify.sweep(lambda *args:None,deadline,now=lambda:clock[0],sleep=sleep)
+  return value,audit.call_count,sleeps,clock[0]
+ def test_retry_then_resolve(self):
+  value,count,sleeps,_=self.run_sweep([self.result(['arn:i-1']),self.result(['arn:i-1']),self.result([])],2000+1200)
+  self.assertEqual(count,3);self.assertEqual(value['leftovers'],[])
+  self.assertEqual([row['passed']for row in value['sweepAttempts']],[False,False,True])
+  self.assertEqual(value['sweepAttempts'][0]['leftovers'],['arn:i-1'])
+ def test_retry_is_bounded_by_ten_minutes(self):
+  value,count,sleeps,end=self.run_sweep([self.result(['arn:i-1'])]*100,1000+5000)
+  self.assertLessEqual(end-1000,cleanup_verify.SWEEP_RETRY_SECONDS);self.assertEqual(count,21)
+  self.assertEqual(value['leftovers'][0]['id'],'arn:i-1')
+ def test_retry_respects_the_cleanup_deadline(self):
+  value,count,sleeps,end=self.run_sweep([self.result(['arn:i-1'])]*100,1000+200)
+  self.assertLessEqual(end,1000+200-cleanup_verify.SWEEP_DEADLINE_MARGIN_SECONDS);self.assertEqual(count,5)
+ def test_no_deadline_or_expired_deadline_is_one_attempt(self):
+  for deadline in (None,900):
+   with self.subTest(deadline=deadline):
+    _,count,sleeps,_=self.run_sweep([self.result(['arn:i-1'])]*3,deadline);self.assertEqual(count,1);self.assertEqual(sleeps,[])
+ def test_final_receipt_keeps_both_views_and_fails_closed(self):
+  arn='arn:aws:ec2:us-east-1:524329886851:instance/i-0aa4cc1ac8162d4e5'
+  with tempfile.TemporaryDirectory()as temp:
+   root=Path(temp);(root/'protected-instances.json').write_text(json.dumps([{'id':'i-protected','state':'running'}]))
+   rows=[{'event':'CREATED','type':'AWS::EC2::Instance','id':'i-own'}]
+   def api(plan,service,operation,*args,**kwargs):
+    if operation=='describe-instances':return {'Reservations':[{'Instances':[{'InstanceId':args[1],'State':{'Name':'terminated'if args[1]=='i-own'else'running'}}]}]}
+    raise AssertionError('Unexpected mock API')
+   plan={'account':'a','region':'r','runId':'run','payloadSource':'sha'}
+   for leftovers in ([arn],[]):
+    with self.subTest(leftovers=leftovers),mock.patch.object(cleanup_verify,'ROOT',root),mock.patch.object(cleanup_verify,'evidence',return_value={}),mock.patch.object(campaign,'actor'),mock.patch.object(cleanup_verify.builder_audit,'audit',return_value={**self.result(leftovers),'nonResourceRecords':[],'expectedStandingIdentity':{}}),mock.patch.object(campaign,'aws',side_effect=api),mock.patch.object(safety,'read_journal',return_value=rows),mock.patch.object(safety,'append')as appended:
+     if leftovers:
+      with self.assertRaises(RuntimeError):cleanup_verify.final(plan)
+      appended.assert_not_called()
+     else:cleanup_verify.final(plan);appended.assert_called_once()
+     receipt=json.loads((root/'cleanup-receipt.json').read_text())
+     self.assertEqual(receipt['allCreatedResourcesGone'],not leftovers)
+     self.assertEqual([(row['id'],row['taggingIndex'],row['authoritative'])for row in receipt['taggedResources']],[(item,'present','shutting-down')for item in leftovers])
+     self.assertEqual(len(receipt['sweepAttempts']),1)
 class ProtectedInventoryChecks(unittest.TestCase):
  def test_expired_terminated_record_is_reported_not_invented(self):
   changes,missing,count=cleanup_verify.protected_comparison([{'id':'old','state':'terminated'}],{})
