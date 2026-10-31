@@ -58,11 +58,13 @@ function Get-BlastAudioState {
         Where-Object { $_.PNPClass -eq 'AudioEndpoint' -or $_.PNPClass -eq 'MEDIA' } |
         ForEach-Object { [ordered]@{ class = [string]$_.PNPClass; name = [string]$_.Name; deviceId = [string]$_.DeviceID; status = [string]$_.Status } })
     $drivers = @(Get-CimInstance Win32_PnPSignedDriver -ErrorAction SilentlyContinue |
-        Where-Object { [string]$_.DeviceName -match 'VB-Audio Virtual Cable' } |
+        Where-Object { [string]$_.DeviceName -match 'VB-Audio\s*Virtual\s*Cable' } |
         ForEach-Object { [ordered]@{ device = [string]$_.DeviceName; version = [string]$_.DriverVersion; inf = [string]$_.InfName; signer = [string]$_.Signer } })
-    $driverDevices = @($devices | Where-Object { $_.class -eq 'MEDIA' -and $_.name -match 'VB-Audio Virtual Cable' -and $_.status -eq 'OK' })
-    # Render endpoints are SWD\MMDEVAPI\{0.0.0.00000000}.{GUID}; capture uses {0.0.1...}.
-    $cable = @($devices | Where-Object { $_.class -eq 'AudioEndpoint' -and $_.name -match '^CABLE Input' -and $_.status -eq 'OK' -and
+    # VB-CABLE 4.5 names its device 'VB-Audio VirtualCable' (pre-flight run 41157011245).
+    $driverDevices = @($devices | Where-Object { $_.class -eq 'MEDIA' -and $_.name -match 'VB-Audio\s*Virtual\s*Cable' -and $_.status -eq 'OK' })
+    # Render endpoints are SWD\MMDEVAPI\{0.0.0.00000000}.{GUID}; capture uses {0.0.1...}. VB-CABLE 4.5
+    # exposes its render endpoints as 'Speakers (VB-Audio Virtual Cable)' and 'CABLE In 16 Ch (...)'.
+    $cable = @($devices | Where-Object { $_.class -eq 'AudioEndpoint' -and $_.name -match '\(VB-Audio Virtual Cable\)$' -and $_.status -eq 'OK' -and
         $_.deviceId -match '^SWD\\MMDEVAPI\\\{0\.0\.0\.00000000\}\.' })
     $isDefault = $false
     if ($result -eq 0 -and $id) {
