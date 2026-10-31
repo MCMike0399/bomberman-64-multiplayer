@@ -27,6 +27,9 @@ import builder_timing
 TARGETS={'linux-x64':'Linux','windows-x64':'Windows'}
 PING_SAMPLE_SECONDS=30
 PING_SAMPLE_LIMIT=40
+CONSOLE_SAMPLE_SECONDS=60
+BOOTSTRAP_FAILED_MARKER='SANCUS-BUILDER-BOOTSTRAP-FAILED'
+CONSOLE_MARKERS=('SANCUS-BUILDER-BOOTSTRAP-FAILED','SANCUS-BUILDER-BOOTSTRAP-READY','SANCUS-BUILDER-BOOTSTRAP-SYSTEM-READY')
 
 
 def utc_now():return datetime.datetime.now(datetime.timezone.utc).isoformat()
@@ -61,7 +64,7 @@ class Controller:
         self.plan=json.loads(campaign.PLAN.read_text());self.operator=operator
         self.expiry=datetime.datetime.fromisoformat(self.plan['fixedCampaignExpiryUtc']).timestamp()
         self.stop=self.expiry-builder_timing.CONTROLLER_STOP_SECONDS
-        self.ping_sampled={}
+        self.ping_sampled={};self.console_sampled={}
         self.api=lambda *args:campaign.aws(self.plan,*args)
         self.client=builder_s3.Objects(self.api,self.plan['runId'])
         path=self.root/'controller.json'
@@ -173,11 +176,35 @@ class Controller:
         self.save()
         return agents
 
+    def console(self,target,force=False,label='latest'):
+        """Read-only guest console capture: retained as evidence, markers recorded per target."""
+        row=self.data['targets'][target];now=time.time()
+        if not force and now-self.console_sampled.get(target,0)<CONSOLE_SAMPLE_SECONDS:return None
+        self.console_sampled[target]=now
+        sample={'atUtc':utc_now(),'label':label}
+        try:
+            text=self.api('ec2','get-console-output','--instance-id',row['instanceId'],'--latest').get('Output')or''
+        except Exception as error:
+            sample['error']=str(error)[:300];row.setdefault('consoleSamples',[]).append(sample);self.save();return None
+        destination=self.root/'evidence'/target/'console';destination.mkdir(parents=True,exist_ok=True)
+        (destination/(label+'.txt')).write_text(text)
+        seen=[marker for marker in CONSOLE_MARKERS if marker in text]
+        sample.update(bytes=len(text.encode()),sha256=hashlib.sha256(text.encode()).hexdigest(),markers=seen)
+        row.setdefault('consoleSamples',[]).append(sample)
+        row['consoleMarkersSeen']=sorted(set(row.get('consoleMarkersSeen',[]))|set(seen))
+        if len(row['consoleSamples'])>PING_SAMPLE_LIMIT:del row['consoleSamples'][1:len(row['consoleSamples'])-PING_SAMPLE_LIMIT+1]
+        self.save()
+        return text
+
     def observe_bootstrap(self,target):
         row=self.data['targets'][target]
         receipt=self.read_object('results/'+target+'/bootstrap-ready.json',self.root/'observations'/target/'bootstrap-ready.json')
         if receipt is None:
             self.ping(target)  # Diagnostic only while waiting; errors are recorded, never fatal.
+            text=self.console(target)
+            if text is not None and BOOTSTRAP_FAILED_MARKER in text:
+                self.console(target,force=True,label='bootstrap-failed')
+                raise RuntimeError('Guest bootstrap reported failure on its console')
             return False
         expected={'runId':self.plan['runId'],'source':self.plan['payloadSource'],'target':target,'instanceId':row['instanceId'],
                   'account':self.plan['account'],'region':self.plan['region'],
@@ -250,6 +277,8 @@ class Controller:
                     self.save()
                 except (ValueError,RuntimeError,TimeoutError)as error:
                     row.update(state='failed',error=str(error));self.data['errors'].append({'target':target,'phase':phase,'error':str(error)})
+                    try:self.console(target,force=True,label='failure')
+                    except Exception as console_error:self.data['errors'].append({'target':target,'error':str(console_error),'scope':'console'})
                     try:self.stop_target(target)
                     except Exception as cleanup_error:self.data['errors'].append({'target':target,'error':str(cleanup_error),'scope':'termination'})
                     self.save()

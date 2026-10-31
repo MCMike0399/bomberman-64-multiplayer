@@ -41,6 +41,8 @@ class PermissionAuditCases(unittest.TestCase):
         self.assertIn(('no-ssm-secrets','ssm:GetParameter'),[(row[0],row[1])for row in rows])
         self.assertIn(('owned-group-delete-wildcard',True),[(row[0],row[4])for row in rows])
         names={(row[0],row[4])for row in rows}
+        for allowed,name in ((True,'owned-console-output'),(False,'untagged-console-output'),(False,'foreign-run-console-output'),(False,'sancus-runner-console-output')):
+            self.assertIn((name,allowed),names)
         for allowed in ('owned-group-delete-wildcard','owned-group-any-name-create','owned-group-any-name-delete'):
             self.assertIn((allowed,True),names)
         for scope in ('default-group','default-named','foreign-group','foreign-named'):
