@@ -146,6 +146,28 @@ def scene(directory, stage):
         raise ValueError('Missing/invalid scene evidence for ' + stage + ': ' + str(error)) from error
 
 
+def multimesh_buffers(description, blob):
+    """Every MultiMesh must retain its complete instance buffer; an empty one compares equal everywhere."""
+    def scalar(value, kind):
+        require(isinstance(value, dict) and value.get('type') == kind and isinstance(value.get('data'), dict), 'Invalid MultiMesh property')
+        data = value['data']; raw = blob[data['offset']:data['offset'] + data['length']]
+        require(len(raw) == 8, 'Invalid MultiMesh property encoding')
+        return struct.unpack_from('<i', raw, 4)[0]
+    for resource in description['resources']:
+        if resource.get('type') != 'MultiMesh': continue
+        values = {row.get('name'): row.get('value') for row in resource.get('properties', [])}
+        try:
+            count = scalar(values['instance_count'], 'Int')
+            stride = (12 if scalar(values['transform_format'], 'Int') == 1 else 8) + \
+                4 * scalar(values['use_colors'], 'Bool') + 4 * scalar(values['use_custom_data'], 'Bool')
+            buffer = values['buffer']
+        except KeyError as error:
+            raise ValueError('Incomplete MultiMesh properties: ' + str(error)) from error
+        require(isinstance(buffer, dict) and buffer.get('type') == 'PackedFloat32Array' and
+                buffer['data']['length'] == 8 + 4 * count * stride,
+                'MultiMesh ' + str(resource.get('id')) + ' does not retain its complete instance buffer')
+
+
 def inventory(directory, label='base-a', binding=None):
     """Validate the exact raw binding and every segment before comparing this trial."""
     path = directory / ('parity-' + label + '-inventory.json')
@@ -180,6 +202,7 @@ def inventory(directory, label='base-a', binding=None):
         require(start == cursor, 'Inventory has overlapping or unclassified bytes')
         cursor = end
     require(cursor == len(blob), 'Inventory binary has an unclassified tail')
+    multimesh_buffers(description, blob)
     return description, blob
 
 

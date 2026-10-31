@@ -35,7 +35,7 @@ public partial class TempleStageView
         }
         const int count=1500;
         var grass=new MultiMesh{TransformFormat=MultiMesh.TransformFormatEnum.Transform3D,UseColors=true,Mesh=mesh,InstanceCount=count};
-        var random=new Random(364);
+        var random=new Random(364);var buffer=new float[count*MultiMeshPacking.Stride];
         for(int i=0;i<count;i++)
         {
             // Keep front grass short and sparse so the court remains the focal point.
@@ -44,10 +44,12 @@ public partial class TempleStageView
             while(x>-.75f&&x<Width+.75f&&z>-.75f&&z<Depth+.75f||Math.Abs(z+3.4f)<1.15f);
             float h=.24f+(float)random.NextDouble()*.38f;
             if(z>Depth)h*=.65f;
-            var basis=Basis.FromEuler(new(0,(float)random.NextDouble()*Mathf.Tau,0)).Scaled(new(.7f,h,.7f));
-            grass.SetInstanceTransform(i,new(basis,new(x,-.24f,z)));
-            grass.SetInstanceColor(i,new Color(.88f+(float)random.NextDouble()*.12f,1,.9f,1));
+            // Managed sin/cos: Basis.FromEuler goes through each OS's libm.
+            var (s,c)=PresentationMath.SinCos((float)random.NextDouble()*Mathf.Tau);
+            var basis=new Basis(c,0,s,0,1,0,-s,0,c).Scaled(new(.7f,h,.7f));
+            MultiMeshPacking.Write(buffer,i,new(basis,new(x,-.24f,z)),new Color(.88f+(float)random.NextDouble()*.12f,1,.9f,1));
         }
+        grass.Buffer=buffer;
         _scenery!.AddChild(new MultiMeshInstance3D{Name="WindGrass",Multimesh=grass,MaterialOverride=WindPaint(new("76a747"),true),
             CastShadow=GeometryInstance3D.ShadowCastingSetting.Off,ExtraCullMargin=.3f});
 

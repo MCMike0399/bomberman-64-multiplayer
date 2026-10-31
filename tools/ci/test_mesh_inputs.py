@@ -1,6 +1,7 @@
 import gzip
 import hashlib
 import json
+import struct
 from pathlib import Path
 import tempfile
 import unittest
@@ -108,3 +109,34 @@ class MeshInputTests(unittest.TestCase):
                 {'binary': 'parity-base-a-inventory.bin', 'unsupported': [], 'nodes': [], 'resources': []}))
         with self.assertRaisesRegex(ValueError, 'Empty/incomplete scene inventory'):
             mesh_inputs.compare_captured(self.root/'a', self.root/'b', self.root/'out')
+
+    def multimesh_fixture(self, path, floats):
+        """One Transform3D+color MultiMesh of two instances (32 floats when complete)."""
+        self.canonical_fixture(path)
+        blob = bytearray(); properties = []
+        def put(name, kind, raw):
+            properties.append({'name': name, 'value': {'type': kind, 'data': {
+                'offset': len(blob), 'length': len(raw), 'sha256': hashlib.sha256(raw).hexdigest()}}}); blob.extend(raw)
+        put('buffer', 'PackedFloat32Array', struct.pack('<ii', 32, len(floats)) + struct.pack('<%df' % len(floats), *floats))
+        put('instance_count', 'Int', struct.pack('<ii', 2, 2))
+        put('transform_format', 'Int', struct.pack('<ii', 2, 1))
+        put('use_colors', 'Bool', struct.pack('<ii', 1, 1))
+        put('use_custom_data', 'Bool', struct.pack('<ii', 1, 0))
+        for label in mesh_inputs.TRIALS:
+            (path/('parity-'+label+'-inventory.bin')).write_bytes(bytes(blob))
+            (path/('parity-'+label+'-inventory.json')).write_text(json.dumps({
+                'binary': 'parity-'+label+'-inventory.bin', 'unsupported': [], 'nodes': [{'mesh': {'reference': 0}}],
+                'resources': [{'id': 0, 'type': 'MultiMesh', 'properties': properties}]}))
+
+    def test_empty_multimesh_buffers_cannot_compare_equal(self):
+        for name in ('a', 'b'): self.multimesh_fixture(self.root/name, [])
+        with self.assertRaisesRegex(ValueError, 'complete instance buffer'):
+            mesh_inputs.compare_captured(self.root/'a', self.root/'b', self.root/'out')
+
+    def test_one_float_step_in_a_multimesh_basis_is_a_difference(self):
+        rotation = [float(i) / 7 for i in range(32)]
+        stepped = list(rotation); stepped[2] = struct.unpack('<f', struct.pack('<i', struct.unpack('<i', struct.pack('<f', stepped[2]))[0] + 1))[0]
+        self.multimesh_fixture(self.root/'a', rotation); self.multimesh_fixture(self.root/'b', rotation)
+        self.assertEqual(mesh_inputs.compare_captured(self.root/'a', self.root/'b', self.root/'same'), 0)
+        self.multimesh_fixture(self.root/'c', stepped)
+        self.assertEqual(mesh_inputs.compare_captured(self.root/'a', self.root/'c', self.root/'step'), 1)

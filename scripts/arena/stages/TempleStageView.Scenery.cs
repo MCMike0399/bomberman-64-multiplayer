@@ -464,13 +464,15 @@ public partial class TempleStageView
         var random=new Random(seed);
         var multimesh=new MultiMesh{TransformFormat=MultiMesh.TransformFormatEnum.Transform3D,UseColors=true,
             Mesh=PrimitiveTemplates.Get("SphereMesh",("radius",.5f),("height",1),("radial_segments",6),("rings",3)),InstanceCount=count};
+        var buffer=new float[count*MultiMeshPacking.Stride];
         for(int i=0;i<count;i++)
         {
             float size=.08f+(float)random.NextDouble()*(.1f+(i%17==0?.18f:0));
             var at=new Vector3(((float)random.NextDouble()-.5f)*spread,-(float)random.NextDouble()*depth,((float)random.NextDouble()-.5f)*spread);
-            multimesh.SetInstanceTransform(i,new Transform3D(Basis.Identity.Scaled(Vector3.One*size),at));
-            multimesh.SetInstanceColor(i,i%5==0?new Color("ffe9b8"):i%7==0?new Color("b8d4ff"):new Color("ffffff"));
+            MultiMeshPacking.Write(buffer,i,new Transform3D(Basis.Identity.Scaled(Vector3.One*size),at),
+                i%5==0?new Color("ffe9b8"):i%7==0?new Color("b8d4ff"):new Color("ffffff"));
         }
+        multimesh.Buffer=buffer;
         var material=new StandardMaterial3D{ShadingMode=BaseMaterial3D.ShadingModeEnum.Unshaded,VertexColorUseAsAlbedo=true,DisableFog=true};
         parent.AddChild(new MultiMeshInstance3D{Name="Starfield",Multimesh=multimesh,MaterialOverride=material,Position=center,
             CastShadow=GeometryInstance3D.ShadowCastingSetting.Off});

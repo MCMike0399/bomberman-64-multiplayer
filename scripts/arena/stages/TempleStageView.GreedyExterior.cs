@@ -39,11 +39,15 @@ public partial class TempleStageView
 
         // Four broad banks leave a quiet reservoir band around the fortress.
         // Their top is below every playable floor, including the bottom chamber.
+        // Bank faces stop inside the quay boxes (set back by BankSetback) so the
+        // masonry face is the only surface on the water plane; coplanar faces
+        // resolved differently on 24-bit and 32-bit float depth buffers.
         float x0=-4.2f,x1=Width+4.2f,z0=-4.2f,z1=Depth+4.2f;
-        Box(_greedyExterior,new(x0-40,-1.4f,cz),new(80,1.4f,160),grass);
-        Box(_greedyExterior,new(x1+40,-1.4f,cz),new(80,1.4f,160),grass);
-        Box(_greedyExterior,new(cx,-1.4f,z0-40),new(x1-x0,1.4f,80),grass);
-        Box(_greedyExterior,new(cx,-1.4f,z1+40),new(x1-x0,1.4f,80),grass);
+        const float BankSetback=.9f;
+        Box(_greedyExterior,new(x0-BankSetback-40,-1.4f,cz),new(80,1.4f,160),grass);
+        Box(_greedyExterior,new(x1+BankSetback+40,-1.4f,cz),new(80,1.4f,160),grass);
+        Box(_greedyExterior,new(cx,-1.4f,z0-BankSetback-40),new(x1-x0+2*BankSetback,1.4f,80),grass);
+        Box(_greedyExterior,new(cx,-1.4f,z1+BankSetback+40),new(x1-x0+2*BankSetback,1.4f,80),grass);
         foreach(float x in new[]{x0-.9f,x1+.9f})
         {
             Box(_greedyExterior,new(x,-1.30f,cz),new(1.8f,1.2f,Depth+12),quay);

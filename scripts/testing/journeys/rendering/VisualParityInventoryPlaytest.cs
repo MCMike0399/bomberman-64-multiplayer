@@ -38,6 +38,11 @@ public partial class PlaytestDriver
                 int id=resources.Count;ids.Add(resource.GetInstanceId(),id);
                 var record=new Dictionary<string,object?>{{"id",id},{"type",resource.GetClass()},{"path",resource.ResourcePath}};resources.Add(record);
                 if(resource is PrimitiveMesh)unsupported.Add("runtime primitive mesh: "+resource.GetClass());
+                // Per-instance setters leave the headless buffer empty; only a complete
+                // buffer makes instance transforms and colors comparable inputs.
+                if(resource is MultiMesh multimesh&&multimesh.Buffer.Length!=multimesh.InstanceCount*
+                   ((multimesh.TransformFormat==MultiMesh.TransformFormatEnum.Transform3D?12:8)+(multimesh.UseColors?4:0)+(multimesh.UseCustomData?4:0)))
+                    unsupported.Add("unretained MultiMesh instance buffer: "+multimesh.Buffer.Length+" floats for "+multimesh.InstanceCount+" instances");
                 if(resource is Texture2D texture)
                 {
                     using var image=texture.GetImage();

@@ -4,7 +4,7 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[2]
 INVENTORY=Path('tools/ci/mesh_producers.json')
 TOKENS=re.compile(r'(?s)\"\"\".*?\"\"\"|@\"(?:\"\"|[^\"])*\"|\"(?:\\.|[^\"\\])*\"|//[^\n]*|/\*.*?\*/')
-PATTERN=re.compile(r'\b(?:ArrayMesh|SurfaceTool|ImmediateMesh|MeshLibrary)\s+\w+\s*=\s*new\s*\(|\bnew\s+(?:Godot\.)?(?:ArrayMesh|SurfaceTool|ImmediateMesh|MeshLibrary|SphereMesh|CylinderMesh|TorusMesh|BoxMesh|PlaneMesh|QuadMesh|CapsuleMesh|PrismMesh)\s*\(|\bPrimitiveTemplates\.(?:Get|With)\s*\(|\bResourceLoader\.Load\s*<\s*(?:ArrayMesh|Mesh|MeshLibrary)\s*>\s*\(|\b\w+\.(?:Commit|AddSurfaceFromArrays|MeshCreate|MeshAddSurface|Duplicate)\s*\(|\b(?:Box|Sphere|Cylinder|Cone|RoundedBox|Taper|Bead|ChamferBox)\s*\(')
+PATTERN=re.compile(r'\b(?:ArrayMesh|SurfaceTool|ImmediateMesh|MeshLibrary)\s+\w+\s*=\s*new\s*\(|\bnew\s+(?:Godot\.)?(?:ArrayMesh|SurfaceTool|ImmediateMesh|MeshLibrary|SphereMesh|CylinderMesh|TorusMesh|BoxMesh|PlaneMesh|QuadMesh|CapsuleMesh|PrismMesh)\s*\(|\bPrimitiveTemplates\.(?:Get|With)\s*\(|\bResourceLoader\.Load\s*<\s*(?:ArrayMesh|Mesh|MeshLibrary)\s*>\s*\(|\b\w+\.(?:Commit|AddSurfaceFromArrays|MeshCreate|MeshAddSurface|Duplicate|SetInstanceTransform|SetInstanceColor|SetInstanceCustomData)\s*\(|\b(?:Box|Sphere|Cylinder|Cone|RoundedBox|Taper|Bead|ChamferBox)\s*\(')
 
 def sites(root=ROOT):
     result=[]
