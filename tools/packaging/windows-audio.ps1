@@ -47,6 +47,41 @@ public static class BlastAudioState {
 '@
 }
 
+# Pinned inside the reviewed archive ($BlastAudioArchiveSha256): INF vbMmeCable64_win10.inf,
+# DriverVer 3.3.1.7, CatalogFile vbaudio_cable64_win10.cat with this SHA-256.
+$BlastAudioInfName = 'vbMmeCable64_win10.inf'
+$BlastAudioCatalogName = 'vbaudio_cable64_win10.cat'
+$BlastAudioCatalogSha256 = '0a921ebadbe39cf3fa7c14ff37d1ca22565a9651244bd3ac177dc810bc99072e'
+$BlastAudioDriverVersion = '3.3.1.7'
+
+function Get-BlastAudioDriver([string]$InstanceId) {
+    $row = [ordered]@{ instanceId = $InstanceId; pinned = $false }
+    try {
+        $properties = @(Get-PnpDeviceProperty -InstanceId $InstanceId -KeyName 'DEVPKEY_Device_DriverInfPath','DEVPKEY_Device_DriverVersion','DEVPKEY_Device_DriverProvider' -ErrorAction Stop)
+        $value = { param($key) ($properties | Where-Object { $_.KeyName -eq $key } | Select-Object -First 1).Data }
+        $row.inf = [string](& $value 'DEVPKEY_Device_DriverInfPath')
+        $row.version = [string](& $value 'DEVPKEY_Device_DriverVersion')
+        $row.provider = [string](& $value 'DEVPKEY_Device_DriverProvider')
+        $installed = Join-Path $env:windir ('INF\' + $row.inf)
+        $installedHash = (Get-FileHash -Algorithm SHA256 $installed -ErrorAction Stop).Hash
+        $repository = Join-Path $env:windir 'System32\DriverStore\FileRepository'
+        $package = @(Get-ChildItem $repository -Directory -Filter ($BlastAudioInfName.ToLowerInvariant() + '_*') -ErrorAction Stop |
+            Where-Object { (Test-Path (Join-Path $_.FullName $BlastAudioInfName)) -and
+                (Get-FileHash -Algorithm SHA256 (Join-Path $_.FullName $BlastAudioInfName)).Hash -eq $installedHash })
+        $row.packages = @($package | ForEach-Object { $_.Name })
+        if ($package.Count -eq 1) {
+            $catalog = Join-Path $package[0].FullName $BlastAudioCatalogName
+            $row.catalogSha256 = (Get-FileHash -Algorithm SHA256 $catalog -ErrorAction Stop).Hash.ToLowerInvariant()
+            $signature = Get-AuthenticodeSignature $catalog
+            $row.catalogSignature = [string]$signature.Status
+            $row.catalogPublisher = [string]$signature.SignerCertificate.Subject
+            $row.pinned = ($row.catalogSha256 -eq $BlastAudioCatalogSha256 -and $row.catalogSignature -eq 'Valid' -and
+                $row.catalogPublisher -match 'Microsoft Windows Hardware Compatibility Publisher' -and $row.version -eq $BlastAudioDriverVersion)
+        }
+    } catch { $row.error = [string]$_.Exception.Message }
+    $row
+}
+
 function Get-BlastAudioState {
     $services = @(foreach ($name in $BlastAudioServices) {
         $service = Get-Service -Name $name
@@ -57,11 +92,11 @@ function Get-BlastAudioState {
     $devices = @(Get-CimInstance Win32_PnPEntity -ErrorAction SilentlyContinue |
         Where-Object { $_.PNPClass -eq 'AudioEndpoint' -or $_.PNPClass -eq 'MEDIA' } |
         ForEach-Object { [ordered]@{ class = [string]$_.PNPClass; name = [string]$_.Name; deviceId = [string]$_.DeviceID; status = [string]$_.Status } })
-    $drivers = @(Get-CimInstance Win32_PnPSignedDriver -ErrorAction SilentlyContinue |
-        Where-Object { [string]$_.DeviceName -match 'VB-Audio\s*Virtual\s*Cable' } |
-        ForEach-Object { [ordered]@{ device = [string]$_.DeviceName; version = [string]$_.DriverVersion; inf = [string]$_.InfName; signer = [string]$_.Signer } })
     # VB-CABLE 4.5 names its device 'VB-Audio VirtualCable' (pre-flight run 41157011245).
     $driverDevices = @($devices | Where-Object { $_.class -eq 'MEDIA' -and $_.name -match 'VB-Audio\s*Virtual\s*Cable' -and $_.status -eq 'OK' })
+    # The driver is identified from that device, never by name: its installed INF must be the
+    # pinned package's vbMmeCable64_win10.inf and its catalog the pinned, Microsoft-signed catalog.
+    $drivers = @(foreach ($device in $driverDevices) { Get-BlastAudioDriver $device.deviceId })
     # Render endpoints are SWD\MMDEVAPI\{0.0.0.00000000}.{GUID}; capture uses {0.0.1...}. VB-CABLE 4.5
     # exposes its render endpoints as 'Speakers (VB-Audio Virtual Cable)' and 'CABLE In 16 Ch (...)'.
     $cable = @($devices | Where-Object { $_.class -eq 'AudioEndpoint' -and $_.name -match '\(VB-Audio Virtual Cable\)$' -and $_.status -eq 'OK' -and
@@ -78,14 +113,14 @@ function Get-BlastAudioState {
         sessionId = [Diagnostics.Process]::GetCurrentProcess().SessionId
         services = $services
         servicesAutomaticAndRunning = $servicesReady
-        virtualCableDriverInstalled = ($driverDevices.Count -ge 1 -and $drivers.Count -ge 1)
+        virtualCableDriverInstalled = ($driverDevices.Count -ge 1 -and @($drivers | Where-Object { $_.pinned }).Count -ge 1)
         virtualCableDrivers = $drivers
         virtualCableRenderEndpoints = $cable
         defaultRenderResult = ('0x{0:X8}' -f $result)
         defaultRenderId = $id
         virtualCableIsDefaultRender = $isDefault
         devices = $devices
-        passed = ($servicesReady -and $driverDevices.Count -ge 1 -and $drivers.Count -ge 1 -and $cable.Count -ge 1 -and $isDefault)
+        passed = ($servicesReady -and $driverDevices.Count -ge 1 -and @($drivers | Where-Object { $_.pinned }).Count -ge 1 -and $cable.Count -ge 1 -and $isDefault)
     }
 }
 
