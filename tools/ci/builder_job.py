@@ -7,7 +7,7 @@ from pathlib import Path
 import subprocess
 
 JOB_TIMEOUT_SECONDS=210*60
-CAMPAIGN_SECONDS=160*60
+CAMPAIGN_SECONDS=175*60  # = job timeout 210 min - cleanup 20 - margin 15 (builder_timing.envelope)
 SMOKE_TIMEOUT_SECONDS=30*60
 
 

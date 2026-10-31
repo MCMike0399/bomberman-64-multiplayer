@@ -55,14 +55,14 @@ class PhaseWiring(unittest.TestCase):
         for target in self.ids:self.ready(target);self.output(target,'core-retained')
         with (patch.object(controller.builder_ssm,'dispatch',return_value='command-id')as dispatch,
                 patch.object(self.session,'owned_target',side_effect=lambda target:self.ids[target]),
-                patch.object(controller.threading,'Event')):
+                patch.object(controller,'new_event')):
             self.session.collect('core')
         self.assertEqual(dispatch.call_count,2)
         self.session.acknowledge()
         for target in self.ids:
             self.assertIn('payload/core-retained-'+target+'.json',self.store.files)
             self.output(target,'finished')
-        with patch.object(self.session,'verify_games',return_value={})as verify,patch.object(controller.threading,'Event'):
+        with patch.object(self.session,'verify_games',return_value={})as verify,patch.object(controller,'new_event'):
             self.session.collect('final');verify.assert_called_once()
         with patch.object(controller.supervisor,'cleanup_owned',return_value={'cleanupComplete':True,'evidenceComplete':True})as cleanup:
             self.assertTrue(self.session.cleanup()['cleanupComplete']);cleanup.assert_called_once()
@@ -158,7 +158,7 @@ class PhaseWiring(unittest.TestCase):
         for target in self.ids:
             self.session.data['targets'][target]['state']='running-core'
             self.output(target,'failed'if target=='windows-x64'else'core-retained')
-        with patch.object(self.session,'stop_target')as stop,patch.object(controller.threading,'Event'):
+        with patch.object(self.session,'stop_target')as stop,patch.object(controller,'new_event'):
             with self.assertRaisesRegex(RuntimeError,'target failed'):self.session.collect('core')
         stop.assert_called_once_with('windows-x64')
         self.assertEqual(self.session.data['targets']['linux-x64']['state'],'core-retained')
@@ -208,7 +208,7 @@ class PhaseWiring(unittest.TestCase):
     def test_final_phase_cannot_substitute_finished_flags_for_receipt_validation(self):
         for target in self.ids:
             self.session.data['targets'][target]['state']='running-remaining';self.output(target,'finished')
-        with patch.object(self.session,'verify_games',side_effect=ValueError('GPU receipt hashes differ')),patch.object(controller.threading,'Event'):
+        with patch.object(self.session,'verify_games',side_effect=ValueError('GPU receipt hashes differ')),patch.object(controller,'new_event'):
             with self.assertRaisesRegex(ValueError,'hashes differ'):self.session.collect('final')
 
     def test_early_worker_exit_zero_is_still_failure_without_the_required_receipt(self):
@@ -217,7 +217,7 @@ class PhaseWiring(unittest.TestCase):
         outcome={'runId':self.plan['runId'],'source':self.plan['payloadSource'],'account':names.ACCOUNT,
                  'region':names.REGION,'instanceId':self.ids[target],'target':target,'exitCode':0}
         self.store.files['results/'+target+'/worker-exit.json']=json.dumps(outcome).encode()
-        with patch.object(self.session,'stop_target')as stop,patch.object(controller.threading,'Event'):
+        with patch.object(self.session,'stop_target')as stop,patch.object(controller,'new_event'):
             with self.assertRaisesRegex(RuntimeError,'target failed'):self.session.collect('core')
         stop.assert_called_once_with(target)
         self.assertIn('required complete receipt',self.session.data['targets'][target]['error'])

@@ -38,6 +38,62 @@ class ResultRetention(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'digest/size'):transfer.retain_results(Client(),self.plan,'linux-x64',self.manifest,destination)
             self.assertFalse((destination/'retention.json').exists())
 
+    def many(self,count=40):
+        files=[];blobs={}
+        for index in range(count):
+            data=('evidence %d\n'%index).encode();key='results/linux-x64/failed/object-%06d.bin'%index
+            blobs[key]=data
+            files.append({'path':'failed/core/file-%03d.log'%index,'objectKey':key,'size':len(data),'sha256':hashlib.sha256(data).hexdigest()})
+        return {**self.manifest,'files':files},blobs
+
+    def test_parallel_retention_verifies_every_file_keeps_order_and_records_throughput(self):
+        import threading,time
+        manifest,blobs=self.many();outer=self;state={'active':0,'peak':0};lock=threading.Lock()
+        class Client:
+            run=outer.plan['runId']
+            def call(self,operation,*args):
+                with lock:state['active']+=1;state['peak']=max(state['peak'],state['active'])
+                time.sleep(0.01);Path(args[-1]).write_bytes(blobs[args[args.index('--key')+1]])
+                with lock:state['active']-=1
+        with tempfile.TemporaryDirectory()as root:
+            result=transfer.retain_results(Client(),self.plan,'linux-x64',manifest,Path(root)/'new',workers=8)
+        self.assertGreater(state['peak'],1)
+        self.assertLessEqual(state['peak'],8)
+        self.assertEqual([row['path']for row in result['files']],[row['path']for row in manifest['files']])
+        timing=result['retentionTiming']
+        self.assertEqual((timing['workers'],timing['files'],timing['bytes']),(8,40,sum(len(b)for b in blobs.values())))
+        self.assertGreater(timing['throughputMBps'],0)
+
+    def test_one_digest_mismatch_fails_the_whole_parallel_retention(self):
+        manifest,blobs=self.many();outer=self
+        bad=manifest['files'][17]['objectKey']
+        class Client:
+            run=outer.plan['runId']
+            def call(self,operation,*args):
+                key=args[args.index('--key')+1]
+                Path(args[-1]).write_bytes(b'corrupt'if key==bad else blobs[key])
+        with tempfile.TemporaryDirectory()as root:
+            destination=Path(root)/'new'
+            with self.assertRaisesRegex(ValueError,'digest/size'):
+                transfer.retain_results(Client(),self.plan,'linux-x64',manifest,destination,workers=8)
+            self.assertFalse((destination/'retention.json').exists())
+            self.assertEqual([path for path in destination.rglob('tmp*')],[])  # no temporary leftovers
+
+    def test_one_worker_error_fails_the_whole_parallel_retention(self):
+        manifest,blobs=self.many();outer=self
+        failing=manifest['files'][5]['objectKey']
+        class Client:
+            run=outer.plan['runId']
+            def call(self,operation,*args):
+                key=args[args.index('--key')+1]
+                if key==failing:raise RuntimeError('s3api/get-object failed (InternalError)')
+                Path(args[-1]).write_bytes(blobs[key])
+        with tempfile.TemporaryDirectory()as root:
+            destination=Path(root)/'new'
+            with self.assertRaisesRegex(RuntimeError,'InternalError'):
+                transfer.retain_results(Client(),self.plan,'linux-x64',manifest,destination,workers=8)
+            self.assertFalse((destination/'retention.json').exists())
+
     def test_stale_source_run_or_target_rejected(self):
         for key,value in [('source','b'*40),('runId','old'),('target','windows-x64')]:
             manifest={**self.manifest,key:value}
