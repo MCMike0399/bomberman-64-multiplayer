@@ -72,6 +72,36 @@ class GuestProtocol(unittest.TestCase):
             ack['coreManifestSha256']='e'*64
             with self.assertRaisesRegex(ValueError,'acknowledgement'):guest.await_core_retention(Client(),root,task,'d'*64)
 
+    def test_access_denied_before_the_ack_exists_is_pending_and_recorded(self):
+        # Campaign 2 attempt 3: without s3:ListBucket a missing key answers 403, not 404.
+        task={**self.task,'expiresAtUtc':'2099-01-01T00:00:00Z'};ack={**self.task,'coreManifestSha256':'d'*64,'retained':True}
+        replies=iter(['AccessDenied','AccessDenied','NoSuchKey',None])
+        class Client:
+            def call(self,operation,*args):
+                code=next(replies)
+                if code:raise guest.builder_s3.ApiError(code)
+                Path(args[-1]).write_text(json.dumps(ack))
+        clock=[0.0];samples=[]
+        with tempfile.TemporaryDirectory()as root,patch.object(guest.threading.Event,'wait',lambda self,seconds:clock.__setitem__(0,clock[0]+seconds)):
+            result=guest.await_core_retention(Client(),root,task,'d'*64,now=lambda:clock[0],samples=samples)
+        self.assertTrue(result['retained'])
+        self.assertEqual([(row['code'],row['count'])for row in samples],[('AccessDenied',2),('NoSuchKey',1)])
+
+    def test_other_errors_still_fail_and_a_persistent_403_times_out_with_evidence(self):
+        task={**self.task,'expiresAtUtc':'2099-01-01T00:00:00Z'}
+        class Broken:
+            def call(self,operation,*args):raise guest.builder_s3.ApiError('InvalidAccessKeyId')
+        class Denied:
+            def call(self,operation,*args):raise guest.builder_s3.ApiError('AccessDenied')
+        with tempfile.TemporaryDirectory()as root:
+            with self.assertRaises(guest.builder_s3.ApiError):guest.await_core_retention(Broken(),root,task,'d'*64)
+            clock=[0.0]
+            with patch.object(guest.threading.Event,'wait',lambda self,seconds:clock.__setitem__(0,clock[0]+seconds)):
+                with self.assertRaisesRegex(TimeoutError,'AccessDenied'):
+                    guest.await_core_retention(Denied(),root,task,'d'*64,now=lambda:clock[0])
+            self.assertGreaterEqual(clock[0],guest.CORE_ACK_WAIT_SECONDS)
+            self.assertLessEqual(guest.CORE_ACK_WAIT_SECONDS,5400)
+
     def test_expired_window_never_starts_remaining_work(self):
         with tempfile.TemporaryDirectory()as root:
             with self.assertRaisesRegex(TimeoutError,'no long tours'):
