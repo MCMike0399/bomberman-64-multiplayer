@@ -1,0 +1,41 @@
+{
+  "title": "Blast Circuit — Make Chaos",
+  "date": "2026-10-31",
+  "video": "../../videos/blast-circuit-make-chaos.mp4",
+  "poster": "make-chaos.png",
+  "durationSeconds": 48,
+  "width": 1920,
+  "height": 1080,
+  "framesPerSecond": 30,
+  "frames": 1440,
+  "sha256": "a3a5788cb92b614a617eaac7e1d08451c22efda190137a02d0f0e6ca894d51d1",
+  "sourceRevision": "cec369f12ce48bf6133cd6aa462b572b4fa507b3",
+  "sourceVersion": "0.45.0",
+  "sourceBuild": 56,
+  "footage": "Actual local eight-seat battles with seven CPUs and ordinary-input practice. Temporary cinematic cameras observe real actors without changing authority state. All footage plays at normal speed.",
+  "arenas": [
+    "Sunken Temple",
+    "Rock Garden",
+    "Up & Down",
+    "Top Rules",
+    "Blizzard Battle",
+    "Greedy Trap"
+  ],
+  "soundtrack": {
+    "title": "All Fuse",
+    "origin": "Original synthesized electronic score",
+    "beatsPerMinute": 140
+  },
+  "fonts": [
+    "Dela Gothic One (SIL OFL)",
+    "M PLUS Rounded 1c (SIL OFL)"
+  ],
+  "validation": {
+    "decodedFrames": 1440,
+    "decodeErrors": 0,
+    "sourceToPanelScale": 1,
+    "audioIntegratedLufs": -15.5,
+    "audioTruePeakDbfs": -3.7,
+    "visualReview": "Reviewed all shots, critical full-size frames, and charge/throw/comic-reaction motion sequences."
+  }
+}

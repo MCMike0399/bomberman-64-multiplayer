@@ -2,7 +2,9 @@
 
 An original Godot C# arena battle game inspired by Bomberman 64: **2–8 participants**, local multiplayer, online rooms and CPU rivals. Carry, pump, kick and throw bombs across layered arenas, collect equipment, and survive each stage’s sudden death.
 
-![Eight-player Sunken Temple at High graphics](docs/images/release-042/scenery-sunken-temple-high.png)
+[![Watch the Make Chaos gameplay trailer](docs/media/trailer/make-chaos.png)](docs/videos/blast-circuit-make-chaos.mp4)
+
+**[Watch the gameplay trailer](docs/videos/blast-circuit-make-chaos.mp4)** — 48 seconds, six arenas, real gameplay and original music. [Capture details](docs/media/trailer/make-chaos.json).
 
 **[Download v0.44.1 for Apple Silicon](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.44.1)** · [Release verification](docs/verification.md) · [Build from source](#build-from-source)
 
