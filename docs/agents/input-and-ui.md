@@ -359,6 +359,18 @@ Use the existing arrow/A-D/controller dial navigation. `graphics-settings` check
 native selection, persistence and paused local continuity; `network` checks online
 continuity. [Rendering budgets and rationale](../graphics-research.md).
 
+On Windows, **Renderer** (Auto, Vulkan, DirectX 12) applies at the next launch. Its
+saved/error status replaces the dial caption ("Renderer · on restart" / "not saved",
+details in the tooltip) instead of adding a line, so Settings keeps one height and
+"Check now" stays inside the minimum 1024 x 640 window under every preset
+(Windows GPU run 41214884627 found the old extra line pushed it out).
+`graphics-settings` audits that window for each preset. Run it with
+`tools/playtest/run.py --qa-windows-settings-rows` to show the Windows rows on
+macOS/Linux; the flag only works with `--playtest=` and writes renderer changes to a
+scratch launcher folder. It also checks that Tab and controller focus scroll
+"Check now" into view. Esc acts in one press while a tooltip is showing: the GUI
+would otherwise spend that press dismissing it (`display-settings` covers this).
+
 **Display mode** selects Windowed or Fullscreen. **Resolution** offers Native
 (shown with the screen's pixel size; saved as Automatic) and the common 16:9/16:10
 sizes from 1280 x 720 through 3840 x 2400 that fit the current screen. Larger sizes

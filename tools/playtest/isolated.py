@@ -142,7 +142,8 @@ def prepare(args, payload, folder, network, windowed):
         engine_args += ['--write-movie', str(GUEST_OUTPUT / 'gameplay.avi')]
     (payload / 'request.json').write_text(json.dumps({
         'scenario': args.scenario, 'timeout': args.timeout, 'network': network,
-        'windowed': windowed, 'script': bool(args.script), 'coldEffects': getattr(args, 'cold_effects', False), 'engineArgs': engine_args}))
+        'windowed': windowed, 'script': bool(args.script), 'coldEffects': getattr(args, 'cold_effects', False),
+        'windowsSettingsRows': getattr(args, 'qa_windows_settings_rows', False), 'engineArgs': engine_args}))
 
 
 def run(args, folder, result, network, windowed):

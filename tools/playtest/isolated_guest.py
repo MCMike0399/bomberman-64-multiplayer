@@ -75,6 +75,8 @@ def main():
                 command.append('--playtest-file=' + str(payload / 'script.json'))
             if request.get('coldEffects'):
                 command.append('--playtest-cold-effects')
+            if request.get('windowsSettingsRows'):
+                command += ['--qa-windows-settings-rows', '--launcher-state-dir=' + str(Path(temporary) / 'launcher-state')]
             if origin:
                 command.append('--playtest-server=' + origin)
             (output / 'guest-command.json').write_text(json.dumps(command, indent=2) + '\n')
