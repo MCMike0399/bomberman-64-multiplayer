@@ -130,4 +130,30 @@ class OwnerBoundStaging(unittest.TestCase):
         aws.assert_not_called()
 
 
+class PendingObjectPolicy(unittest.TestCase):
+    """One bounded-poll step shared by the guest acknowledgement wait and controller receipts."""
+    def client(self,*codes):
+        replies=list(codes)
+        def call(operation,*arguments):
+            code=replies.pop(0)
+            if code:raise s3.ApiError(code)
+        return Mock(call=call)
+
+    def test_guest_policy_treats_missing_403_and_throttling_as_pending_with_samples(self):
+        samples=[];client=self.client('AccessDenied','AccessDenied','NoSuchKey','SlowDown',None)
+        results=[s3.fetch_if_present(client,'payload/k','/tmp/x',s3.GUEST_PENDING,samples,now=lambda:7)for _ in range(5)]
+        self.assertEqual(results,[False,False,False,False,True])
+        self.assertEqual([(row['code'],row['count'])for row in samples],[('AccessDenied',2),('NoSuchKey',1),('SlowDown',1)])
+
+    def test_any_other_code_fails_at_once(self):
+        for policy in (s3.GUEST_PENDING,s3.CONTROLLER_PENDING):
+            with self.assertRaises(s3.ApiError):s3.fetch_if_present(self.client('InvalidAccessKeyId'),'k','/tmp/x',policy,[])
+
+    def test_controller_holds_list_bucket_so_403_is_a_real_denial(self):
+        self.assertNotIn('AccessDenied',s3.CONTROLLER_PENDING);self.assertNotIn('403',s3.CONTROLLER_PENDING)
+        with self.assertRaises(s3.ApiError):s3.fetch_if_present(self.client('AccessDenied'),'k','/tmp/x',s3.CONTROLLER_PENDING,[])
+        self.assertIn('s3:ListBucket',builder_staging.BUCKET_ACTIONS)
+        self.assertNotIn('s3:ListBucket',json.dumps(builder_staging.guest_statements(RUN)))
+
+
 if __name__=='__main__':unittest.main()

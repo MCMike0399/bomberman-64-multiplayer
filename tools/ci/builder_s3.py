@@ -13,6 +13,28 @@ class ApiError(RuntimeError):
 class BucketCollision(RuntimeError):pass
 
 
+# Polled objects that may not exist yet. Guests have no s3:ListBucket, so S3 answers
+# a key that is not staged yet with 403 AccessDenied rather than 404 (runs 41178169234,
+# 41198567742). The controller holds s3:ListBucket on its bucket, so for it a 403 is a
+# real denial and fails at once. Throttling/timeouts are retried by both, and every
+# poll is bounded by its caller's deadline. Mirrors builder_bootstrap.STAGED_PENDING.
+MISSING=('NoSuchKey','404','NotFound')
+TRANSIENT=('SlowDown','RequestTimeout','ServiceUnavailable','InternalError')
+GUEST_PENDING=MISSING+('AccessDenied','403')+TRANSIENT
+CONTROLLER_PENDING=MISSING+TRANSIENT+('UnverifiedError',)
+
+
+def fetch_if_present(client,key,path,pending,samples,now=time.monotonic):
+    """One step of a bounded poll: True once fetched, False (sampled) while pending; other errors raise."""
+    try:client.call('get-object','--key',key,str(path))
+    except ApiError as error:
+        if error.code not in pending:raise
+        if not samples or samples[-1]['code']!=error.code:samples.append({'code':error.code,'count':0,'firstAtMonotonic':now()})
+        samples[-1]['count']+=1
+        return False
+    return True
+
+
 class Objects:
     """Also used by guests: no GitHub credentials and no high-level s3 cp."""
     OPERATIONS={'head-bucket','get-bucket-tagging','get-bucket-location','get-public-access-block',

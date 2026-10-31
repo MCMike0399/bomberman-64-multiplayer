@@ -119,7 +119,7 @@ def publish(client,root,descriptor,input_names,state,extra_files=()):
 CORE_ACK_WAIT_SECONDS=5400
 # Without s3:ListBucket, S3 answers a missing key with 403 AccessDenied rather than 404.
 # Until the deadline that means "not yet"; each sample is recorded (run 41178169234).
-CORE_ACK_PENDING_CODES=('NoSuchKey','404','NotFound','AccessDenied','403')
+CORE_ACK_PENDING_CODES=builder_s3.GUEST_PENDING
 
 
 def await_core_retention(client,root,descriptor,manifest_sha,now=time.monotonic,samples=None):
@@ -127,12 +127,8 @@ def await_core_retention(client,root,descriptor,manifest_sha,now=time.monotonic,
     deadline=now()+min(CORE_ACK_WAIT_SECONDS,max(0,remaining));wait=threading.Event();path=Path(root)/'core-retained-ack.json'
     samples=[]if samples is None else samples
     while now()<deadline:
-        try:client.call('get-object','--key','payload/core-retained-'+descriptor['target']+'.json',str(path))
-        except builder_s3.ApiError as error:
-            if error.code not in CORE_ACK_PENDING_CODES:raise
-            if not samples or samples[-1]['code']!=error.code:samples.append({'code':error.code,'count':0,'firstAtMonotonic':now()})
-            samples[-1]['count']+=1
-        else:
+        if builder_s3.fetch_if_present(client,'payload/core-retained-'+descriptor['target']+'.json',path,
+                                       CORE_ACK_PENDING_CODES,samples,now):
             ack=json.loads(path.read_text())
             expected={key:descriptor[key]for key in ('runId','source','target')}
             expected['coreManifestSha256']=manifest_sha
