@@ -28,6 +28,12 @@ TARGETS={'linux-x64':'Linux','windows-x64':'Windows'}
 PING_SAMPLE_SECONDS=30
 PING_SAMPLE_LIMIT=40
 CONSOLE_SAMPLE_SECONDS=60
+
+
+def new_event():
+    """Collection wait; tests patch this, never the global threading module (the
+    evidence retention thread pool needs real threading)."""
+    return threading.Event()
 BOOTSTRAP_FAILED_MARKER='SANCUS-BUILDER-BOOTSTRAP-FAILED'
 CONSOLE_MARKERS=('SANCUS-BUILDER-BOOTSTRAP-FAILED','SANCUS-BUILDER-BOOTSTRAP-READY','SANCUS-BUILDER-BOOTSTRAP-SYSTEM-READY')
 
@@ -256,7 +262,7 @@ class Controller:
 
     def collect(self,phase):
         if phase not in ('core','final'):raise ValueError('Unknown collection phase')
-        wait=threading.Event()
+        wait=new_event()
         while time.time()<self.stop:
             complete=True
             for target,row in self.data['targets'].items():

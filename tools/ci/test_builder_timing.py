@@ -18,6 +18,17 @@ class CredentialEnvelope(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'does not fit'):
             timing.envelope({**self.plan,'fixedCampaignExpiryUtc':self.expiry(190)})
 
+    def test_selected_175_minute_expiry_is_the_exact_job_envelope_boundary(self):
+        # Reviewer 2026-10-31: +175 min (was 160) = job timeout 210 - cleanup 20 - margin 15.
+        import builder_job
+        self.assertEqual(builder_job.CAMPAIGN_SECONDS+timing.CLEANUP_SECONDS+timing.MARGIN_SECONDS,builder_job.JOB_TIMEOUT_SECONDS)
+        timing.envelope({**self.plan,'fixedCampaignExpiryUtc':self.expiry(175)})
+        late=(self.started+datetime.timedelta(minutes=175,seconds=1)).isoformat()
+        with self.assertRaisesRegex(ValueError,'does not fit'):timing.envelope({**self.plan,'fixedCampaignExpiryUtc':late})
+        self.assertLessEqual(builder_job.CAMPAIGN_SECONDS,10800)  # <= 3 h lifetime rule
+        source=open(__import__('builder_trigger').__file__).read()
+        self.assertIn('timedelta(minutes=175)',source)
+
     def test_each_phase_refuses_insufficient_remaining_session_time(self):
         for phase in timing.PHASE_SECONDS:
             if phase in ('terminate','retain','cleanup'):continue

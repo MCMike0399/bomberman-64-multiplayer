@@ -67,7 +67,7 @@ if __name__=='__main__':
         refusal=builder_guard.refusal(qualification,os.environ.get('GITHUB_EVENT_NAME')=='workflow_run',os.environ.get('DIAGNOSED_FAILURE_RUN',''),
                                       builder_approval.ledger(),os.environ.get('GITHUB_RUN_ID',''))
         if refusal:approved=False;reason=refusal
-    expiry=os.environ.get('FIXED_EXPIRY','')or(datetime.datetime.now(datetime.timezone.utc)+datetime.timedelta(minutes=160)).isoformat()
+    expiry=os.environ.get('FIXED_EXPIRY','')or(datetime.datetime.now(datetime.timezone.utc)+datetime.timedelta(minutes=175)).isoformat()
     parsed=datetime.datetime.fromisoformat(expiry)
     if parsed.tzinfo is None:raise SystemExit('Fixed expiry must have a UTC offset')
     approval={}

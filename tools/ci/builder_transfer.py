@@ -1,6 +1,8 @@
 """Hash-bound per-run staging; result filenames and manifests are untrusted."""
 import hashlib
+import concurrent.futures
 import json
+import time
 import os
 from pathlib import Path, PurePosixPath
 import re
@@ -87,16 +89,20 @@ def validate_results(manifest,plan,target,max_bytes=8*1024**3):
     return rows
 
 
-def retain_results(client,plan,target,manifest,destination):
+# Campaign 2 attempt 3 retained 1,611 files (5.3 GB) one CLI process at a time in ~1 h.
+RETENTION_WORKERS=12
+
+
+def retain_results(client,plan,target,manifest,destination,workers=RETENTION_WORKERS,now=time.monotonic):
     """Receipt proves retention, never that the game assertions passed."""
     if client.run!=plan['runId']:raise ValueError('Staging run differs')
     rows=validate_results(manifest,plan,target)
     destination=Path(destination).resolve()
     # A new directory prevents symlink/path injection through a previous run.
     destination.mkdir(parents=True,exist_ok=False)
-    retained=[]
-    for item in rows:
-        path=destination/item['path'];path.parent.mkdir(parents=True,exist_ok=True)
+    for item in rows:(destination/item['path']).parent.mkdir(parents=True,exist_ok=True)
+    def fetch(item):
+        path=destination/item['path']
         with tempfile.NamedTemporaryFile(dir=path.parent,delete=False)as stream:temporary=Path(stream.name)
         try:
             client.call('get-object','--key',item['objectKey'],str(temporary))
@@ -105,9 +111,21 @@ def retain_results(client,plan,target,manifest,destination):
             temporary.replace(path)
         finally:
             temporary.unlink(missing_ok=True)
-        retained.append({**item,'localPath':str(path)})
+        return {**item,'localPath':str(path)}
+    started=now();count=max(1,min(workers,len(rows)))
+    pool=concurrent.futures.ThreadPoolExecutor(max_workers=count)
+    try:
+        futures=[pool.submit(fetch,item)for item in rows]
+        # Fail closed: the first error (or digest mismatch) fails the whole retention.
+        for future in concurrent.futures.as_completed(futures):future.result()
+        retained=[future.result()for future in futures]  # manifest order
+    finally:
+        pool.shutdown(wait=True,cancel_futures=True)
+    seconds=max(now()-started,1e-6);total=sum(item['size']for item in rows)
+    timing={'workers':count,'files':len(rows),'bytes':total,'seconds':round(seconds,3),
+            'throughputMBps':round(total/seconds/1e6,3)}
     receipt={'schemaVersion':1,'runId':plan['runId'],'source':plan['payloadSource'],
              'account':plan['account'],'region':plan['region'],'target':target,
-             'retained':True,'scope':'game-results-retention','gameVerdict':'not-inferred','files':retained}
+             'retained':True,'scope':'game-results-retention','gameVerdict':'not-inferred','retentionTiming':timing,'files':retained}
     (destination/'retention.json').write_text(json.dumps(receipt,indent=2)+'\n')
     return receipt

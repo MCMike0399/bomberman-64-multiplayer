@@ -114,13 +114,24 @@ def publish(client,root,descriptor,input_names,state,extra_files=()):
     return manifest
 
 
-def await_core_retention(client,root,descriptor,manifest_sha,now=time.monotonic):
+# The controller acknowledges only after durably retaining the guest's core evidence
+# (campaign 2 attempt 3: ~1 h for 4.9 GB). Wait up to this long, never past expiry-20 min.
+CORE_ACK_WAIT_SECONDS=5400
+# Without s3:ListBucket, S3 answers a missing key with 403 AccessDenied rather than 404.
+# Until the deadline that means "not yet"; each sample is recorded (run 41178169234).
+CORE_ACK_PENDING_CODES=('NoSuchKey','404','NotFound','AccessDenied','403')
+
+
+def await_core_retention(client,root,descriptor,manifest_sha,now=time.monotonic,samples=None):
     remaining=datetime.datetime.fromisoformat(descriptor['expiresAtUtc']).timestamp()-time.time()-20*60
-    deadline=now()+min(600,max(0,remaining));wait=threading.Event();path=Path(root)/'core-retained-ack.json'
+    deadline=now()+min(CORE_ACK_WAIT_SECONDS,max(0,remaining));wait=threading.Event();path=Path(root)/'core-retained-ack.json'
+    samples=[]if samples is None else samples
     while now()<deadline:
         try:client.call('get-object','--key','payload/core-retained-'+descriptor['target']+'.json',str(path))
         except builder_s3.ApiError as error:
-            if error.code not in ('NoSuchKey','404','NotFound'):raise
+            if error.code not in CORE_ACK_PENDING_CODES:raise
+            if not samples or samples[-1]['code']!=error.code:samples.append({'code':error.code,'count':0,'firstAtMonotonic':now()})
+            samples[-1]['count']+=1
         else:
             ack=json.loads(path.read_text())
             expected={key:descriptor[key]for key in ('runId','source','target')}
@@ -129,7 +140,7 @@ def await_core_retention(client,root,descriptor,manifest_sha,now=time.monotonic)
                 raise ValueError('Core retention acknowledgement differs from committed evidence')
             return ack
         wait.wait(min(5,max(0,deadline-now())))
-    raise TimeoutError('Core evidence was not acknowledged; no long tours started')
+    raise TimeoutError('Core evidence was not acknowledged; no long tours started; pending samples='+json.dumps(samples))
 
 
 def run(args):
@@ -188,7 +199,8 @@ def run(args):
         step('core',collector('core'),2400)
         output.write_text(json.dumps(report,indent=2)+'\n')
         publish(client,root,descriptor,input_names,'core-retained')
-        report['coreRetentionAcknowledgement']=await_core_retention(client,root,descriptor,digest(root/'result-manifest.json'))
+        report['coreAckPendingSamples']=[]
+        report['coreRetentionAcknowledgement']=await_core_retention(client,root,descriptor,digest(root/'result-manifest.json'),samples=report['coreAckPendingSamples'])
         if target=='windows-x64':
             step('installed-launcher',[sys.executable,'tools/ci/startup_guard.py','--expected-revision',descriptor['source'],
                                       '--output','artifacts/gpu-installed-startup-guard'],600)
