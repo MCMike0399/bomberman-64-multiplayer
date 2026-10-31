@@ -788,6 +788,19 @@ preserve each prop's proportions. Rock Garden uses a fixed equivalent camera
 basis and one managed projection order; fog and DOF are still derived from the
 playable bounds. Other stage camera fits retain their existing path.
 
+2026-10-31 (v0.45.0 sign-off review): the census missed Rock Garden's
+`WindGrass` MultiMesh, whose `Basis.FromEuler` yaw differed by 1–2 float steps
+on 5 Windows and 36 Linux instances. Headless capture keeps an empty buffer for
+per-instance `SetInstanceTransform`/`SetInstanceColor` writes, so the input gate
+compared empty against empty. Static MultiMeshes now fill a managed buffer through
+`MultiMeshPacking` and assign `MultiMesh.Buffer`, with yaw from
+`PresentationMath.SinCos`. The inventory writer and `mesh_inputs.py` reject any
+MultiMesh whose buffer does not hold every instance, and the producer census
+lists the remaining per-instance writers (runtime explosion effects only).
+Greedy Trap's grass banks also stop 0.9 inside the quays: their faces were
+coplanar with the quay masonry, which D32F Metal and the NVIDIA T4 resolved
+differently. Avoid coplanar faces between different materials; set the hidden one back.
+
 These edits are presentation-only. The authority assemblies, terrain layout,
 collision, physics, input protocol, presets and shaders are unchanged. M5
 before/after captures and any raw residuals require visual review before adopting
