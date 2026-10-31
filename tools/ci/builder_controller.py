@@ -140,11 +140,11 @@ class Controller:
 
     def read_object(self,key,path):
         path.parent.mkdir(parents=True,exist_ok=True)
-        try:self.client.call('get-object','--key',key,str(path))
+        # Callers poll within their phase deadline; 403 is never pending here (ListBucket held).
+        samples=self.data.setdefault('objectPollSamples',{}).setdefault(key,[])
+        try:
+            if not builder_s3.fetch_if_present(self.client,key,path,builder_s3.CONTROLLER_PENDING,samples):return None
         except subprocess.TimeoutExpired:return None
-        except builder_s3.ApiError as error:
-            if error.code in ('NoSuchKey','404','NotFound','SlowDown','RequestTimeout','UnverifiedError'):return None
-            raise
         if path.stat().st_size>16*1024*1024:raise ValueError('Control receipt exceeds its size limit')
         return json.loads(path.read_text())
 

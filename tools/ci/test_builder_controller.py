@@ -281,3 +281,18 @@ class PaidApprovalAllocationBoundary(unittest.TestCase):
         with patch.dict(os.environ,{'GITHUB_RUN_ID':'fixture-run','SANCUS_BUILDER_PAID_HOLD':'true'}),patch.object(controller,'verify_context'),patch.object(controller.campaign,'submit_intent')as submit:
             with self.assertRaisesRegex(ValueError,'hold'):self.session.launch()
             submit.assert_not_called()
+
+
+class ReceiptPolls(unittest.TestCase):
+    def test_receipt_poll_samples_404_and_fails_at_once_on_403(self):
+        from types import SimpleNamespace
+        import builder_s3
+        def owner(code):
+            def call(operation,*arguments):raise builder_s3.ApiError(code)
+            return SimpleNamespace(client=SimpleNamespace(call=call),data={})
+        with tempfile.TemporaryDirectory()as root:
+            pending=owner('NoSuchKey')
+            self.assertIsNone(controller.Controller.read_object(pending,'results/linux-x64/worker-exit.json',Path(root)/'a.json'))
+            self.assertEqual(pending.data['objectPollSamples']['results/linux-x64/worker-exit.json'][0]['code'],'NoSuchKey')
+            with self.assertRaises(builder_s3.ApiError):
+                controller.Controller.read_object(owner('AccessDenied'),'results/linux-x64/worker-exit.json',Path(root)/'b.json')

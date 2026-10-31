@@ -21,6 +21,87 @@ LINUX_AWS='/opt/sancus-builder/aws-cli/bin/aws'
 PACKAGES_BEGIN='# >>> sancus-builder:packages'
 PACKAGES_END='# <<< sancus-builder:packages'
 
+# Guests have no s3:ListBucket, so S3 answers a key the controller has not staged
+# yet with 403 AccessDenied, not 404 NoSuchKey (runs 41178169234, 41198567742).
+# Every guest object read goes through one helper per language: missing (404/403)
+# and S3 throttling/timeout codes are pending until the caller's bounded deadline,
+# each new code is sampled to staged-get-samples.log, and any other error fails at
+# once. Pinned hashes and sizes still decide content after a successful read.
+STAGED_PENDING=('NoSuchKey','404','NotFound','AccessDenied','403',
+                'SlowDown','RequestTimeout','ServiceUnavailable','InternalError')
+BASH_STAGED=r'''staged_get(){
+ local key=$1 file=$2 deadline=$((SECONDS+$3)) code='' last=''
+ while :; do
+  if "$aws" --profile sancus --region us-east-1 --cli-connect-timeout 8 --cli-read-timeout 25 s3api get-object --bucket '__BUCKET__' --expected-bucket-owner 524329886851 --key "$key" "$file" >/dev/null 2>"$root/staged-get.err"; then return 0; fi
+  code=$(sed -n 's/.*An error occurred (\([^)]*\)).*/\1/p' "$root/staged-get.err" | head -n 1)
+  case "$code" in
+   __PENDING_CASE__) ;;
+   *) cat "$root/staged-get.err" >&2; echo "Staged object $key failed: ${code:-UnverifiedError}" >&2; return 1;;
+  esac
+  if test "$code" != "$last"; then printf '%s %s %s\n' "$(date -u +%FT%TZ)" "$key" "$code" >> "$root/staged-get-samples.log"; last=$code; fi
+  if ((SECONDS >= deadline)); then echo "Timed out waiting for staged object $key; last $code" >&2; return 1; fi
+  sleep 5
+ done
+}'''.replace('__PENDING_CASE__','|'.join(STAGED_PENDING))
+PS_STAGED=r'''function Wait-StagedObject([string]$Key,[DateTime]$Until,[scriptblock]$Fetch){
+ $last=$null
+ while($true){
+  $code=& $Fetch
+  if(-not $code){return}
+  if($code -notin __PENDING_LIST__){throw "Staged object $Key failed: $code"}
+  if($code -ne $last){Add-Content "$root\staged-get-samples.log" "$([DateTime]::UtcNow.ToString('o')) $Key $code";$last=$code}
+  if([DateTime]::UtcNow -ge $Until){throw "Timed out waiting for staged object $Key; last $code"}
+  Start-Sleep -Seconds 5
+ }
+}
+function Get-StagedObject([string]$Key,[string]$File,[int]$Seconds){
+ Wait-StagedObject $Key ([DateTime]::UtcNow.AddSeconds($Seconds)) {
+  # Native stderr must not end the script under Stop; the exit code and code decide.
+  $ErrorActionPreference='Continue'
+  $text=& $aws --profile sancus --region us-east-1 --cli-connect-timeout 8 --cli-read-timeout 25 s3api get-object --bucket '__BUCKET__' --expected-bucket-owner 524329886851 --key $Key $File 2>&1 | Out-String
+  if($LASTEXITCODE -eq 0){return $null}
+  if($text -match 'An error occurred \(([^)]+)\)'){return $Matches[1]}
+  return 'UnverifiedError'
+ }
+}'''.replace('__PENDING_LIST__',','.join("'"+c+"'" for c in STAGED_PENDING))
+
+# Right after boot the instance-profile credentials can be briefly unavailable
+# through IMDSv2. Before the first staged read each OS waits (bounded) until a token
+# and the role's credentials are retrievable, records the wait, and only then lets
+# the staged-object policy fail fast on non-pending errors.
+IMDS_WAIT_SECONDS=120
+BASH_IMDS=r'''await_instance_credentials(){
+ local started=$SECONDS deadline=$((SECONDS+$1)) token role document
+ while :; do
+  if token=$(curl -fsS -m 2 -X PUT -H 'X-aws-ec2-metadata-token-ttl-seconds: 60' "$imds/latest/api/token" 2>/dev/null) &&
+     role=$(curl -fsS -m 2 -H "X-aws-ec2-metadata-token: $token" "$imds/latest/meta-data/iam/security-credentials/" 2>/dev/null) &&
+     role=${role%%$'\n'*} && test -n "$role" &&
+     document=$(curl -fsS -m 2 -H "X-aws-ec2-metadata-token: $token" "$imds/latest/meta-data/iam/security-credentials/$role" 2>/dev/null); then
+   case "$document" in *'"AccessKeyId"'*)
+    printf '%s imds-credentials ready-after-seconds %s\n' "$(date -u +%FT%TZ)" "$((SECONDS-started))" >> "$root/staged-get-samples.log"; return 0;;
+   esac
+  fi
+  if ((SECONDS >= deadline)); then echo "Instance role credentials unavailable through IMDSv2 after $1 s" >&2; return 1; fi
+  sleep 2
+ done
+}'''
+PS_IMDS=r'''function Wait-InstanceCredentials([int]$Seconds){
+ $started=[DateTime]::UtcNow;$until=$started.AddSeconds($Seconds)
+ while($true){
+  try{
+   $token=(Invoke-WebRequest -UseBasicParsing -Method Put -Uri "$imds/latest/api/token" -Headers @{'X-aws-ec2-metadata-token-ttl-seconds'='60'} -TimeoutSec 2).Content
+   $headers=@{'X-aws-ec2-metadata-token'=$token}
+   $role=([string](Invoke-WebRequest -UseBasicParsing -Uri "$imds/latest/meta-data/iam/security-credentials/" -Headers $headers -TimeoutSec 2).Content).Split("`n")[0].Trim()
+   $document=[string](Invoke-WebRequest -UseBasicParsing -Uri "$imds/latest/meta-data/iam/security-credentials/$role" -Headers $headers -TimeoutSec 2).Content
+   if($role -and $document.Contains('"AccessKeyId"')){
+    Add-Content "$root\staged-get-samples.log" "$([DateTime]::UtcNow.ToString('o')) imds-credentials ready-after-seconds $([int]([DateTime]::UtcNow-$started).TotalSeconds)";return
+   }
+  }catch{}
+  if([DateTime]::UtcNow -ge $until){throw "Instance role credentials unavailable through IMDSv2 after $Seconds s"}
+  Start-Sleep -Seconds 2
+ }
+}'''
+
 LINUX_SETUP=r'''#!/bin/bash
 set -euo pipefail
 root=/opt/sancus-builder
@@ -29,6 +110,7 @@ export AWS_CONFIG_FILE="$root/aws-config"
 export AWS_EC2_METADATA_DISABLED=false
 aws=/opt/sancus-builder/aws-cli/bin/aws
 test -x "$aws"
+__STAGED_GET__
 python3 - "$root" <<'PY'
 import json,sys
 from pathlib import Path
@@ -40,7 +122,7 @@ rows=builder_guest.validate_inputs(manifest,descriptor)
 (root/'inputs.tsv').write_text(''.join('\t'.join(str(row[key])for key in ('fileName','objectKey','sha256','size'))+'\n'for row in rows))
 PY
 while IFS=$'\t' read -r file key sha size; do
- "$aws" --profile sancus --region us-east-1 --cli-connect-timeout 8 --cli-read-timeout 25 s3api get-object --bucket '__BUCKET__' --expected-bucket-owner 524329886851 --key "$key" "$root/cache/$file" >/dev/null
+ staged_get "$key" "$root/cache/$file" 60
  test "$(stat -c %s "$root/cache/$file")" = "$size"
  printf '%s  %s\n' "$sha" "$root/cache/$file" | sha256sum -c -
 done < "$root/inputs.tsv"
@@ -68,6 +150,7 @@ chmod -R go-w "$root/aws-cli"
 printf 'bootstrap-ready; desktop and hardware NOT YET QUALIFIED\n' > "$root/bootstrap.status"
 runuser -u ubuntu -- env AWS_CONFIG_FILE="$root/aws-config" "$root/venv/bin/python" "$root/bin/builder_guest_ready.py" --manifest "$root/manifest.json" --target linux-x64 --output "$root/bootstrap-ready.json"
 '''
+LINUX_SETUP=LINUX_SETUP.replace('__STAGED_GET__',BASH_STAGED)
 
 LINUX_DISPATCH=r'''#!/bin/bash
 set -euo pipefail
@@ -92,6 +175,7 @@ WINDOWS_SETUP=r'''$ErrorActionPreference='Stop'
 $root='C:\sancus-builder'
 $env:AWS_CONFIG_FILE="$root\aws-config"
 $aws='C:\Program Files\Amazon\AWSCLIV2\aws.exe'
+__STAGED_GET_PS__
 $manifest=Get-Content "$root\manifest.json" -Raw | ConvertFrom-Json
 if($manifest.account -ne '524329886851' -or $manifest.region -ne 'us-east-1'){throw 'Wrong guest manifest account'}
 $rows=@($manifest.files | Where-Object { $_.target -in 'all','windows-x64' })
@@ -101,8 +185,8 @@ foreach($row in $rows){
  if($names.ContainsKey($row.fileName.ToLowerInvariant())){throw 'Repeated input name'}
  $names[$row.fileName.ToLowerInvariant()]=$true
  $file=Join-Path "$root\cache" $row.fileName
- & $aws --profile sancus --region us-east-1 --cli-connect-timeout 8 --cli-read-timeout 25 s3api get-object --bucket '__BUCKET__' --expected-bucket-owner 524329886851 --key $row.objectKey $file | Out-Null
- if($LASTEXITCODE -ne 0 -or (Get-Item $file).Length -ne $row.size -or (Get-FileHash -Algorithm SHA256 $file).Hash.ToLowerInvariant() -ne $row.sha256){throw 'Frozen bootstrap input differs'}
+ Get-StagedObject $row.objectKey $file 60
+ if((Get-Item $file).Length -ne $row.size -or (Get-FileHash -Algorithm SHA256 $file).Hash.ToLowerInvariant() -ne $row.sha256){throw 'Frozen bootstrap input differs'}
 }
 function InputFile($role){
  $values=@($rows | Where-Object { $_.role -eq $role })
@@ -151,6 +235,7 @@ Set-Content "$root\bootstrap.status" 'driver installed; rebooting into owned sta
 if(-not(Write-BlastConsole @('SANCUS-BUILDER-BOOTSTRAP-SYSTEM-READY audio gate passed; rebooting into the standard-user desktop'))){Set-Content "$root\console-unavailable.txt" 'SYSTEM-READY marker not written'}
 Restart-Computer -Force
 '''
+WINDOWS_SETUP=WINDOWS_SETUP.replace('__STAGED_GET_PS__',PS_STAGED)
 
 WINDOWS_DISPATCH=r'''param([Parameter(Mandatory=$true)][string]$Descriptor)
 $ErrorActionPreference='Stop'
@@ -245,13 +330,13 @@ aws=/opt/sancus-builder/aws-cli/bin/aws
 __PACKAGES_END__
 printf '[profile sancus]\nregion=us-east-1\n' > "$root/aws-config"
 export AWS_CONFIG_FILE="$root/aws-config"
-bootstrap_deadline=$((SECONDS+300))
-while ((SECONDS < bootstrap_deadline)); do
- if "$aws" --profile sancus --region us-east-1 --cli-connect-timeout 8 --cli-read-timeout 25 s3api get-object --bucket '__BUCKET__' --expected-bucket-owner 524329886851 --key payload/bootstrap.zip "$root/bootstrap.zip" >/dev/null; then break; fi
- sleep 5
-done
+__STAGED_GET__
+__IMDS_WAIT__
+imds=http://169.254.169.254
+await_instance_credentials __IMDS_SECONDS__
+staged_get payload/bootstrap.zip "$root/bootstrap.zip" 300
 printf '%s  %s\n' '__HELPER_SHA__' "$root/bootstrap.zip" | sha256sum -c -
-"$aws" --profile sancus --region us-east-1 --cli-connect-timeout 8 --cli-read-timeout 25 s3api get-object --bucket '__BUCKET__' --expected-bucket-owner 524329886851 --key payload/manifest.json "$root/manifest.json" >/dev/null
+staged_get payload/manifest.json "$root/manifest.json" 60
 printf '%s  %s\n' '__MANIFEST_SHA__' "$root/manifest.json" | sha256sum -c -
 unzip -q "$root/bootstrap.zip" -d "$root/bin"
 chmod 700 "$root/bin/dispatch"
@@ -285,16 +370,21 @@ $client=[Amazon.S3.AmazonS3Client]::new($config)
 $request=[Amazon.S3.Model.GetObjectRequest]::new()
 $request.BucketName='__BUCKET__';$request.Key='payload/bootstrap-awscli.msi'
 $request.ExpectedBucketOwner='524329886851'
-$bootstrapDeadline=[DateTime]::UtcNow.AddMinutes(5)
-while([DateTime]::UtcNow -lt $bootstrapDeadline){
+__STAGED_GET_PS__
+__IMDS_WAIT_PS__
+$imds='http://169.254.169.254'
+Wait-InstanceCredentials __IMDS_SECONDS__
+# Before the CLI exists the same policy reads through the preinstalled AWS SDK.
+Wait-StagedObject 'payload/bootstrap-awscli.msi' ([DateTime]::UtcNow.AddMinutes(5)) {
  try{
   $response=$client.GetObjectAsync($request,[Threading.CancellationToken]::None).GetAwaiter().GetResult()
   $file=[IO.File]::Create("$root\aws.msi")
   try{$response.ResponseStream.CopyTo($file)}finally{$file.Dispose();$response.Dispose()}
-  break
+  return $null
  }catch{
-  if($_.Exception.InnerException.ErrorCode -ne 'NoSuchKey'){throw}
-  Start-Sleep -Seconds 5
+  $code=$_.Exception.InnerException.ErrorCode
+  if($code){return [string]$code}
+  throw
  }
 }
 $client.Dispose()
@@ -304,19 +394,16 @@ if($install.ExitCode -notin 0,3010){throw 'AWS CLI bootstrap failed'}
 Set-Content "$root\aws-config" "[profile sancus]`nregion=us-east-1`n"
 $env:AWS_CONFIG_FILE="$root\aws-config"
 $aws='C:\Program Files\Amazon\AWSCLIV2\aws.exe'
-$bootstrapDeadline=[DateTime]::UtcNow.AddMinutes(5)
-while([DateTime]::UtcNow -lt $bootstrapDeadline){
- & $aws --profile sancus --region us-east-1 --cli-connect-timeout 8 --cli-read-timeout 25 s3api get-object --bucket '__BUCKET__' --expected-bucket-owner 524329886851 --key payload/bootstrap.zip "$root\bootstrap.zip" | Out-Null
- if($LASTEXITCODE -eq 0){break};Start-Sleep -Seconds 5
-}
+Get-StagedObject 'payload/bootstrap.zip' "$root\bootstrap.zip" 300
 if((Get-FileHash -Algorithm SHA256 "$root\bootstrap.zip").Hash.ToLowerInvariant() -ne '__HELPER_SHA__'){throw 'Bootstrap bundle differs'}
-& $aws --profile sancus --region us-east-1 --cli-connect-timeout 8 --cli-read-timeout 25 s3api get-object --bucket '__BUCKET__' --expected-bucket-owner 524329886851 --key payload/manifest.json "$root\manifest.json" | Out-Null
-if($LASTEXITCODE -ne 0 -or (Get-FileHash -Algorithm SHA256 "$root\manifest.json").Hash.ToLowerInvariant() -ne '__MANIFEST_SHA__'){throw 'Frozen input manifest differs'}
+Get-StagedObject 'payload/manifest.json' "$root\manifest.json" 60
+if((Get-FileHash -Algorithm SHA256 "$root\manifest.json").Hash.ToLowerInvariant() -ne '__MANIFEST_SHA__'){throw 'Frozen input manifest differs'}
 Expand-Archive "$root\bootstrap.zip" "$root\bin"
 & "$root\bin\setup.ps1"
 </powershell>
 '''
-    replacements={'__BUCKET__':bucket,'__HELPER_SHA__':helper_sha,'__MANIFEST_SHA__':manifest_sha,'__AWS_SHA__':aws_cli['sha256'],
+    replacements={'__STAGED_GET__':BASH_STAGED,'__STAGED_GET_PS__':PS_STAGED,'__IMDS_WAIT__':BASH_IMDS,'__IMDS_WAIT_PS__':PS_IMDS,
+                  '__IMDS_SECONDS__':str(IMDS_WAIT_SECONDS),'__BUCKET__':bucket,'__HELPER_SHA__':helper_sha,'__MANIFEST_SHA__':manifest_sha,'__AWS_SHA__':aws_cli['sha256'],
                   '__AWS_LINUX_URL__':linux_cli['url'],'__AWS_LINUX_SHA__':linux_cli['sha256'],
                   '__PACKAGES_BEGIN__':PACKAGES_BEGIN,'__PACKAGES_END__':PACKAGES_END}
     def replace(text):
