@@ -2,7 +2,7 @@
   "budgetUsd": 200,
   "perRunCapUsd": 20,
   "preCiEstimateUsd": 4.8,
-  "closedEstimateUsd": 8.91,
+  "closedEstimateUsd": 10.09,
   "recordedRuns": [
     {
       "workflowRunId": "41136197647",
@@ -18,6 +18,11 @@
       "workflowRunId": "41178169234",
       "estimateUsd": 3.4,
       "receipt": "Campaign 2 attempt 3 (source 99e2f34): core GPU evidence collected on both T4 guests; final phase failed (guest ack poll 403 before acknowledgement); instances terminated; cleanup-receipt cost.estimateUsd 3.40, allCreatedResourcesGone true; outcome report passed, zero leftovers; operator audit 2026-10-31T09:09Z 18/18 absent."
+    },
+    {
+      "workflowRunId": "41198567742",
+      "estimateUsd": 1.18,
+      "receipt": "Campaign 3 (source 13fca8d): Windows bootstrap failed at 12:03:29Z on 403 AccessDenied for payload/bootstrap-awscli.msi, which the controller staged at 12:03:52Z (the installer wait accepted only NoSuchKey; the agent role has no s3:ListBucket); Linux core collected and retained (727 files, 2.42 GB, 208 s with 12 workers); instances terminated; cleanup-receipt cost.estimateUsd 1.18, allCreatedResourcesGone true; outcome report passed, zero leftovers. Operator audit 2026-10-31T12:46Z 18/18 absent."
     }
   ],
   "scope": "Conservative closed-campaign estimates. preCiEstimateUsd covers the campaigns before CI/OIDC orchestration. After every paid CI run, a reviewed PR appends {workflowRunId, estimateUsd, receipt} from its cost receipt and raises closedEstimateUsd by the same amount; until then the selector refuses another paid run. Estimates are not invoices."

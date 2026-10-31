@@ -293,7 +293,9 @@ while([DateTime]::UtcNow -lt $bootstrapDeadline){
   try{$response.ResponseStream.CopyTo($file)}finally{$file.Dispose();$response.Dispose()}
   break
  }catch{
-  if($_.Exception.InnerException.ErrorCode -ne 'NoSuchKey'){throw}
+  # The agent role has no s3:ListBucket, so a key the controller has not staged
+  # yet answers 403 AccessDenied rather than NoSuchKey (run 41198567742).
+  if($_.Exception.InnerException.ErrorCode -notin 'NoSuchKey','AccessDenied'){throw}
   Start-Sleep -Seconds 5
  }
 }
@@ -306,7 +308,9 @@ $env:AWS_CONFIG_FILE="$root\aws-config"
 $aws='C:\Program Files\Amazon\AWSCLIV2\aws.exe'
 $bootstrapDeadline=[DateTime]::UtcNow.AddMinutes(5)
 while([DateTime]::UtcNow -lt $bootstrapDeadline){
- & $aws --profile sancus --region us-east-1 --cli-connect-timeout 8 --cli-read-timeout 25 s3api get-object --bucket '__BUCKET__' --expected-bucket-owner 524329886851 --key payload/bootstrap.zip "$root\bootstrap.zip" | Out-Null
+ # Windows PowerShell can raise a not-yet-staged key's CLI stderr under Stop;
+ # the exit code and the bundle hash below decide.
+ try{& $aws --profile sancus --region us-east-1 --cli-connect-timeout 8 --cli-read-timeout 25 s3api get-object --bucket '__BUCKET__' --expected-bucket-owner 524329886851 --key payload/bootstrap.zip "$root\bootstrap.zip" | Out-Null}catch{}
  if($LASTEXITCODE -eq 0){break};Start-Sleep -Seconds 5
 }
 if((Get-FileHash -Algorithm SHA256 "$root\bootstrap.zip").Hash.ToLowerInvariant() -ne '__HELPER_SHA__'){throw 'Bootstrap bundle differs'}

@@ -38,6 +38,17 @@ class DisposableBootstrap(unittest.TestCase):
         self.assertIn('b950e39f01af1d04ea623c8f6d8eb9b6ea5c477c637295fabf20631c85116bfb',bootstrap.WINDOWS_SETUP)
         self.assertLess(bootstrap.WINDOWS_DISPATCH.index('Move-Item'),bootstrap.WINDOWS_DISPATCH.index('Start-ScheduledTask'))
 
+    def test_windows_waits_through_403_for_objects_not_yet_staged(self):
+        # Without s3:ListBucket a missing key is AccessDenied; run 41198567742
+        # threw on it 23 s before the controller staged the CLI installer.
+        initial=self.scripts()['Windows']
+        self.assertIn("-notin 'NoSuchKey','AccessDenied'){throw}",initial)
+        self.assertNotIn("-ne 'NoSuchKey'){throw}",initial)
+        fetch=[line for line in initial.splitlines() if '--key payload/bootstrap.zip' in line]
+        self.assertEqual(len(fetch),1)
+        self.assertTrue(fetch[0].startswith(' try{& $aws') and fetch[0].rstrip().endswith('| Out-Null}catch{}'))
+        self.assertIn("-ne '"+'a'*64+"'){throw 'Bootstrap bundle differs'}",initial)
+
     def test_linux_dispatches_as_standard_user_and_scripts_parse(self):
         self.assertIn('runuser -u ubuntu',bootstrap.LINUX_DISPATCH)
         self.assertNotIn('--preserve-environment',bootstrap.LINUX_DISPATCH)
