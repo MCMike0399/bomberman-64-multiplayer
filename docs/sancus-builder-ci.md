@@ -484,6 +484,24 @@ tagging index still listed the terminated instances and their volumes.
   unknown and every other error remain leftovers. The read-only sweep retries
   for up to ten minutes within the cleanup deadline. The receipt keeps both
   views per ID (`taggedResources`) and every attempt (`sweepAttempts`).
+- **Aged-out instances (2026-10-31).** Once a terminated instance ages out,
+  exact-ID `describe-instances` returns empty `Reservations` with no error while
+  the tagging index may keep listing it (run 41162015860 flagged
+  i-0aa4cc1ac8162d4e5 and i-099e34e90f667045f from run 41151908001). Such a hit
+  becomes `AGED_OUT` only when a builder run's retained journal has the exact
+  `CREATED` `AWS::EC2::Instance` row and that run observed it terminated (a
+  `STATUS` with `state: terminated`/`terminatedObservedAtUtc`, its cleanup
+  receipt listing `finalState` terminated/absent, or a recorded successful
+  terminate request followed by an observed shutting-down/terminated).
+  `builder_retained_journals.py` reads the run's own state directory in its
+  final sweep, then `builder-state-*-final`/`builder-stopped-*`/`builder-armed-*`
+  artifacts of the last 30 `gpu-qualification.yml` runs through `gh api` with
+  the job's read-only `GH_TOKEN` (bounded, cached per process). No journal, an
+  unreadable/expired artifact, a fetch error, no observed termination, any
+  describe error or any non-empty reservation stays `AMBIGUOUS:` and red. The
+  row records `describeShape`, `retainedJournal` (workflow run, artifact
+  name/id, matching event IDs/timestamps, termination evidence) and
+  `journalLookup` errors. Volumes still require their own NotFound answer.
 - **Free pre-flight.** `builder-bootstrap-preflight.yml` runs on PRs touching the
   bootstrap or audio helpers. Linux runs the generated package/CLI section in
   `ubuntu:24.04` plus missing-package and digest-mismatch fault controls

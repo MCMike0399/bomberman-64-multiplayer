@@ -7,7 +7,9 @@ import builder_namespace as names
 import builder_s3
 import builder_audit
 import builder_cost
+import builder_retained_journals as retained
 import datetime
+import os
 import time
 ROOT=None
 # The tagging index lags authoritative deletion (campaign 2 attempt 2): retry the
@@ -53,12 +55,19 @@ def protected_comparison(baseline,actual):
         if differences:changes.append({'id':before['id'],'differences':differences,'note':'Observed concurrent difference; never reverted'})
     return changes,unavailable,compared
 
-def sweep(aws,deadline=None,now=time.time,sleep=time.sleep):
+def own_journals():
+    """This run's local journal for its own instances, then earlier runs' retained artifacts."""
+    run,attempt=os.environ.get('GITHUB_RUN_ID','local'),os.environ.get('GITHUB_RUN_ATTEMPT','1')
+    reference={'source':'this run\'s local state directory','workflowRunId':run,
+               'artifactName':f'builder-state-{run}-{attempt}-final (uploaded after this sweep)'}
+    return retained.Journals(retained.LocalJournal(ROOT,reference),*retained.default().sources)
+
+def sweep(aws,deadline=None,now=time.time,sleep=time.sleep,journals=None):
     """Read-only audit, retried while anything is unresolved and time remains."""
     started=now();stop=started if deadline is None else min(started+SWEEP_RETRY_SECONDS,deadline-SWEEP_DEADLINE_MARGIN_SECONDS)
     attempts=[]
     while True:
-        result=builder_audit.audit(aws,require_scoped_role=False)
+        result=builder_audit.audit(aws,require_scoped_role=False,journals=journals)
         passed=not result['leftovers']and not result['errors']
         attempts.append({'atUtc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'passed':passed,
                          'leftovers':[row['id']for row in result['leftovers']],'errors':[row['type']for row in result['errors']]})
@@ -115,7 +124,7 @@ def final(plan,stage_errors=None,deadline=None):
     live=campaign.aws(plan,'ec2','describe-instances','--instance-ids',*ids)['Reservations']
     actual={x['InstanceId']:x for r in live for x in r['Instances']}
     changes,unavailable,compared=protected_comparison(baseline,actual)
-    audit=sweep(lambda *args:campaign.aws(plan,*args),deadline)
+    audit=sweep(lambda *args:campaign.aws(plan,*args),deadline,journals=own_journals())
     left.extend(audit['leftovers'])
     for error in audit['errors']:left.append({'type':error['type'],'id':'audit','finalState':'UNVERIFIED'})
     receipt={'account':plan['account'],'region':plan['region'],'runId':plan['runId'],'payloadSource':plan['payloadSource'],
