@@ -6,6 +6,7 @@ using BlastCircuit.Arena;
 using BlastCircuit.Rendering;
 using BlastCircuit.UI;
 using BlastCircuit.UI.Menu;
+using BlastCircuit.InputDevices;
 using BlastCircuit.Arena.Stages;
 namespace BlastCircuit.Testing;
 
@@ -90,7 +91,25 @@ public partial class PlaytestDriver
         Check(ReferenceEquals(session,_root.ActiveSession)&&snapshots==_root.SnapshotCount,"display change preserves paused local session");
         Check(PlayerPreferences.Load(_root.PreferencesPath).Fullscreen,"fullscreen selection persists");
         await Capture("display-settings-fullscreen");
-        await KeyPress(Key.Escape);await ActivateNamed("ResumeGame");await Frames(20);
+        // Real fullscreen leaves the OS pointer resting over the menu. On the Windows GPU
+        // run (41214884627) the frame-cap tooltip was showing and Esc did not leave
+        // Settings. Esc must leave Settings in one press even with a tooltip shown.
+        var cap=(Control)_root.FindChild("FrameCap",true,false)!;
+        cap.GetViewport().WarpMouse(cap.GetGlobalTransformWithCanvas()*(cap.Size/2));await Frames(2);
+        var hover=cap.GetViewport().GetScreenTransform()*cap.GetGlobalTransformWithCanvas()*(cap.Size/2);
+        Godot.Input.ParseInputEvent(new InputEventMouseMotion {Position=hover,GlobalPosition=hover});
+        bool TooltipShown()=>AuditDescendants(GetTree().Root).OfType<Label>().Any(label=>label.IsVisibleInTree()&&label.Text==cap.TooltipText);
+        var tooltipWait=System.Diagnostics.Stopwatch.StartNew();
+        while(!TooltipShown()&&tooltipWait.Elapsed.TotalSeconds<5)await Frames(1);
+        Check(TooltipShown(),"frame-cap tooltip shows under a resting pointer");
+        await Capture("display-settings-tooltip");
+        var tip=AuditDescendants(GetTree().Root).OfType<Label>().First(label=>label.IsVisibleInTree()&&label.Text==cap.TooltipText);
+        var chain=new List<string>();for(Node? n=tip;n!=null;n=n.GetParent())chain.Add(n.GetClass()+":"+n.Name+(n is Window w?"[embedded="+w.IsEmbedded()+",popup="+w.GetFlag(Window.Flags.Popup)+",nofocus="+w.GetFlag(Window.Flags.NoFocus)+",focus="+w.HasFocus()+"]":""));
+        Event("tooltip-escape",new {activePopup=DisplayServer.WindowGetActivePopup(),mainWindow=GetWindow().GetWindowId(),screen=_root.ScreenName,chain});
+        await KeyPress(Key.Escape);
+        Check(_root.ScreenName=="Pause","Esc leaves Settings in one press while a tooltip shows (screen "+_root.ScreenName+")");
+        Check(!TooltipShown(),"leaving Settings dismisses the tooltip");
+        await ActivateNamed("ResumeGame");await Frames(20);
         Check(ReferenceEquals(session,_root.ActiveSession)&&_root.SnapshotCount>snapshots,"same local session resumes after display change");
         CheckFraming("sunken-temple",GetWindow().Size);await Capture("display-fullscreen-arena");
         await KeyPress(Key.F11);await WindowMode(Window.ModeEnum.Windowed,"F11 returns to selected window size");
@@ -224,14 +243,30 @@ public partial class PlaytestDriver
                 await SelectGraphics(preset);
                 CheckMenuSampling();
                 await Capture("graphics-menu-"+GraphicsQuality.ToWire(preset));
+                // Each preset description wraps differently. Every preset must keep the whole
+                // Settings screen, including the Windows renderer rows, in the minimum window;
+                // Medium is audited again by the size loop below.
+                if(preset!=GraphicsPreset.Medium)
+                {
+                    var restore=GetWindow().Size;await ResizeWindow(new(1024,640));await Frames(5);
+                    await ActivateNamed("OpenSettings");await Frames(3);
+                    await AuditSettingsFit(new(1024,640),preset);
+                    await KeyPress(Key.Escape);await ResizeWindow(restore);await Frames(5);
+                }
             }
             foreach(var size in new[]{new Vector2I(1024,640),new Vector2I(1280,800)})
             {
                 await ResizeWindow(size);await Frames(5);CheckMenuSampling();
                 await ActivateNamed("OpenSettings");await Frames(3);
-                AuditVisibleMenu("Settings",size);await Capture("graphics-settings-"+size.X);
+                if(size.X==1024)await AuditSettingsFit(size,GraphicsPreset.Medium);else AuditVisibleMenu("Settings",size);
+                await Capture("graphics-settings-"+size.X);
                 await KeyPress(Key.Escape);
             }
+            // After both reviewed captures: walking focus changes dial highlight state.
+            await ResizeWindow(new(1024,640));await Frames(5);
+            await ActivateNamed("OpenSettings");await Frames(3);
+            await CheckNowReachable(new(1024,640));
+            await KeyPress(Key.Escape);await ResizeWindow(new(1280,800));await Frames(5);
             foreach(string stage in new[]{"sunken-temple","rock-garden","up-and-down","top-rules","blizzard-battle","greedy-trap","circuit-garden"})
             {
                 _root.StartLocal(new SessionSettings(Stage:stage,Bots:0),1,practice:true);
@@ -341,6 +376,56 @@ public partial class PlaytestDriver
             Check(Math.Abs(viewport.Size.X-pixels.X)<1.1&&Math.Abs(viewport.Size.Y-pixels.Y)<1.1,"menu texture matches output pixels: "+surface.GetType().Name);
             Check(viewport.Msaa3D==GraphicsQuality.Antialiasing,"menu antialiasing follows preset");
         }
+    }
+
+    /// <summary>
+    /// Audits Settings in the minimum window. With the Windows renderer rows, it also
+    /// changes the renderer so the saved/error status is audited too; that status stays
+    /// in the dial's row, so the lowest control must not move.
+    /// </summary>
+    private async Task AuditSettingsFit(Vector2I size,GraphicsPreset preset)
+    {
+        float Lowest()=>AuditDescendants(_root).OfType<BaseButton>().Where(c=>c.IsVisibleInTree())
+            .Max(c=>(c.GetGlobalTransformWithCanvas()*c.Size).Y);
+        AuditVisibleMenu("Settings",size);
+        if(!ArcadeMenu.WindowsRendererRows)return;
+        float before=Lowest();var dial=NamedButton("RendererChoice");var focus=GetViewport().GuiGetFocusOwner();
+        dial.GrabFocus();await KeyPress(Key.Right);await Frames(3);
+        var caption=AuditDescendants(dial).OfType<Label>().First().Text;
+        Check(caption=="Renderer · on restart","renderer change reports its saved status in the dial row: "+caption);
+        AuditVisibleMenu("Settings",size);
+        Check(Mathf.IsEqualApprox(Lowest(),before),"renderer status keeps the Settings height under "+preset+": "+before+" -> "+Lowest());
+        Event("renderer-status-fit",new {preset=preset.ToString(),window=size.ToString(),lowestBefore=before,lowestAfter=Lowest(),caption});
+        await KeyPress(Key.Left);await Frames(3);
+        if(GodotObject.IsInstanceValid(focus))focus.GrabFocus();
+    }
+
+    /// <summary>"Check now" may sit below the scrolled area; keyboard and controller focus must bring it into view.</summary>
+    private async Task CheckNowReachable(Vector2I size)
+    {
+        var scroll=(Control)_root.FindChild("SettingsScroll",true,false)!;var target=NamedButton("CheckUpdates");
+        var first=(Control)_root.FindChild("SoundVolume",true,false)!;
+        bool InView()=>scroll.GetGlobalRect().Grow(1).Encloses(target.GetGlobalRect());
+        async Task<bool> Reach(Func<Task> step)
+        {
+            for(int i=0;i<30&&GetViewport().GuiGetFocusOwner()!=target;i++)await step();
+            await Frames(6);return GetViewport().GuiGetFocusOwner()==target&&InView();
+        }
+        first.GrabFocus();await Frames(3);
+        Check(await Reach(()=>KeyPress(Key.Tab)),"Tab focus scrolls Check now into view at "+size);
+        await Capture("settings-check-now-tab-"+size.X);
+        var hub=ControllerHub.Current;CtlReleaseAll();hub.OverrideDevicesForPlaytest([QaPads[0]]);await ControllerFrames(3);
+        try
+        {
+            first.GrabFocus();await ControllerFrames(3);
+            async Task Pad(JoyButton button){CtlButton(QaPads[0].RuntimeId,button,true);await ControllerFrames(1);CtlButton(QaPads[0].RuntimeId,button,false);await ControllerFrames(3);}
+            await Pad(JoyButton.RightShoulder);
+            Check(await Reach(()=>Pad(JoyButton.DpadDown)),"controller focus scrolls Check now into view at "+size);
+            await Capture("settings-check-now-controller-"+size.X);
+        }
+        finally {CtlReleaseAll();hub.OverrideDevicesForPlaytest([]);await ControllerFrames(3);}
+        // Leave Settings as it opened so later captures keep their original framing.
+        first.GrabFocus();((ScrollContainer)scroll).ScrollVertical=0;await Frames(3);
     }
 
     private async Task SelectGraphics(GraphicsPreset preset)

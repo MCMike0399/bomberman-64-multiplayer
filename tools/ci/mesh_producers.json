@@ -9410,7 +9410,7 @@
     "scripts/arena/stages/TempleStageView.cs": "9482e7db9597b07ab9e0bcf18db635a2d6a98b8852cb3bd241ca49a8aa9521b1",
     "scripts/rendering/ArtGeometry.cs": "32fea3664b4af118fe691a5e0c1eb396eebf0352922996ea2b18896d0ea9764e",
     "scripts/rendering/PrimitiveTemplates.cs": "a217a597e45615d6a71b19529c4b24ca49cf09b1a2473b53e509ee153cce9352",
-    "scripts/testing/journeys/rendering/AssetAuditPlaytest.cs": "122edb5d6f04cc9fae6fa41c544a95a50da89795cb5f910fa18248c1849d8cd6",
+    "scripts/testing/journeys/rendering/AssetAuditPlaytest.cs": "9369deb5c46c7f4db09a187701d5c548b454e53ba80da072835a8a475f31e742",
     "scripts/testing/journeys/rendering/PickupShowcasePlaytest.cs": "3c142760084075f88141b82a8f45d77d6e3c4fc56fce2896750b2158fd7dce77",
     "scripts/ui/ArcadeModeButton.cs": "a7dc6b554f9ace5e661fe3ba72594bae40ea7bfc9aca8e9314f6dad663f95db9",
     "scripts/ui/menu/ArcadeBackdrop.cs": "8bd82a3611e3ca2216ccfed1c9918f2589139bccbc601572b84a2b9863a3a1eb",

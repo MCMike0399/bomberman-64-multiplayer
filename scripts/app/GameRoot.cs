@@ -282,6 +282,19 @@ public partial class GameRoot : Node3D
         if(!_preparingGraphics&&!_menu.HasOpenPopup&&GetViewport().GuiGetFocusOwner() is LineEdit
             &&@event.IsActionPressed("ui_cancel"))
         {Back();GetViewport().SetInputAsHandled();}
+        // The GUI spends a key press on dismissing a visible tooltip, so a pointer resting on a
+        // control with a tooltip needed two Esc presses (Windows GPU run 41214884627, where real
+        // fullscreen left the pointer over the frame-rate cap). Esc acts in one press.
+        else if(!_preparingGraphics&&!_menu.HasOpenPopup&&TooltipShowing()
+            &&@event is InputEventKey {Pressed:true,Echo:false,Keycode:Key.Escape})
+        {Cancel();GetViewport().SetInputAsHandled();}
+    }
+    private bool TooltipShowing()=>GetViewport().GuiGetHoveredControl() is {} hovered
+        &&hovered.GetChildren(true).OfType<PopupPanel>().Any(panel=>panel.Visible);
+    private void Cancel()
+    {
+        if(ScreenName=="Match"&&_tutorialHud.Finished&&_tutorialLessonId is not null)Navigate("Tutorial",restoreFocus:true);
+        else if(ScreenName=="Match")OpenGameMenu();else Back();
     }
     public override void _UnhandledInput(InputEvent @event)
     {
@@ -299,12 +312,7 @@ public partial class GameRoot : Node3D
             else {if(ScreenName=="Controls")ControllerHub.Current.TesterActive=false;_menu.FocusStart();}
             GetViewport().SetInputAsHandled();return;
         }
-        if(cancel)
-        {
-            if(ScreenName=="Match"&&_tutorialHud.Finished&&_tutorialLessonId is not null)Navigate("Tutorial",restoreFocus:true);
-            else if(ScreenName=="Match")OpenGameMenu();else Back();
-            GetViewport().SetInputAsHandled();
-        }
+        if(cancel){Cancel();GetViewport().SetInputAsHandled();}
     }
     private void OpenGameMenu()
     {

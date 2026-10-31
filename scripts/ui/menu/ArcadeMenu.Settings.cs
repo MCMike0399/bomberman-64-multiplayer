@@ -8,6 +8,14 @@ namespace BlastCircuit.UI.Menu;
 /// <summary>Settings and pause screens, local preferences and update status.</summary>
 public partial class ArcadeMenu
 {
+    /// <summary>
+    /// The Windows-only renderer rows. A playtest may force them on macOS/Linux
+    /// (--qa-windows-settings-rows) so the Windows layout is audited at the minimum
+    /// window on every lane; without --playtest= it is ignored.
+    /// </summary>
+    internal static bool WindowsRendererRows=>OperatingSystem.IsWindows()||
+        OS.GetCmdlineUserArgs() is var args&&args.Contains("--qa-windows-settings-rows")&&args.Any(a=>a.StartsWith("--playtest="));
+
     private void BuildSettings()
     {
         var screen=Screen("Settings");var box=Card(screen,new(150,65),new(1140,740));
@@ -39,19 +47,24 @@ public partial class ArcadeMenu
             {Graphics=(GraphicsPreset)(((int)Graphics+direction+3)%3);_graphicsDescription.Text=GraphicsQuality.Description(Graphics);SettingsChanged?.Invoke();}};
         updates.AddChild(graphics);
         _graphicsDescription=Copy(updates,GraphicsQuality.Description(Graphics),16);
-        if(OperatingSystem.IsWindows())
+        if(WindowsRendererRows)
         {
             string folder=WindowsLaunchGuard.Argument(OS.GetCmdlineUserArgs(),"--launcher-state-dir")??Path.Combine(OS.GetUserDataDir(),"startup");
             var launch=new WindowsLaunchGuard(folder);string[] choices=["auto","vulkan","d3d12"],labels=["Auto","Vulkan","DirectX 12"];
             string selected=launch.ReadPreference().Renderer;
-            var rendererHint=Copy(updates,"Renderer changes apply the next time you open the game.",16);
-            var renderer=new ArcadeRuleDial {Name="RendererChoice",Caption="Renderer",ValueWidth=190,
+            // The save result lives in the dial's own row, so this column keeps one fixed
+            // height and "Check now" stays inside the minimum 1024x640 window.
+            ArcadeRuleDial renderer=null!;
+            void Status(string caption,string detail){renderer.Caption=caption;renderer.TooltipText=detail;}
+            renderer=new ArcadeRuleDial {Name="RendererChoice",Caption="Renderer",ValueWidth=190,
+                TooltipText="Renderer changes apply the next time you open the game.",
                 ReadValue=()=>labels[Array.IndexOf(choices,selected)],ChangeValue=direction=>
                 {
                     string next=choices[(Array.IndexOf(choices,selected)+direction+choices.Length)%choices.Length];
-                    try {launch.SelectRenderer(next);selected=next;rendererHint.Text="Saved. Reopen the game to use this renderer.";}
-                    catch(IOException){rendererHint.Text="Could not save the renderer choice. Check this folder's write permissions.";}
-                    catch(UnauthorizedAccessException){rendererHint.Text="Could not save the renderer choice. Check this folder's write permissions.";}
+                    const string unsaved="Could not save the renderer choice. Check this folder's write permissions.";
+                    try {launch.SelectRenderer(next);selected=next;Status("Renderer · on restart","Saved. Reopen the game to use this renderer.");}
+                    catch(IOException){Status("Renderer · not saved",unsaved);}
+                    catch(UnauthorizedAccessException){Status("Renderer · not saved",unsaved);}
                 }};
             updates.AddChild(renderer);
         }

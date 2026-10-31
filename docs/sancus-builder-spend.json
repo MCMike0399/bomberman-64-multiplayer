@@ -2,7 +2,7 @@
   "budgetUsd": 200,
   "perRunCapUsd": 20,
   "preCiEstimateUsd": 4.8,
-  "closedEstimateUsd": 10.09,
+  "closedEstimateUsd": 13.97,
   "recordedRuns": [
     {
       "workflowRunId": "41136197647",
@@ -23,6 +23,11 @@
       "workflowRunId": "41198567742",
       "estimateUsd": 1.18,
       "receipt": "Campaign 3 (source 13fca8d): Windows bootstrap failed at 12:03:29Z on 403 AccessDenied for payload/bootstrap-awscli.msi, which the controller staged at 12:03:52Z (the installer wait accepted only NoSuchKey; the agent role has no s3:ListBucket); Linux core collected and retained (727 files, 2.42 GB, 208 s with 12 workers); instances terminated; cleanup-receipt cost.estimateUsd 1.18, allCreatedResourcesGone true; outcome report passed, zero leftovers. Operator audit 2026-10-31T12:46Z 18/18 absent."
+    },
+    {
+      "workflowRunId": "41214884627",
+      "estimateUsd": 3.88,
+      "receipt": "Campaign on source cec369f: launch, core (both T4 guests), acknowledgement and retention passed; final phase exit 1: Linux finished; Windows complete-native-graphical failed 3 of 24 cases (tour-03 and menu-preview: Windows-only Settings renderer rows push Check now below 1024x640; tour-02: Escape after real fullscreen did not return to Pause). Instances terminated; cleanup-receipt cost.estimateUsd 3.88, allCreatedResourcesGone true; outcome report passed, zero leftovers; operator audit 2026-10-31T17:55Z 18/18 absent."
     }
   ],
   "scope": "Conservative closed-campaign estimates. preCiEstimateUsd covers the campaigns before CI/OIDC orchestration. After every paid CI run, a reviewed PR appends {workflowRunId, estimateUsd, receipt} from its cost receipt and raises closedEstimateUsd by the same amount; until then the selector refuses another paid run. Estimates are not invoices."

@@ -250,21 +250,22 @@ public partial class PlaytestDriver
     private void AuditVisibleMenu(string screen,Vector2I size)
     {
         var controls=AuditDescendants(_root).OfType<Control>().Where(c=>c.IsVisibleInTree()&&c.GetViewport()==_root.GetViewport()).ToList();
-        var viewport=_root.GetViewport().GetVisibleRect().Grow(1);var outside=new List<string>();var missing=new HashSet<string>();int interactive=0,glyphTexts=0;
+        var viewport=_root.GetViewport().GetVisibleRect().Grow(1);var outside=new List<string>();var outsideRects=new List<string>();var missing=new HashSet<string>();int interactive=0,glyphTexts=0;float lowest=float.MinValue;
         foreach(var control in controls)
         {
             if(control is BaseButton or LineEdit)
             {
-                interactive++;var transform=control.GetGlobalTransformWithCanvas();
+                interactive++;var transform=control.GetGlobalTransformWithCanvas();lowest=Math.Max(lowest,(transform*control.Size).Y);
                 foreach(var corner in new[]{Vector2.Zero,new Vector2(control.Size.X,0),control.Size,new Vector2(0,control.Size.Y)})
-                    if(!viewport.HasPoint(transform*corner)){outside.Add(control.Name.ToString());break;}
+                    if(!viewport.HasPoint(transform*corner))
+                    {outside.Add(control.Name.ToString());outsideRects.Add(control.Name+" "+(transform*Vector2.Zero)+"-"+(transform*control.Size));break;}
             }
             string text=control switch {Label label=>label.Text,Button button=>button.Text,LineEdit field=>field.Text+field.PlaceholderText,_=>""};
             if(string.IsNullOrWhiteSpace(text))continue;
             glyphTexts++;var font=control.GetThemeFont("font");
             foreach(var rune in text.EnumerateRunes())if(!Rune.IsWhiteSpace(rune)&&!font.HasChar(rune.Value))missing.Add(rune+" in "+control.Name);
         }
-        Event("asset-menu",new {screen,window=size.ToString(),viewport=viewport.ToString(),interactive,glyphTexts,outside,missing});
+        Event("asset-menu",new {screen,window=size.ToString(),viewport=viewport.ToString(),interactive,glyphTexts,lowestInteractiveBottom=lowest,outside,outsideRects,missing});
         Check(interactive>0&&outside.Count==0,"native interactive controls fit supported viewport: "+screen+" "+size+" "+string.Join(", ",outside));
         Check(glyphTexts>0&&missing.Count==0,"actual menu text has supported font glyphs: "+screen+" "+size+" "+string.Join(", ",missing));
     }

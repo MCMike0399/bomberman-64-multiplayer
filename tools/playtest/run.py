@@ -105,6 +105,7 @@ def main():
     parser.add_argument('--benchmark-tweak', default='none', help='Diagnostic comma-separated renderer tweaks: static A/B captures per stage plus a timed battle per tweak; ordinary measurements stay untouched')
     parser.add_argument('--benchmark-disable', choices=('none', 'ssil', 'ssao', 'dof', 'glow', 'water', 'shadows'), default='none', help='Diagnostic pass omission; never a full-quality performance result')
     parser.add_argument('--cold-effects', action='store_true', help='Disable startup warmup in first-use-rendering to retain a negative regression witness')
+    parser.add_argument('--qa-windows-settings-rows', action='store_true', help='Playtest-only: show the Windows renderer rows on macOS/Linux to audit the Windows Settings layout')
     parser.add_argument('--desktop', choices=('isolated', 'shared'), default='isolated' if platform.system() == 'Darwin' else 'shared', help='Graphical macOS QA uses a private VM by default; shared explicitly uses your desktop')
     parser.add_argument('--vm', default=os.environ.get('BLAST_QA_VM', 'blast-circuit-qa'), help='Stopped dedicated Tart VM for isolated graphical QA')
     parser.add_argument('--headless', action='store_true', help='Explicitly disable screenshot capture')
@@ -248,6 +249,9 @@ def main():
                 command.append('--playtest-file=' + str(args.script.resolve()))
             if args.cold_effects:
                 command.append('--playtest-cold-effects')
+            if args.qa_windows_settings_rows:
+                # Renderer changes go to a scratch launcher state, never the real one.
+                command += ['--qa-windows-settings-rows', '--launcher-state-dir=' + str(folder / 'launcher-state')]
             if args.scenario == 'graphics-benchmark':
                 command += ['--benchmark-resolution=' + args.benchmark_resolution,
                             '--benchmark-stage=' + args.benchmark_stage,
