@@ -1,4 +1,5 @@
 import hashlib
+import re
 from pathlib import Path
 import subprocess
 import tempfile
@@ -31,7 +32,11 @@ class DisposableBootstrap(unittest.TestCase):
         self.assertNotIn('Administrators',bootstrap.WINDOWS_SETUP)
         self.assertIn('[IO.FileMode]::CreateNew',bootstrap.WINDOWS_DISPATCH)
         initial=self.scripts()['Windows']
-        self.assertNotIn('Invoke-WebRequest',initial)
+        # No internet downloads: the only web requests are IMDSv2 on the link-local endpoint.
+        requests=re.findall(r'Invoke-WebRequest[^\n]*?-Uri "([^"]*)"',initial)
+        self.assertEqual(len(requests),initial.count('Invoke-WebRequest'))
+        self.assertTrue(requests and all(uri.startswith('$imds/latest/')for uri in requests),requests)
+        self.assertEqual(re.findall(r"\$imds='([^']*)'",initial),['http://169.254.169.254'])
         self.assertIn("$request.ExpectedBucketOwner='524329886851'",initial)
         self.assertIn("$request.Key='payload/bootstrap-awscli.msi'",initial)
         self.assertLess(bootstrap.WINDOWS_SETUP.index('Install-BlastAudio'),bootstrap.WINDOWS_SETUP.index('New-LocalUser'))
@@ -140,6 +145,63 @@ class DisposableBootstrap(unittest.TestCase):
             self.assertEqual(samples,['AccessDenied','NoSuchKey'])
             result,_=sdk(['ExpiredToken','ok'])
             self.assertNotEqual(result.returncode,0);self.assertIn('failed: ExpiredToken',result.stdout+result.stderr)
+
+    def fake_imds(self,script):
+        """A local IMDSv2 stand-in that answers each request with the next scripted status."""
+        import http.server,threading
+        replies=list(script);seen=[]
+        class Handler(http.server.BaseHTTPRequestHandler):
+            def log_message(self,*args):pass
+            def answer(self):
+                seen.append((self.command,self.path,self.headers.get('X-aws-ec2-metadata-token')))
+                status=replies.pop(0)if replies else 503
+                if self.path=='/latest/api/token':body='TOKEN'
+                elif self.path.endswith('/security-credentials/'):body='sancus-builder-agent\n'
+                else:body='{"Code":"Success","AccessKeyId":"AKIA"}'if status==200 else'{"Code":"Pending"}'
+                if status==201:status,body=200,'{"Code":"Pending"}'
+                self.send_response(status);self.send_header('Content-Type','text/plain');self.end_headers();self.wfile.write(body.encode())
+            do_GET=do_PUT=answer
+        server=http.server.ThreadingHTTPServer(('127.0.0.1',0),Handler)
+        threading.Thread(target=server.serve_forever,daemon=True).start();self.addCleanup(server.server_close);self.addCleanup(server.shutdown)
+        return 'http://127.0.0.1:%d'%server.server_address[1],seen
+
+    # Token refused twice, then a role whose document lacks credentials (201 marker), then ready.
+    IMDS_SCRIPT=[503,503,200,200,201,200,200,200]
+
+    def test_linux_waits_for_imds_credentials_before_its_first_staged_read(self):
+        scripts=self.scripts()
+        self.assertLess(scripts['Linux'].index('await_instance_credentials 120'),scripts['Linux'].index('staged_get payload/'))
+        url,seen=self.fake_imds(self.IMDS_SCRIPT)
+        with tempfile.TemporaryDirectory()as root:
+            body='set -Eeuo pipefail\nroot=%s\nimds=%s\nsleep(){ :; }\n'%(root,url)+bootstrap.BASH_IMDS+'\nawait_instance_credentials 30\n'
+            result=subprocess.run(['bash','-c',body],capture_output=True,text=True,timeout=60)
+            self.assertEqual(result.returncode,0,result.stderr)
+            self.assertIn('imds-credentials ready-after-seconds',(Path(root)/'staged-get-samples.log').read_text())
+        self.assertEqual([row[0] for row in seen if row[1]=='/latest/api/token'],['PUT']*4)
+        self.assertTrue(all(row[2]=='TOKEN'for row in seen if row[1]!='/latest/api/token'))
+        url,_=self.fake_imds([])
+        with tempfile.TemporaryDirectory()as root:
+            body='set -Eeuo pipefail\nroot=%s\nimds=%s\nsleep(){ :; }\n'%(root,url)+bootstrap.BASH_IMDS+'\nawait_instance_credentials 0\n'
+            result=subprocess.run(['bash','-c',body],capture_output=True,text=True,timeout=60)
+            self.assertNotEqual(result.returncode,0);self.assertIn('unavailable through IMDSv2 after 0 s',result.stderr)
+
+    def test_windows_waits_for_imds_credentials_before_its_first_staged_read(self):
+        scripts=self.scripts()
+        self.assertLess(scripts['Windows'].index('Wait-InstanceCredentials 120'),scripts['Windows'].index("Wait-StagedObject 'payload/bootstrap-awscli.msi'"))
+        pwsh=self.pwsh()
+        if not pwsh:self.skipTest('pwsh unavailable')
+        for script,seconds,ok in ((self.IMDS_SCRIPT,30,True),([],0,False)):
+            url,seen=self.fake_imds(script)
+            with tempfile.TemporaryDirectory()as root:
+                body="$ErrorActionPreference='Stop'\n$root='%s'\n$imds='%s'\nfunction Start-Sleep{}\n"%(root,url)+bootstrap.PS_IMDS+'\nWait-InstanceCredentials %d\n'%seconds
+                (Path(root)/'imds.ps1').write_text(body)
+                result=subprocess.run([pwsh,'-NoProfile','-File',str(Path(root)/'imds.ps1')],capture_output=True,text=True,timeout=120)
+                if ok:
+                    self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+                    self.assertIn('imds-credentials ready-after-seconds',(Path(root)/'staged-get-samples.log').read_text())
+                    self.assertEqual([row[0] for row in seen if row[1]=='/latest/api/token'],['PUT']*4)
+                else:
+                    self.assertNotEqual(result.returncode,0);self.assertIn('unavailable through IMDSv2 after 0 s',result.stdout+result.stderr)
 
     def test_linux_dispatches_as_standard_user_and_scripts_parse(self):
         self.assertIn('runuser -u ubuntu',bootstrap.LINUX_DISPATCH)

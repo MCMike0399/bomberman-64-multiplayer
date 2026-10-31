@@ -65,6 +65,43 @@ function Get-StagedObject([string]$Key,[string]$File,[int]$Seconds){
  }
 }'''.replace('__PENDING_LIST__',','.join("'"+c+"'" for c in STAGED_PENDING))
 
+# Right after boot the instance-profile credentials can be briefly unavailable
+# through IMDSv2. Before the first staged read each OS waits (bounded) until a token
+# and the role's credentials are retrievable, records the wait, and only then lets
+# the staged-object policy fail fast on non-pending errors.
+IMDS_WAIT_SECONDS=120
+BASH_IMDS=r'''await_instance_credentials(){
+ local started=$SECONDS deadline=$((SECONDS+$1)) token role document
+ while :; do
+  if token=$(curl -fsS -m 2 -X PUT -H 'X-aws-ec2-metadata-token-ttl-seconds: 60' "$imds/latest/api/token" 2>/dev/null) &&
+     role=$(curl -fsS -m 2 -H "X-aws-ec2-metadata-token: $token" "$imds/latest/meta-data/iam/security-credentials/" 2>/dev/null) &&
+     role=${role%%$'\n'*} && test -n "$role" &&
+     document=$(curl -fsS -m 2 -H "X-aws-ec2-metadata-token: $token" "$imds/latest/meta-data/iam/security-credentials/$role" 2>/dev/null); then
+   case "$document" in *'"AccessKeyId"'*)
+    printf '%s imds-credentials ready-after-seconds %s\n' "$(date -u +%FT%TZ)" "$((SECONDS-started))" >> "$root/staged-get-samples.log"; return 0;;
+   esac
+  fi
+  if ((SECONDS >= deadline)); then echo "Instance role credentials unavailable through IMDSv2 after $1 s" >&2; return 1; fi
+  sleep 2
+ done
+}'''
+PS_IMDS=r'''function Wait-InstanceCredentials([int]$Seconds){
+ $started=[DateTime]::UtcNow;$until=$started.AddSeconds($Seconds)
+ while($true){
+  try{
+   $token=(Invoke-WebRequest -UseBasicParsing -Method Put -Uri "$imds/latest/api/token" -Headers @{'X-aws-ec2-metadata-token-ttl-seconds'='60'} -TimeoutSec 2).Content
+   $headers=@{'X-aws-ec2-metadata-token'=$token}
+   $role=([string](Invoke-WebRequest -UseBasicParsing -Uri "$imds/latest/meta-data/iam/security-credentials/" -Headers $headers -TimeoutSec 2).Content).Split("`n")[0].Trim()
+   $document=[string](Invoke-WebRequest -UseBasicParsing -Uri "$imds/latest/meta-data/iam/security-credentials/$role" -Headers $headers -TimeoutSec 2).Content
+   if($role -and $document.Contains('"AccessKeyId"')){
+    Add-Content "$root\staged-get-samples.log" "$([DateTime]::UtcNow.ToString('o')) imds-credentials ready-after-seconds $([int]([DateTime]::UtcNow-$started).TotalSeconds)";return
+   }
+  }catch{}
+  if([DateTime]::UtcNow -ge $until){throw "Instance role credentials unavailable through IMDSv2 after $Seconds s"}
+  Start-Sleep -Seconds 2
+ }
+}'''
+
 LINUX_SETUP=r'''#!/bin/bash
 set -euo pipefail
 root=/opt/sancus-builder
@@ -294,6 +331,9 @@ __PACKAGES_END__
 printf '[profile sancus]\nregion=us-east-1\n' > "$root/aws-config"
 export AWS_CONFIG_FILE="$root/aws-config"
 __STAGED_GET__
+__IMDS_WAIT__
+imds=http://169.254.169.254
+await_instance_credentials __IMDS_SECONDS__
 staged_get payload/bootstrap.zip "$root/bootstrap.zip" 300
 printf '%s  %s\n' '__HELPER_SHA__' "$root/bootstrap.zip" | sha256sum -c -
 staged_get payload/manifest.json "$root/manifest.json" 60
@@ -331,6 +371,9 @@ $request=[Amazon.S3.Model.GetObjectRequest]::new()
 $request.BucketName='__BUCKET__';$request.Key='payload/bootstrap-awscli.msi'
 $request.ExpectedBucketOwner='524329886851'
 __STAGED_GET_PS__
+__IMDS_WAIT_PS__
+$imds='http://169.254.169.254'
+Wait-InstanceCredentials __IMDS_SECONDS__
 # Before the CLI exists the same policy reads through the preinstalled AWS SDK.
 Wait-StagedObject 'payload/bootstrap-awscli.msi' ([DateTime]::UtcNow.AddMinutes(5)) {
  try{
@@ -359,7 +402,8 @@ Expand-Archive "$root\bootstrap.zip" "$root\bin"
 & "$root\bin\setup.ps1"
 </powershell>
 '''
-    replacements={'__STAGED_GET__':BASH_STAGED,'__STAGED_GET_PS__':PS_STAGED,'__BUCKET__':bucket,'__HELPER_SHA__':helper_sha,'__MANIFEST_SHA__':manifest_sha,'__AWS_SHA__':aws_cli['sha256'],
+    replacements={'__STAGED_GET__':BASH_STAGED,'__STAGED_GET_PS__':PS_STAGED,'__IMDS_WAIT__':BASH_IMDS,'__IMDS_WAIT_PS__':PS_IMDS,
+                  '__IMDS_SECONDS__':str(IMDS_WAIT_SECONDS),'__BUCKET__':bucket,'__HELPER_SHA__':helper_sha,'__MANIFEST_SHA__':manifest_sha,'__AWS_SHA__':aws_cli['sha256'],
                   '__AWS_LINUX_URL__':linux_cli['url'],'__AWS_LINUX_SHA__':linux_cli['sha256'],
                   '__PACKAGES_BEGIN__':PACKAGES_BEGIN,'__PACKAGES_END__':PACKAGES_END}
     def replace(text):
