@@ -76,6 +76,21 @@ def sweep(aws,deadline=None,now=time.time,sleep=time.sleep,journals=None):
     result['sweepAttempts']=attempts
     return result
 
+def instance_final_state(data,identity,journals=None):
+    """Never raises: one reservation/instance -> its state; empty Reservations -> AGED_OUT only
+    with this run's (or a retained) journal proving creation and observed termination; any
+    other shape -> AMBIGUOUS (a recorded leftover)."""
+    if data is None:return 'absent',None
+    reservations=data.get('Reservations')if isinstance(data,dict)else None
+    if reservations==[]:
+        aged=builder_audit.aged_out(identity,journals or own_journals())
+        return (aged['authoritative']if aged['resolved']else'AMBIGUOUS:empty-reservations-without-journal-proof'),aged
+    try:
+        instances=[item for reservation in reservations for item in reservation['Instances']]
+        if len(instances)==1 and instances[0].get('InstanceId',identity)==identity:return instances[0]['State']['Name'],None
+    except (TypeError,KeyError):pass
+    return 'AMBIGUOUS:unexpected-describe-shape',None
+
 def final(plan,stage_errors=None,deadline=None):
     campaign.actor(plan);rows=safety.read_journal(campaign.JOURNAL,plan)
     try:retained=evidence(plan);evidence_error=None
@@ -88,7 +103,7 @@ def final(plan,stage_errors=None,deadline=None):
             data=campaign.aws(plan,'cloudformation','describe-stacks','--stack-name',identity,missing=('does not exist',));state='absent'if data is None else data['Stacks'][0]['StackStatus']
         elif kind=='AWS::EC2::Instance':
             data=campaign.aws(plan,'ec2','describe-instances','--instance-ids',identity,missing=('InvalidInstanceID.NotFound',))
-            state='absent'if data is None else data['Reservations'][0]['Instances'][0]['State']['Name']
+            state,aged=instance_final_state(data,identity)
         elif kind=='implicit:EBS':
             data=campaign.aws(plan,'ec2','describe-volumes','--volume-ids',identity,missing=('InvalidVolume.NotFound',));state='absent'if data is None else 'PRESENT'
         elif kind=='implicit:ENI':
@@ -113,7 +128,8 @@ def final(plan,stage_errors=None,deadline=None):
             continue
         else:raise ValueError('Unknown created resource type cannot be marked clean: '+kind)
         result={'type':kind,'id':identity,'finalState':state};output.append(result)
-        gone=state=='absent'or kind=='AWS::EC2::Instance'and state=='terminated'or kind=='AWS::CloudFormation::Stack'and state=='DELETE_COMPLETE'
+        if kind=='AWS::EC2::Instance'and aged:result['agedOut']=aged
+        gone=state=='absent'or kind=='AWS::EC2::Instance'and state in ('terminated','AGED_OUT')or kind=='AWS::CloudFormation::Stack'and state=='DELETE_COMPLETE'
         if not gone:left.append(result)
     gaps={}
     for row in rows:

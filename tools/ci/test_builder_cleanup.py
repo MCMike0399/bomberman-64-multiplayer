@@ -87,3 +87,37 @@ class ProtectedInventoryChecks(unittest.TestCase):
   self.assertEqual(count,1);self.assertEqual(missing,[]);self.assertIn('type',changes[0]['differences'])
 
 if __name__=='__main__':unittest.main()
+
+
+class FinalInstanceStateNeverRaises(unittest.TestCase):
+    """Reviewer 2026-10-31: an instance that ages out during this run's own sweep must
+    resolve through the AGED_OUT rule or stay AMBIGUOUS, never crash cleanup."""
+    class Journals:
+        def __init__(self, evidence): self.evidence = evidence
+        def instance(self, identity): return {'evidence': self.evidence, 'matchingJournals': 1 if self.evidence else 0, 'errors': []}
+
+    def state(self, data, evidence=None):
+        import builder_cleanup
+        return builder_cleanup.instance_final_state(data, 'i-0aa4cc1ac8162d4e5', journals=self.Journals(evidence))
+
+    def test_known_shapes(self):
+        self.assertEqual(self.state(None), ('absent', None))
+        one = {'Reservations': [{'Instances': [{'InstanceId': 'i-0aa4cc1ac8162d4e5', 'State': {'Name': 'terminated'}}]}]}
+        self.assertEqual(self.state(one)[0], 'terminated')
+        one['Reservations'][0]['Instances'][0]['State']['Name'] = 'shutting-down'
+        self.assertEqual(self.state(one)[0], 'shutting-down')
+
+    def test_empty_reservations_resolve_only_with_journal_proof(self):
+        state, aged = self.state({'Reservations': []}, evidence={'workflowRunId': '41151908001', 'observedTermination': 'terminated'})
+        self.assertEqual(state, 'AGED_OUT')
+        self.assertEqual(aged['retainedJournal']['workflowRunId'], '41151908001')
+        state, aged = self.state({'Reservations': []}, evidence=None)
+        self.assertEqual(state, 'AMBIGUOUS:empty-reservations-without-journal-proof')
+        self.assertFalse(aged['resolved'])
+
+    def test_unexpected_shapes_are_ambiguous_not_exceptions(self):
+        for data in ({}, {'Reservations': None}, {'Reservations': [{}]}, {'Reservations': [{'Instances': []}]},
+                     {'Reservations': [{'Instances': [{'InstanceId': 'i-other', 'State': {'Name': 'terminated'}}]}]},
+                     {'Reservations': [{'Instances': [{'State': {}}]}]}, 'not-a-dict'):
+            with self.subTest(data=data):
+                self.assertEqual(self.state(data)[0], 'AMBIGUOUS:unexpected-describe-shape')
