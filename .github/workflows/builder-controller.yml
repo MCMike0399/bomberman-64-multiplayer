@@ -31,6 +31,7 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
+      actions: read
       id-token: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -45,6 +46,9 @@ jobs:
           role-duration-seconds: 900
           role-session-name: sancus-builder-audit-${{ github.run_id }}
       - name: Prove identity and discover only owned leftovers without mutation
+        env:
+          # Read-only: retained builder journals prove aged-out terminated instances.
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           umask 077
@@ -318,6 +322,7 @@ jobs:
         if: always()
         env:
           BUILDER_LAUNCH_OUTCOME: ${{ inputs.mode == 'permissions-smoke' && steps.smoke.outcome || steps.launch.outcome }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           if { [ "$MODE" = qualify ] || [ "$MODE" = permissions-smoke ]; } && [ -f artifacts/builder-state/plan.json ]; then
             python3 tools/ci/builder_profile.py -- python3 tools/ci/builder_phase.py --state artifacts/builder-state cleanup

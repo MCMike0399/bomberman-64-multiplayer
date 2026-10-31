@@ -6,6 +6,7 @@ import re
 import subprocess
 
 import builder_namespace as names
+import builder_retained_journals as retained
 
 STANDING={
     f'arn:aws:iam::{names.ACCOUNT}:role/{names.CI_ROLE}',
@@ -25,9 +26,21 @@ def error_code(error):
     return match[1]if match else None
 
 
-def authoritative(aws,arn):
+def aged_out(instance,journals):
+    """Empty exact-ID Reservations resolve only with a builder run's retained journal
+    proving it CREATED this instance and OBSERVED it terminated. Otherwise AMBIGUOUS."""
+    row={'kind':'EC2Instance','authoritative':'AMBIGUOUS:','describeShape':retained.SHAPE,'resolved':False}
+    try:found=(journals or retained.default()).instance(instance)
+    except Exception as error:found={'evidence':None,'errors':[{'error':str(error)[:300]}]}
+    row['journalLookup']={'matchingJournals':found.get('matchingJournals',0),'errors':found.get('errors',[])}
+    if found.get('evidence'):row.update(authoritative='AGED_OUT',resolved=True,retainedJournal=found['evidence'])
+    return row
+
+
+def authoritative(aws,arn,journals=None):
     """Read-only describe of one tagging-index hit. The index lags deletion, so
-    only an authoritative terminated/NotFound/DELETE_COMPLETE answer resolves it.
+    only an authoritative terminated/NotFound/DELETE_COMPLETE answer resolves it,
+    or AGED_OUT: empty exact-ID Reservations plus retained-journal proof.
     Shutting-down, existing, unknown types and every other error stay leftovers."""
     match=re.fullmatch(r'arn:aws:([a-z0-9-]+):([a-z0-9-]*):([0-9]*):(.+)',arn)
     if not match:return {'kind':'unparsed','authoritative':'unknown resource ARN','resolved':False}
@@ -45,6 +58,7 @@ def authoritative(aws,arn):
         return {'kind':kind,'authoritative':state,'resolved':resolved}
     exists=lambda data:('PRESENT',False)
     def instance(data):
+        if isinstance(data,dict)and data.get('Reservations')==[]:return retained.SHAPE,False
         states=[row['State']['Name']for reservation in data.get('Reservations',[])for row in reservation.get('Instances',[])]
         if len(states)!=1:return 'AMBIGUOUS:'+','.join(states),False
         return states[0],states[0]=='terminated'
@@ -54,7 +68,8 @@ def authoritative(aws,arn):
         return states[0],states[0]=='DELETE_COMPLETE'
     kind,_,name=resource.partition('/')
     if service=='ec2'and kind=='instance':
-        return read('EC2Instance',('ec2','describe-instances','--instance-ids',name),('InvalidInstanceID.NotFound',),instance)
+        row=read('EC2Instance',('ec2','describe-instances','--instance-ids',name),('InvalidInstanceID.NotFound',),instance)
+        return aged_out(name,journals)if row['authoritative']==retained.SHAPE else row
     if service=='ec2'and kind=='volume':
         return read('EBS',('ec2','describe-volumes','--volume-ids',name),('InvalidVolume.NotFound',),exists)
     if service=='ec2'and kind=='network-interface':
@@ -77,7 +92,7 @@ def authoritative(aws,arn):
     return {'kind':service+':'+kind,'authoritative':'unknown resource type','resolved':False}
 
 
-def audit(aws,require_scoped_role=True):
+def audit(aws,require_scoped_role=True,journals=None):
     caller=aws('sts','get-caller-identity')
     if caller.get('Account')!=names.ACCOUNT or require_scoped_role and not caller.get('Arn','').startswith(
             f'arn:aws:sts::{names.ACCOUNT}:assumed-role/{names.CI_ROLE}/'):
@@ -116,7 +131,7 @@ def audit(aws,require_scoped_role=True):
         hits=[row['ResourceARN']for row in aws('resourcegroupstaggingapi','get-resources',
               '--tag-filters','Key='+names.RUN_TAG).get('ResourceTagMappingList',[])if not expected_standing(row['ResourceARN'])]
         # Both views per ID: the (lagging) tagging index and the authoritative read.
-        tagged.extend({'id':arn,'taggingIndex':'present',**authoritative(aws,arn)}for arn in hits)
+        tagged.extend({'id':arn,'taggingIndex':'present',**authoritative(aws,arn,journals)}for arn in hits)
         return [row['id']for row in tagged if not row['resolved']]
     observe('TaggedResources',tagging_index)
     leftovers=[{'type':kind,'id':item}for kind,rows in checked.items()if rows for item in rows]

@@ -7,7 +7,9 @@ import builder_namespace as names
 import builder_s3
 import builder_audit
 import builder_cost
+import builder_retained_journals as retained
 import datetime
+import os
 import time
 ROOT=None
 # The tagging index lags authoritative deletion (campaign 2 attempt 2): retry the
@@ -53,12 +55,19 @@ def protected_comparison(baseline,actual):
         if differences:changes.append({'id':before['id'],'differences':differences,'note':'Observed concurrent difference; never reverted'})
     return changes,unavailable,compared
 
-def sweep(aws,deadline=None,now=time.time,sleep=time.sleep):
+def own_journals():
+    """This run's local journal for its own instances, then earlier runs' retained artifacts."""
+    run,attempt=os.environ.get('GITHUB_RUN_ID','local'),os.environ.get('GITHUB_RUN_ATTEMPT','1')
+    reference={'source':'this run\'s local state directory','workflowRunId':run,
+               'artifactName':f'builder-state-{run}-{attempt}-final (uploaded after this sweep)'}
+    return retained.Journals(retained.LocalJournal(ROOT,reference),*retained.default().sources)
+
+def sweep(aws,deadline=None,now=time.time,sleep=time.sleep,journals=None):
     """Read-only audit, retried while anything is unresolved and time remains."""
     started=now();stop=started if deadline is None else min(started+SWEEP_RETRY_SECONDS,deadline-SWEEP_DEADLINE_MARGIN_SECONDS)
     attempts=[]
     while True:
-        result=builder_audit.audit(aws,require_scoped_role=False)
+        result=builder_audit.audit(aws,require_scoped_role=False,journals=journals)
         passed=not result['leftovers']and not result['errors']
         attempts.append({'atUtc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'passed':passed,
                          'leftovers':[row['id']for row in result['leftovers']],'errors':[row['type']for row in result['errors']]})
@@ -66,6 +75,21 @@ def sweep(aws,deadline=None,now=time.time,sleep=time.sleep):
         sleep(SWEEP_INTERVAL_SECONDS)
     result['sweepAttempts']=attempts
     return result
+
+def instance_final_state(data,identity,journals=None):
+    """Never raises: one reservation/instance -> its state; empty Reservations -> AGED_OUT only
+    with this run's (or a retained) journal proving creation and observed termination; any
+    other shape -> AMBIGUOUS (a recorded leftover)."""
+    if data is None:return 'absent',None
+    reservations=data.get('Reservations')if isinstance(data,dict)else None
+    if reservations==[]:
+        aged=builder_audit.aged_out(identity,journals or own_journals())
+        return (aged['authoritative']if aged['resolved']else'AMBIGUOUS:empty-reservations-without-journal-proof'),aged
+    try:
+        instances=[item for reservation in reservations for item in reservation['Instances']]
+        if len(instances)==1 and instances[0].get('InstanceId',identity)==identity:return instances[0]['State']['Name'],None
+    except (TypeError,KeyError):pass
+    return 'AMBIGUOUS:unexpected-describe-shape',None
 
 def final(plan,stage_errors=None,deadline=None):
     campaign.actor(plan);rows=safety.read_journal(campaign.JOURNAL,plan)
@@ -79,7 +103,7 @@ def final(plan,stage_errors=None,deadline=None):
             data=campaign.aws(plan,'cloudformation','describe-stacks','--stack-name',identity,missing=('does not exist',));state='absent'if data is None else data['Stacks'][0]['StackStatus']
         elif kind=='AWS::EC2::Instance':
             data=campaign.aws(plan,'ec2','describe-instances','--instance-ids',identity,missing=('InvalidInstanceID.NotFound',))
-            state='absent'if data is None else data['Reservations'][0]['Instances'][0]['State']['Name']
+            state,aged=instance_final_state(data,identity)
         elif kind=='implicit:EBS':
             data=campaign.aws(plan,'ec2','describe-volumes','--volume-ids',identity,missing=('InvalidVolume.NotFound',));state='absent'if data is None else 'PRESENT'
         elif kind=='implicit:ENI':
@@ -104,7 +128,8 @@ def final(plan,stage_errors=None,deadline=None):
             continue
         else:raise ValueError('Unknown created resource type cannot be marked clean: '+kind)
         result={'type':kind,'id':identity,'finalState':state};output.append(result)
-        gone=state=='absent'or kind=='AWS::EC2::Instance'and state=='terminated'or kind=='AWS::CloudFormation::Stack'and state=='DELETE_COMPLETE'
+        if kind=='AWS::EC2::Instance'and aged:result['agedOut']=aged
+        gone=state=='absent'or kind=='AWS::EC2::Instance'and state in ('terminated','AGED_OUT')or kind=='AWS::CloudFormation::Stack'and state=='DELETE_COMPLETE'
         if not gone:left.append(result)
     gaps={}
     for row in rows:
@@ -115,7 +140,7 @@ def final(plan,stage_errors=None,deadline=None):
     live=campaign.aws(plan,'ec2','describe-instances','--instance-ids',*ids)['Reservations']
     actual={x['InstanceId']:x for r in live for x in r['Instances']}
     changes,unavailable,compared=protected_comparison(baseline,actual)
-    audit=sweep(lambda *args:campaign.aws(plan,*args),deadline)
+    audit=sweep(lambda *args:campaign.aws(plan,*args),deadline,journals=own_journals())
     left.extend(audit['leftovers'])
     for error in audit['errors']:left.append({'type':error['type'],'id':'audit','finalState':'UNVERIFIED'})
     receipt={'account':plan['account'],'region':plan['region'],'runId':plan['runId'],'payloadSource':plan['payloadSource'],
