@@ -369,7 +369,9 @@ details in the tooltip) instead of adding a line, so Settings keeps one height a
 macOS/Linux; the flag only works with `--playtest=` and writes renderer changes to a
 scratch launcher folder. It also checks that Tab and controller focus scroll
 "Check now" into view. Esc acts in one press while a tooltip is showing: the GUI
-would otherwise spend that press dismissing it (`display-settings` covers this).
+spends that press dismissing the tooltip through its own path, and GameRoot then
+acts on the next frame. Navigating under a live tooltip tore it down twice and
+logged disconnect errors (Linux GPU run 41240998617). `display-settings` covers this.
 
 **Display mode** selects Windowed or Fullscreen. **Resolution** offers Native
 (shown with the screen's pixel size; saved as Automatic) and the common 16:9/16:10

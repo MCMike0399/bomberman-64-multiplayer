@@ -284,13 +284,36 @@ public partial class GameRoot : Node3D
         {Back();GetViewport().SetInputAsHandled();}
         // The GUI spends a key press on dismissing a visible tooltip, so a pointer resting on a
         // control with a tooltip needed two Esc presses (Windows GPU run 41214884627, where real
-        // fullscreen left the pointer over the frame-rate cap). Esc acts in one press.
-        else if(!_preparingGraphics&&!_menu.HasOpenPopup&&TooltipShowing()
+        // fullscreen left the pointer over the frame-rate cap). Let Godot dismiss the tooltip
+        // through its own path, then act on the next frame: navigating under a live tooltip tore
+        // it down twice and logged disconnect errors (Linux GPU run 41240998617).
+        else if(!_preparingGraphics&&!_menu.HasOpenPopup&&!_tooltipEscapePending&&TooltipShowing()
             &&@event is InputEventKey {Pressed:true,Echo:false,Keycode:Key.Escape})
-        {Cancel();GetViewport().SetInputAsHandled();}
+        {
+            _tooltipEscapePending=true;_tooltipEscapeEvent=@event.GetInstanceId();TooltipEscapesArmed++;
+            _tooltipEscapeFrame=Engine.GetProcessFrames();
+            GetTree().Connect(SceneTree.SignalName.ProcessFrame,Callable.From(FinishTooltipEscape),(uint)ConnectFlags.OneShot);
+        }
     }
-    private bool TooltipShowing()=>GetViewport().GuiGetHoveredControl() is {} hovered
-        &&hovered.GetChildren(true).OfType<PopupPanel>().Any(panel=>panel.Visible);
+    private bool _tooltipEscapePending;
+    private ulong _tooltipEscapeEvent,_tooltipEscapeFrame;
+    internal bool TooltipEscapePending=>_tooltipEscapePending;
+    internal int TooltipEscapesArmed{get;private set;}
+    private void FinishTooltipEscape()
+    {
+        // _UnhandledInput already acted if the GUI did not spend this press.
+        if(!_tooltipEscapePending)return;
+        // Input flushes early in a frame, so this can still be the arming frame; the dismissed
+        // tooltip is only freed at its end. Act on a later frame.
+        if(Engine.GetProcessFrames()==_tooltipEscapeFrame)
+        {GetTree().Connect(SceneTree.SignalName.ProcessFrame,Callable.From(FinishTooltipEscape),(uint)ConnectFlags.OneShot);return;}
+        _tooltipEscapePending=false;
+        if(!_preparingGraphics&&!_menu.HasOpenPopup)Cancel();
+    }
+    /// <summary>Playtest-only: reproduces a tooltip that vanished before GUI input (ordering b).</summary>
+    internal Func<bool>? TooltipShowingForPlaytest;
+    private bool TooltipShowing()=>TooltipShowingForPlaytest?.Invoke()??(GetViewport().GuiGetHoveredControl() is {} hovered
+        &&hovered.GetChildren(true).OfType<PopupPanel>().Any(panel=>panel.Visible));
     private void Cancel()
     {
         if(ScreenName=="Match"&&_tutorialHud.Finished&&_tutorialLessonId is not null)Navigate("Tutorial",restoreFocus:true);
@@ -312,7 +335,13 @@ public partial class GameRoot : Node3D
             else {if(ScreenName=="Controls")ControllerHub.Current.TesterActive=false;_menu.FocusStart();}
             GetViewport().SetInputAsHandled();return;
         }
-        if(cancel){Cancel();GetViewport().SetInputAsHandled();}
+        if(cancel)
+        {
+            // The press that armed a tooltip Esc reached here, so the GUI did not spend it:
+            // act now and retire the deferred action. Any other press acts normally.
+            if(_tooltipEscapePending&&@event.GetInstanceId()==_tooltipEscapeEvent)_tooltipEscapePending=false;
+            Cancel();GetViewport().SetInputAsHandled();
+        }
     }
     private void OpenGameMenu()
     {
