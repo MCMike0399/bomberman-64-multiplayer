@@ -85,8 +85,12 @@ then segfaulted while a role popup opened: `libnvidia-glcore.so.595.112.07`, a N
 read, in GPU runs 41285894565 and 41304300722, about 2 in 10 T4 `tour-09` runs. llvmpipe,
 Windows and Mac never crashed with embedded popups.
 
-The embedded teardown only logs the two root-Window disconnect lines described under
-Display settings. `tools/playtest/contracts.py` allowlists them on Linux in role-popup
+Godot 4.7.2's embedded teardown on Linux logs the two root-Window disconnect lines described
+under Display settings. It also leaves one stale root-Window connection per signal on the
+persistent role popup; its next open then logs "already connected". After each close,
+RosterSelection disconnects the exact stored callables that target that popup. A small GDScript
+helper does this, because C# cannot pass `callable_mp` callables back. Mac and Windows have
+nothing to remove; the playtest trace records the count. `tools/playtest/contracts.py` allowlists them on Linux in role-popup
 scenarios, at most one of each per traced role-popup close. `controller-popups` and
 `roster-popup-stress` assert that closing pickers restores the root Window's signal
 connections and leaves no popup alive. The native-only input guard (`OwnsPopupInput`)

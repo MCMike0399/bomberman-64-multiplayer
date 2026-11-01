@@ -973,7 +973,8 @@ The campaign window is 180 minutes, the 3 h rule, with a 215-minute job; the fin
 the fixed expiry. A repeat set cut short by time is a failure.
 
 The `linux-popup-crash-loop` PR label repeats the PR head's own Verification packages on
-hosted llvmpipe (with systemd-coredump) and WARP. This is free evidence, never qualification.
+hosted llvmpipe (with systemd-coredump), plus a tour-02 control on cdee141's packages. This is free
+evidence, never qualification.
 
 ### Native artifact and DiskImages lifetimes
 

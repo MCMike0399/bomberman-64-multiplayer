@@ -44,7 +44,8 @@ public partial class PlaytestDriver
             int lifetimeAfter=root.GetSignalConnectionList(Node.SignalName.TreeExited).Count;
             var popups=AllDescendants(root).OfType<Popup>().ToArray();
             Event("roster-popup-stress",new {cycles,focusConnections,focusAfter,lifetimeConnections,lifetimeAfter,popupsBefore,
-                popupsAfter=popups.Length,visiblePopups=popups.Count(popup=>popup.Visible),embedded=roles.All(role=>role.GetPopup().IsEmbedded())});
+                popupsAfter=popups.Length,visiblePopups=popups.Count(popup=>popup.Visible),embedded=roles.All(role=>role.GetPopup().IsEmbedded()),
+                staleRootConnectionsRemoved=BlastCircuit.UI.Menu.RosterSelection.StaleRootConnectionsRemoved});
             Check(cycles>=50,"role popups opened and closed at least 50 times through the controller");
             Check(opened,"every printed-A press opened the actual role popup");
             Check(allClosed,"every confirm closed the role popup");

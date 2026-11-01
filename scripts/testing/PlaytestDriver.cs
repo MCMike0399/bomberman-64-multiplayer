@@ -211,7 +211,9 @@ public partial class PlaytestDriver : Node
             if(_root.FindChild($"Slot{slot}Role",true,false) is not OptionButton role)continue;
             var popup=role.GetPopup();int traced=slot;
             if(_tracedRolePopups.Add(popup.GetInstanceId()))
-                popup.PopupHide+=()=>Event("role-popup-closed",new {slot=traced,embedded=popup.IsEmbedded()});
+                // Deferred after RosterSelection's own deferred cleanup, so the cumulative count includes this close.
+                popup.PopupHide+=()=>Callable.From(()=>Event("role-popup-closed",new {slot=traced,embedded=popup.IsEmbedded(),
+                    staleRootConnectionsRemoved=BlastCircuit.UI.Menu.RosterSelection.StaleRootConnectionsRemoved})).CallDeferred();
         }
     }
     private async Task Frames(int count)

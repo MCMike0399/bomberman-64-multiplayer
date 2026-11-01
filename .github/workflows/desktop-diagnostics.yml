@@ -335,18 +335,19 @@ jobs:
   linux-popup-crash-loop:
     # Free diagnostic for the Linux role-popup crash (GPU runs 41285894565, 41304300722: SIGSEGV in
     # NVIDIA's driver while a native role popup opened). Repeats this PR head's own Verification packages
-    # on hosted software renderers with Linux crash capture. Never qualification.
+    # on hosted llvmpipe with Linux crash capture (WARP lacks Vulkan surface support). Never qualification.
     if: github.event.pull_request.head.repo.full_name == github.repository && contains(github.event.pull_request.labels.*.name, 'linux-popup-crash-loop')
-    name: Popup loop ${{ matrix.target }} ${{ matrix.repeat }}
+    name: Popup loop ${{ matrix.target }} ${{ matrix.repeat }}${{ matrix.build && format(' on {0}', matrix.build) || '' }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - {target: linux-x64, runner: ubuntu-24.04, repeat: 'roster-popup-stress:5'}
-          - {target: linux-x64, runner: ubuntu-24.04, repeat: 'controller-popups:10'}
-          - {target: linux-x64, runner: ubuntu-24.04, repeat: 'tour-09:5'}
+          - {target: linux-x64, runner: ubuntu-24.04, repeat: 'controller-popups:5'}
+          - {target: linux-x64, runner: ubuntu-24.04, repeat: 'tour-09:3'}
           - {target: linux-x64, runner: ubuntu-24.04, repeat: 'tour-02:2'}
-          - {target: windows-x64, runner: windows-2025, repeat: 'roster-popup-stress:2'}
+          # Control: the same tour-02 on cdee141's packages (Verification 41298135848), before this PR.
+          - {target: linux-x64, runner: ubuntu-24.04, repeat: 'tour-02:2', build: '41298135848'}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 300
     steps:
@@ -363,7 +364,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          FIXED_BUILD: ${{ matrix.build }}
         run: |
+          if [ -n "$FIXED_BUILD" ]; then echo "run=$FIXED_BUILD" >> "$GITHUB_OUTPUT"; echo "Using control Verification run $FIXED_BUILD"; exit 0; fi
           id=$(gh api "repos/${{ github.repository }}/actions/workflows/ci.yml/runs?head_sha=$HEAD_SHA&status=success&per_page=1" --jq '.workflow_runs[0].id // empty')
           if [ -z "$id" ]; then echo "No successful Verification run for $HEAD_SHA yet" >&2; exit 1; fi
           echo "run=$id" >> "$GITHUB_OUTPUT"; echo "Using Verification run $id for $HEAD_SHA"
@@ -388,19 +391,12 @@ jobs:
       # systemd-coredump keeps a symbolized stack trace as text (coredumpctl info) for any crash.
       - if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y fuse3 libicu74 xvfb openbox pulseaudio mesa-vulkan-drivers systemd-coredump
-      - if: runner.os == 'Windows'
-        run: ./tools/packaging/windows-test-desktop.ps1
       - name: Repeat with crash capture
         shell: bash
         env:
           TARGET: ${{ matrix.target }}
           REPEAT: ${{ matrix.repeat }}
-        run: |
-          if [ "$TARGET" = linux-x64 ]; then
-            python tools/packaging/linux-desktop.py -- python tools/packaging/verify-desktop.py --target "$TARGET" --graphical --software-renderer --repeat "$REPEAT"
-          else
-            python tools/packaging/verify-desktop.py --target "$TARGET" --graphical --software-renderer --repeat "$REPEAT"
-          fi
+        run: python tools/packaging/linux-desktop.py -- python tools/packaging/verify-desktop.py --target "$TARGET" --graphical --software-renderer --repeat "$REPEAT"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
