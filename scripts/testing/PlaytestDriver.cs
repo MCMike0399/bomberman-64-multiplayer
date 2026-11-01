@@ -204,7 +204,8 @@ public partial class PlaytestDriver : Node
     /// <summary>Trace every Roster role-popup close: runtime-log allowlisting is bounded by these markers.</summary>
     private void TraceRolePopups()
     {
-        if(_root.ScreenName!="Roster"||_tracedRolePopups.Count>=8)return;
+        // No count cap: a rebuilt RosterSelection brings new popup instances that must be traced too.
+        if(_root.ScreenName!="Roster")return;
         for(int slot=0;slot<8;slot++)
         {
             if(_root.FindChild($"Slot{slot}Role",true,false) is not OptionButton role)continue;
