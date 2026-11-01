@@ -2,7 +2,7 @@
   "budgetUsd": 200,
   "perRunCapUsd": 20,
   "preCiEstimateUsd": 4.8,
-  "closedEstimateUsd": 13.97,
+  "closedEstimateUsd": 17.88,
   "recordedRuns": [
     {
       "workflowRunId": "41136197647",
@@ -28,6 +28,11 @@
       "workflowRunId": "41214884627",
       "estimateUsd": 3.88,
       "receipt": "Campaign on source cec369f: launch, core (both T4 guests), acknowledgement and retention passed; final phase exit 1: Linux finished; Windows complete-native-graphical failed 3 of 24 cases (tour-03 and menu-preview: Windows-only Settings renderer rows push Check now below 1024x640; tour-02: Escape after real fullscreen did not return to Pause). Instances terminated; cleanup-receipt cost.estimateUsd 3.88, allCreatedResourcesGone true; outcome report passed, zero leftovers; operator audit 2026-10-31T17:55Z 18/18 absent."
+    },
+    {
+      "workflowRunId": "41240998617",
+      "estimateUsd": 3.91,
+      "receipt": "Campaign on source c0d56c5 (render fingerprint 9329d72f): launch, core (both T4 guests), acknowledgement and retention passed; final phase exit 1: Windows FINISHED (Settings 1024x640 and fullscreen-Esc fixes hold); Linux tour-02 game passed but runtime.log had two engine disconnect errors (nonexistent focus_entered/tree_exited connection) from navigating under a live tooltip. Instances terminated; cleanup-receipt cost.estimateUsd 3.91, allCreatedResourcesGone true; outcome report passed, zero leftovers; operator audit 2026-10-31T23:31Z 18/18 absent."
     }
   ],
   "scope": "Conservative closed-campaign estimates. preCiEstimateUsd covers the campaigns before CI/OIDC orchestration. After every paid CI run, a reviewed PR appends {workflowRunId, estimateUsd, receipt} from its cost receipt and raises closedEstimateUsd by the same amount; until then the selector refuses another paid run. Estimates are not invoices."

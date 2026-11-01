@@ -91,7 +91,37 @@ public partial class PlaytestDriver
         Check(ReferenceEquals(session,_root.ActiveSession)&&snapshots==_root.SnapshotCount,"display change preserves paused local session");
         Check(PlayerPreferences.Load(_root.PreferencesPath).Fullscreen,"fullscreen selection persists");
         await Capture("display-settings-fullscreen");
-        // Real fullscreen leaves the OS pointer resting over the menu. On the Windows GPU
+        // One Esc press, recording every screen it passes through.
+        async Task<(List<string> Screens,bool Armed)> EscapeScreens(string label)
+        {
+            var screens=new List<string>{_root.ScreenName};int window=GetWindow().GetWindowId();int before=_root.TooltipEscapesArmed;
+            Godot.Input.ParseInputEvent(new InputEventKey {WindowId=window,Keycode=Key.Escape,PhysicalKeycode=Key.Escape,Pressed=true});
+            // ParseInputEvent is buffered until the next frame's flush, and in ordering (b) that same
+            // dispatch already retires the flag, so count arms once the press has been processed.
+            bool pendingAfterPress=false;
+            for(int i=0;i<10;i++)
+            {
+                await Frames(1);if(i==0)pendingAfterPress=_root.TooltipEscapePending;
+                if(i==0)Godot.Input.ParseInputEvent(new InputEventKey {WindowId=window,Keycode=Key.Escape,PhysicalKeycode=Key.Escape,Pressed=false});
+                if(screens[^1]!=_root.ScreenName)screens.Add(_root.ScreenName);
+            }
+            bool armed=_root.TooltipEscapesArmed==before+1;
+            Event("tooltip-escape-screens",new {label,screens,armed,pendingAfterPress,pendingAfter=_root.TooltipEscapePending});
+            return (screens,armed);
+        }
+        // Ordering (b): the tooltip vanished before GUI input, so the press that armed the
+        // deferred action reaches _UnhandledInput in the same frame. A real embedded panel would
+        // take the key itself, so the playtest reports a tooltip for exactly this one press.
+        _root.TooltipShowingForPlaytest=()=>true;
+        List<string> unhandledScreens;bool unhandledArmed;
+        try {(unhandledScreens,unhandledArmed)=await EscapeScreens("same-press-reaches-unhandled");}
+        finally {_root.TooltipShowingForPlaytest=null;}
+        var unhandled=(Screens:unhandledScreens,Armed:unhandledArmed);
+        Check(unhandled.Armed,"a tooltip Esc arms the deferred action");
+        Check(unhandled.Screens.SequenceEqual(new[]{"Settings","Pause"}),"Esc reaching _UnhandledInput navigates exactly once: "+string.Join(">",unhandled.Screens));
+        Check(!_root.TooltipEscapePending,"the deferred action is retired once the same press acted");
+        await ActivateNamed("PauseSettings");await Frames(4);
+        // Ordering (a), the real case: real fullscreen leaves the OS pointer resting over the menu. On the Windows GPU
         // run (41214884627) the frame-cap tooltip was showing and Esc did not leave
         // Settings. Esc must leave Settings in one press even with a tooltip shown.
         var cap=(Control)_root.FindChild("FrameCap",true,false)!;
@@ -106,9 +136,11 @@ public partial class PlaytestDriver
         var tip=AuditDescendants(GetTree().Root).OfType<Label>().First(label=>label.IsVisibleInTree()&&label.Text==cap.TooltipText);
         var chain=new List<string>();for(Node? n=tip;n!=null;n=n.GetParent())chain.Add(n.GetClass()+":"+n.Name+(n is Window w?"[embedded="+w.IsEmbedded()+",popup="+w.GetFlag(Window.Flags.Popup)+",nofocus="+w.GetFlag(Window.Flags.NoFocus)+",focus="+w.HasFocus()+"]":""));
         Event("tooltip-escape",new {activePopup=DisplayServer.WindowGetActivePopup(),mainWindow=GetWindow().GetWindowId(),screen=_root.ScreenName,chain});
-        await KeyPress(Key.Escape);
-        Check(_root.ScreenName=="Pause","Esc leaves Settings in one press while a tooltip shows (screen "+_root.ScreenName+")");
+        var dismissed=await EscapeScreens("gui-dismisses-tooltip");
+        Check(dismissed.Armed,"Esc with a tooltip defers its action while the GUI dismisses the tooltip");
+        Check(dismissed.Screens.SequenceEqual(new[]{"Settings","Pause"}),"Esc leaves Settings in one press while a tooltip shows, exactly once: "+string.Join(">",dismissed.Screens));
         Check(!TooltipShown(),"leaving Settings dismisses the tooltip");
+        Check(!_root.TooltipEscapePending,"the deferred tooltip Esc ran once");
         await ActivateNamed("ResumeGame");await Frames(20);
         Check(ReferenceEquals(session,_root.ActiveSession)&&_root.SnapshotCount>snapshots,"same local session resumes after display change");
         CheckFraming("sunken-temple",GetWindow().Size);await Capture("display-fullscreen-arena");
