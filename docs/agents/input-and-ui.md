@@ -77,26 +77,20 @@ backend's canonical IDs. Nintendo confirms with printed A and backs with B.
 
 ## Input path and fairness
 
-On Linux/X11, roster role menus use `PopupMenu.ForceNative`: the official
-4.7.2 release runtime leaves embedded popup parent-focus/lifetime subscriptions
-behind after closing. A stock three-item OptionButton reproduces the same
-errors without game or test-driver logic; the editor does not. Native windows
-retain Godot's painted menu and avoid that broken embedded path. Keep the
-roster theme and input bindings unchanged when maintaining this workaround.
-A native popup window does not stop pad/action events from also reaching the
-root window. Without a guard, the A press that selects a role also activates the
-parent's focused Back button. `GameRoot._Input` therefore consumes pad and
-action events while a native role popup is open and on its closing frame.
-Keyboard events target the popup window itself. Windows and Mac keep embedded
-popups. A native Windows WARP witness on 2026-10-28 passed `controller-popups`
-twice with zero engine errors on the unchanged build, so only Linux/X11 needs
-this path.
-`controller-popups` asserts that closing each picker restores its parent's
-signal-connection counts. Native delivery runs this short journey before the
-complete graphical tour, with the same zero-error policy. Native popup captures
-read actual X11 screen pixels and save only the app's client rectangle, since
-the separate popup window is absent from the main viewport texture. Wayland
-and XWayland screen capture need separate evidence.
+Roster role menus are embedded popups on every OS (decision reversed 2026-11-01).
+From 2026-10-27 Linux/X11 used `PopupMenu.ForceNative` to avoid the 4.7.2
+release template's embedded-popup disconnect errors. Each native open created and
+destroyed an X11 window with its own Vulkan surface and swapchain. NVIDIA's driver
+then segfaulted while a role popup opened: `libnvidia-glcore.so.595.112.07`, a NULL+0x160
+read, in GPU runs 41285894565 and 41304300722, about 2 in 10 T4 `tour-09` runs. llvmpipe,
+Windows and Mac never crashed with embedded popups.
+
+The embedded teardown only logs the two root-Window disconnect lines described under
+Display settings. `tools/playtest/contracts.py` allowlists them on Linux in role-popup
+scenarios, at most one of each per traced role-popup close. `controller-popups` and
+`roster-popup-stress` assert that closing pickers restores the root Window's signal
+connections and leaves no popup alive. The native-only input guard (`OwnsPopupInput`)
+and the screen-pixel popup capture were removed with it.
 
 - [ControllerHub](../../scripts/input_devices/ControllerHub.cs) discovers devices,
   publishes native input, tracks active prompt family/keyboard seat, guards focus,

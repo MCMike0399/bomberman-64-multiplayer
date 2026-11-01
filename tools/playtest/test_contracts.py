@@ -186,4 +186,33 @@ class LinuxPopupTeardownAllowlist(unittest.TestCase):
         self.assertEqual(errors, [other]); self.assertEqual(allowlisted, [self.FOCUS, self.EXITED])
 
 
+class LinuxRolePopupTeardownAllowlist(LinuxPopupTeardownAllowlist):
+    """The same exact pair is retired once per traced Roster role-popup close, on Linux only."""
+    CLOSE = json.dumps({'frame': 3200, 'type': 'role-popup-closed', 'data': {'slot': 1, 'embedded': True}})
+
+    def test_pair_once_per_role_popup_close_in_any_linux_scenario(self):
+        for scenario in ('controller-popups', 'tour-09', 'roster-popup-stress'):
+            errors, allowlisted = self.run_case(self.log((self.FOCUS, self.AT), (self.EXITED, self.AT)), scenario=scenario, trace=self.CLOSE)
+            self.assertEqual(errors, []); self.assertEqual(allowlisted, [self.FOCUS, self.EXITED])
+
+    def test_count_is_bounded_by_traced_closes(self):
+        pairs = [(self.FOCUS, self.AT), (self.EXITED, self.AT)] * 3
+        errors, allowlisted = self.run_case(self.log(*pairs), scenario='roster-popup-stress', trace='\n'.join([self.CLOSE] * 2))
+        self.assertEqual(errors, [self.FOCUS, self.EXITED]); self.assertEqual(len(allowlisted), 4)
+
+    def test_no_traced_close_allows_nothing_outside_tour_02(self):
+        errors, allowlisted = self.run_case(self.log((self.FOCUS, self.AT)), scenario='tour-09', trace=self.SEAM)
+        self.assertEqual(errors, [self.FOCUS]); self.assertEqual(allowlisted, [])
+
+    def test_role_popup_closes_do_not_allow_on_other_targets(self):
+        for system in ('Windows', 'Darwin'):
+            errors, _ = self.run_case(self.log((self.FOCUS, self.AT)), system=system, scenario='tour-09', trace=self.CLOSE)
+            self.assertEqual(errors, [self.FOCUS])
+
+    def test_tooltip_and_role_popup_allowances_add_in_tour_02(self):
+        pairs = [(self.FOCUS, self.AT), (self.FOCUS, self.AT)]
+        errors, allowlisted = self.run_case(self.log(*pairs), trace=self.REAL + '\n' + self.CLOSE)
+        self.assertEqual(errors, []); self.assertEqual(allowlisted, [self.FOCUS, self.FOCUS])
+
+
 if __name__=='__main__':unittest.main()

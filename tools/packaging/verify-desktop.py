@@ -48,6 +48,10 @@ def rotated_peer_probe(executable, output, origin, failures, validate):
     return record
 
 
+# Diagnostic cases that are only ever repeated, never part of the regression suite's coverage.
+REPEAT_ONLY_CASES = ('roster-popup-stress',)
+
+
 def repeat(output, scenario, count, scenario_command, receipt_path, revision):
     """Diagnostic loop: COUNT fresh processes of one case. It never writes a regression
     receipt, so it cannot qualify anything; any run that does not pass fails it."""
@@ -111,9 +115,9 @@ def main():
     repeat_case, repeat_count = None, 0
     if args.repeat:
         repeat_case, _, count = args.repeat.partition(':')
-        if not args.graphical or args.cases or args.merge or repeat_case not in validation.SHARDED_GRAPHICAL \
+        if not args.graphical or args.cases or args.merge or repeat_case not in (*validation.SHARDED_GRAPHICAL, *REPEAT_ONLY_CASES) \
                 or not count.isdigit() or not 1 <= int(count) <= 50:
-            parser.error('--repeat needs --graphical, no --cases/--merge, a required graphical case and COUNT 1-50')
+            parser.error('--repeat needs --graphical, no --cases/--merge, a graphical regression or repeat-only case and COUNT 1-50')
         repeat_count = int(count)
     owned = args.cases.split(',') if args.cases else list(validation.SHARDED_GRAPHICAL)
     if args.part and not args.part.replace('-', '').isalnum():

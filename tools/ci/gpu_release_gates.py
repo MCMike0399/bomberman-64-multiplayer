@@ -31,6 +31,9 @@ def inspect_receipt(data,target,revision,archive,download,server,fingerprint,*,r
         raise RuntimeError('GPU qualification requires its completed ownership-safe cleanup audit')
     if data.get('passed')is not True or data.get('primaryDriver')!='vulkan' or data.get('effectiveSamples')!=2:
         raise RuntimeError('GPU original High qualification is incomplete')
+    # Receipts made before diagnostic repeats were gated (e.g. run 41304300722) carry no verdict for them.
+    if not isinstance(data.get('diagnosticRepeats'),dict)or data['diagnosticRepeats'].get('failures')!=[]:
+        raise RuntimeError('GPU receipt lacks a clean diagnostic-repeat verdict')
     devices=data.get('devices',[])
     if not devices or not all(physical(row)for row in devices):
         raise RuntimeError('GPU receipt requires initialized physical hardware, never software/paravirtual')
@@ -102,6 +105,37 @@ def inspect_graphical(graph,target,revision,release,archive,download,server):
     return graph
 
 
+def diagnostic_repeat_failures(report,target):
+    """Failed, crashed, missing or incomplete diagnostic repeats in the remaining phase's campaign-result.
+
+    Run 41304300722 finished its phase with tour-09 repeat 4 killed (exit 127, no summary); the repeat step
+    failed but the guest and this receipt still said finished/passed. Linux must carry every configured case."""
+    import gpu_campaign
+    expected={case:count for case,count,_ in gpu_campaign.LINUX_REPEATS}if target=='linux-x64'else{}
+    repeats=report.get('diagnosticRepeats')or{}
+    failures=[case+': repeat receipt missing'for case in expected if case not in repeats]
+    for case,row in repeats.items():
+        runs=row.get('runs')or[];need=expected.get(case,row.get('requested'))
+        passed=sum(run.get('passed')is True for run in runs);crashed=sum(bool(run.get('crashed'))for run in runs)
+        if row.get('error')or row.get('requested')!=need or len(runs)!=need or row.get('allPassed')is not True or passed!=need or crashed:
+            failures.append(f"{case}: {passed}/{need} passed, {crashed} crashed, {len(runs)} ran"+(' ('+row['error']+')'if row.get('error')else''))
+    return failures
+
+
+def block_failed_repeats(directory,target,data,graphical,output):
+    """Record a failed receipt (passed false, with reasons) and stop qualification if any diagnostic repeat failed."""
+    remaining=directory/('gpu-campaign-'+target+'-remaining')/'campaign-result.json'
+    report=json.loads(remaining.read_text())if remaining.is_file()else{}
+    failures=diagnostic_repeat_failures(report,target)
+    data['diagnosticRepeats']={'failures':failures,'cases':{case:{key:row.get(key)for key in('requested','completed','passed','crashed','failed','allPassed')}
+                                                            for case,row in(report.get('diagnosticRepeats')or{}).items()}}
+    if failures:
+        data['passed']=False
+        shutil.copy2(graphical,output/graphical.name)
+        (output/receipt_name(target)).write_text(json.dumps(data,indent=2)+'\n')
+        raise RuntimeError('Diagnostic repeats failed; GPU qualification is not passed: '+'; '.join(failures))
+
+
 def stage(directory,target,revision,verification_run):
     import desktop_packages,download_formats,render_fingerprint,release_identity,desktop_validation
     core=directory/('gpu-campaign-'+target+'-core')
@@ -126,6 +160,7 @@ def stage(directory,target,revision,verification_run):
           'scope':'Exact-source physical-GPU graphics evidence; visual user approval is separate'}
     data.update(cleanupAudited=False,campaignRunId=os.environ.get('BLAST_GPU_RUN_ID',''))
     data['scope']='Preliminary exact-source game graphics evidence; promotion rejects it until the controller binds successful cleanup.'
+    block_failed_repeats(directory,target,data,graphical,output)
     inspect_receipt(data,target,revision,data['archiveSha256'],data['downloadSha256'],data['serverSha256'],fingerprint['sha256'],require_cleanup=False)
     shutil.copy2(graphical,output/graphical.name)
     (output/receipt_name(target)).write_text(json.dumps(data,indent=2)+'\n')

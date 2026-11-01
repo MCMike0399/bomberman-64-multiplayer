@@ -6,8 +6,10 @@ import os
 from pathlib import Path
 import subprocess
 
-JOB_TIMEOUT_SECONDS=210*60
-CAMPAIGN_SECONDS=175*60  # = job timeout 210 min - cleanup 20 - margin 15 (builder_timing.envelope)
+JOB_TIMEOUT_SECONDS=215*60
+# = job timeout 215 min - cleanup 20 - margin 15 (builder_timing.envelope). Raised from 175 (2026-11-01) to the
+# 3 h campaign rule for the Linux role-popup repeats.
+CAMPAIGN_SECONDS=180*60
 SMOKE_TIMEOUT_SECONDS=30*60
 
 

@@ -82,7 +82,7 @@ jobs:
       name: gpu-qualification
       url: ${{ format('https://github.com/{0}/actions/runs/{1}#summary', github.repository, github.run_id) }}
     runs-on: ubuntu-24.04
-    timeout-minutes: ${{ inputs.mode == 'permissions-smoke' && 30 || inputs.mode == 'rehearse' && inputs.rehearsal-fault == 'job-timeout' && 3 || 210 }}
+    timeout-minutes: ${{ inputs.mode == 'permissions-smoke' && 30 || inputs.mode == 'rehearse' && inputs.rehearsal-fault == 'job-timeout' && 3 || 215 }}
     permissions:
       contents: read
       actions: read
@@ -250,7 +250,7 @@ jobs:
       - name: Collect the remaining exact-byte machine evidence
         if: success() && !cancelled() && inputs.mode == 'qualify'
         # Platform backstop: phase grant (final) plus two minutes; SIGINT then always-cleanup (probe 41112729113).
-        timeout-minutes: 92
+        timeout-minutes: 97
         run: python3 tools/ci/builder_profile.py -- python3 tools/ci/builder_phase.py --state artifacts/builder-state final
       - name: Recover missing deletion authority from the durable state
         if: always() && inputs.mode == 'qualify' && steps.intent_upload.outputs.artifact-id != '' && (hashFiles('artifacts/builder-state/plan.json') == '' || hashFiles('artifacts/builder-state/creation-manifest.jsonl') == '')

@@ -959,13 +959,21 @@ processes and writes `Blast-Circuit-<target>-repeat-<case>.json` with
 pass, crash and failure counts. It writes no regression receipt, so it cannot
 qualify anything, and it exits non-zero if any run does not pass.
 
-The Linux GPU remaining phase runs `controller-popups` ×10 and `tour-09` ×6
-after the suite (×6 keeps the final phase 10+ minutes under its 5400 s budget). Any crash there fails the target, and `campaign-result.json`
-keeps both receipts under `diagnosticRepeats`.
+The Linux GPU remaining phase runs `roster-popup-stress` ×3 and `tour-09` ×9 after the
+suite (2026-11-01). `roster-popup-stress` opens and closes all eight Roster role popups 56
+times. Receipts sit under `diagnosticRepeats` in `campaign-result.json`.
 
-The `linux-popup-crash-loop` PR label runs the same repeats on hosted llvmpipe
-against the crashed 3086ba2 AppImage, with systemd-coredump. This is free
-backtrace hunting, never qualification.
+`gpu_release_gates.stage` writes a `passed: false` GPU receipt and fails the target if any
+configured repeat is missing, incomplete, failed or crashed. `inspect_receipt` rejects any
+receipt without a clean repeat verdict. Run 41304300722 had shown the gap: a crashed tour-09
+repeat sat inside an otherwise "finished" phase, and its receipt said passed.
+
+The campaign window is 180 minutes, the 3 h rule, with a 215-minute job; the final grant is
+5700 s. Size repeats so the final phase keeps 10 minutes and the paid job 15 minutes before
+the fixed expiry. A repeat set cut short by time is a failure.
+
+The `linux-popup-crash-loop` PR label repeats the PR head's own Verification packages on
+hosted llvmpipe (with systemd-coredump) and WARP. This is free evidence, never qualification.
 
 ### Native artifact and DiskImages lifetimes
 

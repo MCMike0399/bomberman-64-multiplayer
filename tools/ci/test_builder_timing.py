@@ -18,16 +18,32 @@ class CredentialEnvelope(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'does not fit'):
             timing.envelope({**self.plan,'fixedCampaignExpiryUtc':self.expiry(190)})
 
-    def test_selected_175_minute_expiry_is_the_exact_job_envelope_boundary(self):
-        # Reviewer 2026-10-31: +175 min (was 160) = job timeout 210 - cleanup 20 - margin 15.
+    def test_selected_180_minute_expiry_is_the_exact_job_envelope_boundary(self):
+        # Reviewer 2026-10-31: +175 min (was 160); 2026-11-01: +180 min (the 3 h campaign rule) = job timeout
+        # 215 - cleanup 20 - margin 15, for the Linux role-popup repeats.
         import builder_job
         self.assertEqual(builder_job.CAMPAIGN_SECONDS+timing.CLEANUP_SECONDS+timing.MARGIN_SECONDS,builder_job.JOB_TIMEOUT_SECONDS)
-        timing.envelope({**self.plan,'fixedCampaignExpiryUtc':self.expiry(175)})
-        late=(self.started+datetime.timedelta(minutes=175,seconds=1)).isoformat()
-        with self.assertRaisesRegex(ValueError,'does not fit'):timing.envelope({**self.plan,'fixedCampaignExpiryUtc':late})
+        plan={**self.plan,'timing':{**self.plan['timing'],'jobTimeoutSeconds':builder_job.JOB_TIMEOUT_SECONDS}}
+        timing.envelope({**plan,'fixedCampaignExpiryUtc':self.expiry(180)})
+        late=(self.started+datetime.timedelta(minutes=180,seconds=1)).isoformat()
+        with self.assertRaisesRegex(ValueError,'does not fit'):timing.envelope({**plan,'fixedCampaignExpiryUtc':late})
         self.assertLessEqual(builder_job.CAMPAIGN_SECONDS,10800)  # <= 3 h lifetime rule
         source=open(__import__('builder_trigger').__file__).read()
-        self.assertIn('timedelta(minutes=175)',source)
+        self.assertIn('timedelta(minutes=180)',source)
+
+    def test_final_phase_is_capped_by_expiry_and_covered_by_the_3_hour_collection_session(self):
+        # The collection role session is 3 h from job start and is re-assumed only before cleanup.
+        # With a 180-minute expiry the final grant ends at expiry - 20 min, 18 min before that session
+        # (less its 2-minute margin), wherever the final phase starts.
+        import builder_job
+        plan={**self.plan,'fixedCampaignExpiryUtc':self.expiry(180),
+              'timing':{**self.plan['timing'],'jobTimeoutSeconds':builder_job.JOB_TIMEOUT_SECONDS}}
+        for start_minutes in (60,66.5,80):
+            now=self.now+start_minutes*60
+            budget=timing.grant(plan,'final',now=now,expiration=self.expiry(180))['budgetSeconds']
+            self.assertEqual(budget,min(timing.PHASE_SECONDS['final'],int((160-start_minutes)*60)))
+        # Run 41304300722's final phase started at +66.5 min: the grant is now 5610 s (was 5300 s).
+        self.assertEqual(timing.grant(plan,'final',now=self.now+66.5*60,expiration=self.expiry(180))['budgetSeconds'],5610)
 
     def test_each_phase_refuses_insufficient_remaining_session_time(self):
         for phase in timing.PHASE_SECONDS:

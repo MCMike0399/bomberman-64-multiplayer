@@ -200,12 +200,26 @@ public partial class PlaytestDriver : Node
         if(seat==0&&_root.ActiveSession is NetworkSession network)network.SendInput(0,input);
         Event("input",new { seat,input.X,input.Z,input.A,input.B,input.R,input.Aim });
     }
+    private readonly HashSet<ulong> _tracedRolePopups=[];
+    /// <summary>Trace every Roster role-popup close: runtime-log allowlisting is bounded by these markers.</summary>
+    private void TraceRolePopups()
+    {
+        if(_root.ScreenName!="Roster"||_tracedRolePopups.Count>=8)return;
+        for(int slot=0;slot<8;slot++)
+        {
+            if(_root.FindChild($"Slot{slot}Role",true,false) is not OptionButton role)continue;
+            var popup=role.GetPopup();int traced=slot;
+            if(_tracedRolePopups.Add(popup.GetInstanceId()))
+                popup.PopupHide+=()=>Event("role-popup-closed",new {slot=traced,embedded=popup.IsEmbedded()});
+        }
+    }
     private async Task Frames(int count)
     {
         for(var i=0;i<count;i++)
         {
             await ToSignal(GetTree(),SceneTree.SignalName.ProcessFrame); _frame++;
             if(_frame%30==0)ProgressCheckpoint();
+            TraceRolePopups();
             if(_lastSnapshot!=_root.SnapshotCount)
             {
                 _lastSnapshot=_root.SnapshotCount;
@@ -407,22 +421,6 @@ public partial class PlaytestDriver : Node
     }
     private FixtureLive KeepFixtureLive(NetworkSession session,Action<JsonElement>? onMessage=null)=>new(GetTree(),session,onMessage);
     private void Event(string type,object data) => _trace.WriteLine(JsonSerializer.Serialize(new {frame=_frame,type,data}));
-    private Image CapturePixels()
-    {
-        bool nativePopup=OS.GetName()=="Linux"&&DisplayServer.GetName()=="X11"&&
-            AuditDescendants(_root).OfType<OptionButton>().Any(button=>button.GetPopup() is {Visible:true} popup&&!popup.IsEmbedded());
-        if(!nativePopup)return GetViewport().GetTexture().GetImage();
-        // Separate native windows are absent from the main viewport texture.
-        // Retain actual displayed pixels, cropped to this app's client area.
-        var window=GetWindow();int screen=window.CurrentScreen;
-        using var desktop=DisplayServer.ScreenGetImage(screen);
-        if(desktop is null||desktop.IsEmpty())throw new IOException("Native popup screen capture is unavailable");
-        var area=new Rect2I(DisplayServer.WindowGetPosition(window.GetWindowId())-DisplayServer.ScreenGetPosition(screen),window.Size);
-        if(area.Position.X<0||area.Position.Y<0||area.End.X>desktop.GetWidth()||area.End.Y>desktop.GetHeight())
-            throw new IOException("Native popup capture requires the complete app client inside its screen");
-        Event("native-popup-capture",new {source="actual screen pixels cropped to owned client",size=area.Size.ToString()});
-        return desktop.GetRegion(area);
-    }
     private async Task Capture(string label,int settleFrames=2)
     {
         if(_headless) { Event("screenshot-disabled",new {label,reason="headless display"});return; }
@@ -439,7 +437,7 @@ public partial class PlaytestDriver : Node
         }
         else await fence;
         var path=Path.Combine(_output,label+".png");
-        using var pixels=CapturePixels();
+        using var pixels=GetViewport().GetTexture().GetImage();
         if(pixels.IsEmpty())throw new IOException("Renderer returned an empty capture");
         var colors=new HashSet<int>();float low=1,high=0;
         for(int y=0;y<pixels.GetHeight();y+=Math.Max(1,pixels.GetHeight()/18))
