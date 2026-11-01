@@ -48,6 +48,45 @@ def rotated_peer_probe(executable, output, origin, failures, validate):
     return record
 
 
+def repeat(output, scenario, count, scenario_command, receipt_path, revision):
+    """Diagnostic loop: COUNT fresh processes of one case. It never writes a regression
+    receipt, so it cannot qualify anything; any run that does not pass fails it."""
+    output.mkdir(parents=True, exist_ok=True)
+    receipt = {'schemaVersion': 1, 'scope': 'Diagnostic repeat; not qualification. Any crash or failure blocks.',
+               'scenario': scenario, 'requested': count, 'revision': revision, 'runs': []}
+    for index in range(count):
+        previous = set(output.iterdir())
+        command, environment, timeout = scenario_command(scenario, output)
+        row = {'index': index}
+        try:
+            row['runnerExitCode'] = subprocess.run(command, cwd=ROOT, env=environment, timeout=timeout + 300).returncode
+        except subprocess.SubprocessError as error:
+            row['runnerError'] = str(error)
+        folders = [folder for folder in output.iterdir() if folder not in previous and folder.is_dir()]
+        runner = {}
+        if len(folders) == 1 and (folders[0] / 'runner-summary.json').is_file():
+            row['folder'] = folders[0].name
+            runner = json.loads((folders[0] / 'runner-summary.json').read_text())
+        capture = runner.get('linuxCrashCapture') or {}
+        row.update(passed=runner.get('passed') is True and runner.get('exitCode') == 0 and runner.get('errors') == [],
+                   exitCode=runner.get('exitCode'), assertions=runner.get('assertions'), errors=runner.get('errors'),
+                   summaryPresent=bool(folders) and (folders[0] / 'summary.json').is_file(),
+                   inferredSignal=capture.get('inferredSignal'), seconds=runner.get('seconds'),
+                   memoryKiBBefore=capture.get('memoryKiBBefore'), memoryKiBAfter=capture.get('memoryKiBAfter'))
+        # A crash is a game process that ended abnormally without writing its summary.
+        row['crashed'] = not row['passed'] and (row['exitCode'] not in (0, None) or 'runnerError' in row) and not row['summaryPresent']
+        receipt['runs'].append(row)
+        receipt_path.write_text(json.dumps(receipt, indent=2) + '\n')
+    runs = receipt['runs']
+    receipt.update(completed=len(runs), passed=sum(row['passed'] for row in runs), crashed=sum(row['crashed'] for row in runs),
+                   failed=sum(not row['passed'] and not row['crashed'] for row in runs))
+    receipt['allPassed'] = receipt['passed'] == count
+    receipt_path.write_text(json.dumps(receipt, indent=2) + '\n')
+    print(json.dumps({key: receipt[key] for key in ('scenario', 'completed', 'passed', 'crashed', 'failed')}))
+    if not receipt['allPassed']:
+        raise RuntimeError('Diagnostic repeat did not pass every run: ' + scenario)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--target', choices=desktop.TARGETS, required=True)
@@ -59,6 +98,7 @@ def main():
     parser.add_argument('--part', help='Unique label for this runner\'s part receipt')
     parser.add_argument('--merge', action='store_true', help='Combine every part receipt into the complete graphical receipt without running the game')
     parser.add_argument('--default-renderer', action='store_true', help='Exercise the Windows launcher default; actual Vulkan remains required by the graphical receipt')
+    parser.add_argument('--repeat', metavar='CASE:COUNT', help='Diagnostic only: run one graphical case COUNT times in fresh processes and write a pass/crash receipt; writes no regression receipt and fails if any run does not pass')
     args = parser.parse_args()
     if args.default_renderer and (not args.graphical or args.target != 'windows-x64'):
         parser.error('--default-renderer requires Windows graphical mode')
@@ -68,6 +108,13 @@ def main():
         parser.error('--cases/--part/--merge require --graphical')
     if bool(args.cases) != bool(args.part) or args.merge and args.cases:
         parser.error('--cases and --part go together; --merge runs no cases')
+    repeat_case, repeat_count = None, 0
+    if args.repeat:
+        repeat_case, _, count = args.repeat.partition(':')
+        if not args.graphical or args.cases or args.merge or repeat_case not in validation.SHARDED_GRAPHICAL \
+                or not count.isdigit() or not 1 <= int(count) <= 50:
+            parser.error('--repeat needs --graphical, no --cases/--merge, a required graphical case and COUNT 1-50')
+        repeat_count = int(count)
     owned = args.cases.split(',') if args.cases else list(validation.SHARDED_GRAPHICAL)
     if args.part and not args.part.replace('-', '').isalnum():
         parser.error('--part must be alphanumeric with dashes')
@@ -127,29 +174,36 @@ def main():
         # one frame per second, beyond the production six-second lease. Headless
         # native gates and Mac keep the production lease.
         lease = validation.SOFTWARE_PEER_HOST_LEASE if args.software_renderer else None
+        def scenario_command(scenario, destination):
+            command = [sys.executable, str(ROOT / 'tools/playtest/run.py'), '--executable',
+                       str(executable), '--scenario', scenario,
+                       '--output', str(destination), '--desktop', 'shared', '--server', origin]
+            if args.graphical:
+                if not args.default_renderer:command += ['--rendering-driver', settings['driver']]
+            else:command += ['--headless']
+            # Software rendering is slow: retained WARP spent ~90 min in
+            # graphics-settings alone and ~5 min per stage load. Each tour
+            # gets its own process and a bounded allowance below the job limit.
+            heavy = scenario in validation.TOURS or scenario == 'menu-preview'
+            timeout = (12600 if heavy else 5400) if args.software_renderer else 1500
+            if args.software_renderer:command += ['--timeout',str(timeout)]
+            environment = os.environ.copy()
+            environment['BLAST_QA_PEER_JOIN_ORDER']='normal'
+            if args.target == 'linux-x64':
+                # Modern AppImage runtime supports extraction on CI without a FUSE mount.
+                environment['APPIMAGE_EXTRACT_AND_RUN'] = '1'
+            return command, environment, timeout
         with suite.server(dll=server, peer_host_lease=lease) as origin:
+            if repeat_case:
+                repeat(directory / (item['root'] + '-repeat-' + repeat_case), repeat_case, repeat_count, scenario_command,
+                       directory / (item['root'] + '-repeat-' + repeat_case + '.json'), revision)
+                return
             for scenario in [case for case in validation.SHARDED_GRAPHICAL if case in owned] if args.graphical else validation.HEADLESS:
                 # Keep running this runner's remaining cases after a failure so one
                 # native run reports every failing case; the receipt still fails.
                 try:
                     previous = set(output.iterdir())
-                    command = [sys.executable, str(ROOT / 'tools/playtest/run.py'), '--executable',
-                               str(executable), '--scenario', scenario,
-                               '--output', str(output), '--desktop', 'shared', '--server', origin]
-                    if args.graphical:
-                        if not args.default_renderer:command += ['--rendering-driver', settings['driver']]
-                    else:command += ['--headless']
-                    # Software rendering is slow: retained WARP spent ~90 min in
-                    # graphics-settings alone and ~5 min per stage load. Each tour
-                    # gets its own process and a bounded allowance below the job limit.
-                    heavy = scenario in validation.TOURS or scenario == 'menu-preview'
-                    timeout = (12600 if heavy else 5400) if args.software_renderer else 1500
-                    if args.software_renderer:command += ['--timeout',str(timeout)]
-                    environment = os.environ.copy()
-                    environment['BLAST_QA_PEER_JOIN_ORDER']='normal'
-                    if args.target == 'linux-x64':
-                        # Modern AppImage runtime supports extraction on CI without a FUSE mount.
-                        environment['APPIMAGE_EXTRACT_AND_RUN'] = '1'
+                    command, environment, timeout = scenario_command(scenario, output)
                     subprocess.run(command, cwd=ROOT, env=environment, check=True, timeout=timeout+300)
                     reports = [folder / 'summary.json' for folder in output.iterdir()
                                if folder not in previous and (folder / 'summary.json').is_file()]

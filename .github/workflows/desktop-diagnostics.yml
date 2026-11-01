@@ -331,3 +331,64 @@ jobs:
             artifacts/Blast-Circuit-macos-arm64-regression-details/**/*.png
           retention-days: 7
           if-no-files-found: warn
+
+  linux-popup-crash-loop:
+    # Free diagnostic after GPU run 41285894565 (Linux tour-09 killed by a signal in
+    # controller-popups). Repeats the exact crashed 3086ba2 AppImage from Verification
+    # 41276735023 on llvmpipe with Linux crash capture. Never qualification.
+    if: github.event.pull_request.head.repo.full_name == github.repository && contains(github.event.pull_request.labels.*.name, 'linux-popup-crash-loop')
+    name: Linux popup crash loop ${{ matrix.repeat }}
+    strategy:
+      fail-fast: false
+      matrix:
+        repeat: ['controller-popups:20', 'tour-09:10']
+    runs-on: ubuntu-24.04
+    timeout-minutes: 300
+    env:
+      CRASHED_VERIFICATION_RUN: '41276735023'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: Blast-Circuit-linux-x64
+          run-id: ${{ env.CRASHED_VERIFICATION_RUN }}
+          github-token: ${{ github.token }}
+          path: artifacts
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: Blast-Circuit-linux-x64-download
+          run-id: ${{ env.CRASHED_VERIFICATION_RUN }}
+          github-token: ${{ github.token }}
+          path: artifacts
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: Blast-Circuit-server-dotnet10
+          run-id: ${{ env.CRASHED_VERIFICATION_RUN }}
+          github-token: ${{ github.token }}
+          path: artifacts
+      # systemd-coredump keeps a symbolized stack trace as text (coredumpctl info) for any crash.
+      - run: sudo apt-get update && sudo apt-get install -y fuse3 libicu74 xvfb openbox pulseaudio mesa-vulkan-drivers systemd-coredump
+      - name: Repeat with crash capture
+        env:
+          REPEAT: ${{ matrix.repeat }}
+        run: python tools/packaging/linux-desktop.py -- python tools/packaging/verify-desktop.py --target linux-x64 --graphical --software-renderer --repeat "$REPEAT"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: linux-popup-crash-loop-${{ strategy.job-index }}
+          path: |
+            artifacts/Blast-Circuit-linux-x64-repeat-*.json
+            artifacts/Blast-Circuit-linux-x64-repeat-*/**/runner-summary.json
+            artifacts/Blast-Circuit-linux-x64-repeat-*/**/summary.json
+            artifacts/Blast-Circuit-linux-x64-repeat-*/**/progress.json
+            artifacts/Blast-Circuit-linux-x64-repeat-*/**/runtime.log
+            artifacts/Blast-Circuit-linux-x64-repeat-*/**/trace.jsonl
+            artifacts/Blast-Circuit-linux-x64-repeat-*/**/linux-*
+          retention-days: 14
+          if-no-files-found: warn
