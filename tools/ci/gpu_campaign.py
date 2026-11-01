@@ -9,7 +9,7 @@ ROOT=Path(__file__).resolve().parents[2]
 
 # Linux diagnostic repeats after run 41285894565, where tour-09 was killed by a signal inside
 # controller-popups (standalone controller-popups passed in 8.8 s). (case, count, step limit seconds)
-LINUX_REPEATS=(('controller-popups',10,600),('tour-09',10,1200))
+LINUX_REPEATS=(('controller-popups',10,600),('tour-09',6,900))
 
 OTHER_STAGES=('sunken-temple','rock-garden','top-rules','blizzard-battle','greedy-trap','circuit-garden')
 

@@ -959,8 +959,8 @@ processes and writes `Blast-Circuit-<target>-repeat-<case>.json` with
 pass, crash and failure counts. It writes no regression receipt, so it cannot
 qualify anything, and it exits non-zero if any run does not pass.
 
-The Linux GPU remaining phase runs `controller-popups` ×10 and `tour-09` ×10
-after the suite. Any crash there fails the target, and `campaign-result.json`
+The Linux GPU remaining phase runs `controller-popups` ×10 and `tour-09` ×6
+after the suite (×6 keeps the final phase 10+ minutes under its 5400 s budget). Any crash there fails the target, and `campaign-result.json`
 keeps both receipts under `diagnosticRepeats`.
 
 The `linux-popup-crash-loop` PR label runs the same repeats on hosted llvmpipe

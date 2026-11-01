@@ -200,7 +200,7 @@ def run(args):
         if target=='windows-x64':
             step('installed-launcher',[sys.executable,'tools/ci/startup_guard.py','--expected-revision',descriptor['source'],
                                       '--output','artifacts/gpu-installed-startup-guard'],600)
-        # Linux also runs the controller-popups and tour-09 diagnostic repeats (about 13 minutes).
+        # Linux also runs the controller-popups x10 and tour-09 x6 diagnostic repeats (about 9 minutes).
         step('remaining',collector('remaining'),3300 if target=='linux-x64' else 2400)
         step('preliminary-qualification',[sys.executable,'tools/ci/gpu_release_gates.py','--target',target,
               '--revision',descriptor['source'],'--verification-run',descriptor['verificationRunId']],120)
