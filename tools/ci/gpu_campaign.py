@@ -7,9 +7,10 @@ import visual_parity
 
 ROOT=Path(__file__).resolve().parents[2]
 
-# Linux diagnostic repeats after run 41285894565, where tour-09 was killed by a signal inside
-# controller-popups (standalone controller-popups passed in 8.8 s). (case, count, step limit seconds)
-LINUX_REPEATS=(('controller-popups',10,600),('tour-09',6,900))
+# Linux diagnostic repeats after runs 41285894565 and 41304300722 (tour-09 SIGSEGV in NVIDIA's driver while a
+# native Roster role popup opened). roster-popup-stress opens/closes every role popup 56 times per run.
+# (case, count, step limit seconds); sized to the 180-minute campaign window.
+LINUX_REPEATS=(('roster-popup-stress',3,600),('tour-09',9,900))
 
 OTHER_STAGES=('sunken-temple','rock-garden','top-rules','blizzard-battle','greedy-trap','circuit-garden')
 

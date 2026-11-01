@@ -25,7 +25,7 @@ def receipt(target='windows-x64'):
     comparisons.append({'name':'fresh-process','exitCode':0})
     return {'schemaVersion':1,'target':target,'source':SHA,'archiveSha256':'a','downloadSha256':'b','serverSha256':'c',
             'renderFingerprint':'fp','passed':True,'primaryDriver':'vulkan','effectiveSamples':2,'devices':[device],
-            'cleanupAudited':True,'cleanupSha256':'0'*64,'campaignRunId':RUN,
+            'cleanupAudited':True,'cleanupSha256':'0'*64,'campaignRunId':RUN,'diagnosticRepeats':{'failures':[],'cases':{}},
             'primaryHigh':{'passed':True,'revision':SHA,'archiveSha256':'a','downloadSha256':'b',
                            'runs':[{'exitCode':0,'runtimeErrors':[],'validationErrors':[],'meshInputsValidated':True,'device':device}for _ in (0,1)],
                            'comparisons':comparisons}}
@@ -90,4 +90,74 @@ class GpuPromotionBoundary(unittest.TestCase):
             with self.subTest(changed=changed),self.assertRaises(RuntimeError):gates.inspect_run({**run,**changed},'o/r',SHA)
 
 
-if __name__=='__main__':unittest.main()
+def run(index,crashed=False):
+    """One repeat row as verify-desktop --repeat writes it (shape from run 41304300722)."""
+    if crashed:
+        return {'index':index,'runnerExitCode':1,'folder':'20261101T133641.306719Z-tour-09','passed':False,'exitCode':127,
+                'assertions':None,'errors':['Godot did not write summary.json; inspect runtime.log for compile/launch errors'],
+                'summaryPresent':False,'seconds':58.136,'crashed':True,
+                'inferredSignal':{'signal':'SIGSEGV','source':'kernel segfault report','pid':34357,'comm':'BlastCircuit.x8'}}
+    return {'index':index,'runnerExitCode':0,'passed':True,'exitCode':0,'assertions':923,'errors':[],'summaryPresent':True,
+            'seconds':61.4,'crashed':False,'inferredSignal':None}
+
+
+def repeats(case,count,crash_at=None):
+    rows=[run(i,i==crash_at)for i in range(count)]
+    passed=sum(r['passed']for r in rows);crashed=sum(r['crashed']for r in rows)
+    return {'schemaVersion':1,'scenario':case,'requested':count,'runs':rows,'completed':count,'passed':passed,'crashed':crashed,
+            'failed':count-passed-crashed,'allPassed':passed==count}
+
+
+class DiagnosticRepeatGate(unittest.TestCase):
+    """A failed diagnostic repeat inside an otherwise finished remaining phase can never qualify."""
+
+    def linux_report(self,**override):
+        import gpu_campaign
+        report={'phase':'remaining','collectionComplete':True,'passed':False,
+                'diagnosticRepeats':{case:repeats(case,count)for case,count,_ in gpu_campaign.LINUX_REPEATS}}
+        report['diagnosticRepeats'].update(override);return report
+
+    def test_clean_repeats_pass(self):
+        self.assertEqual(gates.diagnostic_repeat_failures(self.linux_report(),'linux-x64'),[])
+
+    def test_run_41304300722_shape_fails(self):
+        import gpu_campaign
+        case,count,_=next(row for row in gpu_campaign.LINUX_REPEATS if row[0]=='tour-09')
+        failures=gates.diagnostic_repeat_failures(self.linux_report(**{case:repeats(case,count,crash_at=min(4,count-1))}),'linux-x64')
+        self.assertEqual(len(failures),1);self.assertIn('1 crashed',failures[0])
+
+    def test_missing_incomplete_or_errored_repeats_fail(self):
+        import gpu_campaign
+        case,count,_=gpu_campaign.LINUX_REPEATS[0]
+        missing=self.linux_report();del missing['diagnosticRepeats'][case]
+        short=self.linux_report(**{case:{**repeats(case,count),'runs':repeats(case,count)['runs'][:-1]}})
+        errored=self.linux_report(**{case:{'error':'repeat receipt missing'}})
+        for report in (missing,short,errored,{}):
+            self.assertTrue(gates.diagnostic_repeat_failures(report,'linux-x64'),report.keys())
+
+    def test_failed_repeats_write_a_failed_receipt_and_stop(self):
+        import gpu_campaign
+        case,count,_=next(row for row in gpu_campaign.LINUX_REPEATS if row[0]=='tour-09')
+        with tempfile.TemporaryDirectory()as temporary:
+            directory=Path(temporary);(directory/'gpu-campaign-linux-x64-remaining').mkdir()
+            (directory/'gpu-campaign-linux-x64-remaining/campaign-result.json').write_text(
+                json.dumps(self.linux_report(**{case:repeats(case,count,crash_at=min(4,count-1))})))
+            graphical=directory/'Blast-Circuit-linux-x64-graphical.json';graphical.write_text('{}')
+            output=directory/'gpu-release-linux-x64';output.mkdir()
+            data=receipt('linux-x64');data.pop('diagnosticRepeats')
+            with self.assertRaisesRegex(RuntimeError,'Diagnostic repeats failed'):
+                gates.block_failed_repeats(directory,'linux-x64',data,graphical,output)
+            written=json.loads((output/gates.receipt_name('linux-x64')).read_text())
+        self.assertIs(written['passed'],False);self.assertTrue(written['diagnosticRepeats']['failures'])
+
+    def test_receipts_without_a_clean_repeat_verdict_cannot_promote(self):
+        for verdict in (None,{'failures':['tour-09: 5/6 passed, 1 crashed, 6 ran']}):
+            data=receipt('linux-x64')
+            if verdict is None:data.pop('diagnosticRepeats')
+            else:data['diagnosticRepeats']=verdict
+            with self.assertRaisesRegex(RuntimeError,'diagnostic-repeat verdict'):
+                gates.inspect_receipt(data,'linux-x64',SHA,'a','b','c','fp',require_cleanup=False)
+
+
+if __name__=='__main__':
+    unittest.main()

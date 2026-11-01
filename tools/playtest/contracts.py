@@ -24,7 +24,8 @@ def runtime_error_lines(text):
 # Godot 4.7.2 Popup visible-parent teardown on Linux X11. A real tooltip shown and
 # dismissed in display-settings (inside tour-02) logs these two engine messages; game
 # state is correct, and display-settings proves the root Window connections return to
-# their baseline. Reviewer-approved, exact-match only (GPU runs 41240998617, 41265927585).
+# their baseline. Reviewer-approved, exact-match only (GPU runs 41240998617, 41265927585); extended
+# 2026-11-01 to traced Roster role-popup closes once role popups became embedded on Linux.
 # Draft upstream report, not filed: artifacts/qa/godot-popup-teardown-upstream-draft.md
 POPUP_TEARDOWN = re.compile(r"ERROR: Attempt to disconnect a nonexistent connection from 'root:<Window#\d+>'\. "
                             r"Signal: '(focus_entered|tree_exited)', callable: ''\.")
@@ -43,10 +44,30 @@ def real_tooltip_cycles(trace_text):
     return cycles
 
 
+def role_popup_closes(trace_text):
+    """Roster role-popup closes traced by the driver (one 'role-popup-closed' event each)."""
+    closes = 0
+    for line in trace_text.splitlines():
+        try:
+            event = json.loads(line)
+        except ValueError:
+            continue
+        if event.get('type') == 'role-popup-closed':
+            closes += 1
+    return closes
+
+
 def runtime_errors_with_allowlist(text, system, scenario, trace_text):
-    """Runtime errors, minus only the exact Linux tour-02 tooltip-teardown pair (at most one of each per real tooltip cycle)."""
+    """Runtime errors, minus only Godot 4.7.2's exact Linux root-Window popup-teardown pair.
+
+    Each signal's line, followed by its object.cpp:1644 location line, is retired at most once per
+    real tooltip cycle in tour-02 plus once per traced Roster role-popup close (any Linux scenario
+    that opens role popups; a scenario that closes none gets no allowance). Everything else fails.
+    """
     lines = text.splitlines()
-    cycles = real_tooltip_cycles(trace_text) if system == 'Linux' and scenario == 'tour-02' else 0
+    cycles = 0
+    if system == 'Linux':
+        cycles = (real_tooltip_cycles(trace_text) if scenario == 'tour-02' else 0) + role_popup_closes(trace_text)
     used = {'focus_entered': 0, 'tree_exited': 0}
     errors, allowlisted = [], []
     for index, line in enumerate(lines):

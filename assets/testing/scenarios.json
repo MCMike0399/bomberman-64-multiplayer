@@ -246,6 +246,17 @@
       "manual": false
     },
     {
+      "id": "roster-popup-stress",
+      "method": "RosterPopupStress",
+      "domains": [
+        "ui",
+        "input"
+      ],
+      "headless": false,
+      "timeout": 240,
+      "manual": false
+    },
+    {
       "id": "controllers",
       "method": "ControllerInputs",
       "domains": [

@@ -333,19 +333,23 @@ jobs:
           if-no-files-found: warn
 
   linux-popup-crash-loop:
-    # Free diagnostic after GPU run 41285894565 (Linux tour-09 killed by a signal in
-    # controller-popups). Repeats the exact crashed 3086ba2 AppImage from Verification
-    # 41276735023 on llvmpipe with Linux crash capture. Never qualification.
+    # Free diagnostic for the Linux role-popup crash (GPU runs 41285894565, 41304300722: SIGSEGV in
+    # NVIDIA's driver while a native role popup opened). Repeats this PR head's own Verification packages
+    # on hosted llvmpipe with Linux crash capture (WARP lacks Vulkan surface support). Never qualification.
     if: github.event.pull_request.head.repo.full_name == github.repository && contains(github.event.pull_request.labels.*.name, 'linux-popup-crash-loop')
-    name: Linux popup crash loop ${{ matrix.repeat }}
+    name: Popup loop ${{ matrix.target }} ${{ matrix.repeat }}${{ matrix.build && format(' on {0}', matrix.build) || '' }}
     strategy:
       fail-fast: false
       matrix:
-        repeat: ['controller-popups:20', 'tour-09:10']
-    runs-on: ubuntu-24.04
+        include:
+          - {target: linux-x64, runner: ubuntu-24.04, repeat: 'roster-popup-stress:5'}
+          - {target: linux-x64, runner: ubuntu-24.04, repeat: 'controller-popups:5'}
+          - {target: linux-x64, runner: ubuntu-24.04, repeat: 'tour-09:3'}
+          - {target: linux-x64, runner: ubuntu-24.04, repeat: 'tour-02:2'}
+          # Control: the same tour-02 on cdee141's packages (Verification 41298135848), before this PR.
+          - {target: linux-x64, runner: ubuntu-24.04, repeat: 'tour-02:2', build: '41298135848'}
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 300
-    env:
-      CRASHED_VERIFICATION_RUN: '41276735023'
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -354,41 +358,57 @@ jobs:
       - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           dotnet-version: 10.0.x
+      - name: Resolve this head's successful Verification build
+        id: build
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          FIXED_BUILD: ${{ matrix.build }}
+        run: |
+          if [ -n "$FIXED_BUILD" ]; then echo "run=$FIXED_BUILD" >> "$GITHUB_OUTPUT"; echo "Using control Verification run $FIXED_BUILD"; exit 0; fi
+          id=$(gh api "repos/${{ github.repository }}/actions/workflows/ci.yml/runs?head_sha=$HEAD_SHA&status=success&per_page=1" --jq '.workflow_runs[0].id // empty')
+          if [ -z "$id" ]; then echo "No successful Verification run for $HEAD_SHA yet" >&2; exit 1; fi
+          echo "run=$id" >> "$GITHUB_OUTPUT"; echo "Using Verification run $id for $HEAD_SHA"
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          name: Blast-Circuit-linux-x64
-          run-id: ${{ env.CRASHED_VERIFICATION_RUN }}
+          name: Blast-Circuit-${{ matrix.target }}
+          run-id: ${{ steps.build.outputs.run }}
           github-token: ${{ github.token }}
           path: artifacts
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          name: Blast-Circuit-linux-x64-download
-          run-id: ${{ env.CRASHED_VERIFICATION_RUN }}
+          name: Blast-Circuit-${{ matrix.target }}-download
+          run-id: ${{ steps.build.outputs.run }}
           github-token: ${{ github.token }}
           path: artifacts
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: Blast-Circuit-server-dotnet10
-          run-id: ${{ env.CRASHED_VERIFICATION_RUN }}
+          run-id: ${{ steps.build.outputs.run }}
           github-token: ${{ github.token }}
           path: artifacts
       # systemd-coredump keeps a symbolized stack trace as text (coredumpctl info) for any crash.
-      - run: sudo apt-get update && sudo apt-get install -y fuse3 libicu74 xvfb openbox pulseaudio mesa-vulkan-drivers systemd-coredump
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y fuse3 libicu74 xvfb openbox pulseaudio mesa-vulkan-drivers systemd-coredump
       - name: Repeat with crash capture
+        shell: bash
         env:
+          TARGET: ${{ matrix.target }}
           REPEAT: ${{ matrix.repeat }}
-        run: python tools/packaging/linux-desktop.py -- python tools/packaging/verify-desktop.py --target linux-x64 --graphical --software-renderer --repeat "$REPEAT"
+        run: python tools/packaging/linux-desktop.py -- python tools/packaging/verify-desktop.py --target "$TARGET" --graphical --software-renderer --repeat "$REPEAT"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
-          name: linux-popup-crash-loop-${{ strategy.job-index }}
+          name: popup-loop-${{ strategy.job-index }}
           path: |
-            artifacts/Blast-Circuit-linux-x64-repeat-*.json
-            artifacts/Blast-Circuit-linux-x64-repeat-*/**/runner-summary.json
-            artifacts/Blast-Circuit-linux-x64-repeat-*/**/summary.json
-            artifacts/Blast-Circuit-linux-x64-repeat-*/**/progress.json
-            artifacts/Blast-Circuit-linux-x64-repeat-*/**/runtime.log
-            artifacts/Blast-Circuit-linux-x64-repeat-*/**/trace.jsonl
-            artifacts/Blast-Circuit-linux-x64-repeat-*/**/linux-*
+            artifacts/Blast-Circuit-*-repeat-*.json
+            artifacts/Blast-Circuit-*-repeat-*/**/runner-summary.json
+            artifacts/Blast-Circuit-*-repeat-*/**/summary.json
+            artifacts/Blast-Circuit-*-repeat-*/**/progress.json
+            artifacts/Blast-Circuit-*-repeat-*/**/runtime.log
+            artifacts/Blast-Circuit-*-repeat-*/**/trace.jsonl
+            artifacts/Blast-Circuit-*-repeat-*/**/*.png
+            artifacts/Blast-Circuit-*-repeat-*/**/linux-*
           retention-days: 14
           if-no-files-found: warn

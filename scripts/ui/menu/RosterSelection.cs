@@ -14,8 +14,6 @@ public partial class RosterSelection : VBoxContainer
     private readonly List<(PanelContainer Panel,OptionButton Role,Button Appearance,Label Title,Label Binding,Control Preview)> _cards=[];
     private Label _summary=null!,_notice=null!;
     private int _selected;
-    private bool _nativePopups;
-    private ulong _popupClosedFrame=ulong.MaxValue;
     public int BotDifficulty {get;set;}=2;
     private readonly List<DifficultyPips> _difficultyPips=[];
     private bool _updating;
@@ -28,7 +26,6 @@ public partial class RosterSelection : VBoxContainer
         :Roster.Binding(slot,ControllerHub.Current.PlayableCount);
     public override void _Ready()
     {
-        _nativePopups=OS.GetName()=="Linux";
         AddThemeConstantOverride("separation",10);
         var header=ArcadeTheme.Row(this,20);ArcadeTheme.Heading(header,"Player Select",40).SizeFlagsHorizontal=SizeFlags.ExpandFill;
         ArcadeTheme.Quiet(ArcadeTheme.Button(header,"Back",()=>BackRequested?.Invoke())).Name="RosterBack";
@@ -45,14 +42,11 @@ public partial class RosterSelection : VBoxContainer
             role.AddThemeIconOverride("arrow",new ImageTexture());row.AddChild(role);
             // Opening after pointer/gamepad navigation must still establish a usable item focus.
             var popup=role.GetPopup();
-            // The 4.7.2 Linux release template leaves embedded-popup parent
-            // subscriptions behind on close. A native Linux window keeps the
-            // same Godot-painted menu without that broken subscription path.
-            if(_nativePopups)
-            {
-                popup.ForceNative=true;
-                popup.PopupHide+=()=>_popupClosedFrame=Engine.GetProcessFrames();
-            }
+            // Embedded on every OS: a native Linux popup window created and destroyed a
+            // Vulkan surface per open and crashed NVIDIA's driver (GPU runs 41285894565,
+            // 41304300722). The 4.7.2 embedded teardown leaves root-Window connections
+            // behind; release them after each close.
+            popup.PopupHide+=()=>Callable.From(()=>ReleaseStaleRootConnections(popup)).CallDeferred();
             popup.AboutToPopup+=()=>popup.CallDeferred(PopupMenu.MethodName.SetFocusedItem,role.Selected);
             var appearance=new Button {Name=$"Slot{slot}Appearance",CustomMinimumSize=new(0,38),SizeFlagsHorizontal=SizeFlags.ExpandFill,Alignment=HorizontalAlignment.Center};
             ArcadeTheme.Quiet(appearance);appearance.AddThemeFontOverride("font",ArcadeTheme.Body);appearance.AddThemeFontSizeOverride("font_size",15);appearance.AddThemeConstantOverride("outline_size",4);appearance.AddThemeConstantOverride("h_separation",7);row.AddChild(appearance);
@@ -143,7 +137,34 @@ public partial class RosterSelection : VBoxContainer
         _=>binding.Replace(" • CONNECT PAD",", connect a pad").Replace("GAMEPAD","Gamepad").Replace("  •  ",", ").Replace(" • ",", ")
     };
     public bool HasOpenPopup=>_cards.Any(c=>c.Role.GetPopup().Visible);
-    public bool OwnsPopupInput=>_nativePopups&&(HasOpenPopup||_popupClosedFrame==Engine.GetProcessFrames());
+    /// <summary>Root-Window connections removed after role-popup closes in this process (0 where Godot cleans up).</summary>
+    internal static int StaleRootConnectionsRemoved {get;private set;}
+    // Godot 4.7.2 release template on Linux X11: Popup::_deinitialize_visible_parents fails to disconnect
+    // the root Window's focus_entered/tree_exited ("Attempt to disconnect a nonexistent connection",
+    // callable ''), so a persistent popup keeps one stale connection per signal and its next open logs
+    // "already connected". Upstream draft (not filed): artifacts/qa/godot-popup-teardown-upstream-draft.md.
+    // These are callable_mp callables, which C# cannot identify or pass back intact, so a GDScript helper
+    // disconnects the exact stored callables whose target is this popup. Elsewhere it finds nothing.
+    private static GDScript? _teardownHelper;
+    private static void ReleaseStaleRootConnections(PopupMenu popup)
+    {
+        if(!GodotObject.IsInstanceValid(popup)||popup.Visible||!popup.IsInsideTree())return;
+        if(_teardownHelper is null)
+        {
+            _teardownHelper=new GDScript {SourceCode=
+                "static func release(root: Window, popup: Object) -> int:\n"+
+                "\tvar removed := 0\n"+
+                "\tfor signal_name in [&\"focus_entered\", &\"tree_exited\"]:\n"+
+                "\t\tfor connection in root.get_signal_connection_list(signal_name):\n"+
+                "\t\t\tvar callable: Callable = connection[\"callable\"]\n"+
+                "\t\t\tif callable.get_object_id() == popup.get_instance_id():\n"+
+                "\t\t\t\troot.disconnect(signal_name, callable)\n"+
+                "\t\t\t\tremoved += 1\n"+
+                "\treturn removed\n"};
+            _teardownHelper.Reload();
+        }
+        StaleRootConnectionsRemoved+=_teardownHelper.Call("release",popup.GetTree().Root,popup).AsInt32();
+    }
     public Control[][] FocusColumns=>_cards.Select((c,i)=>new Control[]{c.Role,c.Appearance,_difficultyPips[i]}).ToArray();
 }
 

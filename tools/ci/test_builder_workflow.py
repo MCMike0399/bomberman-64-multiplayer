@@ -27,7 +27,7 @@ class HostedCleanupPlacement(unittest.TestCase):
             with self.subTest(name=name):self.assertIn('success() && !cancelled()',self.block(name))
 
     def test_job_and_credential_budgets_are_explicit(self):
-        self.assertIn('|| 210',self.source);self.assertIn('role-duration-seconds: 10800',self.source)
+        self.assertIn('|| 215',self.source);self.assertIn('role-duration-seconds: 10800',self.source)
         self.assertIn('steps.cleanup_auth.outputs.aws-expiration',self.source)
         self.assertIn('builder_phase.py --state artifacts/builder-state cleanup',self.source)
 

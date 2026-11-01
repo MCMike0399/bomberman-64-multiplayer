@@ -136,8 +136,14 @@ public partial class PlaytestDriver
         var hover=cap.GetViewport().GetScreenTransform()*cap.GetGlobalTransformWithCanvas()*(cap.Size/2);
         Godot.Input.ParseInputEvent(new InputEventMouseMotion {Position=hover,GlobalPosition=hover});
         bool TooltipShown()=>AuditDescendants(GetTree().Root).OfType<Label>().Any(label=>label.IsVisibleInTree()&&label.Text==cap.TooltipText);
+        // Fixed-step runs advance GUI time 1/30 s per frame however slow a frame is, and Godot's tooltip delay
+        // counts that time: bound the wait by frames as well as wall time (hosted llvmpipe gave only ~15 frames
+        // in 5 s, run 41335468447). Three tooltip delays at 30 frames/s, at least 90 frames.
+        double tooltipDelay=ProjectSettings.GetSetting("gui/timers/tooltip_delay_sec",0.5).AsDouble();
+        int tooltipFrames=Math.Max(90,(int)Math.Ceiling(tooltipDelay*30*3)),waited=0;
         var tooltipWait=System.Diagnostics.Stopwatch.StartNew();
-        while(!TooltipShown()&&tooltipWait.Elapsed.TotalSeconds<5)await Frames(1);
+        while(!TooltipShown()&&(tooltipWait.Elapsed.TotalSeconds<5||waited<tooltipFrames)){await Frames(1);waited++;}
+        Event("tooltip-wait",new {frames=waited,seconds=Math.Round(tooltipWait.Elapsed.TotalSeconds,3),shown=TooltipShown(),tooltipDelay});
         Check(TooltipShown(),"frame-cap tooltip shows under a resting pointer");
         await Capture("display-settings-tooltip");
         var tip=AuditDescendants(GetTree().Root).OfType<Label>().First(label=>label.IsVisibleInTree()&&label.Text==cap.TooltipText);

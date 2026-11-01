@@ -269,10 +269,6 @@ public partial class GameRoot : Node3D
     }
     public override void _Input(InputEvent @event)
     {
-        // Non-window controller events can reach a native popup and its
-        // parent. The popup owns menu navigation, including its closing event.
-        if(_menu.OwnsPopupInput&&(@event is InputEventJoypadButton or InputEventJoypadMotion or InputEventAction))
-        {GetViewport().SetInputAsHandled();return;}
         if(@event is InputEventKey {Pressed:true,Echo:false,Keycode:Key.F3,AltPressed:false,CtrlPressed:false,MetaPressed:false,ShiftPressed:false})
         {
             _menu.ConfigurePerformanceMetrics(!_preferences.PerformanceMetrics);SavePreferences();

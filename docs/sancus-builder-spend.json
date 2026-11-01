@@ -2,7 +2,7 @@
   "budgetUsd": 200,
   "perRunCapUsd": 20,
   "preCiEstimateUsd": 4.8,
-  "closedEstimateUsd": 25.45,
+  "closedEstimateUsd": 29.68,
   "recordedRuns": [
     {
       "workflowRunId": "41136197647",
@@ -43,6 +43,11 @@
       "workflowRunId": "41285894565",
       "estimateUsd": 3.72,
       "receipt": "Campaign on source 3086ba2 (Verification 41276735023 attempt 2): launch, core (both T4 guests), acknowledgement and retention passed; final phase exit 1: Windows FINISHED (24/24); Linux 23/24: tour-02 passed with exactly the two allowlisted Popup teardown lines and the root Window connection-baseline check, but tour-09 was killed by a signal at 48 s in controller-popups right after a role popup closed (AppImage runtime reports signal death as 127; runtime.log has no error; tour-09 passed on c0d56c5 run 41240998617). Core captures match 41240998617 except at the known spots. Instances terminated; cleanup-receipt cost.estimateUsd 3.72, allCreatedResourcesGone true; outcome report passed, zero leftovers; operator audit 2026-11-01T10:03Z, all categories absent."
+    },
+    {
+      "workflowRunId": "41304300722",
+      "estimateUsd": 4.23,
+      "receipt": "Campaign on source cdee141 (Verification 41298135848): both targets finished, final phase 4694.9 s of 5300; Windows 24/24 and Linux 24/24 (tour-02: exactly the two allowlisted Popup teardown lines, root Window baseline check passed); core captures match 41240998617 except at the known spots. Linux diagnostic repeats: controller-popups 10/10, tour-09 5/6 - repeat 4 killed by SIGSEGV in libnvidia-glcore.so.595.112.07 (NULL+0x160) while a native Roster role popup opened; not qualification. Instances terminated; cleanup-receipt cost.estimateUsd 4.23, allCreatedResourcesGone true; outcome report passed, zero leftovers; operator audit 2026-11-01T14:47Z, all categories absent."
     }
   ],
   "scope": "Conservative closed-campaign estimates. preCiEstimateUsd covers the campaigns before CI/OIDC orchestration. After every paid CI run, a reviewed PR appends {workflowRunId, estimateUsd, receipt} from its cost receipt and raises closedEstimateUsd by the same amount; until then the selector refuses another paid run. Estimates are not invoices."
