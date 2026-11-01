@@ -109,6 +109,13 @@ public partial class PlaytestDriver
             Event("tooltip-escape-screens",new {label,screens,armed,pendingAfterPress,pendingAfter=_root.TooltipEscapePending});
             return (screens,armed);
         }
+        // Leak check: Godot's Popup tracks visible parent windows by connecting their focus_entered
+        // and tree_exited. On Linux X11 its tooltip teardown logs disconnect messages (allowlisted
+        // exactly in tools/playtest/contracts.py), so prove the root Window's connections return
+        // to this baseline and no tooltip panel survives.
+        var rootWindow=GetTree().Root;
+        int Connections(string signal)=>rootWindow.GetSignalConnectionList(signal).Count;
+        var parentBaseline=(Focus:Connections("focus_entered"),Exited:Connections("tree_exited"));
         // Ordering (b): the tooltip vanished before GUI input, so the press that armed the
         // deferred action reaches _UnhandledInput in the same frame. A real embedded panel would
         // take the key itself, so the playtest reports a tooltip for exactly this one press.
@@ -147,6 +154,14 @@ public partial class PlaytestDriver
         await KeyPress(Key.F11);await WindowMode(Window.ModeEnum.Windowed,"F11 returns to selected window size");
         await DisplaySize(new(1280,800));
         Check(!_root.Preferences.Fullscreen&&!PlayerPreferences.Load(_root.PreferencesPath).Fullscreen,"F11 updates saved display mode");
+        await Frames(5);
+        var parentAfter=(Focus:Connections("focus_entered"),Exited:Connections("tree_exited"));
+        var tooltipPanels=cap.GetChildren(true).OfType<PopupPanel>().Where(GodotObject.IsInstanceValid).ToArray();
+        Event("popup-parent-connections",new {baselineFocus=parentBaseline.Focus,baselineExited=parentBaseline.Exited,
+            afterFocus=parentAfter.Focus,afterExited=parentAfter.Exited,tooltipPanels=tooltipPanels.Length});
+        Check(parentAfter==parentBaseline,"root Window focus_entered/tree_exited connections return to baseline after the tooltip and F11 ("
+            +parentBaseline+" -> "+parentAfter+")");
+        Check(tooltipPanels.Length==0,"no tooltip panel remains visible or alive under the frame cap");
         await KeyPress(Key.Enter,true);await WindowMode(Window.ModeEnum.Fullscreen,"Alt+Enter restores fullscreen");
         await KeyPress(Key.Enter,true);await WindowMode(Window.ModeEnum.Windowed,"Alt+Enter returns to windowed");
         _root.Back();await Frames(4);await ActivateNamed("OpenSettings");

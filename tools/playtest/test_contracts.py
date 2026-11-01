@@ -133,4 +133,57 @@ class PlaytestContracts(unittest.TestCase):
             result=json.loads(next((Path(d)/'out').glob('*/runner-summary.json')).read_text())
             self.assertFalse(result['passed']);self.assertTrue(result['errors'])
 
+class LinuxPopupTeardownAllowlist(unittest.TestCase):
+    """Reviewer-approved exact allowlist; every other case must stay a runtime error."""
+    FOCUS = "ERROR: Attempt to disconnect a nonexistent connection from 'root:<Window#31625053544>'. Signal: 'focus_entered', callable: ''."
+    EXITED = "ERROR: Attempt to disconnect a nonexistent connection from 'root:<Window#31625053544>'. Signal: 'tree_exited', callable: ''."
+    AT = '   at: _disconnect (core/object/object.cpp:1644)'
+    REAL = json.dumps({'frame': 176, 'type': 'tooltip-escape-screens', 'data': {'label': 'gui-dismisses-tooltip'}})
+    SEAM = json.dumps({'frame': 137, 'type': 'tooltip-escape-screens', 'data': {'label': 'same-press-reaches-unhandled'}})
+
+    def log(self, *pairs):
+        return '\n'.join(['Godot Engine v4.7.2', ''] + [line for pair in pairs for line in pair] + ['PLAYTEST_PASS scenario=tour-02'])
+
+    def run_case(self, text, system='Linux', scenario='tour-02', trace=None):
+        from contracts import runtime_errors_with_allowlist
+        return runtime_errors_with_allowlist(text, system, scenario, self.REAL + '\n' + self.SEAM if trace is None else trace)
+
+    def test_exact_pair_once_per_real_tooltip_cycle_on_linux_tour_02_is_allowlisted(self):
+        errors, allowlisted = self.run_case(self.log((self.FOCUS, self.AT), (self.EXITED, self.AT)))
+        self.assertEqual(errors, []); self.assertEqual(allowlisted, [self.FOCUS, self.EXITED])
+
+    def test_other_targets_still_fail(self):
+        for system in ('Windows', 'Darwin'):
+            errors, allowlisted = self.run_case(self.log((self.FOCUS, self.AT), (self.EXITED, self.AT)), system=system)
+            self.assertEqual(errors, [self.FOCUS, self.EXITED]); self.assertEqual(allowlisted, [])
+
+    def test_other_scenarios_still_fail(self):
+        for scenario in ('display-settings', 'tour-03', 'all', 'menu-preview'):
+            errors, _ = self.run_case(self.log((self.FOCUS, self.AT), (self.EXITED, self.AT)), scenario=scenario)
+            self.assertEqual(errors, [self.FOCUS, self.EXITED])
+
+    def test_extra_occurrence_beyond_real_cycles_still_fails(self):
+        errors, allowlisted = self.run_case(self.log((self.FOCUS, self.AT), (self.FOCUS, self.AT), (self.EXITED, self.AT)))
+        self.assertEqual(errors, [self.FOCUS]); self.assertEqual(allowlisted, [self.FOCUS, self.EXITED])
+
+    def test_no_real_tooltip_cycle_allows_nothing(self):
+        for trace in ('', self.SEAM):
+            errors, allowlisted = self.run_case(self.log((self.FOCUS, self.AT)), trace=trace)
+            self.assertEqual(errors, [self.FOCUS]); self.assertEqual(allowlisted, [])
+
+    def test_wrong_location_or_variant_message_still_fails(self):
+        wrong_at = '   at: _disconnect (core/object/object.cpp:1645)'
+        other_signal = self.FOCUS.replace('focus_entered', 'visibility_changed')
+        named_callable = self.FOCUS.replace("callable: ''", "callable: 'Popup::_parent_focused'")
+        not_root = self.FOCUS.replace("'root:<Window#31625053544>'", "'Popup:<Window#7>'")
+        for pair in ((self.FOCUS, wrong_at), (self.FOCUS, ''), (other_signal, self.AT), (named_callable, self.AT), (not_root, self.AT)):
+            errors, allowlisted = self.run_case(self.log(pair))
+            self.assertEqual(errors, [pair[0]]); self.assertEqual(allowlisted, [])
+
+    def test_any_other_runtime_error_still_fails(self):
+        other = 'ERROR: System.InvalidOperationException: Assertion failed: something'
+        errors, allowlisted = self.run_case(self.log((self.FOCUS, self.AT), (other, ''), (self.EXITED, self.AT)))
+        self.assertEqual(errors, [other]); self.assertEqual(allowlisted, [self.FOCUS, self.EXITED])
+
+
 if __name__=='__main__':unittest.main()
