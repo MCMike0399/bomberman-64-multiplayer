@@ -121,7 +121,7 @@ jobs:
         if: success() && !cancelled()
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python3 tools/ci/builder_job.py --output artifacts/builder-state/job-clock.json --timeout-seconds "${{ inputs.mode == 'permissions-smoke' && 1800 || inputs.mode == 'rehearse' && inputs.rehearsal-fault == 'job-timeout' && 180 || 12600 }}"
+        run: python3 tools/ci/builder_job.py --output artifacts/builder-state/job-clock.json --timeout-seconds "${{ inputs.mode == 'permissions-smoke' && 1800 || inputs.mode == 'rehearse' && inputs.rehearsal-fault == 'job-timeout' && 180 || 12900 }}"
       - name: Assume the scoped role for preparation and collection
         id: assume
         if: success() && !cancelled()
