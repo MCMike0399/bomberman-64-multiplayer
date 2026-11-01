@@ -31,6 +31,39 @@ class HostedCleanupPlacement(unittest.TestCase):
         self.assertIn('steps.cleanup_auth.outputs.aws-expiration',self.source)
         self.assertIn('builder_phase.py --state artifacts/builder-state cleanup',self.source)
 
+    def test_workflow_clock_branches_are_accepted_and_match_platform_envelopes(self):
+        import json
+        import os
+        import re
+        import runpy
+        import tempfile
+        from unittest.mock import patch
+        import builder_job
+
+        clock=self.block('Record the actual hosted job clock')
+        branches=re.search(r'--timeout-seconds "\$\{\{ (.*?) \}\}"',clock).group(1)
+        platform=self.source.split('  campaign:',1)[1].split('timeout-minutes: ${{ ',1)[1].split(' }}',1)[0]
+        pattern=(r"inputs.mode == 'permissions-smoke' && (\d+) \|\| "
+                 r"inputs.mode == 'rehearse' && inputs.rehearsal-fault == 'job-timeout' && (\d+) \|\| (\d+)")
+        seconds=tuple(map(int,re.fullmatch(pattern,branches).groups()))
+        minutes=tuple(map(int,re.fullmatch(pattern,platform).groups()))
+        self.assertEqual(seconds,(builder_job.SMOKE_TIMEOUT_SECONDS,180,builder_job.JOB_TIMEOUT_SECONDS))
+        self.assertEqual(seconds,tuple(value*60 for value in minutes))
+        self.assertEqual(seconds[-1],215*60)
+
+        # Execute the real CLI for every selected branch: an unreviewed value
+        # must fail here before a real workflow can reach credentials or AWS.
+        job={'id':2,'status':'in_progress','runner_name':'fixture','started_at':'2026-11-01T00:00:00Z'}
+        for mode,value in zip(('smoke','rehearse-timeout','default'),seconds):
+            with self.subTest(mode=mode),tempfile.TemporaryDirectory() as directory:
+                output=Path(directory)/'job-clock.json'
+                args=['builder_job.py','--output',str(output),'--timeout-seconds',str(value)]
+                env={'GITHUB_RUN_ID':'123','GITHUB_RUN_ATTEMPT':'1','GITHUB_JOB':'campaign','RUNNER_NAME':'fixture'}
+                with patch('sys.argv',args),patch.dict(os.environ,env),patch(
+                        'subprocess.check_output',return_value=json.dumps({'jobs':[job]})):
+                    runpy.run_path(str(Path(builder_job.__file__)),run_name='__main__')
+                self.assertEqual(json.loads(output.read_text())['jobTimeoutSeconds'],value)
+
     def test_intent_and_core_uploads_precede_the_operations_they_authorize(self):
         self.assertLess(self.source.index('Durably retain the intent'),self.source.index('Launch and arm'))
         self.assertLess(self.source.index('Retain core evidence before'),self.source.index('Acknowledge durable'))
