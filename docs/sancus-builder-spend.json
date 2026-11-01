@@ -2,7 +2,7 @@
   "budgetUsd": 200,
   "perRunCapUsd": 20,
   "preCiEstimateUsd": 4.8,
-  "closedEstimateUsd": 17.88,
+  "closedEstimateUsd": 21.73,
   "recordedRuns": [
     {
       "workflowRunId": "41136197647",
@@ -33,6 +33,11 @@
       "workflowRunId": "41240998617",
       "estimateUsd": 3.91,
       "receipt": "Campaign on source c0d56c5 (render fingerprint 9329d72f): launch, core (both T4 guests), acknowledgement and retention passed; final phase exit 1: Windows FINISHED (Settings 1024x640 and fullscreen-Esc fixes hold); Linux tour-02 game passed but runtime.log had two engine disconnect errors (nonexistent focus_entered/tree_exited connection) from navigating under a live tooltip. Instances terminated; cleanup-receipt cost.estimateUsd 3.91, allCreatedResourcesGone true; outcome report passed, zero leftovers; operator audit 2026-10-31T23:31Z 18/18 absent."
+    },
+    {
+      "workflowRunId": "41265927585",
+      "estimateUsd": 3.85,
+      "receipt": "Campaign on source c7c5ba4 (render fingerprint 4159e344): launch, core (both T4 guests), acknowledgement and retention passed; final phase exit 1: Windows FINISHED; Linux tour-02 game passed (468 assertions) but runtime.log still had the two Godot Popup visible-parent disconnect messages (focus_entered/tree_exited, object.cpp:1644) after a real tooltip; reviewer-approved exact Linux tour-02 allowlist follows. Instances terminated; cleanup-receipt cost.estimateUsd 3.85, allCreatedResourcesGone true; outcome report passed, zero leftovers; operator audit 2026-11-01T05:2xZ 18/18 absent."
     }
   ],
   "scope": "Conservative closed-campaign estimates. preCiEstimateUsd covers the campaigns before CI/OIDC orchestration. After every paid CI run, a reviewed PR appends {workflowRunId, estimateUsd, receipt} from its cost receipt and raises closedEstimateUsd by the same amount; until then the selector refuses another paid run. Estimates are not invoices."

@@ -372,6 +372,12 @@ scratch launcher folder. It also checks that Tab and controller focus scroll
 spends that press dismissing the tooltip through its own path, and GameRoot then
 acts on the next frame. Navigating under a live tooltip tore it down twice and
 logged disconnect errors (Linux GPU run 41240998617). `display-settings` covers this.
+On Linux X11, Godot 4.7.2's tooltip teardown still logs two "Attempt to disconnect a
+nonexistent connection" messages for the root Window (`focus_entered`/`tree_exited`,
+object.cpp:1644) after a real tooltip. `tools/playtest/contracts.py` allowlists exactly
+those, only on Linux `tour-02`, at most once each per real tooltip cycle (reviewer-approved,
+2026-11-01). `display-settings` asserts the root Window connection counts return to
+baseline and no tooltip panel survives. An upstream report is drafted, not filed.
 
 **Display mode** selects Windowed or Fullscreen. **Resolution** offers Native
 (shown with the screen's pixel size; saved as Automatic) and the common 16:9/16:10

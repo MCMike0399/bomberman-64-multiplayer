@@ -21,6 +21,47 @@ def runtime_error_lines(text):
             or any(marker in line for marker in markers)]
 
 
+# Godot 4.7.2 Popup visible-parent teardown on Linux X11. A real tooltip shown and
+# dismissed in display-settings (inside tour-02) logs these two engine messages; game
+# state is correct, and display-settings proves the root Window connections return to
+# their baseline. Reviewer-approved, exact-match only (GPU runs 41240998617, 41265927585).
+# Draft upstream report, not filed: artifacts/qa/godot-popup-teardown-upstream-draft.md
+POPUP_TEARDOWN = re.compile(r"ERROR: Attempt to disconnect a nonexistent connection from 'root:<Window#\d+>'\. "
+                            r"Signal: '(focus_entered|tree_exited)', callable: ''\.")
+POPUP_TEARDOWN_AT = '   at: _disconnect (core/object/object.cpp:1644)'
+
+
+def real_tooltip_cycles(trace_text):
+    cycles = 0
+    for line in trace_text.splitlines():
+        try:
+            event = json.loads(line)
+        except ValueError:
+            continue
+        if event.get('type') == 'tooltip-escape-screens' and (event.get('data') or {}).get('label') == 'gui-dismisses-tooltip':
+            cycles += 1
+    return cycles
+
+
+def runtime_errors_with_allowlist(text, system, scenario, trace_text):
+    """Runtime errors, minus only the exact Linux tour-02 tooltip-teardown pair (at most one of each per real tooltip cycle)."""
+    lines = text.splitlines()
+    cycles = real_tooltip_cycles(trace_text) if system == 'Linux' and scenario == 'tour-02' else 0
+    used = {'focus_entered': 0, 'tree_exited': 0}
+    errors, allowlisted = [], []
+    for index, line in enumerate(lines):
+        if not runtime_error_lines(line):
+            continue
+        match = POPUP_TEARDOWN.fullmatch(line)
+        following = lines[index + 1] if index + 1 < len(lines) else ''
+        if match and following == POPUP_TEARDOWN_AT and used[match[1]] < cycles:
+            used[match[1]] += 1
+            allowlisted.append(line)
+        else:
+            errors.append(line)
+    return errors, allowlisted
+
+
 def catalog(path=CATALOG):
     data = json.loads(Path(path).read_text())
     if data.get('schemaVersion') != 1:
