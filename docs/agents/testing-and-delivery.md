@@ -937,6 +937,36 @@ diagnostic updater baseline described in [independent platform QA](../desktop-cl
 Integrate current main and select the final public identity when ready; stable
 publication still tests the actual latest release and rejects diagnostic receipts.
 
+### Linux crash capture and diagnostic repeats (2026-11-01)
+
+The AppImage type-2 runtime reports a game killed by any signal as exit 127, and
+a killed game writes no summary (GPU run 41285894565: Linux `tour-09` died in
+`controller-popups` with only the banner in `runtime.log`). For packaged Linux
+runs, `tools/playtest/run.py` records free memory before and after every
+scenario. It lets the game write a core up to the existing hard limit; the
+artifact itself is unchanged. After a non-zero or summary-less exit it saves:
+
+- `linux-kernel-log.txt`: `journalctl -k`, falling back to `dmesg`;
+- `linux-coredumps.txt`: the `coredumpctl` list and stack-trace text;
+- `linux-crash-capture.json`: apport log tail, new crash reports and the
+  inferred signal.
+
+stderr is already merged into `runtime.log`. Capture is evidence only and never
+changes a verdict.
+
+`verify-desktop.py --graphical --repeat CASE:COUNT` runs one case in fresh
+processes and writes `Blast-Circuit-<target>-repeat-<case>.json` with
+pass, crash and failure counts. It writes no regression receipt, so it cannot
+qualify anything, and it exits non-zero if any run does not pass.
+
+The Linux GPU remaining phase runs `controller-popups` ×10 and `tour-09` ×6
+after the suite (×6 keeps the final phase 10+ minutes under its 5400 s budget). Any crash there fails the target, and `campaign-result.json`
+keeps both receipts under `diagnosticRepeats`.
+
+The `linux-popup-crash-loop` PR label runs the same repeats on hosted llvmpipe
+against the crashed 3086ba2 AppImage, with systemd-coredump. This is free
+backtrace hunting, never qualification.
+
 ### Native artifact and DiskImages lifetimes
 
 Replay/input artifacts retain receipts, replay streams, inventories and captures,

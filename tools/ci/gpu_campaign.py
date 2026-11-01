@@ -7,6 +7,10 @@ import visual_parity
 
 ROOT=Path(__file__).resolve().parents[2]
 
+# Linux diagnostic repeats after run 41285894565, where tour-09 was killed by a signal inside
+# controller-popups (standalone controller-popups passed in 8.8 s). (case, count, step limit seconds)
+LINUX_REPEATS=(('controller-popups',10,600),('tour-09',6,900))
+
 OTHER_STAGES=('sunken-temple','rock-garden','top-rules','blizzard-battle','greedy-trap','circuit-garden')
 
 def collect_stage_captures(directory,output,target,revision,provenance,expiry,driver='vulkan',expected_adapter='T4',processes=2):
@@ -131,6 +135,16 @@ def run(args):
             if target=='linux-x64':step('saved-startups',[sys.executable,'tools/packaging/startup-desktop.py','--target',target],600,diagnostic=True)
             # Tours are last. A headroom failure is explicit partial coverage, never a pass.
             step('complete-native-graphical',[sys.executable,'tools/packaging/verify-desktop.py','--target',target,'--graphical','--disposable-desktop',*(['--default-renderer']if target=='windows-x64'else[])],1800,diagnostic=True)
+            if target=='linux-x64':
+                # Fresh-process repeats with crash capture. Diagnostic: they cannot qualify anything, and any
+                # crash or failure makes the step, and therefore the target, fail.
+                report['diagnosticRepeats']={}
+                for case,count,limit in LINUX_REPEATS:
+                    try:step('repeat-'+case,[sys.executable,'tools/packaging/verify-desktop.py','--target',target,'--graphical','--disposable-desktop',
+                                             '--repeat',case+':'+str(count)],limit,diagnostic=True)
+                    finally:
+                        receipt=ROOT/'artifacts'/('Blast-Circuit-linux-x64-repeat-'+case+'.json')
+                        report['diagnosticRepeats'][case]=json.loads(receipt.read_text())if receipt.is_file()else{'error':'repeat receipt missing'}
             report['collectionComplete']=True;report['passed']=all(r['exitCode']==0 for r in report['steps'])
     except (OSError,ValueError,KeyError,RuntimeError,subprocess.SubprocessError)as error:report['errors'].append(str(error))
     finally:(output/'campaign-result.json').write_text(json.dumps(report,indent=2)+'\n')

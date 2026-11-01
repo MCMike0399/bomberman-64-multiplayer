@@ -167,6 +167,9 @@ def main():
     folder.mkdir(parents=True)
     owned_server = None
     runtime = None
+    # Packaged Linux games: memory for every run, kernel/core-dump evidence for an abnormal exit.
+    linux_capture = platform.system() == 'Linux' and bool(args.executable)
+    crash_state = None
     server_log = None
     graphical_lock = None
     gpu_guard = contextlib.ExitStack()
@@ -266,7 +269,11 @@ def main():
                 runtime_env = os.environ.copy()
                 if args.metal_hud:
                     runtime_env.update(MTL_HUD_ENABLED='1', MTL_HUD_LOG_ENABLED='1', MTL_HUD_OPACITY='0')
-                runtime = subprocess.Popen(command, cwd=folder if args.app or args.executable else ROOT, stdout=log, stderr=subprocess.STDOUT, start_new_session=os.name == 'posix', env=runtime_env)
+                if linux_capture:
+                    import linux_crash
+                    crash_state = linux_crash.before()
+                runtime = subprocess.Popen(command, cwd=folder if args.app or args.executable else ROOT, stdout=log, stderr=subprocess.STDOUT, start_new_session=os.name == 'posix', env=runtime_env,
+                                           preexec_fn=linux_crash.enable_cores if linux_capture else None)
                 from metal_metrics import MetalHudCapture
                 with MetalHudCapture(folder, runtime.pid) if args.metal_hud else contextlib.nullcontext():
                     runtime.wait(timeout=args.timeout)
@@ -361,6 +368,13 @@ def main():
         if graphical_lock:
             graphical_lock.close()
         gpu_guard.close()
+        if crash_state is not None:
+            try:
+                import linux_crash
+                result['linuxCrashCapture'] = linux_crash.after(folder, crash_state, result.get('exitCode'),
+                                                                (folder / 'summary.json').is_file())
+            except Exception as error:  # evidence only; never changes the verdict
+                result['linuxCrashCapture'] = {'captureError': str(error)}
         result['seconds'] = round(time.monotonic() - started, 3)
         (folder / 'runner-summary.json').write_text(json.dumps(result, indent=2) + '\n')
         junit(folder / 'junit.xml', result, summary)

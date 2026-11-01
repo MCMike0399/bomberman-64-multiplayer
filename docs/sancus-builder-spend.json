@@ -2,7 +2,7 @@
   "budgetUsd": 200,
   "perRunCapUsd": 20,
   "preCiEstimateUsd": 4.8,
-  "closedEstimateUsd": 21.73,
+  "closedEstimateUsd": 25.45,
   "recordedRuns": [
     {
       "workflowRunId": "41136197647",
@@ -38,6 +38,11 @@
       "workflowRunId": "41265927585",
       "estimateUsd": 3.85,
       "receipt": "Campaign on source c7c5ba4 (render fingerprint 4159e344): launch, core (both T4 guests), acknowledgement and retention passed; final phase exit 1: Windows FINISHED; Linux tour-02 game passed (468 assertions) but runtime.log still had the two Godot Popup visible-parent disconnect messages (focus_entered/tree_exited, object.cpp:1644) after a real tooltip; reviewer-approved exact Linux tour-02 allowlist follows. Instances terminated; cleanup-receipt cost.estimateUsd 3.85, allCreatedResourcesGone true; outcome report passed, zero leftovers; operator audit 2026-11-01T05:2xZ 18/18 absent."
+    },
+    {
+      "workflowRunId": "41285894565",
+      "estimateUsd": 3.72,
+      "receipt": "Campaign on source 3086ba2 (Verification 41276735023 attempt 2): launch, core (both T4 guests), acknowledgement and retention passed; final phase exit 1: Windows FINISHED (24/24); Linux 23/24: tour-02 passed with exactly the two allowlisted Popup teardown lines and the root Window connection-baseline check, but tour-09 was killed by a signal at 48 s in controller-popups right after a role popup closed (AppImage runtime reports signal death as 127; runtime.log has no error; tour-09 passed on c0d56c5 run 41240998617). Core captures match 41240998617 except at the known spots. Instances terminated; cleanup-receipt cost.estimateUsd 3.72, allCreatedResourcesGone true; outcome report passed, zero leftovers; operator audit 2026-11-01T10:03Z, all categories absent."
     }
   ],
   "scope": "Conservative closed-campaign estimates. preCiEstimateUsd covers the campaigns before CI/OIDC orchestration. After every paid CI run, a reviewed PR appends {workflowRunId, estimateUsd, receipt} from its cost receipt and raises closedEstimateUsd by the same amount; until then the selector refuses another paid run. Estimates are not invoices."
