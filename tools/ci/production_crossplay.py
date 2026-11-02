@@ -114,7 +114,7 @@ def serve(directory, target, output):
 def committed(output):
     deadline = time.monotonic() + 60
     while True:
-        paths = [output / name for name in ('crossplay.json', 'crossplay-actions.json', 'crossplay-committed.json')]
+        paths = [output / name for name in ('crossplay-actions.json', 'crossplay-committed.json')]
         if all(path.exists() for path in paths) and len({path.read_bytes() for path in paths}) == 1:
             return
         if (output / 'exit.json').exists() or time.monotonic() > deadline:

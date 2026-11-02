@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 import tempfile
+import threading
 import unittest
 from unittest.mock import patch
 import production_crossplay as qa
@@ -41,6 +42,40 @@ class ProductionBoundaryTests(unittest.TestCase):
             (output / 'crossplay-committed.json').write_text('{}')
             (output / 'exit.json').write_text('{}')
             with self.assertRaises(RuntimeError): qa.committed(output)
+
+
+class RealWriterOrderTests(unittest.TestCase):
+    def test_committed_actions_then_finish_then_final_witness(self):
+        # Frozen game CrossPlatformQuickPlaytest.cs202-206: the final witness
+        # cannot exist until the operator has passed the barrier and sent finish.
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            ready = threading.Event()
+            finish = threading.Event()
+            payload = '{"passed":true,"hosting":"cluster"}'
+            def writer():
+                (output / 'crossplay-committed.json').write_text(payload)
+                (output / 'crossplay-actions.json').write_text(payload)
+                ready.set()
+                finish.wait(2)
+                if (output / 'finish').exists():
+                    (output / 'crossplay.json').write_text(payload)
+            worker = threading.Thread(target=writer)
+            worker.start()
+            self.assertTrue(ready.wait(1))
+            try:
+                with patch.object(qa.time, 'monotonic', side_effect=[0, 0, 61]), patch.object(qa.time, 'sleep'):
+                    qa.committed(output)
+                self.assertFalse((output / 'crossplay.json').exists())
+                (output / 'finish').touch()
+                finish.set()
+                worker.join(1)
+                self.assertFalse(worker.is_alive())
+                self.assertEqual(len({(output / name).read_bytes() for name in
+                    ('crossplay-committed.json', 'crossplay-actions.json', 'crossplay.json')}), 1)
+            finally:
+                finish.set()
+                worker.join(1)
 
 
 class RealPublicManifestTests(unittest.TestCase):
