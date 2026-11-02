@@ -68,6 +68,7 @@ jobs:
           path: |
             artifacts/builder-approval-plan.json
             artifacts/builder-qualification-key.json
+            artifacts/builder-guard.json
           if-no-files-found: error
           retention-days: 90
 

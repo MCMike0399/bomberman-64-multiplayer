@@ -2,7 +2,7 @@
   "budgetUsd": 200,
   "perRunCapUsd": 20,
   "preCiEstimateUsd": 4.8,
-  "closedEstimateUsd": 29.68,
+  "closedEstimateUsd": 33.91,
   "recordedRuns": [
     {
       "workflowRunId": "41136197647",
@@ -48,6 +48,11 @@
       "workflowRunId": "41304300722",
       "estimateUsd": 4.23,
       "receipt": "Campaign on source cdee141 (Verification 41298135848): both targets finished, final phase 4694.9 s of 5300; Windows 24/24 and Linux 24/24 (tour-02: exactly the two allowlisted Popup teardown lines, root Window baseline check passed); core captures match 41240998617 except at the known spots. Linux diagnostic repeats: controller-popups 10/10, tour-09 5/6 - repeat 4 killed by SIGSEGV in libnvidia-glcore.so.595.112.07 (NULL+0x160) while a native Roster role popup opened; not qualification. Instances terminated; cleanup-receipt cost.estimateUsd 4.23, allCreatedResourcesGone true; outcome report passed, zero leftovers; operator audit 2026-11-01T14:47Z, all categories absent."
+    },
+    {
+      "workflowRunId": "41370107447",
+      "estimateUsd": 4.23,
+      "receipt": "Campaign on source 51a3be3 (Verification 41357380157): Windows/Linux full graphical 24/24 each; Linux embedded-popup stress 3/3 (168 cycles) and tour-09 9/9, no crashes or leaked connections; final GPU gates passed with verified cleanup and empty diagnostic-repeat failures. Core differences classified as accepted Greedy/Rock/Top Rules repeat spots, D3D12 delta1, animated health captures and derived diagnostics; reviewer visual GO. Instances terminated before fixed expiry; cleanup receipt cost.estimateUsd 4.23, allCreatedResourcesGone true, protected comparison complete with no changes; independent outcome and owner/reviewer AWS audits clean. Draft promotion failed before any deployment/publication on duplicate Sancus-builder-cleanup.json extraction; tooling correction follows."
     }
   ],
   "scope": "Conservative closed-campaign estimates. preCiEstimateUsd covers the campaigns before CI/OIDC orchestration. After every paid CI run, a reviewed PR appends {workflowRunId, estimateUsd, receipt} from its cost receipt and raises closedEstimateUsd by the same amount; until then the selector refuses another paid run. Estimates are not invoices."

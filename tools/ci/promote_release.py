@@ -30,7 +30,14 @@ SERVER_ARCHIVE = SERVER_ARTIFACT + '.zip'
 def gh(*arguments):
     result = subprocess.run(['gh', *arguments], capture_output=True, text=True, timeout=120)
     if result.returncode:
-        raise RuntimeError('GitHub CLI operation failed: ' + ' '.join(arguments[:2]))
+        detail=result.stderr.strip()
+        for name,value in os.environ.items():
+            if value and re.search(r'TOKEN|SECRET|PASSWORD|SIGNING_KEY|PRIVATE_KEY|CREDENTIAL',name,re.I):
+                detail=detail.replace(value,'<redacted>')
+        detail=re.sub(r'(?:github_pat_|gh[pousr]_)[A-Za-z0-9_]+','<redacted>',detail)
+        detail=re.sub(r'(?i)(authorization\s*:\s*(?:bearer|basic)\s+)\S+',r'\1<redacted>',detail)
+        detail=re.sub(r'(?i)([?&](?:token|access_token|sig|signature|key|password)=)[^&\s]+',r'\1<redacted>',detail)
+        raise RuntimeError('GitHub CLI operation failed: ' + ' '.join(arguments[:2])+': '+detail[:1500])
     return result.stdout
 
 

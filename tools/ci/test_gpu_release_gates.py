@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 import gpu_release_gates as gates
 
@@ -88,6 +89,42 @@ class GpuPromotionBoundary(unittest.TestCase):
         for changed in ({'path':'.github/workflows/gpu-once.yml'},{'head_branch':'qa/three-platform-release'},
                         {'head_repository':{'full_name':'fork/repo'}}):
             with self.subTest(changed=changed),self.assertRaises(RuntimeError):gates.inspect_run({**run,**changed},'o/r',SHA)
+
+    def test_download_merges_real_two_artifact_shape_in_either_order(self):
+        self.download_shared_cleanup(mismatch=False)
+
+    def test_download_rejects_different_shared_cleanup_in_either_order(self):
+        self.download_shared_cleanup(mismatch=True)
+
+    def download_shared_cleanup(self,mismatch):
+        for order in (('windows-x64','linux-x64'),('linux-x64','windows-x64')):
+            with self.subTest(order=order),tempfile.TemporaryDirectory() as temporary:
+                root=Path(temporary);destinations=[]
+                run={'head_repository':{'full_name':'o/r'},'head_sha':SHA,'path':'.github/workflows/gpu-qualification.yml',
+                     'head_branch':'main','event':'workflow_dispatch','status':'completed','conclusion':'success'}
+                def gh(*args):
+                    if args[0]=='api':return json.dumps(run)
+                    destination=Path(args[args.index('--dir')+1]);destination.mkdir(exist_ok=True)
+                    destinations.append(destination)
+                    target=order[len(destinations)-1]
+                    files={gates.receipt_name(target):target.encode(),
+                           'Blast-Circuit-'+target+'-graphical.json':b'graphical',
+                           gates.CLEANUP_RECEIPT:(target.encode() if mismatch else b'identical cleanup')}
+                    for name,data in files.items():
+                        path=destination/name
+                        # gh's actual extractor refuses existing names, even for identical bytes.
+                        with path.open('xb') as stream:stream.write(data)
+                    return ''
+                with patch.object(gates,'artifact_name',side_effect=[gates.artifact_name(t) for t in order]):
+                    if mismatch:
+                        with self.assertRaisesRegex(RuntimeError,'conflicting GPU artifact file'):
+                            gates.download('o/r','123',SHA,root,gh)
+                        self.assertEqual((root/gates.CLEANUP_RECEIPT).read_bytes(),order[0].encode())
+                    else:
+                        gates.download('o/r','123',SHA,root,gh)
+                        self.assertEqual((root/gates.CLEANUP_RECEIPT).read_bytes(),b'identical cleanup')
+                        for target in order:self.assertEqual((root/gates.receipt_name(target)).read_bytes(),target.encode())
+                self.assertEqual(len(set(destinations)),2)
 
 
 def run(index,crashed=False):

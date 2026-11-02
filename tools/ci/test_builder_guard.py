@@ -1,4 +1,5 @@
 import unittest
+import copy
 
 import builder_guard as guard
 
@@ -38,6 +39,58 @@ class OncePerVersionAndFingerprint(unittest.TestCase):
         for version, fingerprint in (('', 'f' * 64), ('0.45.0', 'f' * 63), ('0.45.0', None)):
             with self.assertRaises(ValueError):
                 guard.key(version, fingerprint)
+
+
+class ManualNewSourceQualification(unittest.TestCase):
+    """Real run-history shape from successful campaign 41370107447."""
+    old='51a3be34829f6cdaedffe13d1f3c60bc16557ea3'
+    new='b'*40
+    wanted=guard.key('0.45.0','f2064bf4547694531b480e9d209d9f341030732cd6bb9ec184ea7d8b5c432fa4')
+    record={'id':41370107447,'status':'completed','conclusion':'success','head_sha':old,
+            'created_at':'2026-11-02T00:59:58Z','key':wanted}
+
+    def evaluate(self,automatic=False,source=None,record=None,recorded=True):
+        row=copy.deepcopy(record or self.record)
+        def gh(path):
+            if 'workflows/gpu-qualification.yml/runs?' in path:return [{'workflow_runs':[row]}]
+            return [{'artifacts':[{'name':'builder-intent-41370107447-1'},
+                                  {'name':'builder-outcome-41370107447-1'}, {'name':guard.PLAN_ARTIFACT}]}]
+        def download(identity,artifact,filename):return CLEAN if filename=='builder-outcome.json' else row['key']
+        ledger={'recordedRuns':[{'workflowRunId':'41370107447','estimateUsd':4.23}] if recorded else []}
+        receipt={}
+        reason=guard.refusal(self.wanted,automatic,'',ledger,'dry-evaluation',gh,download,
+                             source=source or self.new,receipt=receipt)
+        return reason,receipt
+
+    def test_automatic_same_key_remains_refused(self):
+        self.assertIn('passing qualification already exists',self.evaluate(automatic=True)[0])
+
+    def test_manual_same_source_remains_refused(self):
+        self.assertIn('passing qualification already exists',self.evaluate(source=self.old)[0])
+
+    def test_manual_different_verified_source_is_allowed_and_traced(self):
+        reason,receipt=self.evaluate()
+        self.assertIsNone(reason)
+        self.assertEqual(receipt['supersededSuccesses'],[{'workflowRunId':'41370107447',
+            'headSha':self.old,'renderFingerprint':self.wanted['renderFingerprint']}])
+
+    def test_running_or_queued_attempt_on_different_source_remains_refused(self):
+        for status in ('in_progress','queued'):
+            with self.subTest(status=status):
+                self.assertIn('still running',self.evaluate(record={**self.record,'status':status,'conclusion':None})[0])
+
+    def test_missing_or_ambiguous_source_is_fatal(self):
+        for value in (None,'', ['a'*40,'b'*40], 'not-a-sha'):
+            with self.subTest(value=value):
+                self.assertIn('head_sha',self.evaluate(record={**self.record,'head_sha':value})[0])
+
+    def test_missing_prior_ledger_record_remains_refused(self):
+        self.assertIn('lack a recorded cost receipt',self.evaluate(recorded=False)[0])
+
+    def test_new_source_does_not_bypass_failed_or_cancelled_diagnosis(self):
+        for conclusion in ('failure','cancelled'):
+            with self.subTest(conclusion=conclusion):
+                self.assertIn('diagnosed-failure-run=41370107447',self.evaluate(record={**self.record,'conclusion':conclusion})[0])
 
 
 class FailClosedOnCleanup(unittest.TestCase):

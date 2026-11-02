@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import argparse
 import shutil
+import tempfile
 import re
 import os
 import builder_namespace
@@ -171,7 +172,19 @@ def download(repository,run_id,revision,directory,gh):
     if not run_id or not str(run_id).isdigit():raise RuntimeError('Promotion requires an explicit GPU qualification run ID')
     run=json.loads(gh('api',f'repos/{repository}/actions/runs/{run_id}'));inspect_run(run,repository,revision)
     for target in ('windows-x64','linux-x64'):
-        gh('run','download',str(run_id),'--repo',repository,'--name',artifact_name(target),'--dir',str(directory))
+        with tempfile.TemporaryDirectory(prefix='blast-gpu-artifact-') as temporary:
+            extracted=Path(temporary)
+            gh('run','download',str(run_id),'--repo',repository,'--name',artifact_name(target),'--dir',str(extracted))
+            for source in sorted(extracted.rglob('*')):
+                if source.is_symlink():raise RuntimeError('GPU artifact contains a symbolic link')
+                if source.is_dir():continue
+                destination=directory/source.relative_to(extracted)
+                if destination.exists():
+                    if not destination.is_file() or destination.read_bytes()!=source.read_bytes():
+                        raise RuntimeError('conflicting GPU artifact file: '+str(source.relative_to(extracted)))
+                else:
+                    destination.parent.mkdir(parents=True,exist_ok=True)
+                    shutil.copy2(source,destination)
 
 
 if __name__=='__main__':

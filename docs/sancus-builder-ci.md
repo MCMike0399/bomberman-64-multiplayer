@@ -386,9 +386,15 @@ Three-hour/four-instance limits, `sancus-builder-*` names, the
 
 `builder_trigger.py` selects a paid run only after `builder_guard.py` passes:
 
-- **Once per (version, render fingerprint).** The plan artifact carries
-  `builder-qualification-key.json`. A passing qualification for the key is
-  never repeated. An automatic trigger never retries a failed, cancelled or
+- **Once per (version, render fingerprint) automatically.** The plan artifact carries
+  `builder-qualification-key.json`. Automatic selection never repeats a passing
+  qualification for the key. An explicit manual qualification dispatch may
+  supersede a success on a different verified current-main SHA, because that
+  old source cannot qualify the new publish revision. The trigger reads the
+  current SHA from GitHub; it accepts no source override. Missing or ambiguous
+  prior source metadata, same-source success and active attempts still refuse.
+  `builder-guard.json` in the plan artifact records each superseded run ID,
+  source SHA and fingerprint. An automatic trigger never retries a failed, cancelled or
   running attempt. An operator dispatch after diagnosis must name the latest
   failed run as `diagnosed-failure-run`.
 - **Zero leftovers.** The most recent builder run must have an independent

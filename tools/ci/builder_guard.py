@@ -2,12 +2,14 @@
 
 A paid run is selected only when every guard passes:
 - at most one automatic attempt per (release version, render fingerprint); a passing
-  qualification for the fingerprint is never repeated and a failed or cancelled
+  qualification blocks the same source, while an explicit manual dispatch may
+  qualify a different verified main and records the superseded success; a failed or cancelled
   attempt is never retried automatically (an operator dispatch must name it as diagnosed);
 - the most recent builder run's independent outcome report proves zero leftovers;
 - every earlier paid allocation's cost is recorded in the reviewed ledger.
 """
 import json
+import re
 from pathlib import Path
 import subprocess
 import tempfile
@@ -15,6 +17,7 @@ import tempfile
 REPOSITORY = 'MCMike0399/bomberman-64-multiplayer'
 BASE = f'repos/{REPOSITORY}/actions/'
 KEY_FILE = 'builder-qualification-key.json'
+RECEIPT_FILE = 'builder-guard.json'
 PLAN_ARTIFACT = 'builder-approval-plan'
 BUILDER_ARTIFACTS = ('builder-intent-', 'builder-armed-', 'builder-stopped-', 'builder-state-',
                      'builder-evidence-', 'builder-rehearsal-', 'builder-smoke-', 'builder-outcome-')
@@ -26,9 +29,19 @@ def key(version, fingerprint):
     return {'schemaVersion': 1, 'version': version, 'renderFingerprint': fingerprint}
 
 
-def dedupe(attempts, wanted, automatic, diagnosed=''):
+def dedupe(attempts, wanted, automatic, diagnosed='', *, source=None, superseded=None):
     """attempts: newest-first [{'id','status','conclusion','key'}] of earlier paid selections."""
     same = [run for run in attempts if run.get('key') == wanted]
+    prior=[]
+    if source is not None and not automatic:
+        if not isinstance(source,str) or not re.fullmatch('[0-9a-f]{40}',source):
+            return 'Manual qualification requires a verified current-main SHA'
+        if any(not isinstance(run.get('head_sha'),str) or not re.fullmatch('[0-9a-f]{40}',run['head_sha']) for run in same):
+            return 'Prior qualification has a missing or ambiguous head_sha; refuse until reviewed'
+        # Only an explicit manual current-main selection may supersede an older
+        # success. Automatic dedupe stays keyed solely by version/fingerprint.
+        prior=[run for run in same if run['status']=='completed' and run['conclusion']=='success' and run['head_sha']!=source]
+        same=[run for run in same if run not in prior]
     if any(run['status'] == 'completed' and run['conclusion'] == 'success' for run in same):
         return 'A passing qualification already exists for this version and render fingerprint'
     if any(run['status'] != 'completed' for run in same):
@@ -37,6 +50,9 @@ def dedupe(attempts, wanted, automatic, diagnosed=''):
         return 'Automatic paid qualification already attempted for this version and render fingerprint; a failure needs diagnosis and an operator dispatch'
     if same and str(same[0]['id']) != str(diagnosed):
         return f"Previous attempt {same[0]['id']} ended {same[0]['conclusion']}; dispatch with diagnosed-failure-run={same[0]['id']} after diagnosis"
+    if superseded is not None:
+        superseded.extend({'workflowRunId':str(run['id']),'headSha':run['head_sha'],
+                           'renderFingerprint':wanted['renderFingerprint']} for run in prior)
     return None
 
 
@@ -69,9 +85,15 @@ def spend_refusal(runs, ledger, current, artifacts):
     return None
 
 
-def refusal(wanted, automatic, diagnosed, ledger, current, gh=None, download=None):
+def refusal(wanted, automatic, diagnosed, ledger, current, gh=None, download=None, *, source=None, receipt=None):
     gh = gh or (lambda path: json.loads(subprocess.check_output(['gh', 'api', path, '--paginate', '--slurp'], text=True, timeout=120)))
     download = download or _download
+    superseded=[]
+    if receipt is not None:
+        receipt.update(schemaVersion=1,source=source,automatic=automatic,qualificationKey=wanted,supersededSuccesses=superseded)
+    def verdict(reason):
+        if receipt is not None:receipt.update(passed=reason is None,refusal=reason)
+        return reason
     runs = [run for page in gh(BASE + 'workflows/gpu-qualification.yml/runs?per_page=100') for run in page['workflow_runs']
             if str(run['id']) != str(current)]
     runs.sort(key=lambda run: run['created_at'], reverse=True)
@@ -83,16 +105,17 @@ def refusal(wanted, automatic, diagnosed, ledger, current, gh=None, download=Non
     reason = spend_refusal(runs, ledger, current, artifacts) or outcome_refusal(
         runs, artifacts, lambda identity, name: download(identity, name, 'builder-outcome.json'))
     if reason:
-        return reason
+        return verdict(reason)
     attempts = []
     for run in runs:
         if any(item['name'] == PLAN_ARTIFACT and not item.get('expired') for item in artifacts(run['id'])):
             try:
                 recorded = download(run['id'], PLAN_ARTIFACT, KEY_FILE)
             except FileNotFoundError:
-                return f"Earlier paid selection {run['id']} has no qualification key; refuse until reviewed"
-            attempts.append({'id': run['id'], 'status': run['status'], 'conclusion': run.get('conclusion'), 'key': recorded})
-    return dedupe(attempts, wanted, automatic, diagnosed)
+                return verdict(f"Earlier paid selection {run['id']} has no qualification key; refuse until reviewed")
+            attempts.append({'id': run['id'], 'status': run['status'], 'conclusion': run.get('conclusion'),
+                             'head_sha':run.get('head_sha'),'key': recorded})
+    return verdict(dedupe(attempts,wanted,automatic,diagnosed,source=source,superseded=superseded))
 
 
 def _download(identity, artifact, filename):
