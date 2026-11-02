@@ -49,6 +49,18 @@ dedicated capacity, then a qualified peer if available. Player hosted explicitly
 waits for a qualified peer and a reserved relay slot. Authority stays stable
 during a healthy match; this is not continuous mid-round migration.
 
+## Peer handshake recovery (source work after v0.45.0)
+
+A freshly created native peer link has 15 seconds to become Connected. If it
+stays Connecting without reporting Failed, only the pair's designated offerer
+replaces it and increments the signaling generation. Replacements use the
+existing five-attempt cap and 0/1/2/4/8-second terminal-failure backoff; each
+replacement gets its own full handshake window. Stale SDP/ICE still cannot enter
+another generation. Once a link has connected, this handshake deadline is removed,
+so a transient disconnect continues to use the adapter's existing recovery.
+Server relay traffic remains available while a direct link is unavailable.
+This source change is not part of the published v0.45.0 bytes.
+
 ## Qualification and delivery
 
 Waiting clients measure the actual worker socket and bounded peer routes.

@@ -11,11 +11,13 @@ internal sealed class PeerRoomClient(string playerId, string lobbyId, Func<IPeer
     Action<string, object> sendControl, Action<JsonElement> emit, Func<byte[]> input, Func<double>? serverRtt = null) : IDisposable
 {
     private readonly Dictionary<string, IPeerLink> _links = [];
-    // Terminal native-link recovery, separate from the authority epoch. The pair's
+    // Native-link recovery, separate from the authority epoch. The pair's
     // original offerer replaces a failed link with a fresh one (never re-offering a
     // closed native peer); each attempt has a generation so replaced attempts'
     // late SDP/ICE is ignored. Bounded per epoch; healthy links are never touched.
     internal const int RecoveryAttempts = 5;
+    internal const int ConnectingTimeoutSeconds = 15;
+    private readonly Dictionary<string, long> _connectingSince = [];
     private static readonly double[] RecoveryBackoffSeconds = [0, 1, 2, 4, 8];
     private readonly Dictionary<string, bool> _offers = [];
     private readonly Dictionary<string, int> _generation = [], _remoteGeneration = [];
@@ -151,6 +153,7 @@ internal sealed class PeerRoomClient(string playerId, string lobbyId, Func<IPeer
         RemoveLink(target);
         if (factory is null) return;
         var link = factory(); _links[target] = link;
+        _connectingSince[target] = Clock();
         int epoch = _epoch;
         _offers[target] = offer;
         int generation = offer ? _generation.GetValueOrDefault(target) : _remoteGeneration.GetValueOrDefault(target);
@@ -304,10 +307,16 @@ internal sealed class PeerRoomClient(string playerId, string lobbyId, Func<IPeer
         {
             if (link.Connected)
             {
+                _connectingSince.Remove(target);
                 if (_recovery.TryGetValue(target, out var recovered)) _recovery[target] = (recovered.Attempts, 0);
                 continue;
             }
-            if (!link.Failed || !_offers.GetValueOrDefault(target) || !_connected.Contains(target)) continue;
+            // Some native SCTP associations stay Connecting forever without
+            // reaching Failed. Bound only the initial handshake of each fresh
+            // link; once connected, transient disconnects keep native recovery.
+            bool handshakeExpired = _connectingSince.TryGetValue(target, out long started) &&
+                (double)(now - started) / Stopwatch.Frequency >= ConnectingTimeoutSeconds;
+            if ((!link.Failed && !handshakeExpired) || !_offers.GetValueOrDefault(target) || !_connected.Contains(target)) continue;
             var state = _recovery.GetValueOrDefault(target);
             if (state.Attempts >= RecoveryAttempts || now < state.NextAt) continue;
             double delay = RecoveryBackoffSeconds[Math.Min(state.Attempts + 1, RecoveryBackoffSeconds.Length - 1)];
@@ -322,8 +331,8 @@ internal sealed class PeerRoomClient(string playerId, string lobbyId, Func<IPeer
         RemoveLink(id); _offers.Remove(id); _generation.Remove(id); _remoteGeneration.Remove(id); _recovery.Remove(id);
     }
     private void RemoveLink(string id)
-    { if (_links.Remove(id, out var link)) link.Dispose(); _directSeen.Remove(id); _directQuality.Remove(id); _relayQuality.Remove(id); }
-    private void DisposeLinks() { foreach (var link in _links.Values) link.Dispose(); _links.Clear(); }
+    { if (_links.Remove(id, out var link)) link.Dispose(); _connectingSince.Remove(id); _directSeen.Remove(id); _directQuality.Remove(id); _relayQuality.Remove(id); }
+    private void DisposeLinks() { foreach (var link in _links.Values) link.Dispose(); _links.Clear(); _connectingSince.Clear(); }
     public void Dispose() { if (_disposed) return; _disposed = true; DisposeLinks(); _authority = null; }
     private static ProbeWindow Window(Dictionary<string, ProbeWindow> windows, string id)
     { if (!windows.TryGetValue(id, out var window)) windows[id] = window = new(); return window; }
