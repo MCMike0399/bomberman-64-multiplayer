@@ -34,11 +34,14 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--server-assembly', type=Path, default=ROOT / 'artifacts/server-staged/Bomber.Server.dll')
     parser.add_argument('--assert-resilience', action='store_true')
+    parser.add_argument('--source-root', type=Path, default=ROOT)
     args = parser.parse_args()
     output = args.output.resolve(); output.mkdir(parents=True, exist_ok=False)
+    source = args.source_root.resolve()
     suite = Suite('managed', output, 'unused')
+    suite.provenance['productSource'] = subprocess.check_output(['git', '-C', str(source), 'rev-parse', 'HEAD'], text=True).strip()
     with suite.server(dll=args.server_assembly.resolve()) as origin:
-        command = ['dotnet', 'run', '--no-build', '--project', 'tests/Bomber.Smoke', '--', origin,
+        command = ['dotnet', 'run', '--no-build', '--project', str(source / 'tests/Bomber.Smoke'), '--', origin,
                    '--blackout-only', '--blackout-case=' + args.case, '--blackout-driver=' + args.driver,
                    '--blackout-output=' + str(output / 'measurement.json')]
         if args.assert_resilience: command.append('--assert-resilience')

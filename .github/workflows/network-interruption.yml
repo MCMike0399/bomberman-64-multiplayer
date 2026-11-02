@@ -1,0 +1,89 @@
+name: Network interruption measurements
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/network-interruption.yml'
+      - 'src/Bomber.Client/**'
+      - 'src/Bomber.Game/**'
+      - 'src/Bomber.Server/**'
+      - 'scripts/**'
+      - 'tests/Bomber.Smoke/**'
+      - 'tools/ci/network_blackout*.py'
+permissions:
+  contents: read
+concurrency:
+  group: network-interruption-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  faults:
+    name: ${{ matrix.os }} ${{ matrix.variant }} fault measurements
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        os: [ubuntu-24.04, windows-2025, macos-15]
+        variant: [baseline, candidate]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9
+        with:
+          dotnet-version: 10.0.x
+      - name: Fetch only the checked-in private dependency pin
+        env:
+          KERNEL_REPOSITORY: ${{ secrets.KERNEL_REPOSITORY }}
+          KERNEL_READ_TOKEN: ${{ secrets.KERNEL_READ_TOKEN }}
+          KERNEL_DEPLOY_KEY: ${{ secrets.KERNEL_DEPLOY_KEY }}
+          GITHUB_METADATA_TOKEN: ${{ github.token }}
+        run: python tools/ci/bootstrap_kernel.py
+      - name: Build the pinned baseline or current candidate without changing either source
+        env:
+          VARIANT: ${{ matrix.variant }}
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os, subprocess
+          from pathlib import Path
+          root = Path.cwd()
+          source = root
+          if os.environ['VARIANT'] == 'baseline':
+              source = Path(os.environ['RUNNER_TEMP']) / 'blackout-source-baseline'
+              subprocess.run(['git', 'clone', '--quiet', '--shared', '--no-checkout', str(root), str(source)], check=True)
+              subprocess.run(['git', '-C', str(source), 'checkout', '--quiet', '--detach', '2f018368d4f6a539561f9f374ce540575f541acc'], check=True)
+              subprocess.run(['git', 'clone', '--quiet', '--shared', str(root / 'burbuja-kernel'), str(source / 'burbuja-kernel')], check=True)
+          for project in ('tests/Bomber.Smoke', 'src/Bomber.Server'):
+              subprocess.run(['dotnet', 'build', str(source / project), '--nologo', '-m:1'], check=True)
+          with open(os.environ['GITHUB_ENV'], 'a') as output:
+              output.write('BLACKOUT_SOURCE=' + str(source) + '\n')
+          PY
+      - name: Measure actual product sessions on owned loopback servers
+        env:
+          VARIANT: ${{ matrix.variant }}
+        shell: bash
+        run: python tools/ci/network_blackout_campaign.py --source-root "$BLACKOUT_SOURCE" --variant "$VARIANT" --output "artifacts/network-faults-$VARIANT"
+      - name: Audit and remove only the fixture's loopback qdisc
+        if: always() && runner.os == 'Linux'
+        shell: bash
+        run: |
+          python - <<'PY'
+          import subprocess
+          text = subprocess.check_output(['tc', 'qdisc', 'show', 'dev', 'lo'], text=True)
+          if 'qdisc prio 7b00:' in text:
+              subprocess.run(['sudo', '-n', 'tc', 'qdisc', 'del', 'dev', 'lo', 'root', 'handle', '7b00:'], check=True)
+          after = subprocess.check_output(['tc', 'qdisc', 'show', 'dev', 'lo'], text=True)
+          assert '7b00:' not in after and '7b30:' not in after
+          print('Owned netem qdisc absent; no unrelated qdisc changed.')
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: network-interruption-${{ matrix.os }}-${{ matrix.variant }}
+          path: artifacts/network-faults-${{ matrix.variant }}
+          if-no-files-found: warn
+          retention-days: 14
