@@ -2,7 +2,7 @@
   "budgetUsd": 200,
   "perRunCapUsd": 20,
   "preCiEstimateUsd": 4.8,
-  "closedEstimateUsd": 33.91,
+  "closedEstimateUsd": 38.04,
   "recordedRuns": [
     {
       "workflowRunId": "41136197647",
@@ -53,6 +53,11 @@
       "workflowRunId": "41370107447",
       "estimateUsd": 4.23,
       "receipt": "Campaign on source 51a3be3 (Verification 41357380157): Windows/Linux full graphical 24/24 each; Linux embedded-popup stress 3/3 (168 cycles) and tour-09 9/9, no crashes or leaked connections; final GPU gates passed with verified cleanup and empty diagnostic-repeat failures. Core differences classified as accepted Greedy/Rock/Top Rules repeat spots, D3D12 delta1, animated health captures and derived diagnostics; reviewer visual GO. Instances terminated before fixed expiry; cleanup receipt cost.estimateUsd 4.23, allCreatedResourcesGone true, protected comparison complete with no changes; independent outcome and owner/reviewer AWS audits clean. Draft promotion failed before any deployment/publication on duplicate Sancus-builder-cleanup.json extraction; tooling correction follows."
+    },
+    {
+      "workflowRunId": "41403605524",
+      "estimateUsd": 4.13,
+      "receipt": "Shipped v0.45.0 campaign on af93089 (Verification 41391830489 attempt 2, render fingerprint f2064bf4): Windows/Linux graphical 24/24 each; Linux stress 3/3 (168 cycles) and tour-09 9/9, zero crashes; both final GPU gates passed with cleanupAudited true and empty diagnostic-repeat failures. Core residuals classified only in accepted repeat/diagnostic classes; reviewer visual GO. Both instances terminated before fixed expiry; cleanup cost.estimateUsd 4.13. Independent owner/reviewer AWS audits clean; stale tagging-index entries for an aged-out prior instance and two deleted volumes resolved by direct describe and retained termination evidence. Published release and production Windows/Linux/Mac Quick Play verified (41442404481); AUTO restored true, paid hold remains true."
     }
   ],
   "scope": "Conservative closed-campaign estimates. preCiEstimateUsd covers the campaigns before CI/OIDC orchestration. After every paid CI run, a reviewed PR appends {workflowRunId, estimateUsd, receipt} from its cost receipt and raises closedEstimateUsd by the same amount; until then the selector refuses another paid run. Estimates are not invoices."
