@@ -118,7 +118,8 @@ internal sealed class PeerRoomClient(string playerId, string lobbyId, Func<IPeer
         if (type == "peer.signal")
         {
             var signal = d.GetProperty("payload");
-            if (!RelayProbe(from, signal) && _links.ContainsKey(from) && CurrentAttempt(from, signal) && _links.TryGetValue(from, out var link)) link.AcceptSignal(signal);
+            if (!RelayProbe(from, signal) && _links.ContainsKey(from) && CurrentAttempt(from, signal) && _links.TryGetValue(from, out var link))
+            { ObserveLinkContext(from, link, signal); link.AcceptSignal(signal); }
         }
         else Receive(from, _epoch, JsonSerializer.SerializeToUtf8Bytes(d.GetProperty("payload")));
         return true;
@@ -156,6 +157,7 @@ internal sealed class PeerRoomClient(string playerId, string lobbyId, Func<IPeer
         _connectingSince[target] = Clock();
         int epoch = _epoch;
         _offers[target] = offer;
+        ObserveLinkContext(target, link);
         int generation = offer ? _generation.GetValueOrDefault(target) : _remoteGeneration.GetValueOrDefault(target);
         bool Current() => !_disposed && epoch == _epoch && _links.TryGetValue(target, out var active) && ReferenceEquals(active, link);
         link.Signal += signal =>
@@ -164,6 +166,13 @@ internal sealed class PeerRoomClient(string playerId, string lobbyId, Func<IPeer
         };
         link.Received += packet => { if (Current()) Receive(target, epoch, packet, direct: true); };
         link.Start(offer);
+    }
+    private void ObserveLinkContext(string target, IPeerLink link, JsonElement? signal = null)
+    {
+        if (!link.CaptureDiagnostics) return;
+        int? acceptedGeneration = signal is { } value ? value.TryGetProperty("g", out var generation) ? generation.GetInt32() : 0 : null;
+        link.SetDiagnosticContext(new(playerId, target, _epoch,
+            _offers.GetValueOrDefault(target), _generation.GetValueOrDefault(target), _remoteGeneration.GetValueOrDefault(target), acceptedGeneration));
     }
 
     public void Advance()

@@ -117,6 +117,8 @@ public partial class PlaytestDriver
         private int _states;
         public bool Connected => _inner.Connected;
         public bool Failed => _inner.Failed;
+        public bool CaptureDiagnostics => _inner.CaptureDiagnostics;
+        public void SetDiagnosticContext(PeerLinkDiagnosticContext context) => _inner.SetDiagnosticContext(context);
         public bool DisposableSnapshots => _inner.DisposableSnapshots;
         public event Action<JsonElement>? Signal;
         public event Action<byte[]>? Received;

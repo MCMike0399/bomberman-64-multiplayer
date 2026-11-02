@@ -1,6 +1,7 @@
 {
   "schemaVersion": 1,
   "scenarios": [
+    {"id":"peer-ice-terminal","method":"PeerIceTerminal","domains":["network"],"headless":true,"timeout":30,"manual":false},
     {
       "id": "network-interruption",
       "method": "NetworkInterruption",

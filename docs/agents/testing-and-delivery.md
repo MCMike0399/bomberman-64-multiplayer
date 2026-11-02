@@ -1152,3 +1152,31 @@ Server logs correlate opaque
 room/player IDs with input silence, socket receive/send stalls and snapshot age
 at socket-write time. Pending write bytes are not kernel send-queue depth or
 proof of peer delivery. No delivery/coalescing policy is changed by telemetry.
+
+### Native ICE terminal boundary
+
+An observed Failed/Closed native peer is permanently unusable in its managed
+adapter. Clear SDP readiness and queued ICE, reject late SDP/ICE, and let the
+existing offerer-owned generation/backoff/retry policy create a fresh adapter.
+Recheck terminal state before native candidate application. A fresh adapter must
+still accept genuine candidates before SDP and deliver real packets afterward.
+`peer-ice-terminal` covers these boundaries and the actual adapter-owned disposal
+path; `peer-ice-order` preserves candidate-free SDP/early-candidate delivery.
+
+The optional `BLAST_QA_ICE_IMMEDIATE_CLOSE_PROBE=true` test mode closes the private
+native resource by reflection before terminal state is observable. It bypasses
+the adapter-owned disposal path and is a separate timing diagnostic, not a claim
+that state checks eliminate every native-library interleaving.
+
+QA snapshots retain up to 16 failed applications and 64 retired/terminal records,
+with dropped counts. They freeze adapter ordinal/native start, role, epoch,
+local/remote counters, accepted wire generation, native/signaling/channel states,
+and hashed candidate/SDP order before disposal. Lifecycle receipts omit candidate
+addresses/ports and hold no Godot resources. Normal client diagnostics remain
+separate and do not enable native tracing.
+
+Mac archive qualification uses `--peer-room-repeats 3`: one installed payload,
+three fresh processes, all raw receipts retained, no failed repeat discarded.
+Any runtime error blocks, even if gameplay assertions pass. Verbose engine output
+keeps leak types available; audio resource warnings and native ICE errors must be
+classified separately without adding an error allowlist.

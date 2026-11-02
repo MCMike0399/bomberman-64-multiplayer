@@ -49,7 +49,7 @@ public partial class PlaytestDriver
         object Diagnostics()=>new{stage,leftSignals=leftSignals.Count,rightSignals=rightSignals.Count,leftDelivered,rightDelivered,
             leftIce=leftSignals.Count(Ice),rightIce=rightSignals.Count(Ice),leftGathered=left.IceGatheringComplete,rightGathered=right.IceGatheringComplete,
             leftConnected=left.Connected,leftFailed=left.Failed,rightConnected=right.Connected,rightFailed=right.Failed,
-            leftObservation=left.SignalDiagnostics,rightObservation=right.SignalDiagnostics};
+            leftObservation=left.SafeSignalDiagnostics,rightObservation=right.SafeSignalDiagnostics};
         async Task Until(Func<bool> condition,string label)
         {
             var clock=Stopwatch.StartNew();
