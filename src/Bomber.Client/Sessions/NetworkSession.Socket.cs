@@ -64,7 +64,7 @@ public sealed partial class NetworkSession
                 using var connected = CancellationTokenSource.CreateLinkedTokenSource(ct);
                 var receive = ReceiveAsync(_socket!, connected.Token);
                 var send = SendLoopAsync(_socket!, connected.Token);
-                Task[] connectionTasks = _fastReceiveRecovery ? [receive, send, WatchReceiveAsync(connected.Token)] : [receive, send];
+                Task[] connectionTasks = _fastReceiveRecovery ? [receive, send, WatchReceiveAsync(_socket!, connected.Token)] : [receive, send];
                 await Task.WhenAny(connectionTasks);
                 connected.Cancel();
                 _socket!.Abort();
@@ -78,7 +78,7 @@ public sealed partial class NetworkSession
             {
                 if (ct.IsCancellationRequested) return;
                 if (Status.StartsWith("Ended", StringComparison.Ordinal)) return;
-                NoteConnection($"interrupted: {ex.GetType().Name}: {ex.Message}");
+                NoteConnection($"interrupted: {Bomber.Client.Diagnostics.ConnectionFailure.Describe(ex)}");
                 if (++retries > 5) { Fail("Connection lost. Return to the menu to reconnect."); return; }
                 Volatile.Write(ref _status, $"Reconnecting ({retries}/5)");
                 ReleaseInputs(); Interlocked.Exchange(ref _startPending, 0);Interlocked.Exchange(ref _pendingRules,null);
@@ -102,7 +102,7 @@ public sealed partial class NetworkSession
                     catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
                     catch (Exception reconnectError) when (reconnectError is HttpRequestException or WebSocketException or JsonException or InvalidOperationException or OperationCanceledException)
                     {
-                        NoteConnection($"reconnect failed: {reconnectError.GetType().Name}: {reconnectError.Message}");
+                        NoteConnection($"reconnect failed: {Bomber.Client.Diagnostics.ConnectionFailure.Describe(reconnectError)}");
                         if (++retries > 5) { Fail(reconnectError.Message == OnlineProtocol.ServerUpdateMessage ? OnlineProtocol.ServerUpdateMessage : "Connection lost. Return to the menu to reconnect."); return; }
                         Volatile.Write(ref _status, $"Reconnecting ({retries}/5)");
                     }
@@ -124,7 +124,7 @@ public sealed partial class NetworkSession
                 if (received.MessageType == WebSocketMessageType.Close)
                 {
                     var close = (int?)socket.CloseStatus;
-                    NoteConnection($"server closed {close}: {socket.CloseStatusDescription}");
+                    NoteConnection($"server closed code={close}");
                     if (close is 1000 or 4002 or 4003 or 4004 or 4005)
                     {
                         Volatile.Write(ref _status, $"Ended: {socket.CloseStatusDescription ?? "Lobby closed"}");

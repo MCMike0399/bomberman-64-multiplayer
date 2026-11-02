@@ -14,7 +14,7 @@ internal static class NetworkBlackoutChecks
         string scenario = Option("--blackout-case", "blackout-10");
         string output = Option("--blackout-output", "artifacts/network-blackout.json");
         string driver = Option("--blackout-driver", "proxy");
-        double seconds = scenario switch { "blackout-3" => 3, "blackout-10" => 10, "blackout-45" => 45,
+        double seconds = scenario switch { "blackout-2.9" => 2.9, "blackout-3" => 3, "blackout-3.1" => 3.1, "blackout-10" => 10, "blackout-45" => 45,
             "blackout-60" => 60, "upstream" or "downstream" => 10, "jitter" => 15, "normal" => 600, "reset" => 0,
             _ => throw new ArgumentException("Unknown blackout case") };
         if (driver is not ("proxy" or "tc")) throw new ArgumentException("Unknown fault driver.");
@@ -171,8 +171,8 @@ internal static class NetworkBlackoutChecks
                 ["reconnecting_notice_is_truthful"] = misleadingReconnectSamples == 0,
                 ["feedback_clears_after_recovery"] = terminalCase && cleanTerminal || !affected.IsEnded && string.IsNullOrEmpty(Feedback(affected)),
             };
-            if (scenario is "blackout-3" or "blackout-10" or "downstream" or "upstream") checks["interruption_feedback_shown"] = feedbackSamples > 0;
-            if (scenario is "blackout-3" or "blackout-10" or "blackout-45" or "blackout-60" or "upstream")
+            if (scenario is "blackout-2.9" or "blackout-3" or "blackout-3.1" or "blackout-10" or "downstream" or "upstream") checks["interruption_feedback_shown"] = feedbackSamples > 0;
+            if (scenario is "blackout-2.9" or "blackout-3" or "blackout-3.1" or "blackout-10" or "blackout-45" or "blackout-60" or "upstream")
                 checks["held_movement_neutral_after_500ms"] = heldXAtOneSecond is not null && heldXAtHalfSecond is not null && Math.Abs(heldXAtOneSecond.Value - heldXAtHalfSecond.Value) < .02;
             if (seconds >= 30 && scenario != "normal") checks["dead_network_ended_cleanly"] = affected.IsEnded && affected.Status.Contains("Connection lost", StringComparison.OrdinalIgnoreCase);
             if (scenario == "reset") checks["actual_reconnect_occurred"] = affected.ConnectionGeneration > generation;

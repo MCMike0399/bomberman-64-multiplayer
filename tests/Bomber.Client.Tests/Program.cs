@@ -5,6 +5,10 @@ using Bomber.Game.Matches;
 
 if(args.Contains("--peer-packets")){PeerPacketChecks.Run();return;}
 if(args.Contains("--local-performance")){await LocalPerformance.Run(args);return;}
+if(args.Contains("--connection-outage")){ConnectionOutageChecks.Run();return;}
+if(args.Contains("--connection-privacy")){await ConnectionFailureChecks.Run();return;}
+if(args.Contains("--proxy-dispatch")){await ProxyDispatcherChecks.Run();return;}
+if(args.Contains("--receive-deadline")){ReceiveDeadlineChecks.Run();return;}
 
 var checks = await UpdateChecks.Run();
 checks += await ServerCompatibilityChecks.Run();
@@ -12,6 +16,10 @@ checks += PeerFrameChecks.Run();
 checks += PeerPacketChecks.Run();
 checks += PeerLinkRecoveryChecks.Run();
 checks += ConnectionHealthChecks.Run();
+checks += ConnectionOutageChecks.Run();
+checks += await ConnectionFailureChecks.Run();
+checks += await ProxyDispatcherChecks.Run();
+checks += ReceiveDeadlineChecks.Run();
 checks += await ConnectionJournalChecks.Run();
 checks += InputSendChecks.Run();
 checks += FeedbackSteeringChecks.Run();

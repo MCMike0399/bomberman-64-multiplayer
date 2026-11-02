@@ -55,7 +55,15 @@ public partial class PlaytestDriver
             var affected = (NetworkSession)_root.ActiveSession!;
             await Wait(() => host.Party?.CanStart == true, "three real peers are ready");
             host.RequestStart();
-            await Wait(() => _root.ScreenName == "Match" && _root.SnapshotCount > 5, "real authority enters the rendered battle");
+            await Wait(() => _root.ScreenName == "Match" && _root.SnapshotCount > 0, "real authority enters the rendered battle");
+            // First arena draw may compile renderer pipelines. Record that
+            // separately from sampling several authoritative states; proxy I/O
+            // remains off this dispatcher throughout both phases.
+            int firstDraw = Engine.GetFramesDrawn();
+            await Frames(6);
+            Check(Engine.GetFramesDrawn() > firstDraw, "arena warmup produces real rendered frames");
+            await Wait(() => _root.SnapshotCount > 5, "rendered battle samples fresh authority after warmup");
+            Check(affected.ConnectionGeneration == 1 && affected.ConnectionNotice is null, "owned transport is healthy before the first injected fault");
             string lobby = affected.LobbyId!;
             await Shot("network-healthy-keyboard");
             int drawn = Engine.GetFramesDrawn(); int before = controlSnapshots;
@@ -83,6 +91,7 @@ public partial class PlaytestDriver
             await KeyPress(Key.Escape);
             Check(_root.ScreenName != "Results" && _root.ActiveSession is null, "keyboard Back releases the dead session and returns to a usable menu");
             await Capture("network-menu-keyboard", 0);
+            proxy.ClearFaults();
             // A second real terminal session exercises the controller Back path,
             // using the established canonical-event fixture, not a physical-device claim.
             ControllerHub.Current.OverrideDevicesForPlaytest(QaPads);

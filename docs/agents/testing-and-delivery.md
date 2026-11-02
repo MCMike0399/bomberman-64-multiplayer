@@ -1123,7 +1123,11 @@ Proxy pause/reset rows remain explicitly distinct from Linux TCP/RTO evidence.
 Preserve failed baseline behavior, healthy controls, fresh state/acknowledged
 movement latency and reconnect generations. Compare the same candidate with its
 experimental receive watchdog OFF and ON; healthy candidate 600 s is mandatory.
-A separate 30 s terminal bound must work independently of fast reconnect tuning.
+A separate 30 s terminal bound persists across transport generations until useful
+authoritative state and outgoing input acknowledgment health recover. Socket-only
+handshakes and incoming-only progress do not renew it. The experimental receive
+watchdog rechecks the same inbound progress observation after a 200 ms boundary
+settle interval, before committing an abort.
 Native HUD/menu evidence is a separate rendered journey, not a managed claim.
 
 Client diagnostics retain 64 connection events and 64 RTT spikes in a <=64 KiB
@@ -1133,7 +1137,9 @@ JSON file plus one bounded previous file. Default paths:
 - Windows: `%APPDATA%\Godot\app_userdata\Blast Circuit\network\connection-events.json`.
 - Mac: `~/Library/Application Support/Godot/app_userdata/Blast Circuit/network/connection-events.json`.
 QA redirects its logs under the owned evidence directory. No credentials, headers,
-addresses or player display names are recorded. Server logs correlate opaque
+addresses or player display names are recorded. Failure diagnostics use fixed
+exception categories/codes, never raw messages or socket close descriptions.
+Server logs correlate opaque
 room/player IDs with input silence, socket receive/send stalls and snapshot age
 at socket-write time. Pending write bytes are not kernel send-queue depth or
 proof of peer delivery. No delivery/coalescing policy is changed by telemetry.

@@ -25,6 +25,11 @@ internal sealed class NetworkFaultProxy : IAsyncDisposable
     }
     public void Jitter(TimeSpan duration) => Volatile.Write(ref _jitterUntil,
         System.Diagnostics.Stopwatch.GetTimestamp() + (long)(duration.TotalSeconds * System.Diagnostics.Stopwatch.Frequency));
+    public void ClearFaults()
+    {
+        Volatile.Write(ref _pauseUpUntil, 0); Volatile.Write(ref _pauseDownUntil, 0);
+        Volatile.Write(ref _jitterUntil, 0);
+    }
     private async Task Forward(Stream source, Stream destination, bool upstream, CancellationToken ct)
     {
         var buffer = new byte[16 * 1024];
@@ -44,7 +49,9 @@ internal sealed class NetworkFaultProxy : IAsyncDisposable
         if (!target.IsLoopback || target.Scheme != "http") throw new ArgumentException("Only owned HTTP loopback test servers are supported.");
         _target = target; _listener.Start();
         Origin = new Uri("http://127.0.0.1:" + ((IPEndPoint)_listener.LocalEndpoint).Port);
-        _accept = Accept();
+        // Constructor may run on Godot's render dispatcher. Transport must
+        // continue when shader compilation or a slow frame stalls that thread.
+        _accept = Task.Run(Accept);
     }
     private async Task Accept()
     {

@@ -1,6 +1,7 @@
 using System.Net.WebSockets;
 using System.Text.Json;
 using Bomber.Client.Peer;
+using Bomber.Client.Diagnostics;
 using Bomber.Game.Matches;
 
 namespace Bomber.Client.Sessions;
@@ -10,6 +11,11 @@ public sealed partial class NetworkSession : ISession
 {
     public const string DefaultServerUrl = "https://blast.burbuja-lab.dev";
     private readonly HttpClient _http;
+    private readonly ConnectionHealth _health = new();
+    private ConnectionJournal? _journal;
+    private Task? _terminalMonitor;
+    private bool _fastReceiveRecovery = true;
+    private string? _lastHealthKind;
     private readonly CancellationTokenSource _lifetime = new();
     private readonly MessageBuffer _messages = new();
     private readonly MessageBuffer _wireMessages = new();

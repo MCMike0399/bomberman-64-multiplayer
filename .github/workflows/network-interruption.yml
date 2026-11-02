@@ -81,7 +81,7 @@ jobs:
           "$GODOT" --headless --path . --editor --import --quit
       - name: Render healthy, interrupted, reconnecting, recovered and terminal states
         run: |
-          xvfb-run -a -s '-screen 0 1280x800x24' python3 - <<'PY'
+          python3 tools/packaging/linux-desktop.py -- python3 - <<'PY'
           import subprocess, sys
           from pathlib import Path
           sys.path.insert(0, 'tools/qa')

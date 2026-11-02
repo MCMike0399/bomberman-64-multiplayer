@@ -5,11 +5,6 @@ namespace Bomber.Client.Sessions;
 
 public sealed partial class NetworkSession
 {
-    private readonly ConnectionHealth _health = new();
-    private ConnectionJournal? _journal;
-    private Task? _terminalMonitor;
-    private bool _fastReceiveRecovery = true;
-    private string? _lastHealthKind;
     public string? ConnectionLogPath => _journal?.Path;
     public string? ConnectionNotice => ReadHealth().Text;
     private ConnectionHealth.Observation ReadHealth()
@@ -31,14 +26,20 @@ public sealed partial class NetworkSession
             { acknowledgment = sequence; break; }
         _health.State(acknowledgment);
     }
-    private async Task WatchReceiveAsync(CancellationToken ct)
+    private async Task WatchReceiveAsync(System.Net.WebSockets.ClientWebSocket socket, CancellationToken ct)
     {
         using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(100));
         while (await timer.WaitForNextTickAsync(ct))
         {
-            var health = ReadHealth();
-            if (health.StaleSeconds > 0 && health.InboundSeconds >= 3)
-                throw new IOException("Receive watchdog: no inbound WebSocket progress for 3 seconds in an active match.");
+            if (_health.ReceiveStall() is not { } observation) continue;
+            // Let data arriving at the three-second restoration boundary run
+            // before committing an otherwise avoidable reconnect.
+            await Task.Delay(TimeSpan.FromMilliseconds(200), ct);
+            if (_health.TryAbortReceive(observation, socket.Abort))
+            {
+                NoteConnection("receive watchdog: 3s without progress plus 200ms boundary settle; abort committed");
+                throw new IOException("Receive watchdog: no inbound progress after the three-second deadline and boundary settle interval.");
+            }
         }
     }
     private async Task MonitorSilenceAsync(CancellationToken ct)
@@ -55,9 +56,9 @@ public sealed partial class NetworkSession
                 var health = ReadHealth();
                 // A terminal outage bound is independent of fast reconnect
                 // tuning. Do not wait forever on a half-open TCP connection.
-                if (!IsEnded && health.StaleSeconds >= 30)
+                if (!IsEnded && health.OutageSeconds >= 30)
                 {
-                    NoteConnection($"terminal outage: {health.Reason}; stale={health.StaleSeconds:F1}s");
+                    NoteConnection($"terminal outage: {health.Reason}; outage={health.OutageSeconds:F1}s");
                     Fail("Connection lost. Return to the menu to reconnect.");
                     await _lifetime.CancelAsync(); _socket?.Abort(); return;
                 }

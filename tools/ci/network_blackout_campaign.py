@@ -23,16 +23,18 @@ def main():
     linux = platform.system() == 'Linux'
     cases = [('blackout-3', 'tc' if linux else 'proxy'), ('blackout-10', 'tc' if linux else 'proxy'), ('reset', 'proxy')]
     if linux and args.variant == 'candidate': cases += [('blackout-10-no-fast', 'tc')]
+    if platform.system() == 'Windows' and args.variant == 'candidate':
+        cases += [(case, 'proxy') for case in ('blackout-3-no-fast', 'blackout-2.9', 'blackout-2.9-no-fast', 'blackout-3.1', 'blackout-3.1-no-fast')]
     if linux: cases += [('blackout-45', 'tc'), ('blackout-60', 'tc'), ('upstream', 'proxy'), ('downstream', 'proxy'), ('jitter', 'tc'), ('normal', 'proxy')]
     source = args.source_root.resolve()
     rows = []; failed = False
     for case, driver in cases:
         destination = output / case
-        actual_case = 'blackout-10' if case == 'blackout-10-no-fast' else case
+        actual_case = case.removesuffix('-no-fast')
         command = [sys.executable, str(ROOT / 'tools/ci/network_blackout.py'), '--case', actual_case, '--driver', driver,
                    '--source-root', str(source), '--server-assembly', str(args.server_assembly.resolve() if args.server_assembly else source / 'src/Bomber.Server/bin/Debug/net10.0/Bomber.Server.dll'),
                    '--output', str(destination)]
-        if case == 'blackout-10-no-fast': command += ['--fast-receive-recovery', 'off']
+        if case.endswith('-no-fast'): command += ['--fast-receive-recovery', 'off']
         if args.runtime_identity: command += ['--runtime-identity', str(args.runtime_identity.resolve())]
         if args.probe_assembly: command += ['--probe-assembly', str(args.probe_assembly.resolve())]
         if args.variant == 'candidate': command.append('--assert-resilience')
