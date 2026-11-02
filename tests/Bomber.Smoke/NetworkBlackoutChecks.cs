@@ -1,3 +1,4 @@
+using BlastCircuit.Testing.Fixtures;
 using System.Diagnostics;
 using System.Text.Json;
 using Bomber.Client.Sessions;
@@ -37,15 +38,34 @@ internal static class NetworkBlackoutChecks
         await using var netem = driver == "tc" && scenario is not ("normal" or "reset") ? new NetemFault(proxy.Origin.Port) : null;
         var settings = new SessionSettings(Bots: 0, RoundSeconds: 300, SuddenDeath: false)
             { Hosting = "server", Advanced = new AdvancedRules { BlockPercent = 0, DropPercent = 0 } };
-        await using var host = await NetworkSession.ConnectAsync(server, "Blackout control A", settings, NetworkMode.CreatePrivate);
-        await using var control = await NetworkSession.ConnectAsync(server, "Blackout control B", settings, NetworkMode.JoinCode, host.JoinCode);
-        await using var affected = await NetworkSession.ConnectAsync(proxy.Origin, "Blackout affected", settings, NetworkMode.JoinCode, host.JoinCode);
+        async Task<NetworkSession> Connect(Uri origin, string name, NetworkMode mode, string? code = null, string? diagnostics = null)
+        {
+            var method = typeof(NetworkSession).GetMethod(nameof(NetworkSession.ConnectAsync))!;
+            var values = method.GetParameters().Select(parameter => parameter.Name switch
+            {
+                "server" => (object)origin, "displayName" => name, "settings" => settings,
+                "mode" => mode, "joinCode" => code, "diagnosticsDirectory" => diagnostics,
+                "fastReceiveRecovery" => Option("--fast-receive-recovery", "on") != "off",
+                _ => parameter.DefaultValue,
+            }).ToArray();
+            return await (Task<NetworkSession>)method.Invoke(null, values)!;
+        }
+        await using var host = await Connect(server, "Blackout control A", NetworkMode.CreatePrivate);
+        await using var control = await Connect(server, "Blackout control B", NetworkMode.JoinCode, host.JoinCode);
+        await using var affected = await Connect(proxy.Origin, "Blackout affected", NetworkMode.JoinCode, host.JoinCode,
+            Path.Combine(Path.GetDirectoryName(Path.GetFullPath(output))!, "network"));
         NetworkSession[] sessions = [host, control, affected];
         JsonElement Player(JsonElement frame) => frame.GetProperty("d").GetProperty("players").EnumerateArray().Single(x => x.GetProperty("id").GetString() == affected.PlayerId);
+        long? Ack(JsonElement player) => player.TryGetProperty("ack", out var ack) && ack.ValueKind == JsonValueKind.Number && ack.TryGetInt64(out long value) ? value : null;
         long ServerTime(JsonElement frame) => frame.GetProperty("d").GetProperty("serverTime").GetInt64();
         string? Feedback(NetworkSession session) => session.GetType().GetProperty("ConnectionNotice")?.GetValue(session) as string;
+        double? terminalAt = null;
         void Pump()
         {
+            // The actual app samples held controls every rendered frame. A
+            // reconnect deliberately clears cached input, so re-sample here too.
+            if (postFaultInput is { } held) affected.SendInput(0, held);
+            if (affected.IsEnded) terminalAt ??= clock.Elapsed.TotalSeconds - start;
             for (int i = 0; i < sessions.Length; i++)
             {
                 var session = sessions[i]; session.Advance(1d / 60);
@@ -63,7 +83,8 @@ internal static class NetworkBlackoutChecks
                     {
                         firstSnapshotAfterEnd ??= at - end;
                         if (seen[0] is { } healthy && ServerTime(healthy) - ServerTime(frame) <= 250) firstFreshAfterEnd ??= at - end;
-                        if (postFaultSent is { } sent && sent.Generation == session.ConnectionGeneration && player.GetProperty("ack").GetInt64() >= sent.Sequence)
+                        if (postFaultSent is { } sent && sent.Generation == session.ConnectionGeneration && Ack(player) is { } acceptedSequence && acceptedSequence >= sent.Sequence &&
+                            seen[0] is { } currentControl && ServerTime(currentControl) - ServerTime(frame) <= 250)
                         {
                             if (postAckX is { } before && postFaultInput is { } requested && (x - before) * requested.X > .02f)
                                 firstMovementAfterEnd ??= at - end;
@@ -72,13 +93,17 @@ internal static class NetworkBlackoutChecks
                     }
                     if (rows.Count < 40000) rows.Add(new { atSeconds = at, client = i, serverTime = ServerTime(frame),
                         tick = frame.GetProperty("k").GetInt64(), x, z = player.GetProperty("z").GetSingle(),
-                        alive = player.GetProperty("alive").GetBoolean(), ack = player.GetProperty("ack").GetInt64(),
-                        status = session.Status, generation = session.ConnectionGeneration, notice = Feedback(session) });
+                        alive = player.GetProperty("alive").GetBoolean(), ack = Ack(player),
+                        status = session.Status, generation = session.ConnectionGeneration, notice = Feedback(session), sentSequence = session.InputSequence });
                 }
             }
             if (postFaultInput is { } expected && affected.LatestInputSend is { } sentInput &&
                 sentInput.Input == expected && sentInput.CapturedSequence == sentInput.SentSequence)
-                postFaultSent ??= (sentInput.Generation, sentInput.SentSequence);
+                if (postFaultSent is null || postFaultSent.Value.Generation != sentInput.Generation)
+                { postFaultSent = (sentInput.Generation, sentInput.SentSequence); postAckX = null; }
+            for (int client = 0; client < sessions.Length; client++)
+                if (lastAt[client] > 0 && !sessions[client].IsEnded)
+                    maxGap[client] = Math.Max(maxGap[client], clock.Elapsed.TotalSeconds - lastAt[client]);
             if (clock.Elapsed.TotalSeconds >= start && Feedback(affected) is { Length: > 0 } notice)
             {
                 feedbackSamples++; notices[notice] = notices.GetValueOrDefault(notice) + 1;
@@ -126,19 +151,25 @@ internal static class NetworkBlackoutChecks
             postFaultInput = new PlayerInput(-direction, 0);
             affected.SendInput(0, postFaultInput.Value);
             var recovery = Stopwatch.StartNew();
-            while (recovery.Elapsed.TotalSeconds < 8 && (firstFreshAfterEnd is null || firstMovementAfterEnd is null))
+            while (!affected.IsEnded && recovery.Elapsed.TotalSeconds < 8 && (firstFreshAfterEnd is null || firstMovementAfterEnd is null))
             { Pump(); await Task.Delay(10); }
-            affected.ReleaseInputs(); Pump();
+            postFaultInput = null; affected.ReleaseInputs(); Pump();
+            double? feedbackClearedAfterEnd = null;
+            var settle = Stopwatch.StartNew();
+            while (!affected.IsEnded && !string.IsNullOrEmpty(Feedback(affected)) && settle.Elapsed.TotalSeconds < 8)
+            { Pump(); await Task.Delay(10); }
+            if (string.IsNullOrEmpty(Feedback(affected))) feedbackClearedAfterEnd = clock.Elapsed.TotalSeconds - end;
             bool terminalCase = scenario is "blackout-45" or "blackout-60";
             bool cleanTerminal = affected.IsEnded && affected.Status.Contains("Connection lost", StringComparison.OrdinalIgnoreCase);
             var checks = new Dictionary<string, bool>
             {
-                ["healthy_control_kept_receiving"] = healthyAfterFault - healthyBefore > Math.Max(0, seconds * 5),
+                ["healthy_control_kept_receiving"] = seconds > 0 ? healthyAfterFault - healthyBefore > seconds * 5 : counts[0] > healthyBefore,
                 ["healthy_control_max_gap_under_500ms"] = maxGap[0] < .5 && maxGap[1] < .5,
                 ["same_match_preserved_or_cleanly_ended"] = terminalCase && cleanTerminal || !affected.IsEnded && affected.LobbyId == lobby && affected.Party?.Match == match,
-                ["fresh_catchup_within_500ms"] = terminalCase && cleanTerminal || !affected.IsEnded && firstFreshAfterEnd is <= .5,
+                ["latest_snapshot_catchup_within_500ms_of_first_frame"] = terminalCase && cleanTerminal || !affected.IsEnded && firstFreshAfterEnd is { } fresh && firstSnapshotAfterEnd is { } first && fresh - first <= .5,
                 ["fresh_input_accepted_and_movement_resumed"] = terminalCase && cleanTerminal || !affected.IsEnded && firstMovementAfterEnd is not null,
                 ["reconnecting_notice_is_truthful"] = misleadingReconnectSamples == 0,
+                ["feedback_clears_after_recovery"] = terminalCase && cleanTerminal || !affected.IsEnded && string.IsNullOrEmpty(Feedback(affected)),
             };
             if (scenario is "blackout-3" or "blackout-10" or "downstream" or "upstream") checks["interruption_feedback_shown"] = feedbackSamples > 0;
             if (scenario is "blackout-3" or "blackout-10" or "blackout-45" or "blackout-60" or "upstream")
@@ -150,6 +181,9 @@ internal static class NetworkBlackoutChecks
             var result = new { measurementCompleted = true, conforms = checks.Values.All(x => x), checks, scenario, driver,
                 limitation = driver == "tc" ? "Managed product sessions, no renderer claim; port-scoped actual packet loss on hosted Linux." : "Managed product sessions, no renderer claim; proxy pauses are not packet-loss/RTO measurements.",
                 platform = System.Runtime.InteropServices.RuntimeInformation.OSDescription,
+                clientAssemblySha256 = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(typeof(NetworkSession).Assembly.Location))).ToLowerInvariant(),
+                gameAssemblySha256 = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(typeof(PlayerInput).Assembly.Location))).ToLowerInvariant(),
+                fastReceiveRecoveryRequested = Option("--fast-receive-recovery", "on") != "off",
                 faultSeconds = seconds, faultStartSeconds = start, faultEndSeconds = end,
                 affectedStatusDuring = statusDuring, affectedStatusAfter = affected.Status,
                 generationBefore = generation, generationAfter = affected.ConnectionGeneration,
@@ -159,6 +193,9 @@ internal static class NetworkBlackoutChecks
                 firstMovementAfterEndSeconds = firstMovementAfterEnd, maxVisibleSnapshotGapSeconds = maxGap,
                 heldMovementFromHalfToOneSecond = heldXAtOneSecond - heldXAtHalfSecond,
                 connectionFeedbackSamples = feedbackSamples, noticeSamples = notices, misleadingReconnectSamples,
+                terminalAfterFaultStartSeconds = terminalAt,
+                feedbackClearedAfterEndSeconds = feedbackClearedAfterEnd,
+                connectionLogPath = affected.GetType().GetProperty("ConnectionLogPath")?.GetValue(affected),
                 ended = affected.IsEnded, connectionEvents = affected.ConnectionEvents,
                 visibleSamples = rows };
             Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(output))!);

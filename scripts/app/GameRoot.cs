@@ -487,6 +487,7 @@ public partial class GameRoot : Node3D
             }
         }
         string connection=session is NetworkSession {Party.Hosting:"peer"} peerSession && session.Status=="Connected" ? peerSession.PeerTransport : session.Status;
+        if(session is NetworkSession networkHealth&&networkHealth.ConnectionNotice is {} notice)connection=notice;
         _hud.Connection(connection,session.JoinCode,_practice);_menu.UpdateConnection(session.Status);
         if(session.IsEnded&&session.Status.StartsWith("Error",StringComparison.Ordinal)&&ScreenName!="Results")
         {ScreenName="Results";_hud.Visible=false;_menu.Visible=true;_menu.ShowResults(LatestState,JsonSerializer.SerializeToElement(new {reason=session.Status}));}

@@ -1,4 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><OutputType>Exe</OutputType></PropertyGroup>
   <ItemGroup><ProjectReference Include="../../src/Bomber.Client/Bomber.Client.csproj" /></ItemGroup>
+  <ItemGroup><Compile Include="../../scripts/testing/fixtures/NetworkFaultProxy.cs" Link="NetworkFaultProxy.cs" /></ItemGroup>
 </Project>

@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType></PropertyGroup>
+  <ItemGroup Condition="'$(BaselineAssemblies)' == ''">
+    <ProjectReference Include="../../src/Bomber.Client/Bomber.Client.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(BaselineAssemblies)' != ''">
+    <Reference Include="$(BaselineAssemblies)/Bomber.Client.dll" />
+    <Reference Include="$(BaselineAssemblies)/Bomber.Game.dll" />
+    <Reference Include="$(BaselineAssemblies)/Burbuja.Realtime.Abstractions.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="../Bomber.Smoke/NetworkBlackoutChecks.cs" Link="NetworkBlackoutChecks.cs" />
+    <Compile Include="../../scripts/testing/fixtures/NetworkFaultProxy.cs" Link="NetworkFaultProxy.cs" />
+    <Compile Include="../Bomber.Smoke/NetemFault.cs" Link="NetemFault.cs" />
+  </ItemGroup>
+</Project>

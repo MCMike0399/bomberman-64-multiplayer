@@ -85,7 +85,12 @@ public partial class ArcadeMenu
                 _resultTitle.Text=(leader.GetProperty("name").GetString()??"Player")+" Wins!";
             }
         }
-        if(result is { } r && r.TryGetProperty("reason",out var reason)) text+="\n\n"+(reason.GetString() switch {"bot_won"=>"A CPU rival takes the match!","won"=>"Thanks for playing!",_=>reason.GetString()});
+        if(result is { } r && r.TryGetProperty("reason",out var reason))
+        {
+            string? cause=reason.GetString();
+            if(cause?.Contains("Connection lost",StringComparison.Ordinal)==true)_resultTitle.Text="Connection lost";
+            text+="\n\n"+(cause switch {"bot_won"=>"A CPU rival takes the match!","won"=>"Thanks for playing!",_=>cause});
+        }
         _results.GetNode<Label>("Standings").Text=text;ShowScreen("Results");
     }
 

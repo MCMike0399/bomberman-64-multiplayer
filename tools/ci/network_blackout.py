@@ -35,15 +35,28 @@ def main():
     parser.add_argument('--server-assembly', type=Path, default=ROOT / 'artifacts/server-staged/Bomber.Server.dll')
     parser.add_argument('--assert-resilience', action='store_true')
     parser.add_argument('--source-root', type=Path, default=ROOT)
+    parser.add_argument('--probe-assembly', type=Path)
+    parser.add_argument('--runtime-identity', type=Path)
+    parser.add_argument('--fast-receive-recovery', choices=('on', 'off'), default='on')
     args = parser.parse_args()
     output = args.output.resolve(); output.mkdir(parents=True, exist_ok=False)
     source = args.source_root.resolve()
     suite = Suite('managed', output, 'unused')
     suite.provenance['productSource'] = subprocess.check_output(['git', '-C', str(source), 'rev-parse', 'HEAD'], text=True).strip()
+    if args.runtime_identity:
+        import hashlib
+        identity = json.loads(args.runtime_identity.read_text())
+        for name, expected in identity['files'].items():
+            if hashlib.sha256((args.runtime_identity.parent / name).read_bytes()).hexdigest() != expected:
+                raise RuntimeError('Runtime fixture identity mismatch: ' + name)
+        suite.provenance['productSource'] = identity['productSource']
+        suite.provenance['probeSource'] = identity['probeSource']
+        (output / 'runtime-identity.json').write_text(json.dumps(identity, indent=2) + '\n')
     with suite.server(dll=args.server_assembly.resolve()) as origin:
-        command = ['dotnet', 'run', '--no-build', '--project', str(source / 'tests/Bomber.Smoke'), '--', origin,
+        prefix = ['dotnet', str(args.probe_assembly.resolve())] if args.probe_assembly else ['dotnet', 'run', '--no-build', '--project', str(source / 'tests/Bomber.Smoke'), '--']
+        command = [*prefix, origin,
                    '--blackout-only', '--blackout-case=' + args.case, '--blackout-driver=' + args.driver,
-                   '--blackout-output=' + str(output / 'measurement.json')]
+                   '--blackout-output=' + str(output / 'measurement.json'), '--fast-receive-recovery=' + args.fast_receive_recovery]
         if args.assert_resilience: command.append('--assert-resilience')
         passed = suite.step('network-blackout', command, timeout=750,
                             validate=lambda: validate_measurement(output / 'measurement.json', args.case, args.assert_resilience))

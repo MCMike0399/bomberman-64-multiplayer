@@ -11,6 +11,8 @@ checks += await ServerCompatibilityChecks.Run();
 checks += PeerFrameChecks.Run();
 checks += PeerPacketChecks.Run();
 checks += PeerLinkRecoveryChecks.Run();
+checks += ConnectionHealthChecks.Run();
+checks += await ConnectionJournalChecks.Run();
 checks += InputSendChecks.Run();
 checks += FeedbackSteeringChecks.Run();
 void Check(bool condition, string name) { if (!condition) throw new Exception(name); checks++; }

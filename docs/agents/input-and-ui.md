@@ -75,6 +75,17 @@ Nintendo letters: `A` is south/printed B; `B` is east/printed A; `Y` is
 north/printed X. Translate actions through `ControllerProfile`, preserving the
 backend's canonical IDs. Nintendo confirms with printed A and backs with B.
 
+## Network interruption feedback (unversioned resilience work)
+
+The existing battle footer shows “Connection interrupted” after more than one
+second without authoritative state or input acknowledgment progress. Incoming
+snapshots alone do not prove the outgoing input path is healthy. Only an actual
+transport retry says “Reconnecting (n/5)”. Sustained RTT/jitter shows “Connection
+unstable”; recovery has hysteresis so one fresh frame does not flicker the hint.
+Long dead paths end with “Connection lost” and the ordinary keyboard/controller
+Back path. The native `network-interruption` journey captures the minimum window;
+synthetic controller events do not claim a physical-controller playtest.
+
 ## Input path and fairness
 
 Roster role menus are embedded popups on every OS (decision reversed 2026-11-01).

@@ -1,3 +1,4 @@
+if(args.Contains("--stale-input")){StaleInputChecks.Run();return;}
 if(args.Contains("--round-ending")){Console.WriteLine($"Passed {RoundEndingChecks.Run()} round ending integration checks.");return;}
 if(args.Contains("--blast-hitbox")){Console.WriteLine($"Passed {BlastHitboxChecks.Run()} blast hitbox integration checks.");return;}
 if(args.Contains("--blizzard-battle")){BlizzardBattleChecks.Run();return;}
@@ -43,6 +44,7 @@ if(args.Contains("--sandbox")){SandboxEquipmentChecks.Run();return;}
 if(args.Contains("--cover-layout")){RegionalCoverChecks.Run();return;}
 
 var passed = LedgeDropChecks.Run() + BlizzardBattleChecks.Run() + StageIntegrationChecks.Run() + TutorialChecks.Run() + TutorialChecks.ReviewRegressions() + TopRulesChecks.Run() + AdvancedRulesChecks.Run() + ItemExpirationChecks.Run() + RegionalCoverChecks.Run() + SandboxEquipmentChecks.Run() + PyramidLedgeChecks.Run() + PartyPolishChecks.Run() + PartySessionChecks.Run() + LootAvailabilityChecks.Run() + AimedThrowChecks.Run() + CarryChargeChecks.Run() + BombPlacementChecks.Run() + PowerUpModeChecks.Run() + BombTravelChecks.Run() + KickTimingChecks.Run() + BodyContactChecks.Run() + BombImpactChecks.Run() + TraversalAndGhostChecks.Run() + BombActionsChecks.Run() + GrappleChecks.Run();
+passed+=StaleInputChecks.Run();
 passed+=ItemDensityChecks.Run();
 passed+=BlastHitboxChecks.Run();
 SnapshotChecks.Run(Run);

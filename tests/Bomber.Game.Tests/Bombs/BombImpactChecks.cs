@@ -117,7 +117,10 @@ internal static class BombImpactChecks
             var cells=Cells();for(int z=0;z<15;z++)cells[0,z]=CellDef.Water;
             var f=new AppearanceFixture(customStage:new StageLayout{Id="fixture",Width=15,Height=15,Cells=cells,
                 Spawns=[(3,3),(12,12),(10,12)],SoftBlockDensity=0,InitialItems=[(3,3,"remote")]},humans:3);
-            f.Step(64);f.Message(0,"{\"a\":true}","input");f.Step(2);f.Message(0,"{\"x\":-1}","input");f.Step(30);
+            f.Step(64);f.Message(0,"{\"a\":true}","input");f.Step(2);
+            // This fixture requires a live player walking into water, not a
+            // silent sender whose movement now correctly expires after 350 ms.
+            for(int tick=0;tick<30;tick++){f.Message(0,"{\"x\":-1}","input");f.Step(1);}
             var owner=f.Snapshot.GetProperty("players")[0];
             Assert(!owner.GetProperty("alive").GetBoolean()||owner.GetProperty("ghost").GetBoolean(),"Remote owner fixture never reached water death.");
             f.Step(100);Assert(f.Snapshot.GetProperty("bombs").GetArrayLength()==0,"Dead owner left a permanent remote bomb.");

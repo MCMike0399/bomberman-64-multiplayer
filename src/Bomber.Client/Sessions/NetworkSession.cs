@@ -73,6 +73,7 @@ public sealed partial class NetworkSession : ISession
     private void NoteConnection(string text)
     {
         _connectionEvents.Enqueue($"{DateTimeOffset.UtcNow:HH:mm:ss.fff} g{ConnectionGeneration} {text}");
+        _journal?.Connection(ConnectionGeneration, text);
         while (_connectionEvents.Count > 64) _connectionEvents.TryDequeue(out _);
     }
     public bool IsEnded => Status.StartsWith("Ended", StringComparison.Ordinal) || Status.StartsWith("Error:", StringComparison.Ordinal);
@@ -93,10 +94,12 @@ public sealed partial class NetworkSession : ISession
 
     public static async Task<NetworkSession> ConnectAsync(Uri server, string displayName, SessionSettings settings,
         NetworkMode mode = NetworkMode.CreatePrivate, string? joinCode = null, CancellationToken cancellationToken = default, int appearance = 0,
-        Func<IPeerLink>? peerFactory = null)
+        Func<IPeerLink>? peerFactory = null, string? diagnosticsDirectory = null, bool fastReceiveRecovery = true)
     {
         if (appearance is < 0 or > 7) throw new ArgumentOutOfRangeException(nameof(appearance));
-        var session = new NetworkSession(server, null) { _appearance = appearance, _peerFactory = peerFactory };
+        var session = new NetworkSession(server, null) { _appearance = appearance, _peerFactory = peerFactory,
+            _journal = diagnosticsDirectory is null ? null : new Bomber.Client.Diagnostics.ConnectionJournal(diagnosticsDirectory),
+            _fastReceiveRecovery = fastReceiveRecovery };
         try
         {
             await session.InitializeAsync(displayName, settings, mode, joinCode, cancellationToken).ConfigureAwait(false);
@@ -145,10 +148,12 @@ public sealed partial class NetworkSession : ISession
             _ticketId = null;
         }
         _lobbyId = reservation.GetProperty("lobbyId").GetString();
+        _journal?.Scope(_lobbyId, PlayerId);
         await OpenSocketAsync(reservation, ct);
         // Transport I/O must not capture a UI/engine synchronization context.
         // Peer simulation and native links remain on the caller's polling thread.
         _worker = Task.Run(RunAsync);
+        _terminalMonitor = Task.Run(() => MonitorSilenceAsync(_lifetime.Token));
     }
 
     public void SetAppearance(int index)
@@ -191,6 +196,7 @@ public sealed partial class NetworkSession : ISession
         await _lifetime.CancelAsync();
         _socket?.Abort();
         if (_worker is not null) try { await _worker; } catch (OperationCanceledException) { }
+        if (_terminalMonitor is not null) await _terminalMonitor;
         using var cleanup = new CancellationTokenSource(TimeSpan.FromSeconds(2));
         if (_ticketId is not null)
         {
@@ -223,6 +229,8 @@ public sealed partial class NetworkSession : ISession
         _peer?.Dispose();
         _socket?.Dispose();
         _http.Dispose();
+        NoteConnection("disposed");
+        if (_journal is not null) await _journal.DisposeAsync();
         _lifetime.Dispose();
     }
 }

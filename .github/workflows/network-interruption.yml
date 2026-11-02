@@ -8,6 +8,7 @@ on:
       - 'src/Bomber.Server/**'
       - 'scripts/**'
       - 'tests/Bomber.Smoke/**'
+      - 'tests/Bomber.NetworkResilience.Probe/**'
       - 'tools/ci/network_blackout*.py'
 permissions:
   contents: read
@@ -15,9 +16,92 @@ concurrency:
   group: network-interruption-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  prepare:
+    name: Prepare signed baseline and candidate test runtimes
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9
+        with:
+          dotnet-version: 10.0.x
+      - name: Fetch only the checked-in private dependency pin on the supported build host
+        env:
+          KERNEL_REPOSITORY: ${{ secrets.KERNEL_REPOSITORY }}
+          KERNEL_READ_TOKEN: ${{ secrets.KERNEL_READ_TOKEN }}
+          KERNEL_DEPLOY_KEY: ${{ secrets.KERNEL_DEPLOY_KEY }}
+          GITHUB_METADATA_TOKEN: ${{ github.token }}
+        run: python3 tools/ci/bootstrap_kernel.py
+      - name: Verify shipped signatures and build runtime-only QA fixtures
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/ci/network_blackout_prepare.py --output artifacts/network-runtimes
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: network-runtimes
+          path: |
+            artifacts/network-runtimes/baseline
+            artifacts/network-runtimes/candidate
+          if-no-files-found: error
+          retention-days: 14
+
+  hud-linux:
+    name: Native Linux interruption HUD and terminal menu
+    needs: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9
+        with:
+          dotnet-version: 10.0.x
+      - name: Fetch checked-in dependency for the native source client
+        env:
+          KERNEL_REPOSITORY: ${{ secrets.KERNEL_REPOSITORY }}
+          KERNEL_READ_TOKEN: ${{ secrets.KERNEL_READ_TOKEN }}
+          KERNEL_DEPLOY_KEY: ${{ secrets.KERNEL_DEPLOY_KEY }}
+          GITHUB_METADATA_TOKEN: ${{ github.token }}
+        run: python3 tools/ci/bootstrap_kernel.py
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: network-runtimes
+          path: artifacts/network-runtimes
+      - run: sudo apt-get update && sudo apt-get install -y xvfb openbox pulseaudio mesa-vulkan-drivers
+      - run: python3 tools/ci/install_godot.py --destination "$RUNNER_TEMP/godot"
+      - name: Build and import before the graphical fault journey
+        run: |
+          dotnet build --nologo -m:1
+          "$GODOT" --headless --path . --editor --import --quit
+      - name: Render healthy, interrupted, reconnecting, recovered and terminal states
+        run: |
+          xvfb-run -a -s '-screen 0 1280x800x24' python3 - <<'PY'
+          import subprocess, sys
+          from pathlib import Path
+          sys.path.insert(0, 'tools/qa')
+          from run import Suite
+          import os
+          output = Path('artifacts/network-native-linux').resolve(); output.mkdir()
+          suite = Suite('managed', output, os.environ['GODOT'])
+          with suite.server(dll=Path('artifacts/network-runtimes/candidate/server/Bomber.Server.dll').resolve()) as origin:
+              subprocess.run([sys.executable, 'tools/playtest/run.py', '--scenario', 'network-interruption', '--desktop', 'shared', '--server', origin, '--godot', os.environ['GODOT'], '--output', str(output / 'hud')], check=True)
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: network-native-linux
+          path: artifacts/network-native-linux
+          if-no-files-found: warn
+          retention-days: 14
   faults:
     name: ${{ matrix.os }} ${{ matrix.variant }} fault measurements
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    needs: prepare
     strategy:
       fail-fast: false
       max-parallel: 3
@@ -26,50 +110,41 @@ jobs:
         variant: [baseline, candidate]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
-          fetch-depth: 0
       - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9
         with:
           dotnet-version: 10.0.x
-      - name: Fetch only the checked-in private dependency pin
-        env:
-          KERNEL_REPOSITORY: ${{ secrets.KERNEL_REPOSITORY }}
-          KERNEL_READ_TOKEN: ${{ secrets.KERNEL_READ_TOKEN }}
-          KERNEL_DEPLOY_KEY: ${{ secrets.KERNEL_DEPLOY_KEY }}
-          GITHUB_METADATA_TOKEN: ${{ github.token }}
-        run: python tools/ci/bootstrap_kernel.py
-      - name: Build the pinned baseline or current candidate without changing either source
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: network-runtimes
+          path: artifacts/network-runtimes
+      - name: Verify runtime identity before executing the shared measurement harness
         env:
           VARIANT: ${{ matrix.variant }}
-        shell: bash
         run: |
           python - <<'PY'
-          import os, subprocess
+          import hashlib, json, os
           from pathlib import Path
-          root = Path.cwd()
-          source = root
-          if os.environ['VARIANT'] == 'baseline':
-              source = Path(os.environ['RUNNER_TEMP']) / 'blackout-source-baseline'
-              subprocess.run(['git', 'clone', '--quiet', '--shared', '--no-checkout', str(root), str(source)], check=True)
-              subprocess.run(['git', '-C', str(source), 'checkout', '--quiet', '--detach', '2f018368d4f6a539561f9f374ce540575f541acc'], check=True)
-              subprocess.run(['git', 'clone', '--quiet', '--shared', str(root / 'burbuja-kernel'), str(source / 'burbuja-kernel')], check=True)
-          for project in ('tests/Bomber.Smoke', 'src/Bomber.Server'):
-              subprocess.run(['dotnet', 'build', str(source / project), '--nologo', '-m:1'], check=True)
-          with open(os.environ['GITHUB_ENV'], 'a') as output:
-              output.write('BLACKOUT_SOURCE=' + str(source) + '\n')
+          root = Path('artifacts/network-runtimes') / os.environ['VARIANT']
+          identity = json.loads((root / 'identity.json').read_text())
+          for name, expected in identity['files'].items():
+              assert hashlib.sha256((root / name).read_bytes()).hexdigest() == expected, name
+          print('Verified runtime identity:', identity['variant'], identity['productSource'])
           PY
       - name: Measure actual product sessions on owned loopback servers
         env:
           VARIANT: ${{ matrix.variant }}
-        shell: bash
-        run: python tools/ci/network_blackout_campaign.py --source-root "$BLACKOUT_SOURCE" --variant "$VARIANT" --output "artifacts/network-faults-$VARIANT"
+        run: |
+          python tools/ci/network_blackout_campaign.py --source-root . --variant "$VARIANT" --runtime-identity "artifacts/network-runtimes/$VARIANT/identity.json" --probe-assembly "artifacts/network-runtimes/$VARIANT/probe/Bomber.NetworkResilience.Probe.dll" --server-assembly "artifacts/network-runtimes/$VARIANT/server/Bomber.Server.dll" --output "artifacts/network-faults-$VARIANT"
       - name: Audit and remove only the fixture's loopback qdisc
         if: always() && runner.os == 'Linux'
-        shell: bash
         run: |
           python - <<'PY'
           import subprocess

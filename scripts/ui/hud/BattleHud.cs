@@ -18,6 +18,7 @@ public partial class BattleHud : Control
     private PromptBar _controls=null!;
     private readonly Dictionary<int,PlayerToken> _tokens=[];
     private string _signature="";
+    private bool _connectionWarning;
     private float _hurryAge,_bannerAge;
     private int _phaseNumber=-1,_round,_winsTarget=2;
     private float _roundSeconds;
@@ -43,7 +44,7 @@ public partial class BattleHud : Control
         _recovery=ArcadeTheme.Text(hintPlate,"",18,ArcadeTheme.Gold);_recovery.HorizontalAlignment=HorizontalAlignment.Center;
         var footer=new PanelContainer {AnchorTop=1,AnchorBottom=1,AnchorRight=1,OffsetLeft=24,OffsetRight=-24,OffsetTop=-66,OffsetBottom=-12};
         footer.AddThemeStyleboxOverride("panel",new StyleBoxEmpty {ContentMarginLeft=8,ContentMarginRight=8,ContentMarginTop=6,ContentMarginBottom=6});AddChild(footer);
-        var row=ArcadeTheme.Row(footer,18);_connection=ArcadeTheme.Text(row,"Local battle",15,ArcadeTheme.Muted);_connection.SizeFlagsHorizontal=SizeFlags.ExpandFill;_connection.VerticalAlignment=VerticalAlignment.Center;
+        var row=ArcadeTheme.Row(footer,18);_connection=ArcadeTheme.Text(row,"Local battle",15,ArcadeTheme.Muted);_connection.Name="ConnectionStatus";_connection.SizeFlagsHorizontal=SizeFlags.ExpandFill;_connection.VerticalAlignment=VerticalAlignment.Center;
         _controls=new PromptBar {KeySize=13};row.AddChild(_controls);UpdateControls();ControllerHub.Current.PromptChanged+=UpdateControls;
         _restart=ArcadeTheme.Quiet(ArcadeTheme.Button(row,"Reset practice",()=>RestartRequested?.Invoke()));_restart.Visible=false;
         var escape=new HBoxContainer {MouseFilter=MouseFilterEnum.Ignore};escape.AddThemeConstantOverride("separation",0);row.AddChild(escape);
@@ -153,7 +154,13 @@ public partial class BattleHud : Control
         }
     }
     public void Connection(string status,string? code,bool practice)
-    {_restart.Visible=practice;_connection.Text=(practice?"Practice, ":"")+status+(code is null?"":", room "+code);}
+    {
+        _restart.Visible=practice;
+        _connection.Text=(practice?"Practice, ":"")+status+(code is null?"":", room "+code);
+        bool warning=status.StartsWith("Connection interrupted",StringComparison.Ordinal)||status.StartsWith("Connection unstable",StringComparison.Ordinal)||status.StartsWith("Reconnecting",StringComparison.Ordinal);
+        if(warning!=_connectionWarning)
+        {_connectionWarning=warning;_connection.AddThemeColorOverride("font_color",warning?ArcadeTheme.Gold:ArcadeTheme.Muted);}
+    }
     public override void _Process(double delta)
     {
         if(_phaseNumber==2)_hurryAge+=(float)delta;

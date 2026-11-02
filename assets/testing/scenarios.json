@@ -2,6 +2,14 @@
   "schemaVersion": 1,
   "scenarios": [
     {
+      "id": "network-interruption",
+      "method": "NetworkInterruption",
+      "domains": ["networking", "ui", "rendering"],
+      "headless": false,
+      "timeout": 180,
+      "manual": false
+    },
+    {
       "id": "blast-hitbox",
       "method": "BlastHitbox",
       "domains": [

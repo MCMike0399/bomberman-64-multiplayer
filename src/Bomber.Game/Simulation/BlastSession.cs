@@ -227,8 +227,20 @@ public sealed partial class BlastSession : GameSession
             // Optional pointer landing target; older clients omit it.
             System.Numerics.Vector2? target = raw.Tx is { } tx && raw.Tz is { } tz && float.IsFinite(tx) && float.IsFinite(tz)
                 ? new(tx, tz) : null;
+            if (p.MovementInputExpired && p.LastInputAt is { } previous)
+                Bomber.Game.Diagnostics.InputSilenceTelemetry.Record(context.LobbyId, p.Id, "resumed", (context.Elapsed - previous).TotalMilliseconds);
+            p.MovementInputExpired = false;
+            p.LastInputAt = context.Elapsed;
             p.ReceiveInput(new InputState(x, z, raw.A, raw.B, raw.R, raw.Aim, raw.Stop, target, target is not null && raw.Tr));
         }
+    }
+
+    // LocalMatch holds current device state in-process; no transport heartbeat
+    // is needed. Never replay an old payload after rules clear it (e.g. respawn).
+    internal void RefreshLocalInput(string playerId, TimeSpan elapsed)
+    {
+        if (_players.TryGetValue(playerId, out var player) && player.LastInputAt is not null)
+            player.LastInputAt = elapsed;
     }
 
     public override void OnTick(ISessionContext context)
@@ -236,7 +248,21 @@ public sealed partial class BlastSession : GameSession
         if (_matchEndScheduled)
             return;
 
-        foreach(var player in _players.Values)if(!player.IsBot)player.AdvanceReceivedInput();
+        foreach (var player in _players.Values)
+            if (!player.IsBot)
+            {
+                // Silence must not keep a human walking. This common authority
+                // rule runs for dedicated, peer and local sessions; world physics
+                // and held-action edge ordering continue normally.
+                if (player.LastInputAt is { } received && (context.Elapsed - received).TotalSeconds >= .35)
+                {
+                    if (!player.MovementInputExpired)
+                        Bomber.Game.Diagnostics.InputSilenceTelemetry.Record(context.LobbyId, player.Id, "stalled", (context.Elapsed - received).TotalMilliseconds);
+                    player.MovementInputExpired = true;
+                    player.Input = player.Input with { X = 0, Z = 0 };
+                }
+                player.AdvanceReceivedInput();
+            }
         _tickCount++;
         var dt = (float)context.TickDelta.TotalSeconds;
 

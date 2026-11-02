@@ -1112,3 +1112,28 @@ must also validate. Both original-High processes, all seven scene captures and
 raw controls retain their actual adapter and provenance. Hosted Apple
 Paravirtual is a cross-configuration Mac reference, not a physical M1 claim or
 Windows/Linux GPU qualification. The legacy push job is unchanged.
+
+## Network fault qualification (unversioned resilience work)
+
+`network-interruption.yml` builds a shared probe once on Linux and checks real
+managed sessions on Linux, Windows and Mac. The baseline uses immutable signed
+v0.45.0 client/server binaries; candidate binaries have their own hash inventory.
+Linux packet-loss/jitter rows use an owned port-scoped loopback netem qdisc.
+Proxy pause/reset rows remain explicitly distinct from Linux TCP/RTO evidence.
+Preserve failed baseline behavior, healthy controls, fresh state/acknowledged
+movement latency and reconnect generations. Compare the same candidate with its
+experimental receive watchdog OFF and ON; healthy candidate 600 s is mandatory.
+A separate 30 s terminal bound must work independently of fast reconnect tuning.
+Native HUD/menu evidence is a separate rendered journey, not a managed claim.
+
+Client diagnostics retain 64 connection events and 64 RTT spikes in a <=64 KiB
+JSON file plus one bounded previous file. Default paths:
+- Linux: `$XDG_DATA_HOME/godot/app_userdata/Blast Circuit/network/connection-events.json`
+  (default `~/.local/share/godot/app_userdata/Blast Circuit/network/connection-events.json`).
+- Windows: `%APPDATA%\Godot\app_userdata\Blast Circuit\network\connection-events.json`.
+- Mac: `~/Library/Application Support/Godot/app_userdata/Blast Circuit/network/connection-events.json`.
+QA redirects its logs under the owned evidence directory. No credentials, headers,
+addresses or player display names are recorded. Server logs correlate opaque
+room/player IDs with input silence, socket receive/send stalls and snapshot age
+at socket-write time. Pending write bytes are not kernel send-queue depth or
+proof of peer delivery. No delivery/coalescing policy is changed by telemetry.

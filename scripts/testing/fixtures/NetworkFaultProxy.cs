@@ -2,6 +2,8 @@ using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 
+namespace BlastCircuit.Testing.Fixtures;
+
 /// <summary>Owned loopback fault proxy. Pauses directions or resets only its own test client connections.</summary>
 internal sealed class NetworkFaultProxy : IAsyncDisposable
 {
