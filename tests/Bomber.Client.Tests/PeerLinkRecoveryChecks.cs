@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using Bomber.Client.Peer;
 
-/// <summary>Terminal native-link recovery: one offerer per pair, bounded backoff,
+/// <summary>Failed-link and stalled-handshake recovery: one offerer per pair, bounded backoff,
 /// attempt generations that reject stale signaling, healthy links untouched.</summary>
 internal static class PeerLinkRecoveryChecks
 {
@@ -42,6 +42,44 @@ internal static class PeerLinkRecoveryChecks
     {
         int checks = 0;
         void Check(bool ok, string name) { if (!ok) throw new Exception(name); checks++; }
+        // A native peer can stay Connecting forever without reporting Failed.
+        // Drive the real polling/recovery path with its monotonic clock seam.
+        long connectingClock = 0;
+        var connectingLinks = new List<FakeLink>();
+        using var connecting = new PeerRoomClient("a", "lobby", () => { var link = new FakeLink(); connectingLinks.Add(link); return link; },
+            (_, _) => { }, _ => { }, () => []) { Clock = () => connectingClock };
+        connecting.Handle(Status("a", "b"));
+        connectingClock = 14 * Stopwatch.Frequency; connecting.Advance();
+        Check(connectingLinks.Count == 1, "a Connecting peer keeps its full handshake window");
+        connectingClock = 15 * Stopwatch.Frequency; connecting.Advance();
+        Check(connectingLinks.Count == 2 && connectingLinks[0].Disposed && connecting.Recoveries == 1,
+            "a peer stuck Connecting without Failed is replaced after its bounded handshake window");
+
+        connecting.Advance();
+        Check(connectingLinks.Count == 2, "a replacement Connecting peer gets a fresh full handshake window");
+        for (int attempt = 0; attempt < 10; attempt++)
+        { connectingClock += 15 * Stopwatch.Frequency; connecting.Advance(); }
+        Check(connecting.Recoveries == PeerRoomClient.RecoveryAttempts && connectingLinks.Count == 1 + PeerRoomClient.RecoveryAttempts,
+            "stalled Connecting recovery keeps the existing per-epoch five-attempt cap");
+        connecting.Handle(StatusVersion(2, "a", "b"));
+        int rejoinedCount = connectingLinks.Count;
+        connectingClock += 14 * Stopwatch.Frequency; connecting.Advance();
+        Check(connectingLinks.Count == rejoinedCount, "a member reconnect starts a fresh handshake window");
+        connectingClock += Stopwatch.Frequency; connecting.Advance();
+        Check(connectingLinks.Count == rejoinedCount + 1, "a member reconnect resets the bounded recovery allowance");
+
+        long healthyClock = 0;
+        var healthyLinks = new List<FakeLink>();
+        using var healthy = new PeerRoomClient("a", "lobby", () => { var link = new FakeLink(); healthyLinks.Add(link); return link; },
+            (_, _) => { }, _ => { }, () => []) { Clock = () => healthyClock };
+        healthy.Handle(Status("a", "b"));
+        healthyLinks[0].Connected = true;
+        healthyClock = 60 * Stopwatch.Frequency; healthy.Advance();
+        Check(healthyLinks.Count == 1, "a connected native link is never timed out");
+        healthyLinks[0].Connected = false;
+        healthyClock += 60 * Stopwatch.Frequency; healthy.Advance();
+        Check(healthyLinks.Count == 1, "an established link's transient disconnect does not become a handshake timeout");
+
         long clock = 0;
         var offererLinks = new List<FakeLink>(); var sent = new List<(string Type, JsonElement Data)>();
         // "a" < "b": during adaptive preflight the lexically smaller id offers.
@@ -90,8 +128,10 @@ internal static class PeerLinkRecoveryChecks
 
         var answererLinks = new List<FakeLink>(); var answers = new List<JsonElement>();
         var answerer = new PeerRoomClient("b", "lobby", () => { var link = new FakeLink(); answererLinks.Add(link); return link; },
-            (type, data) => { if (type == "peer.signal") answers.Add(JsonSerializer.SerializeToElement(data)); }, _ => { }, () => []);
+            (type, data) => { if (type == "peer.signal") answers.Add(JsonSerializer.SerializeToElement(data)); }, _ => { }, () => []) { Clock = () => clock };
         answerer.Handle(Status("a", "b"));
+        clock += 60 * Stopwatch.Frequency; answerer.Advance();
+        Check(answererLinks.Count == 1 && answerer.Recoveries == 0, "a stalled answerer never starts a competing offer");
         Check(answererLinks.Count == 1 && answererLinks[0].Offer == false, "the other member answers instead of offering");
         answerer.Handle(Signal("a", new { kind = "ice", media = "0", index = 0, candidate = "early", g = 2 }));
         Check(answererLinks.Count == 2 && answererLinks[0].Disposed && answererLinks[1].Accepted.Count == 1,
