@@ -34,6 +34,22 @@ def check_origin(origin):
         raise RuntimeError('Public server does not match the published client')
 
 
+def verify_download(directory, name, inventory):
+    path = directory / name
+    if name == 'Blast-Circuit-macos-arm64.zip.sha256':
+        archive = 'Blast-Circuit-macos-arm64.zip'
+        expected = inventory[archive]['sha256'] + '  ' + archive + '\n'
+        if path.read_text() != expected:
+            raise RuntimeError('Mac ZIP checksum sidecar differs from the signed ZIP digest')
+        return {'sha256': desktop.digest(path), 'size': path.stat().st_size,
+                'binding': 'checksum-text-matches-signed-zip-digest',
+                'sourceArchiveSha256': inventory[archive]['sha256']}
+    entry = inventory[name]
+    if desktop.digest(path) != entry['sha256'] or path.stat().st_size != entry['size']:
+        raise RuntimeError('Public payload differs from the signed inventory: ' + name)
+    return entry
+
+
 def prepare(directory, target):
     directory.mkdir(parents=True, exist_ok=True)
     release = public.api('repos/' + REPOSITORY + '/releases/tags/v' + VERSION, os.environ.get('GH_TOKEN'))
@@ -49,11 +65,10 @@ def prepare(directory, target):
     archive = 'Blast-Circuit-' + target + '.zip'
     metadata = 'build-metadata.json' if target == 'macos-arm64' else desktop.names(target)['metadata']
     required = (archive, archive + '.sha256', metadata, *downloads.names(target))
+    verified = {}
     for name in required:
         public.download(assets[name]['browser_download_url'], directory / name)
-        entry = delivery['assets'][name]
-        if desktop.digest(directory / name) != entry['sha256'] or (directory / name).stat().st_size != entry['size']:
-            raise RuntimeError('Public payload differs from the signed inventory: ' + name)
+        verified[name] = verify_download(directory, name, delivery['assets'])
     if target == 'macos-arm64':
         public.inspect_package(directory, SOURCE, VERSION, release=RELEASE)
     else:
@@ -65,7 +80,7 @@ def prepare(directory, target):
     (directory / 'origin.json').write_text(json.dumps(origin, indent=2) + '\n')
     proof = dict(origin, actualOS=platform.system(), target=target, anonymousDownloads=True,
                  signedDeliverySha256=desktop.digest(directory / 'Blast-Circuit-release.json'),
-                 verifiedPublicAssets={name: delivery['assets'][name] for name in required})
+                 verifiedPublicAssets=verified)
     (directory / 'production-provenance.json').write_text(json.dumps(proof, indent=2) + '\n')
 
 

@@ -43,4 +43,34 @@ class ProductionBoundaryTests(unittest.TestCase):
             with self.assertRaises(RuntimeError): qa.committed(output)
 
 
+class RealPublicManifestTests(unittest.TestCase):
+    def setUp(self):
+        self.inventory = json.loads((Path(__file__).parent / 'fixtures/v0450-public-release.json').read_text())['assets']
+        self.archive = 'Blast-Circuit-macos-arm64.zip'
+        self.sidecar = self.archive + '.sha256'
+        self.assertIn(self.archive, self.inventory)
+        self.assertNotIn(self.sidecar, self.inventory)
+
+    def test_real_mac_manifest_shape_accepts_bound_sidecar(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / self.sidecar).write_text(self.inventory[self.archive]['sha256'] + '  ' + self.archive + '\n')
+            receipt = qa.verify_download(root, self.sidecar, self.inventory)
+            self.assertEqual(receipt['sourceArchiveSha256'], self.inventory[self.archive]['sha256'])
+            self.assertEqual(receipt['binding'], 'checksum-text-matches-signed-zip-digest')
+
+    def test_real_mac_manifest_shape_rejects_wrong_digest_or_filename(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for text in ('0' * 64 + '  ' + self.archive + '\n', self.inventory[self.archive]['sha256'] + '  other.zip\n'):
+                (root / self.sidecar).write_text(text)
+                with self.assertRaises(RuntimeError): qa.verify_download(root, self.sidecar, self.inventory)
+
+    def test_other_unlisted_download_cannot_use_sidecar_exception(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'other.zip.sha256').write_text('0' * 64)
+            with self.assertRaises(KeyError): qa.verify_download(root, 'other.zip.sha256', self.inventory)
+
+
 if __name__ == '__main__': unittest.main()
