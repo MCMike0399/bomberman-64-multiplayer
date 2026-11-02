@@ -20,6 +20,7 @@ checks += ConnectionOutageChecks.Run();
 checks += await ConnectionFailureChecks.Run();
 checks += await ProxyDispatcherChecks.Run();
 checks += ReceiveDeadlineChecks.Run();
+checks += NetworkDirectionWitnessChecks.Run();
 checks += await ConnectionJournalChecks.Run();
 checks += InputSendChecks.Run();
 checks += FeedbackSteeringChecks.Run();

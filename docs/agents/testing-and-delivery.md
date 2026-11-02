@@ -1129,6 +1129,13 @@ handshakes and incoming-only progress do not renew it. The experimental receive
 watchdog rechecks the same inbound progress observation after a 200 ms boundary
 settle interval, before committing an abort.
 Native HUD/menu evidence is a separate rendered journey, not a managed claim.
+Its protocol witness uses advancing authority time, fixed ACK and advancing
+successfully-sent outstanding input, combined with the visible interrupted
+footer. Rendered drain counts are diagnostic only: slow renderers coalesce state.
+The 240 s whole-journey budget includes measured ~93 s cold llvmpipe startup and
+two independent 30 s terminal/menu trials; the per-outage deadlines stay fixed.
+Capture metadata is sampled after the draw fence and checked against the expected
+footer; transport recovery alone is not proof the recovered footer was rendered.
 
 Client diagnostics retain 64 connection events and 64 RTT spikes in a <=64 KiB
 JSON file plus one bounded previous file. Default paths:
