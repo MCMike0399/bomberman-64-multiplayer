@@ -14,6 +14,7 @@ var clock = Stopwatch.StartNew();
 var games = await Api(HttpMethod.Get, "/realtime/v1/games");
 Check(games.GetProperty("value").EnumerateArray().Any(g => g.GetProperty("id").GetString() == "blast"), "blast game registered");
 
+if(args.Contains("--blackout-only")){await NetworkBlackoutChecks.Run(new Uri(origin), args);return;}
 if(args.Contains("--up-and-down-only")){await UpAndDownNetworkChecks.Run(new Uri(origin));return;}
 if(args.Contains("--aim-only")){await NetworkAimChecks.Run(new Uri(origin));return;}
 if(args.Contains("--adaptive-only") || args.Contains("--adaptive-peer-only") || args.Contains("--adaptive-malformed-only"))
