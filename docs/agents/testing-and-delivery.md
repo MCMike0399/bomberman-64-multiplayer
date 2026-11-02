@@ -1134,6 +1134,8 @@ successfully-sent outstanding input, combined with the visible interrupted
 footer. Rendered drain counts are diagnostic only: slow renderers coalesce state.
 The 240 s whole-journey budget includes measured ~93 s cold llvmpipe startup and
 two independent 30 s terminal/menu trials; the per-outage deadlines stay fixed.
+Frame waits retain each predicate result for its assertion: a stateful fresh-sample
+predicate must not be evaluated twice against the same observation.
 Capture metadata is sampled after the draw fence and checked against the expected
 footer; transport recovery alone is not proof the recovered footer was rendered.
 

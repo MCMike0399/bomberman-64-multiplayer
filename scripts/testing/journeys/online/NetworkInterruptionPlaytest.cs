@@ -26,7 +26,8 @@ public partial class PlaytestDriver
         async Task Wait(Func<bool> condition, string label, double seconds = 15)
         {
             var timer = Stopwatch.StartNew();
-            while (!condition() && timer.Elapsed.TotalSeconds < seconds)
+            bool ready = condition();
+            while (!ready && timer.Elapsed.TotalSeconds < seconds)
             {
                 var controls = new[] { host, control };
                 for (int index = 0; index < controls.Length; index++)
@@ -38,12 +39,17 @@ public partial class PlaytestDriver
                         { controlSnapshots++; controlAuthorityTimes[index] = frame.GetProperty("d").GetProperty("serverTime").GetInt64(); }
                 }
                 await Frames(1); await Task.Delay(10);
+                ready = condition();
             }
-            Check(condition(), label);
+            // A protocol observation is consumed once. Re-evaluating a
+            // successful new-sample predicate would reject the same sample.
+            Check(ready, label);
         }
         Label Footer() => _root.FindChild("ConnectionStatus", true, false) as Label
             ?? throw new InvalidOperationException("Connection footer missing");
         bool Notice(string text) => Footer().IsVisibleInTree() && Footer().Text.Contains(text, StringComparison.Ordinal);
+        bool ConnectionLostRendered() => _root.ScreenName == "Results" && _root.FindChildren("*", "Label", true, false)
+            .OfType<Label>().Any(label => label.IsVisibleInTree() && label.Text == "Connection lost");
         var observations = new List<object>();
         async Task Shot(string name, string expectedText)
         {
@@ -72,6 +78,7 @@ public partial class PlaytestDriver
             await Wait(() => _root.SnapshotCount > 5, "rendered battle samples fresh authority after warmup");
             Check(affected.ConnectionGeneration == 1 && affected.ConnectionNotice is null, "owned transport is healthy before the first injected fault");
             string lobby = affected.LobbyId!;
+            int match = affected.Party?.Match ?? throw new InvalidOperationException("Missing match identity");
             await Shot("network-healthy-keyboard", "Connected");
             int drawn = Engine.GetFramesDrawn(); var controlTimesBefore = controlAuthorityTimes.ToArray();
             proxy.Pause(TimeSpan.FromSeconds(10), upstream: true, downstream: true);
@@ -83,7 +90,7 @@ public partial class PlaytestDriver
             await Shot("network-reconnecting-keyboard", "Reconnecting");
             await Wait(() => affected.Status == "Connected" && affected.ConnectionNotice is null
                 && Footer().Text.StartsWith("Connected", StringComparison.Ordinal), "same match recovers and the rendered warning clears", 25);
-            Check(affected.LobbyId == lobby && _root.ScreenName == "Match", "recovered player stays in the original battle");
+            Check(affected.LobbyId == lobby && affected.Party?.Match == match && _root.ScreenName == "Match", "recovered player stays in the original battle");
             Check(Engine.GetFramesDrawn() > drawn && Enumerable.Range(0, 2).All(index => controlAuthorityTimes[index] - controlTimesBefore[index] >= 5000),
                 "rendering and healthy peers continue during the outage");
             Event("healthy-control-progress", new { controlTimesBefore, controlAuthorityTimes, renderedDrainCount = controlSnapshots });
@@ -113,11 +120,12 @@ public partial class PlaytestDriver
             await Shot("network-outgoing-only", "Connection interrupted");
             await Wait(() => affected.ConnectionNotice is null, "outgoing ACK progress clears feedback", 15);
             proxy.Pause(TimeSpan.FromSeconds(45), upstream: true, downstream: true);
-            await Wait(() => affected.IsEnded && _root.ScreenName == "Results", "long dead path has a bounded terminal menu", 36);
+            await Wait(() => affected.IsEnded && ConnectionLostRendered(), "long dead path has a bounded rendered terminal menu", 36);
             Check(affected.Status.Contains("Connection lost", StringComparison.Ordinal), "terminal result uses the standard connection-loss message");
             await Capture("network-terminal-keyboard", 0);
+            Check(ConnectionLostRendered(), "keyboard terminal capture shows the real Connection lost title");
             await KeyPress(Key.Escape);
-            Check(_root.ScreenName != "Results" && _root.ActiveSession is null, "keyboard Back releases the dead session and returns to a usable menu");
+            Check(_root.ScreenName == "Online" && _root.ActiveSession is null, "keyboard Back releases the dead session and returns to the Online menu");
             await Capture("network-menu-keyboard", 0);
             proxy.ClearFaults();
             // A second real terminal session exercises the controller Back path,
@@ -126,16 +134,24 @@ public partial class PlaytestDriver
             await using var controllerHost = await NetworkSession.ConnectAsync(origin, "Controller control A", settings, NetworkMode.CreatePrivate);
             await using var controllerPeer = await NetworkSession.ConnectAsync(origin, "Controller control B", settings, NetworkMode.JoinCode, controllerHost.JoinCode);
             await _root.StartOnlineAsync(proxy.Origin, "HUD controller", settings, NetworkMode.JoinCode, controllerHost.JoinCode);
+            var controllerSession = (NetworkSession)_root.ActiveSession!;
             await Wait(() => controllerHost.Party?.CanStart == true, "controller cohort is ready");
             controllerHost.RequestStart();
             await Wait(() => _root.ScreenName == "Match", "controller session enters its owned battle");
+            // Register an actual canonical event before labeling the capture
+            // controller-mode. Device inventory alone does not select prompts.
+            CtlButton(12, JoyButton.RightShoulder, true); await Frames(1);
+            CtlButton(12, JoyButton.RightShoulder, false); await Frames(3);
+            Check(ControllerHub.Current.ActiveFamily == ControllerFamily.Xbox, "canonical controller events select the real controller prompts");
             await Shot("network-healthy-controller", "Connected");
             proxy.Pause(TimeSpan.FromSeconds(45), upstream: true, downstream: true);
-            await Wait(() => _root.ScreenName == "Results", "controller session also reaches the terminal menu", 36);
+            await Wait(() => controllerSession.IsEnded && controllerSession.Status.Contains("Connection lost", StringComparison.Ordinal)
+                && ConnectionLostRendered(), "controller session also reaches the rendered Connection lost menu", 36);
             await Capture("network-terminal-controller", 0);
+            Check(ConnectionLostRendered(), "controller terminal capture shows the real Connection lost title");
             CtlButton(12, JoyButton.B, true); await Frames(1);
             CtlButton(12, JoyButton.B, false); await Frames(4);
-            Check(_root.ActiveSession is null && _root.ScreenName != "Results", "controller Back releases the dead session and returns to a usable menu");
+            Check(_root.ActiveSession is null && _root.ScreenName == "Online", "controller Back releases the dead session and returns to the Online menu");
             await Capture("network-menu-controller", 0);
             Event("network-input-evidence", new { syntheticCanonicalControllerEvents = true, physicalControllerTested = false });
         }
