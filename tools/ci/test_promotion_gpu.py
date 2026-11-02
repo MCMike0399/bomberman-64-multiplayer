@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import tempfile
+import subprocess
 import unittest
 from unittest.mock import patch
 
@@ -14,6 +15,23 @@ import promote_release as promotion
 import release_gpu_policy as policy
 from test_gpu_release_gates import receipt,cleanup
 from test_promotion import RELEASE,SHA,FINGERPRINT,write_package,write_server
+
+
+class GithubFailureDiagnostics(unittest.TestCase):
+    def test_error_retains_bounded_stderr_without_credentials(self):
+        secrets=('fixture-auth-token','fixture-signing-key','ghp_unlistedcredential','github_pat_unlistedcredential',
+                 'encoded-auth','signed-url-token')
+        stderr=('file exists: Sancus-builder-cleanup.json; '+secrets[0]+' '+secrets[1]+' '+secrets[2]+' '+secrets[3]+
+                '\nAuthorization: Bearer '+secrets[4]+'\nhttps://example.invalid/?sig='+secrets[5]+'&other=value\n'+'x'*3000)
+        result=subprocess.CompletedProcess([],1,stdout='',stderr=stderr)
+        with patch.dict(os.environ,{'GH_TOKEN':secrets[0],'BLAST_UPDATE_SIGNING_KEY':secrets[1]}),patch.object(
+                promotion.subprocess,'run',return_value=result),self.assertRaises(RuntimeError) as caught:
+            promotion.gh('run','download','123')
+        message=str(caught.exception)
+        self.assertIn('file exists: Sancus-builder-cleanup.json',message)
+        self.assertIn('<redacted>',message)
+        for secret in secrets:self.assertNotIn(secret,message)
+        self.assertLessEqual(len(message),1550)
 
 
 def write_gpu_files(directory):

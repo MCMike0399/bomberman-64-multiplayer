@@ -6,6 +6,7 @@ import builder_trigger as trigger
 class CurrentMainOnly(unittest.TestCase):
     def setUp(self):
         self.guarded=[]
+        self.guard_options=[]
         self.run={'head_repository':{'full_name':trigger.REPOSITORY},'head_sha':'a'*40,'head_branch':'main',
                             'path':'.github/workflows/ci.yml','event':'push','status':'completed','conclusion':'success'}
     def test_exact_successful_current_main_is_eligible(self):self.assertTrue(trigger.eligible(self.run,'a'*40))
@@ -34,13 +35,30 @@ class CurrentMainOnly(unittest.TestCase):
                 raise AssertionError(command)
             env={'REQUESTED_MODE':mode,'VERIFICATION_RUN':verification,'SANCUS_BUILDER_PAID_HOLD':hold,'GITHUB_EVENT_NAME':event,'GITHUB_RUN_ID':'999',
                  'GITHUB_OUTPUT':str(root/'outputs'),'GITHUB_STEP_SUMMARY':str(root/'summary')}
+            def guard_call(*args,**kwargs):
+                self.guarded.append(args);self.guard_options.append(kwargs)
+                kwargs['receipt'].update(passed=refusal is None,source=kwargs['source'],supersededSuccesses=[])
+                return refusal
             with contextlib.chdir(root),patch.dict(os.environ,env),patch.object(trigger.subprocess,'check_output',side_effect=output),patch.object(trigger.release_gpu_policy,'derive',return_value={'requiresGpu':True}),\
                  patch.object(trigger.release_identity,'check_exports',return_value={'version':'0.45.0'}),\
                  patch.object(trigger.render_fingerprint,'calculate',return_value={'sha256':'f'*64}),\
-                 patch.object(trigger.builder_guard,'refusal',side_effect=lambda *a:(self.guarded.append(a),refusal)[1]):
+                 patch.object(trigger.builder_guard,'refusal',side_effect=guard_call):
                 runpy.run_path(str(Path(trigger.__file__)),run_name='__main__')
             self.key=(root/'artifacts/builder-qualification-key.json').read_text()if (root/'artifacts/builder-qualification-key.json').exists()else None
+            self.guard_receipt=(root/'artifacts'/trigger.builder_guard.RECEIPT_FILE).read_text()if (root/'artifacts'/trigger.builder_guard.RECEIPT_FILE).exists()else None
             return (root/'outputs').read_text(),(root/'summary').read_text()
+
+    def test_only_manual_dispatch_passes_the_verified_main_source_and_retains_guard_receipt(self):
+        import json
+        from pathlib import Path
+        for event in ('workflow_dispatch','workflow_run','push'):
+            with self.subTest(event=event):
+                self.selected('qualify','false',event=event)
+                expected='a'*40 if event=='workflow_dispatch' else None
+                self.assertEqual(self.guard_options[-1]['source'],expected)
+                self.assertEqual(json.loads(self.guard_receipt)['source'],expected)
+        workflow=(Path(trigger.__file__).resolve().parents[2]/'.github/workflows/gpu-qualification.yml').read_text()
+        self.assertIn('artifacts/'+trigger.builder_guard.RECEIPT_FILE,workflow)
 
     def test_paid_hold_refuses_before_any_environment_job_is_selected(self):
         output,summary=self.selected('qualify','true')

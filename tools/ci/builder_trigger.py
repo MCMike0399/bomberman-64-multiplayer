@@ -60,12 +60,14 @@ if __name__=='__main__':
             else:approved=policy['requiresGpu'];reason='Major/minor qualification'if approved else'Patch uses free functional/package gates'
     if mode=='qualify' and os.environ.get('SANCUS_BUILDER_PAID_HOLD')!='false':
         approved=False;reason='Paid qualification hold: rehearsal and plan review must finish first'
-    qualification={}
+    qualification={};guard_receipt={}
     if approved and mode=='qualify':
         # No human click: dedupe, zero-leftover outcome and recorded-spend guards decide.
         qualification=builder_guard.key(release_identity.check_exports()['version'],render_fingerprint.calculate()['sha256'])
         refusal=builder_guard.refusal(qualification,os.environ.get('GITHUB_EVENT_NAME')=='workflow_run',os.environ.get('DIAGNOSED_FAILURE_RUN',''),
-                                      builder_approval.ledger(),os.environ.get('GITHUB_RUN_ID',''))
+                                      builder_approval.ledger(),os.environ.get('GITHUB_RUN_ID',''),
+                                      source=source if os.environ.get('GITHUB_EVENT_NAME')=='workflow_dispatch' else None,
+                                      receipt=guard_receipt)
         if refusal:approved=False;reason=refusal
     expiry=os.environ.get('FIXED_EXPIRY','')or(datetime.datetime.now(datetime.timezone.utc)+datetime.timedelta(minutes=180)).isoformat()
     parsed=datetime.datetime.fromisoformat(expiry)
@@ -76,6 +78,7 @@ if __name__=='__main__':
         builder_approval.validate(approval,source,run_id,approval['fixedCampaignExpiryUtc'],builder_approval.ledger())
         path=Path('artifacts/builder-approval-plan.json');path.parent.mkdir(parents=True,exist_ok=True);path.write_text(json.dumps(approval,indent=2)+'\n')
         (path.parent/builder_guard.KEY_FILE).write_text(json.dumps(qualification,indent=2)+'\n')
+        (path.parent/builder_guard.RECEIPT_FILE).write_text(json.dumps(guard_receipt,indent=2)+'\n')
     outputs={'approval-plan':json.dumps(approval,separators=(',',':')),'run':str(approved).lower(),'mode':mode,'source':source,'verification-run-id':run_id,'fixed-expiry':parsed.astimezone(datetime.timezone.utc).isoformat()}
     with Path(os.environ['GITHUB_OUTPUT']).open('a')as output:
         for key,value in outputs.items():output.write(key+'='+value+'\n')
