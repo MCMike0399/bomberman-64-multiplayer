@@ -79,7 +79,7 @@ jobs:
         run: |
           dotnet build --nologo -m:1
           "$GODOT" --headless --path . --editor --import --quit
-      - name: Render healthy, interrupted, reconnecting, recovered and terminal states
+      - name: Bounded native timing diagnosis (360 seconds; not normal qualification)
         run: |
           python3 tools/packaging/linux-desktop.py -- python3 - <<'PY'
           import subprocess, sys
@@ -90,7 +90,7 @@ jobs:
           output = Path('artifacts/network-native-linux').resolve(); output.mkdir()
           suite = Suite('managed', output, os.environ['GODOT'])
           with suite.server(dll=Path('artifacts/network-runtimes/candidate/server/Bomber.Server.dll').resolve()) as origin:
-              subprocess.run([sys.executable, 'tools/playtest/run.py', '--scenario', 'network-interruption', '--desktop', 'shared', '--server', origin, '--godot', os.environ['GODOT'], '--output', str(output / 'hud')], check=True)
+              subprocess.run([sys.executable, 'tools/playtest/run.py', '--scenario', 'network-interruption', '--desktop', 'shared', '--timeout', '360', '--server', origin, '--godot', os.environ['GODOT'], '--output', str(output / 'hud')], check=True)
           PY
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()

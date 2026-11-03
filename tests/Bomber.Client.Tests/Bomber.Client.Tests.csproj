@@ -5,4 +5,5 @@
   <ItemGroup><Compile Include="../../scripts/testing/FeedbackSteering.cs" Link="FeedbackSteering.cs" /></ItemGroup>
   <ItemGroup><Compile Include="../../scripts/testing/fixtures/NetworkFaultProxy.cs" Link="NetworkFaultProxy.cs" /></ItemGroup>
   <ItemGroup><Compile Include="../../scripts/testing/fixtures/NetworkDirectionWitness.cs" Link="NetworkDirectionWitness.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="../../scripts/testing/fixtures/NetworkJourneyScope.cs" Link="NetworkJourneyScope.cs" /></ItemGroup>
 </Project>

@@ -1134,6 +1134,12 @@ successfully-sent outstanding input, combined with the visible interrupted
 footer. Rendered drain counts are diagnostic only: slow renderers coalesce state.
 The 240 s whole-journey budget includes measured ~93 s cold llvmpipe startup and
 two independent 30 s terminal/menu trials; the per-outage deadlines stay fixed.
+The resumed PR #104 timing diagnosis records `network-phase` events for waits,
+captures, body completion and each owned fixture's disposal. All UI/fixture cleanup
+shares one 30 s aggregate budget; a timeout fails the journey and retains its phase
+trace. One explicitly labelled 360 s diagnostic outer ceiling can locate the missing
+final summary; it is not normal native qualification. Restore the 240 s workflow
+ceiling before corrected-head qualification. Preserve the original failed receipts.
 Frame waits retain each predicate result for its assertion: a stateful fresh-sample
 predicate must not be evaluated twice against the same observation.
 Capture metadata is sampled after the draw fence and checked against the expected

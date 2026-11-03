@@ -9,6 +9,7 @@ if(args.Contains("--connection-outage")){ConnectionOutageChecks.Run();return;}
 if(args.Contains("--connection-privacy")){await ConnectionFailureChecks.Run();return;}
 if(args.Contains("--proxy-dispatch")){await ProxyDispatcherChecks.Run();return;}
 if(args.Contains("--receive-deadline")){ReceiveDeadlineChecks.Run();return;}
+if(args.Contains("--network-journey-cleanup")){await NetworkJourneyScopeChecks.Run();return;}
 
 var checks = await UpdateChecks.Run();
 checks += await ServerCompatibilityChecks.Run();
@@ -21,6 +22,7 @@ checks += await ConnectionFailureChecks.Run();
 checks += await ProxyDispatcherChecks.Run();
 checks += ReceiveDeadlineChecks.Run();
 checks += NetworkDirectionWitnessChecks.Run();
+checks += await NetworkJourneyScopeChecks.Run();
 checks += await ConnectionJournalChecks.Run();
 checks += InputSendChecks.Run();
 checks += FeedbackSteeringChecks.Run();

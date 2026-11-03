@@ -13,18 +13,27 @@ public partial class PlaytestDriver
 {
     private async Task NetworkInterruption()
     {
+        await using var scope = new NetworkJourneyScope((phase, state, seconds) =>
+            Event("network-phase", new { phase, state, journeySeconds = seconds, engineSeconds = _clock.Elapsed.TotalSeconds }));
+        scope.Phase("scenario-enter");
         var origin = new Uri(_server);
         Check(origin.IsLoopback && origin.Scheme == "http", "fault journey refuses external servers");
+        scope.Phase("resize-start");
         await ResizeWindow(new Vector2I(1024, 640));
-        await using var proxy = new NetworkFaultProxy(origin);
+        scope.Phase("resize-complete");
+        await using var proxyLease = scope.Own("fault-proxy", new NetworkFaultProxy(origin));
+        var proxy = proxyLease.Resource;
         var settings = new SessionSettings(Bots: 0, RoundSeconds: 300, SuddenDeath: false)
             { Hosting = "server", Advanced = new AdvancedRules { BlockPercent = 0, DropPercent = 0 } };
-        await using var host = await NetworkSession.ConnectAsync(origin, "HUD control A", settings, NetworkMode.CreatePrivate);
-        await using var control = await NetworkSession.ConnectAsync(origin, "HUD control B", settings, NetworkMode.JoinCode, host.JoinCode);
+        await using var hostLease = scope.Own("keyboard-host", await NetworkSession.ConnectAsync(origin, "HUD control A", settings, NetworkMode.CreatePrivate));
+        var host = hostLease.Resource;
+        await using var controlLease = scope.Own("keyboard-peer", await NetworkSession.ConnectAsync(origin, "HUD control B", settings, NetworkMode.JoinCode, host.JoinCode));
+        var control = controlLease.Resource;
         int controlSnapshots = 0;
         var controlAuthorityTimes = new long[2];
         async Task Wait(Func<bool> condition, string label, double seconds = 15)
         {
+            scope.Phase("wait-start: " + label);
             var timer = Stopwatch.StartNew();
             bool ready = condition();
             while (!ready && timer.Elapsed.TotalSeconds < seconds)
@@ -44,6 +53,7 @@ public partial class PlaytestDriver
             // A protocol observation is consumed once. Re-evaluating a
             // successful new-sample predicate would reject the same sample.
             Check(ready, label);
+            scope.Phase("wait-complete: " + label);
         }
         Label Footer() => _root.FindChild("ConnectionStatus", true, false) as Label
             ?? throw new InvalidOperationException("Connection footer missing");
@@ -53,6 +63,7 @@ public partial class PlaytestDriver
         var observations = new List<object>();
         async Task Shot(string name, string expectedText)
         {
+            scope.Phase("capture-start: " + name);
             var footer = Footer();
             Check(footer.Text.StartsWith(expectedText, StringComparison.Ordinal), "rendered connection state is ready for capture: " + name);
             Check(footer.GetGlobalRect().Size.X >= footer.GetMinimumSize().X, "connection feedback fits the minimum window: " + name);
@@ -61,6 +72,7 @@ public partial class PlaytestDriver
             observations.Add(new { name, text = footer.Text, rectangle = footer.GetGlobalRect().ToString(),
                 platform = OS.GetName(), frame = Engine.GetProcessFrames(), drawn = Engine.GetFramesDrawn(),
                 status = _root.ActiveSession?.Status, snapshots = _root.SnapshotCount });
+            scope.Phase("capture-complete: " + name);
         }
         try
         {
@@ -131,8 +143,9 @@ public partial class PlaytestDriver
             // A second real terminal session exercises the controller Back path,
             // using the established canonical-event fixture, not a physical-device claim.
             ControllerHub.Current.OverrideDevicesForPlaytest(QaPads);
-            await using var controllerHost = await NetworkSession.ConnectAsync(origin, "Controller control A", settings, NetworkMode.CreatePrivate);
-            await using var controllerPeer = await NetworkSession.ConnectAsync(origin, "Controller control B", settings, NetworkMode.JoinCode, controllerHost.JoinCode);
+            await using var controllerHostLease = scope.Own("controller-host", await NetworkSession.ConnectAsync(origin, "Controller control A", settings, NetworkMode.CreatePrivate));
+            var controllerHost = controllerHostLease.Resource;
+            await using var controllerPeerLease = scope.Own("controller-peer", await NetworkSession.ConnectAsync(origin, "Controller control B", settings, NetworkMode.JoinCode, controllerHost.JoinCode));
             await _root.StartOnlineAsync(proxy.Origin, "HUD controller", settings, NetworkMode.JoinCode, controllerHost.JoinCode);
             var controllerSession = (NetworkSession)_root.ActiveSession!;
             await Wait(() => controllerHost.Party?.CanStart == true, "controller cohort is ready");
@@ -154,12 +167,16 @@ public partial class PlaytestDriver
             Check(_root.ActiveSession is null && _root.ScreenName == "Online", "controller Back releases the dead session and returns to the Online menu");
             await Capture("network-menu-controller", 0);
             Event("network-input-evidence", new { syntheticCanonicalControllerEvents = true, physicalControllerTested = false });
+            scope.Phase("body-complete");
         }
         finally
         {
+            scope.BeginCleanup();
+            scope.Phase("ui-cleanup-start");
             CtlReleaseAll(); ControllerHub.Current.RestorePhysicalDevicesForPlaytest();
             _root.Back();
             File.WriteAllText(Path.Combine(_output, "network-hud.json"), JsonSerializer.Serialize(observations, new JsonSerializerOptions { WriteIndented = true }));
+            scope.Phase("ui-cleanup-complete");
         }
     }
 }
