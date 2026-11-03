@@ -23,6 +23,37 @@ from test_release_signing import signer
 
 
 class PublishedReleaseTests(unittest.TestCase):
+    def test_signed_new_release_cannot_select_historical_repeat_exception(self):
+        with patch.dict(RELEASE, version='0.45.1', admissionToken='4/0.45.1/10'), tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary); assets, trusted = self.signed_release(root)
+            with patch.object(verify_published, 'PUBLIC_KEY', trusted):
+                verify_published.verify_assets(assets, RELEASE['version'])
+            path = assets / desktop_validation.MAC_RECEIPT
+            receipt = json.loads(path.read_text())
+            receipt.pop('nativePeerRepeatsRequested'); receipt.pop('nativePeerRepeats')
+            path.write_text(json.dumps(receipt))
+            with patch.object(signer, 'ROOT', root), contextlib.redirect_stdout(io.StringIO()):
+                signer.sign(assets / verify_published.ARCHIVE, root / 'fixture.pem', assets, assets / verify_published.SERVER_ARCHIVE)
+            with patch.object(verify_published, 'PUBLIC_KEY', trusted), self.assertRaisesRegex(RuntimeError, 'three native'):
+                verify_published.verify_assets(assets, RELEASE['version'])
+
+    def test_authenticated_historical_release_can_precede_native_repeat_requirement(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary); assets, trusted = self.signed_release(root)
+            path = assets / desktop_validation.MAC_RECEIPT
+            receipt = json.loads(path.read_text())
+            receipt.pop('nativePeerRepeatsRequested'); receipt.pop('nativePeerRepeats')
+            path.write_text(json.dumps(receipt))
+            with patch.object(signer, 'ROOT', root), contextlib.redirect_stdout(io.StringIO()):
+                signer.sign(assets / verify_published.ARCHIVE, root / 'fixture.pem', assets, assets / verify_published.SERVER_ARCHIVE)
+            with patch.object(verify_published, 'PUBLIC_KEY', trusted):
+                verify_published.verify_assets(assets, RELEASE['version'])
+            with self.assertRaisesRegex(RuntimeError, 'three native'):
+                desktop_validation.inspect_mac(receipt, SHA, RELEASE,
+                    desktop_packages.digest(assets / verify_published.ARCHIVE),
+                    desktop_packages.digest(assets / 'Blast-Circuit-macos-arm64.dmg'),
+                    desktop_packages.digest(assets / verify_published.SERVER_ARCHIVE))
+
     def test_new_major_policy_and_gpu_files_are_bound_by_real_signature(self):
         with tempfile.TemporaryDirectory()as temporary:
             root=Path(temporary);assets,trusted=self.signed_release(root)

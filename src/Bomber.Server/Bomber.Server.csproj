@@ -7,4 +7,5 @@
   <Target Name="RemoveStaticPluginPublishManifests" AfterTargets="ComputeFilesToPublish">
     <ItemGroup><ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(ResolvedFileToPublish.RelativePath)' == 'plugin.json'" /></ItemGroup>
   </Target>
+  <ItemGroup><InternalsVisibleTo Include="Bomber.Server.Tests" /></ItemGroup>
 </Project>

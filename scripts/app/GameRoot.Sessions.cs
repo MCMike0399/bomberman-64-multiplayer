@@ -70,7 +70,11 @@ public partial class GameRoot
         ScreenName="Online";_menu.Visible=true;_arena.Visible=false;_hud.Visible=false;_menu.ShowScreen("Online");_menu.SetBusy(true,mode==NetworkMode.QuickPlay?"Searching for players... Cancel to leave the queue.":"Connecting to your battle room...");
         try
         {
-            var session=await NetworkSession.ConnectAsync(server,name,settings,mode,code,cancellation.Token,appearance,() => new GodotPeerLink(useStun:!server.IsLoopback));
+            string? qaOutput=OS.GetCmdlineUserArgs().FirstOrDefault(value=>value.StartsWith("--playtest-output="))?.Split('=',2)[1];
+            string diagnosticDirectory=qaOutput is not null?System.IO.Path.Combine(System.IO.Path.GetFullPath(qaOutput),"network"):
+                _smokeOutput is not null?System.IO.Path.Combine(_smokeOutput,"network"):ProjectSettings.GlobalizePath("user://network");
+            var session=await NetworkSession.ConnectAsync(server,name,settings,mode,code,cancellation.Token,appearance,
+                () => new GodotPeerLink(useStun:!server.IsLoopback),diagnosticsDirectory:diagnosticDirectory);
             if(cancellation.IsCancellationRequested||!IsInsideTree()){await session.DisposeAsync();return;}
             _lastSettings=settings;_lastHumans=1;_lastServer=server;_lastName=name;_lastOnlineAppearance=appearance;_lastMode=mode;_lastCode=code??"";
             Begin(session,true);

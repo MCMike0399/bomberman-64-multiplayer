@@ -20,7 +20,7 @@ public sealed partial class NetworkSession
             if (message.GetProperty("t").GetString() == "party.status" && message.GetProperty("d").TryGetProperty("hosting", out var hosting) && hosting.GetString() is "peer" or "auto")
                 _peer ??= new PeerRoomClient(PlayerId!, _lobbyId!, _peerFactory,
                     (type, data) => { if (ConnectionGeneration == generation) QueuePeer(type, data); },
-                    frame => { if (ConnectionGeneration == generation) _messages.Add(frame); }, TakePeerInput, () => Volatile.Read(ref _serverRtt));
+                    frame => { if (ConnectionGeneration == generation) { ObserveAuthority(frame); _messages.Add(frame); } }, TakePeerInput, () => Volatile.Read(ref _serverRtt));
             if (_peer?.Handle(message) != true) _messages.Add(message);
         }
     }
@@ -43,7 +43,9 @@ public sealed partial class NetworkSession
         {
             var input = _input;
             if (_buttons.TryDequeue(out var buttons)) input = input with { A = buttons.A, B = buttons.B, R = buttons.R, Aim = buttons.Aim, Stop = buttons.Stop };
-            return EncodeInput(input, Interlocked.Increment(ref _sequence));
+            long sequence = Interlocked.Increment(ref _sequence);
+            _health.InputSent(sequence);
+            return EncodeInput(input, sequence);
         }
     }
 }

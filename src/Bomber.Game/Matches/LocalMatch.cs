@@ -71,6 +71,10 @@ public sealed class LocalMatch
     {
         if (IsEnded) return;
         _context.Tick++;
+        // The local adapter is the live held-state source. Refresh its heartbeat,
+        // not its input payload: a respawn must not resurrect cleared controls.
+        foreach (var player in _context.Players)
+            _session.RefreshLocalInput(player.PlayerId, _context.Elapsed);
         _session.OnTick(_context);
         if (IsEnded && Result is { } result) _session.OnMatchEnded(_context, result);
     }

@@ -525,6 +525,9 @@ jobs:
             artifacts/*-regression-details/**/peer-capacity-diagnostics.json
             artifacts/*-regression-details/**/peer-room-diagnostics.json
             artifacts/*-regression-details/**/peer-ice-order-diagnostics.json
+            artifacts/*-regression-details/**/peer-ice-terminal.json
+            artifacts/*-regression-details/**/peer-link-lifecycle-diagnostics.json
+            artifacts/*-regression-details/**/native-peer-repeats.json
             artifacts/*-regression-details/**/network-diagnostics.json
             artifacts/*-regression-details/server*.log
             artifacts/*-regression-details/**/junit.xml
@@ -596,6 +599,9 @@ jobs:
             artifacts/*-regression-details/**/display-restart.json
             artifacts/*-regression-details/**/peer-room-diagnostics.json
             artifacts/*-regression-details/**/peer-ice-order-diagnostics.json
+            artifacts/*-regression-details/**/peer-ice-terminal.json
+            artifacts/*-regression-details/**/peer-link-lifecycle-diagnostics.json
+            artifacts/*-regression-details/**/native-peer-repeats.json
             artifacts/*-regression-details/**/network-diagnostics.json
             artifacts/*-regression-details/**/leaf-memory.json
             artifacts/*-regression-details/server*.log
@@ -631,7 +637,7 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
         shell: bash
         run: |
-          args=()
+          args=(--peer-room-repeats 3)
           if [ "$EVENT_NAME" = pull_request ]; then args+=(--functional-only); fi
           python3 tools/packaging/verify-mac-archive.py "${args[@]}"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -648,6 +654,9 @@ jobs:
             artifacts/*-regression-details/**/display-restart.json
             artifacts/*-regression-details/**/peer-room-diagnostics.json
             artifacts/*-regression-details/**/peer-ice-order-diagnostics.json
+            artifacts/*-regression-details/**/peer-ice-terminal.json
+            artifacts/*-regression-details/**/peer-link-lifecycle-diagnostics.json
+            artifacts/*-regression-details/**/native-peer-repeats.json
             artifacts/*-regression-details/**/network-diagnostics.json
             artifacts/*-regression-details/**/leaf-memory.json
             artifacts/*-regression-details/server*.log

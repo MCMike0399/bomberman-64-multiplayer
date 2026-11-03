@@ -109,6 +109,7 @@ def main():
     parser.add_argument('--desktop', choices=('isolated', 'shared'), default='isolated' if platform.system() == 'Darwin' else 'shared', help='Graphical macOS QA uses a private VM by default; shared explicitly uses your desktop')
     parser.add_argument('--vm', default=os.environ.get('BLAST_QA_VM', 'blast-circuit-qa'), help='Stopped dedicated Tart VM for isolated graphical QA')
     parser.add_argument('--headless', action='store_true', help='Explicitly disable screenshot capture')
+    parser.add_argument('--engine-verbose', action='store_true', help='Retain native engine lifecycle details for diagnosis')
     display = parser.add_mutually_exclusive_group()
     display.add_argument('--windowed', action='store_true', help='Use windowed testing (the default)')
     display.add_argument('--fullscreen', action='store_true', help='Explicitly test fullscreen; normal QA stays windowed')
@@ -231,6 +232,7 @@ def main():
             else:
                 command = [args.godot, '--path', str(ROOT)]
             result['runtimeSource'] = 'exported-executable' if args.executable else 'app-bundle' if args.app else 'source-project'
+            if args.engine_verbose: command.append('--verbose')
             if args.rendering_driver:
                 command += ['--rendering-driver', args.rendering_driver]
             command += engine_timing_args(args.scenario)

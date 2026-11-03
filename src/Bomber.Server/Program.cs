@@ -22,9 +22,13 @@ await using var app = BurbujaApplication.CreateApp(new WebApplicationOptions
         builder.Services.AddSingleton<IRealtimeGame, AdaptiveRoomGame>();
         builder.Services.AddSingleton<IRealtimeGame, PublicAdaptiveRoomGame>();
         builder.Services.AddHostedService<Bomber.Server.PerformanceReporter>();
+        builder.Services.AddHostedService<Bomber.Server.InputSilenceReporter>();
+        builder.Services.AddSingleton<Bomber.Server.SocketProgressReporter>();
+        builder.Services.AddHostedService(services => services.GetRequiredService<Bomber.Server.SocketProgressReporter>());
     },
 });
 app.UseMiddleware<Bomber.Server.ClientProtocolMiddleware>();
+app.UseMiddleware<Bomber.Server.ConnectionTelemetryMiddleware>();
 app.MapGet("/game", () => Results.Ok(new { game = "blast", client = "Godot C#", protocol = "/realtime/v1", tickRate = LocalMatch.TickRate,
     release = new { version = OnlineProtocol.ReleaseVersion, build = OnlineProtocol.ReleaseBuild,
         protocolRevision = OnlineProtocol.Revision, admissionToken = OnlineProtocol.WireRevision, revision = OnlineProtocol.SourceRevision } })).AllowAnonymous();

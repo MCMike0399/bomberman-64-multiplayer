@@ -10,6 +10,9 @@ internal static class PeerLinkRecoveryChecks
     {
         public bool Connected { get; set; }
         public bool Failed { get; set; }
+        public bool CaptureDiagnostics { get; init; }
+        public PeerLinkDiagnosticContext? Context { get; private set; }
+        public void SetDiagnosticContext(PeerLinkDiagnosticContext context) => Context = context;
         public bool? Offer { get; private set; }
         public bool Disposed { get; private set; }
         public List<JsonElement> Accepted { get; } = [];
@@ -154,6 +157,15 @@ internal static class PeerLinkRecoveryChecks
         fresh[^1].Raise(new { kind = "sdp", type = "offer", sdp = "rejoined" });
         Check(fresh[^1].Offer == true, "the designated offerer is preserved across a member reconnect");
         Check(attempts == PeerRoomClient.RecoveryAttempts, "recovery counters are reported");
+        var observedLinks = new List<FakeLink>();
+        using var observed = new PeerRoomClient("b", "lobby", () => { var link = new FakeLink { CaptureDiagnostics = true }; observedLinks.Add(link); return link; },
+            (_, _) => { }, _ => { }, () => []);
+        observed.Handle(Status("a", "b"));
+        Check(observedLinks[0].Context is { LocalPlayerId: "b", RemotePlayerId: "a", Epoch: 4, Offerer: false, LocalGeneration: 0, RemoteGeneration: 0 },
+            "QA context identifies the actual role, members, epoch and generation before native Start");
+        observed.Handle(Signal("a", new { kind = "sdp", type = "offer", sdp = "retry", g = 2 }));
+        Check(observedLinks[^1].Context is { RemoteGeneration: 2, AcceptedSignalGeneration: 2 } && observedLinks[0].Disposed,
+            "replacement and accepted wire generation are retained without changing recovery ownership");
         Console.WriteLine($"PASS {checks} peer link recovery checks");
         return checks;
     }

@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.append(str(ROOT / 'tools/playtest'))
 from contracts import catalog, expanded
 
-HEADLESS = ('core-headless', 'peer-ice-order', 'peer-rooms', 'peer-capacity', 'adaptive-rooms', 'greedy-trap-network', 'adaptive-slow-poll')
+HEADLESS = ('core-headless', 'peer-ice-order', 'peer-ice-terminal', 'peer-rooms', 'peer-capacity', 'adaptive-rooms', 'greedy-trap-network', 'adaptive-slow-poll')
 GRAPHICAL = ('controller-popups', 'all', 'menu-preview', 'water-surface')
 # Windows/Linux CI renders in software (WARP/llvmpipe), where one serial `all`
 # process needs about 5 h (llvmpipe) to 20 h (WARP). The catalog composes `all`
@@ -131,7 +131,7 @@ def inspect_startup(receipt, target, revision, release, archive_sha):
             raise RuntimeError('Desktop startup case is incomplete')
 
 
-def inspect_mac(receipt, revision, release, archive_sha, download_sha, server_sha,*,require_graphics=True):
+def inspect_mac(receipt, revision, release, archive_sha, download_sha, server_sha,*,require_graphics=True,allow_legacy_native_repeats=False):
     cases = receipt.get('cases', [])
     expected=list((*HEADLESS,*GRAPHICAL))
     if not require_graphics and receipt.get('scope')=='functional-regression'and receipt.get('graphicsQualified')is False:
@@ -144,6 +144,17 @@ def inspect_mac(receipt, revision, release, archive_sha, download_sha, server_sh
         raise RuntimeError('Complete Mac archive regression used different server bytes')
     for case in cases:
         inspect_report(case, case['scenario'], {'os': 'macOS', 'driver': 'metal'}, revision, release, case['scenario'] in GRAPHICAL)
+    requested = receipt.get('nativePeerRepeatsRequested')
+    repeats = receipt.get('nativePeerRepeats')
+    if not allow_legacy_native_repeats and (type(requested) is not int or requested != 3):
+        raise RuntimeError('Mac archive qualification requires exactly three native peer repeats')
+    if requested is not None or repeats is not None:
+        if type(requested) is not int or not 1 <= requested <= 3 or not isinstance(repeats, list) or len(repeats) != requested:
+            raise RuntimeError('Mac native peer repeats are incomplete')
+        for index, row in enumerate(repeats, 1):
+            if row.get('index') != index or row.get('revision') != revision or row.get('passed') is not True:
+                raise RuntimeError('Mac native peer repeat failed or changed source')
+            inspect_report(row.get('report', {}), 'peer-rooms', {'os': 'macOS', 'driver': 'metal'}, revision, release, False)
     return receipt
 
 

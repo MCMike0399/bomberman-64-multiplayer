@@ -1,6 +1,15 @@
 {
   "schemaVersion": 1,
   "scenarios": [
+    {"id":"peer-ice-terminal","method":"PeerIceTerminal","domains":["network"],"headless":true,"timeout":30,"manual":false},
+    {
+      "id": "network-interruption",
+      "method": "NetworkInterruption",
+      "domains": ["networking", "ui", "rendering"],
+      "headless": false,
+      "timeout": 240,
+      "manual": false
+    },
     {
       "id": "blast-hitbox",
       "method": "BlastHitbox",

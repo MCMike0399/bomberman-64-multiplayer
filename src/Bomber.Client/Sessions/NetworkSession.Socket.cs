@@ -36,8 +36,9 @@ public sealed partial class NetworkSession
             Interlocked.Exchange(ref _peerHelloSent, 0);
             Interlocked.Exchange(ref _sequence, 0);
             Volatile.Write(ref _inputSendObservation,null);
+            _health.Connected();
             Volatile.Write(ref _status, "Connected");
-            NoteConnection("connected");
+            NoteConnection($"connected version={OnlineProtocol.ReleaseVersion}/{OnlineProtocol.ReleaseBuild}; receive_watchdog={(_fastReceiveRecovery ? 3 : 0)}s; terminal=30s");
         }
         catch (WebSocketException) when (socket.HttpStatusCode == System.Net.HttpStatusCode.Conflict)
         { socket.Dispose(); throw new InvalidOperationException(OnlineProtocol.ServerUpdateMessage); }
@@ -63,10 +64,11 @@ public sealed partial class NetworkSession
                 using var connected = CancellationTokenSource.CreateLinkedTokenSource(ct);
                 var receive = ReceiveAsync(_socket!, connected.Token);
                 var send = SendLoopAsync(_socket!, connected.Token);
-                await Task.WhenAny(receive, send);
+                Task[] connectionTasks = _fastReceiveRecovery ? [receive, send, WatchReceiveAsync(_socket!, connected.Token)] : [receive, send];
+                await Task.WhenAny(connectionTasks);
                 connected.Cancel();
                 _socket!.Abort();
-                try { await Task.WhenAll(receive, send); }
+                try { await Task.WhenAll(connectionTasks); }
                 catch (OperationCanceledException) when (!ct.IsCancellationRequested) { }
                 if (Status.StartsWith("Ended", StringComparison.Ordinal)) return;
                 throw new IOException("Connection interrupted.");
@@ -76,7 +78,7 @@ public sealed partial class NetworkSession
             {
                 if (ct.IsCancellationRequested) return;
                 if (Status.StartsWith("Ended", StringComparison.Ordinal)) return;
-                NoteConnection($"interrupted: {ex.GetType().Name}: {ex.Message}");
+                NoteConnection($"interrupted: {Bomber.Client.Diagnostics.ConnectionFailure.Describe(ex)}");
                 if (++retries > 5) { Fail("Connection lost. Return to the menu to reconnect."); return; }
                 Volatile.Write(ref _status, $"Reconnecting ({retries}/5)");
                 ReleaseInputs(); Interlocked.Exchange(ref _startPending, 0);Interlocked.Exchange(ref _pendingRules,null);
@@ -86,15 +88,22 @@ public sealed partial class NetworkSession
                     try
                     {
                         await Task.Delay(TimeSpan.FromMilliseconds(500 * retries), ct);
-                        var reservation = await RequestAsync(HttpMethod.Post, $"lobbies/{Uri.EscapeDataString(_lobbyId!)}/join", new { }, ct);
+                        // A failed route must not pin a retry to TCP backoff for
+                        // the HTTP client's full initial-connect timeout.
+                        JsonElement reservation;
+                        using (var attempt = CancellationTokenSource.CreateLinkedTokenSource(ct))
+                        {
+                            attempt.CancelAfter(TimeSpan.FromSeconds(5));
+                            reservation = await RequestAsync(HttpMethod.Post, $"lobbies/{Uri.EscapeDataString(_lobbyId!)}/join", new { }, attempt.Token);
+                        }
                         await OpenSocketAsync(reservation, ct);
                         break;
                     }
                     catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
                     catch (Exception reconnectError) when (reconnectError is HttpRequestException or WebSocketException or JsonException or InvalidOperationException or OperationCanceledException)
                     {
-                        NoteConnection($"reconnect failed: {reconnectError.GetType().Name}: {reconnectError.Message}");
-                        if (++retries > 5) { Fail(reconnectError.Message); return; }
+                        NoteConnection($"reconnect failed: {Bomber.Client.Diagnostics.ConnectionFailure.Describe(reconnectError)}");
+                        if (++retries > 5) { Fail(reconnectError.Message == OnlineProtocol.ServerUpdateMessage ? OnlineProtocol.ServerUpdateMessage : "Connection lost. Return to the menu to reconnect."); return; }
                         Volatile.Write(ref _status, $"Reconnecting ({retries}/5)");
                     }
                 }
@@ -115,7 +124,7 @@ public sealed partial class NetworkSession
                 if (received.MessageType == WebSocketMessageType.Close)
                 {
                     var close = (int?)socket.CloseStatus;
-                    NoteConnection($"server closed {close}: {socket.CloseStatusDescription}");
+                    NoteConnection($"server closed code={close}");
                     if (close is 1000 or 4002 or 4003 or 4004 or 4005)
                     {
                         Volatile.Write(ref _status, $"Ended: {socket.CloseStatusDescription ?? "Lobby closed"}");
@@ -126,12 +135,20 @@ public sealed partial class NetworkSession
                 }
                 if (received.MessageType != WebSocketMessageType.Text || frame.Length + received.Count > 1024 * 1024)
                     throw new IOException("Server sent an unsupported or oversized frame.");
+                if (received.Count > 0) _health.Inbound(); // Fragment progress must not spuriously trip the receive watchdog.
                 frame.Write(chunk, 0, received.Count);
             } while (!received.EndOfMessage);
             using var document = JsonDocument.Parse(frame.ToArray(), new JsonDocumentOptions { MaxDepth = 64 });
             var message = document.RootElement;
             if (message.ValueKind != JsonValueKind.Object || !message.TryGetProperty("t", out var type) || type.ValueKind != JsonValueKind.String)
                 throw new IOException("Server sent an invalid message.");
+            _health.Inbound();
+            ObserveAuthority(message);
+            if (type.GetString() == "sys.pong" && message.TryGetProperty("d", out var diagnosticsPong) &&
+                diagnosticsPong.TryGetProperty("echo", out var diagnosticsEcho) && diagnosticsEcho.ValueKind == JsonValueKind.Object &&
+                diagnosticsEcho.TryGetProperty("nonce", out var diagnosticsNonce) && diagnosticsNonce.TryGetInt64(out long diagnosticsSent) &&
+                _health.Pong(diagnosticsSent) is { } roundTrip)
+                _journal?.Rtt(ConnectionGeneration, roundTrip);
             if (type.GetString() == "sys.ended") Volatile.Write(ref _status, "Ended: Match complete");
             if (type.GetString() == "sys.welcome") Interlocked.Exchange(ref _appearancePending, 1);
             if (type.GetString() == "sys.pong" && message.TryGetProperty("d", out var pong) &&
@@ -145,6 +162,7 @@ public sealed partial class NetworkSession
             if (type.GetString() == "party.status")
             {
                 var party = PartyStatus.Parse(message.GetProperty("d"));
+                _health.Match(party.Phase == "playing");
                 if ((party.Hosting == "peer" || party.Adaptive) && Interlocked.Exchange(ref _peerHelloSent, 1) == 0)
                     QueuePeer("peer.hello", new { version = OnlineProtocol.Revision });
                 if (Party?.Phase != party.Phase || Party?.Match != party.Match) ReleaseInputs();
@@ -174,6 +192,7 @@ public sealed partial class NetworkSession
             if (System.Diagnostics.Stopwatch.GetElapsedTime(Volatile.Read(ref _lastPing)).TotalSeconds >= .5)
             {
                 long nonce = System.Diagnostics.Stopwatch.GetTimestamp(); Volatile.Write(ref _lastPing, nonce);
+                _health.Ping(nonce);
                 await socket.SendAsync(JsonSerializer.SerializeToUtf8Bytes(new { t = "sys.ping", d = new { nonce } }).AsMemory(), WebSocketMessageType.Text, true, ct);
             }
             // The initial eight-player stage/appearance burst must never evict ICE offers or answers.
@@ -201,7 +220,8 @@ public sealed partial class NetworkSession
             var bytes = EncodeInput(input, sequence);
             await socket.SendAsync(bytes.AsMemory(), WebSocketMessageType.Text, true, ct);
             var sent=inputProgress.Complete(sample);
-            if(generation==ConnectionGeneration)Volatile.Write(ref _inputSendObservation,sent);
+            if(generation==ConnectionGeneration)
+            { Volatile.Write(ref _inputSendObservation,sent); _health.InputSent(sequence); }
         }
     }
 

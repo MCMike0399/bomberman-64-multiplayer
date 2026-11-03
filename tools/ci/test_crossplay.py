@@ -41,7 +41,11 @@ def write_crossplay(directory, revision=SHA, release=None):
     (directory / validation.MAC_RECEIPT).write_text(json.dumps({'schemaVersion': 1, 'passed': True, 'release': release, 'revision': revision,
         'archiveSha256': desktop.digest(directory / 'Blast-Circuit-macos-arm64.zip'),
         'serverSha256': desktop.digest(directory / 'Blast-Circuit-server-dotnet10.zip'),
-        'downloadSha256': desktop.digest(directory / download_formats.FILES['macos-arm64']), 'cases': cases}))
+        'downloadSha256': desktop.digest(directory / download_formats.FILES['macos-arm64']), 'cases': cases,
+        'nativePeerRepeatsRequested': 3, 'nativePeerRepeats': [
+            {'index': index, 'revision': revision, 'passed': True,
+             'report': copy.deepcopy(next(case for case in cases if case['scenario'] == 'peer-rooms'))}
+            for index in range(1, 4)]}))
 
 
 class CrossplayTests(unittest.TestCase):
@@ -93,6 +97,37 @@ class CrossplayTests(unittest.TestCase):
         with patch.dict(crossplay.os.environ, {'GH_TOKEN': 'fixture', 'ACTIONS_RUNTIME_TOKEN': 'fixture', 'GITHUB_TOKEN': 'fixture'}):
             for name in ('GH_TOKEN', 'GITHUB_TOKEN', 'ACTIONS_RUNTIME_TOKEN'):
                 self.assertNotIn(name, crossplay.clean_environment())
+
+    def test_mac_repeated_native_failure_cannot_hide_behind_first_success(self):
+        import copy
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary); write_desktop(root)
+            for name in ('Blast-Circuit-macos-arm64.zip', download_formats.FILES['macos-arm64']):
+                (root / name).write_bytes(b'Mac fixture')
+            write_crossplay(root)
+            receipt = json.loads((root / validation.MAC_RECEIPT).read_text())
+            receipt.update(scope='functional-regression', graphicsQualified=False, nativePeerRepeatsRequested=3)
+            receipt['cases'] = receipt['cases'][:len(validation.HEADLESS)]
+            report = next(row for row in receipt['cases'] if row['scenario'] == 'peer-rooms')
+            receipt['nativePeerRepeats'] = [{'index': index, 'revision': SHA, 'passed': True, 'report': copy.deepcopy(report)} for index in range(1, 4)]
+            def verify(candidate):
+                return validation.inspect_mac(candidate, SHA, RELEASE, desktop.digest(root / 'Blast-Circuit-macos-arm64.zip'),
+                    desktop.digest(root / download_formats.FILES['macos-arm64']), desktop.digest(root / 'Blast-Circuit-server-dotnet10.zip'), require_graphics=False)
+            verify(receipt)
+            for mutation in ('absent', 'one', 'two', 'missing', 'missing-report', 'error', 'failed', 'stale'):
+                candidate = copy.deepcopy(receipt)
+                if mutation == 'absent':
+                    candidate.pop('nativePeerRepeatsRequested'); candidate.pop('nativePeerRepeats')
+                elif mutation in ('one', 'two'):
+                    count = 1 if mutation == 'one' else 2
+                    candidate['nativePeerRepeatsRequested'] = count
+                    candidate['nativePeerRepeats'] = candidate['nativePeerRepeats'][:count]
+                elif mutation == 'missing': candidate['nativePeerRepeats'].pop()
+                elif mutation == 'missing-report': candidate['nativePeerRepeats'][2].pop('report')
+                elif mutation == 'error': candidate['nativePeerRepeats'][2]['report']['runtimeErrors'] = ['ERROR: native ICE failed']
+                elif mutation == 'failed': candidate['nativePeerRepeats'][2]['passed'] = False
+                else: candidate['nativePeerRepeats'][2]['revision'] = '0' * 40
+                with self.subTest(mutation=mutation), self.assertRaises(RuntimeError): verify(candidate)
 
 
 if __name__ == '__main__': unittest.main()

@@ -18,6 +18,15 @@ For keys, prompts and device input, read [input and UI](input-and-ui.md).
 5. Change the owning layer; repeat the original journey and the focused regression.
    Finish when the original failure is absent and related invariants still hold.
 
+## Input silence safety (unversioned resilience work)
+
+The common authority neutralizes only held movement after 350 ms without a
+fresh human input. World ticks, gravity, environmental motion and action-edge
+ordering continue. Dedicated and peer hosts use the same deadline. The local
+adapter refreshes its in-process input heartbeat without replaying old payloads;
+respawn-cleared controls must stay cleared. Fresh input resumes immediately.
+`StaleInputChecks` covers silence, fresh resumption and local/peer parity.
+
 ## Authority, transport and presentation
 
 Tutorial setup and progress belong to the local authority, with ordinary bomb, collision and recovery rules. [The tutorial contract](../tutorial.md) explains lesson fixtures, online exclusion, failure/retry and concurrent map integration.

@@ -8,6 +8,8 @@ public interface IPeerLink : IDisposable
     /// <summary>The native connection reached a terminal state (failed/closed) and
     /// cannot carry traffic again; a transient disconnect is not terminal.</summary>
     bool Failed => false;
+    bool CaptureDiagnostics => false;
+    void SetDiagnosticContext(PeerLinkDiagnosticContext context) { }
     event Action<JsonElement>? Signal;
     event Action<byte[]>? Received;
     void Start(bool offer);

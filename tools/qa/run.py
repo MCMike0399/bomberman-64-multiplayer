@@ -24,6 +24,7 @@ FOOTERS = {
     'Bomber.Ai.Tests': r'^PASS: (?P<count>\d+) AI behavior, timing, determinism and allocation checks$',
     'Bomber.Audio.Tests': r'^PASS (?P<count>\d+) original PCM cues: [^\r\n]+$',
     'Bomber.Cluster.Tests': r'^ALL CLUSTER PLACEMENT CHECKS PASSED \((?P<count>\d+)\)$',
+    'Bomber.Server.Tests': r'^PASS (?P<count>\d+) server connection telemetry checks$',
     'network-smoke': r'^ALL NETWORK SMOKE CHECKS PASSED(?: \([^\r\n]+\))?$',
     'adaptive-network': r'^PASS (?P<count>\d+) adaptive network checks$',
     'fleet-network': r'^PASS (?P<count>\d+) real fleet infrastructure checks$',
@@ -324,7 +325,7 @@ def execute(suite, app=None):
         suite.step('desktop-update', ['dotnet', 'run', '--no-build', '--project', 'tests/Bomber.DesktopUpdate.Tests'], footer=FOOTERS['Bomber.DesktopUpdate.Tests'])
         return
     if suite.profile == 'managed':
-        projects = ['Bomber.Game.Tests', 'Bomber.Client.Tests', 'Bomber.Ai.Tests', 'Bomber.Audio.Tests', 'Bomber.Cluster.Tests', 'Bomber.Startup.Tests', 'Bomber.DesktopUpdate.Tests', 'Bomber.Smoke']
+        projects = ['Bomber.Game.Tests', 'Bomber.Client.Tests', 'Bomber.Ai.Tests', 'Bomber.Audio.Tests', 'Bomber.Cluster.Tests', 'Bomber.Startup.Tests', 'Bomber.DesktopUpdate.Tests', 'Bomber.Server.Tests', 'Bomber.Smoke']
         for project in projects:
             suite.build('tests/' + project)
         suite.build('tests/Bomber.Release.Probe')
