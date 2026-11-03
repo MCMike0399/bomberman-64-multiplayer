@@ -1134,12 +1134,14 @@ successfully-sent outstanding input, combined with the visible interrupted
 footer. Rendered drain counts are diagnostic only: slow renderers coalesce state.
 The 240 s whole-journey budget includes measured ~93 s cold llvmpipe startup and
 two independent 30 s terminal/menu trials; the per-outage deadlines stay fixed.
-The resumed PR #104 timing diagnosis records `network-phase` events for waits,
+The PR #104 timing witness records `network-phase` events for waits,
 captures, body completion and each owned fixture's disposal. All UI/fixture cleanup
 shares one 30 s aggregate budget; a timeout fails the journey and retains its phase
-trace. One explicitly labelled 360 s diagnostic outer ceiling can locate the missing
-final summary; it is not normal native qualification. Restore the 240 s workflow
-ceiling before corrected-head qualification. Preserve the original failed receipts.
+trace. Elapsed checks after each disposal and at scope exit also reject synchronous
+overruns; a blocked synchronous call still needs the outer process ceiling.
+The separately retained 360 s diagnostic is not normal native qualification. The
+normal workflow retains its 240 s ceiling and requires the final complete summary,
+even when every trace assertion and capture exists. Preserve original failures.
 Frame waits retain each predicate result for its assertion: a stateful fresh-sample
 predicate must not be evaluated twice against the same observation.
 Capture metadata is sampled after the draw fence and checked against the expected
@@ -1183,6 +1185,9 @@ separate and do not enable native tracing.
 
 Mac archive qualification uses `--peer-room-repeats 3`: one installed payload,
 three fresh processes, all raw receipts retained, no failed repeat discarded.
+Current archive and promotion consumers require exactly three even when both
+repeat fields are absent. Only anonymous verification of an authenticated signed
+release at or before v0.45.0 permits the historical receipt format.
 Any runtime error blocks, even if gameplay assertions pass. Verbose engine output
 keeps leak types available; audio resource warnings and native ICE errors must be
 classified separately without adding an error allowlist.

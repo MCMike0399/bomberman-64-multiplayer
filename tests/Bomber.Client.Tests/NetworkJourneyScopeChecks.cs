@@ -55,6 +55,13 @@ internal static class NetworkJourneyScopeChecks
         }
         finally { release.TrySetResult(); }
         Check(stalledFailed, "a non-completing fixture fails the journey instead of blocking its final receipt");
+
+        var synchronous = new NetworkJourneyScope((_, _, _) => { }, TimeSpan.FromMilliseconds(50));
+        synchronous.Own("synchronous", new Fixture(() => { Thread.Sleep(80); return Task.CompletedTask; }));
+        bool synchronousFailed = false;
+        try { await synchronous.DisposeAsync(); }
+        catch (AggregateException error) { synchronousFailed = error.InnerExceptions.Any(e => e is TimeoutException); }
+        Check(synchronousFailed, "synchronous disposal exceeding the budget cannot be recorded as successful cleanup");
         Console.WriteLine($"PASS {checks} network journey cleanup checks");
         return checks;
     }

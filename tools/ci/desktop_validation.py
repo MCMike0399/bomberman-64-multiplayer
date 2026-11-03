@@ -131,7 +131,7 @@ def inspect_startup(receipt, target, revision, release, archive_sha):
             raise RuntimeError('Desktop startup case is incomplete')
 
 
-def inspect_mac(receipt, revision, release, archive_sha, download_sha, server_sha,*,require_graphics=True):
+def inspect_mac(receipt, revision, release, archive_sha, download_sha, server_sha,*,require_graphics=True,allow_legacy_native_repeats=False):
     cases = receipt.get('cases', [])
     expected=list((*HEADLESS,*GRAPHICAL))
     if not require_graphics and receipt.get('scope')=='functional-regression'and receipt.get('graphicsQualified')is False:
@@ -146,6 +146,8 @@ def inspect_mac(receipt, revision, release, archive_sha, download_sha, server_sh
         inspect_report(case, case['scenario'], {'os': 'macOS', 'driver': 'metal'}, revision, release, case['scenario'] in GRAPHICAL)
     requested = receipt.get('nativePeerRepeatsRequested')
     repeats = receipt.get('nativePeerRepeats')
+    if not allow_legacy_native_repeats and (type(requested) is not int or requested != 3):
+        raise RuntimeError('Mac archive qualification requires exactly three native peer repeats')
     if requested is not None or repeats is not None:
         if type(requested) is not int or not 1 <= requested <= 3 or not isinstance(repeats, list) or len(repeats) != requested:
             raise RuntimeError('Mac native peer repeats are incomplete')

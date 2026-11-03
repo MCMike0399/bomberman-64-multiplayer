@@ -36,6 +36,8 @@ internal sealed class NetworkJourneyScope(Action<string, string, double> report,
         BeginCleanup();
         foreach (var resource in Enumerable.Reverse(_resources)) await resource.DisposeAsync();
         report("fixtures", "cleanup-end", _clock.Elapsed.TotalSeconds);
+        if (_cleanup!.Elapsed > _cleanupBudget)
+            _errors.Add(new TimeoutException("Aggregate fixture cleanup exceeded its budget."));
         if (_errors.Count > 0) throw new AggregateException("Network journey cleanup failed", _errors);
     }
 
@@ -48,6 +50,9 @@ internal sealed class NetworkJourneyScope(Action<string, string, double> report,
             var remaining = _cleanupBudget - _cleanup!.Elapsed;
             if (remaining <= TimeSpan.Zero) throw new TimeoutException("Aggregate fixture cleanup budget exhausted: " + name);
             await resource.DisposeAsync().AsTask().WaitAsync(remaining);
+            // DisposeAsync may do synchronous work before returning its task.
+            // WaitAsync cannot preempt that work, but it must never pass the gate.
+            if (_cleanup.Elapsed > _cleanupBudget) throw new TimeoutException("Fixture cleanup exceeded the aggregate budget: " + name);
             report(name, "cleanup-complete", _clock.Elapsed.TotalSeconds);
         }
         catch (Exception error)

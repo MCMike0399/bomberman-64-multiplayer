@@ -21,7 +21,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--directory', type=Path, default=ROOT / 'artifacts')
     parser.add_argument('--functional-only',action='store_true',help='Installed headless/native network journeys only; never graphical qualification')
-    parser.add_argument('--peer-room-repeats', type=int, choices=range(1, 4), default=1, help='Bounded repeats of the identical installed native peer journey')
+    parser.add_argument('--peer-room-repeats', type=int, choices=range(1, 4), default=3, help='Three fresh native peer processes are required for qualification; lower counts cannot produce an accepted receipt')
     args = parser.parse_args()
     if platform.system() != 'Darwin' or platform.machine().lower() != 'arm64':
         raise RuntimeError('Complete Mac archive verification requires the Apple Silicon test desktop')
