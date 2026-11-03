@@ -1,0 +1,38 @@
+name: Frozen Windows startup phase measurement
+on:
+  push:
+    branches: [qa/pr104-windows-startup-phases]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  measure:
+    runs-on: windows-2025
+    timeout-minutes: 40
+    env:
+      BLAST_QA_WINDOWS_DRIVER: d3d12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: Blast-Circuit-windows-x64
+          run-id: 41689854419
+          github-token: ${{ github.token }}
+          path: artifacts
+      - run: ./tools/packaging/windows-test-desktop.ps1
+      - name: Measure the original 240-second verdict and bounded post-smoke shutdown separately
+        shell: bash
+        run: python tools/ci/windows_startup_phases.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: frozen-windows-startup-phases
+          path: |
+            artifacts/windows-startup-phases/**
+            !artifacts/windows-startup-phases/**/installed/**
+            !artifacts/windows-startup-phases/baseline-inputs/**
+          retention-days: 14
+          if-no-files-found: error
