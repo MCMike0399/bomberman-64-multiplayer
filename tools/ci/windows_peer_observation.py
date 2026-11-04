@@ -30,6 +30,10 @@ def fetch(label,run,revision):
  (OUT/(label+'-payload.json')).write_text(json.dumps(proof,indent=2)+'\n');return directory,metadata
 assert platform.system()=='Windows' and os.environ.get('GITHUB_ACTIONS')=='true'
 prepared={label:fetch(label,*value) for label,value in PAYLOADS.items()}
+# Downloads are finished. Every later child (installer, server, game and cleanup)
+# inherits the same credential-free environment, including Suite.server().
+runtime_environment=crossplay.clean_environment()
+os.environ.clear();os.environ.update(runtime_environment)
 spec=importlib.util.spec_from_file_location('owned_qa',ROOT/'tools/qa/run.py');qa=importlib.util.module_from_spec(spec);spec.loader.exec_module(qa)
 receipt={'schemaVersion':1,'nonqualifying':True,'measurementComplete':False,'connectionDeadlineSeconds':5,
          'normalCatalogTimeoutUnchanged':True,'automaticRetries':False,'controllerSource':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),
