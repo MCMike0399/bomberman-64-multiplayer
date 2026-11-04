@@ -18,7 +18,9 @@ For keys, prompts and device input, read [input and UI](input-and-ui.md).
 5. Change the owning layer; repeat the original journey and the focused regression.
    Finish when the original failure is absent and related invariants still hold.
 
-## Input silence safety (unversioned resilience work)
+## Input silence safety (v0.45.1)
+
+[Delivered qualification and limitations](../verification.md#v0451-delivered).
 
 The common authority neutralizes only held movement after 350 ms without a
 fresh human input. World ticks, gravity, environmental motion and action-edge

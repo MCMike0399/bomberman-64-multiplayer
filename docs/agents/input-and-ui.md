@@ -75,7 +75,9 @@ Nintendo letters: `A` is south/printed B; `B` is east/printed A; `Y` is
 north/printed X. Translate actions through `ControllerProfile`, preserving the
 backend's canonical IDs. Nintendo confirms with printed A and backs with B.
 
-## Network interruption feedback (unversioned resilience work)
+## Network interruption feedback (v0.45.1)
+
+[Delivered qualification and limitations](../verification.md#v0451-delivered).
 
 The existing battle footer shows “Connection interrupted” after more than one
 second without authoritative state or input acknowledgment progress. Incoming

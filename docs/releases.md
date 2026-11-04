@@ -306,6 +306,11 @@ only completed directories under the operator's retention policy. Neither tool
 prints target URLs, credentials or adapter output. These are private state files,
 not CI upload artifacts.
 
+The promotion helper bounds `gh run download` and `gh release download` at
+900 seconds for large artifact transfers. Other GitHub operations retain 120
+seconds; it adds no automatic retries. Gameplay, startup, crossplay and deployment
+acceptance checks retain their own deadlines.
+
 ## Live checks and evidence
 
 `/game` advertises `release` with version, build, protocol revision, admission

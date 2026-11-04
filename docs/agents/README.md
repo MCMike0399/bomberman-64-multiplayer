@@ -3,8 +3,8 @@
 The user resumed gameplay work on 2026-10-23 for controller ergonomics, aiming
 and knockdown/blast separation (iteration19). The first eighteen iterations
 remain historical evidence. Iteration20 then rebuilt the walk. Recorded
-release baseline: **v0.44.1/build 55**, published with independently verified Mac
-and server archives (see [verification](../verification.md)). Previous runtime baseline: **v0.18.0**, commit
+release baseline: **v0.45.1/build 57**, published with independently verified
+Mac, Windows, Linux and server archives (see [verification](../verification.md)). Previous runtime baseline: **v0.18.0**, commit
 `316a330d7d895a92f98c1a60be7d571ec445a8a3`. Later documentation commits may follow.
 Verify the live branch, source, tools and installed version before relying on
 that baseline. Start with [project instructions](../../AGENTS.md).
@@ -48,6 +48,11 @@ update the current guide rather than silently reviving old behavior.
 | [Latest verification](../verification.md) | Exact observed results and limitations, with earlier iterations below |
 
 ## Current decisions that supersede earlier experiments
+
+- v0.45.1 delivers Connecting retry and interruption resilience, including the
+  common movement-silence guard and terminal native peers. Packaged three-OS
+  gates, fleet rollout, signed public assets and production crossplay passed.
+  [Delivery, retained failures and scope](../verification.md#v0451-delivered).
 
 - v0.44.1 fixes Blizzard avalanche deaths selecting the burned animation; all
   moving-wall battle arenas use the crush effect. Trusted gates, production

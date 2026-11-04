@@ -1,3 +1,68 @@
+# v0.45.1 delivered
+
+Published **2026-11-04 13:39:34 UTC**: [v0.45.1 / signed downloads](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.45.1).
+Identity: **v0.45.1/build 57/protocol 6**, source
+`68002f2c28314d2ed91301cf37088bea1d408d1a`, token `6/0.45.1/57`.
+[PR #103](https://github.com/MCMike0399/bomberman-64-multiplayer/pull/103)
+delivers the 15-second Connecting retry;
+[PR #104](https://github.com/MCMike0399/bomberman-64-multiplayer/pull/104)
+adds movement-silence safety, truthful inbound/input-ACK interruption feedback,
+bounded recovery and terminal native-peer handling.
+[PR #105](https://github.com/MCMike0399/bomberman-64-multiplayer/pull/105)
+separates large artifact-download budgets from control-plane requests.
+
+- [Exact-main Verification 41788411766](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/41788411766)
+  passed all required gates on attempt two. Mac complete graphical regression
+  passed 5,910 assertions with 598 captures; three fresh native peer processes
+  each passed 21 assertions. All nine startup cases passed on each platform.
+  Mac signed update from the actual published v0.45.0 passed install,
+  deliberate failed-launch rollback and saved High/fullscreen on attempt one.
+  Windows/Linux updater transactions use packaged fixtures.
+- Fresh staged Windows/Linux/Mac crossplay and exact observable replay/input
+  equality passed. The earlier source fault matrix retains 21 accepted candidate
+  rows, including a healthy 600-second control, against immutable signed v0.45.0
+  binaries: [network qualification](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/41689854341).
+- [Protected deployment and anonymous verification 41837022202](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/41837022202)
+  passed. Public, primary and fallback verified the exact identity, real
+  connections, placement and advancing matches without deferral. A separate
+  post-publication probe rejected the actual `6/0.45.0/56` token at guest
+  admission, the socket endpoint and a real WebSocket Upgrade on every node.
+  Anonymous verification checked all 39 assets, trusted CI byte equality,
+  tag/source and latest stable; all four P-256 signatures were independently
+  verified after publication. All 44 v0.45.0 asset IDs, sizes and digests are unchanged.
+- [Production Quick Play 41841585799](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/41841585799)
+  passed on its first fresh cohort. Actual Windows, Linux and Mac clients
+  installed anonymous signed public downloads, shared roster/countdown reset,
+  a real minute and match, accepted movement/bombs and late-entry exclusion.
+  Parity passed; all three raw runtime logs contain no error markers.
+  The three gameplay captures were visually inspected.
+
+The first Windows native ICE-order trial remained Connecting at its original
+five-second deadline despite timely signalling. Its cause remains unexplained.
+A fixed, nonqualifying comparison of five fresh processes per frozen payload
+passed all 20 cases; both reviewers then accepted one complete normal Windows
+requalification. That unchanged native/updater/guard/nine-startup gate passed;
+the original failure and diagnostic remain separate. No gate waiver was used.
+Raw scans of all 15 Mac and 18 positive Windows logs found no runtime errors.
+Mac peer repeats one/two retained AudioStreamWAV/AudioStreamPlaybackWAV ObjectDB
+shutdown warnings; repeat three was clean. Warning metadata may miss midline
+warnings, so raw logs remain authoritative. No audio fix is claimed.
+
+The free patch policy records rendering fingerprint
+`e1cc16127553af978e40155cab48fe17b629c014b67774a66543a7e5f72d39d1`
+and its conservative transport/UI warning. No new paid GPU campaign, hardware
+pixel/performance equivalence, physical-controller certification, Apple
+notarization or local app installation is claimed. AUTO was restored to its
+original true setting; paid HOLD stays true. The bounded deployment executor
+unregistered and stopped its tunnel; the persistent autoscaler remains unloaded.
+
+Archive SHA-256:
+
+- Mac: `58276ef6349e445ce7914e751d62bf18fd7e802820cc42c1df1b80313d55b43d`
+- Windows: `a57ec1a73c124a61f3c295e2fca95d1f074acd5b1d953568628f92e5e4d07699`
+- Linux: `985c566e923550874513bd64c69335e58abacdee617125c239028d33ee8fe50d`
+- Server: `f99f4e4d91ab8b35577c82b4268babc5b2354c1da0a763690c1e4ed9966e7f67`
+
 # v0.44.1 delivered
 
 Published **2026-10-28 22:46:05 UTC**: [v0.44.1 / signed update](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.44.1).

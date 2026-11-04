@@ -1113,7 +1113,9 @@ raw controls retain their actual adapter and provenance. Hosted Apple
 Paravirtual is a cross-configuration Mac reference, not a physical M1 claim or
 Windows/Linux GPU qualification. The legacy push job is unchanged.
 
-## Network fault qualification (unversioned resilience work)
+## Network fault qualification (v0.45.1)
+
+[Delivered qualification and limitations](../verification.md#v0451-delivered).
 
 `network-interruption.yml` builds a shared probe once on Linux and checks real
 managed sessions on Linux, Windows and Mac. The baseline uses immutable signed
