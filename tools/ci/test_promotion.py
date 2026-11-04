@@ -97,6 +97,36 @@ def bind_server_receipts(directory):
         path.write_text(json.dumps(report))
 
 
+class GitHubOperationBudgetTests(unittest.TestCase):
+    def test_large_artifact_transfer_can_complete_after_control_plane_limit(self):
+        # The exact Windows CI artifact took 179.557s on the deployment host.
+        def transfer(command, **options):
+            if options['timeout'] < 180:
+                raise promotion.subprocess.TimeoutExpired(command, options['timeout'])
+            self.assertLessEqual(options['timeout'], 900)
+            return promotion.subprocess.CompletedProcess(command, 0, stdout='downloaded', stderr='')
+
+        for operation in [('run', 'download'), ('release', 'download')]:
+            with self.subTest(operation=operation), patch.object(promotion.subprocess, 'run', side_effect=transfer) as run:
+                self.assertEqual(promotion.gh(*operation, 'fixture'), 'downloaded')
+                self.assertEqual(run.call_count, 1)
+
+    def test_control_plane_operations_keep_the_short_limit(self):
+        for operation in [('api', 'repos/example/game'), ('release', 'view'), ('release', 'edit'),
+                          ('release', 'upload'), ('release', 'create')]:
+            with self.subTest(operation=operation), patch.object(promotion.subprocess, 'run') as run:
+                run.return_value = promotion.subprocess.CompletedProcess([], 0, stdout='ok', stderr='')
+                self.assertEqual(promotion.gh(*operation), 'ok')
+                self.assertEqual(run.call_args.kwargs['timeout'], 120)
+
+    def test_stalled_transfer_is_bounded_and_not_retried(self):
+        with patch.object(promotion.subprocess, 'run', side_effect=promotion.subprocess.TimeoutExpired('gh', 900)) as run:
+            with self.assertRaises(promotion.subprocess.TimeoutExpired):
+                promotion.gh('run', 'download', 'fixture')
+            self.assertEqual(run.call_count, 1)
+            self.assertLessEqual(run.call_args.kwargs['timeout'], 900)
+
+
 class PromotionTests(unittest.TestCase):
     def setUp(self):
         fixture = patch.object(promotion, 'check_exports', return_value=RELEASE)

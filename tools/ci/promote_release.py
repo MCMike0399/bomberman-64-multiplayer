@@ -28,7 +28,10 @@ SERVER_ARCHIVE = SERVER_ARTIFACT + '.zip'
 
 
 def gh(*arguments):
-    result = subprocess.run(['gh', *arguments], capture_output=True, text=True, timeout=120)
+    # Packaged regression artifacts can exceed 700 MB. Keep their transfer
+    # budget separate from API/mutation latency and from gameplay deadlines.
+    timeout = 900 if arguments[:2] in (('run', 'download'), ('release', 'download')) else 120
+    result = subprocess.run(['gh', *arguments], capture_output=True, text=True, timeout=timeout)
     if result.returncode:
         detail=result.stderr.strip()
         for name,value in os.environ.items():
