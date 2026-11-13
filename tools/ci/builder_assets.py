@@ -45,19 +45,18 @@ def fetch(spec,directory):
 def sdk_specs(metadata):
     candidates=[sdk for release in metadata['releases']for sdk in [release.get('sdk',{}),*release.get('sdks',[])]if sdk.get('version')==SDK_VERSION]
     if not candidates:raise ValueError('Pinned SDK version is absent from Microsoft release metadata')
-    files={item['rid']:item for sdk in candidates for item in sdk['files']if item['rid']in ('win-x64','linux-x64')
-           and(item['url'].endswith('.zip')if item['rid']=='win-x64'else item['url'].endswith('.tar.gz'))}
-    if set(files)!={'win-x64','linux-x64'}:raise ValueError('Both exact SDK archives required')
-    return [{'role':'dotnet','target':'windows-x64'if rid=='win-x64'else'linux-x64','fileName':item['url'].rsplit('/',1)[-1],
+    # Windows only since 2026-11-13; Linux qualifies on the owned workstation.
+    files={item['rid']:item for sdk in candidates for item in sdk['files']if item['rid']=='win-x64'and item['url'].endswith('.zip')}
+    if set(files)!={'win-x64'}:raise ValueError('The exact Windows SDK archive is required')
+    return [{'role':'dotnet','target':'windows-x64','fileName':item['url'].rsplit('/',1)[-1],
              'url':item['url'],'algorithm':'sha512','hash':item['hash']}for rid,item in sorted(files.items())]
 
 
 def pillow_specs(metadata):
     selected=[]
-    for target,python,platform in [('windows-x64','cp313','win_amd64'),('linux-x64','cp312','manylinux')]:
+    for target,python,platform in [('windows-x64','cp313','win_amd64')]:
         matches=[item for item in metadata['urls']if item['filename'].endswith('.whl')and
-                 ('-'+python+'-'+python+'-')in item['filename']and platform in item['filename']and
-                 ('x86_64'in item['filename']if target=='linux-x64'else True)]
+                 ('-'+python+'-'+python+'-')in item['filename']and platform in item['filename']]
         if len(matches)!=1:raise ValueError('One exact Pillow wheel required for '+target)
         item=matches[0];selected.append({'role':'pillow','target':target,'fileName':item['filename'],'url':item['url'],
                                        'algorithm':'sha256','hash':item['digests']['sha256']})
@@ -66,7 +65,7 @@ def pillow_specs(metadata):
 
 def freeze(directory,aws):
     directory=Path(directory);directory.mkdir(parents=True,exist_ok=False);specs=list(PUBLIC)
-    for target,asset in [('windows-x64','mono_win64.zip'),('linux-x64','mono_linux_x86_64.zip')]:
+    for target,asset in [('windows-x64','mono_win64.zip')]:
         filename=f'Godot_v{install_godot.VERSION}-stable_{asset}'
         specs.append({'role':'godot','target':target,'fileName':filename,'url':f'https://github.com/godotengine/godot/releases/download/{install_godot.VERSION}-stable/{filename}',
                       'algorithm':'sha512','hash':install_godot.HASHES[asset]})

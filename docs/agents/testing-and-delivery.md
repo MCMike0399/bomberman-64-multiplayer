@@ -821,7 +821,7 @@ physical/GPU evidence. See [desktop clients](../desktop-clients.md).
 Current three-platform strategy (user decision 2026-10-29): hosted Windows WARP
 and Linux llvmpipe are functional/headless, installer/updater, startup/exit and
 network test surfaces only. Graphics and complete graphical tours use real
-GPUs, since 2026-11-13 on the [workstation](../workstation-ci.md) runners. Preserve production quality and use the measured Mac-to-Mac residual
+GPUs, since 2026-11-13 hybrid: Linux on the [workstation](../workstation-ci.md) runner, Windows on the [Sancus builder](../sancus-builder-ci.md). Preserve production quality and use the measured Mac-to-Mac residual
 envelope and user visual sign-off in [GPU qualification](../gpu-qualification.md).
 
 The historical software-runner split is retained as an ordering/partition

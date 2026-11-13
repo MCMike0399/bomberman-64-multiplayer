@@ -24,7 +24,8 @@ import builder_supervisor as supervisor
 import builder_transfer as transfer
 import builder_timing
 
-TARGETS={'linux-x64':'Linux','windows-x64':'Windows'}
+# Windows only since 2026-11-13 (one instance); Linux qualifies on the owned workstation.
+TARGETS=names.TARGETS
 PING_SAMPLE_SECONDS=30
 PING_SAMPLE_LIMIT=40
 CONSOLE_SAMPLE_SECONDS=60
@@ -215,9 +216,9 @@ class Controller:
         expected={'runId':self.plan['runId'],'source':self.plan['payloadSource'],'target':target,'instanceId':row['instanceId'],
                   'account':self.plan['account'],'region':self.plan['region'],
                   'payloadManifestSha256':self.plan['staging']['manifest']['sha256'],'ready':True,'hardwareQualified':False}
-        expected['user']='BlastQa'if target=='windows-x64'else'ubuntu'
+        expected['user']='BlastQa'
         if any(receipt.get(key)!=value for key,value in expected.items()):raise ValueError('Bootstrap receipt identity differs')
-        if target=='windows-x64'and(type(receipt.get('sessionId'))is not int or receipt['sessionId']<=0):
+        if type(receipt.get('sessionId'))is not int or receipt['sessionId']<=0:
             raise ValueError('Windows bootstrap did not observe an interactive session')
         if 'readyAtUtc'not in row:row['readyAtUtc']=utc_now();self.save()
         agents=self.ping(target,force=True)
@@ -301,7 +302,7 @@ class Controller:
         result={}
         for target in TARGETS:
             row=self.data['targets'].get(target,{})
-            if row.get('state')!='finished':raise ValueError('Both complete native GPU workloads are required')
+            if row.get('state')!='finished':raise ValueError('Every complete native GPU workload is required')
             files={item['path']:item for item in row['retention']['files']}
             expected=self.plan['artifacts'][target];prefix='finished/'
             def read(relative):
@@ -323,7 +324,7 @@ class Controller:
     def acknowledge(self):
         for target,row in self.data['targets'].items():
             if row['state']=='finished':continue
-            if row['state']!='core-retained':raise ValueError('Both committed core receipts are required before tours')
+            if row['state']!='core-retained':raise ValueError('Every committed core receipt is required before tours')
             transfer.acknowledge_core(self.client,self.plan,target,row['retention']['rawManifestSha256'],row['retention'],
                                       self.root/('core-ack-'+target+'.json'))
             row['state']='running-remaining';self.save()

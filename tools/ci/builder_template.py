@@ -34,8 +34,9 @@ def build(plan,bootstrap):
         'AgentProfile':{'Type':'AWS::IAM::InstanceProfile','Properties':{
             'InstanceProfileName':names.resource_name(run,'profile'),'Roles':[ref('AgentRole')]}},
     })
-    if {item['os']for item in plan['instances']}!={'Linux','Windows'}or len(plan['instances'])!=2:
-        raise ValueError('This reviewed campaign requires exactly one Windows and one Linux instance')
+    # Windows only since 2026-11-13: exactly one instance, Name-tagged `sancus-builder`.
+    if [item['os']for item in plan['instances']]!=list(names.SYSTEMS):
+        raise ValueError('This reviewed campaign requires exactly one Windows instance')
     for item in plan['instances']:
         osname=item['os']
         resources[osname+'Instance']={'Type':'AWS::EC2::Instance','DeletionPolicy':'Delete',
@@ -49,7 +50,7 @@ def build(plan,bootstrap):
                     'VolumeSize':item['rootGb'],'VolumeType':'gp3','Encrypted':True,'DeleteOnTermination':True}}],
                 'UserData':base64.b64encode(bootstrap[osname].encode()).decode(),
                 'Tags':tags+[{'Key':'Name','Value':names.instance_name(osname.lower())}]}}
-    instance_arns=[sub(f'arn:aws:ec2:{names.REGION}:{names.ACCOUNT}:instance/${{{osname}Instance}}')for osname in ('Linux','Windows')]
+    instance_arns=[sub(f'arn:aws:ec2:{names.REGION}:{names.ACCOUNT}:instance/${{{osname}Instance}}')for osname in names.SYSTEMS]
     resources['ExpiryRole']={'Type':'AWS::IAM::Role','DependsOn':['ExpiryGroup'],'Properties':{
         'RoleName':names.resource_name(run,'expiry'),'PermissionsBoundary':boundary,'Tags':tags,
         'AssumeRolePolicyDocument':{'Version':'2012-10-17','Statement':[{
@@ -59,7 +60,7 @@ def build(plan,bootstrap):
         'Policies':[{'PolicyName':names.resource_name(run,'termination'),'PolicyDocument':{
             'Version':'2012-10-17','Statement':[{'Effect':'Allow','Action':'ec2:TerminateInstances',
                 'Resource':instance_arns,'Condition':{'StringEquals':{'ec2:ResourceTag/'+names.RUN_TAG:ref('RunId')}}}]}}]}}
-    for osname in ('Linux','Windows'):
+    for osname in names.SYSTEMS:
         resources[osname+'Expiry']={'Type':'AWS::Scheduler::Schedule','Properties':{
             'Name':names.resource_name(run,osname.lower()+'-expiry'),'GroupName':group,
             # CFN's live resource schema does not expose ActionAfterCompletion.

@@ -33,8 +33,8 @@ def verify_prepared(plan):
 
 
 def verify_expiry(plan,stack_entry,logical,role,policy,inline_names,schedules):
-    ids=[logical[name+'Instance']['id']for name in ('Linux','Windows')]
-    if len(set(ids))!=2:raise ValueError('Two distinct exact instances required')
+    ids=[logical[name+'Instance']['id']for name in names.SYSTEMS]
+    if len(set(ids))!=len(names.SYSTEMS):raise ValueError('One distinct exact instance per reviewed system required')
     run=plan['runId'];group=names.resource_name(run,'expiry-group')
     group_arn=f'arn:aws:scheduler:{names.REGION}:{names.ACCOUNT}:schedule-group/{group}'
     boundary=f'arn:aws:iam::{names.ACCOUNT}:policy/{names.BOUNDARY}'
@@ -49,8 +49,8 @@ def verify_expiry(plan,stack_entry,logical,role,policy,inline_names,schedules):
         'Resource':[f'arn:aws:ec2:{names.REGION}:{names.ACCOUNT}:instance/{identity}'for identity in ids],
         'Condition':{'StringEquals':{'ec2:ResourceTag/'+names.RUN_TAG:run}}}]}
     if journal.canonical_hash(policy)!=journal.canonical_hash(expected):raise ValueError('Expiry permissions differ')
-    if set(schedules)!={'Linux','Windows'}:raise ValueError('Both actual expiry schedules required')
-    for osname,identity in zip(('Linux','Windows'),ids):
+    if set(schedules)!=set(names.SYSTEMS):raise ValueError('Every actual expiry schedule is required')
+    for osname,identity in zip(names.SYSTEMS,ids):
         schedule=schedules[osname];target=schedule['Target']
         if (schedule['Name']!=names.resource_name(run,osname.lower()+'-expiry')or schedule['GroupName']!=group or
                 schedule['State']!='ENABLED'or schedule['ActionAfterCompletion']!='DELETE'or
@@ -76,7 +76,7 @@ def verify_live(plan):
     policy=campaign.aws(plan,'iam','get-role-policy','--role-name',role['RoleName'],
                         '--policy-name',names.resource_name(plan['runId'],'termination'))['PolicyDocument']
     schedules={osname:campaign.aws(plan,'scheduler','get-schedule','--group-name',names.resource_name(plan['runId'],'expiry-group'),
-                                 '--name',logical[osname+'Expiry']['id'].split('/')[-1])for osname in ('Linux','Windows')}
+                                 '--name',logical[osname+'Expiry']['id'].split('/')[-1])for osname in names.SYSTEMS}
     ids=verify_expiry(plan,entry,logical,role,policy,inline,schedules)
     receipt={**{key:plan[key]for key in ('account','region','runId','payloadSource','fixedCampaignExpiryUtc')},
              'stackArn':sid,'runtimeCleanupArmed':True,'hardwareQualified':False,'instanceIds':ids,
@@ -95,8 +95,8 @@ def set_schedule_auto_delete(plan):
     """
     import builder_campaign as campaign
     campaign.authorize(plan)
-    for osname in ('linux','windows'):
-        name=names.resource_name(plan['runId'],osname+'-expiry')
+    for osname in names.SYSTEMS:
+        name=names.resource_name(plan['runId'],osname.lower()+'-expiry')
         group=names.resource_name(plan['runId'],'expiry-group')
         schedule=campaign.aws(plan,'scheduler','get-schedule','--name',name,'--group-name',group)
         if schedule['Name']!=name or schedule['GroupName']!=group:raise ValueError('Unexpected schedule identity')

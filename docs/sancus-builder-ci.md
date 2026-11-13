@@ -1,10 +1,26 @@
 # Release graphics qualification
 
-> **Retired 2026-11-13.** The user replaced the budgeted Sancus AWS builders with
-> the owned [workstation](workstation-ci.md). `builder-controller.yml`,
-> `builder-bootstrap-preflight.yml` and `gpu-once.yml` were removed; `SANCUS_BUILDER_PAID_HOLD`
-> stays `true`. The `tools/ci/builder_*` modules remain only so historical AWS
-> receipts can be verified. Everything below is history.
+> **Active for Windows only since 2026-11-13.** Linux real-GPU qualification moved
+> to the owned [workstation](workstation-ci.md); the workstation's Windows VM was
+> abandoned after GPU passthrough hung the host kernel, so Windows stays here.
+> Each campaign launches exactly one g4dn.xlarge Windows instance (pinned Windows
+> AMI, T4, interactive standard user `BlastQa`, WDDM, VB-CABLE, SSM dispatch),
+> Name-tagged exactly `sancus-builder`. The Linux AWS builder (template instance,
+> user data, guest paths, pre-flight container job) was removed. Ownership is still
+> the `sancus-builder:run` tag; the deployed IAM policy is unchanged and still
+> allows both pinned AMIs, though only the Windows one is launched. The estimate is
+> one instance (about $3.67 at the reviewed ceiling) within the unchanged $20/run
+> and $200 total guards, ledger, approval plan, dedupe and paid hold
+> (`SANCUS_BUILDER_PAID_HOLD` must be `false` for a paid run).
+>
+> `gpu-qualification.yml` runs the AWS selector and the workstation selector in
+> one `select` job, calls `builder-controller.yml` for Windows (uploads
+> `release-gate-gpu-windows-x64`: receipt, graphical receipt,
+> `Sancus-builder-cleanup.json`) and the workstation runner for Linux (uploads
+> `release-gate-gpu-linux-x64` bound to `Blast-Circuit-gpu-host.json`). Free
+> audit/rehearse/permissions-smoke modes involve only the AWS lane.
+> `builder-bootstrap-preflight.yml` keeps only its Windows audio job. Two-instance
+> descriptions below are history.
 
 User policy, 2026-10-30: a major **or minor** version increase against the latest
 published stable release requires real-GPU qualification of the exact source,
@@ -515,11 +531,10 @@ tagging index still listed the terminated instances and their volumes.
   name/id, matching event IDs/timestamps, termination evidence) and
   `journalLookup` errors. Volumes still require their own NotFound answer.
 - **Free pre-flight.** `builder-bootstrap-preflight.yml` runs on PRs touching the
-  bootstrap or audio helpers. Linux runs the generated package/CLI section in
-  `ubuntu:24.04` plus missing-package and digest-mismatch fault controls
-  (`builder_bootstrap_preflight.py`). Windows runs the shared install and gate as
+  bootstrap or audio helpers. Windows runs the shared install and gate as
   the runner administrator, then the gate as LocalSystem and as a new standard
-  user. Neither job uses AWS.
+  user. It uses no AWS. (Its Linux container job and `builder_bootstrap_preflight.py`
+  were removed with the Linux AWS builder on 2026-11-13.)
 
 ### User budget decision, 2026-10-30 (superseded the same evening)
 

@@ -116,6 +116,8 @@ def final(plan,stage_errors=None,deadline=None):
             data=campaign.aws(plan,'iam','get-instance-profile','--instance-profile-name',identity,missing=('NoSuchEntity',));state='absent'if data is None else 'PRESENT'
         elif kind=='AWS::Scheduler::Schedule':
             logical=row['details']['logicalId']
+            # LinuxExpiry only exists in journals of two-instance campaigns before 2026-11-13;
+            # exact-ID cleanup of such a recovered run must still find it.
             if logical not in ('LinuxExpiry','WindowsExpiry'):raise ValueError('Unknown owned schedule')
             name=names.resource_name(plan['runId'],'linux-expiry'if logical=='LinuxExpiry'else'windows-expiry')
             data=campaign.aws(plan,'scheduler','get-schedule','--name',name,'--group-name',names.resource_name(plan['runId'],'expiry-group'),missing=('ResourceNotFoundException',));state='absent'if data is None else'PRESENT'

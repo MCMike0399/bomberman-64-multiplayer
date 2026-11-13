@@ -12,7 +12,6 @@ import builder_assets
 import builder_bootstrap
 import builder_campaign as campaign
 import builder_controller
-import builder_identity
 import builder_journal
 import builder_namespace as names
 import builder_payload
@@ -54,8 +53,8 @@ def estimate(rates):
 
 def price_rates(aws,state):
     rates={}
-    for system in ('Linux','Windows'):
-        operation='RunInstances:0002'if system=='Windows'else'RunInstances'
+    for system in names.SYSTEMS:
+        operation={'Windows':'RunInstances:0002'}[system]
         filters=[{'Type':'TERM_MATCH','Field':key,'Value':value}for key,value in (
             ('instanceType','g4dn.xlarge'),('regionCode',names.REGION),('operatingSystem',system),
             ('tenancy','Shared'),('preInstalledSw','NA'),('capacitystatus','Used'),('operation',operation))]
@@ -86,7 +85,7 @@ def package_inputs(directory,source,release):
         rows.append({'role':'artifact','target':'all','fileName':name,'path':str(path),'sha256':desktop_packages.digest(path)})
     server=json.loads((directory/'server-build-metadata.json').read_text())
     if server.get('revision')!=source or server.get('release')!=release:raise ValueError('Server metadata differs from frozen client source')
-    for target in ('windows-x64','linux-x64'):
+    for target in names.TARGETS:
         metadata=crossplay_runtime.metadata(directory,target)
         if metadata['revision']!=source or metadata['release']!=release:raise ValueError('Native package metadata differs')
         download_formats.inspect(directory,target,source,release)
@@ -115,8 +114,7 @@ def prepare(state,verification_run,fixed_expiry):
           'verificationRunId':str(verification_run),'fixedCampaignExpiryUtc':expiry,'minimumLaunchHeadroomSeconds':7200,
           'timing':{key:clock[key]for key in ('jobStartedAtUtc','jobTimeoutSeconds','jobMarginSeconds','cleanupBudgetSeconds')},
           **{key:clock[key]for key in ('controllerRunId','controllerRunAttempt','controllerJobId')},
-          'instances':[{'os':system,'type':'g4dn.xlarge','ami':ami,'rootGb':size}for system,ami,size in (
-              ('Linux',builder_identity.AMIS[0],75),('Windows',builder_identity.AMIS[1],80))],
+          'instances':builder_approval.instances(),
           'references':{'vpc':os.environ.get('SANCUS_BUILDER_VPC_ID',''),'subnet':os.environ.get('SANCUS_BUILDER_SUBNET_ID','')}}
     spending=builder_approval.ledger()
     if os.environ.get('MODE')=='qualify':
@@ -142,8 +140,8 @@ def prepare(state,verification_run,fixed_expiry):
     protected_path.write_text(json.dumps(snapshot,indent=2)+'\n');plan['references']['protectedInstancesSha256']=desktop_packages.digest(protected_path)
     plan['release']=release_identity.check_exports();plan['renderFingerprint']=render_fingerprint.calculate()['sha256']
     directory=state/'trusted-artifacts';directory.mkdir()
-    for name in ('Blast-Circuit-windows-x64','Blast-Circuit-windows-x64-download','Blast-Circuit-linux-x64',
-                 'Blast-Circuit-linux-x64-download','Blast-Circuit-server-dotnet10'):
+    for name in (*(name for target in names.TARGETS for name in ('Blast-Circuit-'+target,'Blast-Circuit-'+target+'-download')),
+                 'Blast-Circuit-server-dotnet10'):
         subprocess.run(['gh','run','download',str(verification_run),'--name',name,'--dir',str(directory)],check=True,timeout=600)
     inputs,plan['artifacts']=package_inputs(directory,source,plan['release'])
     tools,cli=builder_assets.freeze(state/'frozen-tools',aws);inputs.extend(tools)

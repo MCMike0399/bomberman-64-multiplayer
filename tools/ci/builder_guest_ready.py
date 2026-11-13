@@ -17,15 +17,15 @@ def publish(manifest_path,target,output):
     identity=native_execution.instance_identity()
     if identity['accountId']!=manifest['account']or identity['region']!=manifest['region']:
         raise ValueError('Bootstrap account/region differs')
-    user=getpass.getuser();session=None
-    if os.name=='nt':
-        session_id=ctypes.c_ulong()
-        if not ctypes.windll.kernel32.ProcessIdToSessionId(os.getpid(),ctypes.byref(session_id)):
-            raise RuntimeError('Cannot observe the actual Windows session')
-        session=session_id.value
-        if session==0 or user!='BlastQa'or ctypes.windll.shell32.IsUserAnAdmin():
-            raise RuntimeError('Bootstrap readiness requires the standard interactive user')
-    elif os.getuid()==0 or user!='ubuntu':raise RuntimeError('Bootstrap readiness requires the disposable Ubuntu user')
+    user=getpass.getuser()
+    # Windows only since 2026-11-13; there is no Linux AWS guest.
+    if os.name!='nt':raise RuntimeError('Bootstrap readiness requires the Windows interactive standard user')
+    session_id=ctypes.c_ulong()
+    if not ctypes.windll.kernel32.ProcessIdToSessionId(os.getpid(),ctypes.byref(session_id)):
+        raise RuntimeError('Cannot observe the actual Windows session')
+    session=session_id.value
+    if session==0 or user!='BlastQa'or ctypes.windll.shell32.IsUserAnAdmin():
+        raise RuntimeError('Bootstrap readiness requires the standard interactive user')
     receipt={'schemaVersion':1,**{key:manifest[key]for key in ('runId','source','account','region')},
              'target':target,'instanceId':identity['instanceId'],'payloadManifestSha256':builder_guest.digest(manifest_path),
              'ready':True,'user':user,'sessionId':session,'hardwareQualified':False,
@@ -37,5 +37,5 @@ def publish(manifest_path,target,output):
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--manifest',type=Path,required=True)
-    parser.add_argument('--target',choices=('windows-x64','linux-x64'),required=True);parser.add_argument('--output',type=Path,required=True)
+    parser.add_argument('--target',choices=('windows-x64',),required=True);parser.add_argument('--output',type=Path,required=True)
     args=parser.parse_args();publish(args.manifest,args.target,args.output)

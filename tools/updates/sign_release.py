@@ -68,7 +68,7 @@ def sign(archive, key, output, server=None):
                 assets.append(output/release_gpu_policy.RECEIPT)
                 if policy['requiresGpu']:
                     gpu_release_gates.inspect_all(output,metadata['revision'],fingerprint=policy['renderFingerprint'],targets=targets)
-                    assets.append(output/gpu_release_gates.CLEANUP_RECEIPT)
+                    assets += [output/name for name in gpu_release_gates.bound_receipts(output,targets)]
             assets += [output / name for target in targets for name in release_gpu_policy.asset_names(target,policy)]
             for target in targets:
                 download_formats.inspect(output, target, metadata['revision'], metadata['release'])

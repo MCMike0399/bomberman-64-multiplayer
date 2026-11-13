@@ -16,7 +16,7 @@ class DisposableBootstrap(unittest.TestCase):
                                               {'url':'https://awscli.amazonaws.com/AWSCLIV2.msi','sha256':'c'*64})
 
     def test_all_object_calls_are_owner_bound_and_there_is_no_github_registration(self):
-        texts=list(self.scripts().values())+[bootstrap.LINUX_SETUP,bootstrap.WINDOWS_SETUP]
+        texts=list(self.scripts().values())+[bootstrap.WINDOWS_SETUP,bootstrap.WINDOWS_DISPATCH,bootstrap.WINDOWS_WORKER]
         for text in texts:
             self.assertNotIn('GITHUB_TOKEN',text);self.assertNotIn('config.sh',text);self.assertNotIn('config.cmd',text)
             self.assertNotIn('api.github.com',text)
@@ -44,24 +44,20 @@ class DisposableBootstrap(unittest.TestCase):
         self.assertLess(bootstrap.WINDOWS_DISPATCH.index('Move-Item'),bootstrap.WINDOWS_DISPATCH.index('Start-ScheduledTask'))
 
     # Every guest read of an object the controller may not have staged yet, by site.
-    SITES={'Linux':{'payload/bootstrap.zip':'staged_get payload/bootstrap.zip "$root/bootstrap.zip" 300',
-                    'payload/manifest.json':'staged_get payload/manifest.json "$root/manifest.json" 60'},
-           'Windows':{'payload/bootstrap-awscli.msi':"Wait-StagedObject 'payload/bootstrap-awscli.msi' ([DateTime]::UtcNow.AddMinutes(5)) {",
+    SITES={'Windows':{'payload/bootstrap-awscli.msi':"Wait-StagedObject 'payload/bootstrap-awscli.msi' ([DateTime]::UtcNow.AddMinutes(5)) {",
                       'payload/bootstrap.zip':"Get-StagedObject 'payload/bootstrap.zip' \"$root\\bootstrap.zip\" 300",
                       'payload/manifest.json':"Get-StagedObject 'payload/manifest.json' \"$root\\manifest.json\" 60"}}
 
-    def test_every_guest_object_read_goes_through_the_one_helper_per_language(self):
+    def test_every_guest_object_read_goes_through_the_one_powershell_helper(self):
         import builder_s3
         self.assertEqual(set(bootstrap.STAGED_PENDING),set(builder_s3.GUEST_PENDING))
         self.assertIn('AccessDenied',bootstrap.STAGED_PENDING);self.assertIn('403',bootstrap.STAGED_PENDING)
         scripts=self.scripts()
         for osname,sites in self.SITES.items():
             for key,call in sites.items():self.assertEqual(scripts[osname].count(call),1,(osname,key))
-        self.assertIn('staged_get "$key" "$root/cache/$file" 60',bootstrap.LINUX_SETUP)
         self.assertIn('Get-StagedObject $row.objectKey $file 60',bootstrap.WINDOWS_SETUP)
         # The only raw get-object left in each guest script is inside its helper.
-        for text,helper in ((scripts['Linux'],bootstrap.BASH_STAGED),(bootstrap.LINUX_SETUP,bootstrap.BASH_STAGED),
-                            (scripts['Windows'],bootstrap.PS_STAGED),(bootstrap.WINDOWS_SETUP,bootstrap.PS_STAGED)):
+        for text,helper in ((scripts['Windows'],bootstrap.PS_STAGED),(bootstrap.WINDOWS_SETUP,bootstrap.PS_STAGED)):
             self.assertEqual(text.count('s3api get-object'),1)
             self.assertNotIn('__STAGED_GET',text)
         self.assertEqual(scripts['Windows'].count('GetObjectAsync'),1)
@@ -74,26 +70,6 @@ class DisposableBootstrap(unittest.TestCase):
             'if test "$reply" = ok; then for last; do :; done; echo payload > "$last"; exit 0; fi\n'
             'echo "An error occurred ($reply) when calling the GetObject operation: denied" >&2; exit 254\n'%(state,state))
         tool.chmod(0o755);return tool
-
-    def run_bash(self,replies,seconds=30):
-        with tempfile.TemporaryDirectory()as root:
-            aws=self.fake_aws(root,replies)
-            script=('set -Eeuo pipefail\nroot=%s\naws=%s\nsleep(){ :; }\n'%(root,aws)+bootstrap.BASH_STAGED.replace('__BUCKET__','b')+
-                    '\nstaged_get payload/x "$root/out" %d\ncat "$root/out"\n'%seconds)
-            result=subprocess.run(['bash','-c',script],capture_output=True,text=True,timeout=60)
-            samples=(Path(root)/'staged-get-samples.log').read_text()if (Path(root)/'staged-get-samples.log').exists()else''
-            return result,[line.split()[-1] for line in samples.splitlines()]
-
-    def test_bash_helper_waits_through_403_and_404_then_reads(self):
-        result,samples=self.run_bash(['AccessDenied','AccessDenied','NoSuchKey','ok'])
-        self.assertEqual(result.returncode,0,result.stderr);self.assertEqual(result.stdout,'payload\n')
-        self.assertEqual(samples,['AccessDenied','NoSuchKey'])
-
-    def test_bash_helper_fails_at_once_on_any_other_error_and_at_its_deadline(self):
-        result,samples=self.run_bash(['AccessDenied','InvalidAccessKeyId','ok'])
-        self.assertNotEqual(result.returncode,0);self.assertIn('failed: InvalidAccessKeyId',result.stderr)
-        result,_=self.run_bash(['AccessDenied']*400,seconds=0)
-        self.assertNotEqual(result.returncode,0);self.assertIn('Timed out waiting for staged object payload/x; last AccessDenied',result.stderr)
 
     def pwsh(self):
         import shutil
@@ -168,23 +144,6 @@ class DisposableBootstrap(unittest.TestCase):
     # Token refused twice, then a role whose document lacks credentials (201 marker), then ready.
     IMDS_SCRIPT=[503,503,200,200,201,200,200,200]
 
-    def test_linux_waits_for_imds_credentials_before_its_first_staged_read(self):
-        scripts=self.scripts()
-        self.assertLess(scripts['Linux'].index('await_instance_credentials 120'),scripts['Linux'].index('staged_get payload/'))
-        url,seen=self.fake_imds(self.IMDS_SCRIPT)
-        with tempfile.TemporaryDirectory()as root:
-            body='set -Eeuo pipefail\nroot=%s\nimds=%s\nsleep(){ :; }\n'%(root,url)+bootstrap.BASH_IMDS+'\nawait_instance_credentials 30\n'
-            result=subprocess.run(['bash','-c',body],capture_output=True,text=True,timeout=60)
-            self.assertEqual(result.returncode,0,result.stderr)
-            self.assertIn('imds-credentials ready-after-seconds',(Path(root)/'staged-get-samples.log').read_text())
-        self.assertEqual([row[0] for row in seen if row[1]=='/latest/api/token'],['PUT']*4)
-        self.assertTrue(all(row[2]=='TOKEN'for row in seen if row[1]!='/latest/api/token'))
-        url,_=self.fake_imds([])
-        with tempfile.TemporaryDirectory()as root:
-            body='set -Eeuo pipefail\nroot=%s\nimds=%s\nsleep(){ :; }\n'%(root,url)+bootstrap.BASH_IMDS+'\nawait_instance_credentials 0\n'
-            result=subprocess.run(['bash','-c',body],capture_output=True,text=True,timeout=60)
-            self.assertNotEqual(result.returncode,0);self.assertIn('unavailable through IMDSv2 after 0 s',result.stderr)
-
     def test_windows_waits_for_imds_credentials_before_its_first_staged_read(self):
         scripts=self.scripts()
         self.assertLess(scripts['Windows'].index('Wait-InstanceCredentials 120'),scripts['Windows'].index("Wait-StagedObject 'payload/bootstrap-awscli.msi'"))
@@ -203,21 +162,22 @@ class DisposableBootstrap(unittest.TestCase):
                 else:
                     self.assertNotEqual(result.returncode,0);self.assertIn('unavailable through IMDSv2 after 0 s',result.stdout+result.stderr)
 
-    def test_linux_dispatches_as_standard_user_and_scripts_parse(self):
-        self.assertIn('runuser -u ubuntu',bootstrap.LINUX_DISPATCH)
-        self.assertNotIn('--preserve-environment',bootstrap.LINUX_DISPATCH)
-        self.assertNotIn('/usr/share/dotnet',bootstrap.LINUX_SETUP)
-        with tempfile.TemporaryDirectory()as root:
-            for index,text in enumerate([self.scripts()['Linux'],bootstrap.LINUX_SETUP,bootstrap.LINUX_DISPATCH]):
-                path=Path(root)/str(index);path.write_text(text)
-                subprocess.run(['bash','-n',str(path)],check=True,capture_output=True)
+    def test_only_the_windows_guest_remains(self):
+        # 2026-11-13: the Linux AWS builder was removed; Linux qualifies on the owned workstation.
+        self.assertEqual(set(self.scripts()),{'Windows'})
+        for name in ('LINUX_SETUP','LINUX_DISPATCH','LINUX_AWS_CLI','LINUX_AWS','BASH_STAGED','BASH_IMDS',
+                     'PACKAGES_BEGIN','linux_package_section','linux_packages'):
+            self.assertFalse(hasattr(bootstrap,name),name)
+        for text in (*self.scripts().values(),bootstrap.WINDOWS_SETUP,bootstrap.WINDOWS_DISPATCH,bootstrap.WINDOWS_WORKER):
+            for needle in ('linux-x64','/opt/sancus-builder','runuser','apt-get','#!/bin/bash'):
+                self.assertNotIn(needle,text)
 
     def test_bundle_is_hash_bound_and_has_only_the_fixed_helpers(self):
         with tempfile.TemporaryDirectory()as root:
             path=Path(root)/'bootstrap.zip';result=bootstrap.bundle(RUN,path)
             self.assertEqual(result['sha256'],hashlib.sha256(path.read_bytes()).hexdigest())
             with zipfile.ZipFile(path)as archive:
-                self.assertEqual(set(archive.namelist()),set(bootstrap.MODULES)|{'setup.sh','dispatch','setup.ps1','dispatch.ps1','worker.ps1','windows-audio.ps1'})
+                self.assertEqual(set(archive.namelist()),set(bootstrap.MODULES)|{'setup.ps1','dispatch.ps1','worker.ps1','windows-audio.ps1'})
                 self.assertEqual(archive.read('windows-audio.ps1'),bootstrap.WINDOWS_AUDIO.read_bytes())
                 self.assertTrue(all('..'not in name and not name.startswith('/')for name in archive.namelist()))
             with self.assertRaises(FileExistsError):bootstrap.bundle(RUN,path)
@@ -225,46 +185,9 @@ class DisposableBootstrap(unittest.TestCase):
     def test_unpinned_or_foreign_cli_bootstrap_refused(self):
         with self.assertRaises(ValueError):bootstrap.userdata({'runId':RUN},'a'*64,'b'*64,{'url':'https://untrusted.invalid/tool.msi','sha256':'c'*64})
         msi={'url':'https://awscli.amazonaws.com/AWSCLIV2.msi','sha256':'c'*64}
-        for linux in ({'url':'https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip','sha256':'d'*64},  # unversioned
-                      {'url':'https://untrusted.invalid/awscli-exe-linux-x86_64-2.38.5.zip','sha256':'d'*64},
-                      {'url':bootstrap.LINUX_AWS_CLI['url'],'sha256':'D'*64},{'url':bootstrap.LINUX_AWS_CLI['url'],'sha256':''}):
-            with self.subTest(linux=linux),self.assertRaises(ValueError):bootstrap.userdata({'runId':RUN},'a'*64,'b'*64,msi,linux)
-
-    def test_linux_installs_pinned_cli_v2_not_the_missing_noble_package(self):
-        script=self.scripts()['Linux']
-        packages=bootstrap.linux_packages(script)
-        self.assertNotIn('awscli',packages);self.assertTrue({'curl','ca-certificates','unzip'}<=set(packages))
-        self.assertEqual(bootstrap.LINUX_AWS_CLI,{'url':'https://awscli.amazonaws.com/awscli-exe-linux-x86_64-2.38.5.zip',
-                         'sha256':'5def7d1b7e55d892f9a381bb2cb2081a685712464be0d36d5d706af0ac48d0d3'})
-        download=script.index(bootstrap.LINUX_AWS_CLI['url']);verify=script.index(bootstrap.LINUX_AWS_CLI['sha256']+"' \"$root/awscli-install/awscliv2.zip\" | sha256sum -c -")
-        unzip=script.index('unzip -q "$root/awscli-install/awscliv2.zip"')
-        self.assertLess(download,verify);self.assertLess(verify,unzip)
-        self.assertLess(unzip,script.index('--install-dir "$root/aws-cli/dist" --bin-dir "$root/aws-cli/bin"'))
-        self.assertIn('chown -R root:root "$root/aws-cli"',script)
-        self.assertEqual(bootstrap.LINUX_AWS,'/opt/sancus-builder/aws-cli/bin/aws')
-        self.assertIn('aws='+bootstrap.LINUX_AWS,script);self.assertIn('aws='+bootstrap.LINUX_AWS,bootstrap.LINUX_SETUP)
-        # Every AWS call in user-data and the Linux setup uses that exact binary.
-        for text in (script,bootstrap.LINUX_SETUP,bootstrap.LINUX_DISPATCH):
-            for line in text.splitlines():
-                if 's3api'in line or '--version'in line and 'aws'in line:
-                    self.assertRegex(line,r'(^|\s)"\$aws" ',line)
-                self.assertNotRegex(line,r'(^|[\s;(])aws\s',line)
-        # Setup re-owns the CLI after the ubuntu chown.
-        self.assertLess(bootstrap.LINUX_SETUP.index('chown -R ubuntu:ubuntu "$root"'),bootstrap.LINUX_SETUP.index('chown -R root:root "$root/aws-cli"'))
-        import builder_guest,os
-        if os.name!='nt':self.assertEqual(builder_guest.AWS_CLI,bootstrap.LINUX_AWS)
-
-    def test_linux_failures_reach_the_serial_console_and_success_is_marked(self):
-        script=self.scripts()['Linux']
-        self.assertTrue(script.startswith('#!/bin/bash\nset -Eeuo pipefail\n'))
-        self.assertIn("trap 'status=$?; trap - ERR; console \"SANCUS-BUILDER-BOOTSTRAP-FAILED",script)
-        self.assertIn('tail -n 80 "$root/bootstrap.log"',script)
-        self.assertIn('${SANCUS_BUILDER_CONSOLE:-/dev/console /dev/ttyS0}',script)
-        self.assertLess(script.index('trap '),script.index('apt-get update'))
-        self.assertTrue(script.rstrip().endswith('console "SANCUS-BUILDER-BOOTSTRAP-READY linux-x64"'))
-        self.assertLess(script.index('bash "$root/bin/setup.sh"'),script.index('test -s "$root/bootstrap-ready.json"'))
-        section=bootstrap.linux_package_section(script)
-        self.assertNotIn('s3api',section);self.assertTrue(section.rstrip().endswith(bootstrap.PACKAGES_END))
+        for helper,manifest,cli in (('A'*64,'b'*64,msi),('a'*64,'',msi),('a'*64,'b'*64,{**msi,'sha256':'D'*64})):
+            with self.subTest(helper=helper,manifest=manifest),self.assertRaises(ValueError):
+                bootstrap.userdata({'runId':RUN},helper,manifest,cli)
 
     def test_windows_audio_gate_runs_as_system_before_readiness(self):
         setup=bootstrap.WINDOWS_SETUP;audio=bootstrap.WINDOWS_AUDIO.read_text()
@@ -290,16 +213,12 @@ class DisposableBootstrap(unittest.TestCase):
 
 
 class FreePreflight(unittest.TestCase):
-    def test_container_section_is_the_real_user_data_prefix_without_bucket_calls(self):
-        import builder_bootstrap_preflight as preflight
-        text,packages=preflight.section()
-        script=bootstrap.userdata({'runId':preflight.RUN},'1'*64,'2'*64,preflight.MSI)['Linux']
-        self.assertTrue(script.startswith(text.rstrip('\n')));self.assertNotIn('s3api',text)
-        self.assertEqual(packages,bootstrap.linux_packages(script))
-        missing,_=preflight.section('missing-package');self.assertIn(preflight.MISSING,missing)
-        digest,_=preflight.section('digest-mismatch');self.assertNotIn(bootstrap.LINUX_AWS_CLI['sha256'],digest)
-        runner=preflight.runner(packages)
-        self.assertIn('SANCUS_BUILDER_CONSOLE=/preflight/console.txt',runner);self.assertIn(bootstrap.LINUX_AWS+' --version',runner)
+    def test_hosted_preflight_keeps_only_the_windows_audio_gate(self):
+        workflow=(Path(__file__).resolve().parents[2]/'.github/workflows/builder-bootstrap-preflight.yml').read_text()
+        self.assertIn('windows-audio-preflight.ps1 -Output',workflow);self.assertIn('runs-on: windows-2025',workflow)
+        self.assertNotIn('builder_bootstrap_preflight.py',workflow);self.assertNotIn('ubuntu',workflow)
+        self.assertNotIn('aws-actions',workflow);self.assertNotIn('id-token',workflow)
+        self.assertFalse((Path(__file__).resolve().parent/'builder_bootstrap_preflight.py').exists())
 
 
 if __name__=='__main__':unittest.main()

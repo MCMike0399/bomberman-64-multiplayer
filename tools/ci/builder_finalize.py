@@ -29,8 +29,8 @@ def cleanup_receipt(raw,plan,variables,created_rows):
         raise ValueError('This hosted controller must not create runner registrations')
     owned=[row for row in created_rows if row.get('event')=='CREATED']
     if (sum(row['type']=='AWS::CloudFormation::Stack'for row in owned)!=1 or
-            sum(row['type']=='AWS::EC2::Instance'for row in owned)!=2):
-        raise ValueError('A real campaign requires its one stack and two journaled native instances')
+            sum(row['type']=='AWS::EC2::Instance'for row in owned)!=len(names.TARGETS)):
+        raise ValueError('A real campaign requires its one stack and its one journaled Windows instance')
     stack=next(row['id']for row in owned if row['type']=='AWS::CloudFormation::Stack')
     if not stack.startswith(f"arn:aws:cloudformation:{plan['region']}:{plan['account']}:stack/{plan['runId']}/"):
         raise ValueError('Exact stack ARN differs from the campaign namespace')
@@ -68,7 +68,7 @@ def bind(state,variables,output):
     output.mkdir(parents=True)
     cleanup_path=output/gates.CLEANUP_RECEIPT;cleanup_path.write_text(json.dumps(cleanup,indent=2)+'\n')
     cleanup_sha=hashlib.sha256(cleanup_path.read_bytes()).hexdigest()
-    for target in ('windows-x64','linux-x64'):
+    for target in names.TARGETS:
         item=controller['targets'][target]
         if item['state']!='finished':raise ValueError('Target did not complete its actual workload')
         files={row['path']:row for row in item['retention']['files']}

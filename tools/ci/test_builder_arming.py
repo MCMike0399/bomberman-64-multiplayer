@@ -15,11 +15,11 @@ class ExactExpiry(unittest.TestCase):
     def setUp(self):
         self.plan={'runId':'sancus-builder-20261030-8762d11-1234567890abcdef','payloadSource':'a'*40,
                    'fixedCampaignExpiryUtc':'2026-10-30T15:00:00Z','account':names.ACCOUNT,'region':names.REGION,
-                   'instances':[{'os':'Linux','ami':'ami-linux','rootGb':75},{'os':'Windows','ami':'ami-windows','rootGb':80}]}
+                   'instances':[{'os':'Windows','ami':'ami-windows','rootGb':80}]}
         self.entry={'details':{'parameters':{'ExpiresAt':'2026-10-30T15:00:00'}}}
-        self.logical={'LinuxInstance':{'id':'i-linux'},'WindowsInstance':{'id':'i-windows'},
+        self.logical={'WindowsInstance':{'id':'i-windows'},
                       'ExpiryRole':{'id':names.resource_name(self.plan['runId'],'expiry')}}
-        resources=builder_template.build(self.plan,{'Linux':'bootstrap','Windows':'bootstrap'})['Resources']
+        resources=builder_template.build(self.plan,{'Windows':'bootstrap'})['Resources']
         role=resources['ExpiryRole']['Properties']
         self.role={'RoleName':role['RoleName'],'Arn':f"arn:aws:iam::{names.ACCOUNT}:role/{role['RoleName']}",
                    'AssumeRolePolicyDocument':role['AssumeRolePolicyDocument'],
@@ -27,10 +27,10 @@ class ExactExpiry(unittest.TestCase):
         self.inline=[role['Policies'][0]['PolicyName']]
         self.policy=copy.deepcopy(role['Policies'][0]['PolicyDocument'])
         statement=self.policy['Statement'][0]
-        statement['Resource']=[f'arn:aws:ec2:{names.REGION}:{names.ACCOUNT}:instance/i-'+osname.lower()for osname in ('Linux','Windows')]
+        statement['Resource']=[f'arn:aws:ec2:{names.REGION}:{names.ACCOUNT}:instance/i-'+osname.lower()for osname in ('Windows',)]
         statement['Condition']['StringEquals']['ec2:ResourceTag/'+names.RUN_TAG]=self.plan['runId']
         self.schedules={}
-        for osname in ('Linux','Windows'):
+        for osname in ('Windows',):
             schedule=copy.deepcopy(resources[osname+'Expiry']['Properties'])
             schedule['ScheduleExpression']='at('+self.entry['details']['parameters']['ExpiresAt']+')'
             schedule['Target']['RoleArn']=self.role['Arn']
@@ -40,7 +40,12 @@ class ExactExpiry(unittest.TestCase):
 
     def check(self):return arming.verify_expiry(self.plan,self.entry,self.logical,self.role,self.policy,self.inline,self.schedules)
 
-    def test_actual_two_targets_and_bound_role_pass(self):self.assertEqual(self.check(),['i-linux','i-windows'])
+    def test_actual_one_windows_target_and_bound_role_pass(self):self.assertEqual(self.check(),['i-windows'])
+
+    def test_a_second_or_retired_linux_schedule_is_refused(self):
+        extra=copy.deepcopy(self.schedules['Windows']);extra['Name']=names.resource_name(self.plan['runId'],'linux-expiry')
+        self.schedules['Linux']=extra
+        with self.assertRaises(ValueError):self.check()
 
     def test_wrong_target_deadline_retry_group_and_auto_delete_fail(self):
         original=copy.deepcopy(self.schedules)

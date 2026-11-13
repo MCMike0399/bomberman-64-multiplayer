@@ -96,7 +96,7 @@ def verify_assets(directory, version):
     expected = {ARCHIVE, SERVER_ARCHIVE, 'build-metadata.json', 'server-build-metadata.json', 'Blast-Circuit-update.json'}
     policy=release_gpu_policy.read(directory)
     if policy:expected.add(release_gpu_policy.RECEIPT)
-    if policy and policy['requiresGpu']:expected.add(gpu_release_gates.bound_receipt(directory))
+    if policy and policy['requiresGpu']:expected.update(gpu_release_gates.bound_receipts(directory))
     if desktop_packages.present(directory):
         expected |= {name for target in desktop_packages.present_targets(directory) for name in release_gpu_policy.asset_names(target,policy)}
         expected |= {'Blast-Circuit-' + target + '-update.json' for target in desktop_packages.present_targets(directory)}
@@ -162,7 +162,7 @@ def compare_run_artifacts(repository, run_id, revision, directory):
             if str(policy['verificationRunId'])!=str(run_id):raise RuntimeError('Published graphics policy names another Verification run')
             if policy['requiresGpu']:
                 gpu_release_gates.download(repository,policy['gpuRunId'],revision,Path(temporary),gh)
-                names+=(gpu_release_gates.bound_receipt(Path(temporary)),)
+                names+=tuple(gpu_release_gates.bound_receipts(Path(temporary)))
         if 'macos-arm64' in download_formats.present(directory):
             names += download_formats.names('macos-arm64')
         if (directory / crossplay.RECEIPT).exists(): names += (crossplay.RECEIPT, desktop_validation.MAC_RECEIPT)

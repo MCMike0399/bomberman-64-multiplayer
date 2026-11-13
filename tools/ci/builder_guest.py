@@ -33,7 +33,7 @@ def validate_inputs(manifest,descriptor):
     if not isinstance(rows,list)or not rows or len(rows)>100:raise ValueError('Invalid guest input count')
     selected=[];keys=set();files=set()
     for row in rows:
-        if row.get('target')not in ('all','windows-x64','linux-x64')or row.get('role')not in ROLES:
+        if row.get('target')not in ('all',*names.TARGETS)or row.get('role')not in ROLES:
             raise ValueError('Unknown payload target or role')
         if not re.fullmatch(r'payload/input-[0-9]{3}\.bin',row.get('objectKey',''))or row['objectKey']in keys:
             raise ValueError('Invalid or repeated payload object')
@@ -67,8 +67,8 @@ def prepare_source(cache,work,manifest,descriptor):
     return rows
 
 
-# Exact owned CLI binaries; never a PATH lookup (Linux installs the pinned v2 bundle).
-AWS_CLI={'nt':r'C:\Program Files\Amazon\AWSCLIV2\aws.exe'}.get(os.name,'/opt/sancus-builder/aws-cli/bin/aws')
+# Exact owned CLI binary; never a PATH lookup. The guest is Windows only since 2026-11-13.
+AWS_CLI=r'C:\Program Files\Amazon\AWSCLIV2\aws.exe'
 
 
 def object_client(run):
@@ -167,41 +167,35 @@ def run(args):
         output.write_text(json.dumps(report,indent=2)+'\n')
         if result.returncode:raise RuntimeError('Guest step failed: '+name)
     try:
-        if target=='windows-x64':
-            # This script only prepares the disposable user's display/audio.
-            step('desktop',['pwsh','-NoProfile','-File','tools/packaging/windows-test-desktop.ps1',
-                            '-OwnedSsm','-VerifyOnly','-ExpectedRevision',descriptor['source']],90)
-            command=['pwsh','-NoProfile','-Command',
-                "$ErrorActionPreference='Stop'; $p=[Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent(); "
-                "@{sessionId=[Diagnostics.Process]::GetCurrentProcess().SessionId; user=$env:USERNAME; "
-                "administrator=$p.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator); "
-                "driverModel=((& nvidia-smi --query-gpu=driver_model.current --format=csv,noheader)-join ' ')} | ConvertTo-Json"]
-            session=json.loads(subprocess.check_output(command,text=True,timeout=30))
-            path=root/'artifacts/windows-gpu-desktop';path.mkdir(exist_ok=True)
-            (path/'session.json').write_text(json.dumps(session,indent=2)+'\n')
-            if session['sessionId']==0 or session['administrator']or session['user']!='BlastQa'or'WDDM'not in session['driverModel']:
-                raise RuntimeError('Windows worker is not the standard interactive user on WDDM')
+        if target not in names.TARGETS:raise ValueError('Unsupported builder target: '+str(target))
+        # This script only prepares the disposable user's display/audio.
+        step('desktop',['pwsh','-NoProfile','-File','tools/packaging/windows-test-desktop.ps1',
+                        '-OwnedSsm','-VerifyOnly','-ExpectedRevision',descriptor['source']],90)
+        command=['pwsh','-NoProfile','-Command',
+            "$ErrorActionPreference='Stop'; $p=[Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent(); "
+            "@{sessionId=[Diagnostics.Process]::GetCurrentProcess().SessionId; user=$env:USERNAME; "
+            "administrator=$p.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator); "
+            "driverModel=((& nvidia-smi --query-gpu=driver_model.current --format=csv,noheader)-join ' ')} | ConvertTo-Json"]
+        session=json.loads(subprocess.check_output(command,text=True,timeout=30))
+        path=root/'artifacts/windows-gpu-desktop';path.mkdir(exist_ok=True)
+        (path/'session.json').write_text(json.dumps(session,indent=2)+'\n')
+        if session['sessionId']==0 or session['administrator']or session['user']!='BlastQa'or'WDDM'not in session['driverModel']:
+            raise RuntimeError('Windows worker is not the standard interactive user on WDDM')
         install=[sys.executable,'tools/ci/install_godot.py','--destination','artifacts/gpu-engine',
                  '--archives','artifacts/engine-archives']
         step('engine',install,90)
-        if target=='windows-x64':godot=next((root/'artifacts/gpu-engine').rglob('*_console.exe'))
-        else:
-            godot=next(path for path in (root/'artifacts/gpu-engine').rglob('Godot*')if path.is_file()and path.name.endswith('.x86_64'))
+        godot=next((root/'artifacts/gpu-engine').rglob('*_console.exe'))
         def collector(phase):
-            command=[sys.executable,'tools/ci/gpu_campaign.py','--target',target,'--expected-revision',descriptor['source'],
-                     '--phase',phase,'--skip-bisection','--expiry',expiry,'--godot',str(godot)]
-            if target=='linux-x64':command=[sys.executable,'tools/packaging/linux-desktop.py','--',*command]
-            return command
+            return [sys.executable,'tools/ci/gpu_campaign.py','--target',target,'--expected-revision',descriptor['source'],
+                    '--phase',phase,'--skip-bisection','--expiry',expiry,'--godot',str(godot)]
         step('core',collector('core'),2400)
         output.write_text(json.dumps(report,indent=2)+'\n')
         publish(client,root,descriptor,input_names,'core-retained')
         report['coreAckPendingSamples']=[]
         report['coreRetentionAcknowledgement']=await_core_retention(client,root,descriptor,digest(root/'result-manifest.json'),samples=report['coreAckPendingSamples'])
-        if target=='windows-x64':
-            step('installed-launcher',[sys.executable,'tools/ci/startup_guard.py','--expected-revision',descriptor['source'],
-                                      '--output','artifacts/gpu-installed-startup-guard'],600)
-        # Linux also runs the roster-popup-stress x3 and tour-09 x9 diagnostic repeats (about 13 minutes).
-        step('remaining',collector('remaining'),3300 if target=='linux-x64' else 2400)
+        step('installed-launcher',[sys.executable,'tools/ci/startup_guard.py','--expected-revision',descriptor['source'],
+                                  '--output','artifacts/gpu-installed-startup-guard'],600)
+        step('remaining',collector('remaining'),2400)
         step('preliminary-qualification',[sys.executable,'tools/ci/gpu_release_gates.py','--target',target,
               '--revision',descriptor['source'],'--verification-run',descriptor['verificationRunId']],120)
         report['complete']=True

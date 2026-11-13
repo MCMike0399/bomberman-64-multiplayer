@@ -76,7 +76,7 @@ def controller_cases():
     run=names.run_id('20261030','09e454b','1234abcd')
     prefix=f'arn:aws:scheduler:{names.REGION}:{names.ACCOUNT}:schedule/'
     return [
-        ('owned-schedule-update','scheduler:UpdateSchedule',prefix+run+'-expiry-group/'+run+'-linux-expiry',{},True),
+        ('owned-schedule-update','scheduler:UpdateSchedule',prefix+run+'-expiry-group/'+run+'-windows-expiry',{},True),
         ('protected-schedule-update','scheduler:UpdateSchedule',prefix+'default/sancus-runner-Watchdog',{},False),
         ('unscoped-schedule-update','scheduler:UpdateSchedule',prefix+'default/sancus-builder-ci',{},False),
     ]
@@ -103,9 +103,9 @@ def permission_audit_cases():
         ('owned-group-any-name-create','scheduler:CreateSchedule',f'arn:aws:scheduler:{region}:{account}:schedule/{run}-expiry-group/any-name',{},True),
         ('owned-group-any-name-delete','scheduler:DeleteSchedule',f'arn:aws:scheduler:{region}:{account}:schedule/{run}-expiry-group/any-name',{},True),
         *[(f'{scope}-{verb.lower()}-denied','scheduler:'+verb,f'arn:aws:scheduler:{region}:{account}:schedule/{group_name}',{},False)
-          for scope,group_name in (('default-group','default/*'),('default-named','default/'+run+'-linux-expiry'),('foreign-group','other-group/*'),('foreign-named','other-group/'+run+'-linux-expiry'))
+          for scope,group_name in (('default-group','default/*'),('default-named','default/'+run+'-windows-expiry'),('foreign-group','other-group/*'),('foreign-named','other-group/'+run+'-windows-expiry'))
           for verb in ('CreateSchedule','UpdateSchedule','DeleteSchedule')],
-        ('default-group-name-precheck','scheduler:GetSchedule',f'arn:aws:scheduler:{region}:{account}:schedule/default/{run}-linux-expiry',{},True),
+        ('default-group-name-precheck','scheduler:GetSchedule',f'arn:aws:scheduler:{region}:{account}:schedule/default/{run}-windows-expiry',{},True),
         ('default-group-foreign-read','scheduler:GetSchedule',f'arn:aws:scheduler:{region}:{account}:schedule/default/{other}',{},False),
         ('read-own-boundary','iam:GetPolicy',f'arn:aws:iam::{account}:policy/{names.BOUNDARY}',{},True),
         ('read-other-policy','iam:GetPolicy',f'arn:aws:iam::{account}:policy/AdministratorAccess',{},False),

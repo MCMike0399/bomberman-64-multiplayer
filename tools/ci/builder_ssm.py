@@ -9,11 +9,12 @@ import builder_journal as journal
 import builder_namespace as names
 
 
-DOCUMENTS={'Linux':'AWS-RunShellScript','Windows':'AWS-RunPowerShellScript'}
+# Windows only since 2026-11-13. The deployed policy still allows AWS-RunShellScript (unused).
+DOCUMENTS={'Windows':'AWS-RunPowerShellScript'}
 
 
 def task(plan,instance,target,payload_sha256):
-    if target not in ('windows-x64','linux-x64'):raise ValueError('Unsupported native target')
+    if target not in names.TARGETS:raise ValueError('Unsupported native target')
     if not re.fullmatch(r'i-[0-9a-f]{8,17}',instance):raise ValueError('Invalid exact instance ID')
     if not re.fullmatch(r'[0-9a-f]{40}',plan['payloadSource']):raise ValueError('Full source SHA required')
     if not re.fullmatch(r'[0-9a-f]{64}',payload_sha256):raise ValueError('Frozen manifest digest required')
@@ -35,7 +36,6 @@ def commands(osname,descriptor):
     executing the game in this SSM LocalSystem session cannot qualify graphics.
     """
     encoded=base64.b64encode(json.dumps(descriptor,sort_keys=True).encode()).decode()
-    if osname=='Linux':return ['/opt/sancus-builder/bin/dispatch '+encoded]
     if osname=='Windows':return [r'& C:\sancus-builder\bin\dispatch.ps1 -Descriptor '+encoded]
     raise ValueError('Unknown operating system')
 
@@ -84,7 +84,7 @@ def reconcile(plan,path,aws,instance):
     intent=intents[0]
     existing=[row for row in rows if row['event']=='CREATED'and row['type']=='SSM::Command'and row['parent']==instance]
     if existing:return existing[0]['id']
-    verify_instance(plan,aws,instance,'Windows'if intent['details']['descriptor']['target']=='windows-x64'else'Linux')
+    verify_instance(plan,aws,instance,names.TARGETS[intent['details']['descriptor']['target']])
     response=aws('ssm','list-commands','--instance-id',instance)
     matches=[item for item in response.get('Commands',[])if item.get('Comment')==intent['details']['comment']]
     if response.get('NextToken'):raise ValueError('Command reconciliation inventory incomplete; no resend authorized')

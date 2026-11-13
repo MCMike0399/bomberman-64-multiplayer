@@ -15,6 +15,12 @@ REGION='us-east-1'
 RUN_PATTERN=r'sancus-builder-20[0-9]{6}-[0-9a-f]{7,12}-(?:[0-9a-f]{8}|[0-9a-f]{16})'
 # IAM glob syntax, deliberately excludes the standing CI role and boundary.
 RUN_GLOB=PREFIX+'20??????-*'
+# User decision 2026-11-13: the paid builder qualifies Windows only, with exactly one
+# instance Name-tagged INSTANCE_NAME. Linux real-GPU qualification runs on the owned
+# workstation. Ownership is keyed on RUN_TAG, never on this display name.
+INSTANCE_NAME=PREFIX.rstrip('-')
+TARGETS={'windows-x64':'Windows'}
+SYSTEMS=tuple(TARGETS.values())
 
 
 def run_id(day,sha,nonce):
@@ -38,9 +44,9 @@ def resource_name(run,suffix):
     return name
 
 
-def instance_name(os):
-    if os not in ('windows','linux'):raise ValueError('Unsupported builder OS')
-    return PREFIX+os
+def instance_name(os='windows'):
+    if os!='windows':raise ValueError('Unsupported builder OS; the Linux AWS builder was removed 2026-11-13')
+    return INSTANCE_NAME
 
 
 def validate_aws_names(template):
@@ -59,7 +65,7 @@ def validate_aws_names(template):
         for tag in data.get('Tags',[]):
             key,value=tag['Key'],tag['Value']
             if key=='Name':
-                if not isinstance(value,str)or not value.startswith(PREFIX):raise ValueError('Unscoped Name tag')
+                if not isinstance(value,str)or not(value==INSTANCE_NAME or value.startswith(PREFIX)):raise ValueError('Unscoped Name tag')
             elif not key.startswith(TAG_PREFIX):raise ValueError('Unscoped AWS tag key')
             if any(word in str(key).casefold()or word in str(value).casefold()for word in ('gpu','blast')):
                 raise ValueError('Forbidden AWS tag token')

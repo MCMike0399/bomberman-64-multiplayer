@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Select workstation GPU qualification for one exact, successful current-main Verification run.
+"""Select the workstation Linux GPU lane for one exact, successful current-main Verification run.
 
 Automatic runs (after Verification) qualify only versions whose release policy requires real
-GPUs (major/minor). A manual dispatch may qualify any complete current-main run. The workstation
-is owned hardware, so there is no spend ledger, paid hold or cleanup audit; runners are single-use.
+GPUs (major/minor). A manual `qualify` dispatch may qualify any complete current-main run. The
+workstation is owned hardware, so there is no spend ledger, paid hold or cleanup audit; runners
+are single-use. Windows is selected separately in the same run by builder_trigger (Sancus AWS).
 """
 import datetime
 import json
@@ -62,7 +63,7 @@ def main():
         for key, value in outputs.items():
             output.write(key + '=' + value + '\n')
     with Path(os.environ['GITHUB_STEP_SUMMARY']).open('a') as summary:
-        summary.write(f'Workstation GPU selection: {reason}. Source `{source}`, Verification `{run_id}`, '
+        summary.write(f'Workstation Linux GPU selection: {reason}. Source `{source}`, Verification `{run_id}`, '
                       f'fixed campaign expiry `{outputs["expiry"]}`.\n')
     print(reason)
 

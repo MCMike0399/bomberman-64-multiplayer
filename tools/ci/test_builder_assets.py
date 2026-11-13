@@ -25,9 +25,12 @@ class FrozenTools(unittest.TestCase):
             with self.assertRaises(ValueError):assets.fetch(spec,root)
             self.assertFalse((Path(root)/'git.exe').exists())
 
-    def test_sdk_metadata_must_contain_both_pinned_platforms(self):
+    def test_sdk_metadata_must_contain_the_pinned_windows_platform(self):
         files=[{'rid':rid,'url':'https://builds.dotnet.microsoft.com/'+name,'hash':'a'*128}for rid,name in [('win-x64','sdk.zip'),('linux-x64','sdk.tar.gz')]]
         metadata={'releases':[{'sdk':{'version':assets.SDK_VERSION,'files':files}}]}
-        self.assertEqual({item['target']for item in assets.sdk_specs(metadata)},{'windows-x64','linux-x64'})
+        self.assertEqual([item['target']for item in assets.sdk_specs(metadata)],['windows-x64'])
+        metadata['releases'][0]['sdk']['files']=files[1:]
+        with self.assertRaises(ValueError):assets.sdk_specs(metadata)
+        metadata['releases'][0]['sdk']['files']=files
         metadata['releases'][0]['sdk']['version']='other'
         with self.assertRaises(ValueError):assets.sdk_specs(metadata)

@@ -18,7 +18,7 @@ import desktop_validation
 import release_gpu_policy as graphics_policy
 import gpu_release_gates
 from test_promotion import RELEASE, SHA, FINGERPRINT, write_package, write_server
-from test_promotion_gpu import write_gpu_files
+from test_promotion_gpu import write_gpu_files, write_hybrid_gpu_files
 from test_release_signing import signer
 
 
@@ -71,6 +71,67 @@ class PublishedReleaseTests(unittest.TestCase):
                 path.write_text(path.read_text().replace('NVIDIA Tesla T4','Microsoft WARP'))
                 with self.assertRaisesRegex(RuntimeError,'signed hash/size'):
                     verify_published.verify_assets(assets,RELEASE['version'])
+
+    def test_hybrid_major_binds_both_receipts_in_the_signed_inventory(self):
+        with tempfile.TemporaryDirectory()as temporary:
+            root=Path(temporary);assets,trusted=self.signed_release(root)
+            decision=graphics_policy.decide('0.14.9',RELEASE['version'],FINGERPRINT,FINGERPRINT)
+            decision.update(schemaVersion=1,source=SHA,verificationRunId='12',gpuRunId='22')
+            (assets/graphics_policy.RECEIPT).write_text(json.dumps(decision))
+            write_hybrid_gpu_files(assets)
+            with patch.object(signer,'ROOT',root),contextlib.redirect_stdout(io.StringIO()):
+                signer.sign(assets/verify_published.ARCHIVE,root/'fixture.pem',assets,assets/verify_published.SERVER_ARCHIVE)
+            with patch.object(verify_published,'PUBLIC_KEY',trusted):
+                delivery=verify_published.verify_assets(assets,RELEASE['version'])
+                for name in (gpu_release_gates.CLEANUP_RECEIPT,gpu_release_gates.HOST_RECEIPT):self.assertIn(name,delivery['assets'])
+                path=assets/gpu_release_gates.HOST_RECEIPT
+                path.write_text(path.read_text().replace('"passed": true','"passed": false'))
+                with self.assertRaisesRegex(RuntimeError,'signed hash/size'):
+                    verify_published.verify_assets(assets,RELEASE['version'])
+
+    def test_legacy_aws_major_inventory_carries_only_the_cleanup_receipt(self):
+        with tempfile.TemporaryDirectory()as temporary:
+            root=Path(temporary);assets,trusted=self.signed_release(root)
+            decision=graphics_policy.decide('0.14.9',RELEASE['version'],FINGERPRINT,FINGERPRINT)
+            decision.update(schemaVersion=1,source=SHA,verificationRunId='12',gpuRunId='22')
+            (assets/graphics_policy.RECEIPT).write_text(json.dumps(decision))
+            write_gpu_files(assets)
+            with patch.object(signer,'ROOT',root),contextlib.redirect_stdout(io.StringIO()):
+                signer.sign(assets/verify_published.ARCHIVE,root/'fixture.pem',assets,assets/verify_published.SERVER_ARCHIVE)
+            with patch.object(verify_published,'PUBLIC_KEY',trusted):
+                delivery=verify_published.verify_assets(assets,RELEASE['version'])
+            self.assertIn(gpu_release_gates.CLEANUP_RECEIPT,delivery['assets'])
+            self.assertNotIn(gpu_release_gates.HOST_RECEIPT,delivery['assets'])
+
+    def test_trusted_run_comparison_names_both_hybrid_bound_receipts(self):
+        import shutil
+        with tempfile.TemporaryDirectory()as temporary:
+            root=Path(temporary);assets,_=self.signed_release(root)
+            decision=graphics_policy.decide('0.14.9',RELEASE['version'],FINGERPRINT,FINGERPRINT)
+            decision.update(schemaVersion=1,source=SHA,verificationRunId='12',gpuRunId='22')
+            (assets/graphics_policy.RECEIPT).write_text(json.dumps(decision))
+            write_hybrid_gpu_files(assets)
+            gpu_names=[name for target in desktop_packages.TARGETS for name in
+                       (gpu_release_gates.receipt_name(target),desktop_packages.names(target)['graphical'])]+list(gpu_release_gates.BOUND_RECEIPTS)
+            def gh(*args):
+                if args[0]=='api':return json.dumps({'head_sha':SHA,'conclusion':'success'})
+                destination=Path(args[args.index('--dir')+1])
+                for path in assets.iterdir():
+                    if path.is_file()and path.name not in gpu_names and not(destination/path.name).exists():shutil.copy2(path,destination/path.name)
+                return ''
+            def gpu_download(repository,run_id,revision,directory,gh):
+                self.assertEqual(str(run_id),'22')
+                for name in gpu_names:shutil.copy2(assets/name,Path(directory)/name)
+            with patch.object(verify_published,'gh',side_effect=gh),patch.object(gpu_release_gates,'download',side_effect=gpu_download):
+                names=verify_published.compare_run_artifacts('o/r','12',SHA,assets)
+                for name in (gpu_release_gates.CLEANUP_RECEIPT,gpu_release_gates.HOST_RECEIPT):self.assertEqual(names.count(name),1)
+                original=(assets/gpu_release_gates.HOST_RECEIPT).read_bytes()
+                def changed(repository,run_id,revision,directory,gh):
+                    gpu_download(repository,run_id,revision,directory,gh)
+                    (Path(directory)/gpu_release_gates.HOST_RECEIPT).write_bytes(original+b' ')
+                with patch.object(gpu_release_gates,'download',side_effect=changed),\
+                     self.assertRaisesRegex(RuntimeError,'Blast-Circuit-gpu-host.json'):
+                    verify_published.compare_run_artifacts('o/r','12',SHA,assets)
 
     def test_patch_signed_inventory_does_not_need_gpu_or_graphical_files(self):
         with tempfile.TemporaryDirectory()as temporary:

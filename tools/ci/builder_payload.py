@@ -82,6 +82,7 @@ def public_manifest(plan,rows):
               'account':plan['account'],'region':plan['region'],
               'files':[{key:row[key]for key in ('role','target','fileName','objectKey','size','sha256')}for row in rows]}
     import builder_guest
-    for target in ('windows-x64','linux-x64'):
+    import builder_namespace
+    for target in builder_namespace.TARGETS:
         builder_guest.validate_inputs(manifest,{**manifest,'target':target})
     return manifest

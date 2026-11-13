@@ -1,9 +1,9 @@
 # Verification and delivery
 
-Real-GPU qualification and deployment run on the owned
-[workstation](workstation-ci.md) since 2026-11-13; the
-[Sancus builder](sancus-builder-ci.md) workflows were removed and remain only as
-history. The major/minor graphics policy is unchanged.
+Since 2026-11-13 deployment and Linux real-GPU qualification run on the owned
+[workstation](workstation-ci.md); Windows real-GPU qualification runs on the paid
+[Sancus builder](sancus-builder-ci.md), Windows only. One `gpu-qualification.yml`
+run produces both promotion artifacts. The major/minor graphics policy is unchanged.
 
 The canonical entry point is `python3 tools/qa/run.py --profile PROFILE`. CI calls the same commands used locally. Each profile writes receipts beneath `artifacts/qa`; gameplay evidence keeps the existing per-run playtest summaries and traces. A successful public PR check does not imply that private builds, Metal rendering or physical controllers were tested.
 

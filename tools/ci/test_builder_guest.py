@@ -13,15 +13,19 @@ import builder_transfer
 class GuestProtocol(unittest.TestCase):
     def setUp(self):
         self.task={'runId':'sancus-builder-20261030-8762d11-1234567890abcdef','source':'a'*40,
-                   'account':'524329886851','region':'us-east-1','target':'linux-x64','instanceId':'i-owned'}
+                   'account':'524329886851','region':'us-east-1','target':'windows-x64','instanceId':'i-owned'}
         self.manifest={'schemaVersion':1,**{key:self.task[key]for key in ('runId','source','account','region')},'files':[
             {'role':'source','target':'all','objectKey':'payload/input-000.bin','fileName':'source.zip','sha256':'b'*64,'size':10},
-            {'role':'artifact','target':'linux-x64','objectKey':'payload/input-001.bin','fileName':'package.zip','sha256':'c'*64,'size':20}]}
+            {'role':'artifact','target':'windows-x64','objectKey':'payload/input-001.bin','fileName':'package.zip','sha256':'c'*64,'size':20}]}
 
     def test_target_selection_is_data_only_and_requires_actual_source_and_package(self):
         self.assertEqual(len(guest.validate_inputs(self.manifest,self.task)),2)
-        manifest=copy.deepcopy(self.manifest);manifest['files'][1]['target']='windows-x64'
+        manifest=copy.deepcopy(self.manifest);manifest['files'][1]['target']='all'
+        manifest['files'][1]['role']='godot'
         with self.assertRaisesRegex(ValueError,'package artifacts'):guest.validate_inputs(manifest,self.task)
+        # Windows only since 2026-11-13: a Linux payload row is not a reviewed target.
+        manifest=copy.deepcopy(self.manifest);manifest['files'][1]['target']='linux-x64'
+        with self.assertRaisesRegex(ValueError,'target'):guest.validate_inputs(manifest,self.task)
 
     def test_wrong_identity_role_path_duplicate_or_hash_refused(self):
         for key,value in [('role','execute-shell'),('fileName','../script'),('objectKey','results/overwrite'),('sha256','bad')]:
@@ -47,8 +51,10 @@ class GuestProtocol(unittest.TestCase):
             self.assertEqual({row['path']for row in manifest['files']},{'failed/case/runtime.log','failed/case/capture.png'})
             self.assertEqual(manifest['state'],'failed');self.assertEqual(manifest['gameVerdict'],'not-inferred')
             self.assertTrue(all('gpu'not in row['objectKey'].lower()and'blast'not in row['objectKey'].lower()for row in manifest['files']))
-            builder_transfer.validate_results(manifest,{**self.task,'payloadSource':self.task['source']},'linux-x64')
-            self.assertEqual(calls[-1][1][1],'results/linux-x64/manifest.json')
+            builder_transfer.validate_results(manifest,{**self.task,'payloadSource':self.task['source']},'windows-x64')
+            self.assertEqual(calls[-1][1][1],'results/windows-x64/manifest.json')
+            with self.assertRaisesRegex(ValueError,'Unknown result target'):
+                builder_transfer.validate_results(manifest,{**self.task,'payloadSource':self.task['source']},'linux-x64')
 
     def test_later_progress_cannot_overwrite_the_committed_core_checkpoint(self):
         objects={}

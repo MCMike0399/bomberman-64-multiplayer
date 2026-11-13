@@ -12,9 +12,9 @@ class ResultRetention(unittest.TestCase):
         self.plan={'runId':'sancus-builder-20261030-8762d11-1234567890abcdef','payloadSource':'a'*40,
                    'account':'524329886851','region':'us-east-1'}
         self.data=b'raw failed scenario evidence\n'
-        self.manifest={'schemaVersion':1,'runId':self.plan['runId'],'source':'a'*40,'target':'linux-x64','state':'failed',
+        self.manifest={'schemaVersion':1,'runId':self.plan['runId'],'source':'a'*40,'target':'windows-x64','state':'failed',
                        'account':self.plan['account'],'region':self.plan['region'],
-                       'files':[{'path':'failed/core/runtime.log','objectKey':'results/linux-x64/failed/object-000000.bin',
+                       'files':[{'path':'failed/core/runtime.log','objectKey':'results/windows-x64/failed/object-000000.bin',
                                  'size':len(self.data),'sha256':hashlib.sha256(self.data).hexdigest()}]}
 
     def test_hash_verified_retention_does_not_imply_product_pass(self):
@@ -24,7 +24,7 @@ class ResultRetention(unittest.TestCase):
             def call(self,operation,*args):
                 outer.assertEqual(operation,'get-object');Path(args[-1]).write_bytes(outer.data)
         with tempfile.TemporaryDirectory()as root:
-            result=transfer.retain_results(Client(),self.plan,'linux-x64',self.manifest,Path(root)/'new')
+            result=transfer.retain_results(Client(),self.plan,'windows-x64',self.manifest,Path(root)/'new')
             self.assertTrue(result['retained']);self.assertEqual(result['gameVerdict'],'not-inferred')
             self.assertEqual(Path(result['files'][0]['localPath']).read_bytes(),self.data)
 
@@ -35,13 +35,13 @@ class ResultRetention(unittest.TestCase):
             def call(self,operation,*args):Path(args[-1]).write_bytes(b'corrupt')
         with tempfile.TemporaryDirectory()as root:
             destination=Path(root)/'new'
-            with self.assertRaisesRegex(ValueError,'digest/size'):transfer.retain_results(Client(),self.plan,'linux-x64',self.manifest,destination)
+            with self.assertRaisesRegex(ValueError,'digest/size'):transfer.retain_results(Client(),self.plan,'windows-x64',self.manifest,destination)
             self.assertFalse((destination/'retention.json').exists())
 
     def many(self,count=40):
         files=[];blobs={}
         for index in range(count):
-            data=('evidence %d\n'%index).encode();key='results/linux-x64/failed/object-%06d.bin'%index
+            data=('evidence %d\n'%index).encode();key='results/windows-x64/failed/object-%06d.bin'%index
             blobs[key]=data
             files.append({'path':'failed/core/file-%03d.log'%index,'objectKey':key,'size':len(data),'sha256':hashlib.sha256(data).hexdigest()})
         return {**self.manifest,'files':files},blobs
@@ -56,7 +56,7 @@ class ResultRetention(unittest.TestCase):
                 time.sleep(0.01);Path(args[-1]).write_bytes(blobs[args[args.index('--key')+1]])
                 with lock:state['active']-=1
         with tempfile.TemporaryDirectory()as root:
-            result=transfer.retain_results(Client(),self.plan,'linux-x64',manifest,Path(root)/'new',workers=8)
+            result=transfer.retain_results(Client(),self.plan,'windows-x64',manifest,Path(root)/'new',workers=8)
         self.assertGreater(state['peak'],1)
         self.assertLessEqual(state['peak'],8)
         self.assertEqual([row['path']for row in result['files']],[row['path']for row in manifest['files']])
@@ -75,7 +75,7 @@ class ResultRetention(unittest.TestCase):
         with tempfile.TemporaryDirectory()as root:
             destination=Path(root)/'new'
             with self.assertRaisesRegex(ValueError,'digest/size'):
-                transfer.retain_results(Client(),self.plan,'linux-x64',manifest,destination,workers=8)
+                transfer.retain_results(Client(),self.plan,'windows-x64',manifest,destination,workers=8)
             self.assertFalse((destination/'retention.json').exists())
             self.assertEqual([path for path in destination.rglob('tmp*')],[])  # no temporary leftovers
 
@@ -91,24 +91,24 @@ class ResultRetention(unittest.TestCase):
         with tempfile.TemporaryDirectory()as root:
             destination=Path(root)/'new'
             with self.assertRaisesRegex(RuntimeError,'InternalError'):
-                transfer.retain_results(Client(),self.plan,'linux-x64',manifest,destination,workers=8)
+                transfer.retain_results(Client(),self.plan,'windows-x64',manifest,destination,workers=8)
             self.assertFalse((destination/'retention.json').exists())
 
     def test_stale_source_run_or_target_rejected(self):
-        for key,value in [('source','b'*40),('runId','old'),('target','windows-x64')]:
+        for key,value in [('source','b'*40),('runId','old'),('target','linux-x64')]:
             manifest={**self.manifest,key:value}
             with self.subTest(key=key),self.assertRaisesRegex(ValueError,'differs'):
-                transfer.validate_results(manifest,self.plan,'linux-x64')
+                transfer.validate_results(manifest,self.plan,'windows-x64')
 
     def test_traversal_case_collision_wrong_prefix_and_size_fail(self):
         for path in ('../secret','/absolute','C:/temp','core\\log','core/../log','core//log'):
             manifest=copy.deepcopy(self.manifest);manifest['files'][0]['path']=path
-            with self.subTest(path=path),self.assertRaises(ValueError):transfer.validate_results(manifest,self.plan,'linux-x64')
+            with self.subTest(path=path),self.assertRaises(ValueError):transfer.validate_results(manifest,self.plan,'windows-x64')
         manifest=copy.deepcopy(self.manifest);manifest['files'][0]['objectKey']='payload/private'
-        with self.assertRaises(ValueError):transfer.validate_results(manifest,self.plan,'linux-x64')
-        manifest=copy.deepcopy(self.manifest);manifest['files'].append({**manifest['files'][0],'path':'failed/core/Runtime.log','objectKey':'results/linux-x64/failed/object-000001.bin'})
-        with self.assertRaises(ValueError):transfer.validate_results(manifest,self.plan,'linux-x64')
-        with self.assertRaises(ValueError):transfer.validate_results(self.manifest,self.plan,'linux-x64',max_bytes=1)
+        with self.assertRaises(ValueError):transfer.validate_results(manifest,self.plan,'windows-x64')
+        manifest=copy.deepcopy(self.manifest);manifest['files'].append({**manifest['files'][0],'path':'failed/core/Runtime.log','objectKey':'results/windows-x64/failed/object-000001.bin'})
+        with self.assertRaises(ValueError):transfer.validate_results(manifest,self.plan,'windows-x64')
+        with self.assertRaises(ValueError):transfer.validate_results(self.manifest,self.plan,'windows-x64',max_bytes=1)
 
     def test_bootstrap_marker_is_uploaded_only_after_the_frozen_manifest(self):
         outer=self;calls=[]

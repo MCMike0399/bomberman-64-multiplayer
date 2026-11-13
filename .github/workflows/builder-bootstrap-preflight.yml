@@ -1,0 +1,42 @@
+name: Builder bootstrap pre-flight
+
+# FREE: no AWS credentials, no OIDC, no paid allocation. Exercises the Windows
+# virtual-audio bootstrap gate that the paid Windows Sancus builder runs, on a
+# hosted Windows runner. The Linux user-data job was removed with the Linux AWS
+# builder (2026-11-13); Linux now qualifies on the owned workstation.
+on:
+  pull_request:
+    paths:
+      - tools/ci/builder_bootstrap.py
+      - tools/packaging/windows-audio.ps1
+      - tools/packaging/windows-audio-preflight.ps1
+      - tools/packaging/windows-test-desktop.ps1
+      - .github/workflows/builder-bootstrap-preflight.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: builder-bootstrap-preflight-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    name: FREE Windows virtual-audio gate (admin install; SYSTEM and standard-user checks)
+    runs-on: windows-2025
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Bootstrap audio section as the runner administrator (Windows PowerShell 5.1, like EC2 user-data)
+        shell: powershell
+        run: ./tools/packaging/windows-audio-preflight.ps1 -Output artifacts/bootstrap-preflight/windows
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: builder-bootstrap-preflight-windows
+          path: artifacts/bootstrap-preflight/windows
+          retention-days: 7
+          if-no-files-found: warn

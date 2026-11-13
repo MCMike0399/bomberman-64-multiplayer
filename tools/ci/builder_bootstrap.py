@@ -1,4 +1,7 @@
-"""Disposable OS setup. All game/source/tool payloads come from the owned bucket."""
+"""Disposable Windows setup. All game/source/tool payloads come from the owned bucket.
+
+Windows only since 2026-11-13: Linux real-GPU qualification runs on the owned workstation.
+"""
 import hashlib
 import json
 from pathlib import Path
@@ -13,36 +16,15 @@ MODULES=('builder_guest.py','builder_guest_ready.py','builder_guest_exit.py','bu
          'builder_namespace.py','native_execution.py')
 # Shared with windows-test-desktop.ps1 -VerifyOnly and the hosted pre-flight.
 WINDOWS_AUDIO=Path(__file__).resolve().parents[1]/'packaging/windows-audio.ps1'
-# Ubuntu 24.04 has no awscli apt package (campaign 2 attempt 2, run 41151908001).
-# The official versioned AWS CLI v2 bundle is pinned by digest and verified before unzip.
-LINUX_AWS_CLI={'url':'https://awscli.amazonaws.com/awscli-exe-linux-x86_64-2.38.5.zip',
-               'sha256':'5def7d1b7e55d892f9a381bb2cb2081a685712464be0d36d5d706af0ac48d0d3'}
-LINUX_AWS='/opt/sancus-builder/aws-cli/bin/aws'
-PACKAGES_BEGIN='# >>> sancus-builder:packages'
-PACKAGES_END='# <<< sancus-builder:packages'
 
 # Guests have no s3:ListBucket, so S3 answers a key the controller has not staged
 # yet with 403 AccessDenied, not 404 NoSuchKey (runs 41178169234, 41198567742).
-# Every guest object read goes through one helper per language: missing (404/403)
+# Every guest object read goes through one PowerShell helper: missing (404/403)
 # and S3 throttling/timeout codes are pending until the caller's bounded deadline,
 # each new code is sampled to staged-get-samples.log, and any other error fails at
 # once. Pinned hashes and sizes still decide content after a successful read.
 STAGED_PENDING=('NoSuchKey','404','NotFound','AccessDenied','403',
                 'SlowDown','RequestTimeout','ServiceUnavailable','InternalError')
-BASH_STAGED=r'''staged_get(){
- local key=$1 file=$2 deadline=$((SECONDS+$3)) code='' last=''
- while :; do
-  if "$aws" --profile sancus --region us-east-1 --cli-connect-timeout 8 --cli-read-timeout 25 s3api get-object --bucket '__BUCKET__' --expected-bucket-owner 524329886851 --key "$key" "$file" >/dev/null 2>"$root/staged-get.err"; then return 0; fi
-  code=$(sed -n 's/.*An error occurred (\([^)]*\)).*/\1/p' "$root/staged-get.err" | head -n 1)
-  case "$code" in
-   __PENDING_CASE__) ;;
-   *) cat "$root/staged-get.err" >&2; echo "Staged object $key failed: ${code:-UnverifiedError}" >&2; return 1;;
-  esac
-  if test "$code" != "$last"; then printf '%s %s %s\n' "$(date -u +%FT%TZ)" "$key" "$code" >> "$root/staged-get-samples.log"; last=$code; fi
-  if ((SECONDS >= deadline)); then echo "Timed out waiting for staged object $key; last $code" >&2; return 1; fi
-  sleep 5
- done
-}'''.replace('__PENDING_CASE__','|'.join(STAGED_PENDING))
 PS_STAGED=r'''function Wait-StagedObject([string]$Key,[DateTime]$Until,[scriptblock]$Fetch){
  $last=$null
  while($true){
@@ -66,25 +48,10 @@ function Get-StagedObject([string]$Key,[string]$File,[int]$Seconds){
 }'''.replace('__PENDING_LIST__',','.join("'"+c+"'" for c in STAGED_PENDING))
 
 # Right after boot the instance-profile credentials can be briefly unavailable
-# through IMDSv2. Before the first staged read each OS waits (bounded) until a token
+# through IMDSv2. Before the first staged read the guest waits (bounded) until a token
 # and the role's credentials are retrievable, records the wait, and only then lets
 # the staged-object policy fail fast on non-pending errors.
 IMDS_WAIT_SECONDS=120
-BASH_IMDS=r'''await_instance_credentials(){
- local started=$SECONDS deadline=$((SECONDS+$1)) token role document
- while :; do
-  if token=$(curl -fsS -m 2 -X PUT -H 'X-aws-ec2-metadata-token-ttl-seconds: 60' "$imds/latest/api/token" 2>/dev/null) &&
-     role=$(curl -fsS -m 2 -H "X-aws-ec2-metadata-token: $token" "$imds/latest/meta-data/iam/security-credentials/" 2>/dev/null) &&
-     role=${role%%$'\n'*} && test -n "$role" &&
-     document=$(curl -fsS -m 2 -H "X-aws-ec2-metadata-token: $token" "$imds/latest/meta-data/iam/security-credentials/$role" 2>/dev/null); then
-   case "$document" in *'"AccessKeyId"'*)
-    printf '%s imds-credentials ready-after-seconds %s\n' "$(date -u +%FT%TZ)" "$((SECONDS-started))" >> "$root/staged-get-samples.log"; return 0;;
-   esac
-  fi
-  if ((SECONDS >= deadline)); then echo "Instance role credentials unavailable through IMDSv2 after $1 s" >&2; return 1; fi
-  sleep 2
- done
-}'''
 PS_IMDS=r'''function Wait-InstanceCredentials([int]$Seconds){
  $started=[DateTime]::UtcNow;$until=$started.AddSeconds($Seconds)
  while($true){
@@ -101,75 +68,6 @@ PS_IMDS=r'''function Wait-InstanceCredentials([int]$Seconds){
   Start-Sleep -Seconds 2
  }
 }'''
-
-LINUX_SETUP=r'''#!/bin/bash
-set -euo pipefail
-root=/opt/sancus-builder
-exec >> "$root/bootstrap.log" 2>&1
-export AWS_CONFIG_FILE="$root/aws-config"
-export AWS_EC2_METADATA_DISABLED=false
-aws=/opt/sancus-builder/aws-cli/bin/aws
-test -x "$aws"
-__STAGED_GET__
-python3 - "$root" <<'PY'
-import json,sys
-from pathlib import Path
-root=Path(sys.argv[1]);sys.path.insert(0,str(root/'bin'))
-import builder_guest
-manifest=json.loads((root/'manifest.json').read_text())
-descriptor={key:manifest[key]for key in ('runId','source','account','region')};descriptor['target']='linux-x64'
-rows=builder_guest.validate_inputs(manifest,descriptor)
-(root/'inputs.tsv').write_text(''.join('\t'.join(str(row[key])for key in ('fileName','objectKey','sha256','size'))+'\n'for row in rows))
-PY
-while IFS=$'\t' read -r file key sha size; do
- staged_get "$key" "$root/cache/$file" 60
- test "$(stat -c %s "$root/cache/$file")" = "$size"
- printf '%s  %s\n' "$sha" "$root/cache/$file" | sha256sum -c -
-done < "$root/inputs.tsv"
-sdk=$(python3 - "$root" <<'PY'
-import json,sys
-from pathlib import Path
-root=Path(sys.argv[1]);rows=[r for r in json.loads((root/'manifest.json').read_text())['files']if r['role']=='dotnet'and r['target']in('all','linux-x64')]
-assert len(rows)==1
-print(root/'cache'/rows[0]['fileName'])
-PY
-)
-mkdir -p "$root/dotnet"
-tar -xzf "$sdk" -C "$root/dotnet"
-python3 -m venv "$root/venv"
-"$root/venv/bin/python" -m pip install --no-index --find-links "$root/cache" Pillow==13.0.0
-icd=''
-for candidate in /usr/share/vulkan/icd.d/nvidia_icd.json /etc/vulkan/icd.d/nvidia_icd.json; do
- if test -f "$candidate"; then icd="$candidate"; break; fi
-done
-test -n "$icd"
-printf '%s' "$icd" > "$root/nvidia-icd.txt"
-chown -R ubuntu:ubuntu "$root"
-chown -R root:root "$root/aws-cli"
-chmod -R go-w "$root/aws-cli"
-printf 'bootstrap-ready; desktop and hardware NOT YET QUALIFIED\n' > "$root/bootstrap.status"
-runuser -u ubuntu -- env AWS_CONFIG_FILE="$root/aws-config" "$root/venv/bin/python" "$root/bin/builder_guest_ready.py" --manifest "$root/manifest.json" --target linux-x64 --output "$root/bootstrap-ready.json"
-'''
-LINUX_SETUP=LINUX_SETUP.replace('__STAGED_GET__',BASH_STAGED)
-
-LINUX_DISPATCH=r'''#!/bin/bash
-set -euo pipefail
-root=/opt/sancus-builder
-test "$#" = 1
-test ! -e "$root/task.json"
-printf '%s' "$1" | base64 --decode > "$root/task.json"
-chmod 644 "$root/task.json"
-test -f "$root/bootstrap.status"
-export AWS_CONFIG_FILE="$root/aws-config"
-export DOTNET_ROOT="$root/dotnet"
-export DOTNET_CLI_HOME="$root/dotnet-home"
-export VK_DRIVER_FILES="$(cat "$root/nvidia-icd.txt")"
-export PATH="$root/dotnet:$root/venv/bin:$PATH"
-worker_status=0
-runuser -u ubuntu -- env AWS_CONFIG_FILE="$root/aws-config" DOTNET_ROOT="$root/dotnet" DOTNET_CLI_HOME="$root/dotnet-home" VK_DRIVER_FILES="$VK_DRIVER_FILES" PATH="$root/dotnet:$root/venv/bin:/usr/local/bin:/usr/bin:/bin" "$root/venv/bin/python" "$root/bin/builder_guest.py" --task "$root/task.json" --manifest "$root/manifest.json" --cache "$root/cache" --work "$root/work" > "$root/worker.log" 2>&1 || worker_status=$?
-"$root/venv/bin/python" "$root/bin/builder_guest_exit.py" --manifest "$root/manifest.json" --target linux-x64 --code "$worker_status" --log "$root/worker.log" --output "$root/worker-exit.json"
-exit "$worker_status"
-'''
 
 WINDOWS_SETUP=r'''$ErrorActionPreference='Stop'
 $root='C:\sancus-builder'
@@ -279,71 +177,21 @@ def bundle(run,output):
     with zipfile.ZipFile(output,'w',zipfile.ZIP_DEFLATED)as archive:
         for name in MODULES:archive.write(Path(__file__).parent/name,name)
         archive.write(WINDOWS_AUDIO,'windows-audio.ps1')
-        for name,text in {'setup.sh':LINUX_SETUP,'dispatch':LINUX_DISPATCH,'setup.ps1':WINDOWS_SETUP,
-                          'dispatch.ps1':WINDOWS_DISPATCH,'worker.ps1':WINDOWS_WORKER}.items():
+        for name,text in {'setup.ps1':WINDOWS_SETUP,'dispatch.ps1':WINDOWS_DISPATCH,'worker.ps1':WINDOWS_WORKER}.items():
             archive.writestr(name,text.replace('__BUCKET__',bucket))
     return {'path':str(output),'sha256':hashlib.sha256(output.read_bytes()).hexdigest()}
 
 
-def userdata(plan,helper_sha,manifest_sha,aws_cli,linux_cli=LINUX_AWS_CLI):
+def userdata(plan,helper_sha,manifest_sha,aws_cli):
     """Windows uses its AMI's AWS SDK to fetch the CLI from the owned bucket.
 
     Even that first GetObject request includes ExpectedBucketOwner. The SDK uses
     the disposable instance role; no operator credentials or hand-written signer.
-    Linux installs the pinned official AWS CLI v2 bundle (digest checked before
-    unzip) into a root-owned directory and calls that exact binary.
     """
-    for sha in (helper_sha,manifest_sha,aws_cli['sha256'],linux_cli['sha256']):
+    for sha in (helper_sha,manifest_sha,aws_cli['sha256']):
         if not re.fullmatch(r'[0-9a-f]{64}',sha):raise ValueError('Pinned bootstrap digests required')
     if aws_cli['url']!='https://awscli.amazonaws.com/AWSCLIV2.msi':raise ValueError('Only the official AWS CLI bootstrap URL is allowed')
-    if not re.fullmatch(r'https://awscli\.amazonaws\.com/awscli-exe-linux-x86_64-2\.[0-9]+\.[0-9]+\.zip',linux_cli['url']):
-        raise ValueError('Only a versioned official AWS CLI v2 Linux bundle is allowed')
     bucket=builder_staging.bucket_name(plan['runId'])
-    linux=r'''#!/bin/bash
-set -Eeuo pipefail
-root=/opt/sancus-builder
-mkdir -p "$root/bin" "$root/cache"
-exec >> "$root/bootstrap.log" 2>&1
-console(){
- for tty in ${SANCUS_BUILDER_CONSOLE:-/dev/console /dev/ttyS0}; do
-  if test -w "$tty"; then
-   { printf '%s\n' "$1"; if test -n "${2:-}"; then tail -n 80 "$root/bootstrap.log" | sed "s/^/$2| /"; fi; } | timeout 20 tee -a "$tty" >/dev/null || true
-  fi
- done
-}
-trap 'status=$?; trap - ERR; console "SANCUS-BUILDER-BOOTSTRAP-FAILED status=$status line=$LINENO command=$BASH_COMMAND" SANCUS-BUILDER-BOOTSTRAP-FAILED; exit "$status"' ERR
-__PACKAGES_BEGIN__
-export DEBIAN_FRONTEND=noninteractive
-apt-get update
-apt-get install -y curl ca-certificates git unzip python3 python3-venv fuse3 squashfs-tools xvfb openbox pulseaudio vulkan-tools libxkbcommon0 libxcursor1 libxinerama1 libxi6 libxrandr2 libpulse0
-install -d -m 700 -o root -g root "$root/awscli-install"
-curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 --retry 5 --retry-delay 3 --connect-timeout 15 --max-time 300 -o "$root/awscli-install/awscliv2.zip" '__AWS_LINUX_URL__'
-printf '%s  %s\n' '__AWS_LINUX_SHA__' "$root/awscli-install/awscliv2.zip" | sha256sum -c -
-unzip -q "$root/awscli-install/awscliv2.zip" -d "$root/awscli-install"
-install -d -m 755 -o root -g root "$root/aws-cli"
-"$root/awscli-install/aws/install" --install-dir "$root/aws-cli/dist" --bin-dir "$root/aws-cli/bin"
-rm -rf "$root/awscli-install"
-chown -R root:root "$root/aws-cli"
-chmod -R go-w "$root/aws-cli"
-aws=/opt/sancus-builder/aws-cli/bin/aws
-"$aws" --version
-__PACKAGES_END__
-printf '[profile sancus]\nregion=us-east-1\n' > "$root/aws-config"
-export AWS_CONFIG_FILE="$root/aws-config"
-__STAGED_GET__
-__IMDS_WAIT__
-imds=http://169.254.169.254
-await_instance_credentials __IMDS_SECONDS__
-staged_get payload/bootstrap.zip "$root/bootstrap.zip" 300
-printf '%s  %s\n' '__HELPER_SHA__' "$root/bootstrap.zip" | sha256sum -c -
-staged_get payload/manifest.json "$root/manifest.json" 60
-printf '%s  %s\n' '__MANIFEST_SHA__' "$root/manifest.json" | sha256sum -c -
-unzip -q "$root/bootstrap.zip" -d "$root/bin"
-chmod 700 "$root/bin/dispatch"
-bash "$root/bin/setup.sh"
-test -s "$root/bootstrap-ready.json"
-console "SANCUS-BUILDER-BOOTSTRAP-READY linux-x64"
-'''
     windows=r'''<powershell>
 $ErrorActionPreference='Stop'
 [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12
@@ -402,24 +250,10 @@ Expand-Archive "$root\bootstrap.zip" "$root\bin"
 & "$root\bin\setup.ps1"
 </powershell>
 '''
-    replacements={'__STAGED_GET__':BASH_STAGED,'__STAGED_GET_PS__':PS_STAGED,'__IMDS_WAIT__':BASH_IMDS,'__IMDS_WAIT_PS__':PS_IMDS,
-                  '__IMDS_SECONDS__':str(IMDS_WAIT_SECONDS),'__BUCKET__':bucket,'__HELPER_SHA__':helper_sha,'__MANIFEST_SHA__':manifest_sha,'__AWS_SHA__':aws_cli['sha256'],
-                  '__AWS_LINUX_URL__':linux_cli['url'],'__AWS_LINUX_SHA__':linux_cli['sha256'],
-                  '__PACKAGES_BEGIN__':PACKAGES_BEGIN,'__PACKAGES_END__':PACKAGES_END}
+    replacements={'__STAGED_GET_PS__':PS_STAGED,'__IMDS_WAIT_PS__':PS_IMDS,
+                  '__IMDS_SECONDS__':str(IMDS_WAIT_SECONDS),'__BUCKET__':bucket,'__HELPER_SHA__':helper_sha,'__MANIFEST_SHA__':manifest_sha,'__AWS_SHA__':aws_cli['sha256']}
     def replace(text):
         for key,value in replacements.items():text=text.replace(key,value)
         if len(text.encode())>16384:raise ValueError('EC2 raw UserData exceeds its fixed size limit')
         return text
-    return {'Linux':replace(linux),'Windows':replace(windows)}
-
-
-def linux_package_section(script):
-    """The user-data prologue through the package/AWS CLI install, for the free pre-flight."""
-    if script.count(PACKAGES_BEGIN)!=1 or script.count(PACKAGES_END)!=1:raise ValueError('Package section markers missing')
-    return script[:script.index(PACKAGES_END)+len(PACKAGES_END)]+'\n'
-
-
-def linux_packages(script):
-    lines=[line for line in script.splitlines()if line.startswith('apt-get install -y ')]
-    if len(lines)!=1:raise ValueError('Exactly one apt install line expected')
-    return lines[0].split()[3:]
+    return {'Windows':replace(windows)}

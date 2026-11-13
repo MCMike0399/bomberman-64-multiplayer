@@ -25,7 +25,7 @@ def publish(manifest_path,target,code,log,output):
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--manifest',type=Path,required=True)
-    parser.add_argument('--target',choices=('windows-x64','linux-x64'),required=True)
+    parser.add_argument('--target',choices=('windows-x64',),required=True)
     parser.add_argument('--code',type=int,required=True);parser.add_argument('--log',type=Path,required=True)
     parser.add_argument('--output',type=Path,required=True);args=parser.parse_args()
     publish(args.manifest,args.target,args.code,args.log,args.output)

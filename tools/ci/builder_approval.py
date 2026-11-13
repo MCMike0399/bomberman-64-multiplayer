@@ -10,7 +10,9 @@ import builder_identity
 import builder_namespace as names
 
 ROOT = Path(__file__).resolve().parents[2]
-RATE_CEILINGS = {'Linux': .526, 'Windows': .710}
+# Windows only since 2026-11-13 (one g4dn.xlarge); Linux qualifies on the owned workstation.
+RATE_CEILINGS = {'Windows': .710}
+ROOT_GB = {'Windows': 80}
 MINIMUM_CAMPAIGN_SECONDS = 6000
 CLEANUP_SECONDS = 1200
 # User decision 2026-10-30: $20 per run, $200 cumulative; ask before exceeding $200.
@@ -23,9 +25,15 @@ def require_unheld(value):
         raise ValueError('Paid qualification hold is active; free audit/rehearsal remain available')
 
 
+def instances():
+    """The one reviewed campaign instance, shared by preparation, approval and the permissions smoke."""
+    return [{'os': 'Windows', 'type': 'g4dn.xlarge', 'ami': builder_identity.WINDOWS_AMI, 'rootGb': ROOT_GB['Windows']}]
+
+
 def estimate(rates):
-    # Three hours of compute, encrypted roots, IPv4 and transfer/latency margin.
-    return round(3 * sum(rates.values()) + 155 * .08 * 3 / 730 + 2 * .005 * 3 + 1.50, 2)
+    # Three hours of compute, encrypted roots, one public IPv4 per instance and transfer/latency margin.
+    storage = sum(ROOT_GB[system] for system in rates)
+    return round(3 * sum(rates.values()) + storage * .08 * 3 / 730 + len(rates) * .005 * 3 + 1.50, 2)
 
 
 def ledger(path=None):
@@ -53,13 +61,12 @@ def build(source, verification_run, expiry, spending):
         raise ValueError('Paid approval exceeds the per-run or cumulative cap')
     return {'schemaVersion': 1, 'source': source, 'verificationRunId': str(verification_run),
             'account': names.ACCOUNT, 'region': names.REGION, 'fixedCampaignExpiryUtc': expiry,
-            'instances': [{'os': osname, 'type': 'g4dn.xlarge', 'ami': ami, 'rootGb': size}
-                          for osname, ami, size in [('Linux', builder_identity.AMIS[0], 75), ('Windows', builder_identity.AMIS[1], 80)]],
+            'instances': instances(),
             'maximumLifetimeSeconds': 10800, 'minimumCampaignSeconds': MINIMUM_CAMPAIGN_SECONDS,
             'cleanupBudgetSeconds': CLEANUP_SECONDS, 'hourlyRateCeilingsUsd': dict(RATE_CEILINGS),
             'estimatedCampaignUsd': cost, 'priorEstimateUsd': prior, 'budgetUsd': budget,
             'remainingBudgetBeforeUsd': round(budget - prior, 2), 'remainingBudgetAfterUsd': round(budget - prior - cost, 2),
-            'estimateScope': 'Conservative maximum reviewed hourly rates, three-hour compute/storage/IPv4 and transfer/termination allowance; not an invoice. Live prices above these ceilings refuse allocation.'}
+            'estimateScope': 'Conservative maximum reviewed hourly rate of the one Windows instance, three-hour compute/storage/IPv4 and transfer/termination allowance; not an invoice. Live prices above these ceilings refuse allocation.'}
 
 
 def validate(approval, source, verification_run, expiry, spending, now=None):

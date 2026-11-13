@@ -1,10 +1,12 @@
 # Native GPU qualification
 
-> Current (2026-11-13): qualification runs on the owned [workstation](workstation-ci.md)
-> RTX 2080 SUPER runners through `gpu-qualification.yml`, with no per-run budget.
-> The AWS campaign, budget and cleanup requirements below are historical; the
-> technical acceptance bar (exact repeats, controls, Mac-to-Mac envelope, physical
-> adapters only, reviewer visual sign-off) is unchanged.
+> Current (2026-11-13, hybrid): one `gpu-qualification.yml` run qualifies Linux on
+> the owned [workstation](workstation-ci.md) RTX 2080 SUPER runner (no per-run cost)
+> and Windows on the paid [Sancus builder](sancus-builder-ci.md) T4, Windows only
+> ($20/run and $200 total guards unchanged). The workstation Windows VM was abandoned
+> after GPU passthrough hung the host kernel. The technical acceptance bar (exact
+> repeats, controls, Mac-to-Mac envelope, physical adapters only, reviewer visual
+> sign-off) is unchanged.
 
 > Current policy (2026-10-30): [major-only qualification, plain Sancus builder namespace and OIDC approval](sancus-builder-ci.md) supersede the earlier controller and naming notes below. Historical results remain unchanged.
 

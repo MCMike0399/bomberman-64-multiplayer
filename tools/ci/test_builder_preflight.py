@@ -6,7 +6,8 @@ import builder_identity
 
 class NoInfrastructureChanges(unittest.TestCase):
     def setUp(self):
-        self.plan={'references':{'subnet':'subnet-owned-reference','vpc':'vpc-protected'}}
+        self.plan={'references':{'subnet':'subnet-owned-reference','vpc':'vpc-protected'},
+                   'instances':[{'os':'Windows','ami':builder_identity.WINDOWS_AMI,'rootGb':80}]}
         self.subnets=[{'SubnetId':'subnet-owned-reference','VpcId':'vpc-protected','State':'available','AvailableIpAddressCount':10}]
         self.tables=[{'RouteTableId':'rt-protected','Associations':[{'Main':True}],
                       'Routes':[{'DestinationCidrBlock':'0.0.0.0/0','GatewayId':'igw-existing','State':'active'}]}]
@@ -24,14 +25,41 @@ class NoInfrastructureChanges(unittest.TestCase):
             with self.assertRaises(ValueError):preflight.check_network(self.plan,self.subnets,self.tables,dns)
 
     def test_unreviewed_image_or_too_small_root_is_refused(self):
-        plan={'instances':[{'ami':ami,'rootGb':80}for ami in builder_identity.AMIS]}
+        plan={'instances':[{'ami':builder_identity.WINDOWS_AMI,'rootGb':80}]}
         images=[{'ImageId':ami,'State':'available','Architecture':'x86_64','OwnerId':'official',
                  'RootDeviceName':'/dev/sda1','BlockDeviceMappings':[{'DeviceName':'/dev/sda1','Ebs':{'VolumeSize':75}}]}for ami in builder_identity.AMIS]
         self.assertFalse(preflight.validate_images(plan,images)['existingImagesModified'])
+        # Windows only since 2026-11-13: the retired (still policy-allowed) Linux image is never launched.
+        for instances in ([{'ami':builder_identity.AMIS[0],'rootGb':80}],
+                          [{'ami':ami,'rootGb':80}for ami in builder_identity.AMIS]):
+            with self.subTest(instances=instances),self.assertRaises(ValueError):preflight.validate_images({'instances':instances},images)
         plan['instances'][0]['rootGb']=20
         with self.assertRaises(ValueError):preflight.validate_images(plan,images)
         plan['instances'][0]['ami']='ami-community'
         with self.assertRaises(ValueError):preflight.validate_images(plan,images)
+
+    def test_live_preflight_reads_and_reserves_only_the_one_windows_instance(self):
+        calls=[]
+        def aws(*args):
+            calls.append(args)
+            if args[0]=='sts':return {'Account':preflight.names.ACCOUNT,'Arn':'arn:aws:sts::x:assumed-role/r/s'}
+            if args[:2]==('ec2','describe-subnets'):return {'Subnets':self.subnets}
+            if args[:2]==('ec2','describe-route-tables'):return {'RouteTables':self.tables}
+            if args[:2]==('ec2','describe-vpc-attribute'):return {'EnableDnsSupport':{'Value':True}}
+            if args[:2]==('ec2','describe-images'):
+                return {'Images':[{'ImageId':ami,'State':'available','Architecture':'x86_64','OwnerId':'official','RootDeviceName':'/dev/sda1',
+                                   'BlockDeviceMappings':[{'DeviceName':'/dev/sda1','Ebs':{'VolumeSize':30}}]}for ami in args[3:]]}
+            if args[0]=='service-quotas':return {'Quota':{'Value':8}}
+            if args[:2]==('ec2','describe-instances'):return {'Reservations':[]}
+            if args[:2]==('ec2','describe-instance-types'):return {'InstanceTypes':[{'InstanceType':'g4dn.xlarge','VCpuInfo':{'DefaultVCpus':4}}]}
+            raise AssertionError(args)
+        from unittest.mock import patch
+        plan={**self.plan,'runId':'run','payloadSource':'a'*40}
+        with patch.object(preflight.builder_audit,'audit',return_value={'passed':True}):
+            result=preflight.inspect(plan,aws)
+        self.assertTrue(result['passed'],result['errors'])
+        self.assertEqual(result['checks']['quota']['requestedVcpus'],4)
+        self.assertIn(('ec2','describe-images','--image-ids',builder_identity.WINDOWS_AMI),calls)
 
 
 if __name__=='__main__':unittest.main()

@@ -13,6 +13,9 @@ OIDC_SUBJECT=('repo:MCMike0399@40257172/bomberman-64-multiplayer@1426399566:'
 # Resolved official AMIs, pinned rather than allowing arbitrary community images.
 # A new image requires a reviewed policy update before a subsequent campaign.
 AMIS=('ami-05414055cdd6e338f','ami-057fee592d97c84cb')
+# Campaigns launch only the Windows image since 2026-11-13. The deployed policy still
+# allows both pins (the Linux one is unused); changing it would require an IAM redeploy.
+WINDOWS_AMI=AMIS[1]
 
 
 def policy(*,staging=False):

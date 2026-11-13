@@ -1,12 +1,13 @@
-"""FREE permissions smoke: the real campaign stack minus its two instances, plus dry-run launches.
+"""FREE permissions smoke: the real campaign stack minus its one instance, plus a dry-run launch.
 
 The smoke stack is derived from ``builder_template.build`` by removing exactly the
-two ``AWS::EC2::Instance`` resources. The expiry role and both schedules keep
+one Windows ``AWS::EC2::Instance`` resource (Windows only since 2026-11-13). The
+expiry role and its schedule keep
 their real names, tags and boundary but target nonexistent dummy instance IDs,
 and the schedules are DISABLED. Creation uses the paid path's exact intent and
 CreateStack call in ``builder_campaign``; cleanup is the paid path's exact-ID
 cleanup and type audit. ``RunInstances`` is only ever called with ``--dry-run``
-and the exact launch properties of both real instances: ``DryRunOperation``
+and the exact launch properties of the real instance: ``DryRunOperation``
 means authorized, ``UnauthorizedOperation`` (or anything else) fails the smoke.
 No compute is allocated, no paid hold is consulted and no paid attempt is recorded.
 """
@@ -25,7 +26,6 @@ import builder_approval
 import builder_arming as arming
 import builder_bootstrap
 import builder_campaign as campaign
-import builder_identity
 import builder_journal as journal
 import builder_namespace as names
 import builder_preflight
@@ -35,13 +35,12 @@ import builder_transfer as transfer
 
 ROOT=Path(__file__).resolve().parents[2]
 REPOSITORY='MCMike0399/bomberman-64-multiplayer'
-SYSTEMS=('Linux','Windows')
+SYSTEMS=names.SYSTEMS
 REMOVED=tuple(osname+'Instance'for osname in SYSTEMS)
 # Syntactically valid, never-issued instance IDs. Even an enabled schedule could
 # only call TerminateInstances on these, and the expiry role is limited to them
 # plus the run tag.
-DUMMY_INSTANCES={'Linux':'i-00000000000000000','Windows':'i-00000000000000001'}
-ROOT_GB={'Linux':75,'Windows':80}
+DUMMY_INSTANCES={'Windows':'i-00000000000000001'}
 # All smoke AWS work must finish this long after the job starts so the shared
 # always-cleanup still fits inside the 30-minute smoke job timeout.
 WORK_SECONDS_AFTER_JOB_START=14*60
@@ -54,8 +53,7 @@ LAUNCH_PROPERTIES={'ImageId','InstanceType','IamInstanceProfile','InstanceInitia
 
 def instances():
     """Identical to the paid preparation plan and disclosed approval instances."""
-    return [{'os':osname,'type':'g4dn.xlarge','ami':ami,'rootGb':ROOT_GB[osname]}
-            for osname,ami in zip(SYSTEMS,builder_identity.AMIS)]
+    return builder_approval.instances()
 
 
 def placeholder_userdata(plan):
@@ -95,7 +93,7 @@ def derive(real):
     template=json.loads(json.dumps(real))
     resources=template['Resources']
     if sorted(key for key,row in resources.items()if row['Type']=='AWS::EC2::Instance')!=sorted(REMOVED):
-        raise ValueError('Real campaign must contain exactly the reviewed Linux and Windows instances')
+        raise ValueError('Real campaign must contain exactly the reviewed Windows instance')
     removed={key:resources.pop(key)for key in REMOVED}
     def rewrite(item):
         if isinstance(item,dict):
@@ -108,7 +106,7 @@ def derive(real):
         return item
     template['Resources']={key:rewrite(row)for key,row in resources.items()}
     schedules=[row for row in template['Resources'].values()if row['Type']=='AWS::Scheduler::Schedule']
-    if len(schedules)!=2:raise ValueError('Both real expiry schedules are required')
+    if len(schedules)!=len(SYSTEMS):raise ValueError('Every real expiry schedule is required')
     for row in schedules:row['Properties']['State']='DISABLED'
     remaining=references(template,set(REMOVED))
     if remaining:raise ValueError('Smoke template still references removed instances: '+','.join(sorted(set(remaining))))
@@ -312,7 +310,7 @@ def run(state,now=time.time):
                     check('dry-run-'+osname.lower(),launch)
     finally:
         result['passed']=bool(result['checks'])and all(row['passed']for row in result['checks'].values())and \
-            len(result['dryRuns'])==2 and all(row['passed']for row in result['dryRuns'])
+            len(result['dryRuns'])==len(SYSTEMS)and all(row['passed']for row in result['dryRuns'])
         result['cleanupRequired']='Always-cleanup deletes the exact stack and staging bucket, then audits every type.'
         write(output,result)
     return result

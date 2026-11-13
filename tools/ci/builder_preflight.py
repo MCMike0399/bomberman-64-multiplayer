@@ -14,8 +14,8 @@ def check_network(plan,subnets,tables,dns):
     if len(subnets)!=1:raise ValueError('One exact referenced subnet required')
     subnet=subnets[0]
     if (subnet['SubnetId']!=plan['references']['subnet']or subnet['VpcId']!=plan['references']['vpc']or
-            subnet['State']!='available'or subnet['AvailableIpAddressCount']<2 or dns.get('Value')is not True):
-        raise ValueError('Referenced subnet/DNS cannot support the two disposable instances')
+            subnet['State']!='available'or subnet['AvailableIpAddressCount']<len(plan['instances'])or dns.get('Value')is not True):
+        raise ValueError('Referenced subnet/DNS cannot support the disposable instance')
     explicit=[table for table in tables if any(row.get('SubnetId')==subnet['SubnetId']for row in table.get('Associations',[]))]
     selected=explicit or[table for table in tables if any(row.get('Main')for row in table.get('Associations',[]))]
     if len(selected)!=1 or not any(row.get('DestinationCidrBlock')=='0.0.0.0/0'and
@@ -28,7 +28,8 @@ def check_network(plan,subnets,tables,dns):
 
 def validate_images(plan,images):
     mapping={item['ImageId']:item for item in images}
-    if {item['ami']for item in plan['instances']}!=set(builder_identity.AMIS):
+    # Windows only since 2026-11-13: the plan names exactly the pinned Windows image.
+    if [item['ami']for item in plan['instances']]!=[builder_identity.WINDOWS_AMI]:
         raise ValueError('Campaign AMIs differ from reviewed identity pins')
     for item in plan['instances']:
         image=mapping[item['ami']]
@@ -58,14 +59,14 @@ def inspect(plan,aws):
         aws('ec2','describe-subnets','--subnet-ids',plan['references']['subnet'])['Subnets'],
         aws('ec2','describe-route-tables','--filters','Name=vpc-id,Values='+plan['references']['vpc'])['RouteTables'],
         aws('ec2','describe-vpc-attribute','--vpc-id',plan['references']['vpc'],'--attribute','enableDnsSupport')['EnableDnsSupport']))
-    check('images',lambda:validate_images(plan,aws('ec2','describe-images','--image-ids',*builder_identity.AMIS)['Images']))
+    check('images',lambda:validate_images(plan,aws('ec2','describe-images','--image-ids',builder_identity.WINDOWS_AMI)['Images']))
     def quota():
         available=aws('service-quotas','get-service-quota','--service-code','ec2','--quota-code','L-DB2E81BA')['Quota']['Value']
         running=[item for group in aws('ec2','describe-instances','--filters','Name=instance-state-name,Values=pending,running')['Reservations']
                  for item in group['Instances']if item['InstanceType'].startswith(('g','vt'))and item.get('InstanceLifecycle')!='spot']
         types=sorted({'g4dn.xlarge',*(item['InstanceType']for item in running)})
         cores={item['InstanceType']:item['VCpuInfo']['DefaultVCpus']for item in aws('ec2','describe-instance-types','--instance-types',*types)['InstanceTypes']}
-        needed=2*cores['g4dn.xlarge'];used=sum(cores[item['InstanceType']]for item in running)
+        needed=len(plan['instances'])*cores['g4dn.xlarge'];used=sum(cores[item['InstanceType']]for item in running)
         if used+needed>available:raise ValueError('Existing G/VT usage plus campaign exceeds the shared quota')
         return {'limit':available,'existingVcpus':used,'requestedVcpus':needed}
     check('quota',quota)

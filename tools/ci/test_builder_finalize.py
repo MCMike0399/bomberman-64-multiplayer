@@ -20,7 +20,7 @@ class CleanupBinding(unittest.TestCase):
                   'typeAudit':{name:{'state':'absent'}for names in finalize.GROUPS.values()for name in names}}
         stack=f"arn:aws:cloudformation:us-east-1:524329886851:stack/{self.plan['runId']}/owned"
         self.created=[{'event':'CREATED','type':kind,'id':identity}for kind,identity in (
-            ('AWS::CloudFormation::Stack',stack),('AWS::EC2::Instance','i-one'),('AWS::EC2::Instance','i-two'))]
+            ('AWS::CloudFormation::Stack',stack),('AWS::EC2::Instance','i-one'))]
         self.raw['resources']=[{'type':row['type'],'id':row['id'],'finalState':'DELETE_COMPLETE'if row['type']=='AWS::CloudFormation::Stack'else'terminated'}for row in self.created]
 
     def test_every_required_type_is_independently_bound(self):
@@ -45,7 +45,12 @@ class CleanupBinding(unittest.TestCase):
 
     def test_type_sweep_cannot_hide_a_missing_exact_created_id(self):
         with self.assertRaisesRegex(ValueError,'physical ID'):
-            finalize.cleanup_receipt({**self.raw,'resources':self.raw['resources'][:2]},self.plan,{},self.created)
+            finalize.cleanup_receipt({**self.raw,'resources':self.raw['resources'][:1]},self.plan,{},self.created)
+
+    def test_a_second_journaled_instance_is_not_the_reviewed_windows_campaign(self):
+        created=self.created+[{'event':'CREATED','type':'AWS::EC2::Instance','id':'i-two'}]
+        raw={**self.raw,'resources':self.raw['resources']+[{'type':'AWS::EC2::Instance','id':'i-two','finalState':'terminated'}]}
+        with self.assertRaisesRegex(ValueError,'one journaled Windows instance'):finalize.cleanup_receipt(raw,self.plan,{},created)
 
     def test_downloaded_state_binds_complete_contract_fixtures_and_cleanup(self):
         # Synthetic schema fixtures only; this does not execute a native game.
@@ -57,7 +62,7 @@ class CleanupBinding(unittest.TestCase):
             release=release_identity.check_exports();write_desktop(packages,revision=self.plan['payloadSource'],release=release)
             plan={**self.plan,'verificationRunId':'123456','renderFingerprint':'fp','release':release,'artifacts':{}}
             status={'targets':{}}
-            for target in ('windows-x64','linux-x64'):
+            for target in ('windows-x64',):
                 expected={'archiveSha256':desktop_packages.digest(packages/desktop_packages.names(target)['archive']),
                           'downloadSha256':desktop_packages.digest(packages/download_formats.FILES[target]),
                           'serverSha256':desktop_packages.digest(packages/'Blast-Circuit-server-dotnet10.zip')}
@@ -83,6 +88,9 @@ class CleanupBinding(unittest.TestCase):
             for target in plan['artifacts']:
                 result=json.loads((output/finalize.gates.receipt_name(target)).read_text())
                 self.assertTrue(result['cleanupAudited'])
+            # Windows only: the bound set never carries a Linux receipt that could collide with the workstation's.
+            self.assertEqual(sorted(path.name for path in output.iterdir()),
+                             sorted([finalize.gates.CLEANUP_RECEIPT,'Blast-Circuit-windows-x64-gpu.json','Blast-Circuit-windows-x64-graphical.json']))
 
 
 if __name__=='__main__':unittest.main()

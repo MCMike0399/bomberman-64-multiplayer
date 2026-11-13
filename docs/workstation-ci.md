@@ -2,10 +2,13 @@
 
 User decision, 2026-11-13: one owned Linux workstation (Alienware Aurora R11,
 Nobara 44, two NVIDIA GeForce RTX 2080 SUPER GPUs) runs the production game
-node, the deployment runner and real-GPU release qualification. It replaces the
-budgeted Sancus AWS GPU builders and the Raspberry Pi primary / DiveMac fallback
-game nodes. Host paths, service names, credentials and network details live in
-private operator documentation, not here.
+node, the deployment runner and Linux real-GPU release qualification. It replaces
+the Raspberry Pi primary / DiveMac fallback game nodes and the Linux Sancus AWS
+builder. The planned Windows VM (VFIO passthrough of the second GPU) was abandoned
+after passthrough hung the host kernel; Windows real-GPU qualification stays on
+the paid [Sancus builder](sancus-builder-ci.md), Windows only. Host paths,
+service names, credentials and network details live in private operator
+documentation, not here.
 
 ## What runs where
 
@@ -14,7 +17,8 @@ private operator documentation, not here.
 | Production game node | Pi primary + DiveMac idle fallback | Workstation, sole node `blast-workstation` |
 | Public gateway, Valkey coordinator | Edge gateway | Unchanged |
 | Deployment runner (`blast-deploy`) | DiveMac autoscaler | Workstation autoscaler, single-use runners |
-| Windows/Linux real-GPU qualification | Sancus AWS g4dn campaigns ($200 budget) | Workstation `blast-gpu` runners, no per-run cost |
+| Linux real-GPU qualification | Sancus AWS g4dn campaign ($200 budget) | Workstation `blast-gpu` Linux runner, no per-run cost |
+| Windows real-GPU qualification | Sancus AWS g4dn campaign (two instances) | Sancus AWS, one Windows instance `sancus-builder` ($20/run, $200 total) |
 | Hosted functional, package, Mac and crossplay lanes | GitHub-hosted | Unchanged |
 
 The Pi and DiveMac game containers and relays are stopped, not deleted; their
@@ -31,12 +35,10 @@ before raising it.
   Podman. The game container binds only loopback; its wstunnel relay is the only
   public exposure.
 - GPU CI runs as a separate unprivileged account. Linux jobs execute in a fresh
-  Ubuntu 24.04 container with the host GPU injected through NVIDIA CDI; Windows
-  jobs execute in a VM that owns the second GPU via VFIO passthrough, as the
-  interactive standard user `BlastQa`.
-- Both service accounts and the VM reach only the public internet. LAN, tailnet,
-  Twingate and link-local destinations are dropped by host firewall rules. The VM
-  may reach only host DNS/DHCP and the runner broker.
+  Ubuntu 24.04 container with the host GPU injected through NVIDIA CDI. There is
+  no workstation Windows GPU runner.
+- Both service accounts reach only the public internet. LAN, tailnet, Twingate
+  and link-local destinations are dropped by host firewall rules.
 - Every runner is single use (GitHub JIT configuration or `--ephemeral`). An
   operator job-start guard, outside the checkout, rejects anything other than the
   allowed workflow on trusted `main` before any step runs: `promote.yml`/`release.yml`
@@ -50,20 +52,27 @@ before raising it.
 
 `gpu-qualification.yml` runs automatically after a successful trusted main
 Verification when the release policy requires real GPUs (major/minor versions),
-and on manual dispatch for any complete current-main Verification run:
+and on manual dispatch with `mode=qualify` for any complete current-main
+Verification run (other modes are free AWS audits/rehearsals with no Linux job):
 
 ```sh
-gh workflow run gpu-qualification.yml -f verification-run-id=<Verification run>
+gh workflow run gpu-qualification.yml -f mode=qualify -f verification-run-id=<Verification run>
 ```
 
-Each target downloads the exact Verification artifacts, checks the physical
-adapter (`EXPECTED_ADAPTER=RTX 2080 SUPER`, never WARP/llvmpipe), runs the
+One run is hybrid. The `select` job runs the AWS selector (paid hold, dedupe,
+cleanup and spend guards) and the workstation selector. Windows runs on the
+[Sancus builder](sancus-builder-ci.md) through the reusable `builder-controller.yml`
+and uploads `release-gate-gpu-windows-x64` bound to `Sancus-builder-cleanup.json`.
+The Linux job downloads the exact Verification artifacts, checks the physical
+adapter (`EXPECTED_ADAPTER=RTX 2080 SUPER`, never llvmpipe), runs the
 original-High core captures and controls, then the complete graphical tours and
-diagnostic repeats. A hosted finalize job binds both staged receipts to
+diagnostic repeats. A hosted finalize job binds the staged Linux receipt to
 `Blast-Circuit-gpu-host.json`, which records this run's single-use workstation
-jobs, runner names and devices. Promotion and published-release verification
-require that bound receipt for major/minor releases. Releases qualified on AWS
-keep their `Sancus-builder-cleanup.json` and still verify.
+job, runner name and devices, and uploads `release-gate-gpu-linux-x64`. The two
+artifacts never share a file name. Promotion and published-release verification
+require every bound receipt the target receipts reference: both for a hybrid
+release; only the shared cleanup receipt for earlier AWS-only releases, which
+still verify.
 
 Pass `--gpu-run-id` (or the dispatch input) with the successful
 `gpu-qualification.yml` run when promoting a major/minor release, as before.

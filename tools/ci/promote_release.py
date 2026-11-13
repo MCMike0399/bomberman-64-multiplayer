@@ -244,7 +244,7 @@ def stage_draft(repository, run_id, version, revision, directory, existing_draft
              'server-build-metadata.json', 'build-metadata.json']
     names += [name for target in desktop_packages.TARGETS for name in release_gpu_policy.asset_names(target,policy)]
     names += [release_gpu_policy.RECEIPT]
-    if policy['requiresGpu']:names.append(gpu_release_gates.bound_receipt(directory))
+    if policy['requiresGpu']:names += gpu_release_gates.bound_receipts(directory)
     names += list(download_formats.names('macos-arm64'))
     names += [crossplay.RECEIPT, desktop_validation.MAC_RECEIPT]
     if signed:

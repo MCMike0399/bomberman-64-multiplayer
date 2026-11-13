@@ -1,20 +1,22 @@
 """Conservative elapsed-resource estimate, explicitly separate from AWS invoices."""
 import datetime
 
+import builder_namespace as names
+
 
 def epoch(value):return datetime.datetime.fromisoformat(value).timestamp()
 
 
 def calculate(plan,rows,resources,observed_at,evidence_bytes=0):
     rates=plan.get('hourlyRatesUsd',{});owned=[row for row in rows if row['event']=='CREATED'and row['type']=='AWS::EC2::Instance']
-    if owned and set(rates)!={'Linux','Windows'}:
+    if owned and set(rates)!=set(names.SYSTEMS):
         return {'complete':False,'reason':'Actual preparation-time hourly rates are missing','invoice':False}
     states={(row['type'],row['id']):row['finalState']for row in resources}
     initial=[row['timestampUtc']for row in rows if row['event']=='INTENT'and row['type']=='AWS::CloudFormation::Stack']
     compute=0;lifetimes=[]
     for instance in owned:
         identity=instance['id'];logical=instance['details'].get('logicalId','')
-        system='Linux'if logical=='LinuxInstance'else'Windows'if logical=='WindowsInstance'else None
+        system=next((name for name in names.SYSTEMS if logical==name+'Instance'),None)
         if system is None or states.get(('AWS::EC2::Instance',identity))not in ('absent','terminated'):
             return {'complete':False,'reason':'Instance identity/final state is unverified','invoice':False}
         observations=[row['details']for row in rows if row['event']=='STATUS'and row['id']==identity]

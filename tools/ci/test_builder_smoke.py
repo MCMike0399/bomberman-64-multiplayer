@@ -32,13 +32,14 @@ def real():
 
 
 class SmokeTemplate(unittest.TestCase):
-    def test_removes_exactly_the_two_instances_and_keeps_every_other_resource_identical(self):
+    def test_removes_exactly_the_one_instance_and_keeps_every_other_resource_identical(self):
         original=real();derived,removed=smoke.derive(original)
-        self.assertEqual(sorted(removed),['LinuxInstance','WindowsInstance'])
-        self.assertEqual(set(original['Resources'])-set(derived['Resources']),{'LinuxInstance','WindowsInstance'})
+        self.assertEqual(sorted(removed),['WindowsInstance'])
+        self.assertEqual(set(original['Resources'])-set(derived['Resources']),{'WindowsInstance'})
         self.assertEqual(set(derived['Resources'])|set(removed),set(original['Resources']))
         self.assertEqual(original['Parameters'],derived['Parameters'])
-        changed={'ExpiryRole','LinuxExpiry','WindowsExpiry'}
+        changed={'ExpiryRole','WindowsExpiry'}
+        self.assertNotIn('LinuxExpiry',original['Resources'])
         for key in set(derived['Resources'])-changed:
             with self.subTest(resource=key):self.assertEqual(derived['Resources'][key],original['Resources'][key])
         # Expiry role: only the instance ARNs change; trust, boundary, name and tags are the real ones.
@@ -57,7 +58,7 @@ class SmokeTemplate(unittest.TestCase):
 
     def test_names_tags_and_boundary_follow_the_real_owned_namespace(self):
         derived,_=smoke.derive(real());text=json.dumps(derived)
-        self.assertEqual(smoke.references(derived,{'LinuxInstance','WindowsInstance'}),[])
+        self.assertEqual(smoke.references(derived,{'WindowsInstance'}),[])
         self.assertNotIn('Instance}',text)
         for key in ('AgentRole','ExpiryRole'):
             self.assertEqual(derived['Resources'][key]['Properties']['PermissionsBoundary'],f'arn:aws:iam::{names.ACCOUNT}:policy/{names.BOUNDARY}')
@@ -70,7 +71,7 @@ class SmokeTemplate(unittest.TestCase):
         for value in smoke.DUMMY_INSTANCES.values():self.assertRegex(value,r'^i-0{16}[01]$')
 
     def test_any_new_instance_reference_fails_closed(self):
-        original=real();original['Resources']['QaSecurityGroup']['DependsOn']=['LinuxInstance']
+        original=real();original['Resources']['QaSecurityGroup']['DependsOn']=['WindowsInstance']
         with self.assertRaisesRegex(ValueError,'still references'):smoke.derive(original)
         original=real();original['Resources']['Extra']={'Type':'AWS::EC2::Instance','Properties':{}}
         with self.assertRaisesRegex(ValueError,'exactly'):smoke.derive(original)
@@ -79,7 +80,8 @@ class SmokeTemplate(unittest.TestCase):
         spending={'closedEstimateUsd':4.8,'budgetUsd':200}
         approval=builder_approval.build('a'*40,'1','2026-10-30T15:00:00+00:00',spending)
         self.assertEqual(smoke.instances(),approval['instances'])
-        self.assertEqual([item['ami']for item in smoke.instances()],list(builder_identity.AMIS))
+        self.assertEqual([item['ami']for item in smoke.instances()],[builder_identity.WINDOWS_AMI])
+        self.assertEqual([item['os']for item in smoke.instances()],['Windows'])
 
     def test_placeholder_user_data_has_the_real_bootstrap_shape(self):
         import builder_bootstrap
@@ -96,7 +98,7 @@ class DryRunParameters(unittest.TestCase):
         self.assertEqual(arguments[0],'--dry-run')
         return {arguments[i]:arguments[i+1]for i in range(1,len(arguments),2)}
 
-    def test_both_launches_match_the_real_template_instance_properties(self):
+    def test_the_launch_matches_the_real_template_instance_properties(self):
         template=real()
         for osname in smoke.SYSTEMS:
             with self.subTest(os=osname):
@@ -121,7 +123,7 @@ class DryRunParameters(unittest.TestCase):
                 self.assertEqual(specs[0]['Tags'],specs[1]['Tags'])
 
     def test_template_launch_drift_or_unresolved_reference_refuses(self):
-        resource=real()['Resources']['LinuxInstance']
+        resource=real()['Resources']['WindowsInstance']
         changed=json.loads(json.dumps(resource));changed['Properties']['KeyName']='x'
         with self.assertRaisesRegex(ValueError,'launch properties changed'):smoke.dry_run_arguments(changed,self.physical,[])
         with self.assertRaisesRegex(ValueError,'Unresolved'):smoke.dry_run_arguments(resource,{'RunId':RUN},[])
@@ -138,7 +140,7 @@ class DryRunVerdict(unittest.TestCase):
 
     def test_dry_run_operation_passes_and_unauthorized_fails(self):
         call,calls=self.call(RuntimeError('ec2/run-instances: '+DRY))
-        record=smoke.dry_run(plan(),'Linux',['--dry-run'],call=call)
+        record=smoke.dry_run(plan(),'Windows',['--dry-run'],call=call)
         self.assertEqual((record['result'],record['passed'],record['errorCode']),('authorized',True,'DryRunOperation'))
         self.assertEqual(calls,[('ec2','run-instances',('--dry-run',))])
         call,_=self.call(RuntimeError('ec2/run-instances: '+DENIED))
@@ -149,19 +151,19 @@ class DryRunVerdict(unittest.TestCase):
     def test_other_errors_and_impossible_success_fail(self):
         for response in (RuntimeError('ec2/run-instances: An error occurred (InvalidAMIID.NotFound) x'),{'Instances':[{'InstanceId':'i-1'}]}):
             call,_=self.call(response)
-            self.assertFalse(smoke.dry_run(plan(),'Linux',['--dry-run'],call=call)['passed'])
+            self.assertFalse(smoke.dry_run(plan(),'Windows',['--dry-run'],call=call)['passed'])
 
     def test_new_instance_profile_propagation_is_retried_within_its_bound(self):
         late=RuntimeError('ec2/run-instances: An error occurred (InvalidParameterValue) when calling the RunInstances operation: '
                           'Value (x) for parameter iamInstanceProfile.name is invalid. Invalid IAM Instance Profile name')
         call,calls=self.call(late,late,RuntimeError(DRY))
-        record=smoke.dry_run(plan(),'Linux',['--dry-run'],call=call,sleep=lambda seconds:None,clock=lambda:0,deadline=10)
+        record=smoke.dry_run(plan(),'Windows',['--dry-run'],call=call,sleep=lambda seconds:None,clock=lambda:0,deadline=10)
         self.assertEqual((record['passed'],record['attempts'],len(calls)),(True,3,3))
         call,calls=self.call(late)
-        self.assertFalse(smoke.dry_run(plan(),'Linux',['--dry-run'],call=call,sleep=lambda seconds:None,clock=lambda:20,deadline=10)['passed'])
+        self.assertFalse(smoke.dry_run(plan(),'Windows',['--dry-run'],call=call,sleep=lambda seconds:None,clock=lambda:20,deadline=10)['passed'])
 
     def test_never_without_dry_run_in_the_smoke_or_the_campaign_wrapper(self):
-        with self.assertRaises(ValueError):smoke.dry_run(plan(),'Linux',['--count','1'],call=lambda *a:self.fail('called'))
+        with self.assertRaises(ValueError):smoke.dry_run(plan(),'Windows',['--count','1'],call=lambda *a:self.fail('called'))
         with patch.object(campaign.subprocess,'run',side_effect=AssertionError('AWS must not be called')),\
              patch.dict(campaign.os.environ,{'BUILDER_DRY_RUN':'false'}):
             for operation,arguments in (('run-instances',('--count','1')),('run-instances',('--dry-run','--no-dry-run')),
@@ -191,18 +193,19 @@ class SmokeFlow(unittest.TestCase):
             written=json.loads((root/'permissions-smoke.json').read_text())
         return result,written,launches
 
-    def test_all_checks_and_both_authorized_dry_runs_pass_without_allocation(self):
+    def test_all_checks_and_the_authorized_windows_dry_run_pass_without_allocation(self):
         result,written,launches=self.flow(DRY)
         self.assertTrue(result['passed']);self.assertEqual(written['passed'],True)
-        self.assertEqual([row['os']for row in written['dryRuns']],['Linux','Windows'])
+        self.assertEqual([row['os']for row in written['dryRuns']],['Windows'])
         self.assertEqual((written['instancesAllocated'],written['paidAttempt']),(0,False))
-        self.assertEqual(len(launches),2)
+        self.assertEqual(len(launches),1)
         for arguments in launches:self.assertIn('--dry-run',arguments)
 
-    def test_an_unauthorized_launch_turns_the_smoke_red_but_records_both(self):
+    def test_an_unauthorized_launch_turns_the_smoke_red_and_is_recorded(self):
         result,written,_=self.flow(DENIED)
-        self.assertFalse(result['passed']);self.assertFalse(written['checks']['dry-run-linux']['passed'])
-        self.assertEqual([row['result']for row in written['dryRuns']],['unauthorized','unauthorized'])
+        self.assertFalse(result['passed']);self.assertFalse(written['checks']['dry-run-windows']['passed'])
+        self.assertNotIn('dry-run-linux',written['checks'])
+        self.assertEqual([row['result']for row in written['dryRuns']],['unauthorized'])
 
     def test_failed_create_skips_everything_else_and_stays_red(self):
         with tempfile.TemporaryDirectory()as root:

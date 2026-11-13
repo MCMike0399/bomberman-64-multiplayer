@@ -10,28 +10,50 @@ import os
 import builder_namespace
 
 SOFTWARE=('warp','basic render','llvmpipe','lavapipe','swiftshader','paravirtual','software')
-# Legacy Sancus AWS campaigns bound an ownership-safe cleanup audit. Published v0.45.0 carries it,
-# so historical verification keeps accepting that shape.
+# Sancus AWS campaigns bind an ownership-safe cleanup audit. Historical releases (v0.45.x) bound
+# both targets to it; since 2026-11-13 the Windows-only AWS builder binds the Windows receipt to it.
 CLEANUP_RECEIPT='Sancus-builder-cleanup.json'
-# Workstation qualification (2026-11-13) binds the single-use runner/job identity instead.
+# Workstation qualification (2026-11-13) binds the single-use runner/job identity instead. The
+# workstation's Windows VM was abandoned, so its host receipt covers exactly the Linux job.
 HOST_RECEIPT='Blast-Circuit-gpu-host.json'
 BOUND_RECEIPTS=(HOST_RECEIPT,CLEANUP_RECEIPT)
 WORKSTATION_HOST='blast-workstation'
-RUNNER_PREFIX={'windows-x64':'blast-gpu-windows-','linux-x64':'blast-gpu-linux-'}
+WORKSTATION_TARGETS=('linux-x64',)
+RUNNER_PREFIX={'linux-x64':'blast-gpu-linux-'}
 CLEANUP_TYPES={'CFN','EC2','EBS','ENI','SG','EIP','IAM','Scheduler','Logs','S3','SSM','AMI','Snapshots','KeyPairs'}
 
 
 def receipt_name(target):return 'Blast-Circuit-'+target+'-gpu.json'
 
 
-def bound_receipt(directory):
-    """The one host/cleanup receipt a GPU qualification artifact set binds."""
-    present=[name for name in BOUND_RECEIPTS if (Path(directory)/name).is_file()]
-    if len(present)!=1:raise RuntimeError('GPU qualification needs exactly one bound host or cleanup receipt')
-    return present[0]
-
-
 def workstation(data):return data.get('qualificationHost')=='workstation'
+
+
+def bound_name(data):
+    """The host or cleanup receipt one target's GPU receipt is bound to."""
+    return HOST_RECEIPT if workstation(data) else CLEANUP_RECEIPT
+
+
+def bound_receipts(directory,targets=None):
+    """Bound host/cleanup receipt names the present targets' GPU receipts reference, sorted.
+
+    A legacy AWS release binds both targets to the cleanup receipt; a hybrid qualification binds
+    Windows to the AWS cleanup receipt and Linux to the workstation host receipt. Every referenced
+    file must exist. For the whole set (no explicit targets) an unreferenced bound receipt is refused
+    rather than published.
+    """
+    import desktop_packages
+    directory=Path(directory)
+    receipts=[directory/receipt_name(target)for target in (desktop_packages.TARGETS if targets is None else targets)]
+    receipts=[path for path in receipts if path.is_file()]
+    if not receipts:raise RuntimeError('GPU qualification has no target receipt to bind')
+    names=sorted({bound_name(json.loads(path.read_text()))for path in receipts})
+    present={name for name in BOUND_RECEIPTS if (directory/name).is_file()}
+    if not set(names)<=present:raise RuntimeError('GPU qualification is missing its bound host or cleanup receipt')
+    if targets is None and present-set(names):raise RuntimeError('GPU qualification carries an unreferenced bound receipt: '+', '.join(sorted(present-set(names))))
+    return names
+
+
 def artifact_name(target):return 'release-gate-gpu-'+target
 
 
@@ -114,27 +136,29 @@ def inspect_host(directory,data,target,revision):
     if (host.get('schemaVersion')!=1 or host.get('source')!=revision or host.get('passed')is not True or
             host.get('host')!=WORKSTATION_HOST or host.get('runnerMode')!='jit-single-use'or
             not str(host.get('runId','')).isdigit()or str(host.get('runId'))!=str(data.get('qualificationRunId'))or
-            host.get('errors')!=[]or set(jobs)!={'windows-x64','linux-x64'}or job.get('conclusion')!='success'or
+            host.get('errors')!=[]or set(jobs)!=set(WORKSTATION_TARGETS)or target not in WORKSTATION_TARGETS or job.get('conclusion')!='success'or
             not str(job.get('runnerName','')).startswith(RUNNER_PREFIX[target])or 'blast-gpu'not in job.get('labels',[])):
         raise RuntimeError('GPU host receipt does not prove this trusted workstation run')
     return host
 
 
 def bind_host(directory,output,revision,run_id,jobs):
-    """Bind the staged receipts of one trusted workflow run to its workstation job identities."""
+    """Bind the staged Linux receipt of one trusted workflow run to its workstation job identity.
+
+    Windows is qualified in the same run by the Sancus AWS builder and bound to its cleanup receipt."""
     directory=Path(directory);output=Path(output)
     if output.exists():raise FileExistsError('Never overwrite a bound qualification artifact')
     rows=[]
-    for target in ('windows-x64','linux-x64'):
+    for target in WORKSTATION_TARGETS:
         job=next((row for row in jobs if row.get('target')==target),None)
         if not job or job.get('conclusion')!='success'or not str(job.get('runnerName','')).startswith(RUNNER_PREFIX[target]):
             raise RuntimeError('Target did not finish on its workstation runner: '+target)
         rows.append({key:job.get(key)for key in ('target','jobId','runnerName','labels','conclusion','startedAt','completedAt')})
-    staged={target:json.loads((directory/('gpu-release-'+target)/receipt_name(target)).read_text())for target in ('windows-x64','linux-x64')}
+    staged={target:json.loads((directory/('gpu-release-'+target)/receipt_name(target)).read_text())for target in WORKSTATION_TARGETS}
     devices=sorted({row['adapter']for data in staged.values()for row in data.get('devices',[])})
     host={'schemaVersion':1,'source':revision,'host':WORKSTATION_HOST,'runId':str(run_id),'runnerMode':'jit-single-use',
           'jobs':rows,'devices':devices,'passed':True,'errors':[],
-          'scope':'Workstation GPU runners: Linux container on the host GPU, Windows VM on the passthrough GPU; one job per runner.'}
+          'scope':'Workstation GPU runner: Linux container on the host GPU; one job per runner. Windows qualifies on the Sancus AWS builder.'}
     output.mkdir(parents=True)
     path=output/HOST_RECEIPT;path.write_text(json.dumps(host,indent=2)+'\n')
     digest=hashlib.sha256(path.read_bytes()).hexdigest()
@@ -273,7 +297,7 @@ def run_jobs(repository,run_id,gh):
     rows=[]
     for page in pages:
         for job in page['jobs']:
-            match=re.search(r'\b(windows-x64|linux-x64)\b',job.get('name',''))
+            match=re.search(r'\b(linux-x64)\b',job.get('name',''))
             if match and job.get('name','').startswith('Workstation GPU'):
                 rows.append({'target':match.group(1),'jobId':job['id'],'runnerName':job.get('runner_name')or'',
                              'labels':job.get('labels',[]),'conclusion':job.get('conclusion'),
@@ -285,7 +309,7 @@ if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--directory',type=Path,default=Path('artifacts'))
     parser.add_argument('--target',choices=('windows-x64','linux-x64'))
     parser.add_argument('--revision',required=True);parser.add_argument('--verification-run')
-    parser.add_argument('--bind-host',type=Path,metavar='OUTPUT',help='Finalize: bind both staged receipts to this run\'s workstation jobs')
+    parser.add_argument('--bind-host',type=Path,metavar='OUTPUT',help='Finalize: bind the staged Linux receipt to this run\'s workstation job')
     args=parser.parse_args()
     if args.bind_host:
         import subprocess

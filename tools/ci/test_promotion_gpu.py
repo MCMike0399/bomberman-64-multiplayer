@@ -49,6 +49,21 @@ def write_gpu_files(directory):
         (directory/gpu.receipt_name(target)).write_text(json.dumps(data))
 
 
+def write_hybrid_gpu_files(directory):
+    """Hybrid qualification (2026-11-13): Windows on the Sancus AWS builder bound to its cleanup
+    receipt, Linux on the owned workstation bound to its host receipt."""
+    write_gpu_files(directory)
+    host={'schemaVersion':1,'source':SHA,'host':gpu.WORKSTATION_HOST,'runId':'22','runnerMode':'jit-single-use',
+          'jobs':[{'target':'linux-x64','jobId':2,'runnerName':'blast-gpu-linux-2','labels':['self-hosted','blast-gpu','Linux','X64'],
+                   'conclusion':'success'}],'devices':['NVIDIA GeForce RTX 2080 SUPER'],'passed':True,'errors':[]}
+    host_path=directory/gpu.HOST_RECEIPT;host_path.write_text(json.dumps(host))
+    path=directory/gpu.receipt_name('linux-x64');data=json.loads(path.read_text())
+    for key in ('cleanupAudited','cleanupSha256','campaignRunId'):data.pop(key)
+    data.update(qualificationHost='workstation',hostVerified=True,qualificationRunId='22',
+                hostReceiptSha256=desktop_packages.digest(host_path))
+    path.write_text(json.dumps(data))
+
+
 class PromotionGraphicsPolicy(unittest.TestCase):
     def setUp(self):
         temporary=tempfile.TemporaryDirectory();self.addCleanup(temporary.cleanup)
@@ -77,6 +92,22 @@ class PromotionGraphicsPolicy(unittest.TestCase):
         call=self.github.call_args_list[0].args
         self.assertIn(str(self.root/policy.RECEIPT),call)
         for target in desktop_packages.TARGETS:self.assertIn(str(self.root/gpu.receipt_name(target)),call)
+
+    def test_legacy_aws_shape_attaches_only_the_shared_cleanup_receipt(self):
+        self.gpu_files();self.stage(self.major())
+        call=self.github.call_args_list[0].args
+        self.assertIn(str(self.root/gpu.CLEANUP_RECEIPT),call);self.assertNotIn(str(self.root/gpu.HOST_RECEIPT),call)
+
+    def test_hybrid_attaches_both_bound_receipts_once(self):
+        write_hybrid_gpu_files(self.root);self.stage(self.major())
+        call=self.github.call_args_list[0].args
+        for name in (gpu.CLEANUP_RECEIPT,gpu.HOST_RECEIPT):self.assertEqual(call.count(str(self.root/name)),1)
+        for target in desktop_packages.TARGETS:self.assertIn(str(self.root/gpu.receipt_name(target)),call)
+
+    def test_hybrid_without_the_linux_host_receipt_is_refused_before_upload(self):
+        write_hybrid_gpu_files(self.root);(self.root/gpu.HOST_RECEIPT).unlink()
+        with self.assertRaisesRegex(RuntimeError,'host receipt'):self.stage(self.major())
+        self.github.assert_not_called()
 
     def test_revalidation_never_rewrites_a_prepared_signed_policy(self):
         self.gpu_files();decision=self.major();self.stage(decision)

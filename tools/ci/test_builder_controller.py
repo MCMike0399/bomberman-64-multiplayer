@@ -28,10 +28,10 @@ class PhaseWiring(unittest.TestCase):
                    'account':names.ACCOUNT,'region':names.REGION,'profile':'sancus','verificationRunId':'123456789',
                    'fixedCampaignExpiryUtc':(datetime.datetime.now(datetime.timezone.utc)+datetime.timedelta(hours=2,minutes=40)).isoformat(),
                    'staging':{'inputs':[],'manifest':{'sha256':'b'*64},'bootstrap':{},'awsCli':{}},
-                   'instances':[{'os':'Linux','ami':'ami-linux'},{'os':'Windows','ami':'ami-windows'}]}
+                   'instances':[{'os':'Windows','ami':'ami-windows'}]}
         (self.root/'plan.json').write_text(json.dumps(self.plan));self.session=controller.Controller(self.root,operator=True)
         self.store=Store(self.plan['runId']);self.session.client=self.store
-        self.ids={'linux-x64':'i-00000000000000001','windows-x64':'i-00000000000000002'}
+        self.ids={'windows-x64':'i-00000000000000002'}
         self.session.data['targets']={target:{'instanceId':identity,'state':'booting'}for target,identity in self.ids.items()}
         self.session.data['bootstrapDeadline']=self.session.stop
         self.session.api=lambda *args:({'Account':names.ACCOUNT,'Arn':f'arn:aws:sts::{names.ACCOUNT}:assumed-role/{names.CI_ROLE}/test'}if args[0]=='sts'else{
@@ -40,8 +40,7 @@ class PhaseWiring(unittest.TestCase):
     def ready(self,target,**overrides):
         value={'schemaVersion':1,'runId':self.plan['runId'],'source':self.plan['payloadSource'],'account':names.ACCOUNT,
                'region':names.REGION,'target':target,'instanceId':self.ids[target],'payloadManifestSha256':'b'*64,
-               'ready':True,'hardwareQualified':False,'user':'BlastQa'if target=='windows-x64'else'ubuntu',
-               'sessionId':1 if target=='windows-x64'else None,**overrides}
+               'ready':True,'hardwareQualified':False,'user':'BlastQa','sessionId':1,**overrides}
         self.store.files['results/'+target+'/bootstrap-ready.json']=json.dumps(value).encode()
 
     def output(self,target,state):
@@ -57,7 +56,7 @@ class PhaseWiring(unittest.TestCase):
                 patch.object(self.session,'owned_target',side_effect=lambda target:self.ids[target]),
                 patch.object(controller,'new_event')):
             self.session.collect('core')
-        self.assertEqual(dispatch.call_count,2)
+        self.assertEqual(dispatch.call_count,1)
         self.session.acknowledge()
         for target in self.ids:
             self.assertIn('payload/core-retained-'+target+'.json',self.store.files)
@@ -69,7 +68,7 @@ class PhaseWiring(unittest.TestCase):
         self.assertTrue(all(row['state']=='finished'for row in self.session.data['targets'].values()))
 
     def test_no_acknowledgement_for_partial_core(self):
-        with self.assertRaisesRegex(ValueError,'Both committed'):self.session.acknowledge()
+        with self.assertRaisesRegex(ValueError,'Every committed'):self.session.acknowledge()
         self.assertFalse(any('core-retained-'in key for key in self.store.files))
 
     def test_wrong_producer_or_system_session_never_dispatches(self):
@@ -88,16 +87,16 @@ class PhaseWiring(unittest.TestCase):
             return {'InstanceInformationList':[]}
         self.session.api=api;clock=[1000.0]
         with patch.object(controller.time,'time',side_effect=lambda:clock[0]):
-            self.assertFalse(self.session.observe_bootstrap('linux-x64'))
-            self.assertFalse(self.session.observe_bootstrap('linux-x64'))  # Rate-limited.
+            self.assertFalse(self.session.observe_bootstrap('windows-x64'))
+            self.assertFalse(self.session.observe_bootstrap('windows-x64'))  # Rate-limited.
             self.assertEqual(calls.count(('ec2','get-console-output')),1)
             clock[0]+=controller.CONSOLE_SAMPLE_SECONDS
             console['text']='x\nSANCUS-BUILDER-BOOTSTRAP-FAILED status=100 line=12\ntail'
             with self.assertRaisesRegex(RuntimeError,'bootstrap reported failure'):
-                self.session.observe_bootstrap('linux-x64')
-        row=self.session.data['targets']['linux-x64']
+                self.session.observe_bootstrap('windows-x64')
+        row=self.session.data['targets']['windows-x64']
         self.assertIn('SANCUS-BUILDER-BOOTSTRAP-FAILED',row['consoleMarkersSeen'])
-        retained=(self.root/'evidence'/'linux-x64'/'console'/'bootstrap-failed.txt').read_text()
+        retained=(self.root/'evidence'/'windows-x64'/'console'/'bootstrap-failed.txt').read_text()
         self.assertIn('status=100',retained)
         self.assertEqual(row['consoleSamples'][-1]['sha256'],__import__('hashlib').sha256(retained.encode()).hexdigest())
 
@@ -127,45 +126,49 @@ class PhaseWiring(unittest.TestCase):
             status=next(statuses,'Online')
             if status=='error':raise RuntimeError('ssm/describe-instance-information: throttled')
             if status=='missing':return {'InstanceInformationList':[]}
-            return {'InstanceInformationList':[{'InstanceId':self.ids['linux-x64'],'PingStatus':status}]}
+            return {'InstanceInformationList':[{'InstanceId':self.ids['windows-x64'],'PingStatus':status}]}
         self.session.api=api;clock=[1000.0]
         with patch.object(controller.time,'time',side_effect=lambda:clock[0]):
             for _ in range(controller.PING_SAMPLE_LIMIT+10):
-                self.assertFalse(self.session.observe_bootstrap('linux-x64'))
-                self.assertFalse(self.session.observe_bootstrap('linux-x64'))  # Rate-limited: no extra API call.
+                self.assertFalse(self.session.observe_bootstrap('windows-x64'))
+                self.assertFalse(self.session.observe_bootstrap('windows-x64'))  # Rate-limited: no extra API call.
                 clock[0]+=controller.PING_SAMPLE_SECONDS
-            row=self.session.data['targets']['linux-x64']
+            row=self.session.data['targets']['windows-x64']
             self.assertEqual(row['pingSampleCount'],controller.PING_SAMPLE_LIMIT+10)
             self.assertEqual(len(row['pingSamples']),controller.PING_SAMPLE_LIMIT)
             self.assertIn('throttled',row['pingSamples'][0]['error'])  # First observation retained.
             self.assertEqual(row['pingSamples'][-1]['pingStatus'],'ConnectionLost')
             self.assertNotIn('readyAtUtc',row)
-            statuses=iter([]);self.ready('linux-x64')
+            statuses=iter([]);self.ready('windows-x64')
             with (patch.object(controller.builder_ssm,'dispatch',return_value='command-id')as dispatch,
-                  patch.object(self.session,'owned_target',return_value=self.ids['linux-x64'])):
-                self.assertTrue(self.session.observe_bootstrap('linux-x64'))
+                  patch.object(self.session,'owned_target',return_value=self.ids['windows-x64'])):
+                self.assertTrue(self.session.observe_bootstrap('windows-x64'))
             dispatch.assert_called_once()
-        saved=json.loads((self.root/'controller.json').read_text())['targets']['linux-x64']
+        saved=json.loads((self.root/'controller.json').read_text())['targets']['windows-x64']
         self.assertTrue(saved['readyAtUtc'].endswith('+00:00'))
         self.assertEqual(saved['pingSamples'][-1]['pingStatus'],'Online')
         self.assertEqual(saved['pingSampleCount'],controller.PING_SAMPLE_LIMIT+11)
+
+    def test_the_campaign_has_exactly_one_windows_target(self):
+        # 2026-11-13: the Linux AWS builder was removed; Linux qualifies on the owned workstation.
+        self.assertEqual(controller.TARGETS,{'windows-x64':'Windows'})
+        self.assertIs(controller.TARGETS,names.TARGETS)
 
     def test_bootstrap_deadline_uses_the_reviewed_window(self):
         self.assertEqual(controller.builder_timing.BOOTSTRAP_SECONDS,900)
         self.assertEqual(self.session.stop,self.session.expiry-20*60)
 
-    def test_failed_target_is_retained_and_terminated_without_discarding_other_core(self):
+    def test_failed_target_is_retained_and_terminated(self):
         for target in self.ids:
             self.session.data['targets'][target]['state']='running-core'
-            self.output(target,'failed'if target=='windows-x64'else'core-retained')
+            self.output(target,'failed')
         with patch.object(self.session,'stop_target')as stop,patch.object(controller,'new_event'):
             with self.assertRaisesRegex(RuntimeError,'target failed'):self.session.collect('core')
         stop.assert_called_once_with('windows-x64')
-        self.assertEqual(self.session.data['targets']['linux-x64']['state'],'core-retained')
         self.assertTrue((self.root/'evidence/windows-x64/failed/retention.json').is_file())
 
     def test_changed_checkpoint_is_not_accepted_again(self):
-        target='linux-x64';manifest=self.output(target,'core-retained')
+        target='windows-x64';manifest=self.output(target,'core-retained')
         observed=self.root/'observations'/target;observed.mkdir(parents=True)
         (observed/'manifest.json').write_text(json.dumps(manifest))
         self.session.retain(target,manifest)
@@ -212,7 +215,7 @@ class PhaseWiring(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'hashes differ'):self.session.collect('final')
 
     def test_early_worker_exit_zero_is_still_failure_without_the_required_receipt(self):
-        target='linux-x64';self.session.data['targets']['windows-x64']['state']='failed'
+        target='windows-x64'
         self.session.data['targets'][target]['state']='running-core'
         outcome={'runId':self.plan['runId'],'source':self.plan['payloadSource'],'account':names.ACCOUNT,
                  'region':names.REGION,'instanceId':self.ids[target],'target':target,'exitCode':0}
@@ -227,7 +230,7 @@ class PhaseWiring(unittest.TestCase):
               patch.object(controller.campaign,'rows',return_value=[]),
               patch.object(controller.builder_ssm,'verify_instance')as metadata,
               patch.object(self.session,'api')as api):
-            with self.assertRaisesRegex(ValueError,'journaled stack member'):self.session.stop_target('linux-x64')
+            with self.assertRaisesRegex(ValueError,'journaled stack member'):self.session.stop_target('windows-x64')
         metadata.assert_not_called();api.assert_not_called()
 
     def test_account_match_alone_does_not_prove_the_hosted_role(self):
@@ -292,7 +295,7 @@ class ReceiptPolls(unittest.TestCase):
             return SimpleNamespace(client=SimpleNamespace(call=call),data={})
         with tempfile.TemporaryDirectory()as root:
             pending=owner('NoSuchKey')
-            self.assertIsNone(controller.Controller.read_object(pending,'results/linux-x64/worker-exit.json',Path(root)/'a.json'))
-            self.assertEqual(pending.data['objectPollSamples']['results/linux-x64/worker-exit.json'][0]['code'],'NoSuchKey')
+            self.assertIsNone(controller.Controller.read_object(pending,'results/windows-x64/worker-exit.json',Path(root)/'a.json'))
+            self.assertEqual(pending.data['objectPollSamples']['results/windows-x64/worker-exit.json'][0]['code'],'NoSuchKey')
             with self.assertRaises(builder_s3.ApiError):
-                controller.Controller.read_object(owner('AccessDenied'),'results/linux-x64/worker-exit.json',Path(root)/'b.json')
+                controller.Controller.read_object(owner('AccessDenied'),'results/windows-x64/worker-exit.json',Path(root)/'b.json')

@@ -139,46 +139,78 @@ def workstation_receipt(target):
 
 
 def jobs(**override):
-    rows=[{'target':'windows-x64','jobId':1,'runnerName':'blast-gpu-windows-1','labels':['self-hosted','blast-gpu','Windows','X64'],
-           'conclusion':'success'},
-          {'target':'linux-x64','jobId':2,'runnerName':'blast-gpu-linux-2','labels':['self-hosted','blast-gpu','Linux','X64'],
+    rows=[{'target':'linux-x64','jobId':2,'runnerName':'blast-gpu-linux-2','labels':['self-hosted','blast-gpu','Linux','X64'],
            'conclusion':'success'}]
     for row in rows:row.update(override.get(row['target'],{}))
     return rows
 
 
+def aws_windows(root):
+    """The Windows half of a hybrid run: the Sancus AWS receipt bound to its cleanup audit."""
+    raw=json.dumps(cleanup()).encode();graphical=b'graphical-windows-x64'
+    data=receipt('windows-x64');data.update(cleanupSha256=hashlib.sha256(raw).hexdigest(),graphicalSha256=hashlib.sha256(graphical).hexdigest())
+    files={gates.CLEANUP_RECEIPT:raw,gates.receipt_name('windows-x64'):json.dumps(data).encode(),
+           'Blast-Circuit-windows-x64-graphical.json':graphical}
+    for name,content in files.items():(Path(root)/name).write_bytes(content)
+    return files
+
+
+def stage_linux(root):
+    """The staged workstation Linux receipt, as the native job uploads it for finalization."""
+    folder=root/'gpu-release-linux-x64';folder.mkdir()
+    (folder/gates.receipt_name('linux-x64')).write_text(json.dumps(workstation_receipt('linux-x64')))
+    (folder/'Blast-Circuit-linux-x64-graphical.json').write_bytes(b'graphical-linux-x64')
+
+
 class WorkstationHostBinding(unittest.TestCase):
-    def staged(self,root):
-        for target in ('windows-x64','linux-x64'):
-            folder=root/('gpu-release-'+target);folder.mkdir()
-            (folder/gates.receipt_name(target)).write_text(json.dumps(workstation_receipt(target)))
-            (folder/('Blast-Circuit-'+target+'-graphical.json')).write_bytes(b'graphical-'+target.encode())
+    def staged(self,root):stage_linux(root)
 
     def test_preliminary_workstation_receipt_cannot_promote(self):
         with self.assertRaisesRegex(RuntimeError,'workstation host receipt'):
             gates.inspect_receipt(workstation_receipt('linux-x64'),'linux-x64',SHA,'a','b','c','fp')
 
-    def test_bound_receipts_pass_promotion_inspection_for_both_targets(self):
+    def test_bound_linux_receipt_passes_promotion_inspection(self):
         with tempfile.TemporaryDirectory()as temporary:
             root=Path(temporary);self.staged(root)
             output=gates.bind_host(root,root/'qualified',SHA,'777',jobs())
-            self.assertEqual(gates.bound_receipt(output),gates.HOST_RECEIPT)
-            for target in ('windows-x64','linux-x64'):
-                data=gates.inspect(output,target,SHA,'a','b','c','fp')
-                self.assertIs(data['hostVerified'],True)
+            self.assertEqual(gates.bound_receipts(output),[gates.HOST_RECEIPT])
+            self.assertEqual(sorted(path.name for path in output.iterdir()),
+                             sorted([gates.HOST_RECEIPT,'Blast-Circuit-linux-x64-gpu.json','Blast-Circuit-linux-x64-graphical.json']))
+            data=gates.inspect(output,'linux-x64',SHA,'a','b','c','fp')
+            self.assertIs(data['hostVerified'],True)
             host=json.loads((output/gates.HOST_RECEIPT).read_text())
+            self.assertEqual([row['target']for row in host['jobs']],['linux-x64'])
             self.assertEqual(host['devices'],['NVIDIA GeForce RTX 2080 SUPER'])
             self.assertEqual(host['runnerMode'],'jit-single-use')
             with self.assertRaises(FileExistsError):gates.bind_host(root,output,SHA,'777',jobs())
 
+    def test_the_abandoned_workstation_windows_vm_can_never_qualify(self):
+        # 2026-11-13: GPU passthrough hung the host kernel; Windows qualifies only on the Sancus builder.
+        self.assertEqual(gates.WORKSTATION_TARGETS,('linux-x64',))
+        with tempfile.TemporaryDirectory()as temporary:
+            root=Path(temporary);self.staged(root);output=gates.bind_host(root,root/'q',SHA,'777',jobs())
+            data=workstation_receipt('windows-x64');data.update(hostVerified=True,
+                hostReceiptSha256=hashlib.sha256((output/gates.HOST_RECEIPT).read_bytes()).hexdigest())
+            (output/gates.receipt_name('windows-x64')).write_text(json.dumps(data))
+            (output/'Blast-Circuit-windows-x64-graphical.json').write_bytes(b'graphical-windows-x64')
+            with self.assertRaisesRegex(RuntimeError,'host receipt'):gates.inspect(output,'windows-x64',SHA,'a','b','c','fp')
+            # A host receipt claiming a Windows job too (the retired two-job shape) proves nothing.
+            path=output/gates.HOST_RECEIPT;host=json.loads(path.read_text())
+            host['jobs'].append({**host['jobs'][0],'target':'windows-x64','runnerName':'blast-gpu-windows-1'});path.write_text(json.dumps(host))
+            linux=json.loads((output/gates.receipt_name('linux-x64')).read_text())
+            linux['hostReceiptSha256']=hashlib.sha256(path.read_bytes()).hexdigest()
+            (output/gates.receipt_name('linux-x64')).write_text(json.dumps(linux))
+            with self.assertRaisesRegex(RuntimeError,'host receipt'):gates.inspect(output,'linux-x64',SHA,'a','b','c','fp')
+
     def test_foreign_failed_or_other_run_jobs_are_never_bound(self):
-        for changed in ({'windows-x64':{'runnerName':'sancus-builder-x'}},{'linux-x64':{'runnerName':'blast-gpu-windows-9'}},
+        for changed in ({'linux-x64':{'runnerName':'sancus-builder-x'}},{'linux-x64':{'runnerName':'blast-gpu-windows-9'}},
                         {'linux-x64':{'conclusion':'failure'}}):
             with self.subTest(changed=changed),tempfile.TemporaryDirectory()as temporary:
                 root=Path(temporary);self.staged(root)
                 with self.assertRaisesRegex(RuntimeError,'workstation runner'):gates.bind_host(root,root/'q',SHA,'777',jobs(**changed))
         with tempfile.TemporaryDirectory()as temporary:
             root=Path(temporary);self.staged(root)
+            with self.assertRaisesRegex(RuntimeError,'workstation runner'):gates.bind_host(root,root/'q',SHA,'777',[])
             with self.assertRaisesRegex(RuntimeError,'not from this workstation run'):gates.bind_host(root,root/'q',SHA,'778',jobs())
 
     def test_tampered_or_mismatched_host_receipt_fails(self):
@@ -190,20 +222,85 @@ class WorkstationHostBinding(unittest.TestCase):
             path.unlink()
             with self.assertRaisesRegex(RuntimeError,'host receipt'):gates.inspect(output,'linux-x64',SHA,'a','b','c','fp')
 
-    def test_exactly_one_bound_receipt_names_the_published_asset(self):
-        with tempfile.TemporaryDirectory()as temporary:
-            root=Path(temporary)
-            with self.assertRaises(RuntimeError):gates.bound_receipt(root)
-            (root/gates.CLEANUP_RECEIPT).write_text('{}');self.assertEqual(gates.bound_receipt(root),gates.CLEANUP_RECEIPT)
-            (root/gates.HOST_RECEIPT).write_text('{}')
-            with self.assertRaises(RuntimeError):gates.bound_receipt(root)
-
-    def test_run_jobs_reads_only_named_workstation_native_jobs(self):
-        page={'jobs':[{'id':1,'name':'Workstation GPU windows-x64','runner_name':'blast-gpu-windows-1','labels':['blast-gpu'],
+    def test_run_jobs_reads_only_the_named_workstation_linux_job(self):
+        page={'jobs':[{'id':1,'name':'Workstation GPU linux-x64','runner_name':'blast-gpu-linux-1','labels':['blast-gpu'],
                        'conclusion':'success','started_at':'s','completed_at':'c'},
+                      {'id':3,'name':'Sancus builder windows-x64 / PAID up to $3.67 - source x','runner_name':'GitHub Actions 2',
+                       'labels':['ubuntu-24.04'],'conclusion':'success'},
+                      {'id':4,'name':'Workstation GPU windows-x64','runner_name':'blast-gpu-windows-1','labels':['blast-gpu'],'conclusion':'success'},
                       {'id':2,'name':'select','runner_name':'GitHub Actions 1','labels':['ubuntu-24.04'],'conclusion':'success'}]}
         rows=gates.run_jobs('o/r','5',lambda *args:json.dumps([page]))
-        self.assertEqual([(row['target'],row['runnerName'])for row in rows],[('windows-x64','blast-gpu-windows-1')])
+        self.assertEqual([(row['target'],row['runnerName'])for row in rows],[('linux-x64','blast-gpu-linux-1')])
+
+
+class BoundReceiptShapes(unittest.TestCase):
+    """Promotion/verification name exactly the bound receipts the target receipts reference."""
+
+    def hybrid(self,root):
+        staged=root/'staged';staged.mkdir()
+        stage_linux(staged)
+        output=gates.bind_host(staged,root/'linux',SHA,'777',jobs())
+        merged=root/'merged';merged.mkdir()
+        for path in output.iterdir():(merged/path.name).write_bytes(path.read_bytes())
+        windows=aws_windows(merged)
+        return merged,set(windows),{path.name for path in output.iterdir()}
+
+    def test_hybrid_binds_windows_to_cleanup_and_linux_to_the_host_receipt(self):
+        with tempfile.TemporaryDirectory()as temporary:
+            merged,windows,linux=self.hybrid(Path(temporary))
+            self.assertFalse(windows&linux,'the two promotion artifacts must never share a file name')
+            self.assertEqual(gates.bound_receipts(merged),sorted([gates.CLEANUP_RECEIPT,gates.HOST_RECEIPT]))
+            self.assertEqual(gates.bound_receipts(merged,['windows-x64']),[gates.CLEANUP_RECEIPT])
+            self.assertEqual(gates.bound_receipts(merged,['linux-x64']),[gates.HOST_RECEIPT])
+            self.assertIs(gates.inspect(merged,'windows-x64',SHA,'a','b','c','fp')['cleanupAudited'],True)
+            self.assertIs(gates.inspect(merged,'linux-x64',SHA,'a','b','c','fp')['hostVerified'],True)
+
+    def test_hybrid_missing_either_bound_receipt_fails(self):
+        for missing in (gates.CLEANUP_RECEIPT,gates.HOST_RECEIPT):
+            with self.subTest(missing=missing),tempfile.TemporaryDirectory()as temporary:
+                merged,_,_=self.hybrid(Path(temporary));(merged/missing).unlink()
+                with self.assertRaisesRegex(RuntimeError,'missing its bound'):gates.bound_receipts(merged)
+
+    def test_legacy_aws_release_binds_both_targets_to_the_one_cleanup_receipt(self):
+        with tempfile.TemporaryDirectory()as temporary:
+            root=Path(temporary);aws_windows(root)
+            data=receipt('linux-x64');data['cleanupSha256']=hashlib.sha256((root/gates.CLEANUP_RECEIPT).read_bytes()).hexdigest()
+            data['graphicalSha256']=hashlib.sha256(b'graphical-linux').hexdigest()
+            (root/gates.receipt_name('linux-x64')).write_text(json.dumps(data))
+            (root/'Blast-Circuit-linux-x64-graphical.json').write_bytes(b'graphical-linux')
+            self.assertEqual(gates.bound_receipts(root),[gates.CLEANUP_RECEIPT])
+            for target in ('windows-x64','linux-x64'):
+                self.assertIs(gates.inspect(root,target,SHA,'a','b','c','fp')['cleanupAudited'],True)
+
+    def test_no_receipt_or_an_unreferenced_bound_receipt_is_refused(self):
+        with tempfile.TemporaryDirectory()as temporary:
+            root=Path(temporary)
+            with self.assertRaisesRegex(RuntimeError,'no target receipt'):gates.bound_receipts(root)
+            aws_windows(root);self.assertEqual(gates.bound_receipts(root),[gates.CLEANUP_RECEIPT])
+            (root/gates.HOST_RECEIPT).write_text('{}')
+            with self.assertRaisesRegex(RuntimeError,'unreferenced'):gates.bound_receipts(root)
+
+    def test_download_merges_the_hybrid_artifacts_without_conflict_in_either_order(self):
+        with tempfile.TemporaryDirectory()as temporary:
+            merged,windows,linux=self.hybrid(Path(temporary))
+            contents={'windows-x64':{name:(merged/name).read_bytes()for name in windows},
+                      'linux-x64':{name:(merged/name).read_bytes()for name in linux}}
+            run={'head_repository':{'full_name':'o/r'},'head_sha':SHA,'path':'.github/workflows/gpu-qualification.yml',
+                 'head_branch':'main','event':'workflow_dispatch','status':'completed','conclusion':'success'}
+            for order in (('windows-x64','linux-x64'),('linux-x64','windows-x64')):
+                with self.subTest(order=order),tempfile.TemporaryDirectory()as destination_root:
+                    destination_root=Path(destination_root);calls=[]
+                    def gh(*args):
+                        if args[0]=='api':return json.dumps(run)
+                        destination=Path(args[args.index('--dir')+1]);destination.mkdir(exist_ok=True)
+                        calls.append(args[args.index('--name')+1])
+                        for name,data in contents[order[len(calls)-1]].items():
+                            with (destination/name).open('xb')as stream:stream.write(data)
+                        return ''
+                    with patch.object(gates,'artifact_name',side_effect=[gates.artifact_name(t)for t in order]):
+                        gates.download('o/r','123',SHA,destination_root,gh)
+                    self.assertEqual({path.name for path in destination_root.iterdir()},windows|linux)
+                    self.assertEqual(gates.bound_receipts(destination_root),sorted([gates.CLEANUP_RECEIPT,gates.HOST_RECEIPT]))
 
 
 def run(index,crashed=False):
