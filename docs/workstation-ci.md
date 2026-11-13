@@ -96,8 +96,11 @@ in 28 seconds.
 ## Reboot and recovery
 
 Production, the relay, both runner controllers and the firewall start at boot.
-The second GPU is bound to `vfio-pci` before the NVIDIA driver loads, so the
-desktop keeps the first GPU. After a host reboot, verify the public `/realtime/v1/games`
+Both GPUs stay on the NVIDIA driver; the host policy forbids runtime GPU
+rebinds, resets or passthrough, and reboots need the owner's approval with
+Blast drained first. The relay uses public DNS resolvers because the Twingate
+client owns the system resolver and needs an interactive login after boot.
+After a host reboot, verify the public `/realtime/v1/games`
 endpoint, the fleet view, both controller heartbeats and one placement probe.
 To roll back the game node to the Pi or DiveMac, restore the edge's previous
 route/credential backup, start the retained node's relay and container, then
