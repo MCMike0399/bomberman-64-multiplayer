@@ -4,8 +4,10 @@ The shared service is `https://blast.burbuja-lab.dev`. Players use that address 
 Quick Play and private rooms. A previously saved custom server address remains a
 device-local choice.
 
-The primary node is **raspberrypi**; **DiveMac** keeps a small idle worker ready for
-overflow. `Blast.Cluster` registers the `blast-primary-fallback` placement policy.
+Since 2026-11-13 the only game node is the owned **workstation** (`blast-workstation`,
+route `/nodes/workstation`); see [workstation hosting](workstation-ci.md). The
+raspberrypi primary and DiveMac fallback described below are stopped and retained
+for rollback; their two-node procedures are historical. `Blast.Cluster` registers the `blast-primary-fallback` placement policy.
 For adaptive rooms it first ranks available execution capacity compatible with
 the requested hosting preference, then uses the configured node order. Empty
 coordination slots alone do not imply capacity to run another match. The kernel filters full/draining

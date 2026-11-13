@@ -49,6 +49,11 @@ update the current guide rather than silently reviving old behavior.
 
 ## Current decisions that supersede earlier experiments
 
+- 2026-11-13: one owned workstation runs the production game node, the
+  deployment runner and Windows/Linux real-GPU qualification. The budgeted
+  Sancus AWS builders and the Pi/DiveMac game nodes are retired (kept for
+  rollback). [Hosting, isolation and procedures](../workstation-ci.md).
+
 - v0.45.1 delivers Connecting retry and interruption resilience, including the
   common movement-silence guard and terminal native peers. Packaged three-OS
   gates, fleet rollout, signed public assets and production crossplay passed.

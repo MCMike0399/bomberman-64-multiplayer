@@ -1,27 +1,17 @@
 name: Release GPU qualification
 
+# Real-GPU qualification on the owned Alienware workstation (2026-11-13), replacing the
+# Sancus AWS builders: Linux runs in a fresh Ubuntu container on the host RTX 2080 SUPER,
+# Windows in a VM that owns the second RTX 2080 SUPER. Runners are single-use (JIT) and an
+# operator job guard accepts only this workflow on trusted main before any step executes.
+
 on:
   workflow_dispatch:
     inputs:
-      mode:
-        description: Free audit/rehearsal/permissions-smoke or a guarded paid qualification
-        type: choice
-        options: [audit, rehearse, permissions-smoke, qualify]
-        default: audit
       verification-run-id:
-        description: Exact successful current-main Verification (rehearsal/qualification; not permissions-smoke)
+        description: Exact successful current-main Verification run
         type: string
-      fixed-expiry:
-        description: Fixed UTC deadline; empty selects one deadline before approval, never extended
-        type: string
-      rehearsal-fault:
-        description: Free probe only; cancel probe is cancelled by the operator after it starts
-        type: choice
-        options: [none, cancel, job-timeout]
-        default: none
-      diagnosed-failure-run:
-        description: Paid retry only; the exact earlier failed qualification run already diagnosed
-        type: string
+        required: true
   workflow_run:
     workflows: [Verification]
     branches: [main]
@@ -32,19 +22,21 @@ permissions:
   actions: read
 
 concurrency:
-  group: sancus-builder-controller
+  group: workstation-gpu-qualification
   cancel-in-progress: false
 
 jobs:
   select:
-    if: github.repository == 'MCMike0399/bomberman-64-multiplayer' && github.ref == 'refs/heads/main'
+    if: >-
+      github.repository == 'MCMike0399/bomberman-64-multiplayer' && github.ref == 'refs/heads/main' &&
+      (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     outputs:
       run: ${{ steps.select.outputs.run }}
-      mode: ${{ steps.select.outputs.mode }}
+      source: ${{ steps.select.outputs.source }}
       verification-run-id: ${{ steps.select.outputs.verification-run-id }}
-      fixed-expiry: ${{ steps.select.outputs.fixed-expiry }}
-      approval-plan: ${{ steps.select.outputs.approval-plan }}
+      expiry: ${{ steps.select.outputs.expiry }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -52,37 +44,182 @@ jobs:
       - id: select
         env:
           GH_TOKEN: ${{ github.token }}
-          REQUESTED_MODE: ${{ github.event_name == 'workflow_run' && 'qualify' || inputs.mode }}
           VERIFICATION_RUN: ${{ github.event.workflow_run.id || inputs.verification-run-id }}
-          FIXED_EXPIRY: ${{ inputs.fixed-expiry }}
-          SANCUS_BUILDER_PAID_HOLD: ${{ vars.SANCUS_BUILDER_PAID_HOLD }}
           BLAST_RELEASE_KIND_OVERRIDE: ${{ vars.BLAST_RELEASE_KIND_OVERRIDE }}
-          DIAGNOSED_FAILURE_RUN: ${{ inputs.diagnosed-failure-run }}
-        run: python3 tools/ci/builder_trigger.py
+        run: python3 tools/ci/gpu_select.py
 
-      - name: Retain the paid plan and its qualification key before allocation
-        if: steps.select.outputs.run == 'true' && steps.select.outputs.mode == 'qualify'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: builder-approval-plan
-          path: |
-            artifacts/builder-approval-plan.json
-            artifacts/builder-qualification-key.json
-            artifacts/builder-guard.json
-          if-no-files-found: error
-          retention-days: 90
-
-  controlled:
+  native:
+    name: Workstation GPU ${{ matrix.target }}
     needs: select
     if: needs.select.outputs.run == 'true'
-    permissions:
-      contents: read
-      actions: read
-      id-token: write
-    uses: ./.github/workflows/builder-controller.yml
-    with:
-      mode: ${{ needs.select.outputs.mode }}
-      verification-run-id: ${{ needs.select.outputs.verification-run-id }}
-      fixed-expiry: ${{ needs.select.outputs.fixed-expiry }}
-      rehearsal-fault: ${{ inputs.rehearsal-fault || 'none' }}
-      approval-plan: ${{ needs.select.outputs.approval-plan }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: windows-x64
+            os: Windows
+          - target: linux-x64
+            os: Linux
+    runs-on: [self-hosted, blast-gpu, '${{ matrix.os }}', X64]
+    timeout-minutes: 330
+    env:
+      TARGET: ${{ matrix.target }}
+      PAYLOAD: ${{ needs.select.outputs.source }}
+      GPU_EXPIRY: ${{ needs.select.outputs.expiry }}
+      VERIFICATION_RUN: ${{ needs.select.outputs.verification-run-id }}
+      EXPECTED_ADAPTER: RTX 2080 SUPER
+      BLAST_GPU_HOST: workstation
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.select.outputs.source }}
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        env:
+          DOTNET_INSTALL_DIR: ${{ runner.temp }}/dotnet
+        with:
+          dotnet-version: 10.0.400
+      - name: Download exact trusted main artifacts without rebuilding containers
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          python - <<'PYMAIN'
+          import json,os,re,subprocess
+          run=os.environ['VERIFICATION_RUN'];assert re.fullmatch('[1-9][0-9]*',run)
+          info=json.loads(subprocess.check_output(['gh','api',f'repos/{os.environ["GITHUB_REPOSITORY"]}/actions/runs/{run}']))
+          assert info['head_repository']['full_name']==os.environ['GITHUB_REPOSITORY'] and info['event'] in ('push','workflow_dispatch')
+          assert info['head_sha']==os.environ['PAYLOAD'] and info['head_branch']=='main' and info['path']=='.github/workflows/ci.yml' and info['status']=='completed' and info['conclusion']=='success'
+          target=os.environ['TARGET']
+          for name in ['Blast-Circuit-'+target,'Blast-Circuit-'+target+'-download','Blast-Circuit-server-dotnet10']:
+              subprocess.run(['gh','run','download',run,'--name',name,'--dir','artifacts'],check=True)
+          PYMAIN
+      - name: Prepare display and actual audio endpoint
+        if: runner.os == 'Windows'
+        run: ./tools/packaging/windows-test-desktop.ps1
+      - name: Verify the interactive standard-user Windows session and WDDM graphics driver
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $session = [Diagnostics.Process]::GetCurrentProcess().SessionId
+          if ($session -eq 0 -or $env:USERNAME -ne 'BlastQa') { throw 'GPU tests require the interactive BlastQa session' }
+          $admin=([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+          if ($admin) { throw 'GPU tests require a standard user, not an elevated administrator' }
+          $model = (& nvidia-smi --query-gpu=driver_model.current --format=csv,noheader) -join ' '
+          if ($LASTEXITCODE -ne 0 -or $model -notmatch 'WDDM') { throw 'NVIDIA graphics-capable WDDM driver is not active' }
+          New-Item -ItemType Directory -Force artifacts/windows-gpu-desktop | Out-Null
+          @{ user=$env:USERNAME; sessionId=$session; driverModel=$model; os=(Get-CimInstance Win32_OperatingSystem | Select-Object Caption,Version,BuildNumber); adapters=@(Get-CimInstance Win32_VideoController | Select-Object Name,DriverVersion,Status,CurrentHorizontalResolution,CurrentVerticalResolution) } | ConvertTo-Json -Depth 5 | Set-Content artifacts/windows-gpu-desktop/session.json
+      - name: Record the Linux container's physical Vulkan device
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          mkdir -p artifacts/linux-gpu-desktop
+          vulkaninfo --summary > artifacts/linux-gpu-desktop/vulkaninfo.txt 2>&1 || true
+          grep -q "deviceName *= .*${EXPECTED_ADAPTER}" artifacts/linux-gpu-desktop/vulkaninfo.txt
+      - name: Install checksum-pinned engine for the small resource control
+        shell: bash
+        run: python tools/ci/install_godot.py --destination artifacts/gpu-engine
+      - name: Verify selected hardware, original 2x resources and real package High
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os,pathlib,subprocess,sys
+          root=pathlib.Path.cwd();environment=root/'artifacts/gpu-venv'
+          subprocess.run([sys.executable,'-m','venv',str(environment)],check=True)
+          executable=environment/('Scripts/python.exe'if os.name=='nt'else'bin/python')
+          subprocess.run([str(executable),'-m','pip','install','Pillow==13.0.0'],check=True)
+          command=[str(executable),'tools/ci/gpu_campaign.py','--target',os.environ['TARGET'],'--expected-revision',os.environ['PAYLOAD'],'--phase','core','--expiry',os.environ['GPU_EXPIRY'],'--godot',os.environ['GODOT']]
+          if os.environ['TARGET']=='linux-x64':command=[str(executable),'tools/packaging/linux-desktop.py','--',*command]
+          subprocess.run(command,check=True)
+          PY
+      - name: Retain core captures before full tours
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: gpu-core-${{ matrix.target }}
+          path: artifacts/gpu-campaign-${{ matrix.target }}-core/
+          if-no-files-found: warn
+      - name: Complete real-GPU tours and stage exact-source receipts
+        shell: bash
+        run: |
+          python - <<'PYFINAL'
+          import os,pathlib,subprocess
+          root=pathlib.Path.cwd();python=root/'artifacts/gpu-venv'/('Scripts/python.exe'if os.name=='nt'else'bin/python')
+          target=os.environ['TARGET']
+          if target=='windows-x64':subprocess.run([str(python),'tools/ci/startup_guard.py','--expected-revision',os.environ['PAYLOAD'],'--output','artifacts/gpu-installed-startup-guard'],check=True)
+          command=[str(python),'tools/ci/gpu_campaign.py','--target',target,'--expected-revision',os.environ['PAYLOAD'],'--phase','remaining','--skip-bisection','--expiry',os.environ['GPU_EXPIRY'],'--godot',os.environ['GODOT']]
+          if target=='linux-x64':command=[str(python),'tools/packaging/linux-desktop.py','--',*command]
+          subprocess.run(command,check=True)
+          subprocess.run([str(python),'tools/ci/gpu_release_gates.py','--target',target,'--revision',os.environ['PAYLOAD'],'--verification-run',os.environ['VERIFICATION_RUN']],check=True)
+          PYFINAL
+      - name: Retain staged exact-source receipts for host binding
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: gpu-staged-${{ matrix.target }}
+          path: artifacts/gpu-release-${{ matrix.target }}/
+          if-no-files-found: error
+          retention-days: 90
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: workstation-gpu-${{ matrix.target }}-diagnostics
+          path: |
+            artifacts/gpu-campaign-${{ matrix.target }}-remaining/
+            artifacts/*-startup*.json
+            artifacts/*-startup-details/
+            artifacts/*-update*.json
+            artifacts/*-update-details/
+            artifacts/*-regression.json
+            artifacts/*-regression-details/
+            artifacts/windows-audio/*.json
+            artifacts/windows-gpu-desktop/
+            artifacts/linux-gpu-desktop/
+          retention-days: 14
+          if-no-files-found: warn
+
+  finalize:
+    name: Bind workstation host receipt
+    needs: [select, native]
+    if: needs.select.outputs.run == 'true' && needs.native.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.select.outputs.source }}
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: gpu-staged-windows-x64
+          path: artifacts/gpu-release-windows-x64
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: gpu-staged-linux-x64
+          path: artifacts/gpu-release-linux-x64
+      - name: Bind both receipts to this run's single-use workstation jobs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/ci/gpu_release_gates.py --directory artifacts --revision "${{ needs.select.outputs.source }}" --bind-host artifacts/gpu-qualified
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-gate-gpu-windows-x64
+          path: |
+            artifacts/gpu-qualified/Blast-Circuit-windows-x64-gpu.json
+            artifacts/gpu-qualified/Blast-Circuit-windows-x64-graphical.json
+            artifacts/gpu-qualified/Blast-Circuit-gpu-host.json
+          if-no-files-found: error
+          retention-days: 90
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-gate-gpu-linux-x64
+          path: |
+            artifacts/gpu-qualified/Blast-Circuit-linux-x64-gpu.json
+            artifacts/gpu-qualified/Blast-Circuit-linux-x64-graphical.json
+            artifacts/gpu-qualified/Blast-Circuit-gpu-host.json
+          if-no-files-found: error
+          retention-days: 90

@@ -127,6 +127,85 @@ class GpuPromotionBoundary(unittest.TestCase):
                 self.assertEqual(len(set(destinations)),2)
 
 
+
+def workstation_receipt(target):
+    data=receipt(target)
+    for key in ('cleanupAudited','cleanupSha256','campaignRunId'):data.pop(key)
+    data['devices'][0]['adapter']='NVIDIA GeForce RTX 2080 SUPER'
+    for row in data['primaryHigh']['runs']:row['device']['adapter']='NVIDIA GeForce RTX 2080 SUPER'
+    data.update(qualificationHost='workstation',hostVerified=False,qualificationRunId='777',
+                graphicalSha256=hashlib.sha256(b'graphical-'+target.encode()).hexdigest())
+    return data
+
+
+def jobs(**override):
+    rows=[{'target':'windows-x64','jobId':1,'runnerName':'blast-gpu-windows-1','labels':['self-hosted','blast-gpu','Windows','X64'],
+           'conclusion':'success'},
+          {'target':'linux-x64','jobId':2,'runnerName':'blast-gpu-linux-2','labels':['self-hosted','blast-gpu','Linux','X64'],
+           'conclusion':'success'}]
+    for row in rows:row.update(override.get(row['target'],{}))
+    return rows
+
+
+class WorkstationHostBinding(unittest.TestCase):
+    def staged(self,root):
+        for target in ('windows-x64','linux-x64'):
+            folder=root/('gpu-release-'+target);folder.mkdir()
+            (folder/gates.receipt_name(target)).write_text(json.dumps(workstation_receipt(target)))
+            (folder/('Blast-Circuit-'+target+'-graphical.json')).write_bytes(b'graphical-'+target.encode())
+
+    def test_preliminary_workstation_receipt_cannot_promote(self):
+        with self.assertRaisesRegex(RuntimeError,'workstation host receipt'):
+            gates.inspect_receipt(workstation_receipt('linux-x64'),'linux-x64',SHA,'a','b','c','fp')
+
+    def test_bound_receipts_pass_promotion_inspection_for_both_targets(self):
+        with tempfile.TemporaryDirectory()as temporary:
+            root=Path(temporary);self.staged(root)
+            output=gates.bind_host(root,root/'qualified',SHA,'777',jobs())
+            self.assertEqual(gates.bound_receipt(output),gates.HOST_RECEIPT)
+            for target in ('windows-x64','linux-x64'):
+                data=gates.inspect(output,target,SHA,'a','b','c','fp')
+                self.assertIs(data['hostVerified'],True)
+            host=json.loads((output/gates.HOST_RECEIPT).read_text())
+            self.assertEqual(host['devices'],['NVIDIA GeForce RTX 2080 SUPER'])
+            self.assertEqual(host['runnerMode'],'jit-single-use')
+            with self.assertRaises(FileExistsError):gates.bind_host(root,output,SHA,'777',jobs())
+
+    def test_foreign_failed_or_other_run_jobs_are_never_bound(self):
+        for changed in ({'windows-x64':{'runnerName':'sancus-builder-x'}},{'linux-x64':{'runnerName':'blast-gpu-windows-9'}},
+                        {'linux-x64':{'conclusion':'failure'}}):
+            with self.subTest(changed=changed),tempfile.TemporaryDirectory()as temporary:
+                root=Path(temporary);self.staged(root)
+                with self.assertRaisesRegex(RuntimeError,'workstation runner'):gates.bind_host(root,root/'q',SHA,'777',jobs(**changed))
+        with tempfile.TemporaryDirectory()as temporary:
+            root=Path(temporary);self.staged(root)
+            with self.assertRaisesRegex(RuntimeError,'not from this workstation run'):gates.bind_host(root,root/'q',SHA,'778',jobs())
+
+    def test_tampered_or_mismatched_host_receipt_fails(self):
+        with tempfile.TemporaryDirectory()as temporary:
+            root=Path(temporary);self.staged(root);output=gates.bind_host(root,root/'q',SHA,'777',jobs())
+            path=output/gates.HOST_RECEIPT;host=json.loads(path.read_text())
+            path.write_text(json.dumps({**host,'runId':'778'}))
+            with self.assertRaisesRegex(RuntimeError,'host receipt'):gates.inspect(output,'linux-x64',SHA,'a','b','c','fp')
+            path.unlink()
+            with self.assertRaisesRegex(RuntimeError,'host receipt'):gates.inspect(output,'linux-x64',SHA,'a','b','c','fp')
+
+    def test_exactly_one_bound_receipt_names_the_published_asset(self):
+        with tempfile.TemporaryDirectory()as temporary:
+            root=Path(temporary)
+            with self.assertRaises(RuntimeError):gates.bound_receipt(root)
+            (root/gates.CLEANUP_RECEIPT).write_text('{}');self.assertEqual(gates.bound_receipt(root),gates.CLEANUP_RECEIPT)
+            (root/gates.HOST_RECEIPT).write_text('{}')
+            with self.assertRaises(RuntimeError):gates.bound_receipt(root)
+
+    def test_run_jobs_reads_only_named_workstation_native_jobs(self):
+        page={'jobs':[{'id':1,'name':'Workstation GPU windows-x64','runner_name':'blast-gpu-windows-1','labels':['blast-gpu'],
+                       'conclusion':'success','started_at':'s','completed_at':'c'},
+                      {'id':2,'name':'select','runner_name':'GitHub Actions 1','labels':['ubuntu-24.04'],'conclusion':'success'}]}
+        rows=gates.run_jobs('o/r','5',lambda *args:json.dumps([page]))
+        self.assertEqual([(row['target'],row['runnerName'])for row in rows],[('windows-x64','blast-gpu-windows-1')])
+
+
 def run(index,crashed=False):
     """One repeat row as verify-desktop --repeat writes it (shape from run 41304300722)."""
     if crashed:

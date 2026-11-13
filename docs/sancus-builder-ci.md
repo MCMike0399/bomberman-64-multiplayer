@@ -1,5 +1,11 @@
 # Release graphics qualification
 
+> **Retired 2026-11-13.** The user replaced the budgeted Sancus AWS builders with
+> the owned [workstation](workstation-ci.md). `builder-controller.yml`,
+> `builder-bootstrap-preflight.yml` and `gpu-once.yml` were removed; `SANCUS_BUILDER_PAID_HOLD`
+> stays `true`. The `tools/ci/builder_*` modules remain only so historical AWS
+> receipts can be verified. Everything below is history.
+
 User policy, 2026-10-30: a major **or minor** version increase against the latest
 published stable release requires real-GPU qualification of the exact source,
 client archives, player downloads and server archive. Patch releases use the

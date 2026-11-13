@@ -50,15 +50,12 @@ class CurrentMainOnly(unittest.TestCase):
 
     def test_only_manual_dispatch_passes_the_verified_main_source_and_retains_guard_receipt(self):
         import json
-        from pathlib import Path
         for event in ('workflow_dispatch','workflow_run','push'):
             with self.subTest(event=event):
                 self.selected('qualify','false',event=event)
                 expected='a'*40 if event=='workflow_dispatch' else None
                 self.assertEqual(self.guard_options[-1]['source'],expected)
                 self.assertEqual(json.loads(self.guard_receipt)['source'],expected)
-        workflow=(Path(trigger.__file__).resolve().parents[2]/'.github/workflows/gpu-qualification.yml').read_text()
-        self.assertIn('artifacts/'+trigger.builder_guard.RECEIPT_FILE,workflow)
 
     def test_paid_hold_refuses_before_any_environment_job_is_selected(self):
         output,summary=self.selected('qualify','true')

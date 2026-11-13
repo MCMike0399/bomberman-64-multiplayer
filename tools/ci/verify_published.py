@@ -96,7 +96,7 @@ def verify_assets(directory, version):
     expected = {ARCHIVE, SERVER_ARCHIVE, 'build-metadata.json', 'server-build-metadata.json', 'Blast-Circuit-update.json'}
     policy=release_gpu_policy.read(directory)
     if policy:expected.add(release_gpu_policy.RECEIPT)
-    if policy and policy['requiresGpu']:expected.add(gpu_release_gates.CLEANUP_RECEIPT)
+    if policy and policy['requiresGpu']:expected.add(gpu_release_gates.bound_receipt(directory))
     if desktop_packages.present(directory):
         expected |= {name for target in desktop_packages.present_targets(directory) for name in release_gpu_policy.asset_names(target,policy)}
         expected |= {'Blast-Circuit-' + target + '-update.json' for target in desktop_packages.present_targets(directory)}
@@ -162,7 +162,7 @@ def compare_run_artifacts(repository, run_id, revision, directory):
             if str(policy['verificationRunId'])!=str(run_id):raise RuntimeError('Published graphics policy names another Verification run')
             if policy['requiresGpu']:
                 gpu_release_gates.download(repository,policy['gpuRunId'],revision,Path(temporary),gh)
-                names+=(gpu_release_gates.CLEANUP_RECEIPT,)
+                names+=(gpu_release_gates.bound_receipt(Path(temporary)),)
         if 'macos-arm64' in download_formats.present(directory):
             names += download_formats.names('macos-arm64')
         if (directory / crossplay.RECEIPT).exists(): names += (crossplay.RECEIPT, desktop_validation.MAC_RECEIPT)
@@ -182,7 +182,7 @@ def verify(repository, version, token=None, run_id=None, superseded=False, lates
     expected_assets = set(ASSETS)
     has_policy=release_gpu_policy.RECEIPT in published
     if has_policy:expected_assets.add(release_gpu_policy.RECEIPT)
-    if has_policy and gpu_release_gates.CLEANUP_RECEIPT in published:expected_assets.add(gpu_release_gates.CLEANUP_RECEIPT)
+    if has_policy:expected_assets.update(name for name in gpu_release_gates.BOUND_RECEIPTS if name in published)
     for target in desktop_packages.TARGETS:
         group = set(desktop_packages.asset_names(target,include_graphics=not has_policy)) | {'Blast-Circuit-' + target + '-update.json', 'Blast-Circuit-' + target + '-update.json.sig'}
         # This is only the download allowlist. The signed, version-derived policy

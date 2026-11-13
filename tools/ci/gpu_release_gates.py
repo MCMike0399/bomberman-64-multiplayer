@@ -10,11 +10,28 @@ import os
 import builder_namespace
 
 SOFTWARE=('warp','basic render','llvmpipe','lavapipe','swiftshader','paravirtual','software')
+# Legacy Sancus AWS campaigns bound an ownership-safe cleanup audit. Published v0.45.0 carries it,
+# so historical verification keeps accepting that shape.
 CLEANUP_RECEIPT='Sancus-builder-cleanup.json'
+# Workstation qualification (2026-11-13) binds the single-use runner/job identity instead.
+HOST_RECEIPT='Blast-Circuit-gpu-host.json'
+BOUND_RECEIPTS=(HOST_RECEIPT,CLEANUP_RECEIPT)
+WORKSTATION_HOST='blast-workstation'
+RUNNER_PREFIX={'windows-x64':'blast-gpu-windows-','linux-x64':'blast-gpu-linux-'}
 CLEANUP_TYPES={'CFN','EC2','EBS','ENI','SG','EIP','IAM','Scheduler','Logs','S3','SSM','AMI','Snapshots','KeyPairs'}
 
 
 def receipt_name(target):return 'Blast-Circuit-'+target+'-gpu.json'
+
+
+def bound_receipt(directory):
+    """The one host/cleanup receipt a GPU qualification artifact set binds."""
+    present=[name for name in BOUND_RECEIPTS if (Path(directory)/name).is_file()]
+    if len(present)!=1:raise RuntimeError('GPU qualification needs exactly one bound host or cleanup receipt')
+    return present[0]
+
+
+def workstation(data):return data.get('qualificationHost')=='workstation'
 def artifact_name(target):return 'release-gate-gpu-'+target
 
 
@@ -28,7 +45,10 @@ def inspect_receipt(data,target,revision,archive,download,server,fingerprint,*,r
               'downloadSha256':download,'serverSha256':server,'renderFingerprint':fingerprint}
     if any(data.get(key)!=value for key,value in expected.items()):
         raise RuntimeError('GPU receipt source/archive/download/server/fingerprint mismatch')
-    if require_cleanup and(data.get('cleanupAudited')is not True or not re.fullmatch(r'[0-9a-f]{64}',data.get('cleanupSha256',''))):
+    if require_cleanup and workstation(data):
+        if data.get('hostVerified')is not True or not re.fullmatch(r'[0-9a-f]{64}',data.get('hostReceiptSha256','')):
+            raise RuntimeError('GPU qualification requires its bound workstation host receipt')
+    elif require_cleanup and(data.get('cleanupAudited')is not True or not re.fullmatch(r'[0-9a-f]{64}',data.get('cleanupSha256',''))):
         raise RuntimeError('GPU qualification requires its completed ownership-safe cleanup audit')
     if data.get('passed')is not True or data.get('primaryDriver')!='vulkan' or data.get('effectiveSamples')!=2:
         raise RuntimeError('GPU original High qualification is incomplete')
@@ -57,6 +77,9 @@ def inspect(directory,target,revision,archive,download,server,fingerprint):
     path=directory/receipt_name(target)
     if not path.is_file():raise RuntimeError('Missing mandatory GPU qualification receipt: '+target)
     data=inspect_receipt(json.loads(path.read_text()),target,revision,archive,download,server,fingerprint)
+    if workstation(data):
+        inspect_host(directory,data,target,revision)
+        return inspect_bound_graphical(directory,target,data)
     cleanup_path=directory/CLEANUP_RECEIPT
     if not cleanup_path.is_file()or hashlib.sha256(cleanup_path.read_bytes()).hexdigest()!=data['cleanupSha256']:
         raise RuntimeError('GPU cleanup receipt is missing or differs from its bound hash')
@@ -70,10 +93,63 @@ def inspect(directory,target,revision,archive,download,server,fingerprint):
             any(cleanup.get(key)is not True for key in ('protectedInventoryVerified','ephemeralRunnersRemoved','gpuVariablesDisarmed'))or
             not CLEANUP_TYPES<=set(checks)or any(checks[key].get('state')!='absent'for key in CLEANUP_TYPES)):
         raise RuntimeError('GPU cleanup is incomplete, mismatched, or retains owned resources')
+    return inspect_bound_graphical(directory,target,data)
+
+
+def inspect_bound_graphical(directory,target,data):
     graphical=directory/('Blast-Circuit-'+target+'-graphical.json')
     if not graphical.is_file()or hashlib.sha256(graphical.read_bytes()).hexdigest()!=data.get('graphicalSha256'):
         raise RuntimeError('GPU graphical tour receipt differs from qualified evidence')
     return data
+
+
+def inspect_host(directory,data,target,revision):
+    """Workstation evidence: the exact trusted run, single-use runners and the physical adapters used."""
+    path=directory/HOST_RECEIPT
+    if not path.is_file()or hashlib.sha256(path.read_bytes()).hexdigest()!=data.get('hostReceiptSha256'):
+        raise RuntimeError('GPU host receipt is missing or differs from its bound hash')
+    host=json.loads(path.read_text())
+    jobs={row.get('target'):row for row in host.get('jobs',[])}
+    job=jobs.get(target,{})
+    if (host.get('schemaVersion')!=1 or host.get('source')!=revision or host.get('passed')is not True or
+            host.get('host')!=WORKSTATION_HOST or host.get('runnerMode')!='jit-single-use'or
+            not str(host.get('runId','')).isdigit()or str(host.get('runId'))!=str(data.get('qualificationRunId'))or
+            host.get('errors')!=[]or set(jobs)!={'windows-x64','linux-x64'}or job.get('conclusion')!='success'or
+            not str(job.get('runnerName','')).startswith(RUNNER_PREFIX[target])or 'blast-gpu'not in job.get('labels',[])):
+        raise RuntimeError('GPU host receipt does not prove this trusted workstation run')
+    return host
+
+
+def bind_host(directory,output,revision,run_id,jobs):
+    """Bind the staged receipts of one trusted workflow run to its workstation job identities."""
+    directory=Path(directory);output=Path(output)
+    if output.exists():raise FileExistsError('Never overwrite a bound qualification artifact')
+    rows=[]
+    for target in ('windows-x64','linux-x64'):
+        job=next((row for row in jobs if row.get('target')==target),None)
+        if not job or job.get('conclusion')!='success'or not str(job.get('runnerName','')).startswith(RUNNER_PREFIX[target]):
+            raise RuntimeError('Target did not finish on its workstation runner: '+target)
+        rows.append({key:job.get(key)for key in ('target','jobId','runnerName','labels','conclusion','startedAt','completedAt')})
+    staged={target:json.loads((directory/('gpu-release-'+target)/receipt_name(target)).read_text())for target in ('windows-x64','linux-x64')}
+    devices=sorted({row['adapter']for data in staged.values()for row in data.get('devices',[])})
+    host={'schemaVersion':1,'source':revision,'host':WORKSTATION_HOST,'runId':str(run_id),'runnerMode':'jit-single-use',
+          'jobs':rows,'devices':devices,'passed':True,'errors':[],
+          'scope':'Workstation GPU runners: Linux container on the host GPU, Windows VM on the passthrough GPU; one job per runner.'}
+    output.mkdir(parents=True)
+    path=output/HOST_RECEIPT;path.write_text(json.dumps(host,indent=2)+'\n')
+    digest=hashlib.sha256(path.read_bytes()).hexdigest()
+    for target,data in staged.items():
+        if not workstation(data)or data.get('source')!=revision or str(data.get('qualificationRunId'))!=str(run_id):
+            raise RuntimeError('Staged receipt is not from this workstation run: '+target)
+        data.update(hostVerified=True,hostReceiptSha256=digest,
+                    scope='Exact-source physical-GPU graphics evidence on the workstation; visual user approval is separate')
+        inspect_receipt(data,target,revision,data['archiveSha256'],data['downloadSha256'],data['serverSha256'],data['renderFingerprint'])
+        graphical=directory/('gpu-release-'+target)/('Blast-Circuit-'+target+'-graphical.json')
+        shutil.copy2(graphical,output/graphical.name)
+        (output/receipt_name(target)).write_text(json.dumps(data,indent=2)+'\n')
+        inspect_host(output,data,target,revision)
+        inspect_bound_graphical(output,target,data)
+    return output
 
 
 def inspect_run(run,repository,revision):
@@ -159,8 +235,12 @@ def stage(directory,target,revision,verification_run):
           'primaryDriver':'vulkan','effectiveSamples':2,'devices':[row['device']for row in high['runs']],
           'primaryHigh':high,'graphicalSha256':desktop_packages.digest(graphical),
           'scope':'Exact-source physical-GPU graphics evidence; visual user approval is separate'}
-    data.update(cleanupAudited=False,campaignRunId=os.environ.get('BLAST_GPU_RUN_ID',''))
-    data['scope']='Preliminary exact-source game graphics evidence; promotion rejects it until the controller binds successful cleanup.'
+    if os.environ.get('BLAST_GPU_HOST')=='workstation':
+        data.update(qualificationHost='workstation',hostVerified=False,qualificationRunId=os.environ.get('GITHUB_RUN_ID',''))
+        data['scope']='Preliminary exact-source game graphics evidence; promotion rejects it until finalization binds the workstation host receipt.'
+    else:
+        data.update(cleanupAudited=False,campaignRunId=os.environ.get('BLAST_GPU_RUN_ID',''))
+        data['scope']='Preliminary exact-source game graphics evidence; promotion rejects it until the controller binds successful cleanup.'
     block_failed_repeats(directory,target,data,graphical,output)
     inspect_receipt(data,target,revision,data['archiveSha256'],data['downloadSha256'],data['serverSha256'],fingerprint['sha256'],require_cleanup=False)
     shutil.copy2(graphical,output/graphical.name)
@@ -187,8 +267,31 @@ def download(repository,run_id,revision,directory,gh):
                     shutil.copy2(source,destination)
 
 
+def run_jobs(repository,run_id,gh):
+    """Read the trusted run's native job identities (actions:read is enough)."""
+    pages=json.loads(gh('api',f'repos/{repository}/actions/runs/{run_id}/jobs?per_page=100','--paginate','--slurp'))
+    rows=[]
+    for page in pages:
+        for job in page['jobs']:
+            match=re.search(r'\b(windows-x64|linux-x64)\b',job.get('name',''))
+            if match and job.get('name','').startswith('Workstation GPU'):
+                rows.append({'target':match.group(1),'jobId':job['id'],'runnerName':job.get('runner_name')or'',
+                             'labels':job.get('labels',[]),'conclusion':job.get('conclusion'),
+                             'startedAt':job.get('started_at'),'completedAt':job.get('completed_at')})
+    return rows
+
+
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--directory',type=Path,default=Path('artifacts'))
-    parser.add_argument('--target',choices=('windows-x64','linux-x64'),required=True)
-    parser.add_argument('--revision',required=True);parser.add_argument('--verification-run',required=True)
-    args=parser.parse_args();print(stage(args.directory.resolve(),args.target,args.revision,args.verification_run))
+    parser.add_argument('--target',choices=('windows-x64','linux-x64'))
+    parser.add_argument('--revision',required=True);parser.add_argument('--verification-run')
+    parser.add_argument('--bind-host',type=Path,metavar='OUTPUT',help='Finalize: bind both staged receipts to this run\'s workstation jobs')
+    args=parser.parse_args()
+    if args.bind_host:
+        import subprocess
+        def gh(*command):return subprocess.check_output(['gh',*command],text=True,timeout=120)
+        repository,run=os.environ['GITHUB_REPOSITORY'],os.environ['GITHUB_RUN_ID']
+        print(bind_host(args.directory.resolve(),args.bind_host.resolve(),args.revision,run,run_jobs(repository,run,gh)))
+    else:
+        if not args.target or not args.verification_run:parser.error('--target and --verification-run are required to stage')
+        print(stage(args.directory.resolve(),args.target,args.revision,args.verification_run))

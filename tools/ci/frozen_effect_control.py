@@ -2,6 +2,7 @@
 from contextlib import contextmanager
 import hashlib
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -70,7 +71,7 @@ def run(target, directory, output, revision, driver, control):
                 mesh_inputs.load(case)
                 if code or errors or native_errors or hook.get('control') != control or not hook.get('observations'):
                     raise RuntimeError('Diagnostic control failed native execution; retain logs')
-                if observation['driver'] != driver or not visual_parity.hardware_adapter_matches(observation, 'T4'):
+                if observation['driver'] != driver or not visual_parity.hardware_adapter_matches(observation, os.environ.get('EXPECTED_ADAPTER') or 'T4'):
                     raise RuntimeError('Diagnostic control selected the wrong API/hardware')
                 rows = hook['observations']
                 if control in ('ssil','ssao','glow') and any(row[control+'After'] for row in rows):

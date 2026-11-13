@@ -1,5 +1,11 @@
 # Native GPU qualification
 
+> Current (2026-11-13): qualification runs on the owned [workstation](workstation-ci.md)
+> RTX 2080 SUPER runners through `gpu-qualification.yml`, with no per-run budget.
+> The AWS campaign, budget and cleanup requirements below are historical; the
+> technical acceptance bar (exact repeats, controls, Mac-to-Mac envelope, physical
+> adapters only, reviewer visual sign-off) is unchanged.
+
 > Current policy (2026-10-30): [major-only qualification, plain Sancus builder namespace and OIDC approval](sancus-builder-ci.md) supersede the earlier controller and naming notes below. Historical results remain unchanged.
 
 ## Current user acceptance and budget — 2026-10-29

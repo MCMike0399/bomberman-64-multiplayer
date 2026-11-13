@@ -85,8 +85,8 @@ def run(args):
                 step('small-resource-'+driver,[sys.executable,'tools/qa/depth_probe.py','--godot',str(args.godot),'--driver',driver,'--output',str(depth)],180)
                 result=json.loads((depth/'depth-probe.json').read_text());original=next(c for c in result['cases']if c['name']=='msaa-2x')
                 device=original['metadata']['device'];report.setdefault('devices',[]).append(original['metadata'])
-                if 't4'not in device.lower()or any(x in device.lower()for x in ('warp','basic render','llvmpipe','lavapipe','swiftshader')):
-                    raise ValueError('Capability failed: selected hardware T4 is absent')
+                if args.expected_adapter.casefold()not in device.casefold()or any(x in device.lower()for x in ('warp','basic render','llvmpipe','lavapipe','swiftshader')):
+                    raise ValueError('Capability failed: selected hardware '+args.expected_adapter+' is absent')
                 for plane in original['planeCenters']:
                     if any(abs(plane[key]-plane['expectedReverseOrthoDepth'])>1e-6 for key in ('rawSample0','rawSample1','resolved')):
                         raise ValueError('Capability failed: original2x known-plane depth is invalid')
@@ -103,14 +103,14 @@ def run(args):
                     if driver=='vulkan':command+=['--default-driver']
                     step('game-health-'+driver,command,240)
                     health.append(json.loads((destination/'gpu-health.json').read_text()))
-                # D3D12 reports 'NVIDIA Tesla T4'; Vulkan reports 'Tesla T4'.
-                # Both game receipts are bound to this one-GPU instance and exact executable.
-                if any('t4' not in row['health']['adapter'].lower()for row in health):raise ValueError('Windows API control did not use the selected T4')
+                # D3D12 and Vulkan both name the adapter (AWS: 'NVIDIA Tesla T4'/'Tesla T4'; workstation:
+                # 'NVIDIA GeForce RTX 2080 SUPER'). Both game receipts are bound to this one-GPU guest and executable.
+                if any(args.expected_adapter.casefold()not in row['health']['adapter'].casefold()for row in health):raise ValueError('Windows API control did not use the selected '+args.expected_adapter)
                 report['actualGameHealth']=health
             technical=[]
             for driver in drivers:
                 destination=output/('high-'+driver)
-                command=[sys.executable,'tools/ci/visual_parity.py','--target',target,'--expected-revision',args.expected_revision,'--expected-adapter','T4','--output',str(destination)]
+                command=[sys.executable,'tools/ci/visual_parity.py','--target',target,'--expected-revision',args.expected_revision,'--expected-adapter',args.expected_adapter,'--output',str(destination)]
                 if target=='windows-x64'and driver=='d3d12':command+=['--diagnostic-windows-driver',driver]
                 step('original-high-'+driver,command,900,diagnostic=True)
                 high=json.loads((destination/'visual-parity-native.json').read_text())
@@ -118,7 +118,7 @@ def run(args):
                     raise RuntimeError('Original High capture execution failed; raw repeat verdict is separate')
                 technical.append(high['passed'])
             stages=collect_stage_captures(ROOT/'artifacts',output/'all-stages',target,args.expected_revision,
-                                          output/'high-vulkan/provenance.json',expiry)
+                                          output/'high-vulkan/provenance.json',expiry,expected_adapter=args.expected_adapter)
             report['allStages']=stages
             if not stages['collectionComplete']:raise RuntimeError('All-stage captures are incomplete; retain partial evidence')
             technical.append(stages['repeatsExact'])
@@ -157,4 +157,6 @@ if __name__=='__main__':
     parser.add_argument('--expected-revision',required=True);parser.add_argument('--expiry',required=True);parser.add_argument('--godot',type=Path,required=True)
     parser.add_argument('--phase',choices=('core','remaining'),required=True)
     parser.add_argument('--skip-bisection',action='store_true')
+    parser.add_argument('--expected-adapter',default=os.environ.get('EXPECTED_ADAPTER')or'T4',
+                        help='Physical adapter name fragment every device check must match (workstation: RTX 2080 SUPER)')
     raise SystemExit(run(parser.parse_args()))

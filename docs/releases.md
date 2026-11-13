@@ -176,6 +176,10 @@ performance or art approval. Run the startup gate locally only in a VM or with
 
 ## Operator setup (one time)
 
+Since 2026-11-13 the `blast-deploy` autoscaler, adapter and the only production
+node run on the [workstation](workstation-ci.md); the targets are `public` and
+`primary`.
+
 The repository supplies orchestration, artifact validation and live verification.
 Host-specific SSH, service supervision, installation and credentials belong to
 an **operator-installed deployment adapter**, not to arbitrary PR code. This

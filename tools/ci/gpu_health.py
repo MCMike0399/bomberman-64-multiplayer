@@ -1,6 +1,7 @@
 """Read the actual game's health on a selected Windows API; no product default change."""
 import argparse
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -8,6 +9,10 @@ import uuid
 import crossplay_runtime
 import desktop_packages as desktop
 
+
+def expected_adapter():
+    """Physical adapter fragment for this qualification host (AWS T4 or the workstation RTX 2080 SUPER)."""
+    return os.environ.get('EXPECTED_ADAPTER') or 'T4'
 
 def run(directory, output, revision, driver, default_driver=False):
     output.mkdir(parents=True,exist_ok=False)
@@ -27,7 +32,7 @@ def run(directory, output, revision, driver, default_driver=False):
         health=json.loads((stage/'health.json').read_text())
         shutdown=json.loads((output/'shutdown.json').read_text())
         text=(output/'runtime.log').read_text(errors='replace')
-        passed=(result.returncode==0 and health['driver']==driver and 't4' in health['adapter'].lower() and
+        passed=(result.returncode==0 and health['driver']==driver and expected_adapter().casefold() in health['adapter'].casefold() and
                 health['method']=='forward_plus' and health['graphics']=='high' and
                 shutdown['sourceRevision']==revision and shutdown['savedStateFlushed'] and shutdown['drain']['completed'] and
                 'ERROR:' not in text and 'GODOT_SMOKE_OK' in text)

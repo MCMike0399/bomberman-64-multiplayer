@@ -300,9 +300,6 @@ class FreePreflight(unittest.TestCase):
         digest,_=preflight.section('digest-mismatch');self.assertNotIn(bootstrap.LINUX_AWS_CLI['sha256'],digest)
         runner=preflight.runner(packages)
         self.assertIn('SANCUS_BUILDER_CONSOLE=/preflight/console.txt',runner);self.assertIn(bootstrap.LINUX_AWS+' --version',runner)
-        workflow=(Path(__file__).resolve().parents[2]/'.github/workflows/builder-bootstrap-preflight.yml').read_text()
-        self.assertIn('builder_bootstrap_preflight.py --output',workflow);self.assertIn('windows-audio-preflight.ps1',workflow)
-        self.assertNotIn('aws-actions',workflow);self.assertNotIn('id-token',workflow)
 
 
 if __name__=='__main__':unittest.main()
