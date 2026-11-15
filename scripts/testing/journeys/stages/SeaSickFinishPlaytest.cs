@@ -78,11 +78,7 @@ public partial class PlaytestDriver
             await WaitState(s=>s.GetProperty("hazards").GetArrayLength()>0,"coloured meteor reaches impact",90);
             await Capture("sea-sick-colour-meteor-impact",0);_root.Back();await Frames(3);
 
-            _root.Navigate("Setup");await Frames(8);var settings=_root.FindChild("SetupSettings",true,false)!;
-            var menu=(ArcadeMenu)settings.GetParent().GetParent().GetParent();menu.Configure(new SessionSettings(Stage:BlastStages.SeaSick),1);await Frames(8);
-            var miniature=AuditDescendants(_root).OfType<TempleStageView>().Single(t=>t.GetParent().Name=="ArenaDiorama"&&t.IsVisibleInTree());
-            Check(miniature.Layout.Id==BlastStages.SeaSick&&miniature.Scenery==null,"coloured cutter miniature retains the real ship without exterior scenery");
-            await Capture("sea-sick-colour-menu-miniature");menu.Configure(new SessionSettings(),1);
+            await SeaSickMiniatureReview();
         }
         finally
         {
@@ -178,6 +174,36 @@ public partial class PlaytestDriver
             }
         }
         finally{_root.Back();await Frames(3);}
+    }
+
+    private async Task SeaSickMiniatureReview()
+    {
+        if(_root.ActiveSession!=null){_root.Back();await Frames(3);}
+        _root.Navigate("Setup");await Frames(8);var settings=_root.FindChild("SetupSettings",true,false)!;
+        var menu=(ArcadeMenu)settings.GetParent().GetParent().GetParent();
+        try
+        {
+            menu.Configure(new SessionSettings(Stage:BlastStages.SeaSick),1);await Frames(8);
+            var miniature=AuditDescendants(_root).OfType<TempleStageView>().Single(t=>t.GetParent().Name=="ArenaDiorama"&&t.IsVisibleInTree());
+            var hull=miniature.GetNode<MeshInstance3D>("CutterHull");
+            Check(hull.IsVisibleInTree(),"menu miniature keeps the cutter's signature navy belly visible");
+            var sea=miniature.GetNode<MeshInstance3D>("SeaSickMiniatureSea");
+            Check(sea.IsVisibleInTree()&&sea.MaterialOverride is StandardMaterial3D {Transparency:BaseMaterial3D.TransparencyEnum.Disabled},"miniature seats the ship in an opaque sea disc");
+            var mount=miniature.GetParent<Node3D>();var inverse=mount.GlobalTransform.AffineInverse();
+            var seaBounds=(inverse*sea.GlobalTransform)*sea.Mesh.GetAabb();
+            float waterline=(inverse*miniature.ToGlobal(new Vector3(12.2f,-2.1f,9.5f))).Y;
+            Check(Math.Abs(waterline-seaBounds.End.Y)<.004f&&seaBounds.End.Y>-.315f&&seaBounds.End.Y<-.27f,"miniature waterline meets the sea disc directly above the display stand");
+            var hullVertices=hull.Mesh.SurfaceGetArrays(0)[(int)Mesh.ArrayType.Vertex].AsVector3Array();
+            float submergedRadius=hullVertices.Where(p=>p.Y<=-2.1f).Select(p=>
+            {
+                var at=inverse*hull.ToGlobal(p);return new Vector2(at.X,at.Z).Length();
+            }).DefaultIfEmpty(0).Max();
+            Event("sea-miniature-seating",new{waterline,seaTop=seaBounds.End.Y,submergedRadius,discRadius=4.55f});
+            Check(submergedRadius<=4.56f,"opaque miniature sea covers the whole submerged keel footprint");
+            Check(miniature.Scenery==null,"ship miniature omits exterior scenery");
+            await Capture("sea-sick-colour-menu-miniature");
+        }
+        finally{menu.Configure(new SessionSettings(),1);_root.Navigate("Modes");await Frames(3);}
     }
 
 }

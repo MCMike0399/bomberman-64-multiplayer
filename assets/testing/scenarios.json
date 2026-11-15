@@ -1878,6 +1878,17 @@
       "headless": true,
       "timeout": 90,
       "manual": false
+    },
+    {
+      "id": "sea-sick-miniature",
+      "method": "SeaSickMiniatureReview",
+      "domains": [
+        "rendering",
+        "ui"
+      ],
+      "headless": true,
+      "timeout": 90,
+      "manual": false
     }
   ]
 }

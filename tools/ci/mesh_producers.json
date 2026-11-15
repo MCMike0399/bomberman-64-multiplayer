@@ -4640,7 +4640,7 @@
     {
       "id": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs:Box:10",
       "file": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs",
-      "line": 115,
+      "line": 124,
       "call": "Box(this,new(x+run/2f,cell.Tier*HeightScale-.07f,z==0?.70f:z==18?18.30f:z+.5f),new(run-.015f,.14f,z is 0 or 18?.60f:.985f),\n                (x*7+z*13)%4==0?pale:oak,.014f)",
       "callSha256": "bab89d0e0015089efdd69e631aafd2bec358650dedfe5e73d6f6caa5dab65f5f",
       "domain": "owned-generator-or-helper"
@@ -4648,7 +4648,7 @@
     {
       "id": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs:PrimitiveTemplates.Get:3",
       "file": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs",
-      "line": 123,
+      "line": 132,
       "call": "PrimitiveTemplates.Get(\"SphereMesh\",(\"radius\",.5f),(\"height\",1),(\"radial_segments\",10),(\"rings\",5))",
       "callSha256": "168fa98cc40a3c0471b3fee0d7cea93ac3aa5b1029c4115d290b2e8f09269e4a",
       "domain": "SphereMesh",
@@ -4659,7 +4659,7 @@
     {
       "id": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs:Box:11",
       "file": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs",
-      "line": 163,
+      "line": 172,
       "call": "Box(root,new(.11f,height+.031f,.04f),new(.10f,.018f,.10f),hoops,.015f)",
       "callSha256": "22063d121710a3bf8f0b446fb489e1829ed2fd98c7d994ce7d1bc2480c5997d8",
       "domain": "owned-generator-or-helper"
@@ -4667,7 +4667,7 @@
     {
       "id": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs:newSurfaceTool:1",
       "file": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs",
-      "line": 181,
+      "line": 190,
       "call": "new SurfaceTool()",
       "callSha256": "524d4daa3dd8ade1577b68b52e91ebbe9907def4954bab94da3aeb8c6bb1a4ae",
       "domain": "owned-generator-or-helper"
@@ -4675,7 +4675,7 @@
     {
       "id": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs:surface.Commit:1",
       "file": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs",
-      "line": 205,
+      "line": 214,
       "call": "surface.Commit()",
       "callSha256": "3a4b0e22bc74cdecd537891eb2f48df20b98f27fbf269b1803e1cc035b3194ec",
       "domain": "owned-generator-or-helper"
@@ -5570,7 +5570,7 @@
     {
       "id": "scripts/ui/menu/ArcadeBackdrop.cs:Box:9",
       "file": "scripts/ui/menu/ArcadeBackdrop.cs",
-      "line": 251,
+      "line": 252,
       "call": "Box(Node parent,Vector3 position,Vector3 size,Material material)",
       "callSha256": "5599077d2bb9f6d4e2d02f9644538f84d91e0a6cfbbbf75e7000ea726f153611",
       "domain": "owned-generator-or-helper"
@@ -5578,7 +5578,7 @@
     {
       "id": "scripts/ui/menu/ArcadeBackdrop.cs:PrimitiveTemplates.Get:3",
       "file": "scripts/ui/menu/ArcadeBackdrop.cs",
-      "line": 252,
+      "line": 253,
       "call": "PrimitiveTemplates.Get(\"BoxMesh\",(\"size\",size))",
       "callSha256": "03ead86cab08ecf8e15d67ed4e38eaa0f66940d9af5a811f6932e3669fc8fcbd",
       "domain": "BoxMesh",
@@ -5769,7 +5769,7 @@
     {
       "id": "scripts/ui/menu/ArcadeBackdrop.cs:ChamferBox:8",
       "file": "scripts/ui/menu/ArcadeBackdrop.cs",
-      "line": 253,
+      "line": 254,
       "call": "ChamferBox(Node parent,Vector3 position,Vector3 size,Material material,float bevel=.08f)",
       "callSha256": "00c885caa690a2799ca33da832df86ae4b38b7a838e8dbd53f2ef05071245a56",
       "domain": "owned-generator-or-helper"
@@ -5777,7 +5777,7 @@
     {
       "id": "scripts/ui/menu/ArcadeBackdrop.cs:newSurfaceTool:1",
       "file": "scripts/ui/menu/ArcadeBackdrop.cs",
-      "line": 255,
+      "line": 256,
       "call": "new SurfaceTool()",
       "callSha256": "524d4daa3dd8ade1577b68b52e91ebbe9907def4954bab94da3aeb8c6bb1a4ae",
       "domain": "owned-generator-or-helper"
@@ -5785,7 +5785,7 @@
     {
       "id": "scripts/ui/menu/ArcadeBackdrop.cs:builder.Commit:1",
       "file": "scripts/ui/menu/ArcadeBackdrop.cs",
-      "line": 275,
+      "line": 276,
       "call": "builder.Commit()",
       "callSha256": "0fa9eba8369cdf50d554b3a90c44727dd10e15710247b9152b3f1d6e88fde9e6",
       "domain": "owned-generator-or-helper"
@@ -5793,7 +5793,7 @@
     {
       "id": "scripts/ui/menu/ArcadeBackdrop.cs:Sphere:6",
       "file": "scripts/ui/menu/ArcadeBackdrop.cs",
-      "line": 277,
+      "line": 278,
       "call": "Sphere(Node parent,Vector3 position,Vector3 scale,Material material)",
       "callSha256": "6c6f1a79b819d9830c0383124de59fdbd15a7c793bf3d9770e21f61db86d56d0",
       "domain": "owned-generator-or-helper"
@@ -5801,7 +5801,7 @@
     {
       "id": "scripts/ui/menu/ArcadeBackdrop.cs:PrimitiveTemplates.Get:4",
       "file": "scripts/ui/menu/ArcadeBackdrop.cs",
-      "line": 278,
+      "line": 279,
       "call": "PrimitiveTemplates.Get(\"SphereMesh\",(\"radius\",.5f),(\"height\",1),(\"radial_segments\",32),(\"rings\",16))",
       "callSha256": "57225ceddb5e8b543ed40890b4b1af5b932946dd2dbe272ca74e51478f072aa6",
       "domain": "SphereMesh",
@@ -5812,7 +5812,7 @@
     {
       "id": "scripts/ui/menu/ArcadeBackdrop.cs:Cylinder:9",
       "file": "scripts/ui/menu/ArcadeBackdrop.cs",
-      "line": 279,
+      "line": 280,
       "call": "Cylinder(Node parent,Vector3 position,float radius,float height,Material material)",
       "callSha256": "feb343d801dddcd663eaae457c7a72af22886c96f759adc99111a44baaf953af",
       "domain": "owned-generator-or-helper"
@@ -5820,7 +5820,7 @@
     {
       "id": "scripts/ui/menu/ArcadeBackdrop.cs:PrimitiveTemplates.Get:5",
       "file": "scripts/ui/menu/ArcadeBackdrop.cs",
-      "line": 280,
+      "line": 281,
       "call": "PrimitiveTemplates.Get(\"CylinderMesh\",(\"top_radius\",radius),(\"bottom_radius\",radius),(\"height\",height),(\"radial_segments\",48))",
       "callSha256": "fba7dc5591f4d63f8bf28c54421d6a6ce513828b47c11de441fb801890755fbe",
       "domain": "CylinderMesh",
@@ -9877,7 +9877,7 @@
     "scripts/arena/stages/TempleStageView.UpAndDown.cs": "66ee09178629038b769382d720fae901d74d7bb670e846143463b998f96f2006",
     "scripts/arena/stages/TempleStageView.UpAndDownExterior.cs": "f6beb01527bf31f486f53c77b0a49a0233aeeaf5dc001d7cd20f9e11090ddacf",
     "scripts/arena/stages/TempleStageView.cs": "625a3dc435f29206b264b162442f9abe29161f35536d212498493bd196df4555",
-    "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs": "b81ad738672d9651f037e741b914262a62b92a30946f3e2dbc9de9dedb7e22ea",
+    "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs": "337bffe78fcbb17f446db18f34ee439ef31c709a2c71e2a950bfce7f6e1f9657",
     "scripts/arena/stages/sea_sick/TempleStageView.ShipDetails.cs": "84e29b31603289fc72353bfa57e0babed45db0c21d15a82ee5b9d5228b31305f",
     "scripts/arena/stages/sea_sick/TempleStageView.ShipFinish.cs": "32a6feb370bb89dab9b4bc51a9396a08f50e489924394da195b49996e9b5e070",
     "scripts/rendering/ArtGeometry.cs": "32fea3664b4af118fe691a5e0c1eb396eebf0352922996ea2b18896d0ea9764e",
@@ -9885,7 +9885,7 @@
     "scripts/testing/journeys/rendering/AssetAuditPlaytest.cs": "9369deb5c46c7f4db09a187701d5c548b454e53ba80da072835a8a475f31e742",
     "scripts/testing/journeys/rendering/PickupShowcasePlaytest.cs": "3c142760084075f88141b82a8f45d77d6e3c4fc56fce2896750b2158fd7dce77",
     "scripts/ui/ArcadeModeButton.cs": "a7dc6b554f9ace5e661fe3ba72594bae40ea7bfc9aca8e9314f6dad663f95db9",
-    "scripts/ui/menu/ArcadeBackdrop.cs": "5ee39e0ae61069d0acb5b4ae61816187dc79c60753ebb0cf472d2348dd880c98",
+    "scripts/ui/menu/ArcadeBackdrop.cs": "83b56f699adee59be28c4b12003f62e753118fa207d108084a38e8f5c3b8f9ac",
     "scripts/ui/menu/CharacterPreview.cs": "c1345917e5292f1391737c7059ca81da68eb4ec7b04e9505e70ef81d3774febd",
     "scripts/ui/menu/ResultMedals.cs": "30d9ff94b7895686819efb5ca9b558edf7eb69782c8a4b149cbac3064971e860",
     "src/Bomber.Game/Simulation/Stages/BlastStages.BlizzardBattle.cs": "cc2be4d216d1267ecf1d9530be526e8b0d9859c15934865bd9e78c83cd9450c6",

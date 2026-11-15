@@ -102,6 +102,15 @@ public partial class TempleStageView
         }
     }
 
+    /// <summary>Opaque display sea occludes only the submerged hull, retaining
+    /// the belly down to its real waterline while seating it on the menu stand.</summary>
+    public void FitSeaSickMiniature(float radius)
+    {
+        if(!_seaSick||IncludeScenery)return;
+        var disc=ShipLathe(this,new(12.2f,-2.1f,9.5f),[(-.06f,radius),(0,radius)],_art.Color(new("24586b"),.72f),"miniature-sea:"+radius);
+        disc.Name="SeaSickMiniatureSea";disc.CastShadow=GeometryInstance3D.ShadowCastingSetting.Off;
+    }
+
     private void BuildShipPlanks(Material oak,Material pale)
     {
         var pegs=new List<Transform3D>();

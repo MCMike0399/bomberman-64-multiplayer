@@ -155,3 +155,10 @@ at 16:9. `sea-sick-framing` uses fixed 16:10/16:9 SubViewports, projects the
 public layout's standing corners through every pose and retains the unchanged
 HUD bound plus a stationary-camera assertion. It reproduced the original
 16:9 breach before the fix and belongs to `tour-24` and the focused regression.
+
+The menu miniature keeps its navy hull visible and seats the accepted −2.1
+waterline on a separate opaque sea disc above the display stand. The disc
+occludes the submerged keel rather than hiding the entire deep hull mesh.
+`sea-sick-miniature` retains the formerly failing belly-visibility check, exact
+waterline/stand seating, opacity and submerged-footprint coverage, plus a native
+menu capture. Battle geometry and framing are unaffected by this correction.
