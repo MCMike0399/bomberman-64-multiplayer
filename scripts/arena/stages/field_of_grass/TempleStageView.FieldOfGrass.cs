@@ -144,7 +144,7 @@ public partial class TempleStageView
             MultiMeshPacking.Write(buffer,i,new(basis,new(x,Surface(x,z),z)),tint);
         }
         grass.Buffer=buffer;
-        var material=_art.Foliage(new("96b766"),true);_fieldGrassMaterial=material;
+        var material=_art.Foliage(new("6f9348"),true);_fieldGrassMaterial=material;
         AddChild(new MultiMeshInstance3D{Name="ConcealingMeadow",Multimesh=grass,MaterialOverride=material,CastShadow=GeometryInstance3D.ShadowCastingSetting.Off,ExtraCullMargin=.4f});
     }
 }

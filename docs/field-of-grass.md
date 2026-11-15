@@ -95,3 +95,9 @@ authority checks, twelve 2,700-tick AI soaks (longest eligible open idle 1.27 s)
 and 50 headless journey assertions, including advancing and paused wind. That
 repeat has no runtime errors or warnings. Revised native visual review remains
 pending; the earlier functional result does not approve the revised art.
+
+The second exported native review passed 96 assertions with 16 captures and clean
+logs; the reviewer accepted the wider silhouette, continuous fence and organic
+concealment, then requested a focused daytime palette refinement. Daylight grass
+now uses a richer middle green with the existing olive/gold variation; Night
+retains its reviewed paint. Geometry, visibility, wind and authority are unchanged.
