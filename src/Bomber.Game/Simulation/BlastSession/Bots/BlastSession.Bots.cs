@@ -273,7 +273,7 @@ public sealed partial class BlastSession
         if(!field.Safe(cell,enter,leave))return false;
         int x=_aiGraph.X(cell),z=_aiGraph.Z(cell);
         if(WaterUnsafe(x+.5f,z+.5f,leave,_aiGraph.Height[cell]))return false;
-        if(_phase==RoundPhase.Hurry&&!_stage.RisingWater&&_stage.Id!=BlastStages.RockGarden)
+        if(_phase==RoundPhase.Hurry&&!_stage.RisingWater&&!BlastStages.UsesMeteors(_stage.Id))
         {
             int columns=(int)MathF.Floor((_hurryColTimer+leave)/BlastStages.HurryColumnSeconds(_stage.Id));
             if(x<_closedLeft+columns||x>=_stage.Width-_closedRight-columns)return false;
@@ -312,7 +312,7 @@ public sealed partial class BlastSession
         int committed=!escape&&_aiCommittedGoals.TryGetValue(bot.Id,out int held)?held:-1;
         while(head<tail)
         {
-            int cell=_aiQueue[head++],depth=_aiDepth[cell];float arrival=depth*(1/(PlayerSpeed*bot.StatusSpeed)+.045f);
+            int cell=_aiQueue[head++],depth=_aiDepth[cell];float arrival=depth*(1/(PlayerSpeed*bot.StatusSpeed)+(_stage.Id==BlastStages.LostAtSea?.15f:.045f));
             if(BotSafe(danger,cell,arrival,arrival+horizon))
             {
                 if(escape)return _aiFirst[cell];
@@ -326,7 +326,7 @@ public sealed partial class BlastSession
             {
                 int next=_aiGraph.Edges[cell*4+((d+bot.Slot)%4)];
                 if(next<0||_aiSeen[next]==_aiGeneration||!BotOpen(next,start,bot,danger))continue;
-                float nextArrival=(depth+1)*(1/(PlayerSpeed*bot.StatusSpeed)+.045f);
+                float nextArrival=(depth+1)*(1/(PlayerSpeed*bot.StatusSpeed)+(_stage.Id==BlastStages.LostAtSea?.15f:.045f));
                 // A body overlaps a cell after its center leaves, and turns add
                 // alignment time; tight timed transits killed escaping bots.
                 if(!BotSafe(danger,next,arrival,nextArrival+TransitMargin))continue;
@@ -452,6 +452,18 @@ public sealed partial class BlastSession
         float dx=x-bot.X,dz=z-bot.Z,length=MathF.Sqrt(dx*dx+dz*dz),moveSpeed=PlayerSpeed*bot.StatusSpeed;
         float speed=Math.Min(1,length/(moveSpeed*_aiSteeringInterval));
         float vx=length<.02f?0:dx/length*speed,vz=length<.02f?0:dz/length*speed;
+        if(SlipperyGlassRules.OnGlass(_stage,bot.X,bot.Z,bot.Y))
+        {
+            // Brake before a turn using the same visible ground momentum as a
+            // human. This only changes intent; CPUs keep the exact same traction.
+            float targetSpeed=Math.Min(moveSpeed,MathF.Sqrt(2*SlipperyGlassRules.Acceleration*length)*.7f);
+            float hx=length>.02f?dx/length:0,hz=length>.02f?dz/length:0;
+            float lateral=bot.SlideVX*-hz+bot.SlideVZ*hx;
+            vx=(hx*targetSpeed+hz*lateral*.8f)/moveSpeed;
+            vz=(hz*targetSpeed-hx*lateral*.8f)/moveSpeed;
+            float magnitude=MathF.Sqrt(vx*vx+vz*vz);
+            if(magnitude>1){vx/=magnitude;vz/=magnitude;}
+        }
         // A gust adds drift to every input. Without leaning into it, the slowing
         // approach settles just outside the alignment tolerance and never turns.
         var wind=BlizzardWind*BlizzardRules.PlayerWindScale;

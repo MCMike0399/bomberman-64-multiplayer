@@ -31,7 +31,7 @@ public partial class PlaytestDriver
         var original=_root.Preferences.StageLighting;
         try
         {
-            foreach(string stage in new[]{"sunken-temple","rock-garden","up-and-down","top-rules","blizzard-battle","greedy-trap"})
+            foreach(string stage in new[]{"sunken-temple","rock-garden","up-and-down","top-rules","blizzard-battle","greedy-trap","lost-at-sea"})
             {
                 _root.StartLocal(new SessionSettings(Stage:stage,Bots:0),1,practice:true);
                 await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"lighting tour enters "+stage,180);

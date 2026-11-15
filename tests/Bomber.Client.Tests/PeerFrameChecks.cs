@@ -11,6 +11,11 @@ internal static class PeerFrameChecks
         int checks=0;
         void Check(bool ok,string name){if(!ok)throw new Exception(name);checks++;}
         var match=new LocalMatch(new MatchOptions{HumanPlayers=2,BotPlayers=6});
+        var sea=new LocalMatch(new MatchOptions{Stage="lost-at-sea",HumanPlayers=8,BotPlayers=0,RoundSeconds=60});
+        for(int tick=0;tick<65;tick++)sea.Tick();
+        using var seaStage=JsonDocument.Parse(sea.StageJson!);using var seaState=JsonDocument.Parse(sea.StateJson!);
+        Check(PeerFrameRules.Valid(seaStage.RootElement)&&PeerFrameRules.Valid(seaState.RootElement),"Lost at Sea real stage and meteor state cross peer validation");
+        Check(new SessionSettings(Stage:"lost-at-sea").ToWireSettings()["stage"]=="lost-at-sea","Lost at Sea room setting survives the wire");
         var snow=new LocalMatch(new MatchOptions{Stage="blizzard-battle",HumanPlayers=2,BotPlayers=0});
         for(int tick=0;tick<110;tick++)snow.Tick();
         Check(PeerFrameRules.Valid(JsonSerializer.SerializeToElement(JsonNode.Parse(snow.StageJson!)!)),"Blizzard Battle stage crosses peer validation");

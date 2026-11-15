@@ -6,6 +6,15 @@ The tools and their `--help` are authoritative for current flags; detailed
 references are [playtests](../../tools/playtest/README.md), [CI](../ci.md),
 [macOS packaging](../macos-app.md), and [verification](../verification.md).
 
+## Lost at Sea (2026-11-15 source work)
+
+[Stage contract and inspected references](../lost-at-sea.md) own the violet slippery
+glass, nonslip silver rim, four orange towers, eight rim starts and meteor Hurry.
+Ground acceleration and glass/rim bomb braking belong to shared authority;
+planted aim, recovery and reset keep their normal safeguards. Use focused
+`--lost-at-sea` checks and the `lost-at-sea` / `lost-at-sea-network` journeys
+(`tour-25`). Native image review is required for the original marine diorama.
+
 ## Select the branch before running work
 
 | Change | Tight loop | Completion gate |

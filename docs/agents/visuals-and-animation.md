@@ -5,6 +5,15 @@ camera, explosions or sound. This guide preserves the user's corrections and
 failed approaches; exact live values remain in source. Use the
 [testing guide](testing-and-delivery.md) for build/recording ownership and commands.
 
+## Lost at Sea (2026-11-15 source work)
+
+[Stage contract and inspected references](../lost-at-sea.md) own the violet slippery
+glass, nonslip silver rim, four orange towers, eight rim starts and meteor Hurry.
+Ground acceleration and glass/rim bomb braking belong to shared authority;
+planted aim, recovery and reset keep their normal safeguards. Use focused
+`--lost-at-sea` checks and the `lost-at-sea` / `lost-at-sea-network` journeys
+(`tour-25`). Native image review is required for the original marine diorama.
+
 ## Start with the actual actor
 
 1. Record whether the complaint appears in a menu, practice, ordinary local
