@@ -71,6 +71,12 @@ public partial class PlaytestDriver
             var terrain=AuditDescendants(arena).OfType<TempleStageView>().Single();
             Check(AuditDescendants(terrain).OfType<MultiMeshInstance3D>().Any(n=>n.Name=="ConcealingMeadow"&&n.Multimesh.InstanceCount>500),"actual arena renders a dense opaque meadow");
             Check(AuditDescendants(arena).OfType<Node3D>().Count(n=>n.Name.ToString().StartsWith("MeadowBoulder"))==28,"accepted battle cover renders as twenty-eight original meadow rocks");
+            CheckClockwiseMeshes(AuditDescendants(terrain).OfType<MeshInstance3D>()
+                .Where(n=>n.Name.ToString().StartsWith("MeadowBankSlope")||n.Name.ToString().StartsWith("ContinuousBankEdge"))
+                .Select(n=>(n.Mesh,n.Name.ToString(),n.Name.ToString().StartsWith("MeadowBankSlope"))).Concat(AuditDescendants(terrain).OfType<MultiMeshInstance3D>()
+                    .Where(n=>n.Name=="ConcealingMeadow").Select(n=>(n.Multimesh.Mesh,n.Name.ToString(),false)))
+                .Concat(AuditDescendants(arena).OfType<MeshInstance3D>().Where(n=>n.GetParent().Name.ToString().StartsWith("MeadowBoulder"))
+                    .Select(n=>(n.Mesh,n.GetParent().Name.ToString(),false))));
             CheckFraming(BlastStages.FieldOfGrass,GetWindow().Size);
             await Capture("field-of-grass-eight-player-opening");
             foreach(var preset in new[]{GraphicsPreset.Low,GraphicsPreset.Medium,GraphicsPreset.High})
@@ -93,7 +99,17 @@ public partial class PlaytestDriver
 
             _root.StartLocal(new SessionSettings(Stage:BlastStages.FieldOfGrass,Bots:0,SuddenDeath:false),1,practice:true);
             await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"meadow exploration begins",150);
-            await GrappleWalk(0,2,9);await GrappleWalk(0,10,9);
+            await GrappleWalk(0,2,9);await GrappleWalk(0,3,9);
+            arena=_root.GetChildren().OfType<ArenaView>().Single();terrain=AuditDescendants(arena).OfType<TempleStageView>().Single();
+            var slope=AuditDescendants(terrain).OfType<MeshInstance3D>().Single(n=>n.Name=="MeadowBankSlope3_9");
+            var slopeVertices=slope.Mesh.SurfaceGetArrays(0)[(int)Mesh.ArrayType.Vertex].AsVector3Array();
+            var sa=slopeVertices[0];var sn=(slopeVertices[2]-sa).Cross(slopeVertices[1]-sa);
+            float footX=Player.GetProperty("x").GetSingle(),footZ=Player.GetProperty("z").GetSingle();
+            float renderedY=sa.Y-(sn.X*(footX-sa.X)+sn.Z*(footZ-sa.Z))/sn.Y;
+            Check(Player.GetProperty("y").GetSingle() is >1.25f and <1.75f&&Math.Abs(Player.GetProperty("y").GetSingle()*TempleStageView.HeightScale-renderedY)<.025f,
+                "ordinary mid-slope actor feet meet the actual upward-facing rendered bank mesh");
+            await Capture("field-of-grass-real-mid-slope-support");
+            await GrappleWalk(0,10,9);
             Check(Math.Abs(Player.GetProperty("y").GetSingle())<.02f,"ordinary movement descends continuously into meadow");
             await Capture("field-of-grass-waist-high-canopy");
             // Ordinary primary tap leaves an uncharged bomb under the meadow.

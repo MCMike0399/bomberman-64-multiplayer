@@ -4449,7 +4449,7 @@
     {
       "id": "scripts/arena/stages/field_of_grass/TempleStageView.FieldOfGrass.cs:surface.Commit:2",
       "file": "scripts/arena/stages/field_of_grass/TempleStageView.FieldOfGrass.cs",
-      "line": 127,
+      "line": 128,
       "call": "surface.Commit()",
       "callSha256": "3a4b0e22bc74cdecd537891eb2f48df20b98f27fbf269b1803e1cc035b3194ec",
       "domain": "owned-generator-or-helper"
@@ -10917,7 +10917,7 @@
     "scripts/arena/stages/TempleStageView.UpAndDown.cs": "66ee09178629038b769382d720fae901d74d7bb670e846143463b998f96f2006",
     "scripts/arena/stages/TempleStageView.UpAndDownExterior.cs": "f6beb01527bf31f486f53c77b0a49a0233aeeaf5dc001d7cd20f9e11090ddacf",
     "scripts/arena/stages/TempleStageView.cs": "5a22a57858ba58cbfff441eb19e22314a6385588371b7cb638018d75db6dbda3",
-    "scripts/arena/stages/field_of_grass/TempleStageView.FieldOfGrass.cs": "0f0829ddf7b0638844868d901cfd99e174a1efa96b638b40b93f28f0fa62e882",
+    "scripts/arena/stages/field_of_grass/TempleStageView.FieldOfGrass.cs": "648cd7583cda29e58049dc259680c6dcf3c34870b55858bbc1c8b49b5fef0862",
     "scripts/arena/stages/field_of_grass/TempleStageView.FieldOfGrassExterior.cs": "97ddcb0185258d6a07ccbb678765ec5a051021d3d1080a0f474b337dfe0479fe",
     "scripts/arena/stages/in_the_gutter/TempleStageView.Gutter.cs": "670f409733bd70da064887d9dc60afa79db65fe7c8cfb21b1bce2dec717ecc6b",
     "scripts/arena/stages/in_the_gutter/TempleStageView.GutterExterior.cs": "7f04edc173ee418ba7e7f26272881c77f505b6aab45714fbce3e484d05648153",

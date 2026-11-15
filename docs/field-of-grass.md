@@ -101,3 +101,15 @@ logs; the reviewer accepted the wider silhouette, continuous fence and organic
 concealment, then requested a focused daytime palette refinement. Daylight grass
 now uses a richer middle green with the existing olive/gold variation; Night
 retains its reviewed paint. Geometry, visibility, wind and authority are unchanged.
+
+The independent art-direction review rejected the presentation and calls for a
+Cutaway Hollow shape study; earlier agent art acceptance is withdrawn. A technical
+mesh audit subsequently exposed back-facing bank tops (136 triangles) and curved
+leaf normals opposite their real geometry. The correction changes bank winding
+and analytic leaf normals without disabling culling. The actual-scene audit was
+retained red, then passes 105 meshes / 1,157 triangles with minimum alignment
+0.998526. Upper ground faces must point upward independently of supplied normals.
+The journey additionally moves the real player halfway down the slope and checks
+its feet against the actual rendered mesh plane, retaining a dedicated capture.
+The corrected headless journey passes 53 assertions; native appearance and the
+full art brief still need review.

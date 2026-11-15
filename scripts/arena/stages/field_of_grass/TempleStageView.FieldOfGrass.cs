@@ -47,8 +47,8 @@ public partial class TempleStageView
                 var surface=new SurfaceTool();surface.Begin(Mesh.PrimitiveType.Triangles);
                 var a=new Vector3(x,y0,z);var b=new Vector3(x+1,y1,z);var c=new Vector3(x+1,y1,z+1);var d=new Vector3(x,y0,z+1);
                 var normal=(d-a).Cross(b-a).Normalized();
-                foreach(var p in new[]{a,c,b,a,d,c}){surface.SetNormal(normal);surface.SetUV(new(p.X,p.Z));surface.AddVertex(p);}
-                surface.Index();AddChild(new MeshInstance3D{Name="MeadowBankSlope",Mesh=surface.Commit(),MaterialOverride=bank});
+                foreach(var p in new[]{a,b,c,a,c,d}){surface.SetNormal(normal);surface.SetUV(new(p.X,p.Z));surface.AddVertex(p);}
+                surface.Index();AddChild(new MeshInstance3D{Name=$"MeadowBankSlope{x}_{z}",Mesh=surface.Commit(),MaterialOverride=bank});
                 // A continuous triangular earth face closes the diorama edge.
                 if(z==1||z==Depth-2)
                 {
@@ -58,7 +58,7 @@ public partial class TempleStageView
                     var highA=new Vector3(x,y0,edge);var highB=new Vector3(x+1,y1,edge);
                     foreach(var point in reverse?new[]{lowA,highB,highA,lowA,lowB,highB}:new[]{lowA,highA,highB,lowA,highB,lowB})
                     {face.SetNormal(reverse?Vector3.Forward:Vector3.Back);face.SetUV(new(point.X,point.Y));face.AddVertex(point);}
-                    face.Index();AddChild(new MeshInstance3D{Name="ContinuousBankEdge",Mesh=face.Commit(),MaterialOverride=bank});
+                    face.Index();AddChild(new MeshInstance3D{Name=$"ContinuousBankEdge{x}_{z}",Mesh=face.Commit(),MaterialOverride=bank});
                 }
             }
             else
@@ -115,7 +115,8 @@ public partial class TempleStageView
             }
             void V(float side,float t)
             {
-                surface.SetNormal(new Vector3(sin,.55f+Math.Abs(side)*.2f,-cos).Normalized());
+                float rise=height-.3f*t*t;
+                surface.SetNormal(new Vector3(-sin*rise,2*bend*t,cos*rise).Normalized());
                 surface.SetUV(new((side+1)/2,t));surface.AddVertex(P(side,t));
             }
             for(int segment=0;segment<3;segment++)
