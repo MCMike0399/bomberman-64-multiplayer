@@ -1255,6 +1255,14 @@
       "manual": false
     },
     {
+      "id": "lost-at-sea-shape-study",
+      "method": "LostAtSeaShapeStudy",
+      "domains": ["gameplay", "rendering", "physics", "ai"],
+      "headless": true,
+      "timeout": 240,
+      "manual": false
+    },
+    {
       "id": "lost-at-sea",
       "method": "LostAtSeaTour",
       "domains": ["gameplay", "rendering", "physics", "ai", "ui"],

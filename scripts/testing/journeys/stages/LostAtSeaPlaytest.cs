@@ -11,6 +11,60 @@ namespace BlastCircuit.Testing;
 
 public partial class PlaytestDriver
 {
+    private async Task LostAtSeaShapeStudy()
+    {
+        Event("glass-buoy-shape-policy",new{ordinaryInputs=true,stateMutation=false,artApproval=false,
+            brief="Fable Glass Buoy: massing and three values before decorative finishing"});
+        var original=_root.Preferences.Graphics;var lighting=_root.Preferences.StageLighting;
+        try
+        {
+            foreach(var (preset,time,label) in new[]{(GraphicsPreset.High,StageTime.Midday,"high-midday"),
+                (GraphicsPreset.High,StageTime.Night,"high-night"),(GraphicsPreset.Low,StageTime.Midday,"low-midday")})
+            {
+                if(_root.ActiveSession!=null){_root.Back();await Frames(3);}
+                if(!_headless){await SelectGraphics(preset);await SelectLocalLighting(time);}
+                _root.StartLocal(new SessionSettings(Stage:BlastStages.LostAtSea,Bots:7,SuddenDeath:false),1);
+                await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"Glass Buoy shape study enters "+label,150);
+                var arena=_root.GetChildren().OfType<ArenaView>().Single();
+                var terrain=AuditDescendants(arena).OfType<TempleStageView>().Single();
+                Check(AuditDescendants(terrain).OfType<Node3D>().Count(n=>n.Name.ToString().StartsWith("GlassBuoyCornerFloat"))==4,
+                    "shape study consumes the rebuilt pontoon and four fat corner floats");
+                var ocean=terrain.GetChildren().OfType<MeshInstance3D>().Single(n=>n.Name=="ObservationSea");
+                Check(((ShaderMaterial)ocean.MaterialOverride).Shader==ArtMaterials.WaterShaderFor(GraphicsQuality.Current),
+                    "real shared premium ocean remains part of arena terrain on "+label);
+                CheckClockwiseMeshes(AuditDescendants(terrain).OfType<MeshInstance3D>()
+                    .Where(n=>n.Name=="SlipperyVioletGlass"||n.Name.ToString().StartsWith("GlassBuoy")||n.Name=="ObservationSea")
+                    .Select(n=>(n.Mesh,n.Name.ToString(),n.Name=="SlipperyVioletGlass"||n.Name=="GlassBuoyRimDeck"||n.Name=="ObservationSea")));
+                var intrusions=SceneryIntrusions(terrain);
+                Check(intrusions.Count==0,"wreck, manta and bell buoy stay outside the player's standing volume");
+                CheckFraming(BlastStages.LostAtSea,GetWindow().Size);
+                await WaitState(s=>s.GetProperty("hazards").EnumerateArray().Any(h=>h.GetProperty("x").GetSingle() is >=3 and <18&&h.GetProperty("z").GetSingle() is >=3 and <18),
+                    "ordinary eight-player combat produces a real blast on the glass",600);
+                Check(State.GetProperty("players").GetArrayLength()==8,"shape study retains the actual eight-player battle roster");
+                await Capture("glass-buoy-shape-"+label+"-combat");
+                if(!_headless&&time==StageTime.Midday&&preset==GraphicsPreset.High)
+                {
+                    var camera=_root.GetViewport().GetCamera3D()!;var pose=camera.Transform;
+                    var (h,v)=(camera.HOffset,camera.VOffset);
+                    try
+                    {
+                        camera.HOffset=0;camera.VOffset=0;
+                        camera.Position=new(terrain.Width+7,16,terrain.Depth+14);
+                        camera.LookAt(new Vector3(terrain.Width/2f,-.45f,terrain.Depth/2f));
+                        await Capture("glass-buoy-shape-oblique-inspection");
+                    }
+                    finally{camera.Transform=pose;camera.HOffset=h;camera.VOffset=v;}
+                }
+            }
+        }
+        finally
+        {
+            Input(0,default);Input(1,default);
+            if(_root.ActiveSession!=null){_root.Back();await Frames(3);}
+            if(!_headless){await SelectGraphics(original);await SelectLocalLighting(lighting);}
+        }
+    }
+
     private async Task LostAtSeaTour()
     {
         Event("lost-at-sea-policy",new{ordinaryInputs=true,stateMutation=false,reference="official guide p107",surface="slippery violet glass with nonslip silver rim"});
@@ -30,17 +84,17 @@ public partial class PlaytestDriver
             Check(AuditDescendants(arena).OfType<Node3D>().Count(n=>n.Name.ToString().StartsWith("ObservationCargo"))==32,"actual accepted cargo renders as thirty-two X-braced crates");
             Check(AuditDescendants(terrain).OfType<MeshInstance3D>().Any(n=>n.Name=="SlipperyVioletGlass"),"actual play surface uses original violet observation glass");
             CheckClockwiseMeshes(AuditDescendants(terrain).OfType<MeshInstance3D>()
-                .Where(n=>n.Name=="SlipperyVioletGlass"||n.Name=="ReefFishTail")
-                .Select(n=>(n.Mesh,n.Name.ToString(),n.Name=="SlipperyVioletGlass")));
+                .Where(n=>n.Name=="SlipperyVioletGlass"||n.Name.ToString().StartsWith("GlassBuoy")||n.Name=="ObservationSea")
+                .Select(n=>(n.Mesh,n.Name.ToString(),n.Name=="SlipperyVioletGlass"||n.Name=="GlassBuoyRimDeck"||n.Name=="ObservationSea")));
             CheckFraming(BlastStages.LostAtSea,GetWindow().Size);await Capture("lost-at-sea-eight-player-opening");
             foreach(var preset in new[]{GraphicsPreset.Low,GraphicsPreset.Medium,GraphicsPreset.High})
             {
                 if(!_headless)await SelectGraphics(preset);
                 await Capture("lost-at-sea-"+GraphicsQuality.ToWire(preset));
             }
-            var school=AuditDescendants(terrain).OfType<Node3D>().First(n=>n.Name.ToString().StartsWith("ObservationFishSchool"));
+            var school=AuditDescendants(terrain).OfType<Node3D>().First(n=>n.Name=="MantaRay");
             var fishBefore=school.Position;await Frames(30);
-            Check(school.Position!=fishBefore,"real marine scenery swims beneath the observation deck");await Capture("lost-at-sea-marine-life-motion");
+            Check(school.Position!=fishBefore,"the large manta mass moves beneath the observation deck");await Capture("lost-at-sea-marine-life-motion");
             if(!_headless)foreach(var time in new[]{StageTime.Morning,StageTime.Afternoon,StageTime.Night})
             {await SelectLocalLighting(time);await Capture("lost-at-sea-lighting-"+StageLighting.ToWire(time));}
             _root.Back();await Frames(3);

@@ -67,6 +67,7 @@ public partial class TempleStageView : Node3D
     {
         _lighting=lighting;
         if(_water?.MaterialOverride is ShaderMaterial material)lighting.ApplyWater(material);
+        if(_sea)TuneBuoyWater();
         if(_greedyMoat?.MaterialOverride is ShaderMaterial moat)lighting.ApplyWater(moat);
         foreach(var frozen in _frozenMaterials)lighting.ApplyKeyLight(frozen);
     }
@@ -79,13 +80,7 @@ public partial class TempleStageView : Node3D
     {
         if(!IsVisibleInTree())return;
         AnimateScenery((float)delta);
-        if(_sea)
-        {
-            if(WeatherActive)_seaClock+=(float)delta;
-            _seaGlass?.SetShaderParameter("ambient_clock",_seaClock);
-            if(_graphicsRevision!=GraphicsQuality.Revision&&_seaGlass is not null)GraphicsQuality.ApplyShaderDetail(_seaGlass);
-            _graphicsRevision=GraphicsQuality.Revision;return;
-        }
+        if(_sea){ProcessGlassBuoy((float)delta);return;}
         if(_blizzard){ProcessBlizzard((float)delta);return;}
         if(_greedy){ProcessGreedyTrap((float)delta);return;}
         if(_castle)

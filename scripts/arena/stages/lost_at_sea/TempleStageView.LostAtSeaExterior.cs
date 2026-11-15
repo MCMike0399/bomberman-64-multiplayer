@@ -6,83 +6,64 @@ namespace BlastCircuit.Arena.Stages;
 
 public partial class TempleStageView
 {
+    // Large forms only: one wreck, slow manta and distant bell buoy replace the
+    // radial scatter of coral pads. Fine finishing waits for shape-study review.
     private void BuildLostAtSeaExterior()
     {
-        var scenery=_scenery!;
-        var sand=_art.Color(new("92b4ad"),.95f);
-        var reef=_art.Toy(new("567a80"),.9f);
-        // Original rounded reef shelves and branching corals establish the
-        // observation window's depth, including real fish beneath its purple glass.
-        for(int i=0;i<12;i++)
+        var wreck=new Node3D{Name="SunkenWreck",Position=new(10.7f,-2.4f,11.5f),Basis=PresentationMath.Rotation(new(0,-.38f,0))};_scenery!.AddChild(wreck);
+        var timber=_art.Toy(new("526379"),.87f);var ribs=_art.Toy(new("718793"),.85f);
+        var hull=new SurfaceTool();hull.Begin(Mesh.PrimitiveType.Triangles);
+        Vector2[] outline=[new(-3.5f,-1),new(-3.8f,0),new(-3.5f,1),new(2.5f,1),new(3.8f,.1f),new(2.5f,-1)];
+        for(int i=0;i<outline.Length;i++)
         {
-            float angle=i*Mathf.Tau/12;var (s,c)=PresentationMath.SinCos(angle);
-            var p=new Vector3(Width/2f+c*16,-3.2f,Depth/2f+s*16);
-            var bed=Prop(scenery,"CoralReef",p,angle);
-            Bead(bed,new(0,.1f,0),new(4.2f,.5f,3.1f),sand);
-            Bead(bed,new(.5f,.4f,.3f),new(2.1f,.85f,1.7f),reef);
-            for(int stem=0;stem<5;stem++)
-            {
-                float xx=-1.4f+stem*.6f,height=.6f+(stem%3)*.22f;
-                var coral=_art.Toy(new(stem%2==0?"df9b87":"b1a1b9"),.85f);
-                var stalk=RoundedBox(bed,new(xx,height/2,-.35f),new(.14f,height,.14f),coral);
-                stalk.Rotation=new(0,0,(stem-2)*.12f);
-                Bead(bed,new(xx,height,-.35f),new(.23f,.24f,.23f),coral);
-                foreach(float sign in new[]{-1f,1f})
-                {
-                    var branch=RoundedBox(bed,new(xx+sign*.15f,height*.65f,-.35f),new(.11f,height*.45f,.11f),coral);
-                    branch.Rotation=new(0,0,-sign*.65f);
-                }
-            }
-            if(i%2==0)SeaKelp(scenery,new(p.X,-3.05f,p.Z+1.3f),i);
+            int j=(i+1)%outline.Length;var a=outline[i];var b=outline[j];
+            Vector3 P(Vector2 v,float y,float width)=>new(v.X*width,y,v.Y*width);
+            var outward=new Vector3(a.X+b.X,0,a.Y+b.Y);
+            BuoyQuad(hull,P(a,-.4f,.68f),P(b,-.4f,.68f),P(b,.2f,1),P(a,.2f,1),outward);
+            BuoyTriangle(hull,new(0,.2f,0),P(a,.2f,1),P(b,.2f,1),Vector3.Up);
+            BuoyTriangle(hull,new(0,-.4f,0),P(b,-.4f,.68f),P(a,-.4f,.68f),Vector3.Down);
         }
-        for(int school=0;school<7;school++)
-        {
-            // Four schools swim directly below the glass; the rest animate its surroundings.
-            float x=school<4?6+(school%2)*8:school==4?-4:school==5?Width+4:Width/2f;
-            float z=school<4?6+(school/2)*8:school==6?-5:Depth*.5f;
-            var root=Prop(scenery,"ObservationFishSchool",new(x,-1.35f,z));
-            for(int fish=0;fish<5;fish++)
-                ObservationFish(root,new((fish-2)*.55f,-(fish%2)*.12f,(fish%3)*.45f),school*.7f+fish);
-            int index=school;
-            _sceneryMotion.Add(t=>root.Position=new(x+PresentationMath.Sin(t*.32f+index)*1.4f,-1.35f+PresentationMath.Sin(t*.55f+index)*.12f,z+PresentationMath.Sin(t*.24f+index)*.8f));
-        }
-        // A tiny research bathysphere, deck lights and an off-court buoy make
-        // this an inhabited marine outpost without crossing the playable volume.
-        var pod=Prop(scenery,"ObservationBathysphere",new(Width+4,-.2f,-3),-.3f);
-        var enamel=_art.Toy(new("d3d7bf"),.65f);var brass=_art.Toy(new("b99c62"),.55f);
-        Sphere(pod,new(0,.7f,0),new(2.5f,1.8f,2.2f),enamel);
-        Sphere(pod,new(0,.85f,1.07f),new(1.35f,1.2f,.2f),brass);
-        Sphere(pod,new(0,.85f,1.19f),new(1.05f,.94f,.08f),_art.Toy(new("548e9d"),.35f));
-        Box(pod,new(0,-.12f,0),new(2.1f,.2f,1.6f),brass,.08f);
-        foreach(float side in new[]{-.85f,.85f})Box(pod,new(side,-.4f,0),new(.14f,.45f,1.8f),brass,.04f);
-        Box(pod,new(0,2.1f,0),new(.06f,1.2f,.06f),brass,.01f);
-        Bead(pod,new(0,2.75f,0),new(.18f,.18f,.18f),Glow(new("e8bc79"),1.1f));
-        _sceneryMotion.Add(t=>pod.Position=new(Width+4,-.2f+PresentationMath.Sin(t*.7f)*.08f,-3));
-        SeaKelp(scenery,new(-3,-3.1f,Depth*.35f),1);
-        SeaKelp(scenery,new(Width+3,-3.1f,Depth*.7f),3);
-    }
+        hull.Index();wreck.AddChild(new MeshInstance3D{Name="GlassBuoyWreckHull",Mesh=hull.Commit(),MaterialOverride=timber});
+        foreach(float x in new[]{-2f,0f,2f})foreach(float side in new[]{-.85f,.85f})
+            RoundedBox(wreck,new(x,.52f,side),new(.22f,.65f,.22f),ribs,.7f);
+        var mast=RoundedBox(wreck,new(-.7f,.45f,0),new(.27f,.55f,.27f),timber,.65f);mast.Basis=PresentationMath.Rotation(new(0,0,-.35f));
+        RoundedBox(wreck,new(-.65f,.72f,0),new(1.5f,.16f,.2f),ribs,.65f);
+        RoundedBox(wreck,new(2.5f,.34f,0),new(.8f,.22f,1.2f),timber,.65f);
 
-    private void ObservationFish(Node3D parent,Vector3 position,float phase)
-    {
-        var fish=Prop(parent,"ReefFish",position,0,.7f);
-        var paint=_art.Toy(new(((int)phase)%2==0?"dfbd78":"91bdc3"),.75f);
-        Bead(fish,Vector3.Zero,new(.6f,.28f,.22f),paint);
-        Plate(fish,new(-.4f,0,0),[new(0,0),new(-.2f,.18f),new(-.2f,-.18f)],.045f,paint).Name="ReefFishTail";
-        Bead(fish,new(.19f,.05f,.1f),new(.045f,.045f,.03f),_art.Color(new("314f60")));
-        _sceneryMotion.Add(t=>fish.Basis=PresentationMath.Rotation(new(0,PresentationMath.Sin(t*3.1f+phase)*.15f,PresentationMath.Sin(t*1.3f+phase)*.035f),Vector3.One*.7f));
-    }
-
-    private void SeaKelp(Node3D parent,Vector3 position,float phase)
-    {
-        var root=Prop(parent,"ObservationKelp",position);
-        var paint=_art.Foliage(new("5c9d87"));_ambientMaterials.Add(paint);
-        for(int stalk=0;stalk<3;stalk++)
+        var manta=new Node3D{Name="MantaRay",Position=new(10.5f,-1.28f,10.5f)};_scenery.AddChild(manta);
+        var dark=_art.Toy(new("0b1d38"),.9f);
+        var wing=new SurfaceTool();wing.Begin(Mesh.PrimitiveType.Triangles);
+        Vector2[] shape=[new(0,-1.1f),new(.75f,-.7f),new(2.6f,-.35f),new(2.1f,.65f),new(.4f,1),new(0,.7f),new(-.4f,1),new(-2.1f,.65f),new(-2.6f,-.35f),new(-.75f,-.7f)];
+        for(int i=0;i<shape.Length;i++)
         {
-            var stem=Prop(root,"KelpStem",new((stalk-1)*.28f,0,0));
-            for(int leaf=0;leaf<4;leaf++)
-                Bead(stem,new((leaf%2==0?-.12f:.12f),.25f+leaf*.29f,0),new(.33f,.55f,.09f),paint);
-            int index=stalk;
-            _sceneryMotion.Add(t=>stem.Basis=PresentationMath.Rotation(new(0,0,PresentationMath.Sin(t*.65f+phase+index)*.11f)));
+            int j=(i+1)%shape.Length;var a=shape[i];var b=shape[j];
+            Vector3 P(Vector2 v,float y)=>new(v.X,y,v.Y);
+            BuoyTriangle(wing,new(0,.1f,0),P(a,0),P(b,0),Vector3.Up);
+            BuoyTriangle(wing,new(0,-.08f,0),P(b,-.06f),P(a,-.06f),Vector3.Down);
+            BuoyQuad(wing,P(a,0),P(a,-.06f),P(b,-.06f),P(b,0),new(a.X+b.X,0,a.Y+b.Y));
         }
+        wing.Index();manta.AddChild(new MeshInstance3D{Name="GlassBuoyMantaSilhouette",Mesh=wing.Commit(),MaterialOverride=dark});
+        RoundedBox(manta,new(0,-.015f,1.7f),new(.12f,.10f,2.3f),dark,.6f);
+        _sceneryMotion.Add(t=>
+        {
+            float phase=t*Mathf.Tau/84;
+            manta.Position=new(Width/2f+PresentationMath.Sin(phase)*3.2f,-1.28f+PresentationMath.Sin(phase*2)*.06f,Depth/2f+PresentationMath.SinCos(phase).Cos*2.6f);
+            manta.Basis=PresentationMath.Rotation(new(0,PresentationMath.Sin(phase)*.2f,0));
+        });
+
+        var buoy=new Node3D{Name="BellBuoy",Position=new(-3.5f,-.45f,12.2f)};_scenery.AddChild(buoy);
+        var white=_art.Toy(new("dde7df"),.64f);var orange=_art.Toy(new("d8743e"),.65f);var rubber=_art.Toy(new("25354b"),.9f);var brass=_art.Toy(new("d2b36c"),.55f);
+        Bead(buoy,Vector3.Zero,new(1.45f,.55f,1.45f),white);
+        Bead(buoy,new(0,.08f,0),new(1.48f,.22f,1.48f),rubber);
+        RoundedBox(buoy,new(0,.34f,0),new(.72f,.45f,.72f),orange,.75f);
+        foreach(float x in new[]{-.24f,.24f})RoundedBox(buoy,new(x,.93f,0),new(.14f,1,.14f),white,.7f);
+        RoundedBox(buoy,new(0,1.42f,0),new(.65f,.18f,.35f),white,.7f);
+        Bead(buoy,new(0,1.02f,0),new(.42f,.5f,.42f),brass);
+        Bead(buoy,new(0,1.57f,0),new(.24f,.18f,.24f),_art.Toy(new("edba66"),.45f,true));
+        _sceneryMotion.Add(t=>
+        {
+            buoy.Position=new(-3.5f,SceneryWaterHeight+.17f+PresentationMath.Sin(t*.8f)*.05f,12.2f);
+            buoy.Basis=PresentationMath.Rotation(new(0,0,PresentationMath.Sin(t*.65f)*.055f));
+        });
     }
 }
