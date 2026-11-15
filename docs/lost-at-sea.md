@@ -122,3 +122,10 @@ three ordinary eight-player combat runs, including actual-glass blasts, geometry
 facing and standing-volume checks. The ordinary slippery-glass journey is also
 repeated against the new body. These are technical checks; the massing, colour,
 water and depth cues remain pending root GPU and independent art review.
+
+A focused paired authority regression exposed kick-hop height selecting rim
+friction while the bomb remained over glass: after seven ticks the hopped shot
+had speed 9.560003 versus 11.580004 without the hop. Friction now samples the
+support surface, retaining the launch hop, constants, layout and fuse. The red
+paired result is retained separately from material verification. This is a
+technical authority correction, not an art tuning change.

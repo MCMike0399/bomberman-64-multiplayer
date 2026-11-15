@@ -1,4 +1,6 @@
 using System.Numerics;
+using System.Reflection;
+using Bomber.Game.Simulation;
 using Bomber.Game.Matches;
 using Bomber.Game.Simulation.Rules;
 using Bomber.Game.Simulation.Stages;
@@ -67,6 +69,20 @@ internal static class LostAtSeaChecks
                 Assert(bomb.GetProperty("state").GetInt32()==(glass?1:0),"Kicked bomb did not distinguish slippery glass from grippy rim.");
                 if(glass)Assert(bomb.GetProperty("x").GetSingle()>10,"Glass kick lost its sustained momentum.");
             }
+        });
+        run("Lost at Sea kick hop never changes ground traction",()=>
+        {
+            (float Speed,float X) Sample(bool hop)
+            {
+                var match=Practice();
+                var session=(BlastSession)typeof(LocalMatch).GetField("_session",BindingFlags.Instance|BindingFlags.NonPublic)!.GetValue(match)!;
+                var bomb=new BlastBomb{Id="traction-hop",X=8.5f,Z=8.5f,VX=12,State=BombState.Rolling,
+                    KickHopRemaining=hop?BlastBomb.KickHopSeconds:0};
+                session.AiTestAddBomb(bomb);Step(match,7);return(bomb.VX,bomb.X);
+            }
+            var flat=Sample(false);var hopped=Sample(true);
+            Assert(Math.Abs(flat.Speed-hopped.Speed)<.001f&&Math.Abs(flat.X-hopped.X)<.001f,
+                $"Kick hop selected different ground traction: flat {flat}, hopped {hopped}.");
         });
         run("Lost at Sea cargo is seeded, scalable and absent from the safe rim",()=>
         {

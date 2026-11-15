@@ -25,7 +25,9 @@ public sealed partial class BlastSession
     {
         if(_stage.Id!=Stages.BlastStages.LostAtSea||b.State!=BombState.Rolling)return;
         float speed=MathF.Sqrt(b.VX*b.VX+b.VZ*b.VZ);
-        float drag=SlipperyGlassRules.OnGlass(_stage,b.X,b.Z,BombY(b))
+        // A launch hop changes occupied height, not the traction of the floor.
+        float support=_stage.SurfaceAt(b.X,b.Z,b.Tier);
+        float drag=SlipperyGlassRules.OnGlass(_stage,b.X,b.Z,support)
             ?SlipperyGlassRules.BombGlassDeceleration:SlipperyGlassRules.BombRimDeceleration;
         float next=Math.Max(0,speed-drag*dt),scale=speed>.0001f?next/speed:0;
         b.VX*=scale;b.VZ*=scale;
