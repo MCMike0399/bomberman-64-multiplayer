@@ -15,27 +15,29 @@ public partial class TempleStageView
         scenery.AddChild(new MeshInstance3D{Name="Nebula",Mesh=PrimitiveTemplates.Get("BoxMesh",("size",new Vector3(190,.05f,190))),
             MaterialOverride=nebula,Position=new(Width/2f,-49,Depth/2f),CastShadow=GeometryInstance3D.ShadowCastingSetting.Off});
 
-        var giant=Prop(scenery,"RingedPlanet",new(-10,-8,1.5f),0,1);
-        var gas=_art.Planet(new("735d88"),new("e6bda1"));_ambientMaterials.Add(gas);
-        var globe=Sphere(giant,Vector3.Zero,Vector3.One*6.4f,gas);
-        globe.CastShadow=GeometryInstance3D.ShadowCastingSetting.Off;globe.Rotation=new(-.6f,0,.25f);
-        var rings=Prop(giant,"PlanetRings",Vector3.Zero);rings.Rotation=new(-.6f,0,.25f);
-        // Solid thin annuli keep the toy-like ring silhouette stable without alpha overdraw.
-        for(int i=0;i<3;i++)
+        var giant=Prop(scenery,"RingedPlanet",new(-9.6f,-8,1.5f));
+        var gas=_art.Planet(new("625b7b"),new("cbb79f"));_ambientMaterials.Add(gas);
+        var globe=Sphere(giant,Vector3.Zero,Vector3.One*6.2f,gas);
+        globe.CastShadow=GeometryInstance3D.ShadowCastingSetting.Off;globe.Basis=PresentationMath.Rotation(new(-.25f,0,.32f),Vector3.One*6.2f);
+        var rings=Prop(giant,"PlanetRings",Vector3.Zero);rings.Basis=PresentationMath.Rotation(new(-.25f,0,.32f));
+        var ringPaint=_art.PlanetRings();
+        // Broad painted discs with a real division read as a tiny astronomical
+        // model. Opaque faces avoid luminous wire rings and transparent sorting.
+        foreach(var (inner,outer) in new[]{(3.65f,4.22f),(4.36f,4.9f)})
         {
-            var ring=new MeshInstance3D{Mesh=PrimitiveTemplates.Get("TorusMesh",("inner_radius",3.9f+i*.43f),("outer_radius",4.15f+i*.43f),("rings",64),("ring_segments",8)),
-                Scale=new(1,.08f,1),MaterialOverride=Glow(new(i==1?"8979a4":"c6b6b1"),.6f),CastShadow=GeometryInstance3D.ShadowCastingSetting.Off};
+            var ring=new MeshInstance3D{Name="PaintedRing",Mesh=OrbitalAnnulus(inner,outer),MaterialOverride=ringPaint,
+                CastShadow=GeometryInstance3D.ShadowCastingSetting.Off};
             rings.AddChild(ring);
         }
-        _sceneryMotion.Add(t=>giant.Position=new(-10+Mathf.Sin(t*.025f)*.65f,-8+Mathf.Sin(t*.04f)*.3f,1.5f));
+        _sceneryMotion.Add(t=>giant.Position=new(-9.6f+Mathf.Sin(t*.025f)*.45f,-8+Mathf.Sin(t*.04f)*.22f,1.5f));
 
-        var blue=Prop(scenery,"BluePlanet",new(Width+11,-12,8));
-        var ocean=_art.Planet(new("254c86"),new("76b8cc"));_ambientMaterials.Add(ocean);
-        var blueGlobe=Sphere(blue,Vector3.Zero,Vector3.One*8.5f,ocean);
-        blueGlobe.CastShadow=GeometryInstance3D.ShadowCastingSetting.Off;blueGlobe.Rotation=new(-.5f,0,-.3f);
+        var blue=Prop(scenery,"BluePlanet",new(Width+10.8f,-12,6.7f));
+        var ocean=_art.Planet(new("293d68"),new("6b9fb3"));_ambientMaterials.Add(ocean);
+        var blueGlobe=Sphere(blue,Vector3.Zero,Vector3.One*7.1f,ocean);
+        blueGlobe.CastShadow=GeometryInstance3D.ShadowCastingSetting.Off;blueGlobe.Basis=PresentationMath.Rotation(new(-.3f,0,-.38f),Vector3.One*7.1f);
         var moon=Prop(scenery,"OrbitingMoon",new(Width+7,-7,-2));
-        var moonPaint=_art.Planet(new("666a88"),new("c7cce2"),true);_ambientMaterials.Add(moonPaint);
-        Sphere(moon,Vector3.Zero,Vector3.One*1.7f,moonPaint).CastShadow=GeometryInstance3D.ShadowCastingSetting.Off;
+        var moonPaint=_art.Planet(new("68647e"),new("b9bbca"),true);_ambientMaterials.Add(moonPaint);
+        Sphere(moon,Vector3.Zero,Vector3.One*1.95f,moonPaint).CastShadow=GeometryInstance3D.ShadowCastingSetting.Off;
         _sceneryMotion.Add(t=>
         {
             float a=t*.045f+.8f;
@@ -60,5 +62,26 @@ public partial class TempleStageView
                 asteroid.Rotation=new(phase+t*.065f,t*.085f+phase,Mathf.Sin(u)*.3f);
             });
         }
+    }
+
+    /// <summary>Thin double-sided annulus. The centre and Cassini-like division
+    /// are actual empty space, so the globe naturally occludes the rear half.</summary>
+    private static ArrayMesh OrbitalAnnulus(float inner,float outer)
+    {
+        var surface=new SurfaceTool();surface.Begin(Mesh.PrimitiveType.Triangles);
+        const int segments=96;
+        void Vertex(float angle,float radius)
+        {
+            var (sin,cos)=PresentationMath.SinCos(angle);
+            var p=new Vector3(cos*radius,0,sin*radius);
+            surface.SetNormal(Vector3.Up);surface.SetUV(new(p.X,p.Z));surface.AddVertex(p);
+        }
+        for(int i=0;i<segments;i++)
+        {
+            float a=i*Mathf.Tau/segments,b=(i+1)*Mathf.Tau/segments;
+            Vertex(a,inner);Vertex(b,outer);Vertex(b,inner);
+            Vertex(a,inner);Vertex(a,outer);Vertex(b,outer);
+        }
+        surface.Index();return surface.Commit();
     }
 }

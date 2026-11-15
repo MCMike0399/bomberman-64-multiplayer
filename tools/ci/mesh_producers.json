@@ -2216,37 +2216,40 @@
       "id": "scripts/arena/stages/TempleStageView.Orbital.cs:Sphere:1",
       "file": "scripts/arena/stages/TempleStageView.Orbital.cs",
       "line": 20,
-      "call": "Sphere(giant,Vector3.Zero,Vector3.One*6.4f,gas)",
-      "callSha256": "6e1a75046017dd217d0da8bb73e54f1334c620ec937ccde63291d42cefb2ce91",
+      "call": "Sphere(giant,Vector3.Zero,Vector3.One*6.2f,gas)",
+      "callSha256": "ceace68a2be7733b6f28536ee1d211eaeb499cd864ad657d61238a52c039700e",
       "domain": "owned-generator-or-helper"
-    },
-    {
-      "id": "scripts/arena/stages/TempleStageView.Orbital.cs:PrimitiveTemplates.Get:2",
-      "file": "scripts/arena/stages/TempleStageView.Orbital.cs",
-      "line": 26,
-      "call": "PrimitiveTemplates.Get(\"TorusMesh\",(\"inner_radius\",3.9f+i*.43f),(\"outer_radius\",4.15f+i*.43f),(\"rings\",64),(\"ring_segments\",8))",
-      "callSha256": "c5e2be54fb438fa6754a2473625c02693cc577f21148d3f4376a27106c7d9f12",
-      "domain": "TorusMesh",
-      "capturedTemplates": [
-        "4b17a8ecd89b9e898f40797f921a629029fd63963994336a734a38569319ef17",
-        "90af13a0e39c01a38fd08584551af259aaa6dfadca8da656e5132d29497bdcc2",
-        "f5eac9e41ac1360e26e57d5d910820810bd77a5a276adee30615ff58bc5b236a"
-      ]
     },
     {
       "id": "scripts/arena/stages/TempleStageView.Orbital.cs:Sphere:2",
       "file": "scripts/arena/stages/TempleStageView.Orbital.cs",
-      "line": 34,
-      "call": "Sphere(blue,Vector3.Zero,Vector3.One*8.5f,ocean)",
-      "callSha256": "50751fd79bdc0e9433ac38b816f20445c393a35db033a244d971614514279413",
+      "line": 36,
+      "call": "Sphere(blue,Vector3.Zero,Vector3.One*7.1f,ocean)",
+      "callSha256": "e71f486a43d44db475eab8a612a6997df09dbb100aa0d6b51e417a646706ae9f",
       "domain": "owned-generator-or-helper"
     },
     {
       "id": "scripts/arena/stages/TempleStageView.Orbital.cs:Sphere:3",
       "file": "scripts/arena/stages/TempleStageView.Orbital.cs",
-      "line": 38,
-      "call": "Sphere(moon,Vector3.Zero,Vector3.One*1.7f,moonPaint)",
-      "callSha256": "3d4202fb5a68545f50b84d7b5a1b0c830a0a93900dca997c0f81739d7790f7c0",
+      "line": 40,
+      "call": "Sphere(moon,Vector3.Zero,Vector3.One*1.95f,moonPaint)",
+      "callSha256": "86c35277274169ca68e9e993988c7e53e32f3cb89411659d7dd00594a14815ae",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/TempleStageView.Orbital.cs:newSurfaceTool:1",
+      "file": "scripts/arena/stages/TempleStageView.Orbital.cs",
+      "line": 71,
+      "call": "new SurfaceTool()",
+      "callSha256": "524d4daa3dd8ade1577b68b52e91ebbe9907def4954bab94da3aeb8c6bb1a4ae",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/TempleStageView.Orbital.cs:surface.Commit:1",
+      "file": "scripts/arena/stages/TempleStageView.Orbital.cs",
+      "line": 85,
+      "call": "surface.Commit()",
+      "callSha256": "3a4b0e22bc74cdecd537891eb2f48df20b98f27fbf269b1803e1cc035b3194ec",
       "domain": "owned-generator-or-helper"
     },
     {
@@ -9398,7 +9401,7 @@
     "scripts/arena/stages/TempleStageView.GreedyExterior.cs": "109e5efa4c608d1a3ada294761e60d769b9dbbe4a3d9b75b47ba590ca03d4076",
     "scripts/arena/stages/TempleStageView.GreedyTrap.cs": "3b6b63d492c540ce7a7ad5d31eeaca620b464f8d7cc8268e89a709ff46bb8b49",
     "scripts/arena/stages/TempleStageView.Meadow.cs": "06264048f537b5475e73e7e118f79468d4bc461838c5af8937b2bc6eb7077e79",
-    "scripts/arena/stages/TempleStageView.Orbital.cs": "bbc72f77f93a1f7bedad259b428dc4677d8acc34e10a4422e41571d434cf6247",
+    "scripts/arena/stages/TempleStageView.Orbital.cs": "e33ee31da244ea52e2270e08aedaa294864de95653358e673bb999f388d0c550",
     "scripts/arena/stages/TempleStageView.RockGarden.cs": "7f91e30a873b4bf2e9d2d93a820dc6cfd26a88ab67ca64eb3e2a5365cb108e4a",
     "scripts/arena/stages/TempleStageView.RockGardenExterior.cs": "77d292b8aaeb598e37e919ed8c98c017e7db17929c0919cf4339bc55a97b2b19",
     "scripts/arena/stages/TempleStageView.Scenery.cs": "e60f206023f5fe7ce9712bb0b07819d58baf80f060daaecdd9df4c42737555a9",
