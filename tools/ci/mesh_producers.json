@@ -4374,23 +4374,23 @@
     {
       "id": "scripts/arena/stages/field_of_grass/TempleStageView.FieldOfGrass.cs:Box:3",
       "file": "scripts/arena/stages/field_of_grass/TempleStageView.FieldOfGrass.cs",
-      "line": 30,
-      "call": "Box(this,new(x+.5f,baseY+.3f,z+.5f),new(.16f,.6f,.16f),timber,.025f)",
-      "callSha256": "81a018d04c2c8475e835f2c99bdedf0287ff1e8245a623c327b214d9f0f378b6",
+      "line": 31,
+      "call": "Box(this,new(x+.5f,baseY+.3f,z+.5f),new(.12f,.6f,.12f),timber,.025f)",
+      "callSha256": "4cf10cf608a882eb2c733ca657af77d655579c611abb2e514e9211384866aedc",
       "domain": "owned-generator-or-helper"
     },
     {
       "id": "scripts/arena/stages/field_of_grass/TempleStageView.FieldOfGrass.cs:Box:4",
       "file": "scripts/arena/stages/field_of_grass/TempleStageView.FieldOfGrass.cs",
-      "line": 33,
-      "call": "Box(this,new(x+.5f,baseY+y,z+.5f),side?new(.095f,.085f,1):new(1,.085f,.095f),rail,.012f)",
-      "callSha256": "1595bb6119512aa3ed45d9a1a1993ff4acfdfecda2673de8ab915df7e29801ca",
+      "line": 39,
+      "call": "Box(this,new(x+.5f,(yLeft+yRight)/2+y,z+.5f),side?new(.075f,.07f,1):new(length,.07f,.075f),rail,.012f)",
+      "callSha256": "f8cbe55803e6c7809c641187df38eba8b0df52cd596540d8bb05325903349b64",
       "domain": "owned-generator-or-helper"
     },
     {
       "id": "scripts/arena/stages/field_of_grass/TempleStageView.FieldOfGrass.cs:newSurfaceTool:1",
       "file": "scripts/arena/stages/field_of_grass/TempleStageView.FieldOfGrass.cs",
-      "line": 39,
+      "line": 47,
       "call": "new SurfaceTool()",
       "callSha256": "524d4daa3dd8ade1577b68b52e91ebbe9907def4954bab94da3aeb8c6bb1a4ae",
       "domain": "owned-generator-or-helper"
@@ -4398,39 +4398,47 @@
     {
       "id": "scripts/arena/stages/field_of_grass/TempleStageView.FieldOfGrass.cs:surface.Commit:1",
       "file": "scripts/arena/stages/field_of_grass/TempleStageView.FieldOfGrass.cs",
-      "line": 43,
+      "line": 51,
       "call": "surface.Commit()",
       "callSha256": "3a4b0e22bc74cdecd537891eb2f48df20b98f27fbf269b1803e1cc035b3194ec",
       "domain": "owned-generator-or-helper"
     },
     {
+      "id": "scripts/arena/stages/field_of_grass/TempleStageView.FieldOfGrass.cs:newSurfaceTool:2",
+      "file": "scripts/arena/stages/field_of_grass/TempleStageView.FieldOfGrass.cs",
+      "line": 56,
+      "call": "new SurfaceTool()",
+      "callSha256": "524d4daa3dd8ade1577b68b52e91ebbe9907def4954bab94da3aeb8c6bb1a4ae",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/field_of_grass/TempleStageView.FieldOfGrass.cs:face.Commit:1",
+      "file": "scripts/arena/stages/field_of_grass/TempleStageView.FieldOfGrass.cs",
+      "line": 61,
+      "call": "face.Commit()",
+      "callSha256": "a400ff803b2b19754aff413cb200a363b4cec1dec884c236eb75de17e286b785",
+      "domain": "owned-generator-or-helper"
+    },
+    {
       "id": "scripts/arena/stages/field_of_grass/TempleStageView.FieldOfGrass.cs:Box:5",
       "file": "scripts/arena/stages/field_of_grass/TempleStageView.FieldOfGrass.cs",
-      "line": 46,
-      "call": "Box(this,new(x+.5f,(Math.Min(y0,y1)-.05f)/2,z+(z==1?0:1)),new(1,Math.Min(y0,y1)+.05f,.05f),bank)",
-      "callSha256": "d6ffcab573ddbd4b83e9d7a427e10baadbaab919ac6f8d5e38e51290877500df",
+      "line": 67,
+      "call": "Box(this,new(x+.5f,(y-.12f)/2,z+.5f),new(1,y+.12f,1),x<5||x>=16?bank:turf)",
+      "callSha256": "025785eb9d4d1da782447ec79d70194d1a931dcfb472c2adb7e429b8d58c9e84",
       "domain": "owned-generator-or-helper"
     },
     {
       "id": "scripts/arena/stages/field_of_grass/TempleStageView.FieldOfGrass.cs:Box:6",
       "file": "scripts/arena/stages/field_of_grass/TempleStageView.FieldOfGrass.cs",
-      "line": 51,
-      "call": "Box(this,new(x+.5f,(y-.12f)/2,z+.5f),new(1,y+.12f,1),x<7||x>=14?bank:turf)",
-      "callSha256": "c4712fc184f791b06b98cf4a63c7cb88b88d109c935d2fe043052a51b15548bb",
-      "domain": "owned-generator-or-helper"
-    },
-    {
-      "id": "scripts/arena/stages/field_of_grass/TempleStageView.FieldOfGrass.cs:Box:7",
-      "file": "scripts/arena/stages/field_of_grass/TempleStageView.FieldOfGrass.cs",
-      "line": 53,
+      "line": 69,
       "call": "Box(this,new(x+.5f,y+.012f,z+.5f),new(.98f,.024f,.98f),turf,.015f)",
       "callSha256": "867df90959fa83ce4393679efeca8b66547f443164a8c59b4c344d58d129145a",
       "domain": "owned-generator-or-helper"
     },
     {
-      "id": "scripts/arena/stages/field_of_grass/TempleStageView.FieldOfGrass.cs:newSurfaceTool:2",
+      "id": "scripts/arena/stages/field_of_grass/TempleStageView.FieldOfGrass.cs:newSurfaceTool:3",
       "file": "scripts/arena/stages/field_of_grass/TempleStageView.FieldOfGrass.cs",
-      "line": 86,
+      "line": 102,
       "call": "new SurfaceTool()",
       "callSha256": "524d4daa3dd8ade1577b68b52e91ebbe9907def4954bab94da3aeb8c6bb1a4ae",
       "domain": "owned-generator-or-helper"
@@ -4438,7 +4446,7 @@
     {
       "id": "scripts/arena/stages/field_of_grass/TempleStageView.FieldOfGrass.cs:surface.Commit:2",
       "file": "scripts/arena/stages/field_of_grass/TempleStageView.FieldOfGrass.cs",
-      "line": 101,
+      "line": 127,
       "call": "surface.Commit()",
       "callSha256": "3a4b0e22bc74cdecd537891eb2f48df20b98f27fbf269b1803e1cc035b3194ec",
       "domain": "owned-generator-or-helper"
@@ -9567,8 +9575,8 @@
     "scripts/arena/stages/TempleStageView.TopRulesExterior.cs": "e1799d261b5abea1cc0a44d6c3a4329a78786a4327973472d3bd26ef28395d15",
     "scripts/arena/stages/TempleStageView.UpAndDown.cs": "66ee09178629038b769382d720fae901d74d7bb670e846143463b998f96f2006",
     "scripts/arena/stages/TempleStageView.UpAndDownExterior.cs": "f6beb01527bf31f486f53c77b0a49a0233aeeaf5dc001d7cd20f9e11090ddacf",
-    "scripts/arena/stages/TempleStageView.cs": "a9cde566e9781eb607cd032df78d4d47a5df84e4aa41785236dc108c0d3f69d3",
-    "scripts/arena/stages/field_of_grass/TempleStageView.FieldOfGrass.cs": "83141c391c45a986b438614ae5cdc394ec47ea068681ff8ac3cf4ec1790c718d",
+    "scripts/arena/stages/TempleStageView.cs": "f7a3cfd3e587e30f6238f38f1fe436bca6234e3ed96af49ee05505dc26a9484b",
+    "scripts/arena/stages/field_of_grass/TempleStageView.FieldOfGrass.cs": "3dba54cb94a53624386c53fd66f03acab3cc806e346cf7939441cfe36e864d3e",
     "scripts/arena/stages/field_of_grass/TempleStageView.FieldOfGrassExterior.cs": "97ddcb0185258d6a07ccbb678765ec5a051021d3d1080a0f474b337dfe0479fe",
     "scripts/rendering/ArtGeometry.cs": "32fea3664b4af118fe691a5e0c1eb396eebf0352922996ea2b18896d0ea9764e",
     "scripts/rendering/PrimitiveTemplates.cs": "a217a597e45615d6a71b19529c4b24ca49cf09b1a2473b53e509ee153cce9352",
@@ -9580,7 +9588,7 @@
     "scripts/ui/menu/ResultMedals.cs": "30d9ff94b7895686819efb5ca9b558edf7eb69782c8a4b149cbac3064971e860",
     "src/Bomber.Game/Simulation/Stages/BlastStages.BlizzardBattle.cs": "cc2be4d216d1267ecf1d9530be526e8b0d9859c15934865bd9e78c83cd9450c6",
     "src/Bomber.Game/Simulation/Stages/BlastStages.CircuitGarden.cs": "f2ca38d2b9657faa917221e164377c1c5644f2d597a10f10dcfe252ec57016e3",
-    "src/Bomber.Game/Simulation/Stages/BlastStages.FieldOfGrass.cs": "7ffab16e447c88d24c7ed8f957a0a539f4af303034cf03808971bc4db3ec296a",
+    "src/Bomber.Game/Simulation/Stages/BlastStages.FieldOfGrass.cs": "ac866542a1d7bb82d2447b090ec5b50d3ba63ae4640dcec36794404dddbb0ff1",
     "src/Bomber.Game/Simulation/Stages/BlastStages.GreedyTrap.cs": "09b0a420d51324c6ebfdbee4ccb167051c73f3789cc4ee810674240c4d16f454",
     "src/Bomber.Game/Simulation/Stages/BlastStages.RockGarden.cs": "7d4c01757638b4792cdb2f2db3598e300581034a39dd8d6f971a3f09b27dfae8",
     "src/Bomber.Game/Simulation/Stages/BlastStages.SunkenTemple.cs": "037f6f69eab3b62db81db07de3735393ae77e349fd3be49fa9206a34c8ba152f",

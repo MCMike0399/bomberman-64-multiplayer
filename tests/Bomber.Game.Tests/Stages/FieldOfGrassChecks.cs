@@ -17,6 +17,7 @@ internal static class FieldOfGrassChecks
                 Assert(stage.At(x,z).IsPassable,"The original open valley gained an interior pillar.");
             for(int z=1;z<18;z++)for(int x=1;x<19;x++)
                 Assert(stage.CanCross(x,z,x+1,z),"Slope has a gap or a vertical step.");
+            Assert(Enumerable.Range(1,19).Count(x=>stage.At(x,9).Kind==CellKind.Floor&&stage.At(x,9).Tier==0)==11,"Reference meadow must occupy about sixty percent of the interior width.");
             Assert(stage.SurfaceAt(2.5f,9.5f)==2&&stage.SurfaceAt(18.5f,9.5f)==2&&stage.SurfaceAt(10.5f,9.5f)==0,"Side banks must overlook the meadow.");
             Assert(stage.Spawns.All(s=>stage.SurfaceAt(s.X+.5f,s.Z+.5f)==2),"All eight players must start on visible bank ledges.");
         });
@@ -42,7 +43,7 @@ internal static class FieldOfGrassChecks
                 Assert(bits.Sum(b=>System.Numerics.BitOperations.PopCount((uint)b))==28*percent/100,"Meadow cover ignored the advanced density setting.");
                 for(int z=0;z<19;z++)for(int x=0;x<21;x++)
                     if((bits[(z*21+x)/8]&(1<<((z*21+x)%8)))!=0)
-                        Assert(x is >=8 and <=12&&z!=9,"Rocks left the valley, blocked bank approaches or central crossing.");
+                        Assert(x is >=6 and <=14&&z!=9,"Rocks left the valley, blocked bank approaches or central crossing.");
                 if(percent==100)layouts.Add(encoded);
             }
             Assert(layouts.Count>=12,"Meadow rocks must vary across new seeds.");

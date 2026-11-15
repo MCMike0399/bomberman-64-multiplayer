@@ -25,8 +25,9 @@ topology cues; the scanned material is research evidence outside the repository.
 The [all-stage battle recording](https://www.youtube.com/watch?v=88xIYg29HlA)
 around 4:54–5:45 is a supplementary gameplay reference.
 
-The 21×19 cell court, two-unit-high banks, four half-tier ramp columns per bank,
-eight ledge starts, 28 randomly sampled rocks and clear center crossing are
+The 21×19 cell court, two-unit-high banks, two one-tier ramp columns per bank,
+an eleven-column meadow (about 58% of the interior), eight ledge starts,
+28 randomly sampled rocks and clear center crossing are
 explicit Blast Circuit tuning for eight players. The reference does not establish
 these dimensions or counts. There is no invented permanent pillar grid, extra
 floor, water, moving wall or grass collision rule.
@@ -38,7 +39,11 @@ spawns, regional cover and `1.05` cover height. Rocks occupy the north/south mea
 regions; approaches and the middle crossing stay clear. The normal Block density
 setting scales the budget, seeds reproduce the layout and Practice clears cover.
 
-Grass conceals through opaque leaf geometry. It never changes collision, bomb
+Grass conceals through dense overlapping curved ribbon leaves, with jittered
+roots and independently varied yaw, height, spread and tints. The first native
+review rejected the original narrow valley and regular pointed-tuft carpet;
+the revised valley width follows the guide silhouette and bank rails follow
+continuous slopes. Grass conceals through opaque leaf geometry. It never changes collision, bomb
 placement, blast shielding, simulation state or the snapshot protocol. Every
 graphics preset retains the same gameplay canopy; Low can hide exterior scenery.
 Player heads and enlarged bombs rise above the leaves. Advisory landing markers
@@ -71,7 +76,7 @@ second client observing the stage, descended player and planted floor bomb.
 
 Source evidence on 2026-11-15: 4,048 complete game checks, 494 client checks,
 the four focused authority checks and twelve 2,700-tick AI soaks passed. The
-focused headless journey passed 47 assertions and the real dedicated/peer network
+focused headless journey initially passed 47 assertions and the real dedicated/peer network
 journey passed 103 assertions, both with zero runtime errors. Public QA and
 source layout, mesh inventory and documentation checks passed. Source headless
 exit logs retain ObjectDB cleanup warnings (eleven local, two network), requiring
@@ -82,3 +87,11 @@ clean functional attempt was rejected when its catalog changed during execution.
 The final matching-catalog run with the pinned extension is the passing network
 receipt. Native graphical review, exported-client qualification and delivery
 remain separate.
+
+The first exported native review passed 93 assertions with 15 captures and clean
+runtime logs, but its regular pointed grass carpet and narrow valley were
+rejected in visual review. The wider organic-leaf revision passes the focused
+authority checks, twelve 2,700-tick AI soaks (longest eligible open idle 1.27 s)
+and 50 headless journey assertions, including advancing and paused wind. That
+repeat has no runtime errors or warnings. Revised native visual review remains
+pending; the earlier functional result does not approve the revised art.

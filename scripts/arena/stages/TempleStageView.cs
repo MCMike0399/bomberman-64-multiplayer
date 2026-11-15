@@ -141,7 +141,7 @@ public partial class TempleStageView : Node3D
     public TempleStageView(ArtMaterials art){_art=art;}
     public float Surface(float x,float z,float y=float.PositiveInfinity) => Layout.SurfaceAt(x,z,y)*HeightScale;
     public CellKind AimCellKind(float x,float z) => Layout.At((int)MathF.Floor(x),(int)MathF.Floor(z)).Kind;
-    public float OverlaySurface(float x,float z)=>_field&&x>=7&&x<14&&z>=1&&z<Depth-1?1.02f:Surface(x,z);
+    public float OverlaySurface(float x,float z)=>_field&&x>=5&&x<16&&z>=1&&z<Depth-1?1.02f:Surface(x,z);
     public float AimSurface(float x,float z) => AimCellKind(x,z) switch
     {
         CellKind.Water => _targetWater/HeightScale,

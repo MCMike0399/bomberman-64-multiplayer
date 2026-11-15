@@ -47,7 +47,7 @@ public partial class StagePreview : Control
         {
             var cell=layout.At(x,z);float y=layout.SurfaceAt(x+.5f,z+.5f);
             var point=origin+new Vector2(x*scale,z*scale*.6f-y*scale*.5f);
-            var color=cell.Kind==CellKind.Pillar?new Color("a89c6a"):x<6||x>14?new Color("b78c59"):new Color((x+z)%3==0?"8db85a":"70a248");
+            var color=cell.Kind==CellKind.Pillar?new Color("a89c6a"):x<5||x>=16?new Color("b78c59"):new Color((x+z)%3==0?"8db85a":"70a248");
             DrawRect(new Rect2(point,new(scale,scale*.6f)),color);
         }
     }

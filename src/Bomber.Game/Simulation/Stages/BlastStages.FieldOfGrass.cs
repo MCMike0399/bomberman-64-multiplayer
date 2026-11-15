@@ -19,14 +19,10 @@ public static partial class BlastStages
             cells[x,z]=x switch
             {
                 <=2 or >=18=>CellDef.Floor2,
-                3=>CellDef.Ramp(1.5f,2,-1,0),
-                4=>CellDef.Ramp(1,1.5f,-1,0),
-                5=>CellDef.Ramp(.5f,1,-1,0),
-                6=>CellDef.Ramp(0,.5f,-1,0),
-                14=>CellDef.Ramp(0,.5f,1,0),
-                15=>CellDef.Ramp(.5f,1,1,0),
-                16=>CellDef.Ramp(1,1.5f,1,0),
-                17=>CellDef.Ramp(1.5f,2,1,0),
+                3=>CellDef.Ramp(1,2,-1,0),
+                4=>CellDef.Ramp(0,1,-1,0),
+                16=>CellDef.Ramp(0,1,1,0),
+                17=>CellDef.Ramp(1,2,1,0),
                 _=>CellDef.Floor0
             };
         for(int x=0;x<width;x++)foreach(int z in new[]{0,depth-1})
@@ -42,9 +38,9 @@ public static partial class BlastStages
             Id=FieldOfGrass,Name="Field of Grass",Width=width,Height=depth,Cells=cells,
             Spawns=[(2,3),(18,3),(2,15),(18,15),(2,7),(18,7),(2,11),(18,11)],
             SoftBlockDensity=1,MaxSoftBlocks=28,OpeningCoverPerSpawn=0,SoftBlockHeight=1.05f,
-            CoverAreas=[new("north-meadow",.5,8,12,2,8),new("south-meadow",.5,8,12,10,16)],
+            CoverAreas=[new("north-meadow",.5,6,14,2,8),new("south-meadow",.5,6,14,10,16)],
             // The central crossing and bank approaches remain readable escape routes.
-            ClearCells=Enumerable.Range(1,17).SelectMany(z=>new[]{(7,z),(13,z)})
+            ClearCells=Enumerable.Range(1,17).SelectMany(z=>new[]{(5,z),(15,z)})
                 .Concat(Enumerable.Range(1,19).Select(x=>(x,9))).ToHashSet()
         };
     }

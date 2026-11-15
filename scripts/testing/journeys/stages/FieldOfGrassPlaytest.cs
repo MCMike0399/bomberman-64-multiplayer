@@ -79,6 +79,14 @@ public partial class PlaytestDriver
                 Check(AuditDescendants(terrain).OfType<MultiMeshInstance3D>().Single(n=>n.Name=="ConcealingMeadow").IsVisibleInTree(),"gameplay grass remains on "+preset);
                 await Capture("field-of-grass-"+GraphicsQuality.ToWire(preset));
             }
+            var grassPaint=(ShaderMaterial)AuditDescendants(terrain).OfType<MultiMeshInstance3D>().Single(n=>n.Name=="ConcealingMeadow").MaterialOverride;
+            float windBefore=grassPaint.GetShaderParameter("ambient_clock").AsSingle();await Frames(45);
+            Check(grassPaint.GetShaderParameter("ambient_clock").AsSingle()>windBefore,"opaque meadow wind advances through its CPU-owned clock");
+            await Capture("field-of-grass-high-wind");
+            await KeyPress(Key.Escape);await Frames(3);
+            float frozenWind=grassPaint.GetShaderParameter("ambient_clock").AsSingle();int frozenSnapshots=_root.SnapshotCount;await Frames(12);
+            Check(grassPaint.GetShaderParameter("ambient_clock").AsSingle()==frozenWind&&_root.SnapshotCount==frozenSnapshots,"local pause freezes real canopy wind and authority together");
+            await ActivateNamed("ResumeGame");
             if(!_headless)foreach(var time in new[]{StageTime.Morning,StageTime.Afternoon,StageTime.Night})
             {await SelectLocalLighting(time);await Capture("field-of-grass-lighting-"+StageLighting.ToWire(time));}
             _root.Back();await Frames(3);
