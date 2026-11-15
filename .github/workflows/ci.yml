@@ -38,6 +38,18 @@ jobs:
         with:
           dotnet-version: 10.0.x
       - run: python3 tools/qa/run.py --profile public
+      - name: Show bounded public startup failure evidence
+        if: failure()
+        run: |
+          python3 - <<'PYLOG'
+          from pathlib import Path
+          # This public-only executable has no kernel, credentials or network
+          # inputs. Keep its actual assertion/exception when QA exits nonzero;
+          # arbitrary build/bootstrap/runtime logs remain private.
+          for path in sorted(Path('artifacts/qa').glob('*/15-startup-guard.log')):
+              print(f'--- {path} (last 16 KiB) ---', flush=True)
+              print(path.read_bytes()[-16384:].decode('utf-8', errors='replace'), flush=True)
+          PYLOG
       - if: always()
         run: python3 tools/ci/stage_reports.py
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
