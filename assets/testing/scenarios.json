@@ -1,11 +1,24 @@
 {
   "schemaVersion": 1,
   "scenarios": [
-    {"id":"peer-ice-terminal","method":"PeerIceTerminal","domains":["network"],"headless":true,"timeout":30,"manual":false},
+    {
+      "id": "peer-ice-terminal",
+      "method": "PeerIceTerminal",
+      "domains": [
+        "network"
+      ],
+      "headless": true,
+      "timeout": 30,
+      "manual": false
+    },
     {
       "id": "network-interruption",
       "method": "NetworkInterruption",
-      "domains": ["networking", "ui", "rendering"],
+      "domains": [
+        "networking",
+        "ui",
+        "rendering"
+      ],
       "headless": false,
       "timeout": 240,
       "manual": false
@@ -992,7 +1005,8 @@
         "tour-19",
         "tour-20",
         "tour-21",
-        "tour-22"
+        "tour-22",
+        "tour-23"
       ],
       "domains": [
         "ai",
@@ -1045,6 +1059,7 @@
         "blizzard-battle",
         "greedy-trap",
         "field-of-grass",
+        "in-the-gutter",
         "stage-scenery",
         "round-ending"
       ],
@@ -1652,7 +1667,8 @@
         "rock-garden",
         "blizzard-battle",
         "greedy-trap",
-        "field-of-grass"
+        "field-of-grass",
+        "in-the-gutter"
       ],
       "domains": [
         "ai",
@@ -1720,7 +1736,9 @@
     {
       "id": "visual-inputs",
       "method": "VisualInputs",
-      "domains": ["rendering"],
+      "domains": [
+        "rendering"
+      ],
       "headless": true,
       "timeout": 60,
       "manual": false
@@ -1776,6 +1794,58 @@
       ],
       "headless": false,
       "timeout": 900,
+      "manual": false
+    },
+    {
+      "id": "in-the-gutter",
+      "method": "InTheGutterTour",
+      "domains": [
+        "gameplay",
+        "physics",
+        "rendering",
+        "ui"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "in-the-gutter-network",
+      "method": "InTheGutterNetworkTour",
+      "domains": [
+        "network",
+        "gameplay",
+        "physics",
+        "rendering"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "tour-23",
+      "steps": [
+        "in-the-gutter",
+        "gutter-water-contact"
+      ],
+      "domains": [
+        "gameplay",
+        "physics",
+        "rendering",
+        "ui"
+      ],
+      "headless": false,
+      "timeout": 240,
+      "manual": false
+    },
+    {
+      "id": "gutter-water-contact",
+      "method": "GutterWaterContact",
+      "domains": [
+        "rendering"
+      ],
+      "headless": false,
+      "timeout": 180,
       "manual": false
     }
   ]

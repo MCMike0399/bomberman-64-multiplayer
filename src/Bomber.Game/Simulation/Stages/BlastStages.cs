@@ -16,6 +16,7 @@ public static partial class BlastStages
         BlizzardBattle => BuildBlizzardBattle(),
         GreedyTrap => BuildGreedyTrap(),
         FieldOfGrass => BuildFieldOfGrass(),
+        InTheGutter => BuildInTheGutter(),
         _ => BuildSunkenTemple(),
     };
 

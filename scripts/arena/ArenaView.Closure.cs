@@ -51,7 +51,7 @@ public partial class ArenaView
         else PoseClosureFronts();
     }
 
-    private bool Translucent=>_stage!=BlastStages.TopRules&&_stage!=BlastStages.BlizzardBattle;
+    private bool Translucent=>_stage!=BlastStages.TopRules&&_stage!=BlastStages.BlizzardBattle&&_stage!=BlastStages.InTheGutter;
 
     private void PoseClosureFronts()
     {
@@ -94,7 +94,7 @@ public partial class ArenaView
     private Node3D AddClosureColumn(int x,bool swell)
     {
         var terrain=_terrain!;
-        var n=_stage==BlastStages.BlizzardBattle?terrain.CreateAvalanche(x,swell):new Node3D();
+        var n=_stage switch {BlastStages.BlizzardBattle=>terrain.CreateAvalanche(x,swell),BlastStages.InTheGutter=>terrain.CreateGutterClosure(x),_=>new Node3D()};
         if(_stage==BlastStages.TopRules)
         {
             var stone=terrain.CastleWallMaterial;

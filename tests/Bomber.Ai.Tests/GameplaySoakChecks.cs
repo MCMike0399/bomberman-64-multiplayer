@@ -72,8 +72,8 @@ static class GameplaySoakChecks
         int fairnessChecks=CheckFairness();
         var results=new List<Result>();
         var stageFilter=args.FirstOrDefault(a=>a.StartsWith("--stage="))?[8..];
-        if(stageFilter is not (null or "greedy-trap" or "field-of-grass"))throw new ArgumentException("Focused soak stage must be greedy-trap or field-of-grass.");
-        foreach(string stage in stageFilter is null?new[]{"rock-garden","up-and-down","sunken-temple","top-rules","blizzard-battle","greedy-trap","field-of-grass"}:new[]{stageFilter})
+        if(stageFilter is not (null or "greedy-trap" or "field-of-grass" or "in-the-gutter"))throw new ArgumentException("Focused soak stage must be greedy-trap or field-of-grass.");
+        foreach(string stage in stageFilter is null?new[]{"rock-garden","up-and-down","sunken-temple","top-rules","blizzard-battle","greedy-trap","field-of-grass","in-the-gutter"}:new[]{stageFilter})
         foreach(string difficulty in new[]{"easy","medium","hard"})
         foreach(int bots in new[]{3,7})
         foreach(int seed in new[]{64,9876})
@@ -96,7 +96,7 @@ static class GameplaySoakChecks
     static int CheckFairness()
     {
         int checks=0;
-        foreach(string stage in new[]{"rock-garden","up-and-down","sunken-temple","top-rules","blizzard-battle","greedy-trap","field-of-grass"})
+        foreach(string stage in new[]{"rock-garden","up-and-down","sunken-temple","top-rules","blizzard-battle","greedy-trap","field-of-grass","in-the-gutter"})
         {
             string? reference=null;
             foreach(string difficulty in new[]{"easy","medium","hard"})

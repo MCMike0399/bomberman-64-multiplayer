@@ -1,4 +1,5 @@
 if(args.Contains("--field-of-grass")){int count=0;FieldOfGrassChecks.Run((name,check)=>{check();count++;Console.WriteLine("PASS "+name);});Console.WriteLine($"Passed {count} Field of Grass integration checks.");return;}
+if(args.Contains("--in-the-gutter")){InTheGutterChecks.Run();return;}
 if(args.Contains("--stale-input")){StaleInputChecks.Run();return;}
 if(args.Contains("--round-ending")){Console.WriteLine($"Passed {RoundEndingChecks.Run()} round ending integration checks.");return;}
 if(args.Contains("--blast-hitbox")){Console.WriteLine($"Passed {BlastHitboxChecks.Run()} blast hitbox integration checks.");return;}
@@ -44,7 +45,7 @@ if(args.Contains("--sandbox")){SandboxEquipmentChecks.Run();return;}
 
 if(args.Contains("--cover-layout")){RegionalCoverChecks.Run();return;}
 
-var passed = LedgeDropChecks.Run() + BlizzardBattleChecks.Run() + StageIntegrationChecks.Run() + TutorialChecks.Run() + TutorialChecks.ReviewRegressions() + TopRulesChecks.Run() + AdvancedRulesChecks.Run() + ItemExpirationChecks.Run() + RegionalCoverChecks.Run() + SandboxEquipmentChecks.Run() + PyramidLedgeChecks.Run() + PartyPolishChecks.Run() + PartySessionChecks.Run() + LootAvailabilityChecks.Run() + AimedThrowChecks.Run() + CarryChargeChecks.Run() + BombPlacementChecks.Run() + PowerUpModeChecks.Run() + BombTravelChecks.Run() + KickTimingChecks.Run() + BodyContactChecks.Run() + BombImpactChecks.Run() + TraversalAndGhostChecks.Run() + BombActionsChecks.Run() + GrappleChecks.Run();
+var passed = InTheGutterChecks.Run() + LedgeDropChecks.Run() + BlizzardBattleChecks.Run() + StageIntegrationChecks.Run() + TutorialChecks.Run() + TutorialChecks.ReviewRegressions() + TopRulesChecks.Run() + AdvancedRulesChecks.Run() + ItemExpirationChecks.Run() + RegionalCoverChecks.Run() + SandboxEquipmentChecks.Run() + PyramidLedgeChecks.Run() + PartyPolishChecks.Run() + PartySessionChecks.Run() + LootAvailabilityChecks.Run() + AimedThrowChecks.Run() + CarryChargeChecks.Run() + BombPlacementChecks.Run() + PowerUpModeChecks.Run() + BombTravelChecks.Run() + KickTimingChecks.Run() + BodyContactChecks.Run() + BombImpactChecks.Run() + TraversalAndGhostChecks.Run() + BombActionsChecks.Run() + GrappleChecks.Run();
 passed+=StaleInputChecks.Run();
 passed+=ItemDensityChecks.Run();
 passed+=BlastHitboxChecks.Run();

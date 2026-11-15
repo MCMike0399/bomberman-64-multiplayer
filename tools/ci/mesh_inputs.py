@@ -9,7 +9,7 @@ from pathlib import Path
 import struct
 
 STAGES = ('sunken-temple', 'rock-garden', 'up-and-down', 'top-rules',
-          'blizzard-battle', 'greedy-trap', 'field-of-grass', 'circuit-garden')
+          'blizzard-battle', 'greedy-trap', 'field-of-grass','in-the-gutter', 'circuit-garden')
 
 TRIALS = ('warmup', 'base-a', 'base-b', 'dof-off', 'reflection-off')
 
