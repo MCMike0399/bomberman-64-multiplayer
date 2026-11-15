@@ -27,6 +27,7 @@ public partial class ArenaView
         _closureAdvancing=(int)F(data,"phase")==2&&mode is "columns" or "avalanche"&&left+right<_terrain.Width-1;
         if(!_closureAdvancing)_closureFront=0;
         if(_stage==BlastStages.GreedyTrap)return;
+        if(_stage==BlastStages.InTheGutter){_terrain.SetGutterCompression(left,right);return;}
         for(int x=0;x<_terrain.Width;x++)
         {
             bool closed=x<left||x>=_terrain.Width-right;
@@ -48,6 +49,7 @@ public partial class ArenaView
         if(_terrain==null||!_closureAdvancing||!_battleActive)return;
         _closureFront=Mathf.Min(1,_closureFront+dt/BlastStages.HurryColumnSeconds(_stage));
         if(_stage==BlastStages.GreedyTrap)_terrain.AdvanceGreedyCompression(_closedLeftView+_closureFront,_closedRightView+_closureFront);
+        else if(_stage==BlastStages.InTheGutter)_terrain.SetGutterCompression(_closedLeftView+_closureFront,_closedRightView+_closureFront);
         else PoseClosureFronts();
     }
 
@@ -94,7 +96,7 @@ public partial class ArenaView
     private Node3D AddClosureColumn(int x,bool swell)
     {
         var terrain=_terrain!;
-        var n=_stage switch {BlastStages.BlizzardBattle=>terrain.CreateAvalanche(x,swell),BlastStages.InTheGutter=>terrain.CreateGutterClosure(x),_=>new Node3D()};
+        var n=_stage switch {BlastStages.BlizzardBattle=>terrain.CreateAvalanche(x,swell),_=>new Node3D()};
         if(_stage==BlastStages.TopRules)
         {
             var stone=terrain.CastleWallMaterial;

@@ -30,7 +30,12 @@ public partial class TempleStageView : Node3D
     private bool _gutter;
     private float _gutterClock,_gutterFlow;
     private Node3D? _gutterArrow;
-    private ShaderMaterial? _gutterWater,_gutterTracer;
+    private ShaderMaterial? _gutterWater,_gutterOceanWater,_gutterWakeMaterial;
+    private int _gutterDirection;
+    private float _gutterFishYaw,_gutterGearPose,_gutterGearTarget;
+    private readonly List<(Node3D Gear,float Phase)> _gutterGears=[];
+    private readonly List<(Node3D Leaf,float Phase)> _gutterLeaves=[];
+    private readonly List<Node3D> _gutterGates=[];
     private readonly List<ShaderMaterial> _gutterMaterials=[];
     private bool _greedy;
     public const float GreedyMoatHeight=-1.28f;
@@ -81,7 +86,12 @@ public partial class TempleStageView : Node3D
         if(_fieldGrassMaterial is not null)_fieldGrassMaterial.SetShaderParameter("paint",new Color(lighting.Label=="Night"?"96b766":"6f9348"));
         if(_water?.MaterialOverride is ShaderMaterial material)lighting.ApplyWater(material);
         if(_greedyMoat?.MaterialOverride is ShaderMaterial moat)lighting.ApplyWater(moat);
-        if(_gutterWater!=null)lighting.ApplyWater(_gutterWater);
+        if(_gutterWater!=null)
+        {
+            lighting.ApplyWater(_gutterWater);
+            _gutterWater.SetShaderParameter("wind_strength",.2f);
+        }
+        if(_gutterOceanWater!=null)ApplyGutterOceanLighting();
         foreach(var frozen in _frozenMaterials)lighting.ApplyKeyLight(frozen);
     }
     public void SetWaterLevel(float tierLevel)

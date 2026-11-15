@@ -21,6 +21,8 @@ public partial class PlaytestDriver
         (BlastStages.FieldOfGrass,["Windmill","RoundTree","FlowerBed","Butterfly","MeadowSeedBarn","MeadowHayCart","MeadowKite"]),
         (BlastStages.SeaSick,["PortEscort","StarboardEscort","Gull","Buoy","HarborIslet"]),
         (BlastStages.LostAtSea,["CoralReef","ObservationFishSchool","ObservationBathysphere","ObservationKelp"]),
+
+        (BlastStages.InTheGutter,["CopperLockWestMachine","CopperLockEastMachine","CopperLockChannelStub","CopperLockFishBody","CopperLockOuterWater"]),
         (BlastStages.CircuitGarden,["TargetRaft","Jetty","Buoy","PalmTree"]),
     ];
 
@@ -83,18 +85,26 @@ public partial class PlaytestDriver
             await SelectGraphics(GraphicsPreset.Low);await Frames(3);
             var terrain=AuditDescendants(LightingArena).OfType<TempleStageView>().Single();
             Check(terrain.Scenery is {} hidden&&!hidden.IsVisibleInTree(),"Low preset hides decorative scenery: "+stage);
+            if(stage==BlastStages.InTheGutter)
+                Check(terrain.FindChild("CopperLockWestMachine",true,false) is Node3D west&&west.IsVisibleInTree()&&
+                    terrain.FindChild("CopperLockEastMachine",true,false) is Node3D east&&east.IsVisibleInTree(),
+                    "Low retains both core Copper Lock hero machines while the reed-bank exterior is hidden");
             await Capture($"scenery-{stage}-low");
             await SelectGraphics(GraphicsPreset.High);await Frames(3);
             terrain=AuditDescendants(LightingArena).OfType<TempleStageView>().Single();
             Check(terrain.Scenery is {} shown&&shown.IsVisibleInTree(),"High preset restores decorative scenery: "+stage);
             await Capture($"scenery-{stage}-high");
-            if(stage is BlastStages.RockGarden or BlastStages.TopRules or BlastStages.BlizzardBattle)
+            if(stage is BlastStages.RockGarden or BlastStages.TopRules or BlastStages.BlizzardBattle or BlastStages.InTheGutter)
             {
                 // A second real frame witnesses wind/orbits/snow, and pause must freeze
                 // both transforms and the CPU-fed shader clock used by the new foliage.
                 await Frames(60);await Capture($"scenery-{stage}-high-motion");
                 await KeyPress(Key.Escape);await Frames(3);
                 var nodes=AuditDescendants(terrain.Scenery!).OfType<Node3D>().ToDictionary(n=>n,n=>n.Transform);
+                var copper=stage==BlastStages.InTheGutter?AuditDescendants(terrain).OfType<Node3D>()
+                    .Where(n=>n.Name=="GutterCurrentMarker"||n.Name.ToString().StartsWith("CopperLockDriveGear")||n.Name.ToString().StartsWith("CopperLockDriftingLeaf"))
+                    .ToDictionary(n=>n,n=>n.Transform):[];
+                float copperClock=terrain.GutterWakeMaterial?.GetShaderParameter("current_clock").AsSingle()??0;
                 var materials=AuditDescendants(terrain.Scenery!).OfType<MeshInstance3D>().Select(n=>n.MaterialOverride)
                     .OfType<ShaderMaterial>().Where(m=>m.Shader.Code.Contains("uniform float ambient_clock",StringComparison.Ordinal)).Distinct().ToArray();
                 var clocks=materials.Select(m=>m.GetShaderParameter("ambient_clock").AsDouble()).ToArray();
@@ -103,6 +113,10 @@ public partial class PlaytestDriver
                 await Frames(15);
                 Check(nodes.All(p=>p.Key.Transform.IsEqualApprox(p.Value))&&materials.Select((m,i)=>m.GetShaderParameter("ambient_clock").AsDouble()==clocks[i]).All(v=>v)
                     &&snow.Select((w,i)=>w.Clock==snowClocks[i]).All(v=>v),"pause freezes ambient transforms, shader clocks and exterior snow: "+stage);
+                if(stage==BlastStages.InTheGutter)
+                    Check(copper.Count>0&&copper.All(p=>p.Key.Transform.IsEqualApprox(p.Value))&&
+                        terrain.GutterWakeMaterial!.GetShaderParameter("current_clock").AsSingle()==copperClock,
+                        "pause freezes the accepted-current fish, gears, leaves and foam clock");
                 await ActivateNamed("ResumeGame");await Frames(3);
             }
         }
@@ -112,15 +126,21 @@ public partial class PlaytestDriver
     private async Task CheckScenery(string stage,TempleStageView terrain,string[] signature)
     {
         var scenery=terrain.Scenery;
-        Check(scenery!=null&&scenery.IsVisibleInTree()&&scenery.Name==TempleStageView.SceneryNodeName,"arena has visible decorative scenery: "+stage);
+        bool copper=stage==BlastStages.InTheGutter;
+        Check(scenery!=null&&scenery.Name==TempleStageView.SceneryNodeName&&(copper?terrain.IsVisibleInTree():scenery.IsVisibleInTree()),
+            copper?"Copper Lock's integrated presentation is visible":"arena has visible decorative scenery: "+stage);
         if(scenery==null)return;
+        Node3D presentation=copper?terrain:scenery;
         foreach(var name in signature)
-            Check(AuditDescendants(scenery).Any(n=>n.Name.ToString().TrimStart('@').StartsWith(name,StringComparison.Ordinal)),$"{stage} scenery includes {name}");
-        Check(!AuditDescendants(scenery).OfType<CollisionObject3D>().Any(),"scenery adds no collision bodies: "+stage);
-        var problems=AuditModelProblems(scenery,out int meshes,out int vertices);
+            Check(AuditDescendants(presentation).Any(n=>n.Name.ToString().TrimStart('@').StartsWith(name,StringComparison.Ordinal)),$"{stage} scenery includes {name}");
+        Check(!AuditDescendants(presentation).OfType<CollisionObject3D>().Any(),"presentation adds no collision bodies: "+stage);
+        var problems=AuditModelProblems(presentation,out int meshes,out int vertices);
         Event("scenery-geometry",new{stage,meshes,vertices,motions=terrain.SceneryMotionCount,problems=problems.Take(5)});
-        Check(problems.Count==0&&meshes>=20,$"scenery geometry is finite, nonempty and textured: {stage} meshes={meshes} {string.Join("; ",problems.Take(3))}");
-        Check(terrain.SceneryMotionCount>0,"scenery has animated life: "+stage);
+        // Copper Lock's machinery/channel are integrated core terrain; it has
+        // no separate island dressing. Audit that real presentation, not padding.
+        const int minimumMeshes=20;
+        Check(problems.Count==0&&meshes>=minimumMeshes,$"scenery geometry is finite, nonempty and textured: {stage} meshes={meshes} {string.Join("; ",problems.Take(3))}");
+        if(!copper)Check(terrain.SceneryMotionCount>0,"scenery has animated life: "+stage);
         if(stage==BlastStages.BlizzardBattle)
         {
             var snow=AuditDescendants(scenery).OfType<BlizzardWeather>().Single();
@@ -129,28 +149,33 @@ public partial class PlaytestDriver
             float before=snow.Clock;await Frames(6);
             Check(snow.Clock>before&&snow.Wind==terrain.Weather!.Wind,"exterior snowfall animates with accepted court wind");
         }
-        var intrusions=SceneryIntrusions(terrain);
+        var intrusions=SceneryIntrusions(terrain,copper?presentation:null);
         Check(intrusions.Count==0,$"scenery stays outside every walkable cell's standing volume: {stage} {string.Join(", ",intrusions.Take(6))}");
 
         // Animated props actually move, and placement still holds mid-animation.
-        var tracked=AuditDescendants(scenery).OfType<Node3D>().ToDictionary(n=>n,n=>n.Transform);
+        var tracked=AuditDescendants(presentation).OfType<Node3D>().ToDictionary(n=>n,n=>n.Transform);
         await Frames(24);
         int moved=tracked.Count(p=>GodotObject.IsInstanceValid(p.Key)&&!p.Key.Transform.IsEqualApprox(p.Value));
         Check(moved>0,$"scenery animates over real frames: {stage} moved={moved}");
-        intrusions=SceneryIntrusions(terrain);
+        intrusions=SceneryIntrusions(terrain,copper?presentation:null);
         Check(intrusions.Count==0,$"animated scenery remains outside play space: {stage} {string.Join(", ",intrusions.Take(6))}");
     }
 
     /// <summary>Mesh bounds in arena space against each passable cell's floor-to-headroom column.</summary>
-    private static List<string> SceneryIntrusions(TempleStageView terrain)
+    private static List<string> SceneryIntrusions(TempleStageView terrain,Node3D? presentation=null)
     {
         var layout=terrain.Layout;var inverse=terrain.GlobalTransform.AffineInverse();var hits=new List<string>();
         const float slack=.08f,headroom=2.1f;
-        foreach(var geometry in AuditDescendants(terrain.Scenery!).OfType<GeometryInstance3D>())
+        foreach(var geometry in AuditDescendants(presentation??terrain.Scenery!).OfType<GeometryInstance3D>())
         {
             // Tiny snowflakes deliberately pass over the court, like its existing
             // weather. Solid props must still satisfy every standing-volume check.
             if(geometry.GetParent() is BlizzardWeather)continue;
+            // Copper's intentionally floor-level water/foam/leaves are current
+            // cues, not solid scenery. Its structural pieces still pass below.
+            string kind=geometry.Name.ToString();
+            if(presentation!=null&&(kind.Contains("Water",StringComparison.Ordinal)||kind=="CopperLockFoamWake"||
+                geometry.GetParent().Name.ToString().StartsWith("CopperLockDriftingLeaf",StringComparison.Ordinal)))continue;
             if(!geometry.IsVisibleInTree())continue;
             // Test each tuft/star rather than the MultiMesh's union: a perimeter
             // planting surrounds the court but none of its instances occupies it.

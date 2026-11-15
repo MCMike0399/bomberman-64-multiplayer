@@ -27,7 +27,7 @@ public partial class PlaytestDriver
             await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"ordinary Gutter battle starts",180);
             var terrain=AuditDescendants(LightingArena).OfType<TempleStageView>().Single();
             Check(terrain.Layout.Id==BlastStages.InTheGutter&&State.GetProperty("players").GetArrayLength()==4,"four original-relative post starts use accepted Gutter layout");
-            Check(terrain.GetNodeOrNull<MeshInstance3D>("GutterShallowWater")!=null&&terrain.GetNodeOrNull<Node3D>("GutterCurrentMarker")!=null,"shallow water and central flow marker render in the actual arena");
+            Check(terrain.GetNodeOrNull<MeshInstance3D>("GutterShallowWater")!=null&&AuditDescendants(terrain).OfType<Node3D>().Any(n=>n.Name=="GutterCurrentMarker"),"shallow water and central flow marker render in the actual arena");
             Check(terrain.Scenery!=null&&!AuditDescendants(terrain.Scenery).OfType<CollisionObject3D>().Any(),"toy lock surroundings add no gameplay collision");
             var playable=new Rect2(-.35f,-.35f,terrain.Width+.7f,terrain.Depth+.7f);
             var intrusions=AuditDescendants(terrain.Scenery!).OfType<MeshInstance3D>().Where(n=>n.Mesh!=null).Where(n=>
@@ -78,7 +78,14 @@ public partial class PlaytestDriver
             await WaitState(s=>s.GetProperty("phase").GetInt32()==2,"Gutter enters real sudden death",180);
             await WaitState(s=>s.GetProperty("closedLeft").GetInt32()>=3,"both grates enter the shallow court",180);
             Check(State.GetProperty("hurryMode").GetString()=="columns"&&State.GetProperty("closedLeft").GetInt32()==State.GetProperty("closedRight").GetInt32(),"closing grates track bilateral authoritative column hazard");
-            Check(AuditDescendants(LightingArena).OfType<Node3D>().Any(n=>n.Name.ToString().StartsWith("ClosingGutterGrate")),"opaque metal grates replace generic red translucent walls");
+            Check(AuditDescendants(LightingArena).OfType<Node3D>().Any(n=>n.Name.ToString().StartsWith("CopperLockGatePanel")),"opaque metal grates replace generic red translucent walls");
+            var westGate=AuditDescendants(LightingArena).OfType<Node3D>().Single(n=>n.Name=="CopperLockWestMachine").GetNode<Node3D>("CopperLockGatePanel");
+            float gateX=westGate.Position.X;
+            for(int frame=0;frame<12;frame++)
+            {
+                await Frames(1);Check(westGate.Position.X>=gateX-.001f,"accepted closure snapshots never pull the advancing gate backward");
+                gateX=westGate.Position.X;
+            }
             await Capture("in-the-gutter-closing-grates");
             await WaitState(s=>s.GetProperty("players").EnumerateArray().Any(p=>!p.GetProperty("alive").GetBoolean()),"grates crush exposed seats",240);
             Check(State.GetProperty("events").EnumerateArray().Any(e=>e.GetProperty("kind").GetString()=="death"&&e.GetProperty("reason").GetString()=="columns"),"Gutter deaths retain the crush reason");
@@ -139,6 +146,67 @@ public partial class PlaytestDriver
             }
         }
     }
+    private async Task CopperLockShapes()
+    {
+        Event("copper-lock-shape-policy",new{authorityUnchanged=true,coreMachinesOnLow=true,materials="blocked palette; detail review pending"});
+        var quality=_root.Preferences.Graphics;var lighting=_root.Preferences.StageLighting;
+        try
+        {
+            await SelectLocalLighting(StageTime.Midday);
+            _root.StartLocal(new SessionSettings(Stage:BlastStages.InTheGutter,Bots:0,SuddenDeath:false),8);
+            await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"Copper Lock shape study enters actual eight-player battle",180);
+            var terrain=AuditDescendants(LightingArena).OfType<TempleStageView>().Single();
+            var core=AuditDescendants(terrain).OfType<Node3D>().Where(n=>n.Name.ToString().StartsWith("CopperLock")).ToArray();
+            Check(core.Count(n=>n.Name.ToString().StartsWith("CopperLockFatGateBar"))==12,"two portcullises have six chunky bars each");
+            Check(core.Count(n=>n.Name.ToString().StartsWith("CopperLockDriveGear"))==2,"both core sluice machines have one large drive gear");
+            Check(core.Count(n=>n.Name.ToString().StartsWith("CopperLockBollardCap"))==4,"four original-relative posts have rounded bollard caps");
+            Check(!AuditDescendants(terrain).Any(n=>n.Name=="GutterFlowTracers"||n.Name=="GutterLockHouse"),"scanline traces and cloned houses are removed");
+            foreach(var node in core.OfType<MeshInstance3D>().Where(n=>n.Name.ToString().StartsWith("CopperLockRing")||
+                n.Name.ToString().StartsWith("CopperLockBowedGantry")||n.Name=="CopperLockCulvertArch"||n.Name=="CopperLockSolidGearDisc"||n.Name=="CopperLockHalfRoundCoping"||n.Name=="CopperLockCurvedWeirWater"))
+            {
+                bool clockwise=true;int triangles=0;
+                for(int surface=0;surface<node.Mesh.GetSurfaceCount();surface++)
+                {
+                    var arrays=node.Mesh.SurfaceGetArrays(surface);
+                    var vertices=arrays[(int)Mesh.ArrayType.Vertex].AsVector3Array();
+                    var normals=arrays[(int)Mesh.ArrayType.Normal].AsVector3Array();
+                    var indices=arrays[(int)Mesh.ArrayType.Index].VariantType==Variant.Type.Nil?
+                        Enumerable.Range(0,vertices.Length).ToArray():arrays[(int)Mesh.ArrayType.Index].AsInt32Array();
+                    for(int i=0;i<indices.Length;i+=3)
+                    {
+                        int a=indices[i],b=indices[i+1],c=indices[i+2];
+                        var cross=(vertices[b]-vertices[a]).Cross(vertices[c]-vertices[a]);
+                        clockwise&=cross.LengthSquared()>1e-10f&&cross.Dot(normals[a]+normals[b]+normals[c])<0;triangles++;
+                    }
+                }
+                Check(clockwise&&triangles>0,"actual indexed Copper Lock faces are nondegenerate and clockwise against their outward normals: "+node.Name);
+            }
+            if(!_headless)
+            {
+                foreach(var preset in new[]{GraphicsPreset.Low,GraphicsPreset.High})
+                {
+                    await SelectGraphics(preset);
+                    Check(core.Where(n=>n.Name=="CopperLockWestMachine"||n.Name=="CopperLockEastMachine").All(n=>n.IsVisibleInTree()),
+                        "arena body and both hero machines remain visible at "+preset);
+                    Check(preset!=GraphicsPreset.Low||terrain.Scenery?.IsVisibleInTree()!=true,"Low hides exterior scenery while preserving core architecture");
+                    Check(terrain.GetNode<MeshInstance3D>("CopperLockOuterWater").IsVisibleInTree(),"core outer water remains visible at "+preset);
+                    await Capture("copper-lock-shapes-"+GraphicsQuality.ToWire(preset));
+                }
+                var camera=_root.GetViewport().GetCamera3D()!;var pose=camera.Transform;
+                camera.Position=new(31,22,32);camera.LookAt(new Vector3(10.5f,1.2f,10.5f));
+                await Capture("copper-lock-shapes-oblique");camera.Transform=pose;
+                await SelectLocalLighting(StageTime.Night);await Capture("copper-lock-shapes-night");
+            }
+            else Check(core.Any(n=>n.Name=="CopperLockWestMachine")&&core.Any(n=>n.Name=="CopperLockEastMachine"),
+                "headless shape scene retains both actual hero machines");
+        }
+        finally
+        {
+            Input(0,default);_root.Navigate("Modes");await Frames(3);
+            if(!_headless){await SelectGraphics(quality);await SelectLocalLighting(lighting);}
+        }
+    }
+
     private async Task GutterWaterContact()
     {
         Check(!_headless,"shallow water contact regression requires actual rendered pixels");
@@ -150,8 +218,9 @@ public partial class PlaytestDriver
             _root.StartLocal(new SessionSettings(Stage:BlastStages.InTheGutter,Bots:0,SuddenDeath:false),4);
             await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"water-contact regression enters actual Gutter battle",180);
             var terrain=AuditDescendants(LightingArena).OfType<TempleStageView>().Single();
+            CheckCopperWaterInputs(terrain);
             var water=(ShaderMaterial)terrain.GetNode<MeshInstance3D>("GutterShallowWater").MaterialOverride;
-            var tracer=(ShaderMaterial)terrain.GetNode<MeshInstance3D>("GutterFlowTracers").MaterialOverride;
+            var tracer=terrain.GutterWakeMaterial!;
             Check(water.Shader==ArtMaterials.GutterWaterShaderFor(GraphicsPreset.High),"regression observes the actual specialized High surface");
             Check(water.Shader.Code.Contains("#define SCENE_REFLECTIONS",StringComparison.Ordinal),"Gutter High retains the full scene-reflection branch");
             Check(ArtMaterials.WaterShaderFor(GraphicsPreset.High).Code.Contains("float jitter=fract(",StringComparison.Ordinal),"other stages retain their established jittered High reflection");
@@ -163,7 +232,7 @@ public partial class PlaytestDriver
             {
                 // Pin only cosmetic water/tracer clocks. Real characters, opaque
                 // scene inputs, shadows, terrain, cover and authority remain active.
-                tracer.Shader.Code=originalTracer.Replace("world.x-current_clock*current","world.x-4.0*current",StringComparison.Ordinal);
+                tracer.Shader.Code=originalTracer.Replace("current_clock*","4.0*",StringComparison.Ordinal);
                 foreach(var time in new[]{StageTime.Midday,StageTime.Night})
                 {
                     await SelectLocalLighting(time);shader.Code=clocked;await Frames(6);

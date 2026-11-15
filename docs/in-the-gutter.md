@@ -19,8 +19,8 @@ The 21×21 dimensions, enlarged two-cell post caps, eight seats, 48 regional
 cover blocks, safe open corridors, eight-second flow cycle, eased reversals,
 calm state and current speeds are project tuning. The original evidence does
 not recover any exact world dimension, force, interval, seed algorithm or
-initial-block placement algorithm. The canal village, sluice wheels, shrubs
-and brass arrow are independently authored scenery.
+initial-block placement algorithm. Copper Lock's machines and ornament are
+independently authored; earlier canal-village prototypes are superseded.
 
 ## Authority and transport
 
@@ -51,34 +51,46 @@ and authored crowns; room settings and ordinary menus accept the same
 identifier. Release admission/version coordination remains the release
 owner's responsibility.
 
-## Presentation
+## Copper Lock presentation
 
-The court is original brick, pale wet paving, cream post caps and dark metal
-grates with brass trim. Shared Low/Medium/High water shaders retain opaque Low,
-clear refracting Medium and scene-reflecting High behavior. Gutter's cached
-High variant uses coherent reflection samples for its upright post/cover
-contacts: the per-pixel march jitter is zero, while the existing twelve coarse
-steps, three bisections, refined hit validation, scene-color sample and Fresnel
-remain. Shared High shaders on other arenas keep their jitter, which protects
-their suspended-deck reflections from banding. This is a local shallow-court
-exception, not removal of scene reflections or extra ray-march work.
+Two core sluice machines frame a rounded burgundy lock. Each has six fat
+cast bars, a deep verdigris beam, domed towers, a solid brass gear with four
+round through-holes and a seated counterweight. Full-opening channel arms
+continue about three cells beyond the gates; their walls support the
+mechanisms, meet the upstream arch and lead to a curved spillway. The old
+separate islet and sharp spillway fins are removed.
 
-A bounded owned ArrayMesh grid supplies the water surface, avoiding a new
-engine-primitive parameter domain. The submerged paving sits above the
-shader's open-sea cutoff, so it is treated as real shallow geometry. A shallow directional tracer layer and center arrow follow
-accepted current; their clock stops on ordinary pause. The outside canal,
-narrow canals, textured quays, gabled keepers' houses, rimmed sluice wheels,
-brass work lamps, planted banks and gauge floats stay outside the playable
-volume; menu miniatures omit scenery. Slow wheel, foliage, float and pump-gauge
-motion supplies small-scale life. The setting has a finite masonry/earth foot
-instead of a large flat cyan base.
+Four burgundy bollards retain their original two-cell support footprints,
+rounded cream caps and recessed brass mooring rings. Half-round cream end
+coping stays inside the original nonwalkable perimeter crowns. A readable
+brass fish vane swings on the center post. Front-facing work lamps provide
+restrained warm Night accents. Camera fitting includes the core envelope and
+eight-player HUD clearance; miniatures scale that complete silhouette.
 
-The closed volume has a low metal base and a thin opaque grille at its leading
-face. Existing closure interpolation paces it to accepted column seals. The
-battle camera uses the enclosed-arena angle and includes standing post-top
-players. The online fallback diagram also depicts the correct water/post map.
-New geometry uses managed portable boxes, the existing sphere template and
-owned SurfaceTool surfaces; no native primitive fallback is introduced.
+Short soft wakes attached to the actual posts/cover, sparse leaves, the vane
+and gear ticks receive accepted current. Gear motion eases toward incremented
+target angles; it does not multiply clock time by changing flow. Pause freezes
+those cues. Paired gate panels follow the existing authoritative closure
+extents. No authority terrain, collision footprint, rules or wire fields change.
+
+Court and outer water retain separate palettes and shader materials. Low
+keeps the full body and darker outer water; Medium adds clear jade shallows;
+High retains actual opaque-scene reflections and restrained caustics. The
+mosaic stays quiet. All identity is core geometry; there is no prop-ring or
+island dressing hidden behind the Low setting.
+
+Both owned water nodes are physically centered, with localized meshes and
+preserved world positions/UVs. The shared shader's radial reflection reach
+therefore treats opposite court corners symmetrically. The consumed-input
+regression verifies 441 court vertices and 8,281 ocean vertices; maximum world
+errors are 3.4e-7 and 5.4e-6 units, with equal 13.435029-unit corner radii.
+
+The court and compact outer-tower reflections use separate cached Copper Lock
+High variants with coherent march samples. Twelve coarse steps, three
+bisections, refined hit validation, scene samples and Fresnel remain; no extra
+per-pixel march work is added. Other maps retain their shared jitter. This
+reduces reflection undersampling, not a claim of perfect or removed reflections.
+Owned packed surfaces use clockwise winding against their outward normals.
 
 ## Verification
 
@@ -139,3 +151,69 @@ gutter-contact-night-high in the ignored 20261115T211031.433422Z native receipt.
 Rebuilt-export review remains with the graphical owner. The user's subsequent request for a stronger cohesive visual
 identity supersedes earlier agent art acceptance: independent visual review
 is pending. No user art approval, publication or deployment is claimed here.
+
+## Copper Lock shape checkpoint
+
+The native source copper-lock-shapes study passes 52 assertions with four
+Low/High/oblique/Night captures and zero runtime errors or warnings
+(20261115T213318.142138Z). Its actual ring, beam and culvert triangles are
+nondegenerate and clockwise; machines remain visible when Low hides scenery.
+Headless copper-lock-shapes passes 19 checks. The updated ordinary gameplay
+tour passes 31, including monotonic gate pacing through accepted snapshots.
+The common all-stage scenery tour now includes Copper Lock's quiet exterior
+signatures and passes 132 headless assertions with zero errors/warnings; the
+graphical path also verifies core machines on Low and paused current cues.
+
+Independent shape review remains REVISE (narrow). The court is accepted for
+further work, while the machine/setting and surface issues above must be
+resolved before final art review, rebuilt-export qualification or release.
+
+## Major-form GO checkpoint
+
+The second study rebuilds the solid gears with four true circular through
+holes and ten chunky teeth, doubles gantry-beam depth, widens towers outward,
+raises the far towers, adds half-round nonwalkable coping and enlarges the
+fish vane. Core outer water remains visible on Low; camera fitting includes
+the machine envelope and eight-player HUD clearance. The left counterweight
+was moved behind its gear after the actual frame revealed occlusion.
+
+The corrected native study passes 56 assertions with four High/Low/Night/
+oblique captures and no runtime errors or warnings. Owned solid-disc,
+half-round coping and curved-spillway faces pass the indexed winding audit;
+headless shape and common scenery checks pass 21 and 130 assertions.
+The reviewed geometry matches the saved mesh-census source hashes.
+
+Independent round-three review approves the major forms for finishing, with
+one bounded correction: connect wider/longer channel arms, seat mechanisms on
+wall tops, integrate the arch and delete the islet. The white spillway fins,
+wake strength, Low water separation and a local outer-water reflection hatch
+also remain to be resolved. This is not final visual or release approval.
+
+## Colored finishing candidate and outer reflection control
+
+The colored real-combat/current/reflection run before the final outer sampling
+choice passes 103 assertions with ten captures and zero runtime errors/warnings
+(20261115T223946.402801Z). It shows actual eight-participant CPU combat in High,
+Low and Night plus an oblique view. The focused current recording passes
+24 native assertions and retains a validated 27.9-second, 30 FPS, 837-frame
+video with accepted fish/gear/leaf/wake reversal. The current logic also passes
+eight headless checks.
+
+A fixed-clock, same-device near-left outer-water control compares the real
+production scene with legacy jitter, reflection-off and above-water-hit
+rejection. The 111×36 output-pixel patch is selected in world space, with
+logical camera coordinates scaled to the unmodified 1280×800 PNG. Legacy
+jitter counts 266 isolated bright pixels, reflection-off zero, above-water
+rejection 266 and coherent sampling 95. Coherent output differs from the
+reflection-off control in 1,332 of 3,996 pixels: the reflection is retained as
+tower mass, with less undersampling. Full-frame root inspection agrees on
+that improvement; remaining approximation must not be described as perfect.
+
+The permanent outer regression compares production to the same-device legacy
+control and requires meaningful reflection contrast. It uses a relative noise
+comparison, not an absolute GPU-specific count alone. The court regression,
+consumed geometry/coverage checks, colored combat and accepted-current witness
+are included in tour-23. The final public QA profile passes. Fresh native
+qualification of this exact candidate, rebuilt-export checks and final
+independent colored-art review still belong to the graphical/release owner.
+Major-form GO is not final art or release approval.

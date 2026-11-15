@@ -889,3 +889,28 @@ ground surfaces and retain the first red result. A live actor standing on the
 rendered surface is separate evidence from a node count or a numerical normal.
 The Lost at Sea glass and Grass bank fixes retain the original missing-surface
 native witness and before/after actual-mesh audits.
+
+### Copper Lock shape direction (2026-11-15)
+
+The generic Gutter waterworks prototype is superseded by the
+[Copper Lock shape study](../in-the-gutter.md#copper-lock-presentation):
+burgundy bollards with cream caps/rings, core cast sluice machines, a fish vane
+and an asymmetric inflow/spillway composition. Low keeps the body and machines.
+Accepted current drives foam/leaves and gear/vane motion. The 52-check native
+shape study is a checkpoint: independent review accepts the court but requests
+a bounded machinery/setting revision and quieter water. It is not final art
+approval. Shared all-stage scenery checks include the quiet reed-bank exterior,
+Low core visibility and paused current cues.
+
+### Copper Lock finishing candidate
+
+The [current contract](../in-the-gutter.md#copper-lock-presentation) keeps the
+approved bollards and court, connects the channel walls beneath the machinery,
+and removes the isolated bank/pointed spillway faces. Identity, outer water
+and warm work lamps remain core geometry on Low. Coherent Copper Lock
+reflections reduce outer-tower undersampling while retaining actual mirrors;
+other arenas keep the shared shader. Water nodes must remain centered because
+the shader uses NODE_POSITION_WORLD for radial coverage: localize geometry
+instead of moving its world footprint. The consumed-geometry regression
+protects that mapping. Final colored review and rebuilt-export qualification
+remain required; do not equate the shape GO or passing counts with approval.

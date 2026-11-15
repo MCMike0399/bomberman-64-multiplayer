@@ -34,6 +34,16 @@ public sealed partial class BattleCameraRig(Camera3D camera)
             int x=i%width,z=i++/width;
             AddCell(cell,x,z);
         }
+        if(stage.GetProperty("id").GetString()=="in-the-gutter")
+        {
+            // Copper Lock's core machines and channel arms are part of its
+            // silhouette, including on Low. Fit their actual authored envelope
+            // so far towers clear the eight-player HUD and gears stay in frame.
+            foreach(float x in new[]{-.75f,width+.75f})_bounds.Add(new(x,5.8f,.95f));
+            foreach(float x in new[]{-4.8f,width+4.8f})foreach(float y in new[]{-.3f,3.8f})
+                _bounds.Add(new(x,y,depth*.5f));
+            _bounds.Add(new(width*.5f,-1.35f,depth+.5f));
+        }
         Fit();
         void AddCell(JsonElement cell,int x,int z)
         {
