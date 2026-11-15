@@ -384,6 +384,12 @@ upper crosswalk, four stairs, night, eight-player combat, real dropped loot belo
 a bridge and inward wall closure. Pickup meshes must use the snapshot's accepted
 `y`; querying the topmost terrain surface moves lower drops onto a bridge.
 
+The 2026-11-15 [orbital surroundings pass](../top-rules-orbital-polish.md) keeps
+this castle and playable geometry. Soft painted planetary bands and broad opaque
+annuli replace the bright regular stripes and thin luminous rings; a smaller
+blue world and restrained nebula keep attention on the court. Inspect ordinary
+battle captures as well as the full ring in an establishing view.
+
 ### Up & Down suspended arena (2026-10-24)
 
 [Stage contract](../up-and-down.md), [original references](../up-and-down-research.md).
