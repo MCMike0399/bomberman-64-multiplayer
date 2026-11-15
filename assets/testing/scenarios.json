@@ -1795,7 +1795,8 @@
     {
       "id": "tour-23",
       "steps": [
-        "in-the-gutter"
+        "in-the-gutter",
+        "gutter-water-contact"
       ],
       "domains": [
         "gameplay",
@@ -1805,6 +1806,16 @@
       ],
       "headless": false,
       "timeout": 240,
+      "manual": false
+    },
+    {
+      "id": "gutter-water-contact",
+      "method": "GutterWaterContact",
+      "domains": [
+        "rendering"
+      ],
+      "headless": false,
+      "timeout": 180,
       "manual": false
     }
   ]

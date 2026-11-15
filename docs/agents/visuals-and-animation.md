@@ -833,3 +833,13 @@ primitive-template domains. Current tracers/arrow follow accepted state; canal
 quays, houses, shrubs and sluice wheels stay outside play and miniatures omit
 them. Ordinary battle captures, preset/Night views, an explicitly labeled
 oblique inspection and actual closing grates are required for visual review.
+
+Gutter's shallow contact exception retains High's real scene reflections,
+Fresnel and existing twelve-step/three-refinement march while using coherent
+samples for its upright posts and cover. Other maps keep the shared jitter
+that protects suspended-deck reflections. The native controlled witness
+identified per-pixel march jitter as the contact screen-door source; more
+refinement did not buy enough quality. The permanent gutter-water-contact
+journey checks Midday/Night contact noise against a reflection-off control and
+requires meaningful actual reflection contrast. Independent art review under
+the user's revised visual bar remains required.

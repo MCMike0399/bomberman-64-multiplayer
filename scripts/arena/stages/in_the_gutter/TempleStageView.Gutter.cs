@@ -24,7 +24,7 @@ public partial class TempleStageView
         }
         if(_gutterWater!=null&&_graphicsRevision!=GraphicsQuality.Revision)
         {
-            _gutterWater.Shader=ArtMaterials.WaterShaderFor(GraphicsQuality.Current);
+            _gutterWater.Shader=ArtMaterials.GutterWaterShaderFor(GraphicsQuality.Current);
             GraphicsQuality.ApplyShaderDetail(_gutterWater);
             if(_lighting!=null)_lighting.ApplyWater(_gutterWater);
             foreach(var material in _gutterMaterials)GraphicsQuality.ApplyShaderDetail(material);
@@ -52,8 +52,8 @@ public partial class TempleStageView
         Box(this,new(Width/2f,-.65f,Depth/2f),new(Width+.7f,1.05f,Depth+.7f),brick,.1f).Name="GutterLockFoundation";
         Box(this,new(Width/2f,-.15f,Depth/2f),new(Width-2,.16f,Depth-2),stone,.04f).Name="GutterSubmergedPaving";
         // An owned grid avoids requesting an uncaptured engine-primitive domain.
-        _gutterWater=_art.Water();_gutterWater.SetShaderParameter("wind_strength",.2f);
-        _gutterWater.SetShaderParameter("seabed_height",-.23f);
+        _gutterWater=new ShaderMaterial{Shader=ArtMaterials.GutterWaterShaderFor(GraphicsQuality.Current),RenderPriority=-16};_gutterWater.SetShaderParameter("wind_strength",.2f);
+        _gutterWater.SetShaderParameter("seabed_height",-1f);
         var water=new MeshInstance3D{Name="GutterShallowWater",Mesh=GutterPlane(1,Width-1,1,Depth-1),
             MaterialOverride=_gutterWater,Position=new(0,.035f,0),CastShadow=GeometryInstance3D.ShadowCastingSetting.Off};
         AddChild(water);

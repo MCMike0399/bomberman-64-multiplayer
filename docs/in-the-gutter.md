@@ -55,12 +55,23 @@ owner's responsibility.
 
 The court is original brick, pale wet paving, cream post caps and dark metal
 grates with brass trim. Shared Low/Medium/High water shaders retain opaque Low,
-clear refracting Medium and scene-reflecting High behavior. A bounded owned
-ArrayMesh grid supplies the water surface, avoiding a new engine-primitive
-parameter domain. A shallow directional tracer layer and center arrow follow
+clear refracting Medium and scene-reflecting High behavior. Gutter's cached
+High variant uses coherent reflection samples for its upright post/cover
+contacts: the per-pixel march jitter is zero, while the existing twelve coarse
+steps, three bisections, refined hit validation, scene-color sample and Fresnel
+remain. Shared High shaders on other arenas keep their jitter, which protects
+their suspended-deck reflections from banding. This is a local shallow-court
+exception, not removal of scene reflections or extra ray-march work.
+
+A bounded owned ArrayMesh grid supplies the water surface, avoiding a new
+engine-primitive parameter domain. The submerged paving sits above the
+shader's open-sea cutoff, so it is treated as real shallow geometry. A shallow directional tracer layer and center arrow follow
 accepted current; their clock stops on ordinary pause. The outside canal,
-quays, lock houses, shrubs and animated sluice wheels stay outside the playable
-volume; menu miniatures omit scenery.
+narrow canals, textured quays, gabled keepers' houses, rimmed sluice wheels,
+brass work lamps, planted banks and gauge floats stay outside the playable
+volume; menu miniatures omit scenery. Slow wheel, foliage, float and pump-gauge
+motion supplies small-scale life. The setting has a finite masonry/earth foot
+instead of a large flat cyan base.
 
 The closed volume has a low metal base and a thin opaque grille at its leading
 face. Existing closure interpolation paces it to accepted column seals. The
@@ -79,7 +90,9 @@ owned SurfaceTool surfaces; no native primitive fallback is introduced.
 - Complete game suite: 4,053 checks pass; existing Blizzard focused suite: 13.
 - Complete client suite: 497 checks pass, including 191 peer-frame checks with
   actual Gutter stage/state acceptance and malformed-current rejection.
-- Source headless in-the-gutter: 18 assertions, zero runtime errors. It drives
+- Refined source headless in-the-gutter: 19 assertions, zero runtime errors,
+  including an audit of the detailed exterior's standing-volume clearance.
+  It drives
   ordinary selection, post descent, bomb placement, pause, eight-player CPU
   combat and closing grates. This is not visual approval.
 - Graphical tour-23 contains in-the-gutter; its native run must inspect the
@@ -94,5 +107,35 @@ owned SurfaceTool surfaces; no native primitive fallback is introduced.
   reviewed geometry-producing calls; source layout and documentation-link
   checks pass.
 
-No native graphical verification, rebuilt-export verification, user art
-approval, publication or deployment is claimed by this source contract.
+## Shallow-contact diagnosis and remaining review
+
+The initial native Gutter tour passed its functional checks but exposed noisy
+reflection fringes. A fixed 1280×800 Night view at water-clock 4 retained the
+actual court, cover, players and opaque scene inputs. The broad contact probe
+counted 2,251 isolated bright water pixels against 441 with only scene
+reflection disabled. Removing tracers, flattening waves, correcting the
+open-sea cutoff, restricting hits above water, increasing bisection depth and
+doubling march samples did not resolve the defect. Coherent samples reduced
+the count to 541 while preserving visible block/post reflections; root and
+implementation-agent inspection agreed on that technical improvement.
+
+The permanent gutter-water-contact journey compares actual production High
+against a reflection-disabled control at Midday and Night. It requires contact
+noise excess at most 150 isolated pixels and at least 250 pixels of real
+reflection contrast; shared High must retain its existing jitter. The earlier
+red diagnostic captures remain in ignored artifacts. This regression is part
+of graphical tour-23.
+
+The refined candidate builds and passes public static checks and the 19-check
+headless tour. The graphical owner's final native source regression passes
+31 assertions with four captures and zero runtime errors/warnings. Midday
+contact counts are 1,420 reflected versus 1,372 control (excess 48), with
+30,861 changed reflection pixels; Night is 1,391 versus 1,400 (excess -9), with
+27,540 changed reflection pixels. Underwater paving/caustics contribute to both
+control counts; the original excess from reflected fringes is absent.
+
+The final source captures are gutter-contact-midday-high and
+gutter-contact-night-high in the ignored 20261115T211031.433422Z native receipt.
+Rebuilt-export review remains with the graphical owner. The user's subsequent request for a stronger cohesive visual
+identity supersedes earlier agent art acceptance: independent visual review
+is pending. No user art approval, publication or deployment is claimed here.

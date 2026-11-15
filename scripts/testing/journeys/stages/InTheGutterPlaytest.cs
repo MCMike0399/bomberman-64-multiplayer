@@ -29,6 +29,13 @@ public partial class PlaytestDriver
             Check(terrain.Layout.Id==BlastStages.InTheGutter&&State.GetProperty("players").GetArrayLength()==4,"four original-relative post starts use accepted Gutter layout");
             Check(terrain.GetNodeOrNull<MeshInstance3D>("GutterShallowWater")!=null&&terrain.GetNodeOrNull<Node3D>("GutterCurrentMarker")!=null,"shallow water and central flow marker render in the actual arena");
             Check(terrain.Scenery!=null&&!AuditDescendants(terrain.Scenery).OfType<CollisionObject3D>().Any(),"toy lock surroundings add no gameplay collision");
+            var playable=new Rect2(-.35f,-.35f,terrain.Width+.7f,terrain.Depth+.7f);
+            var intrusions=AuditDescendants(terrain.Scenery!).OfType<MeshInstance3D>().Where(n=>n.Mesh!=null).Where(n=>
+            {
+                var bounds=(terrain.GlobalTransform.AffineInverse()*n.GlobalTransform)*n.Mesh.GetAabb();
+                return bounds.End.Y>=0&&playable.Intersects(new Rect2(bounds.Position.X,bounds.Position.Z,bounds.Size.X,bounds.Size.Z));
+            }).Select(n=>n.Name.ToString()).ToArray();
+            Check(intrusions.Length==0,"detailed waterworks stay outside the court's standing volume: "+string.Join(',',intrusions));
             await Capture("in-the-gutter-four-player-opening");
             if(!_headless)
             {
@@ -36,7 +43,7 @@ public partial class PlaytestDriver
                 {
                     await SelectGraphics(preset);CheckFraming(BlastStages.InTheGutter,GetWindow().Size);
                     var material=(ShaderMaterial)terrain.GetNode<MeshInstance3D>("GutterShallowWater").MaterialOverride;
-                    Check(material.Shader==ArtMaterials.WaterShaderFor(preset),"Gutter water follows the shared "+preset+" water identity");
+                    Check(material.Shader==ArtMaterials.GutterWaterShaderFor(preset),"Gutter water follows the shared "+preset+" water identity");
                     await Capture("in-the-gutter-"+GraphicsQuality.ToWire(preset));
                 }
                 await SelectLocalLighting(StageTime.Night);await Capture("in-the-gutter-night");
@@ -132,4 +139,80 @@ public partial class PlaytestDriver
             }
         }
     }
+    private async Task GutterWaterContact()
+    {
+        Check(!_headless,"shallow water contact regression requires actual rendered pixels");
+        var quality=_root.Preferences.Graphics;var lighting=_root.Preferences.StageLighting;
+        var size=GetWindow().Size;
+        try
+        {
+            await ResizeWindow(new(1280,800));await SelectGraphics(GraphicsPreset.High);
+            _root.StartLocal(new SessionSettings(Stage:BlastStages.InTheGutter,Bots:0,SuddenDeath:false),4);
+            await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"water-contact regression enters actual Gutter battle",180);
+            var terrain=AuditDescendants(LightingArena).OfType<TempleStageView>().Single();
+            var water=(ShaderMaterial)terrain.GetNode<MeshInstance3D>("GutterShallowWater").MaterialOverride;
+            var tracer=(ShaderMaterial)terrain.GetNode<MeshInstance3D>("GutterFlowTracers").MaterialOverride;
+            Check(water.Shader==ArtMaterials.GutterWaterShaderFor(GraphicsPreset.High),"regression observes the actual specialized High surface");
+            Check(water.Shader.Code.Contains("#define SCENE_REFLECTIONS",StringComparison.Ordinal),"Gutter High retains the full scene-reflection branch");
+            Check(ArtMaterials.WaterShaderFor(GraphicsPreset.High).Code.Contains("float jitter=fract(",StringComparison.Ordinal),"other stages retain their established jittered High reflection");
+            var shader=water.Shader;string original=shader.Code,originalTracer=tracer.Shader.Code;
+            string clocked=original.Replace("TIME","gutter_test_clock",StringComparison.Ordinal)
+                .Replace("uniform float flood_amount=0.0;","uniform float gutter_test_clock=4.0;\nuniform float flood_amount=0.0;",StringComparison.Ordinal);
+            var defects=new List<string>();
+            try
+            {
+                // Pin only cosmetic water/tracer clocks. Real characters, opaque
+                // scene inputs, shadows, terrain, cover and authority remain active.
+                tracer.Shader.Code=originalTracer.Replace("world.x-current_clock*current","world.x-4.0*current",StringComparison.Ordinal);
+                foreach(var time in new[]{StageTime.Midday,StageTime.Night})
+                {
+                    await SelectLocalLighting(time);shader.Code=clocked;await Frames(6);
+                    await Capture("gutter-contact-"+time.ToString().ToLowerInvariant()+"-high",0);
+                    string reflectedPath=_screenshots[^1];
+                    using var reflected=Image.LoadFromFile(reflectedPath);
+                    int reflectedNoise=GutterContactSpeckles(reflected);
+                    shader.Code=clocked.Replace("#define SCENE_REFLECTIONS","",StringComparison.Ordinal);await Frames(6);
+                    await Capture("gutter-contact-"+time.ToString().ToLowerInvariant()+"-reflection-control",0);
+                    using var control=Image.LoadFromFile(_screenshots[^1]);
+                    int controlNoise=GutterContactSpeckles(control),mirrored=0;
+                    for(int y=(int)(reflected.GetHeight()*.24f);y<(int)(reflected.GetHeight()*.84f);y++)
+                    for(int x=(int)(reflected.GetWidth()*.19f);x<(int)(reflected.GetWidth()*.81f);x++)
+                    {
+                        var delta=reflected.GetPixel(x,y)-control.GetPixel(x,y);
+                        if(Math.Max(Math.Abs(delta.R),Math.Max(Math.Abs(delta.G),Math.Abs(delta.B)))>.04f)mirrored++;
+                    }
+                    Event("gutter-water-contact",new{lighting=time.ToString(),reflectedNoise,controlNoise,mirrored});
+                    if(reflectedNoise>controlNoise+150)defects.Add(time+" reflected contacts have isolated fringe pixels: "+reflectedNoise+" vs "+controlNoise);
+                    if(mirrored<250)defects.Add(time+" High lost actual opaque-scene reflections: "+mirrored);
+                    shader.Code=clocked;
+                }
+            }
+            finally{shader.Code=original;tracer.Shader.Code=originalTracer;}
+            Check(defects.Count==0,"shallow contacts stay smooth while High retains actual post and cover reflections"+
+                (defects.Count==0?"":": "+string.Join("; ",defects)));
+        }
+        finally
+        {
+            Input(0,default);_root.Navigate("Modes");await Frames(3);
+            await SelectGraphics(quality);await SelectLocalLighting(lighting);await ResizeWindow(size);
+        }
+    }
+
+    private static int GutterContactSpeckles(Image image)
+    {
+        int count=0,width=image.GetWidth(),height=image.GetHeight();
+        float Bright(Color c)=>(c.R+c.G+c.B)/3;
+        for(int y=(int)(height*.24f);y<(int)(height*.84f);y++)
+        for(int x=(int)(width*.19f);x<(int)(width*.81f);x++)
+        {
+            var c=image.GetPixel(x,y);
+            if(c.G<=c.R*1.05f||c.B<=c.R*1.05f||c.G<=80f/255)continue;
+            float value=Bright(c);
+            float[] neighbors=[Bright(image.GetPixel(x+1,y)),Bright(image.GetPixel(x-1,y)),
+                Bright(image.GetPixel(x,y+1)),Bright(image.GetPixel(x,y-1))];
+            if(neighbors.Count(v=>value-v>13f/255)>=3&&value-neighbors.Average()>18f/255)count++;
+        }
+        return count;
+    }
+
 }

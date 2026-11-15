@@ -357,7 +357,7 @@ public partial class PlaytestDriver
                         Check(water.Length==1,"sea arena retains one water surface: "+stage);
                         Check(((ShaderMaterial)water[0].MaterialOverride).GetShaderParameter("quality_detail").AsSingle()==(preset==GraphicsPreset.Low?0:1),"live water detail follows preset");
                         var waterShader=((ShaderMaterial)water[0].MaterialOverride).Shader;
-                        Check(waterShader==ArtMaterials.WaterShaderFor(preset)&&waterShader.Code.Contains("#define CLEAR_WATER")==(preset!=GraphicsPreset.Low),
+                        Check(waterShader==(stage=="in-the-gutter"?ArtMaterials.GutterWaterShaderFor(preset):ArtMaterials.WaterShaderFor(preset))&&waterShader.Code.Contains("#define CLEAR_WATER")==(preset!=GraphicsPreset.Low),
                             "clear refracting water is used only above Low: "+preset);
                         Check(waterShader.Code.Contains("#define SCENE_REFLECTIONS")==(preset==GraphicsPreset.High),"scene reflections in water are High-only: "+preset);
                         Check(waterShader.Code.Contains("#define WATER_SPARKLE")==(preset==GraphicsPreset.High),"caustic webs and sun glints are High-only: "+preset);
