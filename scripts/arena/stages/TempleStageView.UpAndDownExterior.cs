@@ -1,4 +1,5 @@
 using Godot;
+using BlastCircuit.Rendering;
 using static BlastCircuit.Rendering.ArtGeometry;
 
 namespace BlastCircuit.Arena.Stages;
@@ -28,16 +29,18 @@ public partial class TempleStageView
             Cylinder(jetty,new(side*.42f,-.05f,post*1.05f),.07f,1.1f,_art.Color(new("6b4d33"),.85f));
         Rowboat(scenery,islet+new Vector3(3.6f,0,4.1f),1.2f,new("2f7fb8"),.6f);
 
-        // Sea stacks: tall rock pillars with turf crowns, behind and beside the east pier.
+        // Same four coastal landmarks, with weathered ledges and unequal outlines
+        // instead of straight tubes and circular turf caps.
+        var stackPaint=new StandardMaterial3D {AlbedoColor=Colors.White,VertexColorUseAsAlbedo=true,VertexColorIsSrgb=true,Roughness=.95f};
         void Stack(Vector3 at,float height,float width,int variant,bool tree)
         {
-            var stack=Prop(scenery,"SeaStack",at,variant*1.3f);
-            Taper(stack,new(0,height/2-1,0),width*.42f,width*.32f,height+2,variant%2==0?cliff:cliffDark,7);
-            Rock(stack,new(.2f,-.3f,.3f),new(width*.9f,1.1f,width*.8f),cliffDark,variant,.8f);
-            // The column top is at `height`; the turf crown sits on it.
-            Taper(stack,new(0,height+.02f,0),width*.33f,width*.36f,.1f,grass,7);
-            Sphere(stack,new(0,height+.06f,0),new(width*.68f,.28f,width*.68f),grass);
-            if(tree)RoundTree(stack,new(.1f,height+.1f,0),.7f,new("5b9a4b"),variant);
+            var stack=Prop(scenery,"SeaStack",at);
+            stack.Basis=PresentationMath.Rotation(new(0,variant*1.3f,0));
+            string key=$"coastal-stack:{height}:{width}:{variant}";
+            if(!SceneryMeshes.TryGetValue(key,out var mesh))
+                SceneryMeshes[key]=mesh=CoastalSeaStackMesh(height,width,variant);
+            stack.AddChild(new MeshInstance3D{Name="ErodedSeaStack",Mesh=mesh,MaterialOverride=stackPaint});
+            if(tree)RoundTree(stack,new(.1f,height+.04f,0),.7f,new("5b9a4b"),variant);
         }
         Stack(new(Width+3.6f,sea,-1.5f),5.2f,2.4f,0,true);
         Stack(new(Width+6.2f,sea,1.4f),3.2f,1.8f,1,false);
@@ -64,4 +67,57 @@ public partial class TempleStageView
             Cone(house,new(0,.95f,0),1.25f,.75f,_art.Color(new(i%2==0?"3e6f8e":"c2573f"),.7f),4).Rotation=new(0,Mathf.Pi/4,0);
         }
     }
+    /// <summary>An original low-poly coastal stack: broad foot, broken ledges,
+    /// asymmetrical crown and restrained mineral/algae tint, all owned packed geometry.</summary>
+    private static ArrayMesh CoastalSeaStackMesh(float height,float width,int variant)
+    {
+        const int sides=9;
+        float[] levels=[-1,-.06f,height*.17f,height*.21f,height*.47f,height*.51f,height*.73f,height*.77f,height];
+        float[] radii=[1.15f,1.12f,1.03f,1.10f,.85f,.94f,.78f,.84f,.67f];
+        var surface=new SurfaceTool();surface.Begin(Mesh.PrimitiveType.Triangles);
+        Vector3 Point(int ring,int side)
+        {
+            float angle=side*Mathf.Tau/sides,progress=Math.Max(0,levels[ring]/height);
+            var (sin,cos)=PresentationMath.SinCos(angle);
+            float uneven=1+.12f*PresentationMath.Sin(angle*3+variant*1.7f)+
+                .06f*PresentationMath.Sin(angle*5+ring*.6f+variant);
+            float radius=width*.48f*radii[ring]*uneven;
+            // Gradual lean and displaced strata remove the lathed silhouette.
+            float dx=width*.09f*progress*PresentationMath.Sin(variant+ring*.23f);
+            float dz=width*.07f*progress*PresentationMath.Sin(variant*1.4f+ring*.31f);
+            return new(cos*radius+dx,levels[ring],sin*radius+dz);
+        }
+        void Triangle(Vector3 a,Vector3 b,Vector3 c,Color paint)
+        {
+            var normal=(c-a).Cross(b-a).Normalized();
+            foreach(var point in new[]{a,b,c})
+            {
+                surface.SetNormal(normal);surface.SetColor(paint);
+                surface.SetUV(new(point.X,point.Y));surface.AddVertex(point);
+            }
+        }
+        for(int ring=0;ring<levels.Length-1;ring++)for(int side=0;side<sides;side++)
+        {
+            var a=Point(ring,side);var b=Point(ring,side+1);
+            var c=Point(ring+1,side+1);var d=Point(ring+1,side);
+            // A broad darker tide foot, pale sediment ledges and sparse sage
+            // weathering keep the rock quiet at the ordinary battle distance.
+            float grain=PresentationMath.Sin(side*2.1f+variant*1.3f)*.025f;
+            var color=new Color("8d9489")*(1+grain+(ring%2==0?-.035f:.04f));
+            if(ring==0)color=new Color("657d73");
+            else if(ring is 2 or 4 or 6)color=color.Lightened(.075f);
+            if(ring>=5&&side%4==variant%4)color=color.Lerp(new Color("85916d"),.24f);
+            Triangle(a,b,c,color);Triangle(a,c,d,color);
+        }
+        var center=new Vector3(0,height+.018f,0);
+        for(int side=0;side<sides;side++)
+        {
+            var a=Point(levels.Length-1,side)+new Vector3(0,.012f,0);
+            var b=Point(levels.Length-1,side+1)+new Vector3(0,.012f,0);
+            var turf=new Color("789b63")*(1+PresentationMath.Sin(side*1.7f+variant)*.035f);
+            Triangle(center,a,b,turf);
+        }
+        surface.Index();return surface.Commit();
+    }
+
 }
