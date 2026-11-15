@@ -1987,6 +1987,18 @@
       "headless": true,
       "timeout": 180,
       "manual": false
+    },
+    {
+      "id": "stage-review-matrix",
+      "method": "StageReviewMatrix",
+      "domains": [
+        "rendering",
+        "ui",
+        "gameplay"
+      ],
+      "headless": false,
+      "timeout": 1500,
+      "manual": false
     }
   ]
 }
