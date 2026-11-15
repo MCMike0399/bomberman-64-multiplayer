@@ -72,8 +72,16 @@ The high stem compresses lower section points monotonically above its raised
 keel. All masses remain outside or below the unchanged court.
 The mast is round and tapered, and the two forward obstacles read as a capstan
 and bitts within their existing authority footprints. Long planks follow X with
-staggered butt joints. Previous small cabin/porthole dressing is excluded while
-the sculptural body is reviewed.
+staggered butt joints. The independent shape review accepted this major form before finishing.
+The coloured surface/life pass keeps that massing: navy topsides, cream wale,
+red-oxide boot-top, honey planks/peg dots, teal/brass gunwales and dark recessed
+castle panels. A solid cap rail and raised bow ridge define the approved cap;
+end bulkhead closures seal its former slit. A single swinging stern lantern
+warms Night, with one pennant and two gulls over open sea. The darker, choppier
+stage-specific ocean retains shared reflection/refraction tiers, depth foam at
+the actual rolling hull, quiet crest tips and a small bow crescent. A restrained
+sail shadow follows the roll across the deck. Barrels retain their original
+geometry and finish.
 
 `sea-sick-shape-study` is an explicit grayscale material inspection of an actual
 ordinary local battle with cover disabled through advanced settings. It retains
@@ -131,3 +139,11 @@ journey 133, with zero runtime errors. Verbose source-headless exits retained
 only audio stream/playback warnings; they do not certify a clean exported
 shutdown. The public profile, source layout, producer inventory, documentation
 links and whitespace checks passed. Graphical/export evidence remains pending.
+
+The `sea-sick-finish` review journey captures fresh eight-player CPU combat on
+High Midday, High Night and Low; coloured roll extremes; bow/heel framing at
+both aspect ratios; a real maximum-roll carry marker beside a real blast;
+meteor warning/impact; and the actual menu miniature. `sea-sick-roll-colour`
+retains eight unaltered captures across one slow roll cycle and can be recorded
+with `--record`. These are review leaves; the ordinary `sea-sick` functional
+journey remains in `tour-24` and the main suites.

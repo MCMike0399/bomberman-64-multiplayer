@@ -9,13 +9,13 @@ public partial class TempleStageView
     // a broad toy hull: the existing galleries read as the raised ship's ends.
     private void BuildShipHull(Material timber)
     {
-        var navy=_art.Color(new("263d56"),.84f);
+        var navy=ShipPaint("263d56",style:2);
         var cream=_art.Color(new("e8dcb9"),.8f);
         AddChild(new MeshInstance3D{Name="CutterHull",Mesh=TubbyHullMesh(0,Mathf.Pi,true),MaterialOverride=navy});
         float bandFrom=.18f*Mathf.Pi/2,bandTo=.26f*Mathf.Pi/2;
         AddChild(new MeshInstance3D{Name="CutterWaleNear",Mesh=TubbyHullMesh(bandFrom,bandTo),MaterialOverride=cream});
         AddChild(new MeshInstance3D{Name="CutterWaleFar",Mesh=TubbyHullMesh(Mathf.Pi-bandTo,Mathf.Pi-bandFrom),MaterialOverride=cream});
-        AddChild(new MeshInstance3D{Name="CutterShoulders",Mesh=TubbyShoulderMesh(),MaterialOverride=timber});
+        AddChild(new MeshInstance3D{Name="CutterShoulders",Mesh=TubbyShoulderMesh(),MaterialOverride=ShipPaint("b98450",style:1)});
 
         // The converging bow is a rising cambered mass. The stern is a broad
         // transom and curved taffrail; neither end is an extra flat shelf.
@@ -24,13 +24,16 @@ public partial class TempleStageView
         var right=up.Cross(Vector3.Back).Normalized();bowsprit.Basis=new(right,up,right.Cross(up));bowsprit.Name="CutterBowsprit";
         Box(this,new(-1.72f,-1.5f,9.5f),new(.42f,2.9f,1.9f),navy,.2f).Name="CutterRudder";
         AddChild(new MeshInstance3D{Name="CutterTaffrail",Mesh=TubbyTaffrailMesh(),MaterialOverride=cream});
-        AddChild(new MeshInstance3D{Name="GalleryBulwarks",Mesh=TubbyGalleryBulwarks(),MaterialOverride=timber});
+        AddChild(new MeshInstance3D{Name="GalleryBulwarks",Mesh=TubbyGalleryBulwarks(),MaterialOverride=ShipPaint("65452f",true)});
         foreach(float x in new[]{3f,16f})foreach(float z in new[]{.5f,18.5f})
             ShipLathe(this,new(x,0,z),[(TubbySection(x).Sheer,.28f),(1.87f,.28f)],cream,$"gallery-end:{x}").Name="GalleryBulwarkPost";
         var slices=TubbySlices();
-        foreach(float angle in new[]{0f,Mathf.Pi})for(int i=0;i<slices.Length-1;i++)
+        foreach(float v in new[]{-1f,1f})for(int i=0;i<slices.Length-1;i++)
             if(slices[i]>=19)
-                ShipRope(TubbyPoint(slices[i],angle)+Vector3.Up*.1f,TubbyPoint(slices[i+1],angle)+Vector3.Up*.1f,.105f,cream).Name="ConvergingBowRail";
+                ShipBeam(TubbyCapPoint(slices[i],v)+Vector3.Up*.09f,TubbyCapPoint(slices[i+1],v)+Vector3.Up*.09f,.28f,.18f,cream).Name="BowCapRail";
+        for(int i=0;i<slices.Length-1;i++)if(slices[i]>=19)
+            ShipBeam(TubbyCapPoint(slices[i],0)+Vector3.Up*.10f,TubbyCapPoint(slices[i+1],0)+Vector3.Up*.10f,.24f,.20f,timber).Name="BowCentreRidge";
+
 
     }
 
@@ -153,17 +156,7 @@ public partial class TempleStageView
             if(next<=0||x>=19)
             {
                 const int across=32;
-                Vector3 Cap(float at,float v)
-                {
-                    var section=TubbySection(at);float av=Math.Abs(v);
-                    float ridge=1-(float)(av*Math.Sqrt(av));
-                    if(at>=19)
-                    {
-                        float u=Mathf.Clamp((at-19)/6.5f,0,1);
-                        return new(at,Mathf.Lerp(1.8f,3.5f,u)+Mathf.Lerp(.6f,1.6f,u)*ridge,9.5f+section.Beam*v);
-                    }
-                    return new(at,1.35f+.35f*ridge,9.5f+section.Beam*v);
-                }
+                Vector3 Cap(float at,float v)=>TubbyCapPoint(at,v);
                 for(int span=0;span<across;span++)
                 {
                     float a=-1+2*span/(float)across,b=-1+2*(span+1)/(float)across;
@@ -185,6 +178,24 @@ public partial class TempleStageView
         surface.Index();return ShipMeshes[key]=surface.Commit();
     }
 
+
+    private static Vector3 TubbyCapPoint(float at,float v)
+    {
+        var section=TubbySection(at);float av=Math.Abs(v),ridge=1-(float)(av*Math.Sqrt(av));
+        if(at>=19)
+        {
+            float u=Mathf.Clamp((at-19)/6.5f,0,1);
+            return new(at,Mathf.Lerp(1.8f,3.5f,u)+Mathf.Lerp(.6f,1.6f,u)*ridge,9.5f+section.Beam*v);
+        }
+        return new(at,1.35f+.35f*ridge,9.5f+section.Beam*v);
+    }
+
+    private MeshInstance3D ShipBeam(Vector3 a,Vector3 b,float width,float height,Material paint)
+    {
+        var along=(b-a).Normalized();var across=along.Cross(Vector3.Up).Normalized();var up=across.Cross(along).Normalized();
+        var beam=Box(this,(a+b)/2,new((b-a).Length()+.025f,height,width),paint,.035f);
+        beam.Basis=new(along,up,across);return beam;
+    }
 
     private static ArrayMesh TubbyGalleryBulwarks()
     {

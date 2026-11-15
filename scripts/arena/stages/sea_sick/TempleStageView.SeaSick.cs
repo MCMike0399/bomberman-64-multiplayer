@@ -12,12 +12,13 @@ public partial class TempleStageView
     private void BuildSeaSick()
     {
         Name="SeaSickTerrain";
-        var oak=ShipPaint("b98450");var pale=ShipPaint("c18e59");var dark=ShipPaint("795235");
+        var oak=ShipPaint("b98450",sailShadow:true);var pale=ShipPaint("c18e59",sailShadow:true);var dark=ShipPaint("795235");
         _barrelTimber=ShipPaint("a66f3f");
         var green=_art.Toy(new("356f63"),.65f);var gold=_art.Color(new("c7a15b"),.65f);
         var iron=_art.Color(new("424d53"),.85f);
         BuildShipHull(oak);
         BuildShipPlanks(oak,pale);
+        BuildShipFinish(oak,dark,gold);
 
         // The collision grid owns the real decks and ramps. Individual broad
         // planks are quiet geometry with recessed joints, never a printed grid.
@@ -58,8 +59,11 @@ public partial class TempleStageView
                 var paint=ShipPaint("ae7a49",true);
                 ShipLathe(post,Vector3.Zero,[(0,.46f),(1.15f,.44f),(height-.25f,.34f),(height,.30f)],paint,"main-mast");
                 // Upper spar is cosmetic and exits the battle frame cleanly.
-                var upper=ShipLathe(post,Vector3.Zero,[(height,.30f),(12.4f,.18f)],paint,"upper-mast");
-                upper.CastShadow=GeometryInstance3D.ShadowCastingSetting.Off;
+                if(IncludeScenery)
+                {
+                    var upper=ShipLathe(post,Vector3.Zero,[(height,.30f),(12.4f,.18f)],paint,"upper-mast");
+                    upper.CastShadow=GeometryInstance3D.ShadowCastingSetting.Off;
+                }
             }
             else if(x==5)
             {
@@ -82,17 +86,17 @@ public partial class TempleStageView
         {
             var eye=ShipLathe(this,new(x,.445f,.35f),[(0,.105f),(1.2f,.105f)],gold,"far-deadeye");
             eye.CastShadow=GeometryInstance3D.ShadowCastingSetting.Off;
-            ShipRope(new(9.5f,12,8.5f),new(x,1.65f,.35f),.075f,gold).Name=$"FarShroud{x}";
+            ShipRope(new(9.5f,IncludeScenery?12:6.9f,8.5f),new(x,1.65f,.35f),.075f,gold).Name=$"FarShroud{x}";
         }
-        ShipRope(new(9.5f,12,8.5f),TubbyBowspritTip(),.075f,gold).Name="Forestay";
-        ShipRope(new(9.5f,12,8.5f),new(-1.3f,3.2f,9.5f),.075f,gold).Name="Backstay";
+        ShipRope(new(9.5f,IncludeScenery?12:6.9f,8.5f),TubbyBowspritTip(),.075f,gold).Name="Forestay";
+        ShipRope(new(9.5f,IncludeScenery?12:6.9f,8.5f),new(-1.3f,3.2f,9.5f),.075f,gold).Name="Backstay";
 
         if(IncludeScenery)
         {
             // Fixed world sea; the complete ship, actors and effects rock together
             // above it in ArenaView's StageAssembly, leaving the horizon steady.
             _water=new MeshInstance3D{Name="ShipOcean",TopLevel=true,Mesh=PrimitiveTemplates.Get("PlaneMesh",("size",new Vector2(160,160)),("subdivide_width",180),("subdivide_depth",180)),
-                MaterialOverride=_art.Water(),Position=new(Width/2f,-2.1f,Depth/2f),CastShadow=GeometryInstance3D.ShadowCastingSetting.Off};AddChild(_water);
+                MaterialOverride=new ShaderMaterial{Shader=ArtMaterials.SeaWaterShaderFor(GraphicsQuality.Current),RenderPriority=-16},Position=new(Width/2f,-2.1f,Depth/2f),CastShadow=GeometryInstance3D.ShadowCastingSetting.Off};AddChild(_water);
             AddChild(new MeshInstance3D{Name="Seabed",TopLevel=true,Mesh=PrimitiveTemplates.Get("BoxMesh",("size",new Vector3(160,.05f,160))),
                 MaterialOverride=_art.Color(new("0f3a46"),.95f),Position=new(Width/2f,-4.5f,Depth/2f),CastShadow=GeometryInstance3D.ShadowCastingSetting.Off});
         }
@@ -100,6 +104,7 @@ public partial class TempleStageView
 
     private void BuildShipPlanks(Material oak,Material pale)
     {
+        var pegs=new List<Transform3D>();
         for(int z=0;z<Depth;z++)for(int x=0;x<Width;)
         {
             var cell=Layout.At(x,z);
@@ -109,23 +114,37 @@ public partial class TempleStageView
             while(run<limit&&x+run<Width&&Layout.At(x+run,z).Tier==cell.Tier&&Layout.At(x+run,z).Kind!=CellKind.Ramp&&!InnerPost(x+run))run++;
             Box(this,new(x+run/2f,cell.Tier*HeightScale-.07f,z==0?.70f:z==18?18.30f:z+.5f),new(run-.015f,.14f,z is 0 or 18?.60f:.985f),
                 (x*7+z*13)%4==0?pale:oak,.014f).Name=$"DeckPlank{x}_{z}";
+            float zz=z==0?.70f:z==18?18.30f:z+.5f;
+            foreach(float xx in new[]{x+.19f,x+run-.19f})foreach(float dz in new[]{-.25f,.25f})
+                pegs.Add(new Transform3D(Basis.Identity.Scaled(new(.18f,.025f,.18f)),new(xx,cell.Tier*HeightScale+.006f,zz+dz)));
             x+=run;
         }
+        var dots=new MultiMesh{TransformFormat=MultiMesh.TransformFormatEnum.Transform3D,UseColors=true,
+            Mesh=PrimitiveTemplates.Get("SphereMesh",("radius",.5f),("height",1),("radial_segments",10),("rings",5)),InstanceCount=pegs.Count};
+        var buffer=new float[pegs.Count*MultiMeshPacking.Stride];
+        for(int i=0;i<pegs.Count;i++)MultiMeshPacking.Write(buffer,i,pegs[i],Colors.White);
+        dots.Buffer=buffer;
+        AddChild(new MultiMeshInstance3D{Name="DeckPegs",Multimesh=dots,MaterialOverride=_art.Color(new("6a4b35"),.9f),CastShadow=GeometryInstance3D.ShadowCastingSetting.Off});
     }
 
-    private ShaderMaterial ShipPaint(string hex,bool vertical=false)
+    private ShaderMaterial ShipPaint(string hex,bool vertical=false,int style=0,bool sailShadow=false)
     {
-        var paint=_art.ShipTimber(new(hex),vertical);_shipMaterials.Add(paint);return paint;
+        var paint=_art.ShipTimber(new(hex),vertical,style,sailShadow);_shipMaterials.Add(paint);return paint;
     }
 
-    private void ProcessSeaSick()
+    private void ProcessSeaSick(float delta)
     {
+        if(WeatherActive){_shipLifeClock+=delta;foreach(var motion in _shipLife)motion(_shipLifeClock);}
+        var inverse=GlobalTransform.AffineInverse();float roll=-GlobalBasis.Z.Y;
+        foreach(var paint in _shipMaterials){paint.SetShaderParameter("ship_inverse",inverse);paint.SetShaderParameter("ship_roll",roll);}
+        if(_water?.MaterialOverride is ShaderMaterial sea)
+        {sea.SetShaderParameter("ship_inverse",inverse);sea.SetShaderParameter("ambient_clock",_shipLifeClock);}
         if(_graphicsRevision==GraphicsQuality.Revision)return;
         foreach(var paint in _shipMaterials)GraphicsQuality.ApplyShaderDetail(paint);
         if(_water?.MaterialOverride is ShaderMaterial ocean)
         {
-            ocean.Shader=ArtMaterials.WaterShaderFor(GraphicsQuality.Current);
-            GraphicsQuality.ApplyShaderDetail(ocean);_lighting?.ApplyWater(ocean);
+            ocean.Shader=ArtMaterials.SeaWaterShaderFor(GraphicsQuality.Current);
+            GraphicsQuality.ApplyShaderDetail(ocean);if(_lighting is {} look){look.ApplyWater(ocean);ApplyShipLighting(look);}
             ocean.SetShaderParameter("seabed_height",-4.5f);
         }
         _graphicsRevision=GraphicsQuality.Revision;
@@ -133,7 +152,7 @@ public partial class TempleStageView
 
     private Node3D CreateShipBarrel(Node3D root)
     {
-        root.Name=$"ShipBarrel{(int)root.Position.X}_{(int)root.Position.Z}";
+        root.Name=$"ShipBarrel{(int)root.Position.X}_{(int)root.Position.Z}";root.SetMeta("sea_sick_barrel",true);
         float height=Layout.SoftBlockHeight*HeightScale;
         ShipLathe(root,Vector3.Zero,[(0,.32f),(.12f,.37f),(height*.5f,.45f),(height-.12f,.37f),(height,.32f)],_barrelTimber,"barrel");
         var hoops=_art.Color(new("495a59"),.74f);

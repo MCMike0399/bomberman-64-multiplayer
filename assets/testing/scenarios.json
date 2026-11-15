@@ -1841,6 +1841,30 @@
       "headless": true,
       "timeout": 180,
       "manual": false
+    },
+    {
+      "id": "sea-sick-finish",
+      "method": "SeaSickFinishTour",
+      "domains": [
+        "rendering",
+        "gameplay",
+        "physics",
+        "ui"
+      ],
+      "headless": true,
+      "timeout": 300,
+      "manual": false
+    },
+    {
+      "id": "sea-sick-roll-colour",
+      "method": "SeaSickRollColour",
+      "domains": [
+        "rendering",
+        "gameplay"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
     }
   ]
 }

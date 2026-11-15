@@ -50,6 +50,10 @@ public partial class TempleStageView : Node3D
     private bool _seaSick;
     private readonly List<ShaderMaterial> _shipMaterials=[];
     private ShaderMaterial _barrelTimber=null!;
+    private float _shipLifeClock;
+    private readonly List<Action<float>> _shipLife=[];
+    private OmniLight3D? _shipLanternLight;
+    private StandardMaterial3D? _shipLanternGlow;
     private readonly Dictionary<MeshInstance3D,Material?> _shipStudyMaterials=[];
     private static readonly (float X,float Beam,float Sheer,float Keel)[] TubbyHullSections=[
         (-1.6f,8.6f,1.10f,-2.6f),(0,9.15f,.95f,-3.6f),(3,9.15f,.60f,-4.4f),
@@ -76,6 +80,7 @@ public partial class TempleStageView : Node3D
         if(_water?.MaterialOverride is ShaderMaterial material)lighting.ApplyWater(material);
         if(_greedyMoat?.MaterialOverride is ShaderMaterial moat)lighting.ApplyWater(moat);
         foreach(var frozen in _frozenMaterials)lighting.ApplyKeyLight(frozen);
+        if(_seaSick)ApplyShipLighting(lighting);
     }
     public void SetWaterLevel(float tierLevel)
     {
@@ -87,7 +92,7 @@ public partial class TempleStageView : Node3D
     {
         if(!IsVisibleInTree())return;
         AnimateScenery((float)delta);
-        if(_seaSick){ProcessSeaSick();return;}
+        if(_seaSick){ProcessSeaSick((float)delta);return;}
         if(_blizzard){ProcessBlizzard((float)delta);return;}
         if(_greedy){ProcessGreedyTrap((float)delta);return;}
         if(_castle)

@@ -1,0 +1,143 @@
+using Godot;
+using BlastCircuit.Arena;
+using BlastCircuit.Arena.Effects;
+using BlastCircuit.Arena.Stages;
+using BlastCircuit.Rendering;
+using BlastCircuit.UI.Menu;
+using Bomber.Client.Sessions;
+using Bomber.Game.Matches;
+using Bomber.Game.Simulation.Stages;
+namespace BlastCircuit.Testing;
+
+public partial class PlaytestDriver
+{
+    private async Task SeaSickFinishTour()
+    {
+        Event("sea-sick-colour-policy",new{ordinaryInputs=true,stateMutation=false,barrels="stock 48",combat="fresh seeded eight-player matches",roll="actual slow two-degree cycle"});
+        if(_root.ActiveSession!=null){_root.Back();await Frames(3);}
+        var quality=_root.Preferences.Graphics;var lighting=_root.Preferences.StageLighting;
+        try
+        {
+            foreach(var(preset,time,label) in new[]{(GraphicsPreset.High,StageTime.Midday,"high-midday"),
+                (GraphicsPreset.High,StageTime.Night,"high-night"),(GraphicsPreset.Low,StageTime.Midday,"low-midday")})
+            {
+                await SelectGraphics(preset);await SelectLocalLighting(time);
+                _root.StartLocal(new SessionSettings(Stage:BlastStages.SeaSick,Bots:7,SuddenDeath:false),1);
+                await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"eight-player coloured ship starts: "+label,150);
+                Check(LightingArena.TimeOfDay==time,"rendered local lighting matches the colour capture: "+time);
+                Check(State.GetProperty("players").GetArrayLength()==8,"colour review retains eight roster seats: "+label);
+                await WaitState(s=>s.GetProperty("hazards").GetArrayLength()>0,"real CPU combat reaches a blast: "+label,360);
+                CheckFraming(BlastStages.SeaSick,GetWindow().Size);
+                await Capture("sea-sick-colour-eight-player-"+label,0);_root.Back();await Frames(3);
+            }
+            await SelectGraphics(GraphicsPreset.High);await SelectLocalLighting(StageTime.Midday);
+            await StartColourShip();
+            float sign=0;
+            for(int pass=0;pass<2;pass++)
+            {
+                for(int frame=0;frame<420&&(Math.Abs(LightingArena.ShipRollSine)<.0347f||pass==1&&Mathf.Sign(LightingArena.ShipRollSine)==sign);frame++)await Frames(1);
+                Check(Math.Abs(LightingArena.ShipRollSine)>=.0347f,"coloured capture reaches a real roll extremum");
+                if(pass==0)sign=Mathf.Sign(LightingArena.ShipRollSine);
+                else Check(Mathf.Sign(LightingArena.ShipRollSine)!=sign,"coloured waterline review reaches the opposite roll");
+                await Capture("sea-sick-colour-"+(pass==0?"maximum-roll":"opposite-roll"),0);
+                ShipColourPose(pass==0?"maximum-roll":"opposite-roll");
+            }
+            foreach(var size in new[]{new Vector2I(1280,800),new Vector2I(1280,720)})
+            {
+                if(!_headless)await ResizeWindow(size);
+                CheckFraming(BlastStages.SeaSick,GetWindow().Size);CheckShipBowHeel();
+                await Capture($"sea-sick-colour-bow-heel-{size.X}x{size.Y}");
+            }
+            if(!_headless)await ResizeWindow(new(1280,800));
+            await GrappleWalk(0,4,4);
+            Input(0,new PlayerInput(0,0,A:true,B:true));await Frames(2);
+            Input(0,new PlayerInput(0,0,B:true,Aim:true,AimTarget:new System.Numerics.Vector2(9.0f,4.5f)));await Frames(5);
+            Check(Player.GetProperty("carrying").GetString()=="bomb","ordinary carry and aim prepare a live rocking-deck guide");
+            for(int frame=0;frame<420;frame++)
+            {
+                float phase=Mathf.PosMod(LightingArena.ShipMotionClock*.55f,Mathf.Tau);
+                if(phase>=.14f&&phase<=.23f)break;
+                await Frames(1);
+            }
+            Input(1,new PlayerInput(0,0,A:true));await Frames(2);Input(1,default);
+            await WaitState(s=>s.GetProperty("hazards").GetArrayLength()>0&&Math.Abs(LightingArena.ShipRollSine)>.0345f,
+                "ordinary second-player bomb reaches a real blast at maximum roll",150);
+            var guide=AuditDescendants(LightingArena).OfType<BombThrowPreview>().Single();
+            var marker=guide.GetChildren().OfType<MeshInstance3D>().Last();
+            var reticle=AuditDescendants(guide).OfType<ThrowEndpointReticle>().Single();
+            Check(!reticle.EdgeClamped&&reticle.Position.DistanceTo(GetViewport().GetCamera3D()!.UnprojectPosition(marker.GlobalPosition))<.75f,
+                "maximum-roll aim marker remains on its actual world landing beside a real blast");
+            await Capture("sea-sick-colour-maximum-roll-aim-and-blast",0);ShipColourPose("aim-and-blast");
+            Input(0,default);_root.Back();await Frames(3);
+
+            _root.StartLocal(new SessionSettings(Stage:BlastStages.SeaSick,Bots:0,RoundSeconds:60,Ghosts:false),3);
+            await WaitState(s=>s.GetProperty("meteors").GetArrayLength()>0,"coloured sixty-second Hurry fixture publishes a real meteor",180);
+            await Capture("sea-sick-colour-meteor-warning",0);
+            Input(0,new PlayerInput(0,1));await Frames(25);Input(0,default);
+            await WaitState(s=>s.GetProperty("hazards").GetArrayLength()>0,"coloured meteor reaches impact",90);
+            await Capture("sea-sick-colour-meteor-impact",0);_root.Back();await Frames(3);
+
+            _root.Navigate("Setup");await Frames(8);var settings=_root.FindChild("SetupSettings",true,false)!;
+            var menu=(ArcadeMenu)settings.GetParent().GetParent().GetParent();menu.Configure(new SessionSettings(Stage:BlastStages.SeaSick),1);await Frames(8);
+            var miniature=AuditDescendants(_root).OfType<TempleStageView>().Single(t=>t.GetParent().Name=="ArenaDiorama"&&t.IsVisibleInTree());
+            Check(miniature.Layout.Id==BlastStages.SeaSick&&miniature.Scenery==null,"coloured cutter miniature retains the real ship without exterior scenery");
+            await Capture("sea-sick-colour-menu-miniature");menu.Configure(new SessionSettings(),1);
+        }
+        finally
+        {
+            Input(0,default);Input(1,default);
+            for(int i=0;i<3&&_root.ActiveSession!=null;i++){_root.Back();await Frames(3);}
+            _root.Navigate("Modes");await Frames(3);await SelectGraphics(quality);await SelectLocalLighting(lighting);_root.Navigate("Modes");
+        }
+    }
+
+    private async Task StartColourShip()
+    {
+        _root.StartLocal(new SessionSettings(Stage:BlastStages.SeaSick,Bots:0,SuddenDeath:false,Ghosts:false),4);
+        await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"stock-barrel coloured roll battle starts",150);
+        var terrain=AuditDescendants(LightingArena).OfType<TempleStageView>().Single();
+        var problems=AuditModelProblems(terrain,out int meshes,out int vertices);
+        Check(problems.Count==0,$"finished ship has finite clockwise geometry: {string.Join("; ",problems.Take(3))}");
+        Check(AuditDescendants(LightingArena).Count(n=>n.HasMeta("sea_sick_barrel"))==48,"coloured review restores all stock barrels unchanged");
+    }
+
+    private void CheckShipBowHeel()
+    {
+        var terrain=AuditDescendants(LightingArena).OfType<TempleStageView>().Single();var camera=GetViewport().GetCamera3D()!;
+        var viewport=GetViewport().GetVisibleRect().Size;
+        foreach(var p in new[]{new Vector3(25.3f,5.0f,9.5f),new Vector3(25.5f,5.1f,9.5f)})
+        {
+            var screen=camera.UnprojectPosition(terrain.ToGlobal(p))/viewport;
+            Check(screen.X>=.015f&&screen.X<=.985f&&screen.Y>=.13f&&screen.Y<=.90f,"bow stem and bowsprit heel remain framed: "+screen);
+        }
+    }
+
+    private void ShipColourPose(string label)
+    {
+        var arena=LightingArena;var camera=GetViewport().GetCamera3D()!;
+        Event("ship-colour-pose",new{label,lighting=arena.TimeOfDay.ToString(),clock=arena.ShipMotionClock,rollDegrees=Mathf.Asin(arena.ShipRollSine)*180/Mathf.Pi,
+            parent=arena.StageAssemblyTransform.ToString(),camera=camera.GetCameraTransform().ToString(),
+            near=arena.ScreenPoint(new System.Numerics.Vector3(9.5f,0,17.5f)).ToString()});
+    }
+
+    private async Task SeaSickRollColour()
+    {
+        if(_root.ActiveSession!=null){_root.Back();await Frames(3);}
+        var quality=_root.Preferences.Graphics;var lighting=_root.Preferences.StageLighting;
+        try
+        {
+            await SelectGraphics(GraphicsPreset.High);await SelectLocalLighting(StageTime.Midday);await StartColourShip();
+            float first=LightingArena.ShipMotionClock,period=Mathf.Tau/.55f;
+            for(int i=0;i<8;i++)
+            {
+                float target=first+period*i/8;
+                for(int frame=0;frame<420&&LightingArena.ShipMotionClock<target;frame++)await Frames(1);
+                await Capture($"sea-sick-roll-cycle-{i:D2}",0);ShipColourPose($"cycle-{i:D2}");
+            }
+        }
+        finally
+        {
+            _root.Back();await Frames(3);await SelectGraphics(quality);await SelectLocalLighting(lighting);_root.Navigate("Modes");
+        }
+    }
+}
