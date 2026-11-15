@@ -21,6 +21,7 @@ public partial class StagePreview : Control
         else if(StageIndex==2)DrawUpAndDown(area);
         else if(StageIndex==5)DrawGreedyTrap(area);
         else if(StageIndex==6)DrawField(area);
+        else if(StageIndex==8)DrawSeaSick(area);
         else for(int z=0;z<11;z++)for(int x=0;x<13;x++)
         {
             int tier=StageIndex==3?(x is 0 or 3 or 6 or 9 or 12||z is 0 or 5 or 10?2:0):StageIndex==0?1+(Math.Abs(x-6)>3?2:z<3?3:0):StageIndex==2?x<4?0:x>8?2:1:0;
@@ -33,7 +34,7 @@ public partial class StagePreview : Control
             if(StageIndex!=3&&x%3==0&&z%3==0&&x>0&&z>0)
             {DrawRect(new Rect2(p-new Vector2(.41f*s,1.35f*s),new Vector2(.82f*s,1.35f*s)),new Color("d1b879"));DrawRect(new Rect2(p-new Vector2(.53f*s,1.53f*s),new Vector2(1.06f*s,.3f*s)),new Color("fff0b6"));}
         }
-        string name=StageIndex==0?"Sunken Temple":StageIndex==1?"Rock Garden":StageIndex==2?"Up & Down":StageIndex==4?"Blizzard Battle":StageIndex==3?"Top Rules":StageIndex==6?"Field of Grass":StageIndex==7?"In the Gutter":"Greedy Trap",detail=StageIndex==0?"4 levels":StageIndex==1?"Walled garden":StageIndex==2?"3 levels":StageIndex==4?"Wind & avalanches":StageIndex==3?"Castle bridges":StageIndex==6?"Hidden bombs":StageIndex==7?"Changing currents":"Reward pit";
+        string name=StageIndex==0?"Sunken Temple":StageIndex==1?"Rock Garden":StageIndex==2?"Up & Down":StageIndex==4?"Blizzard Battle":StageIndex==3?"Top Rules":StageIndex==6?"Field of Grass":StageIndex==7?"In the Gutter":StageIndex==8?"Sea Sick":"Greedy Trap",detail=StageIndex==0?"4 levels":StageIndex==1?"Walled garden":StageIndex==2?"3 levels":StageIndex==4?"Wind & avalanches":StageIndex==3?"Castle bridges":StageIndex==6?"Hidden bombs":StageIndex==7?"Changing currents":StageIndex==8?"Pirate deck":"Reward pit";
         var at=new Vector2(20,Size.Y-14);
         DrawStringOutline(ArcadeTheme.Display,at,name,HorizontalAlignment.Left,-1,18,6,ArcadeTheme.Cream);DrawString(ArcadeTheme.Display,at,name,HorizontalAlignment.Left,-1,18,ink);
         float width=ArcadeTheme.Display.GetStringSize(name,HorizontalAlignment.Left,-1,18).X;
@@ -65,6 +66,20 @@ public partial class StagePreview : Control
             DrawRect(new Rect2(point,new(scale-.5f,scale*.6f-.5f)),color);
         }
     }
+    private void DrawSeaSick(Rect2 area)
+    {
+        var layout=BlastStages.Get(BlastStages.SeaSick);
+        float scale=Math.Min(area.Size.X/21,area.Size.Y/17);
+        Vector2 Point(float x,float z,float y=0)=>area.GetCenter()+new Vector2((x-9.5f)*scale,(z-9.5f)*scale*.6f-y*scale*.5f);
+        for(int z=0;z<layout.Height;z++)for(int x=0;x<layout.Width;x++)
+        {
+            var cell=layout.At(x,z);bool edge=x is 0 or 18||z is 0 or 18;
+            DrawRect(new Rect2(Point(x,z,cell.Tier),new(scale-.3f,scale*.6f-.3f)),edge?new Color("397367"):cell.Kind==CellKind.Ramp?new Color("d4ae73"):new Color((x+z)%3==0?"c99961":"b98450"));
+            if(!edge&&cell.Kind==CellKind.Pillar)
+                DrawLine(Point(x+.5f,z+.5f),Point(x+.5f,z+.5f,x==9?5:1.7f),new Color("795235"),scale*.6f);
+        }
+    }
+
     private void DrawGreedyTrap(Rect2 area)
     {
         var layout=BlastStages.Get(BlastStages.GreedyTrap);

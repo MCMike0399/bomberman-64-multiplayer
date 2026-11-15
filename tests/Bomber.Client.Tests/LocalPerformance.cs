@@ -10,7 +10,7 @@ internal static class LocalPerformance
     public static async Task Run(string[] args)
     {
         string output=args.First(a=>a.StartsWith("--output="))[9..];var rows=new List<object>();
-        foreach(string stage in new[]{"sunken-temple","rock-garden","up-and-down","top-rules","blizzard-battle","greedy-trap","field-of-grass","in-the-gutter"})
+        foreach(string stage in new[]{"sunken-temple","rock-garden","up-and-down","top-rules","blizzard-battle","greedy-trap","field-of-grass","in-the-gutter","sea-sick"})
         foreach(int seed in new[]{64,9876,1337})for(int repeat=0;repeat<2;repeat++)
         {
             await using var session=new LocalSession(new SessionSettings(Stage:stage,Bots:7,BotDifficulty:"hard",Wins:5,RoundSeconds:120),seed:seed);

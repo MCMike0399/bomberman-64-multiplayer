@@ -975,8 +975,18 @@
     },
     {
       "id": "tour-22",
-      "steps": ["field-of-grass", "field-of-grass-network"],
-      "domains": ["gameplay", "rendering", "physics", "ai", "ui", "network"],
+      "steps": [
+        "field-of-grass",
+        "field-of-grass-network"
+      ],
+      "domains": [
+        "gameplay",
+        "rendering",
+        "physics",
+        "ai",
+        "ui",
+        "network"
+      ],
       "headless": true,
       "timeout": 480,
       "manual": false
@@ -1006,7 +1016,8 @@
         "tour-20",
         "tour-21",
         "tour-22",
-        "tour-23"
+        "tour-23",
+        "tour-24"
       ],
       "domains": [
         "ai",
@@ -1061,7 +1072,8 @@
         "field-of-grass",
         "in-the-gutter",
         "stage-scenery",
-        "round-ending"
+        "round-ending",
+        "sea-sick"
       ],
       "domains": [
         "ai",
@@ -1272,7 +1284,12 @@
     {
       "id": "field-of-grass-network",
       "method": "FieldOfGrassNetworkTour",
-      "domains": ["gameplay", "rendering", "network", "physics"],
+      "domains": [
+        "gameplay",
+        "rendering",
+        "network",
+        "physics"
+      ],
       "headless": true,
       "timeout": 180,
       "manual": false
@@ -1280,7 +1297,13 @@
     {
       "id": "field-of-grass",
       "method": "FieldOfGrassTour",
-      "domains": ["gameplay", "rendering", "physics", "ai", "ui"],
+      "domains": [
+        "gameplay",
+        "rendering",
+        "physics",
+        "ai",
+        "ui"
+      ],
       "headless": true,
       "timeout": 240,
       "manual": false
@@ -1312,7 +1335,8 @@
         "tutorial",
         "greedy-trap",
         "field-of-grass",
-        "stage-scenery"
+        "stage-scenery",
+        "sea-sick"
       ],
       "domains": [
         "gameplay",
@@ -1603,7 +1627,8 @@
         "blizzard-battle",
         "greedy-trap",
         "field-of-grass",
-        "greedy-canal"
+        "greedy-canal",
+        "sea-sick"
       ],
       "domains": [
         "rendering",
@@ -1846,6 +1871,70 @@
       ],
       "headless": false,
       "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "sea-sick",
+      "method": "SeaSickTour",
+      "domains": [
+        "gameplay",
+        "physics",
+        "rendering",
+        "ui",
+        "ai"
+      ],
+      "headless": true,
+      "timeout": 240,
+      "manual": false
+    },
+    {
+      "id": "sea-sick-network",
+      "method": "SeaSickNetworkTour",
+      "domains": [
+        "gameplay",
+        "network",
+        "rendering"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "tour-24",
+      "steps": [
+        "sea-sick"
+      ],
+      "domains": [
+        "gameplay",
+        "physics",
+        "rendering",
+        "ui",
+        "ai"
+      ],
+      "headless": true,
+      "timeout": 240,
+      "manual": false
+    },
+    {
+      "id": "sea-sick-regression",
+      "steps": [
+        "first-use-rendering",
+        "sea-sick",
+        "stage-scenery",
+        "framing",
+        "precision-aim",
+        "sea-sick-network"
+      ],
+      "domains": [
+        "gameplay",
+        "physics",
+        "rendering",
+        "ui",
+        "network",
+        "ai"
+      ],
+      "headless": false,
+      "timeout": 1200,
       "manual": false
     }
   ]

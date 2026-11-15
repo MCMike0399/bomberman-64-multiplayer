@@ -12,7 +12,7 @@ public partial class PlaytestDriver
         await ControllerFocusReady();
         var menu=AuditDescendants(_root).OfType<ArcadeMenu>().Single();
         var original=_root.Preferences.Graphics;
-        var stages=new[]{"sunken-temple","rock-garden","up-and-down","top-rules","blizzard-battle","greedy-trap","field-of-grass","in-the-gutter"};
+        var stages=new[]{"sunken-temple","rock-garden","up-and-down","top-rules","blizzard-battle","greedy-trap","field-of-grass","in-the-gutter","sea-sick"};
         TempleStageView[] Miniatures()=>AuditDescendants(menu).OfType<TempleStageView>().Where(t=>t.GetParent().Name=="ArenaDiorama").ToArray();
         var cached=Miniatures().ToDictionary(t=>t.Layout.Id,t=>t.GetInstanceId());
         Check(stages.All(cached.ContainsKey)&&cached.Count==stages.Length,"all map previews are prepared before menu input is enabled");

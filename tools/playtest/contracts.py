@@ -128,7 +128,7 @@ def validate_benchmark(receipt, *, stage='sunken-temple', presets=('Low', 'Mediu
         errors.append('Native benchmark stage does not match requested workload')
     if receipt.get('diagnosticOmission', 'none') != omission or receipt.get('fullQuality', True) != (omission == 'none'):
         errors.append('Diagnostic pass omissions must not be reported as full-quality results')
-    stages = ('sunken-temple', 'rock-garden', 'up-and-down', 'top-rules', 'blizzard-battle', 'greedy-trap', 'field-of-grass', 'in-the-gutter') if stage == 'all' else (stage,)
+    stages = ('sunken-temple', 'rock-garden', 'up-and-down', 'top-rules', 'blizzard-battle', 'greedy-trap', 'field-of-grass', 'in-the-gutter', 'sea-sick') if stage == 'all' else (stage,)
     battles = tuple('eight-player-temple' if s == 'sunken-temple' else 'eight-player-' + s for s in stages)
     expected = [(scene, preset) for preset in presets for scene in ('menu', *battles)]
     if not isinstance(samples, list) or any(not isinstance(s, dict) for s in samples) or [(s.get('scene'), s.get('preset')) for s in samples] != expected:

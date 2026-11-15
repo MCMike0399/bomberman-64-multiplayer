@@ -320,7 +320,7 @@ public partial class PlaytestDriver
             await ActivateNamed("OpenSettings");await Frames(3);
             await CheckNowReachable(new(1024,640));
             await KeyPress(Key.Escape);await ResizeWindow(new(1280,800));await Frames(5);
-            foreach(string stage in new[]{"sunken-temple","rock-garden","up-and-down","top-rules","blizzard-battle","greedy-trap","field-of-grass","in-the-gutter","circuit-garden"})
+            foreach(string stage in new[]{"sunken-temple","rock-garden","up-and-down","top-rules","blizzard-battle","greedy-trap","field-of-grass","in-the-gutter","sea-sick","circuit-garden"})
             {
                 _root.StartLocal(new SessionSettings(Stage:stage,Bots:0),1,practice:true);
                 await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"graphics enters "+stage,180);

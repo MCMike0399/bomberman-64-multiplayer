@@ -56,6 +56,9 @@ public partial class TempleStageView : Node3D
     private float _fieldClock;
     private ShaderMaterial? _fieldGrassMaterial;
     private readonly List<ShaderMaterial> _fieldMaterials=[];
+    private bool _seaSick;
+    private readonly List<ShaderMaterial> _shipMaterials=[];
+    private ShaderMaterial _barrelTimber=null!;
     private readonly List<ShaderMaterial> _gardenMaterials=[];
     private Mesh[] _gardenRocks=[];
     private Material _gardenRockMaterial=null!;
@@ -80,6 +83,7 @@ public partial class TempleStageView : Node3D
     }
     public void SetWaterLevel(float tierLevel)
     {
+        if(_seaSick)return;
         _targetWater=tierLevel*HeightScale;
         if(!_waterInitialized&&_water!=null){_water.Position=new(_water.Position.X,_targetWater,_water.Position.Z);_waterInitialized=true;}
     }
@@ -88,6 +92,7 @@ public partial class TempleStageView : Node3D
         if(!IsVisibleInTree())return;
         AnimateScenery((float)delta);
         if(_field){ProcessField((float)delta);return;}
+        if(_seaSick){ProcessSeaSick();return;}
         if(_blizzard){ProcessBlizzard((float)delta);return;}
         if(_gutter){ProcessGutter((float)delta);return;}
         if(_greedy){ProcessGreedyTrap((float)delta);return;}
@@ -193,6 +198,8 @@ public partial class TempleStageView : Node3D
         if(_field){BuildFieldOfGrass();return;}
         _gutter=Layout.Id==BlastStages.InTheGutter;
         if(_gutter){BuildGutter();return;}
+        _seaSick=Layout.Id==BlastStages.SeaSick;
+        if(_seaSick){BuildSeaSick();return;}
         _blizzard=Layout.Id==BlastStages.BlizzardBattle;
         if(_blizzard){BuildBlizzard();return;}
         _castle=Layout.Id==BlastStages.TopRules;
@@ -335,6 +342,7 @@ public partial class TempleStageView : Node3D
         if(_castle)return CreateCastleCover(x,z);
         var root=new Node3D {Position=new(x+.5f,Surface(x+.5f,z+.5f),z+.5f)};
         if(_field)return CreateFieldBoulder(root,cell);
+        if(_seaSick)return CreateShipBarrel(root);
         if(_garden)return CreateGardenBoulder(root,cell);
         if(_blizzard)return CreateIceCone(root,cell);
         if(Layout.Id==BlastStages.UpAndDown)return CreateUpAndDownCover(root,cell);

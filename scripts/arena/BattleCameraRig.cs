@@ -1,6 +1,7 @@
 using Godot;
 using System.Text.Json;
 using BlastCircuit.Arena.Stages;
+using Bomber.Game.Simulation.Stages;
 namespace BlastCircuit.Arena;
 
 /// <summary>Fits playable terrain and standing characters into the space between the HUD and footer.</summary>
@@ -9,7 +10,9 @@ public sealed partial class BattleCameraRig(Camera3D camera)
     private readonly List<Vector3> _bounds=[];
     private Vector3 _center=new(10.5f,2,11.5f);
     private Vector2 _offset;
-    private bool _training, _castle, _blizzard, _pyramid, _garden;
+    private bool _training, _castle, _blizzard, _pyramid, _garden, _ship;
+    /// <summary>Presentation-only map transform, used when measuring the rocking ship.</summary>
+    public Transform3D MapTransform {get;set;}=Transform3D.Identity;
     /// <summary>View depth of the closest/farthest playable point; depth cues stay outside this range.</summary>
     public Vector2 PlayableDepth {get;private set;}=new(20,40);
     /// <summary>Radial camera distance for depth fog, which uses length(view position), not axial depth.</summary>
@@ -18,6 +21,7 @@ public sealed partial class BattleCameraRig(Camera3D camera)
     {
         _bounds.Clear();
         _garden=stage.GetProperty("id").GetString()=="rock-garden";
+        _ship=stage.GetProperty("id").GetString()==BlastStages.SeaSick;
         _blizzard=stage.GetProperty("id").GetString()=="blizzard-battle";
         _castle=stage.GetProperty("id").GetString() is "top-rules" or "greedy-trap" or "field-of-grass" or "in-the-gutter";
         _training=stage.GetProperty("id").GetString()=="circuit-garden";
@@ -37,11 +41,15 @@ public sealed partial class BattleCameraRig(Camera3D camera)
             int kind=cell.GetProperty("k").GetInt32();
             if(kind is 2 or 3)return;
             float y=(kind==4?cell.GetProperty("rt"):cell.GetProperty("t")).GetSingle()*TempleStageView.HeightScale;
+            float head=kind==1?(cell.TryGetProperty("oh",out var crown)&&crown.ValueKind==JsonValueKind.Number?crown.GetSingle()*TempleStageView.HeightScale:1.21f):2.1f;
+            // Tall mast/rigging may extend beyond the frame; fit the actual
+            // combat surface and standing headroom instead of the masthead.
+            if(_ship&&kind==1)head=Mathf.Min(head,2.1f);
             foreach(float dx in new[]{0f,1f})foreach(float dz in new[]{0f,1f})
             {
                 _bounds.Add(new(x+dx,y,z+dz));
                 // Match solid pillar crowns and keep standing-player headroom on walkable cells.
-                _bounds.Add(new(x+dx,y+(kind==1?(cell.TryGetProperty("oh",out var crown)&&crown.ValueKind==JsonValueKind.Number?crown.GetSingle()*TempleStageView.HeightScale:1.21f):2.1f),z+dz));
+                _bounds.Add(new(x+dx,y+head,z+dz));
             }
         }
     }
@@ -93,7 +101,7 @@ public sealed partial class BattleCameraRig(Camera3D camera)
         var view=camera.GetCameraTransform().AffineInverse();
         foreach(var point in _bounds)
         {
-            var position=view*point;float depth=-position.Z;
+            var position=view*(MapTransform*point);float depth=-position.Z;
             nearest=Mathf.Min(nearest,depth);farthest=Mathf.Max(farthest,depth);
             distance=Mathf.Max(distance,position.Length());
         }

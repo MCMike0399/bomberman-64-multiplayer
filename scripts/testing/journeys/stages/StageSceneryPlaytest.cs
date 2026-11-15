@@ -19,6 +19,7 @@ public partial class PlaytestDriver
         (BlastStages.BlizzardBattle,["Igloo","Snowman","Penguin","PineTree","FrozenPond","GlacierPeak","GlacierArch","FrozenCrown","WinterTree","ExteriorSnowfall"]),
         (BlastStages.GreedyTrap,["GreedyWestRowboat","GreedyEastRowboat","Sailboat","Gull"]),
         (BlastStages.FieldOfGrass,["Windmill","RoundTree","FlowerBed","Butterfly","MeadowSeedBarn","MeadowHayCart","MeadowKite"]),
+        (BlastStages.SeaSick,["PortEscort","StarboardEscort","Gull","Buoy","HarborIslet"]),
         (BlastStages.CircuitGarden,["TargetRaft","Jetty","Buoy","PalmTree"]),
     ];
 
