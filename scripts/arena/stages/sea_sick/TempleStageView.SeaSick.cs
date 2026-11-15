@@ -39,14 +39,14 @@ public partial class TempleStageView
             // The deck is a thin slab. Only the gallery's inner riser is tall;
             // the outer hull is shaped separately rather than a solid box tray.
             if(x is not (0 or 18))
-                Box(this,new(x+.5f,(y-.14f-.38f)/2,z+.5f),new(.998f,y-.14f+.38f,.998f),dark);
+                Box(this,new(x+.5f,(y-.14f-.38f)/2,z==0?.70f:z==18?18.30f:z+.5f),new(.998f,y-.14f+.38f,z is 0 or 18?.60f:.998f),dark);
             if(x is 0 or 18||z is 0 or 18)
             {
                 bool side=x is 0 or 18;
                 Box(this,new(x+.5f,y+.20f,z+.5f),new(side?.22f:.99f,.40f,side?.99f:.22f),green,.025f).Name="Gunwale";
                 Box(this,new(x+.5f,y+.41f,z+.5f),new(side?.28f:.99f,.07f,side?.99f:.28f),gold,.018f);
                 Sphere(this,new(x+.5f,y+.58f,z+.5f),Vector3.One*.13f,gold);
-                ShipRope(new(x+(side?.5f:0),y+.55f,z+(side?0:.5f)),new(x+(side?.5f:1),y+.55f,z+(side?1:.5f)),.026f,gold);
+                ShipRope(new(x+(side?.5f:0),y+.55f,z+(side?0:.5f)),new(x+(side?.5f:1),y+.55f,z+(side?1:.5f)),.055f,gold);
             }
         }
         foreach(var (x,z) in new[]{(9,8),(5,11),(13,11)})
@@ -54,7 +54,13 @@ public partial class TempleStageView
             float height=Layout.At(x,z).ObstacleHeight!.Value*HeightScale;
             var post=new Node3D{Name=x==9?"MainMast":"ForwardPost"+x,Position=new(x+.5f,0,z+.5f)};AddChild(post);
             if(x==9)
-                ShipLathe(post,Vector3.Zero,[(0,.46f),(1.15f,.44f),(height-.25f,.34f),(height,.30f)],ShipPaint("ae7a49",true),"main-mast");
+            {
+                var paint=ShipPaint("ae7a49",true);
+                ShipLathe(post,Vector3.Zero,[(0,.46f),(1.15f,.44f),(height-.25f,.34f),(height,.30f)],paint,"main-mast");
+                // Upper spar is cosmetic and exits the battle frame cleanly.
+                var upper=ShipLathe(post,Vector3.Zero,[(height,.30f),(12.4f,.18f)],paint,"upper-mast");
+                upper.CastShadow=GeometryInstance3D.ShadowCastingSetting.Off;
+            }
             else if(x==5)
             {
                 ShipLathe(post,Vector3.Zero,[(0,.45f),(.22f,.47f),(.38f,.34f),(height-.20f,.34f),(height-.12f,.47f),(height,.47f)],oak,"capstan-post");
@@ -72,8 +78,14 @@ public partial class TempleStageView
         }
         // Thick shrouds finish beyond the court; their in-court spans remain
         // above standing headroom. Sail/decor refinement follows shape approval.
-        foreach(float x in new[]{8.1f,10.9f})foreach(float z in new[]{-1.7f,20.7f})
-            ShipRope(new(9.5f,6.75f,8.5f),new(x,1.35f,z),.075f,gold);
+        foreach(float x in new[]{8.1f,10.9f})
+        {
+            var eye=ShipLathe(this,new(x,.445f,.35f),[(0,.105f),(1.2f,.105f)],gold,"far-deadeye");
+            eye.CastShadow=GeometryInstance3D.ShadowCastingSetting.Off;
+            ShipRope(new(9.5f,12,8.5f),new(x,1.65f,.35f),.075f,gold).Name=$"FarShroud{x}";
+        }
+        ShipRope(new(9.5f,12,8.5f),TubbyBowspritTip(),.075f,gold).Name="Forestay";
+        ShipRope(new(9.5f,12,8.5f),new(-3.3f,3.2f,9.5f),.075f,gold).Name="Backstay";
 
         if(IncludeScenery)
         {
@@ -95,7 +107,7 @@ public partial class TempleStageView
             if(cell.Kind==CellKind.Ramp||InnerPost(x)){x++;continue;}
             int run=1,limit=3+(x+z*7)%4;
             while(run<limit&&x+run<Width&&Layout.At(x+run,z).Tier==cell.Tier&&Layout.At(x+run,z).Kind!=CellKind.Ramp&&!InnerPost(x+run))run++;
-            Box(this,new(x+run/2f,cell.Tier*HeightScale-.07f,z+.5f),new(run-.015f,.14f,.985f),
+            Box(this,new(x+run/2f,cell.Tier*HeightScale-.07f,z==0?.70f:z==18?18.30f:z+.5f),new(run-.015f,.14f,z is 0 or 18?.60f:.985f),
                 (x*7+z*13)%4==0?pale:oak,.014f).Name=$"DeckPlank{x}_{z}";
             x+=run;
         }
@@ -133,12 +145,13 @@ public partial class TempleStageView
         return root;
     }
 
-    private void ShipRope(Vector3 a,Vector3 b,float radius,Material paint)
+    private MeshInstance3D ShipRope(Vector3 a,Vector3 b,float radius,Material paint)
     {
         var delta=b-a;float length=delta.Length();
         var rope=ShipLathe(this,(a+b)/2,[(-length/2,radius),(length/2,radius)],paint,$"rope:{length}:{radius}");
         var up=delta/length;var right=up.Cross(Math.Abs(up.Z)<.9f?Vector3.Back:Vector3.Right).Normalized();
         rope.Basis=new(right,up,right.Cross(up));rope.Name="Rigging";
+        rope.CastShadow=GeometryInstance3D.ShadowCastingSetting.Off;return rope;
     }
 
     /// <summary>Owned portable mesh generator: no new platform-native primitive tuples.</summary>

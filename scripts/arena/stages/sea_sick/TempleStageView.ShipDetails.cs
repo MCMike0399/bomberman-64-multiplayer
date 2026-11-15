@@ -16,12 +16,18 @@ public partial class TempleStageView
         AddChild(new MeshInstance3D{Name="CutterWaleFar",Mesh=TubbyHullMesh(Mathf.Pi-.145f,Mathf.Pi-.055f),MaterialOverride=cream});
         AddChild(new MeshInstance3D{Name="CutterShoulders",Mesh=TubbyShoulderMesh(),MaterialOverride=timber});
 
-        // Large silhouette features only for the first shape study. The bow is
-        // right, stern left: neither is hidden under the battle HUD or footer.
-        var bowsprit=ShipLathe(this,new(22.5f,1.8f,9.5f),[(-.7f,.22f),(1.35f,.13f)],timber,"tubby-bowsprit");
-        bowsprit.Basis=PresentationMath.Rotation(new(0,0,-Mathf.Pi/2));bowsprit.Name="CutterBowsprit";
-        var rudder=Box(this,new(-3.55f,-1.5f,9.5f),new(.42f,2.9f,1.9f),navy,.2f);rudder.Name="CutterRudder";
-        Box(this,new(-2.95f,1.45f,9.5f),new(2.2f,.28f,6.4f),timber,.18f).Name="SternTransomCap";
+        // The converging bow is a rising cambered mass. The stern is a broad
+        // transom and curved taffrail; neither end is an extra flat shelf.
+        var heel=new Vector3(22.5f,2.95f,9.5f);var tip=TubbyBowspritTip();var up=(tip-heel).Normalized();
+        var bowsprit=ShipLathe(this,heel,[(0,.23f),((tip-heel).Length(),.16f)],timber,"tubby-raked-bowsprit");
+        var right=up.Cross(Vector3.Back).Normalized();bowsprit.Basis=new(right,up,right.Cross(up));bowsprit.Name="CutterBowsprit";
+        Box(this,new(-3.55f,-1.5f,9.5f),new(.42f,2.9f,1.9f),navy,.2f).Name="CutterRudder";
+        AddChild(new MeshInstance3D{Name="CutterTaffrail",Mesh=TubbyTaffrailMesh(),MaterialOverride=cream});
+        var slices=TubbySlices();
+        foreach(float angle in new[]{0f,Mathf.Pi})for(int i=0;i<slices.Length-1;i++)
+            if(slices[i]>=19)
+                ShipRope(TubbyPoint(slices[i],angle)+Vector3.Up*.1f,TubbyPoint(slices[i+1],angle)+Vector3.Up*.1f,.105f,cream).Name="ConvergingBowRail";
+
     }
 
     private static (float X,float Beam,float Sheer,float Keel)[] TubbySections()=>TubbyHullSections;
@@ -44,12 +50,13 @@ public partial class TempleStageView
     {
         var section=TubbySection(x);var(sin,cos)=PresentationMath.SinCos(angle);
         float fall=sin*(1.1f-.1f*sin);
-        return new(x,section.Sheer-(section.Sheer-section.Keel)*fall,9.5f+section.Beam*cos*(1+.22f*sin));
+        float q=Mathf.Clamp(sin/.22f,0,1),belly=.355f*16*q*q*(1-q)*(1-q);
+        return new(x,section.Sheer-(section.Sheer-section.Keel)*fall,9.5f+(section.Beam+belly)*cos);
     }
 
     private static Vector3 TubbyNormal(float x,float angle)
     {
-        float left=Math.Max(-3.5f,x-.01f),right=Math.Min(22.7f,x+.01f);
+        float left=Math.Max(-3.2f,x-.01f),right=Math.Min(22.8f,x+.01f);
         float low=Math.Max(0,angle-.002f),high=Math.Min(Mathf.Pi,angle+.002f);
         var along=TubbyPoint(right,angle)-TubbyPoint(left,angle);
         var around=TubbyPoint(x,high)-TubbyPoint(x,low);
@@ -75,7 +82,7 @@ public partial class TempleStageView
         void Vertex(float x,float angle)
         {
             var normal=TubbyNormal(x,angle);var p=TubbyPoint(x,angle)+normal*(caps?0:.012f);
-            surface.SetNormal(normal);surface.SetUV(new((x+3.5f)/26.2f,angle/Mathf.Pi));surface.AddVertex(p);
+            surface.SetNormal(normal);surface.SetUV(new((x+3.2f)/26f,angle/Mathf.Pi));surface.AddVertex(p);
         }
         for(int i=0;i<slices.Length-1;i++)for(int ring=0;ring<rings;ring++)
         {
@@ -83,7 +90,7 @@ public partial class TempleStageView
             // (c-a) cross (b-a) points outward: Godot's visible front is clockwise.
             Vertex(x,a);Vertex(next,a);Vertex(next,b);Vertex(x,a);Vertex(next,b);Vertex(x,b);
         }
-        if(caps)foreach(var (x,normal) in new[]{(-3.5f,Vector3.Left),(22.7f,Vector3.Right)})
+        if(caps)foreach(var (x,normal) in new[]{(-3.2f,Vector3.Left),(22.8f,Vector3.Right)})
         {
             var section=TubbySection(x);var centre=new Vector3(x,(section.Sheer+section.Keel)/2,9.5f);
             for(int ring=0;ring<rings;ring++)
@@ -118,16 +125,60 @@ public partial class TempleStageView
             float x=slices[i],next=slices[i+1];
             if(next<=0||x>=19)
             {
-                Quad(TubbyPoint(x,0),TubbyPoint(next,0),TubbyPoint(next,Mathf.Pi),TubbyPoint(x,Mathf.Pi));
+                const int across=24;
+                Vector3 Cap(float at,float v)
+                {
+                    var section=TubbySection(at);
+                    float hump=at>=19?.40f*PresentationMath.Sin(Mathf.Clamp((at-19)/3.8f,0,1)*Mathf.Pi):.10f;
+                    return new(at,section.Sheer+hump*(1-v*v),9.5f+section.Beam*v);
+                }
+                for(int span=0;span<across;span++)
+                {
+                    float a=-1+2*span/(float)across,b=-1+2*(span+1)/(float)across;
+                    Quad(Cap(x,a),Cap(next,a),Cap(next,b),Cap(x,b));
+                }
                 continue;
             }
-            float Floor(float at)=>at<=3.01f||at>=15.99f?1.20f:-.15f;
+            float Rail(float at)=>at<3||at>=16?1.795f:.445f;
             foreach(bool near in new[]{true,false})
             {
-                float angle=near?0:Mathf.Pi,edge=near?19:0;
-                Quad(new(x,Floor(x),edge),new(next,Floor(next),edge),TubbyPoint(next,angle),TubbyPoint(x,angle));
+                float angle=near?0:Mathf.Pi,edge=near?18.5f:.5f;
+                Quad(new(x,Rail(x),edge),new(next,Rail(next),edge),TubbyPoint(next,angle),TubbyPoint(x,angle));
             }
         }
+        surface.Index();return ShipMeshes[key]=surface.Commit();
+    }
+
+
+    private static Vector3 TubbyBowspritTip()
+    {
+        var(sin,cos)=PresentationMath.SinCos(Mathf.Pi/9);
+        return new Vector3(22.5f,2.95f,9.5f)+new Vector3(cos,sin,0)*2.2f;
+    }
+
+    private static ArrayMesh TubbyTaffrailMesh()
+    {
+        const string key="tubby-taffrail";if(ShipMeshes.TryGetValue(key,out var cached))return cached;
+        var surface=new SurfaceTool();surface.Begin(Mesh.PrimitiveType.Triangles);
+        Vector3 Point(float v,bool outer,bool top)=>new(-3.15f-.35f*(1-v*v)+(outer?-.18f:.18f),top?3.15f+.12f*(1-v*v):1.05f,9.5f+8.25f*v);
+        void Quad(Vector3 a,Vector3 b,Vector3 c,Vector3 d,Vector3 outward)
+        {
+            foreach(var triangle in new[]{new[]{a,b,c},new[]{a,c,d}})
+            {
+                var normal=(triangle[2]-triangle[0]).Cross(triangle[1]-triangle[0]).Normalized();
+                if(normal.Dot(outward)<0){(triangle[1],triangle[2])=(triangle[2],triangle[1]);normal=-normal;}
+                foreach(var p in triangle){surface.SetNormal(normal);surface.SetUV(new(p.Z*.2f,p.Y));surface.AddVertex(p);}
+            }
+        }
+        for(int i=0;i<32;i++)
+        {
+            float a=-1+i/16f,b=-1+(i+1)/16f;
+            Quad(Point(a,true,false),Point(b,true,false),Point(b,true,true),Point(a,true,true),Vector3.Left);
+            Quad(Point(a,false,false),Point(b,false,false),Point(b,false,true),Point(a,false,true),Vector3.Right);
+            Quad(Point(a,true,true),Point(b,true,true),Point(b,false,true),Point(a,false,true),Vector3.Up);
+            Quad(Point(a,true,false),Point(b,true,false),Point(b,false,false),Point(a,false,false),Vector3.Down);
+        }
+        foreach(float end in new[]{-1f,1f})Quad(Point(end,true,false),Point(end,false,false),Point(end,false,true),Point(end,true,true),end<0?Vector3.Forward:Vector3.Back);
         surface.Index();return ShipMeshes[key]=surface.Commit();
     }
 
@@ -145,12 +196,13 @@ public partial class TempleStageView
             _shipStudyMaterials.Clear();_graphicsRevision=-1;return;
         }
         var body=_art.Color(new Color(.27f,.27f,.27f),.95f);var trim=_art.Color(new Color(.80f,.80f,.80f),.95f);
-        var deck=_art.Color(new Color(.60f,.60f,.60f),.95f);var sea=_art.Color(new Color(.38f,.38f,.38f),.95f);
+        var deck=_art.Color(new Color(.60f,.60f,.60f),.95f);
         foreach(var mesh in Descendants(this).OfType<MeshInstance3D>())
         {
-            _shipStudyMaterials.TryAdd(mesh,mesh.MaterialOverride);
             string name=mesh.Name.ToString();
-            mesh.MaterialOverride=name.StartsWith("CutterWale")?trim:name=="ShipOcean"||name=="Seabed"?sea:
+            if(name is "ShipOcean" or "Seabed")continue;
+            _shipStudyMaterials.TryAdd(mesh,mesh.MaterialOverride);
+            mesh.MaterialOverride=name.StartsWith("CutterWale")?trim:
                 name=="CutterHull"||name=="CutterRudder"?body:deck;
         }
     }

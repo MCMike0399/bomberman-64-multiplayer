@@ -61,8 +61,11 @@ the exterior ocean/life and retain the original ship geometry.
 The **Tubby Cutter** shape study (2026-11-15) runs the ship left to right:
 left sterncastle and right forecastle reuse the existing raised galleries.
 A continuous loft of curved U-shaped sections gives the body a broad belly,
-raised sheer at both ends and a tapered right bow. Curved shoulders lie outside
-the unchanged court, with a cream wale, a stubby bowsprit and a left rudder.
+with its rail at the hull top and at most a .15-cell outboard ledge. The wale
+flares about .30 cell below it. The right bow is a rising cambered whaleback
+with converging rails and a 2.2-cell bowsprit raked 20°; the left has a broad
+transom, curved taffrail and rudder. Raised ends exaggerate the sheer while
+the waist stays low. All masses remain outside or below the unchanged court.
 The mast is round and tapered, and the two forward obstacles read as a capstan
 and bitts within their existing authority footprints. Long planks follow X with
 staggered butt joints. Previous small cabin/porthole dressing is excluded while
@@ -70,9 +73,14 @@ the sculptural body is reviewed.
 
 `sea-sick-shape-study` is an explicit grayscale material inspection of an actual
 ordinary local battle with cover disabled through advanced settings. It retains
-Low/High battle views, observed maximum roll, a wide oblique view and a lower
-profile view. The real camera is unchanged in the battle captures. Material
-inspection is off in ordinary play; it never changes accepted state. The study
+Low/High battle views, both observed roll extrema on High, a wide oblique view
+and a lower profile view. It keeps the actual desaturated ocean as a fixed
+water reference. Sea Sick's battle fit reserves roughly 78% of frame width for
+the playable court and lifts it so the near wale clears the hint row. Other
+stages keep their framing. Far shrouds and high forestay/backstay cast no
+shadows; near shrouds and stub yards are omitted. The upper mast extension is
+cosmetic; its authority obstacle height remains unchanged. Material inspection is off
+in ordinary play; it never changes accepted state. The study
 must pass native grayscale/320px silhouette review before surface and ambient
 life refinement. Numeric winding/extent checks do not approve the massing.
 

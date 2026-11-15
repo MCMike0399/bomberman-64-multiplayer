@@ -7,7 +7,7 @@ namespace BlastCircuit.Arena;
 /// <summary>Fits playable terrain and standing characters into the space between the HUD and footer.</summary>
 public sealed partial class BattleCameraRig(Camera3D camera)
 {
-    private readonly List<Vector3> _bounds=[];
+    private readonly List<Vector3> _bounds=[],_compositionBounds=[];
     private Vector3 _center=new(10.5f,2,11.5f);
     private Vector2 _offset;
     private bool _training, _castle, _blizzard, _pyramid, _garden, _ship;
@@ -19,7 +19,7 @@ public sealed partial class BattleCameraRig(Camera3D camera)
     public float PlayableDistance {get;private set;}=40;
     public void SetStage(JsonElement stage)
     {
-        _bounds.Clear();
+        _bounds.Clear();_compositionBounds.Clear();
         _garden=stage.GetProperty("id").GetString()=="rock-garden";
         _ship=stage.GetProperty("id").GetString()==BlastStages.SeaSick;
         _blizzard=stage.GetProperty("id").GetString()=="blizzard-battle";
@@ -34,6 +34,8 @@ public sealed partial class BattleCameraRig(Camera3D camera)
             int x=i%width,z=i++/width;
             AddCell(cell,x,z);
         }
+        if(_ship)
+            _compositionBounds.AddRange([new(-3.7f,3.3f,1.2f),new(-3.7f,3.3f,17.8f),new(-3.7f,-2.1f,9.5f),new(24.6f,3.8f,9.5f),new(9.5f,-2.1f,18.95f)]);
         Fit();
         void AddCell(JsonElement cell,int x,int z)
         {
@@ -76,8 +78,19 @@ public sealed partial class BattleCameraRig(Camera3D camera)
                 foreach(var point in _bounds){var screen=project(point)/viewport;min=min.Min(screen);max=max.Max(screen);}
                 // Keep the full playable silhouette inside the HUD-safe band while using more
                 // of the available screen for the arena instead of the surrounding water.
-                var delta=(min+max)*.5f-new Vector2(.5f,_training?.445f:.5175f);
-                if(pass==4)return min.X>=.025f&&max.X<=.975f&&min.Y>=.145f&&max.Y<=(_training?.745f:.89f);
+                var delta=(min+max)*.5f-new Vector2(.5f,_training?.445f:_ship?.4675f:.5175f);
+                // Sea Sick earns space for the curved hull and raised ends, and
+                // keeps the near wale above the control-hint row.
+                if(pass==4)
+                {
+                    if(min.X<(_ship?.11f:.025f)||max.X>(_ship?.89f:.975f)||min.Y<.145f||max.Y>(_training?.745f:_ship?.79f:.89f))return false;
+                    foreach(var point in _compositionBounds)
+                    {
+                        var screen=project(point)/viewport;
+                        if(screen.X<.025f||screen.X>.975f||screen.Y<.13f||screen.Y>.90f)return false;
+                    }
+                    return true;
+                }
                 var origin=project(_center);
                 float pixelsX=(project(_center+camera.GlobalBasis.X)-origin).Length();
                 float pixelsY=(project(_center+camera.GlobalBasis.Y)-origin).Length();
