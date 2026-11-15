@@ -48,6 +48,12 @@ public partial class TempleStageView
             _gutterWater.Shader=ArtMaterials.GutterWaterShaderFor(GraphicsQuality.Current);
             GraphicsQuality.ApplyShaderDetail(_gutterWater);
             if(_lighting!=null)_lighting.ApplyWater(_gutterWater);
+            _gutterWater.SetShaderParameter("wind_strength",.2f);
+            if(_gutterOceanWater!=null)
+            {
+                _gutterOceanWater.Shader=ArtMaterials.GutterOceanShaderFor(GraphicsQuality.Current);
+                GraphicsQuality.ApplyShaderDetail(_gutterOceanWater);ApplyGutterOceanLighting();
+            }
             foreach(var material in _gutterMaterials)GraphicsQuality.ApplyShaderDetail(material);
             _graphicsRevision=GraphicsQuality.Revision;
         }
@@ -76,8 +82,7 @@ public partial class TempleStageView
         Box(this,new(Width/2f,-.17f,Depth/2f),new(Width-2,.2f,Depth-2),mosaic,.035f).Name="GutterSubmergedPaving";
         _gutterWater=new ShaderMaterial{Shader=ArtMaterials.GutterWaterShaderFor(GraphicsQuality.Current),RenderPriority=-16};
         _gutterWater.SetShaderParameter("wind_strength",.2f);_gutterWater.SetShaderParameter("seabed_height",-1f);
-        AddChild(new MeshInstance3D{Name="GutterShallowWater",Mesh=GutterPlane(1,Width-1,1,Depth-1),
-            MaterialOverride=_gutterWater,Position=new(0,.035f,0),CastShadow=GeometryInstance3D.ShadowCastingSetting.Off});
+        GutterWaterPlane(this,"GutterShallowWater",1,Width-1,1,Depth-1,.035f,_gutterWater);
 
         // These perimeter cells are not walkable: a half-round coping
         // communicates a barrier while staying within the authored crown.
@@ -90,11 +95,23 @@ public partial class TempleStageView
         }
         GutterGantry(this,-1,verdigris,brass,cream);
         GutterGantry(this,1,verdigris,brass,cream);
+        GutterWorkLantern(new(.24f,2.35f,Depth+.1f),verdigris,brass);
+        GutterWorkLantern(new(Width-.24f,2.35f,Depth+.1f),verdigris,brass);
         foreach(int x in new[]{4,15})foreach(int z in new[]{4,15})GutterBollard(x,z,brick,cream,brass,algae);
         GutterFishVane(brick,cream,brass,dark);
-        BuildCopperLockEnds(brick,cream,verdigris,brass,dark);
+        BuildCopperLockEnds(brick,cream,verdigris,brass,dark,mosaic);
         BuildGutterLeaves();
         if(IncludeScenery)BuildCopperLockCoreWater();
+    }
+
+    private static MeshInstance3D GutterWaterPlane(Node3D parent,string name,float left,float right,float back,float front,float height,Material material,int divisions=20)
+    {
+        // Shared water centers its radial effects at NODE_POSITION_WORLD.
+        // Localizing this grid preserves its world footprint and UVs.
+        float x=(left+right)/2,z=(back+front)/2;
+        var node=new MeshInstance3D{Name=name,Mesh=GutterPlane(left-x,right-x,back-z,front-z,divisions),
+            Position=new(x,height,z),MaterialOverride=material,CastShadow=GeometryInstance3D.ShadowCastingSetting.Off};
+        parent.AddChild(node);return node;
     }
 
     private static ArrayMesh GutterPlane(float left,float right,float back,float front,int divisions=20)

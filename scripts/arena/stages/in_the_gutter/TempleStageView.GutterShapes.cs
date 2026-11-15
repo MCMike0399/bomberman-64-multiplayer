@@ -248,6 +248,16 @@ public partial class TempleStageView
         AddGutterWake(post,new(0,.07f,0),1);
     }
 
+    private void GutterWorkLantern(Vector3 position,Material verdigris,Material brass)
+    {
+        var lamp=Prop(this,position.X<Width/2f?"CopperLockWestLantern":"CopperLockEastLantern",position);
+        RoundedBox(lamp,Vector3.Zero,new(.56f,.75f,.48f),verdigris,.4f);
+        Box(lamp,new(0,.01f,.25f),new(.35f,.48f,.035f),Glow(new Color("eab978"),1.15f),.025f);
+        RoundedBox(lamp,new(0,.43f,0),new(.69f,.14f,.61f),brass,.6f);
+        lamp.AddChild(new OmniLight3D{Name="CopperLockWorkLight",Position=new(0,0,.4f),
+            LightColor=new Color("eac084"),LightEnergy=.32f,OmniRange=3.3f,ShadowEnabled=false});
+    }
+
     public void SetGutterCompression(float left,float right)
     {
         if(!_gutter||_gutterGates.Count!=2)return;

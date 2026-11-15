@@ -30,7 +30,7 @@ public partial class TempleStageView : Node3D
     private bool _gutter;
     private float _gutterClock,_gutterFlow;
     private Node3D? _gutterArrow;
-    private ShaderMaterial? _gutterWater,_gutterWakeMaterial;
+    private ShaderMaterial? _gutterWater,_gutterOceanWater,_gutterWakeMaterial;
     private int _gutterDirection;
     private float _gutterFishYaw,_gutterGearPose,_gutterGearTarget;
     private readonly List<(Node3D Gear,float Phase)> _gutterGears=[];
@@ -76,7 +76,12 @@ public partial class TempleStageView : Node3D
         _lighting=lighting;
         if(_water?.MaterialOverride is ShaderMaterial material)lighting.ApplyWater(material);
         if(_greedyMoat?.MaterialOverride is ShaderMaterial moat)lighting.ApplyWater(moat);
-        if(_gutterWater!=null)lighting.ApplyWater(_gutterWater);
+        if(_gutterWater!=null)
+        {
+            lighting.ApplyWater(_gutterWater);
+            _gutterWater.SetShaderParameter("wind_strength",.2f);
+        }
+        if(_gutterOceanWater!=null)ApplyGutterOceanLighting();
         foreach(var frozen in _frozenMaterials)lighting.ApplyKeyLight(frozen);
     }
     public void SetWaterLevel(float tierLevel)

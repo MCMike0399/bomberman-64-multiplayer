@@ -18,7 +18,7 @@ public partial class PlaytestDriver
         (BlastStages.TopRules,["FortressCrag","Turret","WallBanner","Cloud","FloatingIslet","Starfield","RingedPlanet","BluePlanet","OrbitingMoon","AsteroidBelt","Nebula"]),
         (BlastStages.BlizzardBattle,["Igloo","Snowman","Penguin","PineTree","FrozenPond","GlacierPeak","GlacierArch","FrozenCrown","WinterTree","ExteriorSnowfall"]),
         (BlastStages.GreedyTrap,["GreedyWestRowboat","GreedyEastRowboat","Sailboat","Gull"]),
-        (BlastStages.InTheGutter,["CopperLockReedBank","CopperLockReeds"]),
+        (BlastStages.InTheGutter,["CopperLockWestMachine","CopperLockEastMachine","CopperLockChannelStub","CopperLockFishBody","CopperLockOuterWater"]),
         (BlastStages.CircuitGarden,["TargetRaft","Jetty","Buoy","PalmTree"]),
     ];
 
@@ -122,18 +122,21 @@ public partial class PlaytestDriver
     private async Task CheckScenery(string stage,TempleStageView terrain,string[] signature)
     {
         var scenery=terrain.Scenery;
-        Check(scenery!=null&&scenery.IsVisibleInTree()&&scenery.Name==TempleStageView.SceneryNodeName,"arena has visible decorative scenery: "+stage);
+        bool copper=stage==BlastStages.InTheGutter;
+        Check(scenery!=null&&scenery.Name==TempleStageView.SceneryNodeName&&(copper?terrain.IsVisibleInTree():scenery.IsVisibleInTree()),
+            copper?"Copper Lock's integrated presentation is visible":"arena has visible decorative scenery: "+stage);
         if(scenery==null)return;
+        Node3D presentation=copper?terrain:scenery;
         foreach(var name in signature)
-            Check(AuditDescendants(scenery).Any(n=>n.Name.ToString().TrimStart('@').StartsWith(name,StringComparison.Ordinal)),$"{stage} scenery includes {name}");
-        Check(!AuditDescendants(scenery).OfType<CollisionObject3D>().Any(),"scenery adds no collision bodies: "+stage);
-        var problems=AuditModelProblems(scenery,out int meshes,out int vertices);
+            Check(AuditDescendants(presentation).Any(n=>n.Name.ToString().TrimStart('@').StartsWith(name,StringComparison.Ordinal)),$"{stage} scenery includes {name}");
+        Check(!AuditDescendants(presentation).OfType<CollisionObject3D>().Any(),"presentation adds no collision bodies: "+stage);
+        var problems=AuditModelProblems(presentation,out int meshes,out int vertices);
         Event("scenery-geometry",new{stage,meshes,vertices,motions=terrain.SceneryMotionCount,problems=problems.Take(5)});
-        // Copper Lock intentionally has one quiet reed-bank vignette. Its
-        // machines are core terrain and receive a separate actual-face/Low audit.
-        int minimumMeshes=stage==BlastStages.InTheGutter?6:20;
+        // Copper Lock's machinery/channel are integrated core terrain; it has
+        // no separate island dressing. Audit that real presentation, not padding.
+        const int minimumMeshes=20;
         Check(problems.Count==0&&meshes>=minimumMeshes,$"scenery geometry is finite, nonempty and textured: {stage} meshes={meshes} {string.Join("; ",problems.Take(3))}");
-        Check(terrain.SceneryMotionCount>0,"scenery has animated life: "+stage);
+        if(!copper)Check(terrain.SceneryMotionCount>0,"scenery has animated life: "+stage);
         if(stage==BlastStages.BlizzardBattle)
         {
             var snow=AuditDescendants(scenery).OfType<BlizzardWeather>().Single();
@@ -142,28 +145,33 @@ public partial class PlaytestDriver
             float before=snow.Clock;await Frames(6);
             Check(snow.Clock>before&&snow.Wind==terrain.Weather!.Wind,"exterior snowfall animates with accepted court wind");
         }
-        var intrusions=SceneryIntrusions(terrain);
+        var intrusions=SceneryIntrusions(terrain,copper?presentation:null);
         Check(intrusions.Count==0,$"scenery stays outside every walkable cell's standing volume: {stage} {string.Join(", ",intrusions.Take(6))}");
 
         // Animated props actually move, and placement still holds mid-animation.
-        var tracked=AuditDescendants(scenery).OfType<Node3D>().ToDictionary(n=>n,n=>n.Transform);
+        var tracked=AuditDescendants(presentation).OfType<Node3D>().ToDictionary(n=>n,n=>n.Transform);
         await Frames(24);
         int moved=tracked.Count(p=>GodotObject.IsInstanceValid(p.Key)&&!p.Key.Transform.IsEqualApprox(p.Value));
         Check(moved>0,$"scenery animates over real frames: {stage} moved={moved}");
-        intrusions=SceneryIntrusions(terrain);
+        intrusions=SceneryIntrusions(terrain,copper?presentation:null);
         Check(intrusions.Count==0,$"animated scenery remains outside play space: {stage} {string.Join(", ",intrusions.Take(6))}");
     }
 
     /// <summary>Mesh bounds in arena space against each passable cell's floor-to-headroom column.</summary>
-    private static List<string> SceneryIntrusions(TempleStageView terrain)
+    private static List<string> SceneryIntrusions(TempleStageView terrain,Node3D? presentation=null)
     {
         var layout=terrain.Layout;var inverse=terrain.GlobalTransform.AffineInverse();var hits=new List<string>();
         const float slack=.08f,headroom=2.1f;
-        foreach(var geometry in AuditDescendants(terrain.Scenery!).OfType<GeometryInstance3D>())
+        foreach(var geometry in AuditDescendants(presentation??terrain.Scenery!).OfType<GeometryInstance3D>())
         {
             // Tiny snowflakes deliberately pass over the court, like its existing
             // weather. Solid props must still satisfy every standing-volume check.
             if(geometry.GetParent() is BlizzardWeather)continue;
+            // Copper's intentionally floor-level water/foam/leaves are current
+            // cues, not solid scenery. Its structural pieces still pass below.
+            string kind=geometry.Name.ToString();
+            if(presentation!=null&&(kind.Contains("Water",StringComparison.Ordinal)||kind=="CopperLockFoamWake"||
+                geometry.GetParent().Name.ToString().StartsWith("CopperLockDriftingLeaf",StringComparison.Ordinal)))continue;
             if(!geometry.IsVisibleInTree())continue;
             // Test each tuft/star rather than the MultiMesh's union: a perimeter
             // planting surrounds the court but none of its instances occupies it.

@@ -218,6 +218,7 @@ public partial class PlaytestDriver
             _root.StartLocal(new SessionSettings(Stage:BlastStages.InTheGutter,Bots:0,SuddenDeath:false),4);
             await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"water-contact regression enters actual Gutter battle",180);
             var terrain=AuditDescendants(LightingArena).OfType<TempleStageView>().Single();
+            CheckCopperWaterInputs(terrain);
             var water=(ShaderMaterial)terrain.GetNode<MeshInstance3D>("GutterShallowWater").MaterialOverride;
             var tracer=terrain.GutterWakeMaterial!;
             Check(water.Shader==ArtMaterials.GutterWaterShaderFor(GraphicsPreset.High),"regression observes the actual specialized High surface");
