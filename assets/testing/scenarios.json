@@ -1036,7 +1036,7 @@
         "ui"
       ],
       "headless": false,
-      "timeout": 1500,
+      "timeout": 1800,
       "manual": false
     },
     {

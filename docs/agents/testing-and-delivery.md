@@ -1223,3 +1223,18 @@ release at or before v0.45.0 permits the historical receipt format.
 Any runtime error blocks, even if gameplay assertions pass. Verbose engine output
 keeps leak types available; audio resource warnings and native ICE errors must be
 classified separately without adding an error allowlist.
+
+## Ten-stage expansion integration (2026-11-15, not yet released)
+
+The combined battle roster adds Field of Grass, In the Gutter, Sea Sick and
+Lost at Sea while retaining Circuit Garden as training. Tours 22–25 extend
+`all`; individual stage and network leaves retain their own deadlines. The
+composed graphical budget is 1,800 seconds (previously 1,500), allowing the
+additional stage, reflection and network journeys to run. Existing per-case
+focus, startup and gameplay deadlines are unchanged.
+
+The two short nautical tours share a Windows software-renderer runner while
+still launching separate game processes. This preserves the 30-job matrix
+budget and exact leaf coverage. The native Mac `all` process remains the
+cross-journey sequencing gate. Source-level and native test success do not
+replace the pending independent visual review of the redesigned arenas.
