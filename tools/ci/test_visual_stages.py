@@ -22,6 +22,7 @@ SCENES = (
     ('field-of-grass', 'full-field-of-grass-high-v2'),
     ('in-the-gutter', 'full-in-the-gutter-high-v2'),
     ('sea-sick', 'full-sea-sick-high-v2'),
+    ('lost-at-sea', 'full-lost-at-sea-high-v2'),
     ('circuit-garden', 'full-circuit-garden-high-v2'),
 )
 LABELS = ('warmup', 'base-a', 'base-b', 'dof-off', 'reflection-off')

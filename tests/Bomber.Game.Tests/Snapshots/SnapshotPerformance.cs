@@ -10,7 +10,7 @@ internal static class SnapshotPerformance
     {
         string output=args.First(a=>a.StartsWith("--output="))[9..];var rows=new List<object>();
         bool eight=args.Contains("--eight-player");int humans=eight?1:3,bots=eight?7:3;string difficulty=eight?"hard":"normal";
-        string[] stages=eight?["sunken-temple","rock-garden","up-and-down","top-rules","blizzard-battle","greedy-trap","field-of-grass","in-the-gutter","sea-sick"]:["sunken-temple"];
+        string[] stages=eight?["sunken-temple","rock-garden","up-and-down","top-rules","blizzard-battle","greedy-trap","field-of-grass","in-the-gutter","sea-sick","lost-at-sea"]:["sunken-temple"];
         foreach(string stage in stages)foreach(int seed in new[]{64,9876,1337})for(int repeat=0;repeat<2;repeat++)
         {
             var match=new LocalMatch(new MatchOptions{HumanPlayers=humans,BotPlayers=bots,BotDifficulty=difficulty,Seed=seed,Stage=stage,Wins=5,RoundSeconds=120});

@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.append(str(ROOT / 'tools/playtest'))
 from contracts import catalog, expanded
 
-HEADLESS = ('core-headless', 'peer-ice-order', 'peer-ice-terminal', 'peer-rooms', 'peer-capacity', 'adaptive-rooms', 'greedy-trap-network', 'field-of-grass-network', 'in-the-gutter-network', 'sea-sick-network', 'adaptive-slow-poll')
+HEADLESS = ('core-headless', 'peer-ice-order', 'peer-ice-terminal', 'peer-rooms', 'peer-capacity', 'adaptive-rooms', 'greedy-trap-network', 'field-of-grass-network', 'in-the-gutter-network', 'sea-sick-network', 'lost-at-sea-network', 'adaptive-slow-poll')
 GRAPHICAL = ('controller-popups', 'all', 'menu-preview', 'water-surface')
 # Windows/Linux CI renders in software (WARP/llvmpipe), where one serial `all`
 # process needs about 5 h (llvmpipe) to 20 h (WARP). The catalog composes `all`
@@ -21,10 +21,12 @@ GRAPHICAL = ('controller-popups', 'all', 'menu-preview', 'water-surface')
 TOURS = tuple(catalog()['all']['steps'])
 SHARDED_GRAPHICAL = ('controller-popups', *TOURS, 'menu-preview', 'water-surface')
 # One fresh runner per part. WARP is ~5x slower than llvmpipe, so Windows
-# gives each tour its own runner while Linux groups about an hour of tours.
+# gives long tours their own runner while Linux groups about an hour of tours.
+# The two short new nautical tours share a runner (still separate game processes),
+# retaining the established 30-job matrix cap without dropping any coverage.
 SOFTWARE_PARTS = {
     'windows-x64': ('windows-2025', (('controller-popups', TOURS[0]), *((tour,) for tour in TOURS[1:3]),
-                                     (TOURS[3], 'water-surface'), *((tour,) for tour in TOURS[4:]), ('menu-preview',))),
+                                     (TOURS[3], 'water-surface'), *((tour,) for tour in TOURS[4:-2]), TOURS[-2:], ('menu-preview',))),
     'linux-x64': ('ubuntu-24.04', (('controller-popups', *TOURS[:4]), TOURS[4:9], TOURS[9:14],
                                    (*TOURS[14:18], 'water-surface'), (*TOURS[18:], 'menu-preview'))),
 }

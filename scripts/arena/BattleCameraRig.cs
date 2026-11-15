@@ -23,7 +23,7 @@ public sealed partial class BattleCameraRig(Camera3D camera)
         _garden=stage.GetProperty("id").GetString()=="rock-garden";
         _ship=stage.GetProperty("id").GetString()==BlastStages.SeaSick;
         _blizzard=stage.GetProperty("id").GetString()=="blizzard-battle";
-        _castle=stage.GetProperty("id").GetString() is "top-rules" or "greedy-trap" or "field-of-grass" or "in-the-gutter";
+        _castle=stage.GetProperty("id").GetString() is "top-rules" or "greedy-trap" or "field-of-grass" or "in-the-gutter" or "lost-at-sea";
         _training=stage.GetProperty("id").GetString()=="circuit-garden";
         _pyramid=stage.GetProperty("id").GetString()=="sunken-temple";
         int width=stage.GetProperty("width").GetInt32(),depth=stage.GetProperty("height").GetInt32();

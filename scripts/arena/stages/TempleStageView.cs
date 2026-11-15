@@ -59,6 +59,9 @@ public partial class TempleStageView : Node3D
     private bool _seaSick;
     private readonly List<ShaderMaterial> _shipMaterials=[];
     private ShaderMaterial _barrelTimber=null!;
+    private bool _sea;
+    private float _seaClock;
+    private ShaderMaterial? _seaGlass;
     private readonly List<ShaderMaterial> _gardenMaterials=[];
     private Mesh[] _gardenRocks=[];
     private Material _gardenRockMaterial=null!;
@@ -93,6 +96,13 @@ public partial class TempleStageView : Node3D
         AnimateScenery((float)delta);
         if(_field){ProcessField((float)delta);return;}
         if(_seaSick){ProcessSeaSick();return;}
+        if(_sea)
+        {
+            if(WeatherActive)_seaClock+=(float)delta;
+            _seaGlass?.SetShaderParameter("ambient_clock",_seaClock);
+            if(_graphicsRevision!=GraphicsQuality.Revision&&_seaGlass is not null)GraphicsQuality.ApplyShaderDetail(_seaGlass);
+            _graphicsRevision=GraphicsQuality.Revision;return;
+        }
         if(_blizzard){ProcessBlizzard((float)delta);return;}
         if(_gutter){ProcessGutter((float)delta);return;}
         if(_greedy){ProcessGreedyTrap((float)delta);return;}
@@ -200,6 +210,8 @@ public partial class TempleStageView : Node3D
         if(_gutter){BuildGutter();return;}
         _seaSick=Layout.Id==BlastStages.SeaSick;
         if(_seaSick){BuildSeaSick();return;}
+        _sea=Layout.Id==BlastStages.LostAtSea;
+        if(_sea){BuildLostAtSea();return;}
         _blizzard=Layout.Id==BlastStages.BlizzardBattle;
         if(_blizzard){BuildBlizzard();return;}
         _castle=Layout.Id==BlastStages.TopRules;
@@ -343,6 +355,7 @@ public partial class TempleStageView : Node3D
         var root=new Node3D {Position=new(x+.5f,Surface(x+.5f,z+.5f),z+.5f)};
         if(_field)return CreateFieldBoulder(root,cell);
         if(_seaSick)return CreateShipBarrel(root);
+        if(_sea)return CreateSeaCargo(root,cell);
         if(_garden)return CreateGardenBoulder(root,cell);
         if(_blizzard)return CreateIceCone(root,cell);
         if(Layout.Id==BlastStages.UpAndDown)return CreateUpAndDownCover(root,cell);
