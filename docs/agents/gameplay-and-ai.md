@@ -671,3 +671,13 @@ narrow flights before the next decision, ending a stock match with water deaths.
 `UpAndDownAiChecks` retains the dry-now/unsafe-before-next-reaction witness, and
 `Bomber.Ai.Tests -- --front-placement` retains ordinary seeded combat on all
 three covered arenas. This changes CPU decision safety, not movement physics.
+
+## In the Gutter (2026-11-15 source work)
+
+[Stage contract](../in-the-gutter.md) owns the safe shallow-water court, four
+elevated starting posts, center marker, eight-seat adaptation and changing
+lateral current. Grounded players and free bombs receive collision-safe drift;
+held/airborne objects and dry caps do not. Bots countersteer and forecast
+ground-bomb advection. Closing grates reuse columns/crush, with continuous
+closed-column checks after current movement. Current speeds, intervals and
+cover counts are project tuning, not recovered original constants.

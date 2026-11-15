@@ -95,7 +95,7 @@ public sealed partial class BlastSession
     private void SimulateRound(ISessionContext context, float dt)
     {
         if (!_practice || _tutorialLesson?.Id=="duel") _roundTimer = ++_fightTicks * dt;
-        if(_stage.Id==BlastStages.BlizzardBattle)_weatherTime+=dt;
+        if(_stage.Id is BlastStages.BlizzardBattle or BlastStages.InTheGutter)_weatherTime+=dt;
         var timeLeft = _roundSeconds - _roundTimer;
 
         // Trigger hurry.
@@ -167,11 +167,12 @@ public sealed partial class BlastSession
         BeginBodyContacts();
         ProcessInputs(context, dt);
         DriftBlizzardPlayers(dt);
+        DriftGutterPlayers(dt);
         TickPlayerCarrying(dt);
         ResolveBodyContacts(dt);
         SynchronizeLatchedGhosts();
         DrownSubmergedEntities();
-        if(_phase==RoundPhase.Hurry&&_stage.Id==BlastStages.BlizzardBattle)KillInClosedColumns(context);
+        if(_phase==RoundPhase.Hurry&&_stage.Id is BlastStages.BlizzardBattle or BlastStages.InTheGutter)KillInClosedColumns(context);
         TickBombs(context, dt);
         TickHazards(context, dt);
         TickItems(context);

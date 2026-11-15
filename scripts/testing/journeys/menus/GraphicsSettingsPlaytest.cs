@@ -320,7 +320,7 @@ public partial class PlaytestDriver
             await ActivateNamed("OpenSettings");await Frames(3);
             await CheckNowReachable(new(1024,640));
             await KeyPress(Key.Escape);await ResizeWindow(new(1280,800));await Frames(5);
-            foreach(string stage in new[]{"sunken-temple","rock-garden","up-and-down","top-rules","blizzard-battle","greedy-trap","circuit-garden"})
+            foreach(string stage in new[]{"sunken-temple","rock-garden","up-and-down","top-rules","blizzard-battle","greedy-trap","in-the-gutter","circuit-garden"})
             {
                 _root.StartLocal(new SessionSettings(Stage:stage,Bots:0),1,practice:true);
                 await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"graphics enters "+stage,180);
@@ -350,7 +350,7 @@ public partial class PlaytestDriver
                     Check(materials.Length>0&&materials.All(m=>m.GetShaderParameter("quality_detail").AsSingle()==(preset==GraphicsPreset.Low?0:1)),"live terrain shader detail follows preset on "+stage);
                     var premium=materials.Where(m=>m.Shader.Code.Contains("uniform float quality_premium")).ToArray();
                     Check(premium.Length>0&&premium.All(m=>m.GetShaderParameter("quality_premium").AsSingle()==(preset==GraphicsPreset.High?1:0)),"High-only stage embellishments follow preset on "+stage);
-                    var water=terrain.GetChildren().OfType<MeshInstance3D>().Where(n=>PrimitiveTemplates.Is(n.Mesh,"PlaneMesh")).ToArray();
+                    var water=terrain.GetChildren().OfType<MeshInstance3D>().Where(n=>PrimitiveTemplates.Is(n.Mesh,"PlaneMesh")||n.Name=="GutterShallowWater").ToArray();
                     if(stage is "rock-garden" or "blizzard-battle")Check(water.Length==0,"garden preserves its dry grass setting at "+preset);
                     else if(stage is not ("top-rules" or "greedy-trap"))
                     {

@@ -823,3 +823,13 @@ upload, duplication and geometry-helper source entry and the finite template
 tuples. New entries or changed producing-source bounds fail the public gate
 until reviewed. Normal headless and packaged functional lanes exercise the
 actual end-of-round closure and meteor paths with templates enforced.
+
+### In the Gutter toy waterworks (2026-11-15 source work)
+
+[Stage and evidence contract](../in-the-gutter.md): original brick posts,
+brass-edged opaque grates, shallow shared-preset water and a current marker
+form the playable lock. Owned packed water grids and portable boxes avoid new
+primitive-template domains. Current tracers/arrow follow accepted state; canal
+quays, houses, shrubs and sluice wheels stay outside play and miniatures omit
+them. Ordinary battle captures, preset/Night views, an explicitly labeled
+oblique inspection and actual closing grates are required for visual review.

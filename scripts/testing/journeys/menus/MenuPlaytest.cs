@@ -69,7 +69,7 @@ public partial class PlaytestDriver
     {
         async Task VerifyStages(string view)
         {
-            foreach(var stage in new[] {"sunken-temple","rock-garden","up-and-down","top-rules","blizzard-battle","greedy-trap"})
+            foreach(var stage in new[] {"sunken-temple","rock-garden","up-and-down","top-rules","blizzard-battle","greedy-trap","in-the-gutter"})
             {
                 _root.StartLocal(new SessionSettings(Stage:stage,Bots:0),1,practice:true);await Frames(10);
                 Check(_root.LatestStage is not null,"camera check receives stage "+stage);

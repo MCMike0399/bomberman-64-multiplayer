@@ -15,6 +15,7 @@ public static partial class BlastStages
         TopRules => BuildTopRules(),
         BlizzardBattle => BuildBlizzardBattle(),
         GreedyTrap => BuildGreedyTrap(),
+        InTheGutter => BuildInTheGutter(),
         _ => BuildSunkenTemple(),
     };
 
