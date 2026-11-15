@@ -48,3 +48,22 @@ bodies, all props outside standing space before/after motion, local pause,
 Low visibility and miniature omission. Its mesh winding audit also covers the
 new ring faces. These checks establish safety and renderer contracts; actual
 captures establish the visual result. No simulation, collision or rules changed.
+
+## Native visual review — 2026-11-15
+
+Root reviewed actual exported Metal captures on Macintosh at the user’s explicit
+request: softer irregular cloud bands, broad divided rings and a subdued blue
+world retain a readable castle silhouette in daylight and Night. The exported
+`scenery-regression` passed 3,485 assertions and 272 captures with zero runtime
+errors or warnings. The fresh baseline passed 371 assertions and 40 captures.
+Clean C# build and the complete public QA profile also passed.
+
+![Baseline High](images/top-rules-orbital/before.png)
+
+![Revised High](images/top-rules-orbital/after.png)
+
+![Revised Night](images/top-rules-orbital/night.png)
+
+[Capture provenance](images/top-rules-orbital/manifest.json). These are root’s
+visual acceptance and native synthetic-input checks, not physical-controller
+evidence or a claim that the user personally approved the images.
