@@ -50,28 +50,32 @@ public partial class TempleStageView
             }
         }
         surface.Index();var mesh=surface.Commit();
-        const int columns=33,rows=51,count=columns*rows;
-        var grass=new MultiMesh{TransformFormat=MultiMesh.TransformFormatEnum.Transform3D,UseColors=true,Mesh=mesh,InstanceCount=count};
-        var buffer=new float[count*MultiMeshPacking.Stride];var random=new Random(6103);
-        for(int i=0;i<count;i++)
+        const int columns=33,rows=51;
+        var random=new Random(6103);var plants=new List<(Vector3 Position,Basis Basis,Color Tint)>();
+        for(int i=0;i<columns*rows;i++)
         {
-            // Jittered staggered roots preserve dense concealment while removing
-            // parallel rows. Independent yaw/width/height and broad colour patches
-            // make neighbouring tufts read as one living, wind-combed meadow.
             float z=.95f+(i/columns)*.344f+((float)random.NextDouble()-.5f)*.25f;
-            float left=4.72f+PresentationMath.Sin(z*.72f+.8f)*.31f+PresentationMath.Sin(z*1.7f)*.11f;
-            float right=16.28f+PresentationMath.Sin(z*.51f+2)*.30f;
+            float left=5.0f+PresentationMath.Sin(z*.47f+.8f)*.60f;
+            float right=16.0f+PresentationMath.Sin(z*.41f+2)*.60f;
             float u=((i%columns)+.5f+((float)random.NextDouble()-.5f)*.55f)/columns;
             float x=Mathf.Lerp(left,right,u);
-            z+=PresentationMath.Sin(x*.6f+1.2f)*.11f;
-            float h=.91f+(float)random.NextDouble()*.32f;
-            float spread=.86f+(float)random.NextDouble()*.42f;
-            var (sine,cosine)=PresentationMath.SinCos((float)random.NextDouble()*Mathf.Tau);
+            float front=1.0f+PresentationMath.Sin(x*.61f+.8f)*.35f;
+            float rear=Depth-1.0f+PresentationMath.Sin(x*.57f+1.2f)*.35f;
+            float fade=HollowSmooth(front,front+.8f,z)*(1-HollowSmooth(rear-.8f,rear,z));
+            if(random.NextDouble()>fade||x<4.5f||x>16.5f)continue;
+            bool shortTuft=x<5||x>16;
+            if(shortTuft&&random.NextDouble()>.25)continue;
+            float h=shortTuft?.15f+(float)random.NextDouble()*.15f:(.91f+(float)random.NextDouble()*.32f)*(.28f+.72f*fade);
+            float spread=shortTuft?.5f:.86f+(float)random.NextDouble()*.42f;
+            var(sine,cosine)=PresentationMath.SinCos((float)random.NextDouble()*Mathf.Tau);
             var basis=new Basis(cosine,0,sine,0,1,0,-sine,0,cosine).Scaled(new(spread,h,spread));
             float patch=.5f+.5f*PresentationMath.Sin(x*.61f+z*.37f);
-            var tint=new Color(.82f+patch*.14f+(float)random.NextDouble()*.09f,.94f+(float)random.NextDouble()*.06f,.79f+patch*.16f);
-            MultiMeshPacking.Write(buffer,i,new(basis,new(x,Surface(x,z),z)),tint);
+            var tint=new Color(.86f+patch*.1f,.96f,.82f+patch*.12f,shortTuft?.28f:1);
+            plants.Add((new(x,Surface(x,z),z),basis,tint));
         }
+        var grass=new MultiMesh{TransformFormat=MultiMesh.TransformFormatEnum.Transform3D,UseColors=true,Mesh=mesh,InstanceCount=plants.Count};
+        var buffer=new float[plants.Count*MultiMeshPacking.Stride];
+        for(int i=0;i<plants.Count;i++)MultiMeshPacking.Write(buffer,i,new(plants[i].Basis,plants[i].Position),plants[i].Tint);
         grass.Buffer=buffer;
         var material=_art.HollowGrass();_fieldGrassMaterial=material;
         AddChild(new MultiMeshInstance3D{Name="ConcealingMeadow",Multimesh=grass,MaterialOverride=material,CastShadow=GeometryInstance3D.ShadowCastingSetting.Off,ExtraCullMargin=.4f});

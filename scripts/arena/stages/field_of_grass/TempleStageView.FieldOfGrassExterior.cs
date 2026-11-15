@@ -11,12 +11,15 @@ public partial class TempleStageView
     private void BuildFieldOfGrassExterior()
     {
         var soil=_art.HollowSurface(0);_fieldMaterials.Add(soil);
-        RoundedBox(_scenery!,new(-.65f,1.98f,9.5f),new(2.0f,1.5f,2.5f),soil,.8f).Name="HollowShoulder";
-        var stile=new Node3D{Name="HollowStile",Position=new(-1.05f,2.73f,8.9f),Basis=PresentationMath.Rotation(new(.03f,.15f,.12f))};_scenery!.AddChild(stile);
+
+        var stile=new Node3D{Name="HollowStile",Position=new(-1.05f,HollowLandscapeHeight(-1.05f,8.9f),8.9f),Basis=PresentationMath.Rotation(new(.03f,.15f,.12f))};_scenery!.AddChild(stile);
         var wood=_art.Toy(new("705039"),.9f);
         foreach(float x in new[]{-.5f,.5f})RoundedBox(stile,new(x,.6f,0),new(.18f,1.2f,.18f),wood,.7f);
         foreach(float y in new[]{.3f,.65f,1.0f})RoundedBox(stile,new(0,y,0),new(1.25f,.16f,.15f),wood,.7f);
-        var hay=new Node3D{Name="HayRick",Position=new(-.95f,2.75f,10.2f)};_scenery.AddChild(hay);
+        var lamp=new StandardMaterial3D{AlbedoColor=new("eab366"),EmissionEnabled=true,Emission=new("ffb450"),EmissionEnergyMultiplier=1.2f,Roughness=.8f};
+        RoundedBox(stile,new(.46f,.95f,.16f),new(.28f,.38f,.25f),lamp,.7f).Name="HollowStileLantern";
+        _hollowLantern=new OmniLight3D{Name="HollowLanternLight",Position=new(.46f,1.05f,.28f),LightColor=new("ffb65c"),LightEnergy=.04f,OmniRange=3.0f,ShadowEnabled=false};stile.AddChild(_hollowLantern);
+        var hay=new Node3D{Name="HayRick",Position=new(-.95f,HollowLandscapeHeight(-.95f,10.2f),10.2f)};_scenery.AddChild(hay);
         var mesh=new SurfaceTool();mesh.Begin(Mesh.PrimitiveType.Triangles);
         const int sides=12;var rings=new Vector3[4,sides];
         for(int row=0;row<4;row++)for(int i=0;i<sides;i++)

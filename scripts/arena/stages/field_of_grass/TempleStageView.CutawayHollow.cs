@@ -13,7 +13,7 @@ public partial class TempleStageView
         var soil=_art.HollowSurface(0);var turf=_art.HollowSurface(1);
         _hollowStoneMaterial=_art.HollowSurface(2);var outside=_art.HollowSurface(3);
         _fieldMaterials.AddRange([soil,turf,_hollowStoneMaterial,outside]);
-        Box(this,new(Width/2f,-1.4f,Depth/2f),new(160,.2f,160),outside).Name="FieldExterior";
+
 
         // Only these sheets support gameplay. Their vertices are the exact
         // authority plane/ramp endpoints; sculpted loam stays below or outside.
@@ -25,11 +25,10 @@ public partial class TempleStageView
             var surface=new SurfaceTool();surface.Begin(Mesh.PrimitiveType.Triangles);
             HollowQuad(surface,new(x,left*HeightScale,z),new(x+1,right*HeightScale,z),new(x+1,right*HeightScale,z+1),new(x,left*HeightScale,z+1),Vector3.Up);
             surface.Index();AddChild(new MeshInstance3D{Name=cell.Kind==CellKind.Ramp?$"MeadowBankSlope{x}_{z}":$"HollowGround{x}_{z}",
-                Mesh=surface.Commit(),MaterialOverride=cell.Kind==CellKind.Ramp?soil:turf});
+                Mesh=surface.Commit(),MaterialOverride=turf});
         }
+        BuildHollowLandscape(_art.HollowSurface(4),outside);
         BuildHollowCutFace(soil);
-        BuildHollowRidge(soil,left:true);BuildHollowRidge(soil,left:false);
-        BuildHollowCoping(soil,front:true);
         // The far end closes with chunky dry stone rather than another fence.
         for(int x=0;x<Width;x++)
         {
@@ -43,110 +42,120 @@ public partial class TempleStageView
     }
 
     private float HollowSupport(float x)=>Layout.SurfaceAt(Math.Clamp(x,1.001f,Width-1.001f),Depth-1.5f)*HeightScale;
-    private float HollowFront(float x)=>Depth-.05f+.07f*PresentationMath.Sin(x*.51f)+.035f*PresentationMath.Sin(x*1.3f);
-
+    private float HollowFront(float x)=>Depth;
+    private static float HollowSmooth(float a,float b,float x){float t=Math.Clamp((x-a)/(b-a),0,1);return t*t*(3-2*t);}
+    private static float HollowHill(float x,float z,float cx,float cz,float rx,float rz,float height)
+    {float r=MathF.Pow((x-cx)/rx,2)+MathF.Pow((z-cz)/rz,2);return r<1?height*(1-r)*(1-r):0;}
+    private float HollowShoulder(float x,float z,bool left)
+    {
+        float u=left?x:Width-x;
+        float edge=.9775f*HollowSmooth(-1.5f,1,u);
+        float hill=left?Math.Max(HollowHill(u,z,-1.2f,3.2f,1.7f,3.1f,.55f),Math.Max(HollowHill(u,z,-2,9.8f,2.5f,4,.9f),HollowHill(u,z,-.8f,15.4f,1.6f,2.9f,.38f)))
+            :Math.Max(HollowHill(u,z,-1.1f,4.8f,1.9f,3.6f,.42f),Math.Max(HollowHill(u,z,-1.9f,11.5f,2.4f,3.5f,.78f),HollowHill(u,z,-.8f,16.2f,1.7f,2.8f,.6f)));
+        return 2.6f+Math.Max(edge,hill);
+    }
+    private float HollowLandscapeHeight(float x,float z)
+    {
+        if(x<=1)return HollowShoulder(x,z,true);
+        if(x>=Width-1)return HollowShoulder(x,z,false);
+        float support=HollowSupport(x);
+        if(z<1)return Mathf.Lerp(2.6f,support+.855f,HollowSmooth(-3,.5f,z));
+        // The actual boundary crown remains inside its nonpassable row. The
+        // exposed front drops to a thin sod edge, rather than a coping roll.
+        float h=support+.15f+.7275f*(1-HollowSmooth(Depth-.5f,Depth,z));
+        if(x<1.5f)h=Mathf.Lerp(HollowShoulder(1,z,true),h,HollowSmooth(1,1.5f,x));
+        if(x>Width-1.5f)h=Mathf.Lerp(h,HollowShoulder(Width-1,z,false),HollowSmooth(Width-1.5f,Width-1,x));
+        return h;
+    }
+    private void BuildHollowLandscape(ShaderMaterial plateau,Material foreground)
+    {
+        _fieldMaterials.Add(plateau);
+        var mesh=new SurfaceTool();mesh.Begin(Mesh.PrimitiveType.Triangles);
+        for(float z=IncludeScenery?-6:0;z<Depth;z+=.5f)for(float x=IncludeScenery?-6:0;x<(IncludeScenery?Width+6:Width);x+=.5f)
+        {
+            if(x>=1&&x<Width-1&&z>=1&&z<Depth-1)continue;
+            Vector3 P(float xx,float zz)=>new(xx,HollowLandscapeHeight(xx,zz),zz);
+            HollowQuad(mesh,P(x,z),P(x+.5f,z),P(x+.5f,z+.5f),P(x,z+.5f),Vector3.Up);
+        }
+        foreach(float x in new[]{1f,Width-1f})
+            HollowQuad(mesh,new(x,2*HeightScale,1),new(x,3.5775f,1),new(x,3.5775f,Depth-1),new(x,2*HeightScale,Depth-1),x<Width/2f?Vector3.Right:Vector3.Left);
+        if(IncludeScenery)
+        {
+            HollowQuad(mesh,new(-80,2.6f,-80),new(-6,2.6f,-80),new(-6,2.6f,Depth),new(-80,2.6f,Depth),Vector3.Up);
+            HollowQuad(mesh,new(Width+6,2.6f,-80),new(80,2.6f,-80),new(80,2.6f,Depth),new(Width+6,2.6f,Depth),Vector3.Up);
+            HollowQuad(mesh,new(-6,2.6f,-80),new(Width+6,2.6f,-80),new(Width+6,2.6f,-6),new(-6,2.6f,-6),Vector3.Up);
+            Box(this,new(Width/2f,-2.0f,Depth+35),new(160,.2f,70),foreground).Name="HollowForeground";
+        }
+        mesh.Index();AddChild(new MeshInstance3D{Name="HollowMeadowPlateau",Mesh=mesh.Commit(),MaterialOverride=plateau});
+    }
+    private float HollowLip(float x)
+    {
+        float overhang=.32f;
+        foreach(float notch in new[]{4.8f,8.4f,13.3f,17.1f})overhang-=.18f*Math.Max(0,1-Math.Abs(x-notch)/.45f);
+        return Math.Clamp(overhang,.15f,.4f);
+    }
     private void BuildHollowCutFace(Material soil)
     {
-        var surface=new SurfaceTool();surface.Begin(Mesh.PrimitiveType.Triangles);
-        const float step=.25f,bottom=-1.15f;
-        for(float x=0;x<Width;x+=step)
+        float left=IncludeScenery?-80:0,right=IncludeScenery?80:Width,bottom=IncludeScenery?-1.8f:-.68f;
+        var face=new SurfaceTool();face.Begin(Mesh.PrimitiveType.Triangles);
+        var sod=new SurfaceTool();sod.Begin(Mesh.PrimitiveType.Triangles);
+        for(float x=left;x<right;x+=.5f)
         {
-            float end=Math.Min(Width,x+step),hl=HollowSupport(x),hr=HollowSupport(end);
-            for(float y=bottom;y<Math.Max(hl,hr);y+=step)
-            {
-                float yl=Math.Min(y,hl),yr=Math.Min(y,hr),tl=Math.Min(y+step,hl),tr=Math.Min(y+step,hr);
-                float mx=(x+end)/2,my=(yl+yr+tl+tr)/4;
-                // An actual opening below the playable floor, not a painted dot.
-                if(MathF.Pow((mx-10.8f)/.43f,2)+MathF.Pow((my+.6f)/.29f,2)<1)continue;
-                HollowQuad(surface,new(x,yl,HollowFront(x)),new(x,tl,HollowFront(x)),new(end,tr,HollowFront(end)),new(end,yr,HollowFront(end)),Vector3.Back);
-            }
+            float end=Math.Min(right,x+.5f),a=HollowLandscapeHeight(x,Depth),b=HollowLandscapeHeight(end,Depth);
+            HollowQuad(face,new(x,bottom,Depth),new(x,a,Depth),new(end,b,Depth),new(end,bottom,Depth),Vector3.Back);
+            HollowQuad(sod,new(x,a,Depth-.03f),new(end,b,Depth-.03f),new(end,b-.12f,Depth+HollowLip(end)),new(x,a-.12f,Depth+HollowLip(x)),Vector3.Up);
+            HollowQuad(sod,new(x,a-.12f,Depth+HollowLip(x)),new(end,b-.12f,Depth+HollowLip(end)),new(end,b-.24f,Depth+.05f),new(x,a-.24f,Depth+.05f),Vector3.Back);
         }
-        // The underside and side cuts make this a lifted slice, not a thin tray.
-        HollowQuad(surface,new(0,bottom,0),new(Width,bottom,0),new(Width,bottom,Depth),new(0,bottom,Depth),Vector3.Down);
-        foreach(bool left in new[]{true,false})
-        {
-            float x=left?0:Width;
-            HollowQuad(surface,new(x,bottom,0),new(x,HollowSupport(x),0),new(x,HollowSupport(x),HollowFront(x)),new(x,bottom,HollowFront(x)),left?Vector3.Left:Vector3.Right);
-        }
-        surface.Index();AddChild(new MeshInstance3D{Name="HollowStrataCutFace",Mesh=surface.Commit(),MaterialOverride=soil});
+        face.Index();sod.Index();AddChild(new MeshInstance3D{Name="HollowStrataCutFace",Mesh=face.Commit(),MaterialOverride=soil});
+        var sodPaint=_art.HollowSurface(5);_fieldMaterials.Add(sodPaint);
+        AddChild(new MeshInstance3D{Name="HollowRaggedSodLip",Mesh=sod.Commit(),MaterialOverride=sodPaint});
+        if(!IncludeScenery)return;
+        foreach(float x in new[]{4.8f,8.4f,13.3f,17.1f})
+            RoundedBox(this,new(x,-1.65f,Depth+.55f),new(.5f,.3f,.4f),soil,.9f).Name="HollowDroppedClod";
     }
-
-    private void BuildHollowRidge(Material soil,bool left)
-    {
-        var surface=new SurfaceTool();surface.Begin(Mesh.PrimitiveType.Triangles);
-        const int sections=44,arc=10;
-        Vector3 Point(int section,int ring)
-        {
-            float z=section*(Depth/(float)sections),angle=ring*Mathf.Pi/arc;
-            var (s,c)=PresentationMath.SinCos(angle);
-            float swell=.91f+.09f*PresentationMath.Sin(z*.71f)+(left?.035f:-.035f)*PresentationMath.Sin(z*1.6f);
-            float crown=2*HeightScale+.8775f;
-            float y=2*HeightScale+.8775f*s;
-            // The inside edge ends at x=1, outside the passable ledge. All
-            // displacement faces away from the gameplay support sheet.
-            float xx=left?Math.Min(.98f,.17f+c*.82f*swell):Math.Max(Width-.98f,Width-.17f-c*.82f*swell);
-            return new(xx,Math.Min(crown,y),z);
-        }
-        for(int z=0;z<sections;z++)for(int r=0;r<arc;r++)
-            HollowQuad(surface,Point(z,r),Point(z+1,r),Point(z+1,r+1),Point(z,r+1),Vector3.Up);
-        foreach(int end in new[]{0,sections})for(int r=0;r<arc;r++)
-            HollowTriangle(surface,new(left?.17f:Width-.17f,2*HeightScale,end==0?0:Depth),Point(end,r),Point(end,r+1),end==0?Vector3.Forward:Vector3.Back);
-        // Rounded outer bellies continue down into the exposed cut section.
-        for(int z=0;z<sections;z++)
-        {
-            float a=z*(Depth/(float)sections),b=(z+1)*(Depth/(float)sections);
-            float xa=Point(z,arc).X,xb=Point(z+1,arc).X;
-            HollowQuad(surface,new(xa,-1.15f,a),new(xa,2*HeightScale,a),new(xb,2*HeightScale,b),new(xb,-1.15f,b),left?Vector3.Left:Vector3.Right);
-        }
-        surface.Index();AddChild(new MeshInstance3D{Name=left?"HollowRoundedWestBank":"HollowRoundedEastBank",Mesh=surface.Commit(),MaterialOverride=soil});
-
-    }
-
-    private void BuildHollowCoping(Material soil,bool front)
-    {
-        var surface=new SurfaceTool();surface.Begin(Mesh.PrimitiveType.Triangles);
-        const int sections=84,arc=10;
-        Vector3 Point(int section,int ring)
-        {
-            float x=section*Width/(float)sections,angle=ring*Mathf.Pi/arc;
-            var(s,c)=PresentationMath.SinCos(angle);
-            float slump=.83f+.03f*PresentationMath.Sin(x*.73f);
-            return new(x,HollowSupport(x)+s*slump,(front?Depth-.5f:.5f)+c*.46f+PresentationMath.Sin(x*.61f)*.055f);
-        }
-        for(int x=0;x<sections;x++)for(int r=0;r<arc;r++)
-            HollowQuad(surface,Point(x,r),Point(x+1,r),Point(x+1,r+1),Point(x,r+1),Vector3.Up);
-        surface.Index();AddChild(new MeshInstance3D{Name="HollowOpenCutRim",Mesh=surface.Commit(),MaterialOverride=soil});
-    }
-
     private void BuildHollowRootsAndBurrow()
     {
-        var rootPaint=_art.Toy(new("603e30"),.94f);
-        foreach(float side in new[]{2.1f,Width-2.3f})
-        {
-            float z=HollowFront(side)+.035f;
-            HollowRoot(this,new(side,2.64f,z),new(side-.16f,1.75f,z+.025f),.17f,rootPaint);
-            HollowRoot(this,new(side-.16f,1.75f,z+.025f),new(side+.23f,.78f,z+.035f),.15f,rootPaint);
-            HollowRoot(this,new(side-.16f,1.75f,z+.025f),new(side-.7f,1.3f,z+.035f),.13f,rootPaint);
-        }
-        var tunnel=new SurfaceTool();tunnel.Begin(Mesh.PrimitiveType.Triangles);
-        const int sides=20;float front=HollowFront(10.8f)+.02f;
+        if(!IncludeScenery)return;
+        var paint=_art.Color(new("593b2c"),.96f);
+        var curves=new[]{
+            (new Vector3(1.4f,2.78f,Depth+.12f),new Vector3(.8f,2.1f,Depth+.18f),new Vector3(2.2f,1.1f,Depth+.21f),new Vector3(1.9f,.32f,Depth+.19f)),
+            (new Vector3(2.65f,2.77f,Depth+.14f),new Vector3(3.1f,2.35f,Depth+.20f),new Vector3(2.2f,1.45f,Depth+.23f),new Vector3(2.8f,.78f,Depth+.22f)),
+            (new Vector3(18.7f,2.77f,Depth+.11f),new Vector3(19.2f,2.2f,Depth+.19f),new Vector3(17.8f,1.2f,Depth+.23f),new Vector3(18.5f,.28f,Depth+.21f)),
+            (new Vector3(19.55f,2.75f,Depth+.13f),new Vector3(19.2f,2.1f,Depth+.22f),new Vector3(20.1f,1.75f,Depth+.25f),new Vector3(19.75f,1.05f,Depth+.23f))};
+        int root=0;foreach(var(a,b,c,d)in curves)BuildHollowRootCurve(a,b,c,d,paint,root++);
+        // An inset ellipse and its matching raised lip cover an intact cut face.
+        // There are no skipped quads or gaps to the background.
+        var mouth=new SurfaceTool();mouth.Begin(Mesh.PrimitiveType.Triangles);
+        var rim=new SurfaceTool();rim.Begin(Mesh.PrimitiveType.Triangles);
+        const int sides=32;
         for(int i=0;i<sides;i++)
         {
             var(sa,ca)=PresentationMath.SinCos(i*Mathf.Tau/sides);var(sb,cb)=PresentationMath.SinCos((i+1)*Mathf.Tau/sides);
-            var a=new Vector3(10.8f+ca*.47f,-.6f+sa*.32f,front);var b=new Vector3(10.8f+cb*.47f,-.6f+sb*.32f,front);
-            HollowQuad(tunnel,a,b,new(b.X,b.Y,front-.45f),new(a.X,a.Y,front-.45f),new(10.8f-a.X,-.6f-a.Y,0));
-            HollowTriangle(tunnel,new(10.8f,-.6f,front-.46f),new(a.X,a.Y,front-.46f),new(b.X,b.Y,front-.46f),Vector3.Back);
+            Vector3 P(float co,float si,float rx,float ry,float z)=>new(10.8f+co*rx,-.88f+si*ry,z);
+            var a=P(ca,sa,.6f,.4f,Depth+.025f);var b=P(cb,sb,.6f,.4f,Depth+.025f);
+            HollowTriangle(mouth,new(10.8f,-.88f,Depth+.025f),a,b,Vector3.Back);
+            HollowQuad(rim,P(ca,sa,.73f,.52f,Depth+.08f),P(cb,sb,.73f,.52f,Depth+.08f),P(cb,sb,.6f,.4f,Depth+.15f),P(ca,sa,.6f,.4f,Depth+.15f),Vector3.Back);
         }
-        tunnel.Index();AddChild(new MeshInstance3D{Name="HollowBurrow",Mesh=tunnel.Commit(),MaterialOverride=_art.Color(new("2f3229"),1)});
-        foreach(var p in new[]{new Vector3(3.7f,.75f,HollowFront(3.7f)+.01f),new Vector3(7.5f,-.55f,HollowFront(7.5f)+.01f),new Vector3(15.6f,-.45f,HollowFront(15.6f)+.01f)})
-            Bead(this,p,new(.42f,.25f,.16f),_hollowStoneMaterial!).Name="HollowBuriedPebble";
+        mouth.Index();rim.Index();AddChild(new MeshInstance3D{Name="HollowBurrowInset",Mesh=mouth.Commit(),MaterialOverride=_art.Color(new("27291e"),1)});
+        AddChild(new MeshInstance3D{Name="HollowBurrowEarthLip",Mesh=rim.Commit(),MaterialOverride=_art.Color(new("9a623c"),.95f)});
+        foreach(float cluster in new[]{2.7f,9.5f,17.4f})for(int n=0;n<3;n++)
+            Bead(this,new(cluster+(n-1)*.72f,-1.04f+(n%2)*.10f,Depth+.045f),new(.85f,.42f,.18f),_hollowStoneMaterial!).Name="HollowClayPebble";
     }
-
-    private static void HollowRoot(Node parent,Vector3 a,Vector3 b,float width,Material material)
+    private void BuildHollowRootCurve(Vector3 a,Vector3 b,Vector3 c,Vector3 d,Material paint,int id)
     {
-        var up=(b-a).Normalized();var right=up.Cross(Vector3.Back).Normalized();var back=right.Cross(up);
-        var root=RoundedBox(parent,(a+b)/2,new(width,a.DistanceTo(b),width),material,.8f);
-        root.Basis=new(right,up,back);root.Name="HollowRoot";
+        const int sections=16,sides=8;var rings=new Vector3[sections+1,sides];var centres=new Vector3[sections+1];
+        for(int row=0;row<=sections;row++)
+        {
+            float t=row/(float)sections,u=1-t;var point=a*u*u*u+b*3*u*u*t+c*3*u*t*t+d*t*t*t;
+            var tangent=((b-a)*3*u*u+(c-b)*6*u*t+(d-c)*3*t*t).Normalized();
+            var right=tangent.Cross(Vector3.Back).Normalized();var back=right.Cross(tangent);centres[row]=point;
+            float radius=Mathf.Lerp(.15f,.04f,t);
+            for(int i=0;i<sides;i++){var(s,co)=PresentationMath.SinCos(i*Mathf.Tau/sides);rings[row,i]=point+(right*co+back*s)*radius;}
+        }
+        var mesh=new SurfaceTool();mesh.Begin(Mesh.PrimitiveType.Triangles);
+        for(int row=0;row<sections;row++)for(int i=0;i<sides;i++)
+        {int j=(i+1)%sides;HollowQuad(mesh,rings[row,i],rings[row,j],rings[row+1,j],rings[row+1,i],(rings[row,i]+rings[row,j])/2-centres[row]);}
+        mesh.Index();AddChild(new MeshInstance3D{Name="HollowCurvedRoot"+id,Mesh=mesh.Commit(),MaterialOverride=paint});
     }
 
     private static void HollowQuad(SurfaceTool surface,Vector3 a,Vector3 b,Vector3 c,Vector3 d,Vector3 outward)

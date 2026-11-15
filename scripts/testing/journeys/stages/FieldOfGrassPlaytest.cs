@@ -28,8 +28,8 @@ public partial class PlaytestDriver
                 await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"Cutaway Hollow study enters "+label,150);
                 var arena=_root.GetChildren().OfType<ArenaView>().Single();var terrain=AuditDescendants(arena).OfType<TempleStageView>().Single();
                 Check(AuditDescendants(terrain).OfType<MeshInstance3D>().Any(n=>n.Name=="HollowStrataCutFace")&&
-                    AuditDescendants(terrain).OfType<MeshInstance3D>().Count(n=>n.Name.ToString().StartsWith("HollowRounded"))==2,
-                    "study consumes the new exposed earth slice and rounded bank masses");
+                    AuditDescendants(terrain).OfType<MeshInstance3D>().Any(n=>n.Name=="HollowMeadowPlateau"),
+                    "study consumes the surrounding meadow and continuous open earth section");
                 CheckClockwiseMeshes(AuditDescendants(terrain).OfType<MeshInstance3D>()
                     .Where(n=>n.Name.ToString().StartsWith("MeadowBankSlope")||n.Name.ToString().StartsWith("Hollow"))
                     .Select(n=>(n.Mesh,n.Name.ToString(),n.Name.ToString().StartsWith("MeadowBankSlope")))
@@ -39,6 +39,11 @@ public partial class PlaytestDriver
                 CheckFraming(BlastStages.FieldOfGrass,GetWindow().Size);
                 await WaitState(s=>s.GetProperty("hazards").GetArrayLength()>0,"ordinary eight-player hollow battle produces real blasts",600);
                 await Capture("cutaway-hollow-shape-"+label+"-combat");
+                var status=_root.FindChild("ConnectionStatus",true,false) as Control;
+                var footer=status?.GetParent()?.GetParent() as Control;bool footerVisible=footer?.Visible??false;
+                if(footer is not null)footer.Visible=false;
+                try{await Capture("cutaway-hollow-shape-"+label+"-unobstructed-cut");}
+                finally{if(footer is not null)footer.Visible=footerVisible;}
                 if(!_headless&&time==StageTime.Midday&&preset==GraphicsPreset.High)
                 {
                     var camera=_root.GetViewport().GetCamera3D()!;var pose=camera.Transform;var(h,v)=(camera.HOffset,camera.VOffset);
@@ -48,15 +53,29 @@ public partial class PlaytestDriver
                         camera.Position=new(terrain.Width+6,13,terrain.Depth+12);camera.LookAt(new Vector3(terrain.Width/2f,.4f,terrain.Depth/2f));
                         await Capture("cutaway-hollow-shape-oblique-inspection");
                         camera.Position=new(terrain.Width/2f,4.8f,terrain.Depth+12);camera.LookAt(new Vector3(terrain.Width/2f,.3f,terrain.Depth-1));
-                        await Capture("cutaway-hollow-shape-cut-face-inspection");
+                        if(footer is not null)footer.Visible=false;
+                        try{await Capture("cutaway-hollow-shape-cut-face-inspection");}
+                        finally{if(footer is not null)footer.Visible=footerVisible;}
                     }
                     finally{camera.Transform=pose;camera.HOffset=h;camera.VOffset=v;}
                 }
             }
+            if(_root.ActiveSession!=null){_root.Back();await Frames(3);}
+            if(!_headless){await SelectGraphics(GraphicsPreset.High);await SelectLocalLighting(StageTime.Midday);}
+            _root.StartLocal(new SessionSettings(Stage:BlastStages.FieldOfGrass,Bots:0,SuddenDeath:false)
+                {Advanced=new AdvancedRules{BlockPercent=0}},8);
+            await WaitState(st=>st.GetProperty("phase").GetInt32()==1,"hollow support witness enters ordinary eight-human battle",150);
+            await GrappleWalk(2,3,15);await GrappleWalk(3,17,15);await GrappleWalk(4,10,7);
+            Check(Math.Abs(GrapplePlayer(0).GetProperty("y").GetSingle()-2)<.02f&&Math.Abs(GrapplePlayer(1).GetProperty("y").GetSingle()-2)<.02f&&
+                Math.Abs(GrapplePlayer(2).GetProperty("y").GetSingle()-1.5f)<.17f&&Math.Abs(GrapplePlayer(3).GetProperty("y").GetSingle()-1.5f)<.17f,
+                "ordinary actors really stand on both physical ledges and both exact slopes");
+            Input(4,new PlayerInput(0,0,A:true));await Frames(2);Input(4,default);await Frames(2);
+            Check(State.GetProperty("bombs").GetArrayLength()==1,"real bomb is planted in the hollow grass for concealment review");
+            await Capture("cutaway-hollow-ledges-slopes-bomb-in-grass",0);
         }
         finally
         {
-            Input(0,default);Input(1,default);
+            foreach(int seat in new[]{0,1,2,3,4})Input(seat,default);
             if(_root.ActiveSession!=null){_root.Back();await Frames(3);}
             if(!_headless){await SelectGraphics(original);await SelectLocalLighting(lighting);}
         }

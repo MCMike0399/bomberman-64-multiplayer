@@ -51,6 +51,7 @@ public partial class TempleStageView : Node3D
     private float _fieldClock;
     private ShaderMaterial? _fieldGrassMaterial;
     private ShaderMaterial? _hollowStoneMaterial;
+    private OmniLight3D? _hollowLantern;
     private Mesh[] _hollowStoneMeshes=[];
     private readonly List<ShaderMaterial> _fieldMaterials=[];
     private readonly List<ShaderMaterial> _gardenMaterials=[];
@@ -69,6 +70,7 @@ public partial class TempleStageView : Node3D
     public void SetLighting(StageLighting lighting)
     {
         _lighting=lighting;
+        if(_hollowLantern is not null)_hollowLantern.LightEnergy=lighting.Label=="Night"?1.1f:.04f;
         if(_fieldGrassMaterial is not null)_fieldGrassMaterial.SetShaderParameter("paint",new Color(lighting.Label=="Night"?"668e4f":"4e793f"));
         if(_water?.MaterialOverride is ShaderMaterial material)lighting.ApplyWater(material);
         if(_greedyMoat?.MaterialOverride is ShaderMaterial moat)lighting.ApplyWater(moat);

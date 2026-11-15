@@ -133,3 +133,22 @@ rechecks ordinary movement and exact mid-slope support. The stile/hay masses are
 intentionally blocked and have no finished ambient life yet. Independent native
 shape review precedes butterfly or material finishing; this checkpoint is not
 a completed scenery/release qualification.
+
+The second coherent terrain candidate replaces the isolated block and rolled
+ridges with a surrounding 2.6-height meadow plateau, three authored shoulder
+hummocks per side and a far turfed rise behind the retaining course. The exposed
+front continues past the frame; a thin ragged sod lip replaces the coping roll.
+The nonpassable boundary row retains its crown through the earth body, while
+all actual walkable sheets remain unchanged. Four broad specified soil layers
+replace line grain. The burrow is an intact-face inset ellipse with a matched
+raised rim, roots taper along asymmetric curves, and clay pebbles form large
+clusters. Five stone masses retain the same physical peak with varied widths
+and warm/cool grey. Grass has larger edge variation, short sparse slope tufts,
+front/back taper and more visible wheat tips. The stile has a warm Night lantern.
+The study adds unobstructed cut-face captures and real actors on both ledges and
+slopes with a planted grass bomb. Native art review remains pending.
+
+The coherent meadow revision passes 40 headless study assertions with zero
+runtime errors or warnings. Its additional views retain the actual support
+sheets, both slope actors and a real planted bomb. Native review of the terrain,
+Night lamp, wheat tips and cut-face readability is still required.
