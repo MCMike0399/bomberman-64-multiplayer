@@ -16,8 +16,7 @@ public partial class TempleStageView
         _barrelTimber=ShipPaint("a66f3f");
         var green=_art.Toy(new("356f63"),.65f);var gold=_art.Color(new("c7a15b"),.65f);
         var iron=_art.Color(new("424d53"),.85f);
-        BuildShipHull(dark,green,gold);
-        BuildQuarterCabin(oak,dark,green,gold);
+        BuildShipHull(oak);
         BuildShipPlanks(oak,pale);
 
         // The collision grid owns the real decks and ramps. Individual broad
@@ -56,18 +55,25 @@ public partial class TempleStageView
             var post=new Node3D{Name=x==9?"MainMast":"ForwardPost"+x,Position=new(x+.5f,0,z+.5f)};AddChild(post);
             if(x==9)
                 ShipLathe(post,Vector3.Zero,[(0,.46f),(1.15f,.44f),(height-.25f,.34f),(height,.30f)],ShipPaint("ae7a49",true),"main-mast");
-            else Box(post,new(0,height/2,0),new(.78f,height,.78f),oak,.065f);
+            else if(x==5)
+            {
+                ShipLathe(post,Vector3.Zero,[(0,.45f),(.22f,.47f),(.38f,.34f),(height-.20f,.34f),(height-.12f,.47f),(height,.47f)],oak,"capstan-post");
+            }
+            else
+            {
+                foreach(float dx in new[]{-.25f,.25f})Box(post,new(dx,height/2,0),new(.31f,height,.66f),oak,.07f);
+                Box(post,new(0,height-.23f,0),new(.93f,.22f,.72f),oak,.07f);
+            }
             Box(post,new(0,.10f,0),new(.95f,.20f,.95f),pale,.025f);
             foreach(float band in new[]{.25f,Mathf.Min(height-.12f,1.35f)})
                 if(x==9)ShipLathe(post,Vector3.Zero,[(band-.045f,.47f),(band+.045f,.47f)],iron,"mast-hoop:"+band);
                 else Box(post,new(0,band,0),new(.82f,.075f,.82f),iron,.014f);
-            if(x!=9)Box(post,new(0,height-.055f,0),new(.81f,.11f,.81f),gold,.025f);
+
         }
-        // A furled sail and high rigging frame the deck without a canvas sheet
-        // covering the playable lanes. Attachment ends remain on the gunwales.
-        BuildFurledSail(dark,gold);
-        foreach(float x in new[]{.5f,18.5f})
-            ShipRope(new(9.5f,6.9f,8.5f),new(x,2.1f,1.5f),.032f,gold);
+        // Thick shrouds finish beyond the court; their in-court spans remain
+        // above standing headroom. Sail/decor refinement follows shape approval.
+        foreach(float x in new[]{8.1f,10.9f})foreach(float z in new[]{-1.7f,20.7f})
+            ShipRope(new(9.5f,6.75f,8.5f),new(x,1.35f,z),.075f,gold);
 
         if(IncludeScenery)
         {

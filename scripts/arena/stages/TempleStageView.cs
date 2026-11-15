@@ -50,6 +50,12 @@ public partial class TempleStageView : Node3D
     private bool _seaSick;
     private readonly List<ShaderMaterial> _shipMaterials=[];
     private ShaderMaterial _barrelTimber=null!;
+    private readonly Dictionary<MeshInstance3D,Material?> _shipStudyMaterials=[];
+    private static readonly (float X,float Beam,float Sheer,float Keel)[] TubbyHullSections=[
+        (-3.5f,.65f,2.15f,-.8f),(-2.8f,4.6f,1.95f,-2.0f),(-1.1f,9.3f,1.6f,-3.6f),
+        (0,10.1f,1.6f,-4.0f),(3.2f,11.4f,1.10f,-4.7f),(9.5f,11.8f,.85f,-4.9f),
+        (15.8f,11.4f,1.10f,-4.7f),(19,10.1f,1.6f,-4.0f),(20.4f,8.2f,1.62f,-3.2f),
+        (21.9f,3.5f,1.95f,-1.8f),(22.7f,.24f,2.15f,-.5f)];
     private bool _garden;
     private readonly List<ShaderMaterial> _gardenMaterials=[];
     private Mesh[] _gardenRocks=[];

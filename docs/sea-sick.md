@@ -58,14 +58,24 @@ retains the existing Low/Medium/High policy. Low hides the escort boats, gulls,
 buoys and distant harbor islet; the playable ship remains. Menu miniatures omit
 the exterior ocean/life and retain the original ship geometry.
 
-The original art uses warm painted timber, green/brass gunwales, rope rails,
-a shaped cutter hull/prow with layered teal strakes and brass portholes, an aft
-quarter cabin and helm, barrel hoops and a folded cream sail with rope lashings.
-Longer staggered deck planks avoid a regular cell grid; the mast is a tapered
-faceted timber shaft within its existing collision footprint. High retains the
-existing material tier and water reflections. Tall mast/rigging can extend above
-the ordinary combat frame; camera fitting protects the playable floor and
-standing headroom rather than shrinking the whole deck to fit the masthead.
+The **Tubby Cutter** shape study (2026-11-15) runs the ship left to right:
+left sterncastle and right forecastle reuse the existing raised galleries.
+A continuous loft of curved U-shaped sections gives the body a broad belly,
+raised sheer at both ends and a tapered right bow. Curved shoulders lie outside
+the unchanged court, with a cream wale, a stubby bowsprit and a left rudder.
+The mast is round and tapered, and the two forward obstacles read as a capstan
+and bitts within their existing authority footprints. Long planks follow X with
+staggered butt joints. Previous small cabin/porthole dressing is excluded while
+the sculptural body is reviewed.
+
+`sea-sick-shape-study` is an explicit grayscale material inspection of an actual
+ordinary local battle with cover disabled through advanced settings. It retains
+Low/High battle views, observed maximum roll, a wide oblique view and a lower
+profile view. The real camera is unchanged in the battle captures. Material
+inspection is off in ordinary play; it never changes accepted state. The study
+must pass native grayscale/320px silhouette review before surface and ambient
+life refinement. Numeric winding/extent checks do not approve the massing.
+
 
 ## Verification and review recipe
 

@@ -1830,6 +1830,17 @@
       "headless": false,
       "timeout": 1200,
       "manual": false
+    },
+    {
+      "id": "sea-sick-shape-study",
+      "method": "SeaSickShapeStudy",
+      "domains": [
+        "rendering",
+        "gameplay"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
     }
   ]
 }
