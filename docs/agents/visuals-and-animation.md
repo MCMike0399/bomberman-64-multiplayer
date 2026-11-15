@@ -832,3 +832,14 @@ upload, duplication and geometry-helper source entry and the finite template
 tuples. New entries or changed producing-source bounds fail the public gate
 until reviewed. Normal headless and packaged functional lanes exercise the
 actual end-of-round closure and meteor paths with templates enforced.
+
+### Clockwise authored surfaces (2026-11-15)
+
+Godot uses clockwise front faces: for emitted vertices `a,b,c`, the outward
+normal is `(c-a).Cross(b-a)`. Supplying `NORMAL=Up` cannot make a back-facing
+triangle visible. Preserve culling and correct the emitted order. The stage
+journeys inspect actual mesh vertex/index/normal buffers, require upward-facing
+ground surfaces and retain the first red result. A live actor standing on the
+rendered surface is separate evidence from a node count or a numerical normal.
+The Lost at Sea glass and Grass bank fixes retain the original missing-surface
+native witness and before/after actual-mesh audits.

@@ -4446,7 +4446,7 @@
     {
       "id": "scripts/arena/stages/field_of_grass/TempleStageView.FieldOfGrass.cs:surface.Commit:2",
       "file": "scripts/arena/stages/field_of_grass/TempleStageView.FieldOfGrass.cs",
-      "line": 127,
+      "line": 128,
       "call": "surface.Commit()",
       "callSha256": "3a4b0e22bc74cdecd537891eb2f48df20b98f27fbf269b1803e1cc035b3194ec",
       "domain": "owned-generator-or-helper"
@@ -9576,11 +9576,11 @@
     "scripts/arena/stages/TempleStageView.UpAndDown.cs": "66ee09178629038b769382d720fae901d74d7bb670e846143463b998f96f2006",
     "scripts/arena/stages/TempleStageView.UpAndDownExterior.cs": "f6beb01527bf31f486f53c77b0a49a0233aeeaf5dc001d7cd20f9e11090ddacf",
     "scripts/arena/stages/TempleStageView.cs": "f0220acaeb0528ec64f302da95037efaad176b5b6ef1bb818878686f0b5025ff",
-    "scripts/arena/stages/field_of_grass/TempleStageView.FieldOfGrass.cs": "0f0829ddf7b0638844868d901cfd99e174a1efa96b638b40b93f28f0fa62e882",
+    "scripts/arena/stages/field_of_grass/TempleStageView.FieldOfGrass.cs": "648cd7583cda29e58049dc259680c6dcf3c34870b55858bbc1c8b49b5fef0862",
     "scripts/arena/stages/field_of_grass/TempleStageView.FieldOfGrassExterior.cs": "97ddcb0185258d6a07ccbb678765ec5a051021d3d1080a0f474b337dfe0479fe",
     "scripts/rendering/ArtGeometry.cs": "32fea3664b4af118fe691a5e0c1eb396eebf0352922996ea2b18896d0ea9764e",
     "scripts/rendering/PrimitiveTemplates.cs": "a217a597e45615d6a71b19529c4b24ca49cf09b1a2473b53e509ee153cce9352",
-    "scripts/testing/journeys/rendering/AssetAuditPlaytest.cs": "9369deb5c46c7f4db09a187701d5c548b454e53ba80da072835a8a475f31e742",
+    "scripts/testing/journeys/rendering/AssetAuditPlaytest.cs": "080b33d640d46659c24993a2777109c9c10d7fb356fcabd38e4168de4c8792d6",
     "scripts/testing/journeys/rendering/PickupShowcasePlaytest.cs": "3c142760084075f88141b82a8f45d77d6e3c4fc56fce2896750b2158fd7dce77",
     "scripts/ui/ArcadeModeButton.cs": "a7dc6b554f9ace5e661fe3ba72594bae40ea7bfc9aca8e9314f6dad663f95db9",
     "scripts/ui/menu/ArcadeBackdrop.cs": "5d8d71918797fc6b6a3a612f99f434fd2cb5ac2d20a9891417102a21bc98072f",
