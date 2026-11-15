@@ -1796,7 +1796,8 @@
     {
       "id": "tour-24",
       "steps": [
-        "sea-sick"
+        "sea-sick",
+        "sea-sick-framing"
       ],
       "domains": [
         "gameplay",
@@ -1817,7 +1818,8 @@
         "stage-scenery",
         "framing",
         "precision-aim",
-        "sea-sick-network"
+        "sea-sick-network",
+        "sea-sick-framing"
       ],
       "domains": [
         "gameplay",
@@ -1864,6 +1866,17 @@
       ],
       "headless": true,
       "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "sea-sick-framing",
+      "method": "SeaSickFramingRegression",
+      "domains": [
+        "rendering",
+        "ui"
+      ],
+      "headless": true,
+      "timeout": 90,
       "manual": false
     }
   ]

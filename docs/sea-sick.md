@@ -147,3 +147,11 @@ meteor warning/impact; and the actual menu miniature. `sea-sick-roll-colour`
 retains eight unaltered captures across one slow roll cycle and can be recorded
 with `--record`. These are review leaves; the ordinary `sea-sick` functional
 journey remains in `tour-24` and the main suites.
+
+The fit reserves the union of the permitted roll/pitch poses once, including
+at a display resize. It never follows the ship during the cycle. This prevents
+a level-only fit from allowing a rolled standing-character corner into the HUD
+at 16:9. `sea-sick-framing` uses fixed 16:10/16:9 SubViewports, projects the
+public layout's standing corners through every pose and retains the unchanged
+HUD bound plus a stationary-camera assertion. It reproduced the original
+16:9 breach before the fix and belongs to `tour-24` and the focused regression.

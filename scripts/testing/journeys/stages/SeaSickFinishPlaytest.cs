@@ -1,4 +1,5 @@
 using Godot;
+using System.Text.Json;
 using BlastCircuit.Arena;
 using BlastCircuit.Arena.Effects;
 using BlastCircuit.Arena.Stages;
@@ -140,4 +141,43 @@ public partial class PlaytestDriver
             _root.Back();await Frames(3);await SelectGraphics(quality);await SelectLocalLighting(lighting);_root.Navigate("Modes");
         }
     }
+    private async Task SeaSickFramingRegression()
+    {
+        if(_root.ActiveSession!=null){_root.Back();await Frames(3);}
+        await StartColourShip();var stage=_root.LatestStage!.Value;
+        var points=new List<Vector3>();int width=stage.GetProperty("width").GetInt32(),index=0;
+        foreach(var cell in stage.GetProperty("cells").EnumerateArray())
+        {
+            int x=index%width,z=index++/width,kind=cell.GetProperty("k").GetInt32();if(kind is 2 or 3)continue;
+            float y=(kind==4?cell.GetProperty("rt"):cell.GetProperty("t")).GetSingle()*TempleStageView.HeightScale;
+            float head=kind==1?Math.Min(cell.GetProperty("oh").GetSingle()*TempleStageView.HeightScale,2.1f):2.1f;
+            foreach(float dx in new[]{0f,1f})foreach(float dz in new[]{0f,1f})foreach(float h in new[]{0f,head})points.Add(new(x+dx,y+h,z+dz));
+        }
+        try
+        {
+            foreach(var size in new[]{new Vector2I(1280,800),new Vector2I(1280,720)})
+            {
+                var view=new SubViewport{OwnWorld3D=true,Size=size,RenderTargetUpdateMode=SubViewport.UpdateMode.Disabled};AddChild(view);
+                try
+                {
+                    var world=new Node3D();view.AddChild(world);
+                    var camera=new Camera3D{Fov=36,Near=.1f,Far=180,Current=true};world.AddChild(camera);await Frames(1);
+                    var rig=new BattleCameraRig(camera);rig.SetStage(stage);var fitted=camera.GetCameraTransform();
+                    foreach(float roll in new[]{-ArenaView.ShipRollAmplitude,ArenaView.ShipRollAmplitude})foreach(float pitch in new[]{-ArenaView.ShipPitchAmplitude,ArenaView.ShipPitchAmplitude})
+                    {
+                        var basis=PresentationMath.Rotation(new(roll,0,pitch));var pivot=new Vector3(9.5f,0,9.5f);var pose=new Transform3D(basis,pivot-basis*pivot);
+                        var projected=points.Select(p=>camera.UnprojectPosition(pose*p)/new Vector2(size.X,size.Y)).ToArray();
+                        var min=projected.Aggregate(new Vector2(float.MaxValue,float.MaxValue),(a,b)=>a.Min(b));
+                        var max=projected.Aggregate(new Vector2(float.MinValue,float.MinValue),(a,b)=>a.Max(b));
+                        Event("ship-fixed-camera-envelope",new{size=size.ToString(),roll,pitch,min=min.ToString(),max=max.ToString()});
+                        Check(min.X>=.02f&&max.X<=.98f&&min.Y>=.14f&&max.Y<=.90f,$"fixed Sea Sick camera contains full motion envelope at {size}: {min}–{max}");
+                        Check(camera.GetCameraTransform().IsEqualApprox(fitted),"framing regression never follows or compensates the ship's roll");
+                    }
+                }
+                finally{view.QueueFree();await Frames(1);}
+            }
+        }
+        finally{_root.Back();await Frames(3);}
+    }
+
 }
