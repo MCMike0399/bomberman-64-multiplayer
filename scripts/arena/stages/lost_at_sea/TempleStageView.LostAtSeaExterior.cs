@@ -67,7 +67,7 @@ public partial class TempleStageView
         var fish=Prop(parent,"ReefFish",position,0,.7f);
         var paint=_art.Toy(new(((int)phase)%2==0?"dfbd78":"91bdc3"),.75f);
         Bead(fish,Vector3.Zero,new(.6f,.28f,.22f),paint);
-        Plate(fish,new(-.4f,0,0),[new(0,0),new(-.2f,.18f),new(-.2f,-.18f)],.045f,paint);
+        Plate(fish,new(-.4f,0,0),[new(0,0),new(-.2f,.18f),new(-.2f,-.18f)],.045f,paint).Name="ReefFishTail";
         Bead(fish,new(.19f,.05f,.1f),new(.045f,.045f,.03f),_art.Color(new("314f60")));
         _sceneryMotion.Add(t=>fish.Basis=PresentationMath.Rotation(new(0,PresentationMath.Sin(t*3.1f+phase)*.15f,PresentationMath.Sin(t*1.3f+phase)*.035f),Vector3.One*.7f));
     }

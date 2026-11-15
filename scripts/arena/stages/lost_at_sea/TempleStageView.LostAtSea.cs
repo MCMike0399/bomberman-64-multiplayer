@@ -19,7 +19,7 @@ public partial class TempleStageView
         // authority cells support actors; all marine scenery is below/outside it.
         Box(this,new(Width/2f,-3.4f,Depth/2f),new(160,.16f,160),_art.Color(new("286477"),.95f)).Name="ObservationOceanBed";
         var glass=new SurfaceTool();glass.Begin(Mesh.PrimitiveType.Triangles);
-        foreach(var point in new[]{new Vector3(3,0,3),new Vector3(Width-3,0,Depth-3),new Vector3(Width-3,0,3),new Vector3(3,0,3),new Vector3(3,0,Depth-3),new Vector3(Width-3,0,Depth-3)})
+        foreach(var point in new[]{new Vector3(3,0,3),new Vector3(Width-3,0,3),new Vector3(Width-3,0,Depth-3),new Vector3(3,0,3),new Vector3(Width-3,0,Depth-3),new Vector3(3,0,Depth-3)})
         {glass.SetNormal(Vector3.Up);glass.SetUV(new(point.X/Width,point.Z/Depth));glass.AddVertex(point);}
         glass.Index();AddChild(new MeshInstance3D{Name="SlipperyVioletGlass",Mesh=glass.Commit(),MaterialOverride=_seaGlass});
         for(int z=0;z<Depth;z++)for(int x=0;x<Width;x++)

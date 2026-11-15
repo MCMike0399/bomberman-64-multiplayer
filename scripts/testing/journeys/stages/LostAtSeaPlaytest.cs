@@ -29,6 +29,9 @@ public partial class PlaytestDriver
             Check(AuditDescendants(terrain).OfType<Node3D>().Count(n=>n.Name.ToString().StartsWith("CoralOrangeTower"))==4,"actual deck renders four tall orange towers");
             Check(AuditDescendants(arena).OfType<Node3D>().Count(n=>n.Name.ToString().StartsWith("ObservationCargo"))==32,"actual accepted cargo renders as thirty-two X-braced crates");
             Check(AuditDescendants(terrain).OfType<MeshInstance3D>().Any(n=>n.Name=="SlipperyVioletGlass"),"actual play surface uses original violet observation glass");
+            CheckClockwiseMeshes(AuditDescendants(terrain).OfType<MeshInstance3D>()
+                .Where(n=>n.Name=="SlipperyVioletGlass"||n.Name=="ReefFishTail")
+                .Select(n=>(n.Mesh,n.Name.ToString(),n.Name=="SlipperyVioletGlass")));
             CheckFraming(BlastStages.LostAtSea,GetWindow().Size);await Capture("lost-at-sea-eight-player-opening");
             foreach(var preset in new[]{GraphicsPreset.Low,GraphicsPreset.Medium,GraphicsPreset.High})
             {

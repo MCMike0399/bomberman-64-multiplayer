@@ -90,3 +90,15 @@ scene names; the four towers now have unique stable names. Source headless exit
 logs retain five local/two network ObjectDB cleanup warnings. Exported/native
 classification, actual glass/fish/contrast image review and release delivery
 remain separate; no user approval of this art is claimed.
+
+The independent art-direction review rejected the initial presentation and calls
+for a Glass Buoy shape study before decorative finishing; art acceptance remains
+withdrawn. Native review also exposed a technical defect: both violet floor
+triangles were back-facing, so default culling removed the intended material
+entirely. The correction reverses their emitted order and keeps culling enabled.
+An actual-scene mesh audit was retained red (two glass faces, alignment -1), then
+green (36 meshes / 282 triangles, minimum alignment 0.9999999). It also checks
+that floor faces point upward independently of supplied normals. The original
+native missing-glass capture and source-derived red/green checks remain in the
+private evidence directory. The corrected headless journey passes 33 assertions;
+corrected native material appearance and the full art brief still require review.
