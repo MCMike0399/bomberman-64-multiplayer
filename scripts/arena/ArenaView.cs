@@ -31,6 +31,9 @@ public partial class ArenaView : Node3D
     public void SetLocalInput(string playerId,PlayerInput input)=>_localInputs[playerId]=input;
     public event Action<string,string?>? PlayerFeedback;
     private readonly Node3D _dynamic=new(),_effects=new();
+    private readonly Node3D _stageAssembly=new(){Name="StageAssembly"};
+    private float _shipClock;
+    public Transform3D StageAssemblyTransform=>_stageAssembly.Transform;
     private readonly Dictionary<string,Node3D> _entities=[];
     private readonly HashSet<string> _seenEntities=new(StringComparer.Ordinal);
     private readonly List<string> _staleEntities=[];
@@ -56,7 +59,7 @@ public partial class ArenaView : Node3D
     public StageTime TimeOfDay {get;private set;}=StageTime.Midday;
     private Camera3D _camera=null!;
     private readonly CameraAttributesPractical _cameraAttributes=new() {DofBlurAmount=.075f};
-    private Transform3D _depthCueTransform;
+    private Transform3D _depthCueTransform,_depthCueMapTransform;
     private BattleCameraRig _cameraRig=null!;
     private BattleAudio _audio=null!;
     private string _stage="";
@@ -97,7 +100,7 @@ public partial class ArenaView : Node3D
 
     public override void _Ready()
     {
-        AddChild(_dynamic);AddChild(_effects);_audio=new BattleAudio();AddChild(_audio);
+        AddChild(_stageAssembly);_stageAssembly.AddChild(_dynamic);_stageAssembly.AddChild(_effects);_audio=new BattleAudio();AddChild(_audio);
         _sky=new ProceduralSkyMaterial {SkyCurve=.22f,GroundCurve=.3f,SunAngleMax=8,SunCurve=.08f,UseDebanding=true};
         _environment=new Godot.Environment
         {
@@ -163,13 +166,13 @@ public partial class ArenaView : Node3D
     {
         string id=data.GetProperty("id").GetString()!;
         if(_stage==id)return;
-        _stage=id;ClearThrowPreviews();
+        _stage=id;_shipClock=0;_stageAssembly.Transform=Transform3D.Identity;_cameraRig.MapTransform=Transform3D.Identity;ClearThrowPreviews();
         _softBlockEncoding=null;_softBlockBits=[];
         _environment.BackgroundMode=id==BlastStages.TopRules?Godot.Environment.BGMode.Color:Godot.Environment.BGMode.Sky;
         _environment.BackgroundColor=new Color("171a22");
         _environment.FogSkyAffect=id==BlastStages.TopRules?0:1;
         _playerMotion.Clear();_facings.Clear();_ghostHosts.Clear();_holders.Clear();_lastLooks.Clear();
-        _terrain?.QueueFree();_terrain=new TempleStageView(_art);AddChild(_terrain);_terrain.Build(data);
+        _terrain?.QueueFree();_terrain=new TempleStageView(_art);_stageAssembly.AddChild(_terrain);_terrain.Build(data);
         _terrain.SetLighting(StageLighting.For(TimeOfDay));
         _terrain.WeatherActive=_battleActive;
         foreach(Node child in _dynamic.GetChildren())child.QueueFree();
@@ -195,10 +198,12 @@ public partial class ArenaView : Node3D
     public override void _Process(double delta)
     {
         _clock+=delta;float dt=(float)delta;
+        AdvanceShipMotion(dt);
+        _cameraRig.MapTransform=_stageAssembly.GlobalTransform;
         float positionBlend=1-Mathf.Exp(-20*dt),facingBlend=1-Mathf.Exp(-18*dt),carryBlend=1-Mathf.Exp(-24*dt);
         // Include projection offsets in the effective view used by radial fog.
         var viewTransform=_camera.GetCameraTransform();
-        if(viewTransform!=_depthCueTransform){_depthCueTransform=viewTransform;_cameraRig.MeasureDepth();ApplyDepthCues();}
+        if(viewTransform!=_depthCueTransform||_cameraRig.MapTransform!=_depthCueMapTransform){_depthCueTransform=viewTransform;_depthCueMapTransform=_cameraRig.MapTransform;_cameraRig.MeasureDepth();ApplyDepthCues();}
         foreach(var (id,target) in _targets)
         {
             if(!_entities.TryGetValue(id,out var node))continue;

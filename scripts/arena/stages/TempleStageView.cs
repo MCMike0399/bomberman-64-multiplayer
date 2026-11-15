@@ -47,6 +47,9 @@ public partial class TempleStageView : Node3D
     private ShaderMaterial? _castleCoverMaterial;
     public ShaderMaterial CastleWallMaterial=>_castleWallMaterial;
     public StageLayout Layout {get;private set;} = null!;
+    private bool _seaSick;
+    private readonly List<ShaderMaterial> _shipMaterials=[];
+    private ShaderMaterial _barrelTimber=null!;
     private bool _garden;
     private readonly List<ShaderMaterial> _gardenMaterials=[];
     private Mesh[] _gardenRocks=[];
@@ -70,6 +73,7 @@ public partial class TempleStageView : Node3D
     }
     public void SetWaterLevel(float tierLevel)
     {
+        if(_seaSick)return;
         _targetWater=tierLevel*HeightScale;
         if(!_waterInitialized&&_water!=null){_water.Position=new(_water.Position.X,_targetWater,_water.Position.Z);_waterInitialized=true;}
     }
@@ -77,6 +81,7 @@ public partial class TempleStageView : Node3D
     {
         if(!IsVisibleInTree())return;
         AnimateScenery((float)delta);
+        if(_seaSick){ProcessSeaSick();return;}
         if(_blizzard){ProcessBlizzard((float)delta);return;}
         if(_greedy){ProcessGreedyTrap((float)delta);return;}
         if(_castle)
@@ -176,6 +181,8 @@ public partial class TempleStageView : Node3D
         Layout=new StageLayout {Id=data.GetProperty("id").GetString()!,Width=Width,Height=Depth,Cells=cells,
             SoftBlockHeight=data.TryGetProperty("coverHeight",out var coverHeight)?coverHeight.GetSingle():BombThrowRules.CoverHeight};
         _underpasses.Clear();foreach(var cell in Layout.Underpasses)_underpasses.Add(cell.Z*Width+cell.X);
+        _seaSick=Layout.Id==BlastStages.SeaSick;
+        if(_seaSick){BuildSeaSick();return;}
         _blizzard=Layout.Id==BlastStages.BlizzardBattle;
         if(_blizzard){BuildBlizzard();return;}
         _castle=Layout.Id==BlastStages.TopRules;
@@ -316,6 +323,7 @@ public partial class TempleStageView : Node3D
         if(_greedy)return CreateGreedyCover(x,z);
         if(_castle)return CreateCastleCover(x,z);
         var root=new Node3D {Position=new(x+.5f,Surface(x+.5f,z+.5f),z+.5f)};
+        if(_seaSick)return CreateShipBarrel(root);
         if(_garden)return CreateGardenBoulder(root,cell);
         if(_blizzard)return CreateIceCone(root,cell);
         if(Layout.Id==BlastStages.UpAndDown)return CreateUpAndDownCover(root,cell);

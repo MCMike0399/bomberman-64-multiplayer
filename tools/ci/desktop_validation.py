@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.append(str(ROOT / 'tools/playtest'))
 from contracts import catalog, expanded
 
-HEADLESS = ('core-headless', 'peer-ice-order', 'peer-ice-terminal', 'peer-rooms', 'peer-capacity', 'adaptive-rooms', 'greedy-trap-network', 'adaptive-slow-poll')
+HEADLESS = ('core-headless', 'peer-ice-order', 'peer-ice-terminal', 'peer-rooms', 'peer-capacity', 'adaptive-rooms', 'greedy-trap-network', 'sea-sick-network', 'adaptive-slow-poll')
 GRAPHICAL = ('controller-popups', 'all', 'menu-preview', 'water-surface')
 # Windows/Linux CI renders in software (WARP/llvmpipe), where one serial `all`
 # process needs about 5 h (llvmpipe) to 20 h (WARP). The catalog composes `all`

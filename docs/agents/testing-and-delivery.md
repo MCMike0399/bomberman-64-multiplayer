@@ -600,6 +600,18 @@ Headless runs check geometry at the current preset; graphical runs select each
 preset through Settings. See the [capture provenance](../media/greedy-waterwheel/manifest.json).
 
 
+## Sea Sick verification
+
+`sea-sick` (`tour-24`, `all`, `core-headless`) covers the actual menu, ship
+geometry, four/eight-player battles, gallery traversal, barrel loot, fireballs,
+pointer picking, landing reticle alignment and local pause. The ocean must
+remain fixed while the complete ship assembly moves, with accepted positions
+unchanged. `sea-sick-network` joins server-backed and player-hosted rooms and
+observes the host on a raised gallery with a supported bomb.
+`sea-sick-regression` pairs those with first-use, scenery, framing and aim
+checks. Inspect ordinary Low/Medium/High, Night, both aspect ratios and motion;
+the oblique inspection view is supplementary. [Contract and references](../sea-sick.md).
+
 ## Top Rules verification
 
 `top-rules` is a standard leaf in `all` and `core-headless`. The graphical

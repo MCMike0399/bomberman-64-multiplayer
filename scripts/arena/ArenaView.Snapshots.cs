@@ -112,7 +112,7 @@ public partial class ArenaView
             {
                 node=new MeteorView(_art);_dynamic.AddChild(node);_entities[id]=node;
             }
-            node.Position=new(F(meteor,"x"),0,F(meteor,"z"));
+            node.Position=new(F(meteor,"x"),_terrain.Surface(F(meteor,"x"),F(meteor,"z")),F(meteor,"z"));
             ((MeteorView)node).SetRemaining(F(meteor,"remaining"));
             node.SetProcess(_battleActive);
         }
