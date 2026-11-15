@@ -12,16 +12,12 @@ public partial class TempleStageView
     private void BuildSeaSick()
     {
         Name="SeaSickTerrain";
-        var oak=ShipPaint("b98450");var pale=ShipPaint("c99961");var dark=ShipPaint("795235");
+        var oak=ShipPaint("b98450");var pale=ShipPaint("c18e59");var dark=ShipPaint("795235");
         _barrelTimber=ShipPaint("a66f3f");
         var green=_art.Toy(new("356f63"),.65f);var gold=_art.Color(new("c7a15b"),.65f);
         var iron=_art.Color(new("424d53"),.85f);
-        var hull=new MeshInstance3D{Name="CutterHull",Mesh=ShipHullMesh(),MaterialOverride=dark};AddChild(hull);
-        foreach(float side in new[]{-.32f,19.32f})
-        {
-            Box(this,new(side,-.50f,9.5f),new(.09f,.28f,16.5f),green,.03f);
-            Box(this,new(side,-.70f,9.5f),new(.10f,.045f,16.5f),gold,.012f);
-        }
+        BuildShipHull(dark,green,gold);
+        BuildQuarterCabin(oak,dark,green,gold);
         BuildShipPlanks(oak,pale);
 
         // The collision grid owns the real decks and ramps. Individual broad
@@ -41,7 +37,10 @@ public partial class TempleStageView
                 continue;
             }
             if(cell.Kind==CellKind.Pillar&&x>0&&x<Width-1&&z>0&&z<Depth-1)continue;
-            Box(this,new(x+.5f,(y-.14f-1.15f)/2,z+.5f),new(.998f,y-.14f+1.15f,.998f),dark);
+            // The deck is a thin slab. Only the gallery's inner riser is tall;
+            // the outer hull is shaped separately rather than a solid box tray.
+            if(x is not (0 or 18))
+                Box(this,new(x+.5f,(y-.14f-.38f)/2,z+.5f),new(.998f,y-.14f+.38f,.998f),dark);
             if(x is 0 or 18||z is 0 or 18)
             {
                 bool side=x is 0 or 18;
@@ -55,17 +54,18 @@ public partial class TempleStageView
         {
             float height=Layout.At(x,z).ObstacleHeight!.Value*HeightScale;
             var post=new Node3D{Name=x==9?"MainMast":"ForwardPost"+x,Position=new(x+.5f,0,z+.5f)};AddChild(post);
-            Box(post,new(0,height/2,0),new(.72f,height,.72f),oak,.045f);
+            if(x==9)
+                ShipLathe(post,Vector3.Zero,[(0,.46f),(1.15f,.44f),(height-.25f,.34f),(height,.30f)],ShipPaint("ae7a49",true),"main-mast");
+            else Box(post,new(0,height/2,0),new(.78f,height,.78f),oak,.065f);
             Box(post,new(0,.10f,0),new(.95f,.20f,.95f),pale,.025f);
             foreach(float band in new[]{.25f,Mathf.Min(height-.12f,1.35f)})
-                Box(post,new(0,band,0),new(.77f,.075f,.77f),iron,.012f);
+                if(x==9)ShipLathe(post,Vector3.Zero,[(band-.045f,.47f),(band+.045f,.47f)],iron,"mast-hoop:"+band);
+                else Box(post,new(0,band,0),new(.82f,.075f,.82f),iron,.014f);
             if(x!=9)Box(post,new(0,height-.055f,0),new(.81f,.11f,.81f),gold,.025f);
         }
         // A furled sail and high rigging frame the deck without a canvas sheet
         // covering the playable lanes. Attachment ends remain on the gunwales.
-        Box(this,new(9.5f,6.55f,8.5f),new(6.2f,.17f,.17f),dark,.04f).Name="MastYard";
-        Box(this,new(9.5f,6.31f,8.5f),new(5.7f,.35f,.40f),_art.Color(new("e5dcc4"),.93f),.12f).Name="FurledCanvas";
-        foreach(float x in new[]{7.3f,8.7f,10.3f,11.7f})Box(this,new(x,6.31f,8.5f),new(.075f,.37f,.42f),gold,.02f);
+        BuildFurledSail(dark,gold);
         foreach(float x in new[]{.5f,18.5f})
             ShipRope(new(9.5f,6.9f,8.5f),new(x,2.1f,1.5f),.032f,gold);
 
@@ -87,7 +87,7 @@ public partial class TempleStageView
             var cell=Layout.At(x,z);
             bool InnerPost(int at)=>at>0&&at<Width-1&&z>0&&z<Depth-1&&Layout.At(at,z).Kind==CellKind.Pillar;
             if(cell.Kind==CellKind.Ramp||InnerPost(x)){x++;continue;}
-            int run=1,limit=2+(x+z*3)%3;
+            int run=1,limit=3+(x+z*7)%4;
             while(run<limit&&x+run<Width&&Layout.At(x+run,z).Tier==cell.Tier&&Layout.At(x+run,z).Kind!=CellKind.Ramp&&!InnerPost(x+run))run++;
             Box(this,new(x+run/2f,cell.Tier*HeightScale-.07f,z+.5f),new(run-.015f,.14f,.985f),
                 (x*7+z*13)%4==0?pale:oak,.014f).Name=$"DeckPlank{x}_{z}";
@@ -95,9 +95,9 @@ public partial class TempleStageView
         }
     }
 
-    private ShaderMaterial ShipPaint(string hex)
+    private ShaderMaterial ShipPaint(string hex,bool vertical=false)
     {
-        var paint=_art.ShipTimber(new(hex));_shipMaterials.Add(paint);return paint;
+        var paint=_art.ShipTimber(new(hex),vertical);_shipMaterials.Add(paint);return paint;
     }
 
     private void ProcessSeaSick()
@@ -169,24 +169,4 @@ public partial class TempleStageView
         var node=new MeshInstance3D{Mesh=mesh,MaterialOverride=paint,Position=at};parent.AddChild(node);return node;
     }
 
-    private static ArrayMesh ShipHullMesh()
-    {
-        var top=new Vector3[]{new(-.3f,-.2f,1),new(1,-.2f,-.7f),new(18,-.2f,-.7f),new(19.3f,-.2f,1),new(19.3f,-.2f,17.8f),new(17,-.2f,20),new(2,-.2f,20),new(-.3f,-.2f,17.8f)};
-        var surface=new SurfaceTool();surface.Begin(Mesh.PrimitiveType.Triangles);
-        var center=new Vector3(9.5f,-1.25f,9.5f);
-        void Triangle(Vector3 a,Vector3 b,Vector3 c)
-        {
-            var normal=(c-a).Cross(b-a).Normalized();var mid=(a+b+c)/3;
-            if(normal.Dot(mid-center)<0){(b,c)=(c,b);normal=-normal;}
-            foreach(var p in new[]{a,b,c}){surface.SetNormal(normal);surface.SetUV(new(p.X*.3f,p.Y*.4f));surface.AddVertex(p);}
-        }
-        for(int i=0;i<top.Length;i++)
-        {
-            int next=(i+1)%top.Length;var a=top[i];var b=top[next];
-            var c=new Vector3(9.5f+(b.X-9.5f)*.70f,-2.5f,9.5f+(b.Z-9.5f)*.80f);
-            var d=new Vector3(9.5f+(a.X-9.5f)*.70f,-2.5f,9.5f+(a.Z-9.5f)*.80f);
-            Triangle(a,b,c);Triangle(a,c,d);Triangle(new(9.5f,-2.5f,9.5f),c,d);
-        }
-        surface.Index();return surface.Commit();
-    }
 }

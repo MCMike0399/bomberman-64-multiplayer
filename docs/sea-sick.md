@@ -59,7 +59,10 @@ buoys and distant harbor islet; the playable ship remains. Menu miniatures omit
 the exterior ocean/life and retain the original ship geometry.
 
 The original art uses warm painted timber, green/brass gunwales, rope rails,
-a compact cutter hull, barrel hoops and a furled cream sail. High retains the
+a shaped cutter hull/prow with layered teal strakes and brass portholes, an aft
+quarter cabin and helm, barrel hoops and a folded cream sail with rope lashings.
+Longer staggered deck planks avoid a regular cell grid; the mast is a tapered
+faceted timber shaft within its existing collision footprint. High retains the
 existing material tier and water reflections. Tall mast/rigging can extend above
 the ordinary combat frame; camera fitting protects the playable floor and
 standing headroom rather than shrinking the whole deck to fit the masthead.
