@@ -50,6 +50,7 @@ public partial class TempleStageView : Node3D
     private bool _garden,_sea;
     private float _seaClock;
     private ShaderMaterial? _seaGlass;
+    private readonly List<OmniLight3D> _buoyLights=[];
     private readonly List<ShaderMaterial> _gardenMaterials=[];
     private Mesh[] _gardenRocks=[];
     private Material _gardenRockMaterial=null!;

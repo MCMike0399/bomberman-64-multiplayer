@@ -60,6 +60,9 @@ public partial class TempleStageView
         RoundedBox(buoy,new(0,1.42f,0),new(.65f,.18f,.35f),white,.7f);
         Bead(buoy,new(0,1.02f,0),new(.42f,.5f,.42f),brass);
         Bead(buoy,new(0,1.57f,0),new(.24f,.18f,.24f),_art.Toy(new("edba66"),.45f,true));
+        var buoyLight=new OmniLight3D{Name="BellBuoyWarmLight",Position=new(0,1.6f,0),LightColor=new("ffb45d"),
+            LightEnergy=.05f,OmniRange=2.8f,OmniAttenuation=2.0f,ShadowEnabled=false};
+        buoy.AddChild(buoyLight);_buoyLights.Add(buoyLight);
         _sceneryMotion.Add(t=>
         {
             buoy.Position=new(-3.5f,SceneryWaterHeight+.17f+PresentationMath.Sin(t*.8f)*.05f,12.2f);

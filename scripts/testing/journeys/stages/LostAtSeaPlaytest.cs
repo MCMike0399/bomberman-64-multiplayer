@@ -11,6 +11,125 @@ namespace BlastCircuit.Testing;
 
 public partial class PlaytestDriver
 {
+    private async Task LostAtSeaMaterialWitness()
+    {
+        var original=_root.Preferences.Graphics;var lighting=_root.Preferences.StageLighting;
+        try
+        {
+            if(!_headless){await SelectGraphics(GraphicsPreset.High);await SelectLocalLighting(StageTime.Midday);}
+            _root.StartLocal(new SessionSettings(Stage:BlastStages.LostAtSea,Bots:0,SuddenDeath:false)
+                {Advanced=new AdvancedRules{BlockPercent=0}},8);
+            await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"material witness enters an ordinary eight-human clear-deck battle",150);
+            await GrappleWalk(3,18,15);
+            foreach(int seat in new[]{3,6})
+            {
+                Input(seat,new PlayerInput(-1,0));
+                await WaitState(_=>GrapplePlayer(seat).GetProperty("x").GetSingle()<=16.5f,"ordinary input moves suit onto glass: "+seat,80);
+                Input(seat,default);await Frames(45);
+                var player=GrapplePlayer(seat);
+                Check(player.GetProperty("x").GetSingle() is >=3 and <18&&player.GetProperty("z").GetSingle() is >=3 and <18,
+                    "blue/purple suit really stands on the physical glass floor: "+seat);
+            }
+            await Capture("glass-material-blue-purple-high-midday");
+            if(!_headless)await SelectLocalLighting(StageTime.Night);
+            await Capture("glass-material-blue-purple-high-night");
+            if(!_headless){await SelectGraphics(GraphicsPreset.Medium);await SelectLocalLighting(StageTime.Afternoon);}
+            await Capture("glass-material-blue-purple-medium-afternoon");
+            if(!_headless){await SelectGraphics(GraphicsPreset.Low);await SelectLocalLighting(StageTime.Midday);}
+            await Capture("glass-material-blue-purple-low-midday");
+        }
+        finally
+        {
+            foreach(int seat in new[]{0,3,6})Input(seat,default);
+            if(_root.ActiveSession!=null){_root.Back();await Frames(3);}
+            if(!_headless){await SelectGraphics(original);await SelectLocalLighting(lighting);}
+        }
+    }
+
+    private async Task LostAtSeaSlideWitness()
+    {
+        Event("glass-slide-witness-policy",new{ordinaryInputs=true,stateMutation=false,
+            scope="real player glass travel and rim traction; real kicked shot resting at the far rim/boundary"});
+        _root.StartLocal(new SessionSettings(Stage:BlastStages.LostAtSea,Bots:0,SuddenDeath:false),1,practice:true);
+        await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"slide witness enters normal clear-deck Practice",150);
+        await GrappleWalk(0,2,8);Input(0,new PlayerInput(1,0));
+        await WaitState(_=>Player.GetProperty("x").GetSingle()>=10,"actual player crosses the glass",150);
+        await Capture("glass-slide-player-crossing",0);
+        await WaitState(_=>Player.GetProperty("x").GetSingle()>=18.1f,"actual player reaches the grippy rim",150);
+        Input(0,default);await Frames(3);float stopped=Player.GetProperty("x").GetSingle();await Frames(12);
+        Check(Math.Abs(Player.GetProperty("x").GetSingle()-stopped)<.01f,"player release on the rim stops without glass coast");
+        await Capture("glass-slide-player-stopped-on-rim",0);
+        Input(0,new PlayerInput(-1,0));
+        await WaitState(_=>Player.GetProperty("x").GetSingle()<=10.5f,"ordinary return reaches the middle of the glass",150);
+        Input(0,default);await Frames(45);
+        Input(0,new PlayerInput(0,0,A:true));await Frames(2);Input(0,default);await Frames(2);
+        Input(0,new PlayerInput(-1,0,A:true));await Frames(2);Input(0,default);
+        await WaitState(s=>s.GetProperty("bombs").EnumerateArray().Any(b=>b.GetProperty("state").GetInt32()==1),"ordinary kick sends a real bomb over the glass",30);
+        await Capture("glass-slide-real-kicked-shot",0);
+        await WaitState(s=>s.GetProperty("bombs").EnumerateArray().Any(b=>b.GetProperty("state").GetInt32()==0&&b.GetProperty("x").GetSingle()<3),
+            "real kicked shot comes to rest at the far rim/boundary",90);
+        await Capture("glass-slide-shot-resting-at-far-rim",0);
+        await Frames(24);Input(0,default);_root.Back();await Frames(3);
+    }
+
+    private async Task LostAtSeaDepthWitness()
+    {
+        Check(!_headless,"under-glass visibility requires an actual renderer, never scene-node presence");
+        Event("glass-depth-witness-policy",new{ordinaryInputs=true,stateMutation=false,
+            controls="labelled presentation-only hidden-subject comparisons after natural later-phase motion"});
+        var original=_root.Preferences.Graphics;var lighting=_root.Preferences.StageLighting;
+        try
+        {
+            await SelectGraphics(GraphicsPreset.High);await SelectLocalLighting(StageTime.Midday);
+            _root.StartLocal(new SessionSettings(Stage:BlastStages.LostAtSea,Bots:0,SuddenDeath:false),1,practice:true);
+            await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"depth witness enters ordinary clear-deck Practice",150);
+            await Frames(1080);
+            await Capture("glass-buoy-depth-world-later-phase");
+            var arena=_root.GetChildren().OfType<ArenaView>().Single();var terrain=AuditDescendants(arena).OfType<TempleStageView>().Single();
+            bool processing=terrain.IsProcessing();terrain.SetProcess(false);
+            try
+            {
+                foreach(string name in new[]{"MantaRay","SunkenWreck"})
+                {
+                    var subject=AuditDescendants(terrain).OfType<Node3D>().Single(n=>n.Name==name);
+                    var bounds=AuditSubtreeBounds(subject,subject.GetParent<Node3D>().GlobalTransform);
+                    var camera=_root.GetViewport().GetCamera3D()!;
+                    var min=new Vector2(float.MaxValue,float.MaxValue);var max=new Vector2(float.MinValue,float.MinValue);
+                    for(int i=0;i<8;i++)
+                    {var screen=camera.UnprojectPosition(bounds.GetEndpoint(i));min=min.Min(screen);max=max.Max(screen);}
+                    await Capture("glass-depth-"+name+"-visible");string visible=_screenshots[^1];
+                    try{subject.Visible=false;await Capture("glass-depth-"+name+"-hidden-control");}
+                    finally{subject.Visible=true;}
+                    using var before=Image.LoadFromFile(visible);using var after=Image.LoadFromFile(_screenshots[^1]);
+                    var logical=_root.GetViewport().GetVisibleRect().Size;
+                    var scale=new Vector2(before.GetWidth()/logical.X,before.GetHeight()/logical.Y);
+                    var roi=new Rect2(min*scale,(max-min)*scale).Grow(10);
+                    int x0=Math.Clamp((int)roi.Position.X,0,before.GetWidth()-1),x1=Math.Clamp((int)roi.End.X,0,before.GetWidth());
+                    int y0=Math.Clamp((int)roi.Position.Y,0,before.GetHeight()-1),y1=Math.Clamp((int)roi.End.Y,0,before.GetHeight());
+                    int changed=0;float maximum=0;
+                    for(int y=y0;y<y1;y++)for(int x=x0;x<x1;x++)
+                    {
+                        var a=before.GetPixel(x,y);var b=after.GetPixel(x,y);
+                        float delta=Math.Max(Math.Abs(a.R-b.R),Math.Max(Math.Abs(a.G-b.G),Math.Abs(a.B-b.B)))*255;
+                        maximum=Math.Max(maximum,delta);if(delta>=6)changed++;
+                    }
+                    Event("glass-depth-pixel-witness",new{name,changed,maximum,roi=new{x0,x1,y0,y1},
+                        scope="visible-image contrast only; recognition and art approval require image review"});
+                    Check(changed>=200&&maximum>=10,name+" visibly affects rendered pixels through the glass at the normal battle camera");
+                    await Capture("glass-depth-"+name+"-restored");
+                }
+            }
+            finally{terrain.SetProcess(processing);}
+            await Frames(90);await Capture("glass-buoy-depth-world-moving-restored");
+        }
+        finally
+        {
+            Input(0,default);
+            if(_root.ActiveSession!=null){_root.Back();await Frames(3);}
+            await SelectGraphics(original);await SelectLocalLighting(lighting);
+        }
+    }
+
     private async Task LostAtSeaShapeStudy()
     {
         Event("glass-buoy-shape-policy",new{ordinaryInputs=true,stateMutation=false,artApproval=false,
@@ -75,6 +194,10 @@ public partial class PlaytestDriver
             var menu=_root.FindChildren("*","",true,false).OfType<ArcadeMenu>().Single();
             menu.Configure(new SessionSettings(Stage:BlastStages.LostAtSea),1);await Frames(8);
             Check(menu.Settings.Stage==BlastStages.LostAtSea,"native setup selects Lost at Sea");await Capture("lost-at-sea-menu-miniature");
+            _root.StartLocal(new SessionSettings(Stage:BlastStages.LostAtSea,Bots:0,SuddenDeath:false),4);
+            await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"four-player observation deck starts",150);
+            Check(State.GetProperty("players").GetArrayLength()==4,"original four-corner opening is supported");
+            await Capture("lost-at-sea-four-player-opening");_root.Back();await Frames(3);
             _root.StartLocal(new SessionSettings(Stage:BlastStages.LostAtSea,Bots:0,SuddenDeath:false),8);
             await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"eight-player observation deck starts",150);
             Check(State.GetProperty("players").GetArrayLength()==8,"observation deck supports eight ordinary rim starts");
@@ -121,6 +244,9 @@ public partial class PlaytestDriver
             await Frames(8);
             Check(State.GetProperty("bombs")[0].GetProperty("x").GetSingle()>bombX+1&&State.GetProperty("bombs")[0].GetProperty("fuse").GetSingle()<fuse,"kicked glass bomb keeps momentum and its real fuse");
             await Capture("lost-at-sea-kicked-bomb-glass-slide");
+            await WaitState(s=>s.GetProperty("bombs").EnumerateArray().Any(b=>b.GetProperty("state").GetInt32()==0&&b.GetProperty("x").GetSingle()>=18),
+                "the actual kicked glass shot comes to rest in the outer rim/boundary region",75);
+            await Capture("lost-at-sea-kicked-bomb-resting-at-rim",0);
             _root.Back();await Frames(3);
 
             _root.StartLocal(new SessionSettings(Stage:BlastStages.LostAtSea,Bots:7,SuddenDeath:false),1);

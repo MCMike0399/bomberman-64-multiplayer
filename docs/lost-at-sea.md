@@ -129,3 +129,32 @@ had speed 9.560003 versus 11.580004 without the hop. Friction now samples the
 support surface, retaining the launch hop, constants, layout and fuse. The red
 paired result is retained separately from material verification. This is a
 technical authority correction, not an art tuning change.
+
+After independent approval of the buoy's major forms, the bounded material
+candidate uses a dark gunmetal 3×3 pane grid, one 0.15-cell bevel and target
+ultramarine/violet centre/edge colours. Broad slow sheen survives Low. Medium and
+High compose actual submerged opaque-scene depth/colour and use a bounded real
+scene-reflection march, rather than painted beacon silhouettes. Transparent
+combat effects draw after the glass. Exposed cap lenses and unshadowed warm
+lamps provide Night pools; the distant buoy has its own lamp.
+
+`lost-at-sea-depth-witness` is graphical-only. It waits for a natural later motion
+phase, captures the world, then performs labelled presentation-only hidden-subject
+controls against real rendered pixels. The controls never edit authority state.
+Even a passing pixel-contrast check does not establish recognisability or art
+approval: the restored normal images and motion require independent review.
+`lost-at-sea-material-witness` moves the actual blue and purple suits onto the
+physical glass using ordinary inputs, covering High, Night, Medium/Afternoon and
+Low. `lost-at-sea-slide-witness` retains actual player rim traction and a real
+kicked shot reaching the outer rim/boundary, suitable for native recording.
+The first two motion-fixture attempts are retained red: the first stepped back
+onto glass before placement and coasted away; the second used a shot longer than
+its fuse budget. The final fixture uses a normal, settled mid-court placement.
+
+The final material candidate's ordinary headless journey passes 36 assertions;
+the real-input slide witness passes 14 and the blue/purple placement witness 9.
+The four-to-eight-player opening exposed Godot replacing authored cover names
+while the previous models awaited deletion. Cover insertion now requests readable
+names, preserving diagnostic identity without changing rules or model visibility.
+The graphical depth witness has not yet run: wreck/manta visibility, material
+colour and Night warmth are explicitly unverified until root GPU review.

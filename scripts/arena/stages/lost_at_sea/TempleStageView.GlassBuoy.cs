@@ -12,10 +12,11 @@ public partial class TempleStageView
     {
         var enamel=_art.Toy(new("e0e8e4"),.62f);
         var rubber=_art.Toy(new("202c3c"),.88f);
-        var steel=_art.Toy(new("819aa8"),.62f);
+        var steel=new StandardMaterial3D{AlbedoColor=new("343b4a"),Roughness=.82f,Metallic=.35f,MetallicSpecular=.24f};
         var orange=_art.Toy(new("d86c35"),.66f);
         _seaGlass=_art.ObservationGlass();
         _seaGlass.SetShaderParameter("glass_bounds",new Vector4(3,3,Width-3,Depth-3));
+        _seaGlass.SetShaderParameter("depth_enabled",IncludeScenery);
 
         var inner=BuoyInnerContour();
         var outer=BuoyOuterContour(-.23f,Width+.23f,-.23f,Depth+.23f,1.5f);
@@ -64,11 +65,15 @@ public partial class TempleStageView
             Box(this,new(Width/2f,wall/2,side),new(Width-1,wall,.82f),enamel,.12f).Name="GlassBuoyCoaming";
         }
         foreach(float x in new[]{3.0f,Width-3.0f})
-            Box(this,new(x+(x<Width/2f?-.13f:.13f),-.055f,Depth/2f),new(.26f,.11f,Depth-6),enamel,.055f).Name="GlassBuoyGlassBevel";
+            Box(this,new(x+(x<Width/2f?-.075f:.075f),-.055f,Depth/2f),new(.15f,.11f,Depth-6),enamel,.055f).Name="GlassBuoyGlassBevel";
         foreach(float z in new[]{3.0f,Depth-3.0f})
-            Box(this,new(Width/2f,-.055f,z+(z<Depth/2f?-.13f:.13f)),new(Width-6,.11f,.26f),enamel,.055f).Name="GlassBuoyGlassBevel";
-        Box(this,new(Width/2f,-.019f,Depth/2f),new(.13f,.05f,Depth-6),steel,.018f).Name="GlassBuoyFlushMullion";
-        Box(this,new(Width/2f,-.019f,Depth/2f),new(Width-6,.05f,.13f),steel,.018f).Name="GlassBuoyFlushMullion";
+            Box(this,new(Width/2f,-.055f,z+(z<Depth/2f?-.075f:.075f)),new(Width-6,.11f,.15f),enamel,.055f).Name="GlassBuoyGlassBevel";
+        for(int pane=1;pane<=2;pane++)
+        {
+            float x=3+(Width-6)*pane/3f,z=3+(Depth-6)*pane/3f;
+            Box(this,new(x,-.019f,Depth/2f),new(.12f,.05f,Depth-6),steel,.018f).Name="GlassBuoyFlushMullion";
+            Box(this,new(Width/2f,-.019f,z),new(Width-6,.05f,.12f),steel,.018f).Name="GlassBuoyFlushMullion";
+        }
         for(int i=0;i<7;i++)foreach(float side in new[]{1.15f,Width-1.15f})
         {
             float along=3+i*(Width-6)/6f;
@@ -131,6 +136,7 @@ public partial class TempleStageView
         bool night=_lighting?.Label=="Night";
         water.SetShaderParameter("deep_color",new Color(night?"08172e":"123859"));
         water.SetShaderParameter("surface_color",new Color(night?"183c5b":"3d7194"));
+        foreach(var light in _buoyLights)light.LightEnergy=night?(light.Name=="BellBuoyWarmLight"?1.3f:.95f):.05f;
     }
 
     private void ProcessGlassBuoy(float delta)
@@ -138,7 +144,11 @@ public partial class TempleStageView
         if(WeatherActive)_seaClock+=delta;
         _seaGlass?.SetShaderParameter("ambient_clock",_seaClock);
         if(_graphicsRevision==GraphicsQuality.Revision)return;
-        if(_seaGlass is not null)GraphicsQuality.ApplyShaderDetail(_seaGlass);
+        if(_seaGlass is not null)
+        {
+            _seaGlass.Shader=ArtMaterials.ObservationGlassShaderFor(GraphicsQuality.Current);
+            GraphicsQuality.ApplyShaderDetail(_seaGlass);
+        }
         if(_water?.MaterialOverride is ShaderMaterial water)
         {
             water.Shader=ArtMaterials.WaterShaderFor(GraphicsQuality.Current);
@@ -159,6 +169,15 @@ public partial class TempleStageView
         Box(root,new(0,height-.085f,0),new(.91f,.17f,.91f),enamel,.065f);
         foreach(float side in new[]{-.3f,.3f})
             Box(root,new(side,height-.32f,.3f),new(.12f,.43f,.12f),rubber,.025f);
+        var lens=new StandardMaterial3D{AlbedoColor=new("f3b451"),Roughness=.42f,MetallicSpecular=.25f,
+            EmissionEnabled=true,Emission=new("ffae48"),EmissionEnergyMultiplier=1.5f};
+        Bead(root,new(0,height-.034f,0),new(.44f,.08f,.44f),lens).Name="BeaconCapLens";
+        if(IncludeScenery)
+        {
+            var light=new OmniLight3D{Name="BeaconWarmLight",Position=new(0,height+.12f,0),LightColor=new("ffb65a"),
+                LightEnergy=.05f,OmniRange=4.2f,OmniAttenuation=2.0f,ShadowEnabled=false};
+            root.AddChild(light);_buoyLights.Add(light);
+        }
         _sceneryMotion.Add(t=>lamp.Visible=PresentationMath.Sin(t*2.1f+x*.6f+z*.3f)>-.25f);
     }
 }
