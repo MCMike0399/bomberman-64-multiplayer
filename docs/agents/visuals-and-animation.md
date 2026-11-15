@@ -5,6 +5,15 @@ camera, explosions or sound. This guide preserves the user's corrections and
 failed approaches; exact live values remain in source. Use the
 [testing guide](testing-and-delivery.md) for build/recording ownership and commands.
 
+## Field of Grass (2026-11-15 source work)
+
+[Stage contract and inspected references](../field-of-grass.md) own the grassy valley,
+continuous side slopes, eight bank starts, random meadow rocks and meteor Hurry.
+Opaque foliage conceals normal bombs and lower bodies without changing physics;
+all presets retain it. Use the focused `--field-of-grass` authority checks and
+`field-of-grass` / `field-of-grass-network` journeys. Graphical images require
+separate review; headless checks do not approve the art or establish delivery.
+
 ## Start with the actual actor
 
 1. Record whether the complaint appears in a menu, practice, ordinary local

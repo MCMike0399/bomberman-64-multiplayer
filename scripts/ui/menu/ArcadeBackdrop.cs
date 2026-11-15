@@ -219,7 +219,7 @@ public partial class ArcadeBackdrop : RenderSurface
             // The trimmed display plinth has no open sea, so it needs no seabed.
             if(child is MeshInstance3D seabed&&seabed.Name=="Seabed")seabed.Visible=false;
             if(child is MeshInstance3D water&&PrimitiveTemplates.Is(water.Mesh,"PlaneMesh")){water.Mesh=PrimitiveTemplates.With(water.Mesh,"size",new Vector2(layout.Width+.8f,layout.Height+.8f));water.Position=new(layout.Width/2f,-.53f,layout.Height/2f);}
-            else if(child is MeshInstance3D exterior&&PrimitiveTemplates.Is(exterior.Mesh,"BoxMesh")&&(child.Name=="GardenExterior"||child.Name=="FrozenExterior"))
+            else if(child is MeshInstance3D exterior&&PrimitiveTemplates.Is(exterior.Mesh,"BoxMesh")&&(child.Name=="GardenExterior"||child.Name=="FrozenExterior"||child.Name=="FieldExterior"))
             {
                 // ArtGeometry caches meshes used by gameplay too; resize a private menu copy.
                 exterior.Mesh=PrimitiveTemplates.With(exterior.Mesh,"size",new Vector3(layout.Width+.8f,PrimitiveTemplates.Parameter(exterior.Mesh,"size").AsVector3().Y,layout.Height+.8f));

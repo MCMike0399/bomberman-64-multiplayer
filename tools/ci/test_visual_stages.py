@@ -19,6 +19,7 @@ SCENES = (
     ('top-rules', 'full-top-rules-high-v2'),
     ('blizzard-battle', 'full-blizzard-battle-high-v2'),
     ('greedy-trap', 'full-greedy-trap-high-v2'),
+    ('field-of-grass', 'full-field-of-grass-high-v2'),
     ('circuit-garden', 'full-circuit-garden-high-v2'),
 )
 LABELS = ('warmup', 'base-a', 'base-b', 'dof-off', 'reflection-off')
@@ -127,13 +128,13 @@ class NativeStageCohort(unittest.TestCase):
                 (folder / 'mesh-inputs-native.json').write_text(json.dumps(report))
         return source
 
-    def test_all_seven_require_three_matching_native_collections(self):
+    def test_all_stages_require_three_matching_native_collections(self):
         result = native_cohort.compare_inputs(self.cohort(), self.root / 'result')
         self.assertTrue(result['passed'])
         self.assertFalse(result['graphicsQualified'])
         self.assertEqual([s['stage'] for s in result['stages']], [s[0] for s in SCENES])
         self.assertTrue(all(s['passed'] for s in result['stages']))
-        self.assertEqual(len(result['inputs']), 14)
+        self.assertEqual(len(result['inputs']), len(SCENES)*2)
 
     def test_different_replay_source_cannot_qualify_matching_scene_files(self):
         source = self.cohort()
@@ -150,7 +151,7 @@ class NativeStageCohort(unittest.TestCase):
         result = native_cohort.compare_inputs(source, self.root / 'result')
         self.assertFalse(result['passed'])
         self.assertEqual([s['stage'] for s in result['stages'] if not s['passed']], ['rock-garden'])
-        self.assertEqual(len(result['inputs']), 14)
+        self.assertEqual(len(result['inputs']), len(SCENES)*2)
 
     def test_absent_target_stage_cannot_be_counted_as_not_applicable(self):
         source = self.cohort()
