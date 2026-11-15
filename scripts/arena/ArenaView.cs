@@ -34,6 +34,9 @@ public partial class ArenaView : Node3D
     private readonly Node3D _stageAssembly=new(){Name="StageAssembly"};
     private float _shipClock;
     public Transform3D StageAssemblyTransform=>_stageAssembly.Transform;
+    public const float ShipRollAmplitude=Mathf.Pi/90,ShipPitchAmplitude=.0035f;
+    public float ShipRollSine=>-_stageAssembly.Basis.Z.Y;
+    public float ShipMotionClock=>_shipClock;
     private readonly Dictionary<string,Node3D> _entities=[];
     private readonly HashSet<string> _seenEntities=new(StringComparer.Ordinal);
     private readonly List<string> _staleEntities=[];

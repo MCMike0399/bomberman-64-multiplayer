@@ -1911,7 +1911,8 @@
     {
       "id": "tour-24",
       "steps": [
-        "sea-sick"
+        "sea-sick",
+        "sea-sick-framing"
       ],
       "domains": [
         "gameplay",
@@ -1932,7 +1933,8 @@
         "stage-scenery",
         "framing",
         "precision-aim",
-        "sea-sick-network"
+        "sea-sick-network",
+        "sea-sick-framing"
       ],
       "domains": [
         "gameplay",
@@ -2072,6 +2074,63 @@
       ],
       "headless": false,
       "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "sea-sick-shape-study",
+      "method": "SeaSickShapeStudy",
+      "domains": [
+        "rendering",
+        "gameplay"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "sea-sick-finish",
+      "method": "SeaSickFinishTour",
+      "domains": [
+        "rendering",
+        "gameplay",
+        "physics",
+        "ui"
+      ],
+      "headless": true,
+      "timeout": 300,
+      "manual": false
+    },
+    {
+      "id": "sea-sick-roll-colour",
+      "method": "SeaSickRollColour",
+      "domains": [
+        "rendering",
+        "gameplay"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "sea-sick-framing",
+      "method": "SeaSickFramingRegression",
+      "domains": [
+        "rendering",
+        "ui"
+      ],
+      "headless": true,
+      "timeout": 90,
+      "manual": false
+    },
+    {
+      "id": "sea-sick-miniature",
+      "method": "SeaSickMiniatureReview",
+      "domains": [
+        "rendering",
+        "ui"
+      ],
+      "headless": true,
+      "timeout": 90,
       "manual": false
     }
   ]

@@ -32,7 +32,7 @@ public partial class PlaytestDriver
         await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"ordinary four-player Sea Sick battle starts",150);
         Check(State.GetProperty("players").GetArrayLength()==4&&Convert.FromBase64String(State.GetProperty("softBlocks").GetString()!).Sum(b=>System.Numerics.BitOperations.PopCount((uint)b))==48,"four original corner starts receive generous barrel groves");
         var arena=LightingArena;var terrain=AuditDescendants(arena).OfType<TempleStageView>().Single();
-        Check(AuditDescendants(arena).Count(n=>n.Name.ToString().StartsWith("ShipBarrel"))==48,"actual destructible cover renders as forty-eight barrels");
+        Check(AuditDescendants(arena).Count(n=>n.HasMeta("sea_sick_barrel"))==48,"actual destructible cover renders as forty-eight barrels");
         Check(AuditDescendants(terrain).Count(n=>n.Name.ToString().StartsWith("ForwardPost"))==2,"actual deck has two short forward posts");
         var problems=AuditModelProblems(terrain,out int meshes,out int vertices);
         Check(problems.Count==0&&meshes>100,$"ship geometry is finite, correctly wound and textured: {string.Join("; ",problems.Take(4))}");

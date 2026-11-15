@@ -67,6 +67,16 @@ public partial class TempleStageView : Node3D
     private bool _sea;
     private float _seaClock;
     private ShaderMaterial? _seaGlass;
+    private float _shipLifeClock;
+    private readonly List<Action<float>> _shipLife=[];
+    private OmniLight3D? _shipLanternLight;
+    private StandardMaterial3D? _shipLanternGlow;
+    private readonly Dictionary<MeshInstance3D,Material?> _shipStudyMaterials=[];
+    private static readonly (float X,float Beam,float Sheer,float Keel)[] TubbyHullSections=[
+        (-1.6f,8.6f,1.10f,-2.6f),(0,9.15f,.95f,-3.6f),(3,9.15f,.60f,-4.4f),
+        (9.5f,9.15f,.445f,-4.9f),(16,9.15f,.60f,-4.6f),(19,9.15f,1.00f,-4.0f),
+        (20.5f,8.2f,1.5f,-3.5f),(22,6.3f,2.1f,-2.9f),(23.5f,3.9f,2.7f,-2.0f),
+        (24.8f,1.6f,3.2f,-1.0f),(25.5f,.35f,3.5f,-.3f)];
     private readonly List<ShaderMaterial> _gardenMaterials=[];
     private Mesh[] _gardenRocks=[];
     private Material _gardenRockMaterial=null!;
@@ -93,6 +103,7 @@ public partial class TempleStageView : Node3D
         }
         if(_gutterOceanWater!=null)ApplyGutterOceanLighting();
         foreach(var frozen in _frozenMaterials)lighting.ApplyKeyLight(frozen);
+        if(_seaSick)ApplyShipLighting(lighting);
     }
     public void SetWaterLevel(float tierLevel)
     {
@@ -105,7 +116,7 @@ public partial class TempleStageView : Node3D
         if(!IsVisibleInTree())return;
         AnimateScenery((float)delta);
         if(_field){ProcessField((float)delta);return;}
-        if(_seaSick){ProcessSeaSick();return;}
+        if(_seaSick){ProcessSeaSick((float)delta);return;}
         if(_sea)
         {
             if(WeatherActive)_seaClock+=(float)delta;
