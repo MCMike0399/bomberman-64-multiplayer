@@ -843,3 +843,15 @@ refinement did not buy enough quality. The permanent gutter-water-contact
 journey checks Midday/Night contact noise against a reflection-off control and
 requires meaningful actual reflection contrast. Independent art review under
 the user's revised visual bar remains required.
+
+### Copper Lock shape direction (2026-11-15)
+
+The generic Gutter waterworks prototype is superseded by the
+[Copper Lock shape study](../in-the-gutter.md#copper-lock-presentation-shape-study):
+burgundy bollards with cream caps/rings, core cast sluice machines, a fish vane
+and an asymmetric inflow/spillway composition. Low keeps the body and machines.
+Accepted current drives foam/leaves and gear/vane motion. The 52-check native
+shape study is a checkpoint: independent review accepts the court but requests
+a bounded machinery/setting revision and quieter water. It is not final art
+approval. Shared all-stage scenery checks include the quiet reed-bank exterior,
+Low core visibility and paused current cues.

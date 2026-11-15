@@ -18,6 +18,7 @@ public partial class PlaytestDriver
         (BlastStages.TopRules,["FortressCrag","Turret","WallBanner","Cloud","FloatingIslet","Starfield","RingedPlanet","BluePlanet","OrbitingMoon","AsteroidBelt","Nebula"]),
         (BlastStages.BlizzardBattle,["Igloo","Snowman","Penguin","PineTree","FrozenPond","GlacierPeak","GlacierArch","FrozenCrown","WinterTree","ExteriorSnowfall"]),
         (BlastStages.GreedyTrap,["GreedyWestRowboat","GreedyEastRowboat","Sailboat","Gull"]),
+        (BlastStages.InTheGutter,["CopperLockOuterWater","CopperLockSeabed","CopperLockReedBank","CopperLockReeds"]),
         (BlastStages.CircuitGarden,["TargetRaft","Jetty","Buoy","PalmTree"]),
     ];
 
@@ -80,18 +81,26 @@ public partial class PlaytestDriver
             await SelectGraphics(GraphicsPreset.Low);await Frames(3);
             var terrain=AuditDescendants(LightingArena).OfType<TempleStageView>().Single();
             Check(terrain.Scenery is {} hidden&&!hidden.IsVisibleInTree(),"Low preset hides decorative scenery: "+stage);
+            if(stage==BlastStages.InTheGutter)
+                Check(terrain.FindChild("CopperLockWestMachine",true,false) is Node3D west&&west.IsVisibleInTree()&&
+                    terrain.FindChild("CopperLockEastMachine",true,false) is Node3D east&&east.IsVisibleInTree(),
+                    "Low retains both core Copper Lock hero machines while the reed-bank exterior is hidden");
             await Capture($"scenery-{stage}-low");
             await SelectGraphics(GraphicsPreset.High);await Frames(3);
             terrain=AuditDescendants(LightingArena).OfType<TempleStageView>().Single();
             Check(terrain.Scenery is {} shown&&shown.IsVisibleInTree(),"High preset restores decorative scenery: "+stage);
             await Capture($"scenery-{stage}-high");
-            if(stage is BlastStages.RockGarden or BlastStages.TopRules or BlastStages.BlizzardBattle)
+            if(stage is BlastStages.RockGarden or BlastStages.TopRules or BlastStages.BlizzardBattle or BlastStages.InTheGutter)
             {
                 // A second real frame witnesses wind/orbits/snow, and pause must freeze
                 // both transforms and the CPU-fed shader clock used by the new foliage.
                 await Frames(60);await Capture($"scenery-{stage}-high-motion");
                 await KeyPress(Key.Escape);await Frames(3);
                 var nodes=AuditDescendants(terrain.Scenery!).OfType<Node3D>().ToDictionary(n=>n,n=>n.Transform);
+                var copper=stage==BlastStages.InTheGutter?AuditDescendants(terrain).OfType<Node3D>()
+                    .Where(n=>n.Name=="GutterCurrentMarker"||n.Name.ToString().StartsWith("CopperLockDriveGear")||n.Name.ToString().StartsWith("CopperLockDriftingLeaf"))
+                    .ToDictionary(n=>n,n=>n.Transform):[];
+                float copperClock=terrain.GutterWakeMaterial?.GetShaderParameter("current_clock").AsSingle()??0;
                 var materials=AuditDescendants(terrain.Scenery!).OfType<MeshInstance3D>().Select(n=>n.MaterialOverride)
                     .OfType<ShaderMaterial>().Where(m=>m.Shader.Code.Contains("uniform float ambient_clock",StringComparison.Ordinal)).Distinct().ToArray();
                 var clocks=materials.Select(m=>m.GetShaderParameter("ambient_clock").AsDouble()).ToArray();
@@ -100,6 +109,10 @@ public partial class PlaytestDriver
                 await Frames(15);
                 Check(nodes.All(p=>p.Key.Transform.IsEqualApprox(p.Value))&&materials.Select((m,i)=>m.GetShaderParameter("ambient_clock").AsDouble()==clocks[i]).All(v=>v)
                     &&snow.Select((w,i)=>w.Clock==snowClocks[i]).All(v=>v),"pause freezes ambient transforms, shader clocks and exterior snow: "+stage);
+                if(stage==BlastStages.InTheGutter)
+                    Check(copper.Count>0&&copper.All(p=>p.Key.Transform.IsEqualApprox(p.Value))&&
+                        terrain.GutterWakeMaterial!.GetShaderParameter("current_clock").AsSingle()==copperClock,
+                        "pause freezes the accepted-current fish, gears, leaves and foam clock");
                 await ActivateNamed("ResumeGame");await Frames(3);
             }
         }
@@ -116,7 +129,10 @@ public partial class PlaytestDriver
         Check(!AuditDescendants(scenery).OfType<CollisionObject3D>().Any(),"scenery adds no collision bodies: "+stage);
         var problems=AuditModelProblems(scenery,out int meshes,out int vertices);
         Event("scenery-geometry",new{stage,meshes,vertices,motions=terrain.SceneryMotionCount,problems=problems.Take(5)});
-        Check(problems.Count==0&&meshes>=20,$"scenery geometry is finite, nonempty and textured: {stage} meshes={meshes} {string.Join("; ",problems.Take(3))}");
+        // Copper Lock intentionally has one quiet reed-bank vignette. Its
+        // machines are core terrain and receive a separate actual-face/Low audit.
+        int minimumMeshes=stage==BlastStages.InTheGutter?8:20;
+        Check(problems.Count==0&&meshes>=minimumMeshes,$"scenery geometry is finite, nonempty and textured: {stage} meshes={meshes} {string.Join("; ",problems.Take(3))}");
         Check(terrain.SceneryMotionCount>0,"scenery has animated life: "+stage);
         if(stage==BlastStages.BlizzardBattle)
         {
