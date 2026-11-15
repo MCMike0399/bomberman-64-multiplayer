@@ -2,9 +2,11 @@
 
 Field of Grass is a battle arena shared by local, dedicated-server and player-hosted
 sessions. Its `field-of-grass` ID is selectable in Local battle, Practice and room
-settings. Original procedural art supplies a soft meadow diorama with earth banks,
-timber fencing, an orchard, mill, seed barn, hay cart, butterflies and a moving kite.
-No reference textures, models, audio or scanned pages ship with the game.
+settings. The current Cutaway Hollow shape study replaces the initial garden-kit
+presentation with rounded red-ochre banks, an exposed strata cut face with roots
+and burrow, original mossy standing-stone volumes and one blocked stile/hay vignette.
+The walkable planes retain exact authority elevation. Shape review is pending;
+butterflies and finer surface finishing are deferred. No reference textures, models, audio or scanned pages ship with the game.
 
 ## Reference evidence and adaptations
 
@@ -113,3 +115,21 @@ The journey additionally moves the real player halfway down the slope and checks
 its feet against the actual rendered mesh plane, retaining a dedicated capture.
 The corrected headless journey passes 53 assertions; native appearance and the
 full art brief still need review.
+
+The Cutaway Hollow blocked candidate uses exact plane/ramp endpoints for every
+walkable sheet. Rounded loam and coarse strata give the surrounding earth volume
+its form; no new support or collision rule is introduced. Standing stones use
+three original profiles with the shared authority peak and broad foot. Central
+grass roots follow irregular edges that climb the bank foot. The old garden
+boulders, windmill, cottage, orchard scatter, cart and hairline fence were removed.
+`field-of-grass-shape-study` supplies real eight-player combat on High Midday,
+High Night and Low plus oblique/cut-face inspections. This is an unapproved
+massing checkpoint; scenery finishing and complete release gates remain pending.
+
+The first blocked Cutaway Hollow study passes 24 headless assertions across
+three real eight-player combat runs. Actual scene audits cover the new bank/cut
+meshes and standing stones, with no facing failures; the standard journey also
+rechecks ordinary movement and exact mid-slope support. The stile/hay masses are
+intentionally blocked and have no finished ambient life yet. Independent native
+shape review precedes butterfly or material finishing; this checkpoint is not
+a completed scenery/release qualification.

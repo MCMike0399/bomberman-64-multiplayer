@@ -12,6 +12,56 @@ namespace BlastCircuit.Testing;
 
 public partial class PlaytestDriver
 {
+    private async Task FieldOfGrassShapeStudy()
+    {
+        Event("cutaway-hollow-study-policy",new{ordinaryInputs=true,stateMutation=false,artApproval=false,
+            brief="rounded loam banks and exposed strata; exact authority support sheets"});
+        var original=_root.Preferences.Graphics;var lighting=_root.Preferences.StageLighting;
+        try
+        {
+            foreach(var (preset,time,label) in new[]{(GraphicsPreset.High,StageTime.Midday,"high-midday"),
+                (GraphicsPreset.High,StageTime.Night,"high-night"),(GraphicsPreset.Low,StageTime.Midday,"low-midday")})
+            {
+                if(_root.ActiveSession!=null){_root.Back();await Frames(3);}
+                if(!_headless){await SelectGraphics(preset);await SelectLocalLighting(time);}
+                _root.StartLocal(new SessionSettings(Stage:BlastStages.FieldOfGrass,Bots:7,SuddenDeath:false),1);
+                await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"Cutaway Hollow study enters "+label,150);
+                var arena=_root.GetChildren().OfType<ArenaView>().Single();var terrain=AuditDescendants(arena).OfType<TempleStageView>().Single();
+                Check(AuditDescendants(terrain).OfType<MeshInstance3D>().Any(n=>n.Name=="HollowStrataCutFace")&&
+                    AuditDescendants(terrain).OfType<MeshInstance3D>().Count(n=>n.Name.ToString().StartsWith("HollowRounded"))==2,
+                    "study consumes the new exposed earth slice and rounded bank masses");
+                CheckClockwiseMeshes(AuditDescendants(terrain).OfType<MeshInstance3D>()
+                    .Where(n=>n.Name.ToString().StartsWith("MeadowBankSlope")||n.Name.ToString().StartsWith("Hollow"))
+                    .Select(n=>(n.Mesh,n.Name.ToString(),n.Name.ToString().StartsWith("MeadowBankSlope")))
+                    .Concat(AuditDescendants(arena).OfType<MeshInstance3D>().Where(n=>n.GetParent().Name.ToString().StartsWith("HollowStandingStone"))
+                        .Select(n=>(n.Mesh,n.GetParent().Name.ToString(),false))));
+                Check(SceneryIntrusions(terrain).Count==0,"blocked stile and hay vignette stay outside all standing volumes");
+                CheckFraming(BlastStages.FieldOfGrass,GetWindow().Size);
+                await WaitState(s=>s.GetProperty("hazards").GetArrayLength()>0,"ordinary eight-player hollow battle produces real blasts",600);
+                await Capture("cutaway-hollow-shape-"+label+"-combat");
+                if(!_headless&&time==StageTime.Midday&&preset==GraphicsPreset.High)
+                {
+                    var camera=_root.GetViewport().GetCamera3D()!;var pose=camera.Transform;var(h,v)=(camera.HOffset,camera.VOffset);
+                    try
+                    {
+                        camera.HOffset=0;camera.VOffset=0;
+                        camera.Position=new(terrain.Width+6,13,terrain.Depth+12);camera.LookAt(new Vector3(terrain.Width/2f,.4f,terrain.Depth/2f));
+                        await Capture("cutaway-hollow-shape-oblique-inspection");
+                        camera.Position=new(terrain.Width/2f,4.8f,terrain.Depth+12);camera.LookAt(new Vector3(terrain.Width/2f,.3f,terrain.Depth-1));
+                        await Capture("cutaway-hollow-shape-cut-face-inspection");
+                    }
+                    finally{camera.Transform=pose;camera.HOffset=h;camera.VOffset=v;}
+                }
+            }
+        }
+        finally
+        {
+            Input(0,default);Input(1,default);
+            if(_root.ActiveSession!=null){_root.Back();await Frames(3);}
+            if(!_headless){await SelectGraphics(original);await SelectLocalLighting(lighting);}
+        }
+    }
+
     private async Task FieldOfGrassNetworkTour()
     {
         foreach(var mode in new[]{NetworkMode.CreatePrivate,NetworkMode.CreatePeer})
@@ -70,12 +120,12 @@ public partial class PlaytestDriver
             var arena=_root.GetChildren().OfType<ArenaView>().Single();
             var terrain=AuditDescendants(arena).OfType<TempleStageView>().Single();
             Check(AuditDescendants(terrain).OfType<MultiMeshInstance3D>().Any(n=>n.Name=="ConcealingMeadow"&&n.Multimesh.InstanceCount>500),"actual arena renders a dense opaque meadow");
-            Check(AuditDescendants(arena).OfType<Node3D>().Count(n=>n.Name.ToString().StartsWith("MeadowBoulder"))==28,"accepted battle cover renders as twenty-eight original meadow rocks");
+            Check(AuditDescendants(arena).OfType<Node3D>().Count(n=>n.Name.ToString().StartsWith("HollowStandingStone"))==28,"accepted battle cover renders as twenty-eight original mossy standing stones");
             CheckClockwiseMeshes(AuditDescendants(terrain).OfType<MeshInstance3D>()
-                .Where(n=>n.Name.ToString().StartsWith("MeadowBankSlope")||n.Name.ToString().StartsWith("ContinuousBankEdge"))
+                .Where(n=>n.Name.ToString().StartsWith("MeadowBankSlope")||n.Name.ToString().StartsWith("ContinuousBankEdge")||n.Name.ToString().StartsWith("Hollow"))
                 .Select(n=>(n.Mesh,n.Name.ToString(),n.Name.ToString().StartsWith("MeadowBankSlope"))).Concat(AuditDescendants(terrain).OfType<MultiMeshInstance3D>()
                     .Where(n=>n.Name=="ConcealingMeadow").Select(n=>(n.Multimesh.Mesh,n.Name.ToString(),false)))
-                .Concat(AuditDescendants(arena).OfType<MeshInstance3D>().Where(n=>n.GetParent().Name.ToString().StartsWith("MeadowBoulder"))
+                .Concat(AuditDescendants(arena).OfType<MeshInstance3D>().Where(n=>n.GetParent().Name.ToString().StartsWith("HollowStandingStone"))
                     .Select(n=>(n.Mesh,n.GetParent().Name.ToString(),false))));
             CheckFraming(BlastStages.FieldOfGrass,GetWindow().Size);
             await Capture("field-of-grass-eight-player-opening");

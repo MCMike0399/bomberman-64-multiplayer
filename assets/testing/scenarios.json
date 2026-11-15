@@ -1255,6 +1255,14 @@
       "manual": false
     },
     {
+      "id": "field-of-grass-shape-study",
+      "method": "FieldOfGrassShapeStudy",
+      "domains": ["gameplay", "rendering", "physics", "ai"],
+      "headless": true,
+      "timeout": 240,
+      "manual": false
+    },
+    {
       "id": "field-of-grass-network",
       "method": "FieldOfGrassNetworkTour",
       "domains": ["gameplay", "rendering", "network", "physics"],
