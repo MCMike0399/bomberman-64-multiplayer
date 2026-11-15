@@ -52,11 +52,10 @@ public partial class TempleStageView : Node3D
     private ShaderMaterial _barrelTimber=null!;
     private readonly Dictionary<MeshInstance3D,Material?> _shipStudyMaterials=[];
     private static readonly (float X,float Beam,float Sheer,float Keel)[] TubbyHullSections=[
-        (-3.2f,8.25f,1.95f,-2.8f),(-1.6f,9.0f,1.86f,-3.7f),(0,9.15f,1.795f,-4.1f),
-        (2.85f,9.15f,1.795f,-4.6f),(3.15f,9.15f,.445f,-4.7f),(5,9.15f,.445f,-4.85f),
-        (9.5f,9.15f,.445f,-4.9f),(14,9.15f,.445f,-4.85f),(15.85f,9.15f,.445f,-4.7f),
-        (16.15f,9.15f,1.795f,-4.6f),(19,9.15f,1.795f,-4.0f),(20.3f,7.0f,2.20f,-3.2f),
-        (21.7f,3.7f,2.75f,-2.0f),(22.8f,.40f,3.05f,-.5f)];
+        (-1.6f,8.6f,1.10f,-2.6f),(0,9.15f,.95f,-3.6f),(3,9.15f,.60f,-4.4f),
+        (9.5f,9.15f,.445f,-4.9f),(16,9.15f,.60f,-4.6f),(19,9.15f,1.00f,-4.0f),
+        (20.5f,8.2f,1.5f,-3.5f),(22,6.3f,2.1f,-2.9f),(23.5f,3.9f,2.7f,-2.0f),
+        (24.8f,1.6f,3.2f,-1.0f),(25.5f,.35f,3.5f,-.3f)];
     private bool _garden;
     private readonly List<ShaderMaterial> _gardenMaterials=[];
     private Mesh[] _gardenRocks=[];

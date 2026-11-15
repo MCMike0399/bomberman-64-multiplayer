@@ -39,7 +39,7 @@ public partial class TempleStageView
             // The deck is a thin slab. Only the gallery's inner riser is tall;
             // the outer hull is shaped separately rather than a solid box tray.
             if(x is not (0 or 18))
-                Box(this,new(x+.5f,(y-.14f-.38f)/2,z==0?.70f:z==18?18.30f:z+.5f),new(.998f,y-.14f+.38f,z is 0 or 18?.60f:.998f),dark);
+                Box(this,new(x+.5f,(y-.14f-.38f)/2,z==0?.775f:z==18?18.225f:z+.5f),new(.998f,y-.14f+.38f,z is 0 or 18?.45f:.998f),dark);
             if(x is 0 or 18||z is 0 or 18)
             {
                 bool side=x is 0 or 18;
@@ -85,7 +85,7 @@ public partial class TempleStageView
             ShipRope(new(9.5f,12,8.5f),new(x,1.65f,.35f),.075f,gold).Name=$"FarShroud{x}";
         }
         ShipRope(new(9.5f,12,8.5f),TubbyBowspritTip(),.075f,gold).Name="Forestay";
-        ShipRope(new(9.5f,12,8.5f),new(-3.3f,3.2f,9.5f),.075f,gold).Name="Backstay";
+        ShipRope(new(9.5f,12,8.5f),new(-1.3f,3.2f,9.5f),.075f,gold).Name="Backstay";
 
         if(IncludeScenery)
         {

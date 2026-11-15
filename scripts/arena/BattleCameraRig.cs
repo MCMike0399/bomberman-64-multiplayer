@@ -35,7 +35,7 @@ public sealed partial class BattleCameraRig(Camera3D camera)
             AddCell(cell,x,z);
         }
         if(_ship)
-            _compositionBounds.AddRange([new(-3.7f,3.3f,1.2f),new(-3.7f,3.3f,17.8f),new(-3.7f,-2.1f,9.5f),new(24.6f,3.8f,9.5f),new(9.5f,-2.1f,18.95f)]);
+            _compositionBounds.AddRange([new(-1.65f,3.3f,1.2f),new(-1.65f,3.3f,17.8f),new(-1.9f,-2.1f,9.5f),new(25.5f,5.1f,9.5f),new(9.5f,-2.1f,19.10f)]);
         Fit();
         void AddCell(JsonElement cell,int x,int z)
         {

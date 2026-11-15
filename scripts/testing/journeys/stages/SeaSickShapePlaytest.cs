@@ -33,22 +33,35 @@ public partial class PlaytestDriver
             var hullVertices=hull.Mesh.SurfaceGetArrays(0)[(int)Mesh.ArrayType.Vertex].AsVector3Array();
             Event("tubby-near-profile",new{samples=hullVertices.Where(p=>Math.Abs(p.X-9.5f)<.001f&&p.Z>18.3f&&p.Y> -2.2f)
                 .Select(p=>new{local=p.ToString(),screen=camera.UnprojectPosition(hull.ToGlobal(p)).ToString()}).ToArray()});
+            async Task<Vector2> CaptureRoll(string label)
+            {
+                CheckFraming(BlastStages.SeaSick,GetWindow().Size);
+                await Capture(label,0); // The returned telemetry is from the captured post-draw frame.
+                var near=arena.ScreenPoint(new System.Numerics.Vector3(9.5f,0,17.5f));
+                var far=arena.ScreenPoint(new System.Numerics.Vector3(9.5f,0,1.5f));
+                Event("ship-roll-capture",new{label,clock=arena.ShipMotionClock,rollSine=arena.ShipRollSine,
+                    rollDegrees=Mathf.Asin(arena.ShipRollSine)*180/Mathf.Pi,near=near.ToString(),far=far.ToString(),
+                    parent=arena.StageAssemblyTransform.ToString(),terrain=terrain.GlobalTransform.ToString(),
+                    ocean=terrain.GetNode<MeshInstance3D>("ShipOcean").GlobalTransform.ToString(),
+                    camera=camera.GetCameraTransform().ToString(),hOffset=camera.HOffset,vOffset=camera.VOffset});
+                return near;
+            }
             foreach(var preset in new[]{GraphicsPreset.Low,GraphicsPreset.High})
             {
                 await SelectGraphics(preset);terrain.SetSceneryVisible(false);terrain.SetShipShapeStudy(true);
                 environment.AdjustmentSaturation=0;
                 CheckFraming(BlastStages.SeaSick,GetWindow().Size);
                 await Capture("sea-sick-shape-"+GraphicsQuality.ToWire(preset)+"-battle");
-                for(int frame=0;frame<420&&Math.Abs(arena.ShipRollSine)<.01045f;frame++)await Frames(1);
-                Check(Math.Abs(arena.ShipRollSine)>=.01045f,"study observes an actual maximum-roll phase without posing the ship");
-                Event("ship-roll-reference",new{preset=preset.ToString(),rollSine=arena.ShipRollSine,oceanY=terrain.WaterHeight,camera=camera.Transform.ToString()});
-                await Capture("sea-sick-shape-"+GraphicsQuality.ToWire(preset)+"-maximum-roll");
+                for(int frame=0;frame<420&&Math.Abs(arena.ShipRollSine)<.0347f;frame++)await Frames(1);
+                Check(Math.Abs(arena.ShipRollSine)>=.0347f,"study observes an actual maximum-roll phase without posing the ship");
+                var firstLandmark=await CaptureRoll("sea-sick-shape-"+GraphicsQuality.ToWire(preset)+"-maximum-roll");
                 if(preset==GraphicsPreset.High)
                 {
                     float firstSign=Mathf.Sign(arena.ShipRollSine);
-                    for(int frame=0;frame<420&&(Mathf.Sign(arena.ShipRollSine)==firstSign||Math.Abs(arena.ShipRollSine)<.01045f);frame++)await Frames(1);
-                    Check(Mathf.Sign(arena.ShipRollSine)!=firstSign&&Math.Abs(arena.ShipRollSine)>=.01045f,"study observes the opposite real roll against fixed water");
-                    await Capture("sea-sick-shape-high-opposite-roll");
+                    for(int frame=0;frame<420&&(Mathf.Sign(arena.ShipRollSine)==firstSign||Math.Abs(arena.ShipRollSine)<.0347f);frame++)await Frames(1);
+                    Check(Mathf.Sign(arena.ShipRollSine)!=firstSign&&Math.Abs(arena.ShipRollSine)>=.0347f,"study observes the opposite real roll against fixed water");
+                    var oppositeLandmark=await CaptureRoll("sea-sick-shape-high-opposite-roll");
+                    Check(firstLandmark.DistanceTo(oppositeLandmark)>3,"opposite actual roll moves the rendered deck landmark visibly against fixed water");
                 }
             }
             if(!_headless)

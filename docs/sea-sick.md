@@ -44,7 +44,7 @@ same fixed warning/impact semantics remain on Rock Garden's flat lawn.
 
 `ArenaView.StageAssembly` contains the ship terrain, players, bombs, cover,
 pickups, explosions, falling fireballs and throw guides. Sea Sick gently rotates
-that single parent around the deck center: at most about 0.60° roll and 0.20°
+that single parent around the deck center: at most about 2° roll and 0.20°
 pitch, with approximately 11.4/14.6-second periods. Sea, seabed and exterior
 boats stay in fixed world space. Camera and HUD stay still. This restrained
 motion is an original comfort/readability adaptation, not recovered timing.
@@ -61,11 +61,15 @@ the exterior ocean/life and retain the original ship geometry.
 The **Tubby Cutter** shape study (2026-11-15) runs the ship left to right:
 left sterncastle and right forecastle reuse the existing raised galleries.
 A continuous loft of curved U-shaped sections gives the body a broad belly,
-with its rail at the hull top and at most a .15-cell outboard ledge. The wale
-flares about .30 cell below it. The right bow is a rising cambered whaleback
-with converging rails and a 2.2-cell bowsprit raked 20°; the left has a broad
-transom, curved taffrail and rudder. Raised ends exaggerate the sheer while
-the waist stays low. All masses remain outside or below the unchanged court.
+with its rail at the hull top and at most a .15-cell outboard ledge. Explicit
+rail, wale, waterline, bilge and keel points flare the topsides outward: .35
+cell at the wale and .45 at the waterline. A single smooth sheer runs through
+the eleven authored longitudinal stations; separate gallery bulwarks end in
+round posts instead of stepping the hull spline. The 6.5-cell right bow is a
+steep crowned turtleback with converging rails and a 2.2-cell bowsprit raked
+20°; the left has a short cambered strip, broad transom, taffrail and rudder.
+The high stem compresses lower section points monotonically above its raised
+keel. All masses remain outside or below the unchanged court.
 The mast is round and tapered, and the two forward obstacles read as a capstan
 and bitts within their existing authority footprints. Long planks follow X with
 staggered butt joints. Previous small cabin/porthole dressing is excluded while
@@ -74,7 +78,10 @@ the sculptural body is reviewed.
 `sea-sick-shape-study` is an explicit grayscale material inspection of an actual
 ordinary local battle with cover disabled through advanced settings. It retains
 Low/High battle views, both observed roll extrema on High, a wide oblique view
-and a lower profile view. It keeps the actual desaturated ocean as a fixed
+and a lower profile view. Post-draw telemetry records the actual ship parent,
+fixed camera/ocean and projected deck landmarks at both roll extrema. The
+slow ±2° envelope replaces an imperceptible ±0.60° study. It keeps the actual
+desaturated ocean as a fixed
 water reference. Sea Sick's battle fit reserves roughly 78% of frame width for
 the playable court and lifts it so the near wale clears the hint row. Other
 stages keep their framing. Far shrouds and high forestay/backstay cast no
