@@ -152,3 +152,19 @@ Midday/Night/High and labeled establishing captures still require visual review.
 Source validation: clean build, public static checks and 119 headless
 stage-scenery assertions pass with zero runtime errors. This verifies geometry
 and placement; it does not establish native rendered quality or user approval.
+
+## Coastal refinement native review — 2026-11-15
+
+Root inspected High before/after and Night from real exports on Apple M5 Pro
+Metal. The eroded layers and fitted crowns improve the coastal silhouette
+without changing arena routes or hiding the ring. The native scenery tour
+passed 371 assertions and 40 captures with no runtime errors or warnings.
+
+![Before](images/up-and-down-coastal/before.png)
+
+![After](images/up-and-down-coastal/after.png)
+
+![Night](images/up-and-down-coastal/night.png)
+
+[Capture provenance](images/up-and-down-coastal/manifest.json). This is root's
+visual review, not physical-controller testing or user image approval.
