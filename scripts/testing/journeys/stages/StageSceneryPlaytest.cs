@@ -18,7 +18,7 @@ public partial class PlaytestDriver
         (BlastStages.TopRules,["FortressCrag","Turret","WallBanner","Cloud","FloatingIslet","Starfield","RingedPlanet","BluePlanet","OrbitingMoon","AsteroidBelt","Nebula"]),
         (BlastStages.BlizzardBattle,["Igloo","Snowman","Penguin","PineTree","FrozenPond","GlacierPeak","GlacierArch","FrozenCrown","WinterTree","ExteriorSnowfall"]),
         (BlastStages.GreedyTrap,["GreedyWestRowboat","GreedyEastRowboat","Sailboat","Gull"]),
-        (BlastStages.InTheGutter,["CopperLockOuterWater","CopperLockSeabed","CopperLockReedBank","CopperLockReeds"]),
+        (BlastStages.InTheGutter,["CopperLockReedBank","CopperLockReeds"]),
         (BlastStages.CircuitGarden,["TargetRaft","Jetty","Buoy","PalmTree"]),
     ];
 
@@ -131,7 +131,7 @@ public partial class PlaytestDriver
         Event("scenery-geometry",new{stage,meshes,vertices,motions=terrain.SceneryMotionCount,problems=problems.Take(5)});
         // Copper Lock intentionally has one quiet reed-bank vignette. Its
         // machines are core terrain and receive a separate actual-face/Low audit.
-        int minimumMeshes=stage==BlastStages.InTheGutter?8:20;
+        int minimumMeshes=stage==BlastStages.InTheGutter?6:20;
         Check(problems.Count==0&&meshes>=minimumMeshes,$"scenery geometry is finite, nonempty and textured: {stage} meshes={meshes} {string.Join("; ",problems.Take(3))}");
         Check(terrain.SceneryMotionCount>0,"scenery has animated life: "+stage);
         if(stage==BlastStages.BlizzardBattle)

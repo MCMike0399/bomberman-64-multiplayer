@@ -34,14 +34,15 @@ uniform float quality_detail=1.0;
 uniform float quality_premium=0.0;
 void fragment(){
     vec2 p=(UV-.5)*vec2(4.8,3.0);
-    float d=p.x*sign(current)-.46;
-    if(d<-.12||d>1.6)discard;
-    float spread=.42+.25*d+.035*sin(d*3.0-current_clock*1.4);
-    float curved=abs(abs(p.y)-spread);
-    float stroke=1.0-smoothstep(.035,.14,curved);
-    float fade=smoothstep(-.12,.16,d)*(1.0-smoothstep(.95,1.6,d));
-    ALBEDO=vec3(.76,.91,.77);
-    ALPHA=stroke*fade*.23*min(1.0,abs(current));
+    float d=p.x*sign(current)-.3;
+    if(d<0.0||d>1.2)discard;
+    float bend=.42*exp(-d*1.3)+.12;
+    float curved=abs(abs(p.y)-bend);
+    float stroke=1.0-smoothstep(.045,.14,curved);
+    float fade=smoothstep(.0,.18,d)*(1.0-smoothstep(.7,1.2,d));
+    float drift=.88+.12*sin(current_clock*.8-d*3.0);
+    ALBEDO=vec3(.72,.87,.73);
+    ALPHA=stroke*fade*drift*.12*min(1.0,abs(current));
 }
 """;
 }

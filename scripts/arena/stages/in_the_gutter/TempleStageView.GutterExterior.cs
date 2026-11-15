@@ -8,10 +8,22 @@ public partial class TempleStageView
 {
     private void BuildCopperLockEnds(Material brick,Material cream,Material verdigris,Material brass,Material dark)
     {
-        // One arched inflow and an offset stepped weir form an asymmetric
-        // industrial vignette. They belong to the arena body and survive Low.
-        var culvert=Prop(this,"CopperLockInflow",new(-2.2f,-.15f,12.3f));
-        culvert.Basis=PresentationMath.Rotation(new(0,.6f,0));
+        // Short cross-channel arms are joined to the body, rather than islets
+        // beside a raft. The upstream culvert is the end wall of the west arm.
+        foreach(int side in new[]{-1,1})
+        {
+            float x=side<0?-.6f:Width+.6f;
+            RoundedBox(this,new(x,-.7f,Depth/2f),new(2.2f,1.25f,3.8f),brick,.22f).Name="CopperLockChannelStub";
+            foreach(int bank in new[]{-1,1})
+            {
+                RoundedBox(this,new(x,-.17f,Depth/2f+bank*1.7f),new(2.3f,1.2f,.42f),brick,.2f);
+                RoundedBox(this,new(x,.43f,Depth/2f+bank*1.7f),new(2.38f,.18f,.5f),cream,.65f);
+            }
+            AddChild(new MeshInstance3D{Name="CopperLockStubWater",Mesh=GutterPlane(side<0?-1.5f:Width-1,side<0?1:Width+1.5f,Depth/2f-1.48f,Depth/2f+1.48f,6),
+                MaterialOverride=_gutterWater,Position=new(0,.035f,0),CastShadow=GeometryInstance3D.ShadowCastingSetting.Off});
+        }
+        var culvert=Prop(this,"CopperLockInflow",new(-1.7f,-.05f,Depth/2f));
+        culvert.Basis=PresentationMath.Rotation(new(0,Mathf.Pi/2,0));
         var arch=new SurfaceTool();arch.Begin(Mesh.PrimitiveType.Triangles);
         const int segments=16;const float outer=1.43f,inner=1.04f,depth=.56f,spring=.75f;
         Vector3 At(int i,float radius,float z)
@@ -49,18 +61,38 @@ public partial class TempleStageView
             MaterialOverride=_gutterWater,Position=new(0,.22f,0),CastShadow=GeometryInstance3D.ShadowCastingSetting.Off});
         GutterRing(culvert,new(0,1.44f,.64f),.24f,.09f,brass);
 
-        var weir=Prop(this,"CopperLockSteppedWeir",new(Width+.18f,0,6.1f));
-        for(int step=0;step<3;step++)
+        var spillway=Prop(this,"CopperLockCurvedSpillway",new(Width+1.25f,0,Depth/2f));
+        var waterSurface=new SurfaceTool();waterSurface.Begin(Mesh.PrimitiveType.Triangles);
+        var foundation=new SurfaceTool();foundation.Begin(Mesh.PrimitiveType.Triangles);
+        const int spillSteps=20;const float spillLength=1.75f,spillWidth=1.42f;
+        Vector3 Spill(int step,float z)
         {
-            float x=.48f+step*.82f,y=.02f-step*.31f;
-            float h=y+1.07f;
-            Box(weir,new(x,-1.15f+h/2,0),new(.82f,h,2.9f),brick,.08f);
-            Box(weir,new(x,y-.04f,0),new(.86f,.1f,3.06f),cream,.045f);
-            weir.AddChild(new MeshInstance3D{Name="CopperLockWeirWater"+step,Mesh=GutterPlane(x-.4f,x+.4f,-1.4f,1.4f,5),
-                MaterialOverride=_gutterWater,Position=new(0,y+.035f,0),CastShadow=GeometryInstance3D.ShadowCastingSetting.Off});
-            foreach(int side in new[]{-1,1})
-                RoundedBox(weir,new(x,y+.1f,side*1.57f),new(.91f,.36f,.25f),verdigris,.45f);
+            float t=step/(float)spillSteps;
+            return new(t*spillLength,.035f-.9f*t*t*(3-2*t),z);
         }
+        for(int i=0;i<spillSteps;i++)
+        {
+            var a=Spill(i,-spillWidth);var b=Spill(i+1,-spillWidth);var c=Spill(i+1,spillWidth);var d=Spill(i,spillWidth);
+            GutterFlatTriangle(waterSurface,a,b,c,Vector3.Up);GutterFlatTriangle(waterSurface,a,c,d,Vector3.Up);
+            foreach(int side in new[]{-1,1})
+            {
+                var e=Spill(i,side*(spillWidth+.19f));var f=Spill(i+1,side*(spillWidth+.19f));
+                var g=new Vector3(f.X,-1.16f,f.Z);var h=new Vector3(e.X,-1.16f,e.Z);
+                GutterFlatTriangle(foundation,e,f,g,new(0,0,side));GutterFlatTriangle(foundation,e,g,h,new(0,0,side));
+            }
+        }
+        waterSurface.Index();foundation.Index();
+        spillway.AddChild(new MeshInstance3D{Name="CopperLockCurvedWeirWater",Mesh=waterSurface.Commit(),MaterialOverride=_gutterWater,
+            CastShadow=GeometryInstance3D.ShadowCastingSetting.Off});
+        spillway.AddChild(new MeshInstance3D{Name="CopperLockSpillwayCheeks",Mesh=foundation.Commit(),MaterialOverride=cream});
+        RoundedBox(spillway,new(.9f,-1.15f,0),new(2.3f,.3f,3.4f),brick,.2f);
+    }
+
+    private void BuildCopperLockCoreWater()
+    {
+        AddChild(new MeshInstance3D{Name="CopperLockOuterWater",Mesh=GutterPlane(-55,Width+55,-55,Depth+55,90),
+            MaterialOverride=_gutterWater,Position=new(0,-.96f,0),CastShadow=GeometryInstance3D.ShadowCastingSetting.Off});
+        Box(this,new(Width/2f,-3.2f,Depth/2f),new(150,.05f,150),_art.Color(new Color("254c47"),.94f)).Name="CopperLockSeabed";
     }
 
     private void BuildGutterExterior()
@@ -68,14 +100,11 @@ public partial class TempleStageView
         // Quiet premium water supplies negative space. A single low reed bank
         // beside the inflow grounds the machine; no house/hedge prop perimeter.
         var scenery=_scenery!;
-        scenery.AddChild(new MeshInstance3D{Name="CopperLockOuterWater",Mesh=GutterPlane(-55,Width+55,-55,Depth+55,90),
-            MaterialOverride=_gutterWater,Position=new(0,-.96f,0),CastShadow=GeometryInstance3D.ShadowCastingSetting.Off});
-        Box(scenery,new(Width/2f,-3.2f,Depth/2f),new(150,.05f,150),_art.Color(new Color("254c47"),.94f)).Name="CopperLockSeabed";
         var bank=_art.Color(new Color("65766a"),.92f);
         var turf=_art.Color(new Color("5e8064"),.94f);
-        RoundedBox(scenery,new(-4.2f,-.83f,13.1f),new(3.2f,.75f,5.2f),bank,.7f).Name="CopperLockReedBank";
-        Sphere(scenery,new(-4.3f,-.43f,13.2f),new(2.8f,.35f,4.65f),turf);
-        var reeds=Prop(scenery,"CopperLockReeds",new(-4.3f,-.2f,13.5f));
+        RoundedBox(scenery,new(-3.3f,-.83f,13.3f),new(3.2f,.75f,5.2f),bank,.7f).Name="CopperLockReedBank";
+        Sphere(scenery,new(-3.4f,-.43f,13.4f),new(2.8f,.35f,4.65f),turf);
+        var reeds=Prop(scenery,"CopperLockReeds",new(-3.4f,-.2f,13.7f));
         for(int n=0;n<5;n++)
         {
             var leaf=Plate(reeds,new((n%3-1)*.35f,0,(n/3)*.4f),[new(-.09f,0),new(.16f,.65f),new(.27f,1.15f),new(.36f,.74f),new(.14f,0)],.055f,_art.Color(new Color(n%2==0?"507d5e":"79976c"),.93f));

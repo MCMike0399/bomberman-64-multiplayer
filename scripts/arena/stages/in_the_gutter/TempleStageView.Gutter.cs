@@ -79,12 +79,14 @@ public partial class TempleStageView
         AddChild(new MeshInstance3D{Name="GutterShallowWater",Mesh=GutterPlane(1,Width-1,1,Depth-1),
             MaterialOverride=_gutterWater,Position=new(0,.035f,0),CastShadow=GeometryInstance3D.ShadowCastingSetting.Off});
 
-        // The cream end copings stay inside the original solid perimeter cells.
-        for(int x=1;x<Width-1;x++)foreach(int z in new[]{0,Depth-1})
+        // These perimeter cells are not walkable: a half-round coping
+        // communicates a barrier while staying within the authored crown.
+        foreach(int z in new[]{0,Depth-1})
         {
-            float h=(Layout.At(x,z).ObstacleHeight??.35f)*HeightScale;
-            RoundedBox(this,new(x+.5f,(h-.12f)/2,z+.5f),new(.998f,h-.12f,.998f),brick,.12f);
-            Box(this,new(x+.5f,h-.06f,z+.5f),new(.998f,.12f,.998f),cream,.035f);
+            float h=(Layout.At(1,z).ObstacleHeight??.35f)*HeightScale;
+            for(int x=1;x<Width-1;x++)
+                RoundedBox(this,new(x+.5f,(h-.25f)/2,z+.5f),new(.998f,h-.25f,.998f),brick,.12f);
+            GutterHalfRoundCoping(z+.5f,h,cream);
         }
         GutterGantry(this,-1,verdigris,brass,cream);
         GutterGantry(this,1,verdigris,brass,cream);
@@ -92,6 +94,7 @@ public partial class TempleStageView
         GutterFishVane(brick,cream,brass,dark);
         BuildCopperLockEnds(brick,cream,verdigris,brass,dark);
         BuildGutterLeaves();
+        if(IncludeScenery)BuildCopperLockCoreWater();
     }
 
     private static ArrayMesh GutterPlane(float left,float right,float back,float front,int divisions=20)
@@ -134,8 +137,8 @@ void fragment(){
     float aa=max(fwidth(edge),.002);
     float tile=smoothstep(.012-aa,.032+aa,edge);
     float alternate=mod(floor(p.x)+floor(p.y),2.0);
-    vec3 paint=mix(vec3(.31,.48,.41),vec3(.36,.53,.45),alternate);
-    ALBEDO=mix(vec3(.25,.40,.35),paint,tile);
+    vec3 paint=mix(vec3(.36,.51,.44),vec3(.38,.53,.46),alternate);
+    ALBEDO=mix(vec3(.31,.47,.40),paint,tile);
     ROUGHNESS=.82;SPECULAR=.2;
 }
 """;

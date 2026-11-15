@@ -153,8 +153,8 @@ public partial class PlaytestDriver
         try
         {
             await SelectLocalLighting(StageTime.Midday);
-            _root.StartLocal(new SessionSettings(Stage:BlastStages.InTheGutter,Bots:0,SuddenDeath:false),4);
-            await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"Copper Lock shape study enters actual four-player battle",180);
+            _root.StartLocal(new SessionSettings(Stage:BlastStages.InTheGutter,Bots:0,SuddenDeath:false),8);
+            await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"Copper Lock shape study enters actual eight-player battle",180);
             var terrain=AuditDescendants(LightingArena).OfType<TempleStageView>().Single();
             var core=AuditDescendants(terrain).OfType<Node3D>().Where(n=>n.Name.ToString().StartsWith("CopperLock")).ToArray();
             Check(core.Count(n=>n.Name.ToString().StartsWith("CopperLockFatGateBar"))==12,"two portcullises have six chunky bars each");
@@ -162,7 +162,7 @@ public partial class PlaytestDriver
             Check(core.Count(n=>n.Name.ToString().StartsWith("CopperLockBollardCap"))==4,"four original-relative posts have rounded bollard caps");
             Check(!AuditDescendants(terrain).Any(n=>n.Name=="GutterFlowTracers"||n.Name=="GutterLockHouse"),"scanline traces and cloned houses are removed");
             foreach(var node in core.OfType<MeshInstance3D>().Where(n=>n.Name.ToString().StartsWith("CopperLockRing")||
-                n.Name.ToString().StartsWith("CopperLockBowedGantry")||n.Name=="CopperLockCulvertArch"))
+                n.Name.ToString().StartsWith("CopperLockBowedGantry")||n.Name=="CopperLockCulvertArch"||n.Name=="CopperLockSolidGearDisc"||n.Name=="CopperLockHalfRoundCoping"||n.Name=="CopperLockCurvedWeirWater"))
             {
                 bool clockwise=true;int triangles=0;
                 for(int surface=0;surface<node.Mesh.GetSurfaceCount();surface++)
@@ -189,6 +189,7 @@ public partial class PlaytestDriver
                     Check(core.Where(n=>n.Name=="CopperLockWestMachine"||n.Name=="CopperLockEastMachine").All(n=>n.IsVisibleInTree()),
                         "arena body and both hero machines remain visible at "+preset);
                     Check(preset!=GraphicsPreset.Low||terrain.Scenery?.IsVisibleInTree()!=true,"Low hides exterior scenery while preserving core architecture");
+                    Check(terrain.GetNode<MeshInstance3D>("CopperLockOuterWater").IsVisibleInTree(),"core outer water remains visible at "+preset);
                     await Capture("copper-lock-shapes-"+GraphicsQuality.ToWire(preset));
                 }
                 var camera=_root.GetViewport().GetCamera3D()!;var pose=camera.Transform;

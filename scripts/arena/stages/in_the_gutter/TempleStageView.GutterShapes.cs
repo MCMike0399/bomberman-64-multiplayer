@@ -51,22 +51,79 @@ public partial class TempleStageView
         parent.AddChild(node);return node;
     }
 
+    private static ArrayMesh GutterGearDisc()
+    {
+        const string key="copper-lock-solid-gear";
+        if(SceneryMeshes.TryGetValue(key,out var cached))return (ArrayMesh)cached;
+        const float radius=.94f,hole=.2f,center=.34f,halfDepth=.22f;
+        var surface=new SurfaceTool();surface.Begin(Mesh.PrimitiveType.Triangles);
+        var outer=new List<Vector2>();
+        static float Angle(float y,float x)
+        {
+            float a=x==0?(y>=0?Mathf.Pi/2:-Mathf.Pi/2):PresentationMath.Atan(y/x)+(x<0?Mathf.Pi:0);
+            return a<0?a+Mathf.Tau:a;
+        }
+        var angles=Enumerable.Range(0,32).Select(i=>i*Mathf.Tau/32).ToList();
+        angles.AddRange([Angle(-center,-center),Angle(-center,radius-center),Angle(radius-center,-center)]);
+        angles=angles.Order().DistinctBy(a=>MathF.Round(a*100000)).ToList();
+        for(int quadrant=0;quadrant<4;quadrant++)
+        {
+            var (sin,cos)=PresentationMath.SinCos(quadrant*Mathf.Pi/2);
+            Vector2 Rotate(Vector2 p)=>new(p.X*cos-p.Y*sin,p.X*sin+p.Y*cos);
+            var inner=new List<Vector2>();var boundary=new List<Vector2>();
+            foreach(float angle in angles)
+            {
+                var (ss,cc)=PresentationMath.SinCos(angle);var d=new Vector2(cc,ss);var c=new Vector2(center,center);
+                float dot=c.Dot(d);
+                float t=-dot+MathF.Sqrt(dot*dot+radius*radius-c.LengthSquared());
+                bool circle=true;
+                if(d.X<-.00001f&&-center/d.X<t){t=-center/d.X;circle=false;}
+                if(d.Y<-.00001f&&-center/d.Y<t){t=-center/d.Y;circle=false;}
+                inner.Add(Rotate(c+d*hole));
+                var edge=Rotate(c+d*t);boundary.Add(edge);
+                if(circle)outer.Add(edge);
+            }
+            for(int i=0;i<angles.Count;i++)
+            {
+                int j=(i+1)%angles.Count;
+                foreach(float z in new[]{-halfDepth,halfDepth})
+                {
+                    var a=new Vector3(inner[i].X,inner[i].Y,z);var b=new Vector3(boundary[i].X,boundary[i].Y,z);
+                    var c=new Vector3(boundary[j].X,boundary[j].Y,z);var d=new Vector3(inner[j].X,inner[j].Y,z);
+                    var n=z>0?Vector3.Back:Vector3.Forward;
+                    GutterFlatTriangle(surface,a,b,c,n);GutterFlatTriangle(surface,a,c,d,n);
+                }
+                var ia=new Vector3(inner[i].X,inner[i].Y,-halfDepth);var ib=new Vector3(inner[j].X,inner[j].Y,-halfDepth);
+                var ic=new Vector3(inner[j].X,inner[j].Y,halfDepth);var id=new Vector3(inner[i].X,inner[i].Y,halfDepth);
+                var c2=Rotate(new(center,center));var normal=new Vector3(c2.X,c2.Y,0)-(ia+ib)*.5f;normal.Z=0;
+                GutterFlatTriangle(surface,ia,ib,ic,normal);GutterFlatTriangle(surface,ia,ic,id,normal);
+            }
+        }
+        // Exact quadrant endpoints close the circular outside rim.
+        outer.AddRange([new(radius,0),new(0,radius),new(-radius,0),new(0,-radius)]);
+        outer=outer.OrderBy(p=>Angle(p.Y,p.X)).DistinctBy(p=>(MathF.Round(p.X*100000),MathF.Round(p.Y*100000))).ToList();
+        for(int i=0;i<outer.Count;i++)
+        {
+            int j=(i+1)%outer.Count;
+            var a=new Vector3(outer[i].X,outer[i].Y,-halfDepth);var b=new Vector3(outer[j].X,outer[j].Y,-halfDepth);
+            var c=new Vector3(outer[j].X,outer[j].Y,halfDepth);var d=new Vector3(outer[i].X,outer[i].Y,halfDepth);
+            var n=(a+b)*.5f;n.Z=0;
+            GutterFlatTriangle(surface,a,b,c,n);GutterFlatTriangle(surface,a,c,d,n);
+        }
+        surface.Index();var mesh=surface.Commit();SceneryMeshes[key]=mesh;return mesh;
+    }
+
     private Node3D GutterGear(Node3D parent,Vector3 position,float phase,Material verdigris,Material brass)
     {
         var gear=Prop(parent,"CopperLockDriveGear",position);
-        GutterRing(gear,Vector3.Zero,.9f,.17f,brass);
-        for(int spoke=0;spoke<3;spoke++)
-        {
-            var bar=Box(gear,Vector3.Zero,new(1.65f,.18f,.19f),verdigris,.055f);
-            bar.Basis=PresentationMath.Rotation(new(0,0,spoke*Mathf.Pi/3));
-        }
+        gear.AddChild(new MeshInstance3D{Name="CopperLockSolidGearDisc",Mesh=GutterGearDisc(),MaterialOverride=brass});
         for(int tooth=0;tooth<10;tooth++)
         {
             float angle=tooth*Mathf.Tau/10;var (sin,cos)=PresentationMath.SinCos(angle);
-            var tip=Box(gear,new(cos*1.07f,sin*1.07f,0),new(.37f,.32f,.24f),brass,.07f);
+            var tip=Box(gear,new(cos*1.07f,sin*1.07f,0),new(.37f,.32f,.46f),brass,.07f);
             tip.Basis=PresentationMath.Rotation(new(0,0,angle));
         }
-        RoundedBox(gear,Vector3.Zero,new(.48f,.48f,.35f),brass,.8f);
+        RoundedBox(gear,Vector3.Zero,new(.43f,.43f,.57f),brass,.8f);
         _gutterGears.Add((gear,phase));
         return gear;
     }
@@ -92,7 +149,7 @@ public partial class TempleStageView
         Vector3 Point(int step,bool top,bool outside)
         {
             float t=step/(float)segments,z=.65f+t*(Depth-1.3f);
-            float y=2.98f+PresentationMath.Sin(t*Mathf.Pi)*.38f+(top?.28f:-.28f);
+            float y=2.98f+PresentationMath.Sin(t*Mathf.Pi)*.38f+(top?.54f:-.54f);
             return new(outside?half:-half,y,z);
         }
         for(int i=0;i<segments;i++)
@@ -116,19 +173,48 @@ public partial class TempleStageView
         beam.Index();machine.AddChild(new MeshInstance3D{Name="CopperLockBowedGantry",Mesh=beam.Commit(),MaterialOverride=verdigris});
         foreach(float z in new[]{.95f,Depth-.95f})
         {
-            RoundedBox(machine,new(0,1.45f,z),new(.88f,2.9f,1.05f),cream,.23f).Name="CopperLockGantryPier";
-            RoundedBox(machine,new(0,.2f,z),new(.98f,.4f,1.34f),verdigris,.5f);
-            Sphere(machine,new(0,3.16f,z),new(1.0f,.65f,1.0f),brass);
+            float tower=z<Depth/2f?5.2f:3.05f;
+            float outboard=side*.26f;
+            RoundedBox(machine,new(outboard,tower/2,z),new(1.41f,tower,1.67f),cream,.24f).Name="CopperLockGantryTower";
+            RoundedBox(machine,new(outboard,.2f,z),new(1.48f,.4f,1.84f),verdigris,.4f);
+            Sphere(machine,new(outboard,tower+.15f,z),new(1.42f,.59f,1.66f),brass);
         }
         // Offset mechanisms form an asymmetric pair in the side margins, below HUD.
-        float gearZ=side<0?7.1f:13.9f,outerX=side*1.82f;
-        GutterGear(machine,new(outerX,1.98f,gearZ),side<0?.14f:.7f,verdigris,brass);
-        Box(machine,new(outerX,1.98f,gearZ-.26f),new(2.6f,.34f,.6f),verdigris,.11f);
-        Box(machine,new(side*.95f,1.95f,gearZ),new(1.7f,.33f,.34f),brass,.1f);
-        float counterZ=gearZ+(side<0?2.6f:-2.6f);
+        float gearZ=Depth*.5f,outerX=side*4f;
+        GutterGear(machine,new(outerX,2.05f,gearZ),side<0?.14f:.7f,verdigris,brass);
+        Box(machine,new(outerX,2.05f,gearZ-.31f),new(2.1f,.4f,.55f),verdigris,.11f);
+        Box(machine,new(side*2f,2.05f,gearZ),new(4f,.38f,.38f),brass,.1f);
+        float counterZ=gearZ-2.6f; // Both weights hang behind the gear faces.
+        RoundedBox(machine,new(outerX,2.63f,gearZ),new(.3f,1.2f,.3f),verdigris,.5f);
+        Box(machine,new(outerX,3.19f,(gearZ+counterZ)/2),new(.3f,.3f,Math.Abs(counterZ-gearZ)+.3f),verdigris,.09f);
         Box(machine,new(outerX,2.5f,counterZ),new(.2f,1.4f,.2f),brass,.07f);
-        RoundedBox(machine,new(outerX,1.48f,counterZ),new(.82f,1.14f,.75f),verdigris,.45f).Name="CopperLockCounterweight";
+        RoundedBox(machine,new(outerX,1.48f,counterZ),new(.97f,1.28f,.84f),verdigris,.45f).Name="CopperLockCounterweight";
         Box(machine,new(outerX,1.5f,counterZ+.39f),new(.68f,.22f,.08f),brass,.025f);
+    }
+
+    private void GutterHalfRoundCoping(float z,float top,Material cream)
+    {
+        const int sides=12;const float radius=.25f;
+        float length=Width-2;
+        var surface=new SurfaceTool();surface.Begin(Mesh.PrimitiveType.Triangles);
+        (Vector3 Point,Vector3 Normal) At(float x,int step)
+        {
+            var (sin,cos)=PresentationMath.SinCos(step*Mathf.Pi/sides);
+            return (new(x,sin*radius,cos*radius),new(0,sin,cos));
+        }
+        for(int i=0;i<sides;i++)
+        {
+            var a=At(0,i);var b=At(length,i);var c=At(length,i+1);var d=At(0,i+1);
+            GutterTriangle(surface,a.Point,b.Point,c.Point,a.Normal,b.Normal,c.Normal);
+            GutterTriangle(surface,a.Point,c.Point,d.Point,a.Normal,c.Normal,d.Normal);
+            GutterFlatTriangle(surface,Vector3.Zero,a.Point,d.Point,Vector3.Left);
+            GutterFlatTriangle(surface,new(length,0,0),b.Point,c.Point,Vector3.Right);
+        }
+        var p0=new Vector3(0,0,-radius);var p1=new Vector3(length,0,-radius);
+        var p2=new Vector3(length,0,radius);var p3=new Vector3(0,0,radius);
+        GutterFlatTriangle(surface,p0,p1,p2,Vector3.Down);GutterFlatTriangle(surface,p0,p2,p3,Vector3.Down);
+        surface.Index();AddChild(new MeshInstance3D{Name="CopperLockHalfRoundCoping",Position=new(1,top-radius,z),
+            Mesh=surface.Commit(),MaterialOverride=cream});
     }
 
     private void GutterBollard(int x,int z,Material brick,Material cream,Material brass,Material algae)
@@ -149,15 +235,16 @@ public partial class TempleStageView
         float x=10.5f,z=10.5f,top=1.1f*HeightScale;
         var post=Prop(this,"CopperLockCenterBollard",new(x,0,z));
         RoundedBox(post,new(0,.28f,0),new(.98f,.56f,.98f),brick,.35f);
-        for(int band=0;band<4;band++)
-            RoundedBox(post,new(0,.57f+band*.22f,0),new(.32f,.24f,.32f),band%2==0?cream:brass,.75f);
+        const float poleTop=2.55f;
+        for(int band=0;band<7;band++)
+            RoundedBox(post,new(0,.62f+band*.29f,0),new(.25f,.3f,.25f),band%2==0?cream:brass,.75f);
         RoundedBox(post,new(0,top-.07f,0),new(.83f,.14f,.83f),cream,.5f);
-        _gutterArrow=Prop(post,"GutterCurrentMarker",new(0,top+.24f,0));
-        Sphere(_gutterArrow,new(.04f,0,0),new(.68f,.39f,.21f),brass).Name="CopperLockFishBody";
-        Plate(_gutterArrow,new(-.36f,0,0),[new(-.16f,-.2f),new(.12f,0),new(-.16f,.2f)],.14f,brass);
-        Plate(_gutterArrow,new(.01f,.17f,0),[new(-.17f,0),new(.12f,0),new(-.08f,.2f)],.1f,brass);
+        _gutterArrow=Prop(post,"GutterCurrentMarker",new(0,poleTop+.25f,0));
+        Sphere(_gutterArrow,new(.06f,0,0),new(.92f,.48f,.25f),brass).Name="CopperLockFishBody";
+        Plate(_gutterArrow,new(-.47f,0,0),[new(-.19f,-.23f),new(.15f,0),new(-.19f,.23f)],.17f,brass);
+        Plate(_gutterArrow,new(.02f,.21f,0),[new(-.2f,0),new(.17f,0),new(-.08f,.22f)],.12f,brass);
         foreach(int face in new[]{-1,1})
-            Sphere(_gutterArrow,new(.25f,.05f,face*.102f),Vector3.One*.065f,dark);
+            Sphere(_gutterArrow,new(.35f,.07f,face*.126f),Vector3.One*.085f,dark);
         AddGutterWake(post,new(0,.07f,0),1);
     }
 

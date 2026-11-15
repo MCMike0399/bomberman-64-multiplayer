@@ -157,3 +157,24 @@ graphical path also verifies core machines on Low and paused current cues.
 Independent shape review remains REVISE (narrow). The court is accepted for
 further work, while the machine/setting and surface issues above must be
 resolved before final art review, rebuilt-export qualification or release.
+
+## Major-form GO checkpoint
+
+The second study rebuilds the solid gears with four true circular through
+holes and ten chunky teeth, doubles gantry-beam depth, widens towers outward,
+raises the far towers, adds half-round nonwalkable coping and enlarges the
+fish vane. Core outer water remains visible on Low; camera fitting includes
+the machine envelope and eight-player HUD clearance. The left counterweight
+was moved behind its gear after the actual frame revealed occlusion.
+
+The corrected native study passes 56 assertions with four High/Low/Night/
+oblique captures and no runtime errors or warnings. Owned solid-disc,
+half-round coping and curved-spillway faces pass the indexed winding audit;
+headless shape and common scenery checks pass 21 and 130 assertions.
+The reviewed geometry matches the saved mesh-census source hashes.
+
+Independent round-three review approves the major forms for finishing, with
+one bounded correction: connect wider/longer channel arms, seat mechanisms on
+wall tops, integrate the arch and delete the islet. The white spillway fins,
+wake strength, Low water separation and a local outer-water reflection hatch
+also remain to be resolved. This is not final visual or release approval.

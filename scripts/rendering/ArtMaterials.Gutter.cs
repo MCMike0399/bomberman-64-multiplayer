@@ -15,6 +15,11 @@ public sealed partial class ArtMaterials
         string source=WaterShaderFor(GraphicsPreset.High).Code;
         if(!source.Contains(jitter,StringComparison.Ordinal))
             throw new InvalidOperationException("Review the Gutter reflection specialization after shared water changes.");
-        return _gutterHighWaterShader=new Shader{Code=source.Replace(jitter,"float jitter=0.0;",StringComparison.Ordinal)};
+        const string caustics="seen+=seen*web*reach*caustic_detail*1.4+light_tint.rgb*web*reach*caustic_detail*.05;";
+        if(!source.Contains(caustics,StringComparison.Ordinal))
+            throw new InvalidOperationException("Review Copper Lock's quiet shallow-water caustics after shared water changes.");
+        source=source.Replace(jitter,"float jitter=0.0;",StringComparison.Ordinal)
+            .Replace(caustics,"seen+=seen*web*reach*caustic_detail*.22+light_tint.rgb*web*reach*caustic_detail*.012;",StringComparison.Ordinal);
+        return _gutterHighWaterShader=new Shader{Code=source};
     }
 }
