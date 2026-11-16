@@ -24,8 +24,8 @@ public static class PeerFrameRules
                     if (!Fields(d,"s:id s:name i:width i:height i:round i:winsTarget i:roundSeconds")) return false;
                     int width=d.GetProperty("width").GetInt32(),height=d.GetProperty("height").GetInt32();
                     return width is >=3 and <=32 && height is >=3 and <=32 &&
-                        d.GetProperty("id").GetString() is "sunken-temple" or "rock-garden" or "up-and-down" or "top-rules" or "blizzard-battle" or "greedy-trap" or "sea-sick" &&
-                        Array(d,"cells",1024,c=>Cell(c,d.GetProperty("id").GetString() is "top-rules" or "greedy-trap" or "sea-sick")) &&
+                        d.GetProperty("id").GetString() is "sunken-temple" or "rock-garden" or "up-and-down" or "top-rules" or "blizzard-battle" or "greedy-trap" or "field-of-grass" or "sea-sick" &&
+                        Array(d,"cells",1024,c=>Cell(c,d.GetProperty("id").GetString() is "top-rules" or "greedy-trap" or "field-of-grass" or "sea-sick")) &&
                         d.GetProperty("cells").GetArrayLength()==width*height && CoverHeight(d) && Underpasses(d,width*height) && Array(d,"spawns",8,p=>p.ValueKind==JsonValueKind.Array&&p.GetArrayLength()==2&&p.EnumerateArray().All(v=>v.TryGetInt32(out int n)&&n>=0&&n<32));
                 case "state":
                     if (!Fields(d,"i:round l:serverTime s:stageLighting l:presentationSeq i:phase n:timeLeft i:closedLeft i:closedRight s:hurryMode n:waterLevel n:waterStartsIn n:waterRiseRate n:hurryStartsIn s:softBlocks")) return false;

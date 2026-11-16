@@ -243,19 +243,19 @@ public partial class PlaytestDriver
             Event("pending-layout-render",new {size=viewport.Size.ToString()});
             // Startup preparation can draw before the parent Control is laid out.
             // Exercise High's real contact shading and water in that exact state.
-            await backdrop.PrepareArenas(new[]{"up-and-down"});
+            using(var batch=new PreparationDrawBatch())await backdrop.PrepareArenas(new[]{"up-and-down"},batch);
             Check(viewport.Size==authored,"an unlaid-out menu preserves its authored render target");
             backdrop.Size=Vector2.One;backdrop._Process(0);
             Check(viewport.Size==authored,"a transient one-pixel layout preserves a valid render target");
             var transform=backdrop.GetViewport().GetScreenTransform()*backdrop.GetGlobalTransformWithCanvas();
             backdrop.Size=new(32/transform.X.Length(),32/transform.Y.Length());backdrop._Process(0);
-            await backdrop.PrepareArenas(new[]{"up-and-down"});
+            using(var batch=new PreparationDrawBatch())await backdrop.PrepareArenas(new[]{"up-and-down"},batch);
             using(var smallest=viewport.GetTexture().GetImage())
                 Check(smallest.GetWidth()==32&&smallest.GetHeight()==32,"the smallest accepted target renders High contact shading safely");
             backdrop.Size=new(640,400);backdrop._Process(0);
             var pixels=backdrop.Size*new Vector2(transform.X.Length(),transform.Y.Length());
             Check(viewport.Size==new Vector2I(Mathf.RoundToInt(pixels.X),Mathf.RoundToInt(pixels.Y)),"settled menu layout resumes output-pixel sizing");
-            await backdrop.PrepareArenas(new[]{"up-and-down","blizzard-battle"});
+            using(var batch=new PreparationDrawBatch())await backdrop.PrepareArenas(new[]{"up-and-down","blizzard-battle"},batch);
             using var image=viewport.GetTexture().GetImage();
             Check(!image.IsEmpty()&&image.GetWidth()==viewport.Size.X&&image.GetHeight()==viewport.Size.Y,"the settled menu renders its real water and ice miniatures");
             await Capture("render-surface-layout-settled");
@@ -320,7 +320,7 @@ public partial class PlaytestDriver
             await ActivateNamed("OpenSettings");await Frames(3);
             await CheckNowReachable(new(1024,640));
             await KeyPress(Key.Escape);await ResizeWindow(new(1280,800));await Frames(5);
-            foreach(string stage in new[]{"sunken-temple","rock-garden","up-and-down","top-rules","blizzard-battle","greedy-trap","sea-sick","circuit-garden"})
+            foreach(string stage in new[]{"sunken-temple","rock-garden","up-and-down","top-rules","blizzard-battle","greedy-trap","field-of-grass","sea-sick","circuit-garden"})
             {
                 _root.StartLocal(new SessionSettings(Stage:stage,Bots:0),1,practice:true);
                 await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"graphics enters "+stage,180);
@@ -351,7 +351,7 @@ public partial class PlaytestDriver
                     var premium=materials.Where(m=>m.Shader.Code.Contains("uniform float quality_premium")).ToArray();
                     Check(premium.Length>0&&premium.All(m=>m.GetShaderParameter("quality_premium").AsSingle()==(preset==GraphicsPreset.High?1:0)),"High-only stage embellishments follow preset on "+stage);
                     var water=terrain.GetChildren().OfType<MeshInstance3D>().Where(n=>PrimitiveTemplates.Is(n.Mesh,"PlaneMesh")).ToArray();
-                    if(stage is "rock-garden" or "blizzard-battle")Check(water.Length==0,"garden preserves its dry grass setting at "+preset);
+                    if(stage is "rock-garden" or "blizzard-battle" or "field-of-grass")Check(water.Length==0,"garden preserves its dry grass setting at "+preset);
                     else if(stage is not ("top-rules" or "greedy-trap"))
                     {
                         Check(water.Length==1,"sea arena retains one water surface: "+stage);
@@ -481,6 +481,47 @@ public partial class PlaytestDriver
         first.GrabFocus();((ScrollContainer)scroll).ScrollVertical=0;await Frames(3);
     }
 
+    private async Task GraphicsPreparationStarvationProbe()
+    {
+        Check(!_headless,"callback starvation probe uses the real native renderer");
+        var original=_root.Preferences.Graphics;
+        Event("graphics-preparation-starvation-policy",new{timeoutSeconds=20,
+            normalCallbacks="deliberately withheld from warmup fence only",realRendering=true,skipWarmup=false});
+        try
+        {
+            _root.Navigate("Modes");await Frames(3);await SelectGraphics(GraphicsPreset.High);
+            long before=BlastCircuit.Arena.Effects.EffectWarmup.StarvedCallbacksForTest;
+            using(BlastCircuit.Arena.Effects.EffectWarmup.StarveDrawCallbacksForTest())
+                await SelectGraphics(GraphicsPreset.Low);
+            Check(BlastCircuit.Arena.Effects.EffectWarmup.StarvedCallbacksForTest>before,"probe actually withholds real warmup draw callbacks");
+            var preparation=JsonSerializer.SerializeToElement(_root.GraphicsPreparationDiagnostics);
+            var miniature=preparation.GetProperty("miniatures");
+            var drawBatch=preparation.GetProperty("effects").GetProperty("last").GetProperty("batch");
+            Check(drawBatch.GetProperty("normalWaits").GetInt32()==1&&
+                drawBatch.GetProperty("forcedDraws").GetInt32()==PreparationDrawBatch.ExpectedDraws(miniature.GetProperty("planned").GetInt32()),
+                "one callback deadline switches the entire unchanged overlay/effect/miniature fence sequence to real forced draws");
+            Check(drawBatch.GetProperty("completed").GetBoolean()&&!drawBatch.GetProperty("forceRendering").GetBoolean(),
+                "batch completion resets the forced-render preference before returning control");
+            Check(miniature.GetProperty("planned").GetInt32()>0&&miniature.GetProperty("readbacks").GetInt32()==miniature.GetProperty("planned").GetInt32(),
+                "every requested real arena preview completed its nonempty pixel readback");
+            _root.Navigate("Setup");await Frames(6);
+            Check(AuditDescendants(_root).OfType<BlastCircuit.Arena.Stages.TempleStageView>().Any(t=>
+                t.GetParent().Name=="ArenaDiorama"&&t.IsVisibleInTree()),"completed starvation probe retains a real visible setup miniature");
+            await Capture("preparation-starved-retained-preview");
+        }
+        finally
+        {
+            // On the retained old-path red, do not begin a competing batch.
+            if(!_root.GraphicsPreparing){_root.Navigate("Modes");await Frames(3);await SelectGraphics(original);}
+        }
+    }
+
+    private object PreparationDiagnosticSnapshot()=>new{
+        tag="DEBUG-gfxprep-20261116",process=Engine.GetProcessFrames(),drawn=Engine.GetFramesDrawn(),
+        window=new{visible=GetWindow().Visible,mode=GetWindow().Mode.ToString(),focused=GetWindow().HasFocus(),
+            applicationFocused=ControllerHub.Current.HasApplicationFocus},
+        disable3D=GetViewport().Disable3D,preparation=_root.GraphicsPreparationDiagnostics};
+
     private async Task SelectGraphics(GraphicsPreset preset)
     {
         // Screen transitions defer their initial focus; let that settle before
@@ -503,10 +544,23 @@ public partial class PlaytestDriver
             bool software=SoftwareRenderer;
             double budget=20;
             ulong firstFrame=Engine.GetProcessFrames();
-            while(_root.GraphicsPreparing&&Waiting(warmup,budget,firstFrame))await Frames(1);
+            int firstDrawn=Engine.GetFramesDrawn();double nextDiagnostic=0;
+            Event("graphics-preparation-start",PreparationDiagnosticSnapshot());
+            while(_root.GraphicsPreparing&&Waiting(warmup,budget,firstFrame))
+            {
+                if(warmup.Elapsed.TotalSeconds>=nextDiagnostic)
+                {
+                    Event("graphics-preparation-progress",new{seconds=warmup.Elapsed.TotalSeconds,
+                        processDelta=Engine.GetProcessFrames()-firstFrame,drawnDelta=Engine.GetFramesDrawn()-firstDrawn,
+                        diagnostic=PreparationDiagnosticSnapshot()});
+                    nextDiagnostic=warmup.Elapsed.TotalSeconds+1;
+                }
+                await Frames(1);
+            }
             var preparation=new {preset=GraphicsQuality.ToWire(preset),seconds=warmup.Elapsed.TotalSeconds,
                 frames=Engine.GetProcessFrames()-firstFrame,budget,finished=!_root.GraphicsPreparing,
-                software,adapter=RenderingServer.GetVideoAdapterName(),adapterType=RenderingServer.GetVideoAdapterType().ToString()};
+                software,adapter=RenderingServer.GetVideoAdapterName(),adapterType=RenderingServer.GetVideoAdapterType().ToString(),
+                drawnFrames=Engine.GetFramesDrawn()-firstDrawn,diagnostic=PreparationDiagnosticSnapshot()};
             _graphicsPreparations.Add(preparation);
             File.WriteAllText(Path.Combine(_output,"graphics-preparation.json"),JsonSerializer.Serialize(_graphicsPreparations));
             Event("graphics-preparation",preparation);

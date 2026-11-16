@@ -55,6 +55,7 @@ public partial class PlaytestDriver
         await Adjust("StageSelector",Key.Right);Check(menu.Settings.Stage=="top-rules","right selects authority Top Rules");await Capture("setup-top-rules");
         await Adjust("StageSelector",Key.Right);Check(menu.Settings.Stage=="blizzard-battle","right selects Blizzard Battle");await Capture("setup-blizzard-battle");
         await Adjust("StageSelector",Key.Right);Check(menu.Settings.Stage=="greedy-trap","right selects Greedy Trap");await Capture("setup-greedy-trap");
+        await Adjust("StageSelector",Key.Right);Check(menu.Settings.Stage=="field-of-grass","right selects Field of Grass");await Capture("setup-field-of-grass");
         await Adjust("StageSelector",Key.Right);Check(menu.Settings.Stage=="sea-sick","right selects Sea Sick");await Capture("setup-sea-sick");
         await Adjust("StageSelector",Key.Right);Check(menu.Settings.Stage=="sunken-temple","arena selection wraps to temple");
         await Adjust("StageSelector",Key.Left);Check(menu.Settings.Stage=="sea-sick","left wraps to previous arena");await Adjust("StageSelector",Key.Right);

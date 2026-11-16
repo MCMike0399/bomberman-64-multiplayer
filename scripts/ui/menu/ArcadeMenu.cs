@@ -90,7 +90,8 @@ public partial class ArcadeMenu : Control
     private PromptBar _inputFooter=null!;
     public int HumanCount => _practice?1:_localPlayers.Roster.Humans;
     public int[] PlayerAppearances => _practice?new[]{_localPlayers.Roster.AuthorityAppearances().FirstOrDefault()}:_localPlayers.Roster.AuthorityAppearances();
-    public Task PrepareArenas()=>_background.PrepareArenas(StageIds);
+    public object ArenaPreparationDiagnostics=>_background.PreparationDiagnostics;
+    public Task PrepareArenas(PreparationDrawBatch batch)=>_background.PrepareArenas(StageIds,batch);
     public object RosterState=>_localPlayers.DiagnosticState;
     public int OnlineAppearance=>_onlineAppearance;
     public string ServerUrl=>_server.Text.Trim();
@@ -100,7 +101,7 @@ public partial class ArcadeMenu : Control
     public SessionSettings Settings => BuildSettings(_practice?0:_localPlayers.Roster.CpuPlayers);
     public SessionSettings OnlineSettings=>BuildSettings((int)_bots.Value);
     private SessionSettings BuildSettings(int bots)=>new(StageIds[_stage.Selected],bots,(int)_wins.Value,(int)_rounds.Value,_sudden.ButtonPressed,_ghosts.ButtonPressed,new[]{"easy","normal","hard"}[_difficulty.Selected]){Advanced=_advanced,Hosting=new[]{"auto","server","peer"}[_hostingPreference]};
-    private static readonly string[] StageIds=["sunken-temple","rock-garden","up-and-down","top-rules","blizzard-battle","greedy-trap","sea-sick"];
+    private static readonly string[] StageIds=["sunken-temple","rock-garden","up-and-down","top-rules","blizzard-battle","greedy-trap","field-of-grass","sea-sick"];
     private static readonly Color Coral=new("f06a55"),Lagoon=new("2a8c92");
     public override void _Ready()
     {

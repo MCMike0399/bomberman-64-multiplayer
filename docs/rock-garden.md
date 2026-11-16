@@ -80,3 +80,43 @@ graphical run captures normal battle and a labeled closer inspection view.
 The old wide stone platform, thirteen columns and 110-block budget are superseded.
 
 [Verification results and remaining integration limitation](verification.md#rock-garden-reconstruction-verification--pr-4).
+
+## Roundstone Orchard — 2026-11-16 source candidate
+
+The second creative review refines Rock Garden as one walled orchard, keeping
+its original five columns, flat court, 64 cover cells, starts, meteors and
+camera. [The reference review](stage-fidelity-research.md) owns original-stage
+fidelity; the orchard, mill and branch are authored setting, not recovered
+Nintendo scenery. [Konami's round Medieval masonry](https://www.konami.com/games/bomberman/r/s/img/ss_battle05_l.jpg)
+informs the scale and carved-stone vocabulary.
+
+The cream coping is roughly 15% quieter and narrower. Five warm carved stones
+have moss shoulders while retaining each physical footprint and crown height.
+Cover has two shoulder profiles and two warm/mossy palettes, with occasional
+lichen caps; its cell and maximum height remain unchanged. The new orchard
+profiles are explicitly separate from the shared background-rock helper, so
+other maps' scenery rocks keep the preceding shape.
+
+The existing windmill is a smaller core landmark, joined by one bowed fruit
+branch outside the north standing volume. Both survive Low and share one
+pausable breeze clock; sails rotate on Low. The mill's existing window glows
+warmly at Night without adding lights. Flower-bed discs and butterflies are
+removed, shrubs are thinned, and no bees or petals are added. The brook,
+bridge, lanterns and quieter outer lawn remain.
+
+The supplied High frame did not establish a footer-clipping defect. Actual
+front-wall/coping projection with the unchanged camera ends at normalized
+Y=.883604 (1280×800) and .889842 (1280×720), leaving 33.1 and25.3 pixels before
+the .925 footer band. The new branch was composed under the existing HUD
+margin rather than changing that camera. Primitive AABB corners overestimate
+round/conical landmarks, so the hero probe consumes their actual captured
+vertices. Final landmark minimum Y is .157324/.151539 for the two aspects.
+
+`rock-orchard` captures High/Medium/Low Midday, High Night combat and an oblique
+inspection. It checks actual carved-stone/branch winding, original cover and
+column bounds, full front-wall framing, core landmark visibility and Low
+rotation/pause. The ordinary `rock-garden` traversal/combat/meteor journey and
+`stage-scenery` placement checks remain. Source build is clean; focused
+headless runs pass103 orchard,78 gameplay and115 scenery assertions with zero
+runtime errors (exit ObjectDB warnings retained where reported). Native
+material/shape acceptance remains root's gate; this is not a release receipt.

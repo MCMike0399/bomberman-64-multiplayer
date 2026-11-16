@@ -76,7 +76,7 @@ public partial class ArenaView
                     seconds=>BlizzardRules.Wind(weather.GetProperty("time").GetSingle()+seconds+BombThrowRules.SimulationStep,weather.GetProperty("seed").GetInt32(),weather.GetProperty("round").GetInt32()):null);
             if(!_throwPreviews.TryGetValue(id,out var view))
             {view=new BombThrowPreview();_effects.AddChild(view);_throwPreviews[id]=view;}
-            view.Update(projection,pumps,player.GetProperty("slot").GetInt32(),aimSet,aiming,range);seen.Add(id);
+            view.Update(projection,pumps,player.GetProperty("slot").GetInt32(),aimSet,aiming,range,_stage==Bomber.Game.Simulation.Stages.BlastStages.FieldOfGrass?_terrain.OverlaySurface(projection.Last.X,projection.Last.Z):float.NegativeInfinity);seen.Add(id);
             view.UpdateScreen(_camera);
             states.Add(new(id,pumps,projection.Last.X,projection.Last.Y,projection.Last.Z,projection.End.ToString(),projection.Points.Count,view.LandingMarkerVisible,view.EndpointLabel,aimSet,aiming,range,view.EndpointMarkerVisible,view.EndpointScreenPosition.X,view.EndpointScreenPosition.Y,view.EndpointEdgeClamped));
         }

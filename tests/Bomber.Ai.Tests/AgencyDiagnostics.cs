@@ -183,7 +183,7 @@ static class AgencyDiagnostics
     internal static List<Result> Matrix(int? startingBombs=null,IReadOnlyList<string>? stages=null)
     {
         var results=new List<Result>();
-        foreach(string stage in stages??new[]{"sunken-temple","rock-garden","up-and-down","top-rules","blizzard-battle","greedy-trap"})
+        foreach(string stage in stages??new[]{"sunken-temple","rock-garden","up-and-down","top-rules","blizzard-battle","greedy-trap","field-of-grass"})
         foreach(string level in new[]{"easy","medium","hard"})
         foreach(int seed in new[]{64,9876})
         {

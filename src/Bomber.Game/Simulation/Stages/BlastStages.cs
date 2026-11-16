@@ -15,6 +15,7 @@ public static partial class BlastStages
         TopRules => BuildTopRules(),
         BlizzardBattle => BuildBlizzardBattle(),
         GreedyTrap => BuildGreedyTrap(),
+        FieldOfGrass => BuildFieldOfGrass(),
         SeaSick => BuildSeaSick(),
         _ => BuildSunkenTemple(),
     };
@@ -25,7 +26,7 @@ public static partial class BlastStages
     public static float HurryColumnSeconds(string id) => id == BlizzardBattle ? Rules.BlizzardRules.AvalancheStepSeconds : 1f;
 
     /// <summary>Open-court falling fireballs replace closing walls on these stages.</summary>
-    public static bool UsesMeteors(string id) => id is RockGarden or SeaSick;
+    public static bool UsesMeteors(string id) => id is RockGarden or FieldOfGrass or SeaSick;
 
     private static CellDef[,] Fill(int w, int h, CellDef def)
     {

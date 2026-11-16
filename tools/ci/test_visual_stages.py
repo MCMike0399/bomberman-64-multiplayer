@@ -19,6 +19,7 @@ SCENES = (
     ('top-rules', 'full-top-rules-high-v2'),
     ('blizzard-battle', 'full-blizzard-battle-high-v2'),
     ('greedy-trap', 'full-greedy-trap-high-v2'),
+    ('field-of-grass', 'full-field-of-grass-high-v2'),
     ('sea-sick', 'full-sea-sick-high-v2'),
     ('circuit-garden', 'full-circuit-garden-high-v2'),
 )

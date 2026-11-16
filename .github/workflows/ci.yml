@@ -283,6 +283,7 @@ jobs:
           name: release-gate-startup
           path: |
             artifacts/release-gate-startup/summary.json
+            artifacts/release-gate-startup/*/app.log
             artifacts/release-gate-startup/*/*.png
           retention-days: 14
           if-no-files-found: warn
@@ -536,7 +537,7 @@ jobs:
             artifacts/*-regression-details/**/progress.json
             artifacts/*-regression-details/**/peer-capacity-diagnostics.json
             artifacts/*-regression-details/**/peer-room-diagnostics.json
-            artifacts/*-regression-details/**/peer-ice-order-diagnostics.json
+            artifacts/*-regression-details/**/peer-ice-order-*.json
             artifacts/*-regression-details/**/peer-ice-terminal.json
             artifacts/*-regression-details/**/peer-link-lifecycle-diagnostics.json
             artifacts/*-regression-details/**/native-peer-repeats.json
@@ -610,7 +611,7 @@ jobs:
             artifacts/*-regression-details/**/peer-capacity-diagnostics.json
             artifacts/*-regression-details/**/display-restart.json
             artifacts/*-regression-details/**/peer-room-diagnostics.json
-            artifacts/*-regression-details/**/peer-ice-order-diagnostics.json
+            artifacts/*-regression-details/**/peer-ice-order-*.json
             artifacts/*-regression-details/**/peer-ice-terminal.json
             artifacts/*-regression-details/**/peer-link-lifecycle-diagnostics.json
             artifacts/*-regression-details/**/native-peer-repeats.json
@@ -665,7 +666,7 @@ jobs:
             artifacts/*-regression-details/**/peer-capacity-diagnostics.json
             artifacts/*-regression-details/**/display-restart.json
             artifacts/*-regression-details/**/peer-room-diagnostics.json
-            artifacts/*-regression-details/**/peer-ice-order-diagnostics.json
+            artifacts/*-regression-details/**/peer-ice-order-*.json
             artifacts/*-regression-details/**/peer-ice-terminal.json
             artifacts/*-regression-details/**/peer-link-lifecycle-diagnostics.json
             artifacts/*-regression-details/**/native-peer-repeats.json

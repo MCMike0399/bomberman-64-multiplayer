@@ -2,6 +2,17 @@
   "schemaVersion": 1,
   "scenarios": [
     {
+      "id": "graphics-preparation-starvation-probe",
+      "method": "GraphicsPreparationStarvationProbe",
+      "domains": [
+        "rendering",
+        "ui"
+      ],
+      "headless": false,
+      "timeout": 90,
+      "manual": false
+    },
+    {
       "id": "peer-ice-terminal",
       "method": "PeerIceTerminal",
       "domains": [
@@ -32,6 +43,18 @@
       ],
       "headless": true,
       "timeout": 120,
+      "manual": false
+    },
+    {
+      "id": "circuit-workshop",
+      "method": "CircuitWorkshopTour",
+      "domains": [
+        "gameplay",
+        "ui",
+        "rendering"
+      ],
+      "headless": true,
+      "timeout": 180,
       "manual": false
     },
     {
@@ -961,6 +984,7 @@
       "id": "tour-21",
       "steps": [
         "stage-scenery",
+        "orrery-keep",
         "wall-death"
       ],
       "domains": [
@@ -968,6 +992,24 @@
         "ui",
         "animation",
         "models"
+      ],
+      "headless": true,
+      "timeout": 480,
+      "manual": false
+    },
+    {
+      "id": "tour-22",
+      "steps": [
+        "field-of-grass",
+        "field-of-grass-network"
+      ],
+      "domains": [
+        "gameplay",
+        "rendering",
+        "physics",
+        "ai",
+        "ui",
+        "network"
       ],
       "headless": true,
       "timeout": 480,
@@ -997,6 +1039,7 @@
         "tour-19",
         "tour-20",
         "tour-21",
+        "tour-22",
         "tour-24"
       ],
       "domains": [
@@ -1049,7 +1092,9 @@
         "rock-garden",
         "blizzard-battle",
         "greedy-trap",
+        "field-of-grass",
         "stage-scenery",
+        "orrery-keep",
         "round-ending",
         "sea-sick"
       ],
@@ -1260,6 +1305,46 @@
       "manual": false
     },
     {
+      "id": "field-of-grass-shape-study",
+      "method": "FieldOfGrassShapeStudy",
+      "domains": [
+        "gameplay",
+        "rendering",
+        "physics",
+        "ai"
+      ],
+      "headless": true,
+      "timeout": 240,
+      "manual": false
+    },
+    {
+      "id": "field-of-grass-network",
+      "method": "FieldOfGrassNetworkTour",
+      "domains": [
+        "gameplay",
+        "rendering",
+        "network",
+        "physics"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "field-of-grass",
+      "method": "FieldOfGrassTour",
+      "domains": [
+        "gameplay",
+        "rendering",
+        "physics",
+        "ai",
+        "ui"
+      ],
+      "headless": true,
+      "timeout": 240,
+      "manual": false
+    },
+    {
       "id": "rock-garden",
       "method": "RockGardenTour",
       "domains": [
@@ -1285,7 +1370,9 @@
         "water-surface",
         "tutorial",
         "greedy-trap",
+        "field-of-grass",
         "stage-scenery",
+        "orrery-keep",
         "sea-sick"
       ],
       "domains": [
@@ -1539,6 +1626,7 @@
         "rock-garden",
         "blizzard-battle",
         "greedy-trap",
+        "field-of-grass",
         "hurry-water",
         "asset-audit",
         "pickup-showcase"
@@ -1570,11 +1658,13 @@
         "map-preview-loading",
         "framing",
         "stage-scenery",
+        "orrery-keep",
         "rock-garden",
         "up-and-down",
         "top-rules",
         "blizzard-battle",
         "greedy-trap",
+        "field-of-grass",
         "greedy-canal",
         "sea-sick"
       ],
@@ -1639,7 +1729,8 @@
         "up-and-down",
         "rock-garden",
         "blizzard-battle",
-        "greedy-trap"
+        "greedy-trap",
+        "field-of-grass"
       ],
       "domains": [
         "ai",
@@ -1765,6 +1856,53 @@
       ],
       "headless": false,
       "timeout": 900,
+      "manual": false
+    },
+    {
+      "id": "glacier-grotto",
+      "method": "GlacierGrotto",
+      "domains": [
+        "rendering",
+        "ui",
+        "gameplay"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "rock-orchard",
+      "method": "RockOrchard",
+      "domains": [
+        "rendering",
+        "ui",
+        "gameplay"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "tideglass-coast",
+      "method": "TideglassCoast",
+      "domains": [
+        "rendering",
+        "ui",
+        "gameplay"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "orrery-keep",
+      "method": "OrreryKeepTour",
+      "domains": [
+        "rendering",
+        "gameplay"
+      ],
+      "headless": true,
+      "timeout": 180,
       "manual": false
     },
     {

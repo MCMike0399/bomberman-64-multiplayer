@@ -20,14 +20,19 @@ GRAPHICAL = ('controller-popups', 'all', 'menu-preview', 'water-surface')
 # Mac still runs `all` in one process, which covers cross-leaf sequencing.
 TOURS = tuple(catalog()['all']['steps'])
 SHARDED_GRAPHICAL = ('controller-popups', *TOURS, 'menu-preview', 'water-surface')
-# One fresh runner per part. WARP is ~5x slower than llvmpipe, so Windows
-# gives each tour its own runner while Linux groups about an hour of tours.
-SOFTWARE_PARTS = {
-    'windows-x64': ('windows-2025', (('controller-popups', TOURS[0]), *((tour,) for tour in TOURS[1:3]),
-                                     (TOURS[3], 'water-surface'), *((tour,) for tour in TOURS[4:]), ('menu-preview',))),
-    'linux-x64': ('ubuntu-24.04', (('controller-popups', *TOURS[:4]), TOURS[4:9], TOURS[9:14],
-                                   (*TOURS[14:18], 'water-surface'), (*TOURS[18:], 'menu-preview'))),
-}
+# One fresh runner per part; every case still starts a separate game process.
+# Pair the final two tours on Windows so roster growth to 25 tours stays within
+# the 30-job combined cap without dropping coverage or changing case order.
+def software_parts(tours):
+    return {
+        'windows-x64': ('windows-2025', (('controller-popups', tours[0]), *((tour,) for tour in tours[1:3]),
+                                         (tours[3], 'water-surface'), *((tour,) for tour in tours[4:-2]), tours[-2:], ('menu-preview',))),
+        'linux-x64': ('ubuntu-24.04', (('controller-popups', *tours[:4]), tours[4:9], tours[9:14],
+                                       (*tours[14:18], 'water-surface'), (*tours[18:], 'menu-preview'))),
+    }
+
+
+SOFTWARE_PARTS = software_parts(TOURS)
 # Peer host lease for the owned server during software-rendered graphical parts.
 SOFTWARE_PEER_HOST_LEASE = 120
 STARTUP = tuple('-'.join((p, d, 'menu')) for p in ('low', 'medium', 'high') for d in ('fullscreen', 'windowed')) + tuple(p + '-fullscreen-gameplay' for p in ('low', 'medium', 'high'))

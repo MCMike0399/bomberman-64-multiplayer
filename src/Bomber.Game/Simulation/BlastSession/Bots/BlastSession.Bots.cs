@@ -273,7 +273,7 @@ public sealed partial class BlastSession
         if(!field.Safe(cell,enter,leave))return false;
         int x=_aiGraph.X(cell),z=_aiGraph.Z(cell);
         if(WaterUnsafe(x+.5f,z+.5f,leave,_aiGraph.Height[cell]))return false;
-        if(_phase==RoundPhase.Hurry&&!_stage.RisingWater&&_stage.Id!=BlastStages.RockGarden)
+        if(_phase==RoundPhase.Hurry&&!_stage.RisingWater&&!BlastStages.UsesMeteors(_stage.Id))
         {
             int columns=(int)MathF.Floor((_hurryColTimer+leave)/BlastStages.HurryColumnSeconds(_stage.Id));
             if(x<_closedLeft+columns||x>=_stage.Width-_closedRight-columns)return false;
