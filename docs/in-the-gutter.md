@@ -291,3 +291,12 @@ passes 22 checks (actual owned CW faces); the accepted-current witness passes 11
 including continuous west/east rotation and one pressure dial. Each raw run has
 two ObjectDB exit warnings and zero runtime errors. Actual High/Medium/Low/Night
 images and current-change motion still require parent review.
+
+The Fishworks native follow-up passed 139 checks/13 captures, but the upright
+west pressure dial read as an empty ellipse from the steep battle camera. Its
+hand was already in front of the face (local Z .23 versus .14); the parent had
+no rotation. Only the dial's own basis now tilts toward that camera using
+managed presentation math (-.60 X, .38 Y). Material, size, face/hand depths,
+mount, main machinery, water and gameplay camera remain unchanged. Source
+build/public and focused shape/current regressions pass; actual dial readability
+remains a native image judgment.

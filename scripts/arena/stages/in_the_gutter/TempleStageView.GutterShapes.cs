@@ -199,6 +199,7 @@ public partial class TempleStageView
             // gantry remains quieter; no added hut or repeat house vignette.
             RoundedBox(machine,new(outerX,2.85f,counterZ),new(.5f,.65f,.45f),verdigris,.45f);
             var dial=Prop(machine,"CopperLockPressureDial",new(outerX,3.5f,counterZ));
+            dial.Basis=PresentationMath.Rotation(new(-.60f,.38f,0));
             Sphere(dial,Vector3.Zero,new(1.5f,1.5f,.25f),cream);
             GutterRing(dial,new(0,0,.12f),.63f,.09f,brass);
             Sphere(dial,new(0,0,.14f),new(1.08f,1.08f,.09f),verdigris);

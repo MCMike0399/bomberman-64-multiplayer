@@ -4734,7 +4734,7 @@
     {
       "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:Sphere:4",
       "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
-      "line": 202,
+      "line": 203,
       "call": "Sphere(dial,Vector3.Zero,new(1.5f,1.5f,.25f),cream)",
       "callSha256": "cccb065e10b3a31fdfd881965474bab76a788e8d766aebc49e051384803ab7a7",
       "domain": "owned-generator-or-helper"
@@ -4742,7 +4742,7 @@
     {
       "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:Sphere:5",
       "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
-      "line": 204,
+      "line": 205,
       "call": "Sphere(dial,new(0,0,.14f),new(1.08f,1.08f,.09f),verdigris)",
       "callSha256": "b8383f1fadcc6e02722e713438e248260f9868be0e1f1d84b3612133cabd0a28",
       "domain": "owned-generator-or-helper"
@@ -4750,7 +4750,7 @@
     {
       "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:RoundedBox:7",
       "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
-      "line": 206,
+      "line": 207,
       "call": "RoundedBox(_gutterDialNeedle,new(.16f,0,0),new(.53f,.10f,.04f),brass,.6f)",
       "callSha256": "91bf4c262be92130348617f0f3bb43708fa23c14d1b4b76569c624bd342c4253",
       "domain": "owned-generator-or-helper"
@@ -4758,7 +4758,7 @@
     {
       "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:Sphere:6",
       "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
-      "line": 207,
+      "line": 208,
       "call": "Sphere(dial,new(0,0,.25f),Vector3.One*.13f,brass)",
       "callSha256": "a7d3a4d264129cd97a24e8951d30359eddaa488c9eb1af766d7e036c8a9e38d1",
       "domain": "owned-generator-or-helper"
@@ -4766,7 +4766,7 @@
     {
       "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:newSurfaceTool:4",
       "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
-      "line": 215,
+      "line": 216,
       "call": "new SurfaceTool()",
       "callSha256": "524d4daa3dd8ade1577b68b52e91ebbe9907def4954bab94da3aeb8c6bb1a4ae",
       "domain": "owned-generator-or-helper"
@@ -4774,7 +4774,7 @@
     {
       "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:surface.Commit:3",
       "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
-      "line": 233,
+      "line": 234,
       "call": "surface.Commit()",
       "callSha256": "3a4b0e22bc74cdecd537891eb2f48df20b98f27fbf269b1803e1cc035b3194ec",
       "domain": "owned-generator-or-helper"
@@ -4782,7 +4782,7 @@
     {
       "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:RoundedBox:8",
       "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
-      "line": 240,
+      "line": 241,
       "call": "RoundedBox(post,new(0,(top-.32f)/2,0),new(1.92f,top-.32f,1.84f),brick,.28f)",
       "callSha256": "4bc4b3946bae6424a0c93b46588a1b3df423e75d579c2835e784df17b2b582fd",
       "domain": "owned-generator-or-helper"
@@ -4790,7 +4790,7 @@
     {
       "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:RoundedBox:9",
       "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
-      "line": 241,
+      "line": 242,
       "call": "RoundedBox(post,new(0,.16f,0),new(1.99f,.32f,1.99f),algae,.35f)",
       "callSha256": "4fbdc377da9354db8b52bb2b9da28a5336bb02431ba2eb27cdadca47acd85bca",
       "domain": "owned-generator-or-helper"
@@ -4798,7 +4798,7 @@
     {
       "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:RoundedBox:10",
       "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
-      "line": 242,
+      "line": 243,
       "call": "RoundedBox(post,new(0,top-.2f,0),new(1.99f,.4f,1.99f),cream,.38f)",
       "callSha256": "b7652491aa5fd03de8ff34676d637609154bf76596df8df454d7ea8ec2846556",
       "domain": "owned-generator-or-helper"
@@ -4806,7 +4806,7 @@
     {
       "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:RoundedBox:11",
       "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
-      "line": 245,
+      "line": 246,
       "call": "RoundedBox(post,new(0,top*.62f,.80f),new(.54f,.56f,.15f),brick,.25f)",
       "callSha256": "880f58091835a9466817a837424fcdd68cfc12bbf99f9309ad6e277dac50c81e",
       "domain": "owned-generator-or-helper"
@@ -4814,7 +4814,7 @@
     {
       "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:RoundedBox:12",
       "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
-      "line": 254,
+      "line": 255,
       "call": "RoundedBox(post,new(0,.28f,0),new(.98f,.56f,.98f),brick,.35f)",
       "callSha256": "25813ee7d3a0ae3f5bd8a99f6e2910dcb86638e9d707847b078da0cb93d17a44",
       "domain": "owned-generator-or-helper"
@@ -4822,7 +4822,7 @@
     {
       "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:RoundedBox:13",
       "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
-      "line": 257,
+      "line": 258,
       "call": "RoundedBox(post,new(0,.62f+band*.29f,0),new(.25f,.3f,.25f),band%2==0?cream:brass,.75f)",
       "callSha256": "6960ea0feb0a20376b2b9ee5868bfd0252ea81fb7adfbe3f98350a77a286936b",
       "domain": "owned-generator-or-helper"
@@ -4830,7 +4830,7 @@
     {
       "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:RoundedBox:14",
       "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
-      "line": 258,
+      "line": 259,
       "call": "RoundedBox(post,new(0,top-.07f,0),new(.83f,.14f,.83f),cream,.5f)",
       "callSha256": "5f0fb88bd4ab6bec6b58161ab26b6220b0842313961621ee342c465ab30a233d",
       "domain": "owned-generator-or-helper"
@@ -4838,7 +4838,7 @@
     {
       "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:Sphere:7",
       "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
-      "line": 260,
+      "line": 261,
       "call": "Sphere(_gutterArrow,new(.06f,0,0),new(.92f,.48f,.25f),brass)",
       "callSha256": "b5b8a790ab6e095812a0659749ca91ff9d70898d94f254c3ba2dcc79bba026f7",
       "domain": "owned-generator-or-helper"
@@ -4846,7 +4846,7 @@
     {
       "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:Sphere:8",
       "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
-      "line": 264,
+      "line": 265,
       "call": "Sphere(_gutterArrow,new(.35f,.07f,face*.126f),Vector3.One*.085f,dark)",
       "callSha256": "381e9adda3fb6cbbb52ac888d019b376fa9361bd6b6cdaee50fd98dcf3b1af76",
       "domain": "owned-generator-or-helper"
@@ -4854,7 +4854,7 @@
     {
       "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:RoundedBox:15",
       "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
-      "line": 272,
+      "line": 273,
       "call": "RoundedBox(lamp,Vector3.Zero,new(.56f,.75f,.48f),verdigris,.4f)",
       "callSha256": "361bb9a756798809c2e86623b96e90efafdd1ad16d8b619e282ff0b2b138e9bb",
       "domain": "owned-generator-or-helper"
@@ -4862,7 +4862,7 @@
     {
       "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:Box:10",
       "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
-      "line": 273,
+      "line": 274,
       "call": "Box(lamp,new(0,.01f,.25f),new(.46f,.59f,.035f),Glow(new Color(\"ffc078\"),1.55f),.025f)",
       "callSha256": "e4b06ad5362d69f6998cb82868f26431c1915201491a9162a0614629e118e6a0",
       "domain": "owned-generator-or-helper"
@@ -4870,7 +4870,7 @@
     {
       "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:RoundedBox:16",
       "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
-      "line": 274,
+      "line": 275,
       "call": "RoundedBox(lamp,new(0,.43f,0),new(.69f,.14f,.61f),brass,.6f)",
       "callSha256": "e30019e33ff7812f226c46c62f8a393d92aa04bc0d87bc22041e1babd5de9928",
       "domain": "owned-generator-or-helper"
@@ -9930,7 +9930,7 @@
     "scripts/arena/stages/TempleStageView.cs": "95be8f451949fe16d99f9e7a17d7368e2f9d04be5d7fe9dfd3fcaf1f29cc3342",
     "scripts/arena/stages/in_the_gutter/TempleStageView.Gutter.cs": "de04df52c1f99ae070c7ac0a8276226c6ef45ef56c578d2420da20b373f12c2d",
     "scripts/arena/stages/in_the_gutter/TempleStageView.GutterExterior.cs": "1dfddbb93bab2f384ba06706d66e279792ff2f420de84b9827a3a684dd042178",
-    "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs": "390582858604ee957dd2a29043b17ecf42481a864b126ccabb8d18d8bb7df6b0",
+    "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs": "0c941239766c31b5b1d028e3895bb337ea2df15e3d227f2d3933d193d76d635f",
     "scripts/rendering/ArtGeometry.cs": "32fea3664b4af118fe691a5e0c1eb396eebf0352922996ea2b18896d0ea9764e",
     "scripts/rendering/PrimitiveTemplates.cs": "a217a597e45615d6a71b19529c4b24ca49cf09b1a2473b53e509ee153cce9352",
     "scripts/testing/journeys/rendering/AssetAuditPlaytest.cs": "9369deb5c46c7f4db09a187701d5c548b454e53ba80da072835a8a475f31e742",
