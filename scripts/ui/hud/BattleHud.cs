@@ -43,7 +43,11 @@ public partial class BattleHud : Control
         var hintPlate=new PanelContainer {MouseFilter=MouseFilterEnum.Ignore};hintPlate.AddThemeStyleboxOverride("panel",hintStyle);hintCenter.AddChild(hintPlate);
         _recovery=ArcadeTheme.Text(hintPlate,"",18,ArcadeTheme.Gold);_recovery.HorizontalAlignment=HorizontalAlignment.Center;
         var footer=new PanelContainer {AnchorTop=1,AnchorBottom=1,AnchorRight=1,OffsetLeft=24,OffsetRight=-24,OffsetTop=-66,OffsetBottom=-12};
-        footer.AddThemeStyleboxOverride("panel",new StyleBoxEmpty {ContentMarginLeft=8,ContentMarginRight=8,ContentMarginTop=6,ContentMarginBottom=6});AddChild(footer);
+        // Snow, sea foam and bright stone can sit directly beneath these small
+        // labels. Keep their existing layout on a quiet translucent ink backing.
+        var footerStyle=new StyleBoxFlat {BgColor=new Color(ArcadeTheme.Ink,.72f),CornerRadiusTopLeft=12,CornerRadiusTopRight=12,CornerRadiusBottomLeft=12,CornerRadiusBottomRight=12,
+            ContentMarginLeft=8,ContentMarginRight=8,ContentMarginTop=6,ContentMarginBottom=6};
+        footer.AddThemeStyleboxOverride("panel",footerStyle);AddChild(footer);
         var row=ArcadeTheme.Row(footer,18);_connection=ArcadeTheme.Text(row,"Local battle",15,ArcadeTheme.Muted);_connection.Name="ConnectionStatus";_connection.SizeFlagsHorizontal=SizeFlags.ExpandFill;_connection.VerticalAlignment=VerticalAlignment.Center;
         _controls=new PromptBar {KeySize=13};row.AddChild(_controls);UpdateControls();ControllerHub.Current.PromptChanged+=UpdateControls;
         _restart=ArcadeTheme.Quiet(ArcadeTheme.Button(row,"Reset practice",()=>RestartRequested?.Invoke()));_restart.Visible=false;

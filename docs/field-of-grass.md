@@ -66,7 +66,10 @@ deployment remain the release owner's work.
 eight supported ledge starts, ordinary downhill/uphill walking, the enclosing
 boundary, sixteen seeded layouts at three cover densities, grass not shielding
 blasts, elevated fireball casualties and matching CPU danger. Client peer-frame
-checks accept the complete stage and real Hurry state and retain the room setting.
+checks accept the complete stage and real Hurry state and retain the room setting. The raised-bank
+meteor witness also inspects the real authority hazard and requires both its
+exact height and bank tier. The constructor retains the reviewed `LandingY`
+and `Tier` assignments together.
 
 `field-of-grass` is an ordinary-input journey covering the menu miniature, eight
 starts, canopy persistence across presets, four lighting looks, bank descent,

@@ -1,0 +1,38 @@
+{
+  "date": "2026-11-15",
+  "baselineSource": "2cfe1b41d74f0d010501c6a33e7ad190e8744762",
+  "candidateSource": "ec600bf",
+  "candidateStageCommit": "61d75b7",
+  "note": "Candidate integration source includes research documentation and the identical stage change; author identity was subsequently amended. Unedited native Metal captures; fixed scene recipe, actors may vary.",
+  "renderer": "Metal Forward+ / Apple M5 Pro",
+  "baseline": {
+    "assertions": 371,
+    "captures": 40
+  },
+  "candidate": {
+    "assertions": 3485,
+    "captures": 272,
+    "runtimeErrors": 0,
+    "runtimeWarnings": 0
+  },
+  "images": [
+    {
+      "image": "before.png",
+      "sha256": "a04ad7323c79c1b62b4c57f48349c7127d450922304352e4532ca04a13625d23",
+      "original": "scenery-top-rules-high.png",
+      "run": "20261115T203015.824074Z-stage-scenery"
+    },
+    {
+      "image": "after.png",
+      "sha256": "ef29ccfec5cfd1448113df7b001c0ce72de9e65d6ea3ebbaffa9ecee37ef0066",
+      "original": "scenery-top-rules-high.png",
+      "run": "20261115T203303.868532Z-scenery-regression"
+    },
+    {
+      "image": "night.png",
+      "sha256": "013ffea93c7ce64b3ba807c40a38bae703e3f09652c44f6f4cc06c77e050bffb",
+      "original": "scenery-top-rules-battle-night.png",
+      "run": "20261115T203303.868532Z-scenery-regression"
+    }
+  ]
+}

@@ -31,6 +31,12 @@ public sealed partial class BattleCameraRig(Camera3D camera)
             int x=i%width,z=i++/width;
             AddCell(cell,x,z);
         }
+        if(stage.GetProperty("id").GetString()=="top-rules")
+        {
+            _bounds.Add(new(width*.5f,-5.8f,depth*.5f));
+            _bounds.Add(new(-1.9f,-.94f,depth+1.7f));
+            _bounds.Add(new(width+1.9f,-.94f,depth+1.7f));
+        }
         Fit();
         void AddCell(JsonElement cell,int x,int z)
         {

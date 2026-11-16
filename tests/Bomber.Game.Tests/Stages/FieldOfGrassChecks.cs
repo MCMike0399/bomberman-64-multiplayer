@@ -1,3 +1,5 @@
+using System.Reflection;
+using Bomber.Game.Simulation;
 using Bomber.Game.Matches;
 using Bomber.Game.Simulation.Ai;
 using Bomber.Game.Simulation.Rules;
@@ -62,6 +64,11 @@ internal static class FieldOfGrassChecks
             Assert(!danger.Safe(graph.Cell(x,z,2),1.1f,1.3f),"CPU danger missed elevated fireball target.");
             Step(match,38);
             Assert(!Player(match).GetProperty("alive").GetBoolean(),"Stationary bank player survived a published meteor impact.");
+            const BindingFlags flags=BindingFlags.Instance|BindingFlags.NonPublic;
+            var session=(BlastSession)typeof(LocalMatch).GetField("_session",flags)!.GetValue(match)!;
+            var hazards=(List<BlastHazard>)typeof(BlastSession).GetField("_hazards",flags)!.GetValue(session)!;
+            Assert(hazards.Any(h=>h.Tier==2&&Math.Abs(h.Y-2)<.01f&&Math.Abs(h.X-x)<.01f&&Math.Abs(h.Z-z)<.01f),
+                "The real elevated meteor hazard must retain both its exact height and bank tier.");
             Assert(Events(match).Any(e=>Kind(e)=="blast"&&Math.Abs(e.GetProperty("y").GetSingle()-2)<.01f),"Meteor blast did not use the actual bank elevation.");
             foreach(var (practice,sudden) in new[]{(false,false),(true,true)})
             {

@@ -87,6 +87,7 @@ public partial class ArenaView
             _targets[id]=PositionOf(b);
             string? carrier=b.TryGetProperty("carrierId",out var carriedBy)&&carriedBy.ValueKind==JsonValueKind.String?carriedBy.GetString():null;
             var model=(BombModel)node;
+            model.SetNight(TimeOfDay==StageTime.Night);
             if(model.UpdateState((int)F(b,"pumps"),(int)F(b,"level"),b.GetProperty("red").GetBoolean(),b.GetProperty("remote").GetBoolean(),F(b,"fuse"),carrier,(int)F(b,"state"),b.TryGetProperty("mode",out var bombMode)?bombMode.GetString()!:"normal",b.TryGetProperty("charge",out var charge)?charge.GetSingle():0))
             {
                 if(!eventsAvailable)_audio.Pump(model.Charge);
