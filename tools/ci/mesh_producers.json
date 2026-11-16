@@ -145,7 +145,7 @@
     {
       "id": "scripts/arena/effects/EffectWarmup.cs:environment.Duplicate:1",
       "file": "scripts/arena/effects/EffectWarmup.cs",
-      "line": 56,
+      "line": 110,
       "call": "environment.Duplicate()",
       "callSha256": "ee6bec069693989314a95901b375ed4c45c10e5562f8cc79061da1c9bff921c1",
       "domain": "owned-generator-or-helper"
@@ -153,7 +153,7 @@
     {
       "id": "scripts/arena/effects/EffectWarmup.cs:key.Duplicate:1",
       "file": "scripts/arena/effects/EffectWarmup.cs",
-      "line": 58,
+      "line": 112,
       "call": "key.Duplicate()",
       "callSha256": "44427e539b675387a4a5af63d6e9426707a8bc23f76eaa2531621491158e48ab",
       "domain": "owned-generator-or-helper"
@@ -161,7 +161,7 @@
     {
       "id": "scripts/arena/effects/EffectWarmup.cs:fill.Duplicate:1",
       "file": "scripts/arena/effects/EffectWarmup.cs",
-      "line": 58,
+      "line": 112,
       "call": "fill.Duplicate()",
       "callSha256": "79d18914c35356ad476903f0c0f9b16565b11e52ee5229729b445fca4f2c5180",
       "domain": "owned-generator-or-helper"
@@ -169,7 +169,7 @@
     {
       "id": "scripts/arena/effects/EffectWarmup.cs:Box:1",
       "file": "scripts/arena/effects/EffectWarmup.cs",
-      "line": 83,
+      "line": 137,
       "call": "Box(world,new(-5+i*2,.4f,6),Vector3.One*(.12f+i*.008f),art.Color(new(\"d5b472\")),.02f)",
       "callSha256": "ad937d27bbfee02b03959ae264e61dbeb06cb6708669e24eb54486963b03c3b3",
       "domain": "owned-generator-or-helper"
@@ -5085,7 +5085,7 @@
     {
       "id": "scripts/ui/menu/ArcadeBackdrop.cs:PrimitiveTemplates.With:1",
       "file": "scripts/ui/menu/ArcadeBackdrop.cs",
-      "line": 221,
+      "line": 233,
       "call": "PrimitiveTemplates.With(water.Mesh,\"size\",new Vector2(layout.Width+.8f,layout.Height+.8f))",
       "callSha256": "3d4cf840c3f5e3748f701efd2ac617caa4c58602a0fda11aa05936243c8e59d2",
       "domain": "owned-generator-or-helper"
@@ -5093,7 +5093,7 @@
     {
       "id": "scripts/ui/menu/ArcadeBackdrop.cs:PrimitiveTemplates.With:2",
       "file": "scripts/ui/menu/ArcadeBackdrop.cs",
-      "line": 225,
+      "line": 237,
       "call": "PrimitiveTemplates.With(exterior.Mesh,\"size\",new Vector3(layout.Width+.8f,PrimitiveTemplates.Parameter(exterior.Mesh,\"size\").AsVector3().Y,layout.Height+.8f))",
       "callSha256": "fa6cdd78883d334a085d95daa8d6e6bfeaba395ba954376a3d23fb6e29432d2d",
       "domain": "owned-generator-or-helper"
@@ -5101,7 +5101,7 @@
     {
       "id": "scripts/ui/menu/ArcadeBackdrop.cs:Box:9",
       "file": "scripts/ui/menu/ArcadeBackdrop.cs",
-      "line": 250,
+      "line": 262,
       "call": "Box(Node parent,Vector3 position,Vector3 size,Material material)",
       "callSha256": "5599077d2bb9f6d4e2d02f9644538f84d91e0a6cfbbbf75e7000ea726f153611",
       "domain": "owned-generator-or-helper"
@@ -5109,7 +5109,7 @@
     {
       "id": "scripts/ui/menu/ArcadeBackdrop.cs:PrimitiveTemplates.Get:3",
       "file": "scripts/ui/menu/ArcadeBackdrop.cs",
-      "line": 251,
+      "line": 263,
       "call": "PrimitiveTemplates.Get(\"BoxMesh\",(\"size\",size))",
       "callSha256": "03ead86cab08ecf8e15d67ed4e38eaa0f66940d9af5a811f6932e3669fc8fcbd",
       "domain": "BoxMesh",
@@ -5300,7 +5300,7 @@
     {
       "id": "scripts/ui/menu/ArcadeBackdrop.cs:ChamferBox:8",
       "file": "scripts/ui/menu/ArcadeBackdrop.cs",
-      "line": 252,
+      "line": 264,
       "call": "ChamferBox(Node parent,Vector3 position,Vector3 size,Material material,float bevel=.08f)",
       "callSha256": "00c885caa690a2799ca33da832df86ae4b38b7a838e8dbd53f2ef05071245a56",
       "domain": "owned-generator-or-helper"
@@ -5308,7 +5308,7 @@
     {
       "id": "scripts/ui/menu/ArcadeBackdrop.cs:newSurfaceTool:1",
       "file": "scripts/ui/menu/ArcadeBackdrop.cs",
-      "line": 254,
+      "line": 266,
       "call": "new SurfaceTool()",
       "callSha256": "524d4daa3dd8ade1577b68b52e91ebbe9907def4954bab94da3aeb8c6bb1a4ae",
       "domain": "owned-generator-or-helper"
@@ -5316,7 +5316,7 @@
     {
       "id": "scripts/ui/menu/ArcadeBackdrop.cs:builder.Commit:1",
       "file": "scripts/ui/menu/ArcadeBackdrop.cs",
-      "line": 274,
+      "line": 286,
       "call": "builder.Commit()",
       "callSha256": "0fa9eba8369cdf50d554b3a90c44727dd10e15710247b9152b3f1d6e88fde9e6",
       "domain": "owned-generator-or-helper"
@@ -5324,7 +5324,7 @@
     {
       "id": "scripts/ui/menu/ArcadeBackdrop.cs:Sphere:6",
       "file": "scripts/ui/menu/ArcadeBackdrop.cs",
-      "line": 276,
+      "line": 288,
       "call": "Sphere(Node parent,Vector3 position,Vector3 scale,Material material)",
       "callSha256": "6c6f1a79b819d9830c0383124de59fdbd15a7c793bf3d9770e21f61db86d56d0",
       "domain": "owned-generator-or-helper"
@@ -5332,7 +5332,7 @@
     {
       "id": "scripts/ui/menu/ArcadeBackdrop.cs:PrimitiveTemplates.Get:4",
       "file": "scripts/ui/menu/ArcadeBackdrop.cs",
-      "line": 277,
+      "line": 289,
       "call": "PrimitiveTemplates.Get(\"SphereMesh\",(\"radius\",.5f),(\"height\",1),(\"radial_segments\",32),(\"rings\",16))",
       "callSha256": "57225ceddb5e8b543ed40890b4b1af5b932946dd2dbe272ca74e51478f072aa6",
       "domain": "SphereMesh",
@@ -5343,7 +5343,7 @@
     {
       "id": "scripts/ui/menu/ArcadeBackdrop.cs:Cylinder:9",
       "file": "scripts/ui/menu/ArcadeBackdrop.cs",
-      "line": 278,
+      "line": 290,
       "call": "Cylinder(Node parent,Vector3 position,float radius,float height,Material material)",
       "callSha256": "feb343d801dddcd663eaae457c7a72af22886c96f759adc99111a44baaf953af",
       "domain": "owned-generator-or-helper"
@@ -5351,7 +5351,7 @@
     {
       "id": "scripts/ui/menu/ArcadeBackdrop.cs:PrimitiveTemplates.Get:5",
       "file": "scripts/ui/menu/ArcadeBackdrop.cs",
-      "line": 279,
+      "line": 291,
       "call": "PrimitiveTemplates.Get(\"CylinderMesh\",(\"top_radius\",radius),(\"bottom_radius\",radius),(\"height\",height),(\"radial_segments\",48))",
       "callSha256": "fba7dc5591f4d63f8bf28c54421d6a6ce513828b47c11de441fb801890755fbe",
       "domain": "CylinderMesh",
@@ -9381,7 +9381,7 @@
     "scripts/arena/effects/BombThrowPreview.cs": "49558d1c164034a7a77a3fd6a2236ada995e3ab2c69745a0fbdb08bafad9a594",
     "scripts/arena/effects/BurnoutEffect.cs": "63cd45a769dfb368ba914dd6576f4e5fd432223489390355cf29e5a128c1b6d4",
     "scripts/arena/effects/CrushEffect.cs": "66dde113dd78783597b6d39750ca9a78f3562be929dc3fb1f3ec21675a013d49",
-    "scripts/arena/effects/EffectWarmup.cs": "8ed81748641947e96734af25ccf29e400f9955df02d927993520a164a673bbad",
+    "scripts/arena/effects/EffectWarmup.cs": "5aa3866bd0ed9b8b90c0765cb86c04561919d88e4ba9975c841c6403a8194656",
     "scripts/arena/effects/ExitEffect.cs": "4b00bdaed054f06f96c1ae33eeca6f74d5fa36eca89f843d3702bac7e4cbb1a7",
     "scripts/arena/effects/ExplosionView.cs": "cf5947b2ccc2e018433abe7fcdb8a090e5c7bbe1fa460dd4e97d2d70f1a1580b",
     "scripts/arena/effects/KickBurst.cs": "a98fb15ff94479816f966f655c7ae317abda3b1e29fcdc5e0cc33f81d4b5b5c4",
@@ -9413,7 +9413,7 @@
     "scripts/testing/journeys/rendering/AssetAuditPlaytest.cs": "9369deb5c46c7f4db09a187701d5c548b454e53ba80da072835a8a475f31e742",
     "scripts/testing/journeys/rendering/PickupShowcasePlaytest.cs": "3c142760084075f88141b82a8f45d77d6e3c4fc56fce2896750b2158fd7dce77",
     "scripts/ui/ArcadeModeButton.cs": "a7dc6b554f9ace5e661fe3ba72594bae40ea7bfc9aca8e9314f6dad663f95db9",
-    "scripts/ui/menu/ArcadeBackdrop.cs": "8bd82a3611e3ca2216ccfed1c9918f2589139bccbc601572b84a2b9863a3a1eb",
+    "scripts/ui/menu/ArcadeBackdrop.cs": "3a1f9092e4d91a724eeae537f491c1667630ca0730727ef542f3093e4a1356ba",
     "scripts/ui/menu/CharacterPreview.cs": "c1345917e5292f1391737c7059ca81da68eb4ec7b04e9505e70ef81d3774febd",
     "scripts/ui/menu/ResultMedals.cs": "30d9ff94b7895686819efb5ca9b558edf7eb69782c8a4b149cbac3064971e860",
     "src/Bomber.Game/Simulation/Stages/BlastStages.BlizzardBattle.cs": "cc2be4d216d1267ecf1d9530be526e8b0d9859c15934865bd9e78c83cd9450c6",
