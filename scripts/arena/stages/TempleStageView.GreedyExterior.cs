@@ -6,6 +6,9 @@ namespace BlastCircuit.Arena.Stages;
 
 public partial class TempleStageView
 {
+    private StandardMaterial3D? _greedyHouseWindows;
+    private bool? _greedyWindowsAtNight;
+
     /// <summary>Original Blue Resort-informed scenery outside the authority's arena.
     /// The reservoir, quays and town are decorative, with no collision bodies.</summary>
     private void BuildGreedyExterior()
@@ -21,9 +24,10 @@ public partial class TempleStageView
         var paving=_art.GardenSurface();paving.SetShaderParameter("stone_color",new Color("b6b8a2"));
         var bed=_art.GardenSurface();bed.SetShaderParameter("stone_color",new Color("738c83"));
         _greedyExteriorMaterials.AddRange([grass,quay,paving,bed]);
-        var coping=_art.Color(new("c3bda2"),.9f);
+        var coping=_art.Color(new("e3d6b8"),.9f);
+        var outerQuay=_art.Color(new("bdb69f"),.95f);
         var slate=_art.Color(new("385e70"),.76f);
-        var dark=_art.Color(new("354d4b"));
+        _greedyHouseWindows=new StandardMaterial3D {AlbedoColor=new("354d4b"),Roughness=.64f,EmissionEnabled=true};
         var rail=_art.Color(new("587968"),.78f);
         float cx=Width*.5f,cz=Depth*.5f;
 
@@ -37,17 +41,18 @@ public partial class TempleStageView
             CastShadow=GeometryInstance3D.ShadowCastingSetting.Off};
         _greedyExterior.AddChild(_greedyMoat);
 
-        // Four broad banks leave a quiet reservoir band around the fortress.
+        // Quiet cream quays leave a clear reservoir band around the fortress.
+        // Their broad paint replaces the competing camouflage lawn at every preset.
         // Their top is below every playable floor, including the bottom chamber.
         // Bank faces stop inside the quay boxes (set back by BankSetback) so the
         // masonry face is the only surface on the water plane; coplanar faces
         // resolved differently on 24-bit and 32-bit float depth buffers.
         float x0=-4.2f,x1=Width+4.2f,z0=-4.2f,z1=Depth+4.2f;
         const float BankSetback=.9f;
-        Box(_greedyExterior,new(x0-BankSetback-40,-1.4f,cz),new(80,1.4f,160),grass);
-        Box(_greedyExterior,new(x1+BankSetback+40,-1.4f,cz),new(80,1.4f,160),grass);
-        Box(_greedyExterior,new(cx,-1.4f,z0-BankSetback-40),new(x1-x0+2*BankSetback,1.4f,80),grass);
-        Box(_greedyExterior,new(cx,-1.4f,z1+BankSetback+40),new(x1-x0+2*BankSetback,1.4f,80),grass);
+        Box(_greedyExterior,new(x0-BankSetback-40,-1.4f,cz),new(80,1.4f,160),outerQuay).Name="GreedyOuterQuayWest";
+        Box(_greedyExterior,new(x1+BankSetback+40,-1.4f,cz),new(80,1.4f,160),outerQuay).Name="GreedyOuterQuayEast";
+        Box(_greedyExterior,new(cx,-1.4f,z0-BankSetback-40),new(x1-x0+2*BankSetback,1.4f,80),outerQuay).Name="GreedyOuterQuayNorth";
+        Box(_greedyExterior,new(cx,-1.4f,z1+BankSetback+40),new(x1-x0+2*BankSetback,1.4f,80),outerQuay).Name="GreedyOuterQuaySouth";
         foreach(float x in new[]{x0-.9f,x1+.9f})
         {
             Box(_greedyExterior,new(x,-1.30f,cz),new(1.8f,1.2f,Depth+12),quay);
@@ -77,7 +82,7 @@ public partial class TempleStageView
         var roof=PrimitiveTemplates.Get("CylinderMesh",("top_radius",0),("bottom_radius",1.85f),("height",1.35f),("radial_segments",4));
         foreach(var (x,z) in new[]{(-6.4f,1.5f),(Width+6.4f,2.5f),(-6.4f,Depth-3),(Width+6.4f,Depth-2)})
         {
-            var tower=new Node3D{Position=new(x,-.62f,z)};_greedyExterior.AddChild(tower);
+            var tower=new Node3D{Name="GreedyQuayHouse",Position=new(x,-.62f,z)};_greedyExterior.AddChild(tower);
             Box(tower,new(0,.12f,0),new(2.55f,.24f,2.55f),coping,.06f);
             Box(tower,new(0,1.1f,0),new(2.25f,1.72f,2.25f),quay,.05f);
             Box(tower,new(0,2.02f,0),new(2.6f,.16f,2.6f),coping,.04f);
@@ -85,7 +90,7 @@ public partial class TempleStageView
                 Position=new(0,2.775f,0),Rotation=new(0,Mathf.Pi/4,0)});
             foreach(float dx in new[]{-.53f,.53f})
             {
-                Box(tower,new(dx,1.1f,1.135f),new(.36f,.59f,.025f),dark,.045f);
+                Box(tower,new(dx,1.1f,1.135f),new(.36f,.59f,.025f),_greedyHouseWindows,.045f).Name="GreedyHouseWindow";
                 Box(tower,new(dx,.78f,1.16f),new(.48f,.07f,.09f),coping,.018f);
             }
         }
@@ -125,6 +130,17 @@ public partial class TempleStageView
         }
         var axle=Cylinder(_greedyWaterwheel,Vector3.Zero,.17f,.7f,rim);axle.RotationDegrees=new(90,0,0);
         foreach(var material in _greedyExteriorMaterials)GraphicsQuality.ApplyShaderDetail(material);
+        UpdateGreedyWindowLighting();
+    }
+
+    private void UpdateGreedyWindowLighting()
+    {
+        bool night=_lighting?.Label=="Night";
+        if(_greedyHouseWindows is null||_greedyWindowsAtNight==night)return;
+        _greedyWindowsAtNight=night;
+        _greedyHouseWindows.AlbedoColor=new(night?"e8b975":"354d4b");
+        _greedyHouseWindows.Emission=new("efb263");
+        _greedyHouseWindows.EmissionEnergyMultiplier=night?1.2f:0;
     }
 
     private void UpdateGreedyExteriorQuality()

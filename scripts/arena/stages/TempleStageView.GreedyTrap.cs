@@ -12,7 +12,7 @@ public partial class TempleStageView
         for(int style=0;style<6;style++)_greedyMaterials.Add(_art.GreedyTrap(style));
         var court=_greedyMaterials[0];var brick=_greedyMaterials[1];var teal=_greedyMaterials[2];
         var ashlar=_greedyMaterials[3];var paving=_greedyMaterials[4];var brass=_greedyMaterials[5];
-        var ink=_art.Color(new("383c39"));var coping=_art.Color(new("dfa94f"));
+        var ink=_art.Color(new("383c39"));var wallCoping=_art.Color(new("e3d6b8"),.9f);var coping=_art.Color(new("dfa94f"));
         Box(this,new(Width/2f,-.38f,Depth/2f),new(Width,.7f,Depth),brick).Name="GreedyFoundation";
         for(int z=0;z<Depth;z++)for(int x=0;x<Width;x++)
         {
@@ -21,7 +21,7 @@ public partial class TempleStageView
             {
                 float crown=y+cell.ObstacleHeight!.Value*HeightScale;
                 var wall=Box(this,new(x+.5f,(crown-.11f)/2,z+.5f),new(1,crown-.11f,1),brick);wall.Name=$"GreedyWallBrick_{x}_{z}";
-                var cap=Box(this,new(x+.5f,crown-.055f,z+.5f),new(1.015f,.11f,1.015f),ink,.025f);cap.Name=$"GreedyWallCap_{x}_{z}";
+                var cap=Box(this,new(x+.5f,crown-.055f,z+.5f),new(1.015f,.11f,1.015f),wallCoping,.025f);cap.Name=$"GreedyWallCap_{x}_{z}";
                 if(z>0&&z<Depth-1)
                 {
                     if(x==0){_greedyOuterLeft.Add(wall);_greedyOuterLeft.Add(cap);}
@@ -93,7 +93,7 @@ public partial class TempleStageView
                 var root=new Node3D{Name="GreedyCrusher"+side};AddChild(root);_greedyCrushers.Add(root);
                 float height=(2+(Layout.At(0,9).ObstacleHeight??1.8f))*HeightScale;
                 Box(root,new(0,(height-.14f)/2,Depth/2f),new(1,height-.14f,Depth-2),_greedyMaterials[1]);
-                Box(root,new(0,height-.07f,Depth/2f),new(1.015f,.14f,Depth-2),_art.Color(new("383c39")),.02f);
+                Box(root,new(0,height-.07f,Depth/2f),new(1.015f,.14f,Depth-2),_art.Color(new("e3d6b8"),.9f),.02f);
                 foreach(float face in new[]{-.505f,.505f})
                     Box(root,new(face,2.9f,Depth/2f),new(.025f,.12f,Depth-2),_greedyMaterials[5]);
             }
@@ -139,6 +139,7 @@ public partial class TempleStageView
 
     private void ProcessGreedyTrap(float delta)
     {
+        UpdateGreedyWindowLighting();
         if(_greedyWallsInitialized&&_greedyWallAge<.12f)
         {
             _greedyWallAge=Math.Min(.12f,_greedyWallAge+delta);float ease=1-Mathf.Pow(1-_greedyWallAge/.12f,3);

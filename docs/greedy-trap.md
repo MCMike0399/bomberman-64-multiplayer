@@ -65,7 +65,7 @@ records the inspected gameplay/manual images and labels this extension explicitl
 
 `TempleStageView.GreedyExterior.cs` adds a broad foundation meeting the water,
 pale quays, two lower causeways, four small slate-roofed towers, sparse round trees,
-and a slowly turning waterwheel. Sage banks and the shared sky/haze keep the
+and a slowly turning waterwheel. Plain cream quay banks and the shared sky/haze keep the
 surroundings quieter than the cream/red/teal arena. The outer reservoir reuses the
 other maps' animated water: opaque on Low, refracting/caustic on Medium and High,
 with the same morning/midday/afternoon/night profiles. The basin inside stays
@@ -203,3 +203,30 @@ The review retained a failing native stair-surface assertion, then raised tread
 paving, court coping and brass sills 0.02 render units above their supports.
 This removes coplanar faces without changing collision, steps or drop physics.
 Shader cache fields follow the main partial's ownership convention.
+
+## Fresh advisor refinement (2026-11-15, source candidate)
+
+The fresh all-map review identified camouflage lawn beyond the canal and
+charcoal wall caps as competing with the reservoir identity. Four existing
+bank solids now use quiet cream quay paint; their geometry, masonry water
+faces and .9-unit seam setback stay fixed. Both static and compressing wall
+crowns use matching cream coping. The safe teal reward floor, all stairways,
+canal waterline, wheel pedestal and shaft retain their original geometry.
+
+The existing blue-roof houses gain warm window emission only at Night,
+including Low. Day windows stay dark. They add no point lights or new props,
+and live local/online lighting changes update the same retained materials.
+Original Blue Resort colour/material context is recorded in
+[the background research](greedy-trap-background-research.md); this is an
+authored reservoir setting, not recovered Greedy Trap scenery.
+
+Review with the existing `greedy-trap` native journey (all presets, lighting,
+oblique views, dry basin traversal and closing walls), then matched seed-64
+Midday opening/Night combat at Low, Medium and High. The source checkpoint
+does not constitute visual acceptance or release qualification.
+
+The candidate builds successfully (zero errors; NuGet's shared vulnerability
+cache was sandbox-inaccessible). Headless `greedy-trap` passes 188 assertions,
+including dry basin traversal, canal/wheel nonintrusion, authored crowns and
+compression. It records zero runtime errors and one exit ObjectDB leak warning;
+no pixels are claimed from this run. Mesh census and documentation links pass.
