@@ -1,12 +1,68 @@
 using Godot;
 using Bomber.Client.Sessions;
 using BlastCircuit.Rendering;
+using BlastCircuit.App;
+using BlastCircuit.Arena;
+using System.Text.Json;
 
 namespace BlastCircuit.Testing;
 
 /// <summary>Reproducible documentation captures from real sessions at the highest preset.</summary>
 public partial class PlaytestDriver
 {
+    /// <summary>Comparable real-session captures for the user's final all-map review.
+    /// This is a gallery journey, not a frame-time or pixel-equivalence claim.</summary>
+    private Task StageReviewMatrix()=>StageReviewMatrixCore(false);
+    private Task TrainingReviewMatrix()=>StageReviewMatrixCore(true);
+
+    private async Task StageReviewMatrixCore(bool trainingOnly)
+    {
+        Check(!_headless,"stage review matrix requires actual rendered pixels");
+        var originalPreset=_root.Preferences.Graphics;var originalLighting=_root.Preferences.StageLighting;
+        var originalSize=GetWindow().Size;var rows=new List<object>();
+        string[] stages=trainingOnly?["circuit-garden"]:["sunken-temple","rock-garden","up-and-down","top-rules","blizzard-battle","greedy-trap",
+            "field-of-grass","in-the-gutter","sea-sick","lost-at-sea","circuit-garden"];
+        try
+        {
+            await ResizeWindow(new Vector2I(1280,800));await ControllerFocusReady();
+            foreach(string stage in stages)
+            foreach(var preset in new[]{GraphicsPreset.Low,GraphicsPreset.Medium,GraphicsPreset.High})
+            foreach(var lighting in new[]{StageTime.Midday,StageTime.Night})
+            {
+                _root.Navigate("Modes");await Frames(3);
+                await SelectGraphics(preset);await SelectLocalLighting(lighting);
+                bool practice=stage=="circuit-garden";
+                _root.StartLocal(new SessionSettings(Stage:stage,Bots:practice?0:7,RoundSeconds:300,SuddenDeath:false),1,practice:practice,seed:64);
+                await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"review matrix enters "+stage,180);
+                Check(_root.Preferences.Graphics==preset&&LightingArena.TimeOfDay==lighting,"review matrix applies requested preset and lighting");
+                Check(Mathf.IsEqualApprox(GetViewport().Scaling3DScale,GraphicsQuality.RenderScale),"review matrix retains actual preset render scale");
+                Check(State.GetProperty("players").GetArrayLength()==(practice?1:8),"review matrix uses the declared participant count");
+                CheckFraming(stage,GetWindow().Size);
+                async Task Save(string moment)
+                {
+                    string label=$"review-{stage}-{GraphicsQuality.ToWire(preset)}-{StageLighting.ToWire(lighting)}-{moment}";
+                    await Capture(label);
+                    rows.Add(new{stage,preset=GraphicsQuality.ToWire(preset),lighting=StageLighting.ToWire(lighting),moment,practice,
+                        file=Path.GetFileName(_screenshots[^1]),window=new{width=GetWindow().Size.X,height=GetWindow().Size.Y},
+                        renderScale=GetViewport().Scaling3DScale,serverTime=State.GetProperty("serverTime").GetInt64(),frame=_frame});
+                    File.WriteAllText(Path.Combine(_output,"stage-review-matrix.json"),JsonSerializer.Serialize(new{
+                        schemaVersion=1,scope="Real fresh local sessions; same seed and ordinary battle camera. Ambient shader phase may differ; not pixel-equivalence or FPS evidence.",
+                        seed=64,stages=stages.Length,rows},new JsonSerializerOptions{WriteIndented=true}));
+                }
+                await Save("opening");
+                if(!practice){await Frames(90);await Save("combat");}
+                Input(0,default);_root.Back();await Frames(3);
+            }
+            Check(rows.Count==(trainingOnly?6:126),"every selected map has its declared preset, lighting and session views");
+        }
+        finally
+        {
+            Input(0,default);_root.Navigate("Modes");
+            await SelectGraphics(originalPreset);await SelectLocalLighting(originalLighting);
+            if(GetWindow().Size!=originalSize)await ResizeWindow(originalSize);
+        }
+    }
+
     private async Task ReadmeGallery()
     {
         Check(!_headless,"README gallery requires real rendered pixels");

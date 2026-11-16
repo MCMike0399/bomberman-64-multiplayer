@@ -9,14 +9,17 @@ unchanged; every change is decision policy in `Bomber.Game`.
 
 ## Diagnostic tools
 
-`Bomber.Ai.Tests -- --agency` runs a 72-run matrix (all six battle arenas, three
-levels, seeds 64/9876): one CPU against an idle, renewed-invulnerable player, and
+`Bomber.Ai.Tests -- --agency` runs a 120-run diagnostic matrix (all ten battle arenas,
+three levels, seeds 64/9876) with current starting resources: one CPU against an idle, renewed-invulnerable player, and
 the first of four CPUs in an ordinary match, one minute each. It reports
 *reversals* (returns to the cell left one move earlier, uninterrupted by a bomb),
 threats against the idle player, gaps, stillness and the share of Blizzard gust
 time spent moving. Options: `--output=PATH`, `--trace=stage,level,seed[,ticks[,bots]]`
 for a per-tick trace, `--sweep` for the moving-target distribution below, and
 `--standoff` for bombs placed by all four CPUs in their first 20 seconds.
+`--agency --comparison` retains the historical six-stage, 72-run, three-bomb
+algorithm-comparison fixture. `--stage-engagement` checks ordinary traversal and
+reachable-court pressure on the four added maps; [scope and limitations](../tests/Bomber.Ai.Tests/README.md#expanded-roster-engagement-2026-11-15).
 `--agency-checks` runs the assertions in [AgencyChecks](../tests/Bomber.Ai.Tests/AgencyChecks.cs);
 they are also part of the default suite.
 

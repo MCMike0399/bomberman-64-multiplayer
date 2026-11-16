@@ -6,11 +6,11 @@ An original Godot C# arena battle game inspired by Bomberman 64: **2–8 partici
 
 **[Watch the gameplay trailer](docs/videos/blast-circuit-make-chaos.mp4)** — 48 seconds, six arenas, real gameplay and original music. [Capture details](docs/media/trailer/make-chaos.json).
 
-**[Download v0.44.1 for Apple Silicon](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.44.1)** · [Release verification](docs/verification.md) · [Build from source](#build-from-source)
+**[Download the latest release](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/latest)** · [Release verification](docs/verification.md) · [Build from source](#build-from-source)
 
-Windows EXE, Linux AppImage and Mac DMG downloads are pending the [three-platform release gates](docs/desktop-clients.md).
+The release page provides Windows EXE, Linux AppImage and Apple Silicon Mac DMG downloads. Each release follows the [three-platform release gates](docs/desktop-clients.md).
 
-The current release includes six battle arenas, animated stage surroundings, refined water reflections and graphics presets, pointer aiming, and improved CPU rivals. All visuals and synthesized sounds are original. Eight-player support and numerical gameplay tuning are project adaptations; the original game supports four players. [Research and sources](docs/history/research.md).
+The 0.46 source candidate completes the ten-arena battle roster and adds a second visual pass across all stages and graphics presets. Animated surroundings, refined water reflections, pointer aiming and CPU rivals remain part of the game. All visuals and synthesized sounds are original. Eight-player support and numerical gameplay tuning are project adaptations; the original game supports four players. [Research and sources](docs/history/research.md).
 
 ## Play
 
@@ -32,7 +32,7 @@ Normal battles default to **first to two wins**, **one minute of regular play**,
 
 ## Arenas
 
-Battle arenas support local, practice and online sessions. Circuit Garden is the separate tutorial and free-practice arena.
+All ten battle arenas support local, practice and online sessions. Circuit Garden is the separate tutorial and free-practice arena. The [stage expansion and visual review](docs/stage-expansion.md) records the original references, High-first art direction and preset checks.
 
 | Arena | Layout and sudden death |
 | --- | --- |
@@ -42,9 +42,12 @@ Battle arenas support local, practice and online sessions. Circuit Garden is the
 | **[Top Rules](docs/top-rules-research.md)** | Two-story castle with three raised lanes, a central crosswalk, four green staircases and a red lower court. Side walls close inward. |
 | **[Blizzard Battle](docs/blizzard-battle.md)** | Snowfield with sixteen violet ice cones, changing diagonal wind and animated snow. Avalanches advance from both sides. |
 | **[Greedy Trap](docs/greedy-trap.md)** | Upper court and narrow middle ring above a turquoise reward chamber, four inner stairways and two upper exits. Sliding walls compress the arena. |
-| **[Sea Sick](docs/sea-sick.md)** *(source addition)* | Wooden pirate deck, tall mast, two forward posts, barrel cover and side galleries. Gentle visual rocking and falling-fireball sudden death. |
+| **[Field of Grass](docs/field-of-grass.md)** | A grassy hollow with traversable earth banks, standing stones and foliage that conceals ordinary bombs. Falling fireballs close out the round. |
+| **[In the Gutter](docs/in-the-gutter.md)** | A shallow lock with raised posts, changing currents and connected waterworks. Closing grates compress the court. |
+| **[Sea Sick](docs/sea-sick.md)** | A wooden ship deck with a curved hull, barrel cover and side galleries. Gentle visual rocking accompanies falling-fireball sudden death. |
+| **[Lost at Sea](docs/lost-at-sea.md)** | Slippery glass above a submerged wreck, surrounded by a grippy pontoon walkway. Falling fireballs keep the final fight moving. |
 
-![Rock Garden battle with wind-swept scenery](docs/media/living-stage-worlds/rock-garden-high.png)
+![Rock Garden battle with its orchard mill](docs/images/stages-046/rock-garden/high-midday.png)
 
 ![Up & Down with suspended platforms and purple stairs](docs/images/release-042/scenery-up-and-down-high.png)
 

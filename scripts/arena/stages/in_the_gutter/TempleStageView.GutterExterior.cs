@@ -8,6 +8,7 @@ public partial class TempleStageView
 {
     private void BuildCopperLockEnds(Material brick,Material cream,Material verdigris,Material brass,Material dark,Material mosaic)
     {
+        var water=_gutterWater??throw new InvalidOperationException("Build the lock water before its channel ends.");
         // The full gate opening continues into a short real channel. Walls
         // and machine pedestals form one body with the lock, including on Low.
         foreach(int side in new[]{-1,1})
@@ -31,7 +32,7 @@ public partial class TempleStageView
             RoundedBox(this,new(endX,.15f,gearZ-.65f),new(.95f,2.15f,1.2f),verdigris,.24f).Name="CopperLockAxlePedestal";
             RoundedBox(this,new(endX,.23f,gearZ-2.6f),new(1.15f,1.35f,1.15f),brick,.22f).Name="CopperLockCounterweightSeat";
             GutterWaterPlane(this,side<0?"CopperLockStubWaterWest":"CopperLockStubWaterEast",
-                side<0?-3f:Width-1,side<0?1:Width+3f,1.6f,Depth-1.6f,.035f,_gutterWater,14);
+                side<0?-3f:Width-1,side<0?1:Width+3f,1.6f,Depth-1.6f,.035f,water,14);
         }
         var culvert=Prop(this,"CopperLockInflow",new(-3.35f,-.05f,Depth/2f));
         culvert.Basis=PresentationMath.Rotation(new(0,Mathf.Pi/2,0));

@@ -5,6 +5,23 @@ camera, explosions or sound. This guide preserves the user's corrections and
 failed approaches; exact live values remain in source. Use the
 [testing guide](testing-and-delivery.md) for build/recording ownership and commands.
 
+## High-first stage identity (2026-11-16 user direction)
+
+High is the complete visual design. Medium and Low retain each stage's defining
+landforms, landmark, palette and inexpensive life cues; simplify reflections,
+lighting, particles and fine surface detail instead of removing its identity.
+Optional dressing can remain under the scenery budget, while essential forms
+belong to the core. Preserve playable support, collision, concealment and actual
+hazards. Decorative life must not resemble a bomb, pickup or target in combat.
+
+Use the [renewed primary references](../history/stage-second-creative-research-20261116.md)
+and [reconciled creative briefs](../history/stage-second-art-reference-addendum-20261116.md).
+The latter withdraws several earlier prop proposals. These are design inputs,
+not visual acceptance: inspect real High battle views first, then matched
+Medium/Low, Night, joins from behind/below, motion and menu miniatures. A mesh
+census or passing geometry test cannot establish that a landmark is visible,
+well seated or free of distracting intersections.
+
 ## Field of Grass (2026-11-15 source work)
 
 [Stage contract and inspected references](../field-of-grass.md) own the grassy valley,

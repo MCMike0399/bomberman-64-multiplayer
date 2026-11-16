@@ -33,7 +33,7 @@ planted aim, recovery and reset keep their normal safeguards. Use focused
 | File moves/renames | `git grep` old paths; build; editor import for `.uid` files | `public` plus the moved area's gate; see [codebase map](codebase-map.md#moving-files-safely) |
 | Simulation/rules | Corresponding executable managed suite with a red regression | `managed`, relevant native journey, `headless` |
 | Client/session/protocol | Client checks and real HTTP/WebSocket repro | `managed` plus `network`; restart only an owned stale server |
-| AI | Focused deterministic regression and matched-seed metrics | Managed AI checks/60-scenario soak plus `ai-play` where visible behavior matters |
+| AI | Focused deterministic regression and matched-seed metrics | Managed AI checks/120-scenario soak plus `ai-play` where visible behavior matters |
 | Input/menu/focus | `controllers`, `aim-inputs`, `wasd-navigation`, or relevant journey | Real windowed graphical checks; physical observation if claiming device support |
 | Rendering/rig/audio | Relevant native scenario and actual images/audio/video | Graphical regression; shipped-app checks for delivery |
 | Packaging/runtime/native backend | Bundle and staged-runtime inspection | `package`, exported-app journey, exact installed-copy verification |
@@ -597,15 +597,15 @@ not establish installation, release publication or external server delivery.
 
 ## Stage scenery verification
 
-`stage-scenery` (in `all`, `core-headless` and `stage-fidelity`) walks all seven
-arenas. It checks signature props, the absence of collision, asset-audit geometry
+`stage-scenery` (in `all`, `core-headless` and `stage-fidelity`) walks all ten battle
+arenas and Circuit Garden. It checks signature props, the absence of collision, asset-audit geometry
 rules, and that mesh bounds stay out of every passable cell's floor-to-2.1
 standing column, before and after animation. It also checks that animated nodes
 move, that a real timed flood lifts the sailboat with the rendered water, and that
 every setup miniature skips the scenery. Graphical runs add Midday/Night battle
 captures and a labelled establishing view per arena. `scenery-regression` pairs
 it with startup, asset, graphics, lighting, setup, menu-preview, framing and the
-five stage journeys. [Stage scenery](../stage-scenery.md).
+registered stage journeys. [Stage scenery](../stage-scenery.md).
 
 ## Greedy Trap verification
 
@@ -1249,6 +1249,27 @@ release at or before v0.45.0 permits the historical receipt format.
 Any runtime error blocks, even if gameplay assertions pass. Verbose engine output
 keeps leak types available; audio resource warnings and native ICE errors must be
 classified separately without adding an error allowlist.
+
+## Ten-stage expansion integration (2026-11-16 source candidate)
+
+The combined roster contains ten battle arenas plus Circuit Garden for training.
+Tours 22–25 extend `all` to 25 tours and 75 leaves. All four added maps also have
+packaged server/peer network journeys. Keep the 120-case default soak, historical
+72-case algorithm comparison and 24 new-stage engagement checks distinct.
+
+The two short nautical tours share a Windows software-renderer runner while
+launching separate game processes, keeping the complete matrix at 30 jobs.
+The Mac archived `all` process remains the cross-journey sequencing gate; its
+outer budgets follow the [measured correction](../history/menu-preview-budget-20261116.md).
+Keep each journey's focus, preparation and gameplay checks intact.
+
+`stage-review-matrix` captures all eleven maps at Low/Medium/High in Midday and
+Night; `stage-review-training` narrows that inspection to Circuit Garden. These
+and the preparation visibility probes are on-demand automated diagnostics, not
+additional required tours or frame-rate measurements. The
+[final independent visual review](../history/stage-final-visual-review-20261116.md)
+returned GO and root accepted the corrected native views. Exact archived-client,
+hardware and deployment checks remain separate release gates.
 
 ## QA nudge publication ownership (2026-11-16)
 

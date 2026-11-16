@@ -2255,6 +2255,52 @@
       "headless": true,
       "timeout": 180,
       "manual": false
+    },
+    {
+      "id": "graphics-preparation-control-probe",
+      "method": "GraphicsPreparationControlProbe",
+      "domains": [
+        "rendering",
+        "ui"
+      ],
+      "headless": false,
+      "timeout": 90,
+      "manual": false
+    },
+    {
+      "id": "graphics-preparation-occluded-probe",
+      "method": "GraphicsPreparationOccludedProbe",
+      "domains": [
+        "rendering",
+        "ui"
+      ],
+      "headless": false,
+      "timeout": 90,
+      "manual": false
+    },
+    {
+      "id": "stage-review-matrix",
+      "method": "StageReviewMatrix",
+      "domains": [
+        "rendering",
+        "ui",
+        "gameplay"
+      ],
+      "headless": false,
+      "timeout": 1500,
+      "manual": false
+    },
+    {
+      "id": "stage-review-training",
+      "method": "TrainingReviewMatrix",
+      "domains": [
+        "rendering",
+        "ui",
+        "gameplay"
+      ],
+      "headless": false,
+      "timeout": 300,
+      "manual": false
     }
   ]
 }
