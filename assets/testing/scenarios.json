@@ -23,6 +23,14 @@
       "manual": false
     },
     {
+      "id": "circuit-workshop",
+      "method": "CircuitWorkshopTour",
+      "domains": ["gameplay", "ui", "rendering"],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
       "id": "tutorial",
       "method": "TutorialTour",
       "domains": [
