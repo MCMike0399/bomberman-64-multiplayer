@@ -320,7 +320,7 @@ public partial class PlaytestDriver
             await ActivateNamed("OpenSettings");await Frames(3);
             await CheckNowReachable(new(1024,640));
             await KeyPress(Key.Escape);await ResizeWindow(new(1280,800));await Frames(5);
-            foreach(string stage in new[]{"sunken-temple","rock-garden","up-and-down","top-rules","blizzard-battle","greedy-trap","field-of-grass","in-the-gutter","circuit-garden"})
+            foreach(string stage in new[]{"sunken-temple","rock-garden","up-and-down","top-rules","blizzard-battle","greedy-trap","field-of-grass","in-the-gutter","sea-sick","circuit-garden"})
             {
                 _root.StartLocal(new SessionSettings(Stage:stage,Bots:0),1,practice:true);
                 await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"graphics enters "+stage,180);
@@ -357,7 +357,7 @@ public partial class PlaytestDriver
                         Check(water.Length==1,"sea arena retains one water surface: "+stage);
                         Check(((ShaderMaterial)water[0].MaterialOverride).GetShaderParameter("quality_detail").AsSingle()==(preset==GraphicsPreset.Low?0:1),"live water detail follows preset");
                         var waterShader=((ShaderMaterial)water[0].MaterialOverride).Shader;
-                        Check(waterShader==(stage=="in-the-gutter"?ArtMaterials.GutterWaterShaderFor(preset):ArtMaterials.WaterShaderFor(preset))&&waterShader.Code.Contains("#define CLEAR_WATER")==(preset!=GraphicsPreset.Low),
+                        Check(waterShader==(stage=="in-the-gutter"?ArtMaterials.GutterWaterShaderFor(preset):stage=="sea-sick"?ArtMaterials.SeaWaterShaderFor(preset):ArtMaterials.WaterShaderFor(preset))&&waterShader.Code.Contains("#define CLEAR_WATER")==(preset!=GraphicsPreset.Low),
                             "clear refracting water is used only above Low: "+preset);
                         Check(waterShader.Code.Contains("#define SCENE_REFLECTIONS")==(preset==GraphicsPreset.High),"scene reflections in water are High-only: "+preset);
                         Check(waterShader.Code.Contains("#define WATER_SPARKLE")==(preset==GraphicsPreset.High),"caustic webs and sun glints are High-only: "+preset);

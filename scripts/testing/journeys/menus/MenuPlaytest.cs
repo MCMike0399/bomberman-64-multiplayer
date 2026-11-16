@@ -69,7 +69,7 @@ public partial class PlaytestDriver
     {
         async Task VerifyStages(string view)
         {
-            foreach(var stage in new[] {"sunken-temple","rock-garden","up-and-down","top-rules","blizzard-battle","greedy-trap","field-of-grass","in-the-gutter"})
+            foreach(var stage in new[] {"sunken-temple","rock-garden","up-and-down","top-rules","blizzard-battle","greedy-trap","field-of-grass","in-the-gutter","sea-sick"})
             {
                 _root.StartLocal(new SessionSettings(Stage:stage,Bots:0),1,practice:true);await Frames(10);
                 Check(_root.LatestStage is not null,"camera check receives stage "+stage);
@@ -108,9 +108,9 @@ public partial class PlaytestDriver
             if(cell.TryGetProperty("below",out var lower)&&lower.ValueKind==JsonValueKind.Object)Sample(lower,x,z);
             int kind=cell.GetProperty("k").GetInt32();if(kind is 2 or 3)return;
             float y=kind==4?cell.GetProperty("rt").GetSingle():cell.GetProperty("t").GetSingle();
-            foreach(float dx in new[]{0f,1f})foreach(float dz in new[]{0f,1f})foreach(float head in new[]{0f,kind==1?(cell.TryGetProperty("oh",out var crown)&&crown.ValueKind==JsonValueKind.Number?crown.GetSingle()*1.35f:1.21f):2.1f})
+            foreach(float dx in new[]{0f,1f})foreach(float dz in new[]{0f,1f})foreach(float head in new[]{0f,kind==1?(cell.TryGetProperty("oh",out var crown)&&crown.ValueKind==JsonValueKind.Number?(stage=="sea-sick"?Mathf.Min(crown.GetSingle()*1.35f,2.1f):crown.GetSingle()*1.35f):1.21f):2.1f})
             {
-                var world=new Vector3(x+dx,y*1.35f+head,z+dz);
+                var world=LightingArena.StageAssemblyTransform*new Vector3(x+dx,y*1.35f+head,z+dz);
                 behind|=camera.IsPositionBehind(world);var p=camera.UnprojectPosition(world)/viewport;
                 minX=Math.Min(minX,p.X);maxX=Math.Max(maxX,p.X);minY=Math.Min(minY,p.Y);maxY=Math.Max(maxY,p.Y);points++;
             }

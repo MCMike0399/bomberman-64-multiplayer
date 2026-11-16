@@ -389,6 +389,17 @@ profiles and all graphics presets. The basin is safe opaque paving, with no
 lethal-water plane. [Stage and visual contract](../greedy-trap.md),
 [inspected original references](../greedy-trap-research.md).
 
+### Sea Sick ship presentation (2026-11-15 source work)
+
+[Sea Sick](../sea-sick.md) uses one rendered ship parent for terrain, actors,
+cover, effects and throw guides. Its gentle roll/pitch leaves the ocean, sky,
+camera and HUD fixed. Preserve the local/global conversions in `ArenaPoint`,
+`ScreenPoint` and the throw reticle. Motion is cosmetic and pauses locally;
+there is no ship-specific drift or gravity. Warm timber, green gunwales, the
+central mast/two forward posts and barrel cover define the stage. The masthead
+may extend beyond the combat frame; playable floors and standing actors remain
+HUD-safe. Low hides exterior life and miniatures omit it.
+
 ### Top Rules castle presentation
 
 [TempleStageView.TopRules](../../scripts/arena/stages/TempleStageView.TopRules.cs)
