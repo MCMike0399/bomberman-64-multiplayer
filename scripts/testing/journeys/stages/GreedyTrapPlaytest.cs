@@ -40,16 +40,18 @@ public partial class PlaytestDriver
                 })),"both rowboats and oars clear the quays and fortress: "+preset);
                 await Capture("greedy-canal-battle-"+GraphicsQuality.ToWire(preset));
                 camera.HOffset=0;camera.VOffset=0;camera.Size=10;
-                camera.Position=new(-10,10,17);camera.LookAt(new Vector3(-3,-.3f,7));
+                camera.Position=new(-8,6,20);camera.LookAt(new Vector3(-2.4f,-.1f,terrain.Depth*.66f-.35f));
                 await Capture("greedy-canal-inspection-"+GraphicsQuality.ToWire(preset));
-                // Sample real animation over a complete revolution. The quay paving
-                // reaches x=-4.1; moving timber must stay in the canal.
+                // Sample a complete revolution against the actual short brick quays,
+                // not the former narrow canal-strip bounds.
                 for(int phase=0;phase<=32;phase++)
                 {
                     var bounds=AuditDescendants(wheel).OfType<MeshInstance3D>()
                         .Select(n=>(terrain.GlobalTransform.AffineInverse()*n.GlobalTransform)*n.Mesh.GetAabb()).ToArray();
-                    Check(bounds.All(b=>b.Position.X> -4.1f&&b.End.X<-.725f),
-                        $"waterwheel clears quay and fortress through rotation: {preset} phase={phase}");
+                    var fixedQuays=AuditDescendants(terrain).OfType<MeshInstance3D>().Where(n=>n.Name.ToString() is "GreedyHouseBrickQuay" or "GreedyMachineQuay" or "GreedyWheelPedestal")
+                        .Select(n=>(terrain.GlobalTransform.AffineInverse()*n.GlobalTransform)*n.Mesh.GetAabb()).ToArray();
+                    Check(bounds.All(b=>b.End.X<-.725f&&!fixedQuays.Any(q=>q.Intersects(b))),
+                        $"waterwheel clears actual fixed quays and fortress through rotation: {preset} phase={phase}");
                     if(phase==8)await Capture("greedy-canal-motion-"+GraphicsQuality.ToWire(preset));
                     await Frames(25);
                 }
@@ -102,6 +104,12 @@ public partial class PlaytestDriver
         Check(intrusive.Length==0,"exterior architecture stays below or outside the playable volume: "+string.Join(',',intrusive));
         var wheel=scenery!.GetNode<Node3D>("GreedyWaterwheelMount/GreedyWaterwheel");float wheelAngle=wheel.Rotation.Z;
         await Frames(8);Check(Math.Abs(wheel.Rotation.Z-wheelAngle)>.01f,"decorative waterwheel rotates independently of match hazards");
+        var floatNode=scenery.GetNode<Node3D>("GreedyReservoirFloat0");var floatBefore=floatNode.Position;
+        await Frames(10);Check(!floatNode.Position.IsEqualApprox(floatBefore),"counting-house reservoir floats move on the core water rhythm");
+        await KeyPress(Key.Escape);await Frames(4);var pausedWheel=wheel.Transform;var pausedFloat=floatNode.Position;
+        await Frames(12);
+        Check(wheel.Transform.IsEqualApprox(pausedWheel)&&floatNode.Position.IsEqualApprox(pausedFloat),"ordinary pause freezes both core reservoir wheel and float life");
+        await ActivateNamed("ResumeGame");
         var brick=openingTerrain.GetNode<MeshInstance3D>("GreedyWallBrick_9_0");
         var cap=openingTerrain.GetNode<MeshInstance3D>("GreedyWallCap_9_0");
         Check(brick.Position.Y+brick.Mesh.GetAabb().End.Y<=cap.Position.Y+cap.Mesh.GetAabb().Position.Y+.001f,
@@ -144,6 +152,9 @@ public partial class PlaytestDriver
             Check(!terrain.GetChildren().OfType<MeshInstance3D>().Any(n=>PrimitiveTemplates.Is(n.Mesh,"PlaneMesh")),"turquoise pit has no water plane at "+preset);
             var moat=terrain.GetNode<MeshInstance3D>("GreedyExterior/GreedyReservoirWater");
             Check(((ShaderMaterial)moat.MaterialOverride).Shader==ArtMaterials.WaterShaderFor(preset),"decorative reservoir follows the shared water quality policy at "+preset);
+            Check(terrain.GetNode<Node3D>("GreedyExterior/GreedyCountingHouse").IsVisibleInTree()&&
+                terrain.GetNode<Node3D>("GreedyExterior/GreedyCountingHouse/GreedyFloatGaugeWindow").IsVisibleInTree(),
+                "hero counting house and its round gauge remain core at "+preset);
             Check(Math.Abs(moat.Position.Y-TempleStageView.GreedyMoatHeight)<.001f,"exterior reservoir stays below the safe chamber floor");
             await Capture("greedy-trap-"+GraphicsQuality.ToWire(preset));
         }

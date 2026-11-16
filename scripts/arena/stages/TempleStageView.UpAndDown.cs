@@ -69,6 +69,17 @@ public partial class TempleStageView
             }
         }
 
+        // Two warm inset pier-head sconces sit below the tier-two standing surface.
+        // They survive Low without adding lights, collision or rail silhouettes.
+        _pierSconceGlow=new StandardMaterial3D {AlbedoColor=new("9b7847"),Roughness=.6f,
+            EmissionEnabled=true,Emission=new("edb466"),EmissionEnergyMultiplier=0};
+        foreach(float x in new[]{5f,19f})
+        {
+            var lamp=new Node3D {Name=x<12?"WestPierSconce":"EastPierSconce",Position=new(x,1.95f,24.025f)};stonework.AddChild(lamp);
+            Box(lamp,Vector3.Zero,new(.46f,.66f,.055f),_art.Toy(new("a7814c"),.7f),.04f);
+            Box(lamp,new(0,.015f,.04f),new(.27f,.43f,.035f),_pierSconceGlow,.035f);
+        }
+
         void Pier(int x0,int x1,int z0,int z1,int tier)
         {
             float top=tier*HeightScale-.18f,bottom=-4.4f;

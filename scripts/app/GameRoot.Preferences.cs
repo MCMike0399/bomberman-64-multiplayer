@@ -11,6 +11,11 @@ namespace BlastCircuit.App;
 /// <summary>Device-local preferences, graphics preparation and menu lighting; never authority state.</summary>
 public partial class GameRoot
 {
+    private string _graphicsPreparationPhase="idle";
+    private int _graphicsPreparationSerial,_activeGraphicsPreparations;
+    public object GraphicsPreparationDiagnostics=>new{phase=_graphicsPreparationPhase,serial=_graphicsPreparationSerial,
+        active=_activeGraphicsPreparations,preparing=_preparingGraphics,screen=ScreenName,
+        effects=EffectWarmup.DrawDiagnostics,miniatures=_menu.ArenaPreparationDiagnostics};
     private void ApplyPreferences()
     {
         _uiAudio.Volume=_preferences.Volume;_arena.Audio.Volume=_preferences.Volume;
@@ -74,11 +79,19 @@ public partial class GameRoot
         {
             string screen=ScreenName;bool menuVisible=_menu.Visible;var focus=GetViewport().GuiGetFocusOwner();
             _preparingGraphics=true;_menu.Visible=false;ControllerHub.Current.MenuNavigationEnabled=false;
+            _graphicsPreparationSerial++;_activeGraphicsPreparations++;
+            using var drawBatch=new PreparationDrawBatch();
             var loading=PreparationOverlay("Applying graphics...");
-            try {await EffectWarmup.Draw(this);await _arena.PrepareEffects();await _menu.PrepareArenas();}
+            try
+            {
+                _graphicsPreparationPhase="overlay-draw";await EffectWarmup.Draw(this,drawBatch);
+                _graphicsPreparationPhase="effect-warmup";await _arena.PrepareEffects(drawBatch);
+                _graphicsPreparationPhase="miniature-warmup";await _menu.PrepareArenas(drawBatch);
+            }
             catch(OperationCanceledException)when(EffectWarmup.Stopping){}
             finally
             {
+                _activeGraphicsPreparations--;_graphicsPreparationPhase="idle";
                 if(GodotObject.IsInstanceValid(loading))loading.QueueFree();_preparingGraphics=false;
                 if(!EffectWarmup.Stopping&&GodotObject.IsInstanceValid(this)&&IsInsideTree())
                 {
