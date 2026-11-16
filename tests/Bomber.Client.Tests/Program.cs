@@ -3,6 +3,7 @@ using Bomber.Client.Controls;
 using Bomber.Client.Sessions;
 using Bomber.Game.Matches;
 
+if(args.Contains("--preparation-draw-batch")){await PreparationDrawBatchChecks.Run();return;}
 if(args.Contains("--peer-packets")){PeerPacketChecks.Run();return;}
 if(args.Contains("--local-performance")){await LocalPerformance.Run(args);return;}
 if(args.Contains("--connection-outage")){ConnectionOutageChecks.Run();return;}
@@ -10,8 +11,10 @@ if(args.Contains("--connection-privacy")){await ConnectionFailureChecks.Run();re
 if(args.Contains("--proxy-dispatch")){await ProxyDispatcherChecks.Run();return;}
 if(args.Contains("--receive-deadline")){ReceiveDeadlineChecks.Run();return;}
 if(args.Contains("--network-journey-cleanup")){await NetworkJourneyScopeChecks.Run();return;}
+if(args.Contains("--retained-failure-evidence")){await RetainedFailureObservationChecks.Run();return;}
 
-var checks = await UpdateChecks.Run();
+var checks = await PreparationDrawBatchChecks.Run();
+checks += await UpdateChecks.Run();
 checks += await ServerCompatibilityChecks.Run();
 checks += PeerFrameChecks.Run();
 checks += PeerPacketChecks.Run();
@@ -23,6 +26,7 @@ checks += await ProxyDispatcherChecks.Run();
 checks += ReceiveDeadlineChecks.Run();
 checks += NetworkDirectionWitnessChecks.Run();
 checks += await NetworkJourneyScopeChecks.Run();
+checks += await RetainedFailureObservationChecks.Run();
 checks += await ConnectionJournalChecks.Run();
 checks += InputSendChecks.Run();
 checks += FeedbackSteeringChecks.Run();
