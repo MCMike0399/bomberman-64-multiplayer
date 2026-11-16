@@ -1,45 +1,41 @@
 using Godot;
+using BlastCircuit.Rendering;
 using static BlastCircuit.Rendering.ArtGeometry;
 
 namespace BlastCircuit.Arena.Stages;
 
 public partial class TempleStageView
 {
+    // Blocked vignette only. No copied garden buildings or radial prop scatter.
+    // Butterfly and fine surface finishing follow the bank shape review.
     private void BuildFieldOfGrassExterior()
     {
-        var scenery=_scenery!;
-        const float ground=-.28f;
-        var wood=_art.Toy(new("bd9468"),.85f);
-        var cream=_art.Toy(new("e6d9ac"),.9f);
-        // A honey-coloured country mill and an orchard wrap the two earth banks.
-        Windmill(scenery,new(-5,ground,-2),.6f);
-        for(int side=0;side<2;side++)for(int row=0;row<4;row++)
+        var soil=_art.HollowSurface(0);_fieldMaterials.Add(soil);
+
+        var stile=new Node3D{Name="HollowStile",Position=new(-1.05f,HollowLandscapeHeight(-1.05f,8.9f),8.9f),Basis=PresentationMath.Rotation(new(.03f,.15f,.12f))};_scenery!.AddChild(stile);
+        var wood=_art.Toy(new("705039"),.9f);
+        foreach(float x in new[]{-.5f,.5f})RoundedBox(stile,new(x,.6f,0),new(.18f,1.2f,.18f),wood,.7f);
+        foreach(float y in new[]{.3f,.65f,1.0f})RoundedBox(stile,new(0,y,0),new(1.25f,.16f,.15f),wood,.7f);
+        var lamp=new StandardMaterial3D{AlbedoColor=new("eab366"),EmissionEnabled=true,Emission=new("ffb450"),EmissionEnergyMultiplier=1.2f,Roughness=.8f};
+        RoundedBox(stile,new(.46f,.95f,.16f),new(.28f,.38f,.25f),lamp,.7f).Name="HollowStileLantern";
+        _hollowLantern=new OmniLight3D{Name="HollowLanternLight",Position=new(.46f,1.05f,.28f),LightColor=new("ffb65c"),LightEnergy=.04f,OmniRange=3.0f,ShadowEnabled=false};stile.AddChild(_hollowLantern);
+        var hay=new Node3D{Name="HayRick",Position=new(-.95f,HollowLandscapeHeight(-.95f,10.2f),10.2f)};_scenery.AddChild(hay);
+        var mesh=new SurfaceTool();mesh.Begin(Mesh.PrimitiveType.Triangles);
+        const int sides=12;var rings=new Vector3[4,sides];
+        for(int row=0;row<4;row++)for(int i=0;i<sides;i++)
         {
-            float x=side==0?-3.6f-row%2:Width+3.6f+row%2,z=-2+row*6.2f;
-            RoundTree(scenery,new(x,ground,z),1.15f+(row%2)*.15f,new(row%2==0?"63894a":"799b51"),row*1.3f+side);
-            FlowerBed(scenery,new(side==0?-1.6f:Width+1.6f,ground,z+2),.75f,8,side*10+row);
-            Butterfly(scenery,new(side==0?-2:Width+2,ground,z+2),.75f,new(row%2==0?"f6d17b":"e9a5b8"),row+side*3);
+            var(s,c)=PresentationMath.SinCos(i*Mathf.Tau/sides);
+            float radius=row==0?.67f:row==1?.72f:row==2?.50f:.23f;
+            float y=row==0?.02f:row==1?.30f:row==2?.65f:.90f;
+            rings[row,i]=new(c*radius+row*.035f,y,s*radius*.74f);
         }
-        var barn=Prop(scenery,"MeadowSeedBarn",new(Width*.7f,ground,-7),.12f);
-        Box(barn,new(0,.8f,0),new(3.2f,1.6f,2),cream,.12f);
-        var roof=Box(barn,new(0,1.85f,0),new(3.6f,.3f,2.6f),_art.Toy(new("a8664c"),.85f),.1f);roof.RotationDegrees=new(0,0,5);
-        Box(barn,new(0,.57f,1.025f),new(.8f,1.1f,.05f),wood,.04f);
-        foreach(float x in new[]{-.95f,.95f})Box(barn,new(x,.94f,1.025f),new(.55f,.55f,.04f),_art.Toy(new("6c9394"),.5f),.04f);
-        var cart=Prop(scenery,"MeadowHayCart",new(-2.7f,ground,Depth+1.8f),-.22f);
-        Box(cart,new(0,.5f,0),new(1.7f,.18f,1.1f),wood,.04f);
-        foreach(float x in new[]{-.65f,.65f})foreach(float z in new[]{-.58f,.58f})
+        for(int i=0;i<sides;i++)
         {
-            Bead(cart,new(x,.28f,z),new(.56f,.56f,.1f),wood);
-            Box(cart,new(x,.72f,z*.85f),new(.07f,.5f,.07f),wood,.01f);
+            int j=(i+1)%sides;
+            for(int row=0;row<3;row++)HollowQuad(mesh,rings[row,i],rings[row,j],rings[row+1,j],rings[row+1,i],(rings[row,i]+rings[row,j])/2-new Vector3(0,.4f,0));
+            HollowTriangle(mesh,new(.105f,.90f,0),rings[3,i],rings[3,j],Vector3.Up);
+            HollowTriangle(mesh,new(0,.02f,0),rings[0,j],rings[0,i],Vector3.Down);
         }
-        for(int i=0;i<3;i++)
-            RoundedBox(cart,new((i-1)*.48f,.83f,0),new(.45f,.53f,.75f),_art.Toy(new("d6ba70"),.94f));
-        // A small original kite bobs over the rear meadow, well outside play space.
-        var kite=Prop(scenery,"MeadowKite",new(Width*.28f,5,-7));
-        var sail=Box(kite,Vector3.Zero,new(.8f,.045f,.8f),_art.Toy(new("db846c"),.85f),.05f);sail.RotationDegrees=new(60,0,45);
-        _sceneryMotion.Add(t=>{kite.Position=new(Width*.28f+Mathf.Sin(t*.25f)*.7f,5+Mathf.Sin(t*.7f)*.3f,-7);kite.Rotation=new(.15f,0,Mathf.Sin(t*.8f)*.12f);});
-        Hill(scenery,new(Width*.4f,-2,-23),new(43,10,16),new("7f9b57"));
-        Hill(scenery,new(-18,-2,-8),new(20,8,22),new("6c8d4d"));
-        Hill(scenery,new(Width+18,-2,-12),new(20,11,22),new("77954f"));
+        mesh.Index();hay.AddChild(new MeshInstance3D{Name="HollowHayRickMesh",Mesh=mesh.Commit(),MaterialOverride=_art.Color(new("b2a15c"),.98f)});
     }
 }
