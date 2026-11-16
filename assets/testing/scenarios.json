@@ -1,12 +1,35 @@
 {
   "schemaVersion": 1,
   "scenarios": [
-    {"id":"graphics-preparation-starvation-probe","method":"GraphicsPreparationStarvationProbe","domains":["rendering","ui"],"headless":false,"timeout":90,"manual":false},
-    {"id":"peer-ice-terminal","method":"PeerIceTerminal","domains":["network"],"headless":true,"timeout":30,"manual":false},
+    {
+      "id": "graphics-preparation-starvation-probe",
+      "method": "GraphicsPreparationStarvationProbe",
+      "domains": [
+        "rendering",
+        "ui"
+      ],
+      "headless": false,
+      "timeout": 90,
+      "manual": false
+    },
+    {
+      "id": "peer-ice-terminal",
+      "method": "PeerIceTerminal",
+      "domains": [
+        "network"
+      ],
+      "headless": true,
+      "timeout": 30,
+      "manual": false
+    },
     {
       "id": "network-interruption",
       "method": "NetworkInterruption",
-      "domains": ["networking", "ui", "rendering"],
+      "domains": [
+        "networking",
+        "ui",
+        "rendering"
+      ],
       "headless": false,
       "timeout": 240,
       "manual": false
@@ -25,7 +48,11 @@
     {
       "id": "circuit-workshop",
       "method": "CircuitWorkshopTour",
-      "domains": ["gameplay", "ui", "rendering"],
+      "domains": [
+        "gameplay",
+        "ui",
+        "rendering"
+      ],
       "headless": true,
       "timeout": 180,
       "manual": false
@@ -1699,7 +1726,9 @@
     {
       "id": "visual-inputs",
       "method": "VisualInputs",
-      "domains": ["rendering"],
+      "domains": [
+        "rendering"
+      ],
       "headless": true,
       "timeout": 60,
       "manual": false
@@ -1760,6 +1789,18 @@
     {
       "id": "glacier-grotto",
       "method": "GlacierGrotto",
+      "domains": [
+        "rendering",
+        "ui",
+        "gameplay"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "rock-orchard",
+      "method": "RockOrchard",
       "domains": [
         "rendering",
         "ui",

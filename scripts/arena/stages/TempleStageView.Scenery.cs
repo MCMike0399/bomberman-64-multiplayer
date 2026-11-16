@@ -380,14 +380,14 @@ public partial class TempleStageView
         return root;
     }
 
-    private Node3D Windmill(Node3D parent,Vector3 position,float yaw)
+    private Node3D Windmill(Node3D parent,Vector3 position,float yaw,bool animate=true)
     {
         var root=Prop(parent,"Windmill",position,yaw);
         var wall=_art.Color(new("efe3c7"),.85f);var roof=_art.Toy(new("b5533c"),.6f);var wood=_art.Color(new("7b5a3c"),.8f);
         Taper(root,new(0,1.3f,0),.95f,.68f,2.6f,wall,20);
         Cone(root,new(0,2.95f,0),.9f,.75f,roof,20);
         Box(root,new(0,.42f,.86f),new(.42f,.75f,.12f),wood,.05f);
-        Box(root,new(0,1.7f,.73f),new(.3f,.3f,.08f),_art.Color(new("5c88a8"),.4f),.04f);
+        Box(root,new(0,1.7f,.73f),new(.3f,.3f,.08f),_art.Color(new("5c88a8"),.4f),.04f).Name="WindmillWindow";
         var hub=new Node3D{Name="WindmillSails",Position=new(0,2.35f,.95f)};root.AddChild(hub);
         Cylinder(hub,Vector3.Zero,.13f,.22f,wood).Rotation=new(Mathf.Pi/2,0,0);
         var canvas=_art.Color(new("f6efe0"),.85f);
@@ -397,7 +397,7 @@ public partial class TempleStageView
             Box(arm,new(0,.95f,.06f),new(.07f,1.9f,.06f),wood);
             Box(arm,new(.2f,1.05f,.07f),new(.36f,1.45f,.025f),canvas,.01f);
         }
-        _sceneryMotion.Add(t=>hub.Rotation=new(0,0,-t*.65f));
+        if(animate)_sceneryMotion.Add(t=>hub.Rotation=new(0,0,-t*.65f));
         return root;
     }
 
