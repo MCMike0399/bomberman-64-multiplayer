@@ -87,28 +87,32 @@ public partial class TempleStageView
 
     }
 
-    /// <summary>Layered irregular rings narrowing to a point well below the foundation.</summary>
+    private static readonly float[] CragLevels=[-.94f,-1.5f,-2.2f,-2.7f,-3.6f,-4.6f,-5.8f];
+    private static readonly float[] CragScales=[1.12f,1.19f,1.09f,1.04f,.88f,.62f,.12f];
+
+    private static Vector3 CragPoint(int width,int depth,int layer,float angle)
+    {
+        var(sin,cos)=BlastCircuit.Rendering.PresentationMath.SinCos(angle);
+        float wobble=layer==0?0:.025f*BlastCircuit.Rendering.PresentationMath.Sin(angle*3+layer*.18f)+
+            .014f*BlastCircuit.Rendering.PresentationMath.SinCos(angle*5-layer*.13f).Cos;
+        float cc=cos*cos,ss=sin*sin;
+        float eighth=cc*cc*cc*cc+ss*ss*ss*ss;
+        float rounded=1/(float)Math.Sqrt(Math.Sqrt(Math.Sqrt(eighth)));
+        float shape=Mathf.Lerp(rounded,1.0f,layer/(float)(CragLevels.Length-1));
+        float size=CragScales[layer]*(1+wobble)*shape;
+        return new(width/2f+cos*width/2f*size,CragLevels[layer],depth/2f+sin*depth/2f*size);
+    }
+
+    /// <summary>Broad rock planes with eroded shoulders and an irregular undercut.</summary>
     private static ArrayMesh CragMesh(int width,int depth)
     {
         var surface=new SurfaceTool();surface.Begin(Mesh.PrimitiveType.Triangles);
-        const int segments=40;
+        const int segments=24;
         // Broad, rounded shoulders and two eroded shelves remain visible below
         // the near wall; only the deep keel narrows to a tabletop-rock point.
-        float[] levels=[-.94f,-1.4f,-1.95f,-2.3f,-2.7f,-3.25f,-3.8f,-4.35f,-5.1f,-5.8f];
-        float[] scales=[1.16f,1.22f,1.16f,.96f,1.01f,.96f,.89f,.79f,.62f,.16f];
+        var levels=CragLevels;
         var center=new Vector3(width/2f,0,depth/2f);
-        Vector3 Point(int layer,int i)
-        {
-            float a=i*Mathf.Tau/segments;
-            var(sin,cos)=BlastCircuit.Rendering.PresentationMath.SinCos(a);
-            float wobble=layer==0?0:.02f*BlastCircuit.Rendering.PresentationMath.Sin(a*3+layer*.18f)+
-                .012f*BlastCircuit.Rendering.PresentationMath.SinCos(a*5-layer*.13f).Cos;
-            float fourth=cos*cos*cos*cos+sin*sin*sin*sin;
-            float rounded=1/(float)Math.Sqrt(Math.Sqrt(fourth));
-            float shape=Mathf.Lerp(rounded,1.0f,layer/(float)(levels.Length-1));
-            float size=scales[layer]*(1+wobble)*shape;
-            return center+new Vector3(cos*width/2f*size,levels[layer],sin*depth/2f*size);
-        }
+        Vector3 Point(int layer,int i)=>CragPoint(width,depth,layer,i*Mathf.Tau/segments);
         Vector3 Normal(int layer,int i)
         {
             var tangent=Point(layer,i+1)-Point(layer,i-1);
@@ -120,8 +124,9 @@ public partial class TempleStageView
         void Triangle(Vector3 a,Vector3 b,Vector3 c,Vector3 na,Vector3 nb,Vector3 nc)
         {
             if((b-a).Cross(c-a).Dot(na+nb+nc)>=0){(b,c)=(c,b);(nb,nc)=(nc,nb);}
-            foreach(var (p,n) in new[]{(a,na),(b,nb),(c,nc)})
-            {surface.SetNormal(n);surface.SetUV(new(p.X+p.Z,p.Y));surface.AddVertex(p);}
+            var face=(c-a).Cross(b-a).Normalized();
+            foreach(var p in new[]{a,b,c})
+            {surface.SetNormal(face);surface.SetUV(new(p.X+p.Z,p.Y));surface.AddVertex(p);}
         }
         for(int layer=0;layer<levels.Length-1;layer++)for(int i=0;i<segments;i++)
         {

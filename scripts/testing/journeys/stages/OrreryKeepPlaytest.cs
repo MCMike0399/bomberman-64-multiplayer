@@ -51,8 +51,8 @@ public partial class PlaytestDriver
                 var turrets=terrain.GetChildren().OfType<Node3D>().Where(n=>n.Name.ToString().TrimStart('@').StartsWith("Turret",StringComparison.Ordinal)).ToArray();
                 Check(turrets.Length==4&&turrets.All(n=>n.IsVisibleInTree()),"four original corner turrets retain the core castle silhouette at "+preset);
                 Check(terrain.GetNode<Node3D>("OrreryLowMoon").IsVisibleInTree()==(preset==GraphicsPreset.Low),"cheap core moon replaces optional planets on Low only");
-                var ring=terrain.GetNode<MeshInstance3D>("OrreryCoreMeridian");var beforeOrbit=ring.Transform;
-                await Frames(12);Check(!ring.Transform.IsEqualApprox(beforeOrbit),"the seated meridian and orbit keep a cheap transform life cue at "+preset);
+                var orbital=terrain.GetNode<Node3D>("OrreryLowMoon");var beforeOrbit=orbital.Transform;
+                await Frames(12);Check(!orbital.Transform.IsEqualApprox(beforeOrbit),"the seated meridian and orbit keep a cheap transform life cue at "+preset);
                 var warmLights=AuditDescendants(terrain).OfType<OmniLight3D>().ToArray();
                 Check(warmLights.Length==2&&warmLights.All(n=>n.IsVisibleInTree()==(preset!=GraphicsPreset.Low)),"two shadowless warm sources retain emissive-only Low policy at "+preset);
                 if(!_headless)
@@ -63,8 +63,8 @@ public partial class PlaytestDriver
                 await Capture("orrery-keep-"+GraphicsQuality.ToWire(preset)+"-battle");
             }
             await KeyPress(Key.Escape);await Frames(4);
-            var pausedRing=terrain.GetNode<MeshInstance3D>("OrreryCoreMeridian").Transform;await Frames(14);
-            Check(terrain.GetNode<MeshInstance3D>("OrreryCoreMeridian").Transform.IsEqualApprox(pausedRing),"ordinary pause freezes the complete core orrery mechanism");
+            var pausedRing=terrain.GetNode<Node3D>("OrreryLowMoon").Transform;await Frames(14);
+            Check(terrain.GetNode<Node3D>("OrreryLowMoon").Transform.IsEqualApprox(pausedRing),"ordinary pause freezes the complete core orrery mechanism");
             await ActivateNamed("ResumeGame");
             await SelectLocalLighting(StageTime.Night);if(!_headless)CheckOrreryPlanets(terrain);
             else Event("orrery-headless-limit",new{projectionQualified=false,logicalCanvas=GetViewport().GetVisibleRect().Size.ToString()});
@@ -122,6 +122,12 @@ public partial class PlaytestDriver
         }
         var ring=terrain.GetNode<MeshInstance3D>("OrreryCoreMeridian");
         Check(ring.IsVisibleInTree(),"the broad load-bearing brass meridian remains a core form");
+        var hoopPoints=Enumerable.Range(0,8).Select(i=>camera.UnprojectPosition(ring.ToGlobal(ring.Mesh.GetAabb().GetEndpoint(i)))/viewport).ToArray();
+        var hoopMin=hoopPoints.Aggregate(new Vector2(float.MaxValue,float.MaxValue),(a,b)=>a.Min(b));
+        var hoopMax=hoopPoints.Aggregate(new Vector2(float.MinValue,float.MinValue),(a,b)=>a.Max(b));
+        Event("orrery-hoop-framing",new{min=hoopMin.ToString(),max=hoopMax.ToString()});
+        Check(hoopMin.X>=.025f&&hoopMax.X<=.975f&&hoopMin.Y>=.145f&&hoopMax.Y<=.90f,
+            "the complete tubular hoop stays above the footer and clear of HUD margins without changing the camera");
     }
 
     // This is an occlusion check against the consumed rendered castle triangles,

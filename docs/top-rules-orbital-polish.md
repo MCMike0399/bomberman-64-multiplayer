@@ -166,3 +166,18 @@ by name; those caps are now named by their real role, leaving the strict winding
 check on actual owned meshes. Native framing/occlusion and perceived orbit still
 require parent-owned image/motion review. The occlusion helper now correctly
 checks visible rendered core meshes, excluding the hidden Low substitute.
+
+The native second-pass images rejected the flat annulus: it intersected the
+squircle as wedges and reached below the footer. Its replacement is a closed
+round tube following the exact shared crag shoulder contour, raised and more
+compact without changing the camera. Arm seats come from that same contour;
+separate hinged orbital transforms preserve their anchored joins. The arm tube
+uses a continuous world-up frame, removing the former reference-axis switch.
+Periodic tube seams reuse exact wrapped samples. The rock now has broad flat
+planes, a square-rounded shoulder, irregular undercut and three deliberate value
+bands. The native journey now requires the entire hoop above the footer.
+
+The rebuilt headless journey passes 78 checks, including strict owned-face
+winding; its latest raw log reports 21 ObjectDB exit warnings and no errors.
+Native footer clearance, arm continuity and the rock read remain unqualified
+until the root reviews fresh actual images.

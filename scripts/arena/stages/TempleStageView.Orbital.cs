@@ -6,26 +6,25 @@ namespace BlastCircuit.Arena.Stages;
 public partial class TempleStageView
 {
     private Node3D? _orreryLowMoon;
-    private readonly List<(Node3D Node,Transform3D Anchor)> _orreryOrbitNodes=[];
+    private readonly List<(Node3D Node,Transform3D Anchor,Vector3 Pivot)> _orreryOrbitNodes=[];
     private float _orreryOrbitClock;
 
-    private void TrackOrreryOrbit(Node3D node)=>_orreryOrbitNodes.Add((node,node.Transform));
+    private void TrackOrreryOrbit(Node3D node,Vector3 pivot)=>_orreryOrbitNodes.Add((node,node.Transform,pivot));
     private void ProcessOrrery(float delta)
     {
         if(!WeatherActive)return;
         _orreryOrbitClock+=delta;
         var basis=PresentationMath.Rotation(new(0,.025f*PresentationMath.Sin(_orreryOrbitClock*.18f),0));
-        var center=new Vector3(Width/2f,-1.9f,Depth/2f);
-        var orbit=new Transform3D(basis,center-basis*center);
-        foreach(var(node,anchor) in _orreryOrbitNodes)node.Transform=orbit*anchor;
+        foreach(var(node,anchor,pivot) in _orreryOrbitNodes)
+            node.Transform=new Transform3D(basis,pivot-basis*pivot)*anchor;
     }
 
     private Vector3 OrrerySeat(float angle)
     {
-        var(sin,cos)=PresentationMath.SinCos(angle);
-        return new(Width/2f+cos*12.35f,-1.9f,Depth/2f+sin*12.35f);
+        var point=CragPoint(Width,Depth,0,angle);
+        var outward=(point-new Vector3(Width/2f,point.Y,Depth/2f)).Normalized();
+        return point+outward*.16f+Vector3.Up*.02f;
     }
-
     private readonly List<OmniLight3D> _orreryWarmLights=[];
 
     private void UpdateOrreryCoreQuality()
@@ -59,15 +58,13 @@ public partial class TempleStageView
         _orreryLowMoon.AddChild(new MeshInstance3D{Name="CoreMoonOrreryArm",
             Mesh=OrreryArmMesh(OrrerySeat(Mathf.Pi*2/3),new(-3.2f,-2.7f,Depth+1.8f),new(-8,-3,12),moonAt,.18f),
             MaterialOverride=_art.Color(new("bfa566"),.48f),CastShadow=GeometryInstance3D.ShadowCastingSetting.Off});
-        TrackOrreryOrbit(_orreryLowMoon);
+        TrackOrreryOrbit(_orreryLowMoon,OrrerySeat(Mathf.Pi*2/3));
         var brass=_art.Toy(new("bfa566"),.48f);
-        var meridian=new MeshInstance3D{Name="OrreryCoreMeridian",Mesh=OrreryRingMesh(12.05f,12.6f),
-            Position=new(Width/2f,-1.9f,Depth/2f),MaterialOverride=brass,
-            CastShadow=GeometryInstance3D.ShadowCastingSetting.Off};AddChild(meridian);TrackOrreryOrbit(meridian);
+        var meridian=new MeshInstance3D{Name="OrreryCoreMeridian",Mesh=OrreryHoopMesh(),MaterialOverride=brass,
+            CastShadow=GeometryInstance3D.ShadowCastingSetting.Off};AddChild(meridian);
         foreach(float angle in new[]{Mathf.Pi/3,Mathf.Pi*2/3,Mathf.Pi/12})
         {
             var cap=Sphere(this,OrrerySeat(angle),new(.72f,.36f,.72f),brass);cap.Name="MeridianJunctionCap";
-            TrackOrreryOrbit(cap);
         }
         UpdateOrreryCoreQuality();
         var rock=new ShaderMaterial{Shader=new Shader{Code=OrreryCragShader}};
@@ -116,12 +113,12 @@ public partial class TempleStageView
             _ambientMaterials.Add(paint);
             var globe=Sphere(root,Vector3.Zero,Vector3.One*diameter,paint);globe.Name="Globe";
             globe.CastShadow=GeometryInstance3D.ShadowCastingSetting.Off;
-            TrackOrreryOrbit(root);
+            TrackOrreryOrbit(root,OrrerySeat(name=="HeroPlanet"?Mathf.Pi*2/3:name=="CompanionPlanet"?Mathf.Pi/3:Mathf.Pi/12));
             _sceneryMotion.Add(t=>globe.Basis=PresentationMath.Rotation(new(.07f*PresentationMath.Sin(t*.07f+phase),t*.035f,phase*.1f),Vector3.One*diameter));
         }
         void Arm(string name,Vector3 a,Vector3 b,Vector3 c,Vector3 d)
         {
-            var mesh=new MeshInstance3D{Name=name,Mesh=OrreryArmMesh(a,b,c,d,.18f),MaterialOverride=brass,CastShadow=GeometryInstance3D.ShadowCastingSetting.Off};scenery.AddChild(mesh);TrackOrreryOrbit(mesh);
+            var mesh=new MeshInstance3D{Name=name,Mesh=OrreryArmMesh(a,b,c,d,.18f),MaterialOverride=brass,CastShadow=GeometryInstance3D.ShadowCastingSetting.Off};scenery.AddChild(mesh);TrackOrreryOrbit(mesh,a);
         }
     }
 
@@ -130,9 +127,10 @@ public partial class TempleStageView
         const int steps=40,sides=10;var surface=new SurfaceTool();surface.Begin(Mesh.PrimitiveType.Triangles);
         Vector3 Point(float t,int side)
         {
+            side%=sides;
             float s=1-t;var centre=s*s*s*a+3*s*s*t*b+3*s*t*t*c+t*t*t*d;
             var tangent=(3*s*s*(b-a)+6*s*t*(c-b)+3*t*t*(d-c)).Normalized();
-            var right=tangent.Cross(Math.Abs(tangent.Z)<.9f?Vector3.Back:Vector3.Right).Normalized();var up=right.Cross(tangent).Normalized();
+            var right=tangent.Cross(Vector3.Up).Normalized();var up=right.Cross(tangent).Normalized();
             var(sin,cos)=PresentationMath.SinCos(side*Mathf.Tau/sides);
             return centre+(right*cos+up*sin)*radius;
         }
@@ -171,28 +169,30 @@ public partial class TempleStageView
         surface.Index();return surface.Commit();
     }
 
-    private static ArrayMesh OrreryRingMesh(float inner,float outer)
+    private ArrayMesh OrreryHoopMesh()
     {
+        const int steps=96,sides=12;const float radius=.18f;
         var surface=new SurfaceTool();surface.Begin(Mesh.PrimitiveType.Triangles);
-        const int segments=64;const float half=.045f;
-        Vector3 Point(int i,float radius,float y){var(sin,cos)=PresentationMath.SinCos(i*Mathf.Tau/segments);return new(cos*radius,y,sin*radius);}
-        void Tri(Vector3 a,Vector3 b,Vector3 c,Vector3 normal)
+        (Vector3 Point,Vector3 Normal) At(int step,int side)
         {
-            if((b-a).Cross(c-a).Dot(normal)>=0)(b,c)=(c,b);
-            foreach(var p in new[]{a,b,c}){surface.SetNormal(normal);surface.SetUV(new(p.X,p.Z));surface.AddVertex(p);}
+            step%=steps;side%=sides;
+            float angle=step*Mathf.Tau/steps;
+            var center=OrrerySeat(angle);
+            var tangent=(OrrerySeat(angle+.001f)-OrrerySeat(angle-.001f)).Normalized();
+            var outward=Vector3.Up.Cross(tangent).Normalized();
+            var(sin,cos)=PresentationMath.SinCos(side*Mathf.Tau/sides);
+            var normal=outward*cos+Vector3.Up*sin;
+            return(center+normal*radius,normal);
         }
-        for(int i=0;i<segments;i++)
+        void Tri((Vector3 Point,Vector3 Normal) a,(Vector3 Point,Vector3 Normal) b,(Vector3 Point,Vector3 Normal) c)
         {
-            foreach(float y in new[]{-half,half})
-            {
-                var a=Point(i,inner,y);var b=Point(i,outer,y);var c=Point(i+1,outer,y);var d=Point(i+1,inner,y);
-                var n=y>0?Vector3.Up:Vector3.Down;Tri(a,b,c,n);Tri(a,c,d,n);
-            }
-            foreach(float r in new[]{inner,outer})
-            {
-                var a=Point(i,r,-half);var b=Point(i+1,r,-half);var c=Point(i+1,r,half);var d=Point(i,r,half);
-                var n=(a+b)*.5f;n.Y=0;n=n.Normalized()*(r==outer?1:-1);Tri(a,b,c,n);Tri(a,c,d,n);
-            }
+            if((b.Point-a.Point).Cross(c.Point-a.Point).Dot(a.Normal+b.Normal+c.Normal)>=0)(b,c)=(c,b);
+            foreach(var p in new[]{a,b,c}){surface.SetNormal(p.Normal);surface.SetUV(new(p.Point.X,p.Point.Z));surface.AddVertex(p.Point);}
+        }
+        for(int step=0;step<steps;step++)for(int side=0;side<sides;side++)
+        {
+            var a=At(step,side);var b=At(step+1,side);var c=At(step+1,side+1);var d=At(step,side+1);
+            Tri(a,b,c);Tri(a,c,d);
         }
         surface.Index();return surface.Commit();
     }
@@ -206,7 +206,8 @@ varying vec3 world;
 varying vec3 painted_normal;
 void vertex(){world=(MODEL_MATRIX*vec4(VERTEX,1.0)).xyz;painted_normal=normalize(MODEL_NORMAL_MATRIX*NORMAL);}
 void fragment(){
-    float strata=smoothstep(-4.8,-3.4,world.y)*.35+smoothstep(-2.1,-1.1,world.y)*.65;
+    float cut=world.y+.14*sin(world.x*.35+world.z*.2);
+    float strata=cut> -1.65?.85:cut> -2.8?.30:cut> -4.1?.62:.16;
     float brush=smoothstep(-.3,.6,sin(world.x*.23+world.z*.17)+sin(world.z*.34-world.x*.13)*.4);
     float sculpt=.58+.42*max(dot(normalize(painted_normal),normalize(vec3(-.45,.72,.52))),0.0);
     ALBEDO=mix(vec3(.023,.012,.043),vec3(.060,.032,.092),strata)*mix(.88,1.08,brush)*sculpt;
