@@ -38,6 +38,8 @@ public partial class TempleStageView
             BlastStages.TopRules=>BuildTopRulesExterior,
             BlastStages.BlizzardBattle=>BuildBlizzardExterior,
             BlastStages.GreedyTrap=>BuildGreedyLife,
+            BlastStages.InTheGutter=>BuildGutterExterior,
+            BlastStages.SeaSick=>BuildSeaSickExterior,
             BlastStages.CircuitGarden=>BuildCircuitGardenExterior,
             _=>null
         };

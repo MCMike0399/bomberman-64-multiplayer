@@ -33,7 +33,7 @@ public partial class PlaytestDriver
         await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"gallery enters movement lesson",180);
         await Capture("gallery-tutorial-lesson");
         _root.Navigate("Modes");await Frames(4);
-        foreach(string stage in new[]{"sunken-temple","rock-garden","up-and-down","top-rules","blizzard-battle","greedy-trap","field-of-grass","lost-at-sea","circuit-garden"})
+        foreach(string stage in new[]{"sunken-temple","rock-garden","up-and-down","top-rules","blizzard-battle","greedy-trap","field-of-grass","in-the-gutter","sea-sick","lost-at-sea","circuit-garden"})
         {
             bool practice=stage=="circuit-garden";
             _root.StartLocal(new SessionSettings(Stage:stage,Bots:practice?0:7),1,practice:practice);

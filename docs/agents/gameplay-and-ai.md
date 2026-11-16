@@ -395,6 +395,17 @@ and the input guide; older iteration tables are historical.
   cannot add walkable floor, ramps or collision height.
   [Travel/water diagnosis](../history/iteration11-kick-research.md).
 
+## Sea Sick (2026-11-15 source work)
+
+[Sea Sick](../sea-sick.md) adds a dry pirate deck, three shielding posts, 48
+regional barrels and accessible raised side galleries for eight starts. Shared
+movement/projectile rules own all physical behavior. Rocking belongs entirely
+to presentation; never infer current, sliding or changed gravity from it.
+Falling fireballs reuse Rock Garden Hurry; impacts and AI danger query actual
+support elevation so gallery targets agree with deck targets. Managed
+`--sea-sick`, focused AI soak and the ordinary `sea-sick`/network journeys
+retain the authority, transport and projection witnesses.
+
 ## Blizzard Battle (2026-10-25)
 
 [Stage contract](../blizzard-battle.md) owns the flat enclosed snowfield, 64 randomly sampled ice cones (1.3-unit stage-owned cover height), eight seats, shared seeded weather and bilateral avalanche closure. Wind affects free bombs and living players through collision, with weaker player response, and the advisory arc uses the same future schedule. Preserve fuse clocks and carried attachment. CPU closure avoidance uses the three-second avalanche interval. Protocol revision 5 gates the expanded stage/weather contract.
@@ -689,3 +700,13 @@ narrow flights before the next decision, ending a stock match with water deaths.
 `UpAndDownAiChecks` retains the dry-now/unsafe-before-next-reaction witness, and
 `Bomber.Ai.Tests -- --front-placement` retains ordinary seeded combat on all
 three covered arenas. This changes CPU decision safety, not movement physics.
+
+## In the Gutter (2026-11-15 source work)
+
+[Stage contract](../in-the-gutter.md) owns the safe shallow-water court, four
+elevated starting posts, center marker, eight-seat adaptation and changing
+lateral current. Grounded players and free bombs receive collision-safe drift;
+held/airborne objects and dry caps do not. Bots countersteer and forecast
+ground-bomb advection. Closing grates reuse columns/crush, with continuous
+closed-column checks after current movement. Current speeds, intervals and
+cover counts are project tuning, not recovered original constants.

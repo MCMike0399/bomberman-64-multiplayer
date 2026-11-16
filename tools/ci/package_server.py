@@ -14,7 +14,7 @@ from release_identity import check_exports
 ROOT = Path(__file__).resolve().parents[2]
 ARCHIVE = 'Blast-Circuit-server-dotnet10.zip'
 REQUIRED = ('Bomber.Server.dll', 'Bomber.Server.deps.json', 'Bomber.Server.runtimeconfig.json')
-NOTICES = ('Notices/Blast-Circuit-MIT.txt', 'Notices/Simulation-MIT.txt', 'README.txt', 'appsettings.json')
+NOTICES = ('Notices/Blast-Circuit-GPL-3.0.txt', 'Notices/Simulation-MIT.txt', 'README.txt', 'appsettings.json')
 PLUGINS = ('Blast.Cluster', 'Realtime.Redis')
 
 
@@ -75,7 +75,7 @@ def stage(source, destination):
     shutil.copyfile(ROOT / 'src/Bomber.Server/appsettings.json', destination / 'appsettings.json')
     notices = destination / 'Notices'
     notices.mkdir()
-    for source_name, target in [('LICENSE', 'Blast-Circuit-MIT.txt'),
+    for source_name, target in [('LICENSE', 'Blast-Circuit-GPL-3.0.txt'),
                                 ('src/Bomber.Game/Simulation/LICENSE', 'Simulation-MIT.txt')]:
         shutil.copyfile(ROOT / source_name, notices / target)
     (destination / 'README.txt').write_text(

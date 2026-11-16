@@ -144,6 +144,7 @@ public sealed partial class BlastSession
             closedLeft = _closedLeft,
             closedRight = _closedRight,
             blizzard = _stage.Id==BlastStages.BlizzardBattle ? new {time=_weatherTime,seed=_weatherSeed,round=_roundNum,x=BlizzardWind.X,z=BlizzardWind.Y} : null,
+            gutter = _stage.Id==BlastStages.InTheGutter ? new {time=_weatherTime,seed=_weatherSeed,round=_roundNum,x=GutterCurrent} : null,
             hurryMode = _tutorialLesson?.Id=="flood"?"water": !_suddenDeath || _practice ? "none" : _stage.RisingWater ? "water" : BlastStages.UsesMeteors(_stage.Id)?"meteors":_stage.Id==BlastStages.BlizzardBattle?"avalanche":"columns",
             waterLevel = _waterLevel,
             waterStartsIn = _tutorialLesson?.Id=="flood" ? (_tutorialStarted?0:Math.Max(0,_phaseTimer)) : !_practice && _suddenDeath && _stage.RisingWater ? Math.Max(0,_roundSeconds-60+FloodRules.RiseDelay-_roundTimer) : -1,

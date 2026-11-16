@@ -32,7 +32,7 @@ def notices(destination, target, published):
                *sorted((ROOT / 'assets/fonts').glob('OFL-*.txt')),
                *sorted((ROOT / 'addons/webrtc_native').glob('LICENSE*'))]
     for source in sources:
-        name = 'Blast-Circuit-MIT.txt' if source == ROOT / 'LICENSE' else 'Simulation-MIT.txt' if source.name == 'LICENSE' else source.name
+        name = 'Blast-Circuit-GPL-3.0.txt' if source == ROOT / 'LICENSE' else 'Simulation-MIT.txt' if source.name == 'LICENSE' else source.name
         shutil.copy2(source, destination / name)
     config = next(published.rglob('Bomberman64Multiplayer.runtimeconfig.json'))
     version = json.loads(config.read_text())['runtimeOptions']['includedFrameworks'][0]['version']

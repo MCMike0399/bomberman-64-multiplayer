@@ -15,12 +15,14 @@ public partial class StagePreview : Control
         var area=new Rect2(16,12,Size.X-32,Size.Y-12-caption);
         float s=Math.Min(area.Size.X/24.5f,area.Size.Y/11.4f),h=s*.41f;
         var center=area.GetCenter()+new Vector2(-s,.62f*s);
-        if(StageIndex==4)DrawBlizzard(area);
+        if(StageIndex==7)DrawGutter(area);
+        else if(StageIndex==4)DrawBlizzard(area);
         else if(StageIndex==1)DrawGarden(area);
         else if(StageIndex==2)DrawUpAndDown(area);
         else if(StageIndex==5)DrawGreedyTrap(area);
         else if(StageIndex==6)DrawField(area);
-        else if(StageIndex==7)DrawObservationDeck(area);
+        else if(StageIndex==8)DrawSeaSick(area);
+        else if(StageIndex==9)DrawObservationDeck(area);
         else for(int z=0;z<11;z++)for(int x=0;x<13;x++)
         {
             int tier=StageIndex==3?(x is 0 or 3 or 6 or 9 or 12||z is 0 or 5 or 10?2:0):StageIndex==0?1+(Math.Abs(x-6)>3?2:z<3?3:0):StageIndex==2?x<4?0:x>8?2:1:0;
@@ -33,11 +35,24 @@ public partial class StagePreview : Control
             if(StageIndex!=3&&x%3==0&&z%3==0&&x>0&&z>0)
             {DrawRect(new Rect2(p-new Vector2(.41f*s,1.35f*s),new Vector2(.82f*s,1.35f*s)),new Color("d1b879"));DrawRect(new Rect2(p-new Vector2(.53f*s,1.53f*s),new Vector2(1.06f*s,.3f*s)),new Color("fff0b6"));}
         }
-        string name=StageIndex==0?"Sunken Temple":StageIndex==1?"Rock Garden":StageIndex==2?"Up & Down":StageIndex==4?"Blizzard Battle":StageIndex==3?"Top Rules":StageIndex==6?"Field of Grass":StageIndex==7?"Lost at Sea":"Greedy Trap",detail=StageIndex==0?"4 levels":StageIndex==1?"Walled garden":StageIndex==2?"3 levels":StageIndex==4?"Wind & avalanches":StageIndex==3?"Castle bridges":StageIndex==6?"Hidden bombs":StageIndex==7?"Slippery glass":"Reward pit";
+        string name=StageIndex==0?"Sunken Temple":StageIndex==1?"Rock Garden":StageIndex==2?"Up & Down":StageIndex==4?"Blizzard Battle":StageIndex==3?"Top Rules":StageIndex==6?"Field of Grass":StageIndex==8?"Sea Sick":StageIndex==7?"In the Gutter":StageIndex==9?"Lost at Sea":"Greedy Trap",detail=StageIndex==0?"4 levels":StageIndex==1?"Walled garden":StageIndex==2?"3 levels":StageIndex==4?"Wind & avalanches":StageIndex==3?"Castle bridges":StageIndex==6?"Hidden bombs":StageIndex==8?"Pirate deck":StageIndex==7?"Changing currents":StageIndex==9?"Slippery glass":"Reward pit";
         var at=new Vector2(20,Size.Y-14);
         DrawStringOutline(ArcadeTheme.Display,at,name,HorizontalAlignment.Left,-1,18,6,ArcadeTheme.Cream);DrawString(ArcadeTheme.Display,at,name,HorizontalAlignment.Left,-1,18,ink);
         float width=ArcadeTheme.Display.GetStringSize(name,HorizontalAlignment.Left,-1,18).X;
         DrawString(ArcadeTheme.Body,at+new Vector2(width+12,0),detail,HorizontalAlignment.Left,-1,15,new Color(ink,.75f));
+    }
+    private void DrawGutter(Rect2 area)
+    {
+        var layout=BlastStages.Get(BlastStages.InTheGutter);
+        float scale=Math.Min(area.Size.X/22,area.Size.Y/15);
+        var origin=area.GetCenter()-new Vector2(layout.Width*scale/2,layout.Height*scale*.3f);
+        for(int z=0;z<layout.Height;z++)for(int x=0;x<layout.Width;x++)
+        {
+            var cell=layout.At(x,z);
+            var point=origin+new Vector2(x*scale,z*scale*.6f-cell.Tier*scale*.5f);
+            var color=cell.Kind==CellKind.Pillar?new Color("69554a"):cell.Tier>0?new Color("d7c49d"):new Color("428e91");
+            DrawRect(new Rect2(point,new(scale-.5f,scale*.6f-.5f)),color);
+        }
     }
     private void DrawField(Rect2 area)
     {
@@ -52,6 +67,20 @@ public partial class StagePreview : Control
             DrawRect(new Rect2(point,new(scale,scale*.6f)),color);
         }
     }
+    private void DrawSeaSick(Rect2 area)
+    {
+        var layout=BlastStages.Get(BlastStages.SeaSick);
+        float scale=Math.Min(area.Size.X/21,area.Size.Y/17);
+        Vector2 Point(float x,float z,float y=0)=>area.GetCenter()+new Vector2((x-9.5f)*scale,(z-9.5f)*scale*.6f-y*scale*.5f);
+        for(int z=0;z<layout.Height;z++)for(int x=0;x<layout.Width;x++)
+        {
+            var cell=layout.At(x,z);bool edge=x is 0 or 18||z is 0 or 18;
+            DrawRect(new Rect2(Point(x,z,cell.Tier),new(scale-.3f,scale*.6f-.3f)),edge?new Color("397367"):cell.Kind==CellKind.Ramp?new Color("d4ae73"):new Color((x+z)%3==0?"c99961":"b98450"));
+            if(!edge&&cell.Kind==CellKind.Pillar)
+                DrawLine(Point(x+.5f,z+.5f),Point(x+.5f,z+.5f,x==9?5:1.7f),new Color("795235"),scale*.6f);
+        }
+    }
+
     private void DrawObservationDeck(Rect2 area)
     {
         var layout=BlastStages.Get(BlastStages.LostAtSea);

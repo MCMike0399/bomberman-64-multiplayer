@@ -56,6 +56,6 @@ public partial class BombThrowPreview : Node3D
         };
     }
     public void HidePreview(){Visible=false;_reticle.Visible=false;}
-    public void UpdateScreen(Camera3D camera)=>_reticle.Update(camera,_endpoint,_end,_material.AlbedoColor,IsVisibleInTree());
+    public void UpdateScreen(Camera3D camera)=>_reticle.Update(camera,ToGlobal(_endpoint),_end,_material.AlbedoColor,IsVisibleInTree());
 }
 public sealed record ThrowPreviewState(string PlayerId,int Pumps,float X,float Y,float Z,string End,int Points,bool LandingMarkerVisible,string EndpointLabel,bool AimSet=false,bool Aiming=false,float AimRange=0,bool EndpointMarkerVisible=false,float ScreenX=0,float ScreenY=0,bool EdgeClamped=false);

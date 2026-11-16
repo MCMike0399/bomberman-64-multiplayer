@@ -74,16 +74,16 @@ class HarnessTests(unittest.TestCase):
         report = {'fairnessChecks': 1, 'idleLimitTicks': 3, 'tickRate': 1,
                   'results': [dict(result, Stage=stage, Difficulty=difficulty, Bots=bots, Seed=seed)
                               for stage in ('sunken-temple', 'rock-garden', 'up-and-down', 'top-rules',
-                                            'blizzard-battle', 'greedy-trap', 'field-of-grass', 'lost-at-sea')
+                                            'blizzard-battle', 'greedy-trap', 'field-of-grass', 'in-the-gutter','sea-sick','lost-at-sea')
                               for difficulty in ('easy', 'medium', 'hard')
                               for bots in (3, 7) for seed in (64, 9876)]}
         with tempfile.TemporaryDirectory() as temporary:
             receipt = Path(temporary) / 'soak.json'
             receipt.write_text(json.dumps(report))
-            self.assertEqual(96, qa.validate_soak(receipt)['scenarios'])
+            self.assertEqual(120, qa.validate_soak(receipt)['scenarios'])
             changes = [('passed', False), ('EligibleBotTicks', 0), ('MovingBotTicks', 0),
                        ('Bombs', 0), ('ActiveTicks', 0), ('LongestOpenIdleTicks', 4), ('Seed', 1),
-                       ('Stage', 'sea-sick'), ('Difficulty', 'normal'), ('Bots', 5)]
+                       ('Stage', 'missing-stage'), ('Difficulty', 'normal'), ('Bots', 5)]
             for key, value in changes:
                 changed = copy.deepcopy(report)
                 changed['results'][0][key] = value

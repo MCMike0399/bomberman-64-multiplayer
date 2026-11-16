@@ -20,7 +20,7 @@ public partial class PlaytestDriver
         var dimensions=Option("--benchmark-resolution","1920x1200").Split('x');
         var resolution=new Vector2I(int.Parse(dimensions[0]),int.Parse(dimensions[1]));
         string stage=Option("--benchmark-stage","sunken-temple");
-        var stages=stage=="all"?new[]{"sunken-temple","rock-garden","up-and-down","top-rules","blizzard-battle","greedy-trap","field-of-grass","lost-at-sea"}:new[]{stage};
+        var stages=stage=="all"?new[]{"sunken-temple","rock-garden","up-and-down","top-rules","blizzard-battle","greedy-trap","field-of-grass","in-the-gutter","sea-sick","lost-at-sea"}:new[]{stage};
         int seconds=int.Parse(Option("--benchmark-seconds","10"));
         string selected=Option("--benchmark-preset","all");
         string diagnosticOmission=Option("--benchmark-disable","none");

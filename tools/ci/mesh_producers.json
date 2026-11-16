@@ -18,7 +18,7 @@
     {
       "id": "scripts/arena/ArenaView.Closure.cs:Box:1",
       "file": "scripts/arena/ArenaView.Closure.cs",
-      "line": 87,
+      "line": 89,
       "call": "Box(node,new(key==LeftSlab?.5f:-.5f,2.1f,_terrain.Depth/2f),new(1,5.8f,_terrain.Depth),_art.Color(new Color(.92f,.18f,.17f,.4f),.7f,true))",
       "callSha256": "ba90c3229eca7aafdf2ceb5fac6547bf45759b89504dea0ca72d3c32e3bda013",
       "domain": "owned-generator-or-helper"
@@ -26,7 +26,7 @@
     {
       "id": "scripts/arena/ArenaView.Closure.cs:Box:2",
       "file": "scripts/arena/ArenaView.Closure.cs",
-      "line": 102,
+      "line": 104,
       "call": "Box(n,new(x+.5f,wallHeight/2,terrain.Depth/2f),new(1,wallHeight,terrain.Depth-2),stone)",
       "callSha256": "8b08b8caab4ebc2cfe8f2db9468db271ae8964cc673eec2dbfaf8d8700e1cd35",
       "domain": "owned-generator-or-helper"
@@ -34,7 +34,7 @@
     {
       "id": "scripts/arena/ArenaView.Closure.cs:Box:3",
       "file": "scripts/arena/ArenaView.Closure.cs",
-      "line": 103,
+      "line": 105,
       "call": "Box(n,new(x+.5f,wallHeight+.05f,terrain.Depth/2f),new(1.03f,.16f,terrain.Depth-2),_art.Color(new Color(\"bdc4c5\")),.025f)",
       "callSha256": "96027d2ff75305388f81b69f8bb4f1aba504d58e361432f36e3462f629ec75ce",
       "domain": "owned-generator-or-helper"
@@ -2351,7 +2351,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Taper:1",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 91,
+      "line": 93,
       "call": "Taper(Node parent,Vector3 position,float bottom,float top,float height,Material material,int sides=20)",
       "callSha256": "bb071017c296fd291c9ca3a71ae5524c5970e07f921dfcdf6c50dfa485b985f7",
       "domain": "owned-generator-or-helper"
@@ -2359,7 +2359,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:PrimitiveTemplates.Get:1",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 95,
+      "line": 97,
       "call": "PrimitiveTemplates.Get(\"CylinderMesh\",(\"bottom_radius\",bottom),(\"top_radius\",top),(\"height\",height),(\"radial_segments\",sides),(\"rings\",1))",
       "callSha256": "d7390e17862275fe745e89841d7b6bef2c6ae62369bde81c2cdbeac3fb64987d",
       "domain": "CylinderMesh",
@@ -2470,7 +2470,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Bead:1",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 100,
+      "line": 102,
       "call": "Bead(Node parent,Vector3 position,Vector3 scale,Material material)",
       "callSha256": "1e0c8cf074d84c2653b385067260bd92abb70dd2aa71c02e2e4374c5577c5595",
       "domain": "owned-generator-or-helper"
@@ -2478,7 +2478,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:PrimitiveTemplates.Get:2",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 103,
+      "line": 105,
       "call": "PrimitiveTemplates.Get(\"SphereMesh\",(\"radius\",.5f),(\"height\",1),(\"radial_segments\",10),(\"rings\",5))",
       "callSha256": "168fa98cc40a3c0471b3fee0d7cea93ac3aa5b1029c4115d290b2e8f09269e4a",
       "domain": "SphereMesh",
@@ -2489,7 +2489,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Cone:1",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 107,
+      "line": 109,
       "call": "Cone(Node parent,Vector3 position,float radius,float height,Material material,int sides=20)",
       "callSha256": "e345a9babf3c5e47a9e32933ad1b0037d34d743903925ec90b967a1f717db518",
       "domain": "owned-generator-or-helper"
@@ -2497,7 +2497,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Taper:2",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 108,
+      "line": 110,
       "call": "Taper(parent,position,radius,0,height,material,sides)",
       "callSha256": "b9a5aa8e0d4413e272579deeef0e3b1319d3c424d783c9c2bf4370e786651d76",
       "domain": "owned-generator-or-helper"
@@ -2505,7 +2505,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:newSurfaceTool:1",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 116,
+      "line": 118,
       "call": "new SurfaceTool()",
       "callSha256": "524d4daa3dd8ade1577b68b52e91ebbe9907def4954bab94da3aeb8c6bb1a4ae",
       "domain": "owned-generator-or-helper"
@@ -2513,7 +2513,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:surface.Commit:1",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 137,
+      "line": 139,
       "call": "surface.Commit()",
       "callSha256": "3a4b0e22bc74cdecd537891eb2f48df20b98f27fbf269b1803e1cc035b3194ec",
       "domain": "owned-generator-or-helper"
@@ -2521,7 +2521,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Taper:3",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 167,
+      "line": 169,
       "call": "Taper(sway,new(lean*t*t*height,t*height,0),.15f-.04f*t,.13f-.04f*t,height/segments*1.12f,i%2==0?bark:ring,10)",
       "callSha256": "2acee6c8195df5e128730344c6a866084a68575381f2ce8e85c38a6809817c0d",
       "domain": "owned-generator-or-helper"
@@ -2529,7 +2529,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Sphere:1",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 174,
+      "line": 176,
       "call": "Sphere(pivot,new(.6f,-.16f,0),new(1.3f,.07f,.32f),f%2==0?frond:frondDark)",
       "callSha256": "1eba0b7032e217ae85d3cfeabf2fdf797cad7f91b3426f82c780b2dc8d9447cc",
       "domain": "owned-generator-or-helper"
@@ -2537,7 +2537,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Bead:2",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 178,
+      "line": 180,
       "call": "Bead(crown,new(Mathf.Cos(n*2.1f)*.13f,-.13f,Mathf.Sin(n*2.1f)*.13f),Vector3.One*.17f,nut)",
       "callSha256": "015b6de0f1e3622d26eb7ed0ebe9b5716f8bfa973080163de774139f8dcf0fa8",
       "domain": "owned-generator-or-helper"
@@ -2545,7 +2545,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Taper:4",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 186,
+      "line": 188,
       "call": "Taper(root,new(0,.45f,0),.17f,.12f,.9f,_art.Color(new(\"7a5f45\"),.9f),10)",
       "callSha256": "46229b0291b17b91431db1132650e488e008d220ff589f7731567febf9ce7ab0",
       "domain": "owned-generator-or-helper"
@@ -2553,7 +2553,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Sphere:2",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 188,
+      "line": 190,
       "call": "Sphere(canopy,Vector3.Zero,new(1.5f,1.35f,1.5f),WindPaint(leaves))",
       "callSha256": "9c3bd9be2b9c998ee11986553fb0b5dc47243800174542f083520f7615f4f84b",
       "domain": "owned-generator-or-helper"
@@ -2561,7 +2561,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Sphere:3",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 189,
+      "line": 191,
       "call": "Sphere(canopy,new(-.38f,.32f,.15f),new(.95f,.9f,.95f),WindPaint(leaves.Lightened(.14f)))",
       "callSha256": "6524a2d34618203a7693a96752f959cfd581d8408fb6750553658d573cb91acb",
       "domain": "owned-generator-or-helper"
@@ -2569,7 +2569,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Sphere:4",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 190,
+      "line": 192,
       "call": "Sphere(canopy,new(.4f,.12f,-.25f),new(.85f,.8f,.85f),WindPaint(leaves.Darkened(.1f)))",
       "callSha256": "c2231a1dde302b19b67ae0dd789c8740ef6280f52f2a308b12c014d6a3c7f16d",
       "domain": "owned-generator-or-helper"
@@ -2577,7 +2577,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Bead:3",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 195,
+      "line": 197,
       "call": "Bead(canopy,new(Mathf.Cos(a)*.65f,.2f+(i%3)*.18f,Mathf.Sin(a)*.65f),new(.42f,.28f,.38f),WindPaint(leaves.Lightened(.08f)))",
       "callSha256": "399409c1a10df8b1da364a5ed1ae5dc7ac91db15c9c30a8ced36e5a7e222a0d8",
       "domain": "owned-generator-or-helper"
@@ -2585,7 +2585,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Taper:5",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 205,
+      "line": 207,
       "call": "Taper(root,new(0,.25f,0),.13f,.1f,.5f,_art.Color(new(\"6d5038\"),.9f),10)",
       "callSha256": "84f195fe59be0f273e15b75de2ea1da73a39b3cc38837acba9a1c8053b18371d",
       "domain": "owned-generator-or-helper"
@@ -2593,7 +2593,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Cone:2",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 210,
+      "line": 212,
       "call": "Cone(root,new(0,y+.42f,0),radius,.95f,needles,9)",
       "callSha256": "fff6896970184406e8bb774ff6779665d38c1dada1ee9380b5761e055165b3d9",
       "domain": "owned-generator-or-helper"
@@ -2601,7 +2601,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Cone:3",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 211,
+      "line": 213,
       "call": "Cone(root,new(0,y+.62f,0),radius*.68f,.55f,white,9)",
       "callSha256": "0edcc9e88806de25d2a016e10d0ee91bf74ec7eb1e583fdf81e0ef6485c29bdb",
       "domain": "owned-generator-or-helper"
@@ -2609,7 +2609,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Sphere:5",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 219,
+      "line": 221,
       "call": "Sphere(root,new(0,.22f,0),new(.9f,.55f,.8f),WindPaint(color))",
       "callSha256": "e60ed600ec179e3b754188b241a51c3135cf31902816cc2ce8b9be2f195aea29",
       "domain": "owned-generator-or-helper"
@@ -2617,7 +2617,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Sphere:6",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 220,
+      "line": 222,
       "call": "Sphere(root,new(.32f,.18f,.12f),new(.55f,.42f,.55f),WindPaint(color.Lightened(.12f)))",
       "callSha256": "6497dce73f5ec0f4faf838e52206a4ff6444cc1df03897b11a8401acfa0e851c",
       "domain": "owned-generator-or-helper"
@@ -2625,7 +2625,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Sphere:7",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 221,
+      "line": 223,
       "call": "Sphere(root,new(-.3f,.16f,-.1f),new(.5f,.38f,.5f),WindPaint(color.Darkened(.08f)))",
       "callSha256": "c3d55d4f79d27dc702d0e4752ced45c21907ffb29ab2dba3f0025151b448abdb",
       "domain": "owned-generator-or-helper"
@@ -2633,7 +2633,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Cylinder:1",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 229,
+      "line": 231,
       "call": "Cylinder(root,new(0,.02f,0),radius,.06f,_art.Color(new(\"5c4632\"),.95f))",
       "callSha256": "63c64a58ba5c2c6e78db4ac1f1b298571a7a2616e7a6c23fca3cb0fc0871e4a5",
       "domain": "owned-generator-or-helper"
@@ -2641,7 +2641,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Bead:4",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 234,
+      "line": 236,
       "call": "Bead(root,at,new(.2f,.14f,.2f),_art.Color(new(\"4c8a3c\"),.9f))",
       "callSha256": "e61de3a93c136213b70364f771999d1631ac5a6b118b7ce6f10a2b8c6580bfdd",
       "domain": "owned-generator-or-helper"
@@ -2649,7 +2649,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Bead:5",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 235,
+      "line": 237,
       "call": "Bead(root,at+new Vector3(0,.12f,0),Vector3.One*.13f,_art.Color(petals[random.Next(petals.Length)],.7f))",
       "callSha256": "4ad57d404c1b5d76cee464201285d4d6d4351518f3877f1c704b642d98f30e91",
       "domain": "owned-generator-or-helper"
@@ -2657,7 +2657,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Sphere:8",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 247,
+      "line": 249,
       "call": "Sphere(bird,Vector3.Zero,new(.17f,.15f,.46f),white)",
       "callSha256": "aea742b9fa81c43e7779bc52a0ba6264dbcf3b8d805f875020aff3a8913d3e8b",
       "domain": "owned-generator-or-helper"
@@ -2665,7 +2665,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Sphere:9",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 248,
+      "line": 250,
       "call": "Sphere(bird,new(0,.05f,-.22f),Vector3.One*.15f,white)",
       "callSha256": "37739e9260d169af746809abc4c2deb96b5c0ec91aa2f5dc2c984c26e9500ef2",
       "domain": "owned-generator-or-helper"
@@ -2673,7 +2673,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Cone:4",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 249,
+      "line": 251,
       "call": "Cone(bird,new(0,.04f,-.33f),.03f,.12f,_art.Color(new(\"f2a531\"),.6f),6)",
       "callSha256": "d528d95ff2dae7845002254803cd7dd457e67aca09a2d2c0e4fb9d952de7f798",
       "domain": "owned-generator-or-helper"
@@ -2681,7 +2681,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Box:1",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 255,
+      "line": 257,
       "call": "Box(hinges[side],new(sign*.3f,0,0),new(.58f,.025f,.2f),white)",
       "callSha256": "ce6a727ca8b195390022bfbced53841d5b16ac84607950b1021997f23ff7f54b",
       "domain": "owned-generator-or-helper"
@@ -2689,7 +2689,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Box:2",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 256,
+      "line": 258,
       "call": "Box(hinges[side],new(sign*.55f,0,.02f),new(.12f,.026f,.16f),gray)",
       "callSha256": "e9c0a0958f25769a3736e5b12c0317bcc34deaa2757b984fbfaa8ea5254720be",
       "domain": "owned-generator-or-helper"
@@ -2697,7 +2697,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Bead:6",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 274,
+      "line": 276,
       "call": "Bead(body,Vector3.Zero,new(.03f,.03f,.12f),_art.Color(new(\"2f2a2a\")))",
       "callSha256": "2a38f588e60f350582f11d02744eb68db6f0ac735a477da61e5821065d177b9d",
       "domain": "owned-generator-or-helper"
@@ -2705,7 +2705,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Bead:7",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 280,
+      "line": 282,
       "call": "Bead(hinges[side],new(sign*.08f,0,-.02f),new(.15f,.012f,.12f),paint)",
       "callSha256": "22b5bee700a7429a463197758ef5e8d35423c87877288c5ddf1fa09c76eaea88",
       "domain": "owned-generator-or-helper"
@@ -2713,7 +2713,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Bead:8",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 281,
+      "line": 283,
       "call": "Bead(hinges[side],new(sign*.065f,0,.06f),new(.1f,.012f,.08f),paint)",
       "callSha256": "48e25a9e7816f0906115bdfae1bdc622196b606cc00124258cc817a5dacb0da5",
       "domain": "owned-generator-or-helper"
@@ -2721,7 +2721,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Box:3",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 311,
+      "line": 313,
       "call": "Box(boat,new(0,.1f,0),new(.62f,.3f,1.5f),_art.Toy(hull,.5f),.12f)",
       "callSha256": "1b5a74c0e352bcbc3134abfb3f764ed976f84c47f706f1a26bcec6b9dfe92a98",
       "domain": "owned-generator-or-helper"
@@ -2729,7 +2729,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Box:4",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 312,
+      "line": 314,
       "call": "Box(boat,new(0,.27f,0),new(.66f,.06f,1.54f),trim,.03f)",
       "callSha256": "0a3340e98f4232cba9a4483608a71b03c483793aa8ffc724faf815c62d8f038e",
       "domain": "owned-generator-or-helper"
@@ -2737,7 +2737,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Box:5",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 313,
+      "line": 315,
       "call": "Box(boat,new(0,.12f,-.82f),new(.42f,.26f,.42f),_art.Toy(hull,.5f),.1f)",
       "callSha256": "7a9b7d13b5a38a575cc3c64dd7d72b3eed7d709a2ad3c84440f551c45f57c0c6",
       "domain": "owned-generator-or-helper"
@@ -2745,7 +2745,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Box:6",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 314,
+      "line": 316,
       "call": "Box(boat,new(0,.33f,.38f),new(.44f,.16f,.42f),_art.Color(new(\"8a6342\"),.8f),.04f)",
       "callSha256": "33ac4744495ed471a96905aff5b403e5a51d8c5ab477dbcf4324c7660519ea6c",
       "domain": "owned-generator-or-helper"
@@ -2753,7 +2753,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Cylinder:2",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 315,
+      "line": 317,
       "call": "Cylinder(boat,new(0,1.05f,-.05f),.035f,1.55f,_art.Color(new(\"7a5a3a\"),.8f))",
       "callSha256": "8dc4ad15e73966b2d2af59071c5cbf3ec4e58a645c33bbe5c2044fdac0b5d692",
       "domain": "owned-generator-or-helper"
@@ -2761,7 +2761,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Box:7",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 326,
+      "line": 328,
       "call": "Box(boat,new(0,.08f,0),new(.5f,.2f,1.1f),_art.Toy(hull,.55f),.09f)",
       "callSha256": "14f7b5b0a8bf2c3fa8b0be905179996d319a7dd9a2c4629eb44c21e434b98ce6",
       "domain": "owned-generator-or-helper"
@@ -2769,7 +2769,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Box:8",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 327,
+      "line": 329,
       "call": "Box(boat,new(0,.12f,0),new(.4f,.14f,.92f),_art.Color(new(\"6b4d33\"),.85f),.05f)",
       "callSha256": "288f3f053dedbd22f6564b37815e9e542f695c46cfaccc2920eabf568cba3602",
       "domain": "owned-generator-or-helper"
@@ -2777,7 +2777,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Box:9",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 328,
+      "line": 330,
       "call": "Box(boat,new(0,.2f,.05f),new(.52f,.04f,.14f),_art.Color(new(\"a37d55\"),.8f))",
       "callSha256": "6f94d9eb568c27a0ddab50194cbdad057e8673cf6bb8361a23c504d86501bd7a",
       "domain": "owned-generator-or-helper"
@@ -2785,7 +2785,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Box:10",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 331,
+      "line": 333,
       "call": "Box(boat,new(side*.34f,.2f,.1f),new(.04f,.04f,.9f),_art.Color(new(\"c9a26d\"),.8f))",
       "callSha256": "b366650d2a819cc753003d8263ac92c381a2ec006da158af96565310f8e9c5dd",
       "domain": "owned-generator-or-helper"
@@ -2793,7 +2793,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Taper:6",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 341,
+      "line": 343,
       "call": "Taper(buoy,new(0,.1f,0),.26f,.2f,.36f,paint,14)",
       "callSha256": "38270c1c97cc2dc1b78b157b7766f2a23a7ddc8daf66907ef061bf88fc0ce8e7",
       "domain": "owned-generator-or-helper"
@@ -2801,7 +2801,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Taper:7",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 342,
+      "line": 344,
       "call": "Taper(buoy,new(0,.33f,0),.2f,.16f,.12f,white,14)",
       "callSha256": "c2ed744b4df96e7ffea8213c38cffccb55091e501fae64aa8de3cfa50f202241",
       "domain": "owned-generator-or-helper"
@@ -2809,7 +2809,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Taper:8",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 343,
+      "line": 345,
       "call": "Taper(buoy,new(0,.46f,0),.16f,.05f,.18f,paint,14)",
       "callSha256": "75e24e8ae1f7776335ac7d8b0528e8fdcfd8044662e00e9db41a729164dff645",
       "domain": "owned-generator-or-helper"
@@ -2817,7 +2817,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Cylinder:3",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 344,
+      "line": 346,
       "call": "Cylinder(buoy,new(0,.6f,0),.02f,.12f,_art.Color(new(\"444444\")))",
       "callSha256": "323ed4b097c3c2d5a08c84a4ab49afc93d5d655e34a6fb579bb267d8ab79320c",
       "domain": "owned-generator-or-helper"
@@ -2825,7 +2825,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Sphere:10",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 345,
+      "line": 347,
       "call": "Sphere(buoy,new(0,.68f,0),Vector3.One*.08f,Glow(new(\"ffe28a\"),2.2f))",
       "callSha256": "11e9bc391b91f3febfb40b4e008c2e2050434207d1d5c37e1807b7308c77396b",
       "domain": "owned-generator-or-helper"
@@ -2833,7 +2833,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Taper:9",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 361,
+      "line": 363,
       "call": "Taper(root,new(0,band*(i+.5f),0),bottom,top,band+.01f,i%2==0?white:red,24)",
       "callSha256": "aceb49d0dc7cd4876f4b1a6cac36f8e7671b3a8ef2917f9d94a202da5b3377ef",
       "domain": "owned-generator-or-helper"
@@ -2841,7 +2841,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Cylinder:4",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 363,
+      "line": 365,
       "call": "Cylinder(root,new(0,height+.04f,0),.58f,.08f,dark)",
       "callSha256": "467923980354ca8368c2c75a97e4b7494af655bf860a33f17faf0828590d48b8",
       "domain": "owned-generator-or-helper"
@@ -2849,7 +2849,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Box:11",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 367,
+      "line": 369,
       "call": "Box(root,new(Mathf.Cos(a)*.53f,height+.2f,Mathf.Sin(a)*.53f),new(.035f,.24f,.035f),dark)",
       "callSha256": "5e0434934b50cef391cd55d43eef8625920e82dcfe2a23d51e96b312ec5ed78b",
       "domain": "owned-generator-or-helper"
@@ -2857,7 +2857,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Cylinder:5",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 369,
+      "line": 371,
       "call": "Cylinder(root,new(0,height+.32f,0),.55f,.03f,dark)",
       "callSha256": "4c11e55a6b7b02dabe68aeb4f3aac762d2fa4add7641368619ceb4c04802ee3e",
       "domain": "owned-generator-or-helper"
@@ -2865,7 +2865,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Cylinder:6",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 370,
+      "line": 372,
       "call": "Cylinder(root,new(0,height+.38f,0),.3f,.62f,Glow(new(\"fff1b5\"),1.2f))",
       "callSha256": "5734ca4e6090799337563fa4979b6e181070593dd0a82229e08db02bc4e42a85",
       "domain": "owned-generator-or-helper"
@@ -2873,7 +2873,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Cone:5",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 371,
+      "line": 373,
       "call": "Cone(root,new(0,height+.92f,0),.42f,.46f,red,16)",
       "callSha256": "d744a645eff6381c4709df146c23b7abdaee04e194fa942f26b26e2f6f5e1a5a",
       "domain": "owned-generator-or-helper"
@@ -2881,7 +2881,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Sphere:11",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 372,
+      "line": 374,
       "call": "Sphere(root,new(0,height+1.2f,0),Vector3.One*.14f,dark)",
       "callSha256": "e759c794eaf6c2ae28aed29f82257f888c7f90b5944cdcc9c6a1b058f6ba09f2",
       "domain": "owned-generator-or-helper"
@@ -2889,7 +2889,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Box:12",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 373,
+      "line": 375,
       "call": "Box(root,new(0,.4f,.6f),new(.32f,.6f,.1f),_art.Color(new(\"4a3628\"),.7f),.04f)",
       "callSha256": "67316594f36f0f17e038ebbc52f20c4bbf0853d98081b44b169228e6e2e4f6ea",
       "domain": "owned-generator-or-helper"
@@ -2897,7 +2897,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Taper:10",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 387,
+      "line": 389,
       "call": "Taper(root,new(0,1.3f,0),.95f,.68f,2.6f,wall,20)",
       "callSha256": "645132b982cdbc59ff04e659fc1b77add615ffff17d1e3401bbaf7c197425f10",
       "domain": "owned-generator-or-helper"
@@ -2905,7 +2905,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Cone:6",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 388,
+      "line": 390,
       "call": "Cone(root,new(0,2.95f,0),.9f,.75f,roof,20)",
       "callSha256": "a9a68f40065d665b6d1ce76900693e541dbb16320c2c547b74f2b12a40007617",
       "domain": "owned-generator-or-helper"
@@ -2913,7 +2913,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Box:13",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 389,
+      "line": 391,
       "call": "Box(root,new(0,.42f,.86f),new(.42f,.75f,.12f),wood,.05f)",
       "callSha256": "e1e1905fdeee19ac88dccd8c8ddae627116b1238bc2f50124283d08c16830092",
       "domain": "owned-generator-or-helper"
@@ -2921,7 +2921,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Box:14",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 390,
+      "line": 392,
       "call": "Box(root,new(0,1.7f,.73f),new(.3f,.3f,.08f),_art.Color(new(\"5c88a8\"),.4f),.04f)",
       "callSha256": "29370aafbd78230de04ec71a8788dc8c00a3c8715f4979484dca08d492ac30ee",
       "domain": "owned-generator-or-helper"
@@ -2929,7 +2929,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Cylinder:7",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 392,
+      "line": 394,
       "call": "Cylinder(hub,Vector3.Zero,.13f,.22f,wood)",
       "callSha256": "3b89168d3af4af3358b61a0f71c81aaffaeb918a25d0170ca4290290a45031f2",
       "domain": "owned-generator-or-helper"
@@ -2937,7 +2937,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Box:15",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 397,
+      "line": 399,
       "call": "Box(arm,new(0,.95f,.06f),new(.07f,1.9f,.06f),wood)",
       "callSha256": "4328f794c428f169ac6f7a6cd833e7769f9856d6639bf80c2ee4767bd1cb067a",
       "domain": "owned-generator-or-helper"
@@ -2945,7 +2945,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Box:16",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 398,
+      "line": 400,
       "call": "Box(arm,new(.2f,1.05f,.07f),new(.36f,1.45f,.025f),canvas,.01f)",
       "callSha256": "25231dc60c097ed29ab2db7b781f45ad68f5c6792a3b6ba72f88c35025ce64b0",
       "domain": "owned-generator-or-helper"
@@ -2953,7 +2953,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Box:17",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 408,
+      "line": 410,
       "call": "Box(root,new(0,.08f,0),new(.6f,.16f,.6f),stone,.03f)",
       "callSha256": "cd9ac3c08204c6b80833c5f4808b2b3623cc3a265de94887b85d5a32b4ce3581",
       "domain": "owned-generator-or-helper"
@@ -2961,7 +2961,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Cylinder:8",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 409,
+      "line": 411,
       "call": "Cylinder(root,new(0,.48f,0),.11f,.66f,stone)",
       "callSha256": "673917a3f645fe945e9180c30ea5ec57f41d01665403cb6b199f39f22fbe12fc",
       "domain": "owned-generator-or-helper"
@@ -2969,7 +2969,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Box:18",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 410,
+      "line": 412,
       "call": "Box(root,new(0,.84f,0),new(.5f,.08f,.5f),stone,.02f)",
       "callSha256": "7b244acb93c5fed6ba52415bf4e4093f9bf77dbb94cd67bb9dc2588a7b7a77c5",
       "domain": "owned-generator-or-helper"
@@ -2977,7 +2977,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Box:19",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 411,
+      "line": 413,
       "call": "Box(root,new(0,1.04f,0),new(.36f,.32f,.36f),stone,.03f)",
       "callSha256": "b74415468aee25f58c3b84b284da34c5dfcb123aac2d08703aba2b6c8f530e3c",
       "domain": "owned-generator-or-helper"
@@ -2985,7 +2985,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Box:20",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 412,
+      "line": 414,
       "call": "Box(root,new(0,1.04f,0),new(.38f,.16f,.2f),Glow(new(\"ffc66b\"),1.4f),.02f)",
       "callSha256": "9003056a759f3cd719c3218faa23e0a4dca2e85278ae2f825b8eb43aa746f1a4",
       "domain": "owned-generator-or-helper"
@@ -2993,7 +2993,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Box:21",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 413,
+      "line": 415,
       "call": "Box(root,new(0,1.04f,0),new(.2f,.16f,.38f),Glow(new(\"ffc66b\"),1.4f),.02f)",
       "callSha256": "93374f0441e88364c0aeac0029d2d0d45f4f4b6f3f146c6a109752864299bdd8",
       "domain": "owned-generator-or-helper"
@@ -3001,7 +3001,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Cone:7",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 414,
+      "line": 416,
       "call": "Cone(root,new(0,1.36f,0),.42f,.34f,stone,4)",
       "callSha256": "3af1fe1f9de2916e80cab59206269cfca650ff5a6533b24c2a3ea0e6e317c04a",
       "domain": "owned-generator-or-helper"
@@ -3009,7 +3009,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Sphere:12",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 415,
+      "line": 417,
       "call": "Sphere(root,new(0,1.56f,0),Vector3.One*.12f,stone)",
       "callSha256": "b1bc376339db023813784c24d537ed0a426823e73943372e9378ca40aa525aeb",
       "domain": "owned-generator-or-helper"
@@ -3017,7 +3017,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Sphere:13",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 416,
+      "line": 418,
       "call": "Sphere(root,new(.18f,.17f,.2f),new(.3f,.08f,.22f),moss)",
       "callSha256": "30dae5d19bd18eaaa9a0d6828fac1452bf62c4c4520ed93b9b9dbfdfa81c4e73",
       "domain": "owned-generator-or-helper"
@@ -3025,7 +3025,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Sphere:14",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 423,
+      "line": 425,
       "call": "Sphere(flame,new(0,.16f,0),new(.32f,.5f,.32f),Glow(new(\"ff7a1f\"),2.4f))",
       "callSha256": "9097aadfc8c4f1bda722a6a8d3de3cf7e731ccf20bc55e5538ce4b5f21031280",
       "domain": "owned-generator-or-helper"
@@ -3033,7 +3033,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Sphere:15",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 424,
+      "line": 426,
       "call": "Sphere(flame,new(0,.14f,0),new(.18f,.32f,.18f),Glow(new(\"ffe27a\"),2.8f))",
       "callSha256": "3aec517d996b2dea95a14b18b1ddc4ed6d73a9dc38dc905d80c766ebd2c9a6ef",
       "domain": "owned-generator-or-helper"
@@ -3041,7 +3041,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Cylinder:9",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 434,
+      "line": 436,
       "call": "Cylinder(parent,position+new Vector3(0,pole/2,0),.03f,pole,_art.Color(new(\"6a5640\"),.7f))",
       "callSha256": "8a52da2d1bc0c9fa1b449cd9ca55ad7301233a91bb5dc8906c5cebb9041cfd00",
       "domain": "owned-generator-or-helper"
@@ -3049,7 +3049,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Sphere:16",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 435,
+      "line": 437,
       "call": "Sphere(parent,position+new Vector3(0,pole+.04f,0),Vector3.One*.09f,_art.Color(new(\"e2b64f\"),.35f))",
       "callSha256": "2e9f37cf88386d0f27a3de63bf74a80f99b2fc9dba5a7b2dc8b3b7cebc36ea31",
       "domain": "owned-generator-or-helper"
@@ -3057,7 +3057,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Sphere:17",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 445,
+      "line": 447,
       "call": "Sphere(cloud,Vector3.Zero,new(2.4f,1.1f,1.6f),white)",
       "callSha256": "94959028f26f483da7c9a2020667ce9c92136e15112c8b9109a181e413c9fa60",
       "domain": "owned-generator-or-helper"
@@ -3065,7 +3065,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Sphere:18",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 446,
+      "line": 448,
       "call": "Sphere(cloud,new(-1,-.15f,.2f),new(1.6f,.9f,1.3f),white)",
       "callSha256": "7818f95527ad4e52093eb334965e59aa16e7a2c66d9ee1b76b7273b5ac820d7f",
       "domain": "owned-generator-or-helper"
@@ -3073,7 +3073,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Sphere:19",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 447,
+      "line": 449,
       "call": "Sphere(cloud,new(1.05f,-.1f,-.15f),new(1.8f,.95f,1.4f),white)",
       "callSha256": "361589b7458e2052e4a099e8fc8b8b9032bab4fd9f432ffa1415369a95977ae7",
       "domain": "owned-generator-or-helper"
@@ -3081,7 +3081,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Sphere:20",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 448,
+      "line": 450,
       "call": "Sphere(cloud,new(.25f,.4f,0),new(1.4f,1,1.2f),white)",
       "callSha256": "907c080da2ca95ad7878eb3433c9a8d0d59e21797ae880c4dc1faa44a127a159",
       "domain": "owned-generator-or-helper"
@@ -3089,7 +3089,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:Sphere:21",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 457,
+      "line": 459,
       "call": "Sphere(parent,position,scale,_art.Color(color,.95f))",
       "callSha256": "99a82c2cf0ab90c8829c87a6bce7a1fead51837408e5cd24af859b4578e23118",
       "domain": "owned-generator-or-helper"
@@ -3097,7 +3097,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Scenery.cs:PrimitiveTemplates.Get:3",
       "file": "scripts/arena/stages/TempleStageView.Scenery.cs",
-      "line": 466,
+      "line": 468,
       "call": "PrimitiveTemplates.Get(\"SphereMesh\",(\"radius\",.5f),(\"height\",1),(\"radial_segments\",6),(\"rings\",3))",
       "callSha256": "a6e05a5aa1b990693980174f7d6f6bd8888e3803826bd0d5605bfa866cd3f8ed",
       "domain": "SphereMesh",
@@ -4095,7 +4095,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:PrimitiveTemplates.Get:1",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 222,
+      "line": 259,
       "call": "PrimitiveTemplates.Get(\"PlaneMesh\",(\"size\",new Vector2(160,160)),(\"subdivide_width\",180),(\"subdivide_depth\",180))",
       "callSha256": "f4d9273801d9e800886b6d10ae66bbfaab6e0e96e5e51d5de5c96ff10ade6f24",
       "domain": "PlaneMesh",
@@ -4106,7 +4106,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:PrimitiveTemplates.Get:2",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 225,
+      "line": 262,
       "call": "PrimitiveTemplates.Get(\"BoxMesh\",(\"size\",new Vector3(160,.05f,160)))",
       "callSha256": "53fb7f4d4dfc8a5c3b956129772b2d397bcdac310b0124db1505fb3c238880f0",
       "domain": "BoxMesh",
@@ -4297,7 +4297,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:1",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 237,
+      "line": 274,
       "call": "Box(this,new(x+.5f,(y-.15f+floorBottom)/2,z+.5f),new(.998f,y-.15f-floorBottom, .998f),wall)",
       "callSha256": "492aad0c9a9968ded3e2d2b29b36179a8c3909df161d5b18fc9c9e282e692f9c",
       "domain": "owned-generator-or-helper"
@@ -4305,7 +4305,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:2",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 238,
+      "line": 275,
       "call": "Box(this,new(x+.5f,y-.085f,z+.5f),new(.985f,.17f,.985f),courtyard?_cobble:_stone,.025f)",
       "callSha256": "daaf78b9841a675e65f9e7d53dda465f358cee2b7423752382c86f35fdf9946f",
       "domain": "owned-generator-or-helper"
@@ -4313,7 +4313,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:3",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 250,
+      "line": 287,
       "call": "Box(this,point-Vector3.Up*treadThickness/2,new(dx==0?.99f:1f/6,h-treadThickness,dz==0?.99f:1f/6),wall)",
       "callSha256": "97028d4a162d1baddea361233ff1de1ac59c7d23dbc7498046fe95acaccfbb7b",
       "domain": "owned-generator-or-helper"
@@ -4321,7 +4321,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:4",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 251,
+      "line": 288,
       "call": "Box(this,new(point.X,from+h-treadThickness/2,point.Z),new(dx==0?.99f:1f/6,treadThickness,dz==0?.99f:1f/6),cap,.006f)",
       "callSha256": "ba78a21f79ada3794215b37c1b72b764691db656623b26e858a8cc6ae1c48628",
       "domain": "owned-generator-or-helper"
@@ -4329,7 +4329,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:newSurfaceTool:1",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 282,
+      "line": 319,
       "call": "new SurfaceTool()",
       "callSha256": "524d4daa3dd8ade1577b68b52e91ebbe9907def4954bab94da3aeb8c6bb1a4ae",
       "domain": "owned-generator-or-helper"
@@ -4337,7 +4337,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:surface.Commit:1",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 308,
+      "line": 345,
       "call": "surface.Commit()",
       "callSha256": "3a4b0e22bc74cdecd537891eb2f48df20b98f27fbf269b1803e1cc035b3194ec",
       "domain": "owned-generator-or-helper"
@@ -4345,7 +4345,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:5",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 314,
+      "line": 351,
       "call": "Box(root,new(0,.3f,.012f),new(.99f,.065f,.03f),light)",
       "callSha256": "329b48b191eff7445f5f0fc067172882948703bca8c32d270b20257c2716ff72",
       "domain": "owned-generator-or-helper"
@@ -4353,7 +4353,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:6",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 315,
+      "line": 352,
       "call": "Box(root,new(0,-.3f,.012f),new(.99f,.065f,.03f),light)",
       "callSha256": "144c06386818208fb4c87bfaef7254df7825ced97a9ca65842ce84d1863be073",
       "domain": "owned-generator-or-helper"
@@ -4361,7 +4361,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:7",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 316,
+      "line": 353,
       "call": "Box(root,new(0,0,.006f),new(.88f,.4f,.018f),dark)",
       "callSha256": "dde399f0835adf0fc7b9bdacc90c81fa68a152a9efe5af2db8ff90c82c9820fd",
       "domain": "owned-generator-or-helper"
@@ -4369,7 +4369,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:8",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 318,
+      "line": 355,
       "call": "Box(root,new(-.36f,0,.023f),new(.055f,.34f,.025f),light)",
       "callSha256": "df97b7afa7d29de5bc05c6d9b63e48193304912fb1b5e9b9472875ce1c3545f5",
       "domain": "owned-generator-or-helper"
@@ -4377,7 +4377,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:9",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 319,
+      "line": 356,
       "call": "Box(root,new(0,.15f,.023f),new(.75f,.055f,.025f),light)",
       "callSha256": "5de3040046c617787761ba697ff22ab4bdaf896c86b2124ca62ab312ae041b03",
       "domain": "owned-generator-or-helper"
@@ -4385,7 +4385,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:10",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 320,
+      "line": 357,
       "call": "Box(root,new(.35f,.01f,.023f),new(.055f,.32f,.025f),light)",
       "callSha256": "c833c5964c6f9523a79ba6bb7173be42c36eb648d8b1c93d4a106711110c9830",
       "domain": "owned-generator-or-helper"
@@ -4393,7 +4393,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:11",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 321,
+      "line": 358,
       "call": "Box(root,new(.095f,-.12f,.023f),new(.56f,.055f,.025f),light)",
       "callSha256": "5f4d1f7cdbaf22fbda3db27a10c5d6e84ec0214449ddd6457955ef2ddac7af47",
       "domain": "owned-generator-or-helper"
@@ -4401,7 +4401,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:12",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 322,
+      "line": 359,
       "call": "Box(root,new(-.16f,-.025f,.023f),new(.055f,.23f,.025f),light)",
       "callSha256": "d95fd178173fbe2350b4c2ac96b4b11869cc487a625893a329160d764acd3a33",
       "domain": "owned-generator-or-helper"
@@ -4409,7 +4409,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:13",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 323,
+      "line": 360,
       "call": "Box(root,new(.02f,.06f,.023f),new(.39f,.055f,.025f),light)",
       "callSha256": "e9fea0c001a6924dc3adecfce99e15d4a5524182043775759565966f9c0ce322",
       "domain": "owned-generator-or-helper"
@@ -4417,7 +4417,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:14",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 324,
+      "line": 361,
       "call": "Box(root,new(.19f,.005f,.023f),new(.055f,.15f,.025f),light)",
       "callSha256": "f11bd63924c1421d60cf6a4052c32702532277813953a91dc1b874342f15d911",
       "domain": "owned-generator-or-helper"
@@ -4425,7 +4425,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:15",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 330,
+      "line": 367,
       "call": "Box(this,p+new Vector3(0,.095f,0),new(.94f,.19f,.94f),highlight,.055f)",
       "callSha256": "8bde92a56a5505b7c764544f6f8f3ba870d4330f665cf344b77a5422ad79358d",
       "domain": "owned-generator-or-helper"
@@ -4433,7 +4433,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:16",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 331,
+      "line": 368,
       "call": "Box(this,p+new Vector3(0,.6f,0),new(.67f,.96f,.67f),stone,.055f)",
       "callSha256": "5126d9370f611f5bbf9fb14e6cdd1a6bd85360062dfc01ab82c3b568f393749f",
       "domain": "owned-generator-or-helper"
@@ -4441,7 +4441,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:17",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 332,
+      "line": 369,
       "call": "Box(this,p+new Vector3(0,1.13f,0),new(.9f,.16f,.9f),highlight,.045f)",
       "callSha256": "3bf9e122d4d6c4a9c91669149d2512766d084bc76bdf26a5b3b629d9fbf87091",
       "domain": "owned-generator-or-helper"
@@ -4449,7 +4449,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:18",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 333,
+      "line": 370,
       "call": "Box(this,p+new Vector3(0,.65f,.345f),new(.26f,.5f,.025f),_art.Color(new(\"856432\")),.015f)",
       "callSha256": "4e0b866cdcf2123d5f590b345c4b8fc4b74d27d891e97dd0fb8ca634a8ac6d05",
       "domain": "owned-generator-or-helper"
@@ -4457,7 +4457,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:19",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 340,
+      "line": 377,
       "call": "Box(this,new(Width*.5f,y,1.95f),new(2.7f,.02f,1.7f),gold,.015f)",
       "callSha256": "ee5bfc8f2a087956e87b95f5a66b3c4ab9d94a027ee855d96b47d935b0707223",
       "domain": "owned-generator-or-helper"
@@ -4465,7 +4465,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:20",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 341,
+      "line": 378,
       "call": "Box(this,new(Width*.5f,y+.015f,1.95f),new(2.3f,.015f,1.3f),dark,.015f)",
       "callSha256": "7348c4e6498333c50b5292e4763feefc8b83a6d973a5415b02bd8359810fda37",
       "domain": "owned-generator-or-helper"
@@ -4473,7 +4473,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:21",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 342,
+      "line": 379,
       "call": "Box(this,new(Width*.5f+i*.5f,y+.03f,1.95f),new(.2f,.015f,.8f),gold)",
       "callSha256": "3634c008c20bc0eb78bbcae83da0e00b916fb2dd3eb2375fd68d5c0083eba123",
       "domain": "owned-generator-or-helper"
@@ -4481,7 +4481,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:22",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 357,
+      "line": 396,
       "call": "Box(root,new(0,.39f,0),new(.76f,.78f,.76f),sandstone,.06f)",
       "callSha256": "4ebdf16410f0b5597e292d9e49e0629793b949f224e313bc6c37292e032106f4",
       "domain": "owned-generator-or-helper"
@@ -4489,7 +4489,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:23",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 358,
+      "line": 397,
       "call": "Box(root,new(0,.045f,0),new(.82f,.09f,.82f),edge,.025f)",
       "callSha256": "bb9f7f1afd949b71ba3bf624b6cbce1dc2c78719460c053f51359de94f43941d",
       "domain": "owned-generator-or-helper"
@@ -4497,7 +4497,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:24",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 359,
+      "line": 398,
       "call": "Box(root,new(0,.77f,0),new(.82f,.09f,.82f),edge,.025f)",
       "callSha256": "d61ae75894b18b04bbfeae2d4e8a7d24547e4618d9b905337c54c155e134415d",
       "domain": "owned-generator-or-helper"
@@ -4505,7 +4505,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:25",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 360,
+      "line": 399,
       "call": "Box(root,new(0,.39f,.383f),new(.41f,.39f,.025f),dark,.04f)",
       "callSha256": "7d2cb887b5e40c57b4a908912519a51708b327e1a8efac8b5c9a9c7c16e602da",
       "domain": "owned-generator-or-helper"
@@ -4513,7 +4513,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:26",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 361,
+      "line": 400,
       "call": "Box(root,new(0,.39f,.407f),new(.23f,.23f,.028f),edge,.025f)",
       "callSha256": "6c6bec71fac60f81f152e6228d6b0f0c13f372f8a9e6700c7247d2c1f412b6d3",
       "domain": "owned-generator-or-helper"
@@ -4975,6 +4975,526 @@
       "domain": "owned-generator-or-helper"
     },
     {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.Gutter.cs:RoundedBox:1",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.Gutter.cs",
+      "line": 86,
+      "call": "RoundedBox(this,new(Width/2f,-.72f,Depth/2f),new(Width+.95f,1.1f,Depth+.85f),brick,.18f)",
+      "callSha256": "68ffdc91daa28151e586d214d504f76365883bcdff5baf512c56987eafa8cc7c",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.Gutter.cs:Box:1",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.Gutter.cs",
+      "line": 87,
+      "call": "Box(this,new(Width/2f,-.17f,Depth/2f),new(Width-2,.2f,Depth-2),mosaic,.035f)",
+      "callSha256": "e89f3627c9fd78aa80a26893cc6a411f42999866a1a488b5f54cc2a0814ec98b",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.Gutter.cs:RoundedBox:2",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.Gutter.cs",
+      "line": 98,
+      "call": "RoundedBox(this,new(x+.5f,(h-.25f)/2,z+.5f),new(.998f,h-.25f,.998f),brick,.12f)",
+      "callSha256": "8ccd2d896df1f8e824787634fb5cb12df36a5af823fbe62077050cfc6ae7684a",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.Gutter.cs:newSurfaceTool:1",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.Gutter.cs",
+      "line": 124,
+      "call": "new SurfaceTool()",
+      "callSha256": "524d4daa3dd8ade1577b68b52e91ebbe9907def4954bab94da3aeb8c6bb1a4ae",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.Gutter.cs:surface.Commit:1",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.Gutter.cs",
+      "line": 135,
+      "call": "surface.Commit()",
+      "callSha256": "3a4b0e22bc74cdecd537891eb2f48df20b98f27fbf269b1803e1cc035b3194ec",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.Gutter.cs:Box:2",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.Gutter.cs",
+      "line": 143,
+      "call": "Box(root,new(0,height/2,0),new(.82f,height,.82f),light,.085f)",
+      "callSha256": "ca92d01a252cb25f8fb20e21886f043c684c066c26a93b98b88d33cae97ce8e1",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.Gutter.cs:Box:3",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.Gutter.cs",
+      "line": 144,
+      "call": "Box(root,new(0,height*.48f,.405f),new(.69f,.07f,.025f),seam,.015f)",
+      "callSha256": "35383b4d09aa9f66f9ca60bb559b89b077988beb0c7e0779c0429ff0780abb69",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterExterior.cs:RoundedBox:1",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterExterior.cs",
+      "line": 16,
+      "call": "RoundedBox(this,new(x,-.7f,Depth/2f),new(4f,1.25f,Depth-1.4f),brick,.22f)",
+      "callSha256": "91b8d42cbd0a4c77f5ceb0bf8bf009d4ecec30432aae38a3c5d88708694d1086",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterExterior.cs:Box:1",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterExterior.cs",
+      "line": 17,
+      "call": "Box(this,new(x,-.11f,Depth/2f),new(3.85f,.1f,Depth-2.8f),mosaic,.035f)",
+      "callSha256": "fef47e31848190d3881e00494e3ac608e033ecea0e351b067e954dedcb568311",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterExterior.cs:RoundedBox:2",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterExterior.cs",
+      "line": 20,
+      "call": "RoundedBox(this,new(x,-.17f,bankZ),new(4.0f,1.2f,.58f),brick,.2f)",
+      "callSha256": "fe5ca798382ffe31154839e24c988f6ae0a36ef9ab39f7702e3f13b008f8bfa2",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterExterior.cs:RoundedBox:3",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterExterior.cs",
+      "line": 21,
+      "call": "RoundedBox(this,new(x,.43f,bankZ),new(4.08f,.18f,.62f),cream,.65f)",
+      "callSha256": "340a95d61e9908e371e12b464efe012d149680d33e332e20b4243dfc230329ef",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterExterior.cs:RoundedBox:4",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterExterior.cs",
+      "line": 27,
+      "call": "RoundedBox(this,new(endX,-.15f,z),new(.8f,1.6f,segment),brick,.18f)",
+      "callSha256": "574931dfd198aa036fbc5d38b529ddeb35a4a50f388c81c4a7d857383664e079",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterExterior.cs:RoundedBox:5",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterExterior.cs",
+      "line": 28,
+      "call": "RoundedBox(this,new(endX,.67f,z),new(.88f,.16f,segment+.08f),cream,.6f)",
+      "callSha256": "1d56aba4e4726d6cea31447b72cf1d9276bc645cec897b3a14d3bf7442651c9b",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterExterior.cs:RoundedBox:6",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterExterior.cs",
+      "line": 31,
+      "call": "RoundedBox(this,new(endX,.15f,gearZ-.65f),new(.95f,2.15f,1.2f),verdigris,.24f)",
+      "callSha256": "d79fea1e00545d2e4eb4a375341a1eb83822cebf5af4b1a78af74a02643104b6",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterExterior.cs:RoundedBox:7",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterExterior.cs",
+      "line": 32,
+      "call": "RoundedBox(this,new(endX,.23f,gearZ-2.6f),new(1.15f,1.35f,1.15f),brick,.22f)",
+      "callSha256": "036973e0a5690004f0794b114a79b623959c828482706138e8e6b2e5093d4fd6",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterExterior.cs:newSurfaceTool:1",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterExterior.cs",
+      "line": 38,
+      "call": "new SurfaceTool()",
+      "callSha256": "524d4daa3dd8ade1577b68b52e91ebbe9907def4954bab94da3aeb8c6bb1a4ae",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterExterior.cs:arch.Commit:1",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterExterior.cs",
+      "line": 60,
+      "call": "arch.Commit()",
+      "callSha256": "f4a8e1f40c370006c4808d7ebfd2b365bcbb1276efa4e9e0c325cf3a3ab67b28",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterExterior.cs:RoundedBox:8",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterExterior.cs",
+      "line": 62,
+      "call": "RoundedBox(culvert,new(side*(outer+inner)/2,spring/2,0),new(outer-inner,spring,depth*2),cream,.2f)",
+      "callSha256": "832346ed049787322a3deb599dd19e4dcd640289e5ba782a59987110e91cb984",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterExterior.cs:RoundedBox:9",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterExterior.cs",
+      "line": 70,
+      "call": "RoundedBox(culvert,new(0,-.15f,.35f),new(3.35f,.3f,2.35f),brick,.2f)",
+      "callSha256": "93f43364f001dbd5086f39adefe77663f45e568925d7c0c68691d2366800e836",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterExterior.cs:newSurfaceTool:2",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterExterior.cs",
+      "line": 76,
+      "call": "new SurfaceTool()",
+      "callSha256": "524d4daa3dd8ade1577b68b52e91ebbe9907def4954bab94da3aeb8c6bb1a4ae",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterExterior.cs:waterSurface.Commit:1",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterExterior.cs",
+      "line": 90,
+      "call": "waterSurface.Commit()",
+      "callSha256": "82849d216fa87c747a06b5d8790b0a222da73b133ac638dd23ca38eae2759161",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterExterior.cs:RoundedBox:10",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterExterior.cs",
+      "line": 92,
+      "call": "RoundedBox(spillway,new(.9f,-1.15f,0),new(2.3f,.3f,3.4f),brick,.2f)",
+      "callSha256": "66718043c06cf9a50f7b094ab36912c0b1b18ff9df25ac663a45c6403a5ec934",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterExterior.cs:Box:2",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterExterior.cs",
+      "line": 104,
+      "call": "Box(this,new(Width/2f,-3.2f,Depth/2f),new(150,.05f,150),_art.Color(new Color(\"254c47\"),.94f))",
+      "callSha256": "010ac3f2957865eb583ea8066f7153e34fc9a83f6bba86e5c292c1b7215882f8",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:newSurfaceTool:1",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
+      "line": 35,
+      "call": "new SurfaceTool()",
+      "callSha256": "524d4daa3dd8ade1577b68b52e91ebbe9907def4954bab94da3aeb8c6bb1a4ae",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:surface.Commit:1",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
+      "line": 49,
+      "call": "surface.Commit()",
+      "callSha256": "3a4b0e22bc74cdecd537891eb2f48df20b98f27fbf269b1803e1cc035b3194ec",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:newSurfaceTool:2",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
+      "line": 61,
+      "call": "new SurfaceTool()",
+      "callSha256": "524d4daa3dd8ade1577b68b52e91ebbe9907def4954bab94da3aeb8c6bb1a4ae",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:surface.Commit:2",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
+      "line": 115,
+      "call": "surface.Commit()",
+      "callSha256": "3a4b0e22bc74cdecd537891eb2f48df20b98f27fbf269b1803e1cc035b3194ec",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:Box:1",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
+      "line": 125,
+      "call": "Box(gear,new(cos*1.07f,sin*1.07f,0),new(.37f,.32f,.46f),brass,.07f)",
+      "callSha256": "c4b45e3c221a114b6f2f0fe84e8a1f9993bfe81809fabad553dff874e9d19953",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:RoundedBox:1",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
+      "line": 128,
+      "call": "RoundedBox(gear,Vector3.Zero,new(.43f,.43f,.57f),brass,.8f)",
+      "callSha256": "d08cd20ce343a0b0a4163085381db37b08930f4da1b22980d22eeaa7fa6583c5",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:Sphere:1",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
+      "line": 129,
+      "call": "Sphere(gear,new(0,0,.36f),new(.66f,.66f,.25f),verdigris)",
+      "callSha256": "82f5e15926caa2661196ac45e08126a061a1e439c1e06a243636a2d45264e120",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:Box:2",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
+      "line": 141,
+      "call": "Box(gate,new(0,.16f,Depth/2f),new(.55f,.32f,Depth-1.6f),verdigris,.11f)",
+      "callSha256": "04fddd8215d7908b1e0c5e8f79761e9535bb63e7a38607859d181d1f1b05a88a",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:Box:3",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
+      "line": 145,
+      "call": "Box(gate,new(0,1.39f,z),new(.44f,2.22f,.44f),verdigris,.15f)",
+      "callSha256": "aa3975aba9388d0c79e0e4fe7437b8e506fdc9e52e7bb40f286cff562119d170",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:Sphere:2",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
+      "line": 146,
+      "call": "Sphere(gate,new(0,2.61f,z),Vector3.One*.58f,brass)",
+      "callSha256": "b08b3fad0400b133ea8bce6f07d7218b854f8adaeb44558a5712751cb880faaf",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:Box:4",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
+      "line": 148,
+      "call": "Box(gate,new(0,2.25f,Depth/2f),new(.55f,.34f,Depth-1.6f),verdigris,.11f)",
+      "callSha256": "eb244885bdfff0f705b816fff5a0d19c8038189e88e52dd76aaf080e43abd3ce",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:newSurfaceTool:3",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
+      "line": 150,
+      "call": "new SurfaceTool()",
+      "callSha256": "524d4daa3dd8ade1577b68b52e91ebbe9907def4954bab94da3aeb8c6bb1a4ae",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:beam.Commit:1",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
+      "line": 176,
+      "call": "beam.Commit()",
+      "callSha256": "a1655c78048c735702937673d9e61dbb465f05eca89163393ca4747d756e412d",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:RoundedBox:2",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
+      "line": 181,
+      "call": "RoundedBox(machine,new(outboard,tower/2,z),new(1.41f,tower,1.67f),cream,.24f)",
+      "callSha256": "bbb7c09ac5b5ea0a66bf9098be1de2bee795924380914f26e235e4ec184c19a1",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:RoundedBox:3",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
+      "line": 182,
+      "call": "RoundedBox(machine,new(outboard,.2f,z),new(1.48f,.4f,1.84f),verdigris,.4f)",
+      "callSha256": "3e4739371f3ee48340a9bc843de43ca56a84cfbd1161ddbc81faceace95fc429",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:Sphere:3",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
+      "line": 183,
+      "call": "Sphere(machine,new(outboard,tower+.15f,z),new(1.42f,.59f,1.66f),brass)",
+      "callSha256": "1b9aaf8626b00cb60c6fe4a2bf448640a26f4922c8121174b4b8d2ab91d9847d",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:Box:5",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
+      "line": 188,
+      "call": "Box(machine,new(outerX,2.05f,gearZ-.31f),new(2.1f,.4f,.55f),verdigris,.11f)",
+      "callSha256": "d1ce8c438c9bdb074fae2e4c3a2cfbb35abde5f6789055547a86d6583426fc32",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:Box:6",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
+      "line": 189,
+      "call": "Box(machine,new(side*2f,2.05f,gearZ),new(4f,.38f,.38f),brass,.1f)",
+      "callSha256": "449cb2fd548129b7895be983c9e23e513d0c4cef22d4a8412128b37c7274d7db",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:RoundedBox:4",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
+      "line": 191,
+      "call": "RoundedBox(machine,new(outerX,2.63f,gearZ),new(.3f,1.2f,.3f),verdigris,.5f)",
+      "callSha256": "a19d246db513b94c00d0ef6ad039d1c1e4c1c3f367a9040c36fd9e11642bf3c2",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:Box:7",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
+      "line": 192,
+      "call": "Box(machine,new(outerX,3.19f,(gearZ+counterZ)/2),new(.3f,.3f,Math.Abs(counterZ-gearZ)+.3f),verdigris,.09f)",
+      "callSha256": "e999c63402f3ac53cfd464d31a6e459fca5afd8bb7422575d1caba6eba1d3fe3",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:Box:8",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
+      "line": 193,
+      "call": "Box(machine,new(outerX,2.5f,counterZ),new(.2f,1.4f,.2f),brass,.07f)",
+      "callSha256": "464598b3c6de8b6683c0565bfcbe915b634d3e4f475a78b2fb5d349aa5c8300a",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:RoundedBox:5",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
+      "line": 194,
+      "call": "RoundedBox(machine,new(outerX,1.48f,counterZ),new(.97f,1.28f,.84f),verdigris,.45f)",
+      "callSha256": "d0a7381bb7e2bbdda6b25238230c14f170406523ab808ffc0ec76f65f845d48e",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:Box:9",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
+      "line": 195,
+      "call": "Box(machine,new(outerX,1.5f,counterZ+.39f),new(.68f,.22f,.08f),brass,.025f)",
+      "callSha256": "637f027145618c5efb26e32f94269c4ff7929869adee12df5ed7d0b5791d36be",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:RoundedBox:6",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
+      "line": 200,
+      "call": "RoundedBox(machine,new(outerX,2.85f,counterZ),new(.5f,.65f,.45f),verdigris,.45f)",
+      "callSha256": "5c7b4d0c7c6ae95f4238339873526aad195014ebbaea532b2bdefb43e862e61c",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:Sphere:4",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
+      "line": 203,
+      "call": "Sphere(dial,Vector3.Zero,new(1.5f,1.5f,.25f),cream)",
+      "callSha256": "cccb065e10b3a31fdfd881965474bab76a788e8d766aebc49e051384803ab7a7",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:Sphere:5",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
+      "line": 205,
+      "call": "Sphere(dial,new(0,0,.14f),new(1.08f,1.08f,.09f),verdigris)",
+      "callSha256": "b8383f1fadcc6e02722e713438e248260f9868be0e1f1d84b3612133cabd0a28",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:RoundedBox:7",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
+      "line": 207,
+      "call": "RoundedBox(_gutterDialNeedle,new(.16f,0,0),new(.53f,.10f,.04f),brass,.6f)",
+      "callSha256": "91bf4c262be92130348617f0f3bb43708fa23c14d1b4b76569c624bd342c4253",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:Sphere:6",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
+      "line": 208,
+      "call": "Sphere(dial,new(0,0,.25f),Vector3.One*.13f,brass)",
+      "callSha256": "a7d3a4d264129cd97a24e8951d30359eddaa488c9eb1af766d7e036c8a9e38d1",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:newSurfaceTool:4",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
+      "line": 216,
+      "call": "new SurfaceTool()",
+      "callSha256": "524d4daa3dd8ade1577b68b52e91ebbe9907def4954bab94da3aeb8c6bb1a4ae",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:surface.Commit:3",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
+      "line": 234,
+      "call": "surface.Commit()",
+      "callSha256": "3a4b0e22bc74cdecd537891eb2f48df20b98f27fbf269b1803e1cc035b3194ec",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:RoundedBox:8",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
+      "line": 241,
+      "call": "RoundedBox(post,new(0,(top-.32f)/2,0),new(1.92f,top-.32f,1.84f),brick,.28f)",
+      "callSha256": "4bc4b3946bae6424a0c93b46588a1b3df423e75d579c2835e784df17b2b582fd",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:RoundedBox:9",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
+      "line": 242,
+      "call": "RoundedBox(post,new(0,.16f,0),new(1.99f,.32f,1.99f),algae,.35f)",
+      "callSha256": "4fbdc377da9354db8b52bb2b9da28a5336bb02431ba2eb27cdadca47acd85bca",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:RoundedBox:10",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
+      "line": 243,
+      "call": "RoundedBox(post,new(0,top-.2f,0),new(1.99f,.4f,1.99f),cream,.38f)",
+      "callSha256": "b7652491aa5fd03de8ff34676d637609154bf76596df8df454d7ea8ec2846556",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:RoundedBox:11",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
+      "line": 246,
+      "call": "RoundedBox(post,new(0,top*.62f,.80f),new(.54f,.56f,.15f),brick,.25f)",
+      "callSha256": "880f58091835a9466817a837424fcdd68cfc12bbf99f9309ad6e277dac50c81e",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:RoundedBox:12",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
+      "line": 255,
+      "call": "RoundedBox(post,new(0,.28f,0),new(.98f,.56f,.98f),brick,.35f)",
+      "callSha256": "25813ee7d3a0ae3f5bd8a99f6e2910dcb86638e9d707847b078da0cb93d17a44",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:RoundedBox:13",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
+      "line": 258,
+      "call": "RoundedBox(post,new(0,.62f+band*.29f,0),new(.25f,.3f,.25f),band%2==0?cream:brass,.75f)",
+      "callSha256": "6960ea0feb0a20376b2b9ee5868bfd0252ea81fb7adfbe3f98350a77a286936b",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:RoundedBox:14",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
+      "line": 259,
+      "call": "RoundedBox(post,new(0,top-.07f,0),new(.83f,.14f,.83f),cream,.5f)",
+      "callSha256": "5f0fb88bd4ab6bec6b58161ab26b6220b0842313961621ee342c465ab30a233d",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:Sphere:7",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
+      "line": 261,
+      "call": "Sphere(_gutterArrow,new(.06f,0,0),new(.92f,.48f,.25f),brass)",
+      "callSha256": "b5b8a790ab6e095812a0659749ca91ff9d70898d94f254c3ba2dcc79bba026f7",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:Sphere:8",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
+      "line": 265,
+      "call": "Sphere(_gutterArrow,new(.35f,.07f,face*.126f),Vector3.One*.085f,dark)",
+      "callSha256": "381e9adda3fb6cbbb52ac888d019b376fa9361bd6b6cdaee50fd98dcf3b1af76",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:RoundedBox:15",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
+      "line": 273,
+      "call": "RoundedBox(lamp,Vector3.Zero,new(.56f,.75f,.48f),verdigris,.4f)",
+      "callSha256": "361bb9a756798809c2e86623b96e90efafdd1ad16d8b619e282ff0b2b138e9bb",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:Box:10",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
+      "line": 274,
+      "call": "Box(lamp,new(0,.01f,.25f),new(.46f,.59f,.035f),Glow(new Color(\"ffc078\"),1.55f),.025f)",
+      "callSha256": "e4b06ad5362d69f6998cb82868f26431c1915201491a9162a0614629e118e6a0",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs:RoundedBox:16",
+      "file": "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs",
+      "line": 275,
+      "call": "RoundedBox(lamp,new(0,.43f,0),new(.69f,.14f,.61f),brass,.6f)",
+      "callSha256": "e30019e33ff7812f226c46c62f8a393d92aa04bc0d87bc22041e1babd5de9928",
+      "domain": "owned-generator-or-helper"
+    },
+    {
       "id": "scripts/arena/stages/lost_at_sea/TempleStageView.GlassBuoy.cs:newSurfaceTool:1",
       "file": "scripts/arena/stages/lost_at_sea/TempleStageView.GlassBuoy.cs",
       "line": 27,
@@ -5348,6 +5868,475 @@
       "line": 93,
       "call": "mesh.Commit()",
       "callSha256": "1ae16663916c4484aad2c46c317cafa7a78f1658b36840f8274d36dc07dbec0f",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs:Box:1",
+      "file": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs",
+      "line": 34,
+      "call": "Box(this,new(x+.5f+cell.RampDX*run,y+height/2-.018f,z+.5f),new(1f/6-.006f,height-.036f,.98f),oak)",
+      "callSha256": "59edea816b95a4c7932069ab69b84cab9a195661a71b28b16d8b380497d76588",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs:Box:2",
+      "file": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs",
+      "line": 35,
+      "call": "Box(this,new(x+.5f+cell.RampDX*run,y+height-.018f,z+.5f),new(1f/6-.006f,.036f,.98f),pale,.004f)",
+      "callSha256": "e0c624fe21287fdee48377090361da7bcb0cc700d114273c8ad1c7bbda5f1ead",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs:Box:3",
+      "file": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs",
+      "line": 43,
+      "call": "Box(this,new(x+.5f,(y-.14f-.38f)/2,z==0?.775f:z==18?18.225f:z+.5f),new(.998f,y-.14f+.38f,z is 0 or 18?.45f:.998f),dark)",
+      "callSha256": "d8fbb0dff00d68cb75040c5aacd8ee14243b46095c9e3703f9792b7219dd40f1",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs:Box:4",
+      "file": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs",
+      "line": 47,
+      "call": "Box(this,new(x+.5f,y+.20f,z+.5f),new(side?.22f:.99f,.40f,side?.99f:.22f),green,.025f)",
+      "callSha256": "f85c3694e4e072de7f9ae91339f110e59f60d6ca9820514013f135ef0cdb490d",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs:Box:5",
+      "file": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs",
+      "line": 48,
+      "call": "Box(this,new(x+.5f,y+.41f,z+.5f),new(side?.28f:.99f,.07f,side?.99f:.28f),gold,.018f)",
+      "callSha256": "1215f249c533948b71f6fadd75a2cf0fc6575c263544c7003211d1c5c44d05bb",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs:Sphere:1",
+      "file": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs",
+      "line": 49,
+      "call": "Sphere(this,new(x+.5f,y+.58f,z+.5f),Vector3.One*.13f,gold)",
+      "callSha256": "dcd0294a32c45f66b59307618db0b1a301119997f577600d12bc861665efafaf",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs:Box:6",
+      "file": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs",
+      "line": 74,
+      "call": "Box(post,new(dx,height/2,0),new(.31f,height,.66f),oak,.07f)",
+      "callSha256": "8fa0a7658d4b658108c37914a96a166d3138c37a255099d814a1858ae90ba447",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs:Box:7",
+      "file": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs",
+      "line": 75,
+      "call": "Box(post,new(0,height-.23f,0),new(.93f,.22f,.72f),oak,.07f)",
+      "callSha256": "85f04d2800d0ab8bcc5a80b5ed27f315ed454345622b92e7be319ec8fe80050e",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs:Box:8",
+      "file": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs",
+      "line": 77,
+      "call": "Box(post,new(0,.10f,0),new(.95f,.20f,.95f),pale,.025f)",
+      "callSha256": "380c6074ccd736d9ab080f7b466278a2ec3cddf464537f7485b00867a6006e91",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs:Box:9",
+      "file": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs",
+      "line": 80,
+      "call": "Box(post,new(0,band,0),new(.82f,.075f,.82f),iron,.014f)",
+      "callSha256": "d8b8e0172a746281cce7974e186ac59b3735d1f66b705b4a1c4a9ee86310b1a1",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs:PrimitiveTemplates.Get:1",
+      "file": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs",
+      "line": 98,
+      "call": "PrimitiveTemplates.Get(\"PlaneMesh\",(\"size\",new Vector2(160,160)),(\"subdivide_width\",180),(\"subdivide_depth\",180))",
+      "callSha256": "f4d9273801d9e800886b6d10ae66bbfaab6e0e96e5e51d5de5c96ff10ade6f24",
+      "domain": "PlaneMesh",
+      "capturedTemplates": [
+        "35e85e2d16a6126c2cafa650137787b18fbdd2bbfde8024fea777d778b17562c"
+      ]
+    },
+    {
+      "id": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs:PrimitiveTemplates.Get:2",
+      "file": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs",
+      "line": 100,
+      "call": "PrimitiveTemplates.Get(\"BoxMesh\",(\"size\",new Vector3(160,.05f,160)))",
+      "callSha256": "53fb7f4d4dfc8a5c3b956129772b2d397bcdac310b0124db1505fb3c238880f0",
+      "domain": "BoxMesh",
+      "portableGenerator": "PrimitiveTemplates.PortableBox",
+      "referenceTemplates": [
+        "01e96380d2572090ebcfe533c1cb81680d11ab249a4f443f4adba5952a58fedb",
+        "0292f5a49ab31ffcf67fae63d8cac0e347b144149654ab58466ba5af1a4ff3c8",
+        "03e11695fc2c7f9fd900628c4ce0219e0748e9463ff3d6e02849178856bdda83",
+        "05bb537317ca93a99f0819e12f4053bd58e1f59f7c3fccff8984994e6a7e5078",
+        "063e4bb9f0c26615ea863ad700e702055983d13da99c57e7f29392aa49f15f16",
+        "06405887bc9dd2b8d052a8338d7cca31b78eb82234d4751a27c7adff1e551160",
+        "073037753131ac7f1563caa17d654fa89893413cefbcfae05474799eebe8fb04",
+        "079248124cee922dbe3d9154b0a9f1bcb6a23a5293197d2eae857daa5d347c26",
+        "0ae2471e565aa200a697d03134c61bb3b0e7b0291bca815e9c8475241f39426b",
+        "0b036a45f2e59f2641ed1caf5ae6fea292a3bf4a14e280dd9133ddd3a7d2c0cf",
+        "0b57744240c733608c5e4c095215c07962ace8a98af35e6f7a4eb3228de0bf08",
+        "0c515b255bf13b42570b39f5aad56906191f0b2d2d6e156ea6352419c7a99b7b",
+        "0c79ef9a402c0f1ebc24d3a63305e1a94511709f2aabe87bd5a5d8163aa0a4d7",
+        "0cb35c2b65195fb8fb5f706b8b8440982b721835bac0979d2c38ebb14bfa3ce2",
+        "0fda0f2c9f2520ce68690f8fbcf45e2bea18b14ae16bec79d71d5df4cecfda92",
+        "0ffb4b62bac4a57b9d8af0afef3a9e2ef7cd9bff6ac42251b980a86e8be8904f",
+        "12e5a360a8fece139a724d5895c71891fb5eb71832366d9d7ea0bcea2b747124",
+        "130cc1da0f29a0bc1110dde6f471be551128964fe7b063f7b25d27f762b33495",
+        "13d9d546f095d950ca61333a2a4246a72d1e7da352e1458bb051eeb3ad27aeae",
+        "13fbad3bed07ceca94631cb48672a2fdfe77327e68a264422b8ee08d47103808",
+        "1ab13fa1f971ed8b141ed6adcd5a28600f8d16b9e6107d57bfb618f1955922d0",
+        "1b24fac37de0eebc197bd038c51e64e1e8aecda6e40d827c78f7f46788063be6",
+        "1b885317ca259fb800bb2fbd2ccbbc97771761b4fd8842601205d1e0c29db2f6",
+        "1eeeb662692af4658d902e5769c45dc530cf4fbdb561381878aedd73005313c6",
+        "21ce4c2daa7b7e7729c78ca32da998dd84c1e7972d871d1d888628f41aca27d6",
+        "224073d73114a0fee44a2bea0a464b1ed0b84939c5ee97e2043a6da039f62af9",
+        "2402881050b802be3d9e78cb7764ab2fa50a8a3fe5a7d3b526ef703221e509d9",
+        "24ef518aa1c980b87c2a974d17b31e5c14be46eef6ccf692d17dbcccc417a8ff",
+        "28a16e86da03422a5ac5c44deb8752e4a3c6595128dbaf6460777861a6b904b4",
+        "29b23645bd6c0e709ede3f4fa8cde6dd6b22653297091833bbd7415618280cd1",
+        "2b19dd40e82ce1b360e903f7fe38bfbeabd778aeb2f1c033407c48a4f0bc7f7b",
+        "2feaaa8de97b511b7041dd4249f12b677f257a4b418e51d175db2f5f7f74d171",
+        "3004f732507bff6f87580dd415ba2714a687c125795c6919319e691c426c469f",
+        "304cef5d79d5792059b7b4fe2f2ecefbd8f5e996b34d9b5842d6a5c8aa271b47",
+        "32bf91e78324164f77f1ec4f2ba7943952da14f44fc1d0f9a5f824f2e88e01a9",
+        "341ee0dc1ba9f7922e185c1a90f04fd68a54857f9a9794b93d437f8c7f9691bd",
+        "3488097b49b2f3bf4204fcf498cd412e7d6a81f554357c25e49d5a738daca641",
+        "35eaf6a8a2c23053f13a0e7bd82a43143abaa12c99ce064f795d8151bc6749ef",
+        "395c41d60e53727471260cfd95a1c9161ce9caeb9dac8932b2c6837490c5d8ff",
+        "3a6c4ba8b35b2ea34a75865a37140a1f244c8650fde2b07aef23b2bbc55730f1",
+        "3b629a9925a79594dc48d8d56d76a67c028e3959a53de77782435ddc4940381e",
+        "3d9aa345b0981f1e8228318a57eb7b72f0ad3241bc01d65f027d8dbdbac9cfdc",
+        "42406cd2f01dc6d5b30555156ce0e62090a0ea9d1c1071501d44120bb2a129cb",
+        "425015496dff3143632cfa16bf622bd707b31dae78eae4a7fcdc67a0303eba13",
+        "43b79ba1869eec8cc55a014ff28ef09622b28e02efd1294cfdde76070c706248",
+        "4722a0ed12b829b6ee4bb35bc5823adc559b93d3e06380c6e68ffedf16797629",
+        "47875c67ebda592834d6a0225f166bf0bf8c1c29007cbb872b223a93b5466c54",
+        "4fc1d79268b2b4fd50d4a47644990cb6ae08af68f8c46c5daa0eb2cba7d0a9ba",
+        "50c23a102b17dfe40db54b871e9ad3412d8ac7548e23e51d782d6158dfe87894",
+        "5221dd7d3b88e0f15662bc4ff710ad17f32fb2ca7b6204d48fa9b0a0aaf8c3dd",
+        "54086e8963ff280dd3dc3bfeb53616b06275f14ed1ef9e069efe80990df5d4c7",
+        "541765f3ae4db5d3e92c1079efd75be7d82d68a97f62169206471ae0b51f5fdc",
+        "550ecc9bbcc4d5f4ae4302fab79e4797133ce86ea77b3198c23808e8737c0508",
+        "55736dba5941098424b19edb2321a4e70b4edbbf85ab416a8a6b42ed31007fa0",
+        "55eb188c5cf9675f0c1ff9bb0b05306ab49a0dc56c6d843b59db134552c2b228",
+        "5708c1ccad919a180ddff4f7bbaca8bf9d17ce5adb5f39555841766fa4c3f8bd",
+        "575f4966d4d07c872be28d2ebd950340b5a6a2c092b5d5c30b22cb9317d3845c",
+        "5ab06c8c666693d22e1fd146bf5287ca64360e506b324b0dc7f558f0212293db",
+        "5d0c30b197e8c438adb57380f5462d9d4793310180d7c724812debf53fdb4813",
+        "5d4c52df5e151f8622511781cdebbd9026ddeebb7e74a829497a2fcf5d4c8d3c",
+        "5f1e4ff8eb864332c0a688c5c87899835a567123b40630addc454ec9d292a26b",
+        "610c8be5755e2357b89976e546a96620f9e33f7798659ff99909e29fef7e6c01",
+        "62aede85ad6a2a7466611593f13bc5b313bc0cc905ed5bb7a6549b23dc94fdfa",
+        "632cbf191addd60228ca7e6fdff2b2eb0eb76c67f0b2383f8e9b8e9a1f498550",
+        "644ed7b8f102bcdfe1db84057b394147b9123d138adf5bbc0bd59cac3d6d414c",
+        "654859395bc23f3ab3f31feda2ab236143fdffca608e9df417a4cdbb8c7e45ac",
+        "66ebbb3aec76778604ba920846d4a746451096a3df55a96952da2aca57e82fb2",
+        "6706b6bd202c5da3835f55b42b5dbbc5e556d2e94eb3e2b8e4d6aeb994d190c7",
+        "67f8d128fa6c060b48d7d128c8656c74c66ec723cc8a5bb3215ce74f879ddc47",
+        "6848ffb9b0f8b2ab80200744cf067618192d00e93c8f866e32e1c1aea9e380bb",
+        "69ff96f75392e60b7aa12eca79fbf24edabe3a2f8059c7da0cdc088b0026d24c",
+        "710d4ebe3bf09e5242a5bfe79646e5af99f6de5246201ab95ef0e0f57955d70d",
+        "71ff1eebafcfd65b963685d5774ec21db90d65c8602a9865eb9d6532c26baa25",
+        "751e9945413bbb6f49fdb7b412be4b42f8180739a5350318cb2a5ae00a9f5619",
+        "759b1122bf8268ea1427b8d2f48529d027be72d70837a9b01937f460eea83c39",
+        "75f3678d84fea68c9c84e3fa1574f26f54627340cabe3d3febdd0fa8ff9725b4",
+        "76b7cee643b9aca5e2f53500bf57812aeb818a7da07a37fb4411fb0131214c82",
+        "7854c4ad9bffdcf3da5e90e2f7bda6dff1a3d6c0fc453e7f5c564ea14096a029",
+        "78bc91fc8f0060db3d9805e8c42f6984883e70cbbe0fd336af611f22bbb8c19d",
+        "7934a7a11a2c347ccd72830edf4d440cdc3208c7dbd8e985f4bcc5c7e097cca1",
+        "79cf5730083f1b089b6ec8a2ae18b0cf53933ca17e0c40d60c91869d036f4c4e",
+        "7b4569005aaecccfbdbd1008bb4891d9b8b4ac8f4702c91bcf84de8c31126312",
+        "7bccb52d21162267d8a093a05baf293e3fc2f8a92b4f8487c46c7b665e5d51d6",
+        "7c43718014ce8c9e3e4b6d254d3ee5368d091fda7d131e4347b9413e1ae853e8",
+        "7dab06c8719a729bc45ec58b03b0aea699ae0e45fcf981e4bafa65248115d0d6",
+        "7fb87eba810863501313be9f35cf400562b3f9b0cf299a4202265d70f69f2b3d",
+        "80b91df633ca70e2e1f0633c87f1ded1c3515c3dcda7ff5c1dcd80f753d75761",
+        "81a8aca68fcdadf254e072cfd510ed5a0552284a40bff931c984f2181aa96899",
+        "8300528be4f579434b093db8d0d98d14a590a997fc4012ac78c7dc1d0e6c9816",
+        "84146f851046ccf486ca223477cd877e2e6d4bb84b227bd801f77d9c9d036fbb",
+        "84f01dcd6ac97fcf94f437275b51a7cdfabc88376a98907ba76d94421662abbc",
+        "85f5d3a11e93d58b7d2e26c214423143e3a70c60a3cec5f4d8a650703ebbb03f",
+        "868581217a8b83c4642fd6944e6734bffc2b4257a03802f43cf8fc2c45f64980",
+        "8b39cf3082bb90e50f6715df67a5c3daa45c767a590968ebab26cbdcdccefabc",
+        "8c796fb971935194cc48bf1572dd89d877f72eab721c46bba7a390f65a483708",
+        "8cd6e2fdeabcffa2dc8c6ca40baae2b3a1b76a4bc659f50b2a3dd3b0bb9f9c95",
+        "8d62ef6037fbc4ed7b7e666821dfebc029597344003e8233e3027c87dcf2e88c",
+        "8e75bd37efede2137afebb60023e125d20dc426de380ddd149d285c99f8797d3",
+        "8f6fab947839d36beeec150048067a1a8f84e0fd8ee9338bc60747d7ae1e22b4",
+        "905ea070d45168943b65ea15ba50de5b4e8b4282063e5272fea82d80bb4af95a",
+        "911a28a60bc429f72a711d2b4441bdae5b3180bf2a40d4408f31d4918542b84c",
+        "9213428164c1ef6ef32e9095611d7d7840d3a59437efadca11bb54bbdedb7aa9",
+        "92243fa3752dcb403330ce861bb0b9d7cd67f913a1bbe40c2acb63d57e3e6828",
+        "93487d0ea0433641e1b45195cad304e4828d15f96ebc94817fb7ce2bbff9d0fb",
+        "948684bbb661a65a5de5a04bfbfad930c9995a84d809a2547987c1393259eee0",
+        "9736864529128754ee70d7da9f856a25ea02b985bed290ca85645e370f193fd2",
+        "9757dbe9ac6f898246ee41f43297e8c5e2ee4f550902a1b3abb2f92eb27b2ddc",
+        "99f9da0d7e210cabc82037e5945e78ff33fd360478a1e9099dcc5c447ac69490",
+        "9bb44a29d3b2859d3d9b140d715a95ca334edc8bab7e09350af59fb62580ea73",
+        "9bfc5c99b3739a21d23ec9e870715ed224e62e9a732cc8ebbfdd7bb8fbdc618a",
+        "9c5b947c546257b1969f38f9e39887052c544b410544a638a1f084ae6f4e073b",
+        "9d257fd019d744a6685bdb6cec7f28d6d2c2aba6217e6e29c47816b825ab09f3",
+        "9ddeedb5a3b35a682e1ed42c6938581eaedc9a55c5d53ed3aa5ea0249a303006",
+        "a19509e4f71c8803cca4bb4926ebe0f856ad2230c0f27c57a4a5932c2f896f20",
+        "a4b1df8f1705a6724cdcf706aa67df99440c220f62cff630593042917d77d44b",
+        "a56f5a5a0947454738935e6e6cf71953b65a58d4745d008d1e2df79cb6505c1d",
+        "a5d2da4fdcf5987a352f78eaf6bb61b00ff4bcbddb7bdd38a5725927ff2ffeeb",
+        "a6cfbbecb827b8e5d5a1dbe6e994417de2d6a0d6b1dede89ae63efa8b2dadbd9",
+        "a89a6819c1c81f0ac169e4ee96e146c81313b053513f93f2faf1340d923ffd45",
+        "a9550ce3daed6dc22967e3c086bbada8f2b6962f3f80b93f509a4ade8098dbfb",
+        "aaa22f0d7162fbf4b40e3f9b86c08e4842cd93322ab5019643af0524e60108ed",
+        "ab0b8b27bc62f48b570cdd693630cc6fc290fb48790ddc5f925a49e02bdf56aa",
+        "ad0993aafa707e33d502d176aee005ce20cbc93ed3c914f74da9e5de5730d21f",
+        "b025085054c20f9ba80168b1c7a171739942f91e9714b15e85305f60e90e177a",
+        "b103ffb34960ca2e747edc4dca7b2e5b678cf1edb59087477b1fd49f8725c78f",
+        "b1b1a74d2c77fb18a4b264ca39d09790f115a153dadd23d482d47bc57429374d",
+        "b3732a4a7c5954e80f3a09698bad384eaf463c8f79119294471a5bef8e381bc0",
+        "b5ab9894d14909ea4d4ee31b4c3f58a41b7d6fa2d3e658ba2d892036cdbf382c",
+        "b67a6327ea26e507c22812d16f58dac1e3a324a159b5c49fa68818e8240d4595",
+        "bbdc941ce3fb73a7c8bf66686b585e1d785a7141e3bdd76acc6d2adb822e240a",
+        "bbeebc28b176a00c924fd66d92dd7f97210aa7c34d735eee0a3cac81ed0caec8",
+        "bcf20cecdb2af3f0b3bce80a6c09d8469d5d90c23524a238e0df333ad1282f4d",
+        "be97ea614428480346067d2aef6005413ccc7c330e6587a87b54cf0e30df7575",
+        "bf59b43db8a77804c7dc159842a4c0bd5068f87059a3ced929c820f23c151992",
+        "c2356e37af8ac619f693e03596501632f123269b2fd5c243cb7ab521d18eea50",
+        "c2a578a554cb9cf46cb2b1de804039e545b4202222eb1cd718b4aa8b1d5dfe0c",
+        "c2d8698529271c1f51f865541aee0b71d0d1277e52e972269ecfbe5681058b56",
+        "c6bcb823fb1444526c3006303cdc79c810f49e0e1ab4161917a92924e39abcd3",
+        "c93cea274a219bc07a93fc7c87bbbdcd9bcb9a3f69e5236ff3574cd0de90e51c",
+        "cb0d81af3e114edaf563fa72a61020d51fc5576fa95029bfa02b97848b70f509",
+        "cc753cc04d27194b70d477d750ad21422d917c34bbd16b52a6fd786d07dc93ea",
+        "cd2fbfb224e8a04b8ffa787e0f11f8e97a44912b93d75a7d5d8e9abde75a2c54",
+        "cd4574273d5612863e3b1347e6a864dcd37d65f792ad6a7e881bcb4534e09b25",
+        "d076fbb3ade929145a549ac38fc4b748d502be7e1bf56232567fbcdffd6b6d75",
+        "d0876638067c9f1d0fae26ce4fd997443bccbf2607ebea56f73a695f55dfdcca",
+        "d0ca94ba059079992bf76fb5c9a937a178ba57e84fa60e3635fdb8e93cc8cce8",
+        "d129bfb6adb085e468a9ace86e50a9f91f12d99ce25d33bee7eb90fdc7912bc5",
+        "d1e4743d127e304e15fb3e0569a88051faf6e21074ed191d21572d08ebf416ca",
+        "d59ee23c7c894addb944df5e9a7567085aceb896ecacb043195c666c642fdd0f",
+        "d6aad0681d71e193d0781b7494a47aeff5c166b47ddfcfd21fa7ee65ea105127",
+        "da4d69e14e90f0e9434e83272c27d4307d026fd327417da10a217b3a6cb6b11f",
+        "db69b1bfb67a11756ab79b9dcf2b337cb9b817468b3873182a3831de69b2aa81",
+        "db7344c0d858610c081732f7982e18818b95dde37b32c653a23041d2aeba3e2b",
+        "db813bc08e8e4d1c80e60ebd89ac95ef6b520c5a82a138de0f9717be9ef22d2d",
+        "dbb06458b5b751f8d8bd0bcf5f9cfb66a101ff648f3fbcf94cda05d8018bbbad",
+        "dbf3d4465321a3712185d7dc6fa73ffdee0c6a096fb2a4f4ae3ded1c1804fd14",
+        "dc5a0b2620875e339e54de6ea8592c568b2e3b760cdf24e5811325b683967dad",
+        "dd434e35bb0e70a36057eea481a8067edc81cdcab002b7ecfe9bef011f9f6f95",
+        "dd64fd3fc7e00713350b0cdefe0cf3433398f4c3860a7e44c2fe531fcd40388a",
+        "dd964a88ad6c1d05aef8dfd1682e379f3f0946a06251f09801d0c189b518a3f9",
+        "de09075d4471edd68299c6160394ac73c6ed6851190de07a289bd15a4d1a1ff7",
+        "de136ff6c682ffbb934d95f54f429bdf1eb93fa8fe5c367c8c374d89ba181191",
+        "e43d67ed6b27179d2283228b74dbeeb61627780e24640ed177a6f43f2f7c53cb",
+        "eb0542f5be64054c5fd5ef77727844965d4d0df524bb13a558c121c7865c64f6",
+        "eb729669040dc2ae483ef86217d0a4059a98324e06d03ce3f2be0f18f5f22e96",
+        "ecd9cd9b7e6861493ee6cc0ce02c9848444c1c160aea19629b81d328c3003d83",
+        "ee8c43ece6955bbcf5a1e91210a581e0a20352da5919ee50d187f14ba95e7769",
+        "f04916a2d063e959a688ca38dfedc2365bfb75266838b8da36a11f6ffbe19e4a",
+        "f0e5d4d35fa05afee412b4bf7f6d2f4820adaec7857364157b98ce9294ec32c9",
+        "f1019161695ef8dd99861ebef97a9560b405301fd71c44f2f051a7b0e1079953",
+        "f176f735a4ad0757fa29893fafd7bd5d1e203d026d642f9589a702cbba6f6dd7",
+        "f1a4d01b2b799da70026a7e1df095089d47641e08264c5d191a20abc06732f52",
+        "f3ec2c81d4185f14f64f3e214e6585d92c2068b88d235368a374130195adae5d",
+        "f4a5b2b30c479999bd3d83d305b66ca530851aa72b72b237f34869b45c6ddbd6",
+        "f4e4be8021c86577bcf7d695feb15c366cdd286b4e471a5f6321fc9fc2669bcc",
+        "f7e34ce0e7eff5567389907df3573cb753853b3d47dcb399e5df887d40229303",
+        "fb159ad60c6dbe4e79926401de2695096164fadf5c4260f878b73a0f17d8f7c6",
+        "fbe58bb75ffb76e9280309d997869ef89b4e4e957168a765249506e399053e07",
+        "fdd7aeebefae78ed7b37caf0140518ecda976469f8fa0f66ae54b523d4a0409e",
+        "ff03851f0f9278182c4a685422a4c1bb1f1ca0a72e621e9fe16acd0f0aea0be8"
+      ]
+    },
+    {
+      "id": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs:Box:10",
+      "file": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs",
+      "line": 124,
+      "call": "Box(this,new(x+run/2f,cell.Tier*HeightScale-.07f,z==0?.70f:z==18?18.30f:z+.5f),new(run-.015f,.14f,z is 0 or 18?.60f:.985f),\n                (x*7+z*13)%4==0?pale:oak,.014f)",
+      "callSha256": "bab89d0e0015089efdd69e631aafd2bec358650dedfe5e73d6f6caa5dab65f5f",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs:PrimitiveTemplates.Get:3",
+      "file": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs",
+      "line": 132,
+      "call": "PrimitiveTemplates.Get(\"SphereMesh\",(\"radius\",.5f),(\"height\",1),(\"radial_segments\",10),(\"rings\",5))",
+      "callSha256": "168fa98cc40a3c0471b3fee0d7cea93ac3aa5b1029c4115d290b2e8f09269e4a",
+      "domain": "SphereMesh",
+      "capturedTemplates": [
+        "10cf70c8929b124b5da71da2f570640b1d97c47968628b13d560314fe45d08b5"
+      ]
+    },
+    {
+      "id": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs:Box:11",
+      "file": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs",
+      "line": 173,
+      "call": "Box(root,new(.11f,height+.031f,.04f),new(.10f,.018f,.10f),hoops,.015f)",
+      "callSha256": "22063d121710a3bf8f0b446fb489e1829ed2fd98c7d994ce7d1bc2480c5997d8",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs:newSurfaceTool:1",
+      "file": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs",
+      "line": 191,
+      "call": "new SurfaceTool()",
+      "callSha256": "524d4daa3dd8ade1577b68b52e91ebbe9907def4954bab94da3aeb8c6bb1a4ae",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs:surface.Commit:1",
+      "file": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs",
+      "line": 215,
+      "call": "surface.Commit()",
+      "callSha256": "3a4b0e22bc74cdecd537891eb2f48df20b98f27fbf269b1803e1cc035b3194ec",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/sea_sick/TempleStageView.ShipDetails.cs:Box:1",
+      "file": "scripts/arena/stages/sea_sick/TempleStageView.ShipDetails.cs",
+      "line": 25,
+      "call": "Box(this,new(-1.72f,-1.5f,9.5f),new(.42f,2.9f,1.9f),navy,.2f)",
+      "callSha256": "8daf8b83499cf0cfa927c8970fde5ee8e4381c58635affad7ff8dd8d17a216fb",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/sea_sick/TempleStageView.ShipDetails.cs:newSurfaceTool:1",
+      "file": "scripts/arena/stages/sea_sick/TempleStageView.ShipDetails.cs",
+      "line": 109,
+      "call": "new SurfaceTool()",
+      "callSha256": "524d4daa3dd8ade1577b68b52e91ebbe9907def4954bab94da3aeb8c6bb1a4ae",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/sea_sick/TempleStageView.ShipDetails.cs:surface.Commit:1",
+      "file": "scripts/arena/stages/sea_sick/TempleStageView.ShipDetails.cs",
+      "line": 135,
+      "call": "surface.Commit()",
+      "callSha256": "3a4b0e22bc74cdecd537891eb2f48df20b98f27fbf269b1803e1cc035b3194ec",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/sea_sick/TempleStageView.ShipDetails.cs:newSurfaceTool:2",
+      "file": "scripts/arena/stages/sea_sick/TempleStageView.ShipDetails.cs",
+      "line": 144,
+      "call": "new SurfaceTool()",
+      "callSha256": "524d4daa3dd8ade1577b68b52e91ebbe9907def4954bab94da3aeb8c6bb1a4ae",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/sea_sick/TempleStageView.ShipDetails.cs:surface.Commit:2",
+      "file": "scripts/arena/stages/sea_sick/TempleStageView.ShipDetails.cs",
+      "line": 178,
+      "call": "surface.Commit()",
+      "callSha256": "3a4b0e22bc74cdecd537891eb2f48df20b98f27fbf269b1803e1cc035b3194ec",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/sea_sick/TempleStageView.ShipDetails.cs:Box:2",
+      "file": "scripts/arena/stages/sea_sick/TempleStageView.ShipDetails.cs",
+      "line": 196,
+      "call": "Box(this,(a+b)/2,new((b-a).Length()+.025f,height,width),paint,.035f)",
+      "callSha256": "a553402f26b280dc43029a482b78f996264a5563540c7c0f5c7adf5e967f59ce",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/sea_sick/TempleStageView.ShipDetails.cs:newSurfaceTool:3",
+      "file": "scripts/arena/stages/sea_sick/TempleStageView.ShipDetails.cs",
+      "line": 203,
+      "call": "new SurfaceTool()",
+      "callSha256": "524d4daa3dd8ade1577b68b52e91ebbe9907def4954bab94da3aeb8c6bb1a4ae",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/sea_sick/TempleStageView.ShipDetails.cs:surface.Commit:3",
+      "file": "scripts/arena/stages/sea_sick/TempleStageView.ShipDetails.cs",
+      "line": 225,
+      "call": "surface.Commit()",
+      "callSha256": "3a4b0e22bc74cdecd537891eb2f48df20b98f27fbf269b1803e1cc035b3194ec",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/sea_sick/TempleStageView.ShipDetails.cs:newSurfaceTool:4",
+      "file": "scripts/arena/stages/sea_sick/TempleStageView.ShipDetails.cs",
+      "line": 237,
+      "call": "new SurfaceTool()",
+      "callSha256": "524d4daa3dd8ade1577b68b52e91ebbe9907def4954bab94da3aeb8c6bb1a4ae",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/sea_sick/TempleStageView.ShipDetails.cs:surface.Commit:4",
+      "file": "scripts/arena/stages/sea_sick/TempleStageView.ShipDetails.cs",
+      "line": 257,
+      "call": "surface.Commit()",
+      "callSha256": "3a4b0e22bc74cdecd537891eb2f48df20b98f27fbf269b1803e1cc035b3194ec",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/sea_sick/TempleStageView.ShipFinish.cs:Box:1",
+      "file": "scripts/arena/stages/sea_sick/TempleStageView.ShipFinish.cs",
+      "line": 59,
+      "call": "Box(root,new(0,0,-.025f),new(width-rim*2,height-rim*2,.04f),panel,.025f)",
+      "callSha256": "ed76ca4311c4a21b2e6aa14cd93e6d9fc73ed62d29fcbf2cdb0f3d0be61804b4",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/sea_sick/TempleStageView.ShipFinish.cs:Box:2",
+      "file": "scripts/arena/stages/sea_sick/TempleStageView.ShipFinish.cs",
+      "line": 62,
+      "call": "Box(root,new(0,sign*(height-rim)/2,.025f),new(width,rim,.13f),frame,.025f)",
+      "callSha256": "6293c278afa89913d639dabcde937f46f8564856c8d385f0698db1ad5212f1f9",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/sea_sick/TempleStageView.ShipFinish.cs:Box:3",
+      "file": "scripts/arena/stages/sea_sick/TempleStageView.ShipFinish.cs",
+      "line": 63,
+      "call": "Box(root,new(sign*(width-rim)/2,0,.025f),new(rim,height-rim*2,.13f),frame,.025f)",
+      "callSha256": "e1fc6e59d259c6b26ec15d50030e463e5fb81d91e342df770d88eb13e347489a",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/sea_sick/TempleStageView.ShipFinish.cs:Box:4",
+      "file": "scripts/arena/stages/sea_sick/TempleStageView.ShipFinish.cs",
+      "line": 73,
+      "call": "Box(hinge,new(0,-.47f,0),new(.48f,.63f,.48f),_shipLanternGlow,.065f)",
+      "callSha256": "cd1ba860da83cfd3446c0e7b21882e4b57cdb14896920b1f897a6f1d597f550b",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/sea_sick/TempleStageView.ShipFinish.cs:Box:5",
+      "file": "scripts/arena/stages/sea_sick/TempleStageView.ShipFinish.cs",
+      "line": 75,
+      "call": "Box(hinge,new(x,-.47f,z),new(.10f,.75f,.10f),brass,.025f)",
+      "callSha256": "c30d572875cd875253d5a680643d79d9016f1380ba3bf5439ada7aad433d71a0",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/sea_sick/TempleStageView.ShipFinish.cs:Box:6",
+      "file": "scripts/arena/stages/sea_sick/TempleStageView.ShipFinish.cs",
+      "line": 76,
+      "call": "Box(hinge,new(0,-.87f,0),new(.68f,.13f,.68f),brass,.04f)",
+      "callSha256": "86decd312507edeead2ecb92f60f1ca10335597657147ee4b8eea21e7128af7a",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/sea_sick/TempleStageView.ShipFinish.cs:newSurfaceTool:1",
+      "file": "scripts/arena/stages/sea_sick/TempleStageView.ShipFinish.cs",
+      "line": 99,
+      "call": "new SurfaceTool()",
+      "callSha256": "524d4daa3dd8ade1577b68b52e91ebbe9907def4954bab94da3aeb8c6bb1a4ae",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/sea_sick/TempleStageView.ShipFinish.cs:surface.Commit:1",
+      "file": "scripts/arena/stages/sea_sick/TempleStageView.ShipFinish.cs",
+      "line": 113,
+      "call": "surface.Commit()",
+      "callSha256": "3a4b0e22bc74cdecd537891eb2f48df20b98f27fbf269b1803e1cc035b3194ec",
       "domain": "owned-generator-or-helper"
     },
     {
@@ -6080,7 +7069,7 @@
     {
       "id": "scripts/ui/menu/ArcadeBackdrop.cs:PrimitiveTemplates.With:1",
       "file": "scripts/ui/menu/ArcadeBackdrop.cs",
-      "line": 233,
+      "line": 234,
       "call": "PrimitiveTemplates.With(water.Mesh,\"size\",new Vector2(layout.Width+.8f,layout.Height+.8f))",
       "callSha256": "3d4cf840c3f5e3748f701efd2ac617caa4c58602a0fda11aa05936243c8e59d2",
       "domain": "owned-generator-or-helper"
@@ -6088,7 +7077,7 @@
     {
       "id": "scripts/ui/menu/ArcadeBackdrop.cs:PrimitiveTemplates.With:2",
       "file": "scripts/ui/menu/ArcadeBackdrop.cs",
-      "line": 237,
+      "line": 238,
       "call": "PrimitiveTemplates.With(exterior.Mesh,\"size\",new Vector3(layout.Width+.8f,PrimitiveTemplates.Parameter(exterior.Mesh,\"size\").AsVector3().Y,layout.Height+.8f))",
       "callSha256": "fa6cdd78883d334a085d95daa8d6e6bfeaba395ba954376a3d23fb6e29432d2d",
       "domain": "owned-generator-or-helper"
@@ -6096,7 +7085,7 @@
     {
       "id": "scripts/ui/menu/ArcadeBackdrop.cs:Box:9",
       "file": "scripts/ui/menu/ArcadeBackdrop.cs",
-      "line": 262,
+      "line": 264,
       "call": "Box(Node parent,Vector3 position,Vector3 size,Material material)",
       "callSha256": "5599077d2bb9f6d4e2d02f9644538f84d91e0a6cfbbbf75e7000ea726f153611",
       "domain": "owned-generator-or-helper"
@@ -6104,7 +7093,7 @@
     {
       "id": "scripts/ui/menu/ArcadeBackdrop.cs:PrimitiveTemplates.Get:3",
       "file": "scripts/ui/menu/ArcadeBackdrop.cs",
-      "line": 263,
+      "line": 265,
       "call": "PrimitiveTemplates.Get(\"BoxMesh\",(\"size\",size))",
       "callSha256": "03ead86cab08ecf8e15d67ed4e38eaa0f66940d9af5a811f6932e3669fc8fcbd",
       "domain": "BoxMesh",
@@ -6295,7 +7284,7 @@
     {
       "id": "scripts/ui/menu/ArcadeBackdrop.cs:ChamferBox:8",
       "file": "scripts/ui/menu/ArcadeBackdrop.cs",
-      "line": 264,
+      "line": 266,
       "call": "ChamferBox(Node parent,Vector3 position,Vector3 size,Material material,float bevel=.08f)",
       "callSha256": "00c885caa690a2799ca33da832df86ae4b38b7a838e8dbd53f2ef05071245a56",
       "domain": "owned-generator-or-helper"
@@ -6303,7 +7292,7 @@
     {
       "id": "scripts/ui/menu/ArcadeBackdrop.cs:newSurfaceTool:1",
       "file": "scripts/ui/menu/ArcadeBackdrop.cs",
-      "line": 266,
+      "line": 268,
       "call": "new SurfaceTool()",
       "callSha256": "524d4daa3dd8ade1577b68b52e91ebbe9907def4954bab94da3aeb8c6bb1a4ae",
       "domain": "owned-generator-or-helper"
@@ -6311,7 +7300,7 @@
     {
       "id": "scripts/ui/menu/ArcadeBackdrop.cs:builder.Commit:1",
       "file": "scripts/ui/menu/ArcadeBackdrop.cs",
-      "line": 286,
+      "line": 288,
       "call": "builder.Commit()",
       "callSha256": "0fa9eba8369cdf50d554b3a90c44727dd10e15710247b9152b3f1d6e88fde9e6",
       "domain": "owned-generator-or-helper"
@@ -6319,7 +7308,7 @@
     {
       "id": "scripts/ui/menu/ArcadeBackdrop.cs:Sphere:6",
       "file": "scripts/ui/menu/ArcadeBackdrop.cs",
-      "line": 288,
+      "line": 290,
       "call": "Sphere(Node parent,Vector3 position,Vector3 scale,Material material)",
       "callSha256": "6c6f1a79b819d9830c0383124de59fdbd15a7c793bf3d9770e21f61db86d56d0",
       "domain": "owned-generator-or-helper"
@@ -6327,7 +7316,7 @@
     {
       "id": "scripts/ui/menu/ArcadeBackdrop.cs:PrimitiveTemplates.Get:4",
       "file": "scripts/ui/menu/ArcadeBackdrop.cs",
-      "line": 289,
+      "line": 291,
       "call": "PrimitiveTemplates.Get(\"SphereMesh\",(\"radius\",.5f),(\"height\",1),(\"radial_segments\",32),(\"rings\",16))",
       "callSha256": "57225ceddb5e8b543ed40890b4b1af5b932946dd2dbe272ca74e51478f072aa6",
       "domain": "SphereMesh",
@@ -6338,7 +7327,7 @@
     {
       "id": "scripts/ui/menu/ArcadeBackdrop.cs:Cylinder:9",
       "file": "scripts/ui/menu/ArcadeBackdrop.cs",
-      "line": 290,
+      "line": 292,
       "call": "Cylinder(Node parent,Vector3 position,float radius,float height,Material material)",
       "callSha256": "feb343d801dddcd663eaae457c7a72af22886c96f759adc99111a44baaf953af",
       "domain": "owned-generator-or-helper"
@@ -6346,7 +7335,7 @@
     {
       "id": "scripts/ui/menu/ArcadeBackdrop.cs:PrimitiveTemplates.Get:5",
       "file": "scripts/ui/menu/ArcadeBackdrop.cs",
-      "line": 291,
+      "line": 293,
       "call": "PrimitiveTemplates.Get(\"CylinderMesh\",(\"top_radius\",radius),(\"bottom_radius\",radius),(\"height\",height),(\"radial_segments\",48))",
       "callSha256": "fba7dc5591f4d63f8bf28c54421d6a6ce513828b47c11de441fb801890755fbe",
       "domain": "CylinderMesh",
@@ -10369,11 +11358,11 @@
     ]
   },
   "domainSources": {
-    "scripts/arena/ArenaView.Closure.cs": "9c34793a86e4f309fe888dbc363f4dda1baed96eb6f504cd45e210a27812850d",
+    "scripts/arena/ArenaView.Closure.cs": "e2314dd2d6d374ca93cd2b86e529bdec826050b495655fc0bc0b2efbc2bce267",
     "scripts/arena/ArenaView.Presentation.cs": "30de0cedd41365e06dfb09cc0f2c22aabd3474351f4c38eb2cda8c55ae6f5323",
     "scripts/arena/ArenaView.Tutorial.cs": "825cf98a8166220f350d47b450199b3a63bce27a2086429accec91489878f604",
     "scripts/arena/effects/BlizzardWeather.cs": "f6f1e42af597f937fdacc1deb0682d97302c300deb29a5ebcce59768d8074951",
-    "scripts/arena/effects/BombThrowPreview.cs": "db8fd24ec40f8aa2c395e1eb543ea9627b98982111c9051b8d9511f9f3b7d46d",
+    "scripts/arena/effects/BombThrowPreview.cs": "b25ab6e401f7c89b586488881937da99b7036624bf504b19f65da83631983d6b",
     "scripts/arena/effects/BurnoutEffect.cs": "63cd45a769dfb368ba914dd6576f4e5fd432223489390355cf29e5a128c1b6d4",
     "scripts/arena/effects/CrushEffect.cs": "66dde113dd78783597b6d39750ca9a78f3562be929dc3fb1f3ec21675a013d49",
     "scripts/arena/effects/EffectWarmup.cs": "5aa3866bd0ed9b8b90c0765cb86c04561919d88e4ba9975c841c6403a8194656",
@@ -10397,40 +11386,48 @@
     "scripts/arena/stages/TempleStageView.Orchard.cs": "4bca87d1f0f83651fb670d401e5f1c2b3b15da232a7bbba0fe8064a2167d960c",
     "scripts/arena/stages/TempleStageView.RockGarden.cs": "5c26497013f5ec8ae208e61d9ee4f0a4a07b42a3b6f3b79fe7c4b20d22ab90f2",
     "scripts/arena/stages/TempleStageView.RockGardenExterior.cs": "c61d20bb2ac02bb45239914524ca4356b65f0f33a0112f1e38c99de4d57bdbd8",
-    "scripts/arena/stages/TempleStageView.Scenery.cs": "f3812b0ebf8f472a55c71e0c6ffe5b45151ce54743c499dabb0cef2017d2e8da",
+    "scripts/arena/stages/TempleStageView.Scenery.cs": "fb549343dd7c0ff24ba729858f051f554c01b36ea623cb813b62399bac5f4137",
     "scripts/arena/stages/TempleStageView.SunkenTempleExterior.cs": "2b5e3f8103d376337f6b332ac92e17bf8eb86690bbc3175aa7f3f3d1b7ed15e8",
     "scripts/arena/stages/TempleStageView.Tideglass.cs": "d9245eabde942e13ef109835dec4309f647df290bf3294a256a70d8c614efb2f",
     "scripts/arena/stages/TempleStageView.TopRules.cs": "8552a011b4aaac9a91be79ee0c057bdf5488445e6f1febe255a208179a24211f",
     "scripts/arena/stages/TempleStageView.TopRulesExterior.cs": "5307bb6fc4b4abb0a5628f5d689353f83807773ed06191ee880868c74c804fcd",
     "scripts/arena/stages/TempleStageView.UpAndDown.cs": "d0cc81ada1113fe3c2a0e6c5fe4c0edd1a4b051c3658b3f56bb22789ef28a1f2",
     "scripts/arena/stages/TempleStageView.UpAndDownExterior.cs": "f688ad4bc2c5a73be4afc1d1206d980612c3b2511fe21dff6925b6ebf7f74096",
-    "scripts/arena/stages/TempleStageView.cs": "8fd8806b442db64cb402325cb5096dacb521911a06a094f1c1b24b2b831c5de0",
+    "scripts/arena/stages/TempleStageView.cs": "39524770c9e78152c47c39978563d57f6ecea9ffdab2bc9940f775af045ed477",
     "scripts/arena/stages/blizzard_battle/TempleStageView.GlacierBowl.cs": "3ef945f4b7fe2bfa12b8fc7695022013a99415236f2ad8744c167e5c66135abc",
     "scripts/arena/stages/blizzard_battle/TempleStageView.GlacierGrottoMesh.cs": "fbba2cba114300059c5b1f42c8711e05fccb6b31af47af47f645a5b3207d6601",
     "scripts/arena/stages/field_of_grass/TempleStageView.CutawayHollow.cs": "ef3e83423ab59cdb1a20b1d414e0e10ee760b34b2f3193597b7a36e48c437b11",
     "scripts/arena/stages/field_of_grass/TempleStageView.FieldOfGrass.cs": "e659e5b319c55c0e1453bf30190ae0ac8a1c9a0666c8d8fde6dbd02924525ce1",
     "scripts/arena/stages/field_of_grass/TempleStageView.FieldOfGrassExterior.cs": "0e1db3b3f389b8fea176fd43c3a37c2b919f787efaf4d010503db9e06333389b",
     "scripts/arena/stages/field_of_grass/TempleStageView.HollowStones.cs": "54b93e50ceae9c1b341f5b60f5bf1c63a5b6a5f9c9e817548acf047f108038b6",
+    "scripts/arena/stages/in_the_gutter/TempleStageView.Gutter.cs": "de04df52c1f99ae070c7ac0a8276226c6ef45ef56c578d2420da20b373f12c2d",
+    "scripts/arena/stages/in_the_gutter/TempleStageView.GutterExterior.cs": "1dfddbb93bab2f384ba06706d66e279792ff2f420de84b9827a3a684dd042178",
+    "scripts/arena/stages/in_the_gutter/TempleStageView.GutterShapes.cs": "0c941239766c31b5b1d028e3895bb337ea2df15e3d227f2d3933d193d76d635f",
     "scripts/arena/stages/lost_at_sea/TempleStageView.GlassBuoy.cs": "ae3c2c7eaf2a1c0a79e5199670edd93686ef810a3be21c189f0c36c4ab08ec8e",
     "scripts/arena/stages/lost_at_sea/TempleStageView.LostAtSea.cs": "ad838fd131c1e14bac4f12e553f4f77cfbbdabad10ef0da8d63bce91d16b1e00",
     "scripts/arena/stages/lost_at_sea/TempleStageView.LostAtSeaExterior.cs": "9e81abf3b85e4fde0d7572c8f7f2b30ca4609977937a1a84de3ddbb5900e7dc6",
+    "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs": "61df78aa07982be1881b34af2cc7efb46a406a7a51e61ae9cf52f9130a26d36b",
+    "scripts/arena/stages/sea_sick/TempleStageView.ShipDetails.cs": "84e29b31603289fc72353bfa57e0babed45db0c21d15a82ee5b9d5228b31305f",
+    "scripts/arena/stages/sea_sick/TempleStageView.ShipFinish.cs": "1bbebb89339611fb3eb06ad018c5f39f730a0b56440c0f16b7c53ae2f6f72d13",
     "scripts/rendering/ArtGeometry.cs": "32fea3664b4af118fe691a5e0c1eb396eebf0352922996ea2b18896d0ea9764e",
     "scripts/rendering/PrimitiveTemplates.cs": "a217a597e45615d6a71b19529c4b24ca49cf09b1a2473b53e509ee153cce9352",
     "scripts/testing/journeys/rendering/AssetAuditPlaytest.cs": "080b33d640d46659c24993a2777109c9c10d7fb356fcabd38e4168de4c8792d6",
     "scripts/testing/journeys/rendering/PickupShowcasePlaytest.cs": "3c142760084075f88141b82a8f45d77d6e3c4fc56fce2896750b2158fd7dce77",
     "scripts/ui/ArcadeModeButton.cs": "a7dc6b554f9ace5e661fe3ba72594bae40ea7bfc9aca8e9314f6dad663f95db9",
-    "scripts/ui/menu/ArcadeBackdrop.cs": "02a6604cfc020ae2fc8f58dfaacc758611f4a934259481eb1a21a320b216fe90",
+    "scripts/ui/menu/ArcadeBackdrop.cs": "393b44b3ef453df50d13ca602d8110d8d9486a3ce97fe3691da00ba32864463d",
     "scripts/ui/menu/CharacterPreview.cs": "c1345917e5292f1391737c7059ca81da68eb4ec7b04e9505e70ef81d3774febd",
     "scripts/ui/menu/ResultMedals.cs": "30d9ff94b7895686819efb5ca9b558edf7eb69782c8a4b149cbac3064971e860",
     "src/Bomber.Game/Simulation/Stages/BlastStages.BlizzardBattle.cs": "cc2be4d216d1267ecf1d9530be526e8b0d9859c15934865bd9e78c83cd9450c6",
     "src/Bomber.Game/Simulation/Stages/BlastStages.CircuitGarden.cs": "f2ca38d2b9657faa917221e164377c1c5644f2d597a10f10dcfe252ec57016e3",
     "src/Bomber.Game/Simulation/Stages/BlastStages.FieldOfGrass.cs": "ac866542a1d7bb82d2447b090ec5b50d3ba63ae4640dcec36794404dddbb0ff1",
     "src/Bomber.Game/Simulation/Stages/BlastStages.GreedyTrap.cs": "09b0a420d51324c6ebfdbee4ccb167051c73f3789cc4ee810674240c4d16f454",
+    "src/Bomber.Game/Simulation/Stages/BlastStages.InTheGutter.cs": "42d88af2ad6a8559b1875a1302876a406dd946e997e4020c050f8fd27f656ead",
     "src/Bomber.Game/Simulation/Stages/BlastStages.LostAtSea.cs": "193e7e3f341ed25b7d8556433e0a8875e5b5ba7945ff2ca726eedfe78730344d",
     "src/Bomber.Game/Simulation/Stages/BlastStages.RockGarden.cs": "7d4c01757638b4792cdb2f2db3598e300581034a39dd8d6f971a3f09b27dfae8",
+    "src/Bomber.Game/Simulation/Stages/BlastStages.SeaSick.cs": "ea2aa3dffcef75a388bc2c21cc280eba23f590566ecfce7a70c42eaa9f0ac5e8",
     "src/Bomber.Game/Simulation/Stages/BlastStages.SunkenTemple.cs": "037f6f69eab3b62db81db07de3735393ae77e349fd3be49fa9206a34c8ba152f",
     "src/Bomber.Game/Simulation/Stages/BlastStages.TopRules.cs": "ebdcd5fcc4d13449ec963386c453a9747ba6c4fd09e27433cab17ae63dd24e85",
     "src/Bomber.Game/Simulation/Stages/BlastStages.UpAndDown.cs": "6283bccf3e0c1bcccd43e4e4a9431bda0bffb25a990d4ebcaabd1e57525652fd",
-    "src/Bomber.Game/Simulation/Stages/BlastStages.cs": "1ff223ea4440f98e94e8355c39b6b56ac0477bd377f8269e256068be2b358b36"
+    "src/Bomber.Game/Simulation/Stages/BlastStages.cs": "00b0fc14d8bd2b932b3b5070f2d9aa31d7065f8ca890adf7636970ade25cf48c"
   }
 }

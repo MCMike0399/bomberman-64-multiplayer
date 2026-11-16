@@ -1040,6 +1040,8 @@
         "tour-20",
         "tour-21",
         "tour-22",
+        "tour-23",
+        "tour-24",
         "tour-25"
       ],
       "domains": [
@@ -1093,9 +1095,11 @@
         "blizzard-battle",
         "greedy-trap",
         "field-of-grass",
+        "in-the-gutter",
         "stage-scenery",
         "orrery-keep",
         "round-ending",
+        "sea-sick",
         "lost-at-sea"
       ],
       "domains": [
@@ -1373,6 +1377,7 @@
         "field-of-grass",
         "stage-scenery",
         "orrery-keep",
+        "sea-sick",
         "lost-at-sea"
       ],
       "domains": [
@@ -1667,6 +1672,7 @@
         "greedy-trap",
         "field-of-grass",
         "greedy-canal",
+        "sea-sick",
         "lost-at-sea"
       ],
       "domains": [
@@ -1732,6 +1738,7 @@
         "blizzard-battle",
         "greedy-trap",
         "field-of-grass",
+        "in-the-gutter",
         "lost-at-sea"
       ],
       "domains": [
@@ -1905,6 +1912,255 @@
       ],
       "headless": true,
       "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "in-the-gutter",
+      "method": "InTheGutterTour",
+      "domains": [
+        "gameplay",
+        "physics",
+        "rendering",
+        "ui"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "in-the-gutter-network",
+      "method": "InTheGutterNetworkTour",
+      "domains": [
+        "network",
+        "gameplay",
+        "physics",
+        "rendering"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "tour-23",
+      "steps": [
+        "in-the-gutter",
+        "copper-lock-combat",
+        "gutter-water-contact",
+        "copper-lock-outer-patch",
+        "copper-lock-current"
+      ],
+      "domains": [
+        "gameplay",
+        "physics",
+        "rendering",
+        "ui"
+      ],
+      "headless": false,
+      "timeout": 240,
+      "manual": false
+    },
+    {
+      "id": "gutter-water-contact",
+      "method": "GutterWaterContact",
+      "domains": [
+        "rendering"
+      ],
+      "headless": false,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "copper-lock-shapes",
+      "method": "CopperLockShapes",
+      "domains": [
+        "rendering",
+        "gameplay"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "copper-lock-combat",
+      "method": "CopperLockCombatTour",
+      "domains": [
+        "rendering",
+        "gameplay",
+        "ai"
+      ],
+      "headless": false,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "copper-lock-current",
+      "method": "CopperLockCurrentChange",
+      "domains": [
+        "rendering",
+        "gameplay"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "copper-lock-finish",
+      "steps": [
+        "copper-lock-combat",
+        "gutter-water-contact",
+        "copper-lock-outer-patch",
+        "copper-lock-current"
+      ],
+      "domains": [
+        "rendering",
+        "gameplay",
+        "ai"
+      ],
+      "headless": false,
+      "timeout": 360,
+      "manual": false
+    },
+    {
+      "id": "copper-lock-water-inputs",
+      "method": "CopperLockWaterInputs",
+      "domains": [
+        "rendering"
+      ],
+      "headless": true,
+      "timeout": 90,
+      "manual": false
+    },
+    {
+      "id": "copper-lock-outer-patch",
+      "method": "CopperLockOuterPatch",
+      "domains": [
+        "rendering"
+      ],
+      "headless": false,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "sea-sick",
+      "method": "SeaSickTour",
+      "domains": [
+        "gameplay",
+        "physics",
+        "rendering",
+        "ui",
+        "ai"
+      ],
+      "headless": true,
+      "timeout": 240,
+      "manual": false
+    },
+    {
+      "id": "sea-sick-network",
+      "method": "SeaSickNetworkTour",
+      "domains": [
+        "gameplay",
+        "network",
+        "rendering"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "tour-24",
+      "steps": [
+        "sea-sick",
+        "sea-sick-framing"
+      ],
+      "domains": [
+        "gameplay",
+        "physics",
+        "rendering",
+        "ui",
+        "ai"
+      ],
+      "headless": true,
+      "timeout": 240,
+      "manual": false
+    },
+    {
+      "id": "sea-sick-regression",
+      "steps": [
+        "first-use-rendering",
+        "sea-sick",
+        "stage-scenery",
+        "framing",
+        "precision-aim",
+        "sea-sick-network",
+        "sea-sick-framing"
+      ],
+      "domains": [
+        "gameplay",
+        "physics",
+        "rendering",
+        "ui",
+        "network",
+        "ai"
+      ],
+      "headless": false,
+      "timeout": 1200,
+      "manual": false
+    },
+    {
+      "id": "sea-sick-shape-study",
+      "method": "SeaSickShapeStudy",
+      "domains": [
+        "rendering",
+        "gameplay"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "sea-sick-finish",
+      "method": "SeaSickFinishTour",
+      "domains": [
+        "rendering",
+        "gameplay",
+        "physics",
+        "ui"
+      ],
+      "headless": true,
+      "timeout": 300,
+      "manual": false
+    },
+    {
+      "id": "sea-sick-roll-colour",
+      "method": "SeaSickRollColour",
+      "domains": [
+        "rendering",
+        "gameplay"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "sea-sick-framing",
+      "method": "SeaSickFramingRegression",
+      "domains": [
+        "rendering",
+        "ui"
+      ],
+      "headless": true,
+      "timeout": 90,
+      "manual": false
+    },
+    {
+      "id": "sea-sick-miniature",
+      "method": "SeaSickMiniatureReview",
+      "domains": [
+        "rendering",
+        "ui"
+      ],
+      "headless": true,
+      "timeout": 90,
       "manual": false
     },
     {

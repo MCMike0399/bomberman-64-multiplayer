@@ -10,6 +10,17 @@ internal static class PeerFrameChecks
     {
         int checks=0;
         void Check(bool ok,string name){if(!ok)throw new Exception(name);checks++;}
+        var gutter=new LocalMatch(new MatchOptions{Stage="in-the-gutter",HumanPlayers=8,BotPlayers=0,Seed=64});
+        for(int tick=0;tick<110;tick++)gutter.Tick();
+        Check(PeerFrameRules.Valid(JsonSerializer.SerializeToElement(JsonNode.Parse(gutter.StageJson!)!)),"Gutter authored posts and grates cross peer validation");
+        Check(PeerFrameRules.Valid(JsonSerializer.SerializeToElement(JsonNode.Parse(gutter.StateJson!)!)),"bounded shallow current crosses peer validation");
+        Check(new SessionSettings(Stage:"in-the-gutter").ToWireSettings()["stage"]=="in-the-gutter","Gutter survives room settings transport");
+        foreach(string field in new[]{"x","time"})
+        {
+            var broken=JsonNode.Parse(gutter.StateJson!)!;
+            broken["d"]!["gutter"]![field]=field=="x"?100:1e200;
+            Check(!PeerFrameRules.Valid(JsonSerializer.SerializeToElement(broken)),"reject invalid Gutter current "+field);
+        }
         var match=new LocalMatch(new MatchOptions{HumanPlayers=2,BotPlayers=6});
         var grass=new LocalMatch(new MatchOptions{Stage="field-of-grass",HumanPlayers=8,BotPlayers=0,RoundSeconds=60});
         for(int tick=0;tick<65;tick++)grass.Tick();
@@ -45,6 +56,12 @@ internal static class PeerFrameChecks
         var castle=new LocalMatch(new MatchOptions{Stage="top-rules",HumanPlayers=2,BotPlayers=0});
         using var castleStage=JsonDocument.Parse(castle.StageJson!);
         Check(PeerFrameRules.Valid(castleStage.RootElement),"Top Rules peer stage accepts fractional stairs, underpasses and authored wall heights");
+        var ship=new LocalMatch(new MatchOptions{Stage="sea-sick",HumanPlayers=8,BotPlayers=0});
+        using var shipStage=JsonDocument.Parse(ship.StageJson!);
+        Check(PeerFrameRules.Valid(shipStage.RootElement),"Sea Sick authored posts and gallery stairs survive peer validation");
+        Check(new SessionSettings(Stage:"sea-sick").ToWireSettings()["stage"]=="sea-sick","Sea Sick room settings retain their stage on the wire");
+        var brokenShip=JsonNode.Parse(ship.StageJson!)!;brokenShip["d"]!["cells"]![8*19+9]!.AsObject().Remove("oh");
+        Check(!PeerFrameRules.Valid(JsonSerializer.SerializeToElement(brokenShip)),"Sea Sick requires the mast's collision crown before rendering");
         var greedy=new LocalMatch(new MatchOptions{Stage="greedy-trap",HumanPlayers=4,BotPlayers=0});
         using var greedyStage=JsonDocument.Parse(greedy.StageJson!);
         Check(PeerFrameRules.Valid(greedyStage.RootElement),"Greedy Trap real stage survives peer validation");

@@ -159,6 +159,7 @@ public sealed partial class BlastSession
             }
 
             DriftBlizzardBomb(b,dt);
+            DriftGutterBomb(b,dt);
             switch (b.State)
             {
                 case BombState.Resting:

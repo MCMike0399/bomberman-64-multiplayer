@@ -29,7 +29,7 @@ public partial class PlaytestDriver
         Check(inputsOnly||!_headless,"images require an actual renderer; input-only mode never qualifies graphics");
         string Option(string name,string fallback)=>OS.GetCmdlineUserArgs().FirstOrDefault(value=>value.StartsWith(name+"=",StringComparison.Ordinal)) is {} value?value[(name.Length+1)..]:fallback;
         string stage = Option("--parity-stage", "up-and-down"), noise = Option("--parity-noise", "integer");
-        if (stage is not ("sunken-temple" or "rock-garden" or "up-and-down" or "top-rules" or "blizzard-battle" or "greedy-trap" or "field-of-grass" or "lost-at-sea" or "circuit-garden") || noise is not ("legacy" or "integer"))
+        if (stage is not ("sunken-temple" or "rock-garden" or "up-and-down" or "top-rules" or "blizzard-battle" or "greedy-trap" or "field-of-grass" or "in-the-gutter" or "sea-sick" or "lost-at-sea" or "circuit-garden") || noise is not ("legacy" or "integer"))
             throw new ArgumentException("Unknown controlled visual experiment.");
         var original=GraphicsQuality.Current;var priorRootProcess=_root.IsProcessing();
         var previousViews=AuditDescendants(_root).OfType<SubViewport>().ToDictionary(v=>v,v=>v.RenderTargetUpdateMode);
