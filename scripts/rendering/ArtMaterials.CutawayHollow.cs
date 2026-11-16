@@ -88,6 +88,12 @@ void fragment(){
    ALBEDO=plateau_turf.rgb*(.84+swath*.13+grass_wash*.14);
    ALBEDO=mix(ALBEDO,vec3(.45,.47,.23),smoothstep(.63,.88,grass_wash)*.25);
  }else if(surface_kind==5)ALBEDO=valley_turf.rgb*(.93+wash*.14);
+ else if(surface_kind==6){
+   float shoulder=min(arena.x,21.0-arena.x);
+   float ragged=.80+cloud(vec2(arena.z*.84,6.0))*.10;
+   float turf=1.0-smoothstep(ragged-.025,ragged+.025,shoulder);
+   ALBEDO=mix(loam.rgb*(.94+wash*.12),valley_turf.rgb*(.95+wash*.10),turf);
+ }
  else ALBEDO=mix(vec3(.20,.27,.11),vec3(.31,.36,.17),cloud(arena.xz*.10));
  ROUGHNESS=.95;SPECULAR=.18;
 }

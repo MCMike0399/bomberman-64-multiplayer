@@ -77,6 +77,9 @@ public partial class TempleStageView
         for(float z=IncludeScenery?-6:0;z<Depth;z+=.5f)for(float x=IncludeScenery?-6:0;x<(IncludeScenery?Width+6:Width);x+=.5f)
         {
             if(x>=1&&x<Width-1&&z>=1&&z<Depth-1)continue;
+            // The rounded inner shoulder owns this half-cell strip once.
+            // Overlaying a ragged lip on the plateau made their faces cross.
+            if(z>=1&&z<Depth-1&&(x==.5f||x==Width-1))continue;
             Vector3 P(float xx,float zz)=>new(xx,HollowLandscapeHeight(xx,zz),zz);
             HollowQuad(mesh,P(x,z),P(x+.5f,z),P(x+.5f,z+.5f),P(x,z+.5f),Vector3.Up);
         }
@@ -116,28 +119,32 @@ public partial class TempleStageView
 
     private void BuildHollowSideCuts()
     {
-        var earth=_art.HollowSurface(0);var sod=_art.HollowSurface(5);
-        _fieldMaterials.AddRange([earth,sod]);
-        var face=new SurfaceTool();face.Begin(Mesh.PrimitiveType.Triangles);
-        var lip=new SurfaceTool();lip.Begin(Mesh.PrimitiveType.Triangles);
+        var paint=_art.HollowSurface(6);_fieldMaterials.Add(paint);
+        var cap=new SurfaceTool();cap.Begin(Mesh.PrimitiveType.Triangles);cap.SetSmoothGroup(0);
         foreach(bool left in new[]{true,false})for(float z=1;z<Depth-1;z+=.5f)
         {
-            float x=left?1:Width-1,direction=left?1:-1;
-            float Crown(float zz)=>3.5775f-.06f*(.5f+.5f*PresentationMath.Sin(zz*1.37f));
-            float Reach(float zz)=>.055f+.035f*PresentationMath.Sin(zz*1.11f+.7f);
-            float a=Crown(z),b=Crown(z+.5f);
-            var outward=left?Vector3.Right:Vector3.Left;
-            // Earth reaches the exact boundary crown; turf is only a thin
-            // slumped skin along it, contained in the nonpassable wall cells.
-            HollowQuad(face,new(x,2*HeightScale, z),new(x,3.5775f,z),new(x,3.5775f,z+.5f),new(x,2*HeightScale,z+.5f),outward);
-            HollowQuad(lip,new(x-.16f*direction,a+.025f,z),new(x-.16f*direction,b+.025f,z+.5f),
-                new(x+Reach(z+.5f)*direction,b-.13f,z+.5f),new(x+Reach(z)*direction,a-.13f,z),Vector3.Up);
-            HollowQuad(lip,new(x+Reach(z)*direction,a-.13f,z),new(x+Reach(z+.5f)*direction,b-.13f,z+.5f),
-                new(x,b-.23f,z+.5f),new(x,a-.23f,z),outward);
+            Vector3 P(float u,float zz)
+            {
+                float x=left?u:Width-u,outer=left?.5f:Width-.5f,inner=left?1:Width-1;
+                float start=HollowLandscapeHeight(outer,zz),crest=3.5775f;
+                float height=u<=.7f?Mathf.Lerp(start,crest,HollowSmooth(.5f,.7f,u)):
+                    2*HeightScale+.8775f*MathF.Sqrt(Math.Max(0,1-MathF.Pow((u-.7f)/.3f,2)));
+                // At both ends this meets the exact adjacent plateau edge.
+                float boundary=Math.Max(1-HollowSmooth(1,1.5f,zz),HollowSmooth(Depth-1.5f,Depth-1,zz));
+                float end=Mathf.Lerp(start,HollowLandscapeHeight(inner,zz),(u-.5f)/.5f);
+                return new(x,Mathf.Lerp(height,end,boundary),zz);
+            }
+            const int sections=12;
+            for(int i=0;i<sections;i++)
+            {
+                float a=.5f+i*.5f/sections,b=.5f+(i+1)*.5f/sections;
+                HollowQuad(cap,P(a,z),P(b,z),P(b,z+.5f),P(a,z+.5f),Vector3.Up);
+            }
+            float edge=left?1:Width-1;
+            HollowQuad(cap,new(edge,2*HeightScale,z),P(1,z),P(1,z+.5f),new(edge,2*HeightScale,z+.5f),left?Vector3.Right:Vector3.Left);
         }
-        face.Index();lip.Index();
-        AddChild(new MeshInstance3D{Name="HollowSideEarthCuts",Mesh=face.Commit(),MaterialOverride=earth});
-        AddChild(new MeshInstance3D{Name="HollowSideSlumpedTurf",Mesh=lip.Commit(),MaterialOverride=sod});
+        cap.GenerateNormals();cap.Index();
+        AddChild(new MeshInstance3D{Name="HollowSideEarthCuts",Mesh=cap.Commit(),MaterialOverride=paint});
     }
     private float HollowLip(float x)
     {

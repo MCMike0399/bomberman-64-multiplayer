@@ -18,7 +18,7 @@ public partial class PlaytestDriver
         (BlastStages.TopRules,["FortressCrag","Turret","WallBanner","Cloud","FloatingIslet","Starfield","RingedPlanet","BluePlanet","OrbitingMoon","AsteroidBelt","Nebula"]),
         (BlastStages.BlizzardBattle,["Igloo","Snowman","Penguin","PineTree","FrozenPond","GlacierPeak","GlacierArch","FrozenCrown","WinterTree","ExteriorSnowfall"]),
         (BlastStages.GreedyTrap,["GreedyWestRowboat","GreedyEastRowboat","Sailboat","Gull"]),
-        (BlastStages.FieldOfGrass,["HollowStile","HayRick"]),
+        (BlastStages.FieldOfGrass,["HayRick"]),
         (BlastStages.CircuitGarden,["TargetRaft","Jetty","Buoy","PalmTree"]),
     ];
 
@@ -117,8 +117,18 @@ public partial class PlaytestDriver
         Check(!AuditDescendants(scenery).OfType<CollisionObject3D>().Any(),"scenery adds no collision bodies: "+stage);
         var problems=AuditModelProblems(scenery,out int meshes,out int vertices);
         Event("scenery-geometry",new{stage,meshes,vertices,motions=terrain.SceneryMotionCount,problems=problems.Take(5)});
-        Check(problems.Count==0&&meshes>=20,$"scenery geometry is finite, nonempty and textured: {stage} meshes={meshes} {string.Join("; ",problems.Take(3))}");
-        Check(terrain.SceneryMotionCount>0,"scenery has animated life: "+stage);
+        bool hollow=stage==BlastStages.FieldOfGrass;
+        Check(problems.Count==0&&(hollow?meshes>0:meshes>=20),$"scenery geometry is finite, nonempty and textured: {stage} meshes={meshes} {string.Join("; ",problems.Take(3))}");
+        if(hollow)
+        {
+            var hay=AuditDescendants(scenery).OfType<MeshInstance3D>().Single(n=>n.Name=="HollowHayRickMesh");
+            var size=hay.Mesh.GetAabb().Size;
+            Check(size.X is >1.2f and <1.6f&&size.Y is >.8f and <1.1f&&size.Z is >.8f and <1.3f,
+                "the single optional hay rick has its intended finite, compact physical bounds");
+            Check(AuditDescendants(terrain).OfType<Node3D>().Single(n=>n.Name=="HollowStile").GetParent()==terrain,
+                "the existing stile and warm lantern are core terrain, retained on Low");
+        }
+        else Check(terrain.SceneryMotionCount>0,"scenery has animated life: "+stage);
         if(stage==BlastStages.BlizzardBattle)
         {
             var snow=AuditDescendants(scenery).OfType<BlizzardWeather>().Single();
@@ -132,9 +142,12 @@ public partial class PlaytestDriver
 
         // Animated props actually move, and placement still holds mid-animation.
         var tracked=AuditDescendants(scenery).OfType<Node3D>().ToDictionary(n=>n,n=>n.Transform);
+        var canopy=hollow?AuditDescendants(terrain).OfType<MultiMeshInstance3D>().Single(n=>n.Name=="ConcealingMeadow").MaterialOverride as ShaderMaterial:null;
+        float canopyClock=canopy?.GetShaderParameter("ambient_clock").AsSingle()??0;
         await Frames(24);
         int moved=tracked.Count(p=>GodotObject.IsInstanceValid(p.Key)&&!p.Key.Transform.IsEqualApprox(p.Value));
-        Check(moved>0,$"scenery animates over real frames: {stage} moved={moved}");
+        Check(hollow?canopy!.GetShaderParameter("ambient_clock").AsSingle()>canopyClock:moved>0,
+            $"world life advances over real frames: {stage} moved={moved}; hollow uses the core meadow breeze");
         intrusions=SceneryIntrusions(terrain);
         Check(intrusions.Count==0,$"animated scenery remains outside play space: {stage} {string.Join(", ",intrusions.Take(6))}");
     }
