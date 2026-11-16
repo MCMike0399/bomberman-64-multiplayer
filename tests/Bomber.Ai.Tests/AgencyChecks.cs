@@ -1,8 +1,8 @@
 using Bomber.Game.Simulation.Rules;
 using Bomber.Game.Simulation.State;
 
-// Regressions for the 2026-10-26 agency work. Each assertion failed on the prior
-// policy; AgencyDiagnostics owns the measurements and their trace mode.
+// Behavioral regressions for the 2026-10-26 agency work plus a fixed matrix-scope
+// guard. AgencyDiagnostics owns the measurements and their trace mode.
 static class AgencyChecks
 {
     public static int Run()
@@ -49,12 +49,15 @@ static class AgencyChecks
 
         // Preserve the original algorithm-comparison loadout; current defaults are
         // exercised independently by PressureChecks, StockHumanPressureChecks and the soak.
-        var matrix=AgencyDiagnostics.Matrix(startingBombs:3);
+        var matrix=AgencyDiagnostics.ComparisonMatrix();
+        Check(matrix.Count==72&&matrix.Select(r=>r.Stage).Distinct().Count()==6&&
+            matrix.Count(r=>r.Scenario=="idle-human")==36,
+            "historical agency comparison explicitly retains its six stages and 72 runs");
         int worstRun=matrix.Max(r=>r.LongestPingPongStreak);
         int worstIdleGap=matrix.Where(r=>r.Scenario=="idle-human").Max(r=>r.LongestPressureGapTicks);
         int idleDeaths=matrix.Where(r=>r.Scenario=="idle-human").Sum(r=>r.BotDeaths);
         Check(worstRun<=20,$"no sustained single-cell shuffle across 72 arena runs with the three-bomb reference loadout (longest {worstRun} reversals; prior policy 99)");
-        Check(worstIdleGap<=20*30,$"an idle player is threatened at least every 20 seconds on every stock arena (longest {worstIdleGap/30f:F1}s; prior policy 60s)");
+        Check(worstIdleGap<=20*30,$"an idle player is threatened at least every 20 seconds on every original comparison arena (longest {worstIdleGap/30f:F1}s; prior policy 60s)");
         Check(idleDeaths<=2,$"bots rarely defeat themselves while attacking an idle player ({idleDeaths} in 36 minutes; prior policy 3)");
 
         // A walking target was trailed from one cell behind, just outside fire-1 reach;
