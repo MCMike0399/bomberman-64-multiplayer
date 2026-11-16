@@ -25,7 +25,7 @@ public partial class TempleStageView
         }
         _castleStone.Add(stone); _castleStone.Add(cap);
         var slate = _art.Color(new("414651"));
-        var inset = _art.Color(new("39382f"));
+        var inset = _art.Color(new("6b6654"));
         var gold = _art.Color(new("a47e33"), .45f);
         var ivory = _art.Color(new("e6e4cd"));
         var carpet = _art.Color(new("186642"));
@@ -35,6 +35,8 @@ public partial class TempleStageView
         float deck = 2 * HeightScale;
         Box(this, new(Width / 2f, -.49f, Depth / 2f), new(Width, .9f, Depth), stone).Name = "CastleFoundation";
         if(IncludeScenery)BuildOrreryCore();
+        BuildTopRulesCoreTurrets();
+        BuildOrreryWallLamps();
         // The red court is solid flooring. Its restrained checker pattern is drawn in world space.
         Box(this, new(Width / 2f, -.055f, Depth / 2f), new(Width - 2, .11f, Depth - 2),
             new ShaderMaterial { Shader = _castleFloorShader ??= new Shader { Code = CastleFloorShader } }).Name = "CastleCourt";

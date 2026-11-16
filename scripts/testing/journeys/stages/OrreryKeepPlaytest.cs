@@ -48,6 +48,11 @@ public partial class PlaytestDriver
                 await SelectGraphics(preset);
                 Check(terrain.GetNode<MeshInstance3D>("FortressCrag").IsVisibleInTree()&&terrain.GetNode<MeshInstance3D>("OrreryBackdrop").IsVisibleInTree(),"core plinth and painted background survive "+preset);
                 Check(terrain.Scenery!.IsVisibleInTree()==(preset!=GraphicsPreset.Low),"orrery decoration follows scenery visibility at "+preset);
+                var turrets=terrain.GetChildren().OfType<Node3D>().Where(n=>n.Name.ToString().TrimStart('@').StartsWith("Turret",StringComparison.Ordinal)).ToArray();
+                Check(turrets.Length==4&&turrets.All(n=>n.IsVisibleInTree()),"four original corner turrets retain the core castle silhouette at "+preset);
+                Check(terrain.GetNode<Node3D>("OrreryLowMoon").IsVisibleInTree()==(preset==GraphicsPreset.Low),"cheap core moon replaces optional planets on Low only");
+                var warmLights=AuditDescendants(terrain).OfType<OmniLight3D>().ToArray();
+                Check(warmLights.Length==2&&warmLights.All(n=>n.IsVisibleInTree()==(preset!=GraphicsPreset.Low)),"two shadowless warm sources retain emissive-only Low policy at "+preset);
                 if(!_headless)
                 {
                     CheckFraming(BlastStages.TopRules,GetWindow().Size);

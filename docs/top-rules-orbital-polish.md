@@ -118,3 +118,26 @@ Clean C# build and the complete public QA profile also passed.
 [Capture provenance](images/top-rules-orbital/manifest.json). These are root’s
 visual acceptance and native synthetic-input checks, not physical-controller
 evidence or a claim that the user personally approved the images.
+
+## Fresh all-preset advisor correction (2026-11-15)
+
+The fresh plain-Claude review found Low lost the keep's turret silhouette, its
+rock body read as a pale wedge, and the brass supports were too thin. The four
+original corner turrets now belong to the core at unchanged positions and scale.
+Low keeps one static cheap crater-painted moon and its thick brass arm; Medium
+and High retain the complete three-globe orrery. All arms have a .18 radius.
+The rock now has broad rounded shoulders, two eroded shelves and a deep keel,
+with managed deterministic ring coordinates, smooth outward vertex normals,
+darker layered paint and a restrained painted rim. The castle, lanes and
+camera direction are unchanged; the lane inset colour is lighter warm slate.
+Two caged amber inner-wall windows provide motivated Night accents. They keep
+emissive paint on Low, with two shadowless warm lights only on Medium/High;
+the former optional violet point light is removed.
+
+Source build/public checks pass. The Orrery headless journey passes 73 assertions,
+including actual indexed clockwise-face checks, retained four core turrets,
+Low-only moon substitution, and the two-light preset policy. Its raw log retains
+four ObjectDB exit leaks; no runtime errors. The first new test caught duplicate
+Godot turret naming; stable front/rear/east/west names fixed the observed failure.
+This does not certify the new native framing, rock silhouette or Night contrast;
+the parent-owned matching captures and fresh advisor review remain required.
