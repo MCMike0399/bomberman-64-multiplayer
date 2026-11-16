@@ -875,6 +875,17 @@ rendered surface is separate evidence from a node count or a numerical normal.
 The Lost at Sea glass and Grass bank fixes retain the original missing-surface
 native witness and before/after actual-mesh audits.
 
+### Up & Down coastal refinement (2026-11-15 source work)
+
+The exterior sea stacks use original irregular packed rock meshes with broad
+tide-worn bases, restrained strata ledges and fitted turf crowns. Keep their
+positions/heights, the single tree, lighthouse and suspended playable structure.
+Static angles use PresentationMath and all new surfaces are owned managed
+geometry; no engine-primitive fallback is introduced. See the
+[stage contract](../up-and-down.md#coastal-scenery-refinement-2026-11-15-source-work).
+The existing stage-scenery journey retains ordinary Midday/Night/High and
+labeled establishing captures for the required visual comparison.
+
 
 ### Returning Tide core landmark finishing (2026-11-16)
 

@@ -133,3 +133,88 @@ water elimination are preserved. Original-game coordinates/drop physics remain
 unverified; see the source research. Guest rendering and synthetic inputs do
 not certify native host GPU performance or physical controller behavior. This
 source PR does not install an app or deploy an external server.
+
+## Coastal scenery refinement (2026-11-15 source work)
+
+The four exterior sea stacks keep their existing positions and heights, while
+an original cached managed mesh replaces their straight tapered silhouettes.
+Unequal faceted outlines, broad tide-worn feet, three restrained eroded ledges
+and gray/sage vertex-painted weathering give them a natural coastal profile.
+The shallow grass crowns follow each rock outline; the existing single tree
+remains. Lighthouse, boats, buoys, far headland and gulls retain their composition.
+
+Only the exterior partial changes: no playable ring, crown, pier, stair, camera,
+water, collision, rule or network field changes. The owned SurfaceTool geometry
+uses managed PresentationMath for static angles and introduces no new native
+primitive parameter domain. Existing scenery checks cover placement, materialed
+nonempty geometry, animation, Low hiding and miniature exclusion. Native
+Midday/Night/High and labeled establishing captures still require visual review.
+Source validation: clean build, public static checks and 119 headless
+stage-scenery assertions pass with zero runtime errors. This verifies geometry
+and placement; it does not establish native rendered quality or user approval.
+
+## Coastal refinement native review — 2026-11-15
+
+Root inspected High before/after and Night from real exports on Apple M5 Pro
+Metal. The eroded layers and fitted crowns improve the coastal silhouette
+without changing arena routes or hiding the ring. The native scenery tour
+passed 371 assertions and 40 captures with no runtime errors or warnings.
+
+![Before](images/up-and-down-coastal/before.png)
+
+![After](images/up-and-down-coastal/after.png)
+
+![Night](images/up-and-down-coastal/night.png)
+
+[Capture provenance](images/up-and-down-coastal/manifest.json). This is root's
+visual review, not physical-controller testing or user image approval.
+
+## Fresh advisor refinement (2026-11-15 source candidate)
+
+The suspended court, piers, stairs, coastal stacks and camera stay fixed.
+The lighthouse replaces the uniformly filled wedge with an owned cone shell
+whose additive density fades along its length and at its silhouette. It is
+Night-only and sweeps slowly (one turn in about 29 seconds), using the existing
+pausable scenery clock. Two small warm sconces are inset below the tier-two
+pier heads. Their Night emission remains on Low, adding no point lights or
+standing/aiming obstacles. The shared lighting profile is unchanged.
+
+Review matched Low/Medium/High Midday and Night views plus a short Night clip;
+the existing `up-and-down` traversal and `stage-scenery` placement/pause journeys
+remain the validation entrypoints. Source checks alone do not approve the glow
+or gradient density.
+
+## Tideglass Beacon — 2026-11-16 source candidate
+
+The final reference addendum keeps the strong suspended court and gives the
+coast one arch/lighthouse grouping. One existing tall stack becomes a single
+owned turf-capped rock with a real through-opening. The remaining stack
+vertices/profiles stay unchanged; their normals now interpolate around and
+across those same profiles to soften the stair-stepped shading.
+
+The lighthouse and its whole existing rocky footing remain in core on Low,
+as do the sea arch and one bell buoy replacing a previous marker. A single
+pausable coastal clock drives the slow beacon, lens accent and buoy. Low
+keeps the emissive lens pulse; Medium and High retain the soft Night beam
+volume and their existing water/refraction/reflection features. No nest,
+new real lights, route or hazard is added. The bell follows the actual rendered
+accepted-water plane, including the stage's existing flood.
+
+The ordinary camera is unchanged. Actual captured landmark vertices initially
+showed a small lighthouse HUD-margin failure, so the complete lighthouse
+islet/jetty vignette moves .6 units forward. Final ordinary projections at
+1280×800 are X[.14747,.81385], Y[.14334,.44765];16:9 also passes. The new
+`tideglass-coast` leaf captures High/Medium/Low Midday, Low Night, High Night
+combat and a labelled arch inspection using an independent zero-offset camera.
+It checks actual clockwise geometry, the through-hole, core retention, water
+contact, cheap Low motion, pause and both ordinary aspect ratios. The existing
+`up-and-down` traversal and `stage-scenery` placement journeys remain required.
+Native images and final advisor review remain the art gate.
+
+Source build is clean. Headless checks pass76 coastal,153 traversal and118
+scenery assertions, with zero runtime errors (exit ObjectDB warnings retained).
+Playtest contracts pass32; census and documentation links match. The separate
+inspection guard consumes actual arch vertices and places them at normalized
+X[.38682,.61893], Y[.23023,.75510], preventing another empty off-target capture.
+These are geometry/fixture checks; root still owns native material and charm
+review, recording and final package qualification.

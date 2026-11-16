@@ -70,6 +70,7 @@ public partial class TempleStageView : Node3D
     public void SetLighting(StageLighting lighting)
     {
         _lighting=lighting;
+        SetUpAndDownLighting(lighting);
         ApplyHollowLanternLighting(lighting);
         if(_fieldGrassMaterial is not null)_fieldGrassMaterial.SetShaderParameter("paint",new Color(lighting.Label=="Night"?"668e4f":"4e793f"));
         if(_water?.MaterialOverride is ShaderMaterial material)lighting.ApplyWater(material);
@@ -93,6 +94,7 @@ public partial class TempleStageView : Node3D
         if(!IsVisibleInTree())return;
         ProcessWorkshop((float)delta);
         AnimateScenery((float)delta);
+        ProcessCoastalLife((float)delta);
         if(_field){ProcessField((float)delta);return;}
         if(_blizzard){ProcessBlizzard((float)delta);return;}
         if(_greedy){ProcessGreedyTrap((float)delta);return;}
