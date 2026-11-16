@@ -12,14 +12,14 @@ public partial class PlaytestDriver
 {
     private static readonly (string Stage,string[] Signature)[] SceneryStages=
     [
-        (BlastStages.SunkenTemple,["Obelisk","SunkenColonnade","SunkenGate","Sailboat","PalmTree","Gull"]),
-        (BlastStages.RockGarden,["Windmill","Footbridge","StoneLantern","FlowerBed","Butterfly","GardenRuin","WindGrass","DriftingLeaves"]),
-        (BlastStages.UpAndDown,["Lighthouse","SeaStack","Buoy","Jetty","Sailboat","Gull"]),
-        (BlastStages.TopRules,["FortressCrag","Turret","WallBanner","Cloud","FloatingIslet","Starfield","RingedPlanet","BluePlanet","OrbitingMoon","AsteroidBelt","Nebula"]),
-        (BlastStages.BlizzardBattle,["Igloo","Snowman","Penguin","PineTree","FrozenPond","GlacierPeak","GlacierArch","FrozenCrown","WinterTree","ExteriorSnowfall"]),
+        (BlastStages.SunkenTemple,["LotusRuin","SunkenColonnade","SunkenGate","Sailboat","PalmTree","Gull"]),
+        (BlastStages.RockGarden,["Footbridge","StoneLantern","WindGrass","DriftingLeaves"]),
+        (BlastStages.UpAndDown,["SeaStack","Buoy","Jetty","Sailboat","Gull"]),
+        (BlastStages.TopRules,["WallBanner","FloatingIslet","HeroPlanet","CompanionPlanet","ToyMoon","OrreryStars","HeroOrreryArm"]),
+        (BlastStages.BlizzardBattle,["PineTree","GlacierPeak","WinterTree","ExteriorSnowfall"]),
         (BlastStages.GreedyTrap,["GreedyWestRowboat","GreedyEastRowboat","Sailboat","Gull"]),
         (BlastStages.InTheGutter,["CopperLockWestMachine","CopperLockEastMachine","CopperLockChannelStub","CopperLockFishBody","CopperLockOuterWater"]),
-        (BlastStages.CircuitGarden,["TargetRaft","Jetty","Buoy","PalmTree"]),
+        (BlastStages.CircuitGarden,["Jetty","Buoy","Gull"]),
     ];
 
     /// <summary>Decorative scenery around every arena: placement outside the playable
@@ -85,6 +85,11 @@ public partial class PlaytestDriver
                 Check(terrain.FindChild("CopperLockWestMachine",true,false) is Node3D west&&west.IsVisibleInTree()&&
                     terrain.FindChild("CopperLockEastMachine",true,false) is Node3D east&&east.IsVisibleInTree(),
                     "Low retains both core Copper Lock hero machines while the reed-bank exterior is hidden");
+            if(stage==BlastStages.SunkenTemple)
+            {
+                var gateway=terrain.GetNode<Node3D>("SunkenGateCore");
+                Check(gateway.IsVisibleInTree(),"Low retains the broken gateway seated on its core islet");
+            }
             await Capture($"scenery-{stage}-low");
             await SelectGraphics(GraphicsPreset.High);await Frames(3);
             terrain=AuditDescendants(LightingArena).OfType<TempleStageView>().Single();
@@ -128,8 +133,35 @@ public partial class PlaytestDriver
         if(scenery==null)return;
         Node3D presentation=copper?terrain:scenery;
         foreach(var name in signature)
-            Check(AuditDescendants(presentation).Any(n=>n.Name.ToString().TrimStart('@').StartsWith(name,StringComparison.Ordinal)),$"{stage} scenery includes {name}");
-        Check(!AuditDescendants(presentation).OfType<CollisionObject3D>().Any(),"presentation adds no collision bodies: "+stage);
+        {
+            // The gateway is the explicit Low/core identity exception.
+            Node signatureRoot=stage==BlastStages.SunkenTemple&&name=="SunkenGate"?terrain:presentation;
+            Check(AuditDescendants(signatureRoot).Any(n=>n.Name.ToString().TrimStart('@').StartsWith(name,StringComparison.Ordinal)),$"{stage} scenery includes {name}");
+        }
+        Check(!AuditDescendants(presentation).OfType<CollisionObject3D>().Any(),"scenery adds no collision bodies: "+stage);
+        if(stage==BlastStages.SunkenTemple)
+        {
+            var gateway=terrain.GetNode<Node3D>("SunkenGateCore");
+            var bounds=AuditDescendants(gateway).OfType<MeshInstance3D>().Select(n=>(terrain.GlobalTransform.AffineInverse()*n.GlobalTransform)*n.Mesh.GetAabb()).ToArray();
+            Check(gateway.GetParent()==terrain&&bounds.Length>0&&bounds.All(b=>b.Position.X>terrain.Width+.35f),
+                "core gateway and shoal stay beyond the playable standing and aiming margin");
+            var sun=gateway.GetNode<Node3D>("TempleSunDisc");var tide=terrain.GetNode<Node3D>("TempleTideFloat");
+            Check(sun.IsVisibleInTree()&&AuditDescendants(sun).OfType<MeshInstance3D>().Count()>=10,"actual gateway shrine carries a chunky sun disc outside the pyramid");
+            Check(AuditDescendants(tide).OfType<MeshInstance3D>().All(n=>((terrain.GlobalTransform.AffineInverse()*n.GlobalTransform)*n.Mesh.GetAabb()).Position.X>terrain.Width+.35f),
+                "copper tide float remains outside every playable standing column");
+            var originalQuality=_root.Preferences.Graphics;
+            foreach(var quality in new[]{GraphicsPreset.Low,GraphicsPreset.Medium,GraphicsPreset.High})
+            {
+                await SelectGraphics(quality);
+                Check(gateway.IsVisibleInTree()&&sun.IsVisibleInTree()&&tide.IsVisibleInTree(),"gateway shrine and tide float remain core on "+quality);
+            }
+            float beforeTide=tide.Position.Y;await Frames(20);
+            Check(Math.Abs(tide.Position.Y-beforeTide)>.0001f,"core copper float has a cheap real tide bob on every preset");
+            await KeyPress(Key.Escape);await Frames(3);var pausedTide=tide.Transform;await Frames(15);
+            Check(tide.Transform.IsEqualApprox(pausedTide),"ordinary pause freezes the core tide-float clock");
+            await ActivateNamed("ResumeGame");await SelectGraphics(originalQuality);
+        }
+
         var problems=AuditModelProblems(presentation,out int meshes,out int vertices);
         Event("scenery-geometry",new{stage,meshes,vertices,motions=terrain.SceneryMotionCount,problems=problems.Take(5)});
         // Copper Lock's machinery/channel are integrated core terrain; it has
@@ -211,6 +243,7 @@ public partial class PlaytestDriver
         var terrain=AuditDescendants(LightingArena).OfType<TempleStageView>().Single();
         var boat=AuditDescendants(terrain.Scenery!).OfType<Node3D>().First(n=>n.Name.ToString().TrimStart('@').StartsWith("Sailboat",StringComparison.Ordinal));
         float before=boat.Position.Y;
+        var tide=terrain.GetNode<Node3D>("TempleTideFloat");float beforeTide=tide.Position.Y;
         Check(Math.Abs(before-terrain.WaterHeight)<.15f,$"sailboat floats on the calm sea: boat={before:0.00} water={terrain.WaterHeight:0.00}");
         await WaitState(s=>s.GetProperty("phase").GetInt32()==2,"scenery flood enters hurry",180);
         await MoveTo(12.5f,2.5f,200);
@@ -218,6 +251,8 @@ public partial class PlaytestDriver
         await Frames(30);
         Check(boat.Position.Y>before+.25f&&Math.Abs(boat.Position.Y-terrain.WaterHeight)<.15f,
             $"sailboat rides the rising flood: before={before:0.00} after={boat.Position.Y:0.00} water={terrain.WaterHeight:0.00}");
+        Check(tide.Position.Y>beforeTide+.25f&&Math.Abs(tide.Position.Y-terrain.WaterHeight-.12f)<.065f,
+            "core copper float follows the accepted rising water plane with bounded bob");
         await Capture("scenery-sunken-temple-flood");
         Input(0,default);_root.Back();await Frames(3);
     }
@@ -235,6 +270,9 @@ public partial class PlaytestDriver
             await Frames(4);
             var miniature=AuditDescendants(_root).OfType<TempleStageView>().Single(t=>t.GetParent().Name=="ArenaDiorama"&&t.IsVisibleInTree());
             Check(miniature.Scenery==null,"menu miniature skips arena scenery: "+menu.Settings.Stage);
+            if(menu.Settings.Stage==BlastStages.SunkenTemple)
+                Check(miniature.GetNodeOrNull<Node3D>("SunkenGateCore")==null&&miniature.GetNodeOrNull<Node3D>("TempleTideFloat")==null,
+                    "ordinary temple miniature omits the outboard shrine and tide float");
             await KeyPress(Key.Right);
         }
         Check(seen.Count>=6,"menu miniature check visited every selectable arena: "+string.Join(',',seen));

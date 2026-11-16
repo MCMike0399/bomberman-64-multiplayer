@@ -27,6 +27,7 @@ public partial class TempleStageView
             material.SetShaderParameter("wind",_blizzardWind);
             if(_graphicsRevision!=GraphicsQuality.Revision)GraphicsQuality.ApplyShaderDetail(material);
         }
+        ProcessGlacierBowl();
         _graphicsRevision=GraphicsQuality.Revision;
         if(_blizzardWeather!=null)_blizzardWeather.Active=WeatherActive;
         if(_exteriorSnow!=null)_exteriorSnow.Active=WeatherActive;
@@ -48,7 +49,8 @@ public partial class TempleStageView
         var ice=_art.FrozenSurface(0);_crystalMaterial=_art.FrozenSurface(1);
         _snowMaterial=_art.FrozenSurface(2);var wall=_art.FrozenSurface(3);
         _frozenMaterials.AddRange([ice,_crystalMaterial,_snowMaterial,wall]);
-        Box(this,new(Width/2f,-.55f,Depth/2f),new(160,.45f,160),_snowMaterial).Name="FrozenExterior";
+        var farSnow=_art.FrozenSurface(2);farSnow.SetShaderParameter("snow_tint",new Color("a3bcc8"));_frozenMaterials.Add(farSnow);
+        Box(this,new(Width/2f,-.55f,Depth/2f),new(160,.45f,160),farSnow).Name="FrozenExterior";
         Box(this,new(Width/2f,-.4f,Depth/2f),new(Width,.6f,Depth),wall,.08f).Name="GlacierFoundation";
         Box(this,new(Width/2f,-.055f,Depth/2f),new(Width-2,.11f,Depth-2),ice,.035f).Name="FrozenCourt";
         for(int z=0;z<Depth;z++)for(int x=0;x<Width;x++)
@@ -63,6 +65,7 @@ public partial class TempleStageView
             if(z==0||z==Depth-1)
                 Box(this,new(x+.5f,.075f,z==0?.96f:Depth-.96f),new(.98f,.15f,.075f),ice,.02f);
         }
+        BuildGlacierBowl();
         _iceCones=Enumerable.Range(0,4).Select(variant=>IceConeMesh(variant,Layout.SoftBlockHeight*HeightScale)).ToArray();
         _blizzardWeather=new BlizzardWeather{Width=Width,Depth=Depth};AddChild(_blizzardWeather);
     }

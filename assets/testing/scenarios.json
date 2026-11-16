@@ -2,6 +2,17 @@
   "schemaVersion": 1,
   "scenarios": [
     {
+      "id": "graphics-preparation-starvation-probe",
+      "method": "GraphicsPreparationStarvationProbe",
+      "domains": [
+        "rendering",
+        "ui"
+      ],
+      "headless": false,
+      "timeout": 90,
+      "manual": false
+    },
+    {
       "id": "peer-ice-terminal",
       "method": "PeerIceTerminal",
       "domains": [
@@ -32,6 +43,18 @@
       ],
       "headless": true,
       "timeout": 120,
+      "manual": false
+    },
+    {
+      "id": "circuit-workshop",
+      "method": "CircuitWorkshopTour",
+      "domains": [
+        "gameplay",
+        "ui",
+        "rendering"
+      ],
+      "headless": true,
+      "timeout": 180,
       "manual": false
     },
     {
@@ -961,6 +984,7 @@
       "id": "tour-21",
       "steps": [
         "stage-scenery",
+        "orrery-keep",
         "wall-death"
       ],
       "domains": [
@@ -1051,6 +1075,7 @@
         "greedy-trap",
         "in-the-gutter",
         "stage-scenery",
+        "orrery-keep",
         "round-ending"
       ],
       "domains": [
@@ -1285,7 +1310,8 @@
         "water-surface",
         "tutorial",
         "greedy-trap",
-        "stage-scenery"
+        "stage-scenery",
+        "orrery-keep"
       ],
       "domains": [
         "gameplay",
@@ -1569,6 +1595,7 @@
         "map-preview-loading",
         "framing",
         "stage-scenery",
+        "orrery-keep",
         "rock-garden",
         "up-and-down",
         "top-rules",
@@ -1764,6 +1791,53 @@
       ],
       "headless": false,
       "timeout": 900,
+      "manual": false
+    },
+    {
+      "id": "glacier-grotto",
+      "method": "GlacierGrotto",
+      "domains": [
+        "rendering",
+        "ui",
+        "gameplay"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "rock-orchard",
+      "method": "RockOrchard",
+      "domains": [
+        "rendering",
+        "ui",
+        "gameplay"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "tideglass-coast",
+      "method": "TideglassCoast",
+      "domains": [
+        "rendering",
+        "ui",
+        "gameplay"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "orrery-keep",
+      "method": "OrreryKeepTour",
+      "domains": [
+        "rendering",
+        "gameplay"
+      ],
+      "headless": true,
+      "timeout": 180,
       "manual": false
     },
     {

@@ -65,7 +65,7 @@ records the inspected gameplay/manual images and labels this extension explicitl
 
 `TempleStageView.GreedyExterior.cs` adds a broad foundation meeting the water,
 pale quays, two lower causeways, four small slate-roofed towers, sparse round trees,
-and a slowly turning waterwheel. Sage banks and the shared sky/haze keep the
+and a slowly turning waterwheel. Plain cream quay banks and the shared sky/haze keep the
 surroundings quieter than the cream/red/teal arena. The outer reservoir reuses the
 other maps' animated water: opaque on Low, refracting/caustic on Medium and High,
 with the same morning/midday/afternoon/night profiles. The basin inside stays
@@ -203,3 +203,93 @@ The review retained a failing native stair-surface assertion, then raised tread
 paving, court coping and brass sills 0.02 render units above their supports.
 This removes coplanar faces without changing collision, steps or drop physics.
 Shader cache fields follow the main partial's ownership convention.
+
+## Fresh advisor refinement (2026-11-15, source candidate)
+
+The fresh all-map review identified camouflage lawn beyond the canal and
+charcoal wall caps as competing with the reservoir identity. Four existing
+bank solids now use quiet cream quay paint; their geometry, masonry water
+faces and .9-unit seam setback stay fixed. Both static and compressing wall
+crowns use matching cream coping. The safe teal reward floor, all stairways,
+canal waterline, wheel pedestal and shaft retain their original geometry.
+
+The existing blue-roof houses gain warm window emission only at Night,
+including Low. Day windows stay dark. They add no point lights or new props,
+and live local/online lighting changes update the same retained materials.
+Original Blue Resort colour/material context is recorded in
+[the background research](greedy-trap-background-research.md); this is an
+authored reservoir setting, not recovered Greedy Trap scenery.
+
+Review with the existing `greedy-trap` native journey (all presets, lighting,
+oblique views, dry basin traversal and closing walls), then matched seed-64
+Midday opening/Night combat at Low, Medium and High. The source checkpoint
+does not constitute visual acceptance or release qualification.
+
+The candidate builds successfully (zero errors; NuGet's shared vulnerability
+cache was sandbox-inaccessible). Headless `greedy-trap` passes 188 assertions,
+including dry basin traversal, canal/wheel nonintrusion, authored crowns and
+compression. It records zero runtime errors and one exit ObjectDB leak warning;
+no pixels are claimed from this run. Mesh census and documentation links pass.
+
+## Reservoir Counting House — second creative pass (2026-11-16)
+
+The fresh High review rejected the broad cream ground because it erased the
+fortress silhouette. The existing shared-water sheet now forms a continuous
+teal reservoir; four distant pale bank solids and their long quay strips are
+removed. Two short brick quays carry one larger counting house with a round
+brass float-gauge window and one smaller plain house. Asymmetric low causeways
+join these to the fort. The round tree trays are removed. The wheel is larger
+in its existing plane, seated on the west wall via a fixed pedestal/shaft, with
+one short sluice. Three small reservoir floats and the gauge float share a slow
+pausable water clock. The dry reward chamber and every authoritative surface,
+hazard, stair, footprint and camera remain unchanged.
+
+High retains its actual water/reflection feature; Medium retains the exact
+existing shared refraction shader. Low keeps the houses, gauge, wheel, floats
+and opaque teal reservoir, with emissive Night windows and no new real lights.
+No primitive capture domain changes were needed: new dimensions use owned
+rounded boxes or transforms of existing pinned unit spheres/captured meshes.
+
+Source/public checks pass. The focused headless Greedy journey passes 194
+assertions, including the larger wheel's full rotational clearance, exterior
+nonintrusion, all-preset shared-water policy/core counting house and ordinary
+pause freezing both wheel and float. Its raw log retains 16 ObjectDB exit leaks
+and no runtime errors. Build passes with the existing NuGet audit-cache access
+warnings. Actual High/Medium/Low, Night, oblique and wheel/current-motion images
+remain parent-owned qualification; these numeric checks do not approve the art.
+
+The first native second-pass receipt passed 204 checks/20 captures, but actual
+battle images hid the enlarged wheel behind the west wall. It is now moved to
+the western front quarter and faces the camera with its XY wheel plane. A short
+rear brick machine pier seats the pedestal/shaft; a connected channel feeds its
+water ribbon. The east house quay moves inward to retain its frame margin.
+Clearance now compares a full rotor revolution against the actual short quays,
+rather than the removed narrow-canal bounds. No game-camera change is used.
+
+The corrected source builds with `-m:1`; the rebuilt focused headless journey
+passes 194 checks, 0 runtime errors and four ObjectDB exit warnings. An earlier
+headless receipt launched after a failed parallel-worker build is not used as
+qualification; the explicit single-node rebuild and fresh output are retained.
+Native battle-camera wheel visibility remains the essential next check.
+
+Root native review confirms the corrected wheel is visible from the gameplay
+camera: `greedy-canal` passes 137 checks/9 captures and a full revolution on all
+presets. The labelled close-inspection camera now targets the new complete
+machine pier instead of the old upstream wheel position. This adjusts evidence
+framing only; accepted geometry and the gameplay camera are unchanged.
+
+## Native visual review (2026-11-16)
+
+The combined release candidate was reviewed at Low, Medium and High in daylight
+and at Night. A fresh plain-Claude Fable 5.2 medium advisor inspected every
+required map/preset image and returned visual GO; root also inspected the actual
+reservoir, connected wheel and quays. This is visual evidence, not publication
+or a frame-rate claim. The shared Night palette/footer comes from PR114.
+
+The native `greedy-canal` witness passed137 assertions and9 captures, including
+full wheel rotations on all presets; its118.93-second recording was decoded.
+Images below are unchanged seed64 captures from combined source6ef981f.
+
+| Low | Medium | High | High Night |
+|---|---|---|---|
+| [View](images/stages-046/greedy-trap/low-midday.png) | [View](images/stages-046/greedy-trap/medium-midday.png) | [View](images/stages-046/greedy-trap/high-midday.png) | [View](images/stages-046/greedy-trap/high-night.png) |

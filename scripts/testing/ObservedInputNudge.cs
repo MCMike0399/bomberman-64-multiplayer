@@ -24,6 +24,10 @@ internal sealed class ObservedInputNudge(PlayerInput press,int generation,long b
         {Finish("two-sent-samples",true,now,progress);return false;}
         return Decision is null;
     }
+    internal static bool NeutralSent(InputSendObservation? sample,PlayerInput neutral,int generation,Release release)=>
+        sample is {} sent&&sent.Generation==generation&&sent.Input==neutral&&sent.CapturedAt>=release.Timestamp&&
+        sent.SentSequence==sent.CapturedSequence&&sent.SentSequence>(release.Observation?.SentSequence??0)&&
+        sent.TotalSentSamples>(release.Observation?.TotalSentSamples??0)&&sent.MatchingSentSamples>0;
     internal void Cancel(long now)=>Finish("cancelled",false,now,null);
     private void Finish(string reason,bool delivered,long now,InputSendObservation? sample)=>
         Interlocked.CompareExchange(ref _release,new(reason,delivered,now,sample),null);

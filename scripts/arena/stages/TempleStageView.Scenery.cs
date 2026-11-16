@@ -349,7 +349,7 @@ public partial class TempleStageView
 
     // ---------------------------------------------------------------- structures
 
-    private Node3D Lighthouse(Node3D parent,Vector3 position,float height,float phase)
+    private Node3D Lighthouse(Node3D parent,Vector3 position,float height,float phase,bool coreClock=false)
     {
         var root=Prop(parent,"Lighthouse",position);
         var red=_art.Toy(new("d8433b"),.5f);var white=_art.Toy(new("f4efe3"),.5f);var dark=_art.Color(new("3a3f47"),.6f);
@@ -366,29 +366,27 @@ public partial class TempleStageView
             Box(root,new(Mathf.Cos(a)*.53f,height+.2f,Mathf.Sin(a)*.53f),new(.035f,.24f,.035f),dark);
         }
         Cylinder(root,new(0,height+.32f,0),.55f,.03f,dark);
-        Cylinder(root,new(0,height+.38f,0),.3f,.62f,Glow(new("fff1b5"),1.2f));
+        Cylinder(root,new(0,height+.38f,0),.3f,.62f,Glow(new("fff1b5"),1.2f)).Name="LighthouseLens";
         Cone(root,new(0,height+.92f,0),.42f,.46f,red,16);
         Sphere(root,new(0,height+1.2f,0),Vector3.One*.14f,dark);
         Box(root,new(0,.4f,.6f),new(.32f,.6f,.1f),_art.Color(new("4a3628"),.7f),.04f);
         var beam=new Node3D{Name="LighthouseBeam",Position=new(0,height+.4f,0)};root.AddChild(beam);
-        var light=Glow(new("fff3c4"),1.3f,.3f);
+        var light=CoastalBeamPaint();var beamMesh=CoastalBeamMesh();
         foreach(int side in new[]{-1,1})
-        {
-            var ray=Taper(beam,new(side*3.3f,0,0),.12f,.55f,6.2f,light,12);
-            ray.Rotation=new(0,0,side*Mathf.Pi/2);ray.CastShadow=GeometryInstance3D.ShadowCastingSetting.Off;
-        }
-        _sceneryMotion.Add(t=>beam.Rotation=new(0,phase+t*.9f,0));
+            beam.AddChild(new MeshInstance3D {Name=side<0?"LighthouseSoftBeamWest":"LighthouseSoftBeamEast",Mesh=beamMesh,MaterialOverride=light,
+                Basis=PresentationMath.Rotation(new(0,side<0?Mathf.Pi:0,0)),CastShadow=GeometryInstance3D.ShadowCastingSetting.Off});
+        if(!coreClock)_sceneryMotion.Add(t=>beam.Basis=PresentationMath.Rotation(new(0,phase+t*.22f,0)));
         return root;
     }
 
-    private Node3D Windmill(Node3D parent,Vector3 position,float yaw)
+    private Node3D Windmill(Node3D parent,Vector3 position,float yaw,bool animate=true)
     {
         var root=Prop(parent,"Windmill",position,yaw);
         var wall=_art.Color(new("efe3c7"),.85f);var roof=_art.Toy(new("b5533c"),.6f);var wood=_art.Color(new("7b5a3c"),.8f);
         Taper(root,new(0,1.3f,0),.95f,.68f,2.6f,wall,20);
         Cone(root,new(0,2.95f,0),.9f,.75f,roof,20);
         Box(root,new(0,.42f,.86f),new(.42f,.75f,.12f),wood,.05f);
-        Box(root,new(0,1.7f,.73f),new(.3f,.3f,.08f),_art.Color(new("5c88a8"),.4f),.04f);
+        Box(root,new(0,1.7f,.73f),new(.3f,.3f,.08f),_art.Color(new("5c88a8"),.4f),.04f).Name="WindmillWindow";
         var hub=new Node3D{Name="WindmillSails",Position=new(0,2.35f,.95f)};root.AddChild(hub);
         Cylinder(hub,Vector3.Zero,.13f,.22f,wood).Rotation=new(Mathf.Pi/2,0,0);
         var canvas=_art.Color(new("f6efe0"),.85f);
@@ -398,7 +396,7 @@ public partial class TempleStageView
             Box(arm,new(0,.95f,.06f),new(.07f,1.9f,.06f),wood);
             Box(arm,new(.2f,1.05f,.07f),new(.36f,1.45f,.025f),canvas,.01f);
         }
-        _sceneryMotion.Add(t=>hub.Rotation=new(0,0,-t*.65f));
+        if(animate)_sceneryMotion.Add(t=>hub.Rotation=new(0,0,-t*.65f));
         return root;
     }
 

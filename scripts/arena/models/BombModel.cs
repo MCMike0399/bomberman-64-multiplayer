@@ -13,6 +13,9 @@ public partial class BombModel : Node3D
     private readonly Node3D _shape=new(),_fuseAssembly=new();
     private readonly MeshInstance3D _shell,_spark;
     private readonly ArtMaterials _art;
+    private readonly Dictionary<Color,StandardMaterial3D> _nightShells=[];
+    private bool _night;
+    private Color _shellColor=new("222536");
     private int _pumps=-1;
     private float _size=BaseVisualScale,_targetSize=BaseVisualScale,_pulse,_fuse=2.5f,_clock;
     private bool _remote;
@@ -54,8 +57,27 @@ public partial class BombModel : Node3D
         _charge=charge;_fuseAssembly.Visible=!remote;
         _shot=motion==1&&carrier is null;_remoteIndicators.Visible=remote;
         _targetSize=Math.Min(2.3f,BaseVisualScale+Math.Max(0,level-1)*.04f+pumps*.32f);
-        _shell.MaterialOverride=_art.Toy(remote?new("2478e8"):red?new("d82e43"):mode=="bounce"?new("a365ea"):new("222536"),.32f);
+        _shellColor=remote?new("2478e8"):red?new("d82e43"):mode=="bounce"?new("a365ea"):new("222536");
+        ApplyShell();
         return pumped;
+    }
+    public void SetNight(bool night)
+    {
+        if(_night==night)return;
+        _night=night;ApplyShell();
+    }
+    private void ApplyShell()
+    {
+        if(!_night){_shell.MaterialOverride=_art.Toy(_shellColor,.32f);return;}
+        if(!_nightShells.TryGetValue(_shellColor,out var material))
+        {
+            // A pale light-driven lacquer rim keeps dark bombs readable on navy
+            // water. Duplicate only the bomb material; shared toys retain their finish.
+            material=(StandardMaterial3D)_art.Toy(_shellColor,.32f).Duplicate();
+            material.Rim=.65f;material.RimTint=.08f;
+            _nightShells[_shellColor]=material;
+        }
+        _shell.MaterialOverride=material;
     }
     public override void _Process(double delta)
     {
