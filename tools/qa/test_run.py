@@ -67,18 +67,21 @@ class HarnessTests(unittest.TestCase):
             with self.assertRaises(PermissionError):
                 qa.stop(process)
 
-    def test_soak_rejects_recorded_failures_inactivity_liveness_and_duplicate_rows(self):
-        result = {'Stage': 'fixture', 'Difficulty': 'fixture', 'Bots': 3, 'Seed': 0,
+    def test_soak_rejects_recorded_failures_inactivity_liveness_duplicates_and_wrong_grid(self):
+        result = {'Stage': 'sunken-temple', 'Difficulty': 'easy', 'Bots': 3, 'Seed': 64,
                   'Ticks': 10, 'ActiveTicks': 5, 'EligibleBotTicks': 6, 'MovingBotTicks': 3,
                   'Bombs': 1, 'LongestOpenIdleTicks': 1}
         report = {'fairnessChecks': 1, 'idleLimitTicks': 3, 'tickRate': 1,
-                  'results': [dict(result, Seed=seed) for seed in range(72)]}
+                  'results': [dict(result, Stage=stage, Difficulty=difficulty, Bots=bots, Seed=seed)
+                              for stage in ('sunken-temple', 'rock-garden', 'up-and-down', 'top-rules', 'blizzard-battle', 'greedy-trap')
+                              for difficulty in ('easy', 'medium', 'hard') for bots in (3, 7) for seed in (64, 9876)]}
         with tempfile.TemporaryDirectory() as temporary:
             receipt = Path(temporary) / 'soak.json'
             receipt.write_text(json.dumps(report))
             self.assertEqual(72, qa.validate_soak(receipt)['scenarios'])
             changes = [('passed', False), ('EligibleBotTicks', 0), ('MovingBotTicks', 0),
-                       ('Bombs', 0), ('ActiveTicks', 0), ('LongestOpenIdleTicks', 4), ('Seed', 1)]
+                       ('Bombs', 0), ('ActiveTicks', 0), ('LongestOpenIdleTicks', 4), ('Seed', 9876),
+                       ('Stage', 'fixture'), ('Difficulty', 'normal'), ('Bots', 5), ('Seed', 42)]
             for key, value in changes:
                 changed = copy.deepcopy(report)
                 changed['results'][0][key] = value
