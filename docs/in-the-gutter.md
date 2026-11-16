@@ -300,3 +300,10 @@ managed presentation math (-.60 X, .38 Y). Material, size, face/hand depths,
 mount, main machinery, water and gameplay camera remain unchanged. Source
 build/public and focused shape/current regressions pass; actual dial readability
 remains a native image judgment.
+
+The initial dial-tilt headless run reached all 22 shape assertions but failed its
+runtime gate because sandboxed user-data logs/shutdown saving were denied; it
+is retained as an infrastructure-red receipt, not a passing run. Fresh authorized
+runs on `b5c791b` pass 22 shape and 11 current checks, zero runtime errors, with
+four ObjectDB exit warnings each. They validate source behavior, not the face's
+appearance; root still owns the actual camera review.
