@@ -456,6 +456,15 @@ Low/High, updater/rollback or Mac quit-path evidence. A headless gameplay pass
 followed by a native abort remains a failed gate. Named game `runtime.log` files
 can be staged explicitly for diagnosis; arbitrary build/bootstrap logs stay out.
 
+The expanded-roster `graphics-settings` and four-phase `menu-preview` scenarios
+have outer catalog budgets of 900s and 1,200s. Retained hosted Metal evidence shows
+healthy Graphics Settings alone taking at least 314s; the inner 20s preparation
+deadline, live per-stage preset checks and software-renderer policy stay intact.
+See the [measured budget correction](../history/menu-preview-budget-20261116.md).
+Only the packaged Mac `all` override uses 3,600s with a 3,900s parent wait; its CI
+job has 90min for the complete expanded archive regression and artifact retention.
+Individual journey waits and other platform/job budgets remain unchanged.
+
 Read [automatic updates](../automatic-updates.md) before changing release signing,
 downloads or installation. The client signature key is public; the signing secret
 stays outside Git. Release fixtures must never be published. Test both successful
