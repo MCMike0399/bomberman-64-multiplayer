@@ -102,6 +102,12 @@ public partial class PlaytestDriver
         Check(intrusive.Length==0,"exterior architecture stays below or outside the playable volume: "+string.Join(',',intrusive));
         var wheel=scenery!.GetNode<Node3D>("GreedyWaterwheelMount/GreedyWaterwheel");float wheelAngle=wheel.Rotation.Z;
         await Frames(8);Check(Math.Abs(wheel.Rotation.Z-wheelAngle)>.01f,"decorative waterwheel rotates independently of match hazards");
+        var floatNode=scenery.GetNode<Node3D>("GreedyReservoirFloat0");var floatBefore=floatNode.Position;
+        await Frames(10);Check(!floatNode.Position.IsEqualApprox(floatBefore),"counting-house reservoir floats move on the core water rhythm");
+        await KeyPress(Key.Escape);await Frames(4);var pausedWheel=wheel.Transform;var pausedFloat=floatNode.Position;
+        await Frames(12);
+        Check(wheel.Transform.IsEqualApprox(pausedWheel)&&floatNode.Position.IsEqualApprox(pausedFloat),"ordinary pause freezes both core reservoir wheel and float life");
+        await ActivateNamed("ResumeGame");
         var brick=openingTerrain.GetNode<MeshInstance3D>("GreedyWallBrick_9_0");
         var cap=openingTerrain.GetNode<MeshInstance3D>("GreedyWallCap_9_0");
         Check(brick.Position.Y+brick.Mesh.GetAabb().End.Y<=cap.Position.Y+cap.Mesh.GetAabb().Position.Y+.001f,
@@ -144,6 +150,9 @@ public partial class PlaytestDriver
             Check(!terrain.GetChildren().OfType<MeshInstance3D>().Any(n=>PrimitiveTemplates.Is(n.Mesh,"PlaneMesh")),"turquoise pit has no water plane at "+preset);
             var moat=terrain.GetNode<MeshInstance3D>("GreedyExterior/GreedyReservoirWater");
             Check(((ShaderMaterial)moat.MaterialOverride).Shader==ArtMaterials.WaterShaderFor(preset),"decorative reservoir follows the shared water quality policy at "+preset);
+            Check(terrain.GetNode<Node3D>("GreedyExterior/GreedyCountingHouse").IsVisibleInTree()&&
+                terrain.GetNode<Node3D>("GreedyExterior/GreedyCountingHouse/GreedyFloatGaugeWindow").IsVisibleInTree(),
+                "hero counting house and its round gauge remain core at "+preset);
             Check(Math.Abs(moat.Position.Y-TempleStageView.GreedyMoatHeight)<.001f,"exterior reservoir stays below the safe chamber floor");
             await Capture("greedy-trap-"+GraphicsQuality.ToWire(preset));
         }

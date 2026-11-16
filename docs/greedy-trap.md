@@ -230,3 +230,30 @@ cache was sandbox-inaccessible). Headless `greedy-trap` passes 188 assertions,
 including dry basin traversal, canal/wheel nonintrusion, authored crowns and
 compression. It records zero runtime errors and one exit ObjectDB leak warning;
 no pixels are claimed from this run. Mesh census and documentation links pass.
+
+## Reservoir Counting House — second creative pass (2026-11-16)
+
+The fresh High review rejected the broad cream ground because it erased the
+fortress silhouette. The existing shared-water sheet now forms a continuous
+teal reservoir; four distant pale bank solids and their long quay strips are
+removed. Two short brick quays carry one larger counting house with a round
+brass float-gauge window and one smaller plain house. Asymmetric low causeways
+join these to the fort. The round tree trays are removed. The wheel is larger
+in its existing plane, seated on the west wall via a fixed pedestal/shaft, with
+one short sluice. Three small reservoir floats and the gauge float share a slow
+pausable water clock. The dry reward chamber and every authoritative surface,
+hazard, stair, footprint and camera remain unchanged.
+
+High retains its actual water/reflection feature; Medium retains the exact
+existing shared refraction shader. Low keeps the houses, gauge, wheel, floats
+and opaque teal reservoir, with emissive Night windows and no new real lights.
+No primitive capture domain changes were needed: new dimensions use owned
+rounded boxes or transforms of existing pinned unit spheres/captured meshes.
+
+Source/public checks pass. The focused headless Greedy journey passes 194
+assertions, including the larger wheel's full rotational clearance, exterior
+nonintrusion, all-preset shared-water policy/core counting house and ordinary
+pause freezing both wheel and float. Its raw log retains 16 ObjectDB exit leaks
+and no runtime errors. Build passes with the existing NuGet audit-cache access
+warnings. Actual High/Medium/Low, Night, oblique and wheel/current-motion images
+remain parent-owned qualification; these numeric checks do not approve the art.

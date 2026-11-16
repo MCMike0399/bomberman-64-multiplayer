@@ -140,6 +140,7 @@ public partial class TempleStageView
     private void ProcessGreedyTrap(float delta)
     {
         UpdateGreedyWindowLighting();
+        ProcessGreedyReservoir(delta);
         if(_greedyWallsInitialized&&_greedyWallAge<.12f)
         {
             _greedyWallAge=Math.Min(.12f,_greedyWallAge+delta);float ease=1-Mathf.Pow(1-_greedyWallAge/.12f,3);
@@ -155,7 +156,7 @@ public partial class TempleStageView
         }
         foreach(var gear in _greedyGears)gear.RotateZ(delta*_greedyGearImpulse*2.4f);
         _greedyGearImpulse=Mathf.MoveToward(_greedyGearImpulse,0,delta*2.5f);
-        if(_greedyWaterwheel is {} wheel&&wheel.IsVisibleInTree())wheel.RotateZ(delta*.24f);
+        if(WeatherActive&&_greedyWaterwheel is {} wheel&&wheel.IsVisibleInTree())wheel.RotateZ(delta*.24f);
     }
 
     private void SizeGreedyCrushers()
