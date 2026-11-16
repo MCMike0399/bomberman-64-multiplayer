@@ -133,3 +133,38 @@ water elimination are preserved. Original-game coordinates/drop physics remain
 unverified; see the source research. Guest rendering and synthetic inputs do
 not certify native host GPU performance or physical controller behavior. This
 source PR does not install an app or deploy an external server.
+
+## Coastal scenery refinement (2026-11-15 source work)
+
+The four exterior sea stacks keep their existing positions and heights, while
+an original cached managed mesh replaces their straight tapered silhouettes.
+Unequal faceted outlines, broad tide-worn feet, three restrained eroded ledges
+and gray/sage vertex-painted weathering give them a natural coastal profile.
+The shallow grass crowns follow each rock outline; the existing single tree
+remains. Lighthouse, boats, buoys, far headland and gulls retain their composition.
+
+Only the exterior partial changes: no playable ring, crown, pier, stair, camera,
+water, collision, rule or network field changes. The owned SurfaceTool geometry
+uses managed PresentationMath for static angles and introduces no new native
+primitive parameter domain. Existing scenery checks cover placement, materialed
+nonempty geometry, animation, Low hiding and miniature exclusion. Native
+Midday/Night/High and labeled establishing captures still require visual review.
+Source validation: clean build, public static checks and 119 headless
+stage-scenery assertions pass with zero runtime errors. This verifies geometry
+and placement; it does not establish native rendered quality or user approval.
+
+## Coastal refinement native review — 2026-11-15
+
+Root inspected High before/after and Night from real exports on Apple M5 Pro
+Metal. The eroded layers and fitted crowns improve the coastal silhouette
+without changing arena routes or hiding the ring. The native scenery tour
+passed 371 assertions and 40 captures with no runtime errors or warnings.
+
+![Before](images/up-and-down-coastal/before.png)
+
+![After](images/up-and-down-coastal/after.png)
+
+![Night](images/up-and-down-coastal/night.png)
+
+[Capture provenance](images/up-and-down-coastal/manifest.json). This is root's
+visual review, not physical-controller testing or user image approval.

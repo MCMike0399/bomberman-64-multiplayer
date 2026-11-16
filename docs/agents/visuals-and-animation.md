@@ -936,3 +936,14 @@ visible-hemisphere rays against the consumed castle/crag triangles. It runs
 inside the common stage-fidelity/scenery/all suites. Native 99/7 evidence
 precedes the last small attachment/tilt correction; fresh integrated
 all-preset review still qualifies the final view.
+
+### Up & Down coastal refinement (2026-11-15 source work)
+
+The exterior sea stacks use original irregular packed rock meshes with broad
+tide-worn bases, restrained strata ledges and fitted turf crowns. Keep their
+positions/heights, the single tree, lighthouse and suspended playable structure.
+Static angles use PresentationMath and all new surfaces are owned managed
+geometry; no engine-primitive fallback is introduced. See the
+[stage contract](../up-and-down.md#coastal-scenery-refinement-2026-11-15-source-work).
+The existing stage-scenery journey retains ordinary Midday/Night/High and
+labeled establishing captures for the required visual comparison.
