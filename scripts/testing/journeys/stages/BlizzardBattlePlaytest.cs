@@ -48,13 +48,13 @@ public partial class PlaytestDriver
                 clockwise&=cross.LengthSquared()>1e-10f&&cross.Dot(bowlNormals[a]+bowlNormals[b]+bowlNormals[c])<0;
             }
             Check(clockwise&&bowlIndex.Length>0,"actual owned glacier body faces are nondegenerate and clockwise with outward normals");
-            Check(terrain.GetNode<Node3D>("GlacierArch").GetParent()==terrain,"ice crown arch is seated on the core bowl shelf");
+            Check(bowl.Mesh.GetSurfaceCount()==3&&terrain.GetNodeOrNull<Node3D>("GlacierArchShelf")==null&&terrain.GetNodeOrNull<Node3D>("GlacierArch")==null,"carved snow and ice vault replaces the intersecting slab and detached posts");
             Check(!AuditDescendants(terrain).Any(n=>n.Name.ToString().StartsWith("Snowman")),"penguin pond replaces the redundant snowman vignette");
             foreach(var preset in Enum.GetValues<GraphicsPreset>())
             {
                 await SelectGraphics(preset);
-                Check(bowl.IsVisibleInTree()&&terrain.GetNode<Node3D>("GlacierArch").IsVisibleInTree(),"bowl and hanging-ice crown survive "+preset);
-                Check(terrain.GetNode<OmniLight3D>("GlacierWindLantern/GlacierWarmLight").IsVisibleInTree()==(preset!=GraphicsPreset.Low),"warm lantern retains emissive-only Low policy at "+preset);
+                Check(bowl.IsVisibleInTree()&&terrain.GetNode<Node3D>("GlacierGrottoCrown").IsVisibleInTree(),"bowl and hanging-ice crown survive "+preset);
+                Check(terrain.GetNode<OmniLight3D>("GlacierVaultLantern/GlacierWarmLight").IsVisibleInTree()==(preset!=GraphicsPreset.Low),"warm lantern retains emissive-only Low policy at "+preset);
             }
             var pennant=terrain.GetNode<MeshInstance3D>("GlacierWindLantern/GlacierWindPennant").MaterialOverride as ShaderMaterial;
             var weather=terrain.Weather!;float clock=weather.Clock;await Frames(12);

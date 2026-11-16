@@ -23,6 +23,7 @@ uniform float quality_detail=1.0;
 uniform float quality_premium=0.0;
 uniform float weather_clock=0.0;
 uniform float snow_normal_strength=.22;
+uniform vec4 snow_tint : source_color=vec4(1.0);
 uniform vec2 wind=vec2(0.0);
 // World-space direction toward the key light and its color times energy, from StageLighting.
 uniform vec3 sun_direction=vec3(.3,.85,.42);
@@ -106,6 +107,7 @@ void fragment(){
       NORMAL=normalize(NORMAL-gradient*snow_normal_strength);
       ALBEDO*=mix(vec3(.74,.84,1.0),vec3(1.0),smoothstep(.3,.7,drift));
     }
+    if(surface_style==2)ALBEDO*=snow_tint.rgb;
     ROUGHNESS=.84;SPECULAR=.28;
   }
   if(detail>.5){

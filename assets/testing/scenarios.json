@@ -1747,6 +1747,18 @@
       "headless": false,
       "timeout": 900,
       "manual": false
+    },
+    {
+      "id": "glacier-grotto",
+      "method": "GlacierGrotto",
+      "domains": [
+        "rendering",
+        "ui",
+        "gameplay"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
     }
   ]
 }

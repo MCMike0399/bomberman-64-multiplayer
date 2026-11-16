@@ -31,28 +31,10 @@ public partial class TempleStageView
                 if(x0<0&&x1<0)(x,z)=(Mathf.Lerp(x0,x1,(float)random.NextDouble()),Mathf.Lerp(z0,z1,(i+.5f)/count));
                 if(x0>Width)(x,z)=(Mathf.Lerp(x0,x1,(float)random.NextDouble()),Mathf.Lerp(z0,z1,(i+.5f)/count));
                 // Keep the pond and igloo clear of trees.
-                if(new Vector2(x-(Width+3.2f),z-9.5f).Length()<3.3f||new Vector2(x-(Width+3.4f),z+1.2f).Length()<2.4f
-                    ||new Vector2(x+4.1f,z-4.4f).Length()<3.2f)continue;
+                if(x<-.2f&&x>-8.5f&&z<9.5f||new Vector2(x+4.2f,z-11).Length()<3.1f)continue;
                 PineTree(scenery,new(x,ground,z),.95f+(float)random.NextDouble()*.75f,true,i*1.7f);
             }
         BuildGlacierLandmarks(ground);
-
-        // An igloo with a block pattern and a dark doorway, beyond the north-east corner.
-        var igloo=Prop(scenery,"Igloo",new(Width+3.4f,ground,-1.2f),-.7f);
-        var dome=Sphere(igloo,Vector3.Zero,new(2.6f,2.1f,2.6f),white);dome.Name="IglooDome";
-        for(int ring=1;ring<4;ring++)
-        {
-            float y=ring*.24f,radius=1.3f*Mathf.Sqrt(1-Mathf.Pow(y/1.05f,2));
-            Taper(igloo,new(0,y,0),radius+.012f,radius+.012f,.025f,shadowSnow,24);
-        }
-        Taper(igloo,new(0,.32f,1.25f),.48f,.48f,.7f,white,16).Rotation=new(Mathf.Pi/2,0,0);
-        Sphere(igloo,new(0,.3f,1.58f),new(.6f,.52f,.08f),_art.Color(new("27354a")));
-
-        // A frozen pond with penguins along the east side.
-        var pond=Prop(scenery,"FrozenPond",new(Width+3.2f,ground,9.5f));
-        Cylinder(pond,new(0,.01f,0),2.1f,.04f,_art.Color(new("9fd3ea"),.08f));
-        Cylinder(pond,new(0,0,0),2.35f,.035f,shadowSnow);
-        foreach(var (x,z,phase) in new[]{(-.6f,-2.6f,0f),(.5f,-2.4f,1.3f),(1.9f,1.9f,2.6f)})Penguin(scenery,pond.Position+new Vector3(x,0,z),phase);
 
         // Ice crystal clusters and soft drifts hug the outside of the walls.
         var crystal=_crystalMaterial;
@@ -82,7 +64,7 @@ public partial class TempleStageView
         var scenery=_scenery!;
         var ice=_art.FrozenSurface(0);_frozenMaterials.Add(ice);
         var blue=_art.FrozenSurface(3);_frozenMaterials.Add(blue);
-        WinterTree(scenery,new(-3.4f,ground,11.8f),1.05f,.4f);
+        WinterTree(scenery,new(-7.8f,ground,12.5f),1.05f,.4f);
         WinterTree(scenery,new(Width+3.1f,ground,3.8f),1.15f,2.1f);
         WinterTree(scenery,new(Width*.22f,ground,-3.3f),.9f,3.4f);
 

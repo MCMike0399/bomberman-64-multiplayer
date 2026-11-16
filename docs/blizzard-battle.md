@@ -137,3 +137,50 @@ sandboxed editor import could not save user editor settings; the authorized
 headless import completed with no errors or warnings. Matched Low/Medium/High
 opening/Night combat captures and a short wind witness still require native
 review and the final advisor gate.
+
+## Glacier Lantern Grotto — 2026-11-16 source candidate
+
+This supersedes the separate arch/shelf in the previous candidate. The user's
+close crop exposed a real support mismatch: shelf topY=.16 engulfed the arch's
+lower .485 units, the snow feet protruded only .015 above it, and the rotated
+left post overhung the shelf by about .80. Parentage/winding checks did not
+prove contact. The old posts and detached slab are removed.
+
+One owned three-surface mesh now carries the sculpted field, continuous snow
+shoulder, genuinely open through-vault, pale thick ice lining and four rounded
+icicles. Its outer shoulder meets the field through a horizontal fillet; the
+white/ice lip shares its generated interface. One tilted violet crown samples
+the actual captured snow triangles for its seven support vertices. The amber
+lantern sits inside the vault. The existing pond/penguins consolidate in its
+lee, absorbing the igloo; Low keeps one penguin. Three broad drifts and a muted
+blue-grey far field separate the white bowl from its surround.
+
+The existing accepted-wind pennant remains at its original post and follows the
+same accepted vector/pausable clock. Court ice, spires, wind forces, avalanche,
+weather draw budgets and all authority/camera behavior remain unchanged. All
+principal masses and the lantern's emission remain on Low; only the existing
+quality effects, companion penguins and real light vary by preset.
+
+The fresh inspected [White Cross image](https://www.konami.com/games/bomberman/r/s/img/ss_battle09_l.jpg)
+informs pale matte snow versus thick blue ice; [Konami's rounded editor slab](https://www.konami.com/games/bomberman/r2/s/img/castle/original_en_3.jpg)
+informs continuous shoulders/undercuts. The grotto is original art, not a
+recovered N64 landmark or mechanic. No reference image is distributed.
+
+`glacier-grotto` is the focused native/probe recipe. It records actual packed
+world bounds, every surface's winding, the through-vault ray, roof thickness,
+icicle/crown contact and ordinary 16:10/16:9 projected bounds. Its native leaf
+captures High/Medium/Low, High Night combat, front three-quarter, rear support
+and low vault views. The ordinary `blizzard-battle` and `stage-scenery` journeys
+remain regressions. These probes support visual review; they cannot approve
+the rendered materials or charm.
+
+Source build passes with zero errors/warnings. Headless checks pass 73 grotto,
+87 Blizzard and 113 scenery assertions, with zero runtime errors (exit ObjectDB
+warnings retained). Python playtest contracts pass32; mesh census matches.
+Captured hero bounds are X[-6.8,-.7], Y[-.3,5.05], Z[1.28,8.72]. The unchanged
+1280×800 camera places them at normalized X[.047245,.236016],
+Y[.163616,.473298]: 60 pixels from the left and 19 below the HUD-safe boundary.
+16:9 also passes. The actual roof surfaces measure Y1.7 and3.7; all48 icicle
+collar samples are within .0112 units of the captured lining, and the seven
+crown bases within .000001 of captured snow. Native shader compilation and
+rendered front/rear/below joins remain root's gate.
