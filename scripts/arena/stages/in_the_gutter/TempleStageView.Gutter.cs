@@ -55,6 +55,7 @@ public partial class TempleStageView
                 GraphicsQuality.ApplyShaderDetail(_gutterOceanWater);ApplyGutterOceanLighting();
             }
             foreach(var material in _gutterMaterials)GraphicsQuality.ApplyShaderDetail(material);
+            foreach(var light in _gutterWorkLights)light.Visible=GraphicsQuality.Current!=GraphicsPreset.Low;
             _graphicsRevision=GraphicsQuality.Revision;
         }
         if(_gutterWakeMaterial!=null)
@@ -95,8 +96,8 @@ public partial class TempleStageView
         }
         GutterGantry(this,-1,verdigris,brass,cream);
         GutterGantry(this,1,verdigris,brass,cream);
-        GutterWorkLantern(new(.24f,2.35f,Depth+.1f),verdigris,brass);
-        GutterWorkLantern(new(Width-.24f,2.35f,Depth+.1f),verdigris,brass);
+        GutterWorkLantern(new(.24f,2.35f,Depth+.42f),verdigris,brass);
+        GutterWorkLantern(new(Width-.24f,2.35f,Depth+.42f),verdigris,brass);
         foreach(int x in new[]{4,15})foreach(int z in new[]{4,15})GutterBollard(x,z,brick,cream,brass,algae);
         GutterFishVane(brick,cream,brass,dark);
         BuildCopperLockEnds(brick,cream,verdigris,brass,dark,mosaic);
@@ -138,6 +139,7 @@ public partial class TempleStageView
         Box(root,new(0,height/2,0),new(.82f,height,.82f),light,.085f);
         Box(root,new(0,height*.48f,.405f),new(.69f,.07f,.025f),seam,.015f);
         AddGutterWake(root,new(0,.072f,0),.84f);
+        AddGutterFoam(root,new(0,.074f,0),.9f);
         return root;
     }
 

@@ -228,6 +228,7 @@ public partial class TempleStageView
         GutterRing(post,new(0,top*.62f,.93f),.28f,.09f,brass);
         RoundedBox(post,new(0,top*.62f,.80f),new(.54f,.56f,.15f),brick,.25f);
         AddGutterWake(post,new(0,.07f,0),1.95f);
+        AddGutterFoam(post,new(0,.074f,0),2.15f);
     }
 
     private void GutterFishVane(Material brick,Material cream,Material brass,Material dark)
@@ -246,16 +247,19 @@ public partial class TempleStageView
         foreach(int face in new[]{-1,1})
             Sphere(_gutterArrow,new(.35f,.07f,face*.126f),Vector3.One*.085f,dark);
         AddGutterWake(post,new(0,.07f,0),1);
+        AddGutterFoam(post,new(0,.074f,0),1.1f);
     }
 
     private void GutterWorkLantern(Vector3 position,Material verdigris,Material brass)
     {
         var lamp=Prop(this,position.X<Width/2f?"CopperLockWestLantern":"CopperLockEastLantern",position);
         RoundedBox(lamp,Vector3.Zero,new(.56f,.75f,.48f),verdigris,.4f);
-        Box(lamp,new(0,.01f,.25f),new(.35f,.48f,.035f),Glow(new Color("eab978"),1.15f),.025f);
+        Box(lamp,new(0,.01f,.25f),new(.46f,.59f,.035f),Glow(new Color("ffc078"),1.55f),.025f);
         RoundedBox(lamp,new(0,.43f,0),new(.69f,.14f,.61f),brass,.6f);
-        lamp.AddChild(new OmniLight3D{Name="CopperLockWorkLight",Position=new(0,0,.4f),
-            LightColor=new Color("eac084"),LightEnergy=.32f,OmniRange=3.3f,ShadowEnabled=false});
+        var light=new OmniLight3D{Name="CopperLockWorkLight",Position=new(0,0,.4f),
+            LightColor=new Color("eac084"),LightEnergy=.7f,OmniRange=4.5f,ShadowEnabled=false,
+            Visible=GraphicsQuality.Current!=GraphicsPreset.Low};
+        lamp.AddChild(light);_gutterWorkLights.Add(light);
     }
 
     public void SetGutterCompression(float left,float right)

@@ -6,6 +6,33 @@ namespace BlastCircuit.Arena.Stages;
 
 public partial class TempleStageView
 {
+    private ShaderMaterial? _gutterFoamMaterial;
+    private readonly List<OmniLight3D> _gutterWorkLights=[];
+
+    private void AddGutterFoam(Node3D parent,Vector3 position,float footprint)
+    {
+        if(_gutterFoamMaterial is null)
+        {
+            _gutterFoamMaterial=new ShaderMaterial{Shader=new Shader{Code=GutterFoamShader},RenderPriority=-14};
+            _gutterMaterials.Add(_gutterFoamMaterial);
+        }
+        if(!SceneryMeshes.TryGetValue("copper-lock-contact-foam",out var mesh))
+            SceneryMeshes["copper-lock-contact-foam"]=mesh=GutterPlane(-.7f,.7f,-.7f,.7f,1);
+        parent.AddChild(new MeshInstance3D{Name="CopperLockWaterlineFoam",Mesh=mesh,MaterialOverride=_gutterFoamMaterial,
+            Position=position,Scale=new(footprint,1,footprint),CastShadow=GeometryInstance3D.ShadowCastingSetting.Off});
+    }
+
+    private const string GutterFoamShader="""
+shader_type spatial;
+render_mode unshaded, blend_mix, depth_draw_never;
+void fragment(){
+    vec2 p=abs((UV-.5)*1.4)-vec2(.36);
+    float edge=length(max(p,vec2(0.0)))+min(max(p.x,p.y),0.0)-.10;
+    float ring=(1.0-smoothstep(.015,.075,abs(edge)));
+    ALBEDO=vec3(.72,.87,.76);
+    ALPHA=ring*.24;
+}
+""";
     private void AddGutterWake(Node3D parent,Vector3 position,float scale)
     {
         if(!SceneryMeshes.TryGetValue("copper-lock-wake",out var mesh))
@@ -43,7 +70,7 @@ void fragment(){
     float fade=smoothstep(.0,.18,d)*(1.0-smoothstep(.35,.78,d));
     float drift=.88+.12*sin(current_clock*.8-d*3.0);
     ALBEDO=vec3(.72,.87,.73);
-    ALPHA=stroke*fade*drift*.075*min(1.0,abs(current));
+    ALPHA=stroke*fade*drift*.24*min(1.0,abs(current))*quality_detail;
 }
 """;
 }
