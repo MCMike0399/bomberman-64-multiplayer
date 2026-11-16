@@ -37,10 +37,39 @@ public partial class PlaytestDriver
             var crystal=cones[0].GetChildren().OfType<MeshInstance3D>().Single();
             Check(crystal.Mesh.GetAabb().End.Y>=1.7f&&Math.Abs(crystal.Mesh.GetAabb().End.Y-terrain.Layout.SoftBlockHeight*TempleStageView.HeightScale)<.001f,"large violet spires reach character height and match accepted cover collision");
             await Capture("blizzard-four-player-opening");
+            var bowl=terrain.GetNode<MeshInstance3D>("GlacierBowlBody");
+            var bowlArrays=bowl.Mesh.SurfaceGetArrays(0);var bowlPoints=bowlArrays[(int)Mesh.ArrayType.Vertex].AsVector3Array();
+            var bowlNormals=bowlArrays[(int)Mesh.ArrayType.Normal].AsVector3Array();var bowlIndex=bowlArrays[(int)Mesh.ArrayType.Index].AsInt32Array();
+            bool clockwise=true;
+            for(int i=0;i<bowlIndex.Length;i+=3)
+            {
+                int a=bowlIndex[i],b=bowlIndex[i+1],c=bowlIndex[i+2];
+                var cross=(bowlPoints[b]-bowlPoints[a]).Cross(bowlPoints[c]-bowlPoints[a]);
+                clockwise&=cross.LengthSquared()>1e-10f&&cross.Dot(bowlNormals[a]+bowlNormals[b]+bowlNormals[c])<0;
+            }
+            Check(clockwise&&bowlIndex.Length>0,"actual owned glacier body faces are nondegenerate and clockwise with outward normals");
+            Check(terrain.GetNode<Node3D>("GlacierArch").GetParent()==terrain,"ice crown arch is seated on the core bowl shelf");
+            Check(!AuditDescendants(terrain).Any(n=>n.Name.ToString().StartsWith("Snowman")),"penguin pond replaces the redundant snowman vignette");
+            foreach(var preset in Enum.GetValues<GraphicsPreset>())
+            {
+                await SelectGraphics(preset);
+                Check(bowl.IsVisibleInTree()&&terrain.GetNode<Node3D>("GlacierArch").IsVisibleInTree(),"bowl and hanging-ice crown survive "+preset);
+                Check(terrain.GetNode<OmniLight3D>("GlacierWindLantern/GlacierWarmLight").IsVisibleInTree()==(preset!=GraphicsPreset.Low),"warm lantern retains emissive-only Low policy at "+preset);
+            }
+            var pennant=terrain.GetNode<MeshInstance3D>("GlacierWindLantern/GlacierWindPennant").MaterialOverride as ShaderMaterial;
             var weather=terrain.Weather!;float clock=weather.Clock;await Frames(12);
+            var wind=State.GetProperty("blizzard");
+            Check(pennant!.GetShaderParameter("accepted_wind").AsVector2()==new Vector2(wind.GetProperty("x").GetSingle(),wind.GetProperty("z").GetSingle()),"broad core pennant follows the accepted weather vector");
+            await SelectLocalLighting(StageTime.Night);
+            var snow=terrain.GetNode<MeshInstance3D>("FrozenExterior").MaterialOverride as ShaderMaterial;
+            Check(Math.Abs(snow!.GetShaderParameter("snow_normal_strength").AsSingle()-.055f)<.0001f,"High Night powder relief is quieter than daytime snow");
+            await SelectLocalLighting(StageTime.Midday);
+            Check(Math.Abs(snow.GetShaderParameter("snow_normal_strength").AsSingle()-.22f)<.0001f,"daytime High snow retains original relief");
             Check(weather.Clock>clock&&weather.VisibleFlakes>0,"production snow flurries animate above the court");
             await KeyPress(Key.Escape);float paused=weather.Clock;int snapshots=_root.SnapshotCount;await Frames(12);
             Check(weather.Clock==paused&&_root.SnapshotCount==snapshots,"ordinary pause freezes snow animation and authoritative weather");
+            float pausedPennant=pennant.GetShaderParameter("weather_clock").AsSingle();await Frames(8);
+            Check(pennant.GetShaderParameter("weather_clock").AsSingle()==pausedPennant,"accepted-wind pennant freezes with the weather on pause");
             await ActivateNamed("ResumeGame");
             var camera=_root.GetViewport().GetCamera3D()!;var pose=camera.Transform;
             if(!_headless)

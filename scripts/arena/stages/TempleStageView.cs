@@ -66,7 +66,13 @@ public partial class TempleStageView : Node3D
         _lighting=lighting;
         if(_water?.MaterialOverride is ShaderMaterial material)lighting.ApplyWater(material);
         if(_greedyMoat?.MaterialOverride is ShaderMaterial moat)lighting.ApplyWater(moat);
-        foreach(var frozen in _frozenMaterials)lighting.ApplyKeyLight(frozen);
+        foreach(var frozen in _frozenMaterials)
+        {
+            lighting.ApplyKeyLight(frozen);
+            // Quiet powder relief at Night; clear court ice/cone styles keep
+            // their original surfaces and every weather/physics rule.
+            frozen.SetShaderParameter("snow_normal_strength",lighting.Label=="Night"?.055f:.22f);
+        }
     }
     public void SetWaterLevel(float tierLevel)
     {

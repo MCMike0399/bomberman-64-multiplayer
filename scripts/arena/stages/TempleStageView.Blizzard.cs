@@ -27,6 +27,7 @@ public partial class TempleStageView
             material.SetShaderParameter("wind",_blizzardWind);
             if(_graphicsRevision!=GraphicsQuality.Revision)GraphicsQuality.ApplyShaderDetail(material);
         }
+        ProcessGlacierBowl();
         _graphicsRevision=GraphicsQuality.Revision;
         if(_blizzardWeather!=null)_blizzardWeather.Active=WeatherActive;
         if(_exteriorSnow!=null)_exteriorSnow.Active=WeatherActive;
@@ -63,6 +64,7 @@ public partial class TempleStageView
             if(z==0||z==Depth-1)
                 Box(this,new(x+.5f,.075f,z==0?.96f:Depth-.96f),new(.98f,.15f,.075f),ice,.02f);
         }
+        BuildGlacierBowl();
         _iceCones=Enumerable.Range(0,4).Select(variant=>IceConeMesh(variant,Layout.SoftBlockHeight*HeightScale)).ToArray();
         _blizzardWeather=new BlizzardWeather{Width=Width,Depth=Depth};AddChild(_blizzardWeather);
     }

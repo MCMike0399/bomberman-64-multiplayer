@@ -48,21 +48,6 @@ public partial class TempleStageView
         Taper(igloo,new(0,.32f,1.25f),.48f,.48f,.7f,white,16).Rotation=new(Mathf.Pi/2,0,0);
         Sphere(igloo,new(0,.3f,1.58f),new(.6f,.52f,.08f),_art.Color(new("27354a")));
 
-        // A cheerful snowman watching from outside the front-left corner.
-        var snowman=Prop(scenery,"Snowman",new(-2.3f,ground,Depth-1.6f),.45f);
-        Sphere(snowman,new(0,.42f,0),Vector3.One*.9f,white);
-        Sphere(snowman,new(0,1.05f,0),Vector3.One*.65f,white);
-        Sphere(snowman,new(0,1.52f,0),Vector3.One*.46f,white);
-        var coal=_art.Color(new("26262c"),.5f);
-        foreach(float x in new[]{-.08f,.08f})Bead(snowman,new(x,1.58f,.2f),Vector3.One*.06f,coal);
-        for(int b=0;b<3;b++)Bead(snowman,new(0,.9f+b*.15f,.31f-b*.01f),Vector3.One*.06f,coal);
-        Cone(snowman,new(0,1.52f,.32f),.05f,.26f,_art.Color(new("f08a2c"),.6f),8).Rotation=new(Mathf.Pi/2,0,0);
-        Taper(snowman,new(0,1.8f,0),.18f,.18f,.26f,_art.Color(new("3a3d52"),.6f),14);
-        Cylinder(snowman,new(0,1.69f,0),.27f,.04f,_art.Color(new("3a3d52"),.6f));
-        Box(snowman,new(0,1.32f,.02f),new(.62f,.1f,.6f),_art.Color(new("d8433b"),.8f),.04f);
-        foreach(int side in new[]{-1,1})
-            Box(snowman,new(side*.48f,1.15f,0),new(.5f,.04f,.04f),_art.Color(new("6b4d33"))).Rotation=new(0,0,side*.45f);
-
         // A frozen pond with penguins along the east side.
         var pond=Prop(scenery,"FrozenPond",new(Width+3.2f,ground,9.5f));
         Cylinder(pond,new(0,.01f,0),2.1f,.04f,_art.Color(new("9fd3ea"),.08f));
@@ -97,42 +82,11 @@ public partial class TempleStageView
         var scenery=_scenery!;
         var ice=_art.FrozenSurface(0);_frozenMaterials.Add(ice);
         var blue=_art.FrozenSurface(3);_frozenMaterials.Add(blue);
-        var arch=Prop(scenery,"GlacierArch",new(-4.1f,ground,4.4f),1.3f);
-        foreach(int side in new[]{-1,1})
-        {
-            var foot=Box(arch,new(0,1.4f,side*1.65f),new(2.1f,2.8f,1.3f),blue,.22f);foot.Rotation=new(0,side*.15f,side*-.08f);
-            Sphere(arch,new(0,.15f,side*1.8f),new(2.8f,.7f,1.9f),_snowMaterial);
-        }
-        Box(arch,new(0,3.05f,0),new(2.3f,1.0f,4.7f),ice,.24f);
-        Box(arch,new(0,3.58f,0),new(2.45f,.26f,4.9f),_snowMaterial,.12f);
-        for(int i=0;i<9;i++)
-        {
-            float z=-1.9f+i*.47f,h=.5f+(i%3)*.25f;
-            Cone(arch,new(.95f,2.65f-h/2,z),.14f,h,_crystalMaterial,6).Rotation=new(Mathf.Pi,0,0);
-        }
-        // A blue frozen crown replaces a uniform line of trees at the rear.
-        var crown=Prop(scenery,"FrozenCrown",new(Width*.53f,ground,-6.1f),-.2f);
-        for(int i=0;i<5;i++)
-        {
-            float h=2.1f+Mathf.Sin(i*1.7f)*.6f;
-            var shard=new MeshInstance3D{Name="CrownShard",Mesh=IceConeMesh(i,h),MaterialOverride=ice,
-                Position=new((i-2)*1.15f,0,(i%2)*.4f),Scale=new(1.7f,1,1.7f),Rotation=new(0,i*1.3f,(i-2)*-.08f)};
-            crown.AddChild(shard);
-            Sphere(crown,new((i-2)*1.15f,.12f,(i%2)*.4f),new(1.6f,.5f,1.5f),_snowMaterial);
-        }
         WinterTree(scenery,new(-3.4f,ground,11.8f),1.05f,.4f);
         WinterTree(scenery,new(Width+3.1f,ground,3.8f),1.15f,2.1f);
         WinterTree(scenery,new(Width*.22f,ground,-3.3f),.9f,3.4f);
 
-        var camp=Prop(scenery,"GlacierLantern",new(Width+1.9f,ground,8.1f));
-        var timber=_art.Color(new("76677b"),.85f);
-        Cylinder(camp,new(0,.65f,0),.045f,1.3f,timber);
-        Box(camp,new(.19f,1.29f,0),new(.44f,.045f,.045f),timber);
-        var lantern=Prop(camp,"LanternSway",new(.36f,1.22f,0));
-        Box(lantern,new(0,-.18f,0),new(.23f,.3f,.23f),Glow(new("ffcc78"),1.3f),.025f);
-        Box(lantern,new(0,-.35f,0),new(.3f,.04f,.3f),timber,.01f);
-        Cone(lantern,new(0,.02f,0),.22f,.15f,timber,4);
-        _sceneryMotion.Add(t=>lantern.Rotation=new(Mathf.Sin(t*1.4f)*.09f,0,Mathf.Sin(t*1.1f)*.12f));
+
     }
 
     private void WinterTree(Node3D parent,Vector3 position,float scale,float phase)

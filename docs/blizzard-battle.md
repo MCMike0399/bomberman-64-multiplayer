@@ -107,3 +107,33 @@ Another regression reproduced resting bombs trapped atop surviving spires; drift
 now uses the shared height-aware static footprint, preserving spire-side blocking
 and allowing supported bombs to drift off and fall. Both corrected paths pass
 the focused managed Blizzard suite. Final combined graphical evidence is separate.
+
+## Glacier Bowl — fresh advisor correction, 2026-11-15
+
+The fresh plain-Claude review found Low's court floating in a white void and
+High Night snow reading as rippling water. The core now includes a sculpted
+rounded snow berm over a blue ice shelf/band, built wholly around the unchanged
+wall footprint. A connected outboard shelf seats the retained left arch; a few
+hanging icicles and three broad crown forms join it into one glacier silhouette.
+The core body and arch remain on Low. The snowman is removed; the eastern frozen
+pond and penguins remain the focal vignette, with the igloo/background trees
+subordinate. A chunky core pennant takes the accepted weather vector and pausable
+weather clock; it has no influence on authority. One amber core lantern retains
+emissive paint on Low and one shadowless warm light on Medium/High.
+
+High snow normal strength is .055 at Night versus the original .22 by day. This
+is a frozen-surface input set by the existing stage lighting handoff, with no
+change to the shared Night profile, cone geometry, court ice, wind, avalanche,
+physics, inputs, camera or authority. The global footer and bomb readability
+corrections belong to the integration owner.
+
+Managed source build and public checks pass. The focused headless Blizzard
+journey passes 87 assertions, including actual indexed clockwise bowl faces,
+core retention on every preset, Night/day snow normal inputs, emissive-only Low
+lantern policy, accepted pennant vector, pause, ordinary throws, cone loot,
+avalanches and CPU combat. Its raw log retains 20 ObjectDB exit leaks and no
+runtime errors; this is not a clean native qualification claim. The first
+sandboxed editor import could not save user editor settings; the authorized
+headless import completed with no errors or warnings. Matched Low/Medium/High
+opening/Night combat captures and a short wind witness still require native
+review and the final advisor gate.
