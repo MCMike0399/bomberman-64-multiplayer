@@ -116,11 +116,35 @@ public partial class PlaytestDriver
                 Check(host.Party?.CanStart==true,mode+" admits two compatible Gutter clients");host.RequestStart();
                 await WaitState(s=>s.GetProperty("phase").GetInt32()==1,mode+" starts real Gutter authority",900);
                 Check(_root.LatestStage!.Value.GetProperty("id").GetString()==BlastStages.InTheGutter,mode+" accepts the correct stage");
-                await MoveTo(4.5f,9.5f,240);
-                Check(Player.GetProperty("y").GetSingle()==0,mode+" accepted ordinary movement reaches the shallow floor");
-                Input(0,new PlayerInput(0,0,A:true));
-                await WaitState(s=>s.GetProperty("bombs").GetArrayLength()>0,mode+" accepts a real ground bomb",120);
+                Check(Player.GetProperty("y").GetSingle()==2,mode+" starts on the real elevated post before dropping");
+                float startX=Player.GetProperty("x").GetSingle(),startZ=Player.GetProperty("z").GetSingle();
+                long releaseSequence=host.InputSequence;int pulses=0;
+                // Flow continues after release, so a stationary X target is not a
+                // valid arrival condition. Walk along Z off the actual post into
+                // the clear cross-channel, observing each released input at authority.
+                while(Player.GetProperty("z").GetSingle()<8.5f&&pulses<8)
+                {
+                    releaseSequence=await NetworkPulse(host,new PlayerInput(0,1),milliseconds:180);pulses++;
+                    await WaitState(_=>Player.GetProperty("ack").GetInt64()>releaseSequence,
+                        mode+" authority acknowledges the ordinary released drop input",180);
+                }
                 Input(0,default);
+                int releasedSnapshots=_root.SnapshotCount;
+                await WaitState(_=>_root.SnapshotCount>=releasedSnapshots+3&&Player.GetProperty("ack").GetInt64()>releaseSequence,
+                    mode+" observes fresh authority after the final movement release",180);
+                await WaitState(_=>Player.GetProperty("alive").GetBoolean()&&Player.GetProperty("y").GetSingle()==0,
+                    mode+" ordinary movement drops onto safe shallow floor",180);
+                float floorX=Player.GetProperty("x").GetSingle(),floorZ=Player.GetProperty("z").GetSingle();
+                var acceptedStage=_root.LatestStage!.Value;int width=acceptedStage.GetProperty("width").GetInt32();
+                var floor=acceptedStage.GetProperty("cells")[(int)MathF.Floor(floorZ)*width+(int)MathF.Floor(floorX)];
+                Check(floorZ>=8.5f&&floorZ<11.5f&&floor.GetProperty("k").GetInt32()==(int)CellKind.Floor&&floor.GetProperty("t").GetInt32()==0,
+                    mode+" released walk reaches the actual clear shallow cross-channel");
+                Event("gutter-network-released-drop",new{mode,pulses,startX,startZ,floorX,floorZ,releaseSequence,
+                    ack=Player.GetProperty("ack").GetInt64(),current=State.GetProperty("gutter").GetProperty("x").GetSingle()});
+                long bombSequence=await NetworkPulse(host,new PlayerInput(0,0,A:true));
+                await WaitState(s=>Player.GetProperty("ack").GetInt64()>bombSequence&&s.GetProperty("bombs").EnumerateArray().Any(b=>
+                    b.GetProperty("ownerId").GetString()==host.PlayerId&&b.GetProperty("y").GetSingle()==0),
+                    mode+" authority acknowledges ordinary primary input and a real ground bomb",180);
                 bool stageSeen=false,currentSeen=false,bombSeen=false;clock.Restart();
                 while(clock.Elapsed.TotalSeconds<8&&!(stageSeen&&currentSeen&&bombSeen))
                 {

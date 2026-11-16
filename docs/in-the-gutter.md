@@ -240,3 +240,33 @@ its caustic call was enabled while the helper still compiled only on High. The
 local Medium shader now widens both matching guards; shared water remains
 unchanged. The failing native log is the retained regression witness; a fresh
 native compile/capture is required before treating this correction as qualified.
+
+## Retained Linux network-fixture failure (2026-11-16)
+
+[Verification run 43759845567, failed native Linux job](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/43759845567/job/132955028092)
+retains the original packaged failure at source `62587642`: the ordinary network
+walk reached the shallow court, then the shared `MoveTo(4.5,9.5)` fixture released
+input and waited three snapshots. Its destination-cell assertion saw alive floor
+coordinates X=5.05, Z=9.5, Y=0 and acknowledgement 323, outside its .5-cell radius.
+The flow continues after released movement. The network method, shared helper
+and authoritative current were still unchanged at `9bcd509d`. One bounded local
+run of that original method passed 46 assertions, preserving the timing-dependent
+nature rather than claiming deterministic local reproduction.
+
+The stage-specific network fixture now uses bounded ordinary Z-input pulses to
+walk off the real elevated post into the clear shallow cross-channel. It waits
+for authority acknowledgement beyond each release, then three fresh snapshots,
+and checks a living body on an actual accepted tier-zero floor cell. Lateral
+current remains free to move X. A bounded ordinary primary pulse must produce an
+acknowledged real ground bomb, which the second client must receive together
+with the actual stage and current. Both server and peer hosting retain the same
+requirements. The common `MoveTo` settling threshold, current physics, session
+protocol and production behavior are unchanged.
+
+The corrected source builds with zero errors (the existing nullable-material
+warning remains in `GutterExterior.cs`). Focused headless network validation
+passes 35 assertions, zero runtime errors and zero warnings. Both accepted
+current directions were exercised: server-hosted release reached X=3.49/Z=8.93
+under current -1.5 with ack 205 beyond release 196; peer-hosted release reached
+X=5.4/Z=9.19 under current +1.5 with ack 111 beyond release 104. These are real
+transport/authority observations, not native rendered or Linux package proof.
