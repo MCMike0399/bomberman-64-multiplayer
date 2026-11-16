@@ -6,11 +6,11 @@ An original Godot C# arena battle game inspired by Bomberman 64: **2–8 partici
 
 **[Watch the gameplay trailer](docs/videos/blast-circuit-make-chaos.mp4)** — 48 seconds, six arenas, real gameplay and original music. [Capture details](docs/media/trailer/make-chaos.json).
 
-**[Download v0.44.1 for Apple Silicon](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/tag/v0.44.1)** · [Release verification](docs/verification.md) · [Build from source](#build-from-source)
+**[Download the latest release](https://github.com/MCMike0399/bomberman-64-multiplayer/releases/latest)** · [Release verification](docs/verification.md) · [Build from source](#build-from-source)
 
-Windows EXE, Linux AppImage and Mac DMG downloads are pending the [three-platform release gates](docs/desktop-clients.md).
+The release page provides Windows EXE, Linux AppImage and Apple Silicon Mac DMG downloads. Each release follows the [three-platform release gates](docs/desktop-clients.md).
 
-The current release includes six battle arenas, animated stage surroundings, refined water reflections and graphics presets, pointer aiming, and improved CPU rivals. All visuals and synthesized sounds are original. Eight-player support and numerical gameplay tuning are project adaptations; the original game supports four players. [Research and sources](docs/history/research.md).
+The 0.46 source candidate completes the ten-arena battle roster and adds a second visual pass across all stages and graphics presets. Animated surroundings, refined water reflections, pointer aiming and CPU rivals remain part of the game. All visuals and synthesized sounds are original. Eight-player support and numerical gameplay tuning are project adaptations; the original game supports four players. [Research and sources](docs/history/research.md).
 
 ## Play
 
