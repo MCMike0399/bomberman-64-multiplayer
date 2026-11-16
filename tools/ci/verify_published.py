@@ -110,11 +110,12 @@ def verify_assets(directory, version):
         path = directory / name
         if entry.get('sha256') != digest(path) or entry.get('size') != path.stat().st_size:
             raise RuntimeError('Published asset differs from its signed hash/size: ' + name)
+    notice = desktop_packages.published_project_notice(revision, release)
     inspect_package(directory, revision, version, release=release)
-    inspect_server(directory, revision, version, release=release)
+    inspect_server(directory, revision, version, release=release, expected_project_notice=notice)
     if desktop_packages.present(directory):
         desktop_packages.inspect(directory, revision, release, targets=desktop_packages.present_targets(directory),
-                                 include_graphics=policy is None or policy['requiresGpu'])
+                                 include_graphics=policy is None or policy['requiresGpu'], expected_project_notice=notice)
         if policy and policy['requiresGpu']:
             gpu_release_gates.inspect_all(directory,revision,fingerprint=policy['renderFingerprint'],targets=desktop_packages.present_targets(directory))
         for target in desktop_packages.present_targets(directory):
