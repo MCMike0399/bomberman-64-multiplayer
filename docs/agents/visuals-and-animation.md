@@ -881,6 +881,51 @@ tuples. New entries or changed producing-source bounds fail the public gate
 until reviewed. Normal headless and packaged functional lanes exercise the
 actual end-of-round closure and meteor paths with templates enforced.
 
+### In the Gutter toy waterworks (2026-11-15 source work)
+
+[Stage and evidence contract](../in-the-gutter.md): original brick posts,
+brass-edged opaque grates, shallow shared-preset water and a current marker
+form the playable lock. Owned packed water grids and portable boxes avoid new
+primitive-template domains. Current tracers/arrow follow accepted state; canal
+quays, houses, shrubs and sluice wheels stay outside play and miniatures omit
+them. Ordinary battle captures, preset/Night views, an explicitly labeled
+oblique inspection and actual closing grates are required for visual review.
+
+Gutter's shallow contact exception retains High's real scene reflections,
+Fresnel and existing twelve-step/three-refinement march while using coherent
+samples for its upright posts and cover. Other maps keep the shared jitter
+that protects suspended-deck reflections. The native controlled witness
+identified per-pixel march jitter as the contact screen-door source; more
+refinement did not buy enough quality. The permanent gutter-water-contact
+journey checks Midday/Night contact noise against a reflection-off control and
+requires meaningful actual reflection contrast. Independent art review under
+the user's revised visual bar remains required.
+
+### Copper Lock shape direction (2026-11-15)
+
+The generic Gutter waterworks prototype is superseded by the
+[Copper Lock shape study](../in-the-gutter.md#copper-lock-presentation):
+burgundy bollards with cream caps/rings, core cast sluice machines, a fish vane
+and an asymmetric inflow/spillway composition. Low keeps the body and machines.
+Accepted current drives foam/leaves and gear/vane motion. The 52-check native
+shape study is a checkpoint: independent review accepts the court but requests
+a bounded machinery/setting revision and quieter water. It is not final art
+approval. Shared all-stage scenery checks include the quiet reed-bank exterior,
+Low core visibility and paused current cues.
+
+### Copper Lock finishing candidate
+
+The [current contract](../in-the-gutter.md#copper-lock-presentation) keeps the
+approved bollards and court, connects the channel walls beneath the machinery,
+and removes the isolated bank/pointed spillway faces. Identity, outer water
+and warm work lamps remain core geometry on Low. Coherent Copper Lock
+reflections reduce outer-tower undersampling while retaining actual mirrors;
+other arenas keep the shared shader. Water nodes must remain centered because
+the shader uses NODE_POSITION_WORLD for radial coverage: localize geometry
+instead of moving its world footprint. The consumed-geometry regression
+protects that mapping. Final colored review and rebuilt-export qualification
+remain required; do not equate the shape GO or passing counts with approval.
+
 ### Clockwise authored surfaces (2026-11-15)
 
 Godot uses clockwise front faces: for emitted vertices `a,b,c`, the outward

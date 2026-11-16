@@ -99,7 +99,7 @@ def main():
     parser.add_argument('--metal-hud', action='store_true', help='Collect Apple GPU timing logs for the native macOS graphics-benchmark')
     parser.add_argument('--gpu-profile', action='store_true', help='Print engine GPU pass timings during the native benchmark (requires working engine timestamps)')
     parser.add_argument('--benchmark-resolution', default='1920x1200', help='Native benchmark output pixels, WIDTHxHEIGHT')
-    parser.add_argument('--benchmark-stage', choices=('all', 'sunken-temple', 'rock-garden', 'up-and-down', 'top-rules', 'blizzard-battle', 'greedy-trap', 'field-of-grass','sea-sick'), default='sunken-temple')
+    parser.add_argument('--benchmark-stage', choices=('all', 'sunken-temple', 'rock-garden', 'up-and-down', 'top-rules', 'blizzard-battle', 'greedy-trap', 'field-of-grass','in-the-gutter','sea-sick'), default='sunken-temple')
     parser.add_argument('--benchmark-seconds', type=int, default=10, help='Measured battle duration per preset (10–120 seconds)')
     parser.add_argument('--benchmark-preset', choices=('all', 'low', 'medium', 'high'), default='all')
     parser.add_argument('--benchmark-tweak', default='none', help='Diagnostic comma-separated renderer tweaks: static A/B captures per stage plus a timed battle per tweak; ordinary measurements stay untouched')

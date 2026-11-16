@@ -1040,6 +1040,7 @@
         "tour-20",
         "tour-21",
         "tour-22",
+        "tour-23",
         "tour-24"
       ],
       "domains": [
@@ -1093,6 +1094,7 @@
         "blizzard-battle",
         "greedy-trap",
         "field-of-grass",
+        "in-the-gutter",
         "stage-scenery",
         "orrery-keep",
         "round-ending",
@@ -1730,7 +1732,8 @@
         "rock-garden",
         "blizzard-battle",
         "greedy-trap",
-        "field-of-grass"
+        "field-of-grass",
+        "in-the-gutter"
       ],
       "domains": [
         "ai",
@@ -1902,6 +1905,132 @@
         "gameplay"
       ],
       "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "in-the-gutter",
+      "method": "InTheGutterTour",
+      "domains": [
+        "gameplay",
+        "physics",
+        "rendering",
+        "ui"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "in-the-gutter-network",
+      "method": "InTheGutterNetworkTour",
+      "domains": [
+        "network",
+        "gameplay",
+        "physics",
+        "rendering"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "tour-23",
+      "steps": [
+        "in-the-gutter",
+        "copper-lock-combat",
+        "gutter-water-contact",
+        "copper-lock-outer-patch",
+        "copper-lock-current"
+      ],
+      "domains": [
+        "gameplay",
+        "physics",
+        "rendering",
+        "ui"
+      ],
+      "headless": false,
+      "timeout": 240,
+      "manual": false
+    },
+    {
+      "id": "gutter-water-contact",
+      "method": "GutterWaterContact",
+      "domains": [
+        "rendering"
+      ],
+      "headless": false,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "copper-lock-shapes",
+      "method": "CopperLockShapes",
+      "domains": [
+        "rendering",
+        "gameplay"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "copper-lock-combat",
+      "method": "CopperLockCombatTour",
+      "domains": [
+        "rendering",
+        "gameplay",
+        "ai"
+      ],
+      "headless": false,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "copper-lock-current",
+      "method": "CopperLockCurrentChange",
+      "domains": [
+        "rendering",
+        "gameplay"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "copper-lock-finish",
+      "steps": [
+        "copper-lock-combat",
+        "gutter-water-contact",
+        "copper-lock-outer-patch",
+        "copper-lock-current"
+      ],
+      "domains": [
+        "rendering",
+        "gameplay",
+        "ai"
+      ],
+      "headless": false,
+      "timeout": 360,
+      "manual": false
+    },
+    {
+      "id": "copper-lock-water-inputs",
+      "method": "CopperLockWaterInputs",
+      "domains": [
+        "rendering"
+      ],
+      "headless": true,
+      "timeout": 90,
+      "manual": false
+    },
+    {
+      "id": "copper-lock-outer-patch",
+      "method": "CopperLockOuterPatch",
+      "domains": [
+        "rendering"
+      ],
+      "headless": false,
       "timeout": 180,
       "manual": false
     },

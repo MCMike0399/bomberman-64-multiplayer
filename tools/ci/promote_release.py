@@ -199,7 +199,7 @@ def inspect_server(directory, revision, version, release=None):
                     or Path(name).suffix in ('.cs', '.csproj', '.pdb', '.key', '.pem')):
                 raise RuntimeError('Server archive contains forbidden source/configuration material')
             allowed = (Path(name).suffix.lower() in ('.dll', '.dylib') or re.search(r'\.so(?:\.\d+)*$', name)
-                       or name in required or name in ('README.txt', 'appsettings.json', 'Notices/Blast-Circuit-MIT.txt', 'Notices/Simulation-MIT.txt')
+                       or name in required or name in ('README.txt', 'appsettings.json', 'Notices/Blast-Circuit-GPL-3.0.txt', 'Notices/Simulation-MIT.txt')
                        or len(Path(name).parts) == 3 and Path(name).parts[0] == 'plugins' and Path(name).parts[1] in ('Blast.Cluster', 'Realtime.Redis')
                        and (Path(name).name == 'plugin.json' or Path(name).name.endswith('.deps.json')))
             if not allowed:

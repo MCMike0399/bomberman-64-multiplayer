@@ -53,7 +53,7 @@ class PlaytestContracts(unittest.TestCase):
                     rootGpuMedianMs=None,rootGpuP95Ms=None,peakBombs=2,peakHazards=2,rootDrawCallsPeak=100,
                     width=3024,height=1964,renderScale=1,preset='High')
         scenes=('menu','eight-player-temple','eight-player-rock-garden','eight-player-up-and-down',
-                'eight-player-top-rules','eight-player-blizzard-battle','eight-player-greedy-trap','eight-player-field-of-grass','eight-player-sea-sick')
+                'eight-player-top-rules','eight-player-blizzard-battle','eight-player-greedy-trap','eight-player-field-of-grass','eight-player-in-the-gutter','eight-player-sea-sick')
         receipt=dict(schemaVersion=1,timingMode='realtime-uncapped',gpu='Apple M5 Pro',stage='all',
                      diagnosticOmission='none',fullQuality=True,requestedWidth=3024,requestedHeight=1964,
                      measurements=[sample|dict(scene=s) for s in scenes])

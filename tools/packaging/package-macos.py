@@ -98,7 +98,7 @@ def main():
         'https://github.com/godotengine/webrtc-native/releases/tag/1.2.2-stable\n'
         'The dynamic extension can be rebuilt/replaced; re-sign the app after replacement.\n'
     )
-    shutil.copy2(ROOT / "LICENSE", notices / "Blast-Circuit-MIT.txt")
+    shutil.copy2(ROOT / "LICENSE", notices / "Blast-Circuit-GPL-3.0.txt")
     shutil.copy2(ROOT / "src/Bomber.Game/Simulation/LICENSE", notices / "Simulation-MIT.txt")
     for name in ["Godot-MIT.txt", "Godot-COPYRIGHT.txt"]:
         shutil.copy2(ROOT / "docs/licenses" / name, notices / name)
