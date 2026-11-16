@@ -1,5 +1,7 @@
 using Godot;
 using BlastCircuit.Arena;
+using BlastCircuit.Arena.Stages;
+using Bomber.Game.Simulation.Rules;
 using Bomber.Client.Sessions;
 using Bomber.Game.Matches;
 using Bomber.Game.Simulation.Stages;
@@ -7,6 +9,39 @@ namespace BlastCircuit.Testing;
 
 public partial class PlaytestDriver
 {
+    private void VerifyGardenGeometry(ArenaView arena)
+    {
+        var terrain=AuditDescendants(arena).OfType<TempleStageView>().Single();
+        var rocks=AuditDescendants(arena).OfType<Node3D>().Where(n=>n.Name.ToString().StartsWith("GardenBoulder"))
+            .SelectMany(n=>n.GetChildren().OfType<MeshInstance3D>()).Select(n=>n.Mesh).Distinct().ToArray();
+        foreach(var mesh in rocks)
+        {
+            var arrays=mesh.SurfaceGetArrays(0);var vertices=arrays[(int)Mesh.ArrayType.Vertex].AsVector3Array();
+            float height=BombThrowRules.CoverHeight*TempleStageView.HeightScale;
+            Check(vertices.All(v=>v.IsFinite()&&new Vector2(v.X,v.Z).Length()<=.5f&&v.Y>=0&&v.Y<=height+.00001f)&&
+                Math.Abs(vertices.Max(v=>v.Y)-height)<.00001f,"rounded cover stays inside its original cell and authored crown");
+        }
+        var copings=terrain.GetChildren().OfType<MeshInstance3D>().Where(n=>n.Name.ToString().StartsWith("GardenCreamCoping")).ToArray();
+        Check(copings.Length==4,"four continuous cream coping courses remain in the core presentation");
+        foreach(var node in copings)
+        {
+            var box=node.Transform*node.Mesh.GetAabb();
+            Check(Math.Abs(box.End.Y-BombThrowRules.PillarHeight*TempleStageView.HeightScale)<.00001f&&
+                box.Position.X>=-.001f&&box.End.X<=terrain.Width+.001f&&box.Position.Z>=-.001f&&box.End.Z<=terrain.Depth+.001f,
+                "rounded coping preserves the physical wall footprint and top");
+        }
+        foreach(var mesh in rocks.Concat(copings.Select(n=>n.Mesh)).Distinct())
+        {
+            var arrays=mesh.SurfaceGetArrays(0);var v=arrays[(int)Mesh.ArrayType.Vertex].AsVector3Array();
+            var normals=arrays[(int)Mesh.ArrayType.Normal].AsVector3Array();var indices=arrays[(int)Mesh.ArrayType.Index].AsInt32Array();
+            bool clockwise=true;
+            for(int i=0;i<indices.Length;i+=3){int a=indices[i],b=indices[i+1],c=indices[i+2];clockwise&=(v[b]-v[a]).Cross(v[c]-v[a]).Dot(normals[a]+normals[b]+normals[c])<0;}
+            Check(indices.Length>0&&clockwise,"actual rounded rock and coping triangles face their outward normals");
+        }
+        var borders=terrain.GetChildren().OfType<MeshInstance3D>().Where(n=>n.Name.ToString().StartsWith("GardenMownBorder")).ToArray();
+        Check(borders.Length==4&&borders.All(n=>(n.Transform*n.Mesh.GetAabb()).End.Y<0),"Low's mown border grounds the enclosure below playable space");
+    }
+
     private async Task RockGardenTour()
     {
         var stage=BlastStages.Get(BlastStages.RockGarden);
@@ -17,6 +52,7 @@ public partial class PlaytestDriver
         var arena=_root.GetChildren().OfType<ArenaView>().Single();
         Check(arena.FindChildren("*","",true,false).OfType<Node3D>().Count(n=>n.Name.ToString().StartsWith("GardenColumn"))==5,"actual garden renders five round columns");
         Check(arena.FindChildren("*","",true,false).OfType<Node3D>().Count(n=>n.Name.ToString().StartsWith("GardenBoulder"))==64,"actual garden renders four generous boulder groves");
+        VerifyGardenGeometry(arena);
         CheckFraming(stage.Id,GetWindow().Size);
         await Capture("rock-garden-four-player-opening");
         _root.Back();await Frames(3);

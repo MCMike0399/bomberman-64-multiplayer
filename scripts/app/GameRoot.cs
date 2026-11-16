@@ -26,6 +26,7 @@ public partial class GameRoot : Node3D
     private ISession? _session;
     private CancellationTokenSource? _connectCancel;
     private readonly Dictionary<int,Func<PlayerInput>> _injected=[];
+    private readonly BlastCircuit.Testing.FixtureInputPublication _fixtureInputPublication=new();
     private bool _connecting,_practice,_setupForHost,_smoke,_editingRoom;
     private string _capture="gameplay";
     private string? _smokeOutput;
@@ -155,12 +156,13 @@ public partial class GameRoot : Node3D
             var warmupClock=System.Diagnostics.Stopwatch.StartNew();
             _preparingGraphics=true;
             ScreenName="Loading";_menu.Visible=false;ControllerHub.Current.MenuNavigationEnabled=false;
+            using var drawBatch=new PreparationDrawBatch();
             var loading=PreparationOverlay("Getting ready...");
             try
             {
-                await EffectWarmup.Draw(this);
-                await _arena.PrepareEffects();
-                await _menu.PrepareArenas();
+                await EffectWarmup.Draw(this,drawBatch);
+                await _arena.PrepareEffects(drawBatch);
+                await _menu.PrepareArenas(drawBatch);
             }
             catch(OperationCanceledException)when(EffectWarmup.Stopping){return;}
             finally
@@ -432,12 +434,13 @@ public partial class GameRoot : Node3D
         UpdateMatchCursor();
         var session=_session;if(session==null)return;
         if(session is NetworkSession reconnecting&&reconnecting.ConnectionGeneration!=_networkGeneration)
-        {_networkGeneration=reconnecting.ConnectionGeneration;session.ReleaseInputs();ControllerHub.Current.RearmControls();}
+        {_networkGeneration=reconnecting.ConnectionGeneration;_fixtureInputPublication.Invalidate();session.ReleaseInputs();ControllerHub.Current.RearmControls();}
         if(ScreenName=="Match" && !(_tutorialLessonId is not null && _tutorialHud.Finished))for(int i=0;i<session.LocalPlayerCount;i++)
         {
             var playerId=session is NetworkSession network?network.PlayerId:$"local-{i}";
+            var publication=_fixtureInputPublication.Capture(session,i);
             var input=_injected.TryGetValue(i,out var injected)?injected():WithPointer(PlayerControls.Read(i,session.LocalPlayerCount),i,playerId);
-            session.SendInput(i,input);
+            _fixtureInputPublication.PublishFrame(publication,input);
             if(playerId!=null)_arena.SetLocalInput(playerId,input);
         }
         if(session is not LocalSession || ScreenName=="Match")session.Advance(delta);

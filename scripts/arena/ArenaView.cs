@@ -83,7 +83,7 @@ public partial class ArenaView : Node3D
     public BattleAudio Audio=>_audio;
     public object PresentationState=>new {sequence=_presentation.Sequence,audio=_audio.Counts,voicePlays=_audio.VoicePlayCount,droppedCues=_audio.DroppedCueCount,effects=_effectCounts,explosions=_explosions.Values.Where(GodotObject.IsInstanceValid).Select(v=>new {tier=v.Tier,radius=v.Radius,age=v.Age,phase=v.Phase,bodyAspect=v.BodyAspect,geometry=v.GeometryCount,flares=v.FlareCount,powerWave=v.PowerWaveVisible,hazard=v.HazardActive,extent=v.VisualExtent}).ToArray()};
     public void ResetPresentationBaseline()=>_presentation.Reset();
-    public Task PrepareEffects()=>EffectWarmup.Run(GetParent(),_art,_environment,_keyLight,_fillLight);
+    public Task PrepareEffects(PreparationDrawBatch batch)=>EffectWarmup.Run(GetParent(),_art,_environment,_keyLight,_fillLight,batch);
     public void ApplyGraphicsQuality()
     {
         GraphicsQuality.ApplyArena(_environment,_cameraAttributes);

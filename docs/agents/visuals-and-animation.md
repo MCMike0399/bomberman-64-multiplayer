@@ -695,6 +695,24 @@ bounded ocean on other arenas. Duplicate its cached box mesh before resizing so
 the gameplay exterior stays full-size. `setup` checks the visible miniature's
 bounds and launches Rock Garden afterward to verify gameplay scenery is intact.
 
+2026-11-15 fresh advisor refinement candidate: the enclosure keeps its exact
+wall crown and cells, with four continuous cream half-round coping courses.
+Three broad lichen sections soften the stone. Four owned smooth boulder
+variants retain the .5-cell radial envelope and authored cover height, with
+warm two-tone paint rather than grey faceted shoulders. A darker, quieter
+outer lawn and four mown border strips remain in core presentation on Low;
+flower beds/butterflies are thinned and the windmill/bridge is the single
+vignette. Other GardenSurface consumers keep their existing shader defaults.
+`rock-garden` now audits actual indexed winding, boulder bounds, coping crowns
+and the below-floor core border before its ordinary traversal/combat/meteor
+journey. Green geometry checks do not replace matched Low/Medium/High native
+review, including Night and a labelled oblique view.
+
+2026-11-16: [Roundstone Orchard](../rock-garden.md) supersedes that candidate's
+uniform cover/bright coping with two stone profiles/palettes, carved moss
+shoulders and a core mill/fruit branch. The camera is retained after measured
+footer clearance; no bees, petals or new physics are introduced.
+
 ## v0.28 reference fidelity
 
 [Stage comparison](../stage-fidelity-research.md) and [explosion sequences](../explosion-fidelity-research.md) record inspected original imagery and limits. The integrated castle has taller authored walls and side banners; Up & Down uses rounded/fluted supports inside its solid footprint; Rock Garden's center crown is 1.35 units versus .9 for its outer columns. Original reference assets remain outside Git and exports.
@@ -823,3 +841,21 @@ upload, duplication and geometry-helper source entry and the finite template
 tuples. New entries or changed producing-source bounds fail the public gate
 until reviewed. Normal headless and packaged functional lanes exercise the
 actual end-of-round closure and meteor paths with templates enforced.
+
+
+### Returning Tide core landmark finishing (2026-11-16)
+
+The Sunken Temple gateway now carries a small gold/pale/teal sun disc; one lotus
+ruin replaces the second palm/obelisk setting. `SunkenGateCore` and the single
+copper `TempleTideFloat` remain on Low, outside the court. The float follows the
+accepted rendered water plane with a pausable core clock; the normal miniature
+omits both outboard landmarks. The pyramid/frieze layout and camera stay fixed.
+[Composition and current evidence](../stage-scenery.md#returning-tide-finishing-2026-11-16).
+
+### Preparation callback fallback (2026-11-16)
+
+One explicit disposable draw batch spans startup/preset overlay, production
+warmup and all real miniatures. After its first missing normal draw callback,
+remaining fences render through process update + ForceDraw/ForceSync; the next
+batch starts normal. Keep the 20-second bound, every draw/readback and cancellation.
+[Retained red/green and standalone roster contract](../history/preparation-draw-batch-20261116.md).
