@@ -823,3 +823,12 @@ upload, duplication and geometry-helper source entry and the finite template
 tuples. New entries or changed producing-source bounds fail the public gate
 until reviewed. Normal headless and packaged functional lanes exercise the
 actual end-of-round closure and meteor paths with templates enforced.
+
+
+### Preparation callback fallback (2026-11-16)
+
+One explicit disposable draw batch spans startup/preset overlay, production
+warmup and all real miniatures. After its first missing normal draw callback,
+remaining fences render through process update + ForceDraw/ForceSync; the next
+batch starts normal. Keep the 20-second bound, every draw/readback and cancellation.
+[Retained red/green and standalone roster contract](../history/preparation-draw-batch-20261116.md).
