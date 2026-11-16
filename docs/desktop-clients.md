@@ -265,3 +265,11 @@ Saved-display process restoration runs sequentially after the main graphical
 process exits. Its unchanged 90-second child deadline, real persisted settings,
 independent capture/check receipt and zero-error requirement remain release gates.
 This avoids resident parent/child renderer contention without changing game graphics.
+
+### Roster-growth-safe software parts (2026-11-16)
+
+The software graphical plan derives tours from the active catalog and pairs the
+last two Windows tours on one runner. Each case still launches a fresh game
+process. Across 21–25 tours, the complete Windows/Linux plan contains 26–30 jobs,
+keeping every case once and every tour in its original order within the existing
+30-job cap. This grouping changes neither renderer settings nor required evidence.
