@@ -40,7 +40,7 @@ public partial class PlaytestDriver
                 })),"both rowboats and oars clear the quays and fortress: "+preset);
                 await Capture("greedy-canal-battle-"+GraphicsQuality.ToWire(preset));
                 camera.HOffset=0;camera.VOffset=0;camera.Size=10;
-                camera.Position=new(-10,10,17);camera.LookAt(new Vector3(-3,-.3f,7));
+                camera.Position=new(-8,6,20);camera.LookAt(new Vector3(-2.4f,-.1f,terrain.Depth*.66f-.35f));
                 await Capture("greedy-canal-inspection-"+GraphicsQuality.ToWire(preset));
                 // Sample a complete revolution against the actual short brick quays,
                 // not the former narrow canal-strip bounds.

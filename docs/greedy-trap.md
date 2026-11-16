@@ -271,3 +271,9 @@ passes 194 checks, 0 runtime errors and four ObjectDB exit warnings. An earlier
 headless receipt launched after a failed parallel-worker build is not used as
 qualification; the explicit single-node rebuild and fresh output are retained.
 Native battle-camera wheel visibility remains the essential next check.
+
+Root native review confirms the corrected wheel is visible from the gameplay
+camera: `greedy-canal` passes 137 checks/9 captures and a full revolution on all
+presets. The labelled close-inspection camera now targets the new complete
+machine pier instead of the old upstream wheel position. This adjusts evidence
+framing only; accepted geometry and the gameplay camera are unchanged.
