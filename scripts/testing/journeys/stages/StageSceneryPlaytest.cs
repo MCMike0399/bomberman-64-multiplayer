@@ -13,7 +13,7 @@ public partial class PlaytestDriver
     private static readonly (string Stage,string[] Signature)[] SceneryStages=
     [
         (BlastStages.SunkenTemple,["Obelisk","SunkenColonnade","SunkenGate","Sailboat","PalmTree","Gull"]),
-        (BlastStages.RockGarden,["Windmill","Footbridge","StoneLantern","FlowerBed","Butterfly","GardenRuin","WindGrass","DriftingLeaves"]),
+        (BlastStages.RockGarden,["Windmill","Footbridge","StoneLantern","FlowerBed","Butterfly","WindGrass","DriftingLeaves"]),
         (BlastStages.UpAndDown,["Lighthouse","SeaStack","Buoy","Jetty","Sailboat","Gull"]),
         (BlastStages.TopRules,["FortressCrag","Turret","WallBanner","Cloud","FloatingIslet","Starfield","RingedPlanet","BluePlanet","OrbitingMoon","AsteroidBelt","Nebula"]),
         (BlastStages.BlizzardBattle,["Igloo","Snowman","Penguin","PineTree","FrozenPond","GlacierPeak","GlacierArch","FrozenCrown","WinterTree","ExteriorSnowfall"]),
