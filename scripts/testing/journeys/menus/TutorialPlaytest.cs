@@ -21,6 +21,7 @@ public partial class PlaytestDriver
             foreach(var(preset,time,label)in cases)
             {
                 if(_root.ActiveSession!=null){_root.Back();await Frames(3);}
+                _root.Navigate("Modes");await Frames(3);
                 if(!_headless){await SelectGraphics(preset);await SelectLocalLighting(time);}
                 _root.Navigate("Tutorial");await Frames(4);await ActivateNamed("Lesson_move");
                 await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"workshop enters the actual movement lesson: "+label,150);
@@ -56,6 +57,7 @@ public partial class PlaytestDriver
         finally
         {
             Input(0,default);if(_root.ActiveSession!=null){_root.Back();await Frames(3);}
+            _root.Navigate("Modes");await Frames(3);
             if(!_headless){await SelectGraphics(quality);await SelectLocalLighting(lighting);}
             _root.Navigate("Modes");await Frames(3);
         }
