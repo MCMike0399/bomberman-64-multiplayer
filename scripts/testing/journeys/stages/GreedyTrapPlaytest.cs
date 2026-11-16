@@ -42,14 +42,16 @@ public partial class PlaytestDriver
                 camera.HOffset=0;camera.VOffset=0;camera.Size=10;
                 camera.Position=new(-10,10,17);camera.LookAt(new Vector3(-3,-.3f,7));
                 await Capture("greedy-canal-inspection-"+GraphicsQuality.ToWire(preset));
-                // Sample real animation over a complete revolution. The quay paving
-                // reaches x=-4.1; moving timber must stay in the canal.
+                // Sample a complete revolution against the actual short brick quays,
+                // not the former narrow canal-strip bounds.
                 for(int phase=0;phase<=32;phase++)
                 {
                     var bounds=AuditDescendants(wheel).OfType<MeshInstance3D>()
                         .Select(n=>(terrain.GlobalTransform.AffineInverse()*n.GlobalTransform)*n.Mesh.GetAabb()).ToArray();
-                    Check(bounds.All(b=>b.Position.X> -4.1f&&b.End.X<-.725f),
-                        $"waterwheel clears quay and fortress through rotation: {preset} phase={phase}");
+                    var fixedQuays=AuditDescendants(terrain).OfType<MeshInstance3D>().Where(n=>n.Name.ToString() is "GreedyHouseBrickQuay" or "GreedyMachineQuay" or "GreedyWheelPedestal")
+                        .Select(n=>(terrain.GlobalTransform.AffineInverse()*n.GlobalTransform)*n.Mesh.GetAabb()).ToArray();
+                    Check(bounds.All(b=>b.End.X<-.725f&&!fixedQuays.Any(q=>q.Intersects(b))),
+                        $"waterwheel clears actual fixed quays and fortress through rotation: {preset} phase={phase}");
                     if(phase==8)await Capture("greedy-canal-motion-"+GraphicsQuality.ToWire(preset));
                     await Frames(25);
                 }

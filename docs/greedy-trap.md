@@ -257,3 +257,17 @@ pause freezing both wheel and float. Its raw log retains 16 ObjectDB exit leaks
 and no runtime errors. Build passes with the existing NuGet audit-cache access
 warnings. Actual High/Medium/Low, Night, oblique and wheel/current-motion images
 remain parent-owned qualification; these numeric checks do not approve the art.
+
+The first native second-pass receipt passed 204 checks/20 captures, but actual
+battle images hid the enlarged wheel behind the west wall. It is now moved to
+the western front quarter and faces the camera with its XY wheel plane. A short
+rear brick machine pier seats the pedestal/shaft; a connected channel feeds its
+water ribbon. The east house quay moves inward to retain its frame margin.
+Clearance now compares a full rotor revolution against the actual short quays,
+rather than the removed narrow-canal bounds. No game-camera change is used.
+
+The corrected source builds with `-m:1`; the rebuilt focused headless journey
+passes 194 checks, 0 runtime errors and four ObjectDB exit warnings. An earlier
+headless receipt launched after a failed parallel-worker build is not used as
+qualification; the explicit single-node rebuild and fresh output are retained.
+Native battle-camera wheel visibility remains the essential next check.

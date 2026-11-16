@@ -59,7 +59,7 @@ public partial class TempleStageView
         }
 
         var roof=PrimitiveTemplates.Get("CylinderMesh",("top_radius",0),("bottom_radius",1.85f),("height",1.35f),("radial_segments",4));
-        foreach(var (x,z) in new[]{(-5.4f,Depth*.35f),(Width+5.4f,Depth*.68f)})
+        foreach(var (x,z) in new[]{(-5.4f,Depth*.35f),(Width+4.5f,Depth*.68f)})
         {
             bool hero=x<0;
             Box(_greedyExterior,new(x,-1.08f,z),new(4.0f,.9f,4.2f),_greedyMaterials[1],.15f).Name="GreedyHouseBrickQuay";
@@ -86,18 +86,18 @@ public partial class TempleStageView
         }
 
         // Put the rotating wheel beside the quay, in the water. The fixed mount
-        // turns its local XY wheel plane along the canal (YZ in arena space),
-        // while the rotor keeps its local Z animation axis. Moving the old wheel
-        // outward alone left the paddles sweeping through the solid bank.
+        // keeps its XY wheel face toward the battle camera. Its short rear pier
+        // and shaft connect back to the fort while paddles sweep only open water.
         var timber=_art.Color(new("786343"),.85f);var rim=_art.Color(new("aa8b54"),.7f);
-        float wheelZ=cz-3;
-        var mount=new Node3D{Name="GreedyWaterwheelMount",Position=new(-1.38f,.05f,wheelZ),Rotation=new(0,Mathf.Pi/2,0)};
+        float wheelZ=Depth*.66f;
+        var mount=new Node3D{Name="GreedyWaterwheelMount",Position=new(-3.9f,.05f,wheelZ)};
         _greedyExterior.AddChild(mount);
         _greedyWaterwheel=new Node3D{Name="GreedyWaterwheel",Scale=new(1.32f,1.32f,1)};mount.AddChild(_greedyWaterwheel);
         // The pedestal sits on the quay; only the stationary shaft crosses its edge.
-        Box(_greedyExterior,new(-.58f,-.4f,wheelZ),new(.42f,.9f,.65f),quay,.035f).Name="GreedyWheelPedestal";
-        var shaft=Cylinder(_greedyExterior,new(-.98f,.05f,wheelZ),.12f,1.25f,rim);
-        shaft.Name="GreedyWheelShaft";shaft.RotationDegrees=new(0,0,90);
+        Box(_greedyExterior,new(-2.25f,-1.3f,wheelZ-.9f),new(4.3f,1.1f,1.0f),_greedyMaterials[1],.10f).Name="GreedyMachineQuay";
+        Box(_greedyExterior,new(-3.9f,-.4f,wheelZ-.9f),new(.5f,1.5f,.7f),quay,.035f).Name="GreedyWheelPedestal";
+        var shaft=Cylinder(_greedyExterior,new(-3.9f,.05f,wheelZ-.45f),.12f,1.25f,rim);
+        shaft.Name="GreedyWheelShaft";shaft.RotationDegrees=new(90,0,0);
         var wheelRim=PrimitiveTemplates.Get("TorusMesh",("inner_radius",.91f),("outer_radius",1.06f),("rings",32),("ring_segments",8));
         foreach(float zz in new[]{-.22f,.22f})
             _greedyWaterwheel.AddChild(new MeshInstance3D{Mesh=wheelRim,MaterialOverride=rim,Position=new(0,0,zz),RotationDegrees=new(90,0,0)});
@@ -124,12 +124,13 @@ public partial class TempleStageView
 
     private void BuildGreedySluice(float wheelZ,Material quay,Material coping)
     {
-        var root=Prop(_greedyExterior!,"GreedyWheelSluice",new(-1.4f,0,wheelZ-.85f));
-        RoundedBox(root,new(.62f,.83f,0),new(.5f,.85f,1.0f),quay,.18f);
-        RoundedBox(root,new(.12f,.93f,0),new(1.2f,.22f,.86f),coping,.17f);
+        var root=Prop(_greedyExterior!,"GreedyWheelSluice",new(-3.9f,0,wheelZ-.15f));
+        RoundedBox(root,new(3.12f,.83f,-.9f),new(.5f,.85f,1.0f),quay,.18f);
+        RoundedBox(root,new(1.5f,1.25f,-.9f),new(3.8f,.22f,.86f),coping,.17f);
+        RoundedBox(root,new(0,1.25f,-.65f),new(.64f,.22f,.4f),coping,.10f);
         _greedySluicePaint=new ShaderMaterial{Shader=new Shader{Code=GreedySluiceShader}};
         _greedyExteriorMaterials.Add(_greedySluicePaint);
-        Box(root,new(0,-.15f,.02f),new(.32f,2.13f,.64f),_greedySluicePaint,.07f).Name="GreedySluiceWater";
+        Box(root,new(0,0,.02f),new(.32f,2.5f,.64f),_greedySluicePaint,.07f).Name="GreedySluiceWater";
     }
 
     private void ProcessGreedyReservoir(float delta)
