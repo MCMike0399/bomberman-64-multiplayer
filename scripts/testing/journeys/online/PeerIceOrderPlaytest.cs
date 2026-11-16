@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text.Json;
 using BlastCircuit.App;
+using BlastCircuit.Testing.Fixtures;
 
 namespace BlastCircuit.Testing;
 
@@ -15,6 +16,7 @@ public partial class PlaytestDriver
         left.Signal += signal => leftSignals.Add(signal.Clone());
         right.Signal += signal => rightSignals.Add(signal.Clone());
         int leftDelivered=0,rightDelivered=0;string stage="offer";
+        JsonElement? firstConnectFailure=null;
         try
         {
             left.Start(true);right.Start(false);
@@ -30,7 +32,11 @@ public partial class PlaytestDriver
             foreach(var signal in rightSignals.Where(Ice))left.AcceptSignal(signal);
             foreach(var signal in rightSignals.Where(Sdp))left.AcceptSignal(signal);
             rightDelivered=rightSignals.Count;stage="connect";
-            await Until(()=>left.Connected&&right.Connected,"native peers connect when ICE arrives before SDP");
+            await RetainedFailureObservation.RunAsync(
+                ()=>Until(()=>left.Connected&&right.Connected,"native peers connect when ICE arrives before SDP"),
+                ()=>firstConnectFailure??JsonSerializer.SerializeToElement(Diagnostics()),ObserveFailedPair,error=>
+                    Event("peer-ice-order-observation-stop",new{type=error.GetType().FullName,
+                        reason=error is TimeoutException?"observation-budget":"observation-error",originalFailureRetained=true}));
             Check(leftSignals.Count==leftDelivered&&rightSignals.Count==rightDelivered,"no later signal substitutes for the exclusively early-ICE proof");
             bool received=false;
             right.Received+=packet=>received|=packet.AsSpan().SequenceEqual("ordered-ice-proof"u8);
@@ -40,8 +46,19 @@ public partial class PlaytestDriver
         }
         finally
         {
-            System.IO.File.WriteAllText(System.IO.Path.Combine(_output,"peer-ice-order-diagnostics.json"),
-                JsonSerializer.Serialize(Diagnostics(),new JsonSerializerOptions{WriteIndented=true,NewLine="\n"}));
+            try
+            {
+                // Preserve the existing receipt's failure-time meaning even
+                // if this same pair becomes connected during the follow-up.
+                object receipt=firstConnectFailure is {} first?first:Diagnostics();
+                System.IO.File.WriteAllText(System.IO.Path.Combine(_output,"peer-ice-order-diagnostics.json"),
+                    JsonSerializer.Serialize(receipt,new JsonSerializerOptions{WriteIndented=true,NewLine="\n"}));
+            }
+            catch(Exception error)when(firstConnectFailure is not null)
+            {
+                try{Event("peer-ice-order-receipt-error",new{type=error.GetType().FullName,originalFailureRetained=true});}
+                catch(Exception){} // A write failure cannot mask the original failed predicate.
+            }
         }
         static bool Ice(JsonElement signal)=>signal.GetProperty("kind").GetString()=="ice";
         static bool Sdp(JsonElement signal)=>signal.GetProperty("kind").GetString()=="sdp";
@@ -50,12 +67,42 @@ public partial class PlaytestDriver
             leftIce=leftSignals.Count(Ice),rightIce=rightSignals.Count(Ice),leftGathered=left.IceGatheringComplete,rightGathered=right.IceGatheringComplete,
             leftConnected=left.Connected,leftFailed=left.Failed,rightConnected=right.Connected,rightFailed=right.Failed,
             leftObservation=left.SafeSignalDiagnostics,rightObservation=right.SafeSignalDiagnostics};
+        async Task ObserveFailedPair(JsonElement firstFailure,CancellationToken cancellation)
+        {
+            string File(string name)=>System.IO.Path.Combine(_output,name);
+            System.IO.File.WriteAllText(File("peer-ice-order-first-failure.json"),
+                JsonSerializer.Serialize(firstFailure,new JsonSerializerOptions{WriteIndented=true}));
+            var samples=new List<JsonElement>();var clock=Stopwatch.StartNew();double nextSample=0;
+            void Sample()
+            {
+                var snapshot=JsonSerializer.SerializeToElement(new{seconds=clock.Elapsed.TotalSeconds,pair=Diagnostics()});
+                samples.Add(snapshot);Event("peer-ice-order-post-failure",snapshot);
+                System.IO.File.WriteAllText(File("peer-ice-order-followup.json"),JsonSerializer.Serialize(new{
+                    schemaVersion=1,originalFailureRetained=true,originalDeadlineSeconds=5,observationBudgetSeconds=10,
+                    sameNativePair=true,extraSignalsDelivered=0,firstFailure,samples
+                },new JsonSerializerOptions{WriteIndented=true}));
+            }
+            // Evidence only. No Start/AcceptSignal, new adapters, replacement
+            // ports or success predicate. A late connection still rethrows.
+            while(clock.Elapsed.TotalSeconds<10)
+            {
+                cancellation.ThrowIfCancellationRequested();
+                left.Poll();right.Poll();
+                if(clock.Elapsed.TotalSeconds>=nextSample)
+                {Sample();nextSample=clock.Elapsed.TotalSeconds+1;}
+                await Frames(1);await Task.Delay(5,cancellation);
+            }
+            cancellation.ThrowIfCancellationRequested();
+            Sample();
+        }
         async Task Until(Func<bool> condition,string label)
         {
             var clock=Stopwatch.StartNew();
             while(!condition()&&clock.Elapsed.TotalSeconds<5)
             {left.Poll();right.Poll();await Frames(1);await Task.Delay(5);}
-            Check(condition(),label+"; "+JsonSerializer.Serialize(Diagnostics()));
+            bool passed=condition();var snapshot=JsonSerializer.SerializeToElement(Diagnostics());
+            if(!passed&&stage=="connect")firstConnectFailure=snapshot;
+            Check(passed,label+"; "+snapshot.GetRawText());
         }
     }
 }

@@ -723,6 +723,13 @@ launches the archived app with each saved preset/display mode, and
 hosted CI the unfixed v0.35.0 crashes (SIGSEGV) in all three High cases while
 v0.35.1/v0.36.0 pass all nine.
 
+The saved-settings startup artifact also retains each isolated case's `app.log`.
+This preserves the first native compiler diagnostic if a Metal pipeline fails;
+the summary's forty-line tail can contain only repeated downstream errors.
+Only those logs, the existing summary and captures are uploaded, never the
+scratch user-data/preferences tree. The nine cases and 180/90-second deadlines
+are unchanged.
+
 ## Display settings verification
 
 `display-settings` is graphical-only and belongs to `all` and `menu-ux`. It checks
@@ -1017,6 +1024,16 @@ internal gathering-state observation; production signalling behavior is unchange
 Signal counts, gathering/connection flags and the failing stage are written before
 link disposal and retained in native CI. Use those observations to distinguish
 incomplete fixture signalling from an actual native connection failure.
+
+If the five-second connection predicate fails, `peer-ice-order` freezes that
+original state before disposal and observes the same two native objects for at
+most ten further seconds. It delivers no more signals and creates no replacement
+adapters or ports. Safe one-second samples retain state and candidate address
+family/scope without raw endpoints or SDP. A late connection, an observation
+error or a stuck observer always rethrows the original failure; this follow-up
+cannot pass or extend the required predicate. The first-failure and follow-up
+JSONs are included in the existing native artifact. Pure managed
+`--retained-failure-evidence` checks cover this policy and endpoint sanitization.
 
 ### Eight-peer native signalling observations
 
