@@ -30,7 +30,7 @@ public partial class BombThrowPreview : Node3D
         Box(_target,Vector3.Zero,new(.035f,.014f,.18f),_material);
         var overlay=new CanvasLayer{Layer=2};AddChild(overlay);overlay.AddChild(_reticle);
     }
-    public void Update(ThrowProjection projection,int pumps,int slot,bool aimSet=false,bool aiming=false,float range=0)
+    public void Update(ThrowProjection projection,int pumps,int slot,bool aimSet=false,bool aiming=false,float range=0,float markerFloor=float.NegativeInfinity)
     {
         var color=pumps==3?ArcadeTheme.Gold:ArcadeTheme.Aqua.Lerp(ArcadeTheme.Gold,pumps/3f);
         _material.AlbedoColor=color;_material.Emission=color*.55f;
@@ -43,7 +43,7 @@ public partial class BombThrowPreview : Node3D
             var p=projection.Points[index];_dots[i].Position=new(p.X,p.Y*TempleStageView.HeightScale,p.Z);
         }
         var last=projection.Last;
-        _target.Position=new(last.X,last.Y*TempleStageView.HeightScale+.055f,last.Z);
+        _target.Position=new(last.X,Math.Max(last.Y*TempleStageView.HeightScale,markerFloor)+.055f,last.Z);
         _target.Visible=projection.End==ThrowProjectionEnd.Landing;
         _endpoint=_target.Position;_end=projection.End;
         _target.Scale=Vector3.One*(aiming?1.08f:1);
@@ -56,6 +56,6 @@ public partial class BombThrowPreview : Node3D
         };
     }
     public void HidePreview(){Visible=false;_reticle.Visible=false;}
-    public void UpdateScreen(Camera3D camera)=>_reticle.Update(camera,_endpoint,_end,_material.AlbedoColor,IsVisibleInTree());
+    public void UpdateScreen(Camera3D camera)=>_reticle.Update(camera,ToGlobal(_endpoint),_end,_material.AlbedoColor,IsVisibleInTree());
 }
 public sealed record ThrowPreviewState(string PlayerId,int Pumps,float X,float Y,float Z,string End,int Points,bool LandingMarkerVisible,string EndpointLabel,bool AimSet=false,bool Aiming=false,float AimRange=0,bool EndpointMarkerVisible=false,float ScreenX=0,float ScreenY=0,bool EdgeClamped=false);

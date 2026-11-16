@@ -95,7 +95,7 @@ public sealed partial class BlastSession
     private void SimulateRound(ISessionContext context, float dt)
     {
         if (!_practice || _tutorialLesson?.Id=="duel") _roundTimer = ++_fightTicks * dt;
-        if(_stage.Id==BlastStages.BlizzardBattle)_weatherTime+=dt;
+        if(_stage.Id is BlastStages.BlizzardBattle or BlastStages.InTheGutter)_weatherTime+=dt;
         var timeLeft = _roundSeconds - _roundTimer;
 
         // Trigger hurry.
@@ -125,7 +125,7 @@ public sealed partial class BlastSession
                 Present("waterfall", magnitude: FloodRules.RisePerSecond, y: _waterLevel);
             }
         }
-        if (_phase == RoundPhase.Hurry && !_stage.RisingWater && _stage.Id!=BlastStages.RockGarden && _tutorialLesson is null)
+        if (_phase == RoundPhase.Hurry && !_stage.RisingWater && !BlastStages.UsesMeteors(_stage.Id) && _tutorialLesson is null)
         {
             _hurryColTimer += dt;
             float interval=BlastStages.HurryColumnSeconds(_stage.Id);
@@ -144,7 +144,7 @@ public sealed partial class BlastSession
             }
         }
 
-        if(_phase==RoundPhase.Hurry&&_stage.Id==BlastStages.RockGarden)TickGardenMeteors(context,dt);
+        if(_phase==RoundPhase.Hurry&&BlastStages.UsesMeteors(_stage.Id))TickGardenMeteors(context,dt);
 
         // Time limit: draw.
         if (!_practice && timeLeft <= 0)
@@ -167,11 +167,12 @@ public sealed partial class BlastSession
         BeginBodyContacts();
         ProcessInputs(context, dt);
         DriftBlizzardPlayers(dt);
+        DriftGutterPlayers(dt);
         TickPlayerCarrying(dt);
         ResolveBodyContacts(dt);
         SynchronizeLatchedGhosts();
         DrownSubmergedEntities();
-        if(_phase==RoundPhase.Hurry&&_stage.Id==BlastStages.BlizzardBattle)KillInClosedColumns(context);
+        if(_phase==RoundPhase.Hurry&&_stage.Id is BlastStages.BlizzardBattle or BlastStages.InTheGutter)KillInClosedColumns(context);
         TickBombs(context, dt);
         TickHazards(context, dt);
         TickItems(context);

@@ -218,8 +218,9 @@ public partial class ArcadeBackdrop : RenderSurface
             var c=layout.Cells[x,z];cells.Add(new {k=(int)c.Kind,t=c.Tier,oh=c.ObstacleHeight,rf=c.RampFromTier,rt=c.RampToTier,rx=c.RampDX,rz=c.RampDZ,below=c.Below is {} lower?new {k=(int)lower.Kind,t=lower.Tier,rf=lower.RampFromTier,rt=lower.RampToTier,rx=lower.RampDX,rz=lower.RampDZ}:null});
         }
         var data=JsonSerializer.SerializeToElement(new {id=layout.Id,width=layout.Width,height=layout.Height,coverHeight=layout.SoftBlockHeight,cells,underpasses=layout.Underpasses.Select(c=>c.Z*layout.Width+c.X).Order().ToArray()});
-        float scale=8.1f/Math.Max(layout.Width,layout.Height);
-        var miniature=new TempleStageView(new ArtMaterials()) {IncludeScenery=false,Scale=Vector3.One*scale,Position=new(-layout.Width*scale/2,0,-layout.Height*scale/2)};
+        float scale=(id==BlastStages.SeaSick?8.0f:8.1f)/(id==BlastStages.SeaSick?29f:(Math.Max(layout.Width,layout.Height)+(id==BlastStages.InTheGutter?9.6f:0)));
+        var miniature=new TempleStageView(new ArtMaterials()) {IncludeScenery=false,Scale=Vector3.One*scale,
+            Position=new(id==BlastStages.SeaSick?-12.2f*scale:-layout.Width*scale/2,id==BlastStages.SeaSick?-.30f+2.1f*scale:0,-layout.Height*scale/2)};
         _arenaMount.AddChild(miniature);miniature.Build(data);
         if(id==BlastStages.BlizzardBattle)
             for(int z=1;z<layout.Height-1;z++)for(int x=1;x<layout.Width-1;x++)
@@ -231,14 +232,15 @@ public partial class ArcadeBackdrop : RenderSurface
             // The trimmed display plinth has no open sea, so it needs no seabed.
             if(child is MeshInstance3D seabed&&seabed.Name=="Seabed")seabed.Visible=false;
             if(child is MeshInstance3D water&&PrimitiveTemplates.Is(water.Mesh,"PlaneMesh")){water.Mesh=PrimitiveTemplates.With(water.Mesh,"size",new Vector2(layout.Width+.8f,layout.Height+.8f));water.Position=new(layout.Width/2f,-.53f,layout.Height/2f);}
-            else if(child is MeshInstance3D exterior&&PrimitiveTemplates.Is(exterior.Mesh,"BoxMesh")&&(child.Name=="GardenExterior"||child.Name=="FrozenExterior"))
+            else if(child is MeshInstance3D exterior&&PrimitiveTemplates.Is(exterior.Mesh,"BoxMesh")&&(child.Name=="GardenExterior"||child.Name=="FrozenExterior"||child.Name=="FieldExterior"))
             {
                 // ArtGeometry caches meshes used by gameplay too; resize a private menu copy.
                 exterior.Mesh=PrimitiveTemplates.With(exterior.Mesh,"size",new Vector3(layout.Width+.8f,PrimitiveTemplates.Parameter(exterior.Mesh,"size").AsVector3().Y,layout.Height+.8f));
             }
             // Gameplay's deep sea foundation would project through the display plinth.
-            else if(child is MeshInstance3D {Mesh:not null} terrain&&terrain.Mesh.GetAabb().Position.Y< -3.5f)terrain.Visible=false;
+            else if(id!=BlastStages.SeaSick&&child is MeshInstance3D {Mesh:not null} terrain&&terrain.Mesh.GetAabb().Position.Y< -3.5f)terrain.Visible=false;
         }
+        if(id==BlastStages.SeaSick)miniature.FitSeaSickMiniature(4.55f/scale);
         if(id==BlastStages.UpAndDown)miniature.FitUpAndDownMiniature(4.45f/scale,-.31f/scale);
         return miniature;
     }

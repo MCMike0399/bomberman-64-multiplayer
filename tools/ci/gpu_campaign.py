@@ -12,7 +12,7 @@ ROOT=Path(__file__).resolve().parents[2]
 # (case, count, step limit seconds); sized to the 180-minute campaign window.
 LINUX_REPEATS=(('roster-popup-stress',3,600),('tour-09',9,900))
 
-OTHER_STAGES=('sunken-temple','rock-garden','top-rules','blizzard-battle','greedy-trap','circuit-garden')
+OTHER_STAGES=('sunken-temple','rock-garden','top-rules','blizzard-battle','greedy-trap','field-of-grass','in-the-gutter','sea-sick','circuit-garden')
 
 def collect_stage_captures(directory,output,target,revision,provenance,expiry,driver='vulkan',expected_adapter='T4',processes=2):
     """Retain the other six original-High scenes; core owns Up & Down's effect controls."""

@@ -23,7 +23,12 @@ public sealed partial class BlastSession
 
     private void DriftBlizzardBomb(BlastBomb bomb,float dt)
     {
-        var wind=BlizzardWind;
+        DriftGroundBomb(bomb,dt,BlizzardWind);
+    }
+
+    // Shared collision-safe ground advection; water current never enters flight.
+    private void DriftGroundBomb(BlastBomb bomb,float dt,Vector2 wind)
+    {
         if(wind==Vector2.Zero||bomb.State is BombState.Carried or BombState.Flying)return;
         float y=BombY(bomb);
         bool Clear(float x,float z)=>!BombThrowRules.StaticObstructed(new(x,y,z),new(x-bomb.X,0,z-bomb.Z),

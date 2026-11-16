@@ -21,7 +21,9 @@ public partial class ArenaView
     public System.Numerics.Vector2? ArenaPoint(Godot.Vector2 screen)
     {
         if(_terrain==null||!_camera.IsInsideTree())return null;
-        var origin=_camera.ProjectRayOrigin(screen);var direction=_camera.ProjectRayNormal(screen);
+        var inverse=_stageAssembly.GlobalTransform.AffineInverse();
+        var origin=inverse*_camera.ProjectRayOrigin(screen);
+        var direction=inverse.Basis*_camera.ProjectRayNormal(screen);
         if(direction.Y>-.01f)return null;
         const float top=8*TempleStageView.HeightScale,bottom=-TempleStageView.HeightScale,step=.05f;
         float Height(float t){var p=origin+direction*t;return p.Y-_terrain.AimSurface(p.X,p.Z)*TempleStageView.HeightScale;}
@@ -38,7 +40,7 @@ public partial class ArenaView
         var floor=origin+direction*((origin.Y)/-direction.Y);
         return new(floor.X,floor.Z);
     }
-    public Godot.Vector2 ScreenPoint(System.Numerics.Vector3 arena)=>_camera.UnprojectPosition(new(arena.X,arena.Y*TempleStageView.HeightScale,arena.Z));
+    public Godot.Vector2 ScreenPoint(System.Numerics.Vector3 arena)=>_camera.UnprojectPosition(_stageAssembly.ToGlobal(new(arena.X,arena.Y*TempleStageView.HeightScale,arena.Z)));
     private void ClearThrowPreviews()
     {
         foreach(var view in _throwPreviews.Values){view.HidePreview();view.QueueFree();}
@@ -74,7 +76,7 @@ public partial class ArenaView
                     seconds=>BlizzardRules.Wind(weather.GetProperty("time").GetSingle()+seconds+BombThrowRules.SimulationStep,weather.GetProperty("seed").GetInt32(),weather.GetProperty("round").GetInt32()):null);
             if(!_throwPreviews.TryGetValue(id,out var view))
             {view=new BombThrowPreview();_effects.AddChild(view);_throwPreviews[id]=view;}
-            view.Update(projection,pumps,player.GetProperty("slot").GetInt32(),aimSet,aiming,range);seen.Add(id);
+            view.Update(projection,pumps,player.GetProperty("slot").GetInt32(),aimSet,aiming,range,_stage==Bomber.Game.Simulation.Stages.BlastStages.FieldOfGrass?_terrain.OverlaySurface(projection.Last.X,projection.Last.Z):float.NegativeInfinity);seen.Add(id);
             view.UpdateScreen(_camera);
             states.Add(new(id,pumps,projection.Last.X,projection.Last.Y,projection.Last.Z,projection.End.ToString(),projection.Points.Count,view.LandingMarkerVisible,view.EndpointLabel,aimSet,aiming,range,view.EndpointMarkerVisible,view.EndpointScreenPosition.X,view.EndpointScreenPosition.Y,view.EndpointEdgeClamped));
         }

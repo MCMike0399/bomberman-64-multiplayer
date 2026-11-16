@@ -32,10 +32,13 @@ public partial class TempleStageView
         {
             BlastStages.SunkenTemple=>BuildSunkenTempleExterior,
             BlastStages.RockGarden=>BuildRockGardenExterior,
+            BlastStages.FieldOfGrass=>BuildFieldOfGrassExterior,
             BlastStages.UpAndDown=>BuildUpAndDownExterior,
             BlastStages.TopRules=>BuildTopRulesExterior,
             BlastStages.BlizzardBattle=>BuildBlizzardExterior,
             BlastStages.GreedyTrap=>BuildGreedyLife,
+            BlastStages.InTheGutter=>BuildGutterExterior,
+            BlastStages.SeaSick=>BuildSeaSickExterior,
             BlastStages.CircuitGarden=>BuildCircuitGardenExterior,
             _=>null
         };

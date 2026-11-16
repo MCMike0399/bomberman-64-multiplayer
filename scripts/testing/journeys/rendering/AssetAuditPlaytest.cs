@@ -193,6 +193,42 @@ public partial class PlaytestDriver
     {
         foreach(var child in parent.GetChildren()){yield return child;foreach(var descendant in AuditDescendants(child))yield return descendant;}
     }
+    // Validate the meshes actually consumed by the scene, including indexed
+    // SurfaceTool output. Godot's front-face convention is clockwise, so its
+    // outward normal is (c-a) x (b-a), independently of supplied NORMAL values.
+    private void CheckClockwiseMeshes(IEnumerable<(Mesh Mesh,string Label,bool UpperSurface)> specimens)
+    {
+        var reports=new List<object>();var failures=new List<string>();int meshes=0,triangles=0;
+        foreach(var (mesh,label,upperSurface) in specimens)
+        {
+            meshes++;int tested=0,wrong=0,degenerate=0;float minimum=1;
+            for(int surface=0;surface<mesh.GetSurfaceCount();surface++)
+            {
+                var arrays=mesh.SurfaceGetArrays(surface);
+                var vertices=arrays[(int)Mesh.ArrayType.Vertex].AsVector3Array();
+                var normals=arrays[(int)Mesh.ArrayType.Normal].AsVector3Array();
+                var indices=arrays[(int)Mesh.ArrayType.Index].VariantType==Variant.Type.Nil
+                    ?Enumerable.Range(0,vertices.Length).ToArray():arrays[(int)Mesh.ArrayType.Index].AsInt32Array();
+                if(normals.Length!=vertices.Length||indices.Length%3!=0)
+                {failures.Add(label+": missing normals or triangle indices");continue;}
+                for(int i=0;i<indices.Length;i+=3)
+                {
+                    int a=indices[i],b=indices[i+1],c=indices[i+2];
+                    var clockwise=(vertices[c]-vertices[a]).Cross(vertices[b]-vertices[a]);
+                    if(clockwise.LengthSquared()<1e-12f){degenerate++;continue;}
+                    var face=clockwise.Normalized();var declared=(normals[a]+normals[b]+normals[c]).Normalized();
+                    float alignment=face.Dot(declared);
+                    minimum=Math.Min(minimum,alignment);tested++;triangles++;
+                    if(!float.IsFinite(alignment)||alignment<=.25f||upperSurface&&(face.Y<=.05f||declared.Y<=.05f))wrong++;
+                }
+            }
+            if(tested==0||wrong>0)failures.Add($"{label}: {wrong}/{tested} wrong-facing triangles; minimum normal alignment {minimum}");
+            reports.Add(new{label,upperSurface,tested,wrong,degenerate,minimum});
+        }
+        Event("clockwise-surface-audit",new{meshes,triangles,reports,failures});
+        Check(meshes>0&&triangles>0&&failures.Count==0,"actual scene meshes retain clockwise front faces aligned with their vertex normals: "+string.Join("; ",failures.Take(5)));
+    }
+
     private static List<string> AuditVertexProblems(Vector3[] vertices)
     {
         var problems=new List<string>();

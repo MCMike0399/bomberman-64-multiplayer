@@ -32,7 +32,7 @@ Normal battles default to **first to two wins**, **one minute of regular play**,
 
 ## Arenas
 
-All six battle arenas support local, practice and online sessions. Circuit Garden is the separate tutorial and free-practice arena.
+Battle arenas support local, practice and online sessions. Circuit Garden is the separate tutorial and free-practice arena.
 
 | Arena | Layout and sudden death |
 | --- | --- |
@@ -42,6 +42,7 @@ All six battle arenas support local, practice and online sessions. Circuit Garde
 | **[Top Rules](docs/top-rules-research.md)** | Two-story castle with three raised lanes, a central crosswalk, four green staircases and a red lower court. Side walls close inward. |
 | **[Blizzard Battle](docs/blizzard-battle.md)** | Snowfield with sixteen violet ice cones, changing diagonal wind and animated snow. Avalanches advance from both sides. |
 | **[Greedy Trap](docs/greedy-trap.md)** | Upper court and narrow middle ring above a turquoise reward chamber, four inner stairways and two upper exits. Sliding walls compress the arena. |
+| **[Sea Sick](docs/sea-sick.md)** *(source addition)* | Wooden pirate deck, tall mast, two forward posts, barrel cover and side galleries. Gentle visual rocking and falling-fireball sudden death. |
 
 ![Rock Garden battle with wind-swept scenery](docs/media/living-stage-worlds/rock-garden-high.png)
 
@@ -213,4 +214,4 @@ python3 tools/qa/run.py --profile package
 
 ## License
 
-[MIT](LICENSE), copyright 2026 MCMike0399. The adapted simulation retains its [upstream MIT notice](src/Bomber.Game/Simulation/LICENSE); bundled fonts use the [SIL Open Font License](docs/licenses/README.md). No original game ROM, Nintendo/Hudson artwork, reference footage, private kernel source, credentials or raw playtest traces are distributed here.
+[GNU General Public License version 3 only (GPL-3.0-only)](LICENSE), copyright 2026 MCMike0399. The adapted simulation retains its [upstream MIT notice](src/Bomber.Game/Simulation/LICENSE); bundled fonts use the [SIL Open Font License](docs/licenses/README.md). No original game ROM, Nintendo/Hudson artwork, reference footage, private kernel source, credentials or raw playtest traces are distributed here.

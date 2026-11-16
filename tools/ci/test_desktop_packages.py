@@ -39,7 +39,7 @@ def write_desktop(directory, revision=SHA, release=None, linux_invariant=True):
         item = desktop.names(target)
         files = {name: b'fixture runtime' for name in (
             settings['executable'], settings['runtime'], settings['webrtc'], 'Bomberman64Multiplayer.dll',
-            settings.get('pck','BlastCircuit.pck'), 'Notices/Blast-Circuit-MIT.txt', 'Notices/WebRTC-SOURCE.txt', 'Notices/DotNet-LICENSE.TXT')}
+            settings.get('pck','BlastCircuit.pck'), 'Notices/Blast-Circuit-GPL-3.0.txt', 'Notices/WebRTC-SOURCE.txt', 'Notices/DotNet-LICENSE.TXT')}
         if 'engine_executable'in settings:files[settings['engine_executable']]=b'fixture engine'
         files['release.json'] = json.dumps({'revision': revision, 'release': release, 'target': target}).encode()
         files['data/Bomberman64Multiplayer.runtimeconfig.json'] = json.dumps({"runtimeOptions":{"includedFrameworks":[{"name":"Microsoft.NETCore.App","version":"10.0.0"}], "configProperties":{"System.Globalization.Invariant":target == "linux-x64" and linux_invariant}}}).encode()

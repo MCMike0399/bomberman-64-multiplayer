@@ -113,7 +113,7 @@ public partial class ArenaView
             {
                 node=new MeteorView(_art);_dynamic.AddChild(node);_entities[id]=node;
             }
-            node.Position=new(F(meteor,"x"),0,F(meteor,"z"));
+            node.Position=new(F(meteor,"x"),_terrain.OverlaySurface(F(meteor,"x"),F(meteor,"z")),F(meteor,"z"));
             ((MeteorView)node).SetRemaining(F(meteor,"remaining"));
             node.SetProcess(_battleActive);
         }
@@ -137,6 +137,7 @@ public partial class ArenaView
         UpdateThrowPreviews(data,_softBlockBits);
         Present(_presentation.Read(data));
         if(data.TryGetProperty("blizzard",out var weather))_terrain.SetBlizzard(weather);
+        if(data.TryGetProperty("gutter",out var current))_terrain.SetGutter(current);
         UpdateClosure(data,(int)F(data,"closedLeft"),(int)F(data,"closedRight"));
     }
 }

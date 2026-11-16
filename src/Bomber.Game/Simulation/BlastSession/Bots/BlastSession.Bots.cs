@@ -43,6 +43,11 @@ public sealed partial class BlastSession
             Func<float,System.Numerics.Vector2> forecast=ahead=>BlizzardRules.Wind(_weatherTime+ahead,_weatherSeed,_roundNum);
             _aiDanger.Wind=forecast;_aiPlacementDanger.Wind=forecast;
         }
+        if(_stage.Id==BlastStages.InTheGutter)
+        {
+            Func<float,System.Numerics.Vector2> forecast=ahead=>new(GutterRules.Current(_weatherTime+ahead,_weatherSeed,_roundNum),0);
+            _aiDanger.Wind=forecast;_aiPlacementDanger.Wind=forecast;
+        }
         int count=_aiGraph.Count;_aiQueue=new int[count];_aiSeen=new int[count];_aiFirst=new int[count];_aiDepth=new int[count];_aiItemKind=new byte[count];_aiCover=new bool[count];_aiNearest=new float[count];_aiSecondNearest=new float[count];_aiNearestOwner=new string?[count];_aiItemDropper=new string?[count];
         _aiPursuit=new int[count];
     }
@@ -273,7 +278,7 @@ public sealed partial class BlastSession
         if(!field.Safe(cell,enter,leave))return false;
         int x=_aiGraph.X(cell),z=_aiGraph.Z(cell);
         if(WaterUnsafe(x+.5f,z+.5f,leave,_aiGraph.Height[cell]))return false;
-        if(_phase==RoundPhase.Hurry&&!_stage.RisingWater&&_stage.Id!=BlastStages.RockGarden)
+        if(_phase==RoundPhase.Hurry&&!_stage.RisingWater&&!BlastStages.UsesMeteors(_stage.Id))
         {
             int columns=(int)MathF.Floor((_hurryColTimer+leave)/BlastStages.HurryColumnSeconds(_stage.Id));
             if(x<_closedLeft+columns||x>=_stage.Width-_closedRight-columns)return false;
@@ -455,6 +460,7 @@ public sealed partial class BlastSession
         // A gust adds drift to every input. Without leaning into it, the slowing
         // approach settles just outside the alignment tolerance and never turns.
         var wind=BlizzardWind*BlizzardRules.PlayerWindScale;
+        if(InShallowCurrent(bot.X,bot.Y,bot.Z))wind.X+=GutterCurrent*GutterRules.PlayerScale;
         if(wind!=System.Numerics.Vector2.Zero)
         {
             vx-=wind.X/moveSpeed;vz-=wind.Y/moveSpeed;

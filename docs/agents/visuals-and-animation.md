@@ -5,6 +5,28 @@ camera, explosions or sound. This guide preserves the user's corrections and
 failed approaches; exact live values remain in source. Use the
 [testing guide](testing-and-delivery.md) for build/recording ownership and commands.
 
+## Field of Grass (2026-11-15 source work)
+
+[Stage contract and inspected references](../field-of-grass.md) own the grassy valley,
+continuous side slopes, eight bank starts, random meadow rocks and meteor Hurry.
+Opaque foliage conceals normal bombs and lower bodies without changing physics;
+all presets retain it. Use the focused `--field-of-grass` authority checks and
+`field-of-grass` / `field-of-grass-network` journeys. Graphical images require
+separate review; headless checks do not approve the art or establish delivery.
+
+Fresh-advisor B1 refinement keeps every support endpoint and the concealing
+canopy. Exposed layered loam and thin ragged turf continue around both sides;
+the far meadow keeps a calm mid-green surface with the canopy's shared gust.
+Exact per-cell support sheets receive shadows; recessed closed bank masses
+cast them, avoiding support-sheet self-shadow seams under grazing Night light.
+Standing stones retain their peak and footprint with broader mossy caps.
+The High-first Root-Hollow pass unifies ledges/slopes as warm loam, removes the
+continuous road-colour stripes, rounds the front turf roll and adds a sparse
+seed-head layer on that same pausable gust. All three presets keep the body and
+concealment; no separate decorative knolls or wind tree are added.
+Review all three Night presets in `field-of-grass-shape-study` and both actual
+mid-slope support witnesses. Source checks alone do not qualify the art.
+
 ## Start with the actual actor
 
 1. Record whether the complaint appears in a menu, practice, ordinary local
@@ -366,6 +388,17 @@ and pulsing amber inlays. It uses the enclosed-arena camera, ordinary lighting
 profiles and all graphics presets. The basin is safe opaque paving, with no
 lethal-water plane. [Stage and visual contract](../greedy-trap.md),
 [inspected original references](../greedy-trap-research.md).
+
+### Sea Sick ship presentation (2026-11-15 source work)
+
+[Sea Sick](../sea-sick.md) uses one rendered ship parent for terrain, actors,
+cover, effects and throw guides. Its gentle roll/pitch leaves the ocean, sky,
+camera and HUD fixed. Preserve the local/global conversions in `ArenaPoint`,
+`ScreenPoint` and the throw reticle. Motion is cosmetic and pauses locally;
+there is no ship-specific drift or gravity. Warm timber, green gunwales, the
+central mast/two forward posts and barrel cover define the stage. The masthead
+may extend beyond the combat frame; playable floors and standing actors remain
+HUD-safe. Low hides exterior life and miniatures omit it.
 
 ### Top Rules castle presentation
 
@@ -847,6 +880,62 @@ upload, duplication and geometry-helper source entry and the finite template
 tuples. New entries or changed producing-source bounds fail the public gate
 until reviewed. Normal headless and packaged functional lanes exercise the
 actual end-of-round closure and meteor paths with templates enforced.
+
+### In the Gutter toy waterworks (2026-11-15 source work)
+
+[Stage and evidence contract](../in-the-gutter.md): original brick posts,
+brass-edged opaque grates, shallow shared-preset water and a current marker
+form the playable lock. Owned packed water grids and portable boxes avoid new
+primitive-template domains. Current tracers/arrow follow accepted state; canal
+quays, houses, shrubs and sluice wheels stay outside play and miniatures omit
+them. Ordinary battle captures, preset/Night views, an explicitly labeled
+oblique inspection and actual closing grates are required for visual review.
+
+Gutter's shallow contact exception retains High's real scene reflections,
+Fresnel and existing twelve-step/three-refinement march while using coherent
+samples for its upright posts and cover. Other maps keep the shared jitter
+that protects suspended-deck reflections. The native controlled witness
+identified per-pixel march jitter as the contact screen-door source; more
+refinement did not buy enough quality. The permanent gutter-water-contact
+journey checks Midday/Night contact noise against a reflection-off control and
+requires meaningful actual reflection contrast. Independent art review under
+the user's revised visual bar remains required.
+
+### Copper Lock shape direction (2026-11-15)
+
+The generic Gutter waterworks prototype is superseded by the
+[Copper Lock shape study](../in-the-gutter.md#copper-lock-presentation):
+burgundy bollards with cream caps/rings, core cast sluice machines, a fish vane
+and an asymmetric inflow/spillway composition. Low keeps the body and machines.
+Accepted current drives foam/leaves and gear/vane motion. The 52-check native
+shape study is a checkpoint: independent review accepts the court but requests
+a bounded machinery/setting revision and quieter water. It is not final art
+approval. Shared all-stage scenery checks include the quiet reed-bank exterior,
+Low core visibility and paused current cues.
+
+### Copper Lock finishing candidate
+
+The [current contract](../in-the-gutter.md#copper-lock-presentation) keeps the
+approved bollards and court, connects the channel walls beneath the machinery,
+and removes the isolated bank/pointed spillway faces. Identity, outer water
+and warm work lamps remain core geometry on Low. Coherent Copper Lock
+reflections reduce outer-tower undersampling while retaining actual mirrors;
+other arenas keep the shared shader. Water nodes must remain centered because
+the shader uses NODE_POSITION_WORLD for radial coverage: localize geometry
+instead of moving its world footprint. The consumed-geometry regression
+protects that mapping. Final colored review and rebuilt-export qualification
+remain required; do not equate the shape GO or passing counts with approval.
+
+### Clockwise authored surfaces (2026-11-15)
+
+Godot uses clockwise front faces: for emitted vertices `a,b,c`, the outward
+normal is `(c-a).Cross(b-a)`. Supplying `NORMAL=Up` cannot make a back-facing
+triangle visible. Preserve culling and correct the emitted order. The stage
+journeys inspect actual mesh vertex/index/normal buffers, require upward-facing
+ground surfaces and retain the first red result. A live actor standing on the
+rendered surface is separate evidence from a node count or a numerical normal.
+The Lost at Sea glass and Grass bank fixes retain the original missing-surface
+native witness and before/after actual-mesh audits.
 
 ### Orrery Keep direction (2026-11-15, current source)
 
