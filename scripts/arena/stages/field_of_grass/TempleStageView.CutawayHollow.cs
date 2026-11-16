@@ -159,7 +159,9 @@ public partial class TempleStageView
     }
     private void BuildHollowCutFace(Material soil)
     {
-        float left=IncludeScenery?-80:0,right=IncludeScenery?80:Width,bottom=IncludeScenery?-1.8f:-.68f;
+        // Close below the foreground's actual -1.9 top instead of exposing a
+        // thin strip of the pale background between the two decorative pieces.
+        float left=IncludeScenery?-80:0,right=IncludeScenery?80:Width,bottom=IncludeScenery?-2.0f:-.68f;
         var face=new SurfaceTool();face.Begin(Mesh.PrimitiveType.Triangles);
         var sod=new SurfaceTool();sod.Begin(Mesh.PrimitiveType.Triangles);sod.SetSmoothGroup(0);
         for(float x=left;x<right;x+=.5f)
