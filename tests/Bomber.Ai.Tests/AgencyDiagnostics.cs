@@ -11,6 +11,10 @@ using Bomber.Game.Simulation.State;
 // standing still through a Blizzard gust, trailing a walking target, or real pursuit.
 static class AgencyDiagnostics
 {
+    // Fixed 2026-10-26 algorithm comparison. New maps have different traversal
+    // contracts and are measured separately; CLI/full-soak coverage remains independent of this fixed reference.
+    internal static readonly string[] ComparisonStages=["sunken-temple","rock-garden","up-and-down","top-rules","blizzard-battle","greedy-trap"];
+    internal static List<Result> ComparisonMatrix()=>Matrix(3,ComparisonStages);
     internal sealed record Result(string Stage,string Difficulty,int Seed,string Scenario,int ActiveTicks,
         int CellChanges,int PingPongs,int LongestPingPongStreak,int DistinctCells,int Bombs,int HumanPressureBombs,
         int FirstPressureTick,int LongestPressureGapTicks,int LongestStillTicks,
@@ -165,7 +169,7 @@ static class AgencyDiagnostics
             var r=parts.Length>4?AllBots(parts[0],parts[1],int.Parse(parts[2]),int.Parse(parts[4]),traceTicks,true):IdleHuman(parts[0],parts[1],int.Parse(parts[2]),traceTicks,true);
             Console.WriteLine(JsonSerializer.Serialize(r));return;
         }
-        var results=Matrix();
+        var results=args.Contains("--comparison")?ComparisonMatrix():Matrix();
         Write(results);
         Console.WriteLine($"{"stage",-16}{"level",-7}{"seed",-6}{"scenario",-11}{"flips",6}{"run",5}{"cells",6}{"bombs",6}{"hits",5}{"first",6}{"gap",6}{"still",6}{"gust%",7}{"calm%",7}{"dead",5}");
         foreach(var r in results)
@@ -176,10 +180,10 @@ static class AgencyDiagnostics
 
     /// <summary>Every stock battle arena, level and both soak seeds: one bot facing an idle
     /// player, and the first of four CPUs in an ordinary match. 60 seconds each.</summary>
-    internal static List<Result> Matrix(int? startingBombs=null)
+    internal static List<Result> Matrix(int? startingBombs=null,IReadOnlyList<string>? stages=null)
     {
         var results=new List<Result>();
-        foreach(string stage in new[]{"sunken-temple","rock-garden","up-and-down","top-rules","blizzard-battle","greedy-trap"})
+        foreach(string stage in stages??new[]{"sunken-temple","rock-garden","up-and-down","top-rules","blizzard-battle","greedy-trap"})
         foreach(string level in new[]{"easy","medium","hard"})
         foreach(int seed in new[]{64,9876})
         {
