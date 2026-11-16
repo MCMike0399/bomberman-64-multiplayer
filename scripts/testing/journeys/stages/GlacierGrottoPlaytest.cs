@@ -85,7 +85,25 @@ public partial class PlaytestDriver
             {
                 actual.Position=new(-11,7,14);actual.LookAt(new(-3.4f,1.1f,5.5f));await Capture("grotto-front-three-quarter");
                 actual.Position=new(-11,5,-5);actual.LookAt(new(-3.6f,1.1f,4.5f));await Capture("grotto-rear-support-inspection");
-                actual.Position=new(-8,.3f,11);actual.LookAt(new(-3.75f,1.2f,5));await Capture("grotto-low-vault-inspection");
+                // The ordinary rig reapplies its projection offsets every frame.
+                // A close contact view needs its own zero-offset camera, not just a new pose.
+                var low=new Camera3D{Fov=36,Near=.1f,Far=180,Current=true};AddChild(low);
+                try
+                {
+                    low.Position=new(-3.55f,.45f,14f);low.LookAt(new(-3.75f,.7f,5.2f));low.MakeCurrent();await Frames(3);
+                    var cavity=body.Mesh.SurfaceGetArrays(1);var points=cavity[(int)Mesh.ArrayType.Vertex].AsVector3Array()
+                        .Select(p=>body.ToGlobal(p)).Where(p=>Math.Abs(p.Z-8.5f)<.0002f&&Math.Abs(p.X+3.75f)<=1.23f&&p.Y<=1.71f).Distinct().ToArray();
+                    var viewport=_root.GetViewport().GetVisibleRect().Size;Vector2 min=Vector2.One,max=Vector2.Zero;bool behind=false;
+                    foreach(var point in points){var at=low.UnprojectPosition(point)/viewport;min=min.Min(at);max=max.Max(at);behind|=low.IsPositionBehind(point);}
+                    Event("grotto-low-inspection-visibility",new{current=low.IsCurrent(),openingVertices=points.Length,
+                        minimum=min.ToString(),maximum=max.ToString(),camera=low.Position.ToString(),look=new Vector3(-3.75f,.7f,5.2f).ToString()});
+                    Check(low.IsCurrent()&&points.Length>=24&&!behind&&min.X>=.04f&&max.X<=.96f&&min.Y>=.14f&&max.Y<=.9f&&
+                        max.X-min.X>.3f&&max.Y-min.Y>.25f,"actual vault opening is prominently framed below the HUD by the independent low inspection camera");
+                    Check(GrottoMeshHits(body,low.GlobalPosition,new(-3.75f,.7f,8.2f)).Count==0,
+                        "low inspection camera has a clear actual-mesh sightline through the mouth");
+                    await Capture("grotto-low-vault-inspection");
+                }
+                finally{low.Free();actual.MakeCurrent();}
             }
             finally{actual.Transform=pose;}
         }

@@ -184,3 +184,16 @@ Y[.163616,.473298]: 60 pixels from the left and 19 below the HUD-safe boundary.
 collar samples are within .0112 units of the captured lining, and the seven
 crown bases within .000001 of captured snow. Native shader compilation and
 rendered front/rear/below joins remain root's gate.
+
+The first native grotto run passed its geometry checks but its low-vault image
+contained only sky/floor. That capture is invalid underside evidence. The close
+pose inherited ordinary battle projection offsets, reapplied every frame by
+the camera rig. Its replacement uses a temporary zero-offset inspection camera,
+requires the actual captured opening rim to occupy a substantial HUD-safe area
+and checks an unobstructed captured-mesh mouth ray before saving the image.
+The ordinary battle camera and grotto geometry are unchanged by this correction.
+The stricter guard first rejected a slightly cropped test pose; it was moved
+back without relaxing the bounds. The corrected headless run passes75 checks,
+projecting all38 actual opening-rim vertices into X[.138,.822], Y[.288,.754],
+with a clear mouth ray. Native recapture is still required to replace the invalid
+underside image; the other accepted native images remain unchanged.
