@@ -234,3 +234,9 @@ These are review candidates. The source/public checks and managed build do not
 establish the Medium water read or visible current direction. Matching native
 Medium opening/combat, Night and six-to-eight-frame current evidence remain the
 acceptance gate.
+
+The first native Medium follow-up exposed a missing specialized helper guard:
+its caustic call was enabled while the helper still compiled only on High. The
+local Medium shader now widens both matching guards; shared water remains
+unchanged. The failing native log is the retained regression witness; a fresh
+native compile/capture is required before treating this correction as qualified.
