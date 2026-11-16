@@ -9,7 +9,7 @@ public sealed partial class BattleCameraRig(Camera3D camera)
     private readonly List<Vector3> _bounds=[];
     private Vector3 _center=new(10.5f,2,11.5f);
     private Vector2 _offset;
-    private bool _training, _castle, _blizzard, _pyramid, _garden;
+    private bool _training, _castle, _blizzard, _pyramid, _garden, _hollow;
     /// <summary>View depth of the closest/farthest playable point; depth cues stay outside this range.</summary>
     public Vector2 PlayableDepth {get;private set;}=new(20,40);
     /// <summary>Radial camera distance for depth fog, which uses length(view position), not axial depth.</summary>
@@ -17,9 +17,10 @@ public sealed partial class BattleCameraRig(Camera3D camera)
     public void SetStage(JsonElement stage)
     {
         _bounds.Clear();
+        _hollow=stage.GetProperty("id").GetString()=="field-of-grass";
         _garden=stage.GetProperty("id").GetString()=="rock-garden";
         _blizzard=stage.GetProperty("id").GetString()=="blizzard-battle";
-        _castle=stage.GetProperty("id").GetString() is "top-rules" or "greedy-trap";
+        _castle=stage.GetProperty("id").GetString() is "top-rules" or "greedy-trap" or "field-of-grass";
         _training=stage.GetProperty("id").GetString()=="circuit-garden";
         _pyramid=stage.GetProperty("id").GetString()=="sunken-temple";
         int width=stage.GetProperty("width").GetInt32(),depth=stage.GetProperty("height").GetInt32();
@@ -74,8 +75,8 @@ public sealed partial class BattleCameraRig(Camera3D camera)
                 foreach(var point in _bounds){var screen=project(point)/viewport;min=min.Min(screen);max=max.Max(screen);}
                 // Keep the full playable silhouette inside the HUD-safe band while using more
                 // of the available screen for the arena instead of the surrounding water.
-                var delta=(min+max)*.5f-new Vector2(.5f,_training?.445f:.5175f);
-                if(pass==4)return min.X>=.025f&&max.X<=.975f&&min.Y>=.145f&&max.Y<=(_training?.745f:.89f);
+                var delta=(min+max)*.5f-new Vector2(.5f,_training?.445f:_hollow?.48f:.5175f);
+                if(pass==4)return min.X>=.025f&&max.X<=.975f&&min.Y>=.145f&&max.Y<=(_training?.745f:_hollow?.82f:.89f);
                 var origin=project(_center);
                 float pixelsX=(project(_center+camera.GlobalBasis.X)-origin).Length();
                 float pixelsY=(project(_center+camera.GlobalBasis.Y)-origin).Length();

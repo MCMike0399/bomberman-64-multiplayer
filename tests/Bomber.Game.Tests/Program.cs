@@ -1,3 +1,4 @@
+if(args.Contains("--field-of-grass")){int count=0;FieldOfGrassChecks.Run((name,check)=>{check();count++;Console.WriteLine("PASS "+name);});Console.WriteLine($"Passed {count} Field of Grass integration checks.");return;}
 if(args.Contains("--stale-input")){StaleInputChecks.Run();return;}
 if(args.Contains("--round-ending")){Console.WriteLine($"Passed {RoundEndingChecks.Run()} round ending integration checks.");return;}
 if(args.Contains("--blast-hitbox")){Console.WriteLine($"Passed {BlastHitboxChecks.Run()} blast hitbox integration checks.");return;}
@@ -58,6 +59,7 @@ TerrainChecks.Run(Run);
 GreedyTrapChecks.Run(Run);
 UpAndDownChecks.Run(Run);
 RockGardenChecks.Run(Run);
+FieldOfGrassChecks.Run(Run);
 BotChecks.Run(Run);
 PracticeAndOutcomeChecks.Run(Run);
 ItemsAndHazardsChecks.Run(Run);

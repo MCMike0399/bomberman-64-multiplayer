@@ -998,6 +998,14 @@
       "manual": false
     },
     {
+      "id": "tour-22",
+      "steps": ["field-of-grass", "field-of-grass-network"],
+      "domains": ["gameplay", "rendering", "physics", "ai", "ui", "network"],
+      "headless": true,
+      "timeout": 480,
+      "manual": false
+    },
+    {
       "id": "all",
       "steps": [
         "tour-01",
@@ -1020,7 +1028,8 @@
         "tour-18",
         "tour-19",
         "tour-20",
-        "tour-21"
+        "tour-21",
+        "tour-22"
       ],
       "domains": [
         "ai",
@@ -1072,6 +1081,7 @@
         "rock-garden",
         "blizzard-battle",
         "greedy-trap",
+        "field-of-grass",
         "stage-scenery",
         "orrery-keep",
         "round-ending"
@@ -1283,6 +1293,30 @@
       "manual": false
     },
     {
+      "id": "field-of-grass-shape-study",
+      "method": "FieldOfGrassShapeStudy",
+      "domains": ["gameplay", "rendering", "physics", "ai"],
+      "headless": true,
+      "timeout": 240,
+      "manual": false
+    },
+    {
+      "id": "field-of-grass-network",
+      "method": "FieldOfGrassNetworkTour",
+      "domains": ["gameplay", "rendering", "network", "physics"],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "field-of-grass",
+      "method": "FieldOfGrassTour",
+      "domains": ["gameplay", "rendering", "physics", "ai", "ui"],
+      "headless": true,
+      "timeout": 240,
+      "manual": false
+    },
+    {
       "id": "rock-garden",
       "method": "RockGardenTour",
       "domains": [
@@ -1308,6 +1342,7 @@
         "water-surface",
         "tutorial",
         "greedy-trap",
+        "field-of-grass",
         "stage-scenery",
         "orrery-keep"
       ],
@@ -1562,6 +1597,7 @@
         "rock-garden",
         "blizzard-battle",
         "greedy-trap",
+        "field-of-grass",
         "hurry-water",
         "asset-audit",
         "pickup-showcase"
@@ -1599,6 +1635,7 @@
         "top-rules",
         "blizzard-battle",
         "greedy-trap",
+        "field-of-grass",
         "greedy-canal"
       ],
       "domains": [
@@ -1662,7 +1699,8 @@
         "up-and-down",
         "rock-garden",
         "blizzard-battle",
-        "greedy-trap"
+        "greedy-trap",
+        "field-of-grass"
       ],
       "domains": [
         "ai",
