@@ -11,7 +11,11 @@ public partial class TempleStageView
     private void BuildLostAtSeaExterior()
     {
         var wreck=new Node3D{Name="SunkenWreck",Position=new(10.7f,-2.4f,11.5f),Basis=PresentationMath.Rotation(new(0,-.38f,0))};_scenery!.AddChild(wreck);
-        var timber=_art.Toy(new("526379"),.87f);var ribs=_art.Toy(new("718793"),.85f);
+        // A broad, faint moonlit shape remains legible through the panes from
+        // the opening; movement is reserved for the manta, not the wreck.
+        var timber=new StandardMaterial3D{AlbedoColor=new("708b98"),Roughness=.87f,
+            EmissionEnabled=true,Emission=new("526b82"),EmissionEnergyMultiplier=.12f};
+        var ribs=_art.Toy(new("91a6ad"),.85f);
         var hull=new SurfaceTool();hull.Begin(Mesh.PrimitiveType.Triangles);
         Vector2[] outline=[new(-3.5f,-1),new(-3.8f,0),new(-3.5f,1),new(2.5f,1),new(3.8f,.1f),new(2.5f,-1)];
         for(int i=0;i<outline.Length;i++)

@@ -21,6 +21,7 @@ render_mode diffuse_burley, depth_draw_always;
 uniform float quality_detail=1.0;
 uniform float quality_premium=0.0;
 uniform float ambient_clock=0.0;
+uniform float surface_sheen=1.0;
 uniform bool depth_enabled=true;
 uniform vec4 centre_color : source_color=vec4(.165,.129,.439,1);
 uniform vec4 edge_color : source_color=vec4(.239,.208,.627,1);
@@ -60,21 +61,37 @@ void fragment(){
  float diagonal=dot(arena,normalize(vec2(1,.78)))-ambient_clock*.045;
  float distance_to_band=abs(mod(diagonal+4.0,8.0)-4.0);
  float sheen=1.0-smoothstep(.8,1.25,distance_to_band);
- ALBEDO=body*(1.0+sheen*.15);
- EMISSION=vec3(0);
+ // Low has no scene reflection or bloom. Paint a broad, soft sky reflection
+ // into the opaque pane instead of asking a specular pinprick to describe it.
+ // The narrow bright strips flank the real flush mullions, never cover them.
+ vec2 pane_size=(glass_bounds.zw-glass_bounds.xy)/3.0;
+ vec2 pane_point=mod(arena-glass_bounds.xy,pane_size);
+ vec2 pane_edge=min(pane_point,pane_size-pane_point);
+ float bevel=1.0-smoothstep(.065,.19,min(pane_edge.x,pane_edge.y));
+ #ifdef GLASS_DEPTH
+ float sheen_weight=.13;
+ float bevel_weight=.13;
+ #else
+ float sheen_weight=.32;
+ float bevel_weight=.30;
+ #endif
+ vec3 reflected_sky=vec3(.48,.57,.85);
+ ALBEDO=mix(body,reflected_sky,sheen*sheen_weight*surface_sheen);
+ ALBEDO=mix(ALBEDO,vec3(.56,.66,.90),bevel*bevel_weight);
+ EMISSION=reflected_sky*(sheen*.045*surface_sheen+bevel*.025);
  #ifdef GLASS_DEPTH
  vec2 pixel=1.0/VIEWPORT_SIZE;
  vec4 below=glass_scene(SCREEN_UV,INV_PROJECTION_MATRIX);
  vec3 below_world=(INV_VIEW_MATRIX*vec4(below.xyz,1.0)).xyz;
  if(depth_enabled&&below.w>.5&&below_world.y<world.y-.05){
    float thickness=world.y-below_world.y;
-   float feature=1.0-smoothstep(1.1,3.2,thickness);
-   float transmission=.10+feature*.45;
+   float feature=1.0-smoothstep(1.1,4.2,thickness);
+   float transmission=.12+feature*.38;
    vec3 seen=glass_soft_color(SCREEN_UV,pixel,2.0+thickness*.35);
    float luminance=dot(seen,vec3(.2126,.7152,.0722));
    seen=mix(seen,vec3(luminance),.38)*vec3(.58,.64,.95);
    ALBEDO*=1.0-transmission;
-   EMISSION=seen*transmission;
+   EMISSION+=seen*transmission;
  }
  // Real opaque-scene reflections, using the same bounded depth-march principle
  // as the shared premium sea. Flat glass needs no wave jitter or extra scene.

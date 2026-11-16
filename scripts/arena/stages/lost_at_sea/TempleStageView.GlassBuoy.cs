@@ -6,6 +6,7 @@ namespace BlastCircuit.Arena.Stages;
 
 public partial class TempleStageView
 {
+    private readonly List<StandardMaterial3D> _buoyBeaconPaint=[];
     // Shape study: the dry authority plane stays at zero. The pontoon's belly
     // and four rounded floats sit below it; coamings occupy the real wall cells.
     private void BuildGlassBuoy()
@@ -136,7 +137,17 @@ public partial class TempleStageView
         bool night=_lighting?.Label=="Night";
         water.SetShaderParameter("deep_color",new Color(night?"08172e":"123859"));
         water.SetShaderParameter("surface_color",new Color(night?"183c5b":"3d7194"));
-        foreach(var light in _buoyLights)light.LightEnergy=night?(light.Name=="BellBuoyWarmLight"?1.3f:.95f):.05f;
+        foreach(var paint in _buoyBeaconPaint)
+        {
+            paint.AlbedoColor=new Color(night?"ffd38b":"e9ad50");
+            paint.EmissionEnergyMultiplier=night?1.25f:.08f;
+        }
+        // The lenses carry the signal on Low, which has no local lights. At
+        // higher presets one fore beacon and the distant buoy supply two soft pools.
+        int pools=0;
+        foreach(var light in _buoyLights)
+            light.LightEnergy=night&&GraphicsQuality.Current!=GraphicsPreset.Low&&pools++<2
+                ?(light.Name=="BellBuoyWarmLight"?1.1f:.85f):0;
     }
 
     private void ProcessGlassBuoy(float delta)
@@ -165,19 +176,20 @@ public partial class TempleStageView
         Box(root,new(0,.11f,0),new(.99f,.22f,.99f),enamel,.08f);
         RoundedBox(root,new(0,(height-.5f)/2,0),new(.77f,height-.5f,.77f),orange,.65f);
         Box(root,new(0,height-.56f,0),new(.86f,.18f,.86f),rubber,.06f);
-        var lamp=Bead(root,new(0,height-.32f,0),new(.66f,.45f,.66f),_art.Toy(new("f2ba54"),.4f,true));
+        var lens=new StandardMaterial3D{AlbedoColor=new("e9ad50"),Roughness=.42f,
+            ShadingMode=BaseMaterial3D.ShadingModeEnum.Unshaded,DisableFog=true,
+            EmissionEnabled=true,Emission=new("ffb959"),EmissionEnergyMultiplier=.08f};
+        _buoyBeaconPaint.Add(lens);
+        Bead(root,new(0,height-.32f,0),new(.66f,.45f,.66f),lens).Name="BeaconLampLens";
         Box(root,new(0,height-.085f,0),new(.91f,.17f,.91f),enamel,.065f);
         foreach(float side in new[]{-.3f,.3f})
             Box(root,new(side,height-.32f,.3f),new(.12f,.43f,.12f),rubber,.025f);
-        var lens=new StandardMaterial3D{AlbedoColor=new("f3b451"),Roughness=.42f,MetallicSpecular=.25f,
-            EmissionEnabled=true,Emission=new("ffae48"),EmissionEnergyMultiplier=1.5f};
         Bead(root,new(0,height-.034f,0),new(.44f,.08f,.44f),lens).Name="BeaconCapLens";
-        if(IncludeScenery)
+        if(IncludeScenery&&x==Width/2&&z<Depth/2)
         {
             var light=new OmniLight3D{Name="BeaconWarmLight",Position=new(0,height+.12f,0),LightColor=new("ffb65a"),
                 LightEnergy=.05f,OmniRange=4.2f,OmniAttenuation=2.0f,ShadowEnabled=false};
             root.AddChild(light);_buoyLights.Add(light);
         }
-        _sceneryMotion.Add(t=>lamp.Visible=PresentationMath.Sin(t*2.1f+x*.6f+z*.3f)>-.25f);
     }
 }
