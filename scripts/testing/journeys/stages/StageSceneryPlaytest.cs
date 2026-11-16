@@ -80,6 +80,11 @@ public partial class PlaytestDriver
             await SelectGraphics(GraphicsPreset.Low);await Frames(3);
             var terrain=AuditDescendants(LightingArena).OfType<TempleStageView>().Single();
             Check(terrain.Scenery is {} hidden&&!hidden.IsVisibleInTree(),"Low preset hides decorative scenery: "+stage);
+            if(stage==BlastStages.SunkenTemple)
+            {
+                var gateway=terrain.GetNode<Node3D>("SunkenGateCore");
+                Check(gateway.IsVisibleInTree(),"Low retains the broken gateway seated on its core islet");
+            }
             await Capture($"scenery-{stage}-low");
             await SelectGraphics(GraphicsPreset.High);await Frames(3);
             terrain=AuditDescendants(LightingArena).OfType<TempleStageView>().Single();
@@ -112,8 +117,20 @@ public partial class PlaytestDriver
         Check(scenery!=null&&scenery.IsVisibleInTree()&&scenery.Name==TempleStageView.SceneryNodeName,"arena has visible decorative scenery: "+stage);
         if(scenery==null)return;
         foreach(var name in signature)
-            Check(AuditDescendants(scenery).Any(n=>n.Name.ToString().TrimStart('@').StartsWith(name,StringComparison.Ordinal)),$"{stage} scenery includes {name}");
+        {
+            // The gateway is the explicit Low/core identity exception.
+            Node signatureRoot=stage==BlastStages.SunkenTemple&&name=="SunkenGate"?terrain:scenery;
+            Check(AuditDescendants(signatureRoot).Any(n=>n.Name.ToString().TrimStart('@').StartsWith(name,StringComparison.Ordinal)),$"{stage} scenery includes {name}");
+        }
         Check(!AuditDescendants(scenery).OfType<CollisionObject3D>().Any(),"scenery adds no collision bodies: "+stage);
+        if(stage==BlastStages.SunkenTemple)
+        {
+            var gateway=terrain.GetNode<Node3D>("SunkenGateCore");
+            var bounds=AuditDescendants(gateway).OfType<MeshInstance3D>().Select(n=>(terrain.GlobalTransform.AffineInverse()*n.GlobalTransform)*n.Mesh.GetAabb()).ToArray();
+            Check(gateway.GetParent()==terrain&&bounds.Length>0&&bounds.All(b=>b.Position.X>terrain.Width+.35f),
+                "core gateway and shoal stay beyond the playable standing and aiming margin");
+        }
+
         var problems=AuditModelProblems(scenery,out int meshes,out int vertices);
         Event("scenery-geometry",new{stage,meshes,vertices,motions=terrain.SceneryMotionCount,problems=problems.Take(5)});
         Check(problems.Count==0&&meshes>=20,$"scenery geometry is finite, nonempty and textured: {stage} meshes={meshes} {string.Join("; ",problems.Take(3))}");

@@ -53,8 +53,11 @@ public partial class TempleStageView
         Box(colonnade,new(0,1.98f,-1.6f),new(.95f,.2f,.95f),pale,.03f);
         var drum=Cylinder(colonnade,new(-1.2f,-.05f,.9f),.34f,1.1f,weathered);drum.Rotation=new(Mathf.Pi/2,.6f,0);
 
-        // A broken gateway on the east side, its lintel slipped and draped in vines.
-        var gate=Prop(scenery,"SunkenGate",new(Width+2.9f,sea,17.4f),-.25f);
+        // One cheap gateway/islet is core identity on Low. It is still authored
+        // only for the full layout, omitted from miniatures and outside play.
+        var gate=Prop(this,"SunkenGateCore",new(Width+2.9f,sea,17.4f),-.25f);
+        Sphere(gate,new(0,-.5f,0),new(4.3f,.9f,2.6f),wetSand).Name="TempleGatewayShoal";
+        Sphere(gate,new(0,-.23f,0),new(3.9f,.85f,2.3f),sand).Name="TempleGatewaySand";
         foreach(float x in new[]{-.9f,.9f})Box(gate,new(x,.75f,0),new(.5f,2.6f,.55f),sandstone,.04f);
         var lintel=Box(gate,new(.15f,2.12f,0),new(2.5f,.36f,.62f),pale,.04f);lintel.Rotation=new(0,0,-.09f);
         for(int vine=0;vine<4;vine++)Box(gate,new(-.75f+vine*.48f,1.65f-vine%2*.2f,.32f),new(.07f,.75f+vine%2*.3f,.05f),moss);

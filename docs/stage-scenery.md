@@ -45,7 +45,7 @@ every time of day, while the crag and turrets still take the lighting profile.
 
 ## Rules
 
-- **Presentation only.** Scenery lives under one `StageScenery` node built by
+- **Presentation only.** Optional scenery lives under one `StageScenery` node built by
   `TempleStageView.BuildScenery()`. It contains meshes and a single starfield
   MultiMesh, with no collision bodies. Authority terrain, camera fitting, death
   planes and AI are unchanged; `BattleCameraRig` fits only authority cells.
@@ -120,3 +120,17 @@ Source branch `t3/stage-visual-personality`, rebased on `main` 450df7e (v0.34.0)
   images is not approval. Full `all` was not rerun, because the existing v0.34
   fresh-display-child timeout is unrelated to this change. `display-settings` is
   not in the focused suite.
+
+## Temple Low gateway (2026-11-15 source candidate)
+
+The existing east-side broken gateway now sits on one small sandy shoal under
+the core terrain root, so Low retains a single lagoon-ruin landmark. This is
+an explicit exception to optional `StageScenery` visibility. The gateway keeps
+its original columns/lintel/vines and placement; no additional vignette is
+added. It remains beyond the playable margin, submerges naturally under the
+rising water and is omitted when `IncludeScenery=false` for miniatures.
+
+`stage-scenery` checks actual core visibility on Low and geometry outside the
+standing/aiming margin, alongside the normal placement/flood/miniature checks.
+Review the ordinary Low camera at Midday/Night before accepting the composition.
+The pyramid, friezes, flood rules and battle camera remain unchanged.
