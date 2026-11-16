@@ -42,8 +42,9 @@ def baseline(destination):
             archive = name.removesuffix('.sha256')
             if path.read_text() != delivery['assets'][archive]['sha256'] + '  ' + archive + '\n': raise RuntimeError('Baseline sidecar differs from signed archive')
         else: raise RuntimeError('Unexpected unsigned baseline input')
-    desktop_packages.inspect_archive(cache, 'linux-x64', SHIPPED, delivery['release'])
-    public.inspect_server(cache, SHIPPED, '0.45.0', release=delivery['release'])
+    notice = desktop_packages.published_project_notice(SHIPPED, delivery['release'])
+    desktop_packages.inspect_archive(cache, 'linux-x64', SHIPPED, delivery['release'], expected_project_notice=notice)
+    public.inspect_server(cache, SHIPPED, '0.45.0', release=delivery['release'], expected_project_notice=notice)
     server = destination / 'baseline/server'; server.mkdir(parents=True)
     with zipfile.ZipFile(cache / 'Blast-Circuit-server-dotnet10.zip') as bundle:
         for member in bundle.infolist():

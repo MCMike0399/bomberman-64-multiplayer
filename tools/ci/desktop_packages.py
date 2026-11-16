@@ -8,6 +8,32 @@ from desktop_rendering import DRIVERS
 import desktop_validation
 import desktop_update_gates
 
+PROJECT_NOTICE = 'Blast-Circuit-GPL-3.0.txt'
+HISTORICAL_PROJECT_NOTICE = 'Blast-Circuit-MIT.txt'
+# Exact signed identities used by the pinned fault baseline and latest-stable
+# update/verification paths. A version number alone cannot select the old notice.
+HISTORICAL_MIT_RELEASES = {
+    'af93089f385290de2f30954ef2822bd4051324da': {
+        'version': '0.45.0', 'build': '56', 'protocolRevision': 6, 'admissionToken': '6/0.45.0/56'},
+    '68002f2c28314d2ed91301cf37088bea1d408d1a': {
+        'version': '0.45.1', 'build': '57', 'protocolRevision': 6, 'admissionToken': '6/0.45.1/57'},
+}
+
+
+def project_notice(revision, release, expected):
+    if expected == PROJECT_NOTICE:
+        return expected
+    if (expected == HISTORICAL_PROJECT_NOTICE and revision in HISTORICAL_MIT_RELEASES
+            and HISTORICAL_MIT_RELEASES[revision] == release):
+        return expected
+    raise RuntimeError('Project notice does not match a supported historical source/release identity')
+
+
+def published_project_notice(revision, release):
+    """Select only after authenticating the published source and signed inventory."""
+    return (HISTORICAL_PROJECT_NOTICE if revision in HISTORICAL_MIT_RELEASES
+            and HISTORICAL_MIT_RELEASES[revision] == release else PROJECT_NOTICE)
+
 TARGETS = {
     'windows-x64': {'preset': 'Windows Vulkan', 'os': 'Windows', 'driver': DRIVERS['windows-x64'],
                     'executable': 'BlastCircuit.exe', 'engine_executable':'BlastCircuit.Player.exe','pck':'BlastCircuit.Player.pck', 'runtime': 'coreclr.dll',
@@ -53,7 +79,7 @@ def digest(path):
         return hashlib.file_digest(stream, 'sha256').hexdigest()
 
 
-def inspect_archive(directory, target, revision, release):
+def inspect_archive(directory, target, revision, release, *, expected_project_notice=PROJECT_NOTICE):
     """Validate without extracting; a forged inventory cannot introduce arbitrary paths."""
     item, settings = names(target), TARGETS[target]
     archive = directory / item['archive']
@@ -86,7 +112,7 @@ def inspect_archive(directory, target, revision, release):
         basenames = {PurePosixPath(name).name for name in seen}
         required = {settings['executable'], settings['runtime'], settings['webrtc'],
                     'Bomberman64Multiplayer.dll', 'Bomberman64Multiplayer.runtimeconfig.json',
-                    settings.get('pck','BlastCircuit.pck'), 'release.json', 'Blast-Circuit-GPL-3.0.txt', 'WebRTC-SOURCE.txt', 'DotNet-LICENSE.TXT'}
+                    settings.get('pck','BlastCircuit.pck'), 'release.json', project_notice(revision, release, expected_project_notice), 'WebRTC-SOURCE.txt', 'DotNet-LICENSE.TXT'}
         if settings.get('engine_executable'):required.add(settings['engine_executable'])
         if not required.issubset(basenames):
             raise RuntimeError('Desktop runtime is incomplete: ' + ', '.join(sorted(required - basenames)))
@@ -110,12 +136,12 @@ def inspect_archive(directory, target, revision, release):
     return metadata
 
 
-def inspect(directory, revision, release, targets=None, *, include_graphics=True):
+def inspect(directory, revision, release, targets=None, *, include_graphics=True, expected_project_notice=PROJECT_NOTICE):
     """Require a native-OS exported smoke, bound to these exact archive bytes."""
     from download_formats import FILES
     for target in (TARGETS if targets is None else targets):
         settings = TARGETS[target]
-        inspect_archive(directory, target, revision, release)
+        inspect_archive(directory, target, revision, release, expected_project_notice=expected_project_notice)
         item = names(target)
         smoke = json.loads((directory / item['smoke']).read_text())
         if (smoke.get('passed') is not True or smoke.get('target') != target or

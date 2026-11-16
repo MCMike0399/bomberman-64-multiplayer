@@ -169,7 +169,7 @@ def inspect_package(directory, revision, version, release=None):
     return archive
 
 
-def inspect_server(directory, revision, version, release=None):
+def inspect_server(directory, revision, version, release=None, *, expected_project_notice=desktop_packages.PROJECT_NOTICE):
     archive = directory / SERVER_ARCHIVE
     receipt = (directory / (SERVER_ARCHIVE + '.sha256')).read_text().strip()
     match = re.fullmatch(r'([0-9a-fA-F]{64})\s+\*?' + re.escape(SERVER_ARCHIVE), receipt)
@@ -183,6 +183,7 @@ def inspect_server(directory, revision, version, release=None):
         raise RuntimeError('Server artifact revision/version/runtime does not match the release')
     if metadata.get('release') != (release or check_exports()) or metadata['release']['version'] != version:
         raise RuntimeError('Server release compatibility identity does not match the verified source')
+    project_notice = 'Notices/' + desktop_packages.project_notice(revision, metadata['release'], expected_project_notice)
     prefix = 'Blast-Circuit-server-dotnet10/'
     with zipfile.ZipFile(archive) as bundle:
         if len(bundle.namelist()) != len(set(bundle.namelist())) or any(
@@ -199,7 +200,7 @@ def inspect_server(directory, revision, version, release=None):
                     or Path(name).suffix in ('.cs', '.csproj', '.pdb', '.key', '.pem')):
                 raise RuntimeError('Server archive contains forbidden source/configuration material')
             allowed = (Path(name).suffix.lower() in ('.dll', '.dylib') or re.search(r'\.so(?:\.\d+)*$', name)
-                       or name in required or name in ('README.txt', 'appsettings.json', 'Notices/Blast-Circuit-GPL-3.0.txt', 'Notices/Simulation-MIT.txt')
+                       or name in required or name in ('README.txt', 'appsettings.json', project_notice, 'Notices/Simulation-MIT.txt')
                        or len(Path(name).parts) == 3 and Path(name).parts[0] == 'plugins' and Path(name).parts[1] in ('Blast.Cluster', 'Realtime.Redis')
                        and (Path(name).name == 'plugin.json' or Path(name).name.endswith('.deps.json')))
             if not allowed:

@@ -429,6 +429,12 @@ recovery logs remain in operator storage.
 
 ## Desktop client release gates
 
+Current package inspection requires the GPL project notice by default. The signed
+v0.45.0 fault baseline and published v0.45.1 retain their MIT-era notice only when
+their complete immutable source/release identity matches the reviewed historical
+contract. Signature, inventory and hash checks remain mandatory before that
+selection; see the [historical notice correction](history/historical-notice-contract-20261116.md).
+
 Windows/Linux delivery source adds required native archived-game regression jobs.
 Promotion requires complete core and graphical journey coverage, the nine saved
 startup cases, actual game updater install/rollback receipts, and player-facing
