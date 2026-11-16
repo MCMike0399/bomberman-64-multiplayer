@@ -31,7 +31,7 @@ descriptions, with no scenery evidence.
 
 | Arena | Theme | Scenery | Animated life |
 | --- | --- | --- | --- |
-| Sunken Temple | Green Garden lagoon ruins | Two sandy palm islets, a sandstone obelisk with a gold pyramidion, a half-sunken colonnade, a broken gateway with vines, low rocks, distant jungle islands | Swaying palms, a sailboat and rowboat that ride the flood, three gulls |
+| Sunken Temple | Returning Tide lagoon shrine | One palm islet, one lotus ruin, half-sunken colonnade, core broken gateway with a chunky sun disc, low rocks and distant jungle islands | Palms, boats riding the flood, gulls and one core copper tide float |
 | Rock Garden | Green Garden meadow | A brook with pebble banks and a timber footbridge, a windmill, ruined columns, four stone lanterns, flower beds, hedges, rounded trees, rolling hills | Windmill sails, swaying canopies, four butterflies |
 | Up & Down | Blue Resort coast | A lighthouse on a rocky islet with a jetty, grass-capped sea stacks, channel buoys, a far headland with rooftops | Rotating lighthouse beam, blinking buoys, bobbing boats, gulls |
 | Top Rules | Black Fortress sky citadel | A rocky crag hanging under the castle, four corner turrets (rear: crenellated braziers; front: low roofed towers), three heraldic banners with an original bomb emblem, floating islets with watchtowers, cloud banks, a starfield in the dark backdrop | Brazier/islet flames, waving pennants, drifting clouds, bobbing islets |
@@ -45,7 +45,7 @@ every time of day, while the crag and turrets still take the lighting profile.
 
 ## Rules
 
-- **Presentation only.** Scenery lives under one `StageScenery` node built by
+- **Presentation only.** Optional scenery lives under one `StageScenery` node built by
   `TempleStageView.BuildScenery()`. It contains meshes and a single starfield
   MultiMesh, with no collision bodies. Authority terrain, camera fitting, death
   planes and AI are unchanged; `BattleCameraRig` fits only authority cells.
@@ -120,3 +120,42 @@ Source branch `t3/stage-visual-personality`, rebased on `main` 450df7e (v0.34.0)
   images is not approval. Full `all` was not rerun, because the existing v0.34
   fresh-display-child timeout is unrelated to this change. `display-settings` is
   not in the focused suite.
+
+## Temple Low gateway (2026-11-15 source candidate)
+
+The existing east-side broken gateway now sits on one small sandy shoal under
+the core terrain root, so Low retains a single lagoon-ruin landmark. This is
+an explicit exception to optional `StageScenery` visibility. The gateway keeps
+its original columns/lintel/vines and placement; no additional vignette is
+added. It remains beyond the playable margin, submerges naturally under the
+rising water and is omitted when `IncludeScenery=false` for miniatures.
+
+`stage-scenery` checks actual core visibility on Low and geometry outside the
+standing/aiming margin, alongside the normal placement/flood/miniature checks.
+Review the ordinary Low camera at Midday/Night before accepting the composition.
+The pyramid, friezes, flood rules and battle camera remain unchanged.
+
+
+## Returning Tide finishing (2026-11-16)
+
+The existing gateway islet becomes the small sun-disc shrine, echoing the
+pyramid's carved vocabulary while keeping the original pyramid silhouette and
+frieze layout. Its gold rays and pale/teal inlay are original geometry, informed
+by the [official B64 world imagery](https://www.nintendo.com/eu/media/downloads/games_8/emanuals/nintendo_8/Manual_Nintendo64_Bomberman64_EN.pdf).
+The second small palm/obelisk setting is replaced by one lotus growing through
+a broken stone drum; the west palm group remains. No unrelated props or local
+lights are added.
+
+A single copper tide float belongs to core presentation alongside the gateway,
+retained on Low, Medium and High. Its body follows the rendered accepted water
+plane with a bounded .05 bob on a separate pausable core clock. It therefore
+continues the cheap life cue while Low hides optional scenery. Both core
+landmarks remain outside playable standing/aiming columns. The ordinary menu
+miniature still omits exterior scenery and these outboard landmarks.
+
+The branch is synchronized with main `3e3253e`. Source build and public contracts
+pass; the final headless stage-scenery journey passes 160 assertions, with two ObjectDB
+exit warnings and no runtime errors. New witnesses include actual sun-disc
+geometry, core margins/three presets, pausable float motion and actual rising
+flood contact. These are source/behavior checks; root owns native High/Medium/Low,
+Night, miniature and flood image review before independent art acceptance.
