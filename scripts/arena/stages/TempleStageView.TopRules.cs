@@ -34,6 +34,7 @@ public partial class TempleStageView
         var ember = _art.Color(new("e69731"), .65f, true);
         float deck = 2 * HeightScale;
         Box(this, new(Width / 2f, -.49f, Depth / 2f), new(Width, .9f, Depth), stone).Name = "CastleFoundation";
+        if(IncludeScenery)BuildOrreryCore();
         // The red court is solid flooring. Its restrained checker pattern is drawn in world space.
         Box(this, new(Width / 2f, -.055f, Depth / 2f), new(Width - 2, .11f, Depth - 2),
             new ShaderMaterial { Shader = _castleFloorShader ??= new Shader { Code = CastleFloorShader } }).Name = "CastleCourt";
