@@ -16,6 +16,20 @@ public partial class PlaytestDriver
         _root.StartLocal(new SessionSettings(Stage:BlastStages.UpAndDown,Bots:0),1,practice:true);
         await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"Up & Down practice starts",150);
         var terrain=_root.GetChildren().OfType<ArenaView>().Single().FindChildren("*","",true,false).OfType<TempleStageView>().Single();
+        var ray=AuditDescendants(terrain).OfType<MeshInstance3D>().Single(n=>n.Name=="LighthouseSoftBeamEast");
+        var beamArrays=ray.Mesh.SurfaceGetArrays(0);var beamVertices=beamArrays[(int)Mesh.ArrayType.Vertex].AsVector3Array();
+        var beamNormals=beamArrays[(int)Mesh.ArrayType.Normal].AsVector3Array();var beamIndices=beamArrays[(int)Mesh.ArrayType.Index].AsInt32Array();
+        bool beamOutward=beamIndices.Length>0&&beamVertices.All(v=>v.IsFinite());
+        for(int i=0;i<beamIndices.Length;i+=3)
+        {
+            int a=beamIndices[i],b=beamIndices[i+1],c=beamIndices[i+2];
+            beamOutward&=(beamVertices[b]-beamVertices[a]).Cross(beamVertices[c]-beamVertices[a]).Dot(beamNormals[a]+beamNormals[b]+beamNormals[c])<0;
+        }
+        Check(beamOutward,"owned lighthouse cone has finite clockwise outward triangles without disabling culling");
+        var sconces=AuditDescendants(terrain).OfType<Node3D>().Where(n=>n.Name=="WestPierSconce"||n.Name=="EastPierSconce").ToArray();
+        Check(sconces.Length==2&&sconces.SelectMany(n=>n.GetChildren().OfType<MeshInstance3D>()).All(n=>
+            ((terrain.GlobalTransform.AffineInverse()*n.GlobalTransform)*n.Mesh.GetAabb()).End.Y<2*TempleStageView.HeightScale),
+            "both core pier-head sconces remain below the tier-two standing surface");
         foreach(var (x,z,tier) in new[]{(5.5f,10.5f,2),(11.5f,2.5f,4),(10.5f,16.5f,0)})
         {
             float top=tier*TempleStageView.HeightScale;

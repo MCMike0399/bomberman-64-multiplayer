@@ -357,9 +357,9 @@ public partial class PlaytestDriver : Node
         long corridorTicks=(long)(Stopwatch.Frequency*(NetworkNudgeDistance-.25d)/4.5d);
         var gate=new ObservedInputNudge(press,generation,connection.LatestInputSend?.TotalSentSamples??0,
             started,Stopwatch.Frequency*5,corridorTicks);
+        using var publication=_root.OwnInputPublicationForPlaytest(connection,0);
         Input(0,hold);
-        _root.InjectInputProvider(0,()=>gate.Pressed(connection.LatestInputSend,Stopwatch.GetTimestamp(),connection.ConnectionGeneration)?press:hold);
-        connection.SendInput(0,press);
+        if(!publication.Publish(press))throw new InvalidOperationException("Nudge session changed before publication");
         var completion=new TaskCompletionSource<long>(TaskCreationOptions.RunContinuationsAsynchronously);
         var observer=new Thread(()=>
         {
@@ -368,13 +368,23 @@ public partial class PlaytestDriver : Node
                 // No engine calls and no dependency on a rendered frame or the
                 // thread-pool timer that may itself be delayed by a hitch.
                 while(gate.Pressed(connection.LatestInputSend,Stopwatch.GetTimestamp(),connection.ConnectionGeneration))Thread.Sleep(1);
-                if(connection.ConnectionGeneration==generation)connection.SendInput(0,hold);
-                completion.TrySetResult(connection.InputSequence);
+                if(!publication.Publish(hold))throw new InvalidOperationException("Nudge session changed before release");
+                long stopDeadline=started+Stopwatch.Frequency*5+corridorTicks;
+                InputSendObservation? neutral;
+                while(true)
+                {
+                    neutral=connection.LatestInputSend;
+                    if(ObservedInputNudge.NeutralSent(neutral,hold,generation,gate.Decision!))break;
+                    if(connection.ConnectionGeneration!=generation||Stopwatch.GetTimestamp()>=stopDeadline)
+                        throw new TimeoutException("Nudge neutral input was not sent within the existing nudge budget");
+                    Thread.Sleep(1);
+                }
+                completion.TrySetResult(neutral!.SentSequence);
             }
             catch(Exception error)
             {
                 gate.Cancel(Stopwatch.GetTimestamp());
-                if(connection.ConnectionGeneration==generation)connection.SendInput(0,hold);
+                publication.Publish(hold);
                 completion.TrySetException(error);
             }
         }){IsBackground=true,Name="QA observed movement"};
@@ -385,7 +395,7 @@ public partial class PlaytestDriver : Node
             Event("network-input-nudge",new{decision.Reason,decision.Delivered,
                 decisionMs=Stopwatch.GetElapsedTime(started,decision.Timestamp).TotalMilliseconds,
                 resumedMs=Stopwatch.GetElapsedTime(started).TotalMilliseconds,corridor=NetworkNudgeDistance,
-                sequence,observation=decision.Observation,x=press.X,z=press.Z,holdCarry=hold.B});
+                sequence,observation=decision.Observation,neutralObservation=connection.LatestInputSend,x=press.X,z=press.Z,holdCarry=hold.B});
             if(!decision.Delivered)throw new InvalidOperationException("Nudge delivery was not observed inside its corridor budget: "+decision.Reason);
             return sequence;
         }

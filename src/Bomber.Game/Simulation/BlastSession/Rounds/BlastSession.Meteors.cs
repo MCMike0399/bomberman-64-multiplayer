@@ -16,8 +16,8 @@ public sealed partial class BlastSession
             _meteors.RemoveAt(i);
             // Ordinary spherical blast rules resolve shielding, cover, hearts,
             // chains and loot. A fireball has no player owner or inventory cost.
-            ExplodeBomb(context,new BlastBomb{Id=meteor.Id,X=meteor.X,Z=meteor.Z,
-                CellX=(int)meteor.X,CellZ=(int)meteor.Z,FireLevel=BlastStages.MeteorFireLevel});
+            ExplodeBomb(context,new BlastBomb{Id=meteor.Id,X=meteor.X,LandingY=_stage.SurfaceAt(meteor.X,meteor.Z),Z=meteor.Z,
+                CellX=(int)meteor.X,CellZ=(int)meteor.Z,Tier=(int)_stage.SurfaceAt(meteor.X,meteor.Z),FireLevel=BlastStages.MeteorFireLevel});
         }
         _meteorTimer-=dt;if(_meteorTimer>0)return;
         float hurryAge=Math.Max(0,_roundTimer-(_roundSeconds-60));

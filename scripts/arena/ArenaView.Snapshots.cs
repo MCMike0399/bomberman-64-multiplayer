@@ -92,6 +92,7 @@ public partial class ArenaView
             _targets[id]=PositionOf(b);
             string? carrier=b.TryGetProperty("carrierId",out var carriedBy)&&carriedBy.ValueKind==JsonValueKind.String?carriedBy.GetString():null;
             var model=(BombModel)node;
+            model.SetNight(TimeOfDay==StageTime.Night);
             if(model.UpdateState((int)F(b,"pumps"),(int)F(b,"level"),b.GetProperty("red").GetBoolean(),b.GetProperty("remote").GetBoolean(),F(b,"fuse"),carrier,(int)F(b,"state"),b.TryGetProperty("mode",out var bombMode)?bombMode.GetString()!:"normal",b.TryGetProperty("charge",out var charge)?charge.GetSingle():0))
             {
                 if(!eventsAvailable)_audio.Pump(model.Charge);
@@ -117,7 +118,7 @@ public partial class ArenaView
             {
                 node=new MeteorView(_art);_dynamic.AddChild(node);_entities[id]=node;
             }
-            node.Position=new(F(meteor,"x"),0,F(meteor,"z"));
+            node.Position=new(F(meteor,"x"),_terrain.OverlaySurface(F(meteor,"x"),F(meteor,"z")),F(meteor,"z"));
             ((MeteorView)node).SetRemaining(F(meteor,"remaining"));
             node.SetProcess(_battleActive);
         }

@@ -165,35 +165,47 @@ public partial class ArcadeBackdrop : RenderSurface
     }
 
     /// <summary>Retain and draw the real miniatures behind the loading overlay, in the current render format.</summary>
-    public async Task PrepareArenas(IEnumerable<string> ids)
+    private string _preparationStep="idle",_preparationArena="";
+    private int _preparationReadbacks,_preparationPlanned;
+    public object PreparationDiagnostics=>new{step=_preparationStep,arena=_preparationArena,
+        readbacks=_preparationReadbacks,planned=_preparationPlanned,
+        visible=IsVisibleInTree(),viewportUpdate=_viewport.RenderTargetUpdateMode.ToString(),viewportSize=_viewport.Size.ToString()};
+    public async Task PrepareArenas(IEnumerable<string> ids,PreparationDrawBatch batch)
     {
         string selected=_arenaId;bool visible=_arenaMount.Visible;
+        var planned=ids.ToArray();_preparationPlanned=planned.Length;_preparationReadbacks=0;
         GraphicsQuality.ApplyViewport(_viewport);
         ApplyGraphics();
         try
         {
             _arenaMount.Visible=true;
-            foreach(string id in ids)
+            foreach(string id in planned)
             {
+                _preparationArena=id;_preparationStep="before-build-draw";
                 // Yield before each procedural build so the loading screen can draw.
-                await EffectWarmup.Draw(this);
-                SelectArena(id);
+                await EffectWarmup.Draw(this,batch);
+                _preparationStep="select-arena";SelectArena(id);
                 for(int frame=0;frame<3;frame++)
                 {
+                    _preparationStep="miniature-draw-"+frame;
                     _viewport.RenderTargetUpdateMode=SubViewport.UpdateMode.Once;
-                    await EffectWarmup.Draw(this);
+                    await EffectWarmup.Draw(this,batch);
                 }
+                _preparationStep="readback";
                 using var pixels=_viewport.GetTexture().GetImage();
                 if(pixels.IsEmpty())throw new InvalidOperationException("Arena preview did not render: "+id);
+                _preparationReadbacks++;
             }
         }
         finally
         {
+            _preparationStep="restore";
             if(!EffectWarmup.Stopping&&GodotObject.IsInstanceValid(this)&&IsInsideTree())
             {
                 if(selected.Length>0)SelectArena(selected);
                 _arenaMount.Visible=visible;
             }
+            _preparationStep="idle";
         }
     }
 
@@ -219,7 +231,7 @@ public partial class ArcadeBackdrop : RenderSurface
             // The trimmed display plinth has no open sea, so it needs no seabed.
             if(child is MeshInstance3D seabed&&(seabed.Name=="Seabed"||seabed.Name=="ObservationOceanBed"))seabed.Visible=false;
             if(child is MeshInstance3D water&&PrimitiveTemplates.Is(water.Mesh,"PlaneMesh")){water.Mesh=PrimitiveTemplates.With(water.Mesh,"size",new Vector2(layout.Width+.8f,layout.Height+.8f));water.Position=new(layout.Width/2f,-.53f,layout.Height/2f);}
-            else if(child is MeshInstance3D exterior&&PrimitiveTemplates.Is(exterior.Mesh,"BoxMesh")&&(child.Name=="GardenExterior"||child.Name=="FrozenExterior"))
+            else if(child is MeshInstance3D exterior&&PrimitiveTemplates.Is(exterior.Mesh,"BoxMesh")&&(child.Name=="GardenExterior"||child.Name=="FrozenExterior"||child.Name=="FieldExterior"))
             {
                 // ArtGeometry caches meshes used by gameplay too; resize a private menu copy.
                 exterior.Mesh=PrimitiveTemplates.With(exterior.Mesh,"size",new Vector3(layout.Width+.8f,PrimitiveTemplates.Parameter(exterior.Mesh,"size").AsVector3().Y,layout.Height+.8f));

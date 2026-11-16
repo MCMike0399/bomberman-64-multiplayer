@@ -1,0 +1,31 @@
+{
+  "date": "2026-11-15",
+  "baselineSource": "2cfe1b4",
+  "candidateSource": "d87f0ca",
+  "renderer": "Metal Forward+ / Apple M5 Pro",
+  "assertions": 371,
+  "captures": 40,
+  "runtimeErrors": 0,
+  "runtimeWarnings": 0,
+  "images": [
+    {
+      "image": "before.png",
+      "sha256": "cf8bfcb11a620382d52ab03990781cde3fb32216a2fe7f9e5d85baa4004a99e8",
+      "original": "scenery-up-and-down-high.png",
+      "run": "20261115T203015.824074Z-stage-scenery"
+    },
+    {
+      "image": "after.png",
+      "sha256": "02cc7aee4a70aefc68d1c03ddae06f61d2d9d30c2fbd6486f42550d4296f346a",
+      "original": "scenery-up-and-down-high.png",
+      "run": "20261115T205028.661949Z-stage-scenery"
+    },
+    {
+      "image": "night.png",
+      "sha256": "63ce46dfb5f5cc34ce0779e8cfe10b627414fcbac52f986c76390894bbe287e6",
+      "original": "scenery-up-and-down-battle-night.png",
+      "run": "20261115T205028.661949Z-stage-scenery"
+    }
+  ],
+  "note": "Unedited native captures, same stage/preset/scene recipe. Original actor/ambient phases retained."
+}

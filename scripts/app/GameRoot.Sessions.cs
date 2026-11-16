@@ -91,7 +91,7 @@ public partial class GameRoot
     private void Begin(ISession session,bool online)
     {
         _uiAudio.MenuConfirm();
-        ReleaseSession();_arena.ResetMatch();_session=session;LatestStage=null;LatestState=null;LatestParty=null;FirstNetworkStateServerTime=null;_result=null;_lobby=null;SnapshotCount=0;_injected.Clear();_hud.Reset();_hud.Practice=_practice;_menu.ResetLobby();_partyMatch=-1;_networkGeneration=0;
+        ReleaseSession();_arena.ResetMatch();_session=session;_fixtureInputPublication.Invalidate();LatestStage=null;LatestState=null;LatestParty=null;FirstNetworkStateServerTime=null;_result=null;_lobby=null;SnapshotCount=0;_injected.Clear();_hud.Reset();_hud.Practice=_practice;_menu.ResetLobby();_partyMatch=-1;_networkGeneration=0;
         ControllerHub.Current.BeginMatch(session.LocalPlayerCount);
         ApplyStageLighting();
         if(online)
@@ -113,6 +113,12 @@ public partial class GameRoot
     // QA providers may expire a synthetic hold before a stalled frame republishes it.
     // Real device sampling remains in PlayerControls.
     public void InjectInputProvider(int seat,Func<PlayerInput> input)=>_injected[seat]=input;
+    internal BlastCircuit.Testing.FixtureInputPublication.Lease OwnInputPublicationForPlaytest(NetworkSession connection,int seat)
+    {
+        if(!ReferenceEquals(_session,connection))throw new InvalidOperationException("Input owner requires its active session");
+        return _fixtureInputPublication.Own(connection,seat);
+    }
+
 
     private void ContinueAfterResults()
     {
@@ -171,7 +177,7 @@ public partial class GameRoot
 
     private void ReleaseSession()
     {
-        var old=_session;_session=null;_injected.Clear();_postMatchSetup=false;_startAfterSettings=null;
+        var old=_session;_session=null;_fixtureInputPublication.Invalidate();_injected.Clear();_postMatchSetup=false;_startAfterSettings=null;
         _tutorialLessonId=null;_trainingSession=false;if(_tutorialHud!=null)_tutorialHud.Visible=false;
         ControllerHub.Current.EndMatch();
         if(old!=null)_=DisposeSessionAsync(old);

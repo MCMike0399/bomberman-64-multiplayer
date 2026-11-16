@@ -1,10 +1,22 @@
 using Godot;
+using BlastCircuit.Rendering;
 using static BlastCircuit.Rendering.ArtGeometry;
 
 namespace BlastCircuit.Arena.Stages;
 
 public partial class TempleStageView
 {
+    private Node3D? _templeTideFloat;
+    private float _templeTideClock;
+
+    private void ProcessTempleTide(float delta)
+    {
+        if(_templeTideFloat is null||!WeatherActive)return;
+        _templeTideClock+=delta;
+        _templeTideFloat.Position=new(Width+1.6f,SceneryWaterHeight+.12f+
+            PresentationMath.Sin(_templeTideClock*1.1f)*.05f,17.7f);
+    }
+
     /// <summary>Green Garden-informed lagoon: palm islets, half-sunken temple ruins,
     /// a moored sailboat and wheeling gulls. Everything sits in open sea beyond the
     /// pyramid's foundation; rising water submerges the ruins and lifts the boats.</summary>
@@ -33,14 +45,21 @@ public partial class TempleStageView
         Rock(scenery,west+new Vector3(2.2f,-.2f,1.2f),new(.9f,.7f,.8f),rock,1,.5f);
         Rock(scenery,west+new Vector3(-2.3f,-.25f,.9f),new(.7f,.5f,.6f),rock,2,1.4f);
 
-        // Back-right: a small islet keeps a sandstone obelisk from the old shrine.
+        // One lotus grows through a broken shrine drum on the second islet.
+        // The west palms remain the single tree vignette.
         var east=new Vector3(Width+4.8f,sea,.4f);
         Islet(east,new(4.2f,1.1f,3.6f));
-        var obelisk=Prop(scenery,"Obelisk",east+new Vector3(.5f,-.05f,-.3f),.3f);
-        Box(obelisk,new(0,.14f,0),new(.95f,.28f,.95f),pale,.04f);
-        Taper(obelisk,new(0,1.6f,0),.36f,.26f,2.7f,sandstone,4).Rotation=new(0,Mathf.Pi/4,0);
-        Cone(obelisk,new(0,3.12f,0),.27f,.34f,_art.Color(new("eac46a"),.35f),4).Rotation=new(0,Mathf.Pi/4,0);
-        PalmTree(scenery,east+new Vector3(-1,.05f,.7f),2.4f,-.26f,-.6f,3.1f);
+        var lotus=Prop(scenery,"LotusRuin",east+new Vector3(.3f,0,-.1f));
+        RoundedBox(lotus,new(0,.17f,0),new(1.65f,.48f,1.5f),sandstone,.25f);
+        RoundedBox(lotus,new(-.59f,.39f,.31f),new(.54f,.27f,.63f),weathered,.2f);
+        Sphere(lotus,new(0,.49f,0),new(1.72f,.12f,1.53f),moss);
+        for(int petal=0;petal<6;petal++)
+        {
+            float angle=petal*Mathf.Tau/6;var(sin,cos)=PresentationMath.SinCos(angle);
+            var leaf=Sphere(lotus,new(cos*.36f,.65f,sin*.36f),Vector3.One,pale);
+            leaf.Basis=PresentationMath.Rotation(new(-.15f,Mathf.Pi/2-angle,0),new(.45f,.20f,.83f));
+        }
+        Sphere(lotus,new(0,.73f,0),new(.4f,.24f,.4f),_art.Toy(new("caa24c"),.65f));
 
         // Half-sunken colonnade off the west walkway.
         var colonnade=Prop(scenery,"SunkenColonnade",new(-2.8f,sea,11.5f));
@@ -53,12 +72,36 @@ public partial class TempleStageView
         Box(colonnade,new(0,1.98f,-1.6f),new(.95f,.2f,.95f),pale,.03f);
         var drum=Cylinder(colonnade,new(-1.2f,-.05f,.9f),.34f,1.1f,weathered);drum.Rotation=new(Mathf.Pi/2,.6f,0);
 
-        // A broken gateway on the east side, its lintel slipped and draped in vines.
-        var gate=Prop(scenery,"SunkenGate",new(Width+2.9f,sea,17.4f),-.25f);
+        // One cheap gateway/islet is core identity on Low. It is still authored
+        // only for the full layout, omitted from miniatures and outside play.
+        var gate=Prop(this,"SunkenGateCore",new(Width+2.9f,sea,17.4f),-.25f);
+        Sphere(gate,new(0,-.5f,0),new(4.3f,.9f,2.6f),wetSand).Name="TempleGatewayShoal";
+        Sphere(gate,new(0,-.23f,0),new(3.9f,.85f,2.3f),sand).Name="TempleGatewaySand";
         foreach(float x in new[]{-.9f,.9f})Box(gate,new(x,.75f,0),new(.5f,2.6f,.55f),sandstone,.04f);
         var lintel=Box(gate,new(.15f,2.12f,0),new(2.5f,.36f,.62f),pale,.04f);lintel.Rotation=new(0,0,-.09f);
         for(int vine=0;vine<4;vine++)Box(gate,new(-.75f+vine*.48f,1.65f-vine%2*.2f,.32f),new(.07f,.75f+vine%2*.3f,.05f),moss);
         Box(gate,new(-1.7f,-.15f,.4f),new(.7f,.5f,.6f),weathered,.06f).Rotation=new(.2f,.4f,.15f);
+
+        var gold=_art.Toy(new("d2ad5e"),.62f);var teal=_art.Toy(new("3c8478"),.76f);
+        var disc=Prop(gate,"TempleSunDisc",new(0,2.42f,.43f));
+        disc.Basis=PresentationMath.Rotation(new(-.25f,0,0));
+        Sphere(disc,Vector3.Zero,new(1.6f,1.6f,.23f),gold);
+        Sphere(disc,new(0,0,.14f),new(1.12f,1.12f,.055f),pale);
+        for(int ray=0;ray<8;ray++)
+        {
+            float angle=ray*Mathf.Tau/8;var(sin,cos)=PresentationMath.SinCos(angle);
+            var stroke=RoundedBox(disc,new(sin*.91f,cos*.91f,0),new(.24f,.38f,.15f),gold,.45f);
+            stroke.Basis=PresentationMath.Rotation(new(0,0,-angle));
+        }
+        Sphere(disc,new(0,.16f,.185f),new(.25f,.25f,.045f),teal);
+        RoundedBox(disc,new(0,-.11f,.185f),new(.56f,.12f,.045f),teal,.45f);
+
+        var copper=_art.Toy(new("aa7548"),.68f);
+        _templeTideFloat=Prop(this,"TempleTideFloat",new(Width+1.6f,sea+.12f,17.7f));
+        Sphere(_templeTideFloat,Vector3.Zero,new(.63f,.38f,.63f),copper);
+        RoundedBox(_templeTideFloat,new(0,.59f,0),new(.12f,1.1f,.12f),copper,.7f);
+        Sphere(_templeTideFloat,new(0,1.13f,0),new(.36f,.30f,.36f),gold);
+        RoundedBox(_templeTideFloat,new(0,.62f,0),new(.31f,.15f,.22f),teal,.4f);
 
         // Low rocks beside the walkways; the front stays clear of the HUD footer.
         Rock(scenery,new(-2.4f,sea-.25f,Depth-6),new(.9f,.6f,.8f),rock,3,.2f);

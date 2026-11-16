@@ -34,8 +34,10 @@ public partial class PlaytestDriver
         await SelectGraphics(GraphicsPreset.Low);
         _root.StartLocal(new SessionSettings(Stage:BlastStages.TopRules,Bots:0,RoundSeconds:60),4);
         await Frames(110);
+        // The crag also has quality controls; the historical reuse bound is for stone.
+        var stoneShader=AuditDescendants(LightingArena).OfType<TempleStageView>().Single().CastleWallMaterial.Shader;
         var lowStone=AuditDescendants(LightingArena).OfType<MeshInstance3D>().Select(n=>n.MaterialOverride)
-            .OfType<ShaderMaterial>().Where(m=>m.Shader.Code.Contains("uniform float quality_detail")).Distinct().ToArray();
+            .OfType<ShaderMaterial>().Where(m=>m.Shader==stoneShader).Distinct().ToArray();
         Check(lowStone.Length>0&&lowStone.All(m=>m.GetShaderParameter("quality_detail").AsSingle()==0),"restarted castle cover and closing walls retain Low shader detail");
         Check(lowStone.Length<=3,"castle rounds reuse bounded terrain-owned stone materials");
         await SelectGraphics(originalQuality);

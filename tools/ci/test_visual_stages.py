@@ -19,6 +19,7 @@ SCENES = (
     ('top-rules', 'full-top-rules-high-v2'),
     ('blizzard-battle', 'full-blizzard-battle-high-v2'),
     ('greedy-trap', 'full-greedy-trap-high-v2'),
+    ('field-of-grass', 'full-field-of-grass-high-v2'),
     ('lost-at-sea', 'full-lost-at-sea-high-v2'),
     ('circuit-garden', 'full-circuit-garden-high-v2'),
 )
@@ -128,7 +129,7 @@ class NativeStageCohort(unittest.TestCase):
                 (folder / 'mesh-inputs-native.json').write_text(json.dumps(report))
         return source
 
-    def test_all_seven_require_three_matching_native_collections(self):
+    def test_all_stages_require_three_matching_native_collections(self):
         result = native_cohort.compare_inputs(self.cohort(), self.root / 'result')
         self.assertTrue(result['passed'])
         self.assertFalse(result['graphicsQualified'])

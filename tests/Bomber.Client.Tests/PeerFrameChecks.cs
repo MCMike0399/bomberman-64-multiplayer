@@ -11,6 +11,12 @@ internal static class PeerFrameChecks
         int checks=0;
         void Check(bool ok,string name){if(!ok)throw new Exception(name);checks++;}
         var match=new LocalMatch(new MatchOptions{HumanPlayers=2,BotPlayers=6});
+        var grass=new LocalMatch(new MatchOptions{Stage="field-of-grass",HumanPlayers=8,BotPlayers=0,RoundSeconds=60});
+        for(int tick=0;tick<65;tick++)grass.Tick();
+        using var grassStage=JsonDocument.Parse(grass.StageJson!);
+        using var grassState=JsonDocument.Parse(grass.StateJson!);
+        Check(PeerFrameRules.Valid(grassStage.RootElement)&&PeerFrameRules.Valid(grassState.RootElement),"Field of Grass slopes and live meteor state cross peer validation");
+        Check(new SessionSettings(Stage:"field-of-grass").ToWireSettings()["stage"]=="field-of-grass","Field of Grass room setting survives the wire");
         var sea=new LocalMatch(new MatchOptions{Stage="lost-at-sea",HumanPlayers=8,BotPlayers=0,RoundSeconds=60});
         for(int tick=0;tick<65;tick++)sea.Tick();
         using var seaStage=JsonDocument.Parse(sea.StageJson!);using var seaState=JsonDocument.Parse(sea.StateJson!);

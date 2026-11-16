@@ -83,7 +83,7 @@ public partial class ArenaView : Node3D
     public BattleAudio Audio=>_audio;
     public object PresentationState=>new {sequence=_presentation.Sequence,audio=_audio.Counts,voicePlays=_audio.VoicePlayCount,droppedCues=_audio.DroppedCueCount,effects=_effectCounts,explosions=_explosions.Values.Where(GodotObject.IsInstanceValid).Select(v=>new {tier=v.Tier,radius=v.Radius,age=v.Age,phase=v.Phase,bodyAspect=v.BodyAspect,geometry=v.GeometryCount,flares=v.FlareCount,powerWave=v.PowerWaveVisible,hazard=v.HazardActive,extent=v.VisualExtent}).ToArray()};
     public void ResetPresentationBaseline()=>_presentation.Reset();
-    public Task PrepareEffects()=>EffectWarmup.Run(GetParent(),_art,_environment,_keyLight,_fillLight);
+    public Task PrepareEffects(PreparationDrawBatch batch)=>EffectWarmup.Run(GetParent(),_art,_environment,_keyLight,_fillLight,batch);
     public void ApplyGraphicsQuality()
     {
         GraphicsQuality.ApplyArena(_environment,_cameraAttributes);
@@ -139,6 +139,7 @@ public partial class ArenaView : Node3D
         _sky.GroundHorizonColor=look.Horizon;_sky.GroundBottomColor=look.Ground;
         _sky.SkyEnergyMultiplier=look.SkyEnergy;_sky.GroundEnergyMultiplier=look.SkyEnergy;
         _terrain?.SetLighting(look);
+        foreach(var bomb in _entities.Values.OfType<BombModel>())bomb.SetNight(TimeOfDay==StageTime.Night);
     }
     private void UpdateProcessing()
     {
@@ -166,7 +167,7 @@ public partial class ArenaView : Node3D
         _stage=id;ClearThrowPreviews();
         _softBlockEncoding=null;_softBlockBits=[];
         _environment.BackgroundMode=id==BlastStages.TopRules?Godot.Environment.BGMode.Color:Godot.Environment.BGMode.Sky;
-        _environment.BackgroundColor=new Color("171a22");
+        _environment.BackgroundColor=new Color("18162e");
         _environment.FogSkyAffect=id==BlastStages.TopRules?0:1;
         _playerMotion.Clear();_facings.Clear();_ghostHosts.Clear();_holders.Clear();_lastLooks.Clear();
         _terrain?.QueueFree();_terrain=new TempleStageView(_art);AddChild(_terrain);_terrain.Build(data);

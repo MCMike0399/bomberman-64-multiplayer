@@ -5,6 +5,28 @@ camera, explosions or sound. This guide preserves the user's corrections and
 failed approaches; exact live values remain in source. Use the
 [testing guide](testing-and-delivery.md) for build/recording ownership and commands.
 
+## Field of Grass (2026-11-15 source work)
+
+[Stage contract and inspected references](../field-of-grass.md) own the grassy valley,
+continuous side slopes, eight bank starts, random meadow rocks and meteor Hurry.
+Opaque foliage conceals normal bombs and lower bodies without changing physics;
+all presets retain it. Use the focused `--field-of-grass` authority checks and
+`field-of-grass` / `field-of-grass-network` journeys. Graphical images require
+separate review; headless checks do not approve the art or establish delivery.
+
+Fresh-advisor B1 refinement keeps every support endpoint and the concealing
+canopy. Exposed layered loam and thin ragged turf continue around both sides;
+the far meadow keeps a calm mid-green surface with the canopy's shared gust.
+Exact per-cell support sheets receive shadows; recessed closed bank masses
+cast them, avoiding support-sheet self-shadow seams under grazing Night light.
+Standing stones retain their peak and footprint with broader mossy caps.
+The High-first Root-Hollow pass unifies ledges/slopes as warm loam, removes the
+continuous road-colour stripes, rounds the front turf roll and adds a sparse
+seed-head layer on that same pausable gust. All three presets keep the body and
+concealment; no separate decorative knolls or wind tree are added.
+Review all three Night presets in `field-of-grass-shape-study` and both actual
+mid-slope support witnesses. Source checks alone do not qualify the art.
+
 ## Lost at Sea (2026-11-15 source work)
 
 [Stage contract and inspected references](../lost-at-sea.md) own the violet slippery
@@ -410,6 +432,12 @@ upper crosswalk, four stairs, night, eight-player combat, real dropped loot belo
 a bridge and inward wall closure. Pickup meshes must use the snapshot's accepted
 `y`; querying the topmost terrain surface moves lower drops onto a bridge.
 
+The 2026-11-15 [orbital surroundings pass](../top-rules-orbital-polish.md) keeps
+this castle and playable geometry. Soft painted planetary bands and broad opaque
+annuli replace the bright regular stripes and thin luminous rings; a smaller
+blue world and restrained nebula keep attention on the court. Inspect ordinary
+battle captures as well as the full ring in an establishing view.
+
 ### Up & Down suspended arena (2026-10-24)
 
 [Stage contract](../up-and-down.md), [original references](../up-and-down-research.md).
@@ -721,6 +749,24 @@ bounded ocean on other arenas. Duplicate its cached box mesh before resizing so
 the gameplay exterior stays full-size. `setup` checks the visible miniature's
 bounds and launches Rock Garden afterward to verify gameplay scenery is intact.
 
+2026-11-15 fresh advisor refinement candidate: the enclosure keeps its exact
+wall crown and cells, with four continuous cream half-round coping courses.
+Three broad lichen sections soften the stone. Four owned smooth boulder
+variants retain the .5-cell radial envelope and authored cover height, with
+warm two-tone paint rather than grey faceted shoulders. A darker, quieter
+outer lawn and four mown border strips remain in core presentation on Low;
+flower beds/butterflies are thinned and the windmill/bridge is the single
+vignette. Other GardenSurface consumers keep their existing shader defaults.
+`rock-garden` now audits actual indexed winding, boulder bounds, coping crowns
+and the below-floor core border before its ordinary traversal/combat/meteor
+journey. Green geometry checks do not replace matched Low/Medium/High native
+review, including Night and a labelled oblique view.
+
+2026-11-16: [Roundstone Orchard](../rock-garden.md) supersedes that candidate's
+uniform cover/bright coping with two stone profiles/palettes, carved moss
+shoulders and a core mill/fruit branch. The camera is retained after measured
+footer clearance; no bees, petals or new physics are introduced.
+
 ## v0.28 reference fidelity
 
 [Stage comparison](../stage-fidelity-research.md) and [explosion sequences](../explosion-fidelity-research.md) record inspected original imagery and limits. The integrated castle has taller authored walls and side banners; Up & Down uses rounded/fluted supports inside its solid footprint; Rock Garden's center crown is 1.35 units versus .9 for its outer columns. Original reference assets remain outside Git and exports.
@@ -860,3 +906,54 @@ ground surfaces and retain the first red result. A live actor standing on the
 rendered surface is separate evidence from a node count or a numerical normal.
 The Lost at Sea glass and Grass bank fixes retain the original missing-surface
 native witness and before/after actual-mesh audits.
+
+### Orrery Keep direction (2026-11-15, current source)
+
+The earlier planet-stripe pass is superseded by
+[Orrery Keep](../top-rules-orbital-polish.md#current-direction-orrery-keep):
+a core Low-visible rock body and painted indigo/violet backdrop, three small
+lacquered globes on brass arms, four chunky stars, retained turret islets and
+one restrained colored rim light. The castle/court and camera direction stay
+unchanged; only the Top-specific fit includes its underside. Native planet
+bounds must remain fully framed outside the HUD/footer and below twelve
+percent of width. Dummy headless projection is not that qualification.
+Actual owned-face winding, Low core retention and real eight-player combat
+checks support the required native captures and independent art review.
+
+The current Orrery pass also gives the hero a small open ring and soft broad
+bands, the blue globe broad patches and the moon a few large crater variations.
+Brass supports must enter the rock shoulders, not end in empty space. The
+dedicated journey combines actual indexed winding, native frame limits and
+visible-hemisphere rays against the consumed castle/crag triangles. It runs
+inside the common stage-fidelity/scenery/all suites. Native 99/7 evidence
+precedes the last small attachment/tilt correction; fresh integrated
+all-preset review still qualifies the final view.
+
+### Up & Down coastal refinement (2026-11-15 source work)
+
+The exterior sea stacks use original irregular packed rock meshes with broad
+tide-worn bases, restrained strata ledges and fitted turf crowns. Keep their
+positions/heights, the single tree, lighthouse and suspended playable structure.
+Static angles use PresentationMath and all new surfaces are owned managed
+geometry; no engine-primitive fallback is introduced. See the
+[stage contract](../up-and-down.md#coastal-scenery-refinement-2026-11-15-source-work).
+The existing stage-scenery journey retains ordinary Midday/Night/High and
+labeled establishing captures for the required visual comparison.
+
+
+### Returning Tide core landmark finishing (2026-11-16)
+
+The Sunken Temple gateway now carries a small gold/pale/teal sun disc; one lotus
+ruin replaces the second palm/obelisk setting. `SunkenGateCore` and the single
+copper `TempleTideFloat` remain on Low, outside the court. The float follows the
+accepted rendered water plane with a pausable core clock; the normal miniature
+omits both outboard landmarks. The pyramid/frieze layout and camera stay fixed.
+[Composition and current evidence](../stage-scenery.md#returning-tide-finishing-2026-11-16).
+
+### Preparation callback fallback (2026-11-16)
+
+One explicit disposable draw batch spans startup/preset overlay, production
+warmup and all real miniatures. After its first missing normal draw callback,
+remaining fences render through process update + ForceDraw/ForceSync; the next
+batch starts normal. Keep the 20-second bound, every draw/readback and cancellation.
+[Retained red/green and standalone roster contract](../history/preparation-draw-batch-20261116.md).

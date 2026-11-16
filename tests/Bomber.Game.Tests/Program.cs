@@ -1,3 +1,4 @@
+if(args.Contains("--field-of-grass")){int count=0;FieldOfGrassChecks.Run((name,check)=>{check();count++;Console.WriteLine("PASS "+name);});Console.WriteLine($"Passed {count} Field of Grass integration checks.");return;}
 if(args.Contains("--lost-at-sea")){int count=0;LostAtSeaChecks.Run((name,check)=>{check();count++;Console.WriteLine("PASS "+name);});Console.WriteLine($"Passed {count} Lost at Sea integration checks.");return;}
 if(args.Contains("--stale-input")){StaleInputChecks.Run();return;}
 if(args.Contains("--round-ending")){Console.WriteLine($"Passed {RoundEndingChecks.Run()} round ending integration checks.");return;}
@@ -59,6 +60,7 @@ TerrainChecks.Run(Run);
 GreedyTrapChecks.Run(Run);
 UpAndDownChecks.Run(Run);
 RockGardenChecks.Run(Run);
+FieldOfGrassChecks.Run(Run);
 LostAtSeaChecks.Run(Run);
 BotChecks.Run(Run);
 PracticeAndOutcomeChecks.Run(Run);
