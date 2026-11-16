@@ -18,7 +18,7 @@ public partial class PlaytestDriver
         (BlastStages.TopRules,["FortressCrag","Turret","WallBanner","Cloud","FloatingIslet","Starfield","RingedPlanet","BluePlanet","OrbitingMoon","AsteroidBelt","Nebula"]),
         (BlastStages.BlizzardBattle,["Igloo","Snowman","Penguin","PineTree","FrozenPond","GlacierPeak","GlacierArch","FrozenCrown","WinterTree","ExteriorSnowfall"]),
         (BlastStages.GreedyTrap,["GreedyWestRowboat","GreedyEastRowboat","Sailboat","Gull"]),
-        (BlastStages.LostAtSea,["SunkenWreck","MantaRay","BellBuoy"]),
+        (BlastStages.LostAtSea,["SunkenWreck","MantaRay"]),
         (BlastStages.CircuitGarden,["TargetRaft","Jetty","Buoy","PalmTree"]),
     ];
 
@@ -117,7 +117,17 @@ public partial class PlaytestDriver
         Check(!AuditDescendants(scenery).OfType<CollisionObject3D>().Any(),"scenery adds no collision bodies: "+stage);
         var problems=AuditModelProblems(scenery,out int meshes,out int vertices);
         Event("scenery-geometry",new{stage,meshes,vertices,motions=terrain.SceneryMotionCount,problems=problems.Take(5)});
-        Check(problems.Count==0&&meshes>=20,$"scenery geometry is finite, nonempty and textured: {stage} meshes={meshes} {string.Join("; ",problems.Take(3))}");
+        bool observatory=stage==BlastStages.LostAtSea;
+        Check(problems.Count==0&&(observatory?meshes>0:meshes>=20),$"scenery geometry is finite, nonempty and textured: {stage} meshes={meshes} {string.Join("; ",problems.Take(3))}");
+        if(observatory)
+        {
+            var wreck=AuditDescendants(scenery).OfType<Node3D>().Single(n=>n.Name=="SunkenWreck");
+            var bounds=AuditSubtreeBounds(wreck,Transform3D.Identity);
+            Check(bounds.End.Y<-.3f&&bounds.Size.X is >1 and <3&&bounds.Size.Z is >3 and <6,
+                "the compact real wreck rib group stays under one quarter of the physical glass");
+            Check(AuditDescendants(terrain).OfType<Node3D>().Single(n=>n.Name=="BellBuoy").GetParent()==terrain,
+                "the leaning bell buoy remains core presentation on Low");
+        }
         Check(terrain.SceneryMotionCount>0,"scenery has animated life: "+stage);
         if(stage==BlastStages.BlizzardBattle)
         {

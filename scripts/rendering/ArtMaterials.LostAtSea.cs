@@ -74,6 +74,18 @@ void fragment(){
  #else
  float sheen_weight=.32;
  float bevel_weight=.30;
+ // Low's opaque pane keeps one restrained subsurface cue. Medium/High use
+ // the real wreck and manta through their existing depth/refraction pass.
+ vec2 wreck=vec2(arena.y-7.9,5.2-arena.x);
+ float rib=1.0-smoothstep(.035,.09,abs(mod(wreck.x+.5,1.0)-.5));
+ rib*=1.0-smoothstep(.64,.80,abs(wreck.y));
+ rib*=1.0-smoothstep(2.05,2.40,abs(wreck.x));
+ float keel=(1.0-smoothstep(.05,.13,abs(wreck.y)))*(1.0-smoothstep(2.25,2.50,abs(wreck.x)));
+ float phase=ambient_clock*6.28318530718/84.0;
+ vec2 manta=arena-vec2(10.5+sin(phase)*3.2,10.5+cos(phase)*2.6);
+ float wing=max(0.0,1.0-abs(manta.x)/2.6);
+ float ray=(1.0-smoothstep(wing*.85,wing*.85+.10,abs(manta.y+.10)))*step(abs(manta.x),2.6);
+ body*=1.0-max(max(rib,keel)*.18,ray*.13);
  #endif
  vec3 reflected_sky=vec3(.48,.57,.85);
  ALBEDO=mix(body,reflected_sky,sheen*sheen_weight*surface_sheen);

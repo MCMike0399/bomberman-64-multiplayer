@@ -48,7 +48,10 @@ public partial class TempleStageView
             var root=new Node3D{Name=$"GlassBuoyCornerFloat{x}_{z}"};AddChild(root);
             RoundedBox(root,new(x,-.96f,z),new(4,1.65f,4),enamel,.9f);
             RoundedBox(root,new(x,-.58f,z),new(4.06f,.30f,4.06f),rubber,.95f);
+            var direction=new Vector3(x<Width/2f?-1:1,0,z<Depth/2f?-1:1).Normalized();
+            Sphere(root,new Vector3(x,-.96f,z)+direction*1.7f,new(1.55f,1.30f,1.55f),orange).Name="GlassBuoyOrangeJunction";
         }
+        BuildBuoyTube(.85f,Width-.85f,.85f,Depth-.85f,-.92f,.80f,.64f,1.1f,enamel,"GlassBuoyTubePontoon");
 
         // Broad rubber footing is continuous across the nonslip rim, without a
         // fine checkerboard. All tread tops are flush with the authority floor.
@@ -60,11 +63,7 @@ public partial class TempleStageView
         // Enamel coamings stay inside the real outer wall cells, with their top
         // matching the authored crown. They do not invent a raised walking route.
         float wall=Layout.At(0,1).ObstacleHeight!.Value*HeightScale;
-        foreach(float side in new[]{.5f,Width-.5f})
-        {
-            Box(this,new(side,wall/2,Depth/2f),new(.82f,wall,Depth-1),enamel,.12f).Name="GlassBuoyCoaming";
-            Box(this,new(Width/2f,wall/2,side),new(Width-1,wall,.82f),enamel,.12f).Name="GlassBuoyCoaming";
-        }
+        BuildBuoyTube(.5f,Width-.5f,.5f,Depth-.5f,wall/2,.38f,wall/2,.60f,enamel,"GlassBuoyRoundedRimLip");
         foreach(float x in new[]{3.0f,Width-3.0f})
             Box(this,new(x+(x<Width/2f?-.075f:.075f),-.055f,Depth/2f),new(.15f,.11f,Depth-6),enamel,.055f).Name="GlassBuoyGlassBevel";
         foreach(float z in new[]{3.0f,Depth-3.0f})
@@ -113,6 +112,28 @@ public partial class TempleStageView
         foreach(var point in new[]{a,b,c}){surface.SetNormal(normal);surface.SetUV(new(point.X,point.Z));surface.AddVertex(point);}
     }
 
+    private void BuildBuoyTube(float left,float right,float rear,float front,float y,float widthRadius,float heightRadius,float corner,Material paint,string name)
+    {
+        var path=new List<Vector3>();
+        foreach(var(cx,cz,start)in new[]{(left+corner,rear+corner,Mathf.Pi),(right-corner,rear+corner,Mathf.Pi*1.5f),
+            (right-corner,front-corner,0f),(left+corner,front-corner,Mathf.Pi*.5f)})
+            for(int step=0;step<=8;step++)
+            {var(s,c)=PresentationMath.SinCos(start+step*Mathf.Pi/16);path.Add(new(cx+c*corner,y,cz+s*corner));}
+        const int sides=16;var points=new Vector3[path.Count,sides];var normals=new Vector3[path.Count,sides];
+        for(int ring=0;ring<path.Count;ring++)
+        {
+            var tangent=(path[(ring+1)%path.Count]-path[(ring+path.Count-1)%path.Count]).Normalized();
+            var outward=new Vector3(tangent.Z,0,-tangent.X);
+            if(outward.Dot(path[ring]-new Vector3((left+right)/2,y,(rear+front)/2))<0)outward=-outward;
+            for(int side=0;side<sides;side++)
+            {var(s,c)=PresentationMath.SinCos(side*Mathf.Tau/sides);points[ring,side]=path[ring]+outward*c*widthRadius+Vector3.Up*s*heightRadius;normals[ring,side]=outward*c+Vector3.Up*s;}
+        }
+        var mesh=new SurfaceTool();mesh.Begin(Mesh.PrimitiveType.Triangles);mesh.SetSmoothGroup(0);
+        for(int ring=0;ring<path.Count;ring++)for(int side=0;side<sides;side++)
+        {int next=(ring+1)%path.Count,end=(side+1)%sides;BuoyQuad(mesh,points[ring,side],points[next,side],points[next,end],points[ring,end],normals[ring,side]);}
+        mesh.GenerateNormals();mesh.Index();AddChild(new MeshInstance3D{Name=name,Mesh=mesh.Commit(),MaterialOverride=paint});
+    }
+
     private void BuildBuoyOcean()
     {
         var ocean=new SurfaceTool();ocean.Begin(Mesh.PrimitiveType.Triangles);
@@ -153,6 +174,10 @@ public partial class TempleStageView
     private void ProcessGlassBuoy(float delta)
     {
         if(WeatherActive)_seaClock+=delta;
+        float pulse=.5f+.5f*PresentationMath.Sin(_seaClock*.70f);
+        bool night=_lighting?.Label=="Night";
+        foreach(var lens in _buoyBeaconPaint)lens.EmissionEnergyMultiplier=night?1.12f+pulse*.36f:.06f+pulse*.04f;
+        ProcessObservatoryBuoy();
         _seaGlass?.SetShaderParameter("ambient_clock",_seaClock);
         if(_graphicsRevision==GraphicsQuality.Revision)return;
         if(_seaGlass is not null)

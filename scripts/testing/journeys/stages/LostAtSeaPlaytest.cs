@@ -88,15 +88,15 @@ public partial class PlaytestDriver
     {
         Check(!_headless,"under-glass visibility requires an actual renderer, never scene-node presence");
         Event("glass-depth-witness-policy",new{ordinaryInputs=true,stateMutation=false,
-            controls="labelled presentation-only hidden-subject comparisons after natural later-phase motion"});
+            controls="labelled presentation-only hidden-subject comparisons in the opening phase"});
         var original=_root.Preferences.Graphics;var lighting=_root.Preferences.StageLighting;
         try
         {
             await SelectGraphics(GraphicsPreset.High);await SelectLocalLighting(StageTime.Midday);
             _root.StartLocal(new SessionSettings(Stage:BlastStages.LostAtSea,Bots:0,SuddenDeath:false),1,practice:true);
             await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"depth witness enters ordinary clear-deck Practice",150);
-            await Frames(1080);
-            await Capture("glass-buoy-depth-world-later-phase");
+            await Frames(12);
+            await Capture("glass-observatory-depth-world-opening");
             var arena=_root.GetChildren().OfType<ArenaView>().Single();var terrain=AuditDescendants(arena).OfType<TempleStageView>().Single();
             bool processing=terrain.IsProcessing();terrain.SetProcess(false);
             try
@@ -132,7 +132,8 @@ public partial class PlaytestDriver
                 }
             }
             finally{terrain.SetProcess(processing);}
-            await Frames(90);await Capture("glass-buoy-depth-world-moving-restored");
+            for(int frame=0;frame<6;frame++)
+            {await Frames(15);await Capture("glass-observatory-manta-and-beacon-motion-"+frame,0);}
         }
         finally
         {

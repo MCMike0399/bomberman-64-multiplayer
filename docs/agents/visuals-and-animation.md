@@ -22,6 +22,15 @@ the wreck has a faint opening-round value cue. Recheck the matched seed-64
 matrix plus `lost-at-sea-material-witness`, including its Low Night frame.
 These are source changes until the corresponding native images are reviewed.
 
+The High-first Glass Buoy Observatory pass adds a full tube pontoon and a rounded
+rim lip within the unchanged wall crown, with orange corner junctions. A compact
+real rib group sits below the clear inner-left quarter; the slow manta starts
+under the window. Medium retains real depth/refraction. Low retains the same
+pontoon, bell buoy and pulsing lenses, with restrained painted subsurface cues.
+`lost-at-sea-depth-witness` now compares visible/hidden real subjects in the
+opening phase and records six motion frames; only actual images establish that
+the wreck/manta are legible through the glass.
+
 ## Start with the actual actor
 
 1. Record whether the complaint appears in a menu, practice, ordinary local
