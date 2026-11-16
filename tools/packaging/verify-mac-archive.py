@@ -52,11 +52,11 @@ def main():
                                '--scenario', scenario, '--server', origin, '--desktop', 'shared', '--output', str(output)]
                     command += ['--rendering-driver', 'metal'] if graphical else ['--headless']
                     if scenario == 'peer-rooms': command.append('--engine-verbose')
-                    # The hosted Metal run was still capturing journey 56/61 at
-                    # the catalog's 1500-second cutoff. Allow the complete archive
-                    # tour to finish without changing any journey's own waits.
-                    if scenario == 'all': command += ['--timeout', '2400']
-                    completed = subprocess.run(command, cwd=ROOT, check=False, timeout=2700 if scenario == 'all' else 1800)
+                    # The old 21-tour roster took 2182 s on hosted Metal; the
+                    # expanded roster has 25 tours plus more per-stage checks.
+                    # Keep every inner wait, with 5 min for child cleanup/reporting.
+                    if scenario == 'all': command += ['--timeout', '3600']
+                    completed = subprocess.run(command, cwd=ROOT, check=False, timeout=3900 if scenario == 'all' else 1800)
                     reports = [p / 'summary.json' for p in output.iterdir() if p not in previous and (p / 'summary.json').exists()]
                     if len(reports) != 1:
                         if scenario == 'peer-rooms':
