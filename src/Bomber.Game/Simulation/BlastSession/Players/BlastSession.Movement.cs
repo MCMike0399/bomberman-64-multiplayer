@@ -28,7 +28,8 @@ public sealed partial class BlastSession
         var startX = p.X;
         var startZ = p.Z;
         var speed=PlayerSpeed*p.StatusSpeed*KickMovementScale(p);
-        ApplyMoveDelta(p, input.X * speed * dt, input.Z * speed * dt,dt);
+        if(_stage.Id==BlastStages.LostAtSea)MoveGroundPlayer(p,input,speed,dt);
+        else ApplyMoveDelta(p, input.X * speed * dt, input.Z * speed * dt,dt);
 
         TurnToward(p, input, dt);
 
@@ -38,7 +39,8 @@ public sealed partial class BlastSession
 
     private void MovePlayerCarrying(BlastPlayer p, InputState input, float dt)
     {
-        ApplyMoveDelta(p, input.X * PlayerSpeed * p.StatusSpeed * dt, input.Z * PlayerSpeed * p.StatusSpeed * dt,dt);
+        if(_stage.Id==BlastStages.LostAtSea)MoveGroundPlayer(p,input,PlayerSpeed*p.StatusSpeed,dt);
+        else ApplyMoveDelta(p, input.X * PlayerSpeed * p.StatusSpeed * dt, input.Z * PlayerSpeed * p.StatusSpeed * dt,dt);
         if (!p.AimSet) TurnToward(p, input, dt);
     }
 

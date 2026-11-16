@@ -21,6 +21,7 @@ public partial class PlaytestDriver
         (BlastStages.FieldOfGrass,["HayRick"]),
         (BlastStages.InTheGutter,["CopperLockWestMachine","CopperLockEastMachine","CopperLockChannelStub","CopperLockFishBody","CopperLockOuterWater"]),
         (BlastStages.SeaSick,["Gull"]),
+        (BlastStages.LostAtSea,["SunkenWreck","MantaRay"]),
         (BlastStages.CircuitGarden,["Jetty","Buoy","Gull"]),
     ];
 
@@ -170,7 +171,8 @@ public partial class PlaytestDriver
         // no separate island dressing. Audit that real presentation, not padding.
         // Hollow intentionally keeps one compact hay mesh; its core stile, terrain
         // and gameplay foliage have their own actual-mesh and support checks.
-        int minimumMeshes=hollow?1:stage==BlastStages.SeaSick?10:20;
+        bool observatory=stage==BlastStages.LostAtSea;
+        int minimumMeshes=hollow||observatory?1:stage==BlastStages.SeaSick?10:20;
         Check(problems.Count==0&&meshes>=minimumMeshes,$"scenery geometry is finite, nonempty and textured: {stage} meshes={meshes} {string.Join("; ",problems.Take(3))}");
         if(hollow)
         {
@@ -180,6 +182,15 @@ public partial class PlaytestDriver
                 "the single optional hay rick has its intended finite, compact physical bounds");
             Check(AuditDescendants(terrain).OfType<Node3D>().Single(n=>n.Name=="HollowStile").GetParent()==terrain,
                 "the existing stile and warm lantern are core terrain, retained on Low");
+        }
+        if(observatory)
+        {
+            var wreck=AuditDescendants(scenery).OfType<Node3D>().Single(n=>n.Name=="SunkenWreck");
+            var bounds=AuditSubtreeBounds(wreck,Transform3D.Identity);
+            Check(bounds.End.Y<-.3f&&bounds.Size.X is >1 and <3&&bounds.Size.Z is >3 and <6,
+                "the compact real wreck rib group stays under one quarter of the physical glass");
+            Check(AuditDescendants(terrain).OfType<Node3D>().Single(n=>n.Name=="BellBuoy").GetParent()==terrain,
+                "the leaning bell buoy remains core presentation on Low");
         }
         if(!copper&&!hollow)Check(terrain.SceneryMotionCount>0,"scenery has animated life: "+stage);
         if(stage==BlastStages.BlizzardBattle)

@@ -13,6 +13,7 @@ public sealed partial class BlastSession
         p.InvincibleTimer<=0&&p.ImpactProtectionTimer<=0&&p.CarriedById is null;
     private static void ClearRecovery(BlastPlayer p)
     {
+        p.SlideVX=p.SlideVZ=0;
         p.StunTimer=0;p.CarriedById=null;p.HoldRemaining=0;p.RecoveryTotal=0;
         p.StruggleCooldown=0;p.RecoveryX=p.RecoveryZ=0;p.KnockdownReason=null;
         p.Airborne=false;p.Falling=false;p.AirVX=p.AirVY=p.AirVZ=0;

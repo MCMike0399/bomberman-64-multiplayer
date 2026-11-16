@@ -1041,7 +1041,8 @@
         "tour-21",
         "tour-22",
         "tour-23",
-        "tour-24"
+        "tour-24",
+        "tour-25"
       ],
       "domains": [
         "ai",
@@ -1098,7 +1099,8 @@
         "stage-scenery",
         "orrery-keep",
         "round-ending",
-        "sea-sick"
+        "sea-sick",
+        "lost-at-sea"
       ],
       "domains": [
         "ai",
@@ -1375,7 +1377,8 @@
         "field-of-grass",
         "stage-scenery",
         "orrery-keep",
-        "sea-sick"
+        "sea-sick",
+        "lost-at-sea"
       ],
       "domains": [
         "gameplay",
@@ -1631,7 +1634,8 @@
         "field-of-grass",
         "hurry-water",
         "asset-audit",
-        "pickup-showcase"
+        "pickup-showcase",
+        "lost-at-sea"
       ],
       "domains": [
         "rendering",
@@ -1668,7 +1672,8 @@
         "greedy-trap",
         "field-of-grass",
         "greedy-canal",
-        "sea-sick"
+        "sea-sick",
+        "lost-at-sea"
       ],
       "domains": [
         "rendering",
@@ -1733,7 +1738,8 @@
         "blizzard-battle",
         "greedy-trap",
         "field-of-grass",
-        "in-the-gutter"
+        "in-the-gutter",
+        "lost-at-sea"
       ],
       "domains": [
         "ai",
@@ -2155,6 +2161,99 @@
       ],
       "headless": true,
       "timeout": 90,
+      "manual": false
+    },
+    {
+      "id": "tour-25",
+      "steps": [
+        "lost-at-sea",
+        "lost-at-sea-network"
+      ],
+      "domains": [
+        "gameplay",
+        "rendering",
+        "physics",
+        "ai",
+        "ui",
+        "network"
+      ],
+      "headless": true,
+      "timeout": 480,
+      "manual": false
+    },
+    {
+      "id": "lost-at-sea-material-witness",
+      "method": "LostAtSeaMaterialWitness",
+      "domains": [
+        "gameplay",
+        "rendering",
+        "physics"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "lost-at-sea-slide-witness",
+      "method": "LostAtSeaSlideWitness",
+      "domains": [
+        "gameplay",
+        "rendering",
+        "physics"
+      ],
+      "headless": true,
+      "timeout": 120,
+      "manual": false
+    },
+    {
+      "id": "lost-at-sea-depth-witness",
+      "method": "LostAtSeaDepthWitness",
+      "domains": [
+        "rendering",
+        "gameplay"
+      ],
+      "headless": false,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "lost-at-sea-shape-study",
+      "method": "LostAtSeaShapeStudy",
+      "domains": [
+        "gameplay",
+        "rendering",
+        "physics",
+        "ai"
+      ],
+      "headless": true,
+      "timeout": 240,
+      "manual": false
+    },
+    {
+      "id": "lost-at-sea",
+      "method": "LostAtSeaTour",
+      "domains": [
+        "gameplay",
+        "rendering",
+        "physics",
+        "ai",
+        "ui"
+      ],
+      "headless": true,
+      "timeout": 240,
+      "manual": false
+    },
+    {
+      "id": "lost-at-sea-network",
+      "method": "LostAtSeaNetworkTour",
+      "domains": [
+        "gameplay",
+        "rendering",
+        "physics",
+        "network"
+      ],
+      "headless": true,
+      "timeout": 180,
       "manual": false
     }
   ]
