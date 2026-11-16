@@ -1020,15 +1020,15 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Blizzard.cs:Box:1",
       "file": "scripts/arena/stages/TempleStageView.Blizzard.cs",
-      "line": 51,
-      "call": "Box(this,new(Width/2f,-.55f,Depth/2f),new(160,.45f,160),_snowMaterial)",
-      "callSha256": "73bc7ec39f04c4f2e0a66ece82cc1155e437368eb5bc205e3efaf9c4d0ddf738",
+      "line": 53,
+      "call": "Box(this,new(Width/2f,-.55f,Depth/2f),new(160,.45f,160),farSnow)",
+      "callSha256": "7a1b3ac724e290857c404dfff65f1d2eb70650b17280d3be630d7593fc973f48",
       "domain": "owned-generator-or-helper"
     },
     {
       "id": "scripts/arena/stages/TempleStageView.Blizzard.cs:Box:2",
       "file": "scripts/arena/stages/TempleStageView.Blizzard.cs",
-      "line": 52,
+      "line": 54,
       "call": "Box(this,new(Width/2f,-.4f,Depth/2f),new(Width,.6f,Depth),wall,.08f)",
       "callSha256": "f9581e326c5fa132de5c7cc088cfcad5fcd79cbbe46e503d8eb2e2da3f185a32",
       "domain": "owned-generator-or-helper"
@@ -1036,7 +1036,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Blizzard.cs:Box:3",
       "file": "scripts/arena/stages/TempleStageView.Blizzard.cs",
-      "line": 53,
+      "line": 55,
       "call": "Box(this,new(Width/2f,-.055f,Depth/2f),new(Width-2,.11f,Depth-2),ice,.035f)",
       "callSha256": "1a06c9af4a85234efadad307f3cf0ed48b9eeedec136db4ce87a5a18fae9a765",
       "domain": "owned-generator-or-helper"
@@ -1044,7 +1044,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Blizzard.cs:Box:4",
       "file": "scripts/arena/stages/TempleStageView.Blizzard.cs",
-      "line": 58,
+      "line": 60,
       "call": "Box(this,new(x+.5f,h*.5f-.125f,z+.5f),new(1,h+.05f,1),wall,.06f)",
       "callSha256": "a22e6b5fa978923dff3baca5f01c63ec95fdec02c1faf0678dcf46389e5b6fc3",
       "domain": "owned-generator-or-helper"
@@ -1052,7 +1052,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Blizzard.cs:Box:5",
       "file": "scripts/arena/stages/TempleStageView.Blizzard.cs",
-      "line": 59,
+      "line": 61,
       "call": "Box(this,new(x+.5f,h-.075f,z+.5f),new(1.04f,.15f,1.04f),_snowMaterial,.065f)",
       "callSha256": "c6ff127aac742e7c653433136e41b19d7fd9eee5947be461dc631164818637a6",
       "domain": "owned-generator-or-helper"
@@ -1060,7 +1060,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Blizzard.cs:Box:6",
       "file": "scripts/arena/stages/TempleStageView.Blizzard.cs",
-      "line": 62,
+      "line": 64,
       "call": "Box(this,new(x==0?.96f:Width-.96f,.075f,z+.5f),new(.075f,.15f,.98f),ice,.02f)",
       "callSha256": "5d1e811b0fbae9b250ffb14117d60cb19e0e84bcba654cfc3ca4cc30363955a6",
       "domain": "owned-generator-or-helper"
@@ -1068,7 +1068,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Blizzard.cs:Box:7",
       "file": "scripts/arena/stages/TempleStageView.Blizzard.cs",
-      "line": 64,
+      "line": 66,
       "call": "Box(this,new(x+.5f,.075f,z==0?.96f:Depth-.96f),new(.98f,.15f,.075f),ice,.02f)",
       "callSha256": "67fab34c62868a17dd506d458ace2fe8ce705c989b8c7202cc476bc50d982a86",
       "domain": "owned-generator-or-helper"
@@ -1076,7 +1076,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Blizzard.cs:newSurfaceTool:1",
       "file": "scripts/arena/stages/TempleStageView.Blizzard.cs",
-      "line": 79,
+      "line": 82,
       "call": "new SurfaceTool()",
       "callSha256": "524d4daa3dd8ade1577b68b52e91ebbe9907def4954bab94da3aeb8c6bb1a4ae",
       "domain": "owned-generator-or-helper"
@@ -1084,7 +1084,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Blizzard.cs:surface.Commit:1",
       "file": "scripts/arena/stages/TempleStageView.Blizzard.cs",
-      "line": 94,
+      "line": 97,
       "call": "surface.Commit()",
       "callSha256": "3a4b0e22bc74cdecd537891eb2f48df20b98f27fbf269b1803e1cc035b3194ec",
       "domain": "owned-generator-or-helper"
@@ -1092,7 +1092,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Blizzard.cs:Box:8",
       "file": "scripts/arena/stages/TempleStageView.Blizzard.cs",
-      "line": 106,
+      "line": 109,
       "call": "Box(root,new(x,.6f,Depth/2f),new(1,1.5f,Depth-2),_snowMaterial,.12f)",
       "callSha256": "7c84a5e7245765a924a83ad96e682abb7336101affedf0e24d717a48b5151f8e",
       "domain": "owned-generator-or-helper"
@@ -1100,7 +1100,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.Blizzard.cs:Sphere:1",
       "file": "scripts/arena/stages/TempleStageView.Blizzard.cs",
-      "line": 110,
+      "line": 113,
       "call": "Sphere(root,new(x,h,z+.5f),new(.99f,.65f,1.1f),_snowMaterial)",
       "callSha256": "60a34212fba376b95a094ea90493e4c51eef98d0e0aaf64e6eb39945e41e4c9f",
       "domain": "owned-generator-or-helper"
@@ -1108,335 +1108,119 @@
     {
       "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Sphere:1",
       "file": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs",
-      "line": 42,
-      "call": "Sphere(igloo,Vector3.Zero,new(2.6f,2.1f,2.6f),white)",
-      "callSha256": "3384c81b6b97eec5ca0a2c67fd3ef7518f73f271cdcafab80c7d785baa82d41a",
-      "domain": "owned-generator-or-helper"
-    },
-    {
-      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Taper:1",
-      "file": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs",
-      "line": 46,
-      "call": "Taper(igloo,new(0,y,0),radius+.012f,radius+.012f,.025f,shadowSnow,24)",
-      "callSha256": "ce15b2621d21e3c6f87b03102b2e86f2cd59b162f8de3d3b9a7e1343cd90fd67",
-      "domain": "owned-generator-or-helper"
-    },
-    {
-      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Taper:2",
-      "file": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs",
-      "line": 48,
-      "call": "Taper(igloo,new(0,.32f,1.25f),.48f,.48f,.7f,white,16)",
-      "callSha256": "aa6daf80400b48c176950836495b8f14dd1df167ae60e311ee51a8b053fa9401",
-      "domain": "owned-generator-or-helper"
-    },
-    {
-      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Sphere:2",
-      "file": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs",
       "line": 49,
-      "call": "Sphere(igloo,new(0,.3f,1.58f),new(.6f,.52f,.08f),_art.Color(new(\"27354a\")))",
-      "callSha256": "20451a2dcc4e0178a30fa9dfb3dfc2f694110f34c7feb689c4f63de2b7390051",
-      "domain": "owned-generator-or-helper"
-    },
-    {
-      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Sphere:3",
-      "file": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs",
-      "line": 53,
-      "call": "Sphere(snowman,new(0,.42f,0),Vector3.One*.9f,white)",
-      "callSha256": "1bbcb1dbcd9e199ee60b60331e1a076502a856df479e9b270a6138a0bc482a24",
-      "domain": "owned-generator-or-helper"
-    },
-    {
-      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Sphere:4",
-      "file": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs",
-      "line": 54,
-      "call": "Sphere(snowman,new(0,1.05f,0),Vector3.One*.65f,white)",
-      "callSha256": "3c8dab5abf23056251de3a28c34035a0b92a67fc6c70cd5f66656207bf949590",
-      "domain": "owned-generator-or-helper"
-    },
-    {
-      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Sphere:5",
-      "file": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs",
-      "line": 55,
-      "call": "Sphere(snowman,new(0,1.52f,0),Vector3.One*.46f,white)",
-      "callSha256": "b79742c00ea969a26cb1eb2a75137e34868e4334660ef2d673d3877ff23c1e72",
-      "domain": "owned-generator-or-helper"
-    },
-    {
-      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Bead:1",
-      "file": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs",
-      "line": 57,
-      "call": "Bead(snowman,new(x,1.58f,.2f),Vector3.One*.06f,coal)",
-      "callSha256": "958410d8437809a1c331567bdf765a1d80c8e4fbea6569f90c7f2057f5a1960e",
-      "domain": "owned-generator-or-helper"
-    },
-    {
-      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Bead:2",
-      "file": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs",
-      "line": 58,
-      "call": "Bead(snowman,new(0,.9f+b*.15f,.31f-b*.01f),Vector3.One*.06f,coal)",
-      "callSha256": "4b24288758c2da10e2097a72c699eefb63bcb045eaae4d9111a4df0e95809867",
-      "domain": "owned-generator-or-helper"
-    },
-    {
-      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Cone:1",
-      "file": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs",
-      "line": 59,
-      "call": "Cone(snowman,new(0,1.52f,.32f),.05f,.26f,_art.Color(new(\"f08a2c\"),.6f),8)",
-      "callSha256": "600e751780753a25ed289cf8b9dd2a802947c5f09bd50c5b496926e737095e51",
-      "domain": "owned-generator-or-helper"
-    },
-    {
-      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Taper:3",
-      "file": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs",
-      "line": 60,
-      "call": "Taper(snowman,new(0,1.8f,0),.18f,.18f,.26f,_art.Color(new(\"3a3d52\"),.6f),14)",
-      "callSha256": "fca83abbf9e2f384daac4080845b1ca44ce3f8adab1fee3d9dd17e01339a43bc",
-      "domain": "owned-generator-or-helper"
-    },
-    {
-      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Cylinder:1",
-      "file": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs",
-      "line": 61,
-      "call": "Cylinder(snowman,new(0,1.69f,0),.27f,.04f,_art.Color(new(\"3a3d52\"),.6f))",
-      "callSha256": "e6111a0c714dd7dcb23d782ad7a6b39550c16ef6bdad8e3b3e50b5ce64592991",
-      "domain": "owned-generator-or-helper"
-    },
-    {
-      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Box:1",
-      "file": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs",
-      "line": 62,
-      "call": "Box(snowman,new(0,1.32f,.02f),new(.62f,.1f,.6f),_art.Color(new(\"d8433b\"),.8f),.04f)",
-      "callSha256": "cb174287cdbc303bef88686d7e6197c120dbdd7f8f6a18a0e7d9c06ea78f1043",
-      "domain": "owned-generator-or-helper"
-    },
-    {
-      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Box:2",
-      "file": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs",
-      "line": 64,
-      "call": "Box(snowman,new(side*.48f,1.15f,0),new(.5f,.04f,.04f),_art.Color(new(\"6b4d33\")))",
-      "callSha256": "54ae9793e2a270744abaa1854304564fbc0bed7063894bcb425e90f449fb40ce",
-      "domain": "owned-generator-or-helper"
-    },
-    {
-      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Cylinder:2",
-      "file": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs",
-      "line": 68,
-      "call": "Cylinder(pond,new(0,.01f,0),2.1f,.04f,_art.Color(new(\"9fd3ea\"),.08f))",
-      "callSha256": "79d4679c3d7fcdd70ade738006aae6327fe41e22bfaa2cfbebd964a8af47e07d",
-      "domain": "owned-generator-or-helper"
-    },
-    {
-      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Cylinder:3",
-      "file": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs",
-      "line": 69,
-      "call": "Cylinder(pond,new(0,0,0),2.35f,.035f,shadowSnow)",
-      "callSha256": "5c17ba4febb873c3b04f853dc06fada49e80d04503f0b8165515622c29244238",
-      "domain": "owned-generator-or-helper"
-    },
-    {
-      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Sphere:6",
-      "file": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs",
-      "line": 82,
       "call": "Sphere(scenery,new(x,ground,z),new(w*.55f,.7f,w),snow)",
       "callSha256": "5cfc7e1ec028bc5bcf10ed98263fc1ab0cc8c781d25cd309e588147a79ee4eb3",
       "domain": "owned-generator-or-helper"
     },
     {
-      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Cone:2",
+      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Cone:1",
       "file": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs",
-      "line": 88,
+      "line": 55,
       "call": "Cone(peak,new(0,height/2,0),radius,height,_art.Color(new(\"8ea3bd\"),.9f),9)",
       "callSha256": "7b72e1d580c97c411dbfbf0f00da22e5b8f846fc1237410d002eb90e1102b523",
       "domain": "owned-generator-or-helper"
     },
     {
-      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Cone:3",
+      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Cone:2",
       "file": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs",
-      "line": 89,
+      "line": 56,
       "call": "Cone(peak,new(0,height*.8f,0),radius*.42f,height*.4f+.05f,_art.Color(new(\"f2f7fb\"),.7f),9)",
       "callSha256": "dce405bdb0cd81dc199476a5eb90e3faeda660ceb82eef1ecd24fab1f7d6e408",
       "domain": "owned-generator-or-helper"
     },
     {
-      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Box:3",
+      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Taper:1",
       "file": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs",
-      "line": 103,
-      "call": "Box(arch,new(0,1.4f,side*1.65f),new(2.1f,2.8f,1.3f),blue,.22f)",
-      "callSha256": "3c12853577777c0021551ea951ef74eba36db8d19474e01f1bd9c99e85d67187",
-      "domain": "owned-generator-or-helper"
-    },
-    {
-      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Sphere:7",
-      "file": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs",
-      "line": 104,
-      "call": "Sphere(arch,new(0,.15f,side*1.8f),new(2.8f,.7f,1.9f),_snowMaterial)",
-      "callSha256": "5daef17d8899e59479b909731469453c1d6262679f9ae3ed99e8113d4283532d",
-      "domain": "owned-generator-or-helper"
-    },
-    {
-      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Box:4",
-      "file": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs",
-      "line": 106,
-      "call": "Box(arch,new(0,3.05f,0),new(2.3f,1.0f,4.7f),ice,.24f)",
-      "callSha256": "8112d9b117323a041e882ed87a19b13c6d99e1de0b649abb3984023e699128a4",
-      "domain": "owned-generator-or-helper"
-    },
-    {
-      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Box:5",
-      "file": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs",
-      "line": 107,
-      "call": "Box(arch,new(0,3.58f,0),new(2.45f,.26f,4.9f),_snowMaterial,.12f)",
-      "callSha256": "2ad56bbfa69d2c84e7f3d14f09543d65797cbb5a2060bfab8c4f3dbd7be6ee06",
-      "domain": "owned-generator-or-helper"
-    },
-    {
-      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Cone:4",
-      "file": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs",
-      "line": 111,
-      "call": "Cone(arch,new(.95f,2.65f-h/2,z),.14f,h,_crystalMaterial,6)",
-      "callSha256": "a30ce76fe0cf7f9c43834f30ded13478faf8d9f6678f5a8c19792113c698f7ed",
-      "domain": "owned-generator-or-helper"
-    },
-    {
-      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Sphere:8",
-      "file": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs",
-      "line": 121,
-      "call": "Sphere(crown,new((i-2)*1.15f,.12f,(i%2)*.4f),new(1.6f,.5f,1.5f),_snowMaterial)",
-      "callSha256": "01849705904c4b5c64b84c3801ea3e301d992aa95e28ab518b8eaee2bc626c58",
-      "domain": "owned-generator-or-helper"
-    },
-    {
-      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Cylinder:4",
-      "file": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs",
-      "line": 129,
-      "call": "Cylinder(camp,new(0,.65f,0),.045f,1.3f,timber)",
-      "callSha256": "2dd970cb4429beb3a638badb6d5f2142e0ed4f6bc6908ed09c673805dd4e3901",
-      "domain": "owned-generator-or-helper"
-    },
-    {
-      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Box:6",
-      "file": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs",
-      "line": 130,
-      "call": "Box(camp,new(.19f,1.29f,0),new(.44f,.045f,.045f),timber)",
-      "callSha256": "ef7da95c434eeab04fb0def49da86db993c834ef1f2dd40422f5d136af7288f4",
-      "domain": "owned-generator-or-helper"
-    },
-    {
-      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Box:7",
-      "file": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs",
-      "line": 132,
-      "call": "Box(lantern,new(0,-.18f,0),new(.23f,.3f,.23f),Glow(new(\"ffcc78\"),1.3f),.025f)",
-      "callSha256": "36729d8c00e86d42c1b8cda7939272f569b15439f02f06f3acebeb157c31c353",
-      "domain": "owned-generator-or-helper"
-    },
-    {
-      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Box:8",
-      "file": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs",
-      "line": 133,
-      "call": "Box(lantern,new(0,-.35f,0),new(.3f,.04f,.3f),timber,.01f)",
-      "callSha256": "d0fd0e1e801b87d807568bf8be7f9b712aeddbb226603141e08dc76481887277",
-      "domain": "owned-generator-or-helper"
-    },
-    {
-      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Cone:5",
-      "file": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs",
-      "line": 134,
-      "call": "Cone(lantern,new(0,.02f,0),.22f,.15f,timber,4)",
-      "callSha256": "332c10198678fc373a54cc289249020483444279d9e16b2504f72ad51724ebb2",
-      "domain": "owned-generator-or-helper"
-    },
-    {
-      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Taper:4",
-      "file": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs",
-      "line": 142,
+      "line": 78,
       "call": "Taper(tree,new(0,.8f,0),.14f,.075f,1.6f,bark,8)",
       "callSha256": "cfd4c92c9562a2034e886976b40a97ad1d50e2bf6786e0d92f8983b665d598e9",
       "domain": "owned-generator-or-helper"
     },
     {
-      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Taper:5",
+      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Taper:2",
       "file": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs",
-      "line": 148,
+      "line": 84,
       "call": "Taper(branch,new(.35f,.28f,0),.065f,.025f,.9f,bark,7)",
       "callSha256": "86265a273c91725c9032c08836de44474e0bb087cfdb4c36cc9d3091b2ebb4a6",
       "domain": "owned-generator-or-helper"
     },
     {
-      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Sphere:9",
+      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Sphere:2",
       "file": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs",
-      "line": 149,
+      "line": 85,
       "call": "Sphere(branch,new(.37f,.39f,0),new(.7f,.14f,.22f),_snowMaterial)",
       "callSha256": "497f06ae6bf4ff0e24bfc2dfbe753424c51cb48a73fb5de35f77d3c9a05daa1a",
       "domain": "owned-generator-or-helper"
     },
     {
-      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Taper:6",
+      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Taper:3",
       "file": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs",
-      "line": 150,
+      "line": 86,
       "call": "Taper(branch,new(.65f,.66f,0),.035f,.008f,.5f,bark,6)",
       "callSha256": "55b2ab919d2dc984a830fe04a480e285f2d5af23d4288ed55c1ae397dc63623f",
       "domain": "owned-generator-or-helper"
     },
     {
-      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Sphere:10",
+      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Sphere:3",
       "file": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs",
-      "line": 151,
+      "line": 87,
       "call": "Sphere(branch,new(.69f,.85f,0),new(.18f,.12f,.18f),_snowMaterial)",
       "callSha256": "a01a7ca7254df1efbb741f4fbe2e9e444317ff553ae18f5dea3bb5b5c803c982",
       "domain": "owned-generator-or-helper"
     },
     {
-      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Sphere:11",
+      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Sphere:4",
       "file": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs",
-      "line": 161,
+      "line": 97,
       "call": "Sphere(body,new(0,.32f,0),new(.4f,.6f,.36f),black)",
       "callSha256": "b5d423d60169cf3c8a39359b82442da7c44d674c3177577f033be3e6d826faf9",
       "domain": "owned-generator-or-helper"
     },
     {
-      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Sphere:12",
+      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Sphere:5",
       "file": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs",
-      "line": 162,
+      "line": 98,
       "call": "Sphere(body,new(0,.3f,.07f),new(.3f,.48f,.26f),white)",
       "callSha256": "713efeb69a916a48f18ac3784989c4e55f5069c742c3e6b4309f055bcd4ca5cf",
       "domain": "owned-generator-or-helper"
     },
     {
-      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Sphere:13",
+      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Sphere:6",
       "file": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs",
-      "line": 163,
+      "line": 99,
       "call": "Sphere(body,new(0,.68f,0),new(.28f,.27f,.27f),black)",
       "callSha256": "1d5318ee0aca0c03851f6f4e8198a984e61ee15432a32ebc80fcd87529db128c",
       "domain": "owned-generator-or-helper"
     },
     {
-      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Bead:3",
+      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Bead:1",
       "file": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs",
-      "line": 164,
+      "line": 100,
       "call": "Bead(body,new(x,.72f,.12f),Vector3.One*.05f,white)",
       "callSha256": "77920c06e7a78dfcbcaa7595f1c56ae42b5ba06493bb554bf48499b791bb59bc",
       "domain": "owned-generator-or-helper"
     },
     {
-      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Cone:6",
+      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Cone:3",
       "file": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs",
-      "line": 165,
+      "line": 101,
       "call": "Cone(body,new(0,.66f,.17f),.04f,.1f,orange,8)",
       "callSha256": "8d1aab7ecc7b312b7f5ce6f13815fd5d06eff683c6b089fbc2daa91e98589588",
       "domain": "owned-generator-or-helper"
     },
     {
-      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Sphere:14",
+      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Sphere:7",
       "file": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs",
-      "line": 166,
+      "line": 102,
       "call": "Sphere(root,new(x,.02f,.08f),new(.12f,.04f,.18f),orange)",
       "callSha256": "e2f4ca68cdd7dd8b6409c802cb17309382da63262116f9bd31cdf8c085e7a382",
       "domain": "owned-generator-or-helper"
     },
     {
-      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Sphere:15",
+      "id": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs:Sphere:8",
       "file": "scripts/arena/stages/TempleStageView.BlizzardExterior.cs",
-      "line": 172,
+      "line": 108,
       "call": "Sphere(flippers[side],new(sign*.03f,-.13f,0),new(.06f,.3f,.14f),black)",
       "callSha256": "92c94314d25ebf2913fe27579ed53edca310b6107928ae4663db0b074aff12af",
       "domain": "owned-generator-or-helper"
@@ -4100,7 +3884,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:PrimitiveTemplates.Get:1",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 192,
+      "line": 198,
       "call": "PrimitiveTemplates.Get(\"PlaneMesh\",(\"size\",new Vector2(160,160)),(\"subdivide_width\",180),(\"subdivide_depth\",180))",
       "callSha256": "f4d9273801d9e800886b6d10ae66bbfaab6e0e96e5e51d5de5c96ff10ade6f24",
       "domain": "PlaneMesh",
@@ -4111,7 +3895,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:PrimitiveTemplates.Get:2",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 195,
+      "line": 201,
       "call": "PrimitiveTemplates.Get(\"BoxMesh\",(\"size\",new Vector3(160,.05f,160)))",
       "callSha256": "53fb7f4d4dfc8a5c3b956129772b2d397bcdac310b0124db1505fb3c238880f0",
       "domain": "BoxMesh",
@@ -4302,7 +4086,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:1",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 207,
+      "line": 213,
       "call": "Box(this,new(x+.5f,(y-.15f+floorBottom)/2,z+.5f),new(.998f,y-.15f-floorBottom, .998f),wall)",
       "callSha256": "492aad0c9a9968ded3e2d2b29b36179a8c3909df161d5b18fc9c9e282e692f9c",
       "domain": "owned-generator-or-helper"
@@ -4310,7 +4094,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:2",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 208,
+      "line": 214,
       "call": "Box(this,new(x+.5f,y-.085f,z+.5f),new(.985f,.17f,.985f),courtyard?_cobble:_stone,.025f)",
       "callSha256": "daaf78b9841a675e65f9e7d53dda465f358cee2b7423752382c86f35fdf9946f",
       "domain": "owned-generator-or-helper"
@@ -4318,7 +4102,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:3",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 220,
+      "line": 226,
       "call": "Box(this,point-Vector3.Up*treadThickness/2,new(dx==0?.99f:1f/6,h-treadThickness,dz==0?.99f:1f/6),wall)",
       "callSha256": "97028d4a162d1baddea361233ff1de1ac59c7d23dbc7498046fe95acaccfbb7b",
       "domain": "owned-generator-or-helper"
@@ -4326,7 +4110,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:4",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 221,
+      "line": 227,
       "call": "Box(this,new(point.X,from+h-treadThickness/2,point.Z),new(dx==0?.99f:1f/6,treadThickness,dz==0?.99f:1f/6),cap,.006f)",
       "callSha256": "ba78a21f79ada3794215b37c1b72b764691db656623b26e858a8cc6ae1c48628",
       "domain": "owned-generator-or-helper"
@@ -4334,7 +4118,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:newSurfaceTool:1",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 252,
+      "line": 258,
       "call": "new SurfaceTool()",
       "callSha256": "524d4daa3dd8ade1577b68b52e91ebbe9907def4954bab94da3aeb8c6bb1a4ae",
       "domain": "owned-generator-or-helper"
@@ -4342,7 +4126,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:surface.Commit:1",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 278,
+      "line": 284,
       "call": "surface.Commit()",
       "callSha256": "3a4b0e22bc74cdecd537891eb2f48df20b98f27fbf269b1803e1cc035b3194ec",
       "domain": "owned-generator-or-helper"
@@ -4350,7 +4134,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:5",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 284,
+      "line": 290,
       "call": "Box(root,new(0,.3f,.012f),new(.99f,.065f,.03f),light)",
       "callSha256": "329b48b191eff7445f5f0fc067172882948703bca8c32d270b20257c2716ff72",
       "domain": "owned-generator-or-helper"
@@ -4358,7 +4142,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:6",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 285,
+      "line": 291,
       "call": "Box(root,new(0,-.3f,.012f),new(.99f,.065f,.03f),light)",
       "callSha256": "144c06386818208fb4c87bfaef7254df7825ced97a9ca65842ce84d1863be073",
       "domain": "owned-generator-or-helper"
@@ -4366,7 +4150,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:7",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 286,
+      "line": 292,
       "call": "Box(root,new(0,0,.006f),new(.88f,.4f,.018f),dark)",
       "callSha256": "dde399f0835adf0fc7b9bdacc90c81fa68a152a9efe5af2db8ff90c82c9820fd",
       "domain": "owned-generator-or-helper"
@@ -4374,7 +4158,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:8",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 288,
+      "line": 294,
       "call": "Box(root,new(-.36f,0,.023f),new(.055f,.34f,.025f),light)",
       "callSha256": "df97b7afa7d29de5bc05c6d9b63e48193304912fb1b5e9b9472875ce1c3545f5",
       "domain": "owned-generator-or-helper"
@@ -4382,7 +4166,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:9",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 289,
+      "line": 295,
       "call": "Box(root,new(0,.15f,.023f),new(.75f,.055f,.025f),light)",
       "callSha256": "5de3040046c617787761ba697ff22ab4bdaf896c86b2124ca62ab312ae041b03",
       "domain": "owned-generator-or-helper"
@@ -4390,7 +4174,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:10",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 290,
+      "line": 296,
       "call": "Box(root,new(.35f,.01f,.023f),new(.055f,.32f,.025f),light)",
       "callSha256": "c833c5964c6f9523a79ba6bb7173be42c36eb648d8b1c93d4a106711110c9830",
       "domain": "owned-generator-or-helper"
@@ -4398,7 +4182,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:11",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 291,
+      "line": 297,
       "call": "Box(root,new(.095f,-.12f,.023f),new(.56f,.055f,.025f),light)",
       "callSha256": "5f4d1f7cdbaf22fbda3db27a10c5d6e84ec0214449ddd6457955ef2ddac7af47",
       "domain": "owned-generator-or-helper"
@@ -4406,7 +4190,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:12",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 292,
+      "line": 298,
       "call": "Box(root,new(-.16f,-.025f,.023f),new(.055f,.23f,.025f),light)",
       "callSha256": "d95fd178173fbe2350b4c2ac96b4b11869cc487a625893a329160d764acd3a33",
       "domain": "owned-generator-or-helper"
@@ -4414,7 +4198,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:13",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 293,
+      "line": 299,
       "call": "Box(root,new(.02f,.06f,.023f),new(.39f,.055f,.025f),light)",
       "callSha256": "e9fea0c001a6924dc3adecfce99e15d4a5524182043775759565966f9c0ce322",
       "domain": "owned-generator-or-helper"
@@ -4422,7 +4206,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:14",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 294,
+      "line": 300,
       "call": "Box(root,new(.19f,.005f,.023f),new(.055f,.15f,.025f),light)",
       "callSha256": "f11bd63924c1421d60cf6a4052c32702532277813953a91dc1b874342f15d911",
       "domain": "owned-generator-or-helper"
@@ -4430,7 +4214,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:15",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 300,
+      "line": 306,
       "call": "Box(this,p+new Vector3(0,.095f,0),new(.94f,.19f,.94f),highlight,.055f)",
       "callSha256": "8bde92a56a5505b7c764544f6f8f3ba870d4330f665cf344b77a5422ad79358d",
       "domain": "owned-generator-or-helper"
@@ -4438,7 +4222,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:16",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 301,
+      "line": 307,
       "call": "Box(this,p+new Vector3(0,.6f,0),new(.67f,.96f,.67f),stone,.055f)",
       "callSha256": "5126d9370f611f5bbf9fb14e6cdd1a6bd85360062dfc01ab82c3b568f393749f",
       "domain": "owned-generator-or-helper"
@@ -4446,7 +4230,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:17",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 302,
+      "line": 308,
       "call": "Box(this,p+new Vector3(0,1.13f,0),new(.9f,.16f,.9f),highlight,.045f)",
       "callSha256": "3bf9e122d4d6c4a9c91669149d2512766d084bc76bdf26a5b3b629d9fbf87091",
       "domain": "owned-generator-or-helper"
@@ -4454,7 +4238,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:18",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 303,
+      "line": 309,
       "call": "Box(this,p+new Vector3(0,.65f,.345f),new(.26f,.5f,.025f),_art.Color(new(\"856432\")),.015f)",
       "callSha256": "4e0b866cdcf2123d5f590b345c4b8fc4b74d27d891e97dd0fb8ca634a8ac6d05",
       "domain": "owned-generator-or-helper"
@@ -4462,7 +4246,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:19",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 310,
+      "line": 316,
       "call": "Box(this,new(Width*.5f,y,1.95f),new(2.7f,.02f,1.7f),gold,.015f)",
       "callSha256": "ee5bfc8f2a087956e87b95f5a66b3c4ab9d94a027ee855d96b47d935b0707223",
       "domain": "owned-generator-or-helper"
@@ -4470,7 +4254,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:20",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 311,
+      "line": 317,
       "call": "Box(this,new(Width*.5f,y+.015f,1.95f),new(2.3f,.015f,1.3f),dark,.015f)",
       "callSha256": "7348c4e6498333c50b5292e4763feefc8b83a6d973a5415b02bd8359810fda37",
       "domain": "owned-generator-or-helper"
@@ -4478,7 +4262,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:21",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 312,
+      "line": 318,
       "call": "Box(this,new(Width*.5f+i*.5f,y+.03f,1.95f),new(.2f,.015f,.8f),gold)",
       "callSha256": "3634c008c20bc0eb78bbcae83da0e00b916fb2dd3eb2375fd68d5c0083eba123",
       "domain": "owned-generator-or-helper"
@@ -4486,7 +4270,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:22",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 325,
+      "line": 331,
       "call": "Box(root,new(0,.39f,0),new(.76f,.78f,.76f),sandstone,.06f)",
       "callSha256": "4ebdf16410f0b5597e292d9e49e0629793b949f224e313bc6c37292e032106f4",
       "domain": "owned-generator-or-helper"
@@ -4494,7 +4278,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:23",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 326,
+      "line": 332,
       "call": "Box(root,new(0,.045f,0),new(.82f,.09f,.82f),edge,.025f)",
       "callSha256": "bb9f7f1afd949b71ba3bf624b6cbce1dc2c78719460c053f51359de94f43941d",
       "domain": "owned-generator-or-helper"
@@ -4502,7 +4286,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:24",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 327,
+      "line": 333,
       "call": "Box(root,new(0,.77f,0),new(.82f,.09f,.82f),edge,.025f)",
       "callSha256": "d61ae75894b18b04bbfeae2d4e8a7d24547e4618d9b905337c54c155e134415d",
       "domain": "owned-generator-or-helper"
@@ -4510,7 +4294,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:25",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 328,
+      "line": 334,
       "call": "Box(root,new(0,.39f,.383f),new(.41f,.39f,.025f),dark,.04f)",
       "callSha256": "7d2cb887b5e40c57b4a908912519a51708b327e1a8efac8b5c9a9c7c16e602da",
       "domain": "owned-generator-or-helper"
@@ -4518,9 +4302,137 @@
     {
       "id": "scripts/arena/stages/TempleStageView.cs:Box:26",
       "file": "scripts/arena/stages/TempleStageView.cs",
-      "line": 329,
+      "line": 335,
       "call": "Box(root,new(0,.39f,.407f),new(.23f,.23f,.028f),edge,.025f)",
       "callSha256": "6c6bec71fac60f81f152e6228d6b0f0c13f372f8a9e6700c7247d2c1f412b6d3",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/blizzard_battle/TempleStageView.GlacierBowl.cs:Cylinder:1",
+      "file": "scripts/arena/stages/blizzard_battle/TempleStageView.GlacierBowl.cs",
+      "line": 26,
+      "call": "Cylinder(lee,new(0,.01f,0),2.1f,.04f,_art.Color(new(\"9fd3ea\"),.08f))",
+      "callSha256": "2f95ea03e58a2fd3e977abe766b900f6fea63ab9a79645973ce10a03fc386c14",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/blizzard_battle/TempleStageView.GlacierBowl.cs:Cylinder:2",
+      "file": "scripts/arena/stages/blizzard_battle/TempleStageView.GlacierBowl.cs",
+      "line": 27,
+      "call": "Cylinder(lee,Vector3.Zero,2.35f,.035f,_art.Color(new(\"dbe6f0\"),.75f))",
+      "callSha256": "a16ec403e639edf7405fc75df0452dc68e174c703097ec7f7eedf2e19927573e",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/blizzard_battle/TempleStageView.GlacierBowl.cs:RoundedBox:1",
+      "file": "scripts/arena/stages/blizzard_battle/TempleStageView.GlacierBowl.cs",
+      "line": 34,
+      "call": "RoundedBox(mast,new(0,1.2f,0),new(.16f,2.4f,.16f),wood,.5f)",
+      "callSha256": "27395cf1dbdf61463879ed6b51d13a5f6d013b0b9412ca7817d27a43d152b743",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/blizzard_battle/TempleStageView.GlacierBowl.cs:Sphere:1",
+      "file": "scripts/arena/stages/blizzard_battle/TempleStageView.GlacierBowl.cs",
+      "line": 35,
+      "call": "Sphere(mast,new(0,2.48f,0),Vector3.One*.27f,brass)",
+      "callSha256": "2890a13532c9166c7bf02c829f51ffd5aa9dbc4be42cde4df9c09b3dc70b3856",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/blizzard_battle/TempleStageView.GlacierBowl.cs:RoundedBox:2",
+      "file": "scripts/arena/stages/blizzard_battle/TempleStageView.GlacierBowl.cs",
+      "line": 40,
+      "call": "RoundedBox(lantern,new(0,.05f,0),new(.7f,.1f,.56f),brass,.4f)",
+      "callSha256": "4e5241add4ca3fb07bbe5d7fc4fe007c0b3a17a7ec27c64db043eed962b0d48e",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/blizzard_battle/TempleStageView.GlacierBowl.cs:RoundedBox:3",
+      "file": "scripts/arena/stages/blizzard_battle/TempleStageView.GlacierBowl.cs",
+      "line": 41,
+      "call": "RoundedBox(lantern,new(0,.43f,0),new(.56f,.69f,.48f),wood,.19f)",
+      "callSha256": "b722ff987954d111a8f8382a8eea51e6078f31710b5aed21dbfe7513689bbd49",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/blizzard_battle/TempleStageView.GlacierBowl.cs:Box:1",
+      "file": "scripts/arena/stages/blizzard_battle/TempleStageView.GlacierBowl.cs",
+      "line": 42,
+      "call": "Box(lantern,new(0,.44f,.255f),new(.41f,.49f,.035f),Glow(new(\"ffc279\"),1.5f),.045f)",
+      "callSha256": "4f41cfe7296d5ce39a3d5566572d3e5c6e983139ecf962bb6bc45d1bccb6b1ae",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/blizzard_battle/TempleStageView.GlacierBowl.cs:RoundedBox:4",
+      "file": "scripts/arena/stages/blizzard_battle/TempleStageView.GlacierBowl.cs",
+      "line": 43,
+      "call": "RoundedBox(lantern,new(0,.82f,0),new(.68f,.15f,.6f),brass,.5f)",
+      "callSha256": "98b4cea527e5c6fcc2d928b11ce90dfc6bbd4eb2f778a4ae524bb7a3b8ff5f55",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/blizzard_battle/TempleStageView.GlacierGrottoMesh.cs:newSurfaceTool:1",
+      "file": "scripts/arena/stages/blizzard_battle/TempleStageView.GlacierGrottoMesh.cs",
+      "line": 70,
+      "call": "new SurfaceTool()",
+      "callSha256": "524d4daa3dd8ade1577b68b52e91ebbe9907def4954bab94da3aeb8c6bb1a4ae",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/blizzard_battle/TempleStageView.GlacierGrottoMesh.cs:newSurfaceTool:2",
+      "file": "scripts/arena/stages/blizzard_battle/TempleStageView.GlacierGrottoMesh.cs",
+      "line": 71,
+      "call": "new SurfaceTool()",
+      "callSha256": "524d4daa3dd8ade1577b68b52e91ebbe9907def4954bab94da3aeb8c6bb1a4ae",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/blizzard_battle/TempleStageView.GlacierGrottoMesh.cs:newSurfaceTool:3",
+      "file": "scripts/arena/stages/blizzard_battle/TempleStageView.GlacierGrottoMesh.cs",
+      "line": 72,
+      "call": "new SurfaceTool()",
+      "callSha256": "524d4daa3dd8ade1577b68b52e91ebbe9907def4954bab94da3aeb8c6bb1a4ae",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/blizzard_battle/TempleStageView.GlacierGrottoMesh.cs:powder.Commit:1",
+      "file": "scripts/arena/stages/blizzard_battle/TempleStageView.GlacierGrottoMesh.cs",
+      "line": 177,
+      "call": "powder.Commit()",
+      "callSha256": "606c73242fc6a6e8cf1a7d45ae7bba061cb0cd6bcaa3a4d32e2c31a5a24b513d",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/blizzard_battle/TempleStageView.GlacierGrottoMesh.cs:frozen.Commit:1",
+      "file": "scripts/arena/stages/blizzard_battle/TempleStageView.GlacierGrottoMesh.cs",
+      "line": 177,
+      "call": "frozen.Commit(mesh)",
+      "callSha256": "543bf2b3eab6b8d86cfcc9eedced04ae603251af54daccdd29c611ef6e8e065a",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/blizzard_battle/TempleStageView.GlacierGrottoMesh.cs:icicles.Commit:1",
+      "file": "scripts/arena/stages/blizzard_battle/TempleStageView.GlacierGrottoMesh.cs",
+      "line": 177,
+      "call": "icicles.Commit(mesh)",
+      "callSha256": "c8b94882493b7d0b0eecfbcc578efbd22b90c10be7dd8845ee92d7379d2e4f9b",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/blizzard_battle/TempleStageView.GlacierGrottoMesh.cs:newSurfaceTool:4",
+      "file": "scripts/arena/stages/blizzard_battle/TempleStageView.GlacierGrottoMesh.cs",
+      "line": 198,
+      "call": "new SurfaceTool()",
+      "callSha256": "524d4daa3dd8ade1577b68b52e91ebbe9907def4954bab94da3aeb8c6bb1a4ae",
+      "domain": "owned-generator-or-helper"
+    },
+    {
+      "id": "scripts/arena/stages/blizzard_battle/TempleStageView.GlacierGrottoMesh.cs:surface.Commit:1",
+      "file": "scripts/arena/stages/blizzard_battle/TempleStageView.GlacierGrottoMesh.cs",
+      "line": 217,
+      "call": "surface.Commit()",
+      "callSha256": "3a4b0e22bc74cdecd537891eb2f48df20b98f27fbf269b1803e1cc035b3194ec",
       "domain": "owned-generator-or-helper"
     },
     {
@@ -9559,8 +9471,8 @@
     "scripts/arena/models/BomberModel.Mishaps.cs": "63a4349d7180f5332b8b33bbc67148eee9dc9d4f3d40d67f6f0b60d32477bb0b",
     "scripts/arena/models/BomberModel.cs": "aa3d46aae0708ee59f9ae6bef7133a5232ea02bc0c3dafdbb86f7b15cb6b7faf",
     "scripts/arena/models/PowerupModel.cs": "44022f1b2a98bbeab5df0096603048045b272818d0b3753a5a400a56015b49d6",
-    "scripts/arena/stages/TempleStageView.Blizzard.cs": "5651a5c6316cbd7df8458290d6258eb7399ab63c8c130e9103d5bb59f457cde0",
-    "scripts/arena/stages/TempleStageView.BlizzardExterior.cs": "67cd2655eb99f74211b78153b831e9e4ffe224a044f2fe5eb52de70db791d97f",
+    "scripts/arena/stages/TempleStageView.Blizzard.cs": "eb5c462a66897c885d449f05bd001c5fae176620c9324a6b46873c383c172841",
+    "scripts/arena/stages/TempleStageView.BlizzardExterior.cs": "a15e440169228924a63298d429002e7edd12f64e4815c19ed923991cef84b0c7",
     "scripts/arena/stages/TempleStageView.CircuitGarden.cs": "3471d0ac35359ce9c8552cefd5bcd9e4d906311fda7026db9a72c404ec9a7b2c",
     "scripts/arena/stages/TempleStageView.CircuitGardenExterior.cs": "23a12cc15296d218d3be4ca38b266a3572d2345df2ea00c775c5916bff44983e",
     "scripts/arena/stages/TempleStageView.GreedyExterior.cs": "ff367d5edeee8ee5da86d64f8246291016c202d5381e725677eca3ba629e5e73",
@@ -9575,7 +9487,9 @@
     "scripts/arena/stages/TempleStageView.TopRulesExterior.cs": "e1799d261b5abea1cc0a44d6c3a4329a78786a4327973472d3bd26ef28395d15",
     "scripts/arena/stages/TempleStageView.UpAndDown.cs": "66ee09178629038b769382d720fae901d74d7bb670e846143463b998f96f2006",
     "scripts/arena/stages/TempleStageView.UpAndDownExterior.cs": "f6beb01527bf31f486f53c77b0a49a0233aeeaf5dc001d7cd20f9e11090ddacf",
-    "scripts/arena/stages/TempleStageView.cs": "3f57e91b3f9ca13569e549a97c30d88489713123228c2cc12e7da87bf2574bd6",
+    "scripts/arena/stages/TempleStageView.cs": "56eca539725b8782ae918cfe09ff845bf94b08252166bb1ddf161d6fb53f7f80",
+    "scripts/arena/stages/blizzard_battle/TempleStageView.GlacierBowl.cs": "3ef945f4b7fe2bfa12b8fc7695022013a99415236f2ad8744c167e5c66135abc",
+    "scripts/arena/stages/blizzard_battle/TempleStageView.GlacierGrottoMesh.cs": "fbba2cba114300059c5b1f42c8711e05fccb6b31af47af47f645a5b3207d6601",
     "scripts/rendering/ArtGeometry.cs": "32fea3664b4af118fe691a5e0c1eb396eebf0352922996ea2b18896d0ea9764e",
     "scripts/rendering/PrimitiveTemplates.cs": "a217a597e45615d6a71b19529c4b24ca49cf09b1a2473b53e509ee153cce9352",
     "scripts/testing/journeys/rendering/AssetAuditPlaytest.cs": "9369deb5c46c7f4db09a187701d5c548b454e53ba80da072835a8a475f31e742",
