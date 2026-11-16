@@ -81,7 +81,23 @@ public sealed class WindowsLaunchGuard(string stateDirectory)
         try
         {
             using var lifetime=engineLifetime?.Invoke(child);
-            if(guarded)Atomic(markerPath,marker with{EnginePid=child.Id,EngineIdentity=DesktopProcessIdentity.StartToken(child)});
+            if(guarded)
+            {
+                string? engineIdentity=null;
+                try {if(!child.HasExited)engineIdentity=DesktopProcessIdentity.StartToken(child);}
+                // A first-frame crash can remove /proc/PID/stat between the
+                // liveness check and the read. Preserve the durable parent
+                // marker and return the actual child exit below. Other birth,
+                // permission and marker-write failures must still propagate.
+                catch(DirectoryNotFoundException) when(OperatingSystem.IsLinux()&&child.HasExited&&!Directory.Exists($"/proc/{child.Id}"))
+                {engineIdentity=null;}
+                catch(FileNotFoundException missingStat) when(OperatingSystem.IsLinux()&&child.HasExited&&missingStat.FileName==$"/proc/{child.Id}/stat")
+                {engineIdentity=null;}
+                // A dead child with no birth token is never considered alive.
+                // Bind its PID so a later launch does not mistake the still-live
+                // launcher for an engine that is currently starting.
+                Atomic(markerPath,marker with{EnginePid=child.Id,EngineIdentity=engineIdentity});
+            }
             var exited=child.WaitForExitAsync(ct);
             while(!exited.IsCompleted)
             {
