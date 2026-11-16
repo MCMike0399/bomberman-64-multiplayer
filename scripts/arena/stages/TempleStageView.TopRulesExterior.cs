@@ -19,32 +19,6 @@ public partial class TempleStageView
 
         var rock=_art.Color(new("5b5860"),.95f);
 
-        // Corner turrets: tall braziers at the rear, short roofed towers at the front
-        // so the near wall stays low and the lower court remains visible.
-        foreach(var (x,z,rear) in new[]{(-.45f,-.45f,true),(Width+.45f,-.45f,true),(-.45f,Depth+.45f,false),(Width+.45f,Depth+.45f,false)})
-        {
-            float height=rear?6.9f:3.15f,radius=rear?.92f:.7f;
-            var turret=Prop(scenery,"Turret",new(x,-.94f,z));
-            Cylinder(turret,new(0,height/2,0),radius,height,stone);
-            Cylinder(turret,new(0,height-.05f,0),radius+.12f,.14f,cap);
-            for(int band=1;band<=(rear?3:1);band++)Cylinder(turret,new(0,band*1.7f,0),radius+.03f,.08f,gold);
-            if(rear)
-            {
-                for(int merlon=0;merlon<8;merlon++)
-                {
-                    float a=merlon*Mathf.Tau/8;
-                    Box(turret,new(Mathf.Cos(a)*.86f,height+.2f,Mathf.Sin(a)*.86f),new(.34f,.36f,.26f),cap,.02f).Rotation=new(0,Mathf.Pi/2-a,0);
-                }
-                Taper(turret,new(0,height+.2f,0),.32f,.45f,.36f,iron,12);
-                Flame(turret,new(0,height+.38f,0),1.4f,x+z);
-            }
-            else
-            {
-                Cone(turret,new(0,height+.6f,0),radius+.16f,1.2f,slate,16);
-                Pennant(turret,new(0,height+1.15f,0),.9f,new("c2263a"),x*.7f+z);
-            }
-        }
-
         // Banners on the rear wall's inner face, between the recessed columns and well
         // above the upper deck's standing space.
         foreach(float x in new[]{5.5f,9.5f,13.5f})
@@ -78,43 +52,86 @@ public partial class TempleStageView
         BuildOrbitalBackdrop();
     }
 
+    private void BuildTopRulesCoreTurrets()
+    {
+        var stone=_castleWallMaterial;
+        var cap=_art.Color(new("bdc4c5"),.8f);var slate=_art.Toy(new("3d4f7a"),.5f);
+        var gold=_art.Color(new("c79a3d"),.4f);var iron=_art.Color(new("2c2f36"),.5f);
+        // Corner turrets: tall braziers at the rear, short roofed towers at the front
+        // so the near wall stays low and the lower court remains visible.
+        foreach(var (x,z,rear) in new[]{(-.45f,-.45f,true),(Width+.45f,-.45f,true),(-.45f,Depth+.45f,false),(Width+.45f,Depth+.45f,false)})
+        {
+            float height=rear?6.9f:3.15f,radius=rear?.92f:.7f;
+            var turret=Prop(this,"Turret"+(rear?"Rear":"Front")+(x<0?"West":"East"),new(x,-.94f,z));
+            Cylinder(turret,new(0,height/2,0),radius,height,stone);
+            Cylinder(turret,new(0,height-.05f,0),radius+.12f,.14f,cap);
+            for(int band=1;band<=(rear?3:1);band++)Cylinder(turret,new(0,band*1.7f,0),radius+.03f,.08f,gold);
+            if(rear)
+            {
+                for(int merlon=0;merlon<8;merlon++)
+                {
+                    float a=merlon*Mathf.Tau/8;
+                    Box(turret,new(Mathf.Cos(a)*.86f,height+.2f,Mathf.Sin(a)*.86f),new(.34f,.36f,.26f),cap,.02f).Rotation=new(0,Mathf.Pi/2-a,0);
+                }
+                Taper(turret,new(0,height+.2f,0),.32f,.45f,.36f,iron,12);
+                Flame(turret,new(0,height+.38f,0),1.4f,x+z);
+            }
+            else
+            {
+                Cone(turret,new(0,height+.6f,0),radius+.16f,1.2f,slate,16);
+                Pennant(turret,new(0,height+1.15f,0),.9f,new("c2263a"),x*.7f+z);
+            }
+        }
+
+    }
+
     /// <summary>Layered irregular rings narrowing to a point well below the foundation.</summary>
     private static ArrayMesh CragMesh(int width,int depth)
     {
         var surface=new SurfaceTool();surface.Begin(Mesh.PrimitiveType.Triangles);
-        const int segments=28;
-        float[] levels=[-.94f,-1.6f,-2.6f,-3.8f,-5.0f,-5.8f];
-        float[] scales=[1.19f,1.15f,1.03f,.82f,.48f,.09f];
+        const int segments=40;
+        // Broad, rounded shoulders and two eroded shelves remain visible below
+        // the near wall; only the deep keel narrows to a tabletop-rock point.
+        float[] levels=[-.94f,-1.4f,-1.95f,-2.3f,-2.7f,-3.25f,-3.8f,-4.35f,-5.1f,-5.8f];
+        float[] scales=[1.16f,1.20f,1.22f,1.18f,1.20f,1.17f,1.12f,1.02f,.72f,.16f];
         var center=new Vector3(width/2f,0,depth/2f);
         Vector3 Point(int layer,int i)
         {
             float a=i*Mathf.Tau/segments;
-            float wobble=layer==0?0:.035f*BlastCircuit.Rendering.PresentationMath.Sin(i*2.7f+layer*1.9f);
-            var(sin,cos)=BlastCircuit.Rendering.PresentationMath.SinCos(a);var dir=new Vector2(cos,sin);
+            var(sin,cos)=BlastCircuit.Rendering.PresentationMath.SinCos(a);
+            float wobble=layer==0?0:.02f*BlastCircuit.Rendering.PresentationMath.Sin(a*3+layer*.18f)+
+                .012f*BlastCircuit.Rendering.PresentationMath.SinCos(a*5-layer*.13f).Cos;
             float fourth=cos*cos*cos*cos+sin*sin*sin*sin;
             float rounded=1/(float)Math.Sqrt(Math.Sqrt(fourth));
             float shape=Mathf.Lerp(rounded,1.0f,layer/(float)(levels.Length-1));
-            float s=scales[layer]*(1+wobble)*shape;
-            return center+new Vector3(dir.X*width/2f*s,levels[layer],dir.Y*depth/2f*s);
+            float size=scales[layer]*(1+wobble)*shape;
+            return center+new Vector3(cos*width/2f*size,levels[layer],sin*depth/2f*size);
         }
-        void Triangle(Vector3 a,Vector3 b,Vector3 c)
+        Vector3 Normal(int layer,int i)
         {
-            var normal=(c-a).Cross(b-a).Normalized();
-            var mid=(a+b+c)/3;
-            if(normal.Dot(new Vector3(mid.X-center.X,0,mid.Z-center.Z))<0){(b,c)=(c,b);normal=-normal;}
-            foreach(var p in new[]{a,b,c}){surface.SetNormal(normal);surface.SetUV(new(p.X+p.Z,p.Y));surface.AddVertex(p);}
+            var tangent=Point(layer,i+1)-Point(layer,i-1);
+            var vertical=Point(Math.Min(levels.Length-1,layer+1),i)-Point(Math.Max(0,layer-1),i);
+            var n=vertical.Cross(tangent).Normalized();var p=Point(layer,i)-center;
+            if(n.Dot(new(p.X,0,p.Z))<0)n=-n;
+            return n;
+        }
+        void Triangle(Vector3 a,Vector3 b,Vector3 c,Vector3 na,Vector3 nb,Vector3 nc)
+        {
+            if((b-a).Cross(c-a).Dot(na+nb+nc)>=0){(b,c)=(c,b);(nb,nc)=(nc,nb);}
+            foreach(var (p,n) in new[]{(a,na),(b,nb),(c,nc)})
+            {surface.SetNormal(n);surface.SetUV(new(p.X+p.Z,p.Y));surface.AddVertex(p);}
         }
         for(int layer=0;layer<levels.Length-1;layer++)for(int i=0;i<segments;i++)
         {
-            var a=Point(layer,i);var b=Point(layer,(i+1)%segments);
-            var c=Point(layer+1,(i+1)%segments);var d=Point(layer+1,i);
-            Triangle(a,b,c);Triangle(a,c,d);
+            var a=Point(layer,i);var b=Point(layer,i+1);var c=Point(layer+1,i+1);var d=Point(layer+1,i);
+            Triangle(a,b,c,Normal(layer,i),Normal(layer,i+1),Normal(layer+1,i+1));
+            Triangle(a,c,d,Normal(layer,i),Normal(layer+1,i+1),Normal(layer+1,i));
         }
         for(int i=0;i<segments;i++)
         {
-            Triangle(new(center.X,levels[0],center.Z),Point(0,i),Point(0,(i+1)%segments));
+            Triangle(new(center.X,levels[0],center.Z),Point(0,i),Point(0,i+1),Vector3.Up,Vector3.Up,Vector3.Up);
             int bottom=levels.Length-1;
-            Triangle(new(center.X,levels[bottom],center.Z),Point(bottom,(i+1)%segments),Point(bottom,i));
+            Triangle(new(center.X,levels[bottom],center.Z),Point(bottom,i+1),Point(bottom,i),Vector3.Down,Vector3.Down,Vector3.Down);
         }
         surface.Index();return surface.Commit();
     }

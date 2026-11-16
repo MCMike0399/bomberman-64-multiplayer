@@ -5,8 +5,41 @@ namespace BlastCircuit.Arena.Stages;
 
 public partial class TempleStageView
 {
+    private Node3D? _orreryLowMoon;
+    private readonly List<OmniLight3D> _orreryWarmLights=[];
+
+    private void UpdateOrreryCoreQuality()
+    {
+        if(_orreryLowMoon!=null)_orreryLowMoon.Visible=GraphicsQuality.Current==GraphicsPreset.Low;
+        foreach(var light in _orreryWarmLights)light.Visible=GraphicsQuality.Current!=GraphicsPreset.Low;
+    }
+
+    private void BuildOrreryWallLamps()
+    {
+        foreach(float x in new[]{5.5f,13.5f})
+        {
+            var lamp=Prop(this,"OrreryInnerWallLantern",new(x,3.35f,1.96f));
+            Box(lamp,Vector3.Zero,new(.7f,.95f,.16f),_art.Color(new("b09255")),.08f);
+            Box(lamp,new(0,0,.09f),new(.51f,.72f,.045f),Glow(new("ffc484"),1.35f),.045f);
+            Box(lamp,new(0,0,.12f),new(.045f,.73f,.035f),_art.Color(new("796440")));
+            var light=new OmniLight3D{Name="OrreryWarmWallLight",Position=new(0,0,.5f),
+                LightColor=new("ffd0a0"),LightEnergy=.7f,OmniRange=7,ShadowEnabled=false,
+                Visible=GraphicsQuality.Current!=GraphicsPreset.Low};lamp.AddChild(light);_orreryWarmLights.Add(light);
+        }
+    }
+
     private void BuildOrreryCore()
     {
+        _orreryLowMoon=Prop(this,"OrreryLowMoon",Vector3.Zero);
+        var moonAt=new Vector3(Width+5.2f,-1.9f,4.2f);
+        var moonPaint=new ShaderMaterial{Shader=new Shader{Code=OrreryGlobeShader}};
+        moonPaint.SetShaderParameter("paint_dark",new Color("8d8375"));moonPaint.SetShaderParameter("paint_light",new Color("e2d4af"));
+        moonPaint.SetShaderParameter("globe_kind",2);
+        Sphere(_orreryLowMoon,moonAt,Vector3.One,moonPaint).Name="CoreMoonGlobe";
+        _orreryLowMoon.AddChild(new MeshInstance3D{Name="CoreMoonOrreryArm",
+            Mesh=OrreryArmMesh(new(Width-.1f,-1.35f,Depth-2.5f),new(Width+5.2f,-1.9f,Depth+.8f),new(Width+7,-2.6f,7),moonAt,.18f),
+            MaterialOverride=_art.Color(new("bfa566"),.48f),CastShadow=GeometryInstance3D.ShadowCastingSetting.Off});
+        UpdateOrreryCoreQuality();
         var rock=new ShaderMaterial{Shader=new Shader{Code=OrreryCragShader}};
         _castleStone.Add(rock);
         AddChild(new MeshInstance3D{Name="FortressCrag",Mesh=CragMesh(Width,Depth),MaterialOverride=rock});
@@ -31,8 +64,7 @@ public partial class TempleStageView
         Arm("HeroOrreryArm",new(-.3f,-1.35f,Depth-1.5f),new(-3.2f,-2.7f,Depth+1.8f),new(-8,-3,12),hero);
         Arm("CompanionOrreryArm",new(Width-.1f,-1.25f,Depth-1.5f),new(Width+3.5f,-2,Depth+2),new(Width+6.5f,-3.4f,14.2f),companion);
         Arm("MoonOrreryArm",new(Width-.1f,-1.35f,Depth-2.5f),new(Width+5.2f,-1.9f,Depth+.8f),new(Width+7,-2.6f,7),moon);
-        scenery.AddChild(new OmniLight3D{Name="OrreryHeroRim",Position=hero+Vector3.Up*.4f,
-            LightColor=new Color("a983c5"),LightEnergy=.42f,OmniRange=24,ShadowEnabled=false});
+
 
         var stars=Prop(scenery,"OrreryStars",Vector3.Zero);
         var starPaint=Glow(new("b9b3d5"),.35f);
@@ -65,7 +97,7 @@ public partial class TempleStageView
         }
         void Arm(string name,Vector3 a,Vector3 b,Vector3 c,Vector3 d)
         {
-            var mesh=new MeshInstance3D{Name=name,Mesh=OrreryArmMesh(a,b,c,d,.095f),MaterialOverride=brass,CastShadow=GeometryInstance3D.ShadowCastingSetting.Off};scenery.AddChild(mesh);
+            var mesh=new MeshInstance3D{Name=name,Mesh=OrreryArmMesh(a,b,c,d,.18f),MaterialOverride=brass,CastShadow=GeometryInstance3D.ShadowCastingSetting.Off};scenery.AddChild(mesh);
             Sphere(scenery,a,Vector3.One*.35f,brass);
         }
     }
@@ -152,7 +184,9 @@ void vertex(){world=(MODEL_MATRIX*vec4(VERTEX,1.0)).xyz;}
 void fragment(){
     float strata=smoothstep(-4.8,-3.4,world.y)*.35+smoothstep(-2.1,-1.1,world.y)*.65;
     float brush=smoothstep(-.3,.6,sin(world.x*.23+world.z*.17)+sin(world.z*.34-world.x*.13)*.4);
-    ALBEDO=mix(vec3(.055,.060,.105),vec3(.10,.105,.17),strata)*mix(.85,1.13,brush);
+    ALBEDO=mix(vec3(.026,.030,.045),vec3(.070,.075,.105),strata)*mix(.85,1.13,brush);
+    float rim=pow(1.0-max(dot(NORMAL,VIEW),0.0),3.0);
+    EMISSION=vec3(.045,.038,.065)*rim;
     ROUGHNESS=.92;SPECULAR=.16;
 }
 """;
