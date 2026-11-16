@@ -1,6 +1,7 @@
 {
   "schemaVersion": 1,
   "scenarios": [
+    {"id":"graphics-preparation-starvation-probe","method":"GraphicsPreparationStarvationProbe","domains":["rendering","ui"],"headless":false,"timeout":90,"manual":false},
     {"id":"peer-ice-terminal","method":"PeerIceTerminal","domains":["network"],"headless":true,"timeout":30,"manual":false},
     {
       "id": "network-interruption",

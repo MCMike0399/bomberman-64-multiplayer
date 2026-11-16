@@ -260,8 +260,8 @@ def validate_playtest(destination, headless):
 
 def validate_soak(path):
     report = json.loads(path.read_text())
-    stages = ('sunken-temple', 'rock-garden', 'up-and-down', 'top-rules', 'blizzard-battle', 'greedy-trap')
-    expected = {(stage, difficulty, bots, seed) for stage in stages
+    expected = {(stage, difficulty, bots, seed)
+                for stage in ('sunken-temple', 'rock-garden', 'up-and-down', 'top-rules', 'blizzard-battle', 'greedy-trap')
                 for difficulty in ('easy', 'medium', 'hard')
                 for bots in (3, 7) for seed in (64, 9876)}
     if len(report.get('results', [])) != len(expected) or report.get('fairnessChecks', 0) <= 0:
@@ -289,7 +289,7 @@ def validate_soak(path):
         identities.add(identity)
         longest = max(longest, idle)
     if identities != expected:
-        raise RuntimeError('AI soak receipt does not match its stage/difficulty/bots/seed grid')
+        raise RuntimeError('AI soak receipt does not cover every required stage, difficulty, roster and seed')
     return {'receipt': str(path), 'scenarios': len(report['results']),
             'longestOpenIdleSeconds': longest / rate, 'idleLimitSeconds': limit / rate}
 
