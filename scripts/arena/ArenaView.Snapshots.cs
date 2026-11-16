@@ -31,7 +31,12 @@ public partial class ArenaView
             for(int i=0;i<_terrain.Width*_terrain.Depth;i++)
             {
                 bool exists=i/8<_softBlockBits.Length&&(_softBlockBits[i/8]&(1<<(i%8)))!=0;
-                if(exists&&!_blocks.ContainsKey(i)){var block=_terrain.CreateCover(i);_dynamic.AddChild(block);_blocks[i]=block;}
+                if(exists&&!_blocks.ContainsKey(i))
+                {
+                    var block=_terrain.CreateCover(i);
+                    // Keep the authored label while prior-match nodes await deletion.
+                    _dynamic.AddChild(block,true);_blocks[i]=block;
+                }
                 if(!exists&&_blocks.Remove(i,out var old)){Debris(old.Position);old.QueueFree();}
             }
         }

@@ -169,7 +169,7 @@ public sealed partial class BlastSession
                         TickFlyingBomb(context,b,dt);
                     }
                     break;
-                case BombState.Rolling: TickRollingBomb(context, b, dt); break;
+                case BombState.Rolling: BrakeGlassBomb(b,dt);if(b.State==BombState.Rolling)TickRollingBomb(context, b, dt);break;
                 case BombState.Flying: TickFlyingBomb(context, b, dt); break;
                 case BombState.Carried:
                     UpdateCarriedBombPosition(b);
