@@ -468,7 +468,8 @@ fixed-step VM readings establish functionality, not native hardware throughput.
 ## Arena selection
 
 The native arena dial cycles Sunken Temple, Rock Garden, Up & Down, Top Rules,
-Blizzard Battle and Greedy Trap. The real miniatures are built and rendered
+Blizzard Battle, Greedy Trap, Field of Grass, In the Gutter, Sea Sick and Lost at
+Sea. Circuit Garden remains the additional tutorial arena. The real miniatures are built and rendered
 during startup preparation, then retained so cycling the dial only changes
 visibility. Graphics-preset preparation redraws every retained miniature and
 restores the selection before returning focus. See the

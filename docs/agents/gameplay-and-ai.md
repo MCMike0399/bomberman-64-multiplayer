@@ -23,6 +23,17 @@ planted aim, recovery and reset keep their normal safeguards. Use focused
 `--lost-at-sea` checks and the `lost-at-sea` / `lost-at-sea-network` journeys
 (`tour-25`). Native image review is required for the original marine diorama.
 
+## Expanded-roster AI validation (2026-11-15)
+
+The historical agency policy comparison keeps its original six arenas, 72 runs,
+three-bomb reference loadout and unchanged thresholds. CLI diagnostics and the
+full gameplay soak keep all ten arenas/120 cases at current resources. The
+24 new-stage engagement fixtures walk the human from the real spawn into a
+reachable court: an actual Gutter cap drop and actual Lost glass inertia are
+required. They preserve mortal bot deaths and observation durations. The policy
+does not target isolated elevated caps with lift/throw/pump attacks; do not claim
+cap engagement from the court check. See the [test contract](../../tests/Bomber.Ai.Tests/README.md#expanded-roster-engagement-2026-11-15).
+
 ## Establish the failing behavior first
 
 1. Identify the session: local normal battle, practice or network; record stage,
@@ -129,7 +140,7 @@ JSON element with the same envelope and payload as the legacy string event.
 the local encode-to-string/parse round trip; network framing, authority cadence,
 input edges and wire fields are unchanged. Retain ordered-message and snapshot
 lifetime checks when changing this boundary. For an eight-participant comparison
-across all six arenas, use `--snapshot-performance --eight-player` in the game
+across all ten battle arenas, use `--snapshot-performance --eight-player` in the game
 suite and `--local-performance` in the client suite, each with `--output=PATH`.
 Hash comparisons establish unchanged outcomes; the local benchmark includes
 input, delivery and retained state, while the legacy benchmark includes text

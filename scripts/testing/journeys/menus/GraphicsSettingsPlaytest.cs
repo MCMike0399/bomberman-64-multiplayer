@@ -516,13 +516,52 @@ public partial class PlaytestDriver
         }
     }
 
+    private Task GraphicsPreparationControlProbe()=>GraphicsPreparationProbe(false);
+    private Task GraphicsPreparationOccludedProbe()=>GraphicsPreparationProbe(true);
+    private async Task GraphicsPreparationProbe(bool minimizeAfterChange)
+    {
+        Check(!_headless,"preparation visibility probe requires the native renderer");
+        var original=_root.Preferences.Graphics;var mode=GetWindow().Mode;
+        var visibleSettle=System.Diagnostics.Stopwatch.StartNew();
+        Event("graphics-preparation-probe-policy",new{minimizeAfterChange,timeoutSeconds=20,
+            purpose="same Greedy High to Low transition before selecting the next stage; no authority or art changes"});
+        try
+        {
+            _root.Navigate("Modes");await Frames(3);await SelectGraphics(GraphicsPreset.High);
+            _root.StartLocal(new Bomber.Client.Sessions.SessionSettings(Stage:"greedy-trap",Bots:7,SuddenDeath:false),1,seed:64);
+            await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"preparation probe enters real Greedy match",180);
+            await Frames(90);_root.Back();_root.Navigate("Modes");await Frames(3);
+            if(minimizeAfterChange)
+            {
+                // The native display controller retries its startup window mode
+                // for five wall-clock seconds. Let that finish visibly before
+                // testing sustained minimization, rather than its auto-restore.
+                while(visibleSettle.Elapsed.TotalSeconds<5.2)await Frames(1);
+                Event("graphics-preparation-visible-settle",new{seconds=visibleSettle.Elapsed.TotalSeconds,
+                    diagnostic=PreparationDiagnosticSnapshot()});
+            }
+            await SelectGraphics(GraphicsPreset.Low,minimizeAfterChange?()=>GetWindow().Mode=Window.ModeEnum.Minimized:null);
+            Check(!_root.GraphicsPreparing,"the bounded High to Low preparation returns control");
+            GetWindow().Mode=mode;await Frames(3);
+            await Capture(minimizeAfterChange?"preparation-restored-after-occlusion":"preparation-visible-control");
+        }
+        finally
+        {
+            // Restore the native QA window even on the retained red. Never
+            // start a second preparation while the first one is unresolved.
+            GetWindow().Mode=mode;
+            if(!_root.GraphicsPreparing)
+            {_root.Navigate("Modes");await Frames(3);await SelectGraphics(original);}
+        }
+    }
+
     private object PreparationDiagnosticSnapshot()=>new{
         tag="DEBUG-gfxprep-20261116",process=Engine.GetProcessFrames(),drawn=Engine.GetFramesDrawn(),
         window=new{visible=GetWindow().Visible,mode=GetWindow().Mode.ToString(),focused=GetWindow().HasFocus(),
             applicationFocused=ControllerHub.Current.HasApplicationFocus},
         disable3D=GetViewport().Disable3D,preparation=_root.GraphicsPreparationDiagnostics};
 
-    private async Task SelectGraphics(GraphicsPreset preset)
+    private async Task SelectGraphics(GraphicsPreset preset,Action? afterChange=null)
     {
         // Screen transitions defer their initial focus; let that settle before
         // focusing and activating a specific native control.
@@ -537,6 +576,7 @@ public partial class PlaytestDriver
         for(int i=0;i<3&&_root.Preferences.Graphics!=preset;i++)
         {
             await KeyPress(Key.Right);
+            afterChange?.Invoke();
             var warmup=System.Diagnostics.Stopwatch.StartNew();
             // Retained llvmpipe and WARP runs rendered only 14-15 preparation
             // frames in 20 seconds; WARP once needed 182 seconds for 28 frames.
