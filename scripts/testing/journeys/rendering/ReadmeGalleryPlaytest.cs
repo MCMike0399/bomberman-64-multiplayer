@@ -12,12 +12,15 @@ public partial class PlaytestDriver
 {
     /// <summary>Comparable real-session captures for the user's final all-map review.
     /// This is a gallery journey, not a frame-time or pixel-equivalence claim.</summary>
-    private async Task StageReviewMatrix()
+    private Task StageReviewMatrix()=>StageReviewMatrixCore(false);
+    private Task TrainingReviewMatrix()=>StageReviewMatrixCore(true);
+
+    private async Task StageReviewMatrixCore(bool trainingOnly)
     {
         Check(!_headless,"stage review matrix requires actual rendered pixels");
         var originalPreset=_root.Preferences.Graphics;var originalLighting=_root.Preferences.StageLighting;
         var originalSize=GetWindow().Size;var rows=new List<object>();
-        string[] stages=["sunken-temple","rock-garden","up-and-down","top-rules","blizzard-battle","greedy-trap",
+        string[] stages=trainingOnly?["circuit-garden"]:["sunken-temple","rock-garden","up-and-down","top-rules","blizzard-battle","greedy-trap",
             "field-of-grass","in-the-gutter","sea-sick","lost-at-sea","circuit-garden"];
         try
         {
@@ -29,7 +32,7 @@ public partial class PlaytestDriver
                 _root.Navigate("Modes");await Frames(3);
                 await SelectGraphics(preset);await SelectLocalLighting(lighting);
                 bool practice=stage=="circuit-garden";
-                _root.StartLocal(new SessionSettings(Stage:stage,Bots:practice?0:7,RoundSeconds:300,SuddenDeath:false),1,practice:practice);
+                _root.StartLocal(new SessionSettings(Stage:stage,Bots:practice?0:7,RoundSeconds:300,SuddenDeath:false),1,practice:practice,seed:64);
                 await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"review matrix enters "+stage,180);
                 Check(_root.Preferences.Graphics==preset&&LightingArena.TimeOfDay==lighting,"review matrix applies requested preset and lighting");
                 Check(Mathf.IsEqualApprox(GetViewport().Scaling3DScale,GraphicsQuality.RenderScale),"review matrix retains actual preset render scale");
@@ -50,7 +53,7 @@ public partial class PlaytestDriver
                 if(!practice){await Frames(90);await Save("combat");}
                 Input(0,default);_root.Back();await Frames(3);
             }
-            Check(rows.Count==126,"all eleven maps have every declared preset, lighting and session view");
+            Check(rows.Count==(trainingOnly?6:126),"every selected map has its declared preset, lighting and session views");
         }
         finally
         {

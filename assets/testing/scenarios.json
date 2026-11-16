@@ -2208,6 +2208,18 @@
       "headless": true,
       "timeout": 180,
       "manual": false
+    },
+    {
+      "id": "stage-review-training",
+      "method": "TrainingReviewMatrix",
+      "domains": [
+        "rendering",
+        "ui",
+        "gameplay"
+      ],
+      "headless": false,
+      "timeout": 300,
+      "manual": false
     }
   ]
 }
