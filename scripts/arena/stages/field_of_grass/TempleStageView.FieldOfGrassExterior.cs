@@ -7,6 +7,7 @@ namespace BlastCircuit.Arena.Stages;
 public partial class TempleStageView
 {
     private StandardMaterial3D? _hollowLanternPaint;
+    private Node3D? _hollowMole;
     // Blocked vignette only. No copied garden buildings or radial prop scatter.
     // Butterfly and fine surface finishing follow the bank shape review.
     private void BuildFieldOfGrassExterior()
@@ -51,5 +52,33 @@ public partial class TempleStageView
         bool night=lighting?.Label=="Night";
         if(_hollowLanternPaint is not null)_hollowLanternPaint.EmissionEnergyMultiplier=night?1.15f:.08f;
         if(_hollowLantern is not null)_hollowLantern.LightEnergy=night&&GraphicsQuality.Current!=GraphicsPreset.Low?1.1f:0;
+    }
+
+    private void BuildHollowBurrowPeek()
+    {
+        if(!IncludeScenery)return;
+        Bead(this,new(10.8f,-1.45f,Depth+.28f),new(1.10f,.34f,.68f),_art.Color(new("9b6a45"),.98f)).Name="HollowBurrowMound";
+        _hollowMole=new Node3D{Name="HollowBurrowMole",Position=new(10.8f,-.89f,Depth+.40f)};AddChild(_hollowMole);
+        var fur=_art.Toy(new("79563e"),.92f);var cream=_art.Toy(new("d2b68c"),.94f);
+        Bead(_hollowMole,Vector3.Zero,new(.72f,.58f,.56f),fur).Name="HollowMoleHead";
+        Bead(_hollowMole,new(0,-.045f,.26f),new(.31f,.20f,.20f),cream).Name="HollowMoleMuzzle";
+        Bead(_hollowMole,new(0,.005f,.36f),new(.14f,.10f,.09f),_art.Toy(new("b67d68"),.9f));
+        foreach(float x in new[]{-.16f,.16f})
+        {
+            Bead(_hollowMole,new(x,.12f,.235f),new(.115f,.13f,.065f),_art.Color(new("e9d8b7"),.95f));
+            Bead(_hollowMole,new(x,.12f,.27f),new(.05f,.065f,.025f),_art.Color(new("352d26"),.95f));
+        }
+        foreach(float x in new[]{-.30f,.30f})Bead(_hollowMole,new(x,-.24f,.20f),new(.16f,.13f,.15f),cream);
+    }
+
+    private void ProcessHollowBurrowPeek()
+    {
+        if(_hollowMole is null)return;
+        float phase=_fieldClock%24;
+        float peek=Math.Clamp(1-HollowSmooth(6,8,phase)+HollowSmooth(22,24,phase),0,1);
+        // Retraction passes behind the existing opaque cut face. The whole
+        // creature stays below the lowest gameplay plane and has no collision.
+        _hollowMole.Position=new(10.8f+PresentationMath.Sin(_fieldClock*.65f)*.025f,-.94f+peek*.05f,Depth-.30f+peek*.70f);
+        _hollowMole.Basis=PresentationMath.Rotation(new(0,PresentationMath.Sin(_fieldClock*.45f)*.10f,0));
     }
 }

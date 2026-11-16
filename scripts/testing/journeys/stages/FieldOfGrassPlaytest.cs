@@ -39,6 +39,13 @@ public partial class PlaytestDriver
                     .Concat(AuditDescendants(arena).OfType<MeshInstance3D>().Where(n=>n.GetParent().Name.ToString().StartsWith("HollowStandingStone"))
                         .Select(n=>(n.Mesh,n.GetParent().Name.ToString(),false))));
                 Check(SceneryIntrusions(terrain).Count==0,"blocked stile and hay vignette stay outside all standing volumes");
+                var mole=AuditDescendants(terrain).OfType<Node3D>().Single(n=>n.Name=="HollowBurrowMole");
+                var inverse=terrain.GlobalTransform.AffineInverse();
+                Check(AuditDescendants(mole).OfType<MeshInstance3D>().All(n=>
+                    (inverse*n.GlobalTransform*n.Mesh.GetAabb()).End.Y<-.3f),
+                    "the entire real burrow peek stays below the lowest playable standing volume");
+                if(!_headless&&preset==GraphicsPreset.High&&time==StageTime.Midday)
+                    await Capture("root-hollow-small-burrow-peek",0);
                 CheckFraming(BlastStages.FieldOfGrass,GetWindow().Size);
                 await WaitState(s=>s.GetProperty("hazards").GetArrayLength()>0,"ordinary eight-player hollow battle produces real blasts",600);
                 await Capture("cutaway-hollow-shape-"+label+"-combat");

@@ -40,6 +40,7 @@ public partial class TempleStageView
         }
         BuildHollowRootsAndBurrow();
         BuildHollowStile();
+        BuildHollowBurrowPeek();
         BuildFieldGrass();
     }
 
