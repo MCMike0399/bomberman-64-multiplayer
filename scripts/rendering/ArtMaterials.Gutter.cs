@@ -17,6 +17,8 @@ public sealed partial class ArtMaterials
             // the court; Medium still has no scene-reflection march.
             string medium=WaterShaderFor(preset).Code;
             medium=medium.Replace("#define CLEAR_WATER","#define CLEAR_WATER\n#define GUTTER_SHALLOWS",StringComparison.Ordinal)
+                .Replace("#ifdef WATER_SPARKLE\n// Drifting Voronoi borders",
+                    "#if defined(WATER_SPARKLE) || defined(GUTTER_SHALLOWS)\n// Drifting Voronoi borders",StringComparison.Ordinal)
                 .Replace("seen=textureLod(screen_texture,refract_uv,0.0).rgb;\n#ifdef WATER_SPARKLE",
                     "seen=textureLod(screen_texture,refract_uv,0.0).rgb*vec3(.78,.96,.87);\n#if defined(WATER_SPARKLE) || defined(GUTTER_SHALLOWS)",StringComparison.Ordinal)
                 .Replace("caustic_detail*1.4+light_tint.rgb*web*reach*caustic_detail*.05;",
