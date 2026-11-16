@@ -133,6 +133,7 @@ public partial class TempleStageView : Node3D
             _masonry.SetShaderParameter("water_height",p.Y);_bedrock.SetShaderParameter("water_height",p.Y);
             _uploadedWater=p.Y;
         }
+        ProcessTempleTide((float)delta);
     }
     public TempleStageView(ArtMaterials art){_art=art;}
     public float Surface(float x,float z,float y=float.PositiveInfinity) => Layout.SurfaceAt(x,z,y)*HeightScale;

@@ -823,3 +823,13 @@ upload, duplication and geometry-helper source entry and the finite template
 tuples. New entries or changed producing-source bounds fail the public gate
 until reviewed. Normal headless and packaged functional lanes exercise the
 actual end-of-round closure and meteor paths with templates enforced.
+
+
+### Returning Tide core landmark finishing (2026-11-16)
+
+The Sunken Temple gateway now carries a small gold/pale/teal sun disc; one lotus
+ruin replaces the second palm/obelisk setting. `SunkenGateCore` and the single
+copper `TempleTideFloat` remain on Low, outside the court. The float follows the
+accepted rendered water plane with a pausable core clock; the normal miniature
+omits both outboard landmarks. The pyramid/frieze layout and camera stay fixed.
+[Composition and current evidence](../stage-scenery.md#returning-tide-finishing-2026-11-16).
