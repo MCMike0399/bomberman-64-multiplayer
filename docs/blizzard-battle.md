@@ -197,3 +197,22 @@ back without relaxing the bounds. The corrected headless run passes75 checks,
 projecting all38 actual opening-rim vertices into X[.138,.822], Y[.288,.754],
 with a clear mouth ray. Native recapture is still required to replace the invalid
 underside image; the other accepted native images remain unchanged.
+
+### Lantern clearance correction
+
+The valid low-vault image exposed a real left-icicle/lantern-cap intersection:
+one generated icicle vertex at(-4.57,.56587,8.175) lay inside the cap's rounded
+volume, not only its AABB. The lantern moves deeper fromZ7.95 to7.45 and .15
+units toward the wider cavity, X-4.55 to-4.40. Shapes, court and cameras do not
+change. A Z-only move also exposed contact with the vault's left lining; that
+red witness is retained alongside the first native image.
+
+The final actual packed-mesh probe checks all2,622 lantern body/cap vertices
+against snow/lining, all-icicle separation, and ordinary-camera window
+sightlines. It finds zero embedded vertices, .29-unit icicle separation and
+three of four clear emitting-face samples. Partial visual framing by the cave
+is allowed; root judges recognizable light in pixels. Ray exits from shared
+triangles are merged by a .00001 distance, avoiding a false odd crossing when
+1.0658500 and1.0658501 straddle a quantized rounding midpoint. Genuine clearance
+checks remain strict. The corrected headless journey passes78 assertions with
+zero runtime errors and a retained exit ObjectDB warning.

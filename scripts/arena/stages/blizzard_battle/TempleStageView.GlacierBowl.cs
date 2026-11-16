@@ -36,7 +36,7 @@ public partial class TempleStageView
         _glacierPennantPaint=new ShaderMaterial{Shader=new Shader{Code=GlacierPennantShader}};
         Plate(mast,new(0,2.15f,0),[new(0,0),new(1.25f,.04f),new(1.1f,-.49f),new(0,-.43f)],.035f,_glacierPennantPaint).Name="GlacierWindPennant";
         // The accepted-wind pennant stays. Only its lantern moves into the vault.
-        var lantern=Prop(this,"GlacierVaultLantern",new(-4.55f,-.26f,GrottoFront-.55f));
+        var lantern=Prop(this,"GlacierVaultLantern",new(-4.40f,-.26f,GrottoFront-1.05f));
         RoundedBox(lantern,new(0,.05f,0),new(.7f,.1f,.56f),brass,.4f);
         RoundedBox(lantern,new(0,.43f,0),new(.56f,.69f,.48f),wood,.19f);
         Box(lantern,new(0,.44f,.255f),new(.41f,.49f,.035f),Glow(new("ffc279"),1.5f),.045f).Name="GlacierWarmWindow";

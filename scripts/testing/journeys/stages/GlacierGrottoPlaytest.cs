@@ -58,6 +58,32 @@ public partial class PlaytestDriver
             }
             Event("grotto-captured-contact",new{icicleCollars=collars.Length,iceGap,crownBaseVertices=bases.Length,crownGap});
             Check(bases.Length==7&&crownGap<.001f,"tilted crown crystal is supported by the actual captured snow surface");
+            var lantern=terrain.GetNode<Node3D>("GlacierVaultLantern");
+            var lampMeshes=AuditDescendants(lantern).OfType<MeshInstance3D>().ToArray();
+            var lampPoints=lampMeshes.SelectMany(n=>Enumerable.Range(0,n.Mesh.GetSurfaceCount()).SelectMany(surface=>
+                n.Mesh.SurfaceGetArrays(surface)[(int)Mesh.ArrayType.Vertex].AsVector3Array().Select(p=>n.ToGlobal(p)))).Distinct().ToArray();
+            var lampBounds=new Aabb(lampPoints[0],Vector3.Zero);foreach(var point in lampPoints)lampBounds=lampBounds.Expand(point);
+            var vaultTriangles=GrottoTriangles(body,0).Concat(GrottoTriangles(body,1)).Where(t=>
+                Math.Min(t.A.X,Math.Min(t.B.X,t.C.X))<=lampBounds.End.X&&Math.Max(t.A.X,Math.Max(t.B.X,t.C.X))>=lampBounds.Position.X&&
+                Math.Min(t.A.Z,Math.Min(t.B.Z,t.C.Z))<=lampBounds.End.Z&&Math.Max(t.A.Z,Math.Max(t.B.Z,t.C.Z))>=lampBounds.Position.Z).ToArray();
+            float nearestIce=iv.Min(p=>body.ToGlobal(p).Z),lastLamp=lampPoints.Max(p=>p.Z);int embedded=0;var embeddedDetails=new List<object>();
+            foreach(var point in lampPoints)
+            {
+                var heights=new List<float>();
+                foreach(float y in GrottoTriangleHits(vaultTriangles,point+Vector3.Up*.0002f,point+Vector3.Up*10).Select(p=>p.Y).Order())
+                    if(heights.Count==0||y-heights[^1]>.00001f)heights.Add(y);
+                // Adjacent triangles share an exit. Quantized rounding can split
+                // 1.0658500/1.0658501 into different bins at the rounding midpoint.
+                if(heights.Count%2!=0){embedded++;embeddedDetails.Add(new{point=point.ToString(),heights});}
+            }
+            var window=lantern.GetNode<MeshInstance3D>("GlacierWarmWindow");var windowPoints=window.Mesh.SurfaceGetArrays(0)[(int)Mesh.ArrayType.Vertex].AsVector3Array()
+                .Where(p=>p.Z>window.Mesh.GetAabb().End.Z-.0001f).Distinct().Select(p=>window.ToGlobal(p)).ToArray();
+            var ordinary=_root.GetViewport().GetCamera3D()!;var allTriangles=GrottoTriangles(body);int visibleWindow=windowPoints.Count(p=>GrottoTriangleHits(allTriangles,ordinary.GlobalPosition,p).Count==0);
+            Event("grotto-lantern-captured-clearance",new{lampVertices=lampPoints.Length,embeddedInVault=embedded,
+                icicleSeparation=nearestIce-lastLamp,visibleWindow,windowSamples=windowPoints.Length,embeddedDetails=embeddedDetails.Take(3)});
+            Check(nearestIce-lastLamp>.1f,"full lantern body and caps are separated from all actual icicle vertices");
+            Check(embedded==0,"full captured lantern body and caps stay outside the solid vault shell");
+            Check(visibleWindow>0,"ordinary battle camera retains an unobstructed actual-mesh warm-window sample");
             foreach(var size in new[]{new Vector2I(1280,800),new Vector2I(1280,720)})
             {
                 var viewport=new SubViewport{Size=size,Disable3D=true};AddChild(viewport);
@@ -111,21 +137,30 @@ public partial class PlaytestDriver
         {Input(0,default);_root.Navigate("Modes");await Frames(3);await SelectGraphics(quality);await SelectLocalLighting(lighting);}
     }
 
-    private static List<Vector3> GrottoMeshHits(MeshInstance3D node,Vector3 from,Vector3 to,int onlySurface=-1)
+    private static List<Vector3> GrottoMeshHits(MeshInstance3D node,Vector3 from,Vector3 to,int onlySurface=-1)=>
+        GrottoTriangleHits(GrottoTriangles(node,onlySurface),from,to);
+
+    private static List<(Vector3 A,Vector3 B,Vector3 C)> GrottoTriangles(MeshInstance3D node,int onlySurface=-1)
     {
-        var hits=new List<Vector3>();var direction=to-from;
+        var result=new List<(Vector3 A,Vector3 B,Vector3 C)>();var transform=node.GlobalTransform;
         for(int surface=0;surface<node.Mesh.GetSurfaceCount();surface++)
         {
             if(onlySurface>=0&&surface!=onlySurface)continue;
-            var arrays=node.Mesh.SurfaceGetArrays(surface);var v=arrays[(int)Mesh.ArrayType.Vertex].AsVector3Array();var indices=arrays[(int)Mesh.ArrayType.Index].AsInt32Array();
-            for(int i=0;i<indices.Length;i+=3)
-            {
-                var a=node.ToGlobal(v[indices[i]]);var b=node.ToGlobal(v[indices[i+1]]);var c=node.ToGlobal(v[indices[i+2]]);
-                var e1=b-a;var e2=c-a;var h=direction.Cross(e2);float determinant=e1.Dot(h);if(Math.Abs(determinant)<.0000001f)continue;
-                var offset=from-a;float u=offset.Dot(h)/determinant;if(u<-.00001f||u>1.00001f)continue;
-                var q=offset.Cross(e1);float w=direction.Dot(q)/determinant;if(w<-.00001f||u+w>1.00001f)continue;
-                float t=e2.Dot(q)/determinant;if(t>=0&&t<=1)hits.Add(from+direction*t);
-            }
+            var arrays=node.Mesh.SurfaceGetArrays(surface);var v=arrays[(int)Mesh.ArrayType.Vertex].AsVector3Array();var ids=arrays[(int)Mesh.ArrayType.Index].AsInt32Array();
+            for(int i=0;i<ids.Length;i+=3)result.Add((transform*v[ids[i]],transform*v[ids[i+1]],transform*v[ids[i+2]]));
+        }
+        return result;
+    }
+
+    private static List<Vector3> GrottoTriangleHits(IEnumerable<(Vector3 A,Vector3 B,Vector3 C)> triangles,Vector3 from,Vector3 to)
+    {
+        var hits=new List<Vector3>();var direction=to-from;
+        foreach(var (a,b,c) in triangles)
+        {
+            var e1=b-a;var e2=c-a;var h=direction.Cross(e2);float determinant=e1.Dot(h);if(Math.Abs(determinant)<.0000001f)continue;
+            var offset=from-a;float u=offset.Dot(h)/determinant;if(u<-.00001f||u>1.00001f)continue;
+            var q=offset.Cross(e1);float w=direction.Dot(q)/determinant;if(w<-.00001f||u+w>1.00001f)continue;
+            float t=e2.Dot(q)/determinant;if(t>=0&&t<=1)hits.Add(from+direction*t);
         }
         return hits;
     }
