@@ -1,24 +1,29 @@
 using Godot;
 using System.Text.Json;
 using BlastCircuit.Arena.Stages;
+using Bomber.Game.Simulation.Stages;
+using BlastCircuit.Rendering;
 namespace BlastCircuit.Arena;
 
 /// <summary>Fits playable terrain and standing characters into the space between the HUD and footer.</summary>
 public sealed partial class BattleCameraRig(Camera3D camera)
 {
-    private readonly List<Vector3> _bounds=[];
+    private readonly List<Vector3> _bounds=[],_compositionBounds=[],_shipFitBounds=[],_shipCompositionBounds=[];
     private Vector3 _center=new(10.5f,2,11.5f);
     private Vector2 _offset;
-    private bool _training, _castle, _blizzard, _pyramid, _garden, _hollow;
+    private bool _training, _castle, _blizzard, _pyramid, _garden, _ship, _hollow;
+    /// <summary>Presentation-only map transform, used when measuring the rocking ship.</summary>
+    public Transform3D MapTransform {get;set;}=Transform3D.Identity;
     /// <summary>View depth of the closest/farthest playable point; depth cues stay outside this range.</summary>
     public Vector2 PlayableDepth {get;private set;}=new(20,40);
     /// <summary>Radial camera distance for depth fog, which uses length(view position), not axial depth.</summary>
     public float PlayableDistance {get;private set;}=40;
     public void SetStage(JsonElement stage)
     {
-        _bounds.Clear();
+        _bounds.Clear();_compositionBounds.Clear();_shipFitBounds.Clear();_shipCompositionBounds.Clear();
         _hollow=stage.GetProperty("id").GetString()=="field-of-grass";
         _garden=stage.GetProperty("id").GetString()=="rock-garden";
+        _ship=stage.GetProperty("id").GetString()==BlastStages.SeaSick;
         _blizzard=stage.GetProperty("id").GetString()=="blizzard-battle";
         _castle=stage.GetProperty("id").GetString() is "top-rules" or "greedy-trap" or "field-of-grass" or "in-the-gutter";
         _training=stage.GetProperty("id").GetString()=="circuit-garden";
@@ -41,6 +46,22 @@ public sealed partial class BattleCameraRig(Camera3D camera)
                 _bounds.Add(new(x,y,depth*.5f));
             _bounds.Add(new(width*.5f,-1.35f,depth+.5f));
         }
+        if(_ship)
+        {
+            _compositionBounds.AddRange([new(-1.65f,3.3f,1.2f),new(-1.65f,3.3f,17.8f),new(-1.9f,-2.1f,9.5f),new(25.5f,5.1f,9.5f),new(9.5f,-2.1f,19.10f)]);
+            // Fit the whole slow motion envelope once. Fitting only the level
+            // deck let a real roll cross the HUD band after a 16:9 resize.
+            // The camera remains fixed while the parent subsequently rocks.
+            var pivot=new Vector3(width*.5f,0,depth*.5f);var supports=_bounds.Distinct().ToArray();
+            _shipFitBounds.AddRange(supports);_shipCompositionBounds.AddRange(_compositionBounds);
+            foreach(float roll in new[]{-ArenaView.ShipRollAmplitude,ArenaView.ShipRollAmplitude})
+            foreach(float pitch in new[]{-ArenaView.ShipPitchAmplitude,ArenaView.ShipPitchAmplitude})
+            {
+                var basis=PresentationMath.Rotation(new(roll,0,pitch));var pose=new Transform3D(basis,pivot-basis*pivot);
+                _shipFitBounds.AddRange(supports.Select(p=>pose*p));
+                _shipCompositionBounds.AddRange(_compositionBounds.Select(p=>pose*p));
+            }
+        }
         if(stage.GetProperty("id").GetString()=="top-rules")
         {
             _bounds.Add(new(width*.5f,-5.8f,depth*.5f));
@@ -54,11 +75,15 @@ public sealed partial class BattleCameraRig(Camera3D camera)
             int kind=cell.GetProperty("k").GetInt32();
             if(kind is 2 or 3)return;
             float y=(kind==4?cell.GetProperty("rt"):cell.GetProperty("t")).GetSingle()*TempleStageView.HeightScale;
+            float head=kind==1?(cell.TryGetProperty("oh",out var crown)&&crown.ValueKind==JsonValueKind.Number?crown.GetSingle()*TempleStageView.HeightScale:1.21f):2.1f;
+            // Tall mast/rigging may extend beyond the frame; fit the actual
+            // combat surface and standing headroom instead of the masthead.
+            if(_ship&&kind==1)head=Mathf.Min(head,2.1f);
             foreach(float dx in new[]{0f,1f})foreach(float dz in new[]{0f,1f})
             {
                 _bounds.Add(new(x+dx,y,z+dz));
                 // Match solid pillar crowns and keep standing-player headroom on walkable cells.
-                _bounds.Add(new(x+dx,y+(kind==1?(cell.TryGetProperty("oh",out var crown)&&crown.ValueKind==JsonValueKind.Number?crown.GetSingle()*TempleStageView.HeightScale:1.21f):2.1f),z+dz));
+                _bounds.Add(new(x+dx,y+head,z+dz));
             }
         }
     }
@@ -82,11 +107,22 @@ public sealed partial class BattleCameraRig(Camera3D camera)
             {
                 Func<Vector3,Vector2> project=_garden?PortableProjection(viewport):camera.UnprojectPosition;
                 Vector2 min=new(float.MaxValue,float.MaxValue),max=new(float.MinValue,float.MinValue);
-                foreach(var point in _bounds){var screen=project(point)/viewport;min=min.Min(screen);max=max.Max(screen);}
+                foreach(var point in _ship?_shipFitBounds:_bounds){var screen=project(point)/viewport;min=min.Min(screen);max=max.Max(screen);}
                 // Keep the full playable silhouette inside the HUD-safe band while using more
                 // of the available screen for the arena instead of the surrounding water.
-                var delta=(min+max)*.5f-new Vector2(.5f,_training?.445f:_hollow?.48f:.5175f);
-                if(pass==4)return min.X>=.025f&&max.X<=.975f&&min.Y>=.145f&&max.Y<=(_training?.745f:_hollow?.82f:.89f);
+                var delta=(min+max)*.5f-new Vector2(.5f,_training?.445f:_ship?.4675f:_hollow?.48f:.5175f);
+                // Sea Sick earns space for the curved hull and raised ends, and
+                // keeps the near wale above the control-hint row.
+                if(pass==4)
+                {
+                    if(min.X<(_ship?.11f:.025f)||max.X>(_ship?.89f:.975f)||min.Y<.145f||max.Y>(_training?.745f:_ship?.79f:_hollow?.82f:.89f))return false;
+                    foreach(var point in _ship?_shipCompositionBounds:_compositionBounds)
+                    {
+                        var screen=project(point)/viewport;
+                        if(screen.X<.025f||screen.X>.975f||screen.Y<.13f||screen.Y>.90f)return false;
+                    }
+                    return true;
+                }
                 var origin=project(_center);
                 float pixelsX=(project(_center+camera.GlobalBasis.X)-origin).Length();
                 float pixelsY=(project(_center+camera.GlobalBasis.Y)-origin).Length();
@@ -110,7 +146,7 @@ public sealed partial class BattleCameraRig(Camera3D camera)
         var view=camera.GetCameraTransform().AffineInverse();
         foreach(var point in _bounds)
         {
-            var position=view*point;float depth=-position.Z;
+            var position=view*(MapTransform*point);float depth=-position.Z;
             nearest=Mathf.Min(nearest,depth);farthest=Mathf.Max(farthest,depth);
             distance=Mathf.Max(distance,position.Length());
         }

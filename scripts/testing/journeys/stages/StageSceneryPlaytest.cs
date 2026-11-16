@@ -20,6 +20,7 @@ public partial class PlaytestDriver
         (BlastStages.GreedyTrap,["GreedyWestRowboat","GreedyEastRowboat","Sailboat","Gull"]),
         (BlastStages.FieldOfGrass,["HayRick"]),
         (BlastStages.InTheGutter,["CopperLockWestMachine","CopperLockEastMachine","CopperLockChannelStub","CopperLockFishBody","CopperLockOuterWater"]),
+        (BlastStages.SeaSick,["Gull"]),
         (BlastStages.CircuitGarden,["Jetty","Buoy","Gull"]),
     ];
 
@@ -169,7 +170,7 @@ public partial class PlaytestDriver
         // no separate island dressing. Audit that real presentation, not padding.
         // Hollow intentionally keeps one compact hay mesh; its core stile, terrain
         // and gameplay foliage have their own actual-mesh and support checks.
-        int minimumMeshes=hollow?1:20;
+        int minimumMeshes=hollow?1:stage==BlastStages.SeaSick?10:20;
         Check(problems.Count==0&&meshes>=minimumMeshes,$"scenery geometry is finite, nonempty and textured: {stage} meshes={meshes} {string.Join("; ",problems.Take(3))}");
         if(hollow)
         {

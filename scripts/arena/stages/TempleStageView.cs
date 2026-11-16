@@ -57,6 +57,19 @@ public partial class TempleStageView : Node3D
     private ShaderMaterial? _castleCoverMaterial;
     public ShaderMaterial CastleWallMaterial=>_castleWallMaterial;
     public StageLayout Layout {get;private set;} = null!;
+    private bool _seaSick;
+    private readonly List<ShaderMaterial> _shipMaterials=[];
+    private ShaderMaterial _barrelTimber=null!;
+    private float _shipLifeClock;
+    private readonly List<Action<float>> _shipLife=[];
+    private OmniLight3D? _shipLanternLight;
+    private StandardMaterial3D? _shipLanternGlow;
+    private readonly Dictionary<MeshInstance3D,Material?> _shipStudyMaterials=[];
+    private static readonly (float X,float Beam,float Sheer,float Keel)[] TubbyHullSections=[
+        (-1.6f,8.6f,1.10f,-2.6f),(0,9.15f,.95f,-3.6f),(3,9.15f,.60f,-4.4f),
+        (9.5f,9.15f,.445f,-4.9f),(16,9.15f,.60f,-4.6f),(19,9.15f,1.00f,-4.0f),
+        (20.5f,8.2f,1.5f,-3.5f),(22,6.3f,2.1f,-2.9f),(23.5f,3.9f,2.7f,-2.0f),
+        (24.8f,1.6f,3.2f,-1.0f),(25.5f,.35f,3.5f,-.3f)];
     private bool _garden,_field;
     private float _fieldClock;
     private ShaderMaterial? _fieldGrassMaterial;
@@ -99,9 +112,11 @@ public partial class TempleStageView : Node3D
             frozen.SetShaderParameter("snow_normal_strength",lighting.Label=="Night"?.055f:.22f);
         }
         ApplyWorkshopLighting(lighting);
+        if(_seaSick)ApplyShipLighting(lighting);
     }
     public void SetWaterLevel(float tierLevel)
     {
+        if(_seaSick)return;
         _targetWater=tierLevel*HeightScale;
         if(!_waterInitialized&&_water!=null){_water.Position=new(_water.Position.X,_targetWater,_water.Position.Z);_waterInitialized=true;}
     }
@@ -110,6 +125,7 @@ public partial class TempleStageView : Node3D
         if(!IsVisibleInTree())return;
         ProcessWorkshop((float)delta);
         AnimateScenery((float)delta);
+        if(_seaSick){ProcessSeaSick((float)delta);return;}
         ProcessCoastalLife((float)delta);
         if(_field){ProcessField((float)delta);return;}
         if(_blizzard){ProcessBlizzard((float)delta);return;}
@@ -217,6 +233,8 @@ public partial class TempleStageView : Node3D
         Layout=new StageLayout {Id=data.GetProperty("id").GetString()!,Width=Width,Height=Depth,Cells=cells,
             SoftBlockHeight=data.TryGetProperty("coverHeight",out var coverHeight)?coverHeight.GetSingle():BombThrowRules.CoverHeight};
         _underpasses.Clear();foreach(var cell in Layout.Underpasses)_underpasses.Add(cell.Z*Width+cell.X);
+        _seaSick=Layout.Id==BlastStages.SeaSick;
+        if(_seaSick){BuildSeaSick();return;}
         _field=Layout.Id==BlastStages.FieldOfGrass;
         if(_field){BuildFieldOfGrass();return;}
         _gutter=Layout.Id==BlastStages.InTheGutter;
@@ -361,6 +379,7 @@ public partial class TempleStageView : Node3D
         if(_greedy)return CreateGreedyCover(x,z);
         if(_castle)return CreateCastleCover(x,z);
         var root=new Node3D {Position=new(x+.5f,Surface(x+.5f,z+.5f),z+.5f)};
+        if(_seaSick)return CreateShipBarrel(root);
         if(_field)return CreateHollowStone(root,cell);
         if(_garden)return CreateGardenBoulder(root,cell);
         if(_blizzard)return CreateIceCone(root,cell);
