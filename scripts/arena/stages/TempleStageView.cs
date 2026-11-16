@@ -91,9 +91,11 @@ public partial class TempleStageView : Node3D
         if(_greedy){ProcessGreedyTrap((float)delta);return;}
         if(_castle)
         {
+            ProcessOrrery((float)delta);
             if(_graphicsRevision!=GraphicsQuality.Revision)
             {
                 foreach(var material in _castleStone)GraphicsQuality.ApplyShaderDetail(material);
+                UpdateOrreryCoreQuality();
                 _graphicsRevision=GraphicsQuality.Revision;
             }
             return;
