@@ -51,26 +51,14 @@ public partial class TempleStageView
         RoundTree(scenery,new(Width*.32f,ground,-6.8f),1.4f,new("5b9a4b"),5.2f);
         RoundTree(scenery,new(Width*.9f,ground,-7.6f),1.15f,new("6aa457"),.7f);
 
-        // Old garden ruins beyond the north-east corner.
-        var ruin=Prop(scenery,"GardenRuin",new(Width+3.2f,ground,-4.6f),-.35f);
-        foreach(var (x,height) in new[]{(-1.1f,2.4f),(1.1f,1.5f)})
-        {
-            Cylinder(ruin,new(x,height/2,0),.32f,height,stone);
-            Cylinder(ruin,new(x,height+.05f,0),.4f,.1f,mossy);
-        }
-        Box(ruin,new(-.35f,2.5f,0),new(1.9f,.28f,.6f),stone,.03f).Rotation=new(0,0,-.05f);
-        Box(ruin,new(1.8f,.15f,.6f),new(.9f,.3f,.55f),mossy,.05f).Rotation=new(0,.5f,.08f);
-
         StoneLantern(scenery,new(-1.5f,ground,-1.4f),.4f);
         StoneLantern(scenery,new(Width+1.5f,ground,-1.3f),-.3f);
         StoneLantern(scenery,new(-1.6f,ground,Depth+.9f),.1f);
         StoneLantern(scenery,new(Width+1.6f,ground,Depth+.9f),-.2f);
 
         // Beds and hedges hug the outside of the walls without rising above them.
-        FlowerBed(scenery,new(-1.75f,ground,5.5f),.75f,11,7);
-        FlowerBed(scenery,new(-1.75f,ground,13),.7f,10,9);
-        FlowerBed(scenery,new(Width+1.75f,ground,4),.7f,10,11);
-        FlowerBed(scenery,new(Width+1.75f,ground,11.5f),.75f,11,13);
+        FlowerBed(scenery,new(-2.8f,ground,4.6f),.75f,8,7);
+        FlowerBed(scenery,new(Width+2.1f,ground,12.8f),.7f,5,13);
         foreach(float z in new[]{2.2f,8.8f,16.4f})
         {
             Bush(scenery,new(-1.5f,ground,z),.9f,new("4c8a42"));
@@ -79,10 +67,8 @@ public partial class TempleStageView
         Rock(scenery,new(-2.6f,ground,8.2f),new(.8f,.6f,.7f),pebble,3,.6f);
         Rock(scenery,new(Width+2.5f,ground,9.6f),new(.7f,.55f,.7f),pebble,1,2.2f);
 
-        Butterfly(scenery,new(-1.75f,ground,5.5f),.9f,new("ffd34d"),0);
-        Butterfly(scenery,new(Width+1.75f,ground,11.5f),.8f,new("f58fb4"),2.1f);
-        Butterfly(scenery,new(-1.75f,ground,13),.8f,new("8fd0ff"),4.2f);
-        Butterfly(scenery,new(Width+1.75f,ground,4),.9f,new("ffffff"),1.2f);
+        Butterfly(scenery,new(-2.8f,ground,4.6f),.9f,new("ffd34d"),0);
+        Butterfly(scenery,new(Width+2.1f,ground,12.8f),.8f,new("f58fb4"),2.1f);
 
         // Soft rolling hills fill the horizon instead of an endless flat lawn.
         Hill(scenery,new(Width/2f,-1.5f,-24),new(46,9,14),new("6f9f58"));

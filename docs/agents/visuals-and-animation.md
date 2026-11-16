@@ -747,6 +747,19 @@ bounded ocean on other arenas. Duplicate its cached box mesh before resizing so
 the gameplay exterior stays full-size. `setup` checks the visible miniature's
 bounds and launches Rock Garden afterward to verify gameplay scenery is intact.
 
+2026-11-15 fresh advisor refinement candidate: the enclosure keeps its exact
+wall crown and cells, with four continuous cream half-round coping courses.
+Three broad lichen sections soften the stone. Four owned smooth boulder
+variants retain the .5-cell radial envelope and authored cover height, with
+warm two-tone paint rather than grey faceted shoulders. A darker, quieter
+outer lawn and four mown border strips remain in core presentation on Low;
+flower beds/butterflies are thinned and the windmill/bridge is the single
+vignette. Other GardenSurface consumers keep their existing shader defaults.
+`rock-garden` now audits actual indexed winding, boulder bounds, coping crowns
+and the below-floor core border before its ordinary traversal/combat/meteor
+journey. Green geometry checks do not replace matched Low/Medium/High native
+review, including Night and a labelled oblique view.
+
 ## v0.28 reference fidelity
 
 [Stage comparison](../stage-fidelity-research.md) and [explosion sequences](../explosion-fidelity-research.md) record inspected original imagery and limits. The integrated castle has taller authored walls and side banners; Up & Down uses rounded/fluted supports inside its solid footprint; Rock Garden's center crown is 1.35 units versus .9 for its outer columns. Original reference assets remain outside Git and exports.
