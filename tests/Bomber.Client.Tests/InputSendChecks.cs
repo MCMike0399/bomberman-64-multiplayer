@@ -32,6 +32,13 @@ internal static class InputSendChecks
         Check(cutoff.Pressed(first,1600,1)&&!cutoff.Pressed(first,1800,1)&&cutoff.Decision is {Delivered:false,Reason:"corridor-cutoff"},"Once sampling starts, the verified corridor bounds the hold");
         var replaced=new ObservedInputNudge(press,1,0,1000,5000,200);
         Check(!replaced.Pressed(two,1640,2)&&replaced.Decision is {Delivered:false,Reason:"session-changed"},"Session replacement cancels the old controller");
+        var neutralCaptured=new InputSendObservation(1,hold,12,1640,1640,11,2,0);
+        Check(!ObservedInputNudge.NeutralSent(neutralCaptured,hold,1,gate.Decision!),"Capturing neutral does not prove its send completed");
+        var neutralSent=neutralCaptured with{SentSequence=12,TotalSentSamples=3,MatchingSentSamples=1};
+        Check(ObservedInputNudge.NeutralSent(neutralSent,hold,1,gate.Decision!),"Nudge completion requires a real matching neutral send");
+        Check(!ObservedInputNudge.NeutralSent(neutralSent,hold,2,gate.Decision!)&&
+            !ObservedInputNudge.NeutralSent(neutralSent with{CapturedAt=1600},hold,1,gate.Decision!)&&
+            !ObservedInputNudge.NeutralSent(two,hold,1,gate.Decision!),"Wrong generation, pre-release and pressed observations cannot confirm neutral");
         return checks;
     }
 }

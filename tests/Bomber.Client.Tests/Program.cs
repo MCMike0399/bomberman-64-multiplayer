@@ -3,6 +3,7 @@ using Bomber.Client.Controls;
 using Bomber.Client.Sessions;
 using Bomber.Game.Matches;
 
+if(args.Contains("--input-publication-wire")){await InputPublicationWireChecks.Run(args);return;}
 if(args.Contains("--preparation-draw-batch")){await PreparationDrawBatchChecks.Run();return;}
 if(args.Contains("--peer-packets")){PeerPacketChecks.Run();return;}
 if(args.Contains("--local-performance")){await LocalPerformance.Run(args);return;}
@@ -29,6 +30,7 @@ checks += await NetworkJourneyScopeChecks.Run();
 checks += await RetainedFailureObservationChecks.Run();
 checks += await ConnectionJournalChecks.Run();
 checks += InputSendChecks.Run();
+checks += FixtureInputPublicationChecks.Run();
 checks += FeedbackSteeringChecks.Run();
 void Check(bool condition, string name) { if (!condition) throw new Exception(name); checks++; }
 void Throws(Action action, string name) { try { action(); } catch (ArgumentException) { checks++; return; } throw new Exception(name); }
