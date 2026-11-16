@@ -8,21 +8,27 @@ public partial class TempleStageView
 {
     private StandardMaterial3D? _workshopLampPaint;
     private ShaderMaterial? _workshopLampGlow;
+    private readonly List<ShaderMaterial> _workshopPennants=[];
     private Node3D? _workshopRaft;
     private float _workshopClock;
 
     private void BuildCircuitWorkshop()
     {
-        var enamel=_art.Toy(new("c6c6b3"),.84f);var teal=_art.Toy(new("397d78"),.76f);
+        var timber=new ShaderMaterial{Shader=new Shader{Code=WorkshopTimberShader}};
+        GraphicsQuality.ApplyShaderDetail(timber);_gardenMaterials.Add(timber);
+        var teal=_art.Toy(new("397d78"),.76f);
         var cream=_art.Toy(new("ded9be"),.85f);var brass=_art.Toy(new("b39a62"),.72f);
         // Rounded bodies stay below exact support planes, never forming a new
         // walkable canal crossing. The pale worktop replaces the tiled sage slab.
-        RoundedBox(this,new(9.5f,-.94f,8.5f),new(19.4f,1.82f,17.4f),enamel,.15f).Name="WorkshopMainPlinth";
-        RoundedBox(this,new(21.5f,-.94f,12),new(3.35f,1.82f,6.35f),enamel,.15f).Name="WorkshopLandingPlinth";
+        RoundedBox(this,new(9.5f,-.94f,8.5f),new(19.4f,1.82f,17.4f),timber,.15f).Name="WorkshopMainPlinth";
+        RoundedBox(this,new(21.5f,-.94f,12),new(3.35f,1.82f,6.35f),timber,.15f).Name="WorkshopLandingPlinth";
         RoundedBox(this,new(11.5f,.6675f,5),new(7.03f,1.335f,4.03f),teal,.065f).Name="WorkshopTeachingTerrace";
         RoundedBox(this,new(11.5f,1.3425f,2),new(3.03f,2.685f,2.03f),teal,.06f).Name="WorkshopHighTargetBody";
-        foreach(float z in new[]{.04f,16.96f})
-            Box(this,new(9.5f,-.22f,z),new(18.8f,.12f,.07f),teal,.025f).Name="WorkshopPlinthInlay";
+        var fender=_art.Toy(new("285f58"),.8f);
+        BuildWorkshopFender(-.10f,19.10f,-.10f,17.10f,fender,"WorkshopMainFender");
+        BuildWorkshopFender(19.90f,23.10f,8.90f,15.10f,fender,"WorkshopLandingFender");
+        foreach(float x in new[]{.28f,18.72f})foreach(float z in new[]{.28f,16.72f})
+            RoundedBox(this,new(x,-.17f,z),new(.68f,.30f,.68f),brass,.6f).Name="WorkshopBrassCorner";
         var paint=new ShaderMaterial{Shader=new Shader{Code=WorkshopSurfaceShader}};
         GraphicsQuality.ApplyShaderDetail(paint);_gardenMaterials.Add(paint);
         var surface=new SurfaceTool();surface.Begin(Mesh.PrimitiveType.Triangles);
@@ -56,8 +62,13 @@ public partial class TempleStageView
         RoundedBox(root,new(0,.6f,0),new(.67f,.96f,.67f),teal,.12f);
         RoundedBox(root,new(0,1.13f,0),new(.9f,.16f,.9f),cream,.22f);
         Box(root,new(0,1.65f,0),new(.065f,1.4f,.065f),brass,.018f);
-        Box(root,new(.28f,2.05f,0),new(.55f,.5f,.035f),teal,.025f);
-        Box(root,new(.28f,2.05f,.026f),new(.25f,.05f,.015f),cream);
+        ShaderMaterial Pennant(Color color)
+        {
+            var material=new ShaderMaterial{Shader=new Shader{Code=WorkshopPennantShader}};
+            material.SetShaderParameter("paint",color);_workshopPennants.Add(material);return material;
+        }
+        Box(root,new(.28f,2.05f,0),new(.55f,.5f,.035f),Pennant(new("397d78")),.025f).Name="WorkshopPennant";
+        Box(root,new(.28f,2.05f,.026f),new(.25f,.05f,.015f),Pennant(new("ded9be"))).Name="WorkshopPennantStripe";
         _workshopLampPaint??=new StandardMaterial3D{AlbedoColor=new("e4b86d"),EmissionEnabled=true,
             Emission=new("ffd08a"),EmissionEnergyMultiplier=.05f,ShadingMode=BaseMaterial3D.ShadingModeEnum.Unshaded,DisableFog=true};
         Bead(root,new(0,2.43f,0),new(.24f,.27f,.24f),_workshopLampPaint).Name="WorkshopFlagLamp";
@@ -95,9 +106,33 @@ public partial class TempleStageView
     {
         if(_workshopRaft is null||!WeatherActive)return;
         _workshopClock+=delta;
+        foreach(var paint in _workshopPennants)paint.SetShaderParameter("ambient_clock",_workshopClock);
         _workshopRaft.Position=new(_workshopRaft.Position.X,SceneryWaterHeight-.02f+PresentationMath.Sin(_workshopClock*1.3f+1.1f)*.05f,_workshopRaft.Position.Z);
         _workshopRaft.Basis=PresentationMath.Rotation(new(PresentationMath.Sin(_workshopClock*1.1f+1.1f)*.03f,
             -.3f+PresentationMath.Sin(_workshopClock*.25f+1.1f)*.08f,PresentationMath.Sin(_workshopClock*.9f+1.43f)*.05f));
+    }
+
+    private void BuildWorkshopFender(float left,float right,float rear,float front,Material paint,string name)
+    {
+        const float corner=.62f,radius=.18f;
+        var path=new List<Vector3>();
+        foreach(var(cx,cz,start)in new[]{(left+corner,rear+corner,Mathf.Pi),(right-corner,rear+corner,Mathf.Pi*1.5f),
+            (right-corner,front-corner,0f),(left+corner,front-corner,Mathf.Pi*.5f)})
+            for(int step=0;step<=8;step++)
+            {var(s,c)=PresentationMath.SinCos(start+step*Mathf.Pi/16);path.Add(new(cx+c*corner,-.23f,cz+s*corner));}
+        const int sides=12;var points=new Vector3[path.Count,sides];var outward=new Vector3[path.Count,sides];
+        for(int ring=0;ring<path.Count;ring++)
+        {
+            var tangent=(path[(ring+1)%path.Count]-path[(ring+path.Count-1)%path.Count]).Normalized();
+            var normal=new Vector3(tangent.Z,0,-tangent.X);
+            if(normal.Dot(path[ring]-new Vector3((left+right)/2,-.23f,(rear+front)/2))<0)normal=-normal;
+            for(int side=0;side<sides;side++)
+            {var(s,c)=PresentationMath.SinCos(side*Mathf.Tau/sides);outward[ring,side]=normal*c+Vector3.Up*s;points[ring,side]=path[ring]+outward[ring,side]*radius;}
+        }
+        var mesh=new SurfaceTool();mesh.Begin(Mesh.PrimitiveType.Triangles);mesh.SetSmoothGroup(0);
+        for(int ring=0;ring<path.Count;ring++)for(int side=0;side<sides;side++)
+        {int next=(ring+1)%path.Count,end=(side+1)%sides;WorkshopQuad(mesh,points[ring,side],points[next,side],points[next,end],points[ring,end],outward[ring,side]);}
+        mesh.GenerateNormals();mesh.Index();AddChild(new MeshInstance3D{Name=name,Mesh=mesh.Commit(),MaterialOverride=paint});
     }
 
     private static void WorkshopQuad(SurfaceTool surface,Vector3 a,Vector3 b,Vector3 c,Vector3 d,Vector3 outward)
@@ -121,7 +156,13 @@ void fragment(){
  vec2 p=arena.xz;
  vec3 cream=vec3(.64,.62,.49),teal=vec3(.055,.25,.23);
  float brush=sin(p.x*.31+sin(p.y*.23))*.018;
- ALBEDO=cream+brush;
+ // Broad, quiet boards restore the bench's material, not fine wood grain.
+ float row=floor(p.y/1.7);
+ float plank_edge=abs(mod(p.y+.85,1.7)-.85);
+ float end_edge=abs(mod(p.x+mod(row,2.0)*2.8,5.6)-2.8);
+ float seam=max(1.0-smoothstep(.025,.025+max(fwidth(p.y),.02),plank_edge),
+     (1.0-smoothstep(.018,.018+max(fwidth(p.x),.02),end_edge))*.65);
+ ALBEDO=(cream+brush+sin(row*2.4)*.014)*(1.0-seam*.16);
  // Accepted lesson start, move target and central staircase route.
  float range=step(5.0,p.x)*step(p.x,18.0);
  float rails=max(stripe(p.y-11.05,.065),stripe(p.y-14.95,.065))*range;
@@ -141,11 +182,39 @@ void fragment(){
  ALBEDO=mix(ALBEDO,teal,inlay*.90);
  // Pale tread marks sit on the actual continuous ramp planes.
  if(p.x>=10.0&&p.x<=13.0&&(p.y>=3.0&&p.y<4.0||p.y>=7.0&&p.y<8.0)){
-   float tread=stripe(mod(p.y*6.0+.5,1.0)-.5,.075);
-   ALBEDO=mix(ALBEDO,teal,tread*.55);
+   float tread=stripe(mod(p.y*6.0+.5,1.0)-.5,.22);
+   ALBEDO=mix(ALBEDO,teal,tread*.95);
  }
  ROUGHNESS=.88;SPECULAR=.22;
 }
+""";
+
+    private const string WorkshopTimberShader="""
+shader_type spatial;
+render_mode diffuse_burley;
+uniform float quality_detail=1.0;
+uniform float quality_premium=0.0;
+varying vec3 timber;
+void vertex(){timber=VERTEX;}
+void fragment(){
+ float plank=floor((timber.y+.94)/.60);
+ float distance=abs(mod(timber.y+.94,.60)-.30);
+ float seam=1.0-smoothstep(.015,.015+max(fwidth(timber.y),.015),distance);
+ ALBEDO=mix(vec3(.28,.16,.075),vec3(.36,.23,.12),.5+.1*sin(plank*2.3))*(1.0-seam*.18);
+ ROUGHNESS=.72;SPECULAR=.24;CLEARCOAT=.16;CLEARCOAT_ROUGHNESS=.45;
+}
+""";
+
+    private const string WorkshopPennantShader="""
+shader_type spatial;
+render_mode diffuse_burley, cull_disabled;
+uniform float ambient_clock=0.0;
+uniform vec4 paint : source_color;
+void vertex(){
+ float free=clamp(VERTEX.x/.55+.5,0.0,1.0);
+ VERTEX.z+=sin(ambient_clock*1.3+1.1+free*3.0)*.065*free*free;
+}
+void fragment(){ALBEDO=paint.rgb;ROUGHNESS=.88;}
 """;
 
     private const string WorkshopLampGlowShader="""

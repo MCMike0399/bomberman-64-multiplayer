@@ -25,6 +25,13 @@ with real lesson instructions, verifies actual worktop facing/support, clears
 movement through ordinary input and climbs both ramps. Its headless mode checks
 geometry and lessons only; matched native images still require visual review.
 
+The High-first Bombwright Bench pass gives the body broad varnished timber,
+the pale worktop broad plank seams, and the perimeter a rounded teal fender
+with four brass corner fittings. Teal nosings follow the unchanged ramp planes.
+Core pennants and the target raft share one pausable swell on every preset;
+the repeated palm islet is removed. No crane or compass prop is added to the
+teaching targets. The witness also records six High frames of the shared motion.
+
 ## Lesson flow
 
 Fast bomb equipment and its lesson were removed on 2026-10-25. Haste remains

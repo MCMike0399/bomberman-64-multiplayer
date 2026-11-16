@@ -12,14 +12,7 @@ public partial class TempleStageView
     {
         var scenery=_scenery!;
         float sea=-.53f;
-        var sand=_art.Color(new("e6cf96"),.95f);var turf=_art.Color(new("6fa456"),.95f);
         var plank=_art.Color(new("9a7650"),.85f);var post=_art.Color(new("6b4d33"),.85f);
-
-        var islet=new Vector3(-4.6f,sea,-1.8f);
-        Sphere(scenery,islet+new Vector3(0,-.35f,0),new(5,1.1f,3.8f),sand).Name="Islet";
-        Sphere(scenery,islet+new Vector3(-.3f,-.2f,-.2f),new(3,.6f,2.2f),turf).Name="IsletTurf";
-        PalmTree(scenery,islet+new Vector3(-.5f,.08f,-.3f),2.6f,.25f,.6f,0);
-        PalmTree(scenery,islet+new Vector3(1,.04f,.4f),2,-.2f,2.8f,2);
 
         // A jetty off the west shore with a moored sailboat.
         var jetty=Prop(scenery,"Jetty",new(-.08f,sea,8.5f),-Mathf.Pi/2);
@@ -31,7 +24,6 @@ public partial class TempleStageView
             Buoy(scenery,new(x,sea,z),phase>1?new Color("3f9b4f"):new Color("d8433b"),phase);
 
         Gull(scenery,new(-5,6.4f,-1.5f),2.4f,.55f,0);
-        Gull(scenery,new(Width+5,6.9f,2),2.8f,-.5f,1.7f);
         Hill(scenery,new(Width*.4f,-1,-28),new(34,6,9),new("6b9a63"));
     }
 

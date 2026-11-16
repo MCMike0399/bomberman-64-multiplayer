@@ -28,6 +28,8 @@ public partial class PlaytestDriver
                 var terrain=AuditDescendants(_root.GetChildren().OfType<ArenaView>().Single()).OfType<TempleStageView>().Single();
                 var top=AuditDescendants(terrain).OfType<MeshInstance3D>().Single(n=>n.Name=="WorkshopMeasuredWorktop");
                 CheckWorkshopWorktop(top);
+                foreach(var fender in AuditDescendants(terrain).OfType<MeshInstance3D>().Where(n=>n.Name=="WorkshopMainFender"||n.Name=="WorkshopLandingFender"))
+                    CheckWorkshopWorktop(fender,false);
                 CheckWorkshopSupport(top);
                 var raft=AuditDescendants(terrain).OfType<Node3D>().Single(n=>n.Name=="TargetRaft");
                 Check(raft.GetParent()==terrain&&raft.IsVisibleInTree(),"target raft remains a visible core teaching object: "+label);
@@ -40,6 +42,9 @@ public partial class PlaytestDriver
                         "actual flag lamps retain warm emission at Night: "+label);
                 }
                 await Capture("circuit-workshop-lesson-"+label);
+                if(!_headless&&preset==GraphicsPreset.High&&time==StageTime.Midday)
+                    for(int frame=0;frame<6;frame++)
+                    {await Frames(15);await Capture("circuit-bench-shared-breeze-"+frame,0);}
                 for(int frame=0;frame<70&&!State.GetProperty("tutorial").GetProperty("complete").GetBoolean();frame++)
                 {Input(0,new(1,0));await Frames(1);}
                 Input(0,default);
@@ -63,7 +68,7 @@ public partial class PlaytestDriver
         }
     }
 
-    private void CheckWorkshopWorktop(MeshInstance3D top)
+    private void CheckWorkshopWorktop(MeshInstance3D top,bool requireUp=true)
     {
         var arrays=top.Mesh.SurfaceGetArrays(0);var vertices=arrays[(int)Mesh.ArrayType.Vertex].AsVector3Array();
         var normals=arrays[(int)Mesh.ArrayType.Normal].AsVector3Array();var indices=arrays[(int)Mesh.ArrayType.Index].AsInt32Array();
@@ -72,9 +77,10 @@ public partial class PlaytestDriver
         {
             int a=indices[i],b=indices[i+1],c=indices[i+2];
             var normal=(vertices[c]-vertices[a]).Cross(vertices[b]-vertices[a]).Normalized();
-            upward&=normal.Y>0&&normal.Dot(normals[a])>.99f;
+            upward&=(!requireUp||normal.Y>0)&&normal.Dot(normals[a])>(requireUp?.99f:.5f);
         }
-        Check(upward,"actual indexed workshop worktop triangles and normals face upward");
+        Check(upward,requireUp?"actual indexed workshop worktop triangles and normals face upward":
+            "actual indexed fender triangles agree with their outward normals: "+top.Name);
     }
 
     private void CheckWorkshopSupport(MeshInstance3D top)
