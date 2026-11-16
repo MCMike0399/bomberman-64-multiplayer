@@ -20,7 +20,7 @@ public partial class PlaytestDriver
             _root.Navigate("Setup");await Frames(6);
             var menu=AuditDescendants(_root).OfType<ArcadeMenu>().Single();
             menu.Configure(new SessionSettings(),1);NamedButton("StageSelector").GrabFocus();
-            for(int n=0;n<6;n++)await KeyPress(Key.Right);
+            for(int n=0;n<7;n++)await KeyPress(Key.Right);
             Check(menu.Settings.Stage==BlastStages.InTheGutter,"native arena dial reaches In the Gutter");
             await Capture("in-the-gutter-menu-miniature");
             _root.StartLocal(new SessionSettings(Stage:BlastStages.InTheGutter,Bots:0,SuddenDeath:false),4);

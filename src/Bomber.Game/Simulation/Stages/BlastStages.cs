@@ -15,6 +15,7 @@ public static partial class BlastStages
         TopRules => BuildTopRules(),
         BlizzardBattle => BuildBlizzardBattle(),
         GreedyTrap => BuildGreedyTrap(),
+        FieldOfGrass => BuildFieldOfGrass(),
         InTheGutter => BuildInTheGutter(),
         _ => BuildSunkenTemple(),
     };
@@ -23,6 +24,8 @@ public static partial class BlastStages
 
     /// <summary>Seconds between Hurry column closures; clients pace the advancing wall face with it.</summary>
     public static float HurryColumnSeconds(string id) => id == BlizzardBattle ? Rules.BlizzardRules.AvalancheStepSeconds : 1f;
+
+    public static bool UsesMeteors(string id) => id is RockGarden or FieldOfGrass;
 
     private static CellDef[,] Fill(int w, int h, CellDef def)
     {

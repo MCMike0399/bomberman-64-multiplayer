@@ -18,6 +18,7 @@ public partial class PlaytestDriver
         (BlastStages.TopRules,["WallBanner","FloatingIslet","HeroPlanet","CompanionPlanet","ToyMoon","OrreryStars","HeroOrreryArm"]),
         (BlastStages.BlizzardBattle,["PineTree","GlacierPeak","WinterTree","ExteriorSnowfall"]),
         (BlastStages.GreedyTrap,["GreedyWestRowboat","GreedyEastRowboat","Sailboat","Gull"]),
+        (BlastStages.FieldOfGrass,["HayRick"]),
         (BlastStages.InTheGutter,["CopperLockWestMachine","CopperLockEastMachine","CopperLockChannelStub","CopperLockFishBody","CopperLockOuterWater"]),
         (BlastStages.CircuitGarden,["Jetty","Buoy","Gull"]),
     ];
@@ -127,7 +128,7 @@ public partial class PlaytestDriver
     private async Task CheckScenery(string stage,TempleStageView terrain,string[] signature)
     {
         var scenery=terrain.Scenery;
-        bool copper=stage==BlastStages.InTheGutter;
+        bool copper=stage==BlastStages.InTheGutter,hollow=stage==BlastStages.FieldOfGrass;
         Check(scenery!=null&&scenery.Name==TempleStageView.SceneryNodeName&&(copper?terrain.IsVisibleInTree():scenery.IsVisibleInTree()),
             copper?"Copper Lock's integrated presentation is visible":"arena has visible decorative scenery: "+stage);
         if(scenery==null)return;
@@ -166,9 +167,20 @@ public partial class PlaytestDriver
         Event("scenery-geometry",new{stage,meshes,vertices,motions=terrain.SceneryMotionCount,problems=problems.Take(5)});
         // Copper Lock's machinery/channel are integrated core terrain; it has
         // no separate island dressing. Audit that real presentation, not padding.
-        const int minimumMeshes=20;
+        // Hollow intentionally keeps one compact hay mesh; its core stile, terrain
+        // and gameplay foliage have their own actual-mesh and support checks.
+        int minimumMeshes=hollow?1:20;
         Check(problems.Count==0&&meshes>=minimumMeshes,$"scenery geometry is finite, nonempty and textured: {stage} meshes={meshes} {string.Join("; ",problems.Take(3))}");
-        if(!copper)Check(terrain.SceneryMotionCount>0,"scenery has animated life: "+stage);
+        if(hollow)
+        {
+            var hay=AuditDescendants(scenery).OfType<MeshInstance3D>().Single(n=>n.Name=="HollowHayRickMesh");
+            var size=hay.Mesh.GetAabb().Size;
+            Check(size.X is >1.2f and <1.6f&&size.Y is >.8f and <1.1f&&size.Z is >.8f and <1.3f,
+                "the single optional hay rick has its intended finite, compact physical bounds");
+            Check(AuditDescendants(terrain).OfType<Node3D>().Single(n=>n.Name=="HollowStile").GetParent()==terrain,
+                "the existing stile and warm lantern are core terrain, retained on Low");
+        }
+        if(!copper&&!hollow)Check(terrain.SceneryMotionCount>0,"scenery has animated life: "+stage);
         if(stage==BlastStages.BlizzardBattle)
         {
             var snow=AuditDescendants(scenery).OfType<BlizzardWeather>().Single();
@@ -182,9 +194,12 @@ public partial class PlaytestDriver
 
         // Animated props actually move, and placement still holds mid-animation.
         var tracked=AuditDescendants(presentation).OfType<Node3D>().ToDictionary(n=>n,n=>n.Transform);
+        var canopy=hollow?AuditDescendants(terrain).OfType<MultiMeshInstance3D>().Single(n=>n.Name=="ConcealingMeadow").MaterialOverride as ShaderMaterial:null;
+        float canopyClock=canopy?.GetShaderParameter("ambient_clock").AsSingle()??0;
         await Frames(24);
         int moved=tracked.Count(p=>GodotObject.IsInstanceValid(p.Key)&&!p.Key.Transform.IsEqualApprox(p.Value));
-        Check(moved>0,$"scenery animates over real frames: {stage} moved={moved}");
+        Check(hollow?canopy!.GetShaderParameter("ambient_clock").AsSingle()>canopyClock:moved>0,
+            $"world life advances over real frames: {stage} moved={moved}; hollow uses the core meadow breeze");
         intrusions=SceneryIntrusions(terrain,copper?presentation:null);
         Check(intrusions.Count==0,$"animated scenery remains outside play space: {stage} {string.Join(", ",intrusions.Take(6))}");
     }

@@ -45,8 +45,8 @@ class StageCaptureContracts(unittest.TestCase):
         result=self.exercise(repeat_code=1)
         self.assertTrue(result['collectionComplete'])
         self.assertFalse(result['repeatsExact'])
-        self.assertEqual(len(result['runs']),12)
-        self.assertEqual(len(result['comparisons']),30)
+        self.assertEqual(len(result['runs']),len(gpu_campaign.OTHER_STAGES)*2)
+        self.assertEqual(len(result['comparisons']),len(gpu_campaign.OTHER_STAGES)*5)
         self.assertEqual({(r['stage'],r['index'])for r in result['runs']},
                          {(stage,index)for stage in gpu_campaign.OTHER_STAGES for index in (0,1)})
 
@@ -61,7 +61,7 @@ class StageCaptureContracts(unittest.TestCase):
         self.assertTrue(result['collectionComplete'])
         self.assertFalse(result['freshProcessCoverage'])
         self.assertEqual(result['expectedAdapter'],'Apple Paravirtual device')
-        self.assertEqual(len(result['runs']),6)
+        self.assertEqual(len(result['runs']),len(gpu_campaign.OTHER_STAGES))
 
     def test_forced_directx_fallback_lane_stays_explicit(self):
         result=self.exercise(driver='d3d12')

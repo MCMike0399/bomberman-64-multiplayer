@@ -22,6 +22,12 @@ internal static class PeerFrameChecks
             Check(!PeerFrameRules.Valid(JsonSerializer.SerializeToElement(broken)),"reject invalid Gutter current "+field);
         }
         var match=new LocalMatch(new MatchOptions{HumanPlayers=2,BotPlayers=6});
+        var grass=new LocalMatch(new MatchOptions{Stage="field-of-grass",HumanPlayers=8,BotPlayers=0,RoundSeconds=60});
+        for(int tick=0;tick<65;tick++)grass.Tick();
+        using var grassStage=JsonDocument.Parse(grass.StageJson!);
+        using var grassState=JsonDocument.Parse(grass.StateJson!);
+        Check(PeerFrameRules.Valid(grassStage.RootElement)&&PeerFrameRules.Valid(grassState.RootElement),"Field of Grass slopes and live meteor state cross peer validation");
+        Check(new SessionSettings(Stage:"field-of-grass").ToWireSettings()["stage"]=="field-of-grass","Field of Grass room setting survives the wire");
         var snow=new LocalMatch(new MatchOptions{Stage="blizzard-battle",HumanPlayers=2,BotPlayers=0});
         for(int tick=0;tick<110;tick++)snow.Tick();
         Check(PeerFrameRules.Valid(JsonSerializer.SerializeToElement(JsonNode.Parse(snow.StageJson!)!)),"Blizzard Battle stage crosses peer validation");

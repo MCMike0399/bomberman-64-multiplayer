@@ -5,6 +5,15 @@ controller prompts, throw previews or shared UI primitives. It records decisions
 that source alone cannot explain. Source and the current README remain the
 lookup for exact values; older iteration documents retain historical evidence.
 
+## Field of Grass (2026-11-15 source work)
+
+[Stage contract and inspected references](../field-of-grass.md) own the grassy valley,
+continuous side slopes, eight bank starts, random meadow rocks and meteor Hurry.
+Opaque foliage conceals normal bombs and lower bodies without changing physics;
+all presets retain it. Use the focused `--field-of-grass` authority checks and
+`field-of-grass` / `field-of-grass-network` journeys. Graphical images require
+separate review; headless checks do not approve the art or establish delivery.
+
 ## Round and match announcements (2026-10-28 source work)
 
 The arena stays visible during the authority's three-second Over phase, including

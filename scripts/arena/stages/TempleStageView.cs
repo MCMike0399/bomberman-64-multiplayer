@@ -57,7 +57,13 @@ public partial class TempleStageView : Node3D
     private ShaderMaterial? _castleCoverMaterial;
     public ShaderMaterial CastleWallMaterial=>_castleWallMaterial;
     public StageLayout Layout {get;private set;} = null!;
-    private bool _garden;
+    private bool _garden,_field;
+    private float _fieldClock;
+    private ShaderMaterial? _fieldGrassMaterial;
+    private ShaderMaterial? _hollowStoneMaterial;
+    private OmniLight3D? _hollowLantern;
+    private Mesh[] _hollowStoneMeshes=[];
+    private readonly List<ShaderMaterial> _fieldMaterials=[];
     private readonly List<ShaderMaterial> _gardenMaterials=[];
     private Mesh[] _gardenRocks=[];
     private Material _gardenRockMaterial=null!;
@@ -75,6 +81,8 @@ public partial class TempleStageView : Node3D
     {
         _lighting=lighting;
         SetUpAndDownLighting(lighting);
+        ApplyHollowLanternLighting(lighting);
+        if(_fieldGrassMaterial is not null)_fieldGrassMaterial.SetShaderParameter("paint",new Color(lighting.Label=="Night"?"668e4f":"4e793f"));
         if(_water?.MaterialOverride is ShaderMaterial material)lighting.ApplyWater(material);
         if(_greedyMoat?.MaterialOverride is ShaderMaterial moat)lighting.ApplyWater(moat);
         if(_gutterWater!=null)
@@ -103,6 +111,7 @@ public partial class TempleStageView : Node3D
         ProcessWorkshop((float)delta);
         AnimateScenery((float)delta);
         ProcessCoastalLife((float)delta);
+        if(_field){ProcessField((float)delta);return;}
         if(_blizzard){ProcessBlizzard((float)delta);return;}
         if(_gutter){ProcessGutter((float)delta);return;}
         if(_greedy){ProcessGreedyTrap((float)delta);return;}
@@ -168,6 +177,7 @@ public partial class TempleStageView : Node3D
     public TempleStageView(ArtMaterials art){_art=art;}
     public float Surface(float x,float z,float y=float.PositiveInfinity) => Layout.SurfaceAt(x,z,y)*HeightScale;
     public CellKind AimCellKind(float x,float z) => Layout.At((int)MathF.Floor(x),(int)MathF.Floor(z)).Kind;
+    public float OverlaySurface(float x,float z)=>_field&&x>=5&&x<16&&z>=1&&z<Depth-1?1.02f:Surface(x,z);
     public float AimSurface(float x,float z) => AimCellKind(x,z) switch
     {
         CellKind.Water => _targetWater/HeightScale,
@@ -207,6 +217,8 @@ public partial class TempleStageView : Node3D
         Layout=new StageLayout {Id=data.GetProperty("id").GetString()!,Width=Width,Height=Depth,Cells=cells,
             SoftBlockHeight=data.TryGetProperty("coverHeight",out var coverHeight)?coverHeight.GetSingle():BombThrowRules.CoverHeight};
         _underpasses.Clear();foreach(var cell in Layout.Underpasses)_underpasses.Add(cell.Z*Width+cell.X);
+        _field=Layout.Id==BlastStages.FieldOfGrass;
+        if(_field){BuildFieldOfGrass();return;}
         _gutter=Layout.Id==BlastStages.InTheGutter;
         if(_gutter){BuildGutter();return;}
         _blizzard=Layout.Id==BlastStages.BlizzardBattle;
@@ -349,6 +361,7 @@ public partial class TempleStageView : Node3D
         if(_greedy)return CreateGreedyCover(x,z);
         if(_castle)return CreateCastleCover(x,z);
         var root=new Node3D {Position=new(x+.5f,Surface(x+.5f,z+.5f),z+.5f)};
+        if(_field)return CreateHollowStone(root,cell);
         if(_garden)return CreateGardenBoulder(root,cell);
         if(_blizzard)return CreateIceCone(root,cell);
         if(Layout.Id==BlastStages.UpAndDown)return CreateUpAndDownCover(root,cell);

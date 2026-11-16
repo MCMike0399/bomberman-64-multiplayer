@@ -6,6 +6,15 @@ The tools and their `--help` are authoritative for current flags; detailed
 references are [playtests](../../tools/playtest/README.md), [CI](../ci.md),
 [macOS packaging](../macos-app.md), and [verification](../verification.md).
 
+## Field of Grass (2026-11-15 source work)
+
+[Stage contract and inspected references](../field-of-grass.md) own the grassy valley,
+continuous side slopes, eight bank starts, random meadow rocks and meteor Hurry.
+Opaque foliage conceals normal bombs and lower bodies without changing physics;
+all presets retain it. Use the focused `--field-of-grass` authority checks and
+`field-of-grass` / `field-of-grass-network` journeys. Graphical images require
+separate review; headless checks do not approve the art or establish delivery.
+
 ## Select the branch before running work
 
 | Change | Tight loop | Completion gate |

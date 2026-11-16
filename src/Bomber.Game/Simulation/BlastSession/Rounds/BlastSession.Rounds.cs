@@ -125,7 +125,7 @@ public sealed partial class BlastSession
                 Present("waterfall", magnitude: FloodRules.RisePerSecond, y: _waterLevel);
             }
         }
-        if (_phase == RoundPhase.Hurry && !_stage.RisingWater && _stage.Id!=BlastStages.RockGarden && _tutorialLesson is null)
+        if (_phase == RoundPhase.Hurry && !_stage.RisingWater && !BlastStages.UsesMeteors(_stage.Id) && _tutorialLesson is null)
         {
             _hurryColTimer += dt;
             float interval=BlastStages.HurryColumnSeconds(_stage.Id);
@@ -144,7 +144,7 @@ public sealed partial class BlastSession
             }
         }
 
-        if(_phase==RoundPhase.Hurry&&_stage.Id==BlastStages.RockGarden)TickGardenMeteors(context,dt);
+        if(_phase==RoundPhase.Hurry&&BlastStages.UsesMeteors(_stage.Id))TickGardenMeteors(context,dt);
 
         // Time limit: draw.
         if (!_practice && timeLeft <= 0)
