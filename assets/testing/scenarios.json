@@ -961,6 +961,7 @@
       "id": "tour-21",
       "steps": [
         "stage-scenery",
+        "orrery-keep",
         "wall-death"
       ],
       "domains": [
@@ -1075,7 +1076,8 @@
         "stage-scenery",
         "round-ending",
         "sea-sick",
-        "lost-at-sea"
+        "lost-at-sea",
+        "orrery-keep"
       ],
       "domains": [
         "ai",
@@ -1286,7 +1288,12 @@
     {
       "id": "field-of-grass-shape-study",
       "method": "FieldOfGrassShapeStudy",
-      "domains": ["gameplay", "rendering", "physics", "ai"],
+      "domains": [
+        "gameplay",
+        "rendering",
+        "physics",
+        "ai"
+      ],
       "headless": true,
       "timeout": 240,
       "manual": false
@@ -1347,7 +1354,8 @@
         "field-of-grass",
         "stage-scenery",
         "sea-sick",
-        "lost-at-sea"
+        "lost-at-sea",
+        "orrery-keep"
       ],
       "domains": [
         "gameplay",
@@ -1641,7 +1649,8 @@
         "field-of-grass",
         "greedy-canal",
         "sea-sick",
-        "lost-at-sea"
+        "lost-at-sea",
+        "orrery-keep"
       ],
       "domains": [
         "rendering",
@@ -2187,6 +2196,17 @@
       ],
       "headless": true,
       "timeout": 240,
+      "manual": false
+    },
+    {
+      "id": "orrery-keep",
+      "method": "OrreryKeepTour",
+      "domains": [
+        "rendering",
+        "gameplay"
+      ],
+      "headless": true,
+      "timeout": 180,
       "manual": false
     }
   ]

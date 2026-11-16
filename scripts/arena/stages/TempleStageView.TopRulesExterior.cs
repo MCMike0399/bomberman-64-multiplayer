@@ -7,8 +7,8 @@ public partial class TempleStageView
 {
     /// <summary>A sky citadel in the castle's dark backdrop, informed by Bomberman 64's
     /// Black Fortress descending through the clouds: a rocky crag below the foundation,
-    /// four corner turrets with braziers and pennants, heraldic wall banners, drifting
-    /// cloud banks, small floating islets and a starfield. None of it is walkable.</summary>
+    /// four corner turrets with braziers and pennants, heraldic wall banners,
+    /// floating turret islets and the brass Orrery Keep. None of it is walkable.</summary>
     private void BuildTopRulesExterior()
     {
         var scenery=_scenery!;
@@ -17,10 +17,7 @@ public partial class TempleStageView
         var gold=_art.Color(new("c79a3d"),.4f);var crimson=_art.Color(new("8c2233"),.8f);
         var iron=_art.Color(new("2c2f36"),.5f);
 
-        // The crag: an irregular inverted spire that grows out of the foundation.
-        // A plain painted rock keeps the castle's bounded set of quality-aware stone shaders.
         var rock=_art.Color(new("5b5860"),.95f);
-        scenery.AddChild(new MeshInstance3D{Name="FortressCrag",Mesh=CragMesh(Width,Depth),MaterialOverride=rock});
 
         // Corner turrets: tall braziers at the rear, short roofed towers at the front
         // so the near wall stays low and the lower court remains visible.
@@ -65,13 +62,6 @@ public partial class TempleStageView
             Sphere(banner,new(.11f,-.42f,.05f),new(.08f,.08f,.03f),Glow(new("ffcf5a"),2));
         }
 
-        // Cloud banks drift through the void below the citadel.
-        Cloud(scenery,new(-6,-4.2f,4),1.3f,.35f,40,0);
-        Cloud(scenery,new(Width+6,-5,12),1.5f,.28f,44,13);
-        Cloud(scenery,new(Width/2f,-6.2f,Depth+4),1.7f,.22f,50,27);
-        Cloud(scenery,new(Width/2f,-3.4f,-5.5f),1.2f,.3f,44,6);
-        Cloud(scenery,new(-4,-7.5f,Depth-2),1.4f,.25f,46,33);
-
         // Floating islets with tiny watchtowers bob slowly around the fortress.
         foreach(var (at,scale,phase) in new[]{(new Vector3(-6.4f,1.5f,-2.5f),1f,0f),(new Vector3(Width+6.6f,.4f,4.5f),.8f,2f),(new Vector3(-7,-1.6f,13),.7f,4f)})
         {
@@ -85,7 +75,6 @@ public partial class TempleStageView
             _sceneryMotion.Add(t=>islet.Position=new(at.X,y+Mathf.Sin(t*.45f+phase)*.25f,at.Z));
         }
 
-        Starfield(scenery,new(Width/2f,-10,Depth/2f),120,30,520,17);
         BuildOrbitalBackdrop();
     }
 
@@ -94,17 +83,17 @@ public partial class TempleStageView
     {
         var surface=new SurfaceTool();surface.Begin(Mesh.PrimitiveType.Triangles);
         const int segments=28;
-        float[] levels=[-.9f,-2.4f,-4.6f,-7.2f,-10.5f];
-        float[] scales=[1.04f,.86f,.6f,.32f,.06f];
+        float[] levels=[-.94f,-1.6f,-2.6f,-3.8f,-5.0f,-5.8f];
+        float[] scales=[1.19f,1.15f,1.03f,.82f,.48f,.09f];
         var center=new Vector3(width/2f,0,depth/2f);
         Vector3 Point(int layer,int i)
         {
             float a=i*Mathf.Tau/segments;
-            float wobble=layer==0?0:.12f*Mathf.Sin(i*2.7f+layer*1.9f)+.06f*Mathf.Sin(i*5.3f+layer);
-            // A rounded rectangle at the top relaxes into a jagged cone.
-            var dir=new Vector2(Mathf.Cos(a),Mathf.Sin(a));
-            float square=1/Mathf.Max(Mathf.Abs(dir.X),Mathf.Abs(dir.Y));
-            float shape=Mathf.Lerp(square,1.1f,layer/(float)(levels.Length-1));
+            float wobble=layer==0?0:.035f*BlastCircuit.Rendering.PresentationMath.Sin(i*2.7f+layer*1.9f);
+            var(sin,cos)=BlastCircuit.Rendering.PresentationMath.SinCos(a);var dir=new Vector2(cos,sin);
+            float fourth=cos*cos*cos*cos+sin*sin*sin*sin;
+            float rounded=1/(float)Math.Sqrt(Math.Sqrt(fourth));
+            float shape=Mathf.Lerp(rounded,1.0f,layer/(float)(levels.Length-1));
             float s=scales[layer]*(1+wobble)*shape;
             return center+new Vector3(dir.X*width/2f*s,levels[layer],dir.Y*depth/2f*s);
         }
@@ -121,6 +110,12 @@ public partial class TempleStageView
             var c=Point(layer+1,(i+1)%segments);var d=Point(layer+1,i);
             Triangle(a,b,c);Triangle(a,c,d);
         }
-        return surface.Commit();
+        for(int i=0;i<segments;i++)
+        {
+            Triangle(new(center.X,levels[0],center.Z),Point(0,i),Point(0,(i+1)%segments));
+            int bottom=levels.Length-1;
+            Triangle(new(center.X,levels[bottom],center.Z),Point(bottom,(i+1)%segments),Point(bottom,i));
+        }
+        surface.Index();return surface.Commit();
     }
 }

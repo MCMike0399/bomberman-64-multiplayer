@@ -914,3 +914,25 @@ the shader uses NODE_POSITION_WORLD for radial coverage: localize geometry
 instead of moving its world footprint. The consumed-geometry regression
 protects that mapping. Final colored review and rebuilt-export qualification
 remain required; do not equate the shape GO or passing counts with approval.
+
+### Orrery Keep direction (2026-11-15, current source)
+
+The earlier planet-stripe pass is superseded by
+[Orrery Keep](../top-rules-orbital-polish.md#current-direction-orrery-keep):
+a core Low-visible rock body and painted indigo/violet backdrop, three small
+lacquered globes on brass arms, four chunky stars, retained turret islets and
+one restrained colored rim light. The castle/court and camera direction stay
+unchanged; only the Top-specific fit includes its underside. Native planet
+bounds must remain fully framed outside the HUD/footer and below twelve
+percent of width. Dummy headless projection is not that qualification.
+Actual owned-face winding, Low core retention and real eight-player combat
+checks support the required native captures and independent art review.
+
+The current Orrery pass also gives the hero a small open ring and soft broad
+bands, the blue globe broad patches and the moon a few large crater variations.
+Brass supports must enter the rock shoulders, not end in empty space. The
+dedicated journey combines actual indexed winding, native frame limits and
+visible-hemisphere rays against the consumed castle/crag triangles. It runs
+inside the common stage-fidelity/scenery/all suites. Native 99/7 evidence
+precedes the last small attachment/tilt correction; fresh integrated
+all-preset review still qualifies the final view.

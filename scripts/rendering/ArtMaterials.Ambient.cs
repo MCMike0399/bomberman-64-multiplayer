@@ -118,17 +118,13 @@ uniform vec2 stage_center=vec2(9.5);
 varying vec3 world;
 void vertex(){world=(MODEL_MATRIX*vec4(VERTEX,1.0)).xyz;}
 void fragment(){
- vec2 p=(world.xz-stage_center)*.035;
- float drift=ambient_clock*.003;
- float cloud=sin(p.x*.8+p.y*.55+sin(p.y*1.9)*.8+drift);
- float fold=sin(p.y*2.7-p.x*.6+sin(p.x*1.7)*.55);
- float veil=smoothstep(-.1,1.0,cloud)*smoothstep(-.6,1.0,fold);
- float dust=.5+.5*sin(p.x*6.0+p.y*4.0+sin(p.y*5.0)*.7);
- // Fade to the black void well before the finite backdrop ends. Neither a
- // mesh edge nor the far clip should make a horizon across the dark setting.
- float envelope=1.0-smoothstep(36.0,68.0,length(world.xz-stage_center));
- vec3 tint=mix(vec3(.014,.021,.035),vec3(.036,.019,.053),.5+.5*sin(p.x-p.y));
- ALBEDO=(vec3(.0012,.002,.006)+tint*veil*(.65+.35*dust))*envelope;
+ vec2 p=(world.xz-stage_center)*.018;
+ float vertical=clamp((world.z-stage_center.y+55.0)/130.0,0.0,1.0);
+ vec3 indigo=vec3(.018,.014,.052),violet=vec3(.071,.033,.105);
+ float brush=.5+.5*sin(p.x*.8+p.y*.65+sin(p.y*1.7)*.35);
+ vec3 paint=mix(indigo,violet,vertical*.75+brush*.12);
+ float envelope=1.0-smoothstep(70.0,93.0,length(world.xz-stage_center));
+ ALBEDO=mix(vec3(.009,.008,.027),paint,envelope);
 }
 """;
 }
