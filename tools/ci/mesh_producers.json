@@ -2332,7 +2332,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.RockGarden.cs:Box:2",
       "file": "scripts/arena/stages/TempleStageView.RockGarden.cs",
-      "line": 39,
+      "line": 43,
       "call": "Box(this,new(x,-.235f,Depth/2f),new(1.4f,.03f,Depth+2.8f),mown)",
       "callSha256": "a13755f252e858bd5a722805e56c93edb2cd8f6d62fecaee757f6ac077bac650",
       "domain": "owned-generator-or-helper"
@@ -2340,7 +2340,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.RockGarden.cs:Box:3",
       "file": "scripts/arena/stages/TempleStageView.RockGarden.cs",
-      "line": 41,
+      "line": 45,
       "call": "Box(this,new(Width/2f,-.235f,z),new(Width,.03f,1.4f),mown)",
       "callSha256": "ed5402826aeafb0d38db9e9bd9812df290541aea69ffe49344891a34e97db737",
       "domain": "owned-generator-or-helper"
@@ -2348,7 +2348,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.RockGarden.cs:Box:4",
       "file": "scripts/arena/stages/TempleStageView.RockGarden.cs",
-      "line": 42,
+      "line": 47,
       "call": "Box(this,new(Width/2f,-.15f,Depth/2f),new(Width,.3f,Depth),grass)",
       "callSha256": "ad20704cde24aae1306c008c2a77753f5dbfb05895b002c20447862ab8df15bb",
       "domain": "owned-generator-or-helper"
@@ -2356,7 +2356,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.RockGarden.cs:Box:5",
       "file": "scripts/arena/stages/TempleStageView.RockGarden.cs",
-      "line": 59,
+      "line": 64,
       "call": "Box(this,new(x+.5f,(height-.22f)/2,z+.5f),new(.995f,height-.22f,.995f),patch?lichened:stone,.045f)",
       "callSha256": "5be482a0e0b942ea1aa7b3e7278c8a25a3e5e2a5e37d104ce2dad65e5dfca493",
       "domain": "owned-generator-or-helper"
@@ -2364,7 +2364,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.RockGarden.cs:Box:6",
       "file": "scripts/arena/stages/TempleStageView.RockGarden.cs",
-      "line": 64,
+      "line": 69,
       "call": "Box(paving,new(x+.5f,-.013f,z+.5f),new(.96f,.05f,.96f),stone,.018f)",
       "callSha256": "b7de9aabc3416ce7e7ef1683b7c7de445b9af909ebabcdca53d896efd7f3c214",
       "domain": "owned-generator-or-helper"
@@ -2372,7 +2372,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.RockGarden.cs:newSurfaceTool:1",
       "file": "scripts/arena/stages/TempleStageView.RockGarden.cs",
-      "line": 72,
+      "line": 77,
       "call": "new SurfaceTool()",
       "callSha256": "524d4daa3dd8ade1577b68b52e91ebbe9907def4954bab94da3aeb8c6bb1a4ae",
       "domain": "owned-generator-or-helper"
@@ -2380,7 +2380,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.RockGarden.cs:surface.Commit:1",
       "file": "scripts/arena/stages/TempleStageView.RockGarden.cs",
-      "line": 93,
+      "line": 98,
       "call": "surface.Commit()",
       "callSha256": "3a4b0e22bc74cdecd537891eb2f48df20b98f27fbf269b1803e1cc035b3194ec",
       "domain": "owned-generator-or-helper"
@@ -2388,7 +2388,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.RockGarden.cs:newSurfaceTool:2",
       "file": "scripts/arena/stages/TempleStageView.RockGarden.cs",
-      "line": 128,
+      "line": 133,
       "call": "new SurfaceTool()",
       "callSha256": "524d4daa3dd8ade1577b68b52e91ebbe9907def4954bab94da3aeb8c6bb1a4ae",
       "domain": "owned-generator-or-helper"
@@ -2396,7 +2396,7 @@
     {
       "id": "scripts/arena/stages/TempleStageView.RockGarden.cs:surface.Commit:2",
       "file": "scripts/arena/stages/TempleStageView.RockGarden.cs",
-      "line": 153,
+      "line": 158,
       "call": "surface.Commit()",
       "callSha256": "3a4b0e22bc74cdecd537891eb2f48df20b98f27fbf269b1803e1cc035b3194ec",
       "domain": "owned-generator-or-helper"
@@ -9440,7 +9440,7 @@
     "scripts/arena/stages/TempleStageView.Meadow.cs": "06264048f537b5475e73e7e118f79468d4bc461838c5af8937b2bc6eb7077e79",
     "scripts/arena/stages/TempleStageView.Orbital.cs": "bbc72f77f93a1f7bedad259b428dc4677d8acc34e10a4422e41571d434cf6247",
     "scripts/arena/stages/TempleStageView.Orchard.cs": "4bca87d1f0f83651fb670d401e5f1c2b3b15da232a7bbba0fe8064a2167d960c",
-    "scripts/arena/stages/TempleStageView.RockGarden.cs": "a68c86d1e7f364c3176618e3e88fb46cb48e99b0a631a5986cd80bdebd2a6942",
+    "scripts/arena/stages/TempleStageView.RockGarden.cs": "5c26497013f5ec8ae208e61d9ee4f0a4a07b42a3b6f3b79fe7c4b20d22ab90f2",
     "scripts/arena/stages/TempleStageView.RockGardenExterior.cs": "c61d20bb2ac02bb45239914524ca4356b65f0f33a0112f1e38c99de4d57bdbd8",
     "scripts/arena/stages/TempleStageView.Scenery.cs": "98a78215e9eb0c1d9017ef0e0fe73d3c7524e3cf73758bdd4162eb5256194fde",
     "scripts/arena/stages/TempleStageView.SunkenTempleExterior.cs": "35a54f9e02893c0af5a6ad9ba30b8076a37e131850479a2d9c78a86961a01a35",

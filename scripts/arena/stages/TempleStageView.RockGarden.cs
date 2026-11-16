@@ -35,10 +35,15 @@ public partial class TempleStageView
         // The exterior is scenery below the playable floor. Only authority cells
         // inside the stone enclosure support players; there is no invented route.
         Box(this,new(Width/2f,-.38f,Depth/2f),new(160,.28f,160),outer).Name="GardenExterior";
-        foreach(float x in new[]{-.7f,Width+.7f})
-            Box(this,new(x,-.235f,Depth/2f),new(1.4f,.03f,Depth+2.8f),mown).Name=x<0?"GardenMownBorderWest":"GardenMownBorderEast";
-        foreach(float z in new[]{-.7f,Depth+.7f})
-            Box(this,new(Width/2f,-.235f,z),new(Width,.03f,1.4f),mown).Name=z<0?"GardenMownBorderNorth":"GardenMownBorderSouth";
+        // Core on every gameplay preset, but outboard ground does not belong
+        // on the menu's tightly fitted miniature stand.
+        if(IncludeScenery)
+        {
+            foreach(float x in new[]{-.7f,Width+.7f})
+                Box(this,new(x,-.235f,Depth/2f),new(1.4f,.03f,Depth+2.8f),mown).Name=x<0?"GardenMownBorderWest":"GardenMownBorderEast";
+            foreach(float z in new[]{-.7f,Depth+.7f})
+                Box(this,new(Width/2f,-.235f,z),new(Width,.03f,1.4f),mown).Name=z<0?"GardenMownBorderNorth":"GardenMownBorderSouth";
+        }
         Box(this,new(Width/2f,-.15f,Depth/2f),new(Width,.3f,Depth),grass);
         float crown=BombThrowRules.PillarHeight*HeightScale;
         foreach(float x in new[]{.5f,Width-.5f})
