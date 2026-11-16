@@ -51,7 +51,7 @@ public sealed partial class BlastSession
                 p.PrevA=input.A;p.PrevB=input.B;p.PrevR=input.R;p.PrevStop=input.Stop;
                 continue;
             }
-            if (ProcessRecovery(p,p.Input,dt)) continue;
+            if (ProcessRecovery(p,p.Input,dt)){p.SlideVX=p.SlideVZ=0;continue;}
 
             // Edge detection for buttons.
             var aPress = input.A && !p.PrevA;
@@ -72,7 +72,7 @@ public sealed partial class BlastSession
                 continue;
             }
             if(stopPress)StopKickedBombs(p);
-            if(AdvanceKick(p,dt))continue;
+            if(AdvanceKick(p,dt)){p.SlideVX=p.SlideVZ=0;continue;}
             UpdateThrowAim(p,input,dt);
 
             // A planted aim stance exchanges movement for deliberate direction and range.
@@ -83,6 +83,7 @@ public sealed partial class BlastSession
                 else
                     MovePlayerCarrying(p, input, dt);
             }
+            else p.SlideVX=p.SlideVZ=0;
             if(input.AimTarget is {} point&&p.CarryingBombId is not null)
                 PointThrowAim(p,input.AimRelative?new(p.X+point.X,p.Z+point.Y):point);
 

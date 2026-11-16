@@ -27,6 +27,32 @@ concealment; no separate decorative knolls or wind tree are added.
 Review all three Night presets in `field-of-grass-shape-study` and both actual
 mid-slope support witnesses. Source checks alone do not qualify the art.
 
+## Lost at Sea (2026-11-15 source work)
+
+[Stage contract and inspected references](../lost-at-sea.md) own the violet slippery
+glass, nonslip silver rim, four orange towers, eight rim starts and meteor Hurry.
+Ground acceleration and glass/rim bomb braking belong to shared authority;
+planted aim, recovery and reset keep their normal safeguards. Use focused
+`--lost-at-sea` checks and the `lost-at-sea` / `lost-at-sea-network` journeys
+(`tour-25`). Native image review is required for the original marine diorama.
+
+Fresh-advisor B3 refinement: Low keeps wide painted diagonal sky sheens and pane
+bevel highlights instead of relying on screen reflections or bloom. All four
+beacon lenses retain warm unshaded Night emission on Low, with no active point
+lights. Medium/High use at most two soft local pools and retain the depth pass;
+the wreck has a faint opening-round value cue. Recheck the matched seed-64
+matrix plus `lost-at-sea-material-witness`, including its Low Night frame.
+These are source changes until the corresponding native images are reviewed.
+
+The High-first Glass Buoy Observatory pass adds a full tube pontoon and a rounded
+rim lip within the unchanged wall crown, with orange corner junctions. A compact
+real rib group sits below the clear inner-left quarter; the slow manta starts
+under the window. Medium retains real depth/refraction. Low retains the same
+pontoon, bell buoy and pulsing lenses, with restrained painted subsurface cues.
+`lost-at-sea-depth-witness` now compares visible/hidden real subjects in the
+opening phase and records six motion frames; only actual images establish that
+the wreck/manta are legible through the glass.
+
 ## Start with the actual actor
 
 1. Record whether the complaint appears in a menu, practice, ordinary local

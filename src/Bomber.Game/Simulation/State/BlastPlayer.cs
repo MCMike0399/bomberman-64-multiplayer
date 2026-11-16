@@ -15,6 +15,7 @@ public sealed class BlastPlayer
 
     // Per-tick body contact bookkeeping; not replicated presentation state.
     internal float BodyStartX,BodyStartZ,BodyYield;
+    internal float SlideVX,SlideVZ;
 
     // Position and orientation.
     public float X { get; set; }
@@ -124,7 +125,7 @@ public sealed class BlastPlayer
         if(_pendingButtons.TryDequeue(out var buttons))
             Input=Input with {A=buttons.A,B=buttons.B,R=buttons.R,Aim=buttons.Aim,Stop=buttons.Stop};
     }
-    public void ClearInput(){MovementInputExpired=false;LastInputAt=null;Input=default;_receivedButtons=default;_pendingButtons.Clear();}
+    public void ClearInput(){SlideVX=SlideVZ=0;MovementInputExpired=false;LastInputAt=null;Input=default;_receivedButtons=default;_pendingButtons.Clear();}
     public bool PrevA { get; set; }
     public bool PrevB { get; set; }
     public bool PrevR { get; set; }

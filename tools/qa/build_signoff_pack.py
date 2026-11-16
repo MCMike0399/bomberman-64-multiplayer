@@ -37,7 +37,7 @@ if Image is not None:
 
 # Keep in step with tools/ci/mesh_inputs.STAGES (a unit test checks this).
 STAGES = ('sunken-temple', 'rock-garden', 'up-and-down', 'top-rules',
-          'blizzard-battle', 'greedy-trap', 'field-of-grass','in-the-gutter','sea-sick', 'circuit-garden')
+          'blizzard-battle', 'greedy-trap', 'field-of-grass','in-the-gutter','sea-sick','lost-at-sea', 'circuit-garden')
 # One PNG per trial per run directory, as written by the visual-parity playtest.
 TRIALS = ('base-a-0', 'base-a-1', 'base-b-0', 'dof-off-0', 'reflection-off-0')
 ROLES = ('mac-reference', 'hosted-envelope', 'm5-envelope', 'windows-vulkan', 'linux-vulkan', 'windows-d3d12')

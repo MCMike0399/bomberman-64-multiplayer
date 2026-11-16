@@ -14,6 +14,15 @@ all presets retain it. Use the focused `--field-of-grass` authority checks and
 `field-of-grass` / `field-of-grass-network` journeys. Graphical images require
 separate review; headless checks do not approve the art or establish delivery.
 
+## Lost at Sea (2026-11-15 source work)
+
+[Stage contract and inspected references](../lost-at-sea.md) own the violet slippery
+glass, nonslip silver rim, four orange towers, eight rim starts and meteor Hurry.
+Ground acceleration and glass/rim bomb braking belong to shared authority;
+planted aim, recovery and reset keep their normal safeguards. Use focused
+`--lost-at-sea` checks and the `lost-at-sea` / `lost-at-sea-network` journeys
+(`tour-25`). Native image review is required for the original marine diorama.
+
 ## Round and match announcements (2026-10-28 source work)
 
 The arena stays visible during the authority's three-second Over phase, including
