@@ -1,3 +1,5 @@
+Blast Circuit is licensed under the [GNU General Public License version 3 only (GPL-3.0-only)](../../LICENSE), copyright 2026 MCMike0399. The adapted simulation retains its [upstream MIT notice](../../src/Bomber.Game/Simulation/LICENSE). Third-party components retain their own licenses as described below.
+
 These unmodified Godot 4.7.2 notices accompany the exported engine:
 
 - [LICENSE.txt](https://github.com/godotengine/godot/blob/4.7.2-stable/LICENSE.txt)

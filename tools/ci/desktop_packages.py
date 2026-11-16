@@ -86,7 +86,7 @@ def inspect_archive(directory, target, revision, release):
         basenames = {PurePosixPath(name).name for name in seen}
         required = {settings['executable'], settings['runtime'], settings['webrtc'],
                     'Bomberman64Multiplayer.dll', 'Bomberman64Multiplayer.runtimeconfig.json',
-                    settings.get('pck','BlastCircuit.pck'), 'release.json', 'Blast-Circuit-MIT.txt', 'WebRTC-SOURCE.txt', 'DotNet-LICENSE.TXT'}
+                    settings.get('pck','BlastCircuit.pck'), 'release.json', 'Blast-Circuit-GPL-3.0.txt', 'WebRTC-SOURCE.txt', 'DotNet-LICENSE.TXT'}
         if settings.get('engine_executable'):required.add(settings['engine_executable'])
         if not required.issubset(basenames):
             raise RuntimeError('Desktop runtime is incomplete: ' + ', '.join(sorted(required - basenames)))

@@ -213,4 +213,4 @@ python3 tools/qa/run.py --profile package
 
 ## License
 
-[MIT](LICENSE), copyright 2026 MCMike0399. The adapted simulation retains its [upstream MIT notice](src/Bomber.Game/Simulation/LICENSE); bundled fonts use the [SIL Open Font License](docs/licenses/README.md). No original game ROM, Nintendo/Hudson artwork, reference footage, private kernel source, credentials or raw playtest traces are distributed here.
+[GNU General Public License version 3 only (GPL-3.0-only)](LICENSE), copyright 2026 MCMike0399. The adapted simulation retains its [upstream MIT notice](src/Bomber.Game/Simulation/LICENSE); bundled fonts use the [SIL Open Font License](docs/licenses/README.md). No original game ROM, Nintendo/Hudson artwork, reference footage, private kernel source, credentials or raw playtest traces are distributed here.
