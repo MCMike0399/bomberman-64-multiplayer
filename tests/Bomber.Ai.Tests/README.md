@@ -6,7 +6,7 @@ Run the behavioral checks without Godot or a network server:
 dotnet run -c Release --project tests/Bomber.Ai.Tests
 ```
 
-The default run executes 98 checks, including the 2026-10-26 agency regressions below. The original 76 checks cover cached legal terrain edges, timed chain reactions, expired hazards, deliberate power-up pursuit, fuse escape, climbing before flooding, fair difficulty response rates, eight-bot deterministic replay on all three maps, repeated bomb pressure against opponents, and reuse of search memory. Existing game integration checks separately exercise safe own-bomb placement, trapped-bot refusal and actual stair movement.
+The default run executes 123 checks, including the 2026-10-26 agency regressions and 24 current-roster traversal/engagement cases below. The original 76 checks cover cached legal terrain edges, timed chain reactions, expired hazards, deliberate power-up pursuit, fuse escape, climbing before flooding, fair difficulty response rates, eight-bot deterministic replay on all three maps, repeated bomb pressure against opponents, and reuse of search memory. Existing game integration checks separately exercise safe own-bomb placement, trapped-bot refusal and actual stair movement.
 
 The planner sees current entities, visible bomb fuses and the known flood schedule. It never consumes future item randomness or changes movement speed, damage, blast radius or inventory. The menu offers **Easy, Medium, Hard**; `medium` and legacy `normal` select the same profile, with `normal` retained as the default wire value for saved clients.
 
@@ -61,7 +61,7 @@ The movement sample is a proxy for blocked/slow movement; it can include legitim
 dotnet run -c Release --project tests/Bomber.Ai.Tests -- --soak --output=artifacts/iteration13/soak.json
 ```
 
-The deterministic matrix runs 60 scenarios: five arenas, Easy/Medium/Hard, three/seven bots, and seeds 64/9876. Each scenario runs up to 2,700 authority ticks (90 seconds), stopping if the five-win match finishes; `--ticks=N` overrides its duration. The JSON records movement, stationary windows, blocked movement commands, safe waits, no-safe-exit waits, new bombs reaching current opponents/cover, destroyed cover, pickups, falling transitions, deaths and round wins. Pressure describes visible blast opportunities, not actual hits. Terrain drops count transitions into the physics falling state, not every descending tick. Deaths include the final elimination that ends a round. These homogeneous difficulty matches describe activity and pacing; their outcomes do not establish pairwise difficulty win rates.
+The current deterministic matrix runs 120 scenarios: ten battle arenas, Easy/Medium/Hard, three/seven bots, and seeds 64/9876. Each scenario runs up to 2,700 authority ticks (90 seconds), stopping if the five-win match finishes; `--ticks=N` overrides its duration. The JSON records movement, stationary windows, blocked movement commands, safe waits, no-safe-exit waits, new bombs reaching current opponents/cover, destroyed cover, pickups, falling transitions, deaths and round wins. Pressure describes visible blast opportunities, not actual hits. Terrain drops count transitions into the physics falling state, not every descending tick. Deaths include the final elimination that ends a round. These homogeneous difficulty matches describe activity and pacing; their outcomes do not establish pairwise difficulty win rates.
 
 Liveness examines every Fight/Hurry tick for living, non-ghost bots outside carried, stunned, airborne, falling and kick recovery states. A stationary window ends on at least 0.12 cell displacement from its anchor. It includes zero movement commands, so a planner that permanently chooses its current position is detectable. A continuous stationary window exceeding 12 seconds fails only while an adjacent authoritative terrain edge remains uncovered, bomb-free, unoccupied and safe in the visible danger forecast for 0.9 seconds. Windows without a safe exit are reported separately, preserving legitimate trapped-bot waits. This is a bounded local movement check, not proof that every strategic goal is reachable. JSON includes the worst bot's position, goal, command and living opponent count for diagnosis. The harness reads current cover/hazards via reflection to keep measurement out of production policy.
 
@@ -181,3 +181,52 @@ The agency matrix and moving-target comparison checks pin their original three-b
 reference loadout so changes to starting inventory do not change the policy
 comparison. CLI diagnostics, fixed-seed pressure checks, stock-human pressure
 checks and the gameplay soak retain the current two-bomb default.
+
+
+## Expanded-roster engagement (2026-11-15)
+
+```sh
+dotnet run -c Release --project tests/Bomber.Ai.Tests -- --agency --comparison --output=artifacts/ai-engagement/original-72.json
+dotnet run -c Release --project tests/Bomber.Ai.Tests -- --agency --output=artifacts/ai-engagement/all-ten-diagnostics.json
+dotnet run -c Release --project tests/Bomber.Ai.Tests -- --stage-engagement --output=artifacts/ai-engagement/new-stage-court.json
+```
+
+The historical algorithm comparison explicitly pins its original six stages,
+72 runs and three-bomb loadout. Its existing shuffle, 20-second idle-pressure,
+self-death and moving-target thresholds are unchanged. `--agency` remains the
+full 120-row ten-stage diagnostic with current two-bomb defaults; the full
+120-case gameplay soak is unchanged. Raw zero-pressure rows remain visible.
+Expanding the historical matrix blindly had applied its original stock-spawn
+contract to Gutter's isolated two-unit caps: walking cannot return after a drop,
+and the current CPU policy has no targeted lift/throw/pump combat. That case
+remains a documented CPU limitation, not a validated cap-pressure capability.
+Lost at Sea's Easy stock-rim approach also exceeds 20 seconds in one diagnostic
+seed with current traction/loadout; it remains in the full diagnostic output.
+
+`StageEngagementChecks` adds 24 current-loadout cases for Grass, Gutter, Sea Sick
+and Lost at Sea: all three difficulties and both standard seeds. Each human
+starts at its real stock spawn and walks into the court through ordinary analog
+inputs, the same directed terrain edges, real seeded cover and actual physics.
+Gutter must witness a real fall from its cap and reach floor height; Lost must
+witness both actors traversing glass and the human coasting after release.
+Only human invulnerability is renewed to sustain the observation. Bot resources,
+cover, damage, decisions and post-start positions are never changed.
+
+After this explicit traversal, every row must contain a real bomb whose visible
+blast geometry reaches the human, with no live pressure gap of 20 seconds or
+more. Each stage/difficulty seed pair must produce at least four pressure bombs.
+All rows count, including early bot deaths; results retain traversal ticks,
+actual observation duration, pressure timing, deaths and physical witnesses.
+Observation lasts up to 60 seconds and stops on bot death. This does not claim a
+minute of survival, equal pacing across levels, reachable-cap attacks or fun.
+`--measure-only` writes the same results without enforcing engagement thresholds.
+
+The initial expanded historical check reproduced a 60-second failure. Before
+changing that gate, the explicit original 72 cases measured 11 maximum reversals,
+17.07 seconds maximum idle-pressure gap and zero idle-target bot deaths, satisfying
+all original thresholds. The new 24 cases measure a 15.47-second worst pressure
+gap, 79 human glass-travel ticks and .207-cell six-tick release coast. Five bots
+die during observation (including one Gutter Hard case after 109 ticks and one
+pressure bomb); these rows remain included. The full default suite passes 123
+checks. These are deterministic simulation observations, not native or network
+qualification.
