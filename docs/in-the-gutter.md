@@ -270,3 +270,24 @@ current directions were exercised: server-hosted release reached X=3.49/Z=8.93
 under current -1.5 with ack 205 beyond release 196; peer-hosted release reached
 X=5.4/Z=9.19 under current +1.5 with ack 111 beyond release 104. These are real
 transport/authority observations, not native rendered or Linux package proof.
+
+## Copper Lock Fishworks — second creative pass (2026-11-16)
+
+One gantry is the active machine: a large round pressure-dial porthole sits on
+its counterweight support, with chunky round axle caps. There is no hut. The
+existing connected channel stubs, culvert and curved spillway remain. Drive
+gears now integrate accepted current continuously; they stop in calm and reverse
+without an angular jump. The dial needle eases to the accepted direction. All
+these core forms and cheap cues remain on Low.
+
+The parent viewed valid Medium native water and found its caustic web too busy.
+Only that local Medium caustic gain is reduced (.42/.018 to .16/.007); tint,
+refraction, foam and current cues remain. The qualified coherent High reflection
+shaders are unchanged. Their remaining pylon reflection residue is not claimed
+fixed by this art pass; it remains a native-review limitation.
+
+Source/public build passes with the existing nullable warning. Headless shapes
+passes 22 checks (actual owned CW faces); the accepted-current witness passes 11,
+including continuous west/east rotation and one pressure dial. Each raw run has
+two ObjectDB exit warnings and zero runtime errors. Actual High/Medium/Low/Night
+images and current-change motion still require parent review.

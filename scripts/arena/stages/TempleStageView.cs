@@ -32,7 +32,7 @@ public partial class TempleStageView : Node3D
     private Node3D? _gutterArrow;
     private ShaderMaterial? _gutterWater,_gutterOceanWater,_gutterWakeMaterial;
     private int _gutterDirection;
-    private float _gutterFishYaw,_gutterGearPose,_gutterGearTarget;
+    private float _gutterFishYaw,_gutterGearPose;
     private readonly List<(Node3D Gear,float Phase)> _gutterGears=[];
     private readonly List<(Node3D Leaf,float Phase)> _gutterLeaves=[];
     private readonly List<Node3D> _gutterGates=[];

@@ -6,6 +6,8 @@ namespace BlastCircuit.Arena.Stages;
 
 public partial class TempleStageView
 {
+    private Node3D? _gutterDialNeedle;
+    private float _gutterDialAngle;
     // Every owned triangle is emitted clockwise against its declared outward
     // normal. The shape journey audits the actual packed arrays after indexing.
     private static void GutterTriangle(SurfaceTool surface,Vector3 a,Vector3 b,Vector3 c,Vector3 na,Vector3 nb,Vector3 nc)
@@ -124,6 +126,7 @@ public partial class TempleStageView
             tip.Basis=PresentationMath.Rotation(new(0,0,angle));
         }
         RoundedBox(gear,Vector3.Zero,new(.43f,.43f,.57f),brass,.8f);
+        Sphere(gear,new(0,0,.36f),new(.66f,.66f,.25f),verdigris).Name="CopperLockRoundAxleCap";
         _gutterGears.Add((gear,phase));
         return gear;
     }
@@ -190,6 +193,19 @@ public partial class TempleStageView
         Box(machine,new(outerX,2.5f,counterZ),new(.2f,1.4f,.2f),brass,.07f);
         RoundedBox(machine,new(outerX,1.48f,counterZ),new(.97f,1.28f,.84f),verdigris,.45f).Name="CopperLockCounterweight";
         Box(machine,new(outerX,1.5f,counterZ+.39f),new(.68f,.22f,.08f),brass,.025f);
+        if(side<0)
+        {
+            // One active machine carries the large porthole gauge. The other
+            // gantry remains quieter; no added hut or repeat house vignette.
+            RoundedBox(machine,new(outerX,2.85f,counterZ),new(.5f,.65f,.45f),verdigris,.45f);
+            var dial=Prop(machine,"CopperLockPressureDial",new(outerX,3.5f,counterZ));
+            Sphere(dial,Vector3.Zero,new(1.5f,1.5f,.25f),cream);
+            GutterRing(dial,new(0,0,.12f),.63f,.09f,brass);
+            Sphere(dial,new(0,0,.14f),new(1.08f,1.08f,.09f),verdigris);
+            _gutterDialNeedle=Prop(dial,"CopperLockCurrentNeedle",new(0,0,.23f));
+            RoundedBox(_gutterDialNeedle,new(.16f,0,0),new(.53f,.10f,.04f),brass,.6f);
+            Sphere(dial,new(0,0,.25f),Vector3.One*.13f,brass);
+        }
     }
 
     private void GutterHalfRoundCoping(float z,float top,Material cream)

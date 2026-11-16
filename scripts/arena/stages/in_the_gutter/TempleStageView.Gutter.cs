@@ -19,7 +19,6 @@ public partial class TempleStageView
         int direction=Math.Sign(next);
         if(direction!=0&&direction!=_gutterDirection)
         {
-            _gutterGearTarget+=direction*.42f;
             _gutterDirection=direction;
         }
         _gutterFlow=next;
@@ -31,7 +30,12 @@ public partial class TempleStageView
         {
             _gutterClock+=delta;
             _gutterFishYaw=Mathf.LerpAngle(_gutterFishYaw,_gutterDirection<0?Mathf.Pi:0,1-Mathf.Exp(-3.5f*delta));
-            _gutterGearPose=Mathf.Lerp(_gutterGearPose,_gutterGearTarget,1-Mathf.Exp(-5*delta));
+            _gutterGearPose+=_gutterFlow/GutterRules.CurrentSpeed*.22f*delta;
+            if(_gutterDialNeedle!=null)
+            {
+                _gutterDialAngle=Mathf.Lerp(_gutterDialAngle,_gutterFlow/GutterRules.CurrentSpeed*.75f,1-Mathf.Exp(-4*delta));
+                _gutterDialNeedle.Basis=PresentationMath.Rotation(new(0,0,_gutterDialAngle));
+            }
             foreach(var (gear,phase) in _gutterGears)
                 gear.Basis=PresentationMath.Rotation(new(0,0,_gutterGearPose+phase));
             foreach(var (leaf,phase) in _gutterLeaves)

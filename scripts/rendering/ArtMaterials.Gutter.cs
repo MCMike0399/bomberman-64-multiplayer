@@ -22,7 +22,7 @@ public sealed partial class ArtMaterials
                 .Replace("seen=textureLod(screen_texture,refract_uv,0.0).rgb;\n#ifdef WATER_SPARKLE",
                     "seen=textureLod(screen_texture,refract_uv,0.0).rgb*vec3(.78,.96,.87);\n#if defined(WATER_SPARKLE) || defined(GUTTER_SHALLOWS)",StringComparison.Ordinal)
                 .Replace("caustic_detail*1.4+light_tint.rgb*web*reach*caustic_detail*.05;",
-                    "caustic_detail*.42+light_tint.rgb*web*reach*caustic_detail*.018;",StringComparison.Ordinal);
+                    "caustic_detail*.16+light_tint.rgb*web*reach*caustic_detail*.007;",StringComparison.Ordinal);
             return _gutterMediumWaterShader??=new Shader{Code=medium};
         }
         if(preset!=GraphicsPreset.High)return WaterShaderFor(preset);

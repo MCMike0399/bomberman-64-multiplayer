@@ -70,10 +70,15 @@ public partial class PlaytestDriver
             var leaf=AuditDescendants(terrain).OfType<Node3D>().Where(n=>n.Name.ToString().StartsWith("CopperLockDriftingLeaf")).Last();
             Check(fish.Basis.X.X<-.8f,"fish weathervane visibly faces the accepted westward current");
             var beforeGear=gear.Basis;float before=State.GetProperty("gutter").GetProperty("x").GetSingle();
+            await Frames(12);
+            Check(beforeGear.X.Cross(gear.Basis.X).Z<-.025f,"drive gear turns continuously west while the accepted current runs west");
+            Check(AuditDescendants(terrain).OfType<Node3D>().Count(n=>n.Name=="CopperLockPressureDial")==1,"one active gantry owns the large round pressure dial");
             await Capture("copper-lock-current-west");
             await WaitState(s=>s.GetProperty("gutter").GetProperty("x").GetSingle()>.5f,"unmodified authority changes flow east",300);
             float atChange=leaf.Position.X;await Frames(30);
             float after=State.GetProperty("gutter").GetProperty("x").GetSingle();
+            var eastStart=gear.Basis;await Frames(12);
+            Check(eastStart.X.Cross(gear.Basis.X).Z>.025f,"the same gear reverses continuously east with the accepted current");
             Check(fish.Basis.X.X>.8f,"fish weathervane swings east after the accepted direction change");
             Check(!gear.Basis.IsEqualApprox(beforeGear),"the machine gear ticks in response to the real direction change");
             Check(leaf.Position.X>atChange+.15f,"sparse floating leaves advect east with the accepted current");
