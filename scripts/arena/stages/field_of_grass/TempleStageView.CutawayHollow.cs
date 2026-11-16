@@ -25,8 +25,9 @@ public partial class TempleStageView
             var surface=new SurfaceTool();surface.Begin(Mesh.PrimitiveType.Triangles);
             HollowQuad(surface,new(x,left*HeightScale,z),new(x+1,right*HeightScale,z),new(x+1,right*HeightScale,z+1),new(x,left*HeightScale,z+1),Vector3.Up);
             surface.Index();AddChild(new MeshInstance3D{Name=cell.Kind==CellKind.Ramp?$"MeadowBankSlope{x}_{z}":$"HollowGround{x}_{z}",
-                Mesh=surface.Commit(),MaterialOverride=turf});
+                Mesh=surface.Commit(),MaterialOverride=turf,CastShadow=GeometryInstance3D.ShadowCastingSetting.Off});
         }
+        BuildHollowBankBodies(soil);
         BuildHollowLandscape(_art.HollowSurface(4),outside);
         BuildHollowCutFace(soil);
         // The far end closes with chunky dry stone rather than another fence.
@@ -38,6 +39,7 @@ public partial class TempleStageView
             RoundedBox(root,new(0,.73f,0),new(.92f,.25f,.65f),_hollowStoneMaterial,.75f);
         }
         BuildHollowRootsAndBurrow();
+        BuildHollowStile();
         BuildFieldGrass();
     }
 
@@ -71,14 +73,13 @@ public partial class TempleStageView
     {
         _fieldMaterials.Add(plateau);
         var mesh=new SurfaceTool();mesh.Begin(Mesh.PrimitiveType.Triangles);
+        mesh.SetSmoothGroup(0);
         for(float z=IncludeScenery?-6:0;z<Depth;z+=.5f)for(float x=IncludeScenery?-6:0;x<(IncludeScenery?Width+6:Width);x+=.5f)
         {
             if(x>=1&&x<Width-1&&z>=1&&z<Depth-1)continue;
             Vector3 P(float xx,float zz)=>new(xx,HollowLandscapeHeight(xx,zz),zz);
             HollowQuad(mesh,P(x,z),P(x+.5f,z),P(x+.5f,z+.5f),P(x,z+.5f),Vector3.Up);
         }
-        foreach(float x in new[]{1f,Width-1f})
-            HollowQuad(mesh,new(x,2*HeightScale,1),new(x,3.5775f,1),new(x,3.5775f,Depth-1),new(x,2*HeightScale,Depth-1),x<Width/2f?Vector3.Right:Vector3.Left);
         if(IncludeScenery)
         {
             HollowQuad(mesh,new(-80,2.6f,-80),new(-6,2.6f,-80),new(-6,2.6f,Depth),new(-80,2.6f,Depth),Vector3.Up);
@@ -86,7 +87,57 @@ public partial class TempleStageView
             HollowQuad(mesh,new(-6,2.6f,-80),new(Width+6,2.6f,-80),new(Width+6,2.6f,-6),new(-6,2.6f,-6),Vector3.Up);
             Box(this,new(Width/2f,-2.0f,Depth+35),new(160,.2f,70),foreground).Name="HollowForeground";
         }
-        mesh.Index();AddChild(new MeshInstance3D{Name="HollowMeadowPlateau",Mesh=mesh.Commit(),MaterialOverride=plateau});
+        mesh.GenerateNormals();mesh.Index();AddChild(new MeshInstance3D{Name="HollowMeadowPlateau",Mesh=mesh.Commit(),MaterialOverride=plateau});
+        BuildHollowSideCuts();
+    }
+
+    private void BuildHollowBankBodies(Material soil)
+    {
+        // Closed, slightly recessed earth volumes cast the bank silhouette.
+        // The exact support sheets receive shadows but never self-shadow one
+        // another at their per-cell seams in grazing Night illumination.
+        foreach(bool left in new[]{true,false})
+        {
+            float outer=left?1:Width-1,inner=left?5:16;
+            var body=new SurfaceTool();body.Begin(Mesh.PrimitiveType.Triangles);
+            Vector3 P(float x,float z)=>new(x,Surface(x,z)-.10f,z);
+            for(float x=Math.Min(outer,inner);x<Math.Max(outer,inner);x++)
+            {
+                HollowQuad(body,P(x,1),P(x+1,1),P(x+1,Depth-1),P(x,Depth-1),Vector3.Up);
+                foreach(float z in new[]{1f,Depth-1f})
+                    HollowQuad(body,new(x,-1.8f,z),P(x,z),P(x+1,z),new(x+1,-1.8f,z),z<Depth/2f?Vector3.Forward:Vector3.Back);
+            }
+            HollowQuad(body,new(outer,-1.8f,1),new(outer,-1.8f,Depth-1),P(outer,Depth-1),P(outer,1),left?Vector3.Left:Vector3.Right);
+            HollowQuad(body,new(inner,-1.8f,1),P(inner,1),P(inner,Depth-1),new(inner,-1.8f,Depth-1),left?Vector3.Right:Vector3.Left);
+            HollowQuad(body,new(outer,-1.8f,1),new(inner,-1.8f,1),new(inner,-1.8f,Depth-1),new(outer,-1.8f,Depth-1),Vector3.Down);
+            body.Index();AddChild(new MeshInstance3D{Name=left?"HollowLeftBankEarth":"HollowRightBankEarth",Mesh=body.Commit(),MaterialOverride=soil});
+        }
+    }
+
+    private void BuildHollowSideCuts()
+    {
+        var earth=_art.HollowSurface(0);var sod=_art.HollowSurface(5);
+        _fieldMaterials.AddRange([earth,sod]);
+        var face=new SurfaceTool();face.Begin(Mesh.PrimitiveType.Triangles);
+        var lip=new SurfaceTool();lip.Begin(Mesh.PrimitiveType.Triangles);
+        foreach(bool left in new[]{true,false})for(float z=1;z<Depth-1;z+=.5f)
+        {
+            float x=left?1:Width-1,direction=left?1:-1;
+            float Crown(float zz)=>3.5775f-.06f*(.5f+.5f*PresentationMath.Sin(zz*1.37f));
+            float Reach(float zz)=>.055f+.035f*PresentationMath.Sin(zz*1.11f+.7f);
+            float a=Crown(z),b=Crown(z+.5f);
+            var outward=left?Vector3.Right:Vector3.Left;
+            // Earth reaches the exact boundary crown; turf is only a thin
+            // slumped skin along it, contained in the nonpassable wall cells.
+            HollowQuad(face,new(x,2*HeightScale, z),new(x,3.5775f,z),new(x,3.5775f,z+.5f),new(x,2*HeightScale,z+.5f),outward);
+            HollowQuad(lip,new(x-.16f*direction,a+.025f,z),new(x-.16f*direction,b+.025f,z+.5f),
+                new(x+Reach(z+.5f)*direction,b-.13f,z+.5f),new(x+Reach(z)*direction,a-.13f,z),Vector3.Up);
+            HollowQuad(lip,new(x+Reach(z)*direction,a-.13f,z),new(x+Reach(z+.5f)*direction,b-.13f,z+.5f),
+                new(x,b-.23f,z+.5f),new(x,a-.23f,z),outward);
+        }
+        face.Index();lip.Index();
+        AddChild(new MeshInstance3D{Name="HollowSideEarthCuts",Mesh=face.Commit(),MaterialOverride=earth});
+        AddChild(new MeshInstance3D{Name="HollowSideSlumpedTurf",Mesh=lip.Commit(),MaterialOverride=sod});
     }
     private float HollowLip(float x)
     {
