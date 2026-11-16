@@ -14,7 +14,7 @@ public partial class PlaytestDriver
     [
         (BlastStages.SunkenTemple,["LotusRuin","SunkenColonnade","SunkenGate","Sailboat","PalmTree","Gull"]),
         (BlastStages.RockGarden,["Footbridge","StoneLantern","WindGrass","DriftingLeaves"]),
-        (BlastStages.UpAndDown,["Lighthouse","SeaStack","Buoy","Jetty","Sailboat","Gull"]),
+        (BlastStages.UpAndDown,["SeaStack","Buoy","Jetty","Sailboat","Gull"]),
         (BlastStages.TopRules,["FortressCrag","Turret","WallBanner","Cloud","FloatingIslet","Starfield","RingedPlanet","BluePlanet","OrbitingMoon","AsteroidBelt","Nebula"]),
         (BlastStages.BlizzardBattle,["PineTree","GlacierPeak","WinterTree","ExteriorSnowfall"]),
         (BlastStages.GreedyTrap,["GreedyWestRowboat","GreedyEastRowboat","Sailboat","Gull"]),

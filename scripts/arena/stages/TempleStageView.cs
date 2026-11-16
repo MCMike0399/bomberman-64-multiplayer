@@ -64,6 +64,7 @@ public partial class TempleStageView : Node3D
     public void SetLighting(StageLighting lighting)
     {
         _lighting=lighting;
+        SetUpAndDownLighting(lighting);
         if(_water?.MaterialOverride is ShaderMaterial material)lighting.ApplyWater(material);
         if(_greedyMoat?.MaterialOverride is ShaderMaterial moat)lighting.ApplyWater(moat);
         foreach(var frozen in _frozenMaterials)
@@ -85,6 +86,7 @@ public partial class TempleStageView : Node3D
         if(!IsVisibleInTree())return;
         ProcessWorkshop((float)delta);
         AnimateScenery((float)delta);
+        ProcessCoastalLife((float)delta);
         if(_blizzard){ProcessBlizzard((float)delta);return;}
         if(_greedy){ProcessGreedyTrap((float)delta);return;}
         if(_castle)

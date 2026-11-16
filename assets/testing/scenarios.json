@@ -1809,6 +1809,18 @@
       "headless": true,
       "timeout": 180,
       "manual": false
+    },
+    {
+      "id": "tideglass-coast",
+      "method": "TideglassCoast",
+      "domains": [
+        "rendering",
+        "ui",
+        "gameplay"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
     }
   ]
 }

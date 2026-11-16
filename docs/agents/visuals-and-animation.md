@@ -842,6 +842,17 @@ tuples. New entries or changed producing-source bounds fail the public gate
 until reviewed. Normal headless and packaged functional lanes exercise the
 actual end-of-round closure and meteor paths with templates enforced.
 
+### Up & Down coastal refinement (2026-11-15 source work)
+
+The exterior sea stacks use original irregular packed rock meshes with broad
+tide-worn bases, restrained strata ledges and fitted turf crowns. Keep their
+positions/heights, the single tree, lighthouse and suspended playable structure.
+Static angles use PresentationMath and all new surfaces are owned managed
+geometry; no engine-primitive fallback is introduced. See the
+[stage contract](../up-and-down.md#coastal-scenery-refinement-2026-11-15-source-work).
+The existing stage-scenery journey retains ordinary Midday/Night/High and
+labeled establishing captures for the required visual comparison.
+
 
 ### Returning Tide core landmark finishing (2026-11-16)
 
