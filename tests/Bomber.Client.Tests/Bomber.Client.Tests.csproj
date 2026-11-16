@@ -8,4 +8,5 @@
   <ItemGroup><Compile Include="../../scripts/testing/fixtures/NetworkJourneyScope.cs" Link="NetworkJourneyScope.cs" /></ItemGroup>
   <ItemGroup><Compile Include="../../scripts/testing/fixtures/RetainedFailureObservation.cs" Link="RetainedFailureObservation.cs" /></ItemGroup>
   <ItemGroup><Compile Include="../../scripts/app/GodotPeerLink.CandidateAddress.cs" Link="GodotPeerLink.CandidateAddress.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="../../scripts/rendering/PreparationDrawBatch.cs" Link="PreparationDrawBatch.cs" /></ItemGroup>
 </Project>

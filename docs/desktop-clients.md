@@ -42,6 +42,15 @@ Windows installs without administrator privileges. Each client includes its
 are not Authenticode signed; the signed delivery inventory authenticates the
 installer. The DMG retains the existing ad-hoc Mac signature.
 
+DMG verification retries once, after two seconds, only when `hdiutil verify`
+explicitly reports EAGAIN / Resource temporarily unavailable. Both attempts use
+the same unchanged image identity and SHA-256; the image is not rebuilt.
+Checksum/format errors, other exits and verification timeouts remain fatal.
+`artifacts/qa/dmg-verification.json` retains every command result and the final
+outcome in the existing package-receipts artifact, including exhausted retries.
+Successful verification and the subsequent readonly payload comparison are
+still required before download metadata is recorded.
+
 Settings enables automatic signed update checks on installed releases. Windows
 replaces the complete installed folder after the old game exits. Linux replaces
 the original AppImage outside its temporary mount. A detached helper launches

@@ -833,3 +833,11 @@ copper `TempleTideFloat` remain on Low, outside the court. The float follows the
 accepted rendered water plane with a pausable core clock; the normal miniature
 omits both outboard landmarks. The pyramid/frieze layout and camera stay fixed.
 [Composition and current evidence](../stage-scenery.md#returning-tide-finishing-2026-11-16).
+
+### Preparation callback fallback (2026-11-16)
+
+One explicit disposable draw batch spans startup/preset overlay, production
+warmup and all real miniatures. After its first missing normal draw callback,
+remaining fences render through process update + ForceDraw/ForceSync; the next
+batch starts normal. Keep the 20-second bound, every draw/readback and cancellation.
+[Retained red/green and standalone roster contract](../history/preparation-draw-batch-20261116.md).
