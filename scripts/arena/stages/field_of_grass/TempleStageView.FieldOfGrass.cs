@@ -12,6 +12,7 @@ public partial class TempleStageView
     private void ProcessField(float delta)
     {
         if(WeatherActive)_fieldClock+=delta;
+        if(_graphicsRevision!=GraphicsQuality.Revision)ApplyHollowLanternLighting(_lighting);
         foreach(var material in _fieldMaterials)
         {
 

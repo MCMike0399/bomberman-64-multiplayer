@@ -97,7 +97,7 @@ public partial class TempleStageView : Node3D
     public void SetLighting(StageLighting lighting)
     {
         _lighting=lighting;
-        if(_hollowLantern is not null)_hollowLantern.LightEnergy=lighting.Label=="Night"?1.1f:.04f;
+        ApplyHollowLanternLighting(lighting);
         if(_fieldGrassMaterial is not null)_fieldGrassMaterial.SetShaderParameter("paint",new Color(lighting.Label=="Night"?"668e4f":"4e793f"));
         if(_water?.MaterialOverride is ShaderMaterial material)lighting.ApplyWater(material);
         if(_sea)TuneBuoyWater();

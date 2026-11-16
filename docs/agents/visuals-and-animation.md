@@ -14,6 +14,15 @@ all presets retain it. Use the focused `--field-of-grass` authority checks and
 `field-of-grass` / `field-of-grass-network` journeys. Graphical images require
 separate review; headless checks do not approve the art or establish delivery.
 
+Fresh-advisor B1 refinement keeps every support endpoint and the concealing
+canopy. Exposed layered loam and thin ragged turf continue around both sides;
+the far meadow uses broad mowing swathes rather than a sage fog surface.
+Exact per-cell support sheets receive shadows; recessed closed bank masses
+cast them, avoiding support-sheet self-shadow seams under grazing Night light.
+Standing stones retain their peak and footprint with broader mossy caps.
+Review all three Night presets in `field-of-grass-shape-study` and both actual
+mid-slope support witnesses. Source checks alone do not qualify the art.
+
 ## Lost at Sea (2026-11-15 source work)
 
 [Stage contract and inspected references](../lost-at-sea.md) own the violet slippery

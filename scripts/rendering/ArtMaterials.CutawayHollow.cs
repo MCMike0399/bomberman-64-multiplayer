@@ -3,13 +3,16 @@ namespace BlastCircuit.Rendering;
 
 public sealed partial class ArtMaterials
 {
-    private static Shader? _hollowSurfaceShader,_hollowGrassShader;
+    private static Shader? _hollowSurfaceShader,_hollowMeadowShader,_hollowGrassShader;
     public ShaderMaterial HollowSurface(int kind)
     {
-        var material=new ShaderMaterial{Shader=_hollowSurfaceShader??=new Shader{Code=HollowSurfaceShader}};
+        var shader=kind==4
+            ?_hollowMeadowShader??=new Shader{Code=HollowSurfaceShader.Replace("render_mode diffuse_burley;","render_mode diffuse_burley, fog_disabled;",StringComparison.Ordinal)}
+            :_hollowSurfaceShader??=new Shader{Code=HollowSurfaceShader};
+        var material=new ShaderMaterial{Shader=shader};
         material.SetShaderParameter("surface_kind",kind);
-        foreach(var(name,color)in new[]{("topsoil","4a2f22"),("loam","a8623c"),("clay","d2a373"),("base_soil","6b4a3a"),
-            ("valley_turf","426d35"),("plateau_turf","789372")})material.SetShaderParameter(name,new Color(color));
+        foreach(var(name,color)in new[]{("topsoil","4a3026"),("loam","945039"),("clay","be9069"),("base_soil","624738"),
+            ("valley_turf","426b36"),("plateau_turf","657d40")})material.SetShaderParameter(name,new Color(color));
         GraphicsQuality.ApplyShaderDetail(material);return material;
     }
     public ShaderMaterial HollowGrass()=>new(){Shader=_hollowGrassShader??=new Shader{Code=HollowGrassShader}};
@@ -62,19 +65,30 @@ void fragment(){
    bool ramp=arena.x>3.0&&arena.x<5.0||arena.x>16.0&&arena.x<18.0;
    if(ramp){
      float down=arena.x<10.5?arena.x-3.0:18.0-arena.x;
-     float reach=.3+cloud(vec2(arena.z*.65,5.0))*.5;
-     float turf=1.0-smoothstep(reach-.12,reach+.12,down);
-     ALBEDO=mix(loam.rgb*.96,valley_turf.rgb,turf);
-   }else ALBEDO=mix(valley_turf.rgb,loam.rgb*.95,worn*.88);
+     float reach=.22+cloud(vec2(arena.z*.71,5.0))*.64;
+     float turf=1.0-smoothstep(reach-.09,reach+.09,down);
+     // The continuous ramp is an exposed earth bank, not an orange road.
+     // Broad deposits follow height; small turf tongues slump over its crown.
+     float deposit=cloud(vec2(arena.z*.27,3.0))*.20;
+     vec3 earth=mix(loam.rgb,clay.rgb,(1.0-smoothstep(.25+deposit,.85+deposit,arena.y))*.55);
+     earth=mix(earth,topsoil.rgb,smoothstep(2.24,2.66,arena.y)*.45);
+     ALBEDO=mix(earth,valley_turf.rgb,turf);
+   }else ALBEDO=mix(valley_turf.rgb,vec3(.40,.27,.17),worn*.72);
    ALBEDO*=.94+wash*.12;
  }else if(surface_kind==2){
    ALBEDO=mix(vec3(.25,.31,.30),vec3(.40,.46,.41),wash)*stone_tint.rgb;
-   float cap=smoothstep(.85,1.3,arena.y)*smoothstep(.15,.65,world_normal.y);
-   ALBEDO=mix(ALBEDO,vec3(.16,.26,.075),cap*.8);
+   float cap=smoothstep(.64,1.05,arena.y)*smoothstep(-.05,.55,world_normal.y);
+   vec3 moss=mix(vec3(.20,.29,.10),vec3(.37,.45,.19),wash);
+   ALBEDO=mix(ALBEDO,moss,cap*.94);
  }else if(surface_kind==4){
-   ALBEDO=plateau_turf.rgb*(.91+wash*.17);
+   // Long, quiet mowing swathes and broad warm/cool grass washes describe a
+   // farm meadow at Low too. No pale fog sheet or camouflage pebble noise.
+   float swath=.5+.5*sin(arena.x*.38+arena.z*.17+sin(arena.z*.09)*.8);
+   float grass_wash=cloud(arena.xz*.075);
+   ALBEDO=plateau_turf.rgb*(.84+swath*.13+grass_wash*.14);
+   ALBEDO=mix(ALBEDO,vec3(.45,.47,.23),smoothstep(.63,.88,grass_wash)*.25);
  }else if(surface_kind==5)ALBEDO=valley_turf.rgb*(.93+wash*.14);
- else ALBEDO=mix(vec3(.13,.19,.15),vec3(.23,.29,.20),wash);
+ else ALBEDO=mix(vec3(.20,.27,.11),vec3(.31,.36,.17),cloud(arena.xz*.10));
  ROUGHNESS=.95;SPECULAR=.18;
 }
 """;

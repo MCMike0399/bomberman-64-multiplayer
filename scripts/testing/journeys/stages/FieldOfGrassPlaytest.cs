@@ -20,7 +20,8 @@ public partial class PlaytestDriver
         try
         {
             foreach(var (preset,time,label) in new[]{(GraphicsPreset.High,StageTime.Midday,"high-midday"),
-                (GraphicsPreset.High,StageTime.Night,"high-night"),(GraphicsPreset.Low,StageTime.Midday,"low-midday")})
+                (GraphicsPreset.High,StageTime.Night,"high-night"),(GraphicsPreset.Low,StageTime.Midday,"low-midday"),
+                (GraphicsPreset.Low,StageTime.Night,"low-night"),(GraphicsPreset.Medium,StageTime.Night,"medium-night")})
             {
                 if(_root.ActiveSession!=null){_root.Back();await Frames(3);}
                 if(!_headless){await SelectGraphics(preset);await SelectLocalLighting(time);}
@@ -178,6 +179,16 @@ public partial class PlaytestDriver
             Check(Player.GetProperty("y").GetSingle() is >1.25f and <1.75f&&Math.Abs(Player.GetProperty("y").GetSingle()*TempleStageView.HeightScale-renderedY)<.025f,
                 "ordinary mid-slope actor feet meet the actual upward-facing rendered bank mesh");
             await Capture("field-of-grass-real-mid-slope-support");
+            await GrappleWalk(0,10,9);await GrappleWalk(0,17,9);
+            var rightSlope=AuditDescendants(terrain).OfType<MeshInstance3D>().Single(n=>n.Name=="MeadowBankSlope17_9");
+            var rightVertices=rightSlope.Mesh.SurfaceGetArrays(0)[(int)Mesh.ArrayType.Vertex].AsVector3Array();
+            var ra=rightVertices[0];var rn=(rightVertices[2]-ra).Cross(rightVertices[1]-ra);
+            float rightX=Player.GetProperty("x").GetSingle(),rightZ=Player.GetProperty("z").GetSingle();
+            float rightY=ra.Y-(rn.X*(rightX-ra.X)+rn.Z*(rightZ-ra.Z))/rn.Y;
+            Check(Player.GetProperty("y").GetSingle() is >1.25f and <1.75f&&rn.Y>0&&
+                Math.Abs(Player.GetProperty("y").GetSingle()*TempleStageView.HeightScale-rightY)<.025f,
+                "right-slope Night-shading fix preserves the real authority-to-rendered support plane");
+            await Capture("field-of-grass-real-right-mid-slope-support");
             await GrappleWalk(0,10,9);
             Check(Math.Abs(Player.GetProperty("y").GetSingle())<.02f,"ordinary movement descends continuously into meadow");
             await Capture("field-of-grass-waist-high-canopy");
