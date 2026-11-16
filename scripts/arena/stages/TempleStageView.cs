@@ -90,6 +90,7 @@ public partial class TempleStageView : Node3D
         }
         if(_garden)
         {
+            ProcessOrchard((float)delta);
             if(_graphicsRevision!=GraphicsQuality.Revision)
             {
                 foreach(var material in _gardenMaterials)GraphicsQuality.ApplyShaderDetail(material);

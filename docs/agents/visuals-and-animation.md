@@ -708,6 +708,11 @@ and the below-floor core border before its ordinary traversal/combat/meteor
 journey. Green geometry checks do not replace matched Low/Medium/High native
 review, including Night and a labelled oblique view.
 
+2026-11-16: [Roundstone Orchard](../rock-garden.md) supersedes that candidate's
+uniform cover/bright coping with two stone profiles/palettes, carved moss
+shoulders and a core mill/fruit branch. The camera is retained after measured
+footer clearance; no bees, petals or new physics are introduced.
+
 ## v0.28 reference fidelity
 
 [Stage comparison](../stage-fidelity-research.md) and [explosion sequences](../explosion-fidelity-research.md) record inspected original imagery and limits. The integrated castle has taller authored walls and side banners; Up & Down uses rounded/fluted supports inside its solid footprint; Rock Garden's center crown is 1.35 units versus .9 for its outer columns. Original reference assets remain outside Git and exports.

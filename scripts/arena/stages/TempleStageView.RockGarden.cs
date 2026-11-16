@@ -7,6 +7,8 @@ namespace BlastCircuit.Arena.Stages;
 
 public partial class TempleStageView
 {
+    private ShaderMaterial[] _orchardBoulderPaints=[];
+
     private void BuildRockGarden()
     {
         Name="RockGardenTerrain";
@@ -24,9 +26,12 @@ public partial class TempleStageView
         mown.SetShaderParameter("grass_variation",.08f);
         var stone=_art.GardenSurface();
         var lichened=_art.GardenSurface();lichened.SetShaderParameter("lichen_patch",.7f);
-        var coping=_art.Toy(new Color("e2d6b4"),.86f);
+        var coping=_art.Toy(new Color("c4b99e"),.88f);
         _gardenRockMaterial=_art.GardenSurface(boulder:true);
-        _gardenMaterials.AddRange([grass,outer,mown,stone,lichened,(ShaderMaterial)_gardenRockMaterial]);
+        var coolRock=_art.GardenSurface(boulder:true);coolRock.SetShaderParameter("stone_color",new Color("8f9e83"));
+        var cappedRock=_art.GardenSurface(boulder:true);cappedRock.SetShaderParameter("stone_color",new Color("8f9e83"));cappedRock.SetShaderParameter("lichen_patch",.75f);
+        _orchardBoulderPaints=[(ShaderMaterial)_gardenRockMaterial,(ShaderMaterial)_gardenRockMaterial,coolRock,cappedRock];
+        _gardenMaterials.AddRange([grass,outer,mown,stone,lichened,(ShaderMaterial)_gardenRockMaterial,coolRock,cappedRock]);
         // The exterior is scenery below the playable floor. Only authority cells
         // inside the stone enclosure support players; there is no invented route.
         Box(this,new(Width/2f,-.38f,Depth/2f),new(160,.28f,160),outer).Name="GardenExterior";
@@ -58,12 +63,12 @@ public partial class TempleStageView
             if(Math.Abs(x-Width/2)+Math.Abs(z-Depth/2)<=3)
                 Box(paving,new(x+.5f,-.013f,z+.5f),new(.96f,.05f,.96f),stone,.018f);
         }
-        _gardenRocks=Enumerable.Range(0,4).Select(GardenRockMesh).ToArray();
+        _gardenRocks=Enumerable.Range(0,4).Select(v=>GardenRockMesh(v,true)).ToArray();
     }
 
     private void GardenCoping(Vector3 position,float length,float yaw,Material paint)
     {
-        const int sides=12;const float radius=.499f,rise=.22f;
+        const int sides=12;const float radius=.424f,rise=.22f;
         var surface=new SurfaceTool();surface.Begin(Mesh.PrimitiveType.Triangles);
         (Vector3 P,Vector3 N) At(float x,int step)
         {
@@ -93,28 +98,33 @@ public partial class TempleStageView
     {
         var root=new Node3D{Name=$"GardenColumn{x}_{z}",Position=new(x+.5f,0,z+.5f)};AddChild(root);
         float height=(Layout.At(x,z).Tier+(Layout.At(x,z).ObstacleHeight??BombThrowRules.PillarHeight))*HeightScale;
-        Cylinder(root,new(0,(height-.05f)/2,0),.49f,height-.05f,stone);
-        Cylinder(root,new(0,height-.025f,0),.495f,.05f,_art.Color(new("c3b78d"),.9f));
-        // A restrained dark weather line under the worn top, without temple caps.
-        Cylinder(root,new(0,height-.065f,0),.492f,.018f,_art.Color(new("777d68")));
+        var carved=_art.GardenSurface();carved.SetShaderParameter("stone_color",new Color("b9aa87"));_gardenMaterials.Add(carved);
+        var moss=_art.Toy(new Color("87996a"),.88f);
+        var mesh=OrchardStandingStoneMesh(height,carved,moss);
+        root.AddChild(new MeshInstance3D{Name="OrchardCarvedStone",Mesh=mesh});
     }
 
     private Node3D CreateGardenBoulder(Node3D root,int cell)
     {
         root.Name="GardenBoulder"+cell;
         int variant=(cell*17+cell/Width*7)%_gardenRocks.Length;
-        root.AddChild(new MeshInstance3D{Mesh=_gardenRocks[variant],MaterialOverride=_gardenRockMaterial});
+        root.AddChild(new MeshInstance3D{Mesh=_gardenRocks[variant],MaterialOverride=_orchardBoulderPaints[variant]});
         root.Rotation=new(0,(cell*2.39996f)%Mathf.Tau,0);
         return root;
     }
 
-    private static ArrayMesh GardenRockMesh(int variant)
+    private static ArrayMesh GardenRockMesh(int variant,bool orchard=false)
     {
         const int sides=20;
         float height=BombThrowRules.CoverHeight*HeightScale;
         (float Y,float Radius)[] profile=[(.015f,.40f),(height*.12f,.465f),
             (height*.32f,.49f),(height*.58f,.47f),(height*.80f,.36f),
             (height*.94f,.19f),(height,0)];
+        if(orchard)
+        {
+            float[] radii=variant%2==0?[.42f,.49f,.475f,.39f,.30f,.17f,0]:[.35f,.40f,.43f,.415f,.31f,.17f,0];
+            for(int i=0;i<profile.Length;i++)profile[i].Radius=radii[i];
+        }
         var surface=new SurfaceTool();surface.Begin(Mesh.PrimitiveType.Triangles);
         (Vector3 P,Vector3 N) At(int ring,int side)
         {
@@ -124,7 +134,8 @@ public partial class TempleStageView
             float radius=p.Radius*(.985f+.015f*PresentationMath.Sin(angle*3+variant));
             var before=profile[Math.Max(0,ring-1)];var after=profile[Math.Min(profile.Length-1,ring+1)];
             var normal=p.Radius==0?Vector3.Up:new Vector3(cos*(after.Y-before.Y),before.Radius-after.Radius,sin*(after.Y-before.Y)).Normalized();
-            return (new(cos*radius+.006f*PresentationMath.Sin(variant)*PresentationMath.Sin(p.Y/height*Mathf.Pi),p.Y,sin*radius),normal);
+            float lean=orchard?.022f*(p.Y/height):.006f*PresentationMath.Sin(variant)*PresentationMath.Sin(p.Y/height*Mathf.Pi);
+            return (new(cos*radius+lean,p.Y,sin*radius*(orchard?.92f:1)),normal);
         }
         void Triangle((Vector3 P,Vector3 N) a,(Vector3 P,Vector3 N) b,(Vector3 P,Vector3 N) c)
         {

@@ -41,7 +41,12 @@ public partial class TempleStageView
             Box(bridge,new(side*.55f,.62f,0),new(.06f,.06f,2.2f),rail,.01f);
         }
 
-        Windmill(scenery,new(-4.8f,ground,1.6f),.55f);
+        var mill=Windmill(this,new(-3.6f,ground,2.4f),.55f,animate:false);
+        mill.Basis=BlastCircuit.Rendering.PresentationMath.Rotation(new(0,.55f,0),Vector3.One*.8f);
+        _orchardMillSails=mill.GetNode<Node3D>("WindmillSails");
+        _orchardMillGlass=new StandardMaterial3D{AlbedoColor=new("6d735d"),Roughness=.65f,EmissionEnabled=true,Emission=new("efb76c")};
+        mill.GetNode<MeshInstance3D>("WindmillWindow").MaterialOverride=_orchardMillGlass;
+        BuildOrchardBranch();
         RoundTree(scenery,new(-3.2f,ground,-1.4f),1.25f,new("5b9a4b"),.3f);
         RoundTree(scenery,new(-4.4f,ground,6.2f),1.05f,new("6aa457"),1.9f);
         RoundTree(scenery,new(-3.4f,ground,11.5f),1.2f,new("4f8f46"),3.3f);
@@ -57,18 +62,10 @@ public partial class TempleStageView
         StoneLantern(scenery,new(Width+1.6f,ground,Depth+.9f),-.2f);
 
         // Beds and hedges hug the outside of the walls without rising above them.
-        FlowerBed(scenery,new(-2.8f,ground,4.6f),.75f,8,7);
-        FlowerBed(scenery,new(Width+2.1f,ground,12.8f),.7f,5,13);
-        foreach(float z in new[]{2.2f,8.8f,16.4f})
-        {
-            Bush(scenery,new(-1.5f,ground,z),.9f,new("4c8a42"));
-            Bush(scenery,new(Width+1.5f,ground,z+.5f),.9f,new("4c8a42"));
-        }
+        foreach(float z in new[]{3.5f,14f})
+            Bush(scenery,new(Width+1.7f,ground,z),.9f,new("4c8a42"));
         Rock(scenery,new(-2.6f,ground,8.2f),new(.8f,.6f,.7f),pebble,3,.6f);
         Rock(scenery,new(Width+2.5f,ground,9.6f),new(.7f,.55f,.7f),pebble,1,2.2f);
-
-        Butterfly(scenery,new(-2.8f,ground,4.6f),.9f,new("ffd34d"),0);
-        Butterfly(scenery,new(Width+2.1f,ground,12.8f),.8f,new("f58fb4"),2.1f);
 
         // Soft rolling hills fill the horizon instead of an endless flat lawn.
         Hill(scenery,new(Width/2f,-1.5f,-24),new(46,9,14),new("6f9f58"));

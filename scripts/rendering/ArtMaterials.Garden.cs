@@ -78,6 +78,8 @@ void fragment(){
    // Broad warm stone paint and smoothly lit shoulders survive every preset.
    float tone=smoothstep(.28,.62,normal_world.y*.65+noise(world.xz*.55)*.35);
    ALBEDO=mix(stone_color.rgb*.82,stone_color.rgb*1.14,tone);
+   float cap=smoothstep(.62,.86,normal_world.y)*lichen_patch;
+   ALBEDO=mix(ALBEDO,vec3(.50,.59,.36),cap*.65);
    ROUGHNESS=.84;SPECULAR=.24;
  }else{
    vec3 base=stone_color.rgb;
