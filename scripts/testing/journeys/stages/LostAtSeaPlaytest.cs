@@ -37,6 +37,18 @@ public partial class PlaytestDriver
             await Capture("glass-material-blue-purple-medium-afternoon");
             if(!_headless){await SelectGraphics(GraphicsPreset.Low);await SelectLocalLighting(StageTime.Midday);}
             await Capture("glass-material-blue-purple-low-midday");
+            if(!_headless)
+            {
+                await SelectLocalLighting(StageTime.Night);
+                var terrain=AuditDescendants(_root.GetChildren().OfType<ArenaView>().Single()).OfType<TempleStageView>().Single();
+                var lenses=AuditDescendants(terrain).OfType<MeshInstance3D>().Where(n=>n.Name=="BeaconLampLens"||n.Name=="BeaconCapLens").ToArray();
+                Check(lenses.Length==8&&lenses.All(n=>n.MaterialOverride is StandardMaterial3D
+                    {ShadingMode:BaseMaterial3D.ShadingModeEnum.Unshaded,EmissionEnabled:true,EmissionEnergyMultiplier:>1}),
+                    "four real beacon side and cap lenses retain warm emission without Low bloom");
+                Check(!AuditDescendants(terrain).OfType<OmniLight3D>().Any(n=>n.LightEnergy>0),
+                    "Low signal lenses do not require local point lights");
+                await Capture("glass-material-blue-purple-low-night");
+            }
         }
         finally
         {
@@ -138,7 +150,8 @@ public partial class PlaytestDriver
         try
         {
             foreach(var (preset,time,label) in new[]{(GraphicsPreset.High,StageTime.Midday,"high-midday"),
-                (GraphicsPreset.High,StageTime.Night,"high-night"),(GraphicsPreset.Low,StageTime.Midday,"low-midday")})
+                (GraphicsPreset.High,StageTime.Night,"high-night"),(GraphicsPreset.Low,StageTime.Midday,"low-midday"),
+                (GraphicsPreset.Low,StageTime.Night,"low-night")})
             {
                 if(_root.ActiveSession!=null){_root.Back();await Frames(3);}
                 if(!_headless){await SelectGraphics(preset);await SelectLocalLighting(time);}
