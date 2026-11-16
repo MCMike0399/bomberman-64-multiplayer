@@ -2,7 +2,6 @@ using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using Godot;
 
 namespace BlastCircuit.App;
@@ -84,10 +83,12 @@ public sealed partial class GodotPeerLink
         }
         if(_candidateEvents!.Count==128){_candidateDrops++;return;}
         var fields=candidate.Split(' ',StringSplitOptions.RemoveEmptyEntries);
+        var address=CandidateAddressSummary(fields.Length>4?fields[4]:null);
         int? port=fields.Length>5&&int.TryParse(fields[5],out int parsed)&&parsed is >0 and <=65535?parsed:null;
         _candidateEvents.Add(new{action,local,nativeStart=_starts,sourceStart,sourceInstance,afterCreationMs=At(now),media,index,
             sha256=Fingerprint(candidate),foundation=fields.Length>0?fields[0]:null,component=fields.Length>1?fields[1]:null,transport=fields.Length>2?fields[2]:null,
-            address=fields.Length>4?fields[4]:null,port,type=fields.Length>7?fields[7]:null,result=result?.ToString()});
+            address=fields.Length>4?fields[4]:null,port,addressFamily=address.Family,addressScope=address.Scope,
+            type=fields.Length>7?fields[7]:null,result=result?.ToString()});
     }
     private void ObservePoll()
     {
@@ -131,17 +132,7 @@ public sealed partial class GodotPeerLink
             RetiredDiagnostics.Enqueue(snapshot);
         }
     }
-    internal JsonElement SafeSignalDiagnostics
-    {
-        get
-        {
-            var safe = JsonSerializer.SerializeToNode(SignalDiagnostics)!.AsObject();
-            foreach (var candidate in safe["candidates"]!.AsArray())
-            { candidate!.AsObject().Remove("address"); candidate.AsObject().Remove("port"); }
-            safe["endpointScope"] = "Candidate/SDP hashes and order only; addresses and ports omitted from QA receipts.";
-            return JsonSerializer.SerializeToElement(safe);
-        }
-    }
+    internal JsonElement SafeSignalDiagnostics=>SafeDiagnosticSnapshot(SignalDiagnostics);
     internal static object LifecycleDiagnostics => new { failed = FailedApplyDiagnostics.ToArray(), failedDropped = _failedDiagnosticsDropped,
         retired = RetiredDiagnostics.ToArray(), retiredDropped = _retiredDiagnosticsDropped,
         scope = "QA-only bounded immutable snapshots; no native resources retained; no candidate addresses/ports." };

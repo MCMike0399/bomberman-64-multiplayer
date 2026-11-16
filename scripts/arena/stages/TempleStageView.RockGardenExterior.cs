@@ -41,7 +41,12 @@ public partial class TempleStageView
             Box(bridge,new(side*.55f,.62f,0),new(.06f,.06f,2.2f),rail,.01f);
         }
 
-        Windmill(scenery,new(-4.8f,ground,1.6f),.55f);
+        var mill=Windmill(this,new(-3.6f,ground,2.4f),.55f,animate:false);
+        mill.Basis=BlastCircuit.Rendering.PresentationMath.Rotation(new(0,.55f,0),Vector3.One*.8f);
+        _orchardMillSails=mill.GetNode<Node3D>("WindmillSails");
+        _orchardMillGlass=new StandardMaterial3D{AlbedoColor=new("6d735d"),Roughness=.65f,EmissionEnabled=true,Emission=new("efb76c")};
+        mill.GetNode<MeshInstance3D>("WindmillWindow").MaterialOverride=_orchardMillGlass;
+        BuildOrchardBranch();
         RoundTree(scenery,new(-3.2f,ground,-1.4f),1.25f,new("5b9a4b"),.3f);
         RoundTree(scenery,new(-4.4f,ground,6.2f),1.05f,new("6aa457"),1.9f);
         RoundTree(scenery,new(-3.4f,ground,11.5f),1.2f,new("4f8f46"),3.3f);
@@ -51,38 +56,16 @@ public partial class TempleStageView
         RoundTree(scenery,new(Width*.32f,ground,-6.8f),1.4f,new("5b9a4b"),5.2f);
         RoundTree(scenery,new(Width*.9f,ground,-7.6f),1.15f,new("6aa457"),.7f);
 
-        // Old garden ruins beyond the north-east corner.
-        var ruin=Prop(scenery,"GardenRuin",new(Width+3.2f,ground,-4.6f),-.35f);
-        foreach(var (x,height) in new[]{(-1.1f,2.4f),(1.1f,1.5f)})
-        {
-            Cylinder(ruin,new(x,height/2,0),.32f,height,stone);
-            Cylinder(ruin,new(x,height+.05f,0),.4f,.1f,mossy);
-        }
-        Box(ruin,new(-.35f,2.5f,0),new(1.9f,.28f,.6f),stone,.03f).Rotation=new(0,0,-.05f);
-        Box(ruin,new(1.8f,.15f,.6f),new(.9f,.3f,.55f),mossy,.05f).Rotation=new(0,.5f,.08f);
-
         StoneLantern(scenery,new(-1.5f,ground,-1.4f),.4f);
         StoneLantern(scenery,new(Width+1.5f,ground,-1.3f),-.3f);
         StoneLantern(scenery,new(-1.6f,ground,Depth+.9f),.1f);
         StoneLantern(scenery,new(Width+1.6f,ground,Depth+.9f),-.2f);
 
         // Beds and hedges hug the outside of the walls without rising above them.
-        FlowerBed(scenery,new(-1.75f,ground,5.5f),.75f,11,7);
-        FlowerBed(scenery,new(-1.75f,ground,13),.7f,10,9);
-        FlowerBed(scenery,new(Width+1.75f,ground,4),.7f,10,11);
-        FlowerBed(scenery,new(Width+1.75f,ground,11.5f),.75f,11,13);
-        foreach(float z in new[]{2.2f,8.8f,16.4f})
-        {
-            Bush(scenery,new(-1.5f,ground,z),.9f,new("4c8a42"));
-            Bush(scenery,new(Width+1.5f,ground,z+.5f),.9f,new("4c8a42"));
-        }
+        foreach(float z in new[]{3.5f,14f})
+            Bush(scenery,new(Width+1.7f,ground,z),.9f,new("4c8a42"));
         Rock(scenery,new(-2.6f,ground,8.2f),new(.8f,.6f,.7f),pebble,3,.6f);
         Rock(scenery,new(Width+2.5f,ground,9.6f),new(.7f,.55f,.7f),pebble,1,2.2f);
-
-        Butterfly(scenery,new(-1.75f,ground,5.5f),.9f,new("ffd34d"),0);
-        Butterfly(scenery,new(Width+1.75f,ground,11.5f),.8f,new("f58fb4"),2.1f);
-        Butterfly(scenery,new(-1.75f,ground,13),.8f,new("8fd0ff"),4.2f);
-        Butterfly(scenery,new(Width+1.75f,ground,4),.9f,new("ffffff"),1.2f);
 
         // Soft rolling hills fill the horizon instead of an endless flat lawn.
         Hill(scenery,new(Width/2f,-1.5f,-24),new(46,9,14),new("6f9f58"));
