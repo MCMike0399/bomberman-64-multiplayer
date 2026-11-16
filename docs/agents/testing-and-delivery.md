@@ -1210,3 +1210,39 @@ release at or before v0.45.0 permits the historical receipt format.
 Any runtime error blocks, even if gameplay assertions pass. Verbose engine output
 keeps leak types available; audio resource warnings and native ICE errors must be
 classified separately without adding an error allowlist.
+
+## QA nudge publication ownership (2026-11-16)
+
+A slow game frame can sample a pressed input before a fixture releases it, then
+publish that cached input after the observer's neutral write. Checking a gate
+only at sampling time does not prevent this ordering. The retained three-OS
+Quick Play failure observed Mac movement 1.50 cells beyond the existing 1.25
+corridor; the owned loopback reproduction confirmed neutral 159/ack159, then a
+stale pressed 161 and 1.65-cell movement. This is a fixture publication defect,
+not permission to change movement speed, authority or the accepted corridor.
+
+`FixtureInputPublication` gives sampled frames an epoch. Exclusive ownership
+acquisition/disposal and session resets invalidate cached epochs. Publication
+validates epoch/session generation and writes through the existing SendInput
+under one short critical section; sampling, visuals and awaits remain outside.
+Both before-acquisition and while-owned cached samples are rejected after
+disposal. The observed nudge owns its input while active and returns a matching
+**successfully sent neutral sequence**, which the existing authority-ack test
+then observes. Its pending/corridor budgets and caller deadlines are unchanged.
+The production sender, wire schema and authority are untouched.
+
+The no-GPU real-path regression is opt-in and starts/stops only its own loopback
+product server, with ordinary bomb/carry/movement inputs and no authority edits:
+
+```sh
+dotnet build src/Bomber.Server/Bomber.Server.csproj --nologo -m:1
+dotnet run --project tests/Bomber.Client.Tests -- --input-publication-wire --input-publication-output=artifacts/nudge-publication-wire
+```
+
+Its structured receipt records rejected stale publications, actual sent/ack
+sequences, position, supported height and the unchanged corridor. Default
+client checks exercise ownership, both stale interleavings, fresh recovery,
+connection-generation invalidation and unsent-neutral rejection.
+`network-input-pulse` additionally exercises the actual headless GameRoot route.
+These local regressions do not qualify a three-platform native action witness
+or justify retrying unchanged failed CI until lucky.
