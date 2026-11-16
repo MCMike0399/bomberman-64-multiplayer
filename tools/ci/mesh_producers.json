@@ -4438,7 +4438,7 @@
     {
       "id": "scripts/arena/stages/field_of_grass/TempleStageView.CutawayHollow.cs:cap.Commit:1",
       "file": "scripts/arena/stages/field_of_grass/TempleStageView.CutawayHollow.cs",
-      "line": 148,
+      "line": 152,
       "call": "cap.Commit()",
       "callSha256": "c75c942f597ef7827cf69fef3863519c97ba6a16acf0d7976e2cfb70b506fb55",
       "domain": "owned-generator-or-helper"
@@ -4446,7 +4446,7 @@
     {
       "id": "scripts/arena/stages/field_of_grass/TempleStageView.CutawayHollow.cs:newSurfaceTool:5",
       "file": "scripts/arena/stages/field_of_grass/TempleStageView.CutawayHollow.cs",
-      "line": 159,
+      "line": 163,
       "call": "new SurfaceTool()",
       "callSha256": "524d4daa3dd8ade1577b68b52e91ebbe9907def4954bab94da3aeb8c6bb1a4ae",
       "domain": "owned-generator-or-helper"
@@ -4454,7 +4454,7 @@
     {
       "id": "scripts/arena/stages/field_of_grass/TempleStageView.CutawayHollow.cs:newSurfaceTool:6",
       "file": "scripts/arena/stages/field_of_grass/TempleStageView.CutawayHollow.cs",
-      "line": 160,
+      "line": 164,
       "call": "new SurfaceTool()",
       "callSha256": "524d4daa3dd8ade1577b68b52e91ebbe9907def4954bab94da3aeb8c6bb1a4ae",
       "domain": "owned-generator-or-helper"
@@ -4462,7 +4462,7 @@
     {
       "id": "scripts/arena/stages/field_of_grass/TempleStageView.CutawayHollow.cs:face.Commit:1",
       "file": "scripts/arena/stages/field_of_grass/TempleStageView.CutawayHollow.cs",
-      "line": 178,
+      "line": 182,
       "call": "face.Commit()",
       "callSha256": "a400ff803b2b19754aff413cb200a363b4cec1dec884c236eb75de17e286b785",
       "domain": "owned-generator-or-helper"
@@ -4470,7 +4470,7 @@
     {
       "id": "scripts/arena/stages/field_of_grass/TempleStageView.CutawayHollow.cs:sod.Commit:1",
       "file": "scripts/arena/stages/field_of_grass/TempleStageView.CutawayHollow.cs",
-      "line": 180,
+      "line": 184,
       "call": "sod.Commit()",
       "callSha256": "e269753bacb01b543e4be3084b3e96cfebd4dc827f45e40db14435ad14bb5b56",
       "domain": "owned-generator-or-helper"
@@ -4478,7 +4478,7 @@
     {
       "id": "scripts/arena/stages/field_of_grass/TempleStageView.CutawayHollow.cs:RoundedBox:3",
       "file": "scripts/arena/stages/field_of_grass/TempleStageView.CutawayHollow.cs",
-      "line": 183,
+      "line": 187,
       "call": "RoundedBox(this,new(x,-1.65f,Depth+.55f),new(.5f,.3f,.4f),soil,.9f)",
       "callSha256": "11d3d069d0b3236ad3dd816b35b7279fc96508e405e13f7cf90d31eaddc87a09",
       "domain": "owned-generator-or-helper"
@@ -4486,7 +4486,7 @@
     {
       "id": "scripts/arena/stages/field_of_grass/TempleStageView.CutawayHollow.cs:newSurfaceTool:7",
       "file": "scripts/arena/stages/field_of_grass/TempleStageView.CutawayHollow.cs",
-      "line": 197,
+      "line": 201,
       "call": "new SurfaceTool()",
       "callSha256": "524d4daa3dd8ade1577b68b52e91ebbe9907def4954bab94da3aeb8c6bb1a4ae",
       "domain": "owned-generator-or-helper"
@@ -4494,7 +4494,7 @@
     {
       "id": "scripts/arena/stages/field_of_grass/TempleStageView.CutawayHollow.cs:newSurfaceTool:8",
       "file": "scripts/arena/stages/field_of_grass/TempleStageView.CutawayHollow.cs",
-      "line": 198,
+      "line": 202,
       "call": "new SurfaceTool()",
       "callSha256": "524d4daa3dd8ade1577b68b52e91ebbe9907def4954bab94da3aeb8c6bb1a4ae",
       "domain": "owned-generator-or-helper"
@@ -4502,7 +4502,7 @@
     {
       "id": "scripts/arena/stages/field_of_grass/TempleStageView.CutawayHollow.cs:mouth.Commit:1",
       "file": "scripts/arena/stages/field_of_grass/TempleStageView.CutawayHollow.cs",
-      "line": 208,
+      "line": 212,
       "call": "mouth.Commit()",
       "callSha256": "9ff79034fed958c8152a8e8033e0bc0a1f81e3cc2024c7dd70b8df8b43fdee18",
       "domain": "owned-generator-or-helper"
@@ -4510,7 +4510,7 @@
     {
       "id": "scripts/arena/stages/field_of_grass/TempleStageView.CutawayHollow.cs:rim.Commit:1",
       "file": "scripts/arena/stages/field_of_grass/TempleStageView.CutawayHollow.cs",
-      "line": 209,
+      "line": 213,
       "call": "rim.Commit()",
       "callSha256": "f5cd03317fdadd3abe60d4eef9bdb96bbd03fd7c3d10d4293963c268e5350cb8",
       "domain": "owned-generator-or-helper"
@@ -4518,7 +4518,7 @@
     {
       "id": "scripts/arena/stages/field_of_grass/TempleStageView.CutawayHollow.cs:Bead:1",
       "file": "scripts/arena/stages/field_of_grass/TempleStageView.CutawayHollow.cs",
-      "line": 211,
+      "line": 215,
       "call": "Bead(this,new(cluster+(n-1)*.72f,-1.04f+(n%2)*.10f,Depth+.045f),new(.85f,.42f,.18f),_hollowStoneMaterial!)",
       "callSha256": "8d43772f6535a46bd74506a8a2ef945a6093bb82f35b142c0ec753d96df9bb5b",
       "domain": "owned-generator-or-helper"
@@ -4526,7 +4526,7 @@
     {
       "id": "scripts/arena/stages/field_of_grass/TempleStageView.CutawayHollow.cs:newSurfaceTool:9",
       "file": "scripts/arena/stages/field_of_grass/TempleStageView.CutawayHollow.cs",
-      "line": 224,
+      "line": 228,
       "call": "new SurfaceTool()",
       "callSha256": "524d4daa3dd8ade1577b68b52e91ebbe9907def4954bab94da3aeb8c6bb1a4ae",
       "domain": "owned-generator-or-helper"
@@ -4534,7 +4534,7 @@
     {
       "id": "scripts/arena/stages/field_of_grass/TempleStageView.CutawayHollow.cs:mesh.Commit:2",
       "file": "scripts/arena/stages/field_of_grass/TempleStageView.CutawayHollow.cs",
-      "line": 227,
+      "line": 231,
       "call": "mesh.Commit()",
       "callSha256": "1ae16663916c4484aad2c46c317cafa7a78f1658b36840f8274d36dc07dbec0f",
       "domain": "owned-generator-or-helper"
@@ -9736,7 +9736,7 @@
     "scripts/arena/stages/TempleStageView.UpAndDown.cs": "66ee09178629038b769382d720fae901d74d7bb670e846143463b998f96f2006",
     "scripts/arena/stages/TempleStageView.UpAndDownExterior.cs": "f6beb01527bf31f486f53c77b0a49a0233aeeaf5dc001d7cd20f9e11090ddacf",
     "scripts/arena/stages/TempleStageView.cs": "8020ca5d3c259d9eb603940dbf89906013444228ea2157a2ea82984277d80986",
-    "scripts/arena/stages/field_of_grass/TempleStageView.CutawayHollow.cs": "81812fab6427b48817cc3a03d2e2b9bc4532dc6f75284e2409ff14d072606533",
+    "scripts/arena/stages/field_of_grass/TempleStageView.CutawayHollow.cs": "5caa0fe7c0cd972ce2f8c09dacb66d85034556789f19188ccd1eb373203dc34a",
     "scripts/arena/stages/field_of_grass/TempleStageView.FieldOfGrass.cs": "e659e5b319c55c0e1453bf30190ae0ac8a1c9a0666c8d8fde6dbd02924525ce1",
     "scripts/arena/stages/field_of_grass/TempleStageView.FieldOfGrassExterior.cs": "0e1db3b3f389b8fea176fd43c3a37c2b919f787efaf4d010503db9e06333389b",
     "scripts/arena/stages/field_of_grass/TempleStageView.HollowStones.cs": "54b93e50ceae9c1b341f5b60f5bf1c63a5b6a5f9c9e817548acf047f108038b6",

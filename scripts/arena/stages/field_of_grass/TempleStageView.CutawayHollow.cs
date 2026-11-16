@@ -128,8 +128,12 @@ public partial class TempleStageView
             {
                 float x=left?u:Width-u,outer=left?.5f:Width-.5f,inner=left?1:Width-1;
                 float start=HollowLandscapeHeight(outer,zz),crest=3.5775f;
+                // Pow(x,2) crosses a measured Mac/x64 libm seam here. Keep the
+                // quarter-profile in fixed float operations, like presentation
+                // rotations, before its actual vertices enter packed storage.
+                float round=(u-.7f)/.3f;
                 float height=u<=.7f?Mathf.Lerp(start,crest,HollowSmooth(.5f,.7f,u)):
-                    2*HeightScale+.8775f*MathF.Sqrt(Math.Max(0,1-MathF.Pow((u-.7f)/.3f,2)));
+                    2*HeightScale+.8775f*MathF.Sqrt(Math.Max(0,1-round*round));
                 // At both ends this meets the exact adjacent plateau edge.
                 float boundary=Math.Max(1-HollowSmooth(1,1.5f,zz),HollowSmooth(Depth-1.5f,Depth-1,zz));
                 float end=Mathf.Lerp(start,HollowLandscapeHeight(inner,zz),(u-.5f)/.5f);

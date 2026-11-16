@@ -28,6 +28,7 @@ public partial class PlaytestDriver
                 _root.StartLocal(new SessionSettings(Stage:BlastStages.FieldOfGrass,Bots:7,SuddenDeath:false),1);
                 await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"Cutaway Hollow study enters "+label,150);
                 var arena=_root.GetChildren().OfType<ArenaView>().Single();var terrain=AuditDescendants(arena).OfType<TempleStageView>().Single();
+                CheckHollowCapStorage(terrain);
                 Check(AuditDescendants(terrain).OfType<MeshInstance3D>().Any(n=>n.Name=="HollowStrataCutFace")&&
                     AuditDescendants(terrain).OfType<MeshInstance3D>().Any(n=>n.Name=="HollowMeadowPlateau"),
                     "study consumes the surrounding meadow and continuous open earth section");
@@ -93,6 +94,26 @@ public partial class PlaytestDriver
         }
     }
 
+    private void CheckHollowCapStorage(TempleStageView terrain)
+    {
+        var cap=AuditDescendants(terrain).OfType<MeshInstance3D>().Single(n=>n.Name=="HollowSideEarthCuts").Mesh;
+        var vertices=cap.SurfaceGetArrays(0)[(int)Mesh.ArrayType.Vertex].AsVector3Array();
+        var sample=vertices.First(p=>BitConverter.SingleToInt32Bits(p.X)==0x3f6aaaaa&&p.Z==1.5f);
+        var surface=cap.Get("_surfaces").AsGodotArray()[0].AsGodotDictionary();
+        byte[] packed=GD.VarToBytes(surface["vertex_data"]);
+        string hash=Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(packed)).ToLowerInvariant();
+        Event("hollow-cap-packed-storage",new{bytes=packed.Length,sha256=hash,
+            sampleX=sample.X,sampleY=sample.Y,sampleZ=sample.Z,yBits=BitConverter.SingleToInt32Bits(sample.Y).ToString("x8"),
+            scope="actual committed ArrayMesh vertex/normal/tangent storage; no regenerated duplicate formula"});
+        // The retained Windows/Linux receipt has this full packed buffer; fixed
+        // float squaring makes Mac emit those same bytes, one height ULP below
+        // its former platform-libm result. Never accept an epsilon comparison.
+        Check(BitConverter.SingleToInt32Bits(sample.Y)==0x4053a4c9,
+            "actual generated quarter-cap seam matches its fixed-arithmetic float32 fixture");
+        Check(hash=="7ff7e2dd93214d70e0680d68ade226c131cc4a79f55e95e2a500dc040056d404",
+            "actual cap vertex/normal/tangent storage matches the exact native packed-buffer fixture");
+    }
+
     private async Task FieldOfGrassNetworkTour()
     {
         foreach(var mode in new[]{NetworkMode.CreatePrivate,NetworkMode.CreatePeer})
@@ -150,6 +171,7 @@ public partial class PlaytestDriver
             Check(State.GetProperty("players").GetArrayLength()==8&&State.GetProperty("players").EnumerateArray().All(p=>Math.Abs(p.GetProperty("y").GetSingle()-2)<.01f),"all eight seats stand on the two side-bank ledges");
             var arena=_root.GetChildren().OfType<ArenaView>().Single();
             var terrain=AuditDescendants(arena).OfType<TempleStageView>().Single();
+            CheckHollowCapStorage(terrain);
             Check(AuditDescendants(terrain).OfType<MultiMeshInstance3D>().Any(n=>n.Name=="ConcealingMeadow"&&n.Multimesh.InstanceCount>500),"actual arena renders a dense opaque meadow");
             Check(AuditDescendants(arena).OfType<Node3D>().Count(n=>n.Name.ToString().StartsWith("HollowStandingStone"))==28,"accepted battle cover renders as twenty-eight original mossy standing stones");
             CheckClockwiseMeshes(AuditDescendants(terrain).OfType<MeshInstance3D>()

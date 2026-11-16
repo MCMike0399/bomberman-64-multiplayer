@@ -152,3 +152,16 @@ The coherent meadow revision passes 40 headless study assertions with zero
 runtime errors or warnings. Its additional views retain the actual support
 sheets, both slope actors and a real planted bomb. Native review of the terrain,
 Night lamp, wheat tips and cut-face readability is still required.
+
+### Exact cap storage correction (2026-11-16)
+
+The retained [PR107 native-input failure](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/43786089024/job/133046828718)
+passed observable authority replay but found one differing mesh: the rounded
+side cap. Platform `MathF.Pow(t,2)` changed 66 height bytes by one float32 ULP
+and one packed normal/tangent byte between Mac and both x64 targets. Fixed float
+`t*t` removes that libm seam; the actual Mac-generated 18,288-byte cap storage
+now exactly matches the retained Windows/Linux buffer. Support planes and art
+remain unchanged at visible precision. Both the ordinary stage journey and
+shape study pin the actual generated vertex and full packed vertex/normal/
+tangent buffer, rather than repeating the formula or accepting a tolerance.
+Fresh whole-scene cross-platform CI remains required for the current head.
