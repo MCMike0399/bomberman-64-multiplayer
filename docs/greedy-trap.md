@@ -277,3 +277,19 @@ camera: `greedy-canal` passes 137 checks/9 captures and a full revolution on all
 presets. The labelled close-inspection camera now targets the new complete
 machine pier instead of the old upstream wheel position. This adjusts evidence
 framing only; accepted geometry and the gameplay camera are unchanged.
+
+## Native visual review (2026-11-16)
+
+The combined release candidate was reviewed at Low, Medium and High in daylight
+and at Night. A fresh plain-Claude Fable 5.2 medium advisor inspected every
+required map/preset image and returned visual GO; root also inspected the actual
+reservoir, connected wheel and quays. This is visual evidence, not publication
+or a frame-rate claim. The shared Night palette/footer comes from PR114.
+
+The native `greedy-canal` witness passed137 assertions and9 captures, including
+full wheel rotations on all presets; its118.93-second recording was decoded.
+Images below are unchanged seed64 captures from combined source6ef981f.
+
+| Low | Medium | High | High Night |
+|---|---|---|---|
+| [View](images/stages-046/greedy-trap/low-midday.png) | [View](images/stages-046/greedy-trap/medium-midday.png) | [View](images/stages-046/greedy-trap/high-midday.png) | [View](images/stages-046/greedy-trap/high-night.png) |
