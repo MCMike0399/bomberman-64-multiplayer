@@ -107,3 +107,112 @@ Another regression reproduced resting bombs trapped atop surviving spires; drift
 now uses the shared height-aware static footprint, preserving spire-side blocking
 and allowing supported bombs to drift off and fall. Both corrected paths pass
 the focused managed Blizzard suite. Final combined graphical evidence is separate.
+
+## Glacier Bowl — fresh advisor correction, 2026-11-15
+
+The fresh plain-Claude review found Low's court floating in a white void and
+High Night snow reading as rippling water. The core now includes a sculpted
+rounded snow berm over a blue ice shelf/band, built wholly around the unchanged
+wall footprint. A connected outboard shelf seats the retained left arch; a few
+hanging icicles and three broad crown forms join it into one glacier silhouette.
+The core body and arch remain on Low. The snowman is removed; the eastern frozen
+pond and penguins remain the focal vignette, with the igloo/background trees
+subordinate. A chunky core pennant takes the accepted weather vector and pausable
+weather clock; it has no influence on authority. One amber core lantern retains
+emissive paint on Low and one shadowless warm light on Medium/High.
+
+High snow normal strength is .055 at Night versus the original .22 by day. This
+is a frozen-surface input set by the existing stage lighting handoff, with no
+change to the shared Night profile, cone geometry, court ice, wind, avalanche,
+physics, inputs, camera or authority. The global footer and bomb readability
+corrections belong to the integration owner.
+
+Managed source build and public checks pass. The focused headless Blizzard
+journey passes 87 assertions, including actual indexed clockwise bowl faces,
+core retention on every preset, Night/day snow normal inputs, emissive-only Low
+lantern policy, accepted pennant vector, pause, ordinary throws, cone loot,
+avalanches and CPU combat. Its raw log retains 20 ObjectDB exit leaks and no
+runtime errors; this is not a clean native qualification claim. The first
+sandboxed editor import could not save user editor settings; the authorized
+headless import completed with no errors or warnings. Matched Low/Medium/High
+opening/Night combat captures and a short wind witness still require native
+review and the final advisor gate.
+
+## Glacier Lantern Grotto — 2026-11-16 source candidate
+
+This supersedes the separate arch/shelf in the previous candidate. The user's
+close crop exposed a real support mismatch: shelf topY=.16 engulfed the arch's
+lower .485 units, the snow feet protruded only .015 above it, and the rotated
+left post overhung the shelf by about .80. Parentage/winding checks did not
+prove contact. The old posts and detached slab are removed.
+
+One owned three-surface mesh now carries the sculpted field, continuous snow
+shoulder, genuinely open through-vault, pale thick ice lining and four rounded
+icicles. Its outer shoulder meets the field through a horizontal fillet; the
+white/ice lip shares its generated interface. One tilted violet crown samples
+the actual captured snow triangles for its seven support vertices. The amber
+lantern sits inside the vault. The existing pond/penguins consolidate in its
+lee, absorbing the igloo; Low keeps one penguin. Three broad drifts and a muted
+blue-grey far field separate the white bowl from its surround.
+
+The existing accepted-wind pennant remains at its original post and follows the
+same accepted vector/pausable clock. Court ice, spires, wind forces, avalanche,
+weather draw budgets and all authority/camera behavior remain unchanged. All
+principal masses and the lantern's emission remain on Low; only the existing
+quality effects, companion penguins and real light vary by preset.
+
+The fresh inspected [White Cross image](https://www.konami.com/games/bomberman/r/s/img/ss_battle09_l.jpg)
+informs pale matte snow versus thick blue ice; [Konami's rounded editor slab](https://www.konami.com/games/bomberman/r2/s/img/castle/original_en_3.jpg)
+informs continuous shoulders/undercuts. The grotto is original art, not a
+recovered N64 landmark or mechanic. No reference image is distributed.
+
+`glacier-grotto` is the focused native/probe recipe. It records actual packed
+world bounds, every surface's winding, the through-vault ray, roof thickness,
+icicle/crown contact and ordinary 16:10/16:9 projected bounds. Its native leaf
+captures High/Medium/Low, High Night combat, front three-quarter, rear support
+and low vault views. The ordinary `blizzard-battle` and `stage-scenery` journeys
+remain regressions. These probes support visual review; they cannot approve
+the rendered materials or charm.
+
+Source build passes with zero errors/warnings. Headless checks pass 73 grotto,
+87 Blizzard and 113 scenery assertions, with zero runtime errors (exit ObjectDB
+warnings retained). Python playtest contracts pass32; mesh census matches.
+Captured hero bounds are X[-6.8,-.7], Y[-.3,5.05], Z[1.28,8.72]. The unchanged
+1280×800 camera places them at normalized X[.047245,.236016],
+Y[.163616,.473298]: 60 pixels from the left and 19 below the HUD-safe boundary.
+16:9 also passes. The actual roof surfaces measure Y1.7 and3.7; all48 icicle
+collar samples are within .0112 units of the captured lining, and the seven
+crown bases within .000001 of captured snow. Native shader compilation and
+rendered front/rear/below joins remain root's gate.
+
+The first native grotto run passed its geometry checks but its low-vault image
+contained only sky/floor. That capture is invalid underside evidence. The close
+pose inherited ordinary battle projection offsets, reapplied every frame by
+the camera rig. Its replacement uses a temporary zero-offset inspection camera,
+requires the actual captured opening rim to occupy a substantial HUD-safe area
+and checks an unobstructed captured-mesh mouth ray before saving the image.
+The ordinary battle camera and grotto geometry are unchanged by this correction.
+The stricter guard first rejected a slightly cropped test pose; it was moved
+back without relaxing the bounds. The corrected headless run passes75 checks,
+projecting all38 actual opening-rim vertices into X[.138,.822], Y[.288,.754],
+with a clear mouth ray. Native recapture is still required to replace the invalid
+underside image; the other accepted native images remain unchanged.
+
+### Lantern clearance correction
+
+The valid low-vault image exposed a real left-icicle/lantern-cap intersection:
+one generated icicle vertex at(-4.57,.56587,8.175) lay inside the cap's rounded
+volume, not only its AABB. The lantern moves deeper fromZ7.95 to7.45 and .15
+units toward the wider cavity, X-4.55 to-4.40. Shapes, court and cameras do not
+change. A Z-only move also exposed contact with the vault's left lining; that
+red witness is retained alongside the first native image.
+
+The final actual packed-mesh probe checks all2,622 lantern body/cap vertices
+against snow/lining, all-icicle separation, and ordinary-camera window
+sightlines. It finds zero embedded vertices, .29-unit icicle separation and
+three of four clear emitting-face samples. Partial visual framing by the cave
+is allowed; root judges recognizable light in pixels. Ray exits from shared
+triangles are merged by a .00001 distance, avoiding a false odd crossing when
+1.0658500 and1.0658501 straddle a quantized rounding midpoint. Genuine clearance
+checks remain strict. The corrected headless journey passes78 assertions with
+zero runtime errors and a retained exit ObjectDB warning.

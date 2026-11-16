@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -43,6 +44,73 @@ def create_dmg(staging, destination):
             raise subprocess.CalledProcessError(result.returncode,command,result.stdout,result.stderr)
 
 
+def verify_dmg(image, receipt):
+    """Verify one newly-created image; retry only its explicit transient EAGAIN."""
+    image=Path(image);receipt=Path(receipt);started=time.monotonic()
+    report={'schemaVersion':1,'gate':'dmg-verification','image':str(image),'passed':False,
+            'outcome':'failed','maximumAttempts':2,'commandTimeoutSeconds':120,'retryDelaySeconds':2,'attempts':[]}
+    def save():
+        receipt.parent.mkdir(parents=True,exist_ok=True)
+        receipt.write_text(json.dumps(report,indent=2)+'\n')
+    def identity():
+        stat=image.stat()
+        return {'device':stat.st_dev,'inode':stat.st_ino,'bytes':stat.st_size,'sha256':desktop.digest(image)}
+    def text(value):
+        return value.decode(errors='replace')if isinstance(value,bytes)else value or''
+    def transient(result):
+        output=result.stdout+'\n'+result.stderr
+        # A generic nonzero exit, checksum failure, bad format, EBUSY or a
+        # filename containing EAGAIN cannot enter this retry path.
+        permanent=re.search(r'checksum[^\r\n]*(?:mismatch|invalid|failed|failure|error|not match)|(?:bad|invalid|no) checksum|'
+                            r'(?:CRC32|SHA256)[^\r\n]*(?:mismatch|invalid|failed|failure|error|not match)|'
+                            r'(?:corrupt|malformed|invalid|unsupported) (?:image|format)|not a disk image|'
+                            r'image format[^\r\n]*(?:invalid|unsupported|unrecognized|not recognized)',output,re.I)
+        unavailable=re.compile(r'hdiutil:\s*verify(?: failed\s*-\s*|:\s*(?:[^\r\n]*\()?)'
+                               r'(?:Resource temporarily unavailable|EAGAIN)(?:\s*\(11\))?\)?\s*',re.I)
+        diagnostics=[line.strip()for line in output.splitlines()if re.match(r'^hdiutil:\s*verify\b',line,re.I)]
+        return (result.returncode>0 and permanent is None and bool(diagnostics)
+                and all(unavailable.fullmatch(line)for line in diagnostics))
+    try:
+        original=identity();report['imageIdentity']=original
+        for attempt in range(2):
+            if identity()!=original:
+                report['outcome']='image-changed'
+                raise RuntimeError('DMG changed before verification; refusing to retry a different image')
+            command=['hdiutil','verify',str(image)]
+            row={'attempt':attempt+1,'command':command,'imageSha256':original['sha256'],'passed':False,'retryEligible':False}
+            report['attempts'].append(row);save();clock=time.monotonic()
+            try:
+                result=subprocess.run(command,capture_output=True,text=True,timeout=120)
+            except (subprocess.TimeoutExpired,OSError)as error:
+                row.update(errorType=type(error).__name__,stdout=text(getattr(error,'stdout',None)),
+                           stderr=text(getattr(error,'stderr',None)),retryEligible=False)
+                raise
+            finally:
+                row['seconds']=round(time.monotonic()-clock,3)
+            row.update(exitCode=result.returncode,stdout=result.stdout,stderr=result.stderr)
+            if result.stdout:print(result.stdout,end='')
+            if result.stderr:print(result.stderr,end='',file=sys.stderr)
+            if identity()!=original:
+                report['outcome']='image-changed'
+                raise RuntimeError('DMG changed during verification; refusing the modified image')
+            if result.returncode==0:
+                row['passed']=True;report.update(passed=True,outcome='verified');return
+            row['retryEligible']=transient(result)
+            if attempt==0 and row['retryEligible']:
+                report['outcome']='retrying-eagain';save()
+                print('DMG_VERIFY_RETRY_EAGAIN: one retry of the same unchanged image')
+                time.sleep(2)
+                continue
+            report['outcome']='eagain-exhausted'if row['retryEligible']else'verify-failed'
+            raise subprocess.CalledProcessError(result.returncode,command,result.stdout,result.stderr)
+    except Exception as error:
+        if report['outcome']=='retrying-eagain':report['outcome']='failed'
+        report['error']={'type':type(error).__name__,'message':str(error)}
+        raise
+    finally:
+        report['seconds']=round(time.monotonic()-started,3);save()
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--target', choices=downloads.FILES, required=True)
@@ -61,7 +129,7 @@ def main():
             subprocess.run(['ditto', '-x', '-k', str(directory / 'Blast-Circuit-macos-arm64.zip'), str(staging)], check=True)
             (staging / 'Applications').symlink_to('/Applications')
             create_dmg(staging,directory/name)
-        subprocess.run(['hdiutil', 'verify', str(directory / name)], check=True, timeout=120)
+        verify_dmg(directory/name,directory/'qa/dmg-verification.json')
         with tempfile.TemporaryDirectory(prefix='blast-dmg-inspect-') as temporary:
             mount = Path(temporary) / 'volume'
             subprocess.run(['hdiutil', 'attach', '-readonly', '-nobrowse', '-noautoopen', '-mountpoint',
