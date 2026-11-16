@@ -348,7 +348,7 @@ public partial class TempleStageView
 
     // ---------------------------------------------------------------- structures
 
-    private Node3D Lighthouse(Node3D parent,Vector3 position,float height,float phase)
+    private Node3D Lighthouse(Node3D parent,Vector3 position,float height,float phase,bool coreClock=false)
     {
         var root=Prop(parent,"Lighthouse",position);
         var red=_art.Toy(new("d8433b"),.5f);var white=_art.Toy(new("f4efe3"),.5f);var dark=_art.Color(new("3a3f47"),.6f);
@@ -365,7 +365,7 @@ public partial class TempleStageView
             Box(root,new(Mathf.Cos(a)*.53f,height+.2f,Mathf.Sin(a)*.53f),new(.035f,.24f,.035f),dark);
         }
         Cylinder(root,new(0,height+.32f,0),.55f,.03f,dark);
-        Cylinder(root,new(0,height+.38f,0),.3f,.62f,Glow(new("fff1b5"),1.2f));
+        Cylinder(root,new(0,height+.38f,0),.3f,.62f,Glow(new("fff1b5"),1.2f)).Name="LighthouseLens";
         Cone(root,new(0,height+.92f,0),.42f,.46f,red,16);
         Sphere(root,new(0,height+1.2f,0),Vector3.One*.14f,dark);
         Box(root,new(0,.4f,.6f),new(.32f,.6f,.1f),_art.Color(new("4a3628"),.7f),.04f);
@@ -374,7 +374,7 @@ public partial class TempleStageView
         foreach(int side in new[]{-1,1})
             beam.AddChild(new MeshInstance3D {Name=side<0?"LighthouseSoftBeamWest":"LighthouseSoftBeamEast",Mesh=beamMesh,MaterialOverride=light,
                 Basis=PresentationMath.Rotation(new(0,side<0?Mathf.Pi:0,0)),CastShadow=GeometryInstance3D.ShadowCastingSetting.Off});
-        _sceneryMotion.Add(t=>beam.Basis=PresentationMath.Rotation(new(0,phase+t*.22f,0)));
+        if(!coreClock)_sceneryMotion.Add(t=>beam.Basis=PresentationMath.Rotation(new(0,phase+t*.22f,0)));
         return root;
     }
 

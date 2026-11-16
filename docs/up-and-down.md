@@ -183,3 +183,38 @@ Review matched Low/Medium/High Midday and Night views plus a short Night clip;
 the existing `up-and-down` traversal and `stage-scenery` placement/pause journeys
 remain the validation entrypoints. Source checks alone do not approve the glow
 or gradient density.
+
+## Tideglass Beacon — 2026-11-16 source candidate
+
+The final reference addendum keeps the strong suspended court and gives the
+coast one arch/lighthouse grouping. One existing tall stack becomes a single
+owned turf-capped rock with a real through-opening. The remaining stack
+vertices/profiles stay unchanged; their normals now interpolate around and
+across those same profiles to soften the stair-stepped shading.
+
+The lighthouse and its whole existing rocky footing remain in core on Low,
+as do the sea arch and one bell buoy replacing a previous marker. A single
+pausable coastal clock drives the slow beacon, lens accent and buoy. Low
+keeps the emissive lens pulse; Medium and High retain the soft Night beam
+volume and their existing water/refraction/reflection features. No nest,
+new real lights, route or hazard is added. The bell follows the actual rendered
+accepted-water plane, including the stage's existing flood.
+
+The ordinary camera is unchanged. Actual captured landmark vertices initially
+showed a small lighthouse HUD-margin failure, so the complete lighthouse
+islet/jetty vignette moves .6 units forward. Final ordinary projections at
+1280×800 are X[.14747,.81385], Y[.14334,.44765];16:9 also passes. The new
+`tideglass-coast` leaf captures High/Medium/Low Midday, Low Night, High Night
+combat and a labelled arch inspection using an independent zero-offset camera.
+It checks actual clockwise geometry, the through-hole, core retention, water
+contact, cheap Low motion, pause and both ordinary aspect ratios. The existing
+`up-and-down` traversal and `stage-scenery` placement journeys remain required.
+Native images and final advisor review remain the art gate.
+
+Source build is clean. Headless checks pass76 coastal,153 traversal and118
+scenery assertions, with zero runtime errors (exit ObjectDB warnings retained).
+Playtest contracts pass32; census and documentation links match. The separate
+inspection guard consumes actual arch vertices and places them at normalized
+X[.38682,.61893], Y[.23023,.75510], preventing another empty off-target capture.
+These are geometry/fixture checks; root still owns native material and charm
+review, recording and final package qualification.

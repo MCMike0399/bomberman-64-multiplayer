@@ -20,12 +20,17 @@ public partial class TempleStageView
         var grass=_art.Color(new("74a65a"),.95f);var plank=_art.Color(new("9a7650"),.85f);
 
         // Lighthouse islet behind the west pier.
-        var islet=new Vector3(-5,sea,-1.6f);
-        Rock(scenery,islet+new Vector3(0,-.55f,0),new(4.6f,1.9f,4.2f),cliff,0,.3f);
-        Rock(scenery,islet+new Vector3(1.7f,-.5f,1.3f),new(2.2f,1.2f,2),cliffDark,2,1.1f);
-        Rock(scenery,islet+new Vector3(-1.6f,-.5f,1),new(1.8f,1,1.6f),cliffDark,3,2.3f);
-        Sphere(scenery,islet+new Vector3(-.1f,.68f,-.1f),new(2.6f,.36f,2.4f),grass).Name="IsletTurf";
-        Lighthouse(scenery,islet+new Vector3(-.2f,.75f,-.3f),4.6f,0);
+        var islet=new Vector3(-5,sea,-1.0f);
+        var coreIslet=Prop(this,"LighthouseIsletCore",Vector3.Zero);
+        Rock(coreIslet,islet+new Vector3(0,-.55f,0),new(4.6f,1.9f,4.2f),cliff,0,.3f);
+        Rock(coreIslet,islet+new Vector3(1.7f,-.5f,1.3f),new(2.2f,1.2f,2),cliffDark,2,1.1f);
+        Rock(coreIslet,islet+new Vector3(-1.6f,-.5f,1),new(1.8f,1,1.6f),cliffDark,3,2.3f);
+        Sphere(coreIslet,islet+new Vector3(-.1f,.68f,-.1f),new(2.6f,.36f,2.4f),grass).Name="IsletTurf";
+        var lighthouse=Lighthouse(coreIslet,islet+new Vector3(-.2f,.75f,-.3f),4.6f,0,coreClock:true);
+        _coastalBeacon=lighthouse.GetNode<Node3D>("LighthouseBeam");
+        _coastalLens=new StandardMaterial3D{AlbedoColor=new("fff1b5"),ShadingMode=BaseMaterial3D.ShadingModeEnum.Unshaded,
+            EmissionEnabled=true,Emission=new("fff1b5"),EmissionEnergyMultiplier=1.2f,DisableFog=true};
+        lighthouse.GetNode<MeshInstance3D>("LighthouseLens").MaterialOverride=_coastalLens;
         var jetty=Prop(scenery,"Jetty",islet+new Vector3(2.2f,0,2.4f),.55f);
         for(int i=0;i<6;i++)Box(jetty,new(0,.28f,i*.42f),new(.9f,.08f,.38f),plank,.015f);
         foreach(int side in new[]{-1,1})for(int post=0;post<3;post++)
@@ -45,12 +50,14 @@ public partial class TempleStageView
             stack.AddChild(new MeshInstance3D{Name="ErodedSeaStack",Mesh=mesh,MaterialOverride=stackPaint});
             if(tree)RoundTree(stack,new(.1f,height+.04f,0),.7f,new("5b9a4b"),variant);
         }
-        Stack(new(Width+3.6f,sea,-1.5f),5.2f,2.4f,0,true);
+        var seaArch=Prop(this,"TideglassSeaArch",new(Width+3.6f,sea,-1.5f));
+        seaArch.Basis=PresentationMath.Rotation(new(0,-.22f,0));
+        seaArch.AddChild(new MeshInstance3D{Name="CarvedCoastalArch",Mesh=CoastalArchMesh(5.2f,2.4f),MaterialOverride=stackPaint});
         Stack(new(Width+6.2f,sea,1.4f),3.2f,1.8f,1,false);
         Stack(new(Width+3.3f,sea,12.5f),2.1f,1.6f,2,false);
         Stack(new(-3.4f,sea,9.5f),1.4f,1.4f,3,false);
 
-        Buoy(scenery,new(-1.8f,sea,5),new("d8433b"),0);
+        BuildCoastalBellBuoy(new(-1.8f,sea,5));
         Buoy(scenery,new(Width+1.8f,sea,7),new("3f9b4f"),.8f);
         Buoy(scenery,new(-2.2f,sea,Depth-.5f),new("d8433b"),1.6f);
         Buoy(scenery,new(Width+2.2f,sea,Depth+.2f),new("3f9b4f"),2.3f);
@@ -141,14 +148,17 @@ void fragment(){
             float dz=width*.07f*progress*PresentationMath.Sin(variant*1.4f+ring*.31f);
             return new(cos*radius+dx,levels[ring],sin*radius+dz);
         }
-        void Triangle(Vector3 a,Vector3 b,Vector3 c,Color paint)
+        Vector3 Normal(int ring,int side)
         {
-            var normal=(c-a).Cross(b-a).Normalized();
-            foreach(var point in new[]{a,b,c})
-            {
-                surface.SetNormal(normal);surface.SetColor(paint);
-                surface.SetUV(new(point.X,point.Y));surface.AddVertex(point);
-            }
+            var vertical=Point(Math.Min(levels.Length-1,ring+1),side)-Point(Math.Max(0,ring-1),side);
+            var tangent=Point(ring,side+1)-Point(ring,side-1);
+            return vertical.Cross(tangent).Normalized();
+        }
+        void Triangle(Vector3 a,Vector3 b,Vector3 c,Color paint,Vector3 na,Vector3 nb,Vector3 nc)
+        {
+            if((b-a).Cross(c-a).Dot(na+nb+nc)>0){(b,c)=(c,b);(nb,nc)=(nc,nb);}
+            foreach(var (point,normal) in new[]{(a,na),(b,nb),(c,nc)})
+            {surface.SetNormal(normal);surface.SetColor(paint);surface.SetUV(new(point.X,point.Y));surface.AddVertex(point);}
         }
         for(int ring=0;ring<levels.Length-1;ring++)for(int side=0;side<sides;side++)
         {
@@ -161,7 +171,7 @@ void fragment(){
             if(ring==0)color=new Color("657d73");
             else if(ring is 2 or 4 or 6)color=color.Lightened(.075f);
             if(ring>=5&&side%4==variant%4)color=color.Lerp(new Color("85916d"),.24f);
-            Triangle(a,b,c,color);Triangle(a,c,d,color);
+            Triangle(a,b,c,color,Normal(ring,side),Normal(ring,side+1),Normal(ring+1,side+1));Triangle(a,c,d,color,Normal(ring,side),Normal(ring+1,side+1),Normal(ring+1,side));
         }
         var center=new Vector3(0,height+.018f,0);
         for(int side=0;side<sides;side++)
@@ -169,7 +179,7 @@ void fragment(){
             var a=Point(levels.Length-1,side)+new Vector3(0,.012f,0);
             var b=Point(levels.Length-1,side+1)+new Vector3(0,.012f,0);
             var turf=new Color("789b63")*(1+PresentationMath.Sin(side*1.7f+variant)*.035f);
-            Triangle(center,a,b,turf);
+            Triangle(center,a,b,turf,Vector3.Up,Vector3.Up,Vector3.Up);
         }
         surface.Index();return surface.Commit();
     }

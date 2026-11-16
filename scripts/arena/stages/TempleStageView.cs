@@ -78,6 +78,7 @@ public partial class TempleStageView : Node3D
     {
         if(!IsVisibleInTree())return;
         AnimateScenery((float)delta);
+        ProcessCoastalLife((float)delta);
         if(_blizzard){ProcessBlizzard((float)delta);return;}
         if(_greedy){ProcessGreedyTrap((float)delta);return;}
         if(_castle)
