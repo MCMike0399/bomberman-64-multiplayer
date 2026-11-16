@@ -217,3 +217,20 @@ are included in tour-23. The final public QA profile passes. Fresh native
 qualification of this exact candidate, rebuilt-export checks and final
 independent colored-art review still belong to the graphical/release owner.
 Major-form GO is not final art or release approval.
+
+## Fresh all-preset advisor correction (2026-11-15)
+
+The fresh plain-Claude advisor's Medium frame read as dry paving. The court now
+uses a local Medium specialization with a gentle jade absorption tint and soft
+caustic lines, retaining Medium's refraction and zero scene-reflection marches.
+High's coherent local reflection shaders and other maps' water remain unchanged.
+Rounded soft foam traces the physical bollard and breakable-cover waterlines;
+short curved wakes gain modest opacity and follow the same accepted current.
+Low retains contact foam and omits wakes. Front-facing work-lamp windows are
+larger and warmer, moved clear of the cream tower face; the two shadowless local
+lights are hidden on Low, whose emissive windows remain visible.
+
+These are review candidates. The source/public checks and managed build do not
+establish the Medium water read or visible current direction. Matching native
+Medium opening/combat, Night and six-to-eight-frame current evidence remain the
+acceptance gate.

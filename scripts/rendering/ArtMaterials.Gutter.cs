@@ -4,11 +4,25 @@ namespace BlastCircuit.Rendering;
 
 public sealed partial class ArtMaterials
 {
+    private static Shader? _gutterMediumWaterShader;
     /// <summary>The shallow lock has upright posts and cover, with no suspended
     /// decks. Coherent reflection samples keep these short contacts solid;
     /// other arenas retain their jittered march against reflected deck banding.</summary>
     public static Shader GutterWaterShaderFor(GraphicsPreset preset)
     {
+        if(preset==GraphicsPreset.Medium)
+        {
+            // The lock is optically shallow: its quiet mosaic otherwise reads as
+            // dry paving without the High reflection pass. Keep this local to
+            // the court; Medium still has no scene-reflection march.
+            string medium=WaterShaderFor(preset).Code;
+            medium=medium.Replace("#define CLEAR_WATER","#define CLEAR_WATER\n#define GUTTER_SHALLOWS",StringComparison.Ordinal)
+                .Replace("seen=textureLod(screen_texture,refract_uv,0.0).rgb;\n#ifdef WATER_SPARKLE",
+                    "seen=textureLod(screen_texture,refract_uv,0.0).rgb*vec3(.78,.96,.87);\n#if defined(WATER_SPARKLE) || defined(GUTTER_SHALLOWS)",StringComparison.Ordinal)
+                .Replace("caustic_detail*1.4+light_tint.rgb*web*reach*caustic_detail*.05;",
+                    "caustic_detail*.42+light_tint.rgb*web*reach*caustic_detail*.018;",StringComparison.Ordinal);
+            return _gutterMediumWaterShader??=new Shader{Code=medium};
+        }
         if(preset!=GraphicsPreset.High)return WaterShaderFor(preset);
         if(_gutterHighWaterShader!=null)return _gutterHighWaterShader;
         const string jitter="float jitter=fract(52.9829189*fract(dot(FRAGCOORD.xy,vec2(.06711056,.00583715))));";
