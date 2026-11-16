@@ -155,12 +155,13 @@ public partial class GameRoot : Node3D
             var warmupClock=System.Diagnostics.Stopwatch.StartNew();
             _preparingGraphics=true;
             ScreenName="Loading";_menu.Visible=false;ControllerHub.Current.MenuNavigationEnabled=false;
+            using var drawBatch=new PreparationDrawBatch();
             var loading=PreparationOverlay("Getting ready...");
             try
             {
-                await EffectWarmup.Draw(this);
-                await _arena.PrepareEffects();
-                await _menu.PrepareArenas();
+                await EffectWarmup.Draw(this,drawBatch);
+                await _arena.PrepareEffects(drawBatch);
+                await _menu.PrepareArenas(drawBatch);
             }
             catch(OperationCanceledException)when(EffectWarmup.Stopping){return;}
             finally

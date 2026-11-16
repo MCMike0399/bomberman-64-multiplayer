@@ -15,6 +15,14 @@ def condition(text,job):
 
 
 class FunctionalWorkflowTrust(unittest.TestCase):
+    def test_diagnostic_artifacts_retain_only_scoped_startup_and_peer_evidence(self):
+        text=WORKFLOW.read_text()
+        startup=re.search(r'^  startup-gate:\n(.*?)(?=^  [a-zA-Z0-9_-]+:)',text,re.M|re.S)[1]
+        self.assertIn('artifacts/release-gate-startup/*/app.log',startup)
+        self.assertNotIn('Library/Application Support',startup)
+        self.assertEqual(3,text.count('artifacts/*-regression-details/**/peer-ice-order-*.json'))
+        self.assertNotIn('artifacts/release-gate-startup/**',startup)
+
     def test_download_containers_do_not_race_the_server_publisher(self):
         text=WORKFLOW.read_text()
         download=re.search(r'^  desktop-download:\n(.*?)(?=^  [a-zA-Z0-9_-]+:)',text,re.M|re.S)[1]
