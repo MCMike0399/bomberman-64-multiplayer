@@ -11,6 +11,22 @@ from test_desktop_packages import write_desktop, add_display_restart, SHA, RELEA
 
 
 class DesktopValidationTests(unittest.TestCase):
+    def test_roster_growth_preserves_all_cases_within_thirty_jobs(self):
+        for count in range(21, 26):
+            tours = tuple('tour-%02d' % i for i in range(1, count + 1))
+            parts = validation.software_parts(tours)
+            self.assertLessEqual(sum(len(groups) for _, groups in parts.values()), 30)
+            for target, (_, groups) in parts.items():
+                # Grouping shares only a runner: cases remain distinct entries
+                # consumed one at a time by the fresh-process desktop executor.
+                cases = [case for group in groups for case in group]
+                expected = ['controller-popups', *tours, 'menu-preview', 'water-surface']
+                with self.subTest(tours=count, target=target):
+                    self.assertCountEqual(cases, expected)
+                    self.assertEqual(len(cases), len(set(cases)))
+                    self.assertEqual([case for case in cases if case in tours], list(tours))
+                    self.assertTrue(all(isinstance(case, str) for case in cases))
+
     def test_graphics_and_saved_startup_cannot_be_omitted_from_promotion(self):
         with tempfile.TemporaryDirectory() as temporary:
             directory = Path(temporary)
