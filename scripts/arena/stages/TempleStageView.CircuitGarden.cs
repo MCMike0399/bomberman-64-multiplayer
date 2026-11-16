@@ -42,7 +42,10 @@ public partial class TempleStageView
             WorkshopQuad(surface,new(x,y0,z),new(x+1,y0,z),new(x+1,y1,z+1),new(x,y1,z+1),Vector3.Up);
             if(cell.Kind==CellKind.Pillar)BuildWorkshopPillar(x,z,teal,cream,brass);
         }
-        surface.Index();AddChild(new MeshInstance3D{Name="WorkshopMeasuredWorktop",Mesh=surface.Commit(),MaterialOverride=paint});
+        // The recessed body casts the plinth silhouette. The exact thin support
+        // sheet receives actor/prop shadows without shadowing its own triangles.
+        surface.Index();AddChild(new MeshInstance3D{Name="WorkshopMeasuredWorktop",Mesh=surface.Commit(),MaterialOverride=paint,
+            CastShadow=GeometryInstance3D.ShadowCastingSetting.Off});
         BuildWorkshopTargetRaft();
     }
 
