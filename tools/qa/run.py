@@ -260,7 +260,11 @@ def validate_playtest(destination, headless):
 
 def validate_soak(path):
     report = json.loads(path.read_text())
-    if len(report.get('results', [])) != 72 or report.get('fairnessChecks', 0) <= 0:
+    stages = ('sunken-temple', 'rock-garden', 'up-and-down', 'top-rules', 'blizzard-battle', 'greedy-trap', 'lost-at-sea')
+    expected = {(stage, difficulty, bots, seed) for stage in stages
+                for difficulty in ('easy', 'medium', 'hard')
+                for bots in (3, 7) for seed in (64, 9876)}
+    if len(report.get('results', [])) != len(expected) or report.get('fairnessChecks', 0) <= 0:
         raise RuntimeError('AI soak receipt is incomplete')
     for item in [report, *report['results']]:
         for key in ('passed', 'Passed'):
@@ -284,6 +288,8 @@ def validate_soak(path):
             raise RuntimeError('AI soak receipt contains missing or duplicate scenario identities')
         identities.add(identity)
         longest = max(longest, idle)
+    if identities != expected:
+        raise RuntimeError('AI soak receipt does not match its stage/difficulty/bots/seed grid')
     return {'receipt': str(path), 'scenarios': len(report['results']),
             'longestOpenIdleSeconds': longest / rate, 'idleLimitSeconds': limit / rate}
 

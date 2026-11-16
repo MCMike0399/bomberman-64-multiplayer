@@ -32,7 +32,13 @@ try
     string output=Path.Combine(root,"engines.txt");var guard=new WindowsLaunchGuard(Path.Combine(root,"state"));
     using var deadline=new CancellationTokenSource(TimeSpan.FromSeconds(20));
     string[] childArgs=["--fixture","--fixture-output="+output];
-    Check(await guard.RunAsync(engine,childArgs,deadline.Token)!=0,"Injected first-frame crash must be retained");
+    Check(await guard.RunAsync(engine,childArgs,deadline.Token,child=>
+    {
+        // Deterministically reproduce Linux removing /proc/PID/stat before
+        // the launcher binds the child's identity. No startup sleep or retry.
+        if(!child.WaitForExit(5000))throw new Exception("Injected early-crash child did not exit");
+        return new EngineScope(()=>{});
+    })==23,"An engine exiting before birth capture preserves its exact first-frame crash");
     Check(File.ReadAllLines(output)[0]=="vulkan marker=True","Crash guard marker exists before renderer process code executes");
     Check(await guard.RunAsync(engine,childArgs,deadline.Token)==0,"Next launch recovers through DirectX12");
     Check(File.ReadAllLines(output)[1].StartsWith("d3d12 ",StringComparison.Ordinal),"Recovered renderer is actually DirectX12");
