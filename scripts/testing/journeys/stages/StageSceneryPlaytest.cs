@@ -126,7 +126,7 @@ public partial class PlaytestDriver
     private async Task CheckScenery(string stage,TempleStageView terrain,string[] signature)
     {
         var scenery=terrain.Scenery;
-        bool copper=stage==BlastStages.InTheGutter;
+        bool copper=stage==BlastStages.InTheGutter,hollow=stage==BlastStages.FieldOfGrass;
         Check(scenery!=null&&scenery.Name==TempleStageView.SceneryNodeName&&(copper?terrain.IsVisibleInTree():scenery.IsVisibleInTree()),
             copper?"Copper Lock's integrated presentation is visible":"arena has visible decorative scenery: "+stage);
         if(scenery==null)return;
@@ -138,9 +138,11 @@ public partial class PlaytestDriver
         Event("scenery-geometry",new{stage,meshes,vertices,motions=terrain.SceneryMotionCount,problems=problems.Take(5)});
         // Copper Lock's machinery/channel are integrated core terrain; it has
         // no separate island dressing. Audit that real presentation, not padding.
-        int minimumMeshes=stage==BlastStages.SeaSick?10:20;
+        // Hollow intentionally uses one small stile/hay vignette; its core terrain
+        // and gameplay foliage have their own actual-mesh and support checks.
+        int minimumMeshes=hollow?5:stage==BlastStages.SeaSick?10:20;
         Check(problems.Count==0&&meshes>=minimumMeshes,$"scenery geometry is finite, nonempty and textured: {stage} meshes={meshes} {string.Join("; ",problems.Take(3))}");
-        if(!copper)Check(terrain.SceneryMotionCount>0,"scenery has animated life: "+stage);
+        if(!copper&&!hollow)Check(terrain.SceneryMotionCount>0,"scenery has animated life: "+stage);
         if(stage==BlastStages.BlizzardBattle)
         {
             var snow=AuditDescendants(scenery).OfType<BlizzardWeather>().Single();
@@ -153,10 +155,12 @@ public partial class PlaytestDriver
         Check(intrusions.Count==0,$"scenery stays outside every walkable cell's standing volume: {stage} {string.Join(", ",intrusions.Take(6))}");
 
         // Animated props actually move, and placement still holds mid-animation.
+        var foliage=hollow?AuditDescendants(terrain).OfType<MultiMeshInstance3D>().Single(n=>n.Name=="ConcealingMeadow").MaterialOverride as ShaderMaterial:null;
+        float foliageClock=foliage?.GetShaderParameter("ambient_clock").AsSingle()??0;
         var tracked=AuditDescendants(presentation).OfType<Node3D>().ToDictionary(n=>n,n=>n.Transform);
         await Frames(24);
         int moved=tracked.Count(p=>GodotObject.IsInstanceValid(p.Key)&&!p.Key.Transform.IsEqualApprox(p.Value));
-        Check(moved>0,$"scenery animates over real frames: {stage} moved={moved}");
+        Check(moved>0||hollow&&foliage!=null&&foliage.GetShaderParameter("ambient_clock").AsSingle()>foliageClock,$"scenery or core foliage animates over real frames: {stage} moved={moved}");
         intrusions=SceneryIntrusions(terrain,copper?presentation:null);
         Check(intrusions.Count==0,$"animated scenery remains outside play space: {stage} {string.Join(", ",intrusions.Take(6))}");
     }
