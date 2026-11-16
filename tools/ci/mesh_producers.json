@@ -372,7 +372,7 @@
     {
       "id": "scripts/arena/models/BombModel.cs:Sphere:1",
       "file": "scripts/arena/models/BombModel.cs",
-      "line": 30,
+      "line": 33,
       "call": "Sphere(_shape,new(0,.35f,0),Vector3.One*.7f,art.Toy(new(\"222536\"),.32f))",
       "callSha256": "5d393a8e780f628c4e4983ce110e9c4032b19648fd82fd313a48886f2c34adb4",
       "domain": "owned-generator-or-helper"
@@ -380,7 +380,7 @@
     {
       "id": "scripts/arena/models/BombModel.cs:Cylinder:1",
       "file": "scripts/arena/models/BombModel.cs",
-      "line": 32,
+      "line": 35,
       "call": "Cylinder(_fuseAssembly,new(0,.69f,0),.09f,.12f,art.Toy(new(\"ac8b3a\"),.35f))",
       "callSha256": "dfaf9e60d06b9d0670ac54cf26af67d87f31e053aac2a7ade8762b4668c90925",
       "domain": "owned-generator-or-helper"
@@ -388,7 +388,7 @@
     {
       "id": "scripts/arena/models/BombModel.cs:Cylinder:2",
       "file": "scripts/arena/models/BombModel.cs",
-      "line": 33,
+      "line": 36,
       "call": "Cylinder(_fuseAssembly,new(.035f,.81f,0),.027f,.2f,art.Toy(new(\"e7c989\")))",
       "callSha256": "071ac1209a9d04c7f88759d94e998b452a04578ecbca496857c0dee6d30f3215",
       "domain": "owned-generator-or-helper"
@@ -396,7 +396,7 @@
     {
       "id": "scripts/arena/models/BombModel.cs:Sphere:2",
       "file": "scripts/arena/models/BombModel.cs",
-      "line": 34,
+      "line": 37,
       "call": "Sphere(_fuseAssembly,new(.076f,.91f,0),Vector3.One*.1f,art.Toy(new(\"ffcf51\"),.3f,true))",
       "callSha256": "f6602c2d53ac625dc3044976bd3bea47011cd1984eb38c136c7316897bf775e1",
       "domain": "owned-generator-or-helper"
@@ -404,7 +404,7 @@
     {
       "id": "scripts/arena/models/BombModel.cs:Sphere:3",
       "file": "scripts/arena/models/BombModel.cs",
-      "line": 40,
+      "line": 43,
       "call": "Sphere(_remoteIndicators,new(Mathf.Sin(angle)*.342f,.38f,Mathf.Cos(angle)*.342f),Vector3.One*.085f,indicator)",
       "callSha256": "fd0d4eca9ce5d0a5263c235c8cd08092f1741afe46fea699052c585f2619eb49",
       "domain": "owned-generator-or-helper"
@@ -412,7 +412,7 @@
     {
       "id": "scripts/arena/models/BombModel.cs:Box:1",
       "file": "scripts/arena/models/BombModel.cs",
-      "line": 45,
+      "line": 48,
       "call": "Box(_trail,new((i-1)*.16f,.18f,-.75f-i*.1f),new(.035f,.025f,.45f+i*.15f),StreakMaterial)",
       "callSha256": "0bf78f9a89646c7e16ebf82c54e8e714d6e9044ccc4606a68985efcd2e139929",
       "domain": "owned-generator-or-helper"
@@ -9677,7 +9677,7 @@
     "scripts/arena/effects/ExplosionView.cs": "cf5947b2ccc2e018433abe7fcdb8a090e5c7bbe1fa460dd4e97d2d70f1a1580b",
     "scripts/arena/effects/KickBurst.cs": "a98fb15ff94479816f966f655c7ae317abda3b1e29fcdc5e0cc33f81d4b5b5c4",
     "scripts/arena/effects/MeteorView.cs": "610990397ed73cc777d107f46fcbc1dba21dc8e7be408c21432d8cab3041ef36",
-    "scripts/arena/models/BombModel.cs": "068170898618171c768f197b05f1eaa21bc3001b6570691ea65f3ad560d0fd6a",
+    "scripts/arena/models/BombModel.cs": "7cf579e4a9387e17ef7a7d21ad36ef273598c024fd3e40edae9ef17d781eed93",
     "scripts/arena/models/BomberMeshLibrary.cs": "35336275bc2891f2e0e25260cd0f265f9d292ede52a985940519f3a0453fbf37",
     "scripts/arena/models/BomberModel.Mishaps.cs": "63a4349d7180f5332b8b33bbc67148eee9dc9d4f3d40d67f6f0b60d32477bb0b",
     "scripts/arena/models/BomberModel.cs": "aa3d46aae0708ee59f9ae6bef7133a5232ea02bc0c3dafdbb86f7b15cb6b7faf",

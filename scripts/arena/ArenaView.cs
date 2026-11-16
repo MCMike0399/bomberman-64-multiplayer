@@ -139,6 +139,7 @@ public partial class ArenaView : Node3D
         _sky.GroundHorizonColor=look.Horizon;_sky.GroundBottomColor=look.Ground;
         _sky.SkyEnergyMultiplier=look.SkyEnergy;_sky.GroundEnergyMultiplier=look.SkyEnergy;
         _terrain?.SetLighting(look);
+        foreach(var bomb in _entities.Values.OfType<BombModel>())bomb.SetNight(TimeOfDay==StageTime.Night);
     }
     private void UpdateProcessing()
     {

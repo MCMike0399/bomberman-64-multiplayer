@@ -24,8 +24,10 @@ public sealed record StageLighting(
             new("a59ad8"), .32f, new("aaa9e5"), .18f,
             new("746994"), new("efb38d"), new("634e65"), .85f,
             new("244b61"), new("668e91"), new("f7d7ab"), .8f, .29f);
-    private static readonly StageLighting Night=new("Night", new(-43,25,0), new("a4c8ff"), .68f,
-            new("829bc5"), .32f, new("9b88c5"), .16f,
+    // A pearl moon key preserves painted ochre, jade and turf hues. The sky and
+    // weaker lavender fill carry the night mood without blue-multiplying every prop.
+    private static readonly StageLighting Night=new("Night", new(-43,25,0), new("dce5fa"), .74f,
+            new("b4bfd0"), .35f, new("aaa0c8"), .14f,
             new("101d3d"), new("53658d"), new("18293f"), .65f,
             new("112e48"), new("36758a"), new("a5d8e3"), .55f, .25f);
     private static readonly StageLighting Midday=new("Midday", new(-64,-34,0), new("fff1d8"), 1.07f,
