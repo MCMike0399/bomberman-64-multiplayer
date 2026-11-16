@@ -77,6 +77,7 @@ public partial class TempleStageView : Node3D
         (9.5f,9.15f,.445f,-4.9f),(16,9.15f,.60f,-4.6f),(19,9.15f,1.00f,-4.0f),
         (20.5f,8.2f,1.5f,-3.5f),(22,6.3f,2.1f,-2.9f),(23.5f,3.9f,2.7f,-2.0f),
         (24.8f,1.6f,3.2f,-1.0f),(25.5f,.35f,3.5f,-.3f)];
+    private readonly List<OmniLight3D> _buoyLights=[];
     private readonly List<ShaderMaterial> _gardenMaterials=[];
     private Mesh[] _gardenRocks=[];
     private Material _gardenRockMaterial=null!;
@@ -95,6 +96,7 @@ public partial class TempleStageView : Node3D
         _lighting=lighting;
         if(_fieldGrassMaterial is not null)_fieldGrassMaterial.SetShaderParameter("paint",new Color(lighting.Label=="Night"?"96b766":"6f9348"));
         if(_water?.MaterialOverride is ShaderMaterial material)lighting.ApplyWater(material);
+        if(_sea)TuneBuoyWater();
         if(_greedyMoat?.MaterialOverride is ShaderMaterial moat)lighting.ApplyWater(moat);
         if(_gutterWater!=null)
         {
@@ -117,13 +119,7 @@ public partial class TempleStageView : Node3D
         AnimateScenery((float)delta);
         if(_field){ProcessField((float)delta);return;}
         if(_seaSick){ProcessSeaSick((float)delta);return;}
-        if(_sea)
-        {
-            if(WeatherActive)_seaClock+=(float)delta;
-            _seaGlass?.SetShaderParameter("ambient_clock",_seaClock);
-            if(_graphicsRevision!=GraphicsQuality.Revision&&_seaGlass is not null)GraphicsQuality.ApplyShaderDetail(_seaGlass);
-            _graphicsRevision=GraphicsQuality.Revision;return;
-        }
+        if(_sea){ProcessGlassBuoy((float)delta);return;}
         if(_blizzard){ProcessBlizzard((float)delta);return;}
         if(_gutter){ProcessGutter((float)delta);return;}
         if(_greedy){ProcessGreedyTrap((float)delta);return;}

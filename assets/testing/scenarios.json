@@ -2132,6 +2132,54 @@
       "headless": true,
       "timeout": 90,
       "manual": false
+    },
+    {
+      "id": "lost-at-sea-material-witness",
+      "method": "LostAtSeaMaterialWitness",
+      "domains": [
+        "gameplay",
+        "rendering",
+        "physics"
+      ],
+      "headless": true,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "lost-at-sea-slide-witness",
+      "method": "LostAtSeaSlideWitness",
+      "domains": [
+        "gameplay",
+        "rendering",
+        "physics"
+      ],
+      "headless": true,
+      "timeout": 120,
+      "manual": false
+    },
+    {
+      "id": "lost-at-sea-depth-witness",
+      "method": "LostAtSeaDepthWitness",
+      "domains": [
+        "rendering",
+        "gameplay"
+      ],
+      "headless": false,
+      "timeout": 180,
+      "manual": false
+    },
+    {
+      "id": "lost-at-sea-shape-study",
+      "method": "LostAtSeaShapeStudy",
+      "domains": [
+        "gameplay",
+        "rendering",
+        "physics",
+        "ai"
+      ],
+      "headless": true,
+      "timeout": 240,
+      "manual": false
     }
   ]
 }

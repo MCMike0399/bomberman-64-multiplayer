@@ -2,9 +2,10 @@
 
 Lost at Sea is a flat battle arena with slippery violet observation glass, a pale
 nonslip perimeter, four coral-orange towers and breakable shipping crates. Local,
-dedicated-server and player-hosted sessions run the same authority. Original
-procedural marine scenery includes fish swimming beneath the glass, coral shelves,
-swaying kelp and a small research bathysphere. Reference media never ships.
+dedicated-server and player-hosted sessions run the same authority. The current Glass Buoy shape study replaces the initial presentation with a
+chamfered enamel pontoon, four fat corner floats, deep violet glass, shared premium
+ocean and three large marine forms: a wreck, slow manta and distant bell buoy.
+Fine finishing is pending independent shape review. Reference media never ships.
 
 ## Inspected source and explicit adaptations
 
@@ -27,7 +28,7 @@ is supplementary footage for the composition.
 The 21×21 footprint, two-cell-wide rim, eight starts, tower positions/heights,
 32 seeded crates and all acceleration/braking constants are explicit Blast
 Circuit tuning for eight players. They are not recovered original constants.
-The marine outpost, fish geometry and surface artwork are original interpretations.
+The pontoon, marine geometry and surface artwork are original interpretations.
 The arena retains a continuous flat floor and four isolated towers, with no
 invented permanent pillar grid, raised combat level, flooding or closing walls.
 
@@ -61,12 +62,15 @@ receiving an unsupported stage after a coordinated release.
 
 ## Presentation and verification
 
-The violet glass is translucent and writes depth, exposing actual marine scenery
-beneath the playable plane without refraction or a new water hazard. A pausable
-CPU clock drives the glass finish and surrounding marine life. The ivory rubber
-treads and rivets show the grippy route. Every preset retains the same floor,
-rim, tower and cover geometry; Low hides decorative marine life. Menu miniatures
-omit scenery and the deep ocean bed.
+The violet glass is translucent and writes depth before transparent combat effects,
+exposing marine geometry beneath the playable plane without a new water hazard.
+Its depth gradient, broad sheen and soft authored beacon reflections survive Low.
+The shared water material surrounds the sealed viewing window, retaining preset
+refraction, reflection and foam policies. The pale enamel body and four rounded
+floats remain visible on Low; black rubber treads show the grippy route. Coamings
+stay inside the authored wall cells, dry footing stays at authority elevation and
+new outboard mass sits below it. A pausable CPU clock drives the glass finish and
+large manta. Menu miniatures omit the world ocean, scenery and deep seabed.
 
 Focused `Bomber.Game.Tests -- --lost-at-sea` checks terrain, eight rim seats,
 ordinary-input coasting/countersteering, immediate rim stops, unchanged ordinary
@@ -102,3 +106,55 @@ that floor faces point upward independently of supplied normals. The original
 native missing-glass capture and source-derived red/green checks remain in the
 private evidence directory. The corrected headless journey passes 33 assertions;
 corrected native material appearance and the full art brief still require review.
+
+The Glass Buoy massing candidate is an explicitly unapproved shape study, not a
+finished art pass. `lost-at-sea-shape-study` retains real eight-player glass-blast
+captures on High Midday, High Night and Low, plus a labelled oblique inspection.
+The camera leaves room for the four outboard floats and their water contact line.
+No new authority surface, collision or traction value is introduced. The old
+matte ground, yellow outer band, radial coral pads and bathysphere were removed.
+A source run accidentally loaded the previous DLL after an earlier failed build;
+its receipt is retained with a NOT_QUALIFIED note and is excluded from evidence.
+New study qualification uses `--build` and requires the rebuilt-float/ocean witness.
+
+The first rebuilt Glass Buoy shape study passes 30 headless assertions across
+three ordinary eight-player combat runs, including actual-glass blasts, geometry
+facing and standing-volume checks. The ordinary slippery-glass journey is also
+repeated against the new body. These are technical checks; the massing, colour,
+water and depth cues remain pending root GPU and independent art review.
+
+A focused paired authority regression exposed kick-hop height selecting rim
+friction while the bomb remained over glass: after seven ticks the hopped shot
+had speed 9.560003 versus 11.580004 without the hop. Friction now samples the
+support surface, retaining the launch hop, constants, layout and fuse. The red
+paired result is retained separately from material verification. This is a
+technical authority correction, not an art tuning change.
+
+After independent approval of the buoy's major forms, the bounded material
+candidate uses a dark gunmetal 3×3 pane grid, one 0.15-cell bevel and target
+ultramarine/violet centre/edge colours. Broad slow sheen survives Low. Medium and
+High compose actual submerged opaque-scene depth/colour and use a bounded real
+scene-reflection march, rather than painted beacon silhouettes. Transparent
+combat effects draw after the glass. Exposed cap lenses and unshadowed warm
+lamps provide Night pools; the distant buoy has its own lamp.
+
+`lost-at-sea-depth-witness` is graphical-only. It waits for a natural later motion
+phase, captures the world, then performs labelled presentation-only hidden-subject
+controls against real rendered pixels. The controls never edit authority state.
+Even a passing pixel-contrast check does not establish recognisability or art
+approval: the restored normal images and motion require independent review.
+`lost-at-sea-material-witness` moves the actual blue and purple suits onto the
+physical glass using ordinary inputs, covering High, Night, Medium/Afternoon and
+Low. `lost-at-sea-slide-witness` retains actual player rim traction and a real
+kicked shot reaching the outer rim/boundary, suitable for native recording.
+The first two motion-fixture attempts are retained red: the first stepped back
+onto glass before placement and coasted away; the second used a shot longer than
+its fuse budget. The final fixture uses a normal, settled mid-court placement.
+
+The final material candidate's ordinary headless journey passes 36 assertions;
+the real-input slide witness passes 14 and the blue/purple placement witness 9.
+The four-to-eight-player opening exposed Godot replacing authored cover names
+while the previous models awaited deletion. Cover insertion now requests readable
+names, preserving diagnostic identity without changing rules or model visibility.
+The graphical depth witness has not yet run: wreck/manta visibility, material
+colour and Night warmth are explicitly unverified until root GPU review.

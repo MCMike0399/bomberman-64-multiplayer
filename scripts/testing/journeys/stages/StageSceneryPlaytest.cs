@@ -20,7 +20,7 @@ public partial class PlaytestDriver
         (BlastStages.GreedyTrap,["GreedyWestRowboat","GreedyEastRowboat","Sailboat","Gull"]),
         (BlastStages.FieldOfGrass,["Windmill","RoundTree","FlowerBed","Butterfly","MeadowSeedBarn","MeadowHayCart","MeadowKite"]),
         (BlastStages.SeaSick,["Gull"]),
-        (BlastStages.LostAtSea,["CoralReef","ObservationFishSchool","ObservationBathysphere","ObservationKelp"]),
+        (BlastStages.LostAtSea,["SunkenWreck","MantaRay","BellBuoy"]),
 
         (BlastStages.InTheGutter,["CopperLockWestMachine","CopperLockEastMachine","CopperLockChannelStub","CopperLockFishBody","CopperLockOuterWater"]),
         (BlastStages.CircuitGarden,["TargetRaft","Jetty","Buoy","PalmTree"]),
