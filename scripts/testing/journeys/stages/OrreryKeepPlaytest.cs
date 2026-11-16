@@ -23,7 +23,7 @@ public partial class PlaytestDriver
             var problems=AuditModelProblems(terrain,out int meshes,out int vertices);
             Check(problems.Count==0,$"orrery and core plinth have finite nonempty geometry: {string.Join("; ",problems.Take(4))}");
             foreach(var meshNode in AuditDescendants(terrain).OfType<MeshInstance3D>().Where(n=>n.Name=="FortressCrag"||
-                n.Name.ToString().Contains("OrreryArm",StringComparison.Ordinal)||n.Name.ToString().StartsWith("FourPointStar",StringComparison.Ordinal)||n.Name=="HeroPlanetRing"))
+                n.Name.ToString().Contains("OrreryArm",StringComparison.Ordinal)||n.Name.ToString().StartsWith("FourPointStar",StringComparison.Ordinal)||n.Name=="OrreryCoreMeridian"))
             {
                 bool outward=true;int triangles=0;
                 for(int surface=0;surface<meshNode.Mesh.GetSurfaceCount();surface++)
@@ -51,6 +51,8 @@ public partial class PlaytestDriver
                 var turrets=terrain.GetChildren().OfType<Node3D>().Where(n=>n.Name.ToString().TrimStart('@').StartsWith("Turret",StringComparison.Ordinal)).ToArray();
                 Check(turrets.Length==4&&turrets.All(n=>n.IsVisibleInTree()),"four original corner turrets retain the core castle silhouette at "+preset);
                 Check(terrain.GetNode<Node3D>("OrreryLowMoon").IsVisibleInTree()==(preset==GraphicsPreset.Low),"cheap core moon replaces optional planets on Low only");
+                var ring=terrain.GetNode<MeshInstance3D>("OrreryCoreMeridian");var beforeOrbit=ring.Transform;
+                await Frames(12);Check(!ring.Transform.IsEqualApprox(beforeOrbit),"the seated meridian and orbit keep a cheap transform life cue at "+preset);
                 var warmLights=AuditDescendants(terrain).OfType<OmniLight3D>().ToArray();
                 Check(warmLights.Length==2&&warmLights.All(n=>n.IsVisibleInTree()==(preset!=GraphicsPreset.Low)),"two shadowless warm sources retain emissive-only Low policy at "+preset);
                 if(!_headless)
@@ -60,6 +62,10 @@ public partial class PlaytestDriver
                 }
                 await Capture("orrery-keep-"+GraphicsQuality.ToWire(preset)+"-battle");
             }
+            await KeyPress(Key.Escape);await Frames(4);
+            var pausedRing=terrain.GetNode<MeshInstance3D>("OrreryCoreMeridian").Transform;await Frames(14);
+            Check(terrain.GetNode<MeshInstance3D>("OrreryCoreMeridian").Transform.IsEqualApprox(pausedRing),"ordinary pause freezes the complete core orrery mechanism");
+            await ActivateNamed("ResumeGame");
             await SelectLocalLighting(StageTime.Night);if(!_headless)CheckOrreryPlanets(terrain);
             else Event("orrery-headless-limit",new{projectionQualified=false,logicalCanvas=GetViewport().GetVisibleRect().Size.ToString()});
             await Capture("orrery-keep-high-night");
@@ -88,7 +94,7 @@ public partial class PlaytestDriver
     private void CheckOrreryPlanets(TempleStageView terrain)
     {
         var camera=GetViewport().GetCamera3D()!;var viewport=GetViewport().GetVisibleRect().Size;
-        var castle=AuditDescendants(terrain).OfType<MeshInstance3D>().Where(n=>n.Mesh!=null&&
+        var castle=AuditDescendants(terrain).OfType<MeshInstance3D>().Where(n=>n.IsVisibleInTree()&&n.Mesh!=null&&
             n.Name!="OrreryBackdrop"&&terrain.Scenery?.IsAncestorOf(n)!=true).ToArray();
         foreach(string name in new[]{"HeroPlanet","CompanionPlanet","ToyMoon"})
         {
@@ -114,12 +120,8 @@ public partial class PlaytestDriver
             Event("orrery-planet-occlusion",new{name,samples=9,blocked=hits.Count,occluders=hits.Take(4).ToArray()});
             Check(hits.Count==0,name+" visible-hemisphere samples are not hidden by the actual castle/crag mesh");
         }
-        var ring=terrain.Scenery!.GetNode<MeshInstance3D>("HeroPlanet/HeroPlanetRing");
-        var ringPoints=Enumerable.Range(0,8).Select(i=>camera.UnprojectPosition(ring.ToGlobal(ring.Mesh.GetAabb().GetEndpoint(i)))/viewport).ToArray();
-        var ringMin=ringPoints.Aggregate(new Vector2(float.MaxValue,float.MaxValue),(a,b)=>a.Min(b));
-        var ringMax=ringPoints.Aggregate(new Vector2(float.MinValue,float.MinValue),(a,b)=>a.Max(b));
-        Check(ringMin.X>=.025f&&ringMax.X<=.975f&&ringMin.Y>=.145f&&ringMax.Y<=.90f,
-            "the complete small hero ring stays framed outside HUD and footer");
+        var ring=terrain.GetNode<MeshInstance3D>("OrreryCoreMeridian");
+        Check(ring.IsVisibleInTree(),"the broad load-bearing brass meridian remains a core form");
     }
 
     // This is an occlusion check against the consumed rendered castle triangles,

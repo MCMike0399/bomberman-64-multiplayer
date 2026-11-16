@@ -37,7 +37,7 @@ public partial class TempleStageView
         }
 
         // Floating islets with tiny watchtowers bob slowly around the fortress.
-        foreach(var (at,scale,phase) in new[]{(new Vector3(-6.4f,1.5f,-2.5f),1f,0f),(new Vector3(Width+6.6f,.4f,4.5f),.8f,2f),(new Vector3(-7,-1.6f,13),.7f,4f)})
+        foreach(var (at,scale,phase) in new[]{(new Vector3(-6.4f,1.5f,-2.5f),1f,0f)})
         {
             var islet=Prop(scenery,"FloatingIslet",at,phase,scale);
             Cone(islet,new(0,-1.2f,0),1.3f,2.4f,rock,7).Rotation=new(Mathf.Pi,0,0);
@@ -65,6 +65,8 @@ public partial class TempleStageView
             var turret=Prop(this,"Turret"+(rear?"Rear":"Front")+(x<0?"West":"East"),new(x,-.94f,z));
             Cylinder(turret,new(0,height/2,0),radius,height,stone);
             Cylinder(turret,new(0,height-.05f,0),radius+.12f,.14f,cap);
+            Sphere(turret,new(0,height*.62f,radius*.94f),new(.5f,.66f,.10f),gold);
+            Sphere(turret,new(0,height*.62f,radius+ .015f),new(.34f,.47f,.08f),Glow(new("ffc793"),1.2f));
             for(int band=1;band<=(rear?3:1);band++)Cylinder(turret,new(0,band*1.7f,0),radius+.03f,.08f,gold);
             if(rear)
             {
@@ -93,7 +95,7 @@ public partial class TempleStageView
         // Broad, rounded shoulders and two eroded shelves remain visible below
         // the near wall; only the deep keel narrows to a tabletop-rock point.
         float[] levels=[-.94f,-1.4f,-1.95f,-2.3f,-2.7f,-3.25f,-3.8f,-4.35f,-5.1f,-5.8f];
-        float[] scales=[1.16f,1.20f,1.22f,1.18f,1.20f,1.17f,1.12f,1.02f,.72f,.16f];
+        float[] scales=[1.16f,1.22f,1.16f,.96f,1.01f,.96f,.89f,.79f,.62f,.16f];
         var center=new Vector3(width/2f,0,depth/2f);
         Vector3 Point(int layer,int i)
         {

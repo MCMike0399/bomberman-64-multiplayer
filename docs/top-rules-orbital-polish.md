@@ -141,3 +141,28 @@ four ObjectDB exit leaks; no runtime errors. The first new test caught duplicate
 Godot turret naming; stable front/rear/east/west names fixed the observed failure.
 This does not certify the new native framing, rock silhouette or Night contrast;
 the parent-owned matching captures and fresh advisor review remain required.
+
+## Moon-Clock Keep — second creative pass (2026-11-16)
+
+The final reference addendum selects one broad brass meridian seated in the
+rounded dark-violet crag, with three arms springing from chunky round junctions.
+The hero is now an ivory crater-painted moon, largest/brightest; the blue and
+violet companions are smaller and duller. The old separate hero-globe ring and
+two repeated floating islets are removed. One mini-island remains. The crag has
+a deeper undercut and deliberate painted shading rather than taking a pale
+ambient wash. Small warm turret portholes echo the existing inner-wall windows.
+
+One bounded slow orbital transform carries the ring, seats, arms and globes
+through the same pausable clock. Low keeps the hero moon/arm, crag, meridian,
+turrets and emissive windows with the same cheap orbital cue; no hazard controls
+this decorative motion. No additional real light is introduced. Court, castle,
+authority and camera are unchanged.
+
+Source/public build checks pass; the focused headless journey passes 78 checks,
+including actual owned indexed-face winding, all-preset orbit/core retention and
+ordinary pause. Its log retains four exit ObjectDB leaks, no runtime errors.
+The owned-face audit initially also selected captured unit-sphere junction caps
+by name; those caps are now named by their real role, leaving the strict winding
+check on actual owned meshes. Native framing/occlusion and perceived orbit still
+require parent-owned image/motion review. The occlusion helper now correctly
+checks visible rendered core meshes, excluding the hidden Low substitute.

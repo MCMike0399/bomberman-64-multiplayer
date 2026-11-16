@@ -6,6 +6,26 @@ namespace BlastCircuit.Arena.Stages;
 public partial class TempleStageView
 {
     private Node3D? _orreryLowMoon;
+    private readonly List<(Node3D Node,Transform3D Anchor)> _orreryOrbitNodes=[];
+    private float _orreryOrbitClock;
+
+    private void TrackOrreryOrbit(Node3D node)=>_orreryOrbitNodes.Add((node,node.Transform));
+    private void ProcessOrrery(float delta)
+    {
+        if(!WeatherActive)return;
+        _orreryOrbitClock+=delta;
+        var basis=PresentationMath.Rotation(new(0,.025f*PresentationMath.Sin(_orreryOrbitClock*.18f),0));
+        var center=new Vector3(Width/2f,-1.9f,Depth/2f);
+        var orbit=new Transform3D(basis,center-basis*center);
+        foreach(var(node,anchor) in _orreryOrbitNodes)node.Transform=orbit*anchor;
+    }
+
+    private Vector3 OrrerySeat(float angle)
+    {
+        var(sin,cos)=PresentationMath.SinCos(angle);
+        return new(Width/2f+cos*12.35f,-1.9f,Depth/2f+sin*12.35f);
+    }
+
     private readonly List<OmniLight3D> _orreryWarmLights=[];
 
     private void UpdateOrreryCoreQuality()
@@ -31,14 +51,24 @@ public partial class TempleStageView
     private void BuildOrreryCore()
     {
         _orreryLowMoon=Prop(this,"OrreryLowMoon",Vector3.Zero);
-        var moonAt=new Vector3(Width+5.2f,-1.9f,4.2f);
+        var moonAt=new Vector3(-6.6f,-2.6f,7.1f);
         var moonPaint=new ShaderMaterial{Shader=new Shader{Code=OrreryGlobeShader}};
-        moonPaint.SetShaderParameter("paint_dark",new Color("8d8375"));moonPaint.SetShaderParameter("paint_light",new Color("e2d4af"));
+        moonPaint.SetShaderParameter("paint_dark",new Color("8d837f"));moonPaint.SetShaderParameter("paint_light",new Color("e2d4bf"));
         moonPaint.SetShaderParameter("globe_kind",2);
-        Sphere(_orreryLowMoon,moonAt,Vector3.One,moonPaint).Name="CoreMoonGlobe";
+        Sphere(_orreryLowMoon,moonAt,Vector3.One*2.6f,moonPaint).Name="CoreMoonGlobe";
         _orreryLowMoon.AddChild(new MeshInstance3D{Name="CoreMoonOrreryArm",
-            Mesh=OrreryArmMesh(new(Width-.1f,-1.35f,Depth-2.5f),new(Width+5.2f,-1.9f,Depth+.8f),new(Width+7,-2.6f,7),moonAt,.18f),
+            Mesh=OrreryArmMesh(OrrerySeat(Mathf.Pi*2/3),new(-3.2f,-2.7f,Depth+1.8f),new(-8,-3,12),moonAt,.18f),
             MaterialOverride=_art.Color(new("bfa566"),.48f),CastShadow=GeometryInstance3D.ShadowCastingSetting.Off});
+        TrackOrreryOrbit(_orreryLowMoon);
+        var brass=_art.Toy(new("bfa566"),.48f);
+        var meridian=new MeshInstance3D{Name="OrreryCoreMeridian",Mesh=OrreryRingMesh(12.05f,12.6f),
+            Position=new(Width/2f,-1.9f,Depth/2f),MaterialOverride=brass,
+            CastShadow=GeometryInstance3D.ShadowCastingSetting.Off};AddChild(meridian);TrackOrreryOrbit(meridian);
+        foreach(float angle in new[]{Mathf.Pi/3,Mathf.Pi*2/3,Mathf.Pi/12})
+        {
+            var cap=Sphere(this,OrrerySeat(angle),new(.72f,.36f,.72f),brass);cap.Name="MeridianJunctionCap";
+            TrackOrreryOrbit(cap);
+        }
         UpdateOrreryCoreQuality();
         var rock=new ShaderMaterial{Shader=new Shader{Code=OrreryCragShader}};
         _castleStone.Add(rock);
@@ -58,12 +88,12 @@ public partial class TempleStageView
         var hero=new Vector3(-6.6f,-2.6f,7.1f);
         var companion=new Vector3(Width+3.8f,-3.1f,10.6f);
         var moon=new Vector3(Width+5.2f,-1.9f,4.2f);
-        Planet("HeroPlanet",hero,2.6f,new("b67c96"),0);
-        Planet("CompanionPlanet",companion,1.85f,new("5d8eac"),1);
-        Planet("ToyMoon",moon,1.0f,new("d7cba9"),2);
-        Arm("HeroOrreryArm",new(-.3f,-1.35f,Depth-1.5f),new(-3.2f,-2.7f,Depth+1.8f),new(-8,-3,12),hero);
-        Arm("CompanionOrreryArm",new(Width-.1f,-1.25f,Depth-1.5f),new(Width+3.5f,-2,Depth+2),new(Width+6.5f,-3.4f,14.2f),companion);
-        Arm("MoonOrreryArm",new(Width-.1f,-1.35f,Depth-2.5f),new(Width+5.2f,-1.9f,Depth+.8f),new(Width+7,-2.6f,7),moon);
+        Planet("HeroPlanet",hero,2.6f,new("d4c7b1"),2);
+        Planet("CompanionPlanet",companion,1.65f,new("526f85"),1);
+        Planet("ToyMoon",moon,.85f,new("8c83a1"),0);
+        Arm("HeroOrreryArm",OrrerySeat(Mathf.Pi*2/3),new(-3.2f,-2.7f,Depth+1.8f),new(-8,-3,12),hero);
+        Arm("CompanionOrreryArm",OrrerySeat(Mathf.Pi/3),new(Width+3.5f,-2,Depth+2),new(Width+6.5f,-3.4f,14.2f),companion);
+        Arm("MoonOrreryArm",OrrerySeat(Mathf.Pi/12),new(Width+6.5f,-1.9f,Depth-2.5f),new(Width+7,-2.6f,7),moon);
 
 
         var stars=Prop(scenery,"OrreryStars",Vector3.Zero);
@@ -86,19 +116,12 @@ public partial class TempleStageView
             _ambientMaterials.Add(paint);
             var globe=Sphere(root,Vector3.Zero,Vector3.One*diameter,paint);globe.Name="Globe";
             globe.CastShadow=GeometryInstance3D.ShadowCastingSetting.Off;
-            if(name=="HeroPlanet")
-            {
-                var ringPaint=(StandardMaterial3D)_art.Toy(new Color("b9a58e"),.58f).Duplicate();ringPaint.DisableFog=true;
-                root.AddChild(new MeshInstance3D{Name="HeroPlanetRing",Mesh=OrreryRingMesh(1.46f,1.78f),
-                    MaterialOverride=ringPaint,Basis=PresentationMath.Rotation(new(-.3f,0,.25f)),
-                    CastShadow=GeometryInstance3D.ShadowCastingSetting.Off});
-            }
+            TrackOrreryOrbit(root);
             _sceneryMotion.Add(t=>globe.Basis=PresentationMath.Rotation(new(.07f*PresentationMath.Sin(t*.07f+phase),t*.035f,phase*.1f),Vector3.One*diameter));
         }
         void Arm(string name,Vector3 a,Vector3 b,Vector3 c,Vector3 d)
         {
-            var mesh=new MeshInstance3D{Name=name,Mesh=OrreryArmMesh(a,b,c,d,.18f),MaterialOverride=brass,CastShadow=GeometryInstance3D.ShadowCastingSetting.Off};scenery.AddChild(mesh);
-            Sphere(scenery,a,Vector3.One*.35f,brass);
+            var mesh=new MeshInstance3D{Name=name,Mesh=OrreryArmMesh(a,b,c,d,.18f),MaterialOverride=brass,CastShadow=GeometryInstance3D.ShadowCastingSetting.Off};scenery.AddChild(mesh);TrackOrreryOrbit(mesh);
         }
     }
 
@@ -176,17 +199,19 @@ public partial class TempleStageView
 
     private const string OrreryCragShader="""
 shader_type spatial;
-render_mode diffuse_burley, fog_disabled;
+render_mode unshaded, fog_disabled;
 uniform float quality_detail=1.0;
 uniform float quality_premium=0.0;
 varying vec3 world;
-void vertex(){world=(MODEL_MATRIX*vec4(VERTEX,1.0)).xyz;}
+varying vec3 painted_normal;
+void vertex(){world=(MODEL_MATRIX*vec4(VERTEX,1.0)).xyz;painted_normal=normalize(MODEL_NORMAL_MATRIX*NORMAL);}
 void fragment(){
     float strata=smoothstep(-4.8,-3.4,world.y)*.35+smoothstep(-2.1,-1.1,world.y)*.65;
     float brush=smoothstep(-.3,.6,sin(world.x*.23+world.z*.17)+sin(world.z*.34-world.x*.13)*.4);
-    ALBEDO=mix(vec3(.026,.030,.045),vec3(.070,.075,.105),strata)*mix(.85,1.13,brush);
+    float sculpt=.58+.42*max(dot(normalize(painted_normal),normalize(vec3(-.45,.72,.52))),0.0);
+    ALBEDO=mix(vec3(.023,.012,.043),vec3(.060,.032,.092),strata)*mix(.88,1.08,brush)*sculpt;
     float rim=pow(1.0-max(dot(NORMAL,VIEW),0.0),3.0);
-    EMISSION=vec3(.045,.038,.065)*rim;
+    EMISSION=vec3(.018,.011,.032)*rim;
     ROUGHNESS=.92;SPECULAR=.16;
 }
 """;
