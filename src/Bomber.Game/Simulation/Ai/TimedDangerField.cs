@@ -123,6 +123,7 @@ internal sealed class TimedDangerField
     private void AddDrift(SoftBlockGrid soft,BlastBomb b,float time)
     {
         float x=b.X,z=b.Z,y=Height(b),horizon=Math.Min(b.IsRemote?2:time,4),covered=0;
+        if(_stage.Id==BlastStages.InTheGutter&&y>.05f)return;
         const float step=.1f;
         for(float t=0;t<horizon;t+=step)
         {

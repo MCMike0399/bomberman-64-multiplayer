@@ -260,7 +260,7 @@ def validate_playtest(destination, headless):
 
 def validate_soak(path):
     report = json.loads(path.read_text())
-    stages = ('sunken-temple', 'rock-garden', 'up-and-down', 'top-rules', 'blizzard-battle', 'greedy-trap', 'field-of-grass')
+    stages = ('sunken-temple', 'rock-garden', 'up-and-down', 'top-rules', 'blizzard-battle', 'greedy-trap', 'field-of-grass', 'in-the-gutter')
     expected = {(stage, difficulty, bots, seed) for stage in stages
                 for difficulty in ('easy', 'medium', 'hard')
                 for bots in (3, 7) for seed in (64, 9876)}

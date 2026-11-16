@@ -137,6 +137,7 @@ public partial class ArenaView
         UpdateThrowPreviews(data,_softBlockBits);
         Present(_presentation.Read(data));
         if(data.TryGetProperty("blizzard",out var weather))_terrain.SetBlizzard(weather);
+        if(data.TryGetProperty("gutter",out var current))_terrain.SetGutter(current);
         UpdateClosure(data,(int)F(data,"closedLeft"),(int)F(data,"closedRight"));
     }
 }
