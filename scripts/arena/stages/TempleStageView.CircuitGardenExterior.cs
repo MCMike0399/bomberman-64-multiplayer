@@ -6,8 +6,8 @@ namespace BlastCircuit.Arena.Stages;
 public partial class TempleStageView
 {
     /// <summary>The training academy's harbor: a palm islet, a mooring jetty with a
-    /// sailboat, channel buoys, a floating target raft and gulls. Kept to the rear
-    /// and sides so the tutorial's instruction space stays clear.</summary>
+    /// sailboat, channel buoys and gulls. The teaching target raft is core terrain;
+    /// optional life stays aside so the instruction space remains clear.</summary>
     private void BuildCircuitGardenExterior()
     {
         var scenery=_scenery!;
@@ -26,15 +26,6 @@ public partial class TempleStageView
         for(int i=0;i<8;i++)Box(jetty,new(0,.32f,i*.42f),new(1,.08f,.38f),plank,.015f);
         foreach(int side in new[]{-1,1})for(int p=0;p<4;p++)Cylinder(jetty,new(side*.46f,0,p*1.05f),.07f,1.2f,post);
         Sailboat(scenery,new(-2.4f,sea,10.1f),Mathf.Pi/2,new("d0603f"),new("f7f1e3"),.5f);
-
-        // A floating target raft echoes the range's markings.
-        var raft=Prop(scenery,"TargetRaft",new(Width+3.6f,sea,1.4f),-.3f);
-        Box(raft,new(0,.06f,0),new(1.8f,.16f,1.8f),plank,.03f);
-        var board=Prop(raft,"TargetBoard",new(0,.95f,0));
-        foreach(var (radius,color) in new[]{(.62f,"f4e8b5"),(.46f,"258d8f"),(.3f,"f4e8b5"),(.14f,"efc65b")})
-            Cylinder(board,new(0,0,.02f*(1-radius)),radius,.05f,_art.Color(new(color),.7f)).Rotation=new(Mathf.Pi/2,0,0);
-        Cylinder(raft,new(0,.42f,-.05f),.05f,.8f,post);
-        Float(raft,.02f,1.1f,.05f);
 
         foreach(var (x,z,phase) in new[]{(-2f,2.5f,0f),(-2.2f,15.5f,1.2f),(Width+2f,6.5f,2.1f),(Width+2.3f,16.5f,.6f)})
             Buoy(scenery,new(x,sea,z),phase>1?new Color("3f9b4f"):new Color("d8433b"),phase);

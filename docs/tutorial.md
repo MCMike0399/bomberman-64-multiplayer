@@ -14,6 +14,17 @@ landing dock across a canal. The [research](tutorial-research.md) distinguishes
 primary-source observations from the project's design choices. No reference
 assets or Smash branding ship.
 
+The 2026-11-15 workshop refinement replaces the sage lawn/tiled slab with a pale
+measured worktop and rounded supporting plinths. Teal inlays align with the real
+lesson start `(8.5,12.5)`, movement target `(11.5,12.5)` and central stair route;
+the raised targets and separated landing dock retain their authority surfaces.
+The existing target raft is core presentation on Low. Flag posts have soft warm
+Night lenses/halos on every preset without point lights. Optional harbour props
+remain unchanged. `circuit-workshop` captures all three presets by day and Night
+with real lesson instructions, verifies actual worktop facing/support, clears
+movement through ordinary input and climbs both ramps. Its headless mode checks
+geometry and lessons only; matched native images still require visual review.
+
 ## Lesson flow
 
 Fast bomb equipment and its lesson were removed on 2026-10-25. Haste remains

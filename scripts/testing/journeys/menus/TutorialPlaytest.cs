@@ -2,10 +2,96 @@ using Godot;
 using BlastCircuit.App;
 using BlastCircuit.InputDevices;
 using BlastCircuit.UI.Hud;
+using BlastCircuit.Arena;
+using BlastCircuit.Arena.Stages;
+using BlastCircuit.Rendering;
 namespace BlastCircuit.Testing;
 
 public partial class PlaytestDriver
 {
+    private async Task CircuitWorkshopTour()
+    {
+        var quality=_root.Preferences.Graphics;var lighting=_root.Preferences.StageLighting;
+        try
+        {
+            var cases=_headless?new[]{(GraphicsPreset.Medium,StageTime.Midday,"headless-geometry")}:
+                new[]{(GraphicsPreset.Low,StageTime.Midday,"low-midday"),(GraphicsPreset.Low,StageTime.Night,"low-night"),
+                    (GraphicsPreset.Medium,StageTime.Midday,"medium-midday"),(GraphicsPreset.Medium,StageTime.Night,"medium-night"),
+                    (GraphicsPreset.High,StageTime.Midday,"high-midday"),(GraphicsPreset.High,StageTime.Night,"high-night")};
+            foreach(var(preset,time,label)in cases)
+            {
+                if(_root.ActiveSession!=null){_root.Back();await Frames(3);}
+                if(!_headless){await SelectGraphics(preset);await SelectLocalLighting(time);}
+                _root.Navigate("Tutorial");await Frames(4);await ActivateNamed("Lesson_move");
+                await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"workshop enters the actual movement lesson: "+label,150);
+                var terrain=AuditDescendants(_root.GetChildren().OfType<ArenaView>().Single()).OfType<TempleStageView>().Single();
+                var top=AuditDescendants(terrain).OfType<MeshInstance3D>().Single(n=>n.Name=="WorkshopMeasuredWorktop");
+                CheckWorkshopWorktop(top);
+                CheckWorkshopSupport(top);
+                var raft=AuditDescendants(terrain).OfType<Node3D>().Single(n=>n.Name=="TargetRaft");
+                Check(raft.GetParent()==terrain&&raft.IsVisibleInTree(),"target raft remains a visible core teaching object: "+label);
+                Check(_root.FindChildren("*","",true,false).OfType<TutorialHud>().Any(h=>h.IsVisibleInTree()),
+                    "real lesson instructions remain visible above the workshop: "+label);
+                if(time==StageTime.Night)
+                {
+                    var lamps=AuditDescendants(terrain).OfType<MeshInstance3D>().Where(n=>n.Name=="WorkshopFlagLamp").ToArray();
+                    Check(lamps.Length==4&&lamps.All(n=>n.MaterialOverride is StandardMaterial3D{EmissionEnabled:true,EmissionEnergyMultiplier:>1}),
+                        "actual flag lamps retain warm emission at Night: "+label);
+                }
+                await Capture("circuit-workshop-lesson-"+label);
+                for(int frame=0;frame<70&&!State.GetProperty("tutorial").GetProperty("complete").GetBoolean();frame++)
+                {Input(0,new(1,0));await Frames(1);}
+                Input(0,default);
+                Check(State.GetProperty("tutorial").GetProperty("complete").GetBoolean(),"accepted movement still clears the lesson across measured inlays: "+label);
+                CheckWorkshopSupport(top);
+            }
+            _root.StartTutorial("terrain");
+            await WaitState(s=>s.GetProperty("phase").GetInt32()==1,"workshop enters actual terrain lesson",150);
+            await MoveTo(11.5f,12.5f,100);await MoveTo(11.5f,1.5f,200);
+            Check(Player.GetProperty("y").GetSingle()>1.95f,"ordinary lesson input reaches both unchanged ramps and the high target");
+            var finalTerrain=AuditDescendants(_root.GetChildren().OfType<ArenaView>().Single()).OfType<TempleStageView>().Single();
+            CheckWorkshopSupport(AuditDescendants(finalTerrain).OfType<MeshInstance3D>().Single(n=>n.Name=="WorkshopMeasuredWorktop"));
+            await Capture("circuit-workshop-real-terrace-lesson");
+        }
+        finally
+        {
+            Input(0,default);if(_root.ActiveSession!=null){_root.Back();await Frames(3);}
+            if(!_headless){await SelectGraphics(quality);await SelectLocalLighting(lighting);}
+            _root.Navigate("Modes");await Frames(3);
+        }
+    }
+
+    private void CheckWorkshopWorktop(MeshInstance3D top)
+    {
+        var arrays=top.Mesh.SurfaceGetArrays(0);var vertices=arrays[(int)Mesh.ArrayType.Vertex].AsVector3Array();
+        var normals=arrays[(int)Mesh.ArrayType.Normal].AsVector3Array();var indices=arrays[(int)Mesh.ArrayType.Index].AsInt32Array();
+        bool upward=indices.Length>0;
+        for(int i=0;i<indices.Length;i+=3)
+        {
+            int a=indices[i],b=indices[i+1],c=indices[i+2];
+            var normal=(vertices[c]-vertices[a]).Cross(vertices[b]-vertices[a]).Normalized();
+            upward&=normal.Y>0&&normal.Dot(normals[a])>.99f;
+        }
+        Check(upward,"actual indexed workshop worktop triangles and normals face upward");
+    }
+
+    private void CheckWorkshopSupport(MeshInstance3D top)
+    {
+        float x=Player.GetProperty("x").GetSingle(),z=Player.GetProperty("z").GetSingle();
+        var arrays=top.Mesh.SurfaceGetArrays(0);var vertices=arrays[(int)Mesh.ArrayType.Vertex].AsVector3Array();
+        var indices=arrays[(int)Mesh.ArrayType.Index].AsInt32Array();float? support=null;
+        for(int i=0;i<indices.Length;i+=3)
+        {
+            var a=vertices[indices[i]];var b=vertices[indices[i+1]];var c=vertices[indices[i+2]];
+            float d=(b.Z-c.Z)*(a.X-c.X)+(c.X-b.X)*(a.Z-c.Z);if(Math.Abs(d)<.00001f)continue;
+            float u=((b.Z-c.Z)*(x-c.X)+(c.X-b.X)*(z-c.Z))/d;
+            float v=((c.Z-a.Z)*(x-c.X)+(a.X-c.X)*(z-c.Z))/d;
+            if(u>=-.001f&&v>=-.001f&&u+v<=1.001f){support=u*a.Y+v*b.Y+(1-u-v)*c.Y;break;}
+        }
+        Check(support is {} y&&Math.Abs(y-Player.GetProperty("y").GetSingle()*TempleStageView.HeightScale)<.025f,
+            "real lesson actor feet meet the actual rendered workshop support plane");
+    }
+
     private async Task TutorialTour()
     {
         _root.Navigate("Modes");await Frames(4);await Click("Tutorial");

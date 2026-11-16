@@ -67,6 +67,7 @@ public partial class TempleStageView : Node3D
         if(_water?.MaterialOverride is ShaderMaterial material)lighting.ApplyWater(material);
         if(_greedyMoat?.MaterialOverride is ShaderMaterial moat)lighting.ApplyWater(moat);
         foreach(var frozen in _frozenMaterials)lighting.ApplyKeyLight(frozen);
+        ApplyWorkshopLighting(lighting);
     }
     public void SetWaterLevel(float tierLevel)
     {
@@ -76,6 +77,7 @@ public partial class TempleStageView : Node3D
     public override void _Process(double delta)
     {
         if(!IsVisibleInTree())return;
+        ProcessWorkshop((float)delta);
         AnimateScenery((float)delta);
         if(_blizzard){ProcessBlizzard((float)delta);return;}
         if(_greedy){ProcessGreedyTrap((float)delta);return;}
@@ -194,7 +196,7 @@ public partial class TempleStageView : Node3D
         if(Layout.Id==BlastStages.UpAndDown&&cells.Cast<CellDef>().Any(c=>c.Below!=null)){BuildUpAndDown();return;}
         bool temple=Layout.Id==BlastStages.SunkenTemple;
         bool garden=Layout.Id==BlastStages.CircuitGarden;
-        if(garden){_masonry.SetShaderParameter("base_color",new Color("9da18a"));_masonry.SetShaderParameter("mortar_color",new Color("596750"));}
+        if(garden){BuildCircuitWorkshop();return;}
         for(int z=0;z<Depth;z++)for(int x=0;x<Width;x++)
         {
             var c=_cells[z*Width+x];int kind=c.GetProperty("k").GetInt32();if(kind is 2 or 3)continue;
@@ -241,7 +243,6 @@ public partial class TempleStageView : Node3D
             }
         }
         if(temple){Bedrock();Shrine();}
-        if(data.GetProperty("id").GetString()=="circuit-garden")GardenDetails();
     }
     private void Bedrock()
     {
