@@ -37,8 +37,18 @@ public partial class PlaytestDriver
         var problems=AuditModelProblems(terrain,out int meshes,out int vertices);
         Check(problems.Count==0&&meshes>100,$"ship geometry is finite, correctly wound and textured: {string.Join("; ",problems.Take(4))}");
         var ocean=terrain.GetNode<MeshInstance3D>("ShipOcean");var seaPose=ocean.GlobalTransform;
+        var signal=terrain.GetNode<Node3D>("MastSignalPennant");var signalPose=signal.Transform;
+
         var shipPose=arena.StageAssemblyTransform;var actor=Player.Clone();await Frames(70);
         Check(!arena.StageAssemblyTransform.IsEqualApprox(shipPose)&&ocean.GlobalTransform.IsEqualApprox(seaPose),"ship rocks coherently against a stationary ocean");
+        Check(!signal.Transform.IsEqualApprox(signalPose),"core mast signal pennant shares the pausable ship life clock");
+        if(!_headless)
+        {
+            var cloth=signal.GetNode<MeshInstance3D>("CutterSignalCloth");var camera=GetViewport().GetCamera3D()!;
+            var viewport=GetViewport().GetVisibleRect().Size;
+            var points=Enumerable.Range(0,8).Select(i=>camera.UnprojectPosition(cloth.ToGlobal(cloth.Mesh.GetAabb().GetEndpoint(i)))/viewport).ToArray();
+            Check(points.All(p=>p.X>.025f&&p.X<.975f&&p.Y>.145f&&p.Y<.90f),"mast signal pennant is actually framed below the HUD in the ordinary battle camera");
+        }
         Check(Player.GetProperty("x").GetSingle()==actor.GetProperty("x").GetSingle()&&Player.GetProperty("z").GetSingle()==actor.GetProperty("z").GetSingle(),"rendered ship motion leaves accepted idle positions unchanged");
         foreach(var point in new[]{new System.Numerics.Vector3(4.5f,0,6.5f),new System.Numerics.Vector3(1.5f,1,7.5f),new System.Numerics.Vector3(17.5f,1,7.5f)})
         {
@@ -49,11 +59,20 @@ public partial class PlaytestDriver
         {if(!_headless)await ResizeWindow(size);CheckFraming(BlastStages.SeaSick,GetWindow().Size);await Capture($"sea-sick-opening-{size.X}x{size.Y}");}
         if(!_headless)await ResizeWindow(new(1280,800));
         foreach(var preset in new[]{GraphicsPreset.Low,GraphicsPreset.Medium,GraphicsPreset.High})
-        {await SelectGraphics(preset);Check(terrain.Scenery!.IsVisibleInTree()==(preset!=GraphicsPreset.Low),"Sea Sick scenery follows "+preset);await Capture("sea-sick-"+GraphicsQuality.ToWire(preset));}
+        {
+            await SelectGraphics(preset);
+            Check(terrain.Scenery!.IsVisibleInTree()==(preset!=GraphicsPreset.Low),"Sea Sick scenery follows "+preset);
+            Check(signal.IsVisibleInTree(),"signal pennant remains core on "+preset);
+            Check(((ShaderMaterial)ocean.MaterialOverride).Shader==ArtMaterials.SeaWaterShaderFor(preset),"thin hull contact keeps all shared ocean features at "+preset);
+            Check(terrain.GetNode<OmniLight3D>("SternLantern/SternLanternGlow").IsVisibleInTree()==(preset!=GraphicsPreset.Low),"stern lantern keeps emissive-only Low policy at "+preset);
+            await Capture("sea-sick-"+GraphicsQuality.ToWire(preset));
+        }
         await SelectLocalLighting(StageTime.Night);await Capture("sea-sick-night");await SelectLocalLighting(lighting);
         await KeyPress(Key.Escape);Check(_root.ScreenName=="Pause","Sea Sick pauses through the ordinary menu");
         var paused=arena.StageAssemblyTransform;int snapshots=_root.SnapshotCount;await Frames(20);
         Check(arena.StageAssemblyTransform.IsEqualApprox(paused)&&_root.SnapshotCount==snapshots,"local pause freezes both ship motion and authority");
+        var pausedSignal=signal.Transform;await Frames(12);
+        Check(signal.Transform.IsEqualApprox(pausedSignal),"ordinary pause freezes the core signal pennant too");
         await ActivateNamed("ResumeGame");await Frames(12);
         Check(!arena.StageAssemblyTransform.IsEqualApprox(paused),"resuming restarts the gentle ship sway");
         if(!_headless)

@@ -4659,7 +4659,7 @@
     {
       "id": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs:Box:11",
       "file": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs",
-      "line": 172,
+      "line": 173,
       "call": "Box(root,new(.11f,height+.031f,.04f),new(.10f,.018f,.10f),hoops,.015f)",
       "callSha256": "22063d121710a3bf8f0b446fb489e1829ed2fd98c7d994ce7d1bc2480c5997d8",
       "domain": "owned-generator-or-helper"
@@ -4667,7 +4667,7 @@
     {
       "id": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs:newSurfaceTool:1",
       "file": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs",
-      "line": 190,
+      "line": 191,
       "call": "new SurfaceTool()",
       "callSha256": "524d4daa3dd8ade1577b68b52e91ebbe9907def4954bab94da3aeb8c6bb1a4ae",
       "domain": "owned-generator-or-helper"
@@ -4675,7 +4675,7 @@
     {
       "id": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs:surface.Commit:1",
       "file": "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs",
-      "line": 214,
+      "line": 215,
       "call": "surface.Commit()",
       "callSha256": "3a4b0e22bc74cdecd537891eb2f48df20b98f27fbf269b1803e1cc035b3194ec",
       "domain": "owned-generator-or-helper"
@@ -4763,7 +4763,7 @@
     {
       "id": "scripts/arena/stages/sea_sick/TempleStageView.ShipFinish.cs:Box:1",
       "file": "scripts/arena/stages/sea_sick/TempleStageView.ShipFinish.cs",
-      "line": 39,
+      "line": 59,
       "call": "Box(root,new(0,0,-.025f),new(width-rim*2,height-rim*2,.04f),panel,.025f)",
       "callSha256": "ed76ca4311c4a21b2e6aa14cd93e6d9fc73ed62d29fcbf2cdb0f3d0be61804b4",
       "domain": "owned-generator-or-helper"
@@ -4771,7 +4771,7 @@
     {
       "id": "scripts/arena/stages/sea_sick/TempleStageView.ShipFinish.cs:Box:2",
       "file": "scripts/arena/stages/sea_sick/TempleStageView.ShipFinish.cs",
-      "line": 42,
+      "line": 62,
       "call": "Box(root,new(0,sign*(height-rim)/2,.025f),new(width,rim,.13f),frame,.025f)",
       "callSha256": "6293c278afa89913d639dabcde937f46f8564856c8d385f0698db1ad5212f1f9",
       "domain": "owned-generator-or-helper"
@@ -4779,7 +4779,7 @@
     {
       "id": "scripts/arena/stages/sea_sick/TempleStageView.ShipFinish.cs:Box:3",
       "file": "scripts/arena/stages/sea_sick/TempleStageView.ShipFinish.cs",
-      "line": 43,
+      "line": 63,
       "call": "Box(root,new(sign*(width-rim)/2,0,.025f),new(rim,height-rim*2,.13f),frame,.025f)",
       "callSha256": "e1fc6e59d259c6b26ec15d50030e463e5fb81d91e342df770d88eb13e347489a",
       "domain": "owned-generator-or-helper"
@@ -4787,7 +4787,7 @@
     {
       "id": "scripts/arena/stages/sea_sick/TempleStageView.ShipFinish.cs:Box:4",
       "file": "scripts/arena/stages/sea_sick/TempleStageView.ShipFinish.cs",
-      "line": 53,
+      "line": 73,
       "call": "Box(hinge,new(0,-.47f,0),new(.48f,.63f,.48f),_shipLanternGlow,.065f)",
       "callSha256": "cd1ba860da83cfd3446c0e7b21882e4b57cdb14896920b1f897a6f1d597f550b",
       "domain": "owned-generator-or-helper"
@@ -4795,7 +4795,7 @@
     {
       "id": "scripts/arena/stages/sea_sick/TempleStageView.ShipFinish.cs:Box:5",
       "file": "scripts/arena/stages/sea_sick/TempleStageView.ShipFinish.cs",
-      "line": 55,
+      "line": 75,
       "call": "Box(hinge,new(x,-.47f,z),new(.10f,.75f,.10f),brass,.025f)",
       "callSha256": "c30d572875cd875253d5a680643d79d9016f1380ba3bf5439ada7aad433d71a0",
       "domain": "owned-generator-or-helper"
@@ -4803,7 +4803,7 @@
     {
       "id": "scripts/arena/stages/sea_sick/TempleStageView.ShipFinish.cs:Box:6",
       "file": "scripts/arena/stages/sea_sick/TempleStageView.ShipFinish.cs",
-      "line": 56,
+      "line": 76,
       "call": "Box(hinge,new(0,-.87f,0),new(.68f,.13f,.68f),brass,.04f)",
       "callSha256": "86decd312507edeead2ecb92f60f1ca10335597657147ee4b8eea21e7128af7a",
       "domain": "owned-generator-or-helper"
@@ -4811,7 +4811,7 @@
     {
       "id": "scripts/arena/stages/sea_sick/TempleStageView.ShipFinish.cs:newSurfaceTool:1",
       "file": "scripts/arena/stages/sea_sick/TempleStageView.ShipFinish.cs",
-      "line": 79,
+      "line": 99,
       "call": "new SurfaceTool()",
       "callSha256": "524d4daa3dd8ade1577b68b52e91ebbe9907def4954bab94da3aeb8c6bb1a4ae",
       "domain": "owned-generator-or-helper"
@@ -4819,7 +4819,7 @@
     {
       "id": "scripts/arena/stages/sea_sick/TempleStageView.ShipFinish.cs:surface.Commit:1",
       "file": "scripts/arena/stages/sea_sick/TempleStageView.ShipFinish.cs",
-      "line": 93,
+      "line": 113,
       "call": "surface.Commit()",
       "callSha256": "3a4b0e22bc74cdecd537891eb2f48df20b98f27fbf269b1803e1cc035b3194ec",
       "domain": "owned-generator-or-helper"
@@ -9877,9 +9877,9 @@
     "scripts/arena/stages/TempleStageView.UpAndDown.cs": "66ee09178629038b769382d720fae901d74d7bb670e846143463b998f96f2006",
     "scripts/arena/stages/TempleStageView.UpAndDownExterior.cs": "f6beb01527bf31f486f53c77b0a49a0233aeeaf5dc001d7cd20f9e11090ddacf",
     "scripts/arena/stages/TempleStageView.cs": "625a3dc435f29206b264b162442f9abe29161f35536d212498493bd196df4555",
-    "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs": "337bffe78fcbb17f446db18f34ee439ef31c709a2c71e2a950bfce7f6e1f9657",
+    "scripts/arena/stages/sea_sick/TempleStageView.SeaSick.cs": "61df78aa07982be1881b34af2cc7efb46a406a7a51e61ae9cf52f9130a26d36b",
     "scripts/arena/stages/sea_sick/TempleStageView.ShipDetails.cs": "84e29b31603289fc72353bfa57e0babed45db0c21d15a82ee5b9d5228b31305f",
-    "scripts/arena/stages/sea_sick/TempleStageView.ShipFinish.cs": "32a6feb370bb89dab9b4bc51a9396a08f50e489924394da195b49996e9b5e070",
+    "scripts/arena/stages/sea_sick/TempleStageView.ShipFinish.cs": "1bbebb89339611fb3eb06ad018c5f39f730a0b56440c0f16b7c53ae2f6f72d13",
     "scripts/rendering/ArtGeometry.cs": "32fea3664b4af118fe691a5e0c1eb396eebf0352922996ea2b18896d0ea9764e",
     "scripts/rendering/PrimitiveTemplates.cs": "a217a597e45615d6a71b19529c4b24ca49cf09b1a2473b53e509ee153cce9352",
     "scripts/testing/journeys/rendering/AssetAuditPlaytest.cs": "9369deb5c46c7f4db09a187701d5c548b454e53ba80da072835a8a475f31e742",

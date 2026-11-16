@@ -148,6 +148,7 @@ public partial class TempleStageView
         foreach(var paint in _shipMaterials){paint.SetShaderParameter("ship_inverse",inverse);paint.SetShaderParameter("ship_roll",roll);}
         if(_water?.MaterialOverride is ShaderMaterial sea)
         {sea.SetShaderParameter("ship_inverse",inverse);sea.SetShaderParameter("ambient_clock",_shipLifeClock);}
+        if(_shipLanternLight!=null)_shipLanternLight.Visible=GraphicsQuality.Current!=GraphicsPreset.Low;
         if(_graphicsRevision==GraphicsQuality.Revision)return;
         foreach(var paint in _shipMaterials)GraphicsQuality.ApplyShaderDetail(paint);
         if(_water?.MaterialOverride is ShaderMaterial ocean)

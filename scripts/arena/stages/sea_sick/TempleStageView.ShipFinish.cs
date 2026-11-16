@@ -24,14 +24,34 @@ public partial class TempleStageView
             ShipInset(root,2.4f,1.35f,frame,panel);
         }
         BuildSternLantern(dark,brass);
-        var pole=ShipLathe(this,new(-1.2f,3.12f,5.5f),[(0,.065f),(1.2f,.055f)],brass,"stern-pennant-pole");
-        pole.CastShadow=GeometryInstance3D.ShadowCastingSetting.Off;
-        var pennant=new Node3D{Name="SternPennant",Position=new(-1.2f,4.26f,5.5f)};AddChild(pennant);
-        var cloth=(StandardMaterial3D)_art.Color(new("b45243"),.9f).Duplicate();
-        var flag=Plate(pennant,Vector3.Zero,[new(0,0),new(.95f,-.10f),new(.73f,-.38f),new(0,-.31f)],.025f,cloth);
-        flag.CastShadow=GeometryInstance3D.ShadowCastingSetting.Off;
-        _shipLife.Add(t=>pennant.Basis=PresentationMath.Rotation(new(0,.28f+PresentationMath.Sin(t*1.1f)*.16f,0)));
+        // The cosmetic masthead exits the battle frame. Its visible signal
+        // collar carries one pennant below the HUD, replacing the stern flag.
+        var pennant=new Node3D{Name="MastSignalPennant",Position=new(9.87f,5.4f,8.5f)};AddChild(pennant);
+        var cloth=new ShaderMaterial{Shader=new Shader{Code=ShipSignalPennantShader}};
+        var flag=Plate(pennant,Vector3.Zero,[new(0,0),new(1.5f,-.08f),new(1.18f,-.52f),new(0,-.43f)],.025f,cloth);
+        flag.Name="CutterSignalCloth";flag.CastShadow=GeometryInstance3D.ShadowCastingSetting.Off;
+        _shipLife.Add(t=>
+        {
+            cloth.SetShaderParameter("life_clock",t);
+            pennant.Basis=PresentationMath.Rotation(new(0,.16f+PresentationMath.Sin(t*.8f)*.12f,-GlobalBasis.Z.Y*.6f));
+        });
     }
+
+    private const string ShipSignalPennantShader="""
+shader_type spatial;
+render_mode diffuse_burley;
+uniform float life_clock=0.0;
+void vertex(){
+    float weight=max(VERTEX.x,0.0)/1.5;
+    VERTEX.z+=sin(life_clock*2.3-VERTEX.x*3.0)*.075*weight;
+    VERTEX.y+=sin(life_clock*1.7-VERTEX.x*2.0)*.025*weight;
+}
+void fragment(){
+    float v=clamp(-UV.y/.52,0.0,1.0);
+    float hem=smoothstep(.04,.10,min(v,1.0-v));
+    ALBEDO=mix(vec3(.73,.53,.25),vec3(.52,.14,.10),hem);ROUGHNESS=.9;
+}
+""";
 
     private static void ShipInset(Node root,float width,float height,Material frame,Material panel)
     {

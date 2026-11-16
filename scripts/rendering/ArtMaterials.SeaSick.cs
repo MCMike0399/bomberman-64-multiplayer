@@ -22,6 +22,9 @@ public sealed partial class ArtMaterials
         const string anchor="  ALBEDO=mix(body,foam_color.rgb,foam*.72);";
         if(!code.Contains(anchor,StringComparison.Ordinal))throw new InvalidOperationException("Shared water accent anchor changed.");
         code=code.Replace("uniform float wind_strength=1.0;","uniform float wind_strength=1.0;\nuniform mat4 ship_inverse=mat4(1.0);\nuniform float ambient_clock=0.0;",StringComparison.Ordinal);
+        code=code.Replace("float contact=smoothstep(.03,.07,thickness)*(1.0-smoothstep(.13,.2,thickness));",
+            "float contact=smoothstep(.02,.05,thickness)*(1.0-smoothstep(.08,.13,thickness));",StringComparison.Ordinal)
+            .Replace("float foam=max(contact,band*.55);","float foam=max(contact,band*.15);",StringComparison.Ordinal);
         code=code.Replace(anchor,"""
   // Sparse crest tips and a small open crescent ahead of the raised bow.
   vec3 ship=(ship_inverse*vec4(world,1.0)).xyz;

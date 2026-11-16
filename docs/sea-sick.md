@@ -162,3 +162,21 @@ occludes the submerged keel rather than hiding the entire deep hull mesh.
 `sea-sick-miniature` retains the formerly failing belly-visibility check, exact
 waterline/stand seating, opacity and submerged-footprint coverage, plus a native
 menu capture. Battle geometry and framing are unaffected by this correction.
+
+## Tubby Chart Cutter — second-pass finishing (2026-11-16)
+
+This remains a finishing pass. One red/gold signal pennant replaces the former
+stern flag, attached at the visible mast collar below the HUD; the tall cosmetic
+masthead itself intentionally exits the battle frame. Small vertex flutter and
+bounded counter-sway share the pausable ship life clock on every preset. The
+native journey now checks its actual battle-camera HUD margins. No figurehead,
+new creature, collision, route, physics, camera or hazard is introduced.
+
+The Sea-specific ocean specialization narrows the existing contact foam and
+reduces its departing bands, retaining the same Low opaque ocean, Medium
+refraction and High reflection features. The existing warm stern lantern stays
+emissive on Low, where its real light is hidden; no new real light is added.
+Source build/public checks pass. The focused headless journey passes 142 checks,
+including all-preset pennant retention, shared sea-feature selection and pause.
+Actual pennant framing, foam restraint and perceived motion still require root's
+native captures and independent art review.
