@@ -34,6 +34,8 @@ public partial class PlaytestDriver
                 CheckClockwiseMeshes(AuditDescendants(terrain).OfType<MeshInstance3D>()
                     .Where(n=>n.Name.ToString().StartsWith("MeadowBankSlope")||n.Name.ToString().StartsWith("Hollow"))
                     .Select(n=>(n.Mesh,n.Name.ToString(),n.Name.ToString().StartsWith("MeadowBankSlope")))
+                    .Concat(AuditDescendants(terrain).OfType<MultiMeshInstance3D>().Where(n=>n.Name=="HollowSeedHeads")
+                        .Select(n=>(n.Multimesh.Mesh,n.Name.ToString(),false)))
                     .Concat(AuditDescendants(arena).OfType<MeshInstance3D>().Where(n=>n.GetParent().Name.ToString().StartsWith("HollowStandingStone"))
                         .Select(n=>(n.Mesh,n.GetParent().Name.ToString(),false))));
                 Check(SceneryIntrusions(terrain).Count==0,"blocked stile and hay vignette stay outside all standing volumes");
@@ -59,6 +61,8 @@ public partial class PlaytestDriver
                         finally{if(footer is not null)footer.Visible=footerVisible;}
                     }
                     finally{camera.Transform=pose;camera.HOffset=h;camera.VOffset=v;}
+                    for(int frame=0;frame<6;frame++)
+                    {await Frames(15);await Capture("root-hollow-shared-gust-"+frame,0);}
                 }
             }
             if(_root.ActiveSession!=null){_root.Back();await Frames(3);}

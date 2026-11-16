@@ -156,15 +156,25 @@ public partial class TempleStageView
     {
         float left=IncludeScenery?-80:0,right=IncludeScenery?80:Width,bottom=IncludeScenery?-1.8f:-.68f;
         var face=new SurfaceTool();face.Begin(Mesh.PrimitiveType.Triangles);
-        var sod=new SurfaceTool();sod.Begin(Mesh.PrimitiveType.Triangles);
+        var sod=new SurfaceTool();sod.Begin(Mesh.PrimitiveType.Triangles);sod.SetSmoothGroup(0);
         for(float x=left;x<right;x+=.5f)
         {
             float end=Math.Min(right,x+.5f),a=HollowLandscapeHeight(x,Depth),b=HollowLandscapeHeight(end,Depth);
             HollowQuad(face,new(x,bottom,Depth),new(x,a,Depth),new(end,b,Depth),new(end,bottom,Depth),Vector3.Back);
-            HollowQuad(sod,new(x,a,Depth-.03f),new(end,b,Depth-.03f),new(end,b-.12f,Depth+HollowLip(end)),new(x,a-.12f,Depth+HollowLip(x)),Vector3.Up);
-            HollowQuad(sod,new(x,a-.12f,Depth+HollowLip(x)),new(end,b-.12f,Depth+HollowLip(end)),new(end,b-.24f,Depth+.05f),new(x,a-.24f,Depth+.05f),Vector3.Back);
+            // A thick rolled turf edge grows from the cut face's own boundary.
+            // It has no overlapping top sheet and no hard two-plane crease.
+            Vector3 Roll(float xx,float height,int ring)
+            {
+                var(s,c)=PresentationMath.SinCos(ring*Mathf.Pi/8);
+                return new(xx,height-.18f+c*.18f,Depth+s*HollowLip(xx));
+            }
+            for(int ring=0;ring<8;ring++)
+            {
+                var(s,c)=PresentationMath.SinCos((ring+.5f)*Mathf.Pi/8);
+                HollowQuad(sod,Roll(x,a,ring),Roll(end,b,ring),Roll(end,b,ring+1),Roll(x,a,ring+1),new(0,c,s));
+            }
         }
-        face.Index();sod.Index();AddChild(new MeshInstance3D{Name="HollowStrataCutFace",Mesh=face.Commit(),MaterialOverride=soil});
+        face.Index();sod.GenerateNormals();sod.Index();AddChild(new MeshInstance3D{Name="HollowStrataCutFace",Mesh=face.Commit(),MaterialOverride=soil});
         var sodPaint=_art.HollowSurface(5);_fieldMaterials.Add(sodPaint);
         AddChild(new MeshInstance3D{Name="HollowRaggedSodLip",Mesh=sod.Commit(),MaterialOverride=sodPaint});
         if(!IncludeScenery)return;

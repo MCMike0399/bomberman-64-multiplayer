@@ -11,8 +11,8 @@ public sealed partial class ArtMaterials
             :_hollowSurfaceShader??=new Shader{Code=HollowSurfaceShader};
         var material=new ShaderMaterial{Shader=shader};
         material.SetShaderParameter("surface_kind",kind);
-        foreach(var(name,color)in new[]{("topsoil","4a3026"),("loam","945039"),("clay","be9069"),("base_soil","624738"),
-            ("valley_turf","426b36"),("plateau_turf","657d40")})material.SetShaderParameter(name,new Color(color));
+        foreach(var(name,color)in new[]{("topsoil","60442f"),("loam","a46b43"),("clay","c49b70"),("base_soil","70503a"),
+            ("valley_turf","426b36"),("plateau_turf","63834b")})material.SetShaderParameter(name,new Color(color));
         GraphicsQuality.ApplyShaderDetail(material);return material;
     }
     public ShaderMaterial HollowGrass()=>new(){Shader=_hollowGrassShader??=new Shader{Code=HollowGrassShader}};
@@ -23,6 +23,7 @@ render_mode diffuse_burley;
 uniform int surface_kind=0;
 uniform float quality_detail=1.0;
 uniform float quality_premium=0.0;
+uniform float ambient_clock=0.0;
 uniform vec4 topsoil : source_color;
 uniform vec4 loam : source_color;
 uniform vec4 clay : source_color;
@@ -60,33 +61,22 @@ void fragment(){
    ALBEDO=mix(ALBEDO,base_soil.rgb,1.0-smoothstep(-1.38,-1.30,arena.y));
    ALBEDO=mix(ALBEDO,topsoil.rgb,smoothstep(cut_top(arena.x)-.32,cut_top(arena.x)-.26,arena.y));
  }else if(surface_kind==1){
-   float path_distance=min(abs(arena.x-2.0),abs(arena.x-19.0));
-   float worn=1.0-smoothstep(.5,.72,path_distance+(cloud(vec2(arena.z*.8,2.0))-.5)*.24);
-   bool ramp=arena.x>3.0&&arena.x<5.0||arena.x>16.0&&arena.x<18.0;
-   if(ramp){
-     float down=arena.x<10.5?arena.x-3.0:18.0-arena.x;
-     float reach=.22+cloud(vec2(arena.z*.71,5.0))*.64;
-     float turf=1.0-smoothstep(reach-.09,reach+.09,down);
-     // The continuous ramp is an exposed earth bank, not an orange road.
-     // Broad deposits follow height; small turf tongues slump over its crown.
-     float deposit=cloud(vec2(arena.z*.27,3.0))*.20;
-     vec3 earth=mix(loam.rgb,clay.rgb,(1.0-smoothstep(.25+deposit,.85+deposit,arena.y))*.55);
-     earth=mix(earth,topsoil.rgb,smoothstep(2.24,2.66,arena.y)*.45);
-     ALBEDO=mix(earth,valley_turf.rgb,turf);
-   }else ALBEDO=mix(valley_turf.rgb,vec3(.40,.27,.17),worn*.72);
-   ALBEDO*=.94+wash*.12;
+   // A single loam mass crosses the ledges and exact physical slopes.
+   // The outside crown carries turf; no green/maroon/beige road stripes.
+   if(arena.x<5.0||arena.x>16.0)
+     ALBEDO=mix(loam.rgb,clay.rgb,.10+wash*.10)*(.96+wash*.08);
+   else ALBEDO=valley_turf.rgb*(.94+wash*.08);
  }else if(surface_kind==2){
    ALBEDO=mix(vec3(.25,.31,.30),vec3(.40,.46,.41),wash)*stone_tint.rgb;
    float cap=smoothstep(.64,1.05,arena.y)*smoothstep(-.05,.55,world_normal.y);
    vec3 moss=mix(vec3(.20,.29,.10),vec3(.37,.45,.19),wash);
    ALBEDO=mix(ALBEDO,moss,cap*.94);
  }else if(surface_kind==4){
-   // Long, quiet mowing swathes and broad warm/cool grass washes describe a
-   // farm meadow at Low too. No pale fog sheet or camouflage pebble noise.
-   float swath=.5+.5*sin(arena.x*.38+arena.z*.17+sin(arena.z*.09)*.8);
-   float grass_wash=cloud(arena.xz*.075);
-   ALBEDO=plateau_turf.rgb*(.84+swath*.13+grass_wash*.14);
-   ALBEDO=mix(ALBEDO,vec3(.45,.47,.23),smoothstep(.63,.88,grass_wash)*.25);
+   // Calm meadow beyond the earth. One shared gust gives life without olive
+   // mottling or competing decorative hills/trees.
+   float gust=.55+.25*sin(arena.x*.63+arena.z*.37-ambient_clock*1.65)
+      +.2*sin(arena.x*.27-arena.z*.41-ambient_clock*.73);
+   ALBEDO=plateau_turf.rgb*(.96+gust*.025);
  }else if(surface_kind==5)ALBEDO=valley_turf.rgb*(.93+wash*.14);
  else if(surface_kind==6){
    float shoulder=min(arena.x,21.0-arena.x);
@@ -94,7 +84,7 @@ void fragment(){
    float turf=1.0-smoothstep(ragged-.025,ragged+.025,shoulder);
    ALBEDO=mix(loam.rgb*(.94+wash*.12),valley_turf.rgb*(.95+wash*.10),turf);
  }
- else ALBEDO=mix(vec3(.20,.27,.11),vec3(.31,.36,.17),cloud(arena.xz*.10));
+ else ALBEDO=plateau_turf.rgb*.94;
  ROUGHNESS=.95;SPECULAR=.18;
 }
 """;

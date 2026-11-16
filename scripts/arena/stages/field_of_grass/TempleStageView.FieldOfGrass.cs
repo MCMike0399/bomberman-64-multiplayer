@@ -7,6 +7,7 @@ namespace BlastCircuit.Arena.Stages;
 
 public partial class TempleStageView
 {
+    private ShaderMaterial? _fieldSeedPaint;
     private void BuildFieldOfGrass()=>BuildCutawayHollow();
 
     private void ProcessField(float delta)
@@ -15,10 +16,11 @@ public partial class TempleStageView
         if(_graphicsRevision!=GraphicsQuality.Revision)ApplyHollowLanternLighting(_lighting);
         foreach(var material in _fieldMaterials)
         {
-
+            material.SetShaderParameter("ambient_clock",_fieldClock);
             if(_graphicsRevision!=GraphicsQuality.Revision)GraphicsQuality.ApplyShaderDetail(material);
         }
         _fieldGrassMaterial?.SetShaderParameter("ambient_clock",_fieldClock);
+        _fieldSeedPaint?.SetShaderParameter("ambient_clock",_fieldClock);
         _graphicsRevision=GraphicsQuality.Revision;
     }
 
@@ -80,5 +82,43 @@ public partial class TempleStageView
         grass.Buffer=buffer;
         var material=_art.HollowGrass();_fieldGrassMaterial=material;
         AddChild(new MultiMeshInstance3D{Name="ConcealingMeadow",Multimesh=grass,MaterialOverride=material,CastShadow=GeometryInstance3D.ShadowCastingSetting.Off,ExtraCullMargin=.4f});
+        BuildHollowSeedHeads();
+    }
+
+    private void BuildHollowSeedHeads()
+    {
+        var ear=new SurfaceTool();ear.Begin(Mesh.PrimitiveType.Triangles);
+        void Triangle(Vector3 a,Vector3 b,Vector3 c,Vector3 outward)
+        {
+            var normal=(c-a).Cross(b-a).Normalized();if(normal.Dot(outward)<0){(b,c)=(c,b);normal=-normal;}
+            foreach(var p in new[]{a,b,c}){ear.SetNormal(normal);ear.SetUV(new(p.X,p.Y/1.4f));ear.AddVertex(p);}
+        }
+        foreach(var(offset,height)in new[]{(-.13f,1.12f),(.04f,1.29f),(.19f,1.04f)})
+        {
+            var a=new Vector3(offset-.018f,.02f,0);var b=new Vector3(offset+.018f,.02f,0);
+            var c=new Vector3(offset+.018f,height-.13f,0);var d=new Vector3(offset-.018f,height-.13f,0);
+            Triangle(a,b,c,Vector3.Back);Triangle(a,c,d,Vector3.Back);
+            const int sides=6;
+            for(int i=0;i<sides;i++)
+            {
+                var(s0,c0)=PresentationMath.SinCos(i*Mathf.Tau/sides);var(s1,c1)=PresentationMath.SinCos((i+1)*Mathf.Tau/sides);
+                var p=new Vector3(offset+c0*.075f,height-.08f,s0*.075f);var q=new Vector3(offset+c1*.075f,height-.08f,s1*.075f);
+                Triangle(new(offset,height-.23f,0),q,p,new(c0,-.1f,s0));
+                Triangle(p,q,new(offset+.025f,height+.09f,0),new(c0,.1f,s0));
+            }
+        }
+        ear.Index();var mesh=ear.Commit();
+        var positions=new List<Vector3>();
+        foreach(float x in new[]{6.35f,14.65f})foreach(float z in new[]{2.8f,5.3f,7.6f,10.8f,13.7f,16.3f})positions.Add(new(x,0,z));
+        foreach(float x in new[]{8.5f,12.5f})foreach(float z in new[]{4.4f,14.7f})positions.Add(new(x,0,z));
+        var multimesh=new MultiMesh{TransformFormat=MultiMesh.TransformFormatEnum.Transform3D,UseColors=true,Mesh=mesh,InstanceCount=positions.Count};
+        var buffer=new float[positions.Count*MultiMeshPacking.Stride];
+        for(int i=0;i<positions.Count;i++)
+            MultiMeshPacking.Write(buffer,i,new(PresentationMath.Rotation(new(0,i*2.39996f,0)),positions[i]),Colors.White);
+        multimesh.Buffer=buffer;
+        _fieldSeedPaint=_art.HollowGrass();_fieldSeedPaint.SetShaderParameter("paint",new Color("929052"));
+        _fieldSeedPaint.SetShaderParameter("tip_paint",new Color("baa56a"));
+        AddChild(new MultiMeshInstance3D{Name="HollowSeedHeads",Multimesh=multimesh,MaterialOverride=_fieldSeedPaint,
+            CastShadow=GeometryInstance3D.ShadowCastingSetting.Off,ExtraCullMargin=.4f});
     }
 }

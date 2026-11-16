@@ -16,10 +16,14 @@ separate review; headless checks do not approve the art or establish delivery.
 
 Fresh-advisor B1 refinement keeps every support endpoint and the concealing
 canopy. Exposed layered loam and thin ragged turf continue around both sides;
-the far meadow uses broad mowing swathes rather than a sage fog surface.
+the far meadow keeps a calm mid-green surface with the canopy's shared gust.
 Exact per-cell support sheets receive shadows; recessed closed bank masses
 cast them, avoiding support-sheet self-shadow seams under grazing Night light.
 Standing stones retain their peak and footprint with broader mossy caps.
+The High-first Root-Hollow pass unifies ledges/slopes as warm loam, removes the
+continuous road-colour stripes, rounds the front turf roll and adds a sparse
+seed-head layer on that same pausable gust. All three presets keep the body and
+concealment; no separate decorative knolls or wind tree are added.
 Review all three Night presets in `field-of-grass-shape-study` and both actual
 mid-slope support witnesses. Source checks alone do not qualify the art.
 
