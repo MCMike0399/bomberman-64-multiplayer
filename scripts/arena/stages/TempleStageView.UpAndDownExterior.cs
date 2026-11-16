@@ -6,6 +6,9 @@ namespace BlastCircuit.Arena.Stages;
 
 public partial class TempleStageView
 {
+    private ShaderMaterial? _coastalBeam;
+    private StandardMaterial3D? _pierSconceGlow;
+
     /// <summary>A Blue Resort-informed coast around the suspended piers: a lighthouse
     /// on a rocky islet with a jetty, grass-capped sea stacks, channel buoys, a
     /// sailboat and gulls. All of it stands in open sea outside the arena.</summary>
@@ -67,6 +70,57 @@ public partial class TempleStageView
             Cone(house,new(0,.95f,0),1.25f,.75f,_art.Color(new(i%2==0?"3e6f8e":"c2573f"),.7f),4).Rotation=new(0,Mathf.Pi/4,0);
         }
     }
+    private void SetUpAndDownLighting(StageLighting lighting)
+    {
+        bool night=lighting.Label=="Night";
+        if(_coastalBeam!=null)_coastalBeam.SetShaderParameter("night_strength",night?.12f:0f);
+        if(_pierSconceGlow!=null)
+        {
+            _pierSconceGlow.AlbedoColor=new(night?"edbf7c":"9b7847");
+            _pierSconceGlow.EmissionEnergyMultiplier=night?1.2f:0;
+        }
+    }
+
+    private ShaderMaterial CoastalBeamPaint()
+    {
+        _coastalBeam=new ShaderMaterial {Shader=new Shader {Code="""
+shader_type spatial;
+render_mode unshaded, blend_add, depth_draw_never;
+uniform float night_strength=0.0;
+void fragment(){
+    float along=smoothstep(.0,.08,UV.x)*(1.0-smoothstep(.12,1.0,UV.x));
+    // View-facing density fades continuously at the silhouette of the cone.
+    float soft_edge=smoothstep(.0,.55,abs(dot(normalize(NORMAL),normalize(VIEW))));
+    ALBEDO=vec3(.96,.84,.58);
+    ALPHA=along*soft_edge*night_strength;
+}
+"""}};
+        return _coastalBeam;
+    }
+
+    private static ArrayMesh CoastalBeamMesh()
+    {
+        const int sides=20;const float length=6.2f,small=.08f,large=.72f;
+        var surface=new SurfaceTool();surface.Begin(Mesh.PrimitiveType.Triangles);
+        (Vector3 P,Vector3 N,Vector2 UV) At(int end,int side)
+        {
+            var (sin,cos)=PresentationMath.SinCos((side%sides)*Mathf.Tau/sides);
+            float radius=end==0?small:large;
+            return (new(.2f+end*length,cos*radius,sin*radius),new Vector3(-(large-small)/length,cos,sin).Normalized(),new(end,side/(float)sides));
+        }
+        void Triangle((Vector3 P,Vector3 N,Vector2 UV) a,(Vector3 P,Vector3 N,Vector2 UV) b,(Vector3 P,Vector3 N,Vector2 UV) c)
+        {
+            if((b.P-a.P).Cross(c.P-a.P).Dot(a.N+b.N+c.N)>0)(b,c)=(c,b);
+            foreach(var v in new[]{a,b,c}){surface.SetNormal(v.N);surface.SetUV(v.UV);surface.AddVertex(v.P);}
+        }
+        for(int side=0;side<sides;side++)
+        {
+            var a=At(0,side);var b=At(1,side);var c=At(1,side+1);var d=At(0,side+1);
+            Triangle(a,b,c);Triangle(a,c,d);
+        }
+        surface.Index();return surface.Commit();
+    }
+
     /// <summary>An original low-poly coastal stack: broad foot, broken ledges,
     /// asymmetrical crown and restrained mineral/algae tint, all owned packed geometry.</summary>
     private static ArrayMesh CoastalSeaStackMesh(float height,float width,int variant)

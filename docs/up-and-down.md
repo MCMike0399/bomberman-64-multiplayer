@@ -168,3 +168,18 @@ passed 371 assertions and 40 captures with no runtime errors or warnings.
 
 [Capture provenance](images/up-and-down-coastal/manifest.json). This is root's
 visual review, not physical-controller testing or user image approval.
+
+## Fresh advisor refinement (2026-11-15 source candidate)
+
+The suspended court, piers, stairs, coastal stacks and camera stay fixed.
+The lighthouse replaces the uniformly filled wedge with an owned cone shell
+whose additive density fades along its length and at its silhouette. It is
+Night-only and sweeps slowly (one turn in about 29 seconds), using the existing
+pausable scenery clock. Two small warm sconces are inset below the tier-two
+pier heads. Their Night emission remains on Low, adding no point lights or
+standing/aiming obstacles. The shared lighting profile is unchanged.
+
+Review matched Low/Medium/High Midday and Night views plus a short Night clip;
+the existing `up-and-down` traversal and `stage-scenery` placement/pause journeys
+remain the validation entrypoints. Source checks alone do not approve the glow
+or gradient density.

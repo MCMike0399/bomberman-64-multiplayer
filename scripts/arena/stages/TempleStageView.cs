@@ -64,6 +64,7 @@ public partial class TempleStageView : Node3D
     public void SetLighting(StageLighting lighting)
     {
         _lighting=lighting;
+        SetUpAndDownLighting(lighting);
         if(_water?.MaterialOverride is ShaderMaterial material)lighting.ApplyWater(material);
         if(_greedyMoat?.MaterialOverride is ShaderMaterial moat)lighting.ApplyWater(moat);
         foreach(var frozen in _frozenMaterials)lighting.ApplyKeyLight(frozen);
