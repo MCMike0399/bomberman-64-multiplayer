@@ -516,6 +516,58 @@ public partial class PlaytestDriver
         }
     }
 
+    private async Task GraphicsPresetRouteProbe()
+    {
+        Check(!_headless,"graphics preset routes require real native rendering");
+        var original=_root.Preferences.Graphics;
+        try
+        {
+            _root.Navigate("Modes");await Frames(3);await ControllerFocusReady();
+            await SelectGraphics(GraphicsPreset.Medium);
+            _root.StartLocal(new SessionSettings(Stage:"greedy-trap",Bots:0,SuddenDeath:false,RoundSeconds:300),2,seed:64);
+            await WaitState(state=>state.GetProperty("phase").GetInt32()==1,"preset route probe enters an ordinary two-human local match",180);
+            var session=_root.ActiveSession;
+            Check(session is LocalSession,"preset route probe uses the real local session");
+            // Medium -> Low is first: the unchanged Right-only helper takes two
+            // completed preparations, so its real route is retained before red.
+            foreach(var (from,target) in new[]{
+                (GraphicsPreset.Medium,GraphicsPreset.Low),(GraphicsPreset.Medium,GraphicsPreset.High),
+                (GraphicsPreset.Low,GraphicsPreset.Medium),(GraphicsPreset.Low,GraphicsPreset.High),
+                (GraphicsPreset.High,GraphicsPreset.Low),(GraphicsPreset.High,GraphicsPreset.Medium)})
+            {
+                await SelectGraphics(from);
+                int before=_graphicsPreparations.Count;
+                var beforeDiagnostic=JsonSerializer.SerializeToElement(_root.GraphicsPreparationDiagnostics);
+                long beforeDraws=beforeDiagnostic.GetProperty("effects").GetProperty("begun").GetInt64();
+                var route=new List<string>();
+                await SelectGraphics(target,()=>route.Add(GraphicsQuality.ToWire(_root.Preferences.Graphics)));
+                int delta=_graphicsPreparations.Count-before;
+                var diagnostic=JsonSerializer.SerializeToElement(_root.GraphicsPreparationDiagnostics);
+                var miniature=diagnostic.GetProperty("miniatures");
+                int planned=miniature.GetProperty("planned").GetInt32(),readbacks=miniature.GetProperty("readbacks").GetInt32();
+                long draws=diagnostic.GetProperty("effects").GetProperty("begun").GetInt64()-beforeDraws;
+                bool sameSession=ReferenceEquals(session,_root.ActiveSession);
+                bool persisted=PlayerPreferences.Load(_root.PreferencesPath).Graphics==target;
+                Event("graphics-preset-route",new{from=GraphicsQuality.ToWire(from),target=GraphicsQuality.ToWire(target),route,
+                    deltaGraphicsPreparations=delta,draws,planned,readbacks,sameSession,persisted,
+                    preparations=_graphicsPreparations.Skip(before).ToArray(),diagnostic});
+                await Capture("graphics-preset-route-"+GraphicsQuality.ToWire(from)+"-to-"+GraphicsQuality.ToWire(target));
+                Check(_root.Preferences.Graphics==target&&persisted,"requested native graphics preset is applied and persisted: "+target);
+                Check(sameSession&&_root.ActiveSession is LocalSession,"preset route retains the active local session: "+from+" to "+target);
+                Check(!_root.GraphicsPreparing&&diagnostic.GetProperty("active").GetInt32()==0&&planned==10&&readbacks==planned,
+                    "preset route completes all ten actual miniature readbacks before returning: "+from+" to "+target);
+                Check(delta==1,"preset route "+from+" to "+target+" requires exactly one preparation; observed "+delta);
+                Check(draws==PreparationDrawBatch.ExpectedDraws(planned),
+                    "one direct preset change retains every overlay/effect/miniature draw fence: "+draws);
+            }
+        }
+        finally
+        {
+            if(!_root.GraphicsPreparing)
+            {_root.Navigate("Modes");await Frames(3);await SelectGraphics(original);}
+        }
+    }
+
     private Task GraphicsPreparationControlProbe()=>GraphicsPreparationProbe(false);
     private Task GraphicsPreparationOccludedProbe()=>GraphicsPreparationProbe(true);
     private async Task GraphicsPreparationProbe(bool minimizeAfterChange)

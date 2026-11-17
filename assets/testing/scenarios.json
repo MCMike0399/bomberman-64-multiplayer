@@ -2301,6 +2301,17 @@
       "headless": false,
       "timeout": 300,
       "manual": false
+    },
+    {
+      "id": "graphics-preset-route-probe",
+      "method": "GraphicsPresetRouteProbe",
+      "domains": [
+        "rendering",
+        "ui"
+      ],
+      "headless": false,
+      "timeout": 180,
+      "manual": false
     }
   ]
 }
