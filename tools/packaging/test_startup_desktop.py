@@ -15,6 +15,13 @@ SPEC.loader.exec_module(startup)
 
 
 class StartupProcessTests(unittest.TestCase):
+    def test_gameplay_budget_covers_measured_slow_hosted_runners(self):
+        # 146.8 s healthy High gameplay x 2.0 slowest observed hosted runner factor.
+        self.assertGreater(startup.startup_budget('gameplay'), 146.8 * 2.0)
+        self.assertEqual(startup.startup_budget('menu'), 240)
+        with self.assertRaises(KeyError):
+            startup.startup_budget('unknown')
+
     def test_timeout_diagnostics_observe_live_child_and_cannot_bypass_cleanup(self):
         observed = []
         def failed_snapshot(process):

@@ -19,6 +19,17 @@ import desktop_packages as desktop
 from desktop_rendering import execution_driver, report_matches
 
 
+# Measured hosted-runner game-process seconds (WARP/llvmpipe). A healthy hosted
+# Windows High gameplay smoke took 146.8 s on Verification 43999328035; slower
+# hosted runners ran every case 1.7-2.0x longer (Medium gameplay 206 s), which
+# projects High gameplay to about 250-295 s. Menu cases stayed under 155 s.
+STARTUP_BUDGET_SECONDS = {'menu': 240, 'gameplay': 480}
+
+
+def startup_budget(kind):
+    return STARTUP_BUDGET_SECONDS[kind]
+
+
 def run_startup(command, cwd, environment, log, timeout=240, on_timeout=None):
     process = subprocess.Popen(command, cwd=cwd, env=environment, stdout=log,
                                stderr=subprocess.STDOUT, start_new_session=os.name == 'posix')
@@ -77,7 +88,7 @@ def main():
             if args.target == 'linux-x64': environment['APPIMAGE_EXTRACT_AND_RUN'] = '1'
             started = time.monotonic()
             with (folder / 'runtime.log').open('w') as log:
-                result = run_startup(command, temporary, environment, log)
+                result = run_startup(command, temporary, environment, log, timeout=startup_budget(kind))
             text = (folder / 'runtime.log').read_text(errors='replace')
             smoke = re.findall(r'^GODOT_SMOKE_OK (\S+) snapshots=(\d+) graphics=(\S+) window=(\S+) size=(\d+)x(\d+) adapter=(.+)$', text, re.MULTILINE)
             if (result.returncode != 0 or len(smoke) != 1 or re.search(r'(^|\s)(ERROR:|SCRIPT ERROR:|Unhandled exception|FATAL:)', text) or
