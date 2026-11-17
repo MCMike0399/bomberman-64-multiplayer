@@ -627,7 +627,9 @@ public partial class PlaytestDriver
         var dial=NamedButton("GraphicsPreset");dial.GrabFocus();
         for(int i=0;i<3&&_root.Preferences.Graphics!=preset;i++)
         {
-            await KeyPress(Key.Right);
+            // A two-step wrap needlessly prepares the full miniature roster twice.
+            int distance=((int)preset-(int)_root.Preferences.Graphics+3)%3;
+            await KeyPress(distance==1?Key.Right:Key.Left);
             afterChange?.Invoke();
             var warmup=System.Diagnostics.Stopwatch.StartNew();
             // Retained llvmpipe and WARP runs rendered only 14-15 preparation
