@@ -124,8 +124,8 @@ public partial class PlaytestDriver
                     if(shader.Code.Contains("#define SCENE_REFLECTIONS",StringComparison.Ordinal))shader.Code=shader.Code.Replace("#define SCENE_REFLECTIONS","",StringComparison.Ordinal);
                 ErrorThreadRecorder.Phase="draw:"+label;
                 if(!inputsOnly)for(int ordinal=1;ordinal<=16;ordinal++)await Draw(ordinal);
-                ErrorThreadRecorder.Phase="record:"+label;
                 else foreach(var spatial in AuditDescendants(arena).Prepend(arena).OfType<Node3D>())spatial.ForceUpdateTransform();
+                ErrorThreadRecorder.Phase="record:"+label;
                 if(!inputsOnly&&label!="warmup")
                 {
                     // Both readbacks use the same disabled target; no extra draw.
