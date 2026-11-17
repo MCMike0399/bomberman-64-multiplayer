@@ -14,7 +14,7 @@ public partial class TempleStageView
 
     private void BuildCircuitWorkshop()
     {
-        var timber=new ShaderMaterial{Shader=new Shader{Code=WorkshopTimberShader}};
+        var timber=new ShaderMaterial{Shader=StageShader(WorkshopTimberShader)};
         GraphicsQuality.ApplyShaderDetail(timber);_gardenMaterials.Add(timber);
         var teal=_art.Toy(new("397d78"),.76f);
         var cream=_art.Toy(new("ded9be"),.85f);var brass=_art.Toy(new("b39a62"),.72f);
@@ -29,7 +29,7 @@ public partial class TempleStageView
         BuildWorkshopFender(19.90f,23.10f,8.90f,15.10f,fender,"WorkshopLandingFender");
         foreach(float x in new[]{.28f,18.72f})foreach(float z in new[]{.28f,16.72f})
             RoundedBox(this,new(x,-.17f,z),new(.68f,.30f,.68f),brass,.6f).Name="WorkshopBrassCorner";
-        var paint=new ShaderMaterial{Shader=new Shader{Code=WorkshopSurfaceShader}};
+        var paint=new ShaderMaterial{Shader=StageShader(WorkshopSurfaceShader)};
         GraphicsQuality.ApplyShaderDetail(paint);_gardenMaterials.Add(paint);
         var surface=new SurfaceTool();surface.Begin(Mesh.PrimitiveType.Triangles);
         for(int z=0;z<Depth;z++)for(int x=0;x<Width;x++)
@@ -64,7 +64,7 @@ public partial class TempleStageView
         Box(root,new(0,1.65f,0),new(.065f,1.4f,.065f),brass,.018f);
         ShaderMaterial Pennant(Color color)
         {
-            var material=new ShaderMaterial{Shader=new Shader{Code=WorkshopPennantShader}};
+            var material=new ShaderMaterial{Shader=StageShader(WorkshopPennantShader)};
             material.SetShaderParameter("paint",color);_workshopPennants.Add(material);return material;
         }
         Box(root,new(.28f,2.05f,0),new(.55f,.5f,.035f),Pennant(new("397d78")),.025f).Name="WorkshopPennant";
@@ -72,7 +72,7 @@ public partial class TempleStageView
         _workshopLampPaint??=new StandardMaterial3D{AlbedoColor=new("e4b86d"),EmissionEnabled=true,
             Emission=new("ffd08a"),EmissionEnergyMultiplier=.05f,ShadingMode=BaseMaterial3D.ShadingModeEnum.Unshaded,DisableFog=true};
         Bead(root,new(0,2.43f,0),new(.24f,.27f,.24f),_workshopLampPaint).Name="WorkshopFlagLamp";
-        _workshopLampGlow??=new ShaderMaterial{Shader=new Shader{Code=WorkshopLampGlowShader}};
+        _workshopLampGlow??=new ShaderMaterial{Shader=StageShader(WorkshopLampGlowShader)};
         var halo=new SurfaceTool();halo.Begin(Mesh.PrimitiveType.Triangles);
         Vector3[] points=[new(-.65f,-.65f,0),new(.65f,-.65f,0),new(.65f,.65f,0),new(-.65f,.65f,0)];
         foreach(int index in new[]{0,2,1,0,3,2})

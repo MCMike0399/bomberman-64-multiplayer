@@ -51,7 +51,7 @@ public partial class TempleStageView
     {
         _orreryLowMoon=Prop(this,"OrreryLowMoon",Vector3.Zero);
         var moonAt=new Vector3(-6.6f,-2.6f,7.1f);
-        var moonPaint=new ShaderMaterial{Shader=new Shader{Code=OrreryGlobeShader}};
+        var moonPaint=new ShaderMaterial{Shader=StageShader(OrreryGlobeShader)};
         moonPaint.SetShaderParameter("paint_dark",new Color("8d837f"));moonPaint.SetShaderParameter("paint_light",new Color("e2d4bf"));
         moonPaint.SetShaderParameter("globe_kind",2);
         Sphere(_orreryLowMoon,moonAt,Vector3.One*2.6f,moonPaint).Name="CoreMoonGlobe";
@@ -67,7 +67,7 @@ public partial class TempleStageView
             var cap=Sphere(this,OrrerySeat(angle),new(.72f,.36f,.72f),brass);cap.Name="MeridianJunctionCap";
         }
         UpdateOrreryCoreQuality();
-        var rock=new ShaderMaterial{Shader=new Shader{Code=OrreryCragShader}};
+        var rock=new ShaderMaterial{Shader=StageShader(OrreryCragShader)};
         _castleStone.Add(rock);
         AddChild(new MeshInstance3D{Name="FortressCrag",Mesh=CragMesh(Width,Depth),MaterialOverride=rock});
         var paint=_art.Nebula();paint.SetShaderParameter("stage_center",new Vector2(Width/2f,Depth/2f));
@@ -107,7 +107,7 @@ public partial class TempleStageView
         void Planet(string name,Vector3 at,float diameter,Color color,float phase)
         {
             var root=Prop(scenery,name,at);
-            var paint=new ShaderMaterial{Shader=new Shader{Code=OrreryGlobeShader}};
+            var paint=new ShaderMaterial{Shader=StageShader(OrreryGlobeShader)};
             paint.SetShaderParameter("paint_dark",color.Darkened(.23f));paint.SetShaderParameter("paint_light",color.Lightened(.1f));
             paint.SetShaderParameter("paint_phase",phase);paint.SetShaderParameter("globe_kind",(int)phase);
             _ambientMaterials.Add(paint);

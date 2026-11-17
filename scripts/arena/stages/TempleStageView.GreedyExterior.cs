@@ -128,7 +128,7 @@ public partial class TempleStageView
         RoundedBox(root,new(3.12f,.83f,-.9f),new(.5f,.85f,1.0f),quay,.18f);
         RoundedBox(root,new(1.5f,1.25f,-.9f),new(3.8f,.22f,.86f),coping,.17f);
         RoundedBox(root,new(0,1.25f,-.65f),new(.64f,.22f,.4f),coping,.10f);
-        _greedySluicePaint=new ShaderMaterial{Shader=new Shader{Code=GreedySluiceShader}};
+        _greedySluicePaint=new ShaderMaterial{Shader=StageShader(GreedySluiceShader)};
         _greedyExteriorMaterials.Add(_greedySluicePaint);
         Box(root,new(0,0,.02f),new(.32f,2.5f,.64f),_greedySluicePaint,.07f).Name="GreedySluiceWater";
     }

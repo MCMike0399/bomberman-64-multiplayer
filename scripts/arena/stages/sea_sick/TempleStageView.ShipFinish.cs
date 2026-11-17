@@ -27,7 +27,7 @@ public partial class TempleStageView
         // The cosmetic masthead exits the battle frame. Its visible signal
         // collar carries one pennant below the HUD, replacing the stern flag.
         var pennant=new Node3D{Name="MastSignalPennant",Position=new(9.87f,5.4f,8.5f)};AddChild(pennant);
-        var cloth=new ShaderMaterial{Shader=new Shader{Code=ShipSignalPennantShader}};
+        var cloth=new ShaderMaterial{Shader=StageShader(ShipSignalPennantShader)};
         var flag=Plate(pennant,Vector3.Zero,[new(0,0),new(1.5f,-.08f),new(1.18f,-.52f),new(0,-.43f)],.025f,cloth);
         flag.Name="CutterSignalCloth";flag.CastShadow=GeometryInstance3D.ShadowCastingSetting.Off;
         _shipLife.Add(t=>

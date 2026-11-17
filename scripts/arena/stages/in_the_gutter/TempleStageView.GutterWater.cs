@@ -13,7 +13,7 @@ public partial class TempleStageView
     {
         if(_gutterFoamMaterial is null)
         {
-            _gutterFoamMaterial=new ShaderMaterial{Shader=new Shader{Code=GutterFoamShader},RenderPriority=-14};
+            _gutterFoamMaterial=new ShaderMaterial{Shader=StageShader(GutterFoamShader),RenderPriority=-14};
             _gutterMaterials.Add(_gutterFoamMaterial);
         }
         if(!SceneryMeshes.TryGetValue("copper-lock-contact-foam",out var mesh))

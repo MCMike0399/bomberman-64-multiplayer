@@ -78,9 +78,9 @@ public partial class TempleStageView
         var verdigris=_art.Toy(new Color("39756f"),.72f);
         var algae=_art.Color(new Color("466b57"),.9f);
         var dark=_art.Color(new Color("253c3b"),.8f);
-        _gutterWakeMaterial=new ShaderMaterial{Shader=new Shader{Code=GutterWakeShader},RenderPriority=-15};
+        _gutterWakeMaterial=new ShaderMaterial{Shader=StageShader(GutterWakeShader),RenderPriority=-15};
         _gutterMaterials.Add(_gutterWakeMaterial);
-        var mosaic=new ShaderMaterial{Shader=new Shader{Code=GutterMosaicShader}};
+        var mosaic=new ShaderMaterial{Shader=StageShader(GutterMosaicShader)};
         _gutterMaterials.Add(mosaic);
         // A sculpted, stepped foot supports the lock rather than a uniform tray lip.
         RoundedBox(this,new(Width/2f,-.72f,Depth/2f),new(Width+.95f,1.1f,Depth+.85f),brick,.18f).Name="CopperLockFoundation";
