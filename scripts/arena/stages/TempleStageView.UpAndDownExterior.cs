@@ -90,7 +90,7 @@ public partial class TempleStageView
 
     private ShaderMaterial CoastalBeamPaint()
     {
-        _coastalBeam=new ShaderMaterial {Shader=new Shader {Code="""
+        _coastalBeam=new ShaderMaterial {Shader=StageShader("""
 shader_type spatial;
 render_mode unshaded, blend_add, depth_draw_never;
 uniform float night_strength=0.0;
@@ -101,7 +101,7 @@ void fragment(){
     ALBEDO=vec3(.96,.84,.58);
     ALPHA=along*soft_edge*night_strength;
 }
-"""}};
+""")};
         return _coastalBeam;
     }
 

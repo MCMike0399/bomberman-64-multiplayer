@@ -42,7 +42,7 @@ def collect_stage_captures(directory,output,target,revision,provenance,expiry,dr
                 case=output/stage/f'run-{index}';case.mkdir(parents=True)
                 command=[str(executable),*visual_parity.renderer_arguments(target,driver),'--windowed','--max-fps','30','--fixed-fps','30','--disable-vsync','--',
                          '--display-windowed','--playtest=visual-parity','--playtest-output='+str(case),'--parity-stage='+stage,
-                         '--parity-provenance='+str(provenance)]
+                         '--parity-provenance='+str(provenance),'--diagnose-error-threads']
                 row={'stage':stage,'index':index,'command':command,'launchPath':'ordinary-launcher-default'if target=='windows-x64'and driver=='vulkan'else'explicit-api','passed':False};report['runs'].append(row)
                 with (case/'runtime.log').open('w')as log:
                     result=subprocess.run(command,cwd=case,stdout=log,stderr=subprocess.STDOUT,timeout=180)
@@ -50,6 +50,9 @@ def collect_stage_captures(directory,output,target,revision,provenance,expiry,dr
                 errors=crossplay_runtime.validate_summary(summary,case,'visual-parity',False)
                 device=json.loads((case/'visual-parity-observations.json').read_text())
                 runtime_errors=[s for s in text.splitlines()if re.search(r'(^|\s)(ERROR:|SCRIPT ERROR:|Unhandled exception|FATAL:)',s)]
+                attribution=case/'error-threads.json'
+                # Observer only: runtime errors below remain fatal whatever the attribution says.
+                row['errorThreads']=json.loads(attribution.read_text())['errors']if attribution.is_file()else None
                 row.update(exitCode=result.returncode,assertions=summary.get('assertions'),device=device,validationErrors=errors,
                            runtimeErrors=runtime_errors,runtimeWarnings=[s for s in text.splitlines()if 'WARNING:'in s])
                 row['passed']=not(result.returncode or errors or runtime_errors)and summary['release']['revision']==revision and device['driver']==driver and visual_parity.hardware_adapter_matches(device,expected_adapter)

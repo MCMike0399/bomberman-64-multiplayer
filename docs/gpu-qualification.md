@@ -324,3 +324,29 @@ trial bindings. A source control timed out with the duplicated report; after
 this recording change it exited cleanly in 11.9 seconds. All ten raw inventory
 JSON/binary hashes were unchanged across those controls. That is a local recorder
 control, not the required native three-OS seven-stage measurement.
+
+## 2026-11-17: Windows T4 stage-capture failures and shader reuse
+
+GPU run `44012050675` (source 7a821ac) reached four Windows T4 Vulkan stages.
+Sunken Temple and Rock Garden passed both processes. Top Rules run-1's
+same-process `fresh-target` repeat differed in about 24 pixels (channel deltas
+18–22). Blizzard passed its 15 checks but logged 50 `free_rid ... render thread`
+errors and 50 leaked Shader RIDs, and was correctly rejected. Linux RTX 2080
+SUPER ran all ten stages twice with exact repeats and none of these errors. A
+local Godot 4.7.2 shader-mutation probe on Linux and a free hosted Windows WARP
+run of the packaged Blizzard/Top Rules fixture (×3 each, `desktop-diagnostics`
+run 44140658496) did not reproduce either failure.
+
+The two failing stages are the only reached stages that built new `Shader`
+objects on every arena build; the passing two built none, and the other stages'
+shared shaders are cached. In Godot 4.7.2 a draw uses a specialized pipeline only
+after its background `PipelineCompilation` task finishes, otherwise the
+ubershader, and `ShaderRD` frees variant RIDs on whichever thread first observes
+a re-initialized version. Neither mechanism is proven on Windows.
+
+Stage views now reuse one `Shader` per constant source (`TempleStageView.StageShader`),
+like `ArtMaterials`. Shader code, materials, uniforms, geometry and presets are
+unchanged. The visual-parity fixture also records the raising thread, worker task
+and fixture phase of every engine error (`--diagnose-error-threads`,
+`error-threads.json`). That observer neither filters nor suppresses errors, and
+campaign runtime errors and strict repeats remain fatal.

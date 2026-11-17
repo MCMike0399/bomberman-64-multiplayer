@@ -12,8 +12,8 @@ public partial class TempleStageView
 
     private void BuildGlacierBowl()
     {
-        var paint=new ShaderMaterial{Shader=new Shader{Code=GlacierBowlShader}};
-        var ice=new ShaderMaterial{Shader=new Shader{Code=GrottoIceShader}};_frozenMaterials.Add(ice);
+        var paint=new ShaderMaterial{Shader=StageShader(GlacierBowlShader)};
+        var ice=new ShaderMaterial{Shader=StageShader(GrottoIceShader)};_frozenMaterials.Add(ice);
         GraphicsQuality.ApplyShaderDetail(ice);
         var body=GlacierGrottoMesh(Width,Depth,paint,ice);
         AddChild(new MeshInstance3D{Name="GlacierBowlBody",Mesh=body});
@@ -33,7 +33,7 @@ public partial class TempleStageView
         var wood=_art.Color(new("786478"),.87f);var brass=_art.Color(new("bc995c"),.58f);
         RoundedBox(mast,new(0,1.2f,0),new(.16f,2.4f,.16f),wood,.5f);
         Sphere(mast,new(0,2.48f,0),Vector3.One*.27f,brass);
-        _glacierPennantPaint=new ShaderMaterial{Shader=new Shader{Code=GlacierPennantShader}};
+        _glacierPennantPaint=new ShaderMaterial{Shader=StageShader(GlacierPennantShader)};
         Plate(mast,new(0,2.15f,0),[new(0,0),new(1.25f,.04f),new(1.1f,-.49f),new(0,-.43f)],.035f,_glacierPennantPaint).Name="GlacierWindPennant";
         // The accepted-wind pennant stays. Only its lantern moves into the vault.
         var lantern=Prop(this,"GlacierVaultLantern",new(-4.40f,-.26f,GrottoFront-1.05f));

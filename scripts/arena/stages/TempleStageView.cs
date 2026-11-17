@@ -53,6 +53,12 @@ public partial class TempleStageView : Node3D
     private float _greedyGearImpulse;
     private readonly List<ShaderMaterial> _castleStone = [];
     private static Shader? _castleFloorShader;
+    // One Shader per constant stage source, as the shared ArtMaterials shaders do.
+    // Rebuilding an arena then reuses compiled shader variants and pipelines
+    // instead of compiling and freeing new ones each match. Main thread only.
+    private static readonly Dictionary<string,Shader> _stageShaders=new(StringComparer.Ordinal);
+    private static Shader StageShader(string code)=>
+        _stageShaders.TryGetValue(code,out var shader)?shader:_stageShaders[code]=new Shader{Code=code};
     private ShaderMaterial _castleWallMaterial=null!;
     private ShaderMaterial? _castleCoverMaterial;
     public ShaderMaterial CastleWallMaterial=>_castleWallMaterial;
