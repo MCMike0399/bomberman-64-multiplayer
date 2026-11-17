@@ -1009,6 +1009,19 @@ The Linux GPU remaining phase runs `roster-popup-stress` ×3 and `tour-09` ×9 a
 suite (2026-11-01). `roster-popup-stress` opens and closes all eight Roster role popups 56
 times. Receipts sit under `diagnosticRepeats` in `campaign-result.json`.
 
+Tour 03's in-game deadline is 900 seconds, matching its `graphics-settings` child; the old
+180-second parent deadline cut off a healthy child. Its steps and in-game waits are unchanged.
+The Linux native GPU campaign gives the complete packaged graphical command 3600 seconds.
+The previous 1800-second outer bound expired with tour 17 active after 142 seconds, with 17 of
+25 tours reached (workstation-gpu-linux-x64-diagnostics artifact 14299103272). Scaling that
+observed progress to all tours is about 2650 seconds; 3600 allows about 950 seconds of margin.
+Each tour retains its own 1500-second outer runner bound (plus 300 seconds for cleanup).
+Windows' optional D3D12 High comparison remains separate from the Vulkan qualifying images,
+per the [current acceptance note](../gpu-qualification.md) and the separately labelled control
+introduced in commit `e856589`. Its repeat residuals are retained and reviewed; capture
+execution, renderer, adapter and runtime checks remain fatal. D3D12 repeat results do not
+replace or weaken the qualifying Vulkan result.
+
 `gpu_release_gates.stage` writes a `passed: false` GPU receipt and fails the target if any
 configured repeat is missing, incomplete, failed or crashed. `inspect_receipt` rejects any
 receipt without a clean repeat verdict. Run 41304300722 had shown the gap: a crashed tour-09
