@@ -2,7 +2,7 @@
   "budgetUsd": 200,
   "perRunCapUsd": 20,
   "preCiEstimateUsd": 4.8,
-  "closedEstimateUsd": 38.04,
+  "closedEstimateUsd": 39.07,
   "recordedRuns": [
     {
       "workflowRunId": "41136197647",
@@ -58,6 +58,11 @@
       "workflowRunId": "41403605524",
       "estimateUsd": 4.13,
       "receipt": "Shipped v0.45.0 campaign on af93089 (Verification 41391830489 attempt 2, render fingerprint f2064bf4): Windows/Linux graphical 24/24 each; Linux stress 3/3 (168 cycles) and tour-09 9/9, zero crashes; both final GPU gates passed with cleanupAudited true and empty diagnostic-repeat failures. Core residuals classified only in accepted repeat/diagnostic classes; reviewer visual GO. Both instances terminated before fixed expiry; cleanup cost.estimateUsd 4.13. Independent owner/reviewer AWS audits clean; stale tagging-index entries for an aged-out prior instance and two deleted volumes resolved by direct describe and retained termination evidence. Published release and production Windows/Linux/Mac Quick Play verified (41442404481); AUTO restored true, paid hold remains true."
+    },
+    {
+      "workflowRunId": "44012050675",
+      "estimateUsd": 1.03,
+      "receipt": "2026-11-17 v0.46.0/build 58/schema 7 qualification on 7a821ac (Verification 43999328035): paid Windows g4dn T4 campaign and owned RTX Linux lane attempted qualification; GPU qualification failed. Linux graphical verification exceeded the 1800-second whole-command limit (workstation-gpu-linux-x64-diagnostics artifact 14299103272); canonical Windows Vulkan passed, diagnostic D3D12 comparison failed, and Windows fixture teardown emitted 50 cleanup errors (builder-evidence artifact 14298859650). No promotion. Cleanup receipt in builder-state-44012050675-1-final artifact 14299893368 reports estimateUsd 1.03, allCreatedResourcesGone true, leftovers [], protected comparison complete; independent builder-outcome artifact 14299864015 confirms resourceCleanupVerified true. Cumulative closed estimate is 39.07 USD."
     }
   ],
   "scope": "Conservative closed-campaign estimates. preCiEstimateUsd covers the campaigns before CI/OIDC orchestration. After every paid CI run, a reviewed PR appends {workflowRunId, estimateUsd, receipt} from its cost receipt and raises closedEstimateUsd by the same amount; until then the selector refuses another paid run. Estimates are not invoices."
