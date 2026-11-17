@@ -769,6 +769,15 @@ Only those logs, the existing summary and captures are uploaded, never the
 scratch user-data/preferences tree. The nine cases and 180/90-second deadlines
 are unchanged.
 
+Hosted Windows/Linux native checks (`tools/packaging/startup-desktop.py`) run the
+same nine saved cases on WARP/llvmpipe. Menu cases keep 240 seconds; gameplay
+cases get 480 seconds (2026-11-17). A healthy hosted Windows High gameplay smoke
+took 146.8 seconds (Verification 43999328035); slower hosted runners took 1.7–2.0×
+as long for every case (PR #130 run 44110498696: Medium gameplay 206 seconds), so
+High gameplay timed out at 240 seconds after printing only its device header.
+The smoke prints its result only on completion. The checks, capture, renderer and
+runtime-error rules are unchanged, and a real hang still fails at the bound.
+
 ## Display settings verification
 
 `display-settings` is graphical-only and belongs to `all` and `menu-ux`. It checks
