@@ -13,6 +13,14 @@ import xml.etree.ElementTree as ET
 from contracts import catalog, expanded, validate_summary, validate_benchmark, junit, ROOT, CATALOG
 
 class PlaytestContracts(unittest.TestCase):
+    def test_graphics_settings_tour_budget_covers_its_full_child_scenario(self):
+        scenarios = catalog()
+        tour = scenarios['tour-03']
+        child = scenarios['graphics-settings']
+        self.assertEqual(tour['steps'], ['graphics-settings'])
+        self.assertEqual(child['timeout'], 900)
+        self.assertEqual(tour['timeout'], child['timeout'])
+
     def test_shutdown_failure_markers_are_errors_without_an_engine_prefix(self):
         from contracts import runtime_error_lines
         for marker in ('BLAST_SHUTDOWN_FINALIZERS_FAILED','BLAST_SHUTDOWN_DRAIN_FAILED',

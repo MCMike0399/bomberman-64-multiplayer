@@ -11,8 +11,20 @@ ROOT=Path(__file__).resolve().parents[2]
 # native Roster role popup opened). roster-popup-stress opens/closes every role popup 56 times per run.
 # (case, count, step limit seconds); sized to the 180-minute campaign window.
 LINUX_REPEATS=(('roster-popup-stress',3,600),('tour-09',9,900))
+LINUX_GRAPHICAL_SUITE_BUDGET_SECONDS=3600
 
 OTHER_STAGES=('sunken-temple','rock-garden','top-rules','blizzard-battle','greedy-trap','field-of-grass','in-the-gutter','sea-sick','lost-at-sea','circuit-garden')
+
+def high_driver_qualifies(target,driver):
+    """Only the shipping Windows Vulkan path qualifies; D3D12 remains diagnostic evidence."""
+    return target in ('windows-x64','linux-x64')and driver=='vulkan'
+
+def record_high_verdict(target,driver,high,technical,diagnostics):
+    if len(high['runs'])!=2 or any(r['exitCode']or r['validationErrors']or r['runtimeErrors']for r in high['runs']):
+        raise RuntimeError('Original High capture execution failed; raw repeat verdict is separate')
+    if high_driver_qualifies(target,driver):technical.append(high['passed'])
+    elif target=='windows-x64'and driver=='d3d12':diagnostics.append({'driver':driver,'scope':'diagnostic-only','passed':high['passed'],'errors':high.get('errors',[])})
+    else:raise RuntimeError('Unexpected GPU target/driver classification: '+target+'/'+driver)
 
 def collect_stage_captures(directory,output,target,revision,provenance,expiry,driver='vulkan',expected_adapter='T4',processes=2):
     """Retain the other six original-High scenes; core owns Up & Down's effect controls."""
@@ -107,16 +119,15 @@ def run(args):
                 # 'NVIDIA GeForce RTX 2080 SUPER'). Both game receipts are bound to this one-GPU guest and executable.
                 if any(args.expected_adapter.casefold()not in row['health']['adapter'].casefold()for row in health):raise ValueError('Windows API control did not use the selected '+args.expected_adapter)
                 report['actualGameHealth']=health
-            technical=[]
+            technical=[];report['diagnosticControls']=[]
             for driver in drivers:
                 destination=output/('high-'+driver)
                 command=[sys.executable,'tools/ci/visual_parity.py','--target',target,'--expected-revision',args.expected_revision,'--expected-adapter',args.expected_adapter,'--output',str(destination)]
                 if target=='windows-x64'and driver=='d3d12':command+=['--diagnostic-windows-driver',driver]
                 step('original-high-'+driver,command,900,diagnostic=True)
                 high=json.loads((destination/'visual-parity-native.json').read_text())
-                if len(high['runs'])!=2 or any(r['exitCode']or r['validationErrors']or r['runtimeErrors']for r in high['runs']):
-                    raise RuntimeError('Original High capture execution failed; raw repeat verdict is separate')
-                technical.append(high['passed'])
+                record_high_verdict(target,driver,high,technical,report['diagnosticControls'])
+            if not technical:raise RuntimeError('No qualifying High renderer verdict was collected')
             stages=collect_stage_captures(ROOT/'artifacts',output/'all-stages',target,args.expected_revision,
                                           output/'high-vulkan/provenance.json',expiry,expected_adapter=args.expected_adapter)
             report['allStages']=stages
@@ -135,7 +146,10 @@ def run(args):
             step('actual-package-replay',[sys.executable,'tools/ci/authority_replay.py','run','--target',target,'--expected-revision',args.expected_revision,'--output',str(output/'replay')],300,diagnostic=True)
             if target=='linux-x64':step('saved-startups',[sys.executable,'tools/packaging/startup-desktop.py','--target',target],600,diagnostic=True)
             # Tours are last. A headroom failure is explicit partial coverage, never a pass.
-            step('complete-native-graphical',[sys.executable,'tools/packaging/verify-desktop.py','--target',target,'--graphical','--disposable-desktop',*(['--default-renderer']if target=='windows-x64'else[])],1800,diagnostic=True)
+            graphical_budget=LINUX_GRAPHICAL_SUITE_BUDGET_SECONDS if target=='linux-x64'else 1800
+            # verify-desktop bounds each scenario process separately; the previous
+            # 1,800s campaign wrapper expired while later tours still had to run.
+            step('complete-native-graphical',[sys.executable,'tools/packaging/verify-desktop.py','--target',target,'--graphical','--disposable-desktop',*(['--default-renderer']if target=='windows-x64'else[])],graphical_budget,diagnostic=True)
             if target=='linux-x64':
                 # Fresh-process repeats with crash capture. Diagnostic: they cannot qualify anything, and any
                 # crash or failure makes the step, and therefore the target, fail.
