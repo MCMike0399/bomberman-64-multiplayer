@@ -9,6 +9,7 @@ using Bomber.Game.Matches;
 using BlastCircuit.Arena;
 using BlastCircuit.Arena.Models;
 using BlastCircuit.Rendering;
+using BlastCircuit.Testing.Fixtures;
 using Godot;
 
 namespace BlastCircuit.Testing;
@@ -35,6 +36,9 @@ public partial class PlaytestDriver
         var previousViews=AuditDescendants(_root).OfType<SubViewport>().ToDictionary(v=>v,v=>v.RenderTargetUpdateMode);
         var existingArena=LightingArena;bool arenaVisible=existingArena.Visible;
         var records=new List<object>();
+        // Diagnostic-only observer; errors remain printed and fatal to the playtest.
+        var errorThreads=OS.GetCmdlineUserArgs().Contains("--diagnose-error-threads")?new ErrorThreadRecorder():null;
+        if(errorThreads is not null){ErrorThreadRecorder.Phase="setup";OS.AddLogger(errorThreads);}
         try
         {
             if(!inputsOnly){await WindowMode(Window.ModeEnum.Windowed,"visual fixture owns a windowed QA surface");await ResizeWindow(new(1280,800));}
@@ -49,6 +53,7 @@ public partial class PlaytestDriver
             existingArena.Visible=arenaVisible;_root.SetProcess(priorRootProcess);
             foreach(var (view,mode) in previousViews)if(GodotObject.IsInstanceValid(view))view.RenderTargetUpdateMode=mode;
             GraphicsQuality.Apply(original,GetViewport());
+            if(errorThreads is not null){ErrorThreadRecorder.Phase="fixture-exit";errorThreads.Write(Path.Combine(_output,"error-threads.json"));}
         }
         File.WriteAllText(Path.Combine(_output,"visual-parity-observations.json"),JsonSerializer.Serialize(new{
             schemaVersion=1,graphicsQualified=false,inputsOnly,experimentStage=stage,noisePolicy=noise,qualification="Measured inputs; package manifests only when archive/module/executable provenance binds; external repeat/control validation required",
@@ -61,6 +66,7 @@ public partial class PlaytestDriver
 
         async Task Trial(string label)
         {
+            ErrorThreadRecorder.Phase="build:"+label;
             var viewport=new SubViewport{Name="FullHighFixture",Size=new(1280,800),OwnWorld3D=true,TransparentBg=false,
                 RenderTargetUpdateMode=SubViewport.UpdateMode.Disabled};
             GraphicsQuality.ApplyViewport(viewport);viewport.Scaling3DScale=1;AddChild(viewport);
@@ -95,6 +101,7 @@ public partial class PlaytestDriver
                     }
                 }
                 FreezeProcessing();
+                ErrorThreadRecorder.Phase="mutate:"+label;
                 var materials=VisualMaterials(arena).OfType<ShaderMaterial>().Distinct().ToArray();
                 foreach(var material in materials)
                 {
@@ -115,7 +122,9 @@ public partial class PlaytestDriver
                 if(label=="dof-off")attributes.DofBlurNearEnabled=attributes.DofBlurFarEnabled=false;
                 if(label=="reflection-off")foreach(var shader in shaders.Keys)
                     if(shader.Code.Contains("#define SCENE_REFLECTIONS",StringComparison.Ordinal))shader.Code=shader.Code.Replace("#define SCENE_REFLECTIONS","",StringComparison.Ordinal);
+                ErrorThreadRecorder.Phase="draw:"+label;
                 if(!inputsOnly)for(int ordinal=1;ordinal<=16;ordinal++)await Draw(ordinal);
+                ErrorThreadRecorder.Phase="record:"+label;
                 else foreach(var spatial in AuditDescendants(arena).Prepend(arena).OfType<Node3D>())spatial.ForceUpdateTransform();
                 if(!inputsOnly&&label!="warmup")
                 {
@@ -197,8 +206,11 @@ public partial class PlaytestDriver
                 File.WriteAllText(Path.Combine(_output,"pose-wave-"+label+".json"),JsonSerializer.Serialize(new{sourceRevision=OnlineProtocol.SourceRevision,
                     scope="Actual presentation inputs; native wave evaluations are retained diagnostic canaries only",samples=poseWaves}));
                 viewport.RenderTargetUpdateMode=SubViewport.UpdateMode.Disabled;
+                ErrorThreadRecorder.Phase="restore:"+label;
                 foreach(var (shader,code) in shaders)shader.Code=code;
+                ErrorThreadRecorder.Phase="free:"+label;
                 overlay.Free();viewport.Free();
+                ErrorThreadRecorder.Phase="after-free:"+label;
             }
 
             Task Draw(int ordinal)

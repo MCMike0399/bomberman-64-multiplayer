@@ -42,6 +42,55 @@ jobs:
           retention-days: 14
           if-no-files-found: warn
 
+  windows-shader-threads:
+    # Free hosted WARP diagnostic for v0.46 Windows Shader-RID errors. It reuses
+    # this head's Verification packages and never qualifies graphics.
+    if: github.event.label.name == 'windows-shader-diagnostics' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: windows-2025
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - id: verification
+        name: Locate this head's Verification packages
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          id=$(gh run list -R "$GITHUB_REPOSITORY" --workflow ci.yml --commit "$HEAD_SHA" --json databaseId,event --jq '[.[]|select(.event=="pull_request")][0].databaseId')
+          test -n "$id" && echo "run=$id" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: Blast-Circuit-windows-x64
+          run-id: ${{ steps.verification.outputs.run }}
+          github-token: ${{ github.token }}
+          path: artifacts
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: Blast-Circuit-windows-x64-download
+          run-id: ${{ steps.verification.outputs.run }}
+          github-token: ${{ github.token }}
+          path: artifacts
+      - run: ./tools/packaging/windows-test-desktop.ps1
+      - shell: bash
+        run: python tools/qa/shader_rid_threads.py --directory artifacts --output artifacts/shader-rid-threads --stages blizzard-battle,top-rules --repeats 3
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: windows-shader-threads
+          path: |
+            artifacts/shader-rid-threads/shader-rid-threads.json
+            artifacts/shader-rid-threads/*/run-*/runtime.log
+            artifacts/shader-rid-threads/*/run-*/error-threads.json
+            artifacts/shader-rid-threads/*/run-*/summary.json
+            artifacts/shader-rid-threads/*/run-*/*/report.json
+            artifacts/shader-rid-threads/*/run-*/parity-base-*.png
+          retention-days: 14
+          if-no-files-found: warn
+
   linux-process-identity:
     if: github.event.label.name == 'linux-update-diagnostics' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-24.04
