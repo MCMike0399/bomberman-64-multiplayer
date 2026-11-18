@@ -34,6 +34,10 @@ def clean_environment():
 # must keep every wait inside its enclosing bound.
 PEER_START_SECONDS = 1800      # clients wait for every peer runner to start
 SERVER_LIFETIME_SECONDS = 4800 # staging server/tunnel self-stop
+TUNNEL_ATTEMPTS = 3
+TUNNEL_ATTEMPT_SECONDS = 90
+# server-start waits for the owned server (<= 30 s), cloudflared download and every tunnel attempt.
+SERVER_START_SECONDS = 60 + TUNNEL_ATTEMPTS * TUNNEL_ATTEMPT_SECONDS + 60
 ARTIFACT_CAP_SECONDS = SERVER_LIFETIME_SECONDS - 300  # server-side wait ends before the server
 CLIENT_SETUP_SECONDS = 600     # checkout, downloads, display/audio fixture, origin
 CLIENT_READINESS_SECONDS = 300
@@ -252,6 +256,34 @@ def stop_launcher(output):
         subprocess.run(['taskkill', '/PID', str(pid), '/T', '/F'], check=True, capture_output=True)
 
 
+def open_tunnel(binary, local, output, expected, server, popen=subprocess.Popen, read=None, now=time.monotonic, pause=time.sleep, stop=None):
+    """Start quick tunnels until one serves this exact candidate; return (origin, tunnel).
+
+    Quick tunnels are an external free service; a fresh tunnel replaces one that exits or
+    never serves the origin (runs 44214645756, 44226863581, 44252986567). A served origin
+    with the wrong identity fails at once.
+    """
+    read = read or read_json; stop = stop or stop_child
+    for attempt in range(1, TUNNEL_ATTEMPTS + 1):
+        log_path = output / f'tunnel-{attempt}.log'
+        with log_path.open('w') as log:
+            tunnel = popen([str(binary), 'tunnel', '--no-autoupdate', '--protocol', 'http2', '--url', local],
+                env=clean_environment(), stdout=log, stderr=subprocess.STDOUT)
+        deadline = now() + TUNNEL_ATTEMPT_SECONDS
+        while now() < deadline and tunnel.poll() is None:
+            if server.poll() is not None: stop(tunnel); raise RuntimeError('Owned staging server exited')
+            match = re.search(r'https://[a-z0-9-]+\.trycloudflare\.com', log_path.read_text(errors='replace'))
+            if match:
+                try: identity = read(match[0] + '/game')['release']
+                except (OSError, ValueError): identity = None
+                if identity is not None:
+                    if identity != expected: stop(tunnel); raise RuntimeError('Staging origin identity differs from candidate')
+                    return match[0], tunnel
+            pause(.5)
+        stop(tunnel)
+    raise RuntimeError(f'Disposable HTTPS staging origin did not become ready after {TUNNEL_ATTEMPTS} tunnels')
+
+
 def server_serve(directory, output):
     def cancelled(*_): raise KeyboardInterrupt('Crossplay staging cancelled')
     signal.signal(signal.SIGTERM, cancelled)
@@ -281,22 +313,8 @@ def server_serve(directory, output):
                 local = match[1]; break
             time.sleep(.1)
         if not local: raise RuntimeError('Owned staging server did not become ready')
-        with (output / 'tunnel.log').open('w') as log:
-            tunnel = subprocess.Popen([str(binary), 'tunnel', '--no-autoupdate', '--protocol', 'http2', '--url', local],
-                env=clean_environment(), stdout=log, stderr=subprocess.STDOUT)
-        deadline = time.monotonic() + 90
-        origin = None
-        while time.monotonic() < deadline:
-            if tunnel.poll() is not None: raise RuntimeError('Disposable staging tunnel exited')
-            match = re.search(r'https://[a-z0-9-]+\.trycloudflare\.com', (output / 'tunnel.log').read_text(errors='replace'))
-            if match:
-                try:
-                    identity = read_json(match[0] + '/game')['release']
-                    if identity != dict(metadata['release'], revision=metadata['revision']): raise RuntimeError('Staging origin identity differs from candidate')
-                    origin = match[0]; break
-                except (OSError, ValueError): pass
-            time.sleep(.5)
-        if not origin: raise RuntimeError('Disposable HTTPS staging origin did not become ready')
+        expected = dict(metadata['release'], revision=metadata['revision'])
+        origin, tunnel = open_tunnel(binary, local, output, expected, server)
         (output / 'origin.json').write_text(json.dumps({'schemaVersion': 1, 'origin': origin, 'revision': metadata['revision'],
             'release': metadata['release'], 'serverArchiveSha256': digest(directory / 'Blast-Circuit-server-dotnet10.zip')}, indent=2) + '\n')
         while not (output / 'stop').exists() and time.monotonic() - started < SERVER_LIFETIME_SECONDS:
@@ -333,7 +351,7 @@ def main():
     elif args.operation == 'wait-jobs': wait_jobs(args.jobs, min(args.timeout, PEER_START_SECONDS), step=args.step)
     elif args.operation == 'server-start':
         process = launch([sys.executable, str(Path(__file__).resolve()), 'server-serve', '--directory', str(directory), '--output', str(output)], output)
-        deadline = time.monotonic() + 150
+        deadline = time.monotonic() + SERVER_START_SECONDS
         while not (output / 'origin.json').exists():
             if process.poll() is not None or time.monotonic() > deadline: raise RuntimeError('Staging server failed; inspect launcher/server/tunnel logs')
             time.sleep(.2)
