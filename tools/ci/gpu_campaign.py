@@ -12,6 +12,12 @@ ROOT=Path(__file__).resolve().parents[2]
 # (case, count, step limit seconds); sized to the 180-minute campaign window.
 LINUX_REPEATS=(('roster-popup-stress',3,600),('tour-09',9,900))
 LINUX_GRAPHICAL_SUITE_BUDGET_SECONDS=3600
+# Windows runs the complete graphical suite on its own remaining-lane instance since 2026-11-17
+# (two parallel Sancus lanes). Linux measured ~4,000 s (25 tours ~3,240 s plus menu-preview and
+# water-surface); the former 1,800 s Windows bound could never complete it. The step headroom
+# check below needs E-now >= 20 min + 5,400 s before the suite starts (E-110 min); the guest
+# wrapper (builder_guest.REMAINING_STEP_SECONDS) adds replay and inspection on top.
+WINDOWS_GRAPHICAL_SUITE_BUDGET_SECONDS=5400
 
 OTHER_STAGES=('sunken-temple','rock-garden','top-rules','blizzard-battle','greedy-trap','field-of-grass','in-the-gutter','sea-sick','lost-at-sea','circuit-garden')
 
@@ -149,7 +155,7 @@ def run(args):
             step('actual-package-replay',[sys.executable,'tools/ci/authority_replay.py','run','--target',target,'--expected-revision',args.expected_revision,'--output',str(output/'replay')],300,diagnostic=True)
             if target=='linux-x64':step('saved-startups',[sys.executable,'tools/packaging/startup-desktop.py','--target',target],600,diagnostic=True)
             # Tours are last. A headroom failure is explicit partial coverage, never a pass.
-            graphical_budget=LINUX_GRAPHICAL_SUITE_BUDGET_SECONDS if target=='linux-x64'else 1800
+            graphical_budget=LINUX_GRAPHICAL_SUITE_BUDGET_SECONDS if target=='linux-x64'else WINDOWS_GRAPHICAL_SUITE_BUDGET_SECONDS
             # verify-desktop bounds each scenario process separately; the previous
             # 1,800s campaign wrapper expired while later tours still had to run.
             step('complete-native-graphical',[sys.executable,'tools/packaging/verify-desktop.py','--target',target,'--graphical','--disposable-desktop',*(['--default-renderer']if target=='windows-x64'else[])],graphical_budget,diagnostic=True)

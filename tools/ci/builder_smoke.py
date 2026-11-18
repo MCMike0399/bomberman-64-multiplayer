@@ -1,13 +1,13 @@
-"""FREE permissions smoke: the real campaign stack minus its one instance, plus a dry-run launch.
+"""FREE permissions smoke: the real campaign stack minus its instances, plus dry-run launches.
 
 The smoke stack is derived from ``builder_template.build`` by removing exactly the
-one Windows ``AWS::EC2::Instance`` resource (Windows only since 2026-11-13). The
-expiry role and its schedule keep
+two Windows lane ``AWS::EC2::Instance`` resources (Windows only since 2026-11-13; two
+parallel lanes since 2026-11-17). The expiry role and both schedules keep
 their real names, tags and boundary but target nonexistent dummy instance IDs,
 and the schedules are DISABLED. Creation uses the paid path's exact intent and
 CreateStack call in ``builder_campaign``; cleanup is the paid path's exact-ID
 cleanup and type audit. ``RunInstances`` is only ever called with ``--dry-run``
-and the exact launch properties of the real instance: ``DryRunOperation``
+and the exact launch properties of each real lane instance: ``DryRunOperation``
 means authorized, ``UnauthorizedOperation`` (or anything else) fails the smoke.
 No compute is allocated, no paid hold is consulted and no paid attempt is recorded.
 """
@@ -35,12 +35,12 @@ import builder_transfer as transfer
 
 ROOT=Path(__file__).resolve().parents[2]
 REPOSITORY='MCMike0399/bomberman-64-multiplayer'
-SYSTEMS=names.SYSTEMS
-REMOVED=tuple(osname+'Instance'for osname in SYSTEMS)
-# Syntactically valid, never-issued instance IDs. Even an enabled schedule could
-# only call TerminateInstances on these, and the expiry role is limited to them
-# plus the run tag.
-DUMMY_INSTANCES={'Windows':'i-00000000000000001'}
+SLOTS=tuple(names.SLOTS)
+REMOVED=tuple(names.slot_logical(slot,'Instance')for slot in SLOTS)
+# Syntactically valid, never-issued instance IDs, one per lane slot. Even an enabled
+# schedule could only call TerminateInstances on these, and the expiry role is limited
+# to them plus the run tag.
+DUMMY_INSTANCES={names.CORE_SLOT:'i-00000000000000001',names.REMAINING_SLOT:'i-00000000000000002'}
 # All smoke AWS work must finish this long after the job starts so the shared
 # always-cleanup still fits inside the 30-minute smoke job timeout.
 WORK_SECONDS_AFTER_JOB_START=14*60
@@ -93,20 +93,20 @@ def derive(real):
     template=json.loads(json.dumps(real))
     resources=template['Resources']
     if sorted(key for key,row in resources.items()if row['Type']=='AWS::EC2::Instance')!=sorted(REMOVED):
-        raise ValueError('Real campaign must contain exactly the reviewed Windows instance')
+        raise ValueError('Real campaign must contain exactly the reviewed Windows lane instances')
     removed={key:resources.pop(key)for key in REMOVED}
     def rewrite(item):
         if isinstance(item,dict):
             if set(item)=={'Fn::Sub'}and isinstance(item['Fn::Sub'],str):
                 text=item['Fn::Sub']
-                for osname in SYSTEMS:text=text.replace('${'+osname+'Instance}',DUMMY_INSTANCES[osname])
+                for slot in SLOTS:text=text.replace('${'+names.slot_logical(slot,'Instance')+'}',DUMMY_INSTANCES[slot])
                 return text if '${'not in text else{'Fn::Sub':text}
             return {key:rewrite(child)for key,child in item.items()}
         if isinstance(item,list):return [rewrite(child)for child in item]
         return item
     template['Resources']={key:rewrite(row)for key,row in resources.items()}
     schedules=[row for row in template['Resources'].values()if row['Type']=='AWS::Scheduler::Schedule']
-    if len(schedules)!=len(SYSTEMS):raise ValueError('Every real expiry schedule is required')
+    if len(schedules)!=len(SLOTS):raise ValueError('Every real expiry schedule is required')
     for row in schedules:row['Properties']['State']='DISABLED'
     remaining=references(template,set(REMOVED))
     if remaining:raise ValueError('Smoke template still references removed instances: '+','.join(sorted(set(remaining))))
@@ -157,7 +157,7 @@ def redact(text):
     return re.sub(r'(Encoded authorization failure message:)\s*\S+',r'\1 <redacted>',str(text)).strip()[:2000]
 
 
-def dry_run(plan,osname,arguments,call=None,sleep=time.sleep,clock=time.time,deadline=None):
+def dry_run(plan,slot,arguments,call=None,sleep=time.sleep,clock=time.time,deadline=None):
     """One authorization-only launch. A real success is impossible and fails loudly."""
     call=call or campaign.aws
     if '--dry-run'not in arguments:raise ValueError('Permissions smoke requires --dry-run')
@@ -168,14 +168,14 @@ def dry_run(plan,osname,arguments,call=None,sleep=time.sleep,clock=time.time,dea
         try:response=call(plan,'ec2','run-instances',*arguments)
         except (RuntimeError,subprocess.TimeoutExpired)as error:text=str(error)
         else:
-            return {'os':osname,'result':'error','passed':False,'attempts':attempts,
+            return {'slot':slot,'result':'error','passed':False,'attempts':attempts,
                     'errorCode':None,'message':'RunInstances returned success despite --dry-run','response':response}
         code=error_code(text)
         # A just-created instance profile is eventually consistent for EC2.
         if code=='InvalidParameterValue'and'iamInstanceProfile'in text and clock()<deadline:
             sleep(5);continue
         result=classify(text)
-        return {'os':osname,'result':result,'passed':result=='authorized','attempts':attempts,
+        return {'slot':slot,'result':result,'passed':result=='authorized','attempts':attempts,
                 'errorCode':code,'message':redact(text)}
 
 
@@ -254,15 +254,15 @@ def verify_schedules(plan,api=None):
     policy=api('iam','get-role-policy','--role-name',role['RoleName'],'--policy-name',names.resource_name(run,'termination'))['PolicyDocument']
     if isinstance(policy,str):policy=json.loads(policy)
     resources=policy['Statement'][0]['Resource']
-    if resources!=[instance_arn(DUMMY_INSTANCES[osname])for osname in SYSTEMS]:
+    if resources!=[instance_arn(DUMMY_INSTANCES[slot])for slot in SLOTS]:
         raise ValueError('Expiry role may target something other than the dummy instances')
-    for osname in SYSTEMS:
-        schedule=api('scheduler','get-schedule','--group-name',group,'--name',names.resource_name(run,osname.lower()+'-expiry'))
+    for slot in SLOTS:
+        schedule=api('scheduler','get-schedule','--group-name',group,'--name',names.child_name(run,names.SLOTS[slot]['expiry']))
         target=schedule['Target']
-        if (schedule['State']!='DISABLED'or json.loads(target['Input'])!={'InstanceIds':[DUMMY_INSTANCES[osname]]}or
+        if (schedule['State']!='DISABLED'or json.loads(target['Input'])!={'InstanceIds':[DUMMY_INSTANCES[slot]]}or
                 target['Arn']!='arn:aws:scheduler:::aws-sdk:ec2:terminateInstances'or target['RoleArn']!=role['Arn']):
             raise ValueError('Smoke schedule is enabled or targets a non-dummy instance')
-        observed[osname]={'state':schedule['State'],'target':DUMMY_INSTANCES[osname],
+        observed[slot]={'state':schedule['State'],'target':DUMMY_INSTANCES[slot],
                           'actionAfterCompletion':schedule.get('ActionAfterCompletion'),
                           'expression':schedule['ScheduleExpression']}
     return observed
@@ -300,17 +300,17 @@ def run(state,now=time.time):
                 check('staging-put-object',stage)
                 real=json.loads((state/'campaign-template.json').read_text())
                 physical={**owned_physical(plan),'RunId':plan['runId'],'SubnetId':plan['references']['subnet']}
-                for osname in SYSTEMS:
-                    def launch(osname=osname):
-                        record=dry_run(plan,osname,dry_run_arguments(real['Resources'][osname+'Instance'],physical,campaign.stack_tags(plan)),
+                for slot in SLOTS:
+                    def launch(slot=slot):
+                        record=dry_run(plan,slot,dry_run_arguments(real['Resources'][names.slot_logical(slot,'Instance')],physical,campaign.stack_tags(plan)),
                                        deadline=min(now()+PROFILE_PROPAGATION_SECONDS,started+WORK_SECONDS_AFTER_JOB_START))
                         result['dryRuns'].append(record)
-                        if not record['passed']:raise RuntimeError(osname+' RunInstances dry run: '+record['result']+' '+str(record['errorCode']))
+                        if not record['passed']:raise RuntimeError(slot+' RunInstances dry run: '+record['result']+' '+str(record['errorCode']))
                         return record['errorCode']
-                    check('dry-run-'+osname.lower(),launch)
+                    check('dry-run-'+slot,launch)
     finally:
         result['passed']=bool(result['checks'])and all(row['passed']for row in result['checks'].values())and \
-            len(result['dryRuns'])==len(SYSTEMS)and all(row['passed']for row in result['dryRuns'])
+            len(result['dryRuns'])==len(SLOTS)and all(row['passed']for row in result['dryRuns'])
         result['cleanupRequired']='Always-cleanup deletes the exact stack and staging bucket, then audits every type.'
         write(output,result)
     return result

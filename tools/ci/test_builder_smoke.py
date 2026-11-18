@@ -32,13 +32,14 @@ def real():
 
 
 class SmokeTemplate(unittest.TestCase):
-    def test_removes_exactly_the_one_instance_and_keeps_every_other_resource_identical(self):
+    def test_removes_exactly_both_lane_instances_and_keeps_every_other_resource_identical(self):
+        # 2026-11-17: two parallel Windows lanes, each with its own disabled dummy-target schedule.
         original=real();derived,removed=smoke.derive(original)
-        self.assertEqual(sorted(removed),['WindowsInstance'])
-        self.assertEqual(set(original['Resources'])-set(derived['Resources']),{'WindowsInstance'})
+        self.assertEqual(sorted(removed),['WindowsInstance','WindowsRemainingInstance'])
+        self.assertEqual(set(original['Resources'])-set(derived['Resources']),{'WindowsInstance','WindowsRemainingInstance'})
         self.assertEqual(set(derived['Resources'])|set(removed),set(original['Resources']))
         self.assertEqual(original['Parameters'],derived['Parameters'])
-        changed={'ExpiryRole','WindowsExpiry'}
+        changed={'ExpiryRole','WindowsExpiry','WindowsRemainingExpiry'}
         self.assertNotIn('LinuxExpiry',original['Resources'])
         for key in set(derived['Resources'])-changed:
             with self.subTest(resource=key):self.assertEqual(derived['Resources'][key],original['Resources'][key])
@@ -47,18 +48,19 @@ class SmokeTemplate(unittest.TestCase):
         before['Properties']['Policies'][0]['PolicyDocument']['Statement'][0].pop('Resource')
         resources=after['Properties']['Policies'][0]['PolicyDocument']['Statement'][0].pop('Resource')
         self.assertEqual(json.loads(json.dumps(after)),before)
-        self.assertEqual(resources,[smoke.instance_arn(smoke.DUMMY_INSTANCES[osname])for osname in smoke.SYSTEMS])
-        for osname in smoke.SYSTEMS:
-            old=json.loads(json.dumps(original['Resources'][osname+'Expiry']['Properties']));new=derived['Resources'][osname+'Expiry']['Properties']
+        self.assertEqual(resources,[smoke.instance_arn(smoke.DUMMY_INSTANCES[slot])for slot in smoke.SLOTS])
+        for slot in smoke.SLOTS:
+            logical=names.slot_logical(slot,'Expiry')
+            old=json.loads(json.dumps(original['Resources'][logical]['Properties']));new=derived['Resources'][logical]['Properties']
             self.assertEqual(new['State'],'DISABLED');self.assertEqual(old.pop('State'),'ENABLED')
-            self.assertEqual(json.loads(new['Target']['Input']),{'InstanceIds':[smoke.DUMMY_INSTANCES[osname]]})
+            self.assertEqual(json.loads(new['Target']['Input']),{'InstanceIds':[smoke.DUMMY_INSTANCES[slot]]})
             old['Target'].pop('Input')
             self.assertEqual({**new,'Target':{k:v for k,v in new['Target'].items()if k!='Input'}},{**old,'State':'DISABLED'})
             self.assertEqual(new['ScheduleExpression'],{'Fn::Sub':'at(${ExpiresAt})'})
 
     def test_names_tags_and_boundary_follow_the_real_owned_namespace(self):
         derived,_=smoke.derive(real());text=json.dumps(derived)
-        self.assertEqual(smoke.references(derived,{'WindowsInstance'}),[])
+        self.assertEqual(smoke.references(derived,{'WindowsInstance','WindowsRemainingInstance'}),[])
         self.assertNotIn('Instance}',text)
         for key in ('AgentRole','ExpiryRole'):
             self.assertEqual(derived['Resources'][key]['Properties']['PermissionsBoundary'],f'arn:aws:iam::{names.ACCOUNT}:policy/{names.BOUNDARY}')
@@ -68,7 +70,8 @@ class SmokeTemplate(unittest.TestCase):
         self.assertEqual(derived['Resources']['StagingBucket']['Properties']['BucketName'],RUN+'-'+names.ACCOUNT)
 
     def test_dummy_instances_are_valid_never_real_ids(self):
-        for value in smoke.DUMMY_INSTANCES.values():self.assertRegex(value,r'^i-0{16}[01]$')
+        for value in smoke.DUMMY_INSTANCES.values():self.assertRegex(value,r'^i-0{16}[12]$')
+        self.assertEqual(len(set(smoke.DUMMY_INSTANCES.values())),len(smoke.SLOTS))
 
     def test_any_new_instance_reference_fails_closed(self):
         original=real();original['Resources']['QaSecurityGroup']['DependsOn']=['WindowsInstance']
@@ -80,30 +83,31 @@ class SmokeTemplate(unittest.TestCase):
         spending={'closedEstimateUsd':4.8,'budgetUsd':200}
         approval=builder_approval.build('a'*40,'1','2026-10-30T15:00:00+00:00',spending)
         self.assertEqual(smoke.instances(),approval['instances'])
-        self.assertEqual([item['ami']for item in smoke.instances()],[builder_identity.WINDOWS_AMI])
-        self.assertEqual([item['os']for item in smoke.instances()],['Windows'])
+        self.assertEqual([item['ami']for item in smoke.instances()],[builder_identity.WINDOWS_AMI]*2)
+        self.assertEqual([item['slot']for item in smoke.instances()],list(smoke.SLOTS))
 
     def test_placeholder_user_data_has_the_real_bootstrap_shape(self):
         import builder_bootstrap
         value=plan();placeholder=smoke.placeholder_userdata(value)
         actual=builder_bootstrap.userdata(value,'1'*64,'2'*64,{'url':'https://awscli.amazonaws.com/AWSCLIV2.msi','sha256':'3'*64})
-        for osname in smoke.SYSTEMS:self.assertEqual(len(placeholder[osname]),len(actual[osname]))
+        self.assertEqual(set(placeholder),{'Windows'})
+        self.assertEqual(len(placeholder['Windows']),len(actual['Windows']))
 
 
 class DryRunParameters(unittest.TestCase):
     physical={'QaSecurityGroup':'sg-0abc','AgentProfile':RUN+'-profile','RunId':RUN,'SubnetId':'subnet-1'}
 
-    def parsed(self,osname):
-        arguments=smoke.dry_run_arguments(real()['Resources'][osname+'Instance'],self.physical,campaign.stack_tags(plan()))
+    def parsed(self,slot):
+        arguments=smoke.dry_run_arguments(real()['Resources'][names.slot_logical(slot,'Instance')],self.physical,campaign.stack_tags(plan()))
         self.assertEqual(arguments[0],'--dry-run')
         return {arguments[i]:arguments[i+1]for i in range(1,len(arguments),2)}
 
     def test_the_launch_matches_the_real_template_instance_properties(self):
         template=real()
-        for osname in smoke.SYSTEMS:
-            with self.subTest(os=osname):
-                properties=template['Resources'][osname+'Instance']['Properties'];values=self.parsed(osname)
-                item=next(row for row in smoke.instances()if row['os']==osname)
+        for slot in smoke.SLOTS:
+            with self.subTest(slot=slot):
+                properties=template['Resources'][names.slot_logical(slot,'Instance')]['Properties'];values=self.parsed(slot)
+                item=next(row for row in smoke.instances()if row['slot']==slot)
                 self.assertEqual(values['--image-id'],item['ami']);self.assertEqual(values['--instance-type'],'g4dn.xlarge')
                 self.assertEqual(values['--count'],'1')
                 self.assertEqual(json.loads(values['--iam-instance-profile']),{'Name':RUN+'-profile'})
@@ -118,7 +122,7 @@ class DryRunParameters(unittest.TestCase):
                 specs=json.loads(values['--tag-specifications'])
                 self.assertEqual([row['ResourceType']for row in specs],['instance','volume'])
                 tags={row['Key']:row['Value']for row in specs[0]['Tags']}
-                self.assertEqual(tags,{names.RUN_TAG:RUN,names.EXPIRY_TAG:'2026-10-30T15:00:00+00:00','Name':names.instance_name(osname.lower()),
+                self.assertEqual(tags,{names.RUN_TAG:RUN,names.EXPIRY_TAG:'2026-10-30T15:00:00+00:00','Name':names.instance_name('windows',slot),
                                        names.TAG_PREFIX+'source':'a'*40})
                 self.assertEqual(specs[0]['Tags'],specs[1]['Tags'])
 
@@ -193,19 +197,19 @@ class SmokeFlow(unittest.TestCase):
             written=json.loads((root/'permissions-smoke.json').read_text())
         return result,written,launches
 
-    def test_all_checks_and_the_authorized_windows_dry_run_pass_without_allocation(self):
+    def test_all_checks_and_both_authorized_lane_dry_runs_pass_without_allocation(self):
         result,written,launches=self.flow(DRY)
         self.assertTrue(result['passed']);self.assertEqual(written['passed'],True)
-        self.assertEqual([row['os']for row in written['dryRuns']],['Windows'])
+        self.assertEqual([row['slot']for row in written['dryRuns']],['windows-x64-core','windows-x64-remaining'])
         self.assertEqual((written['instancesAllocated'],written['paidAttempt']),(0,False))
-        self.assertEqual(len(launches),1)
+        self.assertEqual(len(launches),2)
         for arguments in launches:self.assertIn('--dry-run',arguments)
 
     def test_an_unauthorized_launch_turns_the_smoke_red_and_is_recorded(self):
         result,written,_=self.flow(DENIED)
-        self.assertFalse(result['passed']);self.assertFalse(written['checks']['dry-run-windows']['passed'])
+        self.assertFalse(result['passed']);self.assertFalse(written['checks']['dry-run-windows-x64-core']['passed'])
         self.assertNotIn('dry-run-linux',written['checks'])
-        self.assertEqual([row['result']for row in written['dryRuns']],['unauthorized'])
+        self.assertEqual([row['result']for row in written['dryRuns']],['unauthorized','unauthorized'])
 
     def test_failed_create_skips_everything_else_and_stays_red(self):
         with tempfile.TemporaryDirectory()as root:

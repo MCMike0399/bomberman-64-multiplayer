@@ -30,6 +30,31 @@ class CompletionChecks(unittest.TestCase):
  def test_deleted_stack_record_is_complete_when_children_gone(self):self.check('terminated',False,True,True)
  def test_deleted_stack_record_does_not_hide_volume(self):self.check('terminated',True,True,True)
  def test_delete_failed_is_never_complete(self):self.check('terminated',False,True)
+class TwoLaneCleanup(unittest.TestCase):
+ """2026-11-17: both lane instances and both expiry schedules are exact cleanup targets."""
+ def final(self,lane_state='terminated',schedules=('WindowsExpiry','WindowsRemainingExpiry')):
+  run='sancus-builder-20261117-5ba336f-1234567890abcdef';asked=[]
+  with tempfile.TemporaryDirectory()as temp:
+   root=Path(temp);(root/'protected-instances.json').write_text(json.dumps([{'id':'i-protected','state':'running'}]))
+   rows=[{'event':'CREATED','type':'AWS::EC2::Instance','id':'i-core'},{'event':'CREATED','type':'AWS::EC2::Instance','id':'i-lane'}]
+   rows+=[{'event':'CREATED','type':'AWS::Scheduler::Schedule','id':'schedule-'+name,'details':{'logicalId':name}}for name in schedules]
+   def api(plan,service,operation,*args,**kwargs):
+    if operation=='get-schedule':asked.append(args[1]);return None
+    if operation=='describe-instances':
+     state={'i-core':'terminated','i-lane':lane_state}.get(args[1],'running')
+     return {'Reservations':[{'Instances':[{'InstanceId':args[1],'State':{'Name':state}}]}]}
+    raise AssertionError('Unexpected mock API')
+   plan={'account':'a','region':'r','runId':run,'payloadSource':'sha'}
+   with mock.patch.object(cleanup_verify,'ROOT',root),mock.patch.object(cleanup_verify,'evidence',return_value={}),mock.patch.object(campaign,'actor'),mock.patch.object(cleanup_verify.builder_audit,'audit',return_value={'checked':{},'errors':[],'leftovers':[],'nonResourceRecords':[],'expectedStandingIdentity':{}}),mock.patch.object(campaign,'aws',side_effect=api),mock.patch.object(safety,'read_journal',return_value=rows),mock.patch.object(safety,'append'):
+    return cleanup_verify.final(plan),asked
+ def test_both_lane_schedules_are_read_by_their_exact_names(self):
+  result,asked=self.final()
+  self.assertTrue(result['allCreatedResourcesGone'])
+  self.assertEqual(asked,['sancus-builder-20261117-5ba336f-1234567890abcdef-windows-expiry','sancus-builder-20261117-5ba336f-1234567890abcdef-remain-expiry'])
+ def test_a_running_remaining_lane_instance_is_a_leftover(self):
+  with self.assertRaisesRegex(RuntimeError,'NOT complete'):self.final(lane_state='running')
+ def test_an_unknown_schedule_logical_id_is_never_guessed(self):
+  with self.assertRaisesRegex(ValueError,'Unknown owned schedule'):self.final(schedules=('WindowsExpiry','WindowsLane3Expiry'))
 class TaggingIndexSweep(unittest.TestCase):
  def result(self,leftovers):
   return {'checked':{},'errors':[],'leftovers':[{'type':'TaggedResources','id':item}for item in leftovers],

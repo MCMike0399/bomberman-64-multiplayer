@@ -93,8 +93,8 @@ class CurrentMainOnly(unittest.TestCase):
         plan=json.loads(row.split('=',1)[1])
         self.assertEqual(plan['source'],'a'*40)
         self.assertEqual(plan['verificationRunId'],'123')
-        self.assertEqual([item['os']for item in plan['instances']],['Windows'])
-        self.assertIn('$3.67',summary)
+        self.assertEqual([item['os']for item in plan['instances']],['Windows','Windows'])
+        self.assertIn('$5.84',summary)
         for item in plan['instances']:self.assertIn(item['ami'],summary)
         self.assertEqual(json.loads(self.key),{'schemaVersion':1,'version':'0.45.0','renderFingerprint':'f'*64})
         wanted,automatic,diagnosed,ledger,current=self.guarded[-1]

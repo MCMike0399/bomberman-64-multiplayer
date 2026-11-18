@@ -24,8 +24,11 @@ import builder_supervisor as supervisor
 import builder_transfer as transfer
 import builder_timing
 
-# Windows only since 2026-11-13 (one instance); Linux qualifies on the owned workstation.
+# Windows only since 2026-11-13; Linux qualifies on the owned workstation. Since 2026-11-17
+# two parallel Windows lanes (names.SLOTS): `core` publishes one terminal checkpoint; the
+# controller hands its retained gate inputs to `remaining`, which gates and finishes.
 TARGETS=names.TARGETS
+SLOTS=names.SLOTS
 PING_SAMPLE_SECONDS=30
 PING_SAMPLE_LIMIT=40
 CONSOLE_SAMPLE_SECONDS=60
@@ -134,7 +137,9 @@ class Controller:
         transfer.upload_inputs(self.client,self.plan,campaign.JOURNAL,staging['inputs'])
         transfer.publish_bootstrap(self.client,self.plan,campaign.JOURNAL,staging['manifest'],staging['bootstrap'],staging['awsCli'])
         logical={row['details'].get('logicalId'):row['id']for row in journal.effective_created(campaign.rows(self.plan)).values()}
-        self.data['targets']={target:{'instanceId':logical[osname+'Instance'],'state':'booting','pingSamples':[]}for target,osname in TARGETS.items()}
+        # `targets` is keyed by lane slot; every slot qualifies the one target windows-x64.
+        self.data['targets']={slot:{'instanceId':logical[names.slot_logical(slot,'Instance')],'target':spec['target'],
+                                    'lane':spec['lane'],'state':'booting','pingSamples':[]}for slot,spec in SLOTS.items()}
         self.data.update(phase='bootstrapping',bootstrapStartedAtUtc=utc_now(),
                          bootstrapDeadline=min(time.time()+builder_timing.BOOTSTRAP_SECONDS,self.stop));self.save()
         return ready
@@ -149,20 +154,34 @@ class Controller:
         if path.stat().st_size>16*1024*1024:raise ValueError('Control receipt exceeds its size limit')
         return json.loads(path.read_text())
 
-    def owned_target(self,target):
+    def owned_target(self,slot):
         sid=campaign.authorize(self.plan)
-        row=self.data['targets'][target]
+        row=self.data['targets'][slot]
         owned=journal.effective_created(campaign.rows(self.plan)).get(('AWS::EC2::Instance',row['instanceId']))
-        if not sid or not owned or owned['parent']!=sid or owned['details'].get('logicalId')!=TARGETS[target]+'Instance':
+        if not sid or not owned or owned['parent']!=sid or owned['details'].get('logicalId')!=names.slot_logical(slot,'Instance'):
             raise ValueError('Target is not the exact journaled stack member')
         return row['instanceId']
 
-    def stop_target(self,target):
-        identity=self.owned_target(target)
-        row=self.data['targets'][target]
-        builder_ssm.verify_instance(self.plan,self.api,row['instanceId'],TARGETS[target])
+    def stop_target(self,slot):
+        identity=self.owned_target(slot)
+        row=self.data['targets'][slot]
+        builder_ssm.verify_instance(self.plan,self.api,row['instanceId'],slot)
         self.api('ec2','terminate-instances','--instance-ids',identity)
         row['terminationRequested']=True;self.save()
+
+    def stop_peers(self,failed):
+        """Fail fast: once one lane fails nothing can qualify, so stop every other lane.
+
+        Uses only the exact owned-member termination above; errors are recorded and the
+        always-cleanup still terminates and audits every journaled instance.
+        """
+        for slot,row in self.data['targets'].items():
+            if slot==failed or row.get('terminationRequested'):continue
+            if row['state']not in ('failed','finished'):
+                row.update(state='stopped',error='Stopped after lane '+failed+' failed; nothing can qualify')
+            try:self.stop_target(slot)
+            except Exception as error:self.data['errors'].append({'target':slot,'error':str(error),'scope':'peer-termination'})
+            self.save()
 
     def ping(self,target,force=False):
         """Read-only SSM agent observation, retained as a bounded diagnostic series."""
@@ -205,7 +224,8 @@ class Controller:
 
     def observe_bootstrap(self,target):
         row=self.data['targets'][target]
-        receipt=self.read_object('results/'+target+'/bootstrap-ready.json',self.root/'observations'/target/'bootstrap-ready.json')
+        # Both lanes share user data, so readiness is keyed by the exact instance ID.
+        receipt=self.read_object(names.instance_object(row['instanceId'],'bootstrap-ready.json'),self.root/'observations'/target/'bootstrap-ready.json')
         if receipt is None:
             self.ping(target)  # Diagnostic only while waiting; errors are recorded, never fatal.
             text=self.console(target)
@@ -213,7 +233,7 @@ class Controller:
                 self.console(target,force=True,label='bootstrap-failed')
                 raise RuntimeError('Guest bootstrap reported failure on its console')
             return False
-        expected={'runId':self.plan['runId'],'source':self.plan['payloadSource'],'target':target,'instanceId':row['instanceId'],
+        expected={'runId':self.plan['runId'],'source':self.plan['payloadSource'],'target':SLOTS[target]['target'],'instanceId':row['instanceId'],
                   'account':self.plan['account'],'region':self.plan['region'],
                   'payloadManifestSha256':self.plan['staging']['manifest']['sha256'],'ready':True,'hardwareQualified':False}
         expected['user']='BlastQa'
@@ -225,8 +245,8 @@ class Controller:
         if agents is None:return False
         if not any(agent['InstanceId']==row['instanceId']and agent['PingStatus']=='Online'for agent in agents):return False
         self.owned_target(target)
-        row['commandId']=builder_ssm.dispatch(self.plan,campaign.JOURNAL,self.api,row['instanceId'],TARGETS[target],self.plan['staging']['manifest']['sha256'])
-        row['state']='running-core';self.save();return True
+        row['commandId']=builder_ssm.dispatch(self.plan,campaign.JOURNAL,self.api,row['instanceId'],target,self.plan['staging']['manifest']['sha256'])
+        row['state']='running';self.save();return True
 
     def retain(self,target,manifest):
         transfer.validate_results(manifest,self.plan,target)
@@ -249,26 +269,32 @@ class Controller:
         return receipt
 
     def check_worker_exit(self,target):
-        outcome=self.read_object('results/'+target+'/worker-exit.json',self.root/'observations'/target/'worker-exit.json')
+        instance=self.data['targets'][target]['instanceId']
+        outcome=self.read_object(names.instance_object(instance,'worker-exit.json'),self.root/'observations'/target/'worker-exit.json')
         if outcome is None:return
-        expected={'runId':self.plan['runId'],'source':self.plan['payloadSource'],'target':target,
+        expected={'runId':self.plan['runId'],'source':self.plan['payloadSource'],'target':SLOTS[target]['target'],
                   'account':self.plan['account'],'region':self.plan['region'],'instanceId':self.data['targets'][target]['instanceId']}
         if any(outcome.get(key)!=value for key,value in expected.items()):raise ValueError('Worker outcome producer differs')
         if 'logSha256'in outcome:
             path=self.root/'observations'/target/'worker.log'
-            self.client.call('get-object','--key','results/'+target+'/worker-log.bin',str(path))
+            self.client.call('get-object','--key',names.instance_object(instance,'worker-log.bin'),str(path))
             if path.stat().st_size!=outcome['logSize']or transfer.sha256(path)!=outcome['logSha256']:
                 raise ValueError('Early worker failure log differs')
         raise RuntimeError('Worker exited before its required complete receipt; exitCode='+str(outcome['exitCode']))
+
+    def phase_done(self,phase,slot,row):
+        """core: the core lane finished and the remaining lane is dispatched; final: every lane finished."""
+        if phase=='final'or SLOTS[slot]['lane']=='core':return row['state']=='finished'
+        return row['state']not in ('booting',)
 
     def collect(self,phase):
         if phase not in ('core','final'):raise ValueError('Unknown collection phase')
         wait=new_event()
         while time.time()<self.stop:
-            complete=True
+            if any(row['state']in ('failed','stopped')for row in self.data['targets'].values()):
+                raise RuntimeError('A lane already failed or was stopped; raw retained evidence is not qualification')
             for target,row in self.data['targets'].items():
-                if row['state']=='failed'or phase=='core'and row['state']in ('core-retained','finished')or phase=='final'and row['state']=='finished':continue
-                complete=False
+                if row['state']in ('failed','stopped','finished'):continue
                 try:
                     if row['state']=='booting':
                         if not self.observe_bootstrap(target)and time.time()>self.data['bootstrapDeadline']:
@@ -276,11 +302,9 @@ class Controller:
                         continue
                     manifest=self.read_object('results/'+target+'/manifest.json',self.root/'observations'/target/'manifest.json')
                     if manifest is None:self.check_worker_exit(target);continue
-                    state=manifest.get('state')
-                    if state=='core-retained'and phase=='final':self.check_worker_exit(target);continue
                     retained=self.retain(target,manifest)
-                    row.update(state=state,retention=retained)
-                    if state=='failed':self.stop_target(target)
+                    row.update(state=manifest.get('state'),retention=retained)
+                    if row['state']=='failed':raise RuntimeError('Lane published a failed checkpoint')
                     self.save()
                 except (ValueError,RuntimeError,TimeoutError)as error:
                     row.update(state='failed',error=str(error));self.data['errors'].append({'target':target,'phase':phase,'error':str(error)})
@@ -289,32 +313,46 @@ class Controller:
                     try:self.stop_target(target)
                     except Exception as cleanup_error:self.data['errors'].append({'target':target,'error':str(cleanup_error),'scope':'termination'})
                     self.save()
-            if complete:
+                    # Fail fast (2026-11-17): one failed lane means nothing can qualify.
+                    self.stop_peers(target)
+                    self.data['phase']=phase+'-failed';self.save()
+                    raise RuntimeError('Lane '+target+' failed; the other lane was stopped; raw retained evidence is not qualification')
+            if all(self.phase_done(phase,target,row)for target,row in self.data['targets'].items()):
                 self.data['phase']=phase+'-collected';self.save()
-                if any(row['state']=='failed'for row in self.data['targets'].values()):raise RuntimeError('A target failed; raw retained evidence is not qualification')
                 if phase=='final':self.verify_games()
                 return self.data
             wait.wait(min(5,max(0,self.stop-time.time())))
         raise TimeoutError('Fixed cleanup boundary reached; remaining work is explicitly incomplete')
 
+    def retained_reader(self):
+        def read(slot,relative):
+            files={item['path']:item for item in self.data['targets'][slot]['retention']['files']}
+            item=files.get('finished/'+relative)
+            if item is None:raise ValueError('Lane did not retain '+relative+': '+slot)
+            path=Path(item['localPath']);data=path.read_bytes()
+            if hashlib.sha256(data).hexdigest()!=item['sha256']:raise ValueError('Retained qualification bytes changed')
+            return data,item['sha256']
+        return read
+
     def verify_games(self):
         import desktop_packages,desktop_validation,gpu_release_gates,release_identity
+        for slot in SLOTS:
+            if self.data['targets'].get(slot,{}).get('state')!='finished':raise ValueError('Every complete native GPU workload is required')
+        path=self.root/'core-handoff.json'
+        if not path.is_file():raise ValueError('The controller core handoff is required')
+        handoff_sha=transfer.sha256(path)
+        if self.data.get('coreHandoffSha256')!=handoff_sha:raise ValueError('Core handoff receipt changed after publication')
+        read=self.retained_reader()
+        lane=transfer.verify_lanes(self.plan,self.data['targets'],json.loads(path.read_text()),handoff_sha,read)
         result={}
         for target in TARGETS:
-            row=self.data['targets'].get(target,{})
-            if row.get('state')!='finished':raise ValueError('Every complete native GPU workload is required')
-            files={item['path']:item for item in row['retention']['files']}
-            expected=self.plan['artifacts'][target];prefix='finished/'
-            def read(relative):
-                item=files[prefix+relative];path=Path(item['localPath'])
-                if transfer.sha256(path)!=item['sha256']:raise ValueError('Retained qualification bytes changed')
-                return json.loads(path.read_text()),item['sha256']
-            receipt,_=read('gpu-release-'+target+'/'+gpu_release_gates.receipt_name(target))
+            expected=self.plan['artifacts'][target]
+            data,_=read(lane,'gpu-release-'+target+'/'+gpu_release_gates.receipt_name(target));receipt=json.loads(data)
             gpu_release_gates.inspect_receipt(receipt,target,self.plan['payloadSource'],expected['archiveSha256'],
                 expected['downloadSha256'],expected['serverSha256'],self.plan['renderFingerprint'],require_cleanup=False)
             if receipt.get('campaignRunId')!=self.plan['runId']or receipt.get('verificationRunId')!=str(self.plan['verificationRunId']):
                 raise ValueError('Game receipt belongs to another campaign or trusted artifact run')
-            graphical,sha=read('Blast-Circuit-'+target+'-graphical.json')
+            data,sha=read(lane,'Blast-Circuit-'+target+'-graphical.json');graphical=json.loads(data)
             if receipt['graphicalSha256']!=sha:raise ValueError('Retained graphical tour differs')
             gpu_release_gates.inspect_graphical(graphical,target,self.plan['payloadSource'],release_identity.check_exports(),
                 expected['archiveSha256'],expected['downloadSha256'],expected['serverSha256'])
@@ -322,12 +360,25 @@ class Controller:
         return result
 
     def acknowledge(self):
-        for target,row in self.data['targets'].items():
-            if row['state']=='finished':continue
-            if row['state']!='core-retained':raise ValueError('Every committed core receipt is required before tours')
-            transfer.acknowledge_core(self.client,self.plan,target,row['retention']['rawManifestSha256'],row['retention'],
-                                      self.root/('core-ack-'+target+'.json'))
-            row['state']='running-remaining';self.save()
+        """Publish the hash-bound core handoff to the remaining lane, then stop the idle core instance."""
+        core=self.data['targets'][names.CORE_SLOT];remaining=self.data['targets'][names.REMAINING_SLOT]
+        if core['state']!='finished':raise ValueError('The core lane must be finished and retained before the handoff')
+        if remaining['state']in ('failed','stopped','booting'):raise ValueError('The remaining lane is not running; nothing can qualify')
+        path=self.root/'core-handoff.json'
+        if self.data.get('coreHandoffSha256'):
+            # Resume: never publish a different receipt for this campaign.
+            if not path.is_file()or self.data['coreHandoffSha256']!=transfer.sha256(path):raise ValueError('An earlier core handoff changed')
+        else:
+            # No recorded publication: (re)publish the deterministic receipt from the retained bytes.
+            transfer.publish_core_handoff(self.client,self.plan,core,remaining,path)
+            self.data['coreHandoffSha256']=transfer.sha256(path);self.data['coreHandoffPublishedAtUtc']=utc_now()
+            self.save()
+        # The core instance has published its only checkpoint; terminate it to save cost
+        # through the exact owned-member path. Failure is recorded, cleanup still terminates it.
+        if not core.get('terminationRequested'):
+            try:self.stop_target(names.CORE_SLOT);core['earlyTerminationAtUtc']=utc_now()
+            except Exception as error:core['earlyTerminationError']=str(error)[:300]
+            self.save()
 
     def retain_evidence(self):
         for target,row in self.data['targets'].items():
@@ -348,7 +399,7 @@ class Controller:
         verdict='incomplete'
         try:self.verify_games();verdict='pass'
         except (ValueError,KeyError,RuntimeError,FileNotFoundError):
-            if self.data.get('errors')or any(row.get('state')=='failed'for row in self.data['targets'].values()):verdict='fail'
+            if self.data.get('errors')or any(row.get('state')in ('failed','stopped')for row in self.data['targets'].values()):verdict='fail'
         receipt={**{key:self.plan[key]for key in ('account','region','runId','payloadSource')},
                  'stackArn':campaign.stack_entry(self.plan)['id'],'scope':scope,'verdict':verdict,'retained':True,'files':files,
                  'verdictMeaning':'Machine game/graphics receipts only; cross-GPU image review and user approval remain separate.'}

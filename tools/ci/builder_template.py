@@ -19,7 +19,7 @@ def build(plan,bootstrap):
             'GroupName':names.resource_name(run,'sg'),'GroupDescription':'Owned expiring builder; no ingress',
             'VpcId':ref('VpcId'),'Tags':tags}},
         'AgentRole':{'Type':'AWS::IAM::Role','DependsOn':['StagingBucketPolicy'],'Properties':{
-            'RoleName':names.resource_name(run,'agent'),'PermissionsBoundary':boundary,'Tags':tags,
+            'RoleName':names.child_name(run,'agent'),'PermissionsBoundary':boundary,'Tags':tags,
             'AssumeRolePolicyDocument':{'Version':'2012-10-17','Statement':[{
                 'Effect':'Allow','Principal':{'Service':'ec2.amazonaws.com'},'Action':'sts:AssumeRole'}]},
             'Policies':[{'PolicyName':names.resource_name(run,'agent-permissions'),'PolicyDocument':{
@@ -34,12 +34,17 @@ def build(plan,bootstrap):
         'AgentProfile':{'Type':'AWS::IAM::InstanceProfile','Properties':{
             'InstanceProfileName':names.resource_name(run,'profile'),'Roles':[ref('AgentRole')]}},
     })
-    # Windows only since 2026-11-13: exactly one instance, Name-tagged `sancus-builder`.
-    if [item['os']for item in plan['instances']]!=list(names.SYSTEMS):
-        raise ValueError('This reviewed campaign requires exactly one Windows instance')
+    # Windows only since 2026-11-13. Since 2026-11-17 two parallel Windows lanes
+    # (builder_namespace.SLOTS): `core` keeps WindowsInstance/WindowsExpiry and the Name
+    # `sancus-builder`; `remaining` is WindowsRemainingInstance/WindowsRemainingExpiry,
+    # Name `sancus-builder-remaining`. Both receive identical user data; the lane is only
+    # chosen by the controller's per-slot SSM descriptor.
+    if [(item['os'],item.get('slot'),item.get('lane'))for item in plan['instances']]!=[
+            (row['os'],slot,row['lane'])for slot,row in names.SLOTS.items()]:
+        raise ValueError('This reviewed campaign requires exactly the two parallel Windows lane instances')
     for item in plan['instances']:
-        osname=item['os']
-        resources[osname+'Instance']={'Type':'AWS::EC2::Instance','DeletionPolicy':'Delete',
+        osname=item['os'];slot=item['slot']
+        resources[names.slot_logical(slot,'Instance')]={'Type':'AWS::EC2::Instance','DeletionPolicy':'Delete',
             'DependsOn':['StagingBucketPolicy','ExpiryGroup'],'Properties':{
                 'ImageId':item['ami'],'InstanceType':'g4dn.xlarge','IamInstanceProfile':ref('AgentProfile'),
                 'InstanceInitiatedShutdownBehavior':'terminate','PropagateTagsToVolumeOnCreation':True,
@@ -49,10 +54,10 @@ def build(plan,bootstrap):
                 'BlockDeviceMappings':[{'DeviceName':'/dev/sda1','Ebs':{
                     'VolumeSize':item['rootGb'],'VolumeType':'gp3','Encrypted':True,'DeleteOnTermination':True}}],
                 'UserData':base64.b64encode(bootstrap[osname].encode()).decode(),
-                'Tags':tags+[{'Key':'Name','Value':names.instance_name(osname.lower())}]}}
-    instance_arns=[sub(f'arn:aws:ec2:{names.REGION}:{names.ACCOUNT}:instance/${{{osname}Instance}}')for osname in names.SYSTEMS]
+                'Tags':tags+[{'Key':'Name','Value':names.instance_name(osname.lower(),slot)}]}}
+    instance_arns=[sub(f'arn:aws:ec2:{names.REGION}:{names.ACCOUNT}:instance/${{{names.slot_logical(slot,"Instance")}}}')for slot in names.SLOTS]
     resources['ExpiryRole']={'Type':'AWS::IAM::Role','DependsOn':['ExpiryGroup'],'Properties':{
-        'RoleName':names.resource_name(run,'expiry'),'PermissionsBoundary':boundary,'Tags':tags,
+        'RoleName':names.child_name(run,'expiry'),'PermissionsBoundary':boundary,'Tags':tags,
         'AssumeRolePolicyDocument':{'Version':'2012-10-17','Statement':[{
             'Effect':'Allow','Principal':{'Service':'scheduler.amazonaws.com'},'Action':'sts:AssumeRole',
             'Condition':{'StringEquals':{'aws:SourceAccount':names.ACCOUNT},
@@ -60,9 +65,9 @@ def build(plan,bootstrap):
         'Policies':[{'PolicyName':names.resource_name(run,'termination'),'PolicyDocument':{
             'Version':'2012-10-17','Statement':[{'Effect':'Allow','Action':'ec2:TerminateInstances',
                 'Resource':instance_arns,'Condition':{'StringEquals':{'ec2:ResourceTag/'+names.RUN_TAG:ref('RunId')}}}]}}]}}
-    for osname in names.SYSTEMS:
-        resources[osname+'Expiry']={'Type':'AWS::Scheduler::Schedule','Properties':{
-            'Name':names.resource_name(run,osname.lower()+'-expiry'),'GroupName':group,
+    for slot,row in names.SLOTS.items():
+        resources[names.slot_logical(slot,'Expiry')]={'Type':'AWS::Scheduler::Schedule','Properties':{
+            'Name':names.child_name(run,row['expiry']),'GroupName':group,
             # CFN's live resource schema does not expose ActionAfterCompletion.
             # The controller must set DELETE through UpdateSchedule and verify
             # it before arming; CFN still owns explicit schedule deletion.
@@ -70,7 +75,7 @@ def build(plan,bootstrap):
             'ScheduleExpressionTimezone':'UTC','FlexibleTimeWindow':{'Mode':'OFF'},'State':'ENABLED',
             'Target':{'Arn':'arn:aws:scheduler:::aws-sdk:ec2:terminateInstances',
                 'RoleArn':{'Fn::GetAtt':['ExpiryRole','Arn']},
-                'Input':sub('{"InstanceIds":["${'+osname+'Instance}"]}'),
+                'Input':sub('{"InstanceIds":["${'+names.slot_logical(slot,'Instance')+'}"]}'),
                 'RetryPolicy':{'MaximumRetryAttempts':3,'MaximumEventAgeInSeconds':60}}}}
     template={'AWSTemplateFormatVersion':'2010-09-09','Description':'One owned expiring SSM builder campaign',
               'Parameters':{key:{'Type':'String'}for key in ('RunId','VpcId','SubnetId','ExpiresAt')},'Resources':resources}

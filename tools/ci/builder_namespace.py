@@ -15,13 +15,38 @@ REGION='us-east-1'
 RUN_PATTERN=r'sancus-builder-20[0-9]{6}-[0-9a-f]{7,12}-(?:[0-9a-f]{8}|[0-9a-f]{16})'
 # IAM glob syntax, deliberately excludes the standing CI role and boundary.
 RUN_GLOB=PREFIX+'20??????-*'
-# User decision 2026-11-13: the paid builder qualifies Windows only, with exactly one
-# instance Name-tagged INSTANCE_NAME. Linux real-GPU qualification runs on the owned
-# workstation. Ownership is keyed on RUN_TAG, never on this display name.
+# User decision 2026-11-13: the paid builder qualifies Windows only. Linux real-GPU
+# qualification runs on the owned workstation. Ownership is keyed on RUN_TAG, never on
+# a display name.
+# User decision 2026-11-17: one Windows g4dn.xlarge could not finish inside the fixed
+# 180-minute expiry, so each campaign runs TWO Windows T4 instances in parallel. Lane
+# `core` keeps the bare `sancus-builder` Name and the WindowsInstance/WindowsExpiry
+# logical IDs; lane `remaining` runs the installed-launcher guard, replay and complete
+# graphical suite at once, then gates against the controller's hash-bound core handoff.
+# `windows-x64` remains the only qualified target; the slots are not targets.
 INSTANCE_NAME=PREFIX.rstrip('-')
 TARGETS={'windows-x64':'Windows'}
 SYSTEMS=tuple(TARGETS.values())
-
+CORE_SLOT='windows-x64-core'
+REMAINING_SLOT='windows-x64-remaining'
+# Ordered. `expiry` is the schedule-name suffix: run IDs are 48 characters, and EventBridge
+# Scheduler and IAM names allow at most 64 (see child_name).
+SLOTS={
+    CORE_SLOT:{'target':'windows-x64','os':'Windows','lane':'core','logical':'Windows',
+               'name':INSTANCE_NAME,'expiry':'windows-expiry'},
+    REMAINING_SLOT:{'target':'windows-x64','os':'Windows','lane':'remaining','logical':'WindowsRemaining',
+                    'name':PREFIX+'remaining','expiry':'remain-expiry'},
+}
+LANES={row['lane']:slot for slot,row in SLOTS.items()}
+# Core files that `gpu_release_gates.stage()` reads (it reads nothing else from the core
+# directory and follows no provenance reference from them). The controller hands exactly
+# these bytes from the core lane to the remaining lane, bound by SHA-256.
+HANDOFF_FILES=('gpu-campaign-windows-x64-core/campaign-result.json',
+               'gpu-campaign-windows-x64-core/high-vulkan/visual-parity-native.json')
+HANDOFF_RECEIPT_KEY='payload/core-handoff.json'
+HANDOFF_OBJECT_PATTERN=r'payload/core-handoff/object-[0-9]{3}\.bin'
+INSTANCE_PATTERN=r'i-[0-9a-f]{8,17}'
+NAME_LIMIT=64
 
 def run_id(day,sha,nonce):
     if not re.fullmatch(r'20[0-9]{6}',day)or not re.fullmatch(r'[0-9a-f]{7,12}',sha)or not re.fullmatch(r'(?:[0-9a-f]{8}|[0-9a-f]{16})',nonce):
@@ -44,9 +69,38 @@ def resource_name(run,suffix):
     return name
 
 
-def instance_name(os='windows'):
+def child_name(run,suffix):
+    """A named child (role, schedule) that must fit the 64-character IAM/Scheduler limit."""
+    name=resource_name(run,suffix)
+    if len(name)>NAME_LIMIT:raise ValueError('Builder child name exceeds 64 characters: '+name)
+    return name
+
+
+def instance_name(os='windows',slot=CORE_SLOT):
     if os!='windows':raise ValueError('Unsupported builder OS; the Linux AWS builder was removed 2026-11-13')
-    return INSTANCE_NAME
+    if slot not in SLOTS:raise ValueError('Unknown builder slot')
+    return SLOTS[slot]['name']
+
+
+def slot_logical(slot,kind):
+    """CloudFormation logical ID of one slot's Instance or Expiry resource."""
+    if slot not in SLOTS or kind not in ('Instance','Expiry'):raise ValueError('Unknown builder slot resource')
+    return SLOTS[slot]['logical']+kind
+
+
+def slot_for_logical(logical):
+    return next((slot for slot in SLOTS if logical==slot_logical(slot,'Instance')),None)
+
+
+def handoff_object(index):
+    return 'payload/core-handoff/object-%03d.bin'%index
+
+
+def instance_object(instance,name):
+    """Guest objects written before the lane is known (both instances share user data)."""
+    if not re.fullmatch(INSTANCE_PATTERN,str(instance))or name not in ('bootstrap-ready.json','worker-exit.json','worker-log.bin'):
+        raise ValueError('Invalid per-instance guest object')
+    return 'results/instances/'+instance+'/'+name
 
 
 def validate_aws_names(template):

@@ -16,7 +16,8 @@ def calculate(plan,rows,resources,observed_at,evidence_bytes=0):
     compute=0;lifetimes=[]
     for instance in owned:
         identity=instance['id'];logical=instance['details'].get('logicalId','')
-        system=next((name for name in names.SYSTEMS if logical==name+'Instance'),None)
+        # Compute is per instance (2026-11-17: two parallel Windows lanes); rates are per OS.
+        slot=names.slot_for_logical(logical);system=names.SLOTS[slot]['os']if slot else None
         if system is None or states.get(('AWS::EC2::Instance',identity))not in ('absent','terminated'):
             return {'complete':False,'reason':'Instance identity/final state is unverified','invoice':False}
         observations=[row['details']for row in rows if row['event']=='STATUS'and row['id']==identity]
@@ -26,7 +27,7 @@ def calculate(plan,rows,resources,observed_at,evidence_bytes=0):
         if not starts:return {'complete':False,'reason':'No durable lifetime start observation','invoice':False}
         start=min(starts,key=epoch);end=min(endings,key=epoch)if endings else observed_at
         seconds=max(60,epoch(end)-epoch(start));amount=seconds/3600*rates[system];compute+=amount
-        lifetimes.append({'id':identity,'os':system,'startedAtUtc':start,'terminatedObservedAtUtc':end,
+        lifetimes.append({'id':identity,'os':system,'slot':slot,'lane':names.SLOTS[slot]['lane'],'startedAtUtc':start,'terminatedObservedAtUtc':end,
                           'secondsUpperBound':round(seconds,3),'hourlyUsd':rates[system],'computeUsd':round(amount,6),
                           'startBasis':'AWS launch time'if launches else'Conservative creation-intent time',
                           'endBasis':'First terminated observation'if endings else'Conservative final audit observation'})

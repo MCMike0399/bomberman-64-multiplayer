@@ -85,7 +85,10 @@ def object_client(run):
 
 def publish(client,root,descriptor,input_names,state,extra_files=()):
     """Raw files and an explicit manifest, never a collector-exit-only PASS."""
-    if state not in ('core-retained','finished','failed'):raise ValueError('Unknown evidence checkpoint')
+    # One terminal checkpoint per lane since 2026-11-17 (two parallel lanes, no core ack).
+    if state not in ('finished','failed'):raise ValueError('Unknown evidence checkpoint')
+    slot=descriptor['slot']
+    if names.SLOTS.get(slot,{}).get('lane')!=descriptor.get('lane'):raise ValueError('Unknown lane slot')
     root=Path(root);files=[];snapshot=root/('checkpoint-'+state)
     snapshot.mkdir(exist_ok=False)
     candidates=[(path,path.relative_to(root/'artifacts').as_posix())for path in sorted((root/'artifacts').rglob('*'))
@@ -100,43 +103,81 @@ def publish(client,root,descriptor,input_names,state,extra_files=()):
         if any(part.startswith('.')for part in Path(relative).parts):continue
         data=path.read_bytes();builder_payload.reject_credentials(data,secrets)
         frozen=snapshot/relative;frozen.parent.mkdir(parents=True,exist_ok=True);frozen.write_bytes(data)
-        # Later progress writes cannot replace a core checkpoint while the host
-        # is downloading it. Every checkpoint owns a distinct object prefix.
+        # Every lane slot and checkpoint owns a distinct object prefix.
         relative=state+'/'+relative
-        key='results/'+descriptor['target']+'/'+state+f'/object-{len(files):06d}.bin'
+        key='results/'+slot+'/'+state+f'/object-{len(files):06d}.bin'
         client.call('put-object','--key',key,'--body',str(frozen))
         files.append({'path':relative,'objectKey':key,'size':frozen.stat().st_size,'sha256':digest(frozen)})
     if not files:raise ValueError('Guest produced no retainable evidence')
-    manifest={'schemaVersion':1,**{key:descriptor[key]for key in ('runId','source','account','region','target','instanceId')},
+    manifest={'schemaVersion':1,**{key:descriptor[key]for key in ('runId','source','account','region','target','slot','lane','instanceId')},
               'state':state,'files':files,'gameVerdict':'not-inferred','executionContext':'aws-ssm-interactive-desktop'}
     path=root/'result-manifest.json';path.write_text(json.dumps(manifest,indent=2)+'\n')
-    client.call('put-object','--key','results/'+descriptor['target']+'/manifest.json','--body',str(path))
+    client.call('put-object','--key','results/'+slot+'/manifest.json','--body',str(path))
     return manifest
 
 
-# The controller acknowledges only after durably retaining the guest's core evidence
-# (campaign 2 attempt 3: ~1 h for 4.9 GB). Wait up to this long, never past expiry-20 min.
-CORE_ACK_WAIT_SECONDS=5400
+# Two parallel Windows lanes (user decision 2026-11-17). Timing against the fixed
+# expiry E (every guest step still refuses to start unless E-now >= 20 min + limit):
+# - core lane: desktop, engine, then the core collector (<= 2,400 s; typically ~23 min),
+#   then ONE terminal `finished` checkpoint. No acknowledgement wait.
+# - remaining lane: desktop, engine, installed-launcher (<= 600 s), then the remaining
+#   collector at once: replay (<= 300 s) plus the Windows complete graphical suite
+#   (gpu_campaign.WINDOWS_GRAPHICAL_SUITE_BUDGET_SECONDS = 5,400 s; Linux measured
+#   ~4,000 s) plus 120 s of package inspection, so it must start by E-117 min. It then
+#   waits for the controller's core handoff, never later than E-20 min minus
+#   HANDOFF_PUBLISH_RESERVE_SECONDS (gate <= 120 s, its own `finished` publish and the
+#   controller's retention), runs the unchanged gate and publishes `finished`.
+CORE_STEP_SECONDS=2400
+REMAINING_STEP_SECONDS=300+5400+120
+GATE_STEP_SECONDS=120
+HANDOFF_WAIT_SECONDS=5400
+HANDOFF_PUBLISH_RESERVE_SECONDS=1500
 # Without s3:ListBucket, S3 answers a missing key with 403 AccessDenied rather than 404.
 # Until the deadline that means "not yet"; each sample is recorded (run 41178169234).
-CORE_ACK_PENDING_CODES=builder_s3.GUEST_PENDING
+HANDOFF_PENDING_CODES=builder_s3.GUEST_PENDING
 
 
-def await_core_retention(client,root,descriptor,manifest_sha,now=time.monotonic,samples=None):
-    remaining=datetime.datetime.fromisoformat(descriptor['expiresAtUtc']).timestamp()-time.time()-20*60
-    deadline=now()+min(CORE_ACK_WAIT_SECONDS,max(0,remaining));wait=threading.Event();path=Path(root)/'core-retained-ack.json'
+def place_core_handoff(client,root,descriptor,receipt_path):
+    """Verify the controller-written handoff and place its bytes at their original paths."""
+    receipt_path=Path(receipt_path);raw=receipt_path.read_bytes();receipt=json.loads(raw)
+    expected={'schemaVersion':1,**{key:descriptor[key]for key in ('runId','source','account','region','target')},
+              'coreSlot':names.CORE_SLOT,'remainingSlot':descriptor['slot'],'remainingInstanceId':descriptor['instanceId']}
+    if (any(receipt.get(key)!=value for key,value in expected.items())or descriptor['slot']!=names.REMAINING_SLOT or
+            not re.fullmatch(names.INSTANCE_PATTERN,str(receipt.get('coreInstanceId')))or
+            receipt['coreInstanceId']==descriptor['instanceId']or
+            not re.fullmatch(r'[0-9a-f]{64}',str(receipt.get('coreManifestSha256')))):
+        raise ValueError('Core handoff names another campaign, lane or instance')
+    rows=receipt.get('files')
+    if not isinstance(rows,list)or [row.get('path')for row in rows]!=list(names.HANDOFF_FILES):
+        raise ValueError('Core handoff does not carry exactly the gate inputs')
+    artifacts=Path(root)/'artifacts';staged=[]
+    for index,row in enumerate(rows):
+        if (row.get('objectKey')!=names.handoff_object(index)or not re.fullmatch(names.HANDOFF_OBJECT_PATTERN,row['objectKey'])or
+                not re.fullmatch(r'[0-9a-f]{64}',str(row.get('sha256')))or type(row.get('size'))is not int or not 0<=row['size']<=256*1024**2):
+            raise ValueError('Invalid core handoff object')
+        temporary=Path(root)/('core-handoff-%03d.bin'%index)
+        client.call('get-object','--key',row['objectKey'],str(temporary))
+        if temporary.stat().st_size!=row['size']or digest(temporary)!=row['sha256']:
+            raise ValueError('Core handoff bytes differ from the controller-retained core lane hash: '+row['path'])
+        staged.append((temporary,artifacts/row['path']))
+    for temporary,destination in staged:
+        # Never replace an existing file: this lane does not run the core collector.
+        destination.parent.mkdir(parents=True,exist_ok=True)
+        with temporary.open('rb')as source,destination.open('xb')as stream:shutil.copyfileobj(source,stream)
+    return {'receiptSha256':hashlib.sha256(raw).hexdigest(),'coreInstanceId':receipt['coreInstanceId'],
+            'coreManifestSha256':receipt['coreManifestSha256'],'files':rows}
+
+
+def await_core_handoff(client,root,descriptor,now=time.monotonic,samples=None,clock=time.time):
+    remaining=(datetime.datetime.fromisoformat(descriptor['expiresAtUtc']).timestamp()-clock()
+               -20*60-HANDOFF_PUBLISH_RESERVE_SECONDS)
+    deadline=now()+min(HANDOFF_WAIT_SECONDS,max(0,remaining));wait=threading.Event();path=Path(root)/'core-handoff.json'
     samples=[]if samples is None else samples
     while now()<deadline:
-        if builder_s3.fetch_if_present(client,'payload/core-retained-'+descriptor['target']+'.json',path,
-                                       CORE_ACK_PENDING_CODES,samples,now):
-            ack=json.loads(path.read_text())
-            expected={key:descriptor[key]for key in ('runId','source','target')}
-            expected['coreManifestSha256']=manifest_sha
-            if any(ack.get(key)!=value for key,value in expected.items())or ack.get('retained')is not True:
-                raise ValueError('Core retention acknowledgement differs from committed evidence')
-            return ack
+        if builder_s3.fetch_if_present(client,names.HANDOFF_RECEIPT_KEY,path,HANDOFF_PENDING_CODES,samples,now):
+            return place_core_handoff(client,root,descriptor,path)
         wait.wait(min(5,max(0,deadline-now())))
-    raise TimeoutError('Core evidence was not acknowledged; no long tours started; pending samples='+json.dumps(samples))
+    raise TimeoutError('Core handoff did not arrive inside the fixed window; no gate ran; pending samples='+json.dumps(samples))
 
 
 def run(args):
@@ -151,12 +192,12 @@ def run(args):
     inputs=prepare_source(args.cache,args.work,manifest,descriptor)
     execution=native_execution.context(descriptor['source'],descriptor['target'],args.work)
     client=object_client(descriptor['runId']);root=args.work.resolve();output=root/'artifacts/guest-execution.json'
-    report={'schemaVersion':1,'source':descriptor['source'],'executionContext':execution,'steps':[],
+    slot=descriptor.get('slot');lane=descriptor.get('lane')
+    report={'schemaVersion':1,'source':descriptor['source'],'slot':slot,'lane':lane,'executionContext':execution,'steps':[],
             'complete':False,'errors':[],'gameVerdict':'not-inferred'}
     input_names={row['fileName']for row in inputs if row['role']=='artifact'}
     expiry=descriptor['expiresAtUtc'];target=descriptor['target'];godot=None
     def step(name,command,limit):
-        import datetime
         remaining=datetime.datetime.fromisoformat(expiry).timestamp()-time.time()
         if remaining<20*60+limit:raise TimeoutError('Guest step lacks fixed cleanup headroom: '+name)
         entry={'name':name,'command':command};report['steps'].append(entry)
@@ -168,6 +209,8 @@ def run(args):
         if result.returncode:raise RuntimeError('Guest step failed: '+name)
     try:
         if target not in names.TARGETS:raise ValueError('Unsupported builder target: '+str(target))
+        if slot not in names.SLOTS or names.SLOTS[slot]['lane']!=lane or names.SLOTS[slot]['target']!=target:
+            raise ValueError('Unsupported builder lane slot: '+str(slot))
         # This script only prepares the disposable user's display/audio.
         step('desktop',['pwsh','-NoProfile','-File','tools/packaging/windows-test-desktop.ps1',
                         '-OwnedSsm','-VerifyOnly','-ExpectedRevision',descriptor['source']],90)
@@ -188,16 +231,19 @@ def run(args):
         def collector(phase):
             return [sys.executable,'tools/ci/gpu_campaign.py','--target',target,'--expected-revision',descriptor['source'],
                     '--phase',phase,'--skip-bisection','--expiry',expiry,'--godot',str(godot)]
-        step('core',collector('core'),2400)
-        output.write_text(json.dumps(report,indent=2)+'\n')
-        publish(client,root,descriptor,input_names,'core-retained')
-        report['coreAckPendingSamples']=[]
-        report['coreRetentionAcknowledgement']=await_core_retention(client,root,descriptor,digest(root/'result-manifest.json'),samples=report['coreAckPendingSamples'])
-        step('installed-launcher',[sys.executable,'tools/ci/startup_guard.py','--expected-revision',descriptor['source'],
-                                  '--output','artifacts/gpu-installed-startup-guard'],600)
-        step('remaining',collector('remaining'),2400)
-        step('preliminary-qualification',[sys.executable,'tools/ci/gpu_release_gates.py','--target',target,
-              '--revision',descriptor['source'],'--verification-run',descriptor['verificationRunId']],120)
+        if lane=='core':
+            step('core',collector('core'),CORE_STEP_SECONDS)
+        else:
+            step('installed-launcher',[sys.executable,'tools/ci/startup_guard.py','--expected-revision',descriptor['source'],
+                                      '--output','artifacts/gpu-installed-startup-guard'],600)
+            # Starts at once, in parallel with the core lane; never waits for core evidence.
+            step('remaining',collector('remaining'),REMAINING_STEP_SECONDS)
+            report['coreHandoffPendingSamples']=[]
+            report['coreHandoff']=await_core_handoff(client,root,descriptor,samples=report['coreHandoffPendingSamples'])
+            output.write_text(json.dumps(report,indent=2)+'\n')
+            # The unchanged gate reads the handed-off core files at their original paths.
+            step('preliminary-qualification',[sys.executable,'tools/ci/gpu_release_gates.py','--target',target,
+                  '--revision',descriptor['source'],'--verification-run',descriptor['verificationRunId']],GATE_STEP_SECONDS)
         report['complete']=True
     except (Exception,KeyboardInterrupt)as error:report['errors'].append(str(error))
     finally:

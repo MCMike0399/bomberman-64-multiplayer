@@ -14,7 +14,7 @@ class DisclosedPaidPlan(unittest.TestCase):
         self.data=approval.build('a'*40,'123',self.expiry,self.spending)
         self.plan={'payloadSource':'a'*40,'verificationRunId':'123','fixedCampaignExpiryUtc':self.expiry,
                    **{k:self.data[k]for k in ('account','region','instances','priorEstimateUsd','budgetUsd')},
-                   'hourlyRatesUsd':dict(approval.RATE_CEILINGS),'estimatedCampaignUsd':3.67}
+                   'hourlyRatesUsd':dict(approval.RATE_CEILINGS),'estimatedCampaignUsd':5.84}
 
     def test_hold_defaults_closed_without_affecting_release_kind(self):
         for value in (None,'','true','FALSE','garbage'):
@@ -23,11 +23,15 @@ class DisclosedPaidPlan(unittest.TestCase):
 
     def test_summary_discloses_exact_inputs_cost_and_remaining_budget(self):
         text=approval.summary(self.data)
-        for value in ('a'*40,'123','g4dn.xlarge',approval.builder_identity.WINDOWS_AMI,self.expiry,'$3.67','$20.20','$16.53','Instance count: 1'):
+        for value in ('a'*40,'123','g4dn.xlarge',approval.builder_identity.WINDOWS_AMI,self.expiry,'$5.84','$20.20','$14.36','Instance count: 2',
+                      'lane `core` (`windows-x64-core`)','lane `remaining` (`windows-x64-remaining`)'):
             self.assertIn(value,text)
         # Windows only since 2026-11-13: the retired Linux image is never disclosed or launched.
         self.assertNotIn(approval.builder_identity.AMIS[0],text);self.assertNotIn('Linux',text)
-        self.assertEqual(self.data['instances'],[{'os':'Windows','type':'g4dn.xlarge','ami':approval.builder_identity.AMIS[1],'rootGb':80}])
+        # 2026-11-17: two parallel Windows lanes, one row per lane slot.
+        self.assertEqual(self.data['instances'],[
+            {'os':'Windows','type':'g4dn.xlarge','ami':approval.builder_identity.AMIS[1],'rootGb':80,'slot':'windows-x64-core','lane':'core'},
+            {'os':'Windows','type':'g4dn.xlarge','ami':approval.builder_identity.AMIS[1],'rootGb':80,'slot':'windows-x64-remaining','lane':'remaining'}])
         self.assertEqual(approval.validate_prepared(self.data,self.plan,self.spending,self.now.timestamp()),self.data)
 
     def test_late_approval_preserves_expiry_and_refuses_before_allocation(self):
@@ -41,16 +45,18 @@ class DisclosedPaidPlan(unittest.TestCase):
             with self.subTest(key=key),self.assertRaises(ValueError):approval.validate(changed,'a'*40,'123',self.expiry,self.spending,self.now.timestamp())
         changed=copy.deepcopy(self.plan);changed['instances'][0]['ami']='ami-other'
         with self.assertRaises(ValueError):approval.validate_prepared(self.data,changed,self.spending,self.now.timestamp())
+        changed=copy.deepcopy(self.plan);changed['instances']=changed['instances'][:1]
+        with self.assertRaises(ValueError):approval.validate_prepared(self.data,changed,self.spending,self.now.timestamp())
         changed=copy.deepcopy(self.plan);changed['hourlyRatesUsd']['Windows']=.711
         with self.assertRaisesRegex(ValueError,'price'):approval.validate_prepared(self.data,changed,self.spending,self.now.timestamp())
         with self.assertRaises(ValueError):approval.build('a'*40,'123',self.expiry,{'budgetUsd':25,'closedEstimateUsd':24})
 
     def test_cumulative_limit_accepts_exactly_two_hundred_and_rejects_above(self):
-        spending = {'budgetUsd': 200, 'closedEstimateUsd': 196.33}
+        spending = {'budgetUsd': 200, 'closedEstimateUsd': 194.16}
         plan = approval.build('a' * 40, '123', self.expiry, spending)
         self.assertEqual(plan['remainingBudgetAfterUsd'], 0)
         for invalid in ({'budgetUsd': 200.01, 'closedEstimateUsd': 0},
-                        {'budgetUsd': 200, 'closedEstimateUsd': 196.34}):
+                        {'budgetUsd': 200, 'closedEstimateUsd': 194.17}):
             with self.subTest(spending=invalid), self.assertRaises(ValueError):
                 approval.build('a' * 40, '123', self.expiry, invalid)
 
@@ -59,10 +65,11 @@ class DisclosedPaidPlan(unittest.TestCase):
         # Production hourly ceilings and instance/lifetime limits stay unchanged.
         self.assertEqual((approval.PER_RUN_CAP_USD, approval.CUMULATIVE_CAP_USD), (20, 200))
         spending = {'budgetUsd': 200, 'closedEstimateUsd': 0}
-        with mock.patch.dict(approval.RATE_CEILINGS, {'Windows': 6.154}, clear=True):
+        # Two instances: 6 instance-hours, 160 GiB, two IPv4 addresses.
+        with mock.patch.dict(approval.RATE_CEILINGS, {'Windows': 3.07}, clear=True):
             plan = approval.build('a' * 40, '123', self.expiry, spending)
             self.assertEqual(plan['estimatedCampaignUsd'], 20)
-        with mock.patch.dict(approval.RATE_CEILINGS, {'Windows': 6.155}, clear=True):
+        with mock.patch.dict(approval.RATE_CEILINGS, {'Windows': 3.071}, clear=True):
             with self.assertRaisesRegex(ValueError, 'cap'):
                 approval.build('a' * 40, '123', self.expiry, spending)
 
@@ -73,13 +80,20 @@ class DisclosedPaidPlan(unittest.TestCase):
         self.assertIn('$4.80 / $200.00', text)
         self.assertIn('without a human click', text)
         self.assertEqual(plan['remainingBudgetBeforeUsd'], 195.20)
-        self.assertEqual(plan['remainingBudgetAfterUsd'], 191.53)
+        self.assertEqual(plan['remainingBudgetAfterUsd'], 189.36)
 
-    def test_one_windows_instance_costs_less_than_the_retired_two_instance_campaign(self):
-        # The legacy two-instance formula (Linux .526 + Windows .710, 155 GiB, two IPv4) gave $5.29.
-        self.assertEqual(approval.estimate(approval.RATE_CEILINGS), 3.67)
+    def test_two_parallel_windows_lanes_are_estimated_per_instance(self):
+        # 2026-11-17: compute, root storage and IPv4 count every instance, not every OS key.
+        # The 2026-11-13 single-instance campaign was $3.67; Linux .526 + Windows .710 was $5.29.
+        self.assertEqual(approval.estimate(approval.RATE_CEILINGS), 5.84)
+        self.assertEqual(approval.estimate(approval.RATE_CEILINGS, approval.instances()[:1]), 3.67)
         self.assertEqual(set(approval.RATE_CEILINGS), {'Windows'})
-        self.assertEqual(len(approval.instances()), 1)
+        self.assertEqual([row['lane'] for row in approval.instances()], ['core', 'remaining'])
+        self.assertLessEqual(approval.estimate(approval.RATE_CEILINGS), approval.PER_RUN_CAP_USD)
+        with self.assertRaises(ValueError):
+            approval.estimate(approval.RATE_CEILINGS, approval.instances() * 3)
+        with self.assertRaises(ValueError):
+            approval.estimate(approval.RATE_CEILINGS, [])
 
     def test_checked_in_ledger_is_consistent_and_unrecorded_receipts_are_refused(self):
         import json, tempfile

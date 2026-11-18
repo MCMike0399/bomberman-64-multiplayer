@@ -10,7 +10,8 @@ import builder_identity
 import builder_namespace as names
 
 ROOT = Path(__file__).resolve().parents[2]
-# Windows only since 2026-11-13 (one g4dn.xlarge); Linux qualifies on the owned workstation.
+# Windows only since 2026-11-13; Linux qualifies on the owned workstation. Two parallel
+# Windows g4dn.xlarge lanes since 2026-11-17 (builder_namespace.SLOTS); rates stay per OS.
 RATE_CEILINGS = {'Windows': .710}
 ROOT_GB = {'Windows': 80}
 MINIMUM_CAMPAIGN_SECONDS = 6000
@@ -25,15 +26,27 @@ def require_unheld(value):
         raise ValueError('Paid qualification hold is active; free audit/rehearsal remain available')
 
 
+# The reviewed campaign limit is four instances (docs/gpu-qualification.md).
+MAX_INSTANCES = 4
+
+
 def instances():
-    """The one reviewed campaign instance, shared by preparation, approval and the permissions smoke."""
-    return [{'os': 'Windows', 'type': 'g4dn.xlarge', 'ami': builder_identity.WINDOWS_AMI, 'rootGb': ROOT_GB['Windows']}]
+    """One row per reviewed lane, shared by preparation, approval and the permissions smoke."""
+    rows = [{'os': row['os'], 'type': 'g4dn.xlarge', 'ami': builder_identity.WINDOWS_AMI, 'rootGb': ROOT_GB[row['os']],
+             'slot': slot, 'lane': row['lane']} for slot, row in names.SLOTS.items()]
+    if not 1 <= len(rows) <= MAX_INSTANCES:
+        raise ValueError('A campaign launches one to four instances')
+    return rows
 
 
-def estimate(rates):
-    # Three hours of compute, encrypted roots, one public IPv4 per instance and transfer/latency margin.
-    storage = sum(ROOT_GB[system] for system in rates)
-    return round(3 * sum(rates.values()) + storage * .08 * 3 / 730 + len(rates) * .005 * 3 + 1.50, 2)
+def estimate(rates, planned=None):
+    # Per instance: three hours of compute, its encrypted root and one public IPv4; plus one
+    # transfer/latency/termination margin. Rates are per OS; compute counts every instance.
+    planned = instances() if planned is None else planned
+    if not 1 <= len(planned) <= MAX_INSTANCES or any(item['os'] not in rates for item in planned):
+        raise ValueError('Estimate requires one to four instances with a reviewed hourly rate')
+    storage = sum(item['rootGb'] for item in planned)
+    return round(3 * sum(rates[item['os']] for item in planned) + storage * .08 * 3 / 730 + len(planned) * .005 * 3 + 1.50, 2)
 
 
 def ledger(path=None):
@@ -66,7 +79,7 @@ def build(source, verification_run, expiry, spending):
             'cleanupBudgetSeconds': CLEANUP_SECONDS, 'hourlyRateCeilingsUsd': dict(RATE_CEILINGS),
             'estimatedCampaignUsd': cost, 'priorEstimateUsd': prior, 'budgetUsd': budget,
             'remainingBudgetBeforeUsd': round(budget - prior, 2), 'remainingBudgetAfterUsd': round(budget - prior - cost, 2),
-            'estimateScope': 'Conservative maximum reviewed hourly rate of the one Windows instance, three-hour compute/storage/IPv4 and transfer/termination allowance; not an invoice. Live prices above these ceilings refuse allocation.'}
+            'estimateScope': f'Conservative maximum reviewed hourly rate of each of the {len(instances())} parallel Windows lane instances, three-hour compute/storage/IPv4 per instance and transfer/termination allowance; not an invoice. Live prices above these ceilings refuse allocation.'}
 
 
 def validate(approval, source, verification_run, expiry, spending, now=None):
@@ -88,7 +101,7 @@ def validate_prepared(approval, plan, spending, now=None):
     rates = plan.get('hourlyRatesUsd', {})
     if set(rates) != set(RATE_CEILINGS) or any(type(rates[k]) not in (int, float) or not math.isfinite(rates[k]) or not 0 < rates[k] <= RATE_CEILINGS[k] for k in rates):
         raise ValueError('Live price exceeds the pre-approval hourly ceiling')
-    if plan.get('estimatedCampaignUsd') != estimate(rates) or plan['estimatedCampaignUsd'] > approval['estimatedCampaignUsd']:
+    if plan.get('estimatedCampaignUsd') != estimate(rates, plan['instances']) or plan['estimatedCampaignUsd'] > approval['estimatedCampaignUsd']:
         raise ValueError('Live estimate exceeds the disclosed approval')
     return approval
 
@@ -98,7 +111,7 @@ def summary(approval):
              f"Source: `{approval['source']}`. Verification: `{approval['verificationRunId']}`.",
              f"Account `{approval['account']}`, region `{approval['region']}`. Instance count: {len(approval['instances'])}."]
     for item in approval['instances']:
-        lines.append(f"- {item['os']}: `{item['type']}`, AMI `{item['ami']}`, encrypted root {item['rootGb']} GiB.")
+        lines.append(f"- {item['os']} lane `{item['lane']}` (`{item['slot']}`): `{item['type']}`, AMI `{item['ami']}`, encrypted root {item['rootGb']} GiB.")
     lines += [f"Fixed expiry: `{approval['fixedCampaignExpiryUtc']}`; never extended after approval.",
               f"Conservative estimate: **${approval['estimatedCampaignUsd']:.2f}** (refuse above ${PER_RUN_CAP_USD}). Prior spending: ${approval['priorEstimateUsd']:.2f} / ${approval['budgetUsd']:.2f}.",
               f"Remaining before: ${approval['remainingBudgetBeforeUsd']:.2f}; after this reservation: ${approval['remainingBudgetAfterUsd']:.2f}.",

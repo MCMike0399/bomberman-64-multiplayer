@@ -29,8 +29,13 @@ def cleanup_receipt(raw,plan,variables,created_rows):
         raise ValueError('This hosted controller must not create runner registrations')
     owned=[row for row in created_rows if row.get('event')=='CREATED']
     if (sum(row['type']=='AWS::CloudFormation::Stack'for row in owned)!=1 or
-            sum(row['type']=='AWS::EC2::Instance'for row in owned)!=len(names.TARGETS)):
-        raise ValueError('A real campaign requires its one stack and its one journaled Windows instance')
+            sum(row['type']=='AWS::EC2::Instance'for row in owned)!=len(names.SLOTS)):
+        # 2026-11-17: two parallel Windows lanes, one journaled instance per lane slot.
+        raise ValueError('A real campaign requires its one stack and exactly one journaled Windows instance per lane')
+    import builder_journal
+    lanes={row['details'].get('logicalId')for row in builder_journal.effective_created(created_rows).values()if row['type']=='AWS::EC2::Instance'}
+    if lanes!={names.slot_logical(slot,'Instance')for slot in names.SLOTS}:
+        raise ValueError('Journaled instances are not exactly the reviewed lane slots')
     stack=next(row['id']for row in owned if row['type']=='AWS::CloudFormation::Stack')
     if not stack.startswith(f"arn:aws:cloudformation:{plan['region']}:{plan['account']}:stack/{plan['runId']}/"):
         raise ValueError('Exact stack ARN differs from the campaign namespace')
@@ -68,22 +73,37 @@ def bind(state,variables,output):
     output.mkdir(parents=True)
     cleanup_path=output/gates.CLEANUP_RECEIPT;cleanup_path.write_text(json.dumps(cleanup,indent=2)+'\n')
     cleanup_sha=hashlib.sha256(cleanup_path.read_bytes()).hexdigest()
-    for target in names.TARGETS:
-        item=controller['targets'][target]
-        if item['state']!='finished':raise ValueError('Target did not complete its actual workload')
-        files={row['path']:row for row in item['retention']['files']}
-        for relative,row in files.items():
-            path=(state/'evidence'/target/'finished'/relative).resolve()
+    import builder_transfer
+    slots=controller['targets']
+    if set(slots)!=set(names.SLOTS):raise ValueError('Controller state does not carry exactly the reviewed lane slots')
+    instances={row['id']:row['details'].get('logicalId')for row in builder_journal.effective_created(rows).values()if row['type']=='AWS::EC2::Instance'}
+    for slot,item in slots.items():
+        if item.get('state')!='finished':raise ValueError('Lane did not complete its actual workload: '+slot)
+        if instances.get(item.get('instanceId'))!=names.slot_logical(slot,'Instance'):
+            raise ValueError('Lane instance is not its journaled stack member: '+slot)
+        for row in item['retention']['files']:
+            path=(state/'evidence'/slot/'finished'/row['path']).resolve()
             if not path.is_relative_to(state)or hashlib.sha256(path.read_bytes()).hexdigest()!=row['sha256']:
                 raise ValueError('An original retained game file changed before final binding')
+    def read(slot,relative):
+        row={item['path']:item for item in slots[slot]['retention']['files']}.get('finished/'+relative)
+        if row is None:raise ValueError('Retained qualification input is missing: '+relative)
+        # Resolve only the coordinator's fixed retained layout. Original
+        # absolute paths remain evidence, never a path-selection authority.
+        path=(state/'evidence'/slot/'finished'/'finished'/relative).resolve()
+        data=path.read_bytes()if path.is_relative_to(state)and path.is_file()else None
+        if data is None or hashlib.sha256(data).hexdigest()!=row['sha256']:
+            raise ValueError('Retained qualification input is missing or changed')
+        return data,row['sha256']
+    handoff_path=state/'core-handoff.json'
+    if not handoff_path.is_file():raise ValueError('The controller core handoff receipt is required')
+    handoff_sha=hashlib.sha256(handoff_path.read_bytes()).hexdigest()
+    if controller.get('coreHandoffSha256')!=handoff_sha:raise ValueError('Core handoff receipt differs from the controller record')
+    lane=builder_transfer.verify_lanes(plan,slots,json.loads(handoff_path.read_text()),handoff_sha,read)
+    for target in names.TARGETS:
         def retained(relative):
-            row=files['finished/'+relative]
-            # Resolve only the coordinator's fixed retained layout. Original
-            # absolute paths remain evidence, never a path-selection authority.
-            path=(state/'evidence'/target/'finished'/'finished'/relative).resolve()
-            if not path.is_relative_to(state)or hashlib.sha256(path.read_bytes()).hexdigest()!=row['sha256']:
-                raise ValueError('Retained qualification input is missing or changed')
-            return path
+            read(lane,relative)
+            return (state/'evidence'/lane/'finished'/'finished'/relative).resolve()
         receipt_path=retained('gpu-release-'+target+'/'+gates.receipt_name(target))
         data=json.loads(receipt_path.read_text());expected=plan['artifacts'][target]
         gates.inspect_receipt(data,target,plan['payloadSource'],expected['archiveSha256'],expected['downloadSha256'],

@@ -12,7 +12,16 @@ CREDENTIAL_MARGIN_SECONDS=120
 BOOTSTRAP_SECONDS=900
 # Controller stops collecting this long before the fixed expiry (cleanup headroom).
 CONTROLLER_STOP_SECONDS=20*60
-MINIMUM_LAUNCH_HEADROOM_SECONDS=7200
+# Two parallel Windows lanes (user decision 2026-11-17). The remaining lane must start its
+# replay+suite step (builder_guest.REMAINING_STEP_SECONDS=5,820 s) by E-(1,200+5,820)=E-7,020 s.
+# Nominal intent-to-ready is ~25 min (stack, staging, ~20 min Windows boot) plus ~4 min of
+# desktop/engine/installed-launcher, so CreateStack must leave >= 7,020+1,740 = 8,760 s; a
+# later launch would allocate two instances that cannot qualify. 9,000 s refuses it first.
+# The fixed expiry itself is never moved.
+MINIMUM_LAUNCH_HEADROOM_SECONDS=9000
+# Grants are unchanged by the two-lane split: `core` waits for the core lane's terminal
+# checkpoint (and the remaining lane's dispatch), `acknowledge` publishes the core handoff,
+# `final` waits for the remaining lane. `core`/`final` are also capped at E-20 min.
 PHASE_SECONDS={'intent':300,'intent-published':60,'launch':1200,'core':5400,'acknowledge':120,'final':5700,'terminate':300,'retain':600,'cleanup':1200}
 
 

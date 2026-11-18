@@ -28,8 +28,10 @@ def check_network(plan,subnets,tables,dns):
 
 def validate_images(plan,images):
     mapping={item['ImageId']:item for item in images}
-    # Windows only since 2026-11-13: the plan names exactly the pinned Windows image.
-    if [item['ami']for item in plan['instances']]!=[builder_identity.WINDOWS_AMI]:
+    # Windows only since 2026-11-13; two parallel lanes since 2026-11-17: every planned
+    # instance uses exactly the pinned Windows image, one per reviewed lane slot.
+    if (len(plan['instances'])!=len(names.SLOTS)or
+            any(item['ami']!=builder_identity.WINDOWS_AMI for item in plan['instances'])):
         raise ValueError('Campaign AMIs differ from reviewed identity pins')
     for item in plan['instances']:
         image=mapping[item['ami']]

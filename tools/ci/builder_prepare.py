@@ -47,8 +47,8 @@ def verify_spend_history(ledger):
     if unknown:raise ValueError('Earlier allocation intents need cleanup/cost closure in the ledger before another paid run: '+','.join(unknown))
 
 
-def estimate(rates):
-    return builder_approval.estimate(rates)
+def estimate(rates,planned=None):
+    return builder_approval.estimate(rates,planned)
 
 
 def price_rates(aws,state):
@@ -111,7 +111,7 @@ def prepare(state,verification_run,fixed_expiry):
     expiry=fixed_expiry or clock['fixedCampaignExpiryUtc']
     plan={'schemaVersion':1,'account':names.ACCOUNT,'region':names.REGION,'profile':'sancus','payloadSource':source,
           'runId':names.new_run_id(datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d'),source),
-          'verificationRunId':str(verification_run),'fixedCampaignExpiryUtc':expiry,'minimumLaunchHeadroomSeconds':7200,
+          'verificationRunId':str(verification_run),'fixedCampaignExpiryUtc':expiry,'minimumLaunchHeadroomSeconds':builder_timing.MINIMUM_LAUNCH_HEADROOM_SECONDS,
           'timing':{key:clock[key]for key in ('jobStartedAtUtc','jobTimeoutSeconds','jobMarginSeconds','cleanupBudgetSeconds')},
           **{key:clock[key]for key in ('controllerRunId','controllerRunAttempt','controllerJobId')},
           'instances':builder_approval.instances(),
@@ -132,7 +132,7 @@ def prepare(state,verification_run,fixed_expiry):
     ledger=builder_approval.ledger()
     if os.environ.get('MODE')=='qualify':verify_spend_history(ledger)
     plan.update(budgetUsd=ledger['budgetUsd'],priorEstimateUsd=ledger['closedEstimateUsd'])
-    plan['hourlyRatesUsd']=price_rates(aws,state);plan['estimatedCampaignUsd']=estimate(plan['hourlyRatesUsd'])
+    plan['hourlyRatesUsd']=price_rates(aws,state);plan['estimatedCampaignUsd']=estimate(plan['hourlyRatesUsd'],plan['instances'])
     if plan['estimatedCampaignUsd']>builder_approval.PER_RUN_CAP_USD or plan['estimatedCampaignUsd']+plan['priorEstimateUsd']>min(builder_approval.CUMULATIVE_CAP_USD,plan['budgetUsd']):
         raise ValueError('Reviewed run/cumulative spend cap exceeded before allocation')
     if os.environ.get('MODE')=='qualify':builder_approval.validate_prepared(plan['approvalPlan'],plan,spending)
