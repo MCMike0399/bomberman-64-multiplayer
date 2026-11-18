@@ -14,16 +14,6 @@ LINUX_REPEATS=(('roster-popup-stress',3,600),('tour-09',9,900))
 # Run 44199687411: 25 tours took ~3240 s on the RTX 2080 SUPER and menu-preview was
 # still progressing when the 3600 s bound expired; water-surface had not started.
 LINUX_GRAPHICAL_SUITE_BUDGET_SECONDS=7200
-# Windows shares one fixed paid lifetime with core capture and evidence publication, so
-# its suite gets the time left before the 20-minute cleanup boundary, less this reserve
-# for the preliminary gate and final publication. Below the minimum it refuses upfront.
-WINDOWS_GRAPHICAL_RESERVE_SECONDS=10*60
-WINDOWS_GRAPHICAL_MINIMUM_SECONDS=3600
-
-def windows_graphical_budget(expiry,now):
-    budget=int(expiry-now-20*60-WINDOWS_GRAPHICAL_RESERVE_SECONDS)
-    if budget<WINDOWS_GRAPHICAL_MINIMUM_SECONDS:raise RuntimeError('Insufficient fixed-lifetime headroom for the complete Windows graphical suite')
-    return budget
 
 OTHER_STAGES=('sunken-temple','rock-garden','top-rules','blizzard-battle','greedy-trap','field-of-grass','in-the-gutter','sea-sick','lost-at-sea','circuit-garden')
 
@@ -161,7 +151,7 @@ def run(args):
             step('actual-package-replay',[sys.executable,'tools/ci/authority_replay.py','run','--target',target,'--expected-revision',args.expected_revision,'--output',str(output/'replay')],300,diagnostic=True)
             if target=='linux-x64':step('saved-startups',[sys.executable,'tools/packaging/startup-desktop.py','--target',target],600,diagnostic=True)
             # Tours are last. A headroom failure is explicit partial coverage, never a pass.
-            graphical_budget=LINUX_GRAPHICAL_SUITE_BUDGET_SECONDS if target=='linux-x64'else windows_graphical_budget(expiry,time.time())
+            graphical_budget=LINUX_GRAPHICAL_SUITE_BUDGET_SECONDS if target=='linux-x64'else 1800
             # verify-desktop bounds each scenario process separately; the previous
             # 1,800s campaign wrapper expired while later tours still had to run.
             step('complete-native-graphical',[sys.executable,'tools/packaging/verify-desktop.py','--target',target,'--graphical','--disposable-desktop',*(['--default-renderer']if target=='windows-x64'else[])],graphical_budget,diagnostic=True)

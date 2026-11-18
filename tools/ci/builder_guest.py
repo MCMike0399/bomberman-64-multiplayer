@@ -117,13 +117,6 @@ def publish(client,root,descriptor,input_names,state,extra_files=()):
 # The controller acknowledges only after durably retaining the guest's core evidence
 # (campaign 2 attempt 3: ~1 h for 4.9 GB). Wait up to this long, never past expiry-20 min.
 CORE_ACK_WAIT_SECONDS=5400
-# The remaining collector (replay plus the complete graphical suite) is bounded by the
-# fixed expiry, keeping the guest's 20-minute cleanup headroom and one minute of slack;
-# the collector itself reserves time for the preliminary gate and publication.
-REMAINING_SLACK_SECONDS=60
-def remaining_limit(expiry,now):
-    import datetime
-    return int(datetime.datetime.fromisoformat(expiry).timestamp()-now-20*60-REMAINING_SLACK_SECONDS)
 # Without s3:ListBucket, S3 answers a missing key with 403 AccessDenied rather than 404.
 # Until the deadline that means "not yet"; each sample is recorded (run 41178169234).
 CORE_ACK_PENDING_CODES=builder_s3.GUEST_PENDING
@@ -202,7 +195,7 @@ def run(args):
         report['coreRetentionAcknowledgement']=await_core_retention(client,root,descriptor,digest(root/'result-manifest.json'),samples=report['coreAckPendingSamples'])
         step('installed-launcher',[sys.executable,'tools/ci/startup_guard.py','--expected-revision',descriptor['source'],
                                   '--output','artifacts/gpu-installed-startup-guard'],600)
-        step('remaining',collector('remaining'),remaining_limit(expiry,time.time()))
+        step('remaining',collector('remaining'),2400)
         step('preliminary-qualification',[sys.executable,'tools/ci/gpu_release_gates.py','--target',target,
               '--revision',descriptor['source'],'--verification-run',descriptor['verificationRunId']],120)
         report['complete']=True

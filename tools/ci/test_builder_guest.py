@@ -114,13 +114,4 @@ class GuestProtocol(unittest.TestCase):
                 guest.await_core_retention(None,root,{**self.task,'expiresAtUtc':'2020-01-01T00:00:00Z'},'d'*64)
 
 
-    def test_remaining_collector_is_bounded_by_the_fixed_expiry_with_cleanup_headroom(self):
-        import datetime
-        expiry='2026-11-18T02:29:42+00:00';end=datetime.datetime.fromisoformat(expiry).timestamp()
-        now=end-112*60
-        limit=guest.remaining_limit(expiry,now)
-        self.assertEqual(limit,112*60-20*60-60)
-        # The guest step's own headroom check (remaining >= 20 min + limit) accepts it.
-        self.assertGreaterEqual(end-now,20*60+limit)
-
 if __name__=='__main__':unittest.main()

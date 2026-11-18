@@ -1027,13 +1027,6 @@ and before `water-surface` (artifact 14385966563). The 330-minute workstation jo
 7200 seconds plus the later diagnostic repeats. An even earlier 1800-second bound had stopped at
 tour 17 (artifact 14299103272).
 
-The paid Windows lane has no fixed suite number: its complete graphical command receives the
-time left before the 20-minute cleanup boundary of the fixed campaign expiry, less 10 minutes
-for the preliminary gate and final evidence publication, and refuses upfront below 3600 seconds.
-The guest's `remaining` step is likewise bounded by that expiry. Before 2026-11-17 its 2400-second
-step and 1800-second suite could not hold the measured suite. Insufficient headroom remains an
-explicit failed campaign, never partial qualification.
-
 Fixtures must not assign `Shader.Code` on a live shader that has drawn. Godot 4.7.2 marks the
 RD shader version dirty before it waits for in-flight `PipelineCompilation` tasks; such a task
 then frees variant RIDs off the render thread (`free_rid ... render thread`). Campaign
