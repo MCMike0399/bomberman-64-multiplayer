@@ -15,7 +15,7 @@ LINUX_GRAPHICAL_SUITE_BUDGET_SECONDS=3600
 # Windows runs the complete graphical suite on its own remaining-lane instance since 2026-11-17
 # (two parallel Sancus lanes). Linux measured ~4,000 s (25 tours ~3,240 s plus menu-preview and
 # water-surface); the former 1,800 s Windows bound could never complete it. The step headroom
-# check below needs E-now >= 20 min + 5,400 s before the suite starts (E-110 min); the guest
+# check below needs E-now >= 20 min + 4,800 s before the suite starts (E-100 min); the guest
 # wrapper (builder_guest.REMAINING_STEP_SECONDS) adds replay and inspection on top.
 WINDOWS_GRAPHICAL_SUITE_BUDGET_SECONDS=4800
 
