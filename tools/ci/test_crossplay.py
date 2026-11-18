@@ -181,6 +181,47 @@ class CrossplayRendezvousTests(unittest.TestCase):
         self.assertIn('- name: ' + hold, text)
         self.assertIn('wait-jobs --jobs "Client windows-x64" "Client linux-x64" "Client macos-arm64" --timeout 1800 --step "' + hold + '"', text)
 
+    def test_staging_tunnel_is_replaced_until_one_serves_the_exact_candidate(self):
+        import tempfile
+        expected = {'version': '0.46.0', 'build': '58', 'protocolRevision': 7, 'revision': 'a' * 40}
+        class Process:
+            def __init__(self, exits=False): self.exits = exits; self.stopped = False
+            def poll(self): return 1 if self.exits or self.stopped else None
+        server = Process()
+        def run(behaviours, read):
+            started, stopped = [], []
+            clock = iter(range(0, 100000, 5))
+            with tempfile.TemporaryDirectory() as directory:
+                output = Path(directory)
+                def popen(command, **kwargs):
+                    kind = behaviours[len(started)]
+                    if kind != 'silent': kwargs['stdout'].write(f'INF https://try-{len(started)}.trycloudflare.com\n'); kwargs['stdout'].flush()
+                    process = Process(exits=kind == 'exits'); started.append(process); return process
+                def stop(process): process.stopped = True; stopped.append(process)
+                try:
+                    result = crossplay.open_tunnel('cloudflared', 'http://127.0.0.1:1', output, expected, server, popen=popen,
+                                                   read=read, now=lambda: next(clock), pause=lambda _: None, stop=stop)
+                except RuntimeError as error: result = error
+                logs = sorted(path.name for path in output.glob('tunnel-*.log'))
+            return result, started, stopped, logs
+        good = lambda url: {'release': expected}
+        # An exiting tunnel and a silent one are each replaced; the third serves the candidate.
+        (origin, tunnel), started, stopped, logs = run(['exits', 'silent', 'serves'], good)
+        self.assertEqual(origin, 'https://try-2.trycloudflare.com'); self.assertIs(tunnel, started[2])
+        self.assertEqual(stopped, started[:2]); self.assertEqual(logs, ['tunnel-1.log', 'tunnel-2.log', 'tunnel-3.log'])
+        # An origin answering with another build fails at once, without trying more tunnels.
+        error, started, stopped, _ = run(['serves', 'serves', 'serves'], lambda url: {'release': dict(expected, build='57')})
+        self.assertIn('identity differs', str(error)); self.assertEqual(len(started), 1); self.assertEqual(stopped, started)
+        # Every attempt exhausted is an explicit failure with all tunnels stopped.
+        error, started, stopped, _ = run(['silent'] * crossplay.TUNNEL_ATTEMPTS, good)
+        self.assertIn(f'after {crossplay.TUNNEL_ATTEMPTS} tunnels', str(error)); self.assertEqual(stopped, started)
+        # The coordinator, clients' origin wait and retained logs cover every attempt.
+        self.assertGreaterEqual(crossplay.SERVER_START_SECONDS, crossplay.TUNNEL_ATTEMPTS * crossplay.TUNNEL_ATTEMPT_SECONDS + 30)
+        text = (crossplay.ROOT / '.github/workflows/crossplay.yml').read_text()
+        self.assertIn('wait --names crossplay-origin-a${{ github.run_attempt }} --timeout 600', text)
+        self.assertGreater(600, crossplay.SERVER_START_SECONDS)
+        self.assertIn('artifacts/crossplay-server/tunnel-*.log', text)
+
     def test_artifact_wait_tracks_only_missing_artifacts_producers(self):
         environment = {'GITHUB_REPOSITORY': 'o/r', 'GITHUB_RUN_ID': '1'}
         names = ['crossplay-windows-x64', 'crossplay-linux-x64', 'crossplay-macos-arm64']

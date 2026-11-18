@@ -60,6 +60,7 @@ jobs:
           path: |
             artifacts/crossplay-server/server-summary.json
             artifacts/crossplay-server/launcher.log
+            artifacts/crossplay-server/tunnel-*.log
           retention-days: 14
           if-no-files-found: warn
 
@@ -106,7 +107,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          python tools/ci/crossplay.py wait --names crossplay-origin-a${{ github.run_attempt }} --timeout 300
+          python tools/ci/crossplay.py wait --names crossplay-origin-a${{ github.run_attempt }} --timeout 600
           python tools/ci/crossplay.py download --names crossplay-origin-a${{ github.run_attempt }} --directory artifacts/origin
       - name: Hold until every peer client runner has started
         # Queue delay is not readiness: start each game only once all three
