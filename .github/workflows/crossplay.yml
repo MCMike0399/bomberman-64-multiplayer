@@ -97,8 +97,10 @@ jobs:
         run: python3 tools/packaging/macos-test-display.py
       - if: runner.os == 'Windows'
         run: ./tools/packaging/windows-test-desktop.ps1
+      # 2026-11-18: recommends pulled ~89 MB through a ~143 kB/s EC2 mirror (11-17 min), past
+      # the peer clients' release window. Only these packages (and xvfb-run's xauth) are used.
       - if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y fuse3 xvfb openbox pulseaudio mesa-vulkan-drivers
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends -o Acquire::Retries=3 fuse3 xvfb xauth openbox pulseaudio mesa-vulkan-drivers
       - name: Wait for the isolated public test origin
         env:
           GH_TOKEN: ${{ github.token }}
@@ -108,10 +110,11 @@ jobs:
           python tools/ci/crossplay.py download --names crossplay-origin-a${{ github.run_attempt }} --directory artifacts/origin
       - name: Hold until every peer client runner has started
         # Queue delay is not readiness: start each game only once all three
-        # runners are live, so the in-game ready barrier measures rendering.
+        # runners have finished setup and reached this hold, so the in-game
+        # ready barrier measures rendering, not a slow package mirror.
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python tools/ci/crossplay.py wait-jobs --jobs "Client windows-x64" "Client linux-x64" "Client macos-arm64" --timeout 1800
+        run: python tools/ci/crossplay.py wait-jobs --jobs "Client windows-x64" "Client linux-x64" "Client macos-arm64" --timeout 1800 --step "Hold until every peer client runner has started"
       - name: Install the real download and warm its actual renderer
         env:
           TARGET: ${{ matrix.target }}
