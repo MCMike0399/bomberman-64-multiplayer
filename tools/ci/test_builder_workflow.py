@@ -22,8 +22,9 @@ class HostedCleanupPlacement(unittest.TestCase):
 
     def test_ordinary_phases_stop_on_failure_and_cancel(self):
         for name in ('Prepare exact trusted artifacts before allocation','Persist the exact creation intent without allocating',
-                     'Launch and arm only the reviewed owned stack','Collect the immutable Windows High checkpoint first',
-                     'Acknowledge durable core evidence','Collect the remaining exact-byte machine evidence'):
+                     'Launch and arm only the reviewed owned stack','Collect the core lane checkpoint while the remaining lane runs',
+                     'Hand the retained core gate inputs to the remaining lane','Retain core lane evidence before the remaining lane finishes',
+                     "Collect the remaining lane's gated machine evidence"):
             with self.subTest(name=name):self.assertIn('success() && !cancelled()',self.block(name))
 
     def test_job_and_credential_budgets_are_explicit(self):
@@ -64,9 +65,13 @@ class HostedCleanupPlacement(unittest.TestCase):
                     runpy.run_path(str(Path(builder_job.__file__)),run_name='__main__')
                 self.assertEqual(json.loads(output.read_text())['jobTimeoutSeconds'],value)
 
-    def test_intent_and_core_uploads_precede_the_operations_they_authorize(self):
+    def test_intent_upload_precedes_launch_and_the_core_handoff_is_not_delayed_by_artifact_upload(self):
         self.assertLess(self.source.index('Durably retain the intent'),self.source.index('Launch and arm'))
-        self.assertLess(self.source.index('Retain core evidence before'),self.source.index('Acknowledge durable'))
+        # 2026-11-17: the remaining lane waits on the handoff, so it is published right after
+        # the controller verifies and retains the core lane; the GitHub upload follows, before final.
+        order=[self.source.index(name)for name in ('Collect the core lane checkpoint','Hand the retained core gate inputs',
+                                                    'Retain core lane evidence before','Collect the remaining lane')]
+        self.assertEqual(order,sorted(order))
 
     def test_cancel_path_terminates_before_slow_evidence_and_purges_afterward(self):
         names=('Re-assume fresh credentials immediately before cleanup',
@@ -162,12 +167,13 @@ class HostedCleanupPlacement(unittest.TestCase):
             self.assertFalse(artifact.startswith(('builder-intent-',builder_guard.PLAN_ARTIFACT)))
 
     def test_windows_only_controller_publishes_only_the_windows_promotion_artifact(self):
-        # 2026-11-13: one Windows instance; Linux qualifies on the owned workstation in the caller.
+        # 2026-11-13: Windows only; Linux qualifies on the owned workstation in the caller.
+        # 2026-11-17: two parallel Windows lanes still publish exactly this one Windows artifact.
         report=self.source.split('  report:',1)[1]
         self.assertIn('name: release-gate-gpu-windows-x64',report)
         self.assertNotIn('linux-x64',self.source);self.assertNotIn('Linux',self.source.split('jobs:',1)[1])
         for name in ('Blast-Circuit-windows-x64-gpu.json','Blast-Circuit-windows-x64-graphical.json','Sancus-builder-cleanup.json'):
             self.assertIn('artifacts/builder-qualified/'+name,report)
-        self.assertIn('dry-run the Windows launch',self.source)
+        self.assertIn('dry-run both Windows lane launches',self.source)
         trigger=(ROOT/'.github/workflows/gpu-qualification.yml').read_text()
         self.assertIn("if: needs.select.outputs.run == 'true'",trigger.split('  controlled:',1)[1].split('  native:',1)[0])

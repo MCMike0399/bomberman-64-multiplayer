@@ -1,8 +1,12 @@
 name: Scoped builder controller
 
-# Paid Sancus AWS builder, Windows only since 2026-11-13: one g4dn instance Name-tagged
-# `sancus-builder`. Linux real-GPU qualification runs on the owned workstation in the caller
-# (gpu-qualification.yml). The OIDC trust pins this file's path on main; keep its name.
+# Paid Sancus AWS builder, Windows only since 2026-11-13. Since 2026-11-17 (user decision) two
+# parallel Windows g4dn.xlarge lanes: `core` (Name `sancus-builder`) runs the core checkpoint,
+# `remaining` (Name `sancus-builder-remaining`) runs the installed-launcher guard, replay and
+# complete graphical suite at once, then gates against the controller's hash-bound core
+# handoff. windows-x64 stays the only qualified target. Linux real-GPU qualification runs on
+# the owned workstation in the caller (gpu-qualification.yml). The OIDC trust pins this
+# file's path on main; keep its name.
 
 on:
   workflow_call:
@@ -183,7 +187,7 @@ jobs:
             artifacts/builder-state/*.jsonl
           if-no-files-found: error
           retention-days: 90
-      - name: Create the instance-free stack, verify it and dry-run the Windows launch
+      - name: Create the instance-free stack, verify it and dry-run both Windows lane launches
         id: smoke
         if: success() && !cancelled() && inputs.mode == 'permissions-smoke'
         timeout-minutes: 12
@@ -232,12 +236,20 @@ jobs:
             artifacts/builder-state/*.jsonl
           if-no-files-found: error
           retention-days: 90
-      - name: Collect the immutable Windows High checkpoint first
+      - name: Collect the core lane checkpoint while the remaining lane runs
         if: success() && !cancelled() && inputs.mode == 'qualify'
+        # Dispatches both lanes; ends once the core lane's terminal checkpoint is retained.
         # Platform backstop: phase grant (core) plus two minutes; SIGINT then always-cleanup (probe 41112729113).
         timeout-minutes: 92
         run: python3 tools/ci/builder_profile.py -- python3 tools/ci/builder_phase.py --state artifacts/builder-state core
-      - name: Retain core evidence before acknowledging long tours
+      - name: Hand the retained core gate inputs to the remaining lane
+        if: success() && !cancelled() && inputs.mode == 'qualify'
+        # Publishes the hash-bound core handoff at once (the remaining lane is waiting on it),
+        # then terminates the idle core instance through the exact owned-member path.
+        # Platform backstop: phase grant (acknowledge) plus two minutes; SIGINT then always-cleanup (probe 41112729113).
+        timeout-minutes: 4
+        run: python3 tools/ci/builder_profile.py -- python3 tools/ci/builder_phase.py --state artifacts/builder-state acknowledge
+      - name: Retain core lane evidence before the remaining lane finishes
         if: success() && !cancelled() && inputs.mode == 'qualify'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -246,12 +258,7 @@ jobs:
           compression-level: 0
           if-no-files-found: error
           retention-days: 90
-      - name: Acknowledge durable core evidence
-        if: success() && !cancelled() && inputs.mode == 'qualify'
-        # Platform backstop: phase grant (acknowledge) plus two minutes; SIGINT then always-cleanup (probe 41112729113).
-        timeout-minutes: 4
-        run: python3 tools/ci/builder_profile.py -- python3 tools/ci/builder_phase.py --state artifacts/builder-state acknowledge
-      - name: Collect the remaining exact-byte machine evidence
+      - name: Collect the remaining lane's gated machine evidence
         if: success() && !cancelled() && inputs.mode == 'qualify'
         # Platform backstop: phase grant (final) plus two minutes; SIGINT then always-cleanup (probe 41112729113).
         timeout-minutes: 97
