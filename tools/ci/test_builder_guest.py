@@ -259,4 +259,27 @@ class LaneSequences(unittest.TestCase):
                 self.assertEqual(code,1);self.assertEqual(commands,[]);self.assertIn('lane slot',report['errors'][0])
 
 
+
+class NetworkDiagnostics(unittest.TestCase):
+    def test_probe_and_firewall_facts_are_diagnostic_and_carry_no_raw_address(self):
+        firewall={'profiles':[{'name':'Public','enabled':'True','defaultInbound':'Block','defaultOutbound':'Allow'}],
+                  'categories':['Public'],'enabledInboundBlockRules':3,'qaLocalUdpRule':['True']}
+        with patch.object(guest.subprocess,'check_output',return_value=json.dumps(firewall))as query:
+            report=guest.network_diagnostics()
+        self.assertIn('Get-NetFirewallProfile',query.call_args.args[0][-1])
+        self.assertEqual(report['firewall'],firewall)
+        probe=report['udpSelfProbe']
+        self.assertEqual(set(probe['cases']),{'loopback','host','wildcard-to-host'})
+        self.assertTrue(probe['cases']['loopback']['delivered'])
+        text=json.dumps(report)
+        import re
+        self.assertIsNone(re.search(r'\b\d{1,3}(?:\.\d{1,3}){3}\b',text),'no raw IPv4 address is retained')
+
+    def test_a_failing_query_or_probe_is_recorded_not_raised(self):
+        with (patch.object(guest.subprocess,'check_output',side_effect=guest.subprocess.TimeoutExpired('pwsh',60)),
+              patch.object(guest,'udp_self_probe',side_effect=OSError('no route'))):
+            report=guest.network_diagnostics()
+        self.assertEqual((report['firewallError'],report['udpSelfProbeError']),('TimeoutExpired','OSError'))
+        self.assertNotIn('no route',json.dumps(report))
+
 if __name__=='__main__':unittest.main()

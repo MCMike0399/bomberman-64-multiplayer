@@ -188,6 +188,39 @@ def await_core_handoff(client,root,descriptor,now=time.monotonic,samples=None,cl
     raise TimeoutError('Core handoff did not arrive inside the fixed window; no gate ran; pending samples='+json.dumps(samples))
 
 
+FIREWALL_QUERY=("$ErrorActionPreference='Stop'; @{profiles=@(Get-NetFirewallProfile | ForEach-Object {@{name=$_.Name;"
+    "enabled=[string]$_.Enabled;defaultInbound=[string]$_.DefaultInboundAction;defaultOutbound=[string]$_.DefaultOutboundAction}});"
+    "categories=@(Get-NetConnectionProfile | ForEach-Object {[string]$_.NetworkCategory});"
+    "enabledInboundBlockRules=@(Get-NetFirewallRule -Direction Inbound -Action Block -Enabled True).Count;"
+    "qaLocalUdpRule=@(Get-NetFirewallRule -Name sancus-builder-qa-local-udp -ErrorAction SilentlyContinue | ForEach-Object {[string]$_.Enabled})} | ConvertTo-Json -Depth 4")
+
+
+def udp_self_probe(timeout=3.0):
+    """Self-addressed UDP as the game's own user: loopback, host address, and wildcard bind."""
+    import ipaddress,socket
+    with socket.socket(socket.AF_INET,socket.SOCK_DGRAM)as route:
+        route.connect(('192.0.2.1',9))  # selects the default-route address; sends nothing
+        host=route.getsockname()[0]
+    result={'hostAddressScope':'private'if ipaddress.ip_address(host).is_private else'other','cases':{}}
+    for name,bind,target in (('loopback','127.0.0.1','127.0.0.1'),('host',host,host),('wildcard-to-host','0.0.0.0',host)):
+        with socket.socket(socket.AF_INET,socket.SOCK_DGRAM)as receiver,socket.socket(socket.AF_INET,socket.SOCK_DGRAM)as sender:
+            receiver.bind((bind,0));receiver.settimeout(timeout);start=time.monotonic()
+            sender.sendto(b'sancus-builder-probe',(target,receiver.getsockname()[1]))
+            try:delivered=receiver.recvfrom(64)[0]==b'sancus-builder-probe'
+            except OSError:delivered=False
+            result['cases'][name]={'delivered':delivered,'seconds':round(time.monotonic()-start,3)}
+    return result
+
+
+def network_diagnostics():
+    report={'schemaVersion':1,'scope':'Diagnostic only; no raw addresses; never a qualification verdict'}
+    try:report['firewall']=json.loads(subprocess.check_output(['pwsh','-NoProfile','-Command',FIREWALL_QUERY],text=True,timeout=60))
+    except Exception as error:report['firewallError']=type(error).__name__
+    try:report['udpSelfProbe']=udp_self_probe()
+    except Exception as error:report['udpSelfProbeError']=type(error).__name__
+    return report
+
+
 def run(args):
     descriptor=json.loads(args.task.read_text());manifest=json.loads(args.manifest.read_text())
     if digest(args.manifest)!=descriptor['payloadManifestSha256']:raise ValueError('Guest manifest digest differs')
@@ -233,6 +266,8 @@ def run(args):
         (path/'session.json').write_text(json.dumps(session,indent=2)+'\n')
         if session['sessionId']==0 or session['administrator']or session['user']!='BlastQa'or'WDDM'not in session['driverModel']:
             raise RuntimeError('Windows worker is not the standard interactive user on WDDM')
+        # Diagnostic only (2026-11-18): never a verdict, never raw addresses.
+        (path/'network-diagnostics.json').write_text(json.dumps(network_diagnostics(),indent=2)+'\n')
         install=[sys.executable,'tools/ci/install_godot.py','--destination','artifacts/gpu-engine',
                  '--archives','artifacts/engine-archives']
         step('engine',install,90)

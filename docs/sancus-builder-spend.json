@@ -2,7 +2,7 @@
   "budgetUsd": 200,
   "perRunCapUsd": 20,
   "preCiEstimateUsd": 4.8,
-  "closedEstimateUsd": 40.1,
+  "closedEstimateUsd": 42.37,
   "recordedRuns": [
     {
       "workflowRunId": "41136197647",
@@ -68,6 +68,11 @@
       "workflowRunId": "44199687411",
       "estimateUsd": 1.03,
       "receipt": "2026-11-17 v0.46.0/build 58/schema 7 qualification on 5ba336f (Verification 44183700614): paid Windows g4dn T4 campaign and owned RTX Linux lane attempted qualification; GPU qualification failed. Linux core passed and all 25 graphical tours passed on the RTX 2080 SUPER, but the 3600-second whole-command limit expired during menu-preview (workstation-gpu-linux-x64-diagnostics artifact 14385966563). Windows canonical Vulkan High passed and diagnostic D3D12 failed as diagnostic evidence; the blizzard-battle stage capture raised 50 free_rid errors from one PipelineCompilation worker task during fixture shader restoration (builder-evidence artifact 14384097594). No promotion. Cleanup receipt in builder-state-44199687411-1-final artifact 14383714033 reports estimateUsd 1.03, allCreatedResourcesGone true, leftovers [], protected comparison complete; independent builder-outcome artifact 14384682052 confirms resourceCleanupVerified true. Cumulative closed estimate is 40.10 USD."
+    },
+    {
+      "workflowRunId": "44305798609",
+      "estimateUsd": 2.27,
+      "receipt": "2026-11-18 v0.46.0/build 58/schema 7 qualification on 77cc479 (Verification 44282801184), first two-lane campaign: two g4dn.xlarge Windows lanes and the owned RTX Linux lane; GPU qualification failed. Windows core lane finished (original High and all-stage captures clean); the remaining lane completed the full graphical suite in 1,712 s with every scenario passing except tour-18 peer-ice-order (same-host native ICE pair never connected on the AWS guest; passes on hosted Windows), so the gate refused. Linux failed tour-20/21 under shared-host contention (9-19 fps for ~30 min) and the tour-09 x9 repeat exceeded its 900 s bound. No promotion. Cleanup receipt in builder-state-44305798609-1-final reports estimateUsd 2.27 (instances ~3,977 s and ~4,284 s), allCreatedResourcesGone true, leftovers [], protected comparison complete; independent builder-outcome confirms resourceCleanupVerified true. Cumulative closed estimate is 42.37 USD."
     }
   ],
   "scope": "Conservative closed-campaign estimates. preCiEstimateUsd covers the campaigns before CI/OIDC orchestration. After every paid CI run, a reviewed PR appends {workflowRunId, estimateUsd, receipt} from its cost receipt and raises closedEstimateUsd by the same amount; until then the selector refuses another paid run. Estimates are not invoices."

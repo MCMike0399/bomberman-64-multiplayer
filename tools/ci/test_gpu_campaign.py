@@ -16,6 +16,13 @@ class QualificationBudgets(unittest.TestCase):
         self.assertIn('else WINDOWS_GRAPHICAL_SUITE_BUDGET_SECONDS', inspect.getsource(gpu_campaign.run))
         self.assertNotIn('else 1800', inspect.getsource(gpu_campaign.run))
 
+    def test_linux_tour_09_repeats_fit_nine_measured_fresh_runs(self):
+        # Run 44305798609: ~112-116 s per fresh tour-09; nine exceeded the former 900 s bound.
+        limits={case:(count,limit)for case,count,limit in gpu_campaign.LINUX_REPEATS}
+        count,limit=limits['tour-09']
+        self.assertEqual(count,9)
+        self.assertGreaterEqual(limit,count*116*1.5)
+
     def test_only_canonical_windows_vulkan_high_is_a_qualifying_driver(self):
         self.assertTrue(gpu_campaign.high_driver_qualifies('windows-x64', 'vulkan'))
         self.assertFalse(gpu_campaign.high_driver_qualifies('windows-x64', 'd3d12'))

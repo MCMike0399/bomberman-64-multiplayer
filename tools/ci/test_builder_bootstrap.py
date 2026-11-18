@@ -30,6 +30,12 @@ class DisposableBootstrap(unittest.TestCase):
         self.assertIn('Start-ScheduledTask -TaskName sancus-builder-run',bootstrap.WINDOWS_DISPATCH)
         self.assertIn('$root\\dotnet',bootstrap.WINDOWS_SETUP)
         self.assertNotIn('Administrators',bootstrap.WINDOWS_SETUP)
+        # 2026-11-18: local-subnet UDP only, added before the standard-user logon; no broad opening.
+        rule=next(line for line in bootstrap.WINDOWS_SETUP.splitlines() if line.startswith('New-NetFirewallRule'))
+        self.assertIn('-Direction Inbound -Action Allow -Protocol UDP -RemoteAddress LocalSubnet',rule)
+        self.assertLess(bootstrap.WINDOWS_SETUP.index('New-NetFirewallRule'),bootstrap.WINDOWS_SETUP.index('Register-ScheduledTask'))
+        self.assertEqual(bootstrap.WINDOWS_SETUP.count('New-NetFirewallRule'),1)
+        self.assertNotIn('Set-NetFirewallProfile',bootstrap.WINDOWS_SETUP)
         self.assertIn('[IO.FileMode]::CreateNew',bootstrap.WINDOWS_DISPATCH)
         initial=self.scripts()['Windows']
         # No internet downloads: the only web requests are IMDSv2 on the link-local endpoint.
