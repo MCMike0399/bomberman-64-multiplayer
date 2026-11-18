@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 import builder_guest
+import builder_namespace as names
 import native_execution
 
 
@@ -17,9 +18,10 @@ def publish(manifest_path,target,code,log,output):
           'scope':'Worker process outcome; inspect retained game receipts before any qualification claim.'}
     if log.is_file():
         data.update(logSha256=builder_guest.digest(log),logSize=log.stat().st_size)
-        client.call('put-object','--key','results/'+target+'/worker-log.bin','--body',str(log))
+        client.call('put-object','--key',names.instance_object(identity['instanceId'],'worker-log.bin'),'--body',str(log))
     output=Path(output);output.write_text(json.dumps(data,indent=2)+'\n')
-    client.call('put-object','--key','results/'+target+'/worker-exit.json','--body',str(output))
+    # Keyed by the IMDS instance ID: both lanes share user data (2026-11-17).
+    client.call('put-object','--key',names.instance_object(identity['instanceId'],'worker-exit.json'),'--body',str(output))
     return data
 
 

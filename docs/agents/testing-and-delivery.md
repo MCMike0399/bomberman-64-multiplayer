@@ -878,6 +878,12 @@ and Linux llvmpipe are functional/headless, installer/updater, startup/exit and
 network test surfaces only. Graphics and complete graphical tours use real
 GPUs, since 2026-11-13 hybrid: Linux on the [workstation](../workstation-ci.md) runner, Windows on the [Sancus builder](../sancus-builder-ci.md). Preserve production quality and use the measured Mac-to-Mac residual
 envelope and user visual sign-off in [GPU qualification](../gpu-qualification.md).
+Since 2026-11-17 (user decision) the Sancus Windows campaign runs two parallel
+g4dn.xlarge lanes, `windows-x64-core` and `windows-x64-remaining`, bound by a
+hash-checked core handoff ([two parallel Windows lanes](../sancus-builder-ci.md#user-decision-2026-11-17-two-parallel-windows-lanes)).
+Lane slots are not targets: keep `windows-x64` as the only qualified target and
+the promotion receipts unchanged. Builder changes run
+`python3 -m unittest discover -s tools/ci -p 'test_builder*.py'`.
 
 The historical software-runner split is retained as an ordering/partition
 contract; it is not graphics qualification. `all` is 21 contiguous `tour-NN`

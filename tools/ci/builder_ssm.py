@@ -9,13 +9,20 @@ import builder_journal as journal
 import builder_namespace as names
 
 
-# Windows only since 2026-11-13. The deployed policy still allows AWS-RunShellScript (unused).
+# Windows only since 2026-11-13 (two lane slots since 2026-11-17). The deployed policy still allows AWS-RunShellScript (unused).
 DOCUMENTS={'Windows':'AWS-RunPowerShellScript'}
 
 
-def task(plan,instance,target,payload_sha256):
+def task(plan,instance,slot,payload_sha256):
+    """Data-only descriptor for one lane slot (2026-11-17: two parallel Windows lanes).
+
+    `target` stays the qualified `windows-x64`; `slot` keys the result objects and
+    `lane` selects the guest workload.
+    """
+    if slot not in names.SLOTS:raise ValueError('Unsupported builder lane slot')
+    target=names.SLOTS[slot]['target']
     if target not in names.TARGETS:raise ValueError('Unsupported native target')
-    if not re.fullmatch(r'i-[0-9a-f]{8,17}',instance):raise ValueError('Invalid exact instance ID')
+    if not re.fullmatch(names.INSTANCE_PATTERN,instance):raise ValueError('Invalid exact instance ID')
     if not re.fullmatch(r'[0-9a-f]{40}',plan['payloadSource']):raise ValueError('Full source SHA required')
     if not re.fullmatch(r'[0-9a-f]{64}',payload_sha256):raise ValueError('Frozen manifest digest required')
     if not re.fullmatch(names.RUN_PATTERN,plan['runId']):raise ValueError('Invalid run namespace')
@@ -23,7 +30,7 @@ def task(plan,instance,target,payload_sha256):
     expiry=datetime.datetime.fromisoformat(plan['fixedCampaignExpiryUtc'])
     if expiry.tzinfo is None:raise ValueError('UTC-aware fixed expiry required')
     return {'schemaVersion':1,'runId':plan['runId'],'account':names.ACCOUNT,'region':names.REGION,
-            'instanceId':instance,'target':target,'source':plan['payloadSource'],
+            'instanceId':instance,'target':target,'slot':slot,'lane':names.SLOTS[slot]['lane'],'source':plan['payloadSource'],
             'verificationRunId':str(plan['verificationRunId']),
             'payloadManifestSha256':payload_sha256,'expiresAtUtc':expiry.isoformat(),
             'executionContext':'aws-ssm-interactive-desktop'}
@@ -40,13 +47,15 @@ def commands(osname,descriptor):
     raise ValueError('Unknown operating system')
 
 
-def verify_instance(plan,aws,instance,osname):
+def verify_instance(plan,aws,instance,slot):
+    if slot not in names.SLOTS:raise ValueError('Unknown builder lane slot')
     response=aws('ec2','describe-instances','--instance-ids',instance)
     values=[item for row in response.get('Reservations',[])for item in row.get('Instances',[])]
     if len(values)!=1:raise ValueError('Exact instance inventory missing or ambiguous')
     item=values[0];tags={row['Key']:row['Value']for row in item.get('Tags',[])}
-    expected=next(row for row in plan['instances']if row['os']==osname)
+    expected=next(row for row in plan['instances']if row.get('slot')==slot)
     if (item['InstanceId']!=instance or tags.get(names.RUN_TAG)!=plan['runId']or
+            tags.get('Name')!=names.SLOTS[slot]['name']or
             item['ImageId']!=expected['ami']or item['InstanceType']!='g4dn.xlarge'or
             item['State']['Name']!='running'):
         raise ValueError('Native dispatch ownership, AMI, type or running state differs')
@@ -55,12 +64,12 @@ def verify_instance(plan,aws,instance,osname):
     return item
 
 
-def dispatch(plan,path,aws,instance,osname,manifest_sha256):
-    verify_instance(plan,aws,instance,osname)
+def dispatch(plan,path,aws,instance,slot,manifest_sha256):
+    verify_instance(plan,aws,instance,slot);osname=names.SLOTS[slot]['os']
     rows=journal.read_journal(path,plan)if path.exists()else[]
     if any(row['event']=='INTENT'and row['type']=='SSM::Command'and row['parent']==instance for row in rows):
         raise ValueError('Existing command intent: reconcile it, never blindly resend')
-    descriptor=task(plan,instance,osname.lower()+'-x64',manifest_sha256)
+    descriptor=task(plan,instance,slot,manifest_sha256)
     nonce=str(uuid.uuid4());comment='sancus-builder:'+nonce
     intent=journal.append(path,plan,'INTENT','SSM::Command',nonce,
                           {'comment':comment,'descriptor':descriptor,'document':DOCUMENTS[osname]},instance)
@@ -84,7 +93,7 @@ def reconcile(plan,path,aws,instance):
     intent=intents[0]
     existing=[row for row in rows if row['event']=='CREATED'and row['type']=='SSM::Command'and row['parent']==instance]
     if existing:return existing[0]['id']
-    verify_instance(plan,aws,instance,names.TARGETS[intent['details']['descriptor']['target']])
+    verify_instance(plan,aws,instance,intent['details']['descriptor']['slot'])
     response=aws('ssm','list-commands','--instance-id',instance)
     matches=[item for item in response.get('Commands',[])if item.get('Comment')==intent['details']['comment']]
     if response.get('NextToken'):raise ValueError('Command reconciliation inventory incomplete; no resend authorized')

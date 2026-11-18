@@ -18,8 +18,10 @@ class SpendClosure(unittest.TestCase):
         self.assertEqual(prepare.unrecorded_intents([{'id':1},{'id':3}],ledger,3,artifacts),[])
 
     def test_conservative_full_lifetime_estimate_is_positive(self):
+        # 2026-11-17: two parallel Windows lanes, six instance-hours of compute.
         value=prepare.estimate({'Windows':.710})
-        self.assertGreater(value,3*.710);self.assertLess(value,5)
+        self.assertGreater(value,2*3*.710);self.assertLess(value,20)
+        self.assertEqual(value,prepare.estimate({'Windows':.710},prepare.builder_approval.instances()))
 
     def test_windows_infrastructure_only_rate_is_not_the_standard_licensed_rate(self):
         def product(operation,rate):return json.dumps({'product':{'attributes':{'operation':operation}},

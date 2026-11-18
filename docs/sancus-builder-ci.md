@@ -1,5 +1,15 @@
 # Release graphics qualification
 
+> **Current (user decision 2026-11-17): two parallel Windows T4 lanes per campaign.**
+> One g4dn.xlarge could not finish inside the fixed 180-minute expiry, so each paid
+> campaign launches two Windows g4dn.xlarge instances from identical user data:
+> lane `core` (`windows-x64-core`, Name `sancus-builder`, `WindowsInstance`) and lane
+> `remaining` (`windows-x64-remaining`, Name `sancus-builder-remaining`,
+> `WindowsRemainingInstance`). `windows-x64` remains the only qualified target and the
+> promotion receipts are unchanged. See
+> [two parallel Windows lanes](#user-decision-2026-11-17-two-parallel-windows-lanes);
+> the one-instance description below is history.
+>
 > **Active for Windows only since 2026-11-13.** Linux real-GPU qualification moved
 > to the owned [workstation](workstation-ci.md); the workstation's Windows VM was
 > abandoned after GPU passthrough hung the host kernel, so Windows stays here.
@@ -96,7 +106,9 @@ Core results use an immutable checkpoint prefix. The host must verify and retain
 that checkpoint before acknowledging it through the bucket; only then can the
 guest start the long tours. Later progress cannot overwrite the committed core
 files. Missing acknowledgement stops the next phase within a fixed bound and
-never extends the campaign expiry.
+never extends the campaign expiry. *(Superseded 2026-11-17: each lane publishes
+one terminal checkpoint and the acknowledgement became the core handoff; see
+[two parallel Windows lanes](#user-decision-2026-11-17-two-parallel-windows-lanes).)*
 
 `builder_preflight.py` performs noncreating account, namespace, network, quota and
 pinned-image checks. `builder_recovery.py` maps earlier findings to exact retained
@@ -205,7 +217,11 @@ Historical `blast-gpu-*` receipts keep their original names and hashes.
 - Run stack: `sancus-builder-<YYYYMMDD>-<shortsha>-<nonce>`.
 - Child role, profile, security group and schedule: the complete run name plus
   an explicit suffix.
-- EC2 Name tags: `sancus-builder-windows` and `sancus-builder-linux`.
+- EC2 Name tags: `sancus-builder` (core lane) and `sancus-builder-remaining`
+  (remaining lane) since 2026-11-17; historically `sancus-builder-windows` and
+  `sancus-builder-linux`.
+- Expiry schedules: `<run>-windows-expiry` (core) and `<run>-remain-expiry`
+  (remaining); every named child stays within the 64-character limit.
 - Ownership and expiry keys: `sancus-builder:run` and `sancus-builder:expires`.
 
 Never use `sancus:` tag keys or a broad `sancus-*` ownership search. Those belong
@@ -444,6 +460,106 @@ roles, security groups, schedules and the bucket, or a stack service role
 holding that authority. That widens the boundary of the standing identity. A
 non-empty bucket would also leave the stack `DELETE_FAILED`. It is proposed as
 a separately reviewed change, not part of this one.
+
+### User decision, 2026-11-17: two parallel Windows lanes
+
+One Windows g4dn.xlarge could not finish inside the fixed 180-minute expiry
+(boot ~20 min, core ~23 min, core publish plus controller retention and
+acknowledgement 25–60 min, complete graphical suite ~67 min, the final
+checkpoint re-uploading the whole tree 30–60 min, 20 min cleanup). The user
+decided to run two Windows g4dn.xlarge instances in parallel in one campaign.
+`builder_namespace.SLOTS` is the single definition:
+
+| Slot | Lane | Name tag | Logical IDs | Workload |
+| --- | --- | --- | --- | --- |
+| `windows-x64-core` | `core` | `sancus-builder` | `WindowsInstance`, `WindowsExpiry` | desktop, session, engine, `gpu_campaign.py --phase core`, one terminal `finished` checkpoint; no acknowledgement wait |
+| `windows-x64-remaining` | `remaining` | `sancus-builder-remaining` | `WindowsRemainingInstance`, `WindowsRemainingExpiry` | desktop, session, engine, `installed-launcher`, `gpu_campaign.py --phase remaining` (replay plus the complete graphical suite) at once, then the core handoff, the unchanged `gpu_release_gates.py --target windows-x64`, `finished` |
+
+Both instances receive identical user data. Readiness and early worker-exit
+objects are therefore keyed by the IMDS instance ID
+(`results/instances/<instance>/…`); the controller dispatches a per-slot SSM
+descriptor (`target`, `slot`, `lane`) only after it matches the instance, its
+run tag and its slot Name tag. Lane results live under `results/<slot>/`; the
+controller still requires `manifest.instanceId` to equal that slot's journaled
+instance, because the shared guest role may write any `results/*` key.
+
+**Core handoff.** `gpu_release_gates.stage()` reads exactly two core files:
+`gpu-campaign-windows-x64-core/campaign-result.json` and
+`gpu-campaign-windows-x64-core/high-vulkan/visual-parity-native.json` (it follows
+no provenance reference from them). After retaining the core lane's checkpoint
+the controller's `acknowledge` phase publishes those retained bytes under
+`payload/core-handoff/` (guests cannot write `payload/*`) and, last,
+`payload/core-handoff.json`, naming the core instance ID, the raw core manifest
+SHA-256 and each file's SHA-256. The remaining lane verifies every hash, places
+the files at their original paths (never overwriting) and only then runs the
+gate. The controller then terminates the idle core instance through the exact
+owned-member path. The handoff is published before the `builder-core` GitHub
+upload, so the waiting lane is not delayed by it.
+
+**Binding.** Controller `verify_games` and `builder_finalize.bind` share
+`builder_transfer.verify_lanes`. In addition to every earlier check, both slots
+must be `finished` on distinct journaled instances; the core lane's
+`guest-execution.json` complete with `desktop`, `engine` and `core` exit 0 and its
+`campaign-result.json` `collectionComplete`; the remaining lane complete with
+`installed-launcher`, `remaining` and the gate exit 0; the handed-off files
+byte-identical to the core lane's retained files and to the remaining lane's
+retained copies; the remaining lane's recorded handoff receipt hash equal to the
+controller's `core-handoff.json`; and the gate receipt's `primaryHigh` equal to
+the core lane's High evidence. Promotion receipts, `gpu_release_gates.inspect*`,
+`promote_release.py`, `verify_published.py` and the qualification key are unchanged.
+
+**Fail fast.** When either lane fails, the controller terminates the other
+through the same exact owned-member termination and the phase fails; nothing can
+qualify. The always-cleanup still terminates, deletes and audits every journaled
+instance and both expiry schedules.
+
+**Timing** against the fixed expiry E (never extended; every guest step still
+refuses to start unless E−now ≥ 20 min + its limit):
+
+- Windows complete graphical suite budget `gpu_campaign.WINDOWS_GRAPHICAL_SUITE_BUDGET_SECONDS`
+  = 4,800 s (Linux measured ~4,000 s in run 44199687411: 25 tours ~3,240 s plus
+  menu-preview and water-surface; the former 1,800 s bound could not complete it).
+  Its own step check requires E−100 min at start.
+- Remaining-lane guest step = replay 300 s + suite 4,800 s + 120 s inspection =
+  5,220 s. It is admitted only while its later handoff, gate and publication
+  reserve still fits (`HANDOFF_PUBLISH_RESERVE_SECONDS` = 1,500 s), so it must
+  start by E−(1,200 + 1,500 + 5,220) s = E−7,920 s (E−132 min).
+- CreateStack headroom (`builder_timing.MINIMUM_LAUNCH_HEADROOM_SECONDS`) rose from
+  7,200 s to 9,900 s: nominal intent-to-ready ~25 min plus ~4 min of desktop,
+  engine and installed-launcher must reach the suite by E−132 min (7,920 + 1,740 =
+  9,660 s). Runs 44012050675 and 44199687411 created their stacks 4–7 min after
+  selecting a three-hour expiry (~10,400 s of headroom). A later launch is refused
+  before allocating two instances that cannot qualify. A slower boot near this
+  boundary fails the remaining lane's headroom check: an explicit incomplete
+  campaign, never a waived test.
+- The bootstrap window (`builder_timing.BOOTSTRAP_SECONDS`) rose from 900 s to
+  1,200 s because both lanes must now become ready inside it.
+- The remaining lane waits for the handoff at most until E−20 min −
+  `HANDOFF_PUBLISH_RESERVE_SECONDS` (1,500 s: gate ≤ 120 s, its `finished`
+  publish and the controller's retention), i.e. E−45 min.
+- Guests upload checkpoint objects with eight concurrent workers and publish the
+  manifest only after every object. Run 44199687411's sequential guest upload
+  took ~15 min for 656 files (2.1 GB); controller retention took 130 s.
+- Core lane: core step ≤ 2,400 s needs E−60 min. With a nominal launch near
+  E−170 min it is ready ~E−145 min, done ~E−120 min, published and retained well
+  before the remaining lane's suite ends (nominally ~E−65 min).
+- One transient controller retention error is retried once before fail-fast
+  (recorded under `retentionRetries`, not as a run error); a repeated error fails
+  the lane and stops the other.
+- Lane evidence keys are per slot, and the controller checks each manifest's
+  `instanceId` against that slot's instance. Both guests share one agent role, as
+  the single guest did; the guest was already trusted to write its own evidence.
+- Controller grants are unchanged (`launch` 1,200 s, `core` 5,400 s,
+  `acknowledge` 120 s, `final` 5,700 s; `core`/`final` capped at E−20 min) and so
+  are the workflow step timeouts.
+
+**Cost.** The approval estimate counts compute, root storage and IPv4 per instance:
+3 h × 2 × $0.710 + 160 GiB storage + two IPv4 + $1.50 = **$5.84**, within the
+unchanged $20/run and $200 cumulative guards and the four-instance limit. The cost
+receipt lists both instance lifetimes (`slot`, `lane`). The preflight now reserves
+8 G/VT vCPUs. The standing IAM role, boundary and identity stack are unchanged:
+RunInstances has no instance-count limit and any schedule name in the owned
+group is already allowed.
 
 ### Campaign-2 launch permission audit, 2026-10-30
 

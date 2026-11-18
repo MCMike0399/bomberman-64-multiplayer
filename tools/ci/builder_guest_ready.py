@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 
 import builder_guest
+import builder_namespace as names
 import native_execution
 
 
@@ -31,7 +32,9 @@ def publish(manifest_path,target,output):
              'ready':True,'user':user,'sessionId':session,'hardwareQualified':False,
              'scope':'Owned user/bootstrap ready only; initialized renderer and 2x support still require the game controls.'}
     output=Path(output);output.write_text(json.dumps(receipt,indent=2)+'\n')
-    builder_guest.object_client(manifest['runId']).call('put-object','--key','results/'+target+'/bootstrap-ready.json','--body',str(output))
+    # Both lane instances run identical user data before the controller chooses a lane
+    # (2026-11-17), so readiness is keyed by the IMDS instance ID, never the target.
+    builder_guest.object_client(manifest['runId']).call('put-object','--key',names.instance_object(identity['instanceId'],'bootstrap-ready.json'),'--body',str(output))
     return receipt
 
 

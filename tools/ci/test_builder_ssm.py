@@ -14,7 +14,8 @@ class NativeDispatch(unittest.TestCase):
         self.plan={'runId':'sancus-builder-20261030-8762d11-1234567890abcdef','payloadSource':'a'*40,
                    'verificationRunId':'123456789',
                    'fixedCampaignExpiryUtc':'2026-10-30T15:00:00Z','account':names.ACCOUNT,'region':names.REGION,
-                   'instances':[{'os':'Windows','ami':'ami-owned'}]}
+                   'instances':[{'os':'Windows','ami':'ami-owned','slot':slot,'lane':names.SLOTS[slot]['lane']}for slot in names.SLOTS]}
+        self.slot=names.REMAINING_SLOT;self.name='sancus-builder-remaining'
         self.instance='i-1234567890abcdef0';self.calls=[];self.comment=None;self.lose=False
 
     def aws(self,service,operation,*args):
@@ -22,7 +23,7 @@ class NativeDispatch(unittest.TestCase):
         if operation=='get-caller-identity':return {'Account':names.ACCOUNT}
         if operation=='describe-instances':return {'Reservations':[{'Instances':[{
             'InstanceId':self.instance,'ImageId':'ami-owned','InstanceType':'g4dn.xlarge',
-            'Tags':[{'Key':names.RUN_TAG,'Value':self.plan['runId']}],'State':{'Name':'running'}}]}]}
+            'Tags':[{'Key':names.RUN_TAG,'Value':self.plan['runId']},{'Key':'Name','Value':self.name}],'State':{'Name':'running'}}]}]}
         if operation=='send-command':
             self.comment=args[args.index('--comment')+1]
             if self.lose:raise TimeoutError('Accepted response lost')
@@ -34,17 +35,20 @@ class NativeDispatch(unittest.TestCase):
     def test_success_binds_data_to_exact_instance_and_has_no_github_token(self):
         with tempfile.TemporaryDirectory()as root:
             path=Path(root)/'journal.jsonl'
-            self.assertEqual(ssm.dispatch(self.plan,path,self.aws,self.instance,'Windows','b'*64),'command-1')
+            self.assertEqual(ssm.dispatch(self.plan,path,self.aws,self.instance,self.slot,'b'*64),'command-1')
             row=journal.read_journal(path,self.plan)[0]
             self.assertEqual(row['details']['descriptor']['instanceId'],self.instance)
             self.assertEqual(row['details']['descriptor']['executionContext'],'aws-ssm-interactive-desktop')
+            # 2026-11-17: the descriptor names the qualified target plus the lane slot.
+            self.assertEqual({key:row['details']['descriptor'][key]for key in ('target','slot','lane')},
+                             {'target':'windows-x64','slot':'windows-x64-remaining','lane':'remaining'})
             self.assertNotIn('GITHUB_TOKEN',path.read_text())
-            with self.assertRaisesRegex(ValueError,'reconcile'):ssm.dispatch(self.plan,path,self.aws,self.instance,'Windows','b'*64)
+            with self.assertRaisesRegex(ValueError,'reconcile'):ssm.dispatch(self.plan,path,self.aws,self.instance,self.slot,'b'*64)
 
     def test_accepted_response_loss_reconciles_without_a_second_send(self):
         with tempfile.TemporaryDirectory()as root:
             path=Path(root)/'journal.jsonl';self.lose=True
-            with self.assertRaises(TimeoutError):ssm.dispatch(self.plan,path,self.aws,self.instance,'Windows','b'*64)
+            with self.assertRaises(TimeoutError):ssm.dispatch(self.plan,path,self.aws,self.instance,self.slot,'b'*64)
             self.assertEqual(ssm.reconcile(self.plan,path,self.aws,self.instance),'command-1')
             self.assertEqual(ssm.reconcile(self.plan,path,self.aws,self.instance),'command-1')
             self.assertEqual(sum(operation=='send-command'for _,operation,_ in self.calls),1)
@@ -52,7 +56,7 @@ class NativeDispatch(unittest.TestCase):
     def test_not_observed_remains_unresolved(self):
         with tempfile.TemporaryDirectory()as root:
             path=Path(root)/'journal.jsonl';self.lose=True
-            with self.assertRaises(TimeoutError):ssm.dispatch(self.plan,path,self.aws,self.instance,'Windows','b'*64)
+            with self.assertRaises(TimeoutError):ssm.dispatch(self.plan,path,self.aws,self.instance,self.slot,'b'*64)
             self.comment=None
             self.assertIsNone(ssm.reconcile(self.plan,path,self.aws,self.instance))
             self.assertEqual(len(journal.read_journal(path,self.plan)),1)
@@ -65,11 +69,21 @@ class NativeDispatch(unittest.TestCase):
             if args[1]=='describe-instances':result['Reservations'][0]['Instances'][0]['Tags']=[]
             return result
         with tempfile.TemporaryDirectory()as root:
-            with self.assertRaisesRegex(ValueError,'ownership'):ssm.dispatch(self.plan,Path(root)/'j',wrong,self.instance,'Windows','b'*64)
+            with self.assertRaisesRegex(ValueError,'ownership'):ssm.dispatch(self.plan,Path(root)/'j',wrong,self.instance,self.slot,'b'*64)
+        self.assertFalse(any(operation=='send-command'for _,operation,_ in self.calls))
+
+    def test_a_lane_instance_is_matched_by_its_slot_name_tag(self):
+        # The core lane's instance must never receive the remaining lane's descriptor (or vice versa).
+        with tempfile.TemporaryDirectory()as root:
+            with self.assertRaisesRegex(ValueError,'ownership'):
+                ssm.dispatch(self.plan,Path(root)/'j',self.aws,self.instance,names.CORE_SLOT,'b'*64)
+            with self.assertRaisesRegex(ValueError,'slot'):
+                ssm.verify_instance(self.plan,self.aws,self.instance,'windows-x64')
         self.assertFalse(any(operation=='send-command'for _,operation,_ in self.calls))
 
     def test_windows_only_fixed_dispatcher_receives_encoded_data(self):
-        descriptor=ssm.task(self.plan,self.instance,'windows-x64','b'*64)
+        descriptor=ssm.task(self.plan,self.instance,names.CORE_SLOT,'b'*64)
+        self.assertEqual((descriptor['target'],descriptor['lane']),('windows-x64','core'))
         command=ssm.commands('Windows',descriptor)[0]
         self.assertTrue(command.startswith(r'& C:\sancus-builder\bin\dispatch.ps1 -Descriptor '))
         self.assertEqual(json.loads(base64.b64decode(command.split()[-1])),descriptor)
@@ -77,7 +91,8 @@ class NativeDispatch(unittest.TestCase):
     def test_the_retired_linux_target_and_shell_document_are_refused(self):
         # Windows only since 2026-11-13; the deployed policy still allows AWS-RunShellScript but it is unused.
         self.assertEqual(ssm.DOCUMENTS,{'Windows':'AWS-RunPowerShellScript'})
-        with self.assertRaisesRegex(ValueError,'Unsupported native target'):ssm.task(self.plan,self.instance,'linux-x64','b'*64)
+        for slot in ('linux-x64','windows-x64'):
+            with self.subTest(slot=slot),self.assertRaisesRegex(ValueError,'lane slot'):ssm.task(self.plan,self.instance,slot,'b'*64)
         with self.assertRaisesRegex(ValueError,'Unknown operating system'):ssm.commands('Linux',{})
 
 

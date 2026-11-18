@@ -7,7 +7,7 @@ import builder_identity
 class NoInfrastructureChanges(unittest.TestCase):
     def setUp(self):
         self.plan={'references':{'subnet':'subnet-owned-reference','vpc':'vpc-protected'},
-                   'instances':[{'os':'Windows','ami':builder_identity.WINDOWS_AMI,'rootGb':80}]}
+                   'instances':[{'os':'Windows','ami':builder_identity.WINDOWS_AMI,'rootGb':80}for _ in range(2)]}
         self.subnets=[{'SubnetId':'subnet-owned-reference','VpcId':'vpc-protected','State':'available','AvailableIpAddressCount':10}]
         self.tables=[{'RouteTableId':'rt-protected','Associations':[{'Main':True}],
                       'Routes':[{'DestinationCidrBlock':'0.0.0.0/0','GatewayId':'igw-existing','State':'active'}]}]
@@ -25,20 +25,23 @@ class NoInfrastructureChanges(unittest.TestCase):
             with self.assertRaises(ValueError):preflight.check_network(self.plan,self.subnets,self.tables,dns)
 
     def test_unreviewed_image_or_too_small_root_is_refused(self):
-        plan={'instances':[{'ami':builder_identity.WINDOWS_AMI,'rootGb':80}]}
+        # 2026-11-17: one pinned Windows image per lane slot (two instances).
+        plan={'instances':[{'ami':builder_identity.WINDOWS_AMI,'rootGb':80}for _ in range(2)]}
         images=[{'ImageId':ami,'State':'available','Architecture':'x86_64','OwnerId':'official',
                  'RootDeviceName':'/dev/sda1','BlockDeviceMappings':[{'DeviceName':'/dev/sda1','Ebs':{'VolumeSize':75}}]}for ami in builder_identity.AMIS]
         self.assertFalse(preflight.validate_images(plan,images)['existingImagesModified'])
         # Windows only since 2026-11-13: the retired (still policy-allowed) Linux image is never launched.
-        for instances in ([{'ami':builder_identity.AMIS[0],'rootGb':80}],
-                          [{'ami':ami,'rootGb':80}for ami in builder_identity.AMIS]):
+        for instances in ([{'ami':builder_identity.AMIS[0],'rootGb':80}]*2,
+                          [{'ami':ami,'rootGb':80}for ami in builder_identity.AMIS],
+                          [{'ami':builder_identity.WINDOWS_AMI,'rootGb':80}],
+                          [{'ami':builder_identity.WINDOWS_AMI,'rootGb':80}]*3):
             with self.subTest(instances=instances),self.assertRaises(ValueError):preflight.validate_images({'instances':instances},images)
-        plan['instances'][0]['rootGb']=20
+        plan['instances'][1]['rootGb']=20
         with self.assertRaises(ValueError):preflight.validate_images(plan,images)
-        plan['instances'][0]['ami']='ami-community'
+        plan['instances'][1]['ami']='ami-community'
         with self.assertRaises(ValueError):preflight.validate_images(plan,images)
 
-    def test_live_preflight_reads_and_reserves_only_the_one_windows_instance(self):
+    def test_live_preflight_reads_and_reserves_both_windows_lane_instances(self):
         calls=[]
         def aws(*args):
             calls.append(args)
@@ -58,7 +61,7 @@ class NoInfrastructureChanges(unittest.TestCase):
         with patch.object(preflight.builder_audit,'audit',return_value={'passed':True}):
             result=preflight.inspect(plan,aws)
         self.assertTrue(result['passed'],result['errors'])
-        self.assertEqual(result['checks']['quota']['requestedVcpus'],4)
+        self.assertEqual(result['checks']['quota']['requestedVcpus'],8)
         self.assertIn(('ec2','describe-images','--image-ids',builder_identity.WINDOWS_AMI),calls)
 
 

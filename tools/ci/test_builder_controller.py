@@ -28,54 +28,164 @@ class PhaseWiring(unittest.TestCase):
                    'account':names.ACCOUNT,'region':names.REGION,'profile':'sancus','verificationRunId':'123456789',
                    'fixedCampaignExpiryUtc':(datetime.datetime.now(datetime.timezone.utc)+datetime.timedelta(hours=2,minutes=40)).isoformat(),
                    'staging':{'inputs':[],'manifest':{'sha256':'b'*64},'bootstrap':{},'awsCli':{}},
-                   'instances':[{'os':'Windows','ami':'ami-windows'}]}
+                   'instances':[{'os':'Windows','ami':'ami-windows','slot':slot,'lane':row['lane']}for slot,row in names.SLOTS.items()]}
         (self.root/'plan.json').write_text(json.dumps(self.plan));self.session=controller.Controller(self.root,operator=True)
         self.store=Store(self.plan['runId']);self.session.client=self.store
-        self.ids={'windows-x64':'i-00000000000000002'}
-        self.session.data['targets']={target:{'instanceId':identity,'state':'booting'}for target,identity in self.ids.items()}
+        # 2026-11-17: two parallel Windows lanes keyed by slot; both qualify windows-x64 only.
+        self.ids={names.CORE_SLOT:'i-0000000000000c0e0',names.REMAINING_SLOT:'i-0000000000000aea0'}
+        self.session.data['targets']={slot:{'instanceId':identity,'state':'booting','target':'windows-x64','lane':names.SLOTS[slot]['lane']}
+                                      for slot,identity in self.ids.items()}
         self.session.data['bootstrapDeadline']=self.session.stop
         self.session.api=lambda *args:({'Account':names.ACCOUNT,'Arn':f'arn:aws:sts::{names.ACCOUNT}:assumed-role/{names.CI_ROLE}/test'}if args[0]=='sts'else{
             'InstanceInformationList':[{'InstanceId':identity,'PingStatus':'Online'}for identity in self.ids.values()]})
 
     def ready(self,target,**overrides):
         value={'schemaVersion':1,'runId':self.plan['runId'],'source':self.plan['payloadSource'],'account':names.ACCOUNT,
-               'region':names.REGION,'target':target,'instanceId':self.ids[target],'payloadManifestSha256':'b'*64,
+               'region':names.REGION,'target':'windows-x64','instanceId':self.ids[target],'payloadManifestSha256':'b'*64,
                'ready':True,'hardwareQualified':False,'user':'BlastQa','sessionId':1,**overrides}
-        self.store.files['results/'+target+'/bootstrap-ready.json']=json.dumps(value).encode()
+        self.store.files[names.instance_object(self.ids[target],'bootstrap-ready.json')]=json.dumps(value).encode()
 
-    def output(self,target,state):
+    def output(self,target,state,files=None):
         work=self.root/('guest-'+target+'-'+state);(work/'artifacts').mkdir(parents=True)
         (work/'artifacts/runtime.log').write_text('raw '+state)
-        descriptor={'runId':self.plan['runId'],'source':self.plan['payloadSource'],'target':target,
-                    'account':names.ACCOUNT,'region':names.REGION,'instanceId':self.ids[target]}
+        for relative,data in (files or{}).items():
+            path=work/'artifacts'/relative;path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(data)
+        descriptor={'runId':self.plan['runId'],'source':self.plan['payloadSource'],'target':'windows-x64','slot':target,
+                    'lane':names.SLOTS[target]['lane'],'account':names.ACCOUNT,'region':names.REGION,'instanceId':self.ids[target]}
         return builder_guest.publish(self.store,work,descriptor,set(),state)
 
-    def test_core_upload_ack_final_and_cleanup_wiring(self):
-        for target in self.ids:self.ready(target);self.output(target,'core-retained')
+    def core_files(self):
+        return {relative:('{"core": "%s"}'%relative).encode()for relative in names.HANDOFF_FILES}
+
+    def test_two_lane_core_handoff_final_and_cleanup_wiring(self):
+        for target in self.ids:self.ready(target)
+        self.output(names.CORE_SLOT,'finished',self.core_files())
         with (patch.object(controller.builder_ssm,'dispatch',return_value='command-id')as dispatch,
                 patch.object(self.session,'owned_target',side_effect=lambda target:self.ids[target]),
                 patch.object(controller,'new_event')):
             self.session.collect('core')
-        self.assertEqual(dispatch.call_count,1)
-        self.session.acknowledge()
-        for target in self.ids:
-            self.assertIn('payload/core-retained-'+target+'.json',self.store.files)
-            self.output(target,'finished')
+        # Both lanes are dispatched in parallel; the core phase ends once core is retained.
+        self.assertEqual([call.args[4]for call in dispatch.call_args_list],[names.CORE_SLOT,names.REMAINING_SLOT])
+        self.assertEqual(self.session.data['targets'][names.CORE_SLOT]['state'],'finished')
+        self.assertEqual(self.session.data['targets'][names.REMAINING_SLOT]['state'],'running')
+        with patch.object(self.session,'stop_target')as stop:self.session.acknowledge()
+        stop.assert_called_once_with(names.CORE_SLOT)  # The idle core instance is terminated early.
+        receipt=json.loads(self.store.files[names.HANDOFF_RECEIPT_KEY])
+        self.assertEqual((receipt['coreInstanceId'],receipt['remainingInstanceId']),(self.ids[names.CORE_SLOT],self.ids[names.REMAINING_SLOT]))
+        self.assertEqual(receipt['coreManifestSha256'],self.session.data['targets'][names.CORE_SLOT]['retention']['rawManifestSha256'])
+        for row in receipt['files']:
+            self.assertEqual(self.store.files[row['objectKey']],self.core_files()[row['path']])
+        self.assertEqual(self.session.data['coreHandoffSha256'],hashlib.sha256(self.store.files[names.HANDOFF_RECEIPT_KEY]).hexdigest())
+        with patch.object(self.session,'stop_target')as stop:self.session.acknowledge()  # Resumable, never republished differently.
+        self.output(names.REMAINING_SLOT,'finished')
         with patch.object(self.session,'verify_games',return_value={})as verify,patch.object(controller,'new_event'):
             self.session.collect('final');verify.assert_called_once()
         with patch.object(controller.supervisor,'cleanup_owned',return_value={'cleanupComplete':True,'evidenceComplete':True})as cleanup:
             self.assertTrue(self.session.cleanup()['cleanupComplete']);cleanup.assert_called_once()
         self.assertTrue(all(row['state']=='finished'for row in self.session.data['targets'].values()))
+        self.assertTrue((self.root/'evidence'/names.REMAINING_SLOT/'finished/retention.json').is_file())
 
-    def test_no_acknowledgement_for_partial_core(self):
-        with self.assertRaisesRegex(ValueError,'Every committed'):self.session.acknowledge()
-        self.assertFalse(any('core-retained-'in key for key in self.store.files))
+    def test_no_handoff_before_the_core_lane_is_finished_or_after_the_remaining_lane_failed(self):
+        with self.assertRaisesRegex(ValueError,'core lane must be finished'):self.session.acknowledge()
+        self.session.data['targets'][names.CORE_SLOT]['state']='finished'
+        for state in ('failed','stopped','booting'):
+            self.session.data['targets'][names.REMAINING_SLOT]['state']=state
+            with self.subTest(state=state),self.assertRaisesRegex(ValueError,'nothing can qualify'):self.session.acknowledge()
+        self.assertFalse(any(key.startswith('payload/core-handoff')for key in self.store.files))
+
+    def test_a_changed_handoff_receipt_is_never_republished(self):
+        self.session.data['targets'][names.CORE_SLOT]['state']='finished'
+        self.session.data['targets'][names.REMAINING_SLOT]['state']='running'
+        (self.root/'core-handoff.json').write_text('{"other": true}');self.session.data['coreHandoffSha256']='0'*64
+        with self.assertRaisesRegex(ValueError,'earlier core handoff changed'):self.session.acknowledge()
+        (self.root/'core-handoff.json').unlink()
+        with self.assertRaisesRegex(ValueError,'earlier core handoff changed'):self.session.acknowledge()
+        self.assertNotIn(names.HANDOFF_RECEIPT_KEY,self.store.files)
+
+    def test_core_phase_waits_for_the_remaining_lane_dispatch_and_final_waits_for_both(self):
+        self.session.data['targets'][names.CORE_SLOT]['state']='running'
+        self.session.data['targets'][names.REMAINING_SLOT]['state']='booting'
+        self.output(names.CORE_SLOT,'finished',self.core_files())
+        clock=[self.session.stop-100]
+        def tick():clock[0]+=10;return clock[0]
+        self.session.data['bootstrapDeadline']=self.session.stop+60
+        with (patch.object(controller.time,'time',side_effect=tick),patch.object(controller,'new_event'),
+              patch.object(self.session,'observe_bootstrap',return_value=False)as observed):
+            with self.assertRaisesRegex(TimeoutError,'Fixed cleanup boundary'):self.session.collect('core')
+        self.assertGreater(observed.call_count,1)
+        self.assertEqual(self.session.data['targets'][names.CORE_SLOT]['state'],'finished')
+        self.session.data['targets'][names.REMAINING_SLOT]['state']='running';clock[0]=self.session.stop-100
+        with (patch.object(controller.time,'time',side_effect=tick),patch.object(controller,'new_event'),
+              patch.object(self.session,'verify_games')as verify):
+            with self.assertRaisesRegex(TimeoutError,'Fixed cleanup boundary'):self.session.collect('final')
+        verify.assert_not_called()
+
+    def test_one_failed_lane_stops_the_other_lane_at_once(self):
+        for slot in self.ids:self.session.data['targets'][slot]['state']='running'
+        self.output(names.REMAINING_SLOT,'failed')
+        with patch.object(self.session,'stop_target')as stop,patch.object(controller,'new_event'):
+            with self.assertRaisesRegex(RuntimeError,'other lane was stopped'):self.session.collect('core')
+        self.assertEqual([call.args[0]for call in stop.call_args_list],[names.REMAINING_SLOT,names.CORE_SLOT])
+        rows=self.session.data['targets']
+        self.assertEqual((rows[names.REMAINING_SLOT]['state'],rows[names.CORE_SLOT]['state']),('failed','stopped'))
+        self.assertTrue((self.root/'evidence'/names.REMAINING_SLOT/'failed/retention.json').is_file())
+        with patch.object(self.session,'stop_target'),patch.object(controller,'new_event'):
+            with self.assertRaisesRegex(RuntimeError,'already failed'):self.session.collect('final')
+
+    def test_one_transient_retention_error_is_retried_without_failing_either_lane(self):
+        self.session.data['targets'][names.CORE_SLOT]['state']='running'
+        self.session.data['targets'][names.REMAINING_SLOT]['state']='running'
+        self.output(names.CORE_SLOT,'finished',self.core_files())
+        real=self.session.retain;calls=[]
+        def flaky(target,manifest):
+            calls.append(target)
+            if len(calls)==1:raise RuntimeError('transient S3 read')
+            return real(target,manifest)
+        clock=[self.session.stop-100]
+        def tick():clock[0]+=10;return clock[0]
+        with (patch.object(self.session,'retain',side_effect=flaky),patch.object(self.session,'stop_target')as stop,
+              patch.object(controller.time,'time',side_effect=tick),patch.object(controller,'new_event')):
+            self.session.collect('core')
+        stop.assert_not_called()
+        self.assertEqual(self.session.data['phase'],'core-collected')
+        self.assertEqual(self.session.data['targets'][names.CORE_SLOT]['state'],'finished')
+        self.assertEqual(self.session.data['errors'],[])
+        self.assertEqual([row['error']for row in self.session.data['retentionRetries']],['transient S3 read'])
+
+    def test_a_repeated_retention_error_still_fails_and_stops_the_other_lane(self):
+        for slot in self.ids:self.session.data['targets'][slot]['state']='running'
+        self.output(names.CORE_SLOT,'finished',self.core_files())
+        with (patch.object(self.session,'retain',side_effect=RuntimeError('bytes differ'))as retain,
+              patch.object(self.session,'stop_target')as stop,patch.object(controller,'new_event')):
+            with self.assertRaisesRegex(RuntimeError,'other lane was stopped'):self.session.collect('core')
+        self.assertEqual(retain.call_count,2)
+        self.assertEqual([call.args[0]for call in stop.call_args_list],[names.CORE_SLOT,names.REMAINING_SLOT])
+
+    def test_peer_termination_errors_are_recorded_without_hiding_the_lane_failure(self):
+        for slot in self.ids:self.session.data['targets'][slot]['state']='running'
+        self.output(names.CORE_SLOT,'failed')
+        def stop(slot):
+            if slot==names.REMAINING_SLOT:raise ValueError('not running')
+        with patch.object(self.session,'stop_target',side_effect=stop),patch.object(controller,'new_event'):
+            with self.assertRaisesRegex(RuntimeError,'Lane windows-x64-core failed'):self.session.collect('core')
+        self.assertIn({'target':names.REMAINING_SLOT,'error':'not running','scope':'peer-termination'},self.session.data['errors'])
+
+    def test_final_verification_requires_both_lanes_and_the_published_handoff(self):
+        with self.assertRaisesRegex(ValueError,'Every complete'):self.session.verify_games()
+        for slot in self.ids:self.session.data['targets'][slot]['state']='finished'
+        with self.assertRaisesRegex(ValueError,'handoff is required'):self.session.verify_games()
+        (self.root/'core-handoff.json').write_text('{}');self.session.data['coreHandoffSha256']='0'*64
+        with self.assertRaisesRegex(ValueError,'changed after publication'):self.session.verify_games()
+        self.session.data['coreHandoffSha256']=hashlib.sha256(b'{}').hexdigest()
+        with patch.object(controller.transfer,'verify_lanes',side_effect=ValueError('not byte-identical'))as lanes:
+            with self.assertRaisesRegex(ValueError,'byte-identical'):self.session.verify_games()
+        self.assertEqual(lanes.call_args.args[2:4],({},hashlib.sha256(b'{}').hexdigest()))
 
     def test_wrong_producer_or_system_session_never_dispatches(self):
         for changes in ({'instanceId':'i-protected'},{'user':'SYSTEM'},{'sessionId':0}):
-            self.ready('windows-x64',**changes)
+            self.ready(names.REMAINING_SLOT,**changes)
             with patch.object(controller.builder_ssm,'dispatch')as dispatch,self.assertRaises(ValueError):
-                self.session.observe_bootstrap('windows-x64')
+                self.session.observe_bootstrap(names.REMAINING_SLOT)
             dispatch.assert_not_called()
 
     def test_console_failure_marker_fails_target_fast_and_retains_console(self):
@@ -87,16 +197,16 @@ class PhaseWiring(unittest.TestCase):
             return {'InstanceInformationList':[]}
         self.session.api=api;clock=[1000.0]
         with patch.object(controller.time,'time',side_effect=lambda:clock[0]):
-            self.assertFalse(self.session.observe_bootstrap('windows-x64'))
-            self.assertFalse(self.session.observe_bootstrap('windows-x64'))  # Rate-limited.
+            self.assertFalse(self.session.observe_bootstrap(names.REMAINING_SLOT))
+            self.assertFalse(self.session.observe_bootstrap(names.REMAINING_SLOT))  # Rate-limited.
             self.assertEqual(calls.count(('ec2','get-console-output')),1)
             clock[0]+=controller.CONSOLE_SAMPLE_SECONDS
             console['text']='x\nSANCUS-BUILDER-BOOTSTRAP-FAILED status=100 line=12\ntail'
             with self.assertRaisesRegex(RuntimeError,'bootstrap reported failure'):
-                self.session.observe_bootstrap('windows-x64')
-        row=self.session.data['targets']['windows-x64']
+                self.session.observe_bootstrap(names.REMAINING_SLOT)
+        row=self.session.data['targets'][names.REMAINING_SLOT]
         self.assertIn('SANCUS-BUILDER-BOOTSTRAP-FAILED',row['consoleMarkersSeen'])
-        retained=(self.root/'evidence'/'windows-x64'/'console'/'bootstrap-failed.txt').read_text()
+        retained=(self.root/'evidence'/names.REMAINING_SLOT/'console'/'bootstrap-failed.txt').read_text()
         self.assertIn('status=100',retained)
         self.assertEqual(row['consoleSamples'][-1]['sha256'],__import__('hashlib').sha256(retained.encode()).hexdigest())
 
@@ -111,10 +221,10 @@ class PhaseWiring(unittest.TestCase):
             return {'InstanceInformationList':[]}
         self.session.api=api;clock=[1000.0]
         with patch.object(controller.time,'time',side_effect=lambda:clock[0]):
-            self.assertFalse(self.session.observe_bootstrap('windows-x64'))
+            self.assertFalse(self.session.observe_bootstrap(names.REMAINING_SLOT))
             clock[0]+=controller.CONSOLE_SAMPLE_SECONDS
-            self.assertFalse(self.session.observe_bootstrap('windows-x64'))
-        row=self.session.data['targets']['windows-x64']
+            self.assertFalse(self.session.observe_bootstrap(names.REMAINING_SLOT))
+        row=self.session.data['targets'][names.REMAINING_SLOT]
         self.assertIn('AccessDenied',row['consoleSamples'][0]['error'])
         self.assertEqual(row['consoleMarkersSeen'],['SANCUS-BUILDER-BOOTSTRAP-SYSTEM-READY'])
 
@@ -126,49 +236,41 @@ class PhaseWiring(unittest.TestCase):
             status=next(statuses,'Online')
             if status=='error':raise RuntimeError('ssm/describe-instance-information: throttled')
             if status=='missing':return {'InstanceInformationList':[]}
-            return {'InstanceInformationList':[{'InstanceId':self.ids['windows-x64'],'PingStatus':status}]}
+            return {'InstanceInformationList':[{'InstanceId':self.ids[names.REMAINING_SLOT],'PingStatus':status}]}
         self.session.api=api;clock=[1000.0]
         with patch.object(controller.time,'time',side_effect=lambda:clock[0]):
             for _ in range(controller.PING_SAMPLE_LIMIT+10):
-                self.assertFalse(self.session.observe_bootstrap('windows-x64'))
-                self.assertFalse(self.session.observe_bootstrap('windows-x64'))  # Rate-limited: no extra API call.
+                self.assertFalse(self.session.observe_bootstrap(names.REMAINING_SLOT))
+                self.assertFalse(self.session.observe_bootstrap(names.REMAINING_SLOT))  # Rate-limited: no extra API call.
                 clock[0]+=controller.PING_SAMPLE_SECONDS
-            row=self.session.data['targets']['windows-x64']
+            row=self.session.data['targets'][names.REMAINING_SLOT]
             self.assertEqual(row['pingSampleCount'],controller.PING_SAMPLE_LIMIT+10)
             self.assertEqual(len(row['pingSamples']),controller.PING_SAMPLE_LIMIT)
             self.assertIn('throttled',row['pingSamples'][0]['error'])  # First observation retained.
             self.assertEqual(row['pingSamples'][-1]['pingStatus'],'ConnectionLost')
             self.assertNotIn('readyAtUtc',row)
-            statuses=iter([]);self.ready('windows-x64')
+            statuses=iter([]);self.ready(names.REMAINING_SLOT)
             with (patch.object(controller.builder_ssm,'dispatch',return_value='command-id')as dispatch,
-                  patch.object(self.session,'owned_target',return_value=self.ids['windows-x64'])):
-                self.assertTrue(self.session.observe_bootstrap('windows-x64'))
+                  patch.object(self.session,'owned_target',return_value=self.ids[names.REMAINING_SLOT])):
+                self.assertTrue(self.session.observe_bootstrap(names.REMAINING_SLOT))
             dispatch.assert_called_once()
-        saved=json.loads((self.root/'controller.json').read_text())['targets']['windows-x64']
+        saved=json.loads((self.root/'controller.json').read_text())['targets'][names.REMAINING_SLOT]
         self.assertTrue(saved['readyAtUtc'].endswith('+00:00'))
         self.assertEqual(saved['pingSamples'][-1]['pingStatus'],'Online')
         self.assertEqual(saved['pingSampleCount'],controller.PING_SAMPLE_LIMIT+11)
 
-    def test_the_campaign_has_exactly_one_windows_target(self):
+    def test_the_campaign_has_exactly_one_windows_target_and_two_lane_slots(self):
         # 2026-11-13: the Linux AWS builder was removed; Linux qualifies on the owned workstation.
         self.assertEqual(controller.TARGETS,{'windows-x64':'Windows'})
         self.assertIs(controller.TARGETS,names.TARGETS)
+        self.assertEqual(list(controller.SLOTS),['windows-x64-core','windows-x64-remaining'])
 
     def test_bootstrap_deadline_uses_the_reviewed_window(self):
-        self.assertEqual(controller.builder_timing.BOOTSTRAP_SECONDS,900)
+        self.assertEqual(controller.builder_timing.BOOTSTRAP_SECONDS,1200)
         self.assertEqual(self.session.stop,self.session.expiry-20*60)
 
-    def test_failed_target_is_retained_and_terminated(self):
-        for target in self.ids:
-            self.session.data['targets'][target]['state']='running-core'
-            self.output(target,'failed')
-        with patch.object(self.session,'stop_target')as stop,patch.object(controller,'new_event'):
-            with self.assertRaisesRegex(RuntimeError,'target failed'):self.session.collect('core')
-        stop.assert_called_once_with('windows-x64')
-        self.assertTrue((self.root/'evidence/windows-x64/failed/retention.json').is_file())
-
     def test_changed_checkpoint_is_not_accepted_again(self):
-        target='windows-x64';manifest=self.output(target,'core-retained')
+        target=names.CORE_SLOT;manifest=self.output(target,'finished')
         observed=self.root/'observations'/target;observed.mkdir(parents=True)
         (observed/'manifest.json').write_text(json.dumps(manifest))
         self.session.retain(target,manifest)
@@ -192,7 +294,7 @@ class PhaseWiring(unittest.TestCase):
     def test_launch_wires_exact_stack_observation_arming_and_staging_in_order(self):
         journal.append(controller.campaign.JOURNAL,self.plan,'INTENT','AWS::CloudFormation::Stack',self.plan['runId'],{})
         calls=[]
-        logical={target:{'id':identity,'details':{'logicalId':controller.TARGETS[target]+'Instance'}}for target,identity in self.ids.items()}
+        logical={slot:{'id':identity,'details':{'logicalId':names.slot_logical(slot,'Instance')}}for slot,identity in self.ids.items()}
         def wait(*args,**kwargs):kwargs['observe']();calls.append('wait-complete')
         with (patch.object(controller,'verify_context'),
               patch.object(controller.campaign,'submit_intent',side_effect=lambda plan:calls.append('submit')or'stack'),
@@ -206,23 +308,25 @@ class PhaseWiring(unittest.TestCase):
             result=self.session.launch()
         self.assertTrue(result['runtimeCleanupArmed'])
         self.assertEqual(calls,['submit','inventory','wait-complete','inventory','auto-delete','armed','inputs','bootstrap-last'])
-        self.assertEqual(self.session.data['targets']['windows-x64']['instanceId'],self.ids['windows-x64'])
+        self.assertEqual({slot:row['instanceId']for slot,row in self.session.data['targets'].items()},self.ids)
+        self.assertEqual({slot:row['lane']for slot,row in self.session.data['targets'].items()},
+                         {names.CORE_SLOT:'core',names.REMAINING_SLOT:'remaining'})
 
     def test_final_phase_cannot_substitute_finished_flags_for_receipt_validation(self):
         for target in self.ids:
-            self.session.data['targets'][target]['state']='running-remaining';self.output(target,'finished')
+            self.session.data['targets'][target]['state']='running';self.output(target,'finished')
         with patch.object(self.session,'verify_games',side_effect=ValueError('GPU receipt hashes differ')),patch.object(controller,'new_event'):
             with self.assertRaisesRegex(ValueError,'hashes differ'):self.session.collect('final')
 
     def test_early_worker_exit_zero_is_still_failure_without_the_required_receipt(self):
-        target='windows-x64'
-        self.session.data['targets'][target]['state']='running-core'
+        target=names.CORE_SLOT
+        for slot in self.ids:self.session.data['targets'][slot]['state']='running'
         outcome={'runId':self.plan['runId'],'source':self.plan['payloadSource'],'account':names.ACCOUNT,
-                 'region':names.REGION,'instanceId':self.ids[target],'target':target,'exitCode':0}
-        self.store.files['results/'+target+'/worker-exit.json']=json.dumps(outcome).encode()
+                 'region':names.REGION,'instanceId':self.ids[target],'target':'windows-x64','exitCode':0}
+        self.store.files[names.instance_object(self.ids[target],'worker-exit.json')]=json.dumps(outcome).encode()
         with patch.object(self.session,'stop_target')as stop,patch.object(controller,'new_event'):
-            with self.assertRaisesRegex(RuntimeError,'target failed'):self.session.collect('core')
-        stop.assert_called_once_with(target)
+            with self.assertRaisesRegex(RuntimeError,'failed'):self.session.collect('core')
+        self.assertEqual(stop.call_args_list[0].args,(target,))
         self.assertIn('required complete receipt',self.session.data['targets'][target]['error'])
 
     def test_tag_alone_does_not_authorize_terminating_an_unjournaled_instance(self):
@@ -230,7 +334,7 @@ class PhaseWiring(unittest.TestCase):
               patch.object(controller.campaign,'rows',return_value=[]),
               patch.object(controller.builder_ssm,'verify_instance')as metadata,
               patch.object(self.session,'api')as api):
-            with self.assertRaisesRegex(ValueError,'journaled stack member'):self.session.stop_target('windows-x64')
+            with self.assertRaisesRegex(ValueError,'journaled stack member'):self.session.stop_target(names.CORE_SLOT)
         metadata.assert_not_called();api.assert_not_called()
 
     def test_account_match_alone_does_not_prove_the_hosted_role(self):

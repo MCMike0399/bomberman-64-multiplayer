@@ -1,8 +1,9 @@
 name: Release GPU qualification
 
 # Hybrid real-GPU qualification (user decision 2026-11-13). One run produces both promotion
-# artifacts: Windows on the paid Sancus AWS builder (one g4dn instance named `sancus-builder`,
-# reusable builder-controller.yml) and Linux on the owned workstation (fresh Ubuntu container on
+# artifacts: Windows on the paid Sancus AWS builder (since 2026-11-17 two parallel g4dn lanes,
+# `sancus-builder` core and `sancus-builder-remaining`, one campaign and one unchanged Windows promotion
+# artifact; reusable builder-controller.yml) and Linux on the owned workstation (fresh Ubuntu container on
 # the host RTX 2080 SUPER, single-use JIT runner guarded to this workflow on trusted main). The
 # workstation's Windows VM was abandoned after GPU passthrough hung the host kernel.
 

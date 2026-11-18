@@ -117,9 +117,11 @@ def final(plan,stage_errors=None,deadline=None):
         elif kind=='AWS::Scheduler::Schedule':
             logical=row['details']['logicalId']
             # LinuxExpiry only exists in journals of two-instance campaigns before 2026-11-13;
-            # exact-ID cleanup of such a recovered run must still find it.
-            if logical not in ('LinuxExpiry','WindowsExpiry'):raise ValueError('Unknown owned schedule')
-            name=names.resource_name(plan['runId'],'linux-expiry'if logical=='LinuxExpiry'else'windows-expiry')
+            # exact-ID cleanup of such a recovered run must still find it. Every current lane
+            # slot (2026-11-17: WindowsExpiry and WindowsRemainingExpiry) has its own schedule.
+            known={'LinuxExpiry':'linux-expiry',**{names.slot_logical(slot,'Expiry'):spec['expiry']for slot,spec in names.SLOTS.items()}}
+            if logical not in known:raise ValueError('Unknown owned schedule')
+            name=names.resource_name(plan['runId'],known[logical])
             data=campaign.aws(plan,'scheduler','get-schedule','--name',name,'--group-name',names.resource_name(plan['runId'],'expiry-group'),missing=('ResourceNotFoundException',));state='absent'if data is None else'PRESENT'
         elif kind=='AWS::Scheduler::ScheduleGroup':
             data=campaign.aws(plan,'scheduler','get-schedule-group','--name',identity,missing=('ResourceNotFoundException',));state='absent'if data is None else'PRESENT'

@@ -8,11 +8,24 @@ CLEANUP_SECONDS=1200
 MARGIN_SECONDS=900
 CREDENTIAL_MARGIN_SECONDS=120
 # Owned guest bootstrap window, measured from the end of launch inside the core
-# grant (raised from 600 after campaign 2 attempt 2; Windows reboots once).
-BOOTSTRAP_SECONDS=900
+# grant (raised from 600 after campaign 2 attempt 2; Windows reboots once). Raised to
+# 1,200 s on 2026-11-17: both parallel lanes must now be ready inside it.
+BOOTSTRAP_SECONDS=1200
 # Controller stops collecting this long before the fixed expiry (cleanup headroom).
 CONTROLLER_STOP_SECONDS=20*60
-MINIMUM_LAUNCH_HEADROOM_SECONDS=7200
+# Two parallel Windows lanes (user decision 2026-11-17). The remaining lane's replay+suite
+# step (builder_guest.REMAINING_STEP_SECONDS=5,220 s) is admitted only with its handoff,
+# gate and publish reserve (HANDOFF_PUBLISH_RESERVE_SECONDS=1,500 s) still ahead of the
+# 20-minute cleanup boundary, so it must start by E-(1,200+1,500+5,220)=E-7,920 s.
+# Nominal intent-to-ready is ~25 min (stack, staging, ~20 min Windows boot) plus ~4 min of
+# desktop/engine/installed-launcher, so CreateStack must leave >= 7,920+1,740 = 9,660 s; a
+# later launch would allocate two instances that cannot qualify. 9,900 s refuses it first.
+# Runs 44012050675/44199687411 created their stack ~4-7 min after selecting a 3-hour expiry
+# (~10,400 s of headroom). The fixed expiry itself is never moved.
+MINIMUM_LAUNCH_HEADROOM_SECONDS=9900
+# Grants are unchanged by the two-lane split: `core` waits for the core lane's terminal
+# checkpoint (and the remaining lane's dispatch), `acknowledge` publishes the core handoff,
+# `final` waits for the remaining lane. `core`/`final` are also capped at E-20 min.
 PHASE_SECONDS={'intent':300,'intent-published':60,'launch':1200,'core':5400,'acknowledge':120,'final':5700,'terminate':300,'retain':600,'cleanup':1200}
 
 
