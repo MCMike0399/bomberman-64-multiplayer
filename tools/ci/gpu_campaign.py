@@ -11,7 +11,9 @@ ROOT=Path(__file__).resolve().parents[2]
 # native Roster role popup opened). roster-popup-stress opens/closes every role popup 56 times per run.
 # (case, count, step limit seconds); sized to the 180-minute campaign window.
 LINUX_REPEATS=(('roster-popup-stress',3,600),('tour-09',9,900))
-LINUX_GRAPHICAL_SUITE_BUDGET_SECONDS=3600
+# Run 44199687411: 25 tours took ~3240 s on the RTX 2080 SUPER and menu-preview was
+# still progressing when the 3600 s bound expired; water-surface had not started.
+LINUX_GRAPHICAL_SUITE_BUDGET_SECONDS=7200
 # Windows runs the complete graphical suite on its own remaining-lane instance since 2026-11-17
 # (two parallel Sancus lanes). Linux measured ~4,000 s (25 tours ~3,240 s plus menu-preview and
 # water-surface); the former 1,800 s Windows bound could never complete it. The step headroom

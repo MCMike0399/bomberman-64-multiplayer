@@ -5,7 +5,9 @@ import gpu_campaign
 
 class QualificationBudgets(unittest.TestCase):
     def test_linux_full_suite_has_room_beyond_the_previous_whole_command_deadline(self):
-        self.assertEqual(gpu_campaign.LINUX_GRAPHICAL_SUITE_BUDGET_SECONDS, 3600)
+        # Run 44199687411 spent ~3240 s on the tours alone before 3600 s expired.
+        self.assertEqual(gpu_campaign.LINUX_GRAPHICAL_SUITE_BUDGET_SECONDS, 7200)
+
 
     def test_windows_remaining_lane_suite_budget_covers_the_measured_full_suite(self):
         # 2026-11-17: Windows runs the complete suite on its own parallel lane (Linux measured ~4,000 s).
