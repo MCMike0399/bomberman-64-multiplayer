@@ -5,7 +5,21 @@ import gpu_campaign
 
 class QualificationBudgets(unittest.TestCase):
     def test_linux_full_suite_has_room_beyond_the_previous_whole_command_deadline(self):
-        self.assertEqual(gpu_campaign.LINUX_GRAPHICAL_SUITE_BUDGET_SECONDS, 3600)
+        # Run 44199687411 spent ~3240 s on the tours alone before 3600 s expired.
+        self.assertEqual(gpu_campaign.LINUX_GRAPHICAL_SUITE_BUDGET_SECONDS, 7200)
+
+    def test_windows_suite_uses_fixed_lifetime_less_cleanup_and_publication_reserve(self):
+        now = 1_000_000.0
+        self.assertEqual(gpu_campaign.windows_graphical_budget(now + 116 * 60, now), 86 * 60)
+        # The campaign step's own headroom check accepts exactly this bound.
+        budget = gpu_campaign.windows_graphical_budget(now + 116 * 60, now)
+        self.assertGreaterEqual(116 * 60, 20 * 60 + budget)
+
+    def test_windows_suite_refuses_upfront_without_a_complete_suite_window(self):
+        now = 1_000_000.0
+        with self.assertRaisesRegex(RuntimeError, 'Insufficient fixed-lifetime headroom'):
+            gpu_campaign.windows_graphical_budget(now + 89 * 60, now)
+        self.assertEqual(gpu_campaign.windows_graphical_budget(now + 90 * 60, now), 3600)
 
     def test_only_canonical_windows_vulkan_high_is_a_qualifying_driver(self):
         self.assertTrue(gpu_campaign.high_driver_qualifies('windows-x64', 'vulkan'))
