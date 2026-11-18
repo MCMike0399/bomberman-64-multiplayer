@@ -94,15 +94,24 @@ def job_states(suffixes, jobs):
     return {suffix: next((job for job in jobs if job['name'].endswith(suffix)), None) for suffix in suffixes}
 
 
-def wait_jobs(suffixes, timeout, now=time.monotonic, pause=time.sleep, jobs=None):
-    """Hold until every peer client job is actually running; fail fast if one ends."""
+def reached_step(job, step):
+    return any(row.get('name') == step and row.get('status') in ('in_progress', 'completed') for row in job.get('steps') or [])
+
+
+def wait_jobs(suffixes, timeout, now=time.monotonic, pause=time.sleep, jobs=None, step=None):
+    """Hold until every peer client job is actually running; fail fast if one ends.
+
+    With step, every peer must also have reached that step, i.e. finished its own setup.
+    Slow package mirrors (2026-11-18: 11-17 min apt) then delay all clients here, inside
+    the peer-start bound, instead of expiring the 300 s rendered-ready barrier.
+    """
     deadline = now() + timeout
     while True:
         states = job_states(suffixes, jobs() if jobs else run_jobs(deadline=deadline, now=now))
         ended = [suffix for suffix, job in states.items() if job and job['status'] == 'completed']
         if ended: raise RuntimeError('Crossplay peer job ended before the match: ' + ', '.join(ended))
-        if all(job and job['status'] == 'in_progress' for job in states.values()): return
-        if now() > deadline: raise RuntimeError('Crossplay peer runners did not all start: ' + ', '.join(suffixes))
+        if all(job and job['status'] == 'in_progress' and (step is None or reached_step(job, step)) for job in states.values()): return
+        if now() > deadline: raise RuntimeError('Crossplay peer runners did not all reach the hold: ' + ', '.join(suffixes))
         pause(10)
 
 
@@ -306,6 +315,7 @@ def main():
     parser.add_argument('--directory', type=Path, default=ROOT / 'artifacts')
     parser.add_argument('--output', type=Path, default=ROOT / 'artifacts/crossplay-server')
     parser.add_argument('--names', nargs='+', default=[])
+    parser.add_argument('--step', help='wait-jobs: every peer job must have reached this step name')
     parser.add_argument('--timeout', type=int, default=900)
     parser.add_argument('--jobs', nargs='+', default=[], help='Job-name suffixes that must stay alive (wait) or be running (wait-jobs)')
     parser.add_argument('--cap', type=int, default=0, help='Hard ceiling in seconds for liveness-extended waits (at most ARTIFACT_CAP_SECONDS)')
@@ -320,7 +330,7 @@ def main():
     elif args.operation == 'download':
         if len(args.names) != 1: raise RuntimeError('Download exactly one artifact')
         download_artifact(args.names[0], directory, attempt_started())
-    elif args.operation == 'wait-jobs': wait_jobs(args.jobs, min(args.timeout, PEER_START_SECONDS))
+    elif args.operation == 'wait-jobs': wait_jobs(args.jobs, min(args.timeout, PEER_START_SECONDS), step=args.step)
     elif args.operation == 'server-start':
         process = launch([sys.executable, str(Path(__file__).resolve()), 'server-serve', '--directory', str(directory), '--output', str(output)], output)
         deadline = time.monotonic() + 150

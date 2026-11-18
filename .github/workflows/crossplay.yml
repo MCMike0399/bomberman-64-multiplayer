@@ -110,10 +110,11 @@ jobs:
           python tools/ci/crossplay.py download --names crossplay-origin-a${{ github.run_attempt }} --directory artifacts/origin
       - name: Hold until every peer client runner has started
         # Queue delay is not readiness: start each game only once all three
-        # runners are live, so the in-game ready barrier measures rendering.
+        # runners have finished setup and reached this hold, so the in-game
+        # ready barrier measures rendering, not a slow package mirror.
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python tools/ci/crossplay.py wait-jobs --jobs "Client windows-x64" "Client linux-x64" "Client macos-arm64" --timeout 1800
+        run: python tools/ci/crossplay.py wait-jobs --jobs "Client windows-x64" "Client linux-x64" "Client macos-arm64" --timeout 1800 --step "Hold until every peer client runner has started"
       - name: Install the real download and warm its actual renderer
         env:
           TARGET: ${{ matrix.target }}

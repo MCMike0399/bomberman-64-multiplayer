@@ -158,8 +158,28 @@ class CrossplayRendezvousTests(unittest.TestCase):
             crossplay.wait_jobs(names, 1800, now=lambda: 0, pause=lambda _: None, jobs=lambda: ended)
         queued = [job(n, 'queued') for n in names]
         times = iter([0, 2000])
-        with self.assertRaisesRegex(RuntimeError, 'did not all start'):
+        with self.assertRaisesRegex(RuntimeError, 'did not all reach the hold'):
             crossplay.wait_jobs(names, 1800, now=lambda: next(times), pause=lambda _: None, jobs=lambda: queued)
+
+    def test_with_a_step_every_peer_must_have_finished_setup_and_reached_the_hold(self):
+        hold = 'Hold until every peer client runner has started'
+        def job(name, *steps): return {'name': 'Cross-platform Quick Play / ' + name, 'status': 'in_progress', 'conclusion': None,
+                                       'steps': [{'name': step, 'status': status} for step, status in steps]}
+        names = ['Client windows-x64', 'Client linux-x64', 'Client macos-arm64']
+        setup = ('Run sudo apt-get update', 'in_progress')
+        slow = [job(n, ('Set up job', 'completed'), setup if 'linux' in n else (hold, 'in_progress')) for n in names]
+        ready = [job(n, ('Set up job', 'completed'), (hold, 'in_progress' if 'linux' in n else 'completed')) for n in names]
+        sequence = iter([slow, slow, ready]); polls = []
+        crossplay.wait_jobs(names, 1800, now=lambda: 0, pause=polls.append, jobs=lambda: next(sequence), step=hold)
+        self.assertEqual(len(polls), 2)
+        times = iter([0, 2000])
+        with self.assertRaisesRegex(RuntimeError, 'did not all reach the hold'):
+            crossplay.wait_jobs(names, 1800, now=lambda: next(times), pause=lambda _: None, jobs=lambda: slow, step=hold)
+        # Without a step, a running job is enough (unchanged behaviour).
+        crossplay.wait_jobs(names, 1800, now=lambda: 0, pause=lambda _: None, jobs=lambda: slow)
+        text = (crossplay.ROOT / '.github/workflows/crossplay.yml').read_text()
+        self.assertIn('- name: ' + hold, text)
+        self.assertIn('wait-jobs --jobs "Client windows-x64" "Client linux-x64" "Client macos-arm64" --timeout 1800 --step "' + hold + '"', text)
 
     def test_artifact_wait_tracks_only_missing_artifacts_producers(self):
         environment = {'GITHUB_REPOSITORY': 'o/r', 'GITHUB_RUN_ID': '1'}
