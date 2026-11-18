@@ -1,5 +1,6 @@
 """Fixed guest workload. Bootstrap supplies cached, immutable inputs and a desktop."""
 import argparse
+import concurrent.futures
 import hashlib
 import json
 import os
@@ -104,11 +105,15 @@ def publish(client,root,descriptor,input_names,state,extra_files=()):
         data=path.read_bytes();builder_payload.reject_credentials(data,secrets)
         frozen=snapshot/relative;frozen.parent.mkdir(parents=True,exist_ok=True);frozen.write_bytes(data)
         # Every lane slot and checkpoint owns a distinct object prefix.
-        relative=state+'/'+relative
         key='results/'+slot+'/'+state+f'/object-{len(files):06d}.bin'
-        client.call('put-object','--key',key,'--body',str(frozen))
-        files.append({'path':relative,'objectKey':key,'size':frozen.stat().st_size,'sha256':digest(frozen)})
+        files.append({'path':state+'/'+relative,'objectKey':key,'size':frozen.stat().st_size,'sha256':digest(frozen),'frozen':frozen})
     if not files:raise ValueError('Guest produced no retainable evidence')
+    # One CLI call per object took ~1.4 s (656 files in ~15 min, run 44199687411); upload
+    # the frozen snapshot concurrently, then publish the manifest only after every object.
+    with concurrent.futures.ThreadPoolExecutor(max_workers=PUBLISH_WORKERS)as pool:
+        for future in [pool.submit(client.call,'put-object','--key',row['objectKey'],'--body',str(row['frozen']))for row in files]:
+            future.result()
+    for row in files:del row['frozen']
     manifest={'schemaVersion':1,**{key:descriptor[key]for key in ('runId','source','account','region','target','slot','lane','instanceId')},
               'state':state,'files':files,'gameVerdict':'not-inferred','executionContext':'aws-ssm-interactive-desktop'}
     path=root/'result-manifest.json';path.write_text(json.dumps(manifest,indent=2)+'\n')
@@ -122,13 +127,16 @@ def publish(client,root,descriptor,input_names,state,extra_files=()):
 #   then ONE terminal `finished` checkpoint. No acknowledgement wait.
 # - remaining lane: desktop, engine, installed-launcher (<= 600 s), then the remaining
 #   collector at once: replay (<= 300 s) plus the Windows complete graphical suite
-#   (gpu_campaign.WINDOWS_GRAPHICAL_SUITE_BUDGET_SECONDS = 5,400 s; Linux measured
-#   ~4,000 s) plus 120 s of package inspection, so it must start by E-117 min. It then
+#   (gpu_campaign.WINDOWS_GRAPHICAL_SUITE_BUDGET_SECONDS = 4,800 s; Linux measured
+#   ~4,000 s in run 44199687411) plus 120 s of package inspection. The step is admitted
+#   only if it can still reach the gate: E-now >= 20 min + HANDOFF_PUBLISH_RESERVE_SECONDS
+#   + REMAINING_STEP_SECONDS, i.e. it must start by E-132 min. It then
 #   waits for the controller's core handoff, never later than E-20 min minus
 #   HANDOFF_PUBLISH_RESERVE_SECONDS (gate <= 120 s, its own `finished` publish and the
 #   controller's retention), runs the unchanged gate and publishes `finished`.
+PUBLISH_WORKERS=8
 CORE_STEP_SECONDS=2400
-REMAINING_STEP_SECONDS=300+5400+120
+REMAINING_STEP_SECONDS=300+4800+120
 GATE_STEP_SECONDS=120
 HANDOFF_WAIT_SECONDS=5400
 HANDOFF_PUBLISH_RESERVE_SECONDS=1500
@@ -197,9 +205,10 @@ def run(args):
             'complete':False,'errors':[],'gameVerdict':'not-inferred'}
     input_names={row['fileName']for row in inputs if row['role']=='artifact'}
     expiry=descriptor['expiresAtUtc'];target=descriptor['target'];godot=None
-    def step(name,command,limit):
+    def step(name,command,limit,reserve=0):
+        # reserve: time a later step of this lane still needs after this one (gate and publish).
         remaining=datetime.datetime.fromisoformat(expiry).timestamp()-time.time()
-        if remaining<20*60+limit:raise TimeoutError('Guest step lacks fixed cleanup headroom: '+name)
+        if remaining<20*60+reserve+limit:raise TimeoutError('Guest step lacks fixed cleanup headroom: '+name)
         entry={'name':name,'command':command};report['steps'].append(entry)
         log=root/'artifacts'/('guest-'+name+'.log');start=time.monotonic()
         with log.open('w')as stream:
@@ -237,7 +246,7 @@ def run(args):
             step('installed-launcher',[sys.executable,'tools/ci/startup_guard.py','--expected-revision',descriptor['source'],
                                       '--output','artifacts/gpu-installed-startup-guard'],600)
             # Starts at once, in parallel with the core lane; never waits for core evidence.
-            step('remaining',collector('remaining'),REMAINING_STEP_SECONDS)
+            step('remaining',collector('remaining'),REMAINING_STEP_SECONDS,reserve=HANDOFF_PUBLISH_RESERVE_SECONDS)
             report['coreHandoffPendingSamples']=[]
             report['coreHandoff']=await_core_handoff(client,root,descriptor,samples=report['coreHandoffPendingSamples'])
             output.write_text(json.dumps(report,indent=2)+'\n')

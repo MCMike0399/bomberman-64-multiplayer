@@ -9,7 +9,7 @@ class QualificationBudgets(unittest.TestCase):
 
     def test_windows_remaining_lane_suite_budget_covers_the_measured_full_suite(self):
         # 2026-11-17: Windows runs the complete suite on its own parallel lane (Linux measured ~4,000 s).
-        self.assertEqual(gpu_campaign.WINDOWS_GRAPHICAL_SUITE_BUDGET_SECONDS, 5400)
+        self.assertEqual(gpu_campaign.WINDOWS_GRAPHICAL_SUITE_BUDGET_SECONDS, 4800)
         import inspect
         self.assertIn('else WINDOWS_GRAPHICAL_SUITE_BUDGET_SECONDS', inspect.getsource(gpu_campaign.run))
         self.assertNotIn('else 1800', inspect.getsource(gpu_campaign.run))

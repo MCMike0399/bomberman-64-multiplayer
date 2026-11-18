@@ -132,6 +132,35 @@ class PhaseWiring(unittest.TestCase):
         with patch.object(self.session,'stop_target'),patch.object(controller,'new_event'):
             with self.assertRaisesRegex(RuntimeError,'already failed'):self.session.collect('final')
 
+    def test_one_transient_retention_error_is_retried_without_failing_either_lane(self):
+        self.session.data['targets'][names.CORE_SLOT]['state']='running'
+        self.session.data['targets'][names.REMAINING_SLOT]['state']='running'
+        self.output(names.CORE_SLOT,'finished',self.core_files())
+        real=self.session.retain;calls=[]
+        def flaky(target,manifest):
+            calls.append(target)
+            if len(calls)==1:raise RuntimeError('transient S3 read')
+            return real(target,manifest)
+        clock=[self.session.stop-100]
+        def tick():clock[0]+=10;return clock[0]
+        with (patch.object(self.session,'retain',side_effect=flaky),patch.object(self.session,'stop_target')as stop,
+              patch.object(controller.time,'time',side_effect=tick),patch.object(controller,'new_event')):
+            self.session.collect('core')
+        stop.assert_not_called()
+        self.assertEqual(self.session.data['phase'],'core-collected')
+        self.assertEqual(self.session.data['targets'][names.CORE_SLOT]['state'],'finished')
+        self.assertEqual(self.session.data['errors'],[])
+        self.assertEqual([row['error']for row in self.session.data['retentionRetries']],['transient S3 read'])
+
+    def test_a_repeated_retention_error_still_fails_and_stops_the_other_lane(self):
+        for slot in self.ids:self.session.data['targets'][slot]['state']='running'
+        self.output(names.CORE_SLOT,'finished',self.core_files())
+        with (patch.object(self.session,'retain',side_effect=RuntimeError('bytes differ'))as retain,
+              patch.object(self.session,'stop_target')as stop,patch.object(controller,'new_event')):
+            with self.assertRaisesRegex(RuntimeError,'other lane was stopped'):self.session.collect('core')
+        self.assertEqual(retain.call_count,2)
+        self.assertEqual([call.args[0]for call in stop.call_args_list],[names.CORE_SLOT,names.REMAINING_SLOT])
+
     def test_peer_termination_errors_are_recorded_without_hiding_the_lane_failure(self):
         for slot in self.ids:self.session.data['targets'][slot]['state']='running'
         self.output(names.CORE_SLOT,'failed')
@@ -237,7 +266,7 @@ class PhaseWiring(unittest.TestCase):
         self.assertEqual(list(controller.SLOTS),['windows-x64-core','windows-x64-remaining'])
 
     def test_bootstrap_deadline_uses_the_reviewed_window(self):
-        self.assertEqual(controller.builder_timing.BOOTSTRAP_SECONDS,900)
+        self.assertEqual(controller.builder_timing.BOOTSTRAP_SECONDS,1200)
         self.assertEqual(self.session.stop,self.session.expiry-20*60)
 
     def test_changed_checkpoint_is_not_accepted_again(self):

@@ -17,7 +17,7 @@ LINUX_GRAPHICAL_SUITE_BUDGET_SECONDS=3600
 # water-surface); the former 1,800 s Windows bound could never complete it. The step headroom
 # check below needs E-now >= 20 min + 5,400 s before the suite starts (E-110 min); the guest
 # wrapper (builder_guest.REMAINING_STEP_SECONDS) adds replay and inspection on top.
-WINDOWS_GRAPHICAL_SUITE_BUDGET_SECONDS=5400
+WINDOWS_GRAPHICAL_SUITE_BUDGET_SECONDS=4800
 
 OTHER_STAGES=('sunken-temple','rock-garden','top-rules','blizzard-battle','greedy-trap','field-of-grass','in-the-gutter','sea-sick','lost-at-sea','circuit-garden')
 

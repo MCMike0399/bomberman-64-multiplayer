@@ -517,25 +517,38 @@ instance and both expiry schedules.
 refuses to start unless E−now ≥ 20 min + its limit):
 
 - Windows complete graphical suite budget `gpu_campaign.WINDOWS_GRAPHICAL_SUITE_BUDGET_SECONDS`
-  = 5,400 s (Linux measured ~4,000 s: 25 tours ~3,240 s plus menu-preview and
-  water-surface; the former 1,800 s bound could not complete it). Its own step
-  check requires E−110 min at start.
-- Remaining-lane guest step = replay 300 s + suite 5,400 s + 120 s inspection =
-  5,820 s, so it must start by E−7,020 s (E−117 min).
+  = 4,800 s (Linux measured ~4,000 s in run 44199687411: 25 tours ~3,240 s plus
+  menu-preview and water-surface; the former 1,800 s bound could not complete it).
+  Its own step check requires E−100 min at start.
+- Remaining-lane guest step = replay 300 s + suite 4,800 s + 120 s inspection =
+  5,220 s. It is admitted only while its later handoff, gate and publication
+  reserve still fits (`HANDOFF_PUBLISH_RESERVE_SECONDS` = 1,500 s), so it must
+  start by E−(1,200 + 1,500 + 5,220) s = E−7,920 s (E−132 min).
 - CreateStack headroom (`builder_timing.MINIMUM_LAUNCH_HEADROOM_SECONDS`) rose from
-  7,200 s to 9,000 s: nominal intent-to-ready ~25 min plus ~4 min of desktop,
-  engine and installed-launcher must reach the suite by E−117 min (7,020 + 1,740 =
-  8,760 s). A later launch is refused before allocating two instances that cannot
-  qualify. A slower boot near this boundary fails the remaining lane's headroom
-  check: an explicit incomplete campaign, never a waived test.
+  7,200 s to 9,900 s: nominal intent-to-ready ~25 min plus ~4 min of desktop,
+  engine and installed-launcher must reach the suite by E−132 min (7,920 + 1,740 =
+  9,660 s). Runs 44012050675 and 44199687411 created their stacks 4–7 min after
+  selecting a three-hour expiry (~10,400 s of headroom). A later launch is refused
+  before allocating two instances that cannot qualify. A slower boot near this
+  boundary fails the remaining lane's headroom check: an explicit incomplete
+  campaign, never a waived test.
+- The bootstrap window (`builder_timing.BOOTSTRAP_SECONDS`) rose from 900 s to
+  1,200 s because both lanes must now become ready inside it.
 - The remaining lane waits for the handoff at most until E−20 min −
   `HANDOFF_PUBLISH_RESERVE_SECONDS` (1,500 s: gate ≤ 120 s, its `finished`
   publish and the controller's retention), i.e. E−45 min.
+- Guests upload checkpoint objects with eight concurrent workers and publish the
+  manifest only after every object. Run 44199687411's sequential guest upload
+  took ~15 min for 656 files (2.1 GB); controller retention took 130 s.
 - Core lane: core step ≤ 2,400 s needs E−60 min. With a nominal launch near
-  E−160 min it is ready ~E−135 min, done ~E−110 min, published and retained
-  ~E−70 to E−50 min; the handoff is then already waiting when the remaining
-  lane's suite ends (nominally ~E−45 to E−40 min at the latest launch, earlier
-  otherwise).
+  E−170 min it is ready ~E−145 min, done ~E−120 min, published and retained well
+  before the remaining lane's suite ends (nominally ~E−65 min).
+- One transient controller retention error is retried once before fail-fast
+  (recorded under `retentionRetries`, not as a run error); a repeated error fails
+  the lane and stops the other.
+- Lane evidence keys are per slot, and the controller checks each manifest's
+  `instanceId` against that slot's instance. Both guests share one agent role, as
+  the single guest did; the guest was already trusted to write its own evidence.
 - Controller grants are unchanged (`launch` 1,200 s, `core` 5,400 s,
   `acknowledge` 120 s, `final` 5,700 s; `core`/`final` capped at E−20 min) and so
   are the workflow step timeouts.

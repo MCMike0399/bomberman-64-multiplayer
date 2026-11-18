@@ -3,7 +3,7 @@
 > Current (user decision 2026-11-17): the Windows lane runs on **two parallel Sancus
 > T4 instances** in one campaign: `core` collects the core checkpoint while
 > `remaining` runs the installed-launcher guard, replay and complete graphical suite
-> (5,400 s Windows budget), then gates against the controller's hash-bound core
+> (4,800 s Windows budget), then gates against the controller's hash-bound core
 > handoff. `windows-x64` stays the only qualified target, the receipts and the
 > acceptance bar are unchanged, and the estimate is $5.84 within the $20/$200
 > guards. See [two parallel Windows lanes](sancus-builder-ci.md#user-decision-2026-11-17-two-parallel-windows-lanes).

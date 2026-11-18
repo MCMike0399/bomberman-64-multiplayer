@@ -66,26 +66,27 @@ class CredentialEnvelope(unittest.TestCase):
 
     def test_bootstrap_window_and_both_lanes_fit_the_latest_permitted_launch(self):
         # Latest CreateStack allowed by minimumLaunchHeadroomSeconds, then a full launch
-        # grant. The 900 s bootstrap deadline precedes the controller stop, and the core
+        # grant. The 1,200 s bootstrap deadline precedes the controller stop, and the core
         # grant covers bootstrap plus the core lane's 2400 s step with its own headroom.
         import builder_guest,gpu_campaign
         expiry=self.started.timestamp()+160*60
         submitted=expiry-timing.MINIMUM_LAUNCH_HEADROOM_SECONDS
         launched=submitted+timing.PHASE_SECONDS['launch']
         bootstrap_deadline=min(launched+timing.BOOTSTRAP_SECONDS,expiry-timing.CONTROLLER_STOP_SECONDS)
-        self.assertEqual(bootstrap_deadline,launched+900)
+        self.assertEqual(bootstrap_deadline,launched+1200)
         core=timing.grant(self.plan,'core',now=launched,expiration=self.expiry(400))['budgetSeconds']
         self.assertEqual(core,5400)
         self.assertGreaterEqual(core,timing.BOOTSTRAP_SECONDS+builder_guest.CORE_STEP_SECONDS)
         self.assertGreaterEqual(expiry-bootstrap_deadline,20*60+builder_guest.CORE_STEP_SECONDS)
-        # Remaining lane (2026-11-17): replay + the 5,400 s Windows suite + inspection must
-        # start by E-117 min. Nominal intent-to-ready (~25 min) plus desktop/engine/launcher
-        # (~4 min) fits the 9,000 s launch boundary; the former 7,200 s boundary could not.
+        # Remaining lane (2026-11-17): replay + the 4,800 s Windows suite + inspection is
+        # admitted only with the handoff/gate/publish reserve still ahead, so it must start
+        # by E-132 min. Nominal intent-to-ready (~25 min) plus desktop/engine/launcher
+        # (~4 min) fits the 9,900 s launch boundary; 9,000 s and 7,200 s could not.
         self.assertEqual(builder_guest.REMAINING_STEP_SECONDS,300+gpu_campaign.WINDOWS_GRAPHICAL_SUITE_BUDGET_SECONDS+120)
-        latest_remaining=expiry-20*60-builder_guest.REMAINING_STEP_SECONDS
-        self.assertEqual(expiry-latest_remaining,7020)
+        latest_remaining=expiry-20*60-builder_guest.HANDOFF_PUBLISH_RESERVE_SECONDS-builder_guest.REMAINING_STEP_SECONDS
+        self.assertEqual(expiry-latest_remaining,7920)
         self.assertLessEqual(submitted+25*60+4*60,latest_remaining)
-        self.assertGreater(expiry-7200+25*60+4*60,latest_remaining)
+        for former in (7200,9000):self.assertGreater(expiry-former+25*60+4*60,latest_remaining)
         # The suite step inside gpu_campaign keeps its own E-now >= 20 min + limit check.
         self.assertLessEqual(20*60+gpu_campaign.WINDOWS_GRAPHICAL_SUITE_BUDGET_SECONDS+300,expiry-latest_remaining)
         # The handoff wait ends early enough for the gate step's own headroom check.

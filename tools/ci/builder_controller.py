@@ -302,7 +302,12 @@ class Controller:
                         continue
                     manifest=self.read_object('results/'+target+'/manifest.json',self.root/'observations'/target/'manifest.json')
                     if manifest is None:self.check_worker_exit(target);continue
-                    retained=self.retain(target,manifest)
+                    try:retained=self.retain(target,manifest)
+                    except (ValueError,RuntimeError)as first:
+                        # Fail-fast stops the other lane too, so one transient S3 read must not
+                        # cost both lanes: retry once; a deterministic mismatch fails again.
+                        self.data.setdefault('retentionRetries',[]).append({'target':target,'phase':phase,'error':str(first)});self.save()
+                        retained=self.retain(target,manifest)
                     row.update(state=manifest.get('state'),retention=retained)
                     if row['state']=='failed':raise RuntimeError('Lane published a failed checkpoint')
                     self.save()

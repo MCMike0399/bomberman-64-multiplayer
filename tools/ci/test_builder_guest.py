@@ -61,6 +61,31 @@ class GuestProtocol(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'slot'):
                 builder_transfer.validate_results(manifest,{**task,'payloadSource':task['source']},'windows-x64-core')
 
+    def test_publish_uploads_every_object_before_the_manifest_and_stops_on_a_failed_upload(self):
+        import threading
+        task=self.lane()
+        for fail in (False,True):
+            with self.subTest(fail=fail),tempfile.TemporaryDirectory()as root:
+                root=Path(root);artifacts=root/'artifacts';artifacts.mkdir()
+                for index in range(40):(artifacts/f'case-{index:02d}.json').write_text(str(index))
+                calls=[];lock=threading.Lock()
+                class Client:
+                    def call(self,operation,*args):
+                        key=args[1]
+                        if fail and key.endswith('object-000007.bin'):raise RuntimeError('put failed')
+                        with lock:calls.append(key)
+                if fail:
+                    with self.assertRaisesRegex(RuntimeError,'put failed'):guest.publish(Client(),root,task,set(),'finished')
+                    self.assertNotIn('results/windows-x64-remaining/manifest.json',calls)
+                    continue
+                manifest=guest.publish(Client(),root,task,set(),'finished')
+                self.assertEqual(calls[-1],'results/windows-x64-remaining/manifest.json')
+                self.assertEqual(sorted(calls[:-1]),[row['objectKey']for row in manifest['files']])
+                self.assertEqual([row['objectKey']for row in manifest['files']],
+                                 [f'results/windows-x64-remaining/finished/object-{index:06d}.bin'for index in range(40)])
+                self.assertTrue(all(set(row)=={'path','objectKey','size','sha256'}for row in manifest['files']))
+                self.assertEqual(json.loads((root/'result-manifest.json').read_text()),manifest)
+
     def test_each_lane_publishes_only_terminal_checkpoints_under_its_own_slot(self):
         objects={}
         class Client:
@@ -217,6 +242,15 @@ class LaneSequences(unittest.TestCase):
         code,commands,published,report,_=self.run_lane('windows-x64-remaining',expires=expires)
         self.assertEqual(code,1);self.assertEqual(commands,['desktop','engine','installed-launcher'])
         self.assertIn('headroom: remaining',report['errors'][0])
+
+    def test_remaining_step_also_needs_its_handoff_gate_and_publish_reserve(self):
+        # Enough for the step alone, not for the gate and publication after it.
+        expires=(guest.datetime.datetime.now(guest.datetime.timezone.utc)+guest.datetime.timedelta(
+            seconds=20*60+guest.REMAINING_STEP_SECONDS+guest.HANDOFF_PUBLISH_RESERVE_SECONDS-120)).isoformat()
+        code,commands,published,report,waited=self.run_lane('windows-x64-remaining',expires=expires)
+        self.assertEqual(code,1);self.assertEqual(commands,['desktop','engine','installed-launcher'])
+        self.assertIn('headroom: remaining',report['errors'][0]);waited.assert_not_called()
+        self.assertEqual(published,[('windows-x64-remaining','failed')])
 
     def test_unknown_or_mismatched_lane_never_runs_a_workload(self):
         for slot,lane in (('windows-x64-core','remaining'),('windows-x64','core'),('windows-x64-remaining',None)):
