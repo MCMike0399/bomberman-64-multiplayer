@@ -5,7 +5,9 @@ import gpu_campaign
 
 class QualificationBudgets(unittest.TestCase):
     def test_linux_full_suite_has_room_beyond_the_previous_whole_command_deadline(self):
-        self.assertEqual(gpu_campaign.LINUX_GRAPHICAL_SUITE_BUDGET_SECONDS, 3600)
+        # Run 44199687411 spent ~3240 s on the tours alone before 3600 s expired.
+        self.assertEqual(gpu_campaign.LINUX_GRAPHICAL_SUITE_BUDGET_SECONDS, 7200)
+
 
     def test_only_canonical_windows_vulkan_high_is_a_qualifying_driver(self):
         self.assertTrue(gpu_campaign.high_driver_qualifies('windows-x64', 'vulkan'))

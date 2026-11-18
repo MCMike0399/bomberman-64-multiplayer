@@ -1020,10 +1020,21 @@ times. Receipts sit under `diagnosticRepeats` in `campaign-result.json`.
 
 Tour 03's in-game deadline is 900 seconds, matching its `graphics-settings` child; the old
 180-second parent deadline cut off a healthy child. Its steps and in-game waits are unchanged.
-The Linux native GPU campaign gives the complete packaged graphical command 3600 seconds.
-The previous 1800-second outer bound expired with tour 17 active after 142 seconds, with 17 of
-25 tours reached (workstation-gpu-linux-x64-diagnostics artifact 14299103272). Scaling that
-observed progress to all tours is about 2650 seconds; 3600 allows about 950 seconds of margin.
+The Linux native GPU campaign gives the complete packaged graphical command 7200 seconds
+(2026-11-17). Campaign 44199687411 passed all 25 tours on the RTX 2080 SUPER in about 3240
+seconds, then the earlier 3600-second bound expired while `menu-preview` was still progressing
+and before `water-surface` (artifact 14385966563). The 330-minute workstation job still covers
+7200 seconds plus the later diagnostic repeats. An even earlier 1800-second bound had stopped at
+tour 17 (artifact 14299103272).
+
+Fixtures must not assign `Shader.Code` on a live shader that has drawn. Godot 4.7.2 marks the
+RD shader version dirty before it waits for in-flight `PipelineCompilation` tasks; such a task
+then frees variant RIDs off the render thread (`free_rid ... render thread`). Campaign
+44199687411 attributed all 50 Windows Blizzard errors to one such worker during
+`restore:warmup`. The visual-parity fixture therefore assigns fixture-owned `Shader` objects
+whose code is final before assignment and restores the original `Shader` references.
+Production shaders only receive code at creation. On llvmpipe, old and new fixtures produce
+byte-identical PNGs, conditions and inventories for Blizzard.
 Each tour retains its own 1500-second outer runner bound (plus 300 seconds for cleanup).
 Windows' optional D3D12 High comparison remains separate from the Vulkan qualifying images,
 per the [current acceptance note](../gpu-qualification.md) and the separately labelled control

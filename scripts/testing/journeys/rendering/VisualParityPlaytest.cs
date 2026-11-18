@@ -74,7 +74,8 @@ public partial class PlaytestDriver
             var overlay=new CanvasLayer{Layer=200};AddChild(overlay);
             var displayed=new TextureRect{Texture=viewport.GetTexture(),ExpandMode=TextureRect.ExpandModeEnum.IgnoreSize,StretchMode=TextureRect.StretchModeEnum.KeepAspectCentered};
             overlay.AddChild(displayed);displayed.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-            var shaders=new Dictionary<Shader,string>();
+            var shaders=new Dictionary<Shader,string>();var substitutes=new Dictionary<Shader,Shader>();
+            var swapped=new List<(ShaderMaterial Material,Shader Original)>();
             var draws=new List<object>();var poseWaves=new List<object>();
             if(BomberModel.PoseWaveObservation is not null)throw new InvalidOperationException("Pose observer already owned");
             BomberModel.PoseWaveObservation=poseWaves.Add;
@@ -102,17 +103,29 @@ public partial class PlaytestDriver
                 }
                 FreezeProcessing();
                 ErrorThreadRecorder.Phase="mutate:"+label;
+                // Draw through fixture-owned Shaders whose code is final before assignment.
+                // Changing Code on a live Shader marks its RD version dirty before Godot
+                // waits for in-flight PipelineCompilation tasks; such a task then frees
+                // variant RIDs off the render thread (run 44199687411, restore:warmup).
+                // Production Shaders are never recompiled; a released substitute's
+                // ShaderData waits for its own compilations before freeing.
                 var materials=VisualMaterials(arena).OfType<ShaderMaterial>().Distinct().ToArray();
                 foreach(var material in materials)
                 {
-                    var shader=material.Shader;if(shaders.ContainsKey(shader))continue;
-                    shaders[shader]=shader.Code;
-                    if(noise=="integer"&&shader.Code.Contains(ArtMaterials.LegacyNoiseHash,StringComparison.Ordinal))
-                        shader.Code=ArtMaterials.IntegerNoiseForExperiment(shader.Code);
-                    if(noise=="legacy"&&shader.Code.Contains(ArtMaterials.IntegerNoiseHash,StringComparison.Ordinal))
-                        shader.Code=ArtMaterials.LegacyNoiseForExperiment(shader.Code);
-                    if(Regex.IsMatch(shader.Code,@"\bTIME\b"))
-                        shader.Code=Regex.Replace(shader.Code,@"\bTIME\b","parity_fixture_time").Replace("shader_type spatial;","shader_type spatial;\nuniform float parity_fixture_time=4.0;",StringComparison.Ordinal);
+                    var original=material.Shader;
+                    if(!substitutes.TryGetValue(original,out var substitute))
+                    {
+                        string code=original.Code;shaders[original]=code;
+                        if(noise=="integer"&&code.Contains(ArtMaterials.LegacyNoiseHash,StringComparison.Ordinal))
+                            code=ArtMaterials.IntegerNoiseForExperiment(code);
+                        if(noise=="legacy"&&code.Contains(ArtMaterials.IntegerNoiseHash,StringComparison.Ordinal))
+                            code=ArtMaterials.LegacyNoiseForExperiment(code);
+                        if(Regex.IsMatch(code,@"\bTIME\b"))
+                            code=Regex.Replace(code,@"\bTIME\b","parity_fixture_time").Replace("shader_type spatial;","shader_type spatial;\nuniform float parity_fixture_time=4.0;",StringComparison.Ordinal);
+                        if(label=="reflection-off")code=code.Replace("#define SCENE_REFLECTIONS","",StringComparison.Ordinal);
+                        substitutes[original]=substitute=new Shader{Code=code};
+                    }
+                    material.Shader=substitute;swapped.Add((material,original));
                 }
                 var camera=AuditDescendants(arena).OfType<Camera3D>().Single();
                 var attributes=(CameraAttributesPractical)camera.Attributes;
@@ -120,8 +133,6 @@ public partial class PlaytestDriver
                 Check(viewport.Msaa3D==Viewport.Msaa.Msaa2X&&GraphicsQuality.Current==GraphicsPreset.High&&environment.SsilEnabled&&
                     attributes.DofBlurFarEnabled&&attributes.DofBlurNearEnabled,"fresh fixture requests High, 2xMSAA, SSIL and near/far DOF: "+label);
                 if(label=="dof-off")attributes.DofBlurNearEnabled=attributes.DofBlurFarEnabled=false;
-                if(label=="reflection-off")foreach(var shader in shaders.Keys)
-                    if(shader.Code.Contains("#define SCENE_REFLECTIONS",StringComparison.Ordinal))shader.Code=shader.Code.Replace("#define SCENE_REFLECTIONS","",StringComparison.Ordinal);
                 ErrorThreadRecorder.Phase="draw:"+label;
                 if(!inputsOnly)for(int ordinal=1;ordinal<=16;ordinal++)await Draw(ordinal);
                 else foreach(var spatial in AuditDescendants(arena).Prepend(arena).OfType<Node3D>())spatial.ForceUpdateTransform();
@@ -170,7 +181,7 @@ public partial class PlaytestDriver
                         json=$"parity-{label}-inventory.json",jsonSha256=ReplayHash(File.ReadAllBytes(Path.Combine(_output,$"parity-{label}-inventory.json"))),
                         binary=$"parity-{label}-inventory.bin",binarySha256=ReplayHash(File.ReadAllBytes(Path.Combine(_output,$"parity-{label}-inventory.bin"))),
                         identitySha256=assetsSha256},authority=match.StateMessage,
-                    shaders=shaders.Select(pair=>new{original=ReplayHash(Encoding.UTF8.GetBytes(pair.Value)),active=ReplayHash(Encoding.UTF8.GetBytes(pair.Key.Code))}).ToArray(),
+                    shaders=shaders.Select(pair=>new{original=ReplayHash(Encoding.UTF8.GetBytes(pair.Value)),active=ReplayHash(Encoding.UTF8.GetBytes(substitutes[pair.Key].Code))}).ToArray(),
                     temporal=new{reset="New SubViewport/OwnWorld3D/ArenaView and render buffers per trial",warmupDraws=16,
                         jitter="Production Circle/Low, flag on; tagged Circle does not consume seed; no reseed",draws},
                     capture="SubViewport post-tonemap GetImage; flush Node3D transforms/sync/once/zero-step draw/sync/readback/disable; no unplanned target or fallback draws"};
@@ -207,7 +218,8 @@ public partial class PlaytestDriver
                     scope="Actual presentation inputs; native wave evaluations are retained diagnostic canaries only",samples=poseWaves}));
                 viewport.RenderTargetUpdateMode=SubViewport.UpdateMode.Disabled;
                 ErrorThreadRecorder.Phase="restore:"+label;
-                foreach(var (shader,code) in shaders)shader.Code=code;
+                foreach(var (material,original) in swapped)material.Shader=original;
+                foreach(var substitute in substitutes.Values)substitute.Dispose();
                 ErrorThreadRecorder.Phase="free:"+label;
                 overlay.Free();viewport.Free();
                 ErrorThreadRecorder.Phase="after-free:"+label;
