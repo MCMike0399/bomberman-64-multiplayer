@@ -1024,6 +1024,19 @@ The Linux GPU remaining phase runs `roster-popup-stress` ×3 and `tour-09` ×9 a
 suite (2026-11-01). `roster-popup-stress` opens and closes all eight Roster role popups 56
 times. Receipts sit under `diagnosticRepeats` in `campaign-result.json`.
 
+GPU campaign 44305798609 (2026-11-18): the Linux `tour-09` ×9 diagnostic repeat needs ~9 × 116 s
+of fresh runs, so its bound is 1,800 s (was 900 s). In the same run, tours 18–24 slowed to 9–19 fps
+for about 30 minutes while production workloads loaded the shared workstation CPU, so tours 20 and
+21 hit their catalog deadlines. Catalog deadlines are unchanged; a run that coincides with heavy
+production load can fail and is rerun, never relaxed.
+
+The paid Windows guest adds one inbound UDP allow rule limited to the local subnet before the
+standard-user logon (user decision 2026-11-18). In that run, `peer-ice-order`'s same-host native
+pair gathered and exchanged private host candidates but never connected on the AWS guest, while
+hosted Windows passed. The test and its predicates are unchanged. Each lane writes
+`windows-gpu-desktop/network-diagnostics.json` with firewall profile facts and a self-UDP probe
+(loopback, host address, wildcard bind). It records no raw addresses and is never a verdict.
+
 Tour 03's in-game deadline is 900 seconds, matching its `graphics-settings` child; the old
 180-second parent deadline cut off a healthy child. Its steps and in-game waits are unchanged.
 The Linux native GPU campaign gives the complete packaged graphical command 7200 seconds

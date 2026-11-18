@@ -122,6 +122,11 @@ New-LocalUser -Name BlastQa -Password (ConvertTo-SecureString $password -AsPlain
 Add-LocalGroupMember -SID 'S-1-5-32-545' -Member BlastQa
 & icacls $root /grant "$env:COMPUTERNAME\BlastQa`:(OI)(CI)M" /T /C | Out-Null
 if($LASTEXITCODE -ne 0){throw 'Owned standard-user directory permission failed'}
+# User decision 2026-11-18: run 44305798609's same-host native ICE pair (peer-ice-order) never
+# connected on this guest although hosted Windows passed. Allow inbound UDP from the local
+# subnet only, as a player accepting the Windows firewall prompt would; the security group
+# still admits no external inbound. The worker records firewall state and a self-UDP probe.
+New-NetFirewallRule -Name sancus-builder-qa-local-udp -DisplayName 'sancus-builder QA local-subnet UDP' -Direction Inbound -Action Allow -Protocol UDP -RemoteAddress LocalSubnet -Profile Any | Out-Null
 $logon='HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon'
 @{DefaultUserName='BlastQa';DefaultDomainName=$env:COMPUTERNAME;DefaultPassword=$password;AutoAdminLogon='1';ForceAutoLogon='1'}.GetEnumerator() | ForEach-Object {Set-ItemProperty $logon -Name $_.Key -Value $_.Value}
 $password=$null
