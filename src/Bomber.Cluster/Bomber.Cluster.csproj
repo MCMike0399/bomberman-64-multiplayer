@@ -7,6 +7,7 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <ProjectReference Include="../../burbuja-kernel/src/Burbuja.Core.Abstractions/Burbuja.Core.Abstractions.csproj" Private="false" ExcludeAssets="runtime" />
     <ProjectReference Include="../../burbuja-kernel/src/Burbuja.Realtime.Abstractions/Burbuja.Realtime.Abstractions.csproj" Private="false" ExcludeAssets="runtime" />
+    <ProjectReference Include="../../burbuja-kernel/src/Burbuja.Cluster.Abstractions/Burbuja.Cluster.Abstractions.csproj" Private="false" ExcludeAssets="runtime" />
     <None Update="plugin.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

@@ -1,3 +1,4 @@
+using Burbuja.Cluster.Abstractions;
 using Burbuja.Core.Abstractions.Plugin;
 using Burbuja.Realtime.Abstractions;
 using Microsoft.Extensions.Configuration;
@@ -9,7 +10,7 @@ namespace Bomber.Cluster;
 public sealed class ClusterPlugin : IBurbujaPlugin
 {
     public PluginManifest Manifest { get; } = new(
-        "Blast.Cluster", "Blast Cluster Placement", "1.2.0", PluginContracts.Version,
+        "Blast.Cluster", "Blast Cluster Placement", "1.3.0", PluginContracts.Version,
         "Bomber.Cluster.dll", typeof(ClusterPlugin).FullName!, PluginLoadKind.Dynamic,
         ["blast.cluster.placement"], [], [], ["all", "worker"], "BlastCluster", false, [], 210);
 
@@ -18,7 +19,9 @@ public sealed class ClusterPlugin : IBurbujaPlugin
         services.AddSingleton<ILobbyPlacementStrategy>(sp => new PreferredServerPlacement(
             sp.GetRequiredService<IConfiguration>().GetSection("BlastCluster:ServerOrder")
                 .GetChildren().Select(c => c.Value ?? "").ToArray(),
-            new PressureSnapshot(sp.GetRequiredService<IConfiguration>()["BlastCluster:AdmissionFile"])));
+            // The kernel's cluster module, when this host enables it, replaces the advisory file.
+            new PressureSnapshot(sp.GetRequiredService<IConfiguration>()["BlastCluster:AdmissionFile"],
+                cluster: sp.GetService<INodePressure>(), nodeId: sp.GetRequiredService<IConfiguration>()["Kernel:NodeId"])));
         services.AddSingleton<PressureAdmission>();
         services.AddSingleton<ISessionResourceAdmission>(sp => sp.GetRequiredService<PressureAdmission>());
         services.AddHostedService(sp => sp.GetRequiredService<PressureAdmission>());

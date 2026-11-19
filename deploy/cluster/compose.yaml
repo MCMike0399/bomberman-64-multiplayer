@@ -39,6 +39,12 @@ services:
       BlastCluster__ServerOrder__0: blast-pi
       BlastCluster__ServerOrder__1: blast-divemac
       BlastCluster__AdmissionFile: /run/blast-admission/placement.json
+      # Opt-in: take pressure advice from the kernel's cluster module in this process instead of
+      # the admission file. Nothing of the cluster is served on the game listener.
+      Cluster__Enabled: ${BLAST_KERNEL_PRESSURE:-false}
+      Cluster__Role: all
+      Cluster__Http: "false"
+      Cluster__Agent__MaxTemperatureC: ${BLAST_MAX_TEMPERATURE_C:-78}
       Auth__ApiKeys__0__Key: ${BLAST_OPERATOR_KEY:?Private operator key}
       Auth__ApiKeys__0__PrincipalId: blast-operator
       Auth__ApiKeys__0__Roles__0: Owner

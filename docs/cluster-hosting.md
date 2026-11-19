@@ -115,7 +115,11 @@ capacity from simultaneous gameplay and retain the busy fallback limitation.
 
 ### Pressure-aware placement extension
 
-`Blast.Cluster` 1.2.0 optionally reads `BlastCluster:AdmissionFile`, configured as
+`Blast.Cluster` 1.3.0 takes pressure advice from one of two sources, never both.
+The file source below is the default and is unchanged. The kernel source is
+described under [Kernel pressure source](#kernel-pressure-source-opt-in).
+
+With the file source it reads `BlastCluster:AdmissionFile`, configured as
 `/run/blast-admission/placement.json`. The host mounts the **directory**
 `./admission` read-only, so atomic file replacements become visible inside Docker
 (a single-file bind would retain the old inode). The document contains Unix
@@ -137,6 +141,42 @@ snapshot falls back to the existing measured, resource-capped placement policy.
 Thus the monitor is not a new availability dependency for the game. Heavy file
 compute uses a separate fail-closed admission policy because its input can wait.
 Manual drains remain authoritative throughout monitoring failure or recovery.
+
+### Kernel pressure source (opt-in)
+
+Setting `BLAST_KERNEL_PRESSURE=true` enables the kernel's cluster module inside
+the game server (`Cluster:Enabled`, role `all`, `Cluster:Http=false`). The server
+then reads its own load and reaches the same verdict in process: processors
+busy (85% of the host's processors), memory low (under 768 MiB available on the
+host), or a thermal zone at or above `BLAST_MAX_TEMPERATURE_C` (default 78).
+Three pressed readings defer new rooms and new simulation/relay claims; six
+clear readings restore them. Nothing is written, copied or parsed, and none of
+the cluster's HTTP surface is added to the game listener.
+
+The rules that matter are the same as for the file: an unknown or stale verdict
+excludes nothing, active claims are preserved, releases are always permitted,
+and a manual drain stays authoritative. `tests/Bomber.Cluster.Tests` proves each
+of them for both sources.
+
+What it does not yet cover, compared with the private host monitor:
+
+- **Protected-service health.** The kernel source does not know whether another
+  service on the host is down. Keep the file source where that signal matters.
+- **Another host's verdict.** With one game host there is no peer to exclude.
+  With several, each host needs a kernel cluster controller to learn the others'
+  verdicts; until one is deployed, a host excludes only itself.
+
+The node id and the realtime server id must be the same value, which they are
+in every deployment here (both come from `BLAST_NODE`).
+
+Rollback is `BLAST_KERNEL_PRESSURE=false`: the file source is read again.
+
+Verified 2026-11-15 on the published server with the plugin loaded: with the
+module off or calm a room is created; with pressure forced room creation
+answers `503 no_capacity`; the cluster paths on the listener answer 404. The
+same result was reproduced in a Linux container limited to 1 CPU and 768 MiB,
+which is where a processor-limit defect in the kernel was found and fixed
+before this pin. It has not run on a production host.
 
 Update the matching server and plugins together when Kernel contracts change,
 one drained/empty node at a time. Preserve credentials and measured physical

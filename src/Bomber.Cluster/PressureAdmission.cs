@@ -1,3 +1,4 @@
+using Burbuja.Cluster.Abstractions;
 using Burbuja.Realtime.Abstractions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
@@ -11,9 +12,9 @@ public sealed class PressureAdmission : BackgroundService, ISessionResourceAdmis
     private readonly string[] _servers;
     private volatile bool _allowed = true;
 
-    public PressureAdmission(IConfiguration config)
+    public PressureAdmission(IConfiguration config, INodePressure? cluster = null)
     {
-        _snapshot = new PressureSnapshot(config["BlastCluster:AdmissionFile"]);
+        _snapshot = new PressureSnapshot(config["BlastCluster:AdmissionFile"], cluster: cluster, nodeId: config["Kernel:NodeId"]);
         _servers = config.GetSection("Realtime:Servers").GetChildren().Select(c => c["Id"] ?? "").ToArray();
         if (_servers.Length == 0) _servers = [config["Kernel:NodeId"] ?? "local"];
     }

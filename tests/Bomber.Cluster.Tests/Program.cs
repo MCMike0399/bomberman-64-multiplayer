@@ -1,4 +1,6 @@
 using Bomber.Cluster;
+using Burbuja.Cluster.Abstractions;
+using Microsoft.Extensions.Configuration;
 using Burbuja.Realtime.Abstractions;
 using Burbuja.Realtime.Fleet;
 
@@ -60,4 +62,44 @@ try
     Check(aware.Choose([Node("primary"), Node("fallback",1)], request) == "primary", "recovery restores primary preference without moving existing rooms");
 }
 finally { File.Delete(file); }
+
+// The same decisions, taken from the kernel's cluster module instead of the advisory file.
+var kernel = new FakePressure();
+var viaKernel = new PressureSnapshot(file, () => now, kernel, "primary");
+var clustered = new LobbyBalancer([], new PreferredServerPlacement(["primary", "fallback"], viaKernel), allowCrossRegion: true);
+Check(viaKernel.Source == "kernel-cluster" && pressure.Source == "file" && new PressureSnapshot(null).Source == "none", "the advice source is explicit");
+Check(clustered.Choose([Node("primary"), Node("fallback")], request) == "primary", "an unknown kernel verdict preserves bounded baseline");
+kernel.Local = new NodePressure(true, true, PressureLevel.Critical, ["memory is low"], now);
+Check(clustered.Choose([Node("primary"), Node("fallback")], request) == "fallback", "this node pressed by its own verdict moves new rooms to fallback");
+Check(clustered.Choose([Node("primary"), Node("fallback")], request with { Region = "primary" }) == null, "kernel pressure cannot be bypassed with a region");
+kernel.Local = new NodePressure(false, true, PressureLevel.Normal, [], now);
+kernel.PressuredNodes = new HashSet<string> { "fallback" };
+Check(clustered.Choose([Node("primary", 2), Node("fallback")], request) == null, "a peer the controller reports as pressed receives no overflow");
+kernel.Local = new NodePressure(true, true, PressureLevel.Elevated, ["processors are busy"], now);
+Check(clustered.Choose([Node("primary"), Node("fallback")], request) == null, "both pressed by the kernel reject new rooms");
+kernel.Local = new NodePressure(true, false, PressureLevel.Unknown, [], null);
+kernel.PressuredNodes = new HashSet<string>();
+Check(clustered.Choose([Node("primary"), Node("fallback")], request) == "primary", "a verdict the kernel no longer vouches for excludes nothing");
+Snapshot(now.ToUnixTimeMilliseconds()/1000.0, "primary");
+try { Check(clustered.Choose([Node("primary"), Node("fallback")], request) == "primary", "the advisory file is not consulted once the kernel module is the source"); }
+finally { File.Delete(file); }
+Check(clustered.Choose([Node("primary",0,LobbyServerState.Draining), Node("fallback")], request) == "fallback", "kernel advice never overrides an operator drain");
+
+var settings = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["Kernel:NodeId"] = "primary", ["Realtime:Servers:0:Id"] = "primary" }).Build();
+var admission = new PressureAdmission(settings, kernel);
+admission.Refresh();
+Check(admission.CanIncrease("simulation"), "an unknown kernel verdict admits new match claims");
+kernel.Local = new NodePressure(true, true, PressureLevel.Critical, ["memory is low"], now);
+admission.Refresh();
+Check(!admission.CanIncrease("simulation") && !admission.CanIncrease("peer-relay"), "this node pressed by its own verdict defers new match claims");
+kernel.Local = new NodePressure(false, true, PressureLevel.Normal, [], now);
+kernel.PressuredNodes = new HashSet<string> { "fallback" };
+admission.Refresh();
+Check(admission.CanIncrease("simulation"), "a pressed peer does not defer claims on this node");
 Console.WriteLine($"ALL CLUSTER PLACEMENT CHECKS PASSED ({checks})");
+
+sealed class FakePressure : INodePressure
+{
+    public NodePressure Local { get; set; } = NodePressure.Unknown;
+    public IReadOnlySet<string> PressuredNodes { get; set; } = new HashSet<string>();
+}
