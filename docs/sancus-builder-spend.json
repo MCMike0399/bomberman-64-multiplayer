@@ -2,7 +2,7 @@
   "budgetUsd": 200,
   "perRunCapUsd": 20,
   "preCiEstimateUsd": 4.8,
-  "closedEstimateUsd": 44.57,
+  "closedEstimateUsd": 46.8,
   "recordedRuns": [
     {
       "workflowRunId": "41136197647",
@@ -78,6 +78,11 @@
       "workflowRunId": "44419205064",
       "estimateUsd": 2.2,
       "receipt": "2026-11-18 v0.46.0/build 58/schema 7 qualification on d3ed1ed (Verification 44357192094), second two-lane campaign after the guest LocalSubnet UDP rule and diagnostics (#140): both g4dn.xlarge Windows lanes passed (core and remaining, including tour-18 peer-ice-order); the paid job concluded success. The owned RTX Linux lane in attempt 1 failed only because the tour-09 x9 repeat exceeded its 1800 s bound under shared-host load (load average 50-68); that job alone was rerun with no further paid allocation. Cleanup receipt in builder-state-44419205064-1-final reports estimateUsd 2.20 (instances ~3,789 s and ~4,095 s), allCreatedResourcesGone true, leftovers [], protected comparison complete; independent builder-outcome-44419205064-1 confirms resourceCleanupVerified true. Cumulative closed estimate is 44.57 USD."
+    },
+    {
+      "workflowRunId": "44606079637",
+      "estimateUsd": 2.23,
+      "receipt": "2026-11-19 v0.46.0/build 58/schema 7 qualification on 64264c5 (Verification 44577230710), third two-lane campaign: both g4dn.xlarge Windows lanes and the owned RTX Linux lane passed; GPU qualification succeeded and was used for promotion. Cleanup receipt in builder-state-44606079637-1-final reports estimateUsd 2.23 (instances ~3,820 s and ~4,182 s), allCreatedResourcesGone true, leftovers [], protected comparison complete; independent builder-outcome-44606079637-1 confirms resourceCleanupVerified true. Cumulative closed estimate is 46.80 USD."
     }
   ],
   "scope": "Conservative closed-campaign estimates. preCiEstimateUsd covers the campaigns before CI/OIDC orchestration. After every paid CI run, a reviewed PR appends {workflowRunId, estimateUsd, receipt} from its cost receipt and raises closedEstimateUsd by the same amount; until then the selector refuses another paid run. Estimates are not invoices."
