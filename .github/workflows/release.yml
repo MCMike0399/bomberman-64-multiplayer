@@ -22,19 +22,24 @@ jobs:
     timeout-minutes: 5
     outputs:
       version: ${{ steps.release.outputs.version }}
-      exists: ${{ steps.release.outputs.exists }}
+      publish: ${{ steps.release.outputs.publish }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
           persist-credentials: false
       - id: release
         env:
           GH_TOKEN: ${{ github.token }}
           RUN_ID: ${{ github.event.workflow_run.id }}
           EXPECTED_SHA: ${{ github.event.workflow_run.head_sha }}
+          BLAST_RELEASE_KIND_OVERRIDE: ${{ vars.BLAST_RELEASE_KIND_OVERRIDE }}
         run: |
           set -euo pipefail
+          if [[ "$(git rev-parse HEAD)" != "$EXPECTED_SHA" ]]; then
+            echo 'publish=false' >> "$GITHUB_OUTPUT"
+            echo 'Verification source was superseded before automatic promotion.' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
           version=$(python3 -c 'import sys; sys.path.insert(0,"tools/ci"); from release_identity import check_exports; print(check_exports()["version"])')
           echo "version=$version" >> "$GITHUB_OUTPUT"
           # Documentation-only pushes have no candidate artifacts. An existing
@@ -42,18 +47,17 @@ jobs:
           skipped=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/jobs?per_page=100" \
             --jq '[.jobs[] | select(.name == "Trusted Apple Silicon package" and .conclusion == "skipped")] | length')
           if [[ "$skipped" == 1 ]]; then
-            echo 'exists=true' >> "$GITHUB_OUTPUT"
+            echo 'publish=false' >> "$GITHUB_OUTPUT"
             echo 'No release candidate: trusted package lane was skipped.' >> "$GITHUB_STEP_SUMMARY"
           elif gh release view "v$version" >/dev/null 2>&1; then
-            echo 'exists=true' >> "$GITHUB_OUTPUT"
+            echo 'publish=false' >> "$GITHUB_OUTPUT"
           else
-            python3 tools/ci/promote_release.py --check-only --run-id "$RUN_ID" --version "$version" --expected-sha "$EXPECTED_SHA"
-            echo 'exists=false' >> "$GITHUB_OUTPUT"
+            python3 tools/ci/promote_release.py --check-only --automatic --run-id "$RUN_ID" --version "$version" --expected-sha "$EXPECTED_SHA"
           fi
 
   release:
     needs: candidate
-    if: needs.candidate.outputs.exists == 'false'
+    if: needs.candidate.outputs.publish == 'true'
     permissions:
       contents: write
       actions: read

@@ -90,9 +90,9 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         if: matrix.target != 'macos-arm64'
         with:
-          # Candidate mode uses the prepared exact player download (EXE/AppImage)
-          # directly, so the mixed-OS match need not wait for every graphical tour.
-          name: ${{ inputs.mode == 'candidate' && format('download-{0}', matrix.target) || format('Blast-Circuit-{0}-smoke', matrix.target) }}
+          # Verification and candidate runs use the downloads consumed by their native gates.
+          # Frozen diagnostic runs retain their pre-existing artifact convention.
+          name: ${{ inputs.mode == 'candidate' && format('download-{0}', matrix.target) || inputs.mode == 'verification' && format('Blast-Circuit-{0}-download', matrix.target) || format('Blast-Circuit-{0}-smoke', matrix.target) }}
           path: artifacts
       - if: runner.os == 'macOS'
         run: python3 tools/packaging/macos-test-display.py

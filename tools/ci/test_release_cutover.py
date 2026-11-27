@@ -149,10 +149,18 @@ class ReleaseCutoverTests(unittest.TestCase):
         self.assertEqual('succeeded', Journal(self.state / '12/journal.json').value['status'])
         self.fail_publish = False
         self.events.clear()
-        with patch.object(deploy_release, 'require_current_main', side_effect=RuntimeError('main advanced')):
+        with (patch.object(deploy_release, 'require_current_main', side_effect=RuntimeError('main advanced')),
+              patch.dict(os.environ, {'BLAST_RETRY_DEPLOYED': 'true'})):
             deploy_release.main(self.args)
         self.assertEqual(['stage', 'check-upload', 'identity', 'match', 'identity', 'publish'], self.events)
         self.assertEqual(2 + len(desktop_packages.artifacts()), self.downloads, 'retry must use the durable inspected artifacts')
+
+    def test_explicit_publication_retry_cannot_start_a_new_deployment(self):
+        with patch.dict(os.environ, {'BLAST_RETRY_DEPLOYED': 'true'}):
+            with self.assertRaisesRegex(RuntimeError, 'successful deployment journal'):
+                deploy_release.main(self.args)
+        self.assertEqual([], self.events)
+        self.assertEqual(0, self.downloads)
 
     def test_retry_against_newer_fleet_cannot_publish_old_candidate(self):
         self.fail_publish = True

@@ -8,9 +8,10 @@ from pathlib import Path
 import re
 import subprocess
 import time
+import xml.etree.ElementTree as ET
 
 from promote_release import gh, inspect_run, require_current_main
-from release_identity import ROOT, check_exports
+from release_identity import ROOT, check_exports, parse_identity
 
 
 def prepare(version, protocol=None, root=ROOT):
@@ -71,7 +72,7 @@ def doctor(repository, publishing=False):
     return checks
 
 
-def dispatch(repository, run_id, publishing, retry_deployed=False):
+def dispatch(repository, run_id, publishing, retry_deployed=False, gpu_run_id=None):
     checks = doctor(repository, publishing)
     if not all(checks.values()):
         raise RuntimeError('Release prerequisites missing: ' + ', '.join(name for name, passed in checks.items() if not passed))
@@ -82,8 +83,13 @@ def dispatch(repository, run_id, publishing, retry_deployed=False):
     if local != revision or subprocess.check_output(['git', 'status', '--porcelain', '--untracked-files=normal'], cwd=ROOT, text=True).strip():
         raise RuntimeError('Dispatch from a clean checkout of the exact verified commit')
     release = check_exports()
-    gh('workflow', 'run', 'promote.yml', '--repo', repository, '--ref', 'main',
-       '-f', 'run_id=' + run_id, '-f', 'version=' + release['version'], '-f', 'publish=' + str(publishing).lower())
+    command = ['workflow', 'run', 'promote.yml', '--repo', repository, '--ref', 'main',
+               '-f', 'run_id=' + run_id, '-f', 'version=' + release['version'], '-f', 'publish=' + str(publishing).lower()]
+    if gpu_run_id:
+        command += ['-f', 'gpu_run_id=' + gpu_run_id]
+    if retry_deployed:
+        command += ['-f', 'retry_deployed=true']
+    gh(*command)
     print(f"Requested {'deployment/publication' if publishing else 'signed draft'} of v{release['version']} from Verification {run_id}.")
     print(f'https://github.com/{repository}/actions/workflows/promote.yml')
 
@@ -99,6 +105,30 @@ def elapsed(started, finished=None):
     return f' [{seconds // 60}m{seconds % 60:02d}s]'
 
 
+def workflow_lines(repository, name, run):
+    attempt = run.get('run_attempt', 1)
+    attempt_start = run.get('run_started_at')
+    lifecycle = elapsed(run.get('created_at'), run['updated_at'] if run['status'] == 'completed' else None)
+    lines = [f"{name} {run['id']} attempt {attempt}: {run['status']}/{run.get('conclusion') or 'pending'}{lifecycle} total {run['html_url']}"]
+    base = f"repos/{repository}/actions/runs/{run['id']}/attempts/{attempt}"
+    pages = json.loads(gh('api', base + '/jobs?per_page=100', '--paginate', '--slurp'))
+    for page in pages:
+        for job in page['jobs']:
+            result = job.get('conclusion') or job['status']
+            line = f"  {result:<11} {job['name']}"
+            started = job.get('started_at')
+            queued = job.get('created_at')
+            if started and attempt_start and started < attempt_start:
+                line += ' (reused from an earlier attempt)'
+            elif job.get('runner_name') and started:
+                line += ' queue' + elapsed(queued, started) if queued else ''
+                line += ' run' + elapsed(started, job.get('completed_at'))
+            elif result in ('queued', 'waiting', 'pending') and queued:
+                line += ' waiting' + elapsed(queued)
+            lines.append(line)
+    return lines
+
+
 def status(repository, revision):
     """Where is this commit in the pipeline? One read-only call instead of several gh queries."""
     lines = [f'Commit {revision[:12]}']
@@ -106,26 +136,21 @@ def status(repository, revision):
     runs = [run for run in runs if run.get('head_branch') == 'main' and run.get('event') in ('push', 'workflow_dispatch')]
     if not runs:
         return lines + ['Verification: no trusted main run for this commit (PRs run public checks only)']
-    run = runs[0]
-    lines.append(f"Verification {run['id']}: {run['status']}/{run.get('conclusion') or 'pending'} {run['html_url']}")
-    jobs = json.loads(gh('api', f"repos/{repository}/actions/runs/{run['id']}/jobs?per_page=100"))['jobs']
-    for job in jobs:
-        lines.append(f"  {job.get('conclusion') or job['status']:<10} {job['name']}" + elapsed(job.get('started_at'), job.get('completed_at')))
-    release = check_exports()
-    releases = json.loads(gh('api', f'repos/{repository}/releases?per_page=20'))
-    match = next((item for item in releases if item.get('tag_name') == 'v' + release['version']), None)
+    lines.extend(workflow_lines(repository, 'Verification', runs[0]))
+    props = gh('api', f'repos/{repository}/contents/Release.props?ref={revision}', '-H', 'Accept: application/vnd.github.raw+json')
+    release = parse_identity(ET.fromstring(props))
+    pages = json.loads(gh('api', f'repos/{repository}/releases?per_page=100', '--paginate', '--slurp'))
+    match = next((item for page in pages for item in page if item.get('tag_name') == 'v' + release['version']), None)
     if match is None:
         state = 'not created'
     else:
         state = ('draft' if match['draft'] else 'prerelease' if match['prerelease'] else 'published') + ' ' + match['html_url']
     lines.append(f"Release v{release['version']} build {release['build']}: {state}")
-    promotions = json.loads(gh('api', f'repos/{repository}/actions/workflows/release.yml/runs?per_page=10'))['workflow_runs']
-    promotion = next((item for item in promotions if item.get('head_sha') == revision), None)
-    if promotion:
-        lines.append(f"Publish verified update {promotion['id']}: {promotion['status']}/{promotion.get('conclusion') or 'pending'} {promotion['html_url']}")
-        jobs = json.loads(gh('api', f"repos/{repository}/actions/runs/{promotion['id']}/jobs?per_page=100"))['jobs']
-        for job in jobs:
-            lines.append(f"  {job.get('conclusion') or job['status']:<10} {job['name']}" + elapsed(job.get('started_at'), job.get('completed_at')))
+    for workflow, name in (('gpu-qualification.yml', 'GPU qualification'),
+                           ('release.yml', 'Publish verified update'), ('promote.yml', 'Manual promotion')):
+        rows = json.loads(gh('api', f'repos/{repository}/actions/workflows/{workflow}/runs?head_sha={revision}&branch=main&per_page=10'))['workflow_runs']
+        if rows:
+            lines.extend(workflow_lines(repository, name, rows[0]))
     return lines
 
 
@@ -154,6 +179,7 @@ def main(argv=None):
     diagnose.add_argument('--publish', action='store_true', help='Also audit deployment prerequisites')
     deliver = commands.add_parser('dispatch', help='Dispatch the existing protected release workflow')
     deliver.add_argument('--run-id', required=True)
+    deliver.add_argument('--gpu-run-id', help='Successful GPU qualification run ID, required for a major/minor release')
     deliver.add_argument('--publish', action='store_true', help='Explicitly deploy and publish; default creates a signed draft')
     deliver.add_argument('--retry-deployed', action='store_true', help='Retry a completed rollout after main advanced; workflow requires its durable success journal')
     follow = commands.add_parser('status', help='Read-only: Verification jobs, release and publication state for a commit')
@@ -191,9 +217,11 @@ def main(argv=None):
     else:
         if not re.fullmatch(r'[1-9][0-9]*', args.run_id):
             parser.error('Run ID must be a positive integer')
+        if args.gpu_run_id is not None and not re.fullmatch(r'[1-9][0-9]*', args.gpu_run_id):
+            parser.error('GPU run ID must be a positive integer')
         if args.retry_deployed and not args.publish:
             parser.error('--retry-deployed requires --publish')
-        dispatch(args.repository, args.run_id, args.publish, args.retry_deployed)
+        dispatch(args.repository, args.run_id, args.publish, args.retry_deployed, args.gpu_run_id)
     return 0
 
 

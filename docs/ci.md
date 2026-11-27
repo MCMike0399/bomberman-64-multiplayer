@@ -50,6 +50,15 @@ receipts explicitly omit graphical qualification; the complete Mac graphical
 tour remains on main. Replay and captured-input automation are a separate
 remaining delivery boundary; skipped jobs are never counted as evidence.
 
+On main, two hosted Mac jobs verify the same installed DMG and server. One runs
+the continuous `all` tour, and the other runs the functional, native peer and
+remaining graphical cases. A hosted join requires both exact-source receipts
+and publishes the complete Mac regression. Promotion checks that receipt
+against the bytes it will sign. Crossplay uses the original player-download and
+server artifacts alongside these checks. The Windows and Linux packaged updater
+fixtures are separate outputs of their package jobs and are consumed by the
+native updater gates.
+
 ## Graphical runner requirements
 
 Developer macOS runs default to the [isolated local desktop](../tools/playtest/README.md#isolated-macos-desktop).

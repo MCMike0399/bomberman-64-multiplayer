@@ -18,7 +18,7 @@ documentation, not here.
 | Public gateway, Valkey coordinator | Edge gateway | Unchanged |
 | Deployment runner (`blast-deploy`) | DiveMac autoscaler | Workstation autoscaler, single-use runners |
 | Linux real-GPU qualification | Sancus AWS g4dn campaign ($200 budget) | Workstation `blast-gpu` Linux runner, no per-run cost |
-| Windows real-GPU qualification | Sancus AWS g4dn campaign (two instances) | Sancus AWS, one Windows instance `sancus-builder` ($20/run, $200 total) |
+| Windows real-GPU qualification | Serial Windows Sancus lane | Two ephemeral Sancus Windows T4 lanes, core and remaining, in one guarded campaign ($20/run, $200 total) |
 | Hosted functional, package, Mac and crossplay lanes | GitHub-hosted | Unchanged |
 
 The Pi and DiveMac game containers and relays are stopped, not deleted; their
@@ -28,6 +28,14 @@ the previous two-node total (9 rooms, 3 simulations, 1 peer relay) with a 2-CPU,
 768 MiB container ceiling. That is a conservative starting point, not a measured
 workstation limit; run the [capacity probe](cluster-hosting.md#capacity-and-failure-checks)
 before raising it.
+
+DiveMac remains available for isolated Mac QA. The controlled first use for
+release CI would be a dedicated, disposable desktop running the exact archived
+Mac candidate and producing the same validated regression receipts as the
+hosted lane. It needs the [graphical runner isolation](ci.md#graphical-runner-requirements)
+and a comparable timing trial before it carries a required gate. Keep Raspberry
+Pi available for its existing services and the documented rollback topology.
+It is ARM64 and cannot replace the Linux x64 Vulkan lane.
 
 ## Isolation boundaries
 
@@ -74,8 +82,10 @@ require every bound receipt the target receipts reference: both for a hybrid
 release; only the shared cleanup receipt for earlier AWS-only releases, which
 still verify.
 
-Pass `--gpu-run-id` (or the dispatch input) with the successful
-`gpu-qualification.yml` run when promoting a major/minor release, as before.
+Pass `--gpu-run-id` to `python3 tools/ci/release.py dispatch` (or use the dispatch
+input) with the successful `gpu-qualification.yml` run when promoting a
+major/minor release. The hosted validation job checks the workflow identity
+and both target artifacts before asking for the deployment runner.
 Visual sign-off remains a separate human judgment.
 
 ## Deployment

@@ -75,16 +75,24 @@ def bind(directory,repository,version,revision,run_id,gh,*,fetch=False,gpu_run_i
     return read(directory)
 
 
-def derive(repository,candidate,gh):
+def latest_stable(repository, gh):
     pages=json.loads(gh('api',f'repos/{repository}/releases?per_page=100','--paginate','--slurp'))
     releases=[row for page in pages for row in page if not row.get('draft')and not row.get('prerelease')and re.fullmatch(r'v[0-9]+\.[0-9]+\.[0-9]+',row.get('tag_name',''))]
-    previous=max(releases,key=lambda row:version(row['tag_name']))if releases else None
+    return max((row['tag_name'] for row in releases), key=version, default=None)
+
+
+def configured_override():
+    raw = os.environ.get('BLAST_RELEASE_KIND_OVERRIDE')
+    return json.loads(raw) if raw else None
+
+
+def derive(repository,candidate,gh):
+    previous=latest_stable(repository,gh)
     baseline=None
     if previous:
-        metadata=json.loads(gh('release','download',previous['tag_name'],'--repo',repository,'--pattern','build-metadata.json','--output','-'))
+        metadata=json.loads(gh('release','download',previous,'--repo',repository,'--pattern','build-metadata.json','--output','-'))
         baseline=metadata.get('renderFingerprint')
-    raw=os.environ.get('BLAST_RELEASE_KIND_OVERRIDE');override=json.loads(raw)if raw else None
-    policy=decide(previous['tag_name'].removeprefix('v')if previous else None,candidate,baseline,render_fingerprint.calculate()['sha256'],override)
+    policy=decide(previous.removeprefix('v') if previous else None,candidate,baseline,render_fingerprint.calculate()['sha256'],configured_override())
     text=f"Release graphics policy: {policy['kind']} ({policy['previousVersion']} → {candidate}); real GPU required: {policy['requiresGpu']}"
     print(text)
     if policy['warning']:print('WARNING: '+policy['warning'])

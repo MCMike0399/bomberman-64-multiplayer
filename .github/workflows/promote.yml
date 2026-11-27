@@ -15,6 +15,9 @@ on:
       publish:
         type: boolean
         default: false
+      retry_deployed:
+        type: boolean
+        default: false
     secrets:
       BLAST_UPDATE_SIGNING_KEY:
         required: true
@@ -34,6 +37,10 @@ on:
         required: true
       publish:
         description: Deploy the matching server, verify all targets, then publish
+        type: boolean
+        default: false
+      retry_deployed:
+        description: Resume publication from the matching successful deployment journal
         type: boolean
         default: false
       version:
@@ -65,7 +72,21 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RUN_ID: ${{ inputs.run_id }}
           VERSION: ${{ inputs.version }}
-        run: python3 tools/ci/promote_release.py --check-only --run-id "$RUN_ID" --version "$VERSION"
+          BLAST_GPU_QUALIFICATION_RUN_ID: ${{ inputs.gpu_run_id }}
+          BLAST_RELEASE_KIND_OVERRIDE: ${{ vars.BLAST_RELEASE_KIND_OVERRIDE }}
+          PUBLISH: ${{ inputs.publish }}
+          RETRY_DEPLOYED: ${{ inputs.retry_deployed }}
+        run: |
+          set -euo pipefail
+          args=()
+          if [[ "$RETRY_DEPLOYED" == true ]]; then
+            if [[ "$PUBLISH" != true ]]; then
+              echo 'A deployment retry requires publish=true.' >&2
+              exit 1
+            fi
+            args+=(--retry-deployed)
+          fi
+          python3 tools/ci/promote_release.py --check-only --run-id "$RUN_ID" --version "$VERSION" "${args[@]}"
 
   deploy:
     name: Deploy and publish prepared release
@@ -83,6 +104,8 @@ jobs:
           persist-credentials: false
           ref: ${{ needs.validate.outputs.revision }}
       - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        env:
+          DOTNET_INSTALL_DIR: ${{ runner.temp }}/dotnet
         with:
           dotnet-version: 10.0.x
       - name: Verify draft bytes, deploy once, verify every node and publish
@@ -98,6 +121,7 @@ jobs:
           BLAST_UPDATE_SIGNING_KEY: ${{ secrets.BLAST_UPDATE_SIGNING_KEY }}
           BLAST_GPU_QUALIFICATION_RUN_ID: ${{ inputs.gpu_run_id }}
           BLAST_RELEASE_KIND_OVERRIDE: ${{ vars.BLAST_RELEASE_KIND_OVERRIDE }}
+          BLAST_RETRY_DEPLOYED: ${{ inputs.retry_deployed }}
         run: |
           set -euo pipefail
           umask 077

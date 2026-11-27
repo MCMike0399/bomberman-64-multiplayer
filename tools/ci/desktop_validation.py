@@ -3,6 +3,7 @@ import hashlib
 import json
 import math
 from pathlib import Path
+import re
 import sys
 from desktop_rendering import report_matches, target_for_os
 
@@ -17,7 +18,7 @@ GRAPHICAL = ('controller-popups', 'all', 'menu-preview', 'water-surface')
 # process needs about 5 h (llvmpipe) to 20 h (WARP). The catalog composes `all`
 # from contiguous tours; each tour runs in its own fresh process on its own
 # runner. Together they must cover exactly the same leaves in the same order.
-# Mac still runs `all` in one process, which covers cross-leaf sequencing.
+# Mac runs `all` in one process, which covers cross-leaf sequencing.
 TOURS = tuple(catalog()['all']['steps'])
 SHARDED_GRAPHICAL = ('controller-popups', *TOURS, 'menu-preview', 'water-surface')
 # One fresh runner per part; every case still starts a separate game process.
@@ -38,6 +39,10 @@ SOFTWARE_PEER_HOST_LEASE = 120
 STARTUP = tuple('-'.join((p, d, 'menu')) for p in ('low', 'medium', 'high') for d in ('fullscreen', 'windowed')) + tuple(p + '-fullscreen-gameplay' for p in ('low', 'medium', 'high'))
 MAC_ARTIFACT = 'Blast-Circuit-macos-arm64-regression'
 MAC_RECEIPT = MAC_ARTIFACT + '.json'
+MAC_MAIN_PARTS = {
+    'all-tour': ('all',),
+    'other-cases': (*HEADLESS, *(scenario for scenario in GRAPHICAL if scenario != 'all')),
+}
 
 
 def catalog_digest():
@@ -161,6 +166,28 @@ def inspect_mac(receipt, revision, release, archive_sha, download_sha, server_sh
                 raise RuntimeError('Mac native peer repeat failed or changed source')
             inspect_report(row.get('report', {}), 'peer-rooms', {'os': 'macOS', 'driver': 'metal'}, revision, release, False)
     return receipt
+
+
+def merge_mac_main(parts, revision, release):
+    if parts.keys() != MAC_MAIN_PARTS.keys():
+        raise RuntimeError('Expected both Mac regression parts')
+    other = parts['other-cases']
+    payload = ('archiveSha256', 'downloadSha256', 'serverSha256')
+    hashes = [other.get(key) for key in payload]
+    if any(not isinstance(value, str) or not re.fullmatch(r'[0-9a-f]{64}', value) for value in hashes):
+        raise RuntimeError('Mac regression parts require archive, player download and server hashes')
+    cases = {}
+    for name, expected in MAC_MAIN_PARTS.items():
+        part = parts[name]
+        if (part.get('scope') != name or part.get('schemaVersion') != 1 or part.get('passed') is not True or
+                part.get('revision') != revision or part.get('release') != release or
+                [part.get(key) for key in payload] != hashes or
+                [case.get('scenario') for case in part.get('cases', [])] != list(expected)):
+            raise RuntimeError('Mac regression part is incomplete or mismatched: ' + name)
+        cases.update((case['scenario'], case) for case in part['cases'])
+    merged = {**other, 'scope': 'complete-regression',
+              'cases': [cases[scenario] for scenario in (*HEADLESS, *GRAPHICAL)]}
+    return inspect_mac(merged, revision, release, *hashes)
 
 
 if __name__ == '__main__':

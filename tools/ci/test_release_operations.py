@@ -22,6 +22,19 @@ class ReleaseTimingTests(unittest.TestCase):
         self.assertEqual('', release.elapsed(None))
         self.assertEqual(' [0m00s]', release.elapsed('2026-10-27T10:01:00Z', '2026-10-27T10:00:00Z'))
 
+    def test_status_distinguishes_current_job_queue_from_reused_jobs(self):
+        run = {'id': 12, 'run_attempt': 2, 'run_started_at': '2026-11-19T03:00:00Z', 'created_at': '2026-11-19T00:00:00Z',
+               'updated_at': '2026-11-19T03:07:00Z', 'html_url': 'https://example.com/12', 'status': 'completed', 'conclusion': 'success'}
+        jobs = [{'name': 'Deploy', 'runner_name': 'runner', 'created_at': '2026-11-19T03:00:30Z',
+                 'started_at': '2026-11-19T03:01:00Z', 'completed_at': '2026-11-19T03:07:00Z', 'conclusion': 'success'},
+                {'name': 'Validate', 'runner_name': 'runner', 'created_at': '2026-11-19T03:00:01Z',
+                 'started_at': '2026-11-19T00:01:00Z', 'completed_at': '2026-11-19T00:02:00Z', 'conclusion': 'success'}]
+        with patch.object(release, 'gh', return_value=json.dumps([{'jobs': jobs[:1]}, {'jobs': jobs[1:]}])):
+            output = '\n'.join(release.workflow_lines('example/game', 'Promotion', run))
+        self.assertIn('attempt 2: completed/success [187m00s] total', output)
+        self.assertIn('Deploy queue [0m30s] run [6m00s]', output)
+        self.assertIn('Validate (reused from an earlier attempt)', output)
+
 
 class ReleaseOperationsTests(unittest.TestCase):
     def test_prepare_increments_build_preserves_schema_and_refuses_downgrade(self):
@@ -40,6 +53,24 @@ class ReleaseOperationsTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, 'operator adapter'):
                 release.dispatch('example/game', '12', True)
         github.assert_not_called()
+
+    def test_dispatch_forwards_exact_gpu_run_to_the_protected_workflow(self):
+        revision = 'a' * 40
+        with (
+            patch.object(release, 'doctor', return_value={'ready': True}),
+            patch.object(release, 'inspect_run', return_value=revision),
+            patch.object(release, 'require_current_main') as current,
+            patch.object(release, 'check_exports', return_value={'version': '0.47.0'}),
+            patch.object(release.subprocess, 'check_output', side_effect=[revision, '', revision, '']),
+            patch.object(release, 'gh') as github,
+        ):
+            release.dispatch('example/game', '12', True, gpu_run_id='34')
+            release.dispatch('example/game', '12', True, retry_deployed=True)
+        current.assert_called_once_with('example/game', revision)
+        base = ('workflow', 'run', 'promote.yml', '--repo', 'example/game', '--ref', 'main',
+                '-f', 'run_id=12', '-f', 'version=0.47.0', '-f', 'publish=true')
+        self.assertEqual([(*base, '-f', 'gpu_run_id=34'), (*base, '-f', 'retry_deployed=true')],
+                         [call.args for call in github.call_args_list])
 
     def test_doctor_reports_missing_infrastructure_without_disclosing_values(self):
         replies = [json.dumps([{'variables': [{'name': 'BLAST_RELEASE_SERVER_URLS', 'value': '{"private":"https://secret.example"}'}]}]),

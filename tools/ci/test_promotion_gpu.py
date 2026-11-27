@@ -33,6 +33,110 @@ class GithubFailureDiagnostics(unittest.TestCase):
         for secret in secrets:self.assertNotIn(secret,message)
         self.assertLessEqual(len(message),1550)
 
+    def test_timed_out_transfer_retries_exact_artifact_without_merging_partial_files(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            seen = []
+
+            def transfer(*command):
+                seen.append(command[:-1])
+                stage = Path(command[-1])
+                self.assertEqual([], list(stage.iterdir()))
+                if len(seen) == 1:
+                    (stage / 'incomplete.zip').write_bytes(b'partial')
+                    raise subprocess.TimeoutExpired(command, 900)
+                (stage / 'package.zip').write_bytes(b'tested package')
+
+            with patch.object(promotion, 'github_command', side_effect=transfer), patch.object(promotion.time, 'sleep'):
+                promotion.gh('run', 'download', '12', '--repo', 'example/game', '--name', 'package', '--dir', str(root))
+            self.assertEqual([seen[0], seen[0]], seen)
+            self.assertEqual({'package.zip': b'tested package'}, {file.name: file.read_bytes() for file in root.iterdir()})
+
+    def test_permanent_failure_and_conflicting_bytes_do_not_overwrite_release_inputs(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            package = root / 'package.zip'
+            package.write_bytes(b'original')
+            command = ('run', 'download', '12', '--repo', 'example/game', '--name', 'package', '--dir', str(root))
+            with patch.object(promotion, 'github_command', side_effect=RuntimeError('HTTP 404')) as transfer:
+                with self.assertRaisesRegex(RuntimeError, 'HTTP 404'):
+                    promotion.gh(*command)
+                transfer.assert_called_once()
+
+            def transfer_with_conflict(*command):
+                (Path(command[-1]) / package.name).write_bytes(b'wrong input')
+
+            with patch.object(promotion, 'github_command', side_effect=transfer_with_conflict):
+                with self.assertRaisesRegex(RuntimeError, 'disagree'):
+                    promotion.gh(*command)
+            self.assertEqual(b'original', package.read_bytes())
+            self.assertEqual([package], list(root.iterdir()))
+
+    def test_transient_error_retries_once_and_persistent_timeout_surfaces(self):
+        with tempfile.TemporaryDirectory() as temporary, patch.object(promotion.time, 'sleep'):
+            command = ('run', 'download', '12', '--repo', 'example/game', '--name', 'package', '--dir', temporary)
+            with patch.object(promotion, 'github_command', side_effect=[
+                    RuntimeError('HTTP 502'), subprocess.TimeoutExpired(command, 900)]) as transfer:
+                with self.assertRaises(subprocess.TimeoutExpired):
+                    promotion.gh(*command)
+            self.assertEqual(2, transfer.call_count)
+            self.assertEqual([], list(Path(temporary).iterdir()))
+
+
+class PromotionPreflight(unittest.TestCase):
+    def test_automatic_route_skips_a_superseded_verification_before_gpu_lookup(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary) / 'workflow-output'
+            with (patch.dict(os.environ, {'GITHUB_OUTPUT': str(output)}),
+                  patch.object(promotion, 'inspect_run', return_value=SHA),
+                  patch.object(promotion, 'current_main', return_value='b' * 40),
+                  patch.object(promotion, 'check_promotion_gpu') as gpu_check):
+                promotion.main(['--check-only', '--automatic', '--run-id', '12', '--version', '0.47.0',
+                                '--repository', 'example/game'])
+            gpu_check.assert_not_called()
+            self.assertIn('publish=false', output.read_text().splitlines())
+
+    def test_explicit_durable_retry_checks_the_verification_run_without_fetching_gpu_artifacts(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary) / 'workflow-output'
+            with (patch.dict(os.environ, {'GITHUB_OUTPUT': str(output)}),
+                  patch.object(promotion, 'inspect_run', return_value=SHA) as verification,
+                  patch.object(promotion, 'gh') as github):
+                promotion.main(['--check-only', '--retry-deployed', '--run-id', '12', '--version', '0.47.0',
+                                '--repository', 'example/game'])
+            verification.assert_called_once_with('example/game', '12')
+            github.assert_not_called()
+            self.assertIn(f'revision={SHA}', output.read_text().splitlines())
+
+    def test_automatic_route_skips_major_and_accepts_patch_without_gpu_queries(self):
+        stable = json.dumps([[{'tag_name': 'v0.46.0'}, {'tag_name': 'v0.47.0', 'draft': True}]])
+        with patch.object(promotion, 'gh', return_value=stable) as github, patch.dict(os.environ, {'BLAST_RELEASE_KIND_OVERRIDE': ''}):
+            self.assertFalse(promotion.check_promotion_gpu('example/game', '0.47.0', SHA, '', automatic=True))
+            self.assertTrue(promotion.check_promotion_gpu('example/game', '0.46.1', SHA, '', automatic=True))
+            self.assertTrue(all('/releases?' in call.args[1] for call in github.call_args_list))
+
+    def test_manual_major_requires_successful_exact_main_gpu_run(self):
+        stable = json.dumps([[{'tag_name': 'v0.46.0'}]])
+        gpu_run = {'head_repository': {'full_name': 'example/game'}, 'head_sha': SHA, 'head_branch': 'main',
+                   'path': '.github/workflows/gpu-qualification.yml', 'event': 'workflow_dispatch',
+                   'status': 'completed', 'conclusion': 'success'}
+        qualified = [{'name': gpu.artifact_name(target)} for target in desktop_packages.TARGETS]
+        with patch.dict(os.environ, {'BLAST_RELEASE_KIND_OVERRIDE': ''}):
+            with patch.object(promotion, 'gh', return_value=stable):
+                with self.assertRaisesRegex(RuntimeError, 'explicit GPU qualification run ID'):
+                    promotion.check_promotion_gpu('example/game', '0.47.0', SHA, '')
+            for changes in ({}, {'head_sha': 'b' * 40}, {'conclusion': 'failure'}):
+                with self.subTest(changes=changes), patch.object(promotion, 'gh', side_effect=[
+                        stable, json.dumps({**gpu_run, **changes}), json.dumps([{'artifacts': qualified}])]):
+                    if changes:
+                        with self.assertRaisesRegex(RuntimeError, 'exact trusted main SHA'):
+                            promotion.check_promotion_gpu('example/game', '0.47.0', SHA, '34')
+                    else:
+                        self.assertTrue(promotion.check_promotion_gpu('example/game', '0.47.0', SHA, '34'))
+            with patch.object(promotion, 'gh', side_effect=[stable, json.dumps(gpu_run), json.dumps([{'artifacts': qualified[:1]}])]):
+                with self.assertRaisesRegex(RuntimeError, 'unexpired artifact for linux-x64'):
+                    promotion.check_promotion_gpu('example/game', '0.47.0', SHA, '34')
+
 
 def write_gpu_files(directory):
     cleanup_path=directory/gpu.CLEANUP_RECEIPT

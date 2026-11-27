@@ -3,6 +3,7 @@
 import argparse
 import importlib.util
 import json
+import os
 from pathlib import Path
 import platform
 import shutil
@@ -15,17 +16,28 @@ import crossplay_runtime
 import desktop_validation as validation
 import desktop_packages as desktop
 from promote_release import inspect_package, inspect_server
+from release_identity import check_exports
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--directory', type=Path, default=ROOT / 'artifacts')
-    parser.add_argument('--functional-only',action='store_true',help='Installed headless/native network journeys only; never graphical qualification')
+    modes = parser.add_mutually_exclusive_group()
+    modes.add_argument('--functional-only',action='store_true',help='Installed headless/native network journeys only; never graphical qualification')
+    modes.add_argument('--ci-part', choices=validation.MAC_MAIN_PARTS, help='One part of the main CI archive regression')
+    modes.add_argument('--merge-ci-parts', action='store_true', help='Validate and join both exact-source main CI receipts')
     parser.add_argument('--peer-room-repeats', type=int, choices=range(1, 4), default=3, help='Three fresh native peer processes are required for qualification; lower counts cannot produce an accepted receipt')
     args = parser.parse_args()
+    directory = args.directory.resolve()
+    if args.merge_ci_parts:
+        parts = {name: json.loads((directory / name / validation.MAC_RECEIPT).read_text())
+                 for name in validation.MAC_MAIN_PARTS}
+        receipt = validation.merge_mac_main(parts, os.environ['GITHUB_SHA'], check_exports())
+        (directory / validation.MAC_RECEIPT).write_text(json.dumps(receipt, indent=2) + '\n')
+        print('PASS joined Mac archive regression for the exact CI source and archives')
+        return
     if platform.system() != 'Darwin' or platform.machine().lower() != 'arm64':
         raise RuntimeError('Complete Mac archive verification requires the Apple Silicon test desktop')
-    directory = args.directory.resolve()
     metadata = json.loads((directory / 'build-metadata.json').read_text())
     revision, release = metadata['revision'], metadata['release']
     inspect_package(directory, revision, release['version'], release)
@@ -38,13 +50,15 @@ def main():
     verifier_spec = importlib.util.spec_from_file_location('verifier', ROOT / 'tools/packaging/verify-desktop.py')
     verifier = importlib.util.module_from_spec(verifier_spec); verifier_spec.loader.exec_module(verifier)
     cases = []; native_repeats = []
+    scenarios = (validation.MAC_MAIN_PARTS[args.ci_part] if args.ci_part else
+                 validation.HEADLESS if args.functional_only else (*validation.HEADLESS, *validation.GRAPHICAL))
     try:
         executable = crossplay_runtime.install(directory, 'macos-arm64', output)
         app = executable.parents[2]
         verifier.extract(directory / 'Blast-Circuit-server-dotnet10.zip', output)
         suite = qa.Suite('mac-archive', output, 'unused', desktop='shared')
         with suite.server(dll=output / 'Blast-Circuit-server-dotnet10/Bomber.Server.dll') as origin:
-            for scenario in (validation.HEADLESS if args.functional_only else (*validation.HEADLESS,*validation.GRAPHICAL)):
+            for scenario in scenarios:
                 for repeat in range(args.peer_room_repeats if scenario == 'peer-rooms' else 1):
                     previous = set(output.iterdir())
                     graphical = scenario in validation.GRAPHICAL
@@ -83,15 +97,17 @@ def main():
             'revision': revision, 'release': release, 'archiveSha256': desktop.digest(directory / 'Blast-Circuit-macos-arm64.zip'),
             'downloadSha256': desktop.digest(directory / 'Blast-Circuit-macos-arm64.dmg'),
             'serverSha256': desktop.digest(directory / 'Blast-Circuit-server-dotnet10.zip'), 'cases': cases,
-            'scope':'functional-regression'if args.functional_only else'complete-regression',
-            'graphicsQualified':False if args.functional_only else None,
-            'nativePeerRepeatsRequested':args.peer_room_repeats,'nativePeerRepeats':native_repeats}
-        validation.inspect_mac(receipt,revision,release,receipt['archiveSha256'],receipt['downloadSha256'],
-                               receipt['serverSha256'],require_graphics=not args.functional_only)
-        (directory / 'Blast-Circuit-macos-arm64-regression.json').write_text(json.dumps(receipt,indent=2)+'\n')
+            'scope': args.ci_part or ('functional-regression' if args.functional_only else 'complete-regression'),
+            'graphicsQualified':False if args.functional_only else None}
+        if 'peer-rooms' in scenarios:
+            receipt.update(nativePeerRepeatsRequested=args.peer_room_repeats, nativePeerRepeats=native_repeats)
+        if not args.ci_part:
+            validation.inspect_mac(receipt,revision,release,receipt['archiveSha256'],receipt['downloadSha256'],
+                                   receipt['serverSha256'],require_graphics=not args.functional_only)
+        (directory / validation.MAC_RECEIPT).write_text(json.dumps(receipt,indent=2)+'\n')
     finally:
         if (output / 'installed').exists(): shutil.rmtree(output / 'installed')
-    print('PASS DMG-installed Mac functional regression'if args.functional_only else'PASS full DMG-installed Mac gameplay, multiplayer and graphical regression')
+    print('PASS DMG-installed Mac ' + receipt['scope'])
 
 
 if __name__ == '__main__': main()

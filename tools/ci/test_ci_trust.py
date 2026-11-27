@@ -51,9 +51,37 @@ class FunctionalWorkflowTrust(unittest.TestCase):
 
     def test_three_os_crossplay_waits_for_the_actual_native_artifacts(self):
         text=WORKFLOW.read_text()
-        self.assertRegex(text,r'(?s)\n  crossplay:\n.*?needs: \[desktop-smoke, mac-regression\].*?uses: \./\.github/workflows/crossplay.yml')
-        self.assertIn('if [ "$EVENT_NAME" = pull_request ]; then args+=(--functional-only); fi',text)
+        self.assertRegex(text,r'(?s)\n  crossplay:\n.*?needs: \[package, desktop-download, managed\].*?uses: \./\.github/workflows/crossplay.yml\n +with:\n +mode: verification')
+        crossplay = WORKFLOW.with_name('crossplay.yml').read_text()
+        self.assertIn("inputs.mode == 'verification' && format('Blast-Circuit-{0}-download', matrix.target)", crossplay)
+        self.assertIn("format('Blast-Circuit-{0}-smoke', matrix.target)", crossplay)
+        self.assertIn('name: Exported macos-arm64 regression', text)
+        self.assertIn('name: Exported ${{ matrix.target }} smoke', text)
+        self.assertIn("""fromJSON(github.event_name == 'pull_request' && '["functional"]' || '["all-tour","other-cases"]')""", text)
+        self.assertIn('needs: mac-regression-parts', text)
+        self.assertIn('--merge-ci-parts', text)
+        self.assertIn("needs.mac-regression-parts.result != 'skipped'", text)
+        self.assertIn("needs.mac-regression-parts.result != 'success'", text)
         self.assertNotIn('\n  desktop-tour:',text)
+
+    def test_promotion_downloads_exclude_mac_diagnostics_and_installer_fixtures(self):
+        text = WORKFLOW.read_text()
+        self.assertRegex(text, r'name: Blast-Circuit-macos-arm64-regression\n +path: artifacts/Blast-Circuit-macos-arm64-regression.json\n')
+        self.assertRegex(text, r'name: Blast-Circuit-macos-arm64-regression-diagnostics-.*\n +path: \|')
+        for target in ('windows-x64', 'linux-x64'):
+            with self.subTest(target=target):
+                self.assertRegex(text, rf'name: Blast-Circuit-{target}-update-fixture\n +path: \|\n +artifacts/Blast-Circuit-{target}-update-fixture.zip\n')
+        native = text.split('\n  desktop-native:', 1)[1].split('\n  desktop-smoke:', 1)[0]
+        self.assertIn('name: Blast-Circuit-${{ matrix.target }}-update-fixture', native)
+        self.assertIn('package-update-fixture.py --target "$TARGET" --unpack', native)
+
+    def test_gpu_candidates_cannot_enter_automatic_promotion(self):
+        automatic = WORKFLOW.with_name('release.yml').read_text()
+        self.assertIn('--check-only --automatic', automatic)
+        self.assertIn("if: needs.candidate.outputs.publish == 'true'", automatic)
+        promote = WORKFLOW.with_name('promote.yml').read_text()
+        deploy = promote.split('\n  deploy:', 1)[1].split('\n  draft:', 1)[0]
+        self.assertIn('DOTNET_INSTALL_DIR: ${{ runner.temp }}/dotnet', deploy)
 
 
 if __name__=='__main__':unittest.main()

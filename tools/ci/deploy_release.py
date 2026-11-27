@@ -75,11 +75,15 @@ def main(argv=None):
     parser.add_argument('--adapter', type=Path, required=True)
     parser.add_argument('--signing-key', type=Path, required=True)
     parser.add_argument('--publish', action='store_true', help='Stage the signed draft before rollout, then publish after live verification in this transaction')
+    parser.add_argument('--retry-deployed', action='store_true', default=os.environ.get('BLAST_RETRY_DEPLOYED') == 'true',
+                        help='Require a matching successful rollout in persistent state')
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--state-dir', type=Path, required=True, help='Persistent private operator directory outside checkout')
     args = parser.parse_args(argv)
     if not re.fullmatch(r'[1-9][0-9]*', args.run_id):
         parser.error('Run ID must be a positive integer')
+    if args.retry_deployed and not args.publish:
+        parser.error('--retry-deployed requires --publish')
     targets = targets_from_json(os.environ.get('BLAST_RELEASE_SERVER_URLS', '{}'))
     placements = placements_from_json(os.environ.get('BLAST_RELEASE_PLACEMENTS', '{}'), targets)
     revision = inspect_run(args.repository, args.run_id)
@@ -94,10 +98,13 @@ def main(argv=None):
             if Journal(pending).value['status'] not in ('succeeded', 'recovered'):
                 raise RuntimeError('An interrupted deployment requires recovery before another rollout')
         directory = args.state_dir / args.run_id
+        saved = directory / 'journal.json'
+        completed = saved.is_file() and Journal(saved).value['status'] == 'succeeded'
+        if args.retry_deployed and not completed:
+            raise RuntimeError('Publication retry requires a successful deployment journal')
         if directory.exists():
-            saved = directory / 'journal.json'
             context = directory / 'deployment.json'
-            if saved.is_file() and Journal(saved).value['status'] == 'succeeded':
+            if completed:
                 previous = json.loads(context.read_text())
                 if any(previous.get(key) != value for key, value in
                        (('revision', revision), ('release', release), ('targets', targets), ('placements', placements))):

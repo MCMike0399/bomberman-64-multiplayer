@@ -9,7 +9,11 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def identity(root=ROOT):
-    properties = ET.parse(root / 'Release.props').getroot().find('PropertyGroup')
+    return parse_identity(ET.parse(root / 'Release.props').getroot())
+
+
+def parse_identity(document):
+    properties = document.find('PropertyGroup')
     version = properties.findtext('BlastVersion', '')
     build = properties.findtext('BlastBuild', '')
     protocol = properties.findtext('BlastProtocolRevision', '')

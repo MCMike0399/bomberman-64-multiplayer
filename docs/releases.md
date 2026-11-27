@@ -67,20 +67,24 @@ engine errors, missing captures and incorrect applied settings still fail.
    An existing draft can be promoted only when its immutable tag and source
    commit match exactly; published tags cannot be moved or reused.
 5. With `AUTO_RELEASE_ENABLED=true`, **Publish verified update** calls the same
-   workflow after successful trusted Verification. It preserves existing version
-   releases. An unchanged version does not produce a new release. No second
-   automatic publication path bypasses deployment.
+   workflow for eligible patches after successful trusted Verification. It skips
+   existing versions and GPU-required candidates before requesting the deployment
+   runner. When the [GPU qualification](workstation-ci.md#gpu-qualification)
+   succeeds, explicitly dispatch promotion with that run ID.
 
 From a clean checkout of the verified commit:
 
 ```sh
 python3 tools/ci/release.py dispatch --run-id 123456
 python3 tools/ci/release.py dispatch --run-id 123456 --publish
+python3 tools/ci/release.py dispatch --run-id 123456 --gpu-run-id 123457 --publish
 ```
 
-The first command prepares a signed draft. The second explicitly deploys and
-publishes. Use a real successful Verification run ID. Build once in trusted CI;
-reuse its exact artifacts for both commands. Do not repeat package/managed runs
+The first command prepares a signed patch draft. The second explicitly deploys
+and publishes a patch, and the third supplies the required GPU run for a
+major/minor release. A major/minor draft also requires that run ID. Use actual
+successful run IDs from the candidate's exact SHA. Build once in trusted CI;
+reuse its exact artifacts for promotion. Do not repeat package/managed runs
 locally after their required gates pass unless source, failures or unresolved
 risks changed. Keep the source SHA, run ID and release identity together.
 
@@ -112,6 +116,42 @@ keyed by OS, architecture, SDK and controller tools; their native initialization
 deployment target and exported-bundle checks still run after a cache hit.
 `python3 tools/ci/release.py status` shows elapsed durations for verification
 and publication jobs, including in-progress work.
+
+#### v0.46.0 timing and pipeline changes
+
+The final candidate took **9h49m18s** from Verification creation to publication,
+including three Verification attempts and three promotion attempts.
+
+| Phase | Observed elapsed | What the attempts show |
+| --- | --- | --- |
+| [Verification](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/44577230710) | 2h43m18s | One Mac package was cancelled. The successful archived Mac regression took 73m42s including setup and evidence upload, with 53m09s in the continuous `all` tour. A first crossplay attempt lost its Mac runner. The passing crossplay attempt took about 16m. |
+| [GPU qualification](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/44606079637) | 1h52m22s | Linux took 110m11s on Alienware. Both Windows lanes ran in parallel and the paid builder job finished in 79m22s including its cleanup. |
+| [Promotion and public verification](https://github.com/MCMike0399/bomberman-64-multiplayer/actions/runs/44624974949) | 5h15m32s | Attempt one queued for 3h56m38s and hit a .NET install permission error. Attempt two queued for 17s and hit a 900s artifact transfer deadline. Attempt three queued for 11s and took 18m16s including public verification. |
+
+Verification starts staged three-OS Quick Play when the exact player downloads
+and server are available. Independent platform regressions remain required.
+On main, the Mac regression keeps `all` in one process, with the other cases
+on a separate hosted Mac. Their receipts must agree on the source, release and
+three payload hashes and together contain all original scenarios and native
+peer repetitions. The canonical gate artifact contains the joined receipt.
+Screenshots and logs remain available per part and workflow attempt.
+
+The signing and rollout jobs receive smaller Verification archives. Mac
+diagnostics alone accounted for most of the historical 873 MB Mac regression
+artifact. The Windows and Linux updater fixtures go directly to native tests
+in their own artifacts. Exact named run artifact downloads retry once on a
+timeout or recognized transient network error, with a fresh extraction directory
+per attempt. The privileged workstation runner installs the .NET SDK under
+its job's writable temporary directory.
+
+For the next candidate, follow the exact SHA with
+`python3 tools/ci/release.py status --sha FULL_SHA`. It shows Verification, GPU
+qualification, automatic publication and manual promotion, with separate queues
+and execution for the current attempt and markers for reused jobs. Check the
+first missed job in the attempt that ran it. A fresh deployment heartbeat
+confirms the controller is reporting. Record the actual runner wait and any setup
+failure separately. Compare a successful comparable run with the timestamps
+above before reporting an observed speedup.
 
 The updater fixture warms the actual installation path once and reuses it for
 all three transactions. It waits for the installer's lock to disappear before

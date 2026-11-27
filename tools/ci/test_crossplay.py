@@ -92,6 +92,31 @@ class CrossplayTests(unittest.TestCase):
             validation.inspect_mac(*args,require_graphics=False)
             with self.assertRaises(RuntimeError):validation.inspect_mac(*args)
 
+    def test_split_mac_receipts_recreate_the_complete_gate_and_reject_mixed_inputs(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            write_desktop(root)
+            for name in ('Blast-Circuit-macos-arm64.zip', download_formats.FILES['macos-arm64']):
+                (root / name).write_bytes(b'Mac fixture')
+            write_crossplay(root)
+            full = json.loads((root / validation.MAC_RECEIPT).read_text())
+            parts = {
+                'all-tour': {**full, 'scope': 'all-tour', 'cases': [case for case in full['cases'] if case['scenario'] == 'all']},
+                'other-cases': {**full, 'scope': 'other-cases', 'cases': [case for case in full['cases'] if case['scenario'] != 'all']},
+            }
+            self.assertEqual({**full, 'scope': 'complete-regression'}, validation.merge_mac_main(parts, SHA, RELEASE))
+            with self.assertRaisesRegex(RuntimeError, 'both Mac'):
+                validation.merge_mac_main({'other-cases': parts['other-cases']}, SHA, RELEASE)
+            for field, bad in (('archiveSha256', 'a' * 64), ('downloadSha256', 'b' * 64), ('serverSha256', 'c' * 64),
+                               ('revision', 'd' * 40), ('scope', 'functional-regression'), ('cases', []), ('passed', False)):
+                candidate = {**parts, 'all-tour': {**parts['all-tour'], field: bad}}
+                with self.subTest(field=field), self.assertRaisesRegex(RuntimeError, 'incomplete or mismatched'):
+                    validation.merge_mac_main(candidate, SHA, RELEASE)
+            incomplete = copy.deepcopy(parts)
+            incomplete['other-cases']['nativePeerRepeats'].pop()
+            with self.assertRaisesRegex(RuntimeError, 'native peer repeats are incomplete'):
+                validation.merge_mac_main(incomplete, SHA, RELEASE)
+
     def test_game_process_environment_excludes_ci_credentials(self):
         from unittest.mock import patch
         with patch.dict(crossplay.os.environ, {'GH_TOKEN': 'fixture', 'ACTIONS_RUNTIME_TOKEN': 'fixture', 'GITHUB_TOKEN': 'fixture'}):

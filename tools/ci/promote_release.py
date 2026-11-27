@@ -7,8 +7,10 @@ import os
 from pathlib import Path
 import plistlib
 import re
+import shutil
 import subprocess
 import tempfile
+import time
 import zipfile
 import sys
 from release_identity import check_exports
@@ -25,9 +27,11 @@ ARTIFACT = 'Blast-Circuit-macos-arm64-ad-hoc'
 ARCHIVE = 'Blast-Circuit-macos-arm64.zip'
 SERVER_ARTIFACT = 'Blast-Circuit-server-dotnet10'
 SERVER_ARCHIVE = SERVER_ARTIFACT + '.zip'
+TRANSIENT_DOWNLOAD_ERROR = re.compile(
+    r'HTTP 5\d\d|TLS handshake timeout|connection reset|i/o timeout|unexpected EOF', re.I)
 
 
-def gh(*arguments):
+def github_command(*arguments):
     # Packaged regression artifacts can exceed 700 MB. Keep their transfer
     # budget separate from API/mutation latency and from gameplay deadlines.
     timeout = 900 if arguments[:2] in (('run', 'download'), ('release', 'download')) else 120
@@ -42,6 +46,44 @@ def gh(*arguments):
         detail=re.sub(r'(?i)([?&](?:token|access_token|sig|signature|key|password)=)[^&\s]+',r'\1<redacted>',detail)
         raise RuntimeError('GitHub CLI operation failed: ' + ' '.join(arguments[:2])+': '+detail[:1500])
     return result.stdout
+
+
+def gh(*arguments):
+    if arguments[:2] != ('run', 'download') or '--name' not in arguments or arguments[-2] != '--dir':
+        return github_command(*arguments)
+
+    destination = Path(arguments[-1])
+    destination.mkdir(parents=True, exist_ok=True)
+    for attempt in range(2):
+        with tempfile.TemporaryDirectory(prefix='.artifact-', dir=destination) as temporary:
+            stage = Path(temporary)
+            try:
+                output = github_command(*arguments[:-1], temporary)
+            except (subprocess.TimeoutExpired, RuntimeError) as error:
+                if attempt or not (isinstance(error, subprocess.TimeoutExpired) or TRANSIENT_DOWNLOAD_ERROR.search(str(error))):
+                    raise
+                print(f'Transient transfer failure; retrying {arguments[arguments.index("--name") + 1]} from run {arguments[2]}',
+                      file=sys.stderr, flush=True)
+                time.sleep(2)
+                continue
+            files = []
+            for source in stage.rglob('*'):
+                target = destination / source.relative_to(stage)
+                if source.is_symlink() or target.is_symlink():
+                    raise RuntimeError('Unexpected symbolic link in Verification artifact')
+                if source.is_dir():
+                    if target.exists() and not target.is_dir():
+                        raise RuntimeError('Verification artifact path conflicts: ' + target.name)
+                    continue
+                if target.exists():
+                    if not target.is_file() or desktop_packages.digest(source) != desktop_packages.digest(target):
+                        raise RuntimeError('Verification artifacts disagree on file: ' + target.name)
+                else:
+                    files.append((source, target))
+            for source, target in files:
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.move(source, target)
+            return output
 
 
 def inspect_run(repository, run_id):
@@ -80,10 +122,34 @@ def inspect_gates(repository, run_id, version, build=None):
                                        build or check_exports()['build'])
 
 
-def require_current_main(repository, revision):
+def current_main(repository):
     head = json.loads(gh('api', f'repos/{repository}/git/ref/heads/main'))
-    if head.get('object', {}).get('sha') != revision:
+    return head.get('object', {}).get('sha')
+
+
+def require_current_main(repository, revision):
+    if current_main(repository) != revision:
         raise RuntimeError('Refusing stale deployment/publication: verify the current main commit first')
+
+
+def check_promotion_gpu(repository, version, revision, gpu_run_id, *, automatic=False):
+    previous = release_gpu_policy.latest_stable(repository, gh)
+    requires_gpu = release_gpu_policy.decide(previous, version, override=release_gpu_policy.configured_override())['requiresGpu']
+    if not requires_gpu:
+        return True
+    if automatic:
+        return False
+    if not re.fullmatch(r'[1-9][0-9]*', gpu_run_id):
+        raise RuntimeError('Promotion requires an explicit GPU qualification run ID')
+    run = json.loads(gh('api', f'repos/{repository}/actions/runs/{gpu_run_id}'))
+    gpu_release_gates.inspect_run(run, repository, revision)
+    base = f'repos/{repository}/actions/runs/{gpu_run_id}/artifacts?per_page=100'
+    pages = json.loads(gh('api', base, '--paginate', '--slurp'))
+    available = [artifact['name'] for page in pages for artifact in page['artifacts'] if not artifact.get('expired')]
+    for target in desktop_packages.TARGETS:
+        if available.count(gpu_release_gates.artifact_name(target)) != 1:
+            raise RuntimeError('GPU qualification lacks exactly one unexpired artifact for ' + target)
+    return True
 
 
 def inspect_existing_release(repository, version, revision, publish=False):
@@ -275,6 +341,8 @@ def main(argv=None):
     parser.add_argument('--expected-sha')
     parser.add_argument('--gpu-run-id',default=os.environ.get('BLAST_GPU_QUALIFICATION_RUN_ID',''))
     parser.add_argument('--check-only', action='store_true')
+    parser.add_argument('--automatic', action='store_true', help='Check automatic promotion eligibility')
+    parser.add_argument('--retry-deployed', action='store_true', help='Check the source run for a durable publication retry')
     parser.add_argument('--signing-key', type=Path)
     parser.add_argument('--publish', action='store_true', help='Publish the verified signed release instead of creating a draft')
     args = parser.parse_args(argv)
@@ -282,6 +350,10 @@ def main(argv=None):
         parser.error('Use a positive numeric run ID and a version such as 0.15.0')
     if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+', args.repository):
         parser.error('Repository must be owner/name')
+    if args.automatic and not args.check_only:
+        parser.error('--automatic requires --check-only')
+    if args.retry_deployed and (args.automatic or not args.check_only):
+        parser.error('--retry-deployed requires a manual --check-only')
     version = args.version.removeprefix('v')
     revision = inspect_run(args.repository, args.run_id)
     if args.expected_sha and revision != args.expected_sha:
@@ -290,9 +362,22 @@ def main(argv=None):
     targets = targets_from_json(os.environ.get('BLAST_RELEASE_SERVER_URLS', '{}')) if args.publish else None
     placements = placements_from_json(os.environ.get('BLAST_RELEASE_PLACEMENTS', '{}'), targets) if args.publish else None
     if args.check_only:
+        message = None
+        if args.automatic and current_main(args.repository) != revision:
+            message = 'Verification source was superseded before automatic promotion.'
+        elif not args.retry_deployed and not check_promotion_gpu(
+                args.repository, version, revision, args.gpu_run_id, automatic=args.automatic):
+            message = 'GPU qualification required. Dispatch promotion with the successful GPU run ID.'
         if os.environ.get('GITHUB_OUTPUT'):
             with open(os.environ['GITHUB_OUTPUT'], 'a') as stream:
                 stream.write('revision=' + revision + '\n')
+                stream.write('publish=' + str(message is None).lower() + '\n')
+        if message:
+            print(message)
+            if os.environ.get('GITHUB_STEP_SUMMARY'):
+                with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as stream:
+                    stream.write(message + '\n')
+            return
         print('Validated successful main Verification run at ' + revision)
         return
     existing_draft = inspect_existing_release(args.repository, version, revision, args.publish)
