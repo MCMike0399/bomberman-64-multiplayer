@@ -37,7 +37,19 @@ if (args.Contains("--") || args.Any(a => a.StartsWith("--update-token=")))
     if (token is not null)
     {
         string root = Path.GetDirectoryName(Path.GetDirectoryName(Environment.ProcessPath!))!;
-        File.WriteAllText(Path.Combine(root, ".blast-update-" + token, "healthy"), "99.0.0");
+        string stage = Path.Combine(root, ".blast-update-" + token);
+        string healthy = Path.Combine(stage, "healthy");
+        if (File.Exists(Path.Combine(Path.GetDirectoryName(Environment.ProcessPath!)!, "lock-health")))
+        {
+            // Model a Windows launch that makes the marker visible before
+            // closing its writer. The original helper rolls back here.
+            await using var writer = new FileStream(healthy, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+            File.WriteAllText(Path.Combine(stage, "health-writer-open"), "");
+            using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(8));
+            while (!File.Exists(Path.Combine(stage, "finish-health-write"))) await Task.Delay(10, deadline.Token);
+            await writer.WriteAsync("99.0.0"u8.ToArray());
+        }
+        else File.WriteAllText(healthy, "99.0.0");
     }
     await Task.Delay(10000);
     return 0;
@@ -103,7 +115,9 @@ if (OperatingSystem.IsWindows())
         if (Directory.Exists(probe + "-moved")) Directory.Delete(probe + "-moved");
     }
 }
-foreach (bool failedLaunch in new[] { false, true })
+var transactions = new List<(bool FailedLaunch, bool LockedHealth)> { (false, false), (true, false) };
+if (OperatingSystem.IsWindows()) transactions.Add((false, true));
+foreach (var (failedLaunch, lockedHealth) in transactions)
 {
     string root = Path.Combine(OperatingSystem.IsMacOS() ? "/private/tmp" : Path.GetTempPath(), "blast-update-transaction-" + Guid.NewGuid().ToString("N"));
     Directory.CreateDirectory(root);
@@ -113,6 +127,7 @@ foreach (bool failedLaunch in new[] { false, true })
     File.WriteAllText(Path.Combine(target, "old-marker"), "old");
     File.WriteAllText(Path.Combine(target, "unins000.dat"), "installed uninstall data");
     if (failedLaunch) File.WriteAllText(Path.Combine(next, "fail-launch"), "fail");
+    if (lockedHealth) File.WriteAllText(Path.Combine(next, "lock-health"), "");
     var children = new List<Process>();
     Task? sharing = null;
     try
@@ -147,6 +162,14 @@ foreach (bool failedLaunch in new[] { false, true })
         var transaction = DesktopUpdateTransaction.Run(path, timeout.Token);
         while (!File.Exists(Path.Combine(stage, "ready"))) await Task.Delay(20, timeout.Token);
         Check(File.Exists(Path.Combine(target, "old-marker")), "A running game must remain installed during handoff");
+        if (lockedHealth)
+        {
+            while (!File.Exists(Path.Combine(stage, "health-writer-open"))) await Task.Delay(10, timeout.Token);
+            Check(File.Exists(Path.Combine(stage, "healthy")), "The health marker must be visible while locked");
+            // Keep the writer open across multiple reads by the updater's 100 ms poll.
+            await Task.WhenAny(transaction, Task.Delay(1000, timeout.Token));
+            File.WriteAllText(Path.Combine(stage, "finish-health-write"), "");
+        }
         try { await transaction; Check(!failedLaunch, "Failed launch must report failure"); }
         catch (IOException) when (failedLaunch) { checks++; }
         if (sharing is not null) await sharing;
