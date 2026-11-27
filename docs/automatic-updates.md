@@ -120,6 +120,11 @@ reopens the previous payload. Windows retains installer-owned uninstall data
 and updates its per-user Apps & Features version. Completed staging is removed
 on a later ordinary launch after the helper releases its lock.
 
+The game publishes its version marker only after closing the file. If a Windows
+sharing or lock violation briefly prevents a read, the helper keeps polling
+within the same health deadline. The process fixture holds the marker open and
+requires installation to succeed once the complete, matching version is readable.
+
 Native jobs require the complete headless and graphical game suites, all nine
 saved preset/display startup cases, and an actual signed fixture update from the
 candidate to deliberately newer game code with the same logic. They verify

@@ -12,7 +12,7 @@ if (args.Contains("--fixture"))
     {
         string root = Path.GetDirectoryName(Path.GetDirectoryName(Environment.ProcessPath!))!;
         if (File.Exists(Path.Combine(Path.GetDirectoryName(Environment.ProcessPath!)!, "fail-launch"))) return 23;
-        File.WriteAllText(Path.Combine(root, ".blast-update-" + token, "healthy"), "99.0.0");
+        DesktopUpdateTransaction.PublishHealth(Path.Combine(root, ".blast-update-" + token, "healthy"), "99.0.0");
     }
     await Task.Delay(token is null ? 1500 : 10000);
     return 0;
@@ -49,7 +49,7 @@ if (args.Contains("--") || args.Any(a => a.StartsWith("--update-token=")))
             while (!File.Exists(Path.Combine(stage, "finish-health-write"))) await Task.Delay(10, deadline.Token);
             await writer.WriteAsync("99.0.0"u8.ToArray());
         }
-        else File.WriteAllText(healthy, "99.0.0");
+        else DesktopUpdateTransaction.PublishHealth(healthy, "99.0.0");
     }
     await Task.Delay(10000);
     return 0;
