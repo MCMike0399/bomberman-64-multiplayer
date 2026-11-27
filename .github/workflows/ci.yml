@@ -79,7 +79,7 @@ jobs:
     if: >-
       needs.public.outputs.runtime == 'true' && vars.KERNEL_CI_ENABLED == 'true' &&
       ((github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) ||
-       (github.event_name != 'pull_request' && github.ref == 'refs/heads/main'))
+       (github.event_name != 'pull_request' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.repository == 'MCMike0399/bomberman-64-multiplayer' && github.actor == 'MCMike0399' && github.ref == 'refs/heads/codex/blast-release-rehearsal-20261126'))
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -122,7 +122,7 @@ jobs:
     if: >-
       needs.public.outputs.runtime == 'true' && vars.KERNEL_CI_ENABLED == 'true' &&
       ((github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) ||
-       (github.event_name != 'pull_request' && github.ref == 'refs/heads/main'))
+       (github.event_name != 'pull_request' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.repository == 'MCMike0399/bomberman-64-multiplayer' && github.actor == 'MCMike0399' && github.ref == 'refs/heads/codex/blast-release-rehearsal-20261126'))
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -191,7 +191,7 @@ jobs:
     if: >-
       needs.public.outputs.runtime == 'true' && vars.KERNEL_CI_ENABLED == 'true' &&
       ((github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) ||
-       (github.event_name != 'pull_request' && github.ref == 'refs/heads/main'))
+       (github.event_name != 'pull_request' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.repository == 'MCMike0399/bomberman-64-multiplayer' && github.actor == 'MCMike0399' && github.ref == 'refs/heads/codex/blast-release-rehearsal-20261126'))
     runs-on: macos-15
     timeout-minutes: 25
     steps:
@@ -259,7 +259,7 @@ jobs:
   startup-gate:
     name: 'Release gate: saved-settings startup'
     needs: package
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.KERNEL_CI_ENABLED == 'true'
+    if: ((github.event_name != 'pull_request' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.repository == 'MCMike0399/bomberman-64-multiplayer' && github.actor == 'MCMike0399' && github.ref == 'refs/heads/codex/blast-release-rehearsal-20261126')) && vars.KERNEL_CI_ENABLED == 'true'
     runs-on: macos-15
     timeout-minutes: 20
     steps:
@@ -291,7 +291,7 @@ jobs:
   update-gate:
     name: 'Release gate: update from published'
     needs: package
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.KERNEL_CI_ENABLED == 'true'
+    if: ((github.event_name != 'pull_request' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.repository == 'MCMike0399/bomberman-64-multiplayer' && github.actor == 'MCMike0399' && github.ref == 'refs/heads/codex/blast-release-rehearsal-20261126')) && vars.KERNEL_CI_ENABLED == 'true'
     runs-on: macos-15
     timeout-minutes: 40
     steps:
@@ -331,7 +331,7 @@ jobs:
     if: >-
       needs.public.outputs.runtime == 'true' && vars.KERNEL_CI_ENABLED == 'true' &&
       ((github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) ||
-       (github.event_name != 'pull_request' && github.ref == 'refs/heads/main'))
+       (github.event_name != 'pull_request' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.repository == 'MCMike0399/bomberman-64-multiplayer' && github.actor == 'MCMike0399' && github.ref == 'refs/heads/codex/blast-release-rehearsal-20261126'))
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
@@ -376,7 +376,7 @@ jobs:
     if: >-
       needs.public.outputs.runtime == 'true' && vars.KERNEL_CI_ENABLED == 'true' &&
       ((github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) ||
-       (github.event_name != 'pull_request' && github.ref == 'refs/heads/main'))
+       (github.event_name != 'pull_request' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.repository == 'MCMike0399/bomberman-64-multiplayer' && github.actor == 'MCMike0399' && github.ref == 'refs/heads/codex/blast-release-rehearsal-20261126'))
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:

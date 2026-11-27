@@ -35,7 +35,7 @@ class FunctionalWorkflowTrust(unittest.TestCase):
         text=WORKFLOW.read_text()
         expected="""needs.public.outputs.runtime == 'true' && vars.KERNEL_CI_ENABLED == 'true' &&
           ((github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) ||
-           (github.event_name != 'pull_request' && github.ref == 'refs/heads/main'))"""
+           (github.event_name != 'pull_request' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.repository == 'MCMike0399/bomberman-64-multiplayer' && github.actor == 'MCMike0399' && github.ref == 'refs/heads/codex/blast-release-rehearsal-20261126'))"""
         for job in ('managed','headless','package','windows-package','linux-package'):
             with self.subTest(job=job):self.assertEqual(condition(text,job),''.join(expected.split()))
         self.assertNotRegex(text,re.compile(r'^  pull_request_target:',re.M))
@@ -47,7 +47,10 @@ class FunctionalWorkflowTrust(unittest.TestCase):
             with self.subTest(job=job):
                 self.assertIn("github.event_name!='pull_request'",expression)
                 self.assertIn("github.ref=='refs/heads/main'",expression)
-                self.assertNotIn('||',expression)
+                if job == 'graphical':
+                    self.assertNotIn('||',expression)
+                else:
+                    self.assertIn("(github.event_name=='workflow_dispatch'&&github.repository=='MCMike0399/bomberman-64-multiplayer'&&github.actor=='MCMike0399'&&github.ref=='refs/heads/codex/blast-release-rehearsal-20261126')", expression)
 
     def test_three_os_crossplay_waits_for_the_actual_native_artifacts(self):
         text=WORKFLOW.read_text()
