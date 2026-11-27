@@ -66,7 +66,7 @@ public static class DesktopUpdateTransaction
             {
                 ct.ThrowIfCancellationRequested();
                 if (launched.HasExited) throw new IOException("Updated game exited before reporting health.");
-                if (File.Exists(healthy) && (await File.ReadAllTextAsync(healthy, ct)).Trim() == request.Version)
+                if (await HasReportedHealth(healthy, request.Version, ct))
                 {
                     failureKind = "finalize";
                     WriteHistory(request.History, "installed " + request.Version);
@@ -125,6 +125,26 @@ public static class DesktopUpdateTransaction
             throw;
         }
         finally { launched?.Dispose(); }
+    }
+
+    public static void PublishHealth(string path, string version)
+    {
+        // A visible marker must already contain the complete version.
+        string temporary = path + ".tmp";
+        File.WriteAllText(temporary, version);
+        File.Move(temporary, path, overwrite: true);
+    }
+
+    private static async Task<bool> HasReportedHealth(string path, string version, CancellationToken ct)
+    {
+        if (!File.Exists(path)) return false;
+        try { return (await File.ReadAllTextAsync(path, ct)).Trim() == version; }
+        catch (IOException error) when (OperatingSystem.IsWindows() && (error.HResult & 0xffff) is 32 or 33)
+        {
+            // A legacy launch or another Windows reader can still hold the marker.
+            // Keep polling within the existing health deadline.
+            return false;
+        }
     }
 
     private static Process Launch(string target, bool appImage, bool windowed, string? token,bool recovery=false)

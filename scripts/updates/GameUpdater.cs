@@ -72,7 +72,7 @@ public partial class GameUpdater : Node
                 method=RenderingServer.GetCurrentRenderingMethod(),rendererState=RendererBackend.State,adapter=RenderingServer.GetVideoAdapterName(),
                 graphics=GetParent() is BlastCircuit.App.GameRoot root?root.AppliedGraphicsPreset:"unknown",
                 window=GetWindow().Mode.ToString().ToLowerInvariant()}));
-            File.WriteAllText(_healthPath,Version);_healthPath=null;
+            DesktopUpdateTransaction.PublishHealth(_healthPath,Version);_healthPath=null;
             GD.Print("BLAST_UPDATE_HEALTHY "+Version);
         }
         if(_initialized&&!_recovery&&automatic&&idle&&!_checked&&_uptime>=5&&!_busy&&!UpdateReady)
